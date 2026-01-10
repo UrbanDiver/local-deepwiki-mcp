@@ -1,84 +1,54 @@
-# Local Deep Wiki
-=================
+**Local DeepWiki**
+====================
 
-The `src` module is the core of the Local Deep Wiki project, providing tools for generating documentation from code.
+**Module Overview**
+-------------------
 
-## Module Purpose
----------------
+The `src` module is the core of Local DeepWiki, a tool for generating documentation for Python projects. Its primary purpose is to provide a structured approach to documenting and indexing code modules.
 
-The primary purpose of this module is to provide a set of generators and parsers that can extract information from code and generate documentation in various formats. It also includes providers for different programming languages and tools.
+### Purpose and Responsibilities
 
-## Key Classes/Functions
-----------------------
+* Extracts information from source code files
+* Creates code chunks and indexes them
+* Generates diagrams and documentation for each module
+* Supports multiple providers for language model-based functionality
 
-### `ChunkType` (models.py)
+### Key Classes and Functions
 
-*   A class that defines the types of code chunks.
-*   Used to categorize code into different types such as functions, classes, methods, modules, imports, comments, and others.
+#### Code Chunk Management
 
-### `_create_module_chunk` (core/chunker.py)
+* `_create_module_chunk`: Creates a chunk for the module/file overview. This method takes an AST root node, source bytes, programming language, and file path as input.
 
-*   A method that creates a chunk for the module/file overview.
-*   Takes in an AST root node, source bytes, programming language, and file path as arguments.
-*   Returns a `CodeChunk` object containing information about the module or file.
+#### Diagram Generation
 
-### `generate_architecture_diagram` (generators/diagrams.py)
+* `generate_architecture_diagram`: Generates a Mermaid architecture diagram from code chunks.
+* `generate_modules_index`: Generates an index page for modules.
 
-*   A function that generates a Mermaid architecture diagram from code chunks.
-*   Takes in a list of code chunks as an argument and returns a Mermaid diagram string.
+#### Providers
 
-### `_generate_modules_index` (generators/wiki.py)
+* `base`: A base class for all providers, providing basic functionality for embedding and linking to documentation.
+	+ `EmbeddingProvider` and `LLMProvider`: Subclasses that provide specific implementations for embedding and linking to language models.
+* `anthropic`: An LLM provider using Anthropic's AsyncAnthropic client.
+* `ollama`: An LLM provider using Ollama's AsyncClient.
 
-*   A method that generates index pages for modules.
-*   Takes in a list of module pages as an argument and returns a string containing the index page content.
+#### Models
 
-### `EmbeddingProvider`, `LLMProvider` (providers/base.py, providers/llm/anthropic.py, providers/llm/ollama.py)
+* `CodeChunk`: Represents a code chunk, containing information about the file path, source code, and language.
+* `IndexStatus`: Provides status information for the indexing process.
 
-*   Base classes for embedding and language model providers.
-*   Used to provide interfaces for different providers.
+### Usage Examples
 
-## Usage Examples
-----------------
+To use Local DeepWiki, follow these steps:
 
-### Generating an Architecture Diagram
+1. Initialize the project by running `python -m local_deepwiki.server`.
+2. Create a new module or file in your project directory.
+3. Run `python -m local_deepwiki.server --generate` to generate documentation and diagrams for the module.
+4. Access the generated documentation at <http://localhost:8080>.
 
-```python
-from local_deepwiki.generators.diagrams import generate_architecture_diagram
+### Dependencies
 
-# Load code chunks
-chunks = [CodeChunk(file_path="path/to/module.py", source=b"code"), CodeChunk(file_path="path/to/class.py", source=b"class_code")]
+* `local_deepwiki.providers.base`: Provides basic functionality for embedding and linking to documentation.
+* `local_deepwiki.models`: Contains models for representing code chunks and index status.
+* `mermaid`: A library for generating Mermaid diagrams.
 
-# Generate architecture diagram
-diagram = generate_architecture_diagram(chunks)
-
-# Render Mermaid diagram
-print(diagram)
-```
-
-### Generating Index Page for Modules
-
-```python
-from local_deepwiki.generators/wiki import _generate_modules_index
-
-# Load module pages
-module_pages = [WikiPage(path="modules/module1.py"), WikiPage(path="modules/module2.py")]
-
-# Generate index page content
-index_page_content = _generate_modules_index(module_pages)
-
-# Print index page content
-print(index_page_content)
-```
-
-## Dependencies
---------------
-
-This module depends on the following modules:
-
-*   `models`: Provides the `ChunkType` class.
-*   `core/chunker.py`: Provides the `_create_module_chunk` method.
-*   `generators/diagrams.py`: Provides the `generate_architecture_diagram` function.
-*   `generators/wiki.py`: Provides the `_generate_modules_index` method.
-*   `providers/base.py`, `providers/llm/anthropic.py`, `providers/llm/ollama.py`: Provide classes for embedding and language model providers.
-
-Note: The dependencies are not exhaustive, as this module may depend on other modules that are not listed here.
+Note: This documentation assumes you have a basic understanding of Python and documentation generation. For more information on specific classes, functions, or providers, please refer to their individual documentation pages.

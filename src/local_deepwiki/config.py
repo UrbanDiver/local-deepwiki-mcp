@@ -31,7 +31,7 @@ class EmbeddingConfig(BaseModel):
 class OllamaConfig(BaseModel):
     """Configuration for Ollama LLM."""
 
-    model: str = Field(default="llama3.2", description="Ollama model name")
+    model: str = Field(default="qwen3-coder:30b", description="Ollama model name")
     base_url: str = Field(default="http://localhost:11434", description="Ollama API URL")
 
 

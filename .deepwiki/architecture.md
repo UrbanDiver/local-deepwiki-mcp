@@ -1,75 +1,100 @@
-**Local DeepWiki Architecture Documentation**
-=============================================
-
 **System Architecture Overview**
-------------------------------
+================================
 
-Local DeepWiki is a web application that utilizes various components to process and generate documentation from source code. The system architecture can be divided into the following main components:
+The system is designed to provide a comprehensive platform for understanding and generating documentation from code. The core components of the system are:
 
-*   **LLM Provider**: Responsible for providing large language models (LLMs) to generate text-based outputs.
-*   **Embedding Provider**: Provides embedding models for natural language processing tasks.
-*   **Parser**: Responsible for parsing source code and generating documentation.
-*   **Chunker**: Splits source code into smaller chunks for efficient processing.
+*   **LLM Providers**: Responsible for providing the underlying language model (LM) capabilities.
+    *   Ollama
+    *   Anthropic
+    *   OpenAI
+*   **Embedding Providers**: Responsible for providing embedding capabilities.
+    *   Local
+    *   OpenAI
+*   **Wiki Generators**: Responsible for generating documentation from code chunks.
 
 **Key Components and Their Responsibilities**
----------------------------------------------
+--------------------------------------------
 
 ### LLM Provider
 
-The LLM provider is responsible for providing the necessary large language models to generate text-based outputs. The `get_llm_provider` function in `src/local_deepwiki/providers/__init__.py` returns the configured LLM provider instance based on the provided configuration.
+The LLM provider is responsible for providing the underlying language model capabilities. The provider can be configured using the `LLMConfig` class, which includes options for selecting the provider (e.g., Ollama, Anthropic, OpenAI) and configuring the LLM instance.
 
-```mermaid
-graph LR
-    A[LLM Provider] -->|Provide LLMs| B[Embedding Provider]
-    B -->|Provide embeddings| C[Parser]
-    C -->|Parse source code| D[Chunker]
-    D -->|Split source code into chunks| C
+```python
+class LLMConfig(BaseModel):
+    """LLM provider configuration."""
+
+    provider: Literal["ollama", "anthropic", "openai"] = Field(
+        default="ollama", description="LLM provider"
+    )
+    ollama: OllamaConfig = Field(default_factory=OllamaConfig)
+    anthropic: AnthropicConfig = Field(default_factory=AnthropicConfig)
+    openai: OpenAILLMConfig = Field(default_factory=OpenAILLMConfig)
 ```
 
 ### Embedding Provider
 
-The embedding provider is responsible for providing the necessary embedding models for natural language processing tasks. The `get_llm_provider` function in `src/local_deepwiki/providers/__init__.py` returns the configured LLM provider instance based on the provided configuration.
+The embedding provider is responsible for providing embedding capabilities. The provider can be configured using the `EmbeddingConfig` class, which includes options for selecting the provider (e.g., local, OpenAI) and configuring the embedding instance.
+
+```python
+class EmbeddingConfig(BaseModel):
+    """Embedding provider configuration."""
+
+    provider: Literal["local", "openai"] = Field(default="local", description="Embedding provider")
+    local: LocalEmbeddingConfig = Field(default_factory=LocalEmbeddingConfig)
+    openai: OpenAIEmbeddingConfig = Field(default_factory=OpenAIEmbeddingConfig)
+```
+
+### Wiki Generator
+
+The wiki generator is responsible for generating documentation from code chunks. The generator can be configured using the `WikiConfig` class, which includes options for selecting the provider (e.g., Ollama, Anthropic) and configuring the LLM instance.
+
+```python
+class WikiConfig(BaseModel):
+    """Wiki configuration."""
+
+    provider: Literal["ollama", "anthropic"] = Field(default="ollama", description="Wiki provider")
+    ollama: OllamaConfig = Field(default_factory=OllamaConfig)
+    anthropic: AnthropicConfig = Field(default_factory=AnthropicConfig)
+```
+
+**Data Flow between Components**
+------------------------------
+
+The data flow between components is as follows:
+
+*   **LLM Provider**: Provides the underlying language model capabilities.
+*   **Embedding Provider**: Provides embedding capabilities based on the LLM provider output.
+*   **Wiki Generator**: Generates documentation from code chunks using the LLM and embedding providers.
 
 ```mermaid
 graph LR
-    A[LLM Provider] -->|Provide embeddings| B[Embedding Provider]
+    A[LLM Provider] -->|Output| B[Embedding Provider]
+    B -->|Input| C[Wiki Generator]
+    A -->|Input| C
 ```
 
-### Parser
+**Mermaid Diagram**
+------------------
 
-The parser is responsible for parsing source code and generating documentation. The `generate_architecture_diagram` function in `src/local_deepwiki/generators/diagrams.py` generates a Mermaid diagram showing the architecture.
+Here is a Mermaid diagram showing the system architecture:
 
 ```mermaid
 graph LR
-    A[CodeChunk] -->|Parse source code| B[Parser]
-    B -->|Generate documentation| C[WikiPage]
+    LLM[LLM Provider] -->|Output| Embedding[Embedding Provider]
+    Embedding -->|Input| Wiki[Wiki Generator]
+
+    style LLM fill:#f9f,stroke:#333,stroke-width:2px
+    style Embedding fill:#fff,stroke:#333,stroke-width:2px
+    style Wiki fill:#f0f,stroke:#333,stroke-width:2px
 ```
-
-### Chunker
-
-The chunker is responsible for splitting source code into smaller chunks for efficient processing. The `generate_architecture_diagram` function in `src/local_deepwiki/generators/diagrams.py` generates a Mermaid diagram showing the architecture.
-
-```mermaid
-graph LR
-    A[CodeChunk] -->|Split into chunks| B[Chunker]
-```
-
-**Data Flow Between Components**
---------------------------------
-
-The data flow between components can be summarized as follows:
-
-*   The LLM provider provides the necessary large language models to generate text-based outputs.
-*   The embedding provider provides the necessary embedding models for natural language processing tasks.
-*   The parser parses source code and generates documentation using the provided embeddings.
-*   The chunker splits source code into smaller chunks for efficient processing.
 
 **Design Patterns Used**
--------------------------
+------------------------
 
-The system architecture employs several design patterns, including:
+The system uses the following design patterns:
 
-*   **Model-View-Controller (MVC)**: The system architecture follows an MVC pattern, where the parser acts as the controller, and the WikiPage acts as the view.
-*   **Repository Pattern**: The system architecture uses a repository pattern to encapsulate data access logic.
+*   **Dependency Inversion Principle**: The LLM and embedding providers are decoupled from each other using interfaces.
+*   **Single Responsibility Principle**: Each component has a single responsibility (e.g., providing language model capabilities).
+*   **Open-Closed Principle**: The system is designed to be extensible, allowing new components to be added without modifying existing code.
 
-By following these design patterns, the system architecture is modular, scalable, and maintainable.
+Note: This documentation is based on the provided codebase and may not cover all aspects of the system architecture.

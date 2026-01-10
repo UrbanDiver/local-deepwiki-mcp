@@ -1,46 +1,35 @@
-**Dependencies Overview**
-==========================
+# Dependencies Overview
+=====================================
 
 ### External Dependencies
 
-The following libraries and packages are used by the project:
+The following external libraries and packages are used in the project:
 
-* `sentence-transformers`: used for sentence embeddings
-* `openai`: used for OpenAI API interactions
-* `lancedb`: used for vector store operations
-* `tree_sitter_python`, `tree_sitter_javascript`, `tree_sitter_typescript`, etc.: used for code parsing and syntax analysis
+* `sentence_transformers` for sentence embeddings
+* `openai` for OpenAI API access
+* `lancedb` for vector database operations
+* `tree_sitter_python`, `tree_sitter_javascript`, etc. for parser configuration and language support
 
 ### Internal Module Dependencies
 
-The following modules depend on the project's internal dependencies:
+The following modules depend on each other:
 
-| Module | Depends On |
-| --- | --- |
-| `config.py` | `base.py`, `embeddings/local.py`, `embeddings/openai.py`, `models.py` |
-| `providers/base.py` | - |
-| `providers/embeddings/local.py` | `base.py` |
-| `providers/embeddings/openai.py` | `base.py` |
-| `core/chunker.py` | `config.py`, `parser.py` |
-| `core/parser.py` | `config.py` |
-| `core/vectorstore.py` | `base.py` |
-
-### Mermaid Diagram
 ```mermaid
-graph LR;
-    A[config.py] -->|depends on| B[base.py];
-    B --> C[embeddings/local.py];
-    B --> D[embeddings/openai.py];
-    A --> E[providers/base.py];
-    E --> F[providers/embeddings/local.py];
-    E --> G[providers/embeddings/openai.py];
-    H[core/chunker.py] -->|depends on| I[config.py];
-    I --> J[parser.py];
-    J --> K[core/vectorstore.py];
+graph LR
+    A[local_deepwiki.config] --> B[local_deepwiki.providers.base]
+    B --> C[local_deepwiki.providers.embeddings.local]
+    B --> D[local_deepwiki.providers.embeddings.openai]
+    C --> E[local_deepwiki.core.chunker]
+    D --> E
+    E --> F[local_deepwiki.models]
+    E --> G[local_deepwiki.core.parser]
+    H[local_deepwiki.core.vectorstore] --> I[local_deepwiki.config]
 ```
-Note: The Mermaid diagram shows the dependencies between modules. It may not be exhaustive, but it should give a general idea of how the project's internal dependencies are structured.
 
 ### Notable Dependency Patterns
 
-* The `providers` module has two sub-modules: `embeddings/local.py` and `embeddings/openai.py`. This suggests that the project is using multiple embedding providers.
-* The `core/chunker.py` module depends on both `config.py` and `parser.py`, indicating that it uses configuration settings to determine how to parse code chunks.
-* The `core/vectorstore.py` module depends on `base.py`, which suggests that it uses a base class or interface for vector store operations.
+* The `local_deepwiki.providers.base` module is a base class for all provider classes, and both `LocalEmbeddingProvider` and `OpenAIEmbeddingProvider` depend on it.
+* The `local_deepwiki.core.parser` module depends on several external libraries (`tree_sitter_python`, etc.) to configure the parser.
+* The `local_deepwiki.models` module is used throughout the project, and all providers that embed sentences (both local and OpenAI) depend on it.
+
+Note: This documentation only includes a high-level overview of dependencies. A more detailed dependency graph can be found in individual code files and modules.
