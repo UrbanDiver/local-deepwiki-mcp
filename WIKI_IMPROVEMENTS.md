@@ -4,12 +4,12 @@ This document tracks planned improvements to the Local DeepWiki documentation ge
 
 ## Content Quality
 
-### 1. Better API Reference
-- [ ] Generate structured API docs with type signatures
-- [ ] Extract parameters, return types from type hints
-- [ ] Parse and display docstrings in a consistent format
-- [ ] Show default values for optional parameters
-- **Files**: `generators/wiki.py`, possibly new `generators/api_docs.py`
+### 1. Better API Reference ✅
+- [x] Generate structured API docs with type signatures
+- [x] Extract parameters, return types from type hints
+- [x] Parse and display docstrings in a consistent format
+- [x] Show default values for optional parameters
+- **Files**: `generators/api_docs.py`, `generators/wiki.py`
 
 ### 2. Usage Examples from Tests
 - [ ] Scan test files for usage patterns of documented classes/functions
@@ -105,7 +105,7 @@ This document tracks planned improvements to the Local DeepWiki documentation ge
 - ~~#10 Incremental Wiki Generation~~ ✅
 
 **Larger Features** (1+ day each):
-- #1 Better API Reference
+- ~~#1 Better API Reference~~ ✅
 - ~~#7 Call Graph Diagrams~~ ✅
 - ~~#12 Watch Mode~~ ✅
 
@@ -116,4 +116,4 @@ This document tracks planned improvements to the Local DeepWiki documentation ge
 - Current wiki generation uses Ollama (qwen3-coder:30b) by default
 - Cross-linking was added in commit `f933c46`
 - Web UI runs on Flask at port 8080
-- All 164 tests currently pass
+- All 205 tests currently pass

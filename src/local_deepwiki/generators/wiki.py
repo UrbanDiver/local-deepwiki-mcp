@@ -9,6 +9,7 @@ from typing import Any
 
 from local_deepwiki.config import Config, get_config
 from local_deepwiki.core.vectorstore import VectorStore
+from local_deepwiki.generators.api_docs import get_file_api_docs
 from local_deepwiki.generators.callgraph import get_file_call_graph
 from local_deepwiki.generators.crosslinks import EntityRegistry, add_cross_links
 from local_deepwiki.generators.search import write_search_index
@@ -936,6 +937,13 @@ Do NOT include mermaid class diagrams - they will be auto-generated."""
                 content,
                 flags=re.DOTALL | re.IGNORECASE
             )
+
+            # Generate API reference section with type signatures
+            abs_file_path = Path(index_status.repo_path) / file_info.path
+            if abs_file_path.exists():
+                api_docs = get_file_api_docs(abs_file_path)
+                if api_docs:
+                    content += "\n\n## API Reference\n\n" + api_docs
 
             # Generate class diagram if file has classes
             # Use get_chunks_by_file for complete chunk list (not just search results)
