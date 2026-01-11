@@ -1,5 +1,6 @@
 """Wiki documentation generator using LLM providers."""
 
+import re
 import time
 from pathlib import Path
 from typing import Any
@@ -17,6 +18,69 @@ SYSTEM_PROMPT = """You are a technical documentation expert. Generate clear, con
 - Focus on explaining what the code does and how to use it
 - Be accurate and avoid speculation
 - Keep explanations practical and actionable"""
+
+
+def generate_class_diagram(chunks: list) -> str | None:
+    """Generate a Mermaid class diagram from code chunks.
+
+    Args:
+        chunks: List of CodeChunk objects.
+
+    Returns:
+        Mermaid class diagram markdown string, or None if no classes found.
+    """
+    from local_deepwiki.models import ChunkType
+
+    # Collect classes and their methods
+    classes: dict[str, list[str]] = {}
+    standalone_functions: list[str] = []
+
+    for chunk in chunks:
+        # Handle both CodeChunk objects and SearchResult objects (which have .chunk)
+        if hasattr(chunk, 'chunk'):
+            chunk = chunk.chunk
+        if chunk.chunk_type == ChunkType.CLASS:
+            class_name = chunk.name or "Unknown"
+            if class_name not in classes:
+                classes[class_name] = []
+        elif chunk.chunk_type == ChunkType.METHOD:
+            parent = chunk.parent_name or "Unknown"
+            method_name = chunk.name or "unknown"
+            if parent not in classes:
+                classes[parent] = []
+            # Avoid duplicates
+            if method_name not in classes[parent]:
+                classes[parent].append(method_name)
+        elif chunk.chunk_type == ChunkType.FUNCTION:
+            func_name = chunk.name or "unknown"
+            if func_name not in standalone_functions:
+                standalone_functions.append(func_name)
+
+    # Filter to only classes with methods (empty classes cause Mermaid syntax errors)
+    classes_with_methods = {k: v for k, v in classes.items() if v}
+
+    # If no classes with methods, nothing to diagram
+    if not classes_with_methods:
+        return None
+
+    # Build Mermaid diagram
+    lines = ["```mermaid", "classDiagram"]
+
+    for class_name, methods in sorted(classes_with_methods.items()):
+        # Sanitize class name for Mermaid (remove special chars)
+        safe_name = class_name.replace("<", "_").replace(">", "_").replace(" ", "_")
+        lines.append(f"    class {safe_name} {{")
+        for method in methods:
+            # Mark private methods with - prefix, others with +
+            prefix = "-" if method.startswith("_") else "+"
+            # Sanitize method name
+            safe_method = method.replace("<", "_").replace(">", "_")
+            lines.append(f"        {prefix}{safe_method}()")
+        lines.append("    }")
+
+    lines.append("```")
+
+    return "\n".join(lines)
 
 
 class WikiGenerator:
@@ -341,9 +405,26 @@ Generate comprehensive documentation that includes:
 4. **Usage Examples**: Show how to use the main components
 5. **Dependencies**: What this file imports/depends on
 
-Format as markdown with clear sections. Be specific about the actual code."""
+Format as markdown with clear sections. Be specific about the actual code.
+Do NOT include mermaid class diagrams - they will be auto-generated."""
 
             content = await self.llm.generate(prompt, system_prompt=SYSTEM_PROMPT)
+
+            # Strip any LLM-generated class diagram sections (we add our own)
+            # Remove "## Class Diagram" section and any mermaid classDiagram blocks
+            content = re.sub(
+                r'\n*##\s*Class\s*Diagram\s*\n+```mermaid\s*\n+classDiagram.*?```',
+                '',
+                content,
+                flags=re.DOTALL | re.IGNORECASE
+            )
+
+            # Generate class diagram if file has classes
+            # Use get_chunks_by_file for complete chunk list (not just search results)
+            all_file_chunks = await self.vector_store.get_chunks_by_file(file_info.path)
+            class_diagram = generate_class_diagram(all_file_chunks)
+            if class_diagram:
+                content += "\n\n## Class Diagram\n\n" + class_diagram
 
             # Create nested path structure: files/module/filename.md
             parts = file_path.parts
