@@ -49,3 +49,5 @@ Thumbs.db
 
 # Project specific
 *.lance
+.deepwiki/
+.claude/
