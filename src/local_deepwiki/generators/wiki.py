@@ -113,6 +113,165 @@ def generate_class_diagram(chunks: list) -> str | None:
     return "\n".join(lines)
 
 
+def generate_dependency_graph(chunks: list, project_name: str = "project") -> str | None:
+    """Generate a Mermaid flowchart showing module dependencies.
+
+    Args:
+        chunks: List of CodeChunk objects (should include IMPORT chunks).
+        project_name: Name of the project for filtering internal imports.
+
+    Returns:
+        Mermaid flowchart markdown string, or None if no dependencies found.
+    """
+    from local_deepwiki.models import ChunkType
+
+    # Collect dependencies: file -> set of imports
+    dependencies: dict[str, set[str]] = {}
+
+    for chunk in chunks:
+        if hasattr(chunk, 'chunk'):
+            chunk = chunk.chunk
+        if chunk.chunk_type != ChunkType.IMPORT:
+            continue
+
+        file_path = chunk.file_path
+        # Get module name from file path (e.g., src/local_deepwiki/core/indexer.py -> core.indexer)
+        module = _path_to_module(file_path)
+        if not module:
+            continue
+
+        if module not in dependencies:
+            dependencies[module] = set()
+
+        # Parse imports from content
+        for line in chunk.content.split('\n'):
+            line = line.strip()
+            if not line:
+                continue
+
+            imported = _parse_import_line(line, project_name)
+            if imported:
+                dependencies[module].add(imported)
+
+    if not dependencies:
+        return None
+
+    # Filter to only internal dependencies (within the project)
+    internal_modules = set(dependencies.keys())
+    internal_deps: dict[str, set[str]] = {}
+
+    for module, imports in dependencies.items():
+        internal_imports = {imp for imp in imports if imp in internal_modules}
+        if internal_imports:
+            internal_deps[module] = internal_imports
+
+    if not internal_deps:
+        return None
+
+    # Build Mermaid flowchart
+    lines = ["```mermaid", "flowchart TD"]
+
+    # Create node definitions with short IDs
+    node_ids: dict[str, str] = {}
+    for i, module in enumerate(sorted(internal_modules)):
+        node_id = f"M{i}"
+        node_ids[module] = node_id
+        # Use last part of module name for display
+        display_name = module.split('.')[-1]
+        lines.append(f"    {node_id}[{display_name}]")
+
+    # Add edges
+    for module, imports in sorted(internal_deps.items()):
+        from_id = node_ids.get(module)
+        if not from_id:
+            continue
+        for imp in sorted(imports):
+            to_id = node_ids.get(imp)
+            if to_id and from_id != to_id:
+                lines.append(f"    {from_id} --> {to_id}")
+
+    lines.append("```")
+
+    return "\n".join(lines)
+
+
+def _path_to_module(file_path: str) -> str | None:
+    """Convert file path to module name.
+
+    Args:
+        file_path: Path like 'src/local_deepwiki/core/indexer.py'
+
+    Returns:
+        Module name like 'core.indexer', or None if not applicable.
+    """
+    from pathlib import Path
+
+    p = Path(file_path)
+    if p.suffix != '.py':
+        return None
+    if p.name.startswith('__'):
+        return None
+
+    # Remove src/local_deepwiki prefix and .py suffix
+    parts = list(p.parts)
+
+    # Find the main package directory
+    try:
+        # Look for common patterns
+        if 'src' in parts:
+            idx = parts.index('src')
+            parts = parts[idx + 1:]
+        elif 'local_deepwiki' in parts:
+            idx = parts.index('local_deepwiki')
+            parts = parts[idx:]
+    except (ValueError, IndexError):
+        pass
+
+    # Remove .py extension from last part
+    if parts and parts[-1].endswith('.py'):
+        parts[-1] = parts[-1][:-3]
+
+    # Skip __init__ and similar
+    if parts and parts[-1].startswith('__'):
+        return None
+
+    return '.'.join(parts) if parts else None
+
+
+def _parse_import_line(line: str, project_name: str) -> str | None:
+    """Parse a Python import line to extract the imported module.
+
+    Args:
+        line: Import statement line.
+        project_name: Project name for filtering.
+
+    Returns:
+        Full imported module name (e.g., 'local_deepwiki.core.chunker'), or None if not internal.
+    """
+    # Handle: from local_deepwiki.core.chunker import CodeChunker
+    if line.startswith('from '):
+        parts = line.split()
+        if len(parts) >= 2:
+            module = parts[1]
+            # Check if it's an internal import
+            if 'local_deepwiki' in module:
+                # Keep full module path for matching
+                if module.startswith('local_deepwiki.'):
+                    return module
+                elif '.local_deepwiki.' in module:
+                    # Extract from nested path
+                    idx = module.find('local_deepwiki.')
+                    return module[idx:]
+    # Handle: import local_deepwiki.core.chunker
+    elif line.startswith('import '):
+        parts = line.split()
+        if len(parts) >= 2:
+            module = parts[1].split(',')[0]  # Handle multiple imports
+            if module.startswith('local_deepwiki.'):
+                return module
+    return None
+
+
 class WikiGenerator:
     """Generate wiki documentation from indexed code."""
 
@@ -513,10 +672,10 @@ Do NOT include mermaid class diagrams - they will be auto-generated."""
 
     async def _generate_dependencies(self, index_status: IndexStatus) -> WikiPage:
         """Generate dependencies documentation."""
-        # Get import chunks
+        # Get import chunks - use higher limit for complete dependency graph
         search_results = await self.vector_store.search(
             "import require include dependencies",
-            limit=30,
+            limit=100,
         )
 
         import_chunks = [r for r in search_results if r.chunk.chunk_type.value == "import"]
@@ -533,12 +692,20 @@ Do NOT include mermaid class diagrams - they will be auto-generated."""
 Generate documentation that includes:
 1. External dependencies (libraries, packages)
 2. Internal module dependencies
-3. A Mermaid diagram showing dependency relationships (use ```mermaid code blocks)
-4. Any notable dependency patterns
+3. Any notable dependency patterns
+
+Do NOT include a Mermaid diagram - one will be auto-generated.
 
 Format as markdown."""
 
         content = await self.llm.generate(prompt, system_prompt=SYSTEM_PROMPT)
+
+        # Generate auto-generated module dependency graph
+        dep_graph = generate_dependency_graph(import_chunks, "local_deepwiki")
+        if dep_graph:
+            content += "\n\n## Module Dependency Graph\n\n"
+            content += "The following diagram shows internal module dependencies:\n\n"
+            content += dep_graph
 
         return WikiPage(
             path="dependencies.md",
