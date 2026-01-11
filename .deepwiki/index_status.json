@@ -1,8 +1,8 @@
 {
   "repo_path": "/Users/brian/Projects/local-deepwiki-mcp",
-  "indexed_at": 1768085940.700327,
+  "indexed_at": 1768087488.6449761,
   "total_files": 28,
-  "total_chunks": 170,
+  "total_chunks": 172,
   "languages": {
     "python": 28
   },
@@ -130,9 +130,9 @@
     {
       "path": "src/local_deepwiki/web/app.py",
       "language": "python",
-      "size_bytes": 11761,
-      "last_modified": 1768085503.0602942,
-      "hash": "83ed5e9d145defb4ccee1f155790dc175d77b218460b959ad3ac4211d75b9dbf",
+      "size_bytes": 12056,
+      "last_modified": 1768086354.6403,
+      "hash": "46bca20697793cfd4afd44e4d1ebbbbc1c9542af38a4a3e4de5b3619e88f0d54",
       "chunk_count": 10
     },
     {
@@ -226,10 +226,10 @@
     {
       "path": "src/local_deepwiki/generators/wiki.py",
       "language": "python",
-      "size_bytes": 10781,
-      "last_modified": 1768082867.8977973,
-      "hash": "4301a9227488a2292def8ad08954c2458f843415e40c7773c57d320100327cd4",
-      "chunk_count": 12
+      "size_bytes": 16153,
+      "last_modified": 1768087176.9537191,
+      "hash": "79df87c6c1b776d1d4a8bb2fb13bd731eaa0106770e9039e7171fa4ba88cac01",
+      "chunk_count": 14
     }
   ]
 }

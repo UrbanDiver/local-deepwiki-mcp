@@ -62,10 +62,11 @@ class WikiGenerator:
             WikiStructure with generated pages.
         """
         pages: list[WikiPage] = []
+        total_steps = 5  # overview, architecture, modules, files, dependencies
 
         # Generate index page (overview)
         if progress_callback:
-            progress_callback("Generating overview", 0, 4)
+            progress_callback("Generating overview", 0, total_steps)
 
         overview_page = await self._generate_overview(index_status)
         pages.append(overview_page)
@@ -73,7 +74,7 @@ class WikiGenerator:
 
         # Generate architecture page
         if progress_callback:
-            progress_callback("Generating architecture docs", 1, 4)
+            progress_callback("Generating architecture docs", 1, total_steps)
 
         architecture_page = await self._generate_architecture(index_status)
         pages.append(architecture_page)
@@ -81,23 +82,32 @@ class WikiGenerator:
 
         # Generate module pages
         if progress_callback:
-            progress_callback("Generating module documentation", 2, 4)
+            progress_callback("Generating module documentation", 2, total_steps)
 
         module_pages = await self._generate_module_docs(index_status)
         for page in module_pages:
             pages.append(page)
             self._write_page(page)
 
+        # Generate file-level documentation
+        if progress_callback:
+            progress_callback("Generating file documentation", 3, total_steps)
+
+        file_pages = await self._generate_file_docs(index_status, progress_callback)
+        for page in file_pages:
+            pages.append(page)
+            self._write_page(page)
+
         # Generate dependencies page
         if progress_callback:
-            progress_callback("Generating dependencies", 3, 4)
+            progress_callback("Generating dependencies", 4, total_steps)
 
         deps_page = await self._generate_dependencies(index_status)
         pages.append(deps_page)
         self._write_page(deps_page)
 
         if progress_callback:
-            progress_callback("Wiki generation complete", 4, 4)
+            progress_callback("Wiki generation complete", total_steps, total_steps)
 
         return WikiStructure(root=str(self.wiki_path), pages=pages)
 
@@ -250,6 +260,143 @@ Format as markdown."""
             if page.path != "modules/index.md":
                 name = Path(page.path).stem
                 lines.append(f"- [{page.title}]({name}.md)")
+
+        return "\n".join(lines)
+
+    async def _generate_file_docs(
+        self, index_status: IndexStatus, progress_callback: Any = None
+    ) -> list[WikiPage]:
+        """Generate documentation for individual source files."""
+        pages = []
+
+        # Filter to significant files (skip __init__.py, test files for now)
+        significant_files = [
+            f for f in index_status.files
+            if not f.path.endswith("__init__.py")
+            and f.chunk_count >= 2  # Has meaningful content
+        ]
+
+        # Limit to avoid too many LLM calls
+        max_files = 20
+        if len(significant_files) > max_files:
+            # Prioritize files with more chunks (more complex)
+            significant_files = sorted(
+                significant_files, key=lambda x: x.chunk_count, reverse=True
+            )[:max_files]
+
+        for i, file_info in enumerate(significant_files):
+            file_path = Path(file_info.path)
+
+            # Get all chunks for this file
+            search_results = await self.vector_store.search(
+                f"file:{file_info.path}",
+                limit=50,
+            )
+
+            # Filter to chunks from this specific file
+            file_chunks = [
+                r for r in search_results
+                if r.chunk.file_path == file_info.path
+            ]
+
+            if not file_chunks:
+                # Fallback: search by filename
+                search_results = await self.vector_store.search(
+                    file_path.stem,
+                    limit=30,
+                )
+                file_chunks = [
+                    r for r in search_results
+                    if r.chunk.file_path == file_info.path
+                ]
+
+            if not file_chunks:
+                continue
+
+            # Build context from chunks
+            context_parts = []
+            for r in file_chunks[:15]:  # Limit context size
+                chunk = r.chunk
+                context_parts.append(
+                    f"Type: {chunk.chunk_type.value}\n"
+                    f"Name: {chunk.name}\n"
+                    f"Lines: {chunk.start_line}-{chunk.end_line}\n"
+                    f"```\n{chunk.content[:600]}\n```"
+                )
+
+            context = "\n\n".join(context_parts)
+
+            prompt = f"""Generate documentation for the file '{file_info.path}':
+
+Language: {file_info.language}
+Total code chunks: {file_info.chunk_count}
+
+Code contents:
+{context}
+
+Generate comprehensive documentation that includes:
+1. **File Overview**: Purpose and responsibility of this file
+2. **Classes**: Document each class with its purpose, key methods, and usage
+3. **Functions**: Document each function with parameters, return values, and purpose
+4. **Usage Examples**: Show how to use the main components
+5. **Dependencies**: What this file imports/depends on
+
+Format as markdown with clear sections. Be specific about the actual code."""
+
+            content = await self.llm.generate(prompt, system_prompt=SYSTEM_PROMPT)
+
+            # Create nested path structure: files/module/filename.md
+            parts = file_path.parts
+            if len(parts) > 1:
+                wiki_path = f"files/{'/'.join(parts[:-1])}/{file_path.stem}.md"
+            else:
+                wiki_path = f"files/{file_path.stem}.md"
+
+            page = WikiPage(
+                path=wiki_path,
+                title=f"{file_path.name}",
+                content=content,
+                generated_at=time.time(),
+            )
+            pages.append(page)
+
+        # Create files index
+        if pages:
+            files_index = WikiPage(
+                path="files/index.md",
+                title="Source Files",
+                content=self._generate_files_index(pages),
+                generated_at=time.time(),
+            )
+            pages.insert(0, files_index)
+
+        return pages
+
+    def _generate_files_index(self, file_pages: list[WikiPage]) -> str:
+        """Generate index page for file documentation."""
+        lines = [
+            "# Source Files\n",
+            "Detailed documentation for individual source files.\n",
+        ]
+
+        # Group by directory
+        by_dir: dict[str, list[WikiPage]] = {}
+        for page in file_pages:
+            if page.path == "files/index.md":
+                continue
+            parts = Path(page.path).parts
+            if len(parts) > 2:
+                dir_name = parts[1]  # files/DIR/file.md -> DIR
+            else:
+                dir_name = "root"
+            by_dir.setdefault(dir_name, []).append(page)
+
+        for dir_name, dir_pages in sorted(by_dir.items()):
+            lines.append(f"\n## {dir_name}\n")
+            for page in sorted(dir_pages, key=lambda p: p.title):
+                # Make relative link from files/index.md
+                rel_path = page.path.replace("files/", "")
+                lines.append(f"- [{page.title}]({rel_path})")
 
         return "\n".join(lines)
 

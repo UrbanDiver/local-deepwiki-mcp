@@ -212,10 +212,11 @@ HTML_TEMPLATE = """
     </main>
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
     <script>
-        // Initialize mermaid with dark theme
+        // Initialize mermaid with base theme (allows custom styles)
         mermaid.initialize({
             startOnLoad: false,
-            theme: 'dark',
+            securityLevel: 'loose',
+            theme: 'base',
             themeVariables: {
                 primaryColor: '#238636',
                 primaryTextColor: '#c9d1d9',
@@ -229,8 +230,10 @@ HTML_TEMPLATE = """
                 clusterBkg: '#161b22',
                 clusterBorder: '#30363d',
                 titleColor: '#c9d1d9',
-                edgeLabelBackground: '#161b22'
-            }
+                edgeLabelBackground: '#161b22',
+                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif'
+            },
+            themeCSS: '.node rect, .node polygon { fill: #161b22; stroke: #30363d; } .edgeLabel { background-color: #161b22; }'
         });
 
         // Find mermaid code blocks and render them

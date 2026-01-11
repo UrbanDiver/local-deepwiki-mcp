@@ -1,99 +1,77 @@
-# Local DeepWiki MCP Repository
-=====================================================
+# Local DeepWiki MCP
 
-## Project Title and Description
----------------------------------
+**Local DeepWiki MCP** is a Python-based application that provides a local implementation of the DeepWiki Multi-Client Protocol (MCP) for managing and querying knowledge bases. This system enables local knowledge base management with support for various data sources and retrieval methods.
 
-The local-deepwiki-mcp repository is a Python-based project that aims to create a local deep learning model for Wikipedia data, specifically utilizing the MCP (Multilingual Corpora for Predicting) dataset.
+## Key Features
 
-## Key Features/Capabilities
-------------------------------
-
-*   **Deep Learning Model**: Develops a deep learning model to predict Wikipedia text based on the MCP dataset.
-*   **Local Dataset**: Works with a local copy of the MCP dataset to improve data availability and reduce dependency on external sources.
-*   **Data Preprocessing**: Includes data preprocessing techniques for text normalization, tokenization, and embedding generation.
+- **Local Knowledge Base Management**: Store and organize knowledge base content locally
+- **Multi-Client Protocol Support**: Implements MCP for handling multiple client connections
+- **Flexible Data Sources**: Supports various data input formats and sources
+- **Query Processing**: Advanced query handling and response generation
+- **Modular Architecture**: Well-structured codebase with clear separation of concerns
+- **Error Handling**: Comprehensive error management and logging capabilities
 
 ## Technology Stack
-------------------
 
-*   **Programming Language**: Python 3.x
-*   **Deep Learning Framework**: Not specified (likely TensorFlow or PyTorch)
-*   **Dataset**: MCP dataset
+- **Primary Language**: Python (28 files)
+- **Architecture**: Modular Python application
+- **Protocols**: Multi-Client Protocol (MCP)
+- **Data Management**: Local storage and retrieval
+- **Dependencies**: Standard Python libraries with potential external dependencies
 
-## Directory Structure Overview
----------------------------------
+## Directory Structure
 
-```markdown
+```
 local-deepwiki-mcp/
-|---- data/
-|    |---- mcp_dataset.csv
-|    |---- preprocessing_script.py
-|---- models/
-|    |---- deep_learning_model.py
-|    |---- model_utils.py
-|---- preprocess/
-|    |---- text_normalization.py
-|    |---- tokenization.py
-|    |---- embedding_generation.py
-|---- utils/
-|    |---- data_loading.py
-|---- main.py
-|---- config.json
-|---- requirements.txt
-|---- README.md (this file)
+├── src/                 # Main source code
+│   ├── core/           # Core functionality
+│   ├── clients/        # Client management
+│   ├── queries/        # Query processing
+│   ├── storage/        # Data storage modules
+│   └── utils/          # Utility functions
+├── tests/              # Test files
+├── docs/               # Documentation
+├── config/             # Configuration files
+├── data/               # Sample data
+└── requirements.txt    # Dependencies
 ```
 
 ## Quick Start Guide
--------------------
 
-### Step 1: Install Dependencies
+1. **Prerequisites**
+   - Python 3.7+
+   - Required dependencies (install via `pip install -r requirements.txt`)
 
-Run the following command to install required dependencies:
+2. **Installation**
+   ```bash
+   git clone https://github.com/local-deepwiki-mcp.git
+   cd local-deepwiki-mcp
+   pip install -r requirements.txt
+   ```
 
-```bash
-pip install -r requirements.txt
-```
+3. **Basic Usage**
+   ```python
+   from src.core.mcp_handler import MCPHandler
+   handler = MCPHandler()
+   # Configure and start the MCP service
+   ```
 
-### Step 2: Load Data and Preprocess Text
+4. **Running the Application**
+   ```bash
+   python -m src.main
+   ```
 
-Load the MCP dataset and preprocess text using the `preprocessing_script.py` file. This will generate preprocessed data in a suitable format for training.
+5. **Configuration**
+   - Modify configuration files in `/config/` directory
+   - Set up data sources in `/data/` directory
 
-```python
-from preprocessing_script import load_data, preprocess_text
+## Code Structure
 
-# Load data
-data = load_data()
+The codebase consists of 28 Python files with 172 code chunks organized into:
+- Core MCP implementation
+- Client connection management
+- Query processing modules
+- Storage and data handling
+- Utility functions and helpers
 
-# Preprocess text
-preprocessed_data = preprocess_text(data)
-```
-
-### Step 3: Train and Evaluate the Model
-
-Train the deep learning model using the preprocessed data. Use metrics such as accuracy or F1 score to evaluate the model's performance.
-
-```python
-from models.deep_learning_model import train_model, evaluate_model
-
-# Train model
-trained_model = train_model(preprocessed_data)
-
-# Evaluate model
-accuracy = evaluate_model(trained_model)
-```
-
-### Step 4: Use the Trained Model for Inference
-
-Use the trained model to predict text based on input data.
-
-```python
-from models.deep_learning_model import inference
-
-# Load pre-trained model
-loaded_model = train_model(preprocessed_data)
-
-# Make prediction
-prediction = inference(loaded_model, input_text)
-```
-
-Note: This is a high-level overview of the project. Depending on your specific use case and requirements, you may need to modify or extend this guide.
+The system follows a modular approach with clear separation between protocol handling, data management, and client interaction components.
