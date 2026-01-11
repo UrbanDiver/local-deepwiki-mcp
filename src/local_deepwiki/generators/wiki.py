@@ -7,8 +7,8 @@ from typing import Any
 
 from local_deepwiki.config import Config, get_config
 from local_deepwiki.core.vectorstore import VectorStore
-from local_deepwiki.models import CodeChunk, IndexStatus, WikiPage, WikiStructure
-from local_deepwiki.providers.base import LLMProvider
+from local_deepwiki.generators.crosslinks import EntityRegistry, add_cross_links
+from local_deepwiki.models import IndexStatus, WikiPage, WikiStructure
 from local_deepwiki.providers.llm import get_llm_provider
 
 
@@ -17,7 +17,9 @@ SYSTEM_PROMPT = """You are a technical documentation expert. Generate clear, con
 - Include code examples where helpful
 - Focus on explaining what the code does and how to use it
 - Be accurate and avoid speculation
-- Keep explanations practical and actionable"""
+- Keep explanations practical and actionable
+- When mentioning class or function names in prose explanations, write them as plain text (e.g., "The WikiGenerator class") rather than inline code, so they can be cross-linked
+- Only use backticks for code snippets, variable names in context, or when showing exact syntax"""
 
 
 def generate_class_diagram(chunks: list) -> str | None:
@@ -300,6 +302,9 @@ class WikiGenerator:
 
         self.llm = get_llm_provider(self.config.llm)
 
+        # Entity registry for cross-linking
+        self.entity_registry = EntityRegistry()
+
     async def generate(
         self,
         index_status: IndexStatus,
@@ -315,7 +320,7 @@ class WikiGenerator:
             WikiStructure with generated pages.
         """
         pages: list[WikiPage] = []
-        total_steps = 5  # overview, architecture, modules, files, dependencies
+        total_steps = 6  # overview, architecture, modules, files, dependencies, cross-links
 
         # Generate index page (overview)
         if progress_callback:
@@ -358,6 +363,16 @@ class WikiGenerator:
         deps_page = await self._generate_dependencies(index_status)
         pages.append(deps_page)
         self._write_page(deps_page)
+
+        # Apply cross-links to all pages
+        if progress_callback:
+            progress_callback("Adding cross-links", 5, total_steps)
+
+        pages = add_cross_links(pages, self.entity_registry)
+
+        # Re-write pages with cross-links
+        for page in pages:
+            self._write_page(page)
 
         if progress_callback:
             progress_callback("Wiki generation complete", total_steps, total_steps)
@@ -412,11 +427,13 @@ Format as markdown with proper headings."""
 {context}
 
 Generate documentation that includes:
-1. System architecture overview
-2. Key components and their responsibilities
-3. Data flow between components
+1. System architecture overview - describe how the system works at a high level
+2. Key components and their responsibilities - explain what each major class does and how they interact. When describing classes like WikiGenerator, VectorStore, CodeChunker, etc., write their names as plain text in sentences (not in backticks) so they can be cross-linked.
+3. Data flow between components - explain how data moves through the system, mentioning specific classes involved
 4. A Mermaid diagram showing the architecture (use ```mermaid code blocks)
-5. Design patterns used
+5. Design patterns used - describe patterns and which classes implement them
+
+IMPORTANT: Write class and component names as plain text in prose (e.g., "The WikiGenerator class uses VectorStore to retrieve code context") rather than using backticks, so they can be automatically linked to their documentation pages.
 
 Format as markdown with clear sections."""
 
@@ -476,10 +493,13 @@ Code context:
 {context}
 
 Generate documentation that includes:
-1. Module purpose and responsibilities
-2. Key classes/functions and their purposes
-3. Usage examples
-4. Dependencies on other modules
+1. Module purpose and responsibilities - explain what this module does
+2. Key classes and functions - describe each major class (e.g., WikiGenerator, VectorStore, CodeChunker) and what it does. Write class names as plain text in sentences.
+3. How components interact - explain how classes in this module work together and with other modules
+4. Usage examples (use code blocks for actual code)
+5. Dependencies - what other modules this depends on
+
+IMPORTANT: When mentioning class names in prose explanations, write them as plain text (e.g., "The CodeParser class handles parsing") rather than using backticks, so they can be cross-linked to their documentation.
 
 Format as markdown."""
 
@@ -588,11 +608,13 @@ Code contents:
 {context}
 
 Generate comprehensive documentation that includes:
-1. **File Overview**: Purpose and responsibility of this file
-2. **Classes**: Document each class with its purpose, key methods, and usage
-3. **Functions**: Document each function with parameters, return values, and purpose
-4. **Usage Examples**: Show how to use the main components
-5. **Dependencies**: What this file imports/depends on
+1. **File Overview**: Purpose and responsibility of this file. Explain how it relates to other components in the codebase.
+2. **Classes**: Document each class with its purpose, key methods, and usage. Describe relationships with other classes.
+3. **Functions**: Document each function with parameters, return values, and purpose.
+4. **Usage Examples**: Show how to use the main components (use code blocks for examples).
+5. **Related Components**: Mention other classes or modules this file works with, written as plain text in sentences (e.g., "This class works with VectorStore to store embeddings").
+
+IMPORTANT: When mentioning class names like VectorStore, WikiGenerator, CodeChunker, etc. in explanatory prose, write them as plain text without backticks so they can be automatically cross-linked. Only use backticks for actual code snippets.
 
 Format as markdown with clear sections. Be specific about the actual code.
 Do NOT include mermaid class diagrams - they will be auto-generated."""
@@ -621,6 +643,9 @@ Do NOT include mermaid class diagrams - they will be auto-generated."""
                 wiki_path = f"files/{'/'.join(parts[:-1])}/{file_path.stem}.md"
             else:
                 wiki_path = f"files/{file_path.stem}.md"
+
+            # Register entities for cross-linking
+            self.entity_registry.register_from_chunks(all_file_chunks, wiki_path)
 
             page = WikiPage(
                 path=wiki_path,
@@ -690,9 +715,11 @@ Do NOT include mermaid class diagrams - they will be auto-generated."""
 {context}
 
 Generate documentation that includes:
-1. External dependencies (libraries, packages)
-2. Internal module dependencies
-3. Any notable dependency patterns
+1. External dependencies (libraries, packages) - list third-party libraries and their purposes
+2. Internal module dependencies - explain how internal modules depend on each other. Describe which classes (like WikiGenerator, VectorStore, CodeChunker, RepositoryIndexer) use which other classes.
+3. Dependency patterns - describe notable patterns like dependency injection or the provider pattern, mentioning specific classes involved
+
+IMPORTANT: When mentioning class names in explanations, write them as plain text in sentences (e.g., "WikiGenerator depends on VectorStore for code retrieval") rather than using backticks, so they can be cross-linked.
 
 Do NOT include a Mermaid diagram - one will be auto-generated.
 
