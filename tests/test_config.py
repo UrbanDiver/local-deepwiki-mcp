@@ -30,7 +30,7 @@ class TestConfig:
         """Test LLM configuration."""
         config = Config()
 
-        assert config.llm.ollama.model == "llama3.2"
+        assert config.llm.ollama.model == "qwen3-coder:30b"
         assert config.llm.ollama.base_url == "http://localhost:11434"
         assert config.llm.anthropic.model == "claude-sonnet-4-20250514"
         assert config.llm.openai.model == "gpt-4o"

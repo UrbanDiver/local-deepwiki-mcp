@@ -18,6 +18,7 @@ class Language(str, Enum):
     JAVA = "java"
     C = "c"
     CPP = "cpp"
+    SWIFT = "swift"
 
 
 class ChunkType(str, Enum):

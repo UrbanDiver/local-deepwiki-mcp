@@ -27,6 +27,7 @@ FUNCTION_NODE_TYPES: dict[Language, set[str]] = {
     Language.JAVA: {"method_declaration", "constructor_declaration"},
     Language.C: {"function_definition"},
     Language.CPP: {"function_definition"},
+    Language.SWIFT: {"function_declaration", "init_declaration"},
 }
 
 CLASS_NODE_TYPES: dict[Language, set[str]] = {
@@ -38,6 +39,7 @@ CLASS_NODE_TYPES: dict[Language, set[str]] = {
     Language.JAVA: {"class_declaration", "interface_declaration", "enum_declaration"},
     Language.C: {"struct_specifier"},
     Language.CPP: {"class_specifier", "struct_specifier"},
+    Language.SWIFT: {"class_declaration", "struct_declaration", "protocol_declaration", "enum_declaration", "extension_declaration"},
 }
 
 IMPORT_NODE_TYPES: dict[Language, set[str]] = {
@@ -49,6 +51,7 @@ IMPORT_NODE_TYPES: dict[Language, set[str]] = {
     Language.JAVA: {"import_declaration"},
     Language.C: {"preproc_include"},
     Language.CPP: {"preproc_include"},
+    Language.SWIFT: {"import_declaration"},
 }
 
 

@@ -12,6 +12,7 @@ import tree_sitter_rust
 import tree_sitter_java
 import tree_sitter_c
 import tree_sitter_cpp
+import tree_sitter_swift
 from tree_sitter import Language, Parser, Node
 
 from local_deepwiki.models import Language as LangEnum, FileInfo
@@ -26,6 +27,7 @@ LANGUAGE_MODULES = {
     LangEnum.JAVA: tree_sitter_java,
     LangEnum.C: tree_sitter_c,
     LangEnum.CPP: tree_sitter_cpp,
+    LangEnum.SWIFT: tree_sitter_swift,
 }
 
 # File extension to language mapping
@@ -47,6 +49,7 @@ EXTENSION_MAP: dict[str, LangEnum] = {
     ".cxx": LangEnum.CPP,
     ".hpp": LangEnum.CPP,
     ".hxx": LangEnum.CPP,
+    ".swift": LangEnum.SWIFT,
 }
 
 
@@ -277,5 +280,15 @@ def get_docstring(node: Node, source: bytes, language: LangEnum) -> str | None:
             text = get_node_text(prev, source)
             if text.startswith("///"):
                 return text[3:].strip()
+
+    elif language == LangEnum.SWIFT:
+        # Swift doc comments (/// or /** */)
+        prev = node.prev_sibling
+        if prev and prev.type == "comment":
+            text = get_node_text(prev, source)
+            if text.startswith("///"):
+                return text[3:].strip()
+            elif text.startswith("/**"):
+                return text[3:-2].strip()
 
     return None

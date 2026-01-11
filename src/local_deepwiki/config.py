@@ -62,7 +62,7 @@ class ParsingConfig(BaseModel):
     """Code parsing configuration."""
 
     languages: list[str] = Field(
-        default=["python", "typescript", "javascript", "go", "rust", "java", "c", "cpp"],
+        default=["python", "typescript", "javascript", "go", "rust", "java", "c", "cpp", "swift"],
         description="Languages to parse"
     )
     max_file_size: int = Field(default=1048576, description="Max file size in bytes (1MB)")

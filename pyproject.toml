@@ -15,6 +15,7 @@ dependencies = [
     "tree-sitter-java>=0.23",
     "tree-sitter-c>=0.23",
     "tree-sitter-cpp>=0.23",
+    "tree-sitter-swift>=0.0.1",
     "lancedb>=0.15",
     "sentence-transformers>=3.0",
     "openai>=1.0",
