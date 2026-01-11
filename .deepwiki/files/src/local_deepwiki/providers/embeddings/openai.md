@@ -2,49 +2,44 @@
 
 ## File Overview
 
-This file provides an implementation of an embedding provider that uses the OpenAI API. It enables generating vector embeddings for text using OpenAI's embedding models, which are commonly used for semantic search, similarity calculations, and other NLP tasks.
+This file implements an embedding provider that uses the OpenAI API to generate embeddings for text. It provides an asynchronous interface for generating embeddings using OpenAI's embedding models.
 
 ## Classes
 
 ### `OpenAIEmbeddingProvider`
 
-**Purpose**: An embedding provider that interfaces with OpenAI's embedding API to generate vector representations of text.
+An embedding provider that uses OpenAI's API to generate text embeddings.
 
-**Key Methods**:
-- `__init__(model: str = "text-embedding-3-small", api_key: str | None = None)`: Initializes the provider with a model and API key
-- `embed(text: str) -> list[float]`: Generates embeddings for a given text (async)
+#### Constructor
 
-**Usage**:
 ```python
-provider = OpenAIEmbeddingProvider(model="text-embedding-3-small")
-embeddings = await provider.embed("Hello world")
+def __init__(self, model: str = "text-embedding-3-small", api_key: str | None = None)
 ```
 
-**Constructor Parameters**:
-- `model` (str): The OpenAI embedding model to use. Defaults to `"text-embedding-3-small"`
-- `api_key` (str | None): Optional API key. If not provided, uses the `OPENAI_API_KEY` environment variable
+Initialize the OpenAI embedding provider.
 
-## Functions
+**Parameters:**
+- `model` (str): OpenAI embedding model name. Defaults to "text-embedding-3-small"
+- `api_key` (str | None): Optional API key. Uses OPENAI_API_KEY environment variable if not provided
 
-### `__init__(self, model: str = "text-embedding-3-small", api_key: str | None = None)`
+**Attributes:**
+- `_model` (str): The embedding model name
+- `_client` (AsyncOpenAI): Async OpenAI client instance
+- `_dimension` (int): Embedding dimension size for the specified model
 
-Initializes the OpenAI embedding provider.
+#### Methods
 
-**Parameters**:
-- `model` (str): OpenAI embedding model name
-- `api_key` (str | None): Optional API key. Uses `OPENAI_API_KEY` environment variable if not provided
+```python
+async def embed(self, texts: list[str]) -> list[list[float]]
+```
 
-**Returns**: None
+Generate embeddings for a list of texts.
 
-### `embed(self, text: str) -> list[float]`
+**Parameters:**
+- `texts` (list[str]): List of text strings to embed
 
-Generates embeddings for the given text.
-
-**Parameters**:
-- `text` (str): The text to embed
-
-**Returns**:
-- `list[float]`: The embedding vector as a list of floats
+**Returns:**
+- `list[list[float]]`: List of embedding vectors, where each vector is a list of floats
 
 ## Usage Examples
 
@@ -53,40 +48,59 @@ Generates embeddings for the given text.
 ```python
 from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
 
-# Initialize with default model
+# Using default model and API key from environment
 provider = OpenAIEmbeddingProvider()
 
-# Generate embeddings
-embeddings = await provider.embed("Hello world")
-print(embeddings)
-```
-
-### Custom Model and API Key
-
-```python
-from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
-
-# Initialize with custom model and API key
+# Using custom model and API key
 provider = OpenAIEmbeddingProvider(
     model="text-embedding-3-large",
     api_key="your-api-key-here"
 )
-
-# Generate embeddings
-embeddings = await provider.embed("Hello world")
-print(embeddings)
 ```
 
-### Environment Variable Setup
+### Generating Embeddings
 
-```bash
-export OPENAI_API_KEY="your-api-key-here"
+```python
+import asyncio
+
+async def example():
+    provider = OpenAIEmbeddingProvider()
+    
+    texts = [
+        "Hello world",
+        "How are you?",
+        "OpenAI embeddings"
+    ]
+    
+    embeddings = await provider.embed(texts)
+    print(embeddings)
+
+# Run the async function
+asyncio.run(example())
 ```
 
 ## Dependencies
 
 - `os`: For accessing environment variables
-- `openai.AsyncOpenAI`: OpenAI client for asynchronous API calls
-- `local_deepwiki.providers.base.EmbeddingProvider`: Base class for embedding providers
+- `openai.AsyncOpenAI`: OpenAI asynchronous client
+- `local_deepwiki.providers.base.EmbeddingProvider`: Base embedding provider class
 
-**Note**: The code references `OPENAI_EMBEDDING_DIMENSIONS` which is expected to be defined elsewhere in the codebase, mapping model names to their respective embedding dimensions.
+The provider requires the `OPENAI_API_KEY` environment variable to be set if no explicit API key is provided during initialization.
+
+## Class Diagram
+
+```mermaid
+classDiagram
+    class OpenAIEmbeddingProvider {
+        -__init__()
+        +embed()
+        +get_dimension()
+        +name()
+    }
+```
+
+## See Also
+
+- [base](../base.md) - dependency
+- [openai](../llm/openai.md) - shares 3 dependencies
+- [anthropic](../llm/anthropic.md) - shares 2 dependencies

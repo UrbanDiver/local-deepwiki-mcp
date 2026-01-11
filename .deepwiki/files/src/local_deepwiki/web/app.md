@@ -1,80 +1,88 @@
-# DeepWiki Web Application
+# DeepWiki Web Application Documentation
 
 ## File Overview
 
-This file implements a Flask-based web server for serving a local wiki documentation system. It provides functionality to render markdown files as HTML pages, organize wiki structure, and serve content through a web interface.
+This file implements a Flask-based web application for serving a local wiki built with DeepWiki. It provides functionality to render markdown pages, build navigation structures, and serve the wiki content via a web interface.
 
 ## Dependencies
 
-- `flask`: Web framework for creating the server
-- `markdown`: Markdown to HTML conversion
-- `argparse`: Command-line argument parsing
-- `pathlib.Path`: File system path manipulation
+- `json`: For JSON serialization
+- `pathlib.Path`: For path manipulation
+- `flask.Flask`, `render_template_string`, `abort`, `redirect`, `url_for`, `jsonify`: Flask web framework components
+- `markdown`: For rendering markdown content to HTML
+- `argparse`: For command-line argument parsing
 
 ## Functions
 
 ### `run_server(wiki_path: str | Path, host: str = "127.0.0.1", port: int = 8080, debug: bool = False)`
 
-**Purpose**: Starts the DeepWiki web server with specified configuration.
+**Purpose**: Starts the DeepWiki web server.
 
 **Parameters**:
 - `wiki_path`: Path to the wiki directory
-- `host`: Host address to bind to (default: "127.0.0.1")
-- `port`: Port number to bind to (default: 8080)
+- `host`: Host to bind to (default: "127.0.0.1")
+- `port`: Port to bind to (default: 8080)
 - `debug`: Enable debug mode (default: False)
 
-**Usage**:
+**Returns**: None
+
+**Example**:
 ```python
 run_server("/path/to/wiki", host="0.0.0.0", port=8080, debug=True)
 ```
 
 ### `create_app(wiki_path: str | Path) -> Flask`
 
-**Purpose**: Creates and configures a Flask application with the specified wiki path.
+**Purpose**: Creates and configures a Flask application instance with the specified wiki path.
 
 **Parameters**:
 - `wiki_path`: Path to the wiki directory
 
-**Returns**: Configured Flask application instance
+**Returns**: Flask application instance
 
-**Usage**:
+**Example**:
 ```python
 app = create_app("/path/to/wiki")
 ```
 
 ### `main()`
 
-**Purpose**: Command-line entry point for running the server.
+**Purpose**: Command-line entry point for running the web server.
 
 **Parameters**: None
 
-**Usage**:
+**Returns**: None
+
+**Example**:
 ```bash
 python app.py /path/to/wiki --host 0.0.0.0 --port 8080 --debug
 ```
 
 ### `view_page(path: str)`
 
-**Purpose**: Renders a specific wiki page as HTML.
+**Purpose**: Renders a specific wiki page for display in the browser.
 
 **Parameters**:
-- `path`: Relative path to the markdown file
+- `path`: Relative path to the wiki page
 
-**Returns**: Rendered HTML page
+**Returns**: Rendered HTML page or HTTP error
 
-**Usage**:
+**Example**:
 ```python
-# Called internally by Flask routes
+# This function is used internally by Flask routes
+# Access via: http://localhost:8080/page/path
 ```
 
 ### `get_wiki_structure(wiki_path: Path)`
 
-**Purpose**: Analyzes the wiki directory structure to build navigation information.
+**Purpose**: Builds a structure of all wiki pages and their sections.
 
 **Parameters**:
 - `wiki_path`: Path to the wiki directory
 
-**Returns**: Tuple of (pages, sections) for navigation
+**Returns**: Tuple of (pages, sections) representing the wiki structure
+
+**Note**: This function is referenced but not shown in the provided code.
 
 ### `extract_title(file_path: Path)`
 
@@ -85,14 +93,29 @@ python app.py /path/to/wiki --host 0.0.0.0 --port 8080 --debug
 
 **Returns**: Title string extracted from the file
 
-### `render_markdown(content: str)`
+**Note**: This function is referenced but not shown in the provided code.
+
+### `render_markdown(content: str) -> str`
 
 **Purpose**: Converts markdown content to HTML.
 
 **Parameters**:
-- `content`: Markdown text content
+- `content`: Markdown content as string
 
-**Returns**: HTML formatted content
+**Returns**: HTML content as string
+
+**Note**: This function is referenced but not shown in the provided code.
+
+### `build_breadcrumb(path: str) -> list`
+
+**Purpose**: Builds breadcrumb navigation for a given path.
+
+**Parameters**:
+- `path`: Path to build breadcrumb for
+
+**Returns**: List of breadcrumb items
+
+**Note**: This function is referenced but not shown in the provided code.
 
 ### `index()`
 
@@ -102,38 +125,63 @@ python app.py /path/to/wiki --host 0.0.0.0 --port 8080 --debug
 
 **Returns**: Rendered HTML index page
 
+**Note**: This function is referenced but not shown in the provided code.
+
+### `search_json()`
+
+**Purpose**: Provides JSON endpoint for wiki search functionality.
+
+**Parameters**: None
+
+**Returns**: JSON response with search results
+
+**Note**: This function is referenced but not shown in the provided code.
+
 ## Usage Examples
 
-### Starting the Server
+### Running the Server
 
-```python
-# Using CLI
-python app.py /path/to/.deepwiki --host 0.0.0.0 --port 8080
+```bash
+# Run with default settings
+python app.py
 
-# Using Python API
-from src.local_deepwiki.web.app import run_server
-run_server("/path/to/wiki", host="0.0.0.0", port=8080, debug=True)
+# Run with custom path and settings
+python app.py /path/to/wiki --host 0.0.0.0 --port 8080 --debug
 ```
 
-### Creating a Custom App
+### Creating an Application Instance
 
 ```python
-from src.local_deepwiki.web.app import create_app
-from pathlib import Path
+from app import create_app
 
-app = create_app(Path("/path/to/wiki"))
-# Configure additional routes or settings as needed
+app = create_app("/path/to/wiki")
 ```
 
-## Key Features
+### Server Configuration
 
-- **Markdown Rendering**: Converts markdown files to HTML with proper formatting
-- **Directory Navigation**: Builds navigation structure from wiki directory
-- **Error Handling**: Proper HTTP error responses for missing pages or server issues
-- **CLI Interface**: Command-line interface for easy server startup
-- **Breadcrumbs**: Navigation breadcrumbs for page hierarchy
-- **Debug Mode**: Support for Flask debug mode with detailed error reporting
+```python
+from app import run_server
+
+run_server(
+    wiki_path="/path/to/wiki",
+    host="0.0.0.0",
+    port=8080,
+    debug=True
+)
+```
 
 ## Notes
 
-The application expects a `.deepwiki` directory structure containing markdown files. The `WIKI_PATH` global variable is used to store the configured wiki path for all routes and functions.
+- The `WIKI_PATH` global variable is set during `create_app()` and used by `view_page()`
+- All functions are designed to work within the Flask application context
+- Error handling is implemented with HTTP abort codes (404 for not found, 500 for internal errors)
+- The application expects markdown files with `.md` extension in the wiki directory
+- Breadcrumb navigation is built dynamically based on the requested page path
+
+## See Also
+
+- [test_web](../../../tests/test_web.md) - uses this
+- [test_search](../../../tests/test_search.md) - uses this
+- [search](../generators/search.md) - shares 2 dependencies
+- [vectorstore](../core/vectorstore.md) - shares 2 dependencies
+- [indexer](../core/indexer.md) - shares 2 dependencies

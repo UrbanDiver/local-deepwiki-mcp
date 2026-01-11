@@ -1,70 +1,56 @@
 # Tests Module Documentation
 
-## Overview
+## Module Purpose and Responsibilities
 
-The `tests` module contains all unit tests for the `local_deepwiki` package. It ensures the correct functionality of core components including code parsing, chunking, and configuration management.
+The tests module contains all unit and integration tests for the local_deepwiki package. It ensures that core functionality works correctly and helps maintain code quality by validating behavior across different components like parsing, chunking, cross-linking, configuration, and web application features.
 
-## Module Structure
+## Key Classes and Functions
 
-```
-tests/
-├── __init__.py          # Empty package initializer
-├── test_parser.py       # Tests for CodeParser and node helper functions
-├── test_chunker.py      # Tests for CodeChunker
-└── test_config.py       # Tests for Config class
-```
+### TestCodeParser
+The TestCodeParser class tests the CodeParser class which handles parsing code files and detecting programming languages. It verifies that the parser correctly identifies Python files and extracts language information from file paths.
 
-## Key Components
+### TestNodeHelpers
+The TestNodeHelpers class tests helper functions for working with parsed code nodes. It ensures that text can be correctly extracted from parsed code nodes and that node names are properly retrieved.
 
-### 1. `TestCodeParser` (tests/test_parser.py)
+### TestEntityRegistry
+The TestEntityRegistry class tests the entity registration functionality, which manages how code entities (functions, classes, etc.) are registered and looked up for cross-linking. It includes tests for registering entities with aliases, skipping short/private/excluded names, and handling camelCase aliases.
 
-Test suite for the `CodeParser` class responsible for parsing source code and detecting programming languages.
+### TestCrossLinker
+The TestCrossLinker class tests the cross-linking functionality that adds links between related entities in documentation. It ensures proper linking behavior in prose, code blocks, and various naming scenarios, including qualified names, bold text, and existing links.
 
-#### Methods:
-- `setup_method()`: Initializes a `CodeParser` instance for each test
-- `test_detect_language_python()`: Verifies Python language detection
-- `test_get_node_text()`: Tests extracting text from AST nodes
+### TestRelationshipAnalyzer
+The TestRelationshipAnalyzer class tests the relationship analysis functionality that determines how files relate to each other in the documentation. It ensures that relationships between files are correctly identified and analyzed.
 
-### 2. `TestNodeHelpers` (tests/test_parser.py)
+### TestBuildFileToWikiMap
+The TestBuildFileToWikiMap class tests the functionality that maps file paths to wiki pages, which is essential for organizing documentation content.
 
-Tests for helper functions that work with AST nodes.
+### TestGenerateSeeAlsoSection
+The TestGenerateSeeAlsoSection class tests the generation of "See Also" sections that link to related documentation.
 
-#### Methods:
-- `setup_method()`: Initializes a `CodeParser` instance
-- `test_get_node_text()`: Tests extracting text from nodes
+### TestConfig
+The TestConfig class tests the configuration system, ensuring that default values are correctly set and that configuration can be properly loaded and modified.
 
-### 3. `TestCodeChunker` (tests/test_chunker.py)
+### TestCodeChunker
+The TestCodeChunker class tests the code chunking functionality that splits code files into manageable chunks for processing and embedding. It verifies chunking behavior for different languages, line number handling, and unique ID generation.
 
-Test suite for the `CodeChunker` class that splits source code into manageable chunks.
+### TestBuildBreadcrumb
+The TestBuildBreadcrumb class tests the breadcrumb navigation building functionality in the web application.
 
-#### Methods:
-- `setup_method()`: Initializes a `CodeChunker` instance
-- `test_chunk_python_file()`: Tests chunking Python files
-- `test_chunk_extracts_function_names()`: Verifies function name extraction
-- `test_chunk_extracts_class_names()`: Verifies class name extraction
-- `test_chunk_extracts_docstrings()`: Tests docstring extraction
-- `test_chunk_javascript_file()`: Tests chunking JavaScript files
-- `test_chunk_sets_line_numbers()`: Verifies line number assignment
-- `test_chunk_generates_unique_ids()`: Tests unique ID generation
-- `test_chunk_unsupported_file_returns_empty()`: Tests handling of unsupported files
+### TestFlaskApp
+The TestFlaskApp class tests the Flask web application setup and behavior.
 
-### 4. `TestConfig` (tests/test_config.py)
+## How Components Interact
 
-Test suite for the `Config` class that manages application configuration.
+The test suite exercises components in isolation and in combination. For example:
 
-#### Methods:
-- `test_default_config()`: Verifies default configuration values
-- `test_embedding_config()`: Tests embedding configuration
-- `test_llm_config()`: Tests LLM configuration
-- `test_parsing_config()`: Tests parsing configuration
-- `test_chunking_config()`: Tests chunking configuration
-- `test_get_config()`: Tests configuration retrieval
-- `test_set_config()`: Tests configuration setting
+1. The CodeParser and CodeChunker work together in the parsing pipeline
+2. The EntityRegistry and CrossLinker collaborate to create meaningful links between related code entities
+3. Configuration tests ensure that all components receive correct settings
+4. The web application tests validate that the UI components work correctly with the backend processing
 
 ## Usage Examples
 
 ### Running Tests
-
 ```bash
 # Run all tests
 pytest tests/
@@ -80,64 +66,24 @@ pytest tests/test_parser.py::TestCodeParser::test_detect_language_python
 ```
 
 ### Example Test Structure
-
 ```python
-def test_chunk_python_file(self, tmp_path):
-    """Test chunking a Python file."""
-    code = '''"""Module docstring."""
-
-import os
-from pathlib import Path
-
-def hello(name: str) -> str:
-    """Say hello to someone."""
-    return f"Hello, {name}!"
-
-class Greeter:
-    """A class that greets people."""
-
-    def __init__(self, prefix: str = "Hello"):
-        self.prefix = prefix
-
-    def greet(self, name: str) -> str:
-        """Greet someone."""
-        return f"{self.prefix}, {name}!"
-'''
-    
-    # Create temporary file
-    file_path = tmp_path / "test.py"
-    file_path.write_text(code)
-    
-    # Chunk the file
-    chunks = self.chunker.chunk_file(file_path)
-    
-    # Verify results
-    assert len(chunks) > 0
-    assert chunks[0].type == ChunkType.FUNCTION
+def test_detect_language_python(self):
+    """Test Python language detection."""
+    assert self.parser.detect_language(Path("test.py")) == Language.PYTHON
+    assert self.parser.detect_language(Path("test.pyi")) == Language.PYTHON
 ```
 
 ## Dependencies
 
-### Internal Dependencies
-- `local_deepwiki.core.parser`: `CodeParser` class
-- `local_deepwiki.core.chunker`: `CodeChunker` class
-- `local_deepwiki.config`: `Config` class
-- `local_deepwiki.models`: `Language`, `ChunkType` enums
+This module depends on:
+- `local_deepwiki.core.parser` - for CodeParser functionality
+- `local_deepwiki.models` - for Language and other data models
+- `local_deepwiki.config` - for configuration testing
+- `local_deepwiki.web.app` - for web application testing
+- `local_deepwiki.generators.see_also` - for see also section generation
+- `pytest` - for testing framework
+- `tempfile` and `pathlib` - for file system operations
+- `local_deepwiki.chunker` - for chunking functionality
+- `local_deepwiki.crosslinks` - for cross-linking functionality
 
-### External Dependencies
-- `pytest`: Testing framework
-- `pathlib`: Path handling
-- `tempfile`: Temporary file handling
-
-## Test Coverage
-
-The test suite covers:
-- Language detection for various file extensions
-- AST parsing and node text extraction
-- Code chunking with proper function/class identification
-- Configuration management and validation
-- Edge cases like unsupported file types
-- Line number and unique ID assignment
-- Documentation string extraction
-
-All tests are designed to be independent and run in any order.
+The tests module serves as the quality assurance layer for the entire local_deepwiki package, ensuring that each component functions correctly and as expected.

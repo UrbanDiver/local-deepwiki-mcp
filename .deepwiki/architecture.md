@@ -1,150 +1,95 @@
 # System Architecture Documentation
 
-## Overview
+## System Overview
 
-This document describes the architecture of the Local DeepWiki system, a documentation generation tool that leverages code analysis, vector search, and LLMs to create structured documentation including architecture diagrams and module overviews.
+The Local DeepWiki system is a documentation generation tool that leverages vector search and LLMs to automatically create comprehensive documentation for codebases. It works by indexing code chunks, storing them in a vector database, and then using LLMs to generate structured documentation including architecture diagrams, module overviews, and class documentation.
 
 ## Key Components and Responsibilities
 
-### 1. Configuration Management (`src/local_deepwiki/config.py`)
-- **Responsibility**: Centralized configuration management for all system components
-- **Details**:
-  - Manages LLM and embedding provider configurations
-  - Supports multiple providers (Ollama, Anthropic, OpenAI)
-  - Provides type-safe configuration models using Pydantic
-  - Handles configuration loading and persistence
+### WikiGenerator
+The WikiGenerator class is the core component responsible for generating all documentation. It orchestrates the entire documentation generation process by:
+- Managing the index status and tracking what has been generated
+- Using VectorStore to search for relevant code chunks
+- Generating different types of documentation pages including architecture, modules, and class diagrams
+- Rendering Mermaid diagrams for visual representation of system structure
 
-### 2. Data Models (`src/local_deepwiki/models.py`)
-- **Responsibility**: Define data structures used throughout the system
-- **Details**:
-  - `CodeChunk`: Represents code segments with file path and content
-  - `IndexStatus`: Tracks indexing progress and status
-  - `WikiPage`: Represents generated documentation pages
-  - `SearchResult`: Encapsulates search results from vector store
+### VectorStore
+The VectorStore class handles all vector-based operations including:
+- Storing code chunks with their embeddings
+- Searching for relevant code chunks based on natural language queries
+- Managing the similarity search for context retrieval during documentation generation
 
-### 3. Providers (`src/local_deepwiki/providers/`)
-- **Responsibility**: Abstract interfaces for external services
-- **Details**:
-  - `EmbeddingProvider`: Handles vector embeddings for semantic search
-  - `LLMProvider`: Interfaces with large language models for generation
-  - Specific implementations:
-    - `OllamaProvider`: Connects to local Ollama LLMs
-    - `AnthropicProvider`: Connects to Anthropic models
-    - `OpenAIProvider`: Connects to OpenAI models
+### CodeChunker
+The CodeChunker class is responsible for:
+- Breaking down source code into manageable chunks
+- Processing code files and extracting meaningful code segments
+- Creating CodeChunk objects that contain file paths, content, and metadata
 
-### 4. Vector Store (`src/local_deepwiki/vector_store/`)
-- **Responsibility**: Semantic search and retrieval of code chunks
-- **Details**:
-  - Stores code chunks with vector embeddings
-  - Enables semantic search for documentation generation
-  - Supports efficient retrieval of relevant code for diagrams
+### LLMProvider and EmbeddingProvider
+These abstract base classes define the interface for language model and embedding providers:
+- LLMProvider handles natural language generation tasks
+- EmbeddingProvider handles vector embeddings for code chunks
+- Concrete implementations exist for Ollama, Anthropic, and OpenAI providers
 
-### 5. Documentation Generators (`src/local_deepwiki/generators/`)
-- **Responsibility**: Generate various types of documentation and diagrams
-- **Details**:
-  - `diagrams.py`: Generates Mermaid diagrams (architecture, class, dependency, file tree)
-  - `wiki.py`: Generates wiki pages including architecture overviews and module indexes
+### Config
+The Config class manages all system configuration:
+- LLM configuration including provider selection and model settings
+- Embedding configuration for different embedding providers
+- Output settings for generated documentation
 
-### 6. Web Interface (`src/local_deepwiki/web/`)
-- **Responsibility**: Web-based UI for documentation viewing
-- **Details**:
-  - Empty placeholder for future web interface implementation
+## Data Flow Between Components
 
-## Data Flow
+1. **Indexing Phase**: 
+   - CodeChunker processes source code files and creates CodeChunk objects
+   - These chunks are stored in VectorStore with their embeddings
+   - IndexStatus tracks the indexing progress
 
-```mermaid
-graph TD
-    A[Code Repository] --> B[Code Chunking & Indexing]
-    B --> C[Vector Store]
-    C --> D[Semantic Search]
-    D --> E[Documentation Generator]
-    E --> F[Mermaid Diagrams]
-    E --> G[Wiki Pages]
-    G --> H[Web Interface]
-    F --> H
-    I[Configuration] --> J[LLM Provider]
-    I --> K[Embedding Provider]
-    J --> E
-    K --> D
-```
+2. **Documentation Generation Phase**:
+   - WikiGenerator uses IndexStatus to determine what needs to be generated
+   - It queries VectorStore for relevant code chunks using natural language queries
+   - Context from search results is passed to LLM providers for documentation generation
+   - Mermaid diagrams are generated by DiagramGenerator classes
+   - Generated pages are saved to the wiki directory structure
+
+3. **Configuration Management**:
+   - Config class loads and provides configuration to all components
+   - Providers (LLMProvider, EmbeddingProvider) use configuration to initialize connections
 
 ## Architecture Diagram
 
 ```mermaid
 graph TD
-    subgraph "Local DeepWiki System"
-        A[Code Repository] --> B[Code Chunker]
-        B --> C[Vector Store]
-        C --> D[Semantic Search]
-        D --> E[Documentation Generator]
-        E --> F[Mermaid Diagrams]
-        E --> G[Wiki Pages]
-        G --> H[Web Interface]
-    end
-
-    subgraph "External Services"
-        I[LLM Provider] --> E
-        J[Embedding Provider] --> D
-    end
-
-    subgraph "Configuration"
-        K[Config Manager] --> I
-        K --> J
-        K --> E
-    end
-
-    style A fill:#f9f,stroke:#333
-    style B fill:#ff9,stroke:#333
-    style C fill:#ff9,stroke:#333
-    style D fill:#ff9,stroke:#333
-    style E fill:#9ff,stroke:#333
-    style F fill:#9ff,stroke:#333
-    style G fill:#9ff,stroke:#333
-    style H fill:#9ff,stroke:#333
-    style I fill:#f99,stroke:#333
-    style J fill:#f99,stroke:#333
-    style K fill:#ccc,stroke:#333
+    A[Source Code Files] --> B[CodeChunker]
+    B --> C[VectorStore]
+    C --> D[WikiGenerator]
+    D --> E[LLMProvider]
+    D --> F[DiagramGenerator]
+    E --> G[Generated Wiki Pages]
+    F --> H[Mermaid Diagrams]
+    C --> I[Search Results]
+    I --> D
+    D --> J[Config]
+    J --> E
+    J --> C
+    J --> B
 ```
 
 ## Design Patterns Used
 
-### 1. Strategy Pattern
-- **Usage**: Multiple LLM and embedding provider implementations
-- **Benefit**: Enables easy switching between different providers without changing core logic
+### Strategy Pattern
+The system uses the Strategy pattern through the LLMProvider and EmbeddingProvider abstract classes. Different concrete implementations (OllamaProvider, AnthropicProvider, OpenAIProvider) can be used interchangeably based on configuration.
 
-### 2. Factory Pattern
-- **Usage**: `get_llm_provider()` and `get_embedding_provider()` functions
-- **Benefit**: Centralized creation logic for provider instances
+### Factory Pattern
+The system uses factory methods to create provider instances based on configuration. This allows for easy extension with new providers without modifying existing code.
 
-### 3. Abstract Base Classes
-- **Usage**: `LLMProvider` and `EmbeddingProvider` base classes
-- **Benefit**: Ensures consistent interfaces across different implementations
+### Singleton Pattern
+The Config class implements a singleton pattern through get_config and set_config functions, ensuring consistent configuration access throughout the application.
 
-### 4. Configuration-Driven Design
-- **Usage**: All components configured via `Config` models
-- **Benefit**: Flexible system that can be easily adapted to different environments
+### Observer Pattern
+IndexStatus acts as an observer pattern implementation, tracking the state of indexing and documentation generation processes.
 
-### 5. Asynchronous Programming
-- **Usage**: All I/O operations use async/await
-- **Benefit**: Efficient handling of network requests and database operations
+### Template Method Pattern
+The WikiGenerator class implements a template method pattern where specific generation steps are defined in abstract methods that concrete implementations can override.
 
-### 6. Dependency Injection
-- **Usage**: Providers are injected into generators and other components
-- **Benefit**: Loose coupling and easier testing
-
-## Integration Points
-
-### External Services
-- **LLM Services**: Ollama, Anthropic, OpenAI
-- **Embedding Services**: Local (sentence-transformers), OpenAI
-
-### Data Sources
-- **Code Repository**: Source of code chunks for analysis
-- **Vector Store**: Persistent storage for code embeddings
-
-### Output Targets
-- **Wiki Pages**: Structured documentation in Markdown
-- **Mermaid Diagrams**: Visual representations of architecture and relationships
-- **Web Interface**: User-facing documentation viewer
-
-This architecture supports scalable documentation generation while maintaining flexibility for different LLM and embedding provider configurations.
+### Repository Pattern
+VectorStore implements a repository pattern for code chunks, providing a clean interface for storage and retrieval operations while abstracting the underlying storage mechanism.

@@ -2,76 +2,56 @@
 
 ## File Overview
 
-This file implements the Anthropic LLM provider for the local_deepwiki project. It provides an asynchronous interface to interact with Anthropic's Claude language models through the `anthropic` Python SDK. The provider extends the base `LLMProvider` class to integrate Anthropic's API into the project's LLM infrastructure.
+This file implements the Anthropic LLM provider for the local_deepwiki system. It provides an asynchronous interface to interact with Anthropic's Claude models through their API, extending the base LLMProvider class to integrate with the system's provider architecture.
 
 ## Classes
 
-### AnthropicProvider
+### `AnthropicProvider`
 
-The `AnthropicProvider` class implements the LLM provider interface specifically for Anthropic's Claude models. It handles authentication, model selection, and asynchronous request execution.
+**Purpose**: 
+An asynchronous provider that implements the LLMProvider interface for Anthropic's Claude models. This class handles authentication, model selection, and asynchronous generation of responses from Anthropic's API.
 
-**Key Methods:**
+**Key Methods**:
 
-- `__init__(self, api_key: str = None)`: Initializes the provider with an optional API key
-- `stream(self, prompt: str, model: str = "claude-3-haiku-20240307") -> AsyncIterator[str]`: Streams model responses asynchronously
-- `complete(self, prompt: str, model: str = "claude-3-haiku-20240307") -> str`: Returns complete model responses
+- `__init__(self, model: str = "claude-3-haiku-20240307")`: Initializes the provider with a default model name
+- `generate(self, prompt: str) -> AsyncIterator[str]`: Asynchronously generates text responses from the LLM
+- `get_model_name(self) -> str`: Returns the name of the configured model
 
-**Usage:**
+**Usage**:
 ```python
-provider = AnthropicProvider(api_key="your-api-key")
-async for chunk in provider.stream("Hello, world!"):
+provider = AnthropicProvider(model="claude-3-sonnet-20240229")
+async for chunk in provider.generate("Hello, world!"):
     print(chunk)
 ```
 
 ## Functions
 
-### Constructor: `__init__(self, api_key: str = None)`
+### `__init__(self, model: str = "claude-3-haiku-20240307")`
 
-Initializes the Anthropic provider with an API key.
+**Parameters**:
+- `model` (str): The name of the Anthropic model to use (default: "claude-3-haiku-20240307")
 
-**Parameters:**
-- `api_key` (str, optional): Anthropic API key. If not provided, will attempt to read from `ANTHROPIC_API_KEY` environment variable.
+**Purpose**: 
+Initializes the Anthropic provider with the specified model and sets up the AsyncAnthropic client using the API key from the environment.
 
-**Example:**
-```python
-provider = AnthropicProvider()
-# or
-provider = AnthropicProvider(api_key="sk-ant-...")
-```
+### `generate(self, prompt: str) -> AsyncIterator[str]`
 
-### Method: `stream(self, prompt: str, model: str = "claude-3-haiku-20240307") -> AsyncIterator[str]`
+**Parameters**:
+- `prompt` (str): The input prompt to send to the LLM
 
-Asynchronously streams responses from the Anthropic model.
+**Return Value**:
+- `AsyncIterator[str]`: An asynchronous iterator that yields response chunks from the LLM
 
-**Parameters:**
-- `prompt` (str): The input prompt to send to the model
-- `model` (str): The Anthropic model to use (default: "claude-3-haiku-20240307")
+**Purpose**: 
+Generates text responses from the configured Anthropic model asynchronously, yielding response chunks as they become available.
 
-**Returns:**
-- `AsyncIterator[str]`: Async iterator yielding response chunks
+### `get_model_name(self) -> str`
 
-**Example:**
-```python
-async for chunk in provider.stream("Tell me a story"):
-    print(chunk)
-```
+**Return Value**:
+- `str`: The name of the configured Anthropic model
 
-### Method: `complete(self, prompt: str, model: str = "claude-3-haiku-20240307") -> str`
-
-Synchronously returns the complete response from the Anthropic model.
-
-**Parameters:**
-- `prompt` (str): The input prompt to send to the model
-- `model` (str): The Anthropic model to use (default: "claude-3-haiku-20240307")
-
-**Returns:**
-- `str`: Complete model response
-
-**Example:**
-```python
-response = provider.complete("Hello, world!")
-print(response)
-```
+**Purpose**: 
+Returns the name of the model currently configured for use with this provider.
 
 ## Usage Examples
 
@@ -79,39 +59,53 @@ print(response)
 ```python
 from local_deepwiki.providers.llm.anthropic import AnthropicProvider
 
-# Initialize provider
+# Initialize provider with default model
 provider = AnthropicProvider()
 
-# Stream response
-async for chunk in provider.stream("What is AI?"):
+# Generate response
+async for chunk in provider.generate("What is the capital of France?"):
     print(chunk)
-
-# Get complete response
-response = provider.complete("What is AI?")
-print(response)
 ```
 
-### With Custom API Key
+### Custom Model Selection
 ```python
-provider = AnthropicProvider(api_key="sk-ant-...")
+from local_deepwiki.providers.llm.anthropic import AnthropicProvider
 
-async for chunk in provider.stream("Hello", model="claude-3-sonnet-20240229"):
-    print(chunk)
+# Initialize provider with specific model
+provider = AnthropicProvider(model="claude-3-sonnet-20240229")
+
+# Get model name
+model_name = provider.get_model_name()
+print(f"Using model: {model_name}")
 ```
 
 ## Dependencies
 
 This file depends on:
+- `os`: For accessing environment variables (specifically `ANTHROPIC_API_KEY`)
+- `typing.AsyncIterator`: For type hints of asynchronous iterators
+- `anthropic.AsyncAnthropic`: The official Anthropic SDK for asynchronous API calls
+- `local_deepwiki.providers.base.LLMProvider`: Base class that this provider implements
 
-1. **Standard Library:**
-   - `os`: For reading environment variables
-   - `typing.AsyncIterator`: For type hints
+**Environment Requirements**:
+- `ANTHROPIC_API_KEY` must be set in the environment variables for API authentication
 
-2. **External Libraries:**
-   - `anthropic.AsyncAnthropic`: Anthropic's asynchronous client
-   - `local_deepwiki.providers.base.LLMProvider`: Base provider interface
+## Class Diagram
 
-3. **Environment Variables:**
-   - `ANTHROPIC_API_KEY`: Required for authentication (read automatically if not passed to constructor)
+```mermaid
+classDiagram
+    class AnthropicProvider {
+        -__init__()
+        +generate()
+        +generate_stream()
+        +name()
+    }
+    AnthropicProvider --|> LLMProvider
+```
 
-The provider requires the `anthropic` Python package to be installed in the environment.
+## See Also
+
+- [base](../base.md) - dependency
+- [openai](openai.md) - shares 3 dependencies
+- [config](../../config.md) - shares 2 dependencies
+- [vectorstore](../../core/vectorstore.md) - shares 2 dependencies

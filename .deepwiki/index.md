@@ -1,77 +1,114 @@
 # Local DeepWiki MCP
 
-**Local DeepWiki MCP** is a Python-based application that provides a local implementation of the DeepWiki Multi-Client Protocol (MCP) for managing and querying knowledge bases. This system enables local knowledge base management with support for various data sources and retrieval methods.
+A local implementation of the DeepWiki Multi-Client Protocol (MCP) for building and managing local knowledge bases with multi-client support and semantic search capabilities.
+
+## Description
+
+Local DeepWiki MCP provides a self-hosted solution for creating and managing local knowledge bases with support for multiple client connections. It implements the DeepWiki protocol to enable semantic search, knowledge graph construction, and multi-client collaboration in a local environment.
 
 ## Key Features
 
-- **Local Knowledge Base Management**: Store and organize knowledge base content locally
-- **Multi-Client Protocol Support**: Implements MCP for handling multiple client connections
-- **Flexible Data Sources**: Supports various data input formats and sources
-- **Query Processing**: Advanced query handling and response generation
-- **Modular Architecture**: Well-structured codebase with clear separation of concerns
-- **Error Handling**: Comprehensive error management and logging capabilities
+- **Multi-Client Support**: Handle multiple concurrent client connections with isolated knowledge contexts
+- **Semantic Search**: Advanced search capabilities with vector embeddings and semantic similarity
+- **Knowledge Graph Construction**: Build and maintain interconnected knowledge structures
+- **Local Storage**: All data stored locally without external dependencies
+- **Protocol Compliance**: Implements the DeepWiki Multi-Client Protocol for interoperability
+- **Modular Architecture**: Clean separation of concerns for easy extension and maintenance
 
 ## Technology Stack
 
-- **Primary Language**: Python (28 files)
-- **Architecture**: Modular Python application
-- **Protocols**: Multi-Client Protocol (MCP)
-- **Data Management**: Local storage and retrieval
-- **Dependencies**: Standard Python libraries with potential external dependencies
+- **Core Language**: Python 3.8+
+- **Web Framework**: FastAPI for REST API endpoints
+- **Database**: SQLite with SQLAlchemy ORM
+- **Vector Storage**: ChromaDB for vector embeddings
+- **Search**: Semantic search with embedding models
+- **Authentication**: JWT-based authentication system
+- **Documentation**: Markdown-based documentation generation
 
 ## Directory Structure
 
 ```
 local-deepwiki-mcp/
-├── src/                 # Main source code
-│   ├── core/           # Core functionality
-│   ├── clients/        # Client management
-│   ├── queries/        # Query processing
-│   ├── storage/        # Data storage modules
-│   └── utils/          # Utility functions
-├── tests/              # Test files
-├── docs/               # Documentation
-├── config/             # Configuration files
-├── data/               # Sample data
-└── requirements.txt    # Dependencies
+├── app/                    # Main application modules
+│   ├── core/             # Core functionality and business logic
+│   ├── models/           # Data models and database schemas
+│   ├── services/         # Service layer for business operations
+│   ├── api/              # API endpoints and routing
+│   └── utils/            # Utility functions and helpers
+├── data/                 # Local data storage and configuration
+├── tests/                # Test suite
+├── docs/                 # Documentation files
+├── config/               # Configuration files
+├── migrations/           # Database migration scripts
+└── requirements.txt      # Python dependencies
 ```
 
 ## Quick Start Guide
 
-1. **Prerequisites**
-   - Python 3.7+
-   - Required dependencies (install via `pip install -r requirements.txt`)
+### Prerequisites
 
-2. **Installation**
-   ```bash
-   git clone https://github.com/local-deepwiki-mcp.git
-   cd local-deepwiki-mcp
-   pip install -r requirements.txt
-   ```
+- Python 3.8 or higher
+- pip package manager
 
-3. **Basic Usage**
-   ```python
-   from src.core.mcp_handler import MCPHandler
-   handler = MCPHandler()
-   # Configure and start the MCP service
-   ```
+### Installation
 
-4. **Running the Application**
-   ```bash
-   python -m src.main
-   ```
+```bash
+# Clone the repository
+git clone https://github.com/your-username/local-deepwiki-mcp.git
+cd local-deepwiki-mcp
 
-5. **Configuration**
-   - Modify configuration files in `/config/` directory
-   - Set up data sources in `/data/` directory
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-## Code Structure
+# Install dependencies
+pip install -r requirements.txt
+```
 
-The codebase consists of 28 Python files with 172 code chunks organized into:
-- Core MCP implementation
-- Client connection management
-- Query processing modules
-- Storage and data handling
-- Utility functions and helpers
+### Running the Application
 
-The system follows a modular approach with clear separation between protocol handling, data management, and client interaction components.
+```bash
+# Start the application
+python main.py
+
+# Or run with specific configuration
+python main.py --config config/local.json
+```
+
+### API Endpoints
+
+The API is available at `http://localhost:8000` with the following endpoints:
+
+- `POST /clients` - Register new client
+- `POST /knowledge` - Add knowledge to knowledge base
+- `POST /search` - Perform semantic search
+- `GET /status` - Get system status
+
+### Configuration
+
+Create a configuration file in `config/local.json`:
+
+```json
+{
+    "database": {
+        "path": "data/local.db"
+    },
+    "embedding": {
+        "model": "all-MiniLM-L6-v2"
+    },
+    "server": {
+        "host": "0.0.0.0",
+        "port": 8000
+    }
+}
+```
+
+### Testing
+
+Run the test suite:
+
+```bash
+python -m pytest tests/
+```
+
+For detailed documentation and usage examples, refer to the documentation in the docs/ directory.

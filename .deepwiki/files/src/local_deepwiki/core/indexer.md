@@ -1,191 +1,164 @@
-# `src/local_deepwiki/core/indexer.py`
+# local_deepwiki.core.indexer
 
 ## File Overview
 
-This file implements the core indexing functionality for the `local_deepwiki` system. It provides the `RepositoryIndexer` class, which is responsible for indexing code repositories by parsing files, chunking code, generating embeddings, and storing the results in a vector store. The indexer supports both full rebuilds and incremental updates, and can track indexing status across runs.
+The `indexer.py` file implements the core indexing functionality for the local_deepwiki system. It provides the main `RepositoryIndexer` class responsible for processing code repositories, parsing source files, chunking code into manageable pieces, and storing vector representations for semantic search capabilities.
 
 ## Classes
 
-### `RepositoryIndexer`
+### RepositoryIndexer
 
-The `RepositoryIndexer` class is the main entry point for indexing code repositories. It handles parsing, chunking, embedding, and vector storage of code files.
+The `RepositoryIndexer` class orchestrates the entire indexing process for a code repository. It handles file discovery, parsing, chunking, and vector storage operations.
 
-#### Constructor
+#### Key Methods
+
+- `__init__(self, config: Config = None)`: Initializes the indexer with optional configuration
+- `index_repository(self, progress_callback: Callable[[str, int], None] = None)`: Main method to index an entire repository
+- `process_file(self, file_path: Path, progress: Progress, task_id: TaskID)`: Processes individual files
+- `chunk_file(self, file_info: FileInfo) -> list[CodeChunk]`: Splits files into code chunks
+- `store_chunks(self, chunks: list[CodeChunk])`: Stores chunks in vector database
+
+#### Usage Example
 
 ```python
-def __init__(
-    self,
-    repo_path: Path,
-    config: Config | None = None,
-    embedding_provider_name: str | None = None,
-)
+from local_deepwiki.core.indexer import RepositoryIndexer
+
+# Initialize indexer
+indexer = RepositoryIndexer()
+
+# Index repository with progress tracking
+indexer.index_repository()
 ```
 
-**Parameters:**
-- `repo_path` (`Path`): Path to the root of the repository to index.
-- `config` (`Config | None`, optional): Configuration object. If not provided, defaults to `get_config()`.
-- `embedding_provider_name` (`str | None`, optional): Override embedding provider ("local" or "openai").
+## Functions
 
-**Purpose:**
-Initializes the indexer with the repository path and configuration.
+### index_repository
 
-#### Methods
+**Signature**: `index_repository(self, progress_callback: Callable[[str, int], None] = None)`
 
-##### `index(full_rebuild: bool = False, progress_callback: Callable[[str, int, int], None] | None = None) -> IndexStatus`
+**Parameters**:
+- `progress_callback`: Optional function to track indexing progress with (message, percentage) parameters
 
-**Parameters:**
-- `full_rebuild` (`bool`, optional): If `True`, rebuilds the entire index. If `False`, performs an incremental update.
-- `progress_callback` (`Callable[[str, int, int], None] | None`, optional): Callback function to report progress updates. Signature: `(message: str, current: int, total: int)`.
+**Returns**: None
 
-**Returns:**
-`IndexStatus`: Object containing indexing results and status information.
+**Purpose**: Main entry point for repository indexing. Discovers files, processes each file through parsing and chunking, then stores vectors in the database.
 
-**Purpose:**
-Indexes the repository by parsing files, chunking code, generating embeddings, and storing in vector store. Supports full rebuilds and incremental updates.
+### process_file
 
-##### `_load_status() -> IndexStatus | None`
+**Signature**: `process_file(self, file_path: Path, progress: Progress, task_id: TaskID)`
 
-**Returns:**
-`IndexStatus | None`: Previous indexing status if found, otherwise `None`.
+**Parameters**:
+- `file_path`: Path to the source file to process
+- `progress`: Rich progress tracking object
+- `task_id`: Task identifier for progress tracking
 
-**Purpose:**
-Loads the indexing status from a saved file to determine what needs to be indexed.
+**Returns**: None
 
-##### `_save_status(status: IndexStatus) -> None`
+**Purpose**: Processes individual files by parsing them, creating code chunks, and storing them in the vector database.
 
-**Parameters:**
-- `status` (`IndexStatus`): Indexing status to save.
+### chunk_file
 
-**Purpose:**
-Saves the current indexing status to a file for future incremental updates.
+**Signature**: `chunk_file(self, file_info: FileInfo) -> list[CodeChunk]`
 
-##### `_should_index_file(file_path: Path) -> bool`
+**Parameters**:
+- `file_info`: FileInfo object containing file metadata and content
 
-**Parameters:**
-- `file_path` (`Path`): Path to the file to check.
+**Returns**: List of CodeChunk objects representing the file's content
 
-**Returns:**
-`bool`: `True` if the file should be indexed based on the configuration's file patterns.
+**Purpose**: Splits a parsed file into logical code chunks suitable for vector storage and semantic search.
 
-**Purpose:**
-Determines if a file should be indexed based on configured include/exclude patterns.
+### store_chunks
 
-##### `_parse_file(file_path: Path) -> FileInfo`
+**Signature**: `store_chunks(self, chunks: list[CodeChunk])`
 
-**Parameters:**
-- `file_path` (`Path`): Path to the file to parse.
+**Parameters**:
+- `chunks`: List of CodeChunk objects to store
 
-**Returns:**
-`FileInfo`: Parsed file information including code chunks and metadata.
+**Returns**: None
 
-**Purpose:**
-Parses a single file and returns structured information about it.
-
-##### `_chunk_file(file_info: FileInfo) -> list[CodeChunk]`
-
-**Parameters:**
-- `file_info` (`FileInfo`): Parsed file information.
-
-**Returns:**
-`list[CodeChunk]`: List of code chunks extracted from the file.
-
-**Purpose:**
-Chunks the code in a parsed file into manageable segments for embedding.
-
-##### `_embed_chunks(chunks: list[CodeChunk]) -> list[CodeChunk]`
-
-**Parameters:**
-- `chunks` (`list[CodeChunk]`): List of code chunks to embed.
-
-**Returns:**
-`list[CodeChunk]`: List of code chunks with embedded vectors.
-
-**Purpose:**
-Generates embeddings for code chunks using the configured embedding provider.
-
-##### `_store_chunks(chunks: list[CodeChunk]) -> None`
-
-**Parameters:**
-- `chunks` (`list[CodeChunk]`): List of code chunks with embeddings to store.
-
-**Purpose:**
-Stores the embedded code chunks in the vector store.
-
-##### `_update_index_status(status: IndexStatus, file_path: Path) -> None`
-
-**Parameters:**
-- `status` (`IndexStatus`): Current indexing status.
-- `file_path` (`Path`): Path to the file that was indexed.
-
-**Purpose:**
-Updates the indexing status with information about a processed file.
+**Purpose**: Stores code chunks in the vector database with their corresponding embeddings.
 
 ## Usage Examples
 
 ### Basic Indexing
 
 ```python
-from pathlib import Path
 from local_deepwiki.core.indexer import RepositoryIndexer
 
-# Initialize indexer
-indexer = RepositoryIndexer(
-    repo_path=Path("/path/to/repo"),
-    embedding_provider_name="local"  # Optional override
-)
+# Create indexer instance
+indexer = RepositoryIndexer()
 
-# Index the repository
-status = await indexer.index()
-
-# Check status
-print(f"Indexed {status.files_indexed} files")
+# Index current repository
+indexer.index_repository()
 ```
 
-### Full Rebuild
+### Indexing with Progress Tracking
 
 ```python
-# Force a full rebuild
-status = await indexer.index(full_rebuild=True)
+from local_deepwiki.core.indexer import RepositoryIndexer
+
+def progress_callback(message: str, percentage: int):
+    print(f"{message}: {percentage}%")
+
+indexer = RepositoryIndexer()
+indexer.index_repository(progress_callback=progress_callback)
 ```
 
-### Progress Tracking
+### Custom Configuration
 
 ```python
-def progress_callback(message: str, current: int, total: int):
-    print(f"{message}: {current}/{total}")
+from local_deepwiki.core.indexer import RepositoryIndexer
+from local_deepwiki.config import Config
 
-status = await indexer.index(
-    full_rebuild=True,
-    progress_callback=progress_callback
+config = Config(
+    repo_path="/path/to/repo",
+    chunk_size=1000,
+    chunk_overlap=100
 )
+
+indexer = RepositoryIndexer(config=config)
+indexer.index_repository()
 ```
 
 ## Dependencies
 
-This file imports the following modules and components:
+This file imports the following components:
 
-- `fnmatch`: For file pattern matching
-- `json`: For loading/saving index status
-- `time`: For timing operations
-- `pathlib.Path`: For path manipulation
-- `typing.Callable`: For type hints
-- `rich.progress.Progress, TaskID`: For progress reporting
-- `local_deepwiki.config.Config, get_config`: For configuration management
-- `local_deepwiki.core.chunker.CodeChunker`: For code chunking
-- `local_deepwiki.core.parser.CodeParser`: For parsing code files
-- `local_deepwiki.core.vectorstore.VectorStore`: For vector storage
-- `local_deepwiki.models.CodeChunk, FileInfo, IndexStatus`: Data models
-- `local_deepwiki.providers.embeddings.get_embedding_provider`: For embedding generation
+### Standard Library
+- `fnmatch`: Pattern matching for file discovery
+- `json`: JSON serialization for configuration
+- `time`: Timing measurements
+- `pathlib.Path`: Path manipulation utilities
+- `typing.Callable`: Type hints for callback functions
 
-## Constants
+### Third-party Libraries
+- `rich.progress`: Progress tracking UI components
+- `local_deepwiki.config`: Configuration management
+- `local_deepwiki.core.chunker`: Code chunking functionality
+- `local_deepwiki.core.parser`: Source code parsing
+- `local_deepwiki.core.vectorstore`: Vector database operations
+- `local_deepwiki.models`: Data models (CodeChunk, FileInfo, IndexStatus)
+- `local_deepwiki.providers.embeddings`: Embedding provider interface
 
-- `INDEX_STATUS_FILE`: Name of the file used to store indexing status (default: `"index_status.json"`)
+## Class Diagram
 
-## Notes
+```mermaid
+classDiagram
+    class RepositoryIndexer {
+        -__init__()
+        +index()
+        -_find_source_files()
+        -_load_status()
+        -_save_status()
+        +get_status()
+        +search()
+    }
+```
 
-- The indexer tracks indexing status in a JSON file to support incremental updates.
-- File inclusion/exclusion is controlled via configuration patterns.
-- The indexer uses a `CodeParser` to parse files and a `CodeChunker` to split code into chunks.
-- Embeddings are generated using the configured embedding provider.
-- Vector storage is handled by the `VectorStore` class.
-- Progress reporting is optional but supported via the `progress_callback` parameter.
+## See Also
+
+- [server](../server.md) - uses this
+- [vectorstore](vectorstore.md) - dependency
+- [parser](parser.md) - dependency
+- [chunker](chunker.md) - dependency
+- [models](../models.md) - dependency

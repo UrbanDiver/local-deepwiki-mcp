@@ -1,173 +1,122 @@
-# `src/local_deepwiki/server.py` Documentation
+# Local DeepWiki Server Documentation
 
 ## File Overview
 
-This file implements the main server logic for the Local DeepWiki application. It provides a tool-based interface for indexing repositories, generating wiki documentation, and querying the generated content using the MCP (Model Control Protocol) standard.
-
-The server exposes tools for:
-- Indexing repositories and generating wiki documentation
-- Reading wiki structure and individual pages
-- Searching code content
-- Asking questions about the indexed repository
+The `src/local_deepwiki/server.py` file implements a server that provides a set of tools for interacting with code repositories and generating wiki documentation. It serves as the core entry point for the Local DeepWiki application, exposing functionality through the MCP (Model Control Protocol) interface to enable AI agents to index repositories, search code, and generate wiki content.
 
 ## Dependencies
 
 This file imports the following modules and components:
 
-- `asyncio` - For asynchronous operations
-- `json` - For JSON serialization
-- `pathlib.Path` - For path manipulation
-- `typing.Any` - For type annotations
-- `mcp.server.Server` - MCP server implementation
-- `mcp.server.stdio.stdio_server` - For stdio-based server communication
-- `mcp.types.TextContent` and `Tool` - MCP types for content and tools
-- `local_deepwiki.config.Config` - Configuration management
-- `local_deepwiki.core.indexer.RepositoryIndexer` - Repository indexing logic
-- `local_deepwiki.core.vectorstore.VectorStore` - Vector storage implementation
-- `local_deepwiki.generators.wiki.generate_wiki` - Wiki generation function
-- `local_deepwiki.models.WikiStructure` - Wiki structure model
-- `local_deepwiki.providers.embeddings.get_embedding_provider` - Embedding provider factory
-- `local_deepwiki.providers.llm.get_llm_provider` - LLM provider factory
+- `asyncio`: For asynchronous programming support
+- `json`: For JSON serialization/deserialization
+- `pathlib.Path`: For file system path operations
+- `typing.Any`: For type annotations
+- `mcp.server.Server`: MCP server interface
+- `mcp.server.stdio.stdio_server`: Standard I/O server implementation
+- `mcp.types.TextContent`, `mcp.types.Tool`: MCP type definitions
+- `local_deepwiki.config.Config`, `get_config`, `set_config`: Configuration management
+- `local_deepwiki.core.indexer.RepositoryIndexer`: Repository indexing functionality
+- `local_deepwiki.core.vectorstore.VectorStore`: Vector storage and search
+- `local_deepwiki.generators.wiki.generate_wiki`: Wiki generation logic
+- `local_deepwiki.models.WikiStructure`: Wiki structure model
+- `local_deepwiki.providers.embeddings.get_embedding_provider`: Embedding provider factory
+- `local_deepwiki.providers.llm.get_llm_provider`: LLM provider factory
+
+## Classes
+
+### RepositoryIndexer
+
+**Purpose**: Provides functionality to index code repositories for semantic search and documentation generation.
+
+**Key Methods**:
+- `index_repository(path: str, config: Config)`: Indexes a repository at the given path using the provided configuration
+
+### VectorStore
+
+**Purpose**: Manages vector embeddings for semantic search and retrieval of code content.
+
+**Key Methods**:
+- `search(query: str, top_k: int = 10)`: Searches for relevant code snippets matching the query
+- `add_document(document: dict)`: Adds a document to the vector store
 
 ## Functions
 
-### `list_tools()`
+### `list_tools() -> list[Tool]`
 
-**Purpose**: Returns a list of available tools for the MCP server.
+**Purpose**: Returns a list of available tools that can be called through the MCP interface.
 
 **Parameters**: None
 
-**Return Value**: `list[Tool]` - List of tool definitions with names, descriptions, and input schemas.
+**Return Value**: List of `Tool` objects describing the available functionality
 
-**Usage**:
-```python
-tools = await list_tools()
-```
+### `call_tool(tool_name: str, tool_input: dict) -> Any`
 
-### `call_tool()`
-
-**Purpose**: Dispatches tool calls to their respective handlers.
+**Purpose**: Executes a specific tool with the given input parameters.
 
 **Parameters**:
-- `tool_name` (str): Name of the tool to call
-- `args` (dict): Arguments for the tool call
+- `tool_name`: Name of the tool to call
+- `tool_input`: Dictionary containing tool-specific input parameters
 
-**Return Value**: `Any` - Result of the tool execution
+**Return Value**: Result of the tool execution
 
-**Usage**:
-```python
-result = await call_tool("index_repository", {"repo_path": "/path/to/repo"})
-```
+### `handle_index_repository(input_data: dict) -> dict`
 
-### `handle_index_repository()`
-
-**Purpose**: Handles the `index_repository` tool call, which indexes a repository and generates wiki documentation.
+**Purpose**: Handles the index repository tool call, creating a new index from a repository path.
 
 **Parameters**:
-- `args` (dict): Dictionary containing:
-  - `repo_path` (str): Absolute path to the repository to index
-  - `wiki_path` (str): Path where wiki files should be stored
-  - `config` (dict, optional): Configuration overrides
+- `input_data`: Dictionary containing repository path and optional configuration
 
-**Return Value**: `list[TextContent]` - Result text content indicating success or error
+**Return Value**: Dictionary with status and index information
 
-**Usage**:
-```python
-result = await handle_index_repository({
-    "repo_path": "/home/user/project",
-    "wiki_path": "/home/user/project/wiki"
-})
-```
+### `progress_callback(progress: int, total: int, message: str)`
 
-### `progress_callback()`
-
-**Purpose**: Callback function to report indexing progress.
+**Purpose**: Callback function for reporting indexing progress.
 
 **Parameters**:
-- `message` (str): Progress message to report
+- `progress`: Current progress value
+- `total`: Total expected progress
+- `message`: Progress status message
 
 **Return Value**: None
 
-**Usage**:
-```python
-# Called internally during indexing operations
-```
+### `handle_ask_question(input_data: dict) -> dict`
 
-### `handle_ask_question()`
-
-**Purpose**: Handles the `ask_question` tool call, which answers questions about the indexed repository.
+**Purpose**: Handles asking questions about the indexed repository content.
 
 **Parameters**:
-- `args` (dict): Dictionary containing:
-  - `question` (str): Question to ask
-  - `wiki_path` (str): Path to the wiki documentation
+- `input_data`: Dictionary containing the question and context
 
-**Return Value**: `list[TextContent]` - Result text content with answer or error
+**Return Value**: Dictionary with the answer and related code snippets
 
-**Usage**:
-```python
-result = await handle_ask_question({
-    "question": "How does the authentication work?",
-    "wiki_path": "/home/user/project/wiki"
-})
-```
+### `handle_read_wiki_structure(input_data: dict) -> dict`
 
-### `handle_read_wiki_structure()`
-
-**Purpose**: Handles the `read_wiki_structure` tool call, which returns the structure of wiki files.
+**Purpose**: Reads and returns the wiki structure for the indexed repository.
 
 **Parameters**:
-- `args` (dict): Dictionary containing:
-  - `wiki_path` (str): Path to the wiki directory
+- `input_data`: Dictionary containing path information
 
-**Return Value**: `list[TextContent]` - Result text content with wiki structure or error
+**Return Value**: Dictionary with the wiki structure
 
-**Usage**:
-```python
-result = await handle_read_wiki_structure({
-    "wiki_path": "/home/user/project/wiki"
-})
-```
+### `handle_read_wiki_page(input_data: dict) -> dict`
 
-### `handle_read_wiki_page()`
-
-**Purpose**: Handles the `read_wiki_page` tool call, which reads and returns the content of a specific wiki page.
+**Purpose**: Reads a specific wiki page content.
 
 **Parameters**:
-- `args` (dict): Dictionary containing:
-  - `wiki_path` (str): Path to the wiki directory
-  - `page` (str): Relative path to the wiki page
+- `input_data`: Dictionary containing page path information
 
-**Return Value**: `list[TextContent]` - Result text content with page content or error
+**Return Value**: Dictionary with page content
 
-**Usage**:
-```python
-result = await handle_read_wiki_page({
-    "wiki_path": "/home/user/project/wiki",
-    "page": "installation.md"
-})
-```
+### `handle_search_code(input_data: dict) -> dict`
 
-### `handle_search_code()`
-
-**Purpose**: Handles the `search_code` tool call, which searches for code snippets in the indexed repository.
+**Purpose**: Searches code snippets in the indexed repository.
 
 **Parameters**:
-- `args` (dict): Dictionary containing:
-  - `query` (str): Search query
-  - `wiki_path` (str): Path to the wiki directory
+- `input_data`: Dictionary containing search query and parameters
 
-**Return Value**: `list[TextContent]` - Result text content with search results or error
+**Return Value**: Dictionary with search results and code snippets
 
-**Usage**:
-```python
-result = await handle_search_code({
-    "query": "authentication logic",
-    "wiki_path": "/home/user/project/wiki"
-})
-```
-
-### `main()`
+### `main() -> None`
 
 **Purpose**: Main entry point for the server application.
 
@@ -175,24 +124,13 @@ result = await handle_search_code({
 
 **Return Value**: None
 
-**Usage**:
-```python
-if __name__ == "__main__":
-    asyncio.run(main())
-```
+### `run() -> None`
 
-### `run()`
-
-**Purpose**: Runs the MCP server with configured tools.
+**Purpose**: Starts the MCP server with the defined tools.
 
 **Parameters**: None
 
 **Return Value**: None
-
-**Usage**:
-```python
-await run()
-```
 
 ## Usage Examples
 
@@ -201,46 +139,61 @@ await run()
 ```python
 # Run the server
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
 ```
 
-### Using Tools
+### Using the Index Repository Tool
 
-#### Indexing a Repository
 ```python
-await call_tool("index_repository", {
-    "repo_path": "/path/to/repo",
-    "wiki_path": "/path/to/wiki"
-})
+# Example input for index repository tool
+index_input = {
+    "path": "/path/to/repository",
+    "config": {
+        "embedding_model": "text-embedding-3-small",
+        "chunk_size": 1000
+    }
+}
+
+# Call the tool
+result = call_tool("index_repository", index_input)
 ```
 
-#### Asking a Question
+### Searching Code
+
 ```python
-await call_tool("ask_question", {
-    "question": "What is the purpose of this function?",
-    "wiki_path": "/path/to/wiki"
-})
+# Example input for search code tool
+search_input = {
+    "query": "how to implement authentication",
+    "top_k": 5
+}
+
+# Call the tool
+result = call_tool("search_code", search_input)
 ```
 
-#### Reading Wiki Structure
+### Asking Questions
+
 ```python
-await call_tool("read_wiki_structure", {
-    "wiki_path": "/path/to/wiki"
-})
+# Example input for ask question tool
+question_input = {
+    "question": "What is the purpose of the User model?",
+    "context": "repository_index_id"
+}
+
+# Call the tool
+result = call_tool("ask_question", question_input)
 ```
 
-#### Reading a Wiki Page
-```python
-await call_tool("read_wiki_page", {
-    "wiki_path": "/path/to/wiki",
-    "page": "installation.md"
-})
-```
+## Server Configuration
 
-#### Searching Code
-```python
-await call_tool("search_code", {
-    "query": "database connection",
-    "wiki_path": "/path/to/wiki"
-})
-```
+The server uses configuration management through `local_deepwiki.config.Config` which can be accessed via `get_config()` and `set_config()` functions. Configuration includes embedding model selection, chunk size, and other repository indexing parameters.
+
+The server implements the MCP protocol and can be run as a standard I/O server, making it compatible with AI agents that support the Model Control Protocol.
+
+## See Also
+
+- [vectorstore](core/vectorstore.md) - dependency
+- [indexer](core/indexer.md) - dependency
+- [models](models.md) - dependency
+- [config](config.md) - dependency
+- [wiki](generators/wiki.md) - dependency

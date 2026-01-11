@@ -1,21 +1,18 @@
-# Base Provider Module
+# Base Provider Classes
 
 ## File Overview
 
-This module defines abstract base classes for embedding and language model providers. It establishes the interface contract that concrete implementations must follow, ensuring consistency across different provider implementations while maintaining asynchronous operation capabilities.
+This file defines abstract base classes for embedding and language model providers. It establishes the interface contract that concrete provider implementations must follow, ensuring consistency across different embedding and LLM services.
 
 ## Classes
 
 ### EmbeddingProvider
 
-Abstract base class for embedding providers. This class defines the interface that all embedding providers must implement.
+Abstract base class for embedding providers. All concrete embedding implementations must inherit from this class and implement its abstract methods.
 
 #### Methods
 
-##### `embed`
-```python
-async def embed(self, texts: list[str]) -> list[list[float]]
-```
+##### `embed(texts: list[str]) -> list[list[float]]`
 
 Generate embeddings for a list of texts.
 
@@ -27,16 +24,13 @@ Generate embeddings for a list of texts.
 
 **Example:**
 ```python
-# This would be implemented by concrete classes
+# This method must be implemented by concrete classes
 async def embed(self, texts: list[str]) -> list[list[float]]:
     # Implementation would generate embeddings for the provided texts
     pass
 ```
 
-##### `get_dimension`
-```python
-def get_dimension(self) -> int
-```
+##### `get_dimension() -> int`
 
 Get the embedding dimension.
 
@@ -45,29 +39,27 @@ Get the embedding dimension.
 
 **Example:**
 ```python
-# This would be implemented by concrete classes
+# This method must be implemented by concrete classes
 def get_dimension(self) -> int:
-    # Implementation would return the dimension of the embeddings
+    # Implementation would return the dimension of embeddings
     pass
 ```
 
-##### `dimension` (Property)
-```python
-@property
-@abstractmethod
-def dimension(self) -> int
-```
+##### `dimension` (property)
 
-Get the embedding dimension as a property.
+Returns the embedding dimension as a property.
 
 **Returns:**
 - `int`: The dimension of the embedding vectors
 
-**Note:** This is an abstract property that must be implemented by subclasses.
+## Dependencies
+
+- `abc.ABC`: Abstract base class functionality
+- `typing.AsyncIterator`: Type hint for asynchronous iterators
 
 ## Usage Examples
 
-### Creating a Concrete Implementation
+To create a concrete embedding provider:
 
 ```python
 from base import EmbeddingProvider
@@ -77,33 +69,39 @@ class MyEmbeddingProvider(EmbeddingProvider):
         self._dimension = 768
     
     async def embed(self, texts: list[str]) -> list[list[float]]:
-        # Implementation would generate embeddings
-        return [[0.1] * self._dimension for _ in texts]
+        # Implementation here
+        pass
     
     def get_dimension(self) -> int:
         return self._dimension
-    
-    @property
-    def dimension(self) -> int:
-        return self._dimension
-```
 
-### Using the Provider
-
-```python
-# Assuming MyEmbeddingProvider is implemented
+# Usage
 provider = MyEmbeddingProvider()
-
-# Generate embeddings
-texts = ["Hello world", "How are you?"]
-embeddings = await provider.embed(texts)
-print(f"Embedding dimension: {provider.get_dimension()}")
+dimension = provider.get_dimension()  # Returns 768
 ```
 
-## Dependencies
+## Class Diagram
 
-- `abc.ABC`: Abstract base class functionality
-- `typing.AsyncIterator`: Type hint for asynchronous iterators
-- `typing.list`: Type hint for list types
+```mermaid
+classDiagram
+    class EmbeddingProvider {
+        +embed()
+        +get_dimension()
+        +name()
+    }
+    class LLMProvider {
+        +generate()
+        +generate_stream()
+        +name()
+    }
+    EmbeddingProvider --|> ABC
+    LLMProvider --|> ABC
+```
 
-**Note:** The file appears to be incomplete as it references a `LLMProvider` class that is not defined in the provided code snippet, and the `EmbeddingProvider` class definition is cut off after the `dimension` property.
+## See Also
+
+- [vectorstore](../core/vectorstore.md) - uses this
+- [openai](embeddings/openai.md) - uses this
+- [ollama](llm/ollama.md) - uses this
+- [openai](llm/openai.md) - uses this
+- [local](embeddings/local.md) - uses this

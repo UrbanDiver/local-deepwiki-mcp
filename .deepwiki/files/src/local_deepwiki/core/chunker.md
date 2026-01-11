@@ -1,163 +1,92 @@
-# Code Chunker Documentation
+# `src/local_deepwiki/core/chunker.py`
 
 ## File Overview
 
-This file implements the `CodeChunker` class responsible for extracting semantic code chunks from source files. It uses AST parsing to identify modules, classes, functions, and methods, creating structured `CodeChunk` objects that represent different semantic units within code files.
+This file implements the `CodeChunker` class responsible for splitting source code files into logical chunks based on AST (Abstract Syntax Tree) structure. It supports multiple programming languages and provides functionality to extract module-level information, function definitions, class definitions, and other code elements into structured `CodeChunk` objects.
 
 ## Classes
 
 ### `CodeChunker`
 
-The `CodeChunker` class is the core component for extracting code chunks from source files using tree-sitter parsing.
+The `CodeChunker` class is the main component for splitting source code into logical chunks.
 
-#### Constructor
+#### Purpose
+
+- Parses source code using `CodeParser`
+- Splits code into chunks based on AST node types
+- Supports different programming languages
+- Generates `CodeChunk` objects with metadata like type, name, content, and location
+
+#### Key Methods
+
+- `__init__(self, config: ChunkingConfig | None = None)`: Initializes the chunker with optional configuration.
+- `_create_module_chunk(...)`: Creates a chunk representing the entire module/file.
+- `chunk_file(...)`: Main method to process a file and generate chunks.
+- `chunk_code(...)`: Processes source code string and generates chunks.
+- `_chunk_function(...)`: Creates a chunk for a function definition.
+- `_chunk_class(...)`: Creates a chunk for a class definition.
+- `_chunk_method(...)`: Creates a chunk for a method definition.
+- `_chunk_imports(...)`: Creates a chunk for import statements.
+- `_chunk_constants(...)`: Creates a chunk for constants.
+
+#### Usage Example
 
 ```python
-def __init__(self, config: ChunkingConfig | None = None)
-```
+from local_deepwiki.core.chunker import CodeChunker
 
-**Purpose**: Initialize the chunker with optional configuration.
-
-**Parameters**:
-- `config`: Optional chunking configuration. If not provided, uses default configuration from `get_config().chunking`.
-
-**Usage**:
-```python
 chunker = CodeChunker()
-# or
-chunker = CodeChunker(custom_config)
+source_code = "def hello():\n    print('Hello')\n"
+chunks = list(chunker.chunk_code(source_code, "python", "example.py"))
+for chunk in chunks:
+    print(f"Chunk: {chunk.name} ({chunk.type})")
 ```
 
-#### Methods
+## Functions
 
-##### `chunk_file`
+### `get_parent_classes(node: Node, language: Language) -> list[str]`
+
+#### Purpose
+
+Retrieves the parent class names from a class definition node.
+
+#### Parameters
+
+- `node`: A `Node` from the AST representing a class definition.
+- `language`: The programming language (used for language-specific parsing).
+
+#### Return Value
+
+A list of strings representing the names of parent classes.
+
+#### Example
 
 ```python
-def chunk_file(self, file_path: Path, repo_root: Path) -> Iterator[CodeChunk]
+# Assuming node represents a Python class definition
+parent_classes = get_parent_classes(node, Language.PYTHON)
+print(parent_classes)  # e.g., ['BaseClass', 'Mixin']
 ```
-
-**Purpose**: Extract code chunks from a source file.
-
-**Parameters**:
-- `file_path`: Path to the source file to process
-- `repo_root`: Root directory of the repository
-
-**Returns**: Iterator of `CodeChunk` objects representing semantic units found in the file
-
-**Usage**:
-```python
-chunker = CodeChunker()
-for chunk in chunker.chunk_file(Path("src/main.py"), Path("/project/root")):
-    print(chunk.name, chunk.type)
-```
-
-##### `_create_module_chunk`
-
-```python
-def _create_module_chunk(
-    self,
-    root: Node,
-    source: bytes,
-    language: Language,
-    file_path: str,
-) -> CodeChunk
-```
-
-**Purpose**: Create a chunk for the module/file overview.
-
-**Parameters**:
-- `root`: AST root node
-- `source`: Source bytes
-- `language`: Programming language
-- `file_path`: Relative file path
-
-**Returns**: A `CodeChunk` for the module
-
-##### `_create_function_chunk`
-
-```python
-def _create_function_chunk(
-    self,
-    func_node: Node,
-    source: bytes,
-    language: Language,
-    file_path: str,
-) -> CodeChunk
-```
-
-**Purpose**: Create a chunk for a top-level function.
-
-**Parameters**:
-- `func_node`: The function AST node
-- `source`: Source bytes
-- `language`: Programming language
-- `file_path`: Relative file path
-
-**Returns**: A `CodeChunk` for the function
-
-##### `_create_method_chunk`
-
-```python
-def _create_method_chunk(
-    self,
-    method_node: Node,
-    source: bytes,
-    language: Language,
-    file_path: str,
-    class_name: str,
-) -> CodeChunk
-```
-
-**Purpose**: Create a chunk for a class method.
-
-**Parameters**:
-- `method_node`: The method AST node
-- `source`: Source bytes
-- `language`: Programming language
-- `file_path`: Relative file path
-- `class_name`: Name of the parent class
-
-**Returns**: A `CodeChunk` for the method
-
-## Dependencies
-
-This file imports the following components:
-
-- `hashlib` - For generating chunk identifiers
-- `pathlib.Path` - For file path handling
-- `typing.Iterator` - For type hints
-- `tree_sitter.Node` - For AST node handling
-- `local_deepwiki.config.ChunkingConfig` - Configuration for chunking behavior
-- `local_deepwiki.config.get_config` - For retrieving default configuration
-- `local_deepwiki.core.parser` - AST parsing utilities:
-  - `CodeParser` - For parsing source files
-  - `get_node_text` - Extract text from AST nodes
-  - `get_node_name` - Extract names from AST nodes
-  - `get_docstring` - Extract docstrings from nodes
-  - `find_nodes_by_type` - Find nodes of specific types
-- `local_deepwiki.models` - Data models:
-  - `CodeChunk` - Representation of code chunks
-  - `ChunkType` - Types of code chunks
-  - `Language` - Supported programming languages
 
 ## Usage Examples
 
 ### Basic Usage
 
 ```python
-from pathlib import Path
 from local_deepwiki.core.chunker import CodeChunker
 
-# Initialize chunker
 chunker = CodeChunker()
+code = """
+def my_function():
+    '''This is a docstring'''
+    return True
 
-# Process a file
-file_path = Path("src/example.py")
-repo_root = Path("/project/root")
+class MyClass:
+    def method(self):
+        pass
+"""
 
-for chunk in chunker.chunk_file(file_path, repo_root):
-    print(f"Chunk: {chunk.name} ({chunk.type})")
-    print(f"Content: {chunk.content[:100]}...")
+chunks = list(chunker.chunk_code(code, "python", "test.py"))
+for chunk in chunks:
+    print(f"Type: {chunk.type}, Name: {chunk.name}")
 ```
 
 ### With Custom Configuration
@@ -166,31 +95,59 @@ for chunk in chunker.chunk_file(file_path, repo_root):
 from local_deepwiki.config import ChunkingConfig
 from local_deepwiki.core.chunker import CodeChunker
 
-# Create custom configuration
 config = ChunkingConfig(
     max_chunk_size=1000,
-    include_docstrings=True
+    include_docstrings=True,
+    chunk_types=["function", "class"]
 )
-
-# Initialize chunker with custom config
 chunker = CodeChunker(config)
 ```
 
-### Processing Multiple Files
+## Dependencies
 
-```python
-from pathlib import Path
-from local_deepwiki.core.chunker import CodeChunker
+This file imports the following components:
 
-chunker = CodeChunker()
+- `hashlib`: For generating unique identifiers
+- `pathlib.Path`: For handling file paths
+- `typing.Iterator`: For type hints of iterators
+- `tree_sitter.Node`: For AST node handling
+- `local_deepwiki.config`: Configuration handling
+  - `ChunkingConfig`: Configuration schema
+  - `get_config`: Function to retrieve global config
+- `local_deepwiki.core.parser`: AST parsing utilities
+  - `CodeParser`: Parser for source code
+  - `get_node_text`: Extract text from AST node
+  - `get_node_name`: Extract name from AST node
+  - `get_docstring`: Extract docstring from AST node
+  - `find_nodes_by_type`: Find nodes of specific type
+- `local_deepwiki.models`: Data models
+  - `CodeChunk`: Model for code chunks
+  - `ChunkType`: Enum for chunk types
+  - `Language`: Enum for supported languages
 
-repo_root = Path("/project/root")
-source_files = list(repo_root.rglob("*.py"))
+## Class Diagram
 
-for file_path in source_files:
-    try:
-        for chunk in chunker.chunk_file(file_path, repo_root):
-            print(f"{chunk.file_path}:{chunk.name} - {chunk.type}")
-    except Exception as e:
-        print(f"Error processing {file_path}: {e}")
+```mermaid
+classDiagram
+    class CodeChunker {
+        -__init__()
+        +chunk_file()
+        -_create_module_chunk()
+        -_create_file_summary()
+        -_create_imports_chunk()
+        -_extract_class_chunks()
+        -_create_class_summary_chunk()
+        -_create_method_chunk()
+        -_create_function_chunk()
+        -_is_inside_class()
+        -_generate_id()
+    }
 ```
+
+## See Also
+
+- [test_chunker](../../../tests/test_chunker.md) - uses this
+- [indexer](indexer.md) - uses this
+- [models](../models.md) - dependency
+- [config](../config.md) - dependency
+- [parser](parser.md) - dependency

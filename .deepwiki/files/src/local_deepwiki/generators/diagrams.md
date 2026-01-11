@@ -1,154 +1,103 @@
-# diagrams.py
+# Diagram Generation Module
 
 ## File Overview
 
-This file provides functionality for generating various Mermaid diagrams from code chunks. It includes functions to create architecture diagrams, class diagrams, dependency diagrams, and file tree diagrams, enabling visual representation of code structure and relationships.
+The `diagrams.py` file is responsible for generating various types of architectural diagrams from code repositories. It provides functionality to create architecture diagrams, class diagrams, dependency diagrams, and file tree diagrams from code chunks and index status information.
 
 ## Dependencies
 
-- `local_deepwiki.models.CodeChunk`
-- `local_deepwiki.models.IndexStatus`
+This module imports:
+- `CodeChunk` from `local_deepwiki.models`
+- `IndexStatus` from `local_deepwiki.models`
+
+## Classes
+
+### CodeChunk
+Represents a chunk of code with metadata about its location, content, and processing status.
+
+### IndexStatus
+Represents the indexing status of code chunks within a repository.
 
 ## Functions
 
 ### generate_architecture_diagram
-
 ```python
-def generate_architecture_diagram(chunks: list[CodeChunk]) -> str:
-    """Generate a Mermaid architecture diagram from code chunks.
-
-    Args:
-        chunks: List of code chunks to visualize.
-
-    Returns:
-        Mermaid diagram string.
+def generate_architecture_diagram(code_chunks: list[CodeChunk], index_status: IndexStatus) -> str:
     """
-```
-
-Generates a Mermaid architecture diagram that visualizes code chunks organized by modules/files. The diagram shows relationships between different code modules in a hierarchical structure.
-
-**Parameters:**
-- `chunks` (list[CodeChunk]): List of code chunks to visualize
-
-**Returns:**
-- `str`: Mermaid diagram string representing the architecture
-
-**Usage Example:**
-```python
-chunks = [chunk1, chunk2, chunk3]  # List of CodeChunk objects
-diagram = generate_architecture_diagram(chunks)
-print(diagram)
+    Generate an architecture diagram from code chunks and index status.
+    
+    Args:
+        code_chunks (list[CodeChunk]): List of code chunks to analyze
+        index_status (IndexStatus): Indexing status information
+        
+    Returns:
+        str: Generated architecture diagram content
+    """
 ```
 
 ### generate_class_diagram
-
 ```python
-def generate_class_diagram(chunks: list[CodeChunk]) -> str:
-    """Generate a Mermaid class diagram from code chunks.
-
+def generate_class_diagram(code_chunks: list[CodeChunk], index_status: IndexStatus) -> str:
+    """
+    Generate a class diagram from code chunks and index status.
+    
     Args:
-        chunks: List of code chunks to visualize.
-
+        code_chunks (list[CodeChunk]): List of code chunks to analyze
+        index_status (IndexStatus): Indexing status information
+        
     Returns:
-        Mermaid diagram string.
+        str: Generated class diagram content
     """
 ```
-
-Generates a Mermaid class diagram that visualizes classes and their relationships from code chunks. This function analyzes the code structure to identify class definitions and their connections.
-
-**Parameters:**
-- `chunks` (list[CodeChunk]): List of code chunks to visualize
-
-**Returns:**
-- `str`: Mermaid diagram string representing the class structure
 
 ### generate_dependency_diagram
-
 ```python
-def generate_dependency_diagram(chunks: list[CodeChunk]) -> str:
-    """Generate a Mermaid dependency diagram from code chunks.
-
+def generate_dependency_diagram(code_chunks: list[CodeChunk], index_status: IndexStatus) -> str:
+    """
+    Generate a dependency diagram from code chunks and index status.
+    
     Args:
-        chunks: List of code chunks to visualize.
-
+        code_chunks (list[CodeChunk]): List of code chunks to analyze
+        index_status (IndexStatus): Indexing status information
+        
     Returns:
-        Mermaid diagram string.
+        str: Generated dependency diagram content
     """
 ```
-
-Generates a Mermaid dependency diagram that shows relationships and dependencies between different code elements. This function identifies import statements and other dependency relationships in the code.
-
-**Parameters:**
-- `chunks` (list[CodeChunk]): List of code chunks to visualize
-
-**Returns:**
-- `str`: Mermaid diagram string representing the dependencies
 
 ### generate_file_tree_diagram
-
 ```python
-def generate_file_tree_diagram(chunks: list[CodeChunk]) -> str:
-    """Generate a Mermaid file tree diagram from code chunks.
-
+def generate_file_tree_diagram(code_chunks: list[CodeChunk], index_status: IndexStatus) -> str:
+    """
+    Generate a file tree diagram from code chunks and index status.
+    
     Args:
-        chunks: List of code chunks to visualize.
-
+        code_chunks (list[CodeChunk]): List of code chunks to analyze
+        index_status (IndexStatus): Indexing status information
+        
     Returns:
-        Mermaid diagram string.
+        str: Generated file tree diagram content
     """
 ```
-
-Generates a Mermaid file tree diagram that visualizes the hierarchical structure of files and directories from code chunks. This function organizes chunks by their file paths to create a tree representation.
-
-**Parameters:**
-- `chunks` (list[CodeChunk]): List of code chunks to visualize
-
-**Returns:**
-- `str`: Mermaid diagram string representing the file tree structure
 
 ### render_tree
-
 ```python
-def render_tree(chunks: list[CodeChunk]) -> str:
-    """Render a tree structure from code chunks.
-
+def render_tree(code_chunks: list[CodeChunk], index_status: IndexStatus) -> str:
+    """
+    Render a tree structure from code chunks and index status.
+    
     Args:
-        chunks: List of code chunks to visualize.
-
+        code_chunks (list[CodeChunk]): List of code chunks to analyze
+        index_status (IndexStatus): Indexing status information
+        
     Returns:
-        Mermaid diagram string.
+        str: Rendered tree structure content
     """
 ```
-
-Renders a tree structure visualization from code chunks, typically used for hierarchical file organization or code structure representation.
-
-**Parameters:**
-- `chunks` (list[CodeChunk]): List of code chunks to visualize
-
-**Returns:**
-- `str`: Mermaid diagram string representing the tree structure
 
 ## Usage Examples
 
 ### Basic Usage
-
-```python
-from local_deepwiki.generators.diagrams import generate_architecture_diagram, generate_class_diagram
-
-# Assuming you have a list of CodeChunk objects
-chunks = [...]  # Your list of code chunks
-
-# Generate architecture diagram
-architecture_diagram = generate_architecture_diagram(chunks)
-print(architecture_diagram)
-
-# Generate class diagram
-class_diagram = generate_class_diagram(chunks)
-print(class_diagram)
-```
-
-### Complete Diagram Generation
-
 ```python
 from local_deepwiki.generators.diagrams import (
     generate_architecture_diagram,
@@ -157,16 +106,27 @@ from local_deepwiki.generators.diagrams import (
     generate_file_tree_diagram
 )
 
-# Generate all types of diagrams
-diagrams = {
-    'architecture': generate_architecture_diagram(chunks),
-    'class': generate_class_diagram(chunks),
-    'dependency': generate_dependency_diagram(chunks),
-    'file_tree': generate_file_tree_diagram(chunks)
-}
-
-for diagram_type, diagram in diagrams.items():
-    print(f"=== {diagram_type.upper()} DIAGRAM ===")
-    print(diagram)
-    print()
+# Assuming you have code chunks and index status
+diagram_content = generate_architecture_diagram(code_chunks, index_status)
+print(diagram_content)
 ```
+
+### Generating Multiple Diagram Types
+```python
+# Generate different types of diagrams
+architecture_diagram = generate_architecture_diagram(code_chunks, index_status)
+class_diagram = generate_class_diagram(code_chunks, index_status)
+dependency_diagram = generate_dependency_diagram(code_chunks, index_status)
+file_tree_diagram = generate_file_tree_diagram(code_chunks, index_status)
+```
+
+### Using Render Tree Function
+```python
+# Generate tree structure
+tree_content = render_tree(code_chunks, index_status)
+print(tree_content)
+```
+
+## See Also
+
+- [models](../models.md) - dependency
