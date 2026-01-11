@@ -27,6 +27,7 @@ dependencies = [
     "pandas>=2.0",
     "flask>=3.0",
     "markdown>=3.0",
+    "watchdog>=4.0",
 ]
 
 [project.optional-dependencies]
@@ -38,6 +39,7 @@ dev = [
 [project.scripts]
 local-deepwiki = "local_deepwiki.server:main"
 deepwiki-serve = "local_deepwiki.web.app:main"
+deepwiki-watch = "local_deepwiki.watcher:main"
 
 [build-system]
 requires = ["hatchling"]

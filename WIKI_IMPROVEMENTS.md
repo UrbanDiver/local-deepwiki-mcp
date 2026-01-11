@@ -84,12 +84,12 @@ This document tracks planned improvements to the Local DeepWiki documentation ge
 - [x] Handle qualified names like `module.ClassName`
 - **Files**: `generators/crosslinks.py`
 
-### 12. Watch Mode
-- [ ] Add file watcher using `watchdog` library
-- [ ] Auto-trigger incremental reindex on file changes
-- [ ] Auto-regenerate affected wiki pages
-- [ ] Add `--watch` flag to CLI
-- **Files**: `server.py`, new `watcher.py`
+### 12. Watch Mode ✅
+- [x] Add file watcher using `watchdog` library
+- [x] Auto-trigger incremental reindex on file changes
+- [x] Auto-regenerate affected wiki pages
+- [x] Add `deepwiki-watch` CLI command
+- **Files**: `watcher.py`, `pyproject.toml`
 
 ---
 
@@ -107,7 +107,7 @@ This document tracks planned improvements to the Local DeepWiki documentation ge
 **Larger Features** (1+ day each):
 - #1 Better API Reference
 - #7 Call Graph Diagrams
-- #12 Watch Mode
+- ~~#12 Watch Mode~~ ✅
 
 ---
 
@@ -116,4 +116,4 @@ This document tracks planned improvements to the Local DeepWiki documentation ge
 - Current wiki generation uses Ollama (qwen3-coder:30b) by default
 - Cross-linking was added in commit `f933c46`
 - Web UI runs on Flask at port 8080
-- All 118 tests currently pass
+- All 141 tests currently pass

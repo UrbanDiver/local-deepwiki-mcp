@@ -6,7 +6,7 @@
 
 ## Current Status: ✅ Complete & Working
 
-The project is fully implemented and tested. All 29 tests pass.
+The project is fully implemented and tested. All 141 tests pass.
 
 ## Architecture
 
@@ -43,6 +43,7 @@ The project is fully implemented and tested. All 29 tests pass.
 | `src/local_deepwiki/config.py` | Configuration management |
 | `src/local_deepwiki/models.py` | Pydantic data models |
 | `src/local_deepwiki/web/app.py` | Flask web UI for browsing wiki |
+| `src/local_deepwiki/watcher.py` | File watcher for auto-reindexing |
 
 ## Tech Stack
 
@@ -67,6 +68,9 @@ uv run local-deepwiki
 
 # Serve the wiki with web UI
 uv run deepwiki-serve .deepwiki --port 8080
+
+# Watch mode - auto-reindex on file changes
+uv run deepwiki-watch /path/to/repo
 ```
 
 ## MCP Server Configuration
@@ -124,7 +128,7 @@ asyncio.run(test())
 
 - [x] Web UI for browsing generated wiki
 - [x] File-level documentation generation
-- [ ] Watch mode for auto-reindexing on file changes
+- [x] Watch mode for auto-reindexing on file changes
 - [x] Swift language support
 - [ ] Support for more languages (Ruby, PHP, Kotlin)
 - [ ] Better diagram generation
