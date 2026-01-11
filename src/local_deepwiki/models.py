@@ -111,3 +111,31 @@ class SearchResult(BaseModel):
     chunk: CodeChunk = Field(description="The matched code chunk")
     score: float = Field(description="Similarity score")
     highlights: list[str] = Field(default_factory=list, description="Relevant snippets")
+
+
+class WikiPageStatus(BaseModel):
+    """Status of a generated wiki page for incremental generation."""
+
+    path: str = Field(description="Wiki page path (e.g., 'files/src/module/file.md')")
+    source_files: list[str] = Field(
+        default_factory=list, description="Source files that contributed to this page"
+    )
+    source_hashes: dict[str, str] = Field(
+        default_factory=dict, description="Mapping of source file path to content hash"
+    )
+    content_hash: str = Field(description="Hash of the generated page content")
+    generated_at: float = Field(description="Timestamp when page was generated")
+
+
+class WikiGenerationStatus(BaseModel):
+    """Status of wiki generation for tracking incremental updates."""
+
+    repo_path: str = Field(description="Path to the repository")
+    generated_at: float = Field(description="Timestamp of last generation")
+    total_pages: int = Field(description="Total pages generated")
+    index_status_hash: str = Field(
+        default="", description="Hash of index status for detecting changes"
+    )
+    pages: dict[str, WikiPageStatus] = Field(
+        default_factory=dict, description="Mapping of page path to status"
+    )

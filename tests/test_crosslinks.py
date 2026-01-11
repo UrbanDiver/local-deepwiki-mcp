@@ -286,8 +286,8 @@ class TestCrossLinker:
         result = linker.add_links(page)
         assert "[VectorStore](../files/core/vectorstore.md)" in result.content
 
-    def test_does_not_link_in_inline_code(self):
-        """Test that existing inline code is preserved."""
+    def test_links_backticked_entities(self):
+        """Test that backticked entity names get linked."""
         registry = EntityRegistry()
         registry.register_entity(
             name="VectorStore",
@@ -305,10 +305,75 @@ class TestCrossLinker:
         )
 
         result = linker.add_links(page)
-        # Should preserve inline code
-        assert "`VectorStore`" in result.content
-        # Should not create link inside backticks
-        assert "[VectorStore]" not in result.content
+        # Backticked entity should become a link with backticks preserved
+        assert "[`VectorStore`](vectorstore.md)" in result.content
+
+    def test_does_not_link_non_entity_inline_code(self):
+        """Test that non-entity inline code is preserved unchanged."""
+        registry = EntityRegistry()
+        registry.register_entity(
+            name="VectorStore",
+            entity_type=ChunkType.CLASS,
+            wiki_path="files/vectorstore.md",
+            file_path="vectorstore.py",
+        )
+
+        linker = CrossLinker(registry)
+        page = WikiPage(
+            path="files/indexer.md",
+            title="Indexer",
+            content="Use `some_variable` in your code.",
+            generated_at=0,
+        )
+
+        result = linker.add_links(page)
+        # Non-entity inline code should be preserved
+        assert "`some_variable`" in result.content
+        # Should not be linked
+        assert "[`some_variable`]" not in result.content
+
+    def test_links_qualified_names(self):
+        """Test that qualified names like module.ClassName get linked."""
+        registry = EntityRegistry()
+        registry.register_entity(
+            name="VectorStore",
+            entity_type=ChunkType.CLASS,
+            wiki_path="files/vectorstore.md",
+            file_path="vectorstore.py",
+        )
+
+        linker = CrossLinker(registry)
+        page = WikiPage(
+            path="files/indexer.md",
+            title="Indexer",
+            content="Import `local_deepwiki.core.VectorStore` from the module.",
+            generated_at=0,
+        )
+
+        result = linker.add_links(page)
+        # Qualified name should be linked, preserving full path
+        assert "[`local_deepwiki.core.VectorStore`](vectorstore.md)" in result.content
+
+    def test_links_simple_qualified_names(self):
+        """Test that simple qualified names like module.Class get linked."""
+        registry = EntityRegistry()
+        registry.register_entity(
+            name="WikiGenerator",
+            entity_type=ChunkType.CLASS,
+            wiki_path="files/wiki.md",
+            file_path="wiki.py",
+        )
+
+        linker = CrossLinker(registry)
+        page = WikiPage(
+            path="files/indexer.md",
+            title="Indexer",
+            content="Use `generators.WikiGenerator` for docs.",
+            generated_at=0,
+        )
+
+        result = linker.add_links(page)
+        assert "[`generators.WikiGenerator`](wiki.md)" in result.content
 
     def test_preserves_existing_links(self):
         """Test that existing markdown links are preserved."""

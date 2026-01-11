@@ -1,7 +1,8 @@
 """Simple Flask web UI for browsing DeepWiki documentation."""
 
+import json
 from pathlib import Path
-from flask import Flask, render_template_string, abort, redirect, url_for
+from flask import Flask, render_template_string, abort, redirect, url_for, jsonify
 import markdown
 
 app = Flask(__name__)
@@ -153,9 +154,105 @@ HTML_TEMPLATE = """
             color: #8b949e;
             margin-bottom: 20px;
             font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0;
         }
         .breadcrumb a {
             color: var(--link-color);
+            text-decoration: none;
+        }
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+        .breadcrumb .separator {
+            margin: 0 8px;
+            color: #6e7681;
+        }
+        .breadcrumb .current {
+            color: var(--text-color);
+            font-weight: 500;
+        }
+        /* Search box styles */
+        .search-container {
+            margin-bottom: 20px;
+            position: relative;
+        }
+        .search-input {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-color);
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .search-input:focus {
+            border-color: var(--link-color);
+        }
+        .search-input::placeholder {
+            color: #6e7681;
+        }
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--sidebar-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            margin-top: 4px;
+            max-height: 400px;
+            overflow-y: auto;
+            z-index: 100;
+            display: none;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        }
+        .search-results.active {
+            display: block;
+        }
+        .search-result {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .search-result:last-child {
+            border-bottom: none;
+        }
+        .search-result:hover {
+            background: var(--border-color);
+        }
+        .search-result-title {
+            color: var(--link-color);
+            font-weight: 500;
+            margin-bottom: 2px;
+        }
+        .search-result-path {
+            font-size: 12px;
+            color: #6e7681;
+            margin-bottom: 4px;
+        }
+        .search-result-snippet {
+            font-size: 13px;
+            color: #8b949e;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .search-result-match {
+            background: rgba(88, 166, 255, 0.2);
+            color: var(--link-color);
+            border-radius: 2px;
+            padding: 0 2px;
+        }
+        .search-no-results {
+            padding: 12px;
+            color: #8b949e;
+            text-align: center;
         }
         .mermaid {
             background: var(--sidebar-bg);
@@ -186,6 +283,10 @@ HTML_TEMPLATE = """
 <body>
     <nav class="sidebar">
         <h2>DeepWiki</h2>
+        <div class="search-container">
+            <input type="text" class="search-input" id="search-input" placeholder="Search docs..." autocomplete="off">
+            <div class="search-results" id="search-results"></div>
+        </div>
         <ul>
             {% for page in pages %}
             <li><a href="{{ url_for('view_page', path=page.path) }}"
@@ -252,6 +353,163 @@ HTML_TEMPLATE = """
             mermaid.run();
         });
     </script>
+    <script>
+        // Search functionality
+        (function() {
+            let searchIndex = null;
+            const searchInput = document.getElementById('search-input');
+            const searchResults = document.getElementById('search-results');
+
+            // Load search index
+            fetch('/search.json')
+                .then(response => response.json())
+                .then(data => { searchIndex = data; })
+                .catch(err => console.log('Search index not available'));
+
+            // Simple fuzzy match - checks if all query chars appear in order
+            function fuzzyMatch(query, text) {
+                query = query.toLowerCase();
+                text = text.toLowerCase();
+                let qi = 0;
+                for (let ti = 0; ti < text.length && qi < query.length; ti++) {
+                    if (text[ti] === query[qi]) qi++;
+                }
+                return qi === query.length;
+            }
+
+            // Score a result based on match quality
+            function scoreResult(query, entry) {
+                query = query.toLowerCase();
+                let score = 0;
+
+                // Title match (highest priority)
+                if (entry.title.toLowerCase().includes(query)) {
+                    score += 100;
+                    if (entry.title.toLowerCase().startsWith(query)) score += 50;
+                } else if (fuzzyMatch(query, entry.title)) {
+                    score += 30;
+                }
+
+                // Heading match
+                for (const heading of entry.headings || []) {
+                    if (heading.toLowerCase().includes(query)) {
+                        score += 40;
+                        break;
+                    }
+                }
+
+                // Code terms match (class names, functions)
+                for (const term of entry.terms || []) {
+                    if (term.toLowerCase().includes(query)) {
+                        score += 60;
+                        break;
+                    } else if (fuzzyMatch(query, term)) {
+                        score += 20;
+                        break;
+                    }
+                }
+
+                // Snippet match
+                if (entry.snippet && entry.snippet.toLowerCase().includes(query)) {
+                    score += 10;
+                }
+
+                return score;
+            }
+
+            // Perform search
+            function search(query) {
+                if (!searchIndex || query.length < 2) {
+                    searchResults.classList.remove('active');
+                    return;
+                }
+
+                const results = searchIndex
+                    .map(entry => ({ entry, score: scoreResult(query, entry) }))
+                    .filter(r => r.score > 0)
+                    .sort((a, b) => b.score - a.score)
+                    .slice(0, 8);
+
+                if (results.length === 0) {
+                    searchResults.innerHTML = '<div class="search-no-results">No results found</div>';
+                    searchResults.classList.add('active');
+                    return;
+                }
+
+                const html = results.map(r => {
+                    const entry = r.entry;
+                    return `
+                        <div class="search-result" data-path="${entry.path}">
+                            <div class="search-result-title">${escapeHtml(entry.title)}</div>
+                            <div class="search-result-path">${escapeHtml(entry.path)}</div>
+                            <div class="search-result-snippet">${escapeHtml(entry.snippet || '')}</div>
+                        </div>
+                    `;
+                }).join('');
+
+                searchResults.innerHTML = html;
+                searchResults.classList.add('active');
+
+                // Add click handlers
+                searchResults.querySelectorAll('.search-result').forEach(el => {
+                    el.addEventListener('click', () => {
+                        window.location.href = '/wiki/' + el.dataset.path;
+                    });
+                });
+            }
+
+            function escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            // Event listeners
+            let debounceTimer;
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => search(e.target.value.trim()), 150);
+            });
+
+            searchInput.addEventListener('focus', () => {
+                if (searchInput.value.trim().length >= 2) {
+                    search(searchInput.value.trim());
+                }
+            });
+
+            // Close results when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.search-container')) {
+                    searchResults.classList.remove('active');
+                }
+            });
+
+            // Keyboard navigation
+            searchInput.addEventListener('keydown', (e) => {
+                const results = searchResults.querySelectorAll('.search-result');
+                const active = searchResults.querySelector('.search-result:hover, .search-result.active');
+                let index = Array.from(results).indexOf(active);
+
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    index = Math.min(index + 1, results.length - 1);
+                    results.forEach((r, i) => r.classList.toggle('active', i === index));
+                    if (results[index]) results[index].scrollIntoView({ block: 'nearest' });
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    index = Math.max(index - 1, 0);
+                    results.forEach((r, i) => r.classList.toggle('active', i === index));
+                    if (results[index]) results[index].scrollIntoView({ block: 'nearest' });
+                } else if (e.key === 'Enter' && index >= 0) {
+                    e.preventDefault();
+                    results[index].click();
+                } else if (e.key === 'Escape') {
+                    searchResults.classList.remove('active');
+                    searchInput.blur();
+                }
+            });
+        })();
+    </script>
 </body>
 </html>
 """
@@ -312,10 +570,76 @@ def render_markdown(content: str) -> str:
     return md.convert(content)
 
 
+def build_breadcrumb(wiki_path: Path, current_path: str) -> str:
+    """Build breadcrumb navigation HTML with clickable links.
+
+    For a path like 'files/src/local_deepwiki/core/chunker.md', generates:
+    Home > Files > src > local_deepwiki > core > chunker
+
+    Each segment links to its index.md if one exists in that folder.
+    """
+    parts = current_path.split('/')
+
+    # Root pages don't need breadcrumbs (or just show Home)
+    if len(parts) == 1:
+        return ""
+
+    breadcrumb_items = []
+
+    # Always start with Home
+    breadcrumb_items.append(f'<a href="/">Home</a>')
+
+    # Build path progressively and check for index.md at each level
+    cumulative_path = ""
+    for part in parts[:-1]:  # Exclude the current page
+        if cumulative_path:
+            cumulative_path = f"{cumulative_path}/{part}"
+        else:
+            cumulative_path = part
+
+        # Check if there's an index.md in this folder
+        index_path = wiki_path / cumulative_path / "index.md"
+        display_name = part.replace("_", " ").replace("-", " ").title()
+
+        if index_path.exists():
+            link_path = f"{cumulative_path}/index.md"
+            breadcrumb_items.append(f'<a href="/wiki/{link_path}">{display_name}</a>')
+        else:
+            # No index.md, just show as text
+            breadcrumb_items.append(f'<span>{display_name}</span>')
+
+    # Add current page name (no link, it's the current page)
+    current_page = parts[-1]
+    if current_page.endswith('.md'):
+        current_page = current_page[:-3]
+    current_page = current_page.replace("_", " ").replace("-", " ").title()
+    breadcrumb_items.append(f'<span class="current">{current_page}</span>')
+
+    return ' <span class="separator">›</span> '.join(breadcrumb_items)
+
+
 @app.route('/')
 def index():
     """Redirect to index.md."""
     return redirect(url_for('view_page', path='index.md'))
+
+
+@app.route('/search.json')
+def search_json():
+    """Serve the search index JSON file."""
+    if WIKI_PATH is None:
+        abort(500, "Wiki path not configured")
+
+    search_path = WIKI_PATH / 'search.json'
+    if not search_path.exists():
+        # Return empty index if not generated yet
+        return jsonify([])
+
+    try:
+        data = json.loads(search_path.read_text())
+        return jsonify(data)
+    except Exception as e:
+        abort(500, f"Error reading search index: {e}")
 
 
 @app.route('/wiki/<path:path>')
@@ -337,12 +661,8 @@ def view_page(path: str):
     pages, sections = get_wiki_structure(WIKI_PATH)
     title = extract_title(file_path)
 
-    # Build breadcrumb
-    parts = path.split('/')
-    if len(parts) > 1:
-        breadcrumb = f'<a href="{url_for("index")}">Home</a> / {" / ".join(parts[:-1])} / {parts[-1]}'
-    else:
-        breadcrumb = ""
+    # Build breadcrumb navigation
+    breadcrumb = build_breadcrumb(WIKI_PATH, path)
 
     return render_template_string(
         HTML_TEMPLATE,

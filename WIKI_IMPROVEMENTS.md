@@ -27,23 +27,24 @@ This document tracks planned improvements to the Local DeepWiki documentation ge
 
 ## Navigation & Discovery
 
-### 4. Search Index
-- [ ] Generate `search.json` with page titles, headings, and content snippets
-- [ ] Add client-side search to web UI (JavaScript fuzzy search)
-- [ ] Index class names, function names, and key terms
-- **Files**: `generators/wiki.py`, `web/app.py`, new JS in `web/static/`
+### 4. Search Index ✅
+- [x] Generate `search.json` with page titles, headings, and content snippets
+- [x] Add client-side search to web UI (JavaScript fuzzy search)
+- [x] Index class names, function names, and key terms
+- **Files**: `generators/search.py`, `generators/wiki.py`, `web/app.py`
 
-### 5. Breadcrumb Navigation
-- [ ] Add breadcrumb trail to each wiki page
-- [ ] Show path like: Home > Modules > Core > Indexer
-- [ ] Update web UI template to render breadcrumbs
-- **Files**: `web/app.py`, templates
+### 5. Breadcrumb Navigation ✅
+- [x] Add breadcrumb trail to each wiki page
+- [x] Show path like: Home › Modules › Core › Indexer
+- [x] Update web UI template to render breadcrumbs
+- [x] Links to index.md when folder has one, plain text otherwise
+- **Files**: `web/app.py`
 
-### 6. "See Also" Sections
-- [ ] Analyze import relationships between files
-- [ ] Suggest related pages based on shared dependencies
-- [ ] Add "See Also" section at bottom of each page
-- **Files**: `generators/wiki.py`
+### 6. "See Also" Sections ✅
+- [x] Analyze import relationships between files
+- [x] Suggest related pages based on shared dependencies
+- [x] Add "See Also" section at bottom of each page
+- **Files**: `generators/see_also.py`, `generators/wiki.py`
 
 ---
 
@@ -71,16 +72,16 @@ This document tracks planned improvements to the Local DeepWiki documentation ge
 
 ## Technical Improvements
 
-### 10. Incremental Wiki Generation
-- [ ] Track file hashes and only regenerate changed pages
-- [ ] Store generation metadata (hash, timestamp) per page
-- [ ] Skip unchanged files during wiki generation
+### 10. Incremental Wiki Generation ✅
+- [x] Track file hashes and only regenerate changed pages
+- [x] Store generation metadata (hash, timestamp) per page
+- [x] Skip unchanged files during wiki generation
 - **Files**: `generators/wiki.py`, `models.py`
 
-### 11. Better Cross-Link Detection
-- [ ] Parse LLM output to find class names even in backticks
-- [ ] Convert `` `ClassName` `` to `` [`ClassName`](path) ``
-- [ ] Handle qualified names like `module.ClassName`
+### 11. Better Cross-Link Detection ✅
+- [x] Parse LLM output to find class names even in backticks
+- [x] Convert `` `ClassName` `` to `` [`ClassName`](path) ``
+- [x] Handle qualified names like `module.ClassName`
 - **Files**: `generators/crosslinks.py`
 
 ### 12. Watch Mode
@@ -95,13 +96,13 @@ This document tracks planned improvements to the Local DeepWiki documentation ge
 ## Priority Suggestions
 
 **Quick Wins** (1-2 hours each):
-- #5 Breadcrumb Navigation
-- #11 Better Cross-Link Detection
+- ~~#5 Breadcrumb Navigation~~ ✅
+- ~~#11 Better Cross-Link Detection~~ ✅
 
 **Medium Effort** (half day each):
-- #4 Search Index
-- #6 "See Also" Sections
-- #10 Incremental Wiki Generation
+- ~~#4 Search Index~~ ✅
+- ~~#6 "See Also" Sections~~ ✅
+- ~~#10 Incremental Wiki Generation~~ ✅
 
 **Larger Features** (1+ day each):
 - #1 Better API Reference
@@ -115,4 +116,4 @@ This document tracks planned improvements to the Local DeepWiki documentation ge
 - Current wiki generation uses Ollama (qwen3-coder:30b) by default
 - Cross-linking was added in commit `f933c46`
 - Web UI runs on Flask at port 8080
-- All 52 tests currently pass
+- All 118 tests currently pass

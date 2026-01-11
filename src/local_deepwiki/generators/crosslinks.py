@@ -5,6 +5,7 @@ wiki pages when classes, functions, or other documented entities are mentioned.
 """
 
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -393,7 +394,7 @@ class CrossLinker:
         Returns:
             Text with entity mentions replaced.
         """
-        # First, protect existing links and inline code by replacing them temporarily
+        # First, protect existing links and headings by replacing them temporarily
         protected: list[tuple[str, str]] = []
         counter = 0
 
@@ -404,10 +405,18 @@ class CrossLinker:
             counter += 1
             return placeholder
 
-        # Protect existing markdown links, inline code, and headings
+        # Protect existing markdown links and headings
         temp_text = re.sub(r'\[([^\]]+)\]\([^)]+\)', protect, text)
-        temp_text = re.sub(r'`[^`]+`', protect, temp_text)
         temp_text = re.sub(r'^(#{1,6}\s+.+)$', protect, temp_text, flags=re.MULTILINE)
+
+        # Convert backticked entity names to links: `EntityName` -> [`EntityName`](path)
+        # Also handle qualified names like `module.EntityName` -> [`EntityName`](path)
+        temp_text = self._link_backticked_entities(
+            temp_text, entity_name, rel_path, protect
+        )
+
+        # Protect all remaining inline code (that didn't match entities)
+        temp_text = re.sub(r'`[^`]+`', protect, temp_text)
 
         # Replace bold entity mentions: **EntityName** -> **[EntityName](path)**
         bold_pattern = rf'\*\*{re.escape(entity_name)}\*\*'
@@ -426,6 +435,50 @@ class CrossLinker:
             temp_text = temp_text.replace(placeholder, original)
 
         return temp_text
+
+    def _link_backticked_entities(
+        self,
+        text: str,
+        entity_name: str,
+        rel_path: str,
+        protect: Callable[[re.Match[str]], str],
+    ) -> str:
+        """Convert backticked entity names to links.
+
+        Handles:
+        - `EntityName` -> [`EntityName`](path)
+        - `module.EntityName` -> [`EntityName`](path)
+        - `module.submodule.EntityName` -> [`EntityName`](path)
+
+        Args:
+            text: The text to process.
+            entity_name: The entity name to find.
+            rel_path: The relative path to the entity's wiki page.
+            protect: Function to protect already-processed content.
+
+        Returns:
+            Text with backticked entities converted to links.
+        """
+        # Pattern for exact match: `EntityName`
+        exact_pattern = rf'`{re.escape(entity_name)}`'
+        exact_replacement = f"[`{entity_name}`]({rel_path})"
+        text = re.sub(exact_pattern, exact_replacement, text)
+
+        # Pattern for qualified names: `something.EntityName` or `a.b.EntityName`
+        # Captures the entity name at the end after a dot
+        qualified_pattern = rf'`([a-zA-Z_][a-zA-Z0-9_]*\.)+{re.escape(entity_name)}`'
+
+        def qualified_replacement(match: re.Match) -> str:
+            # Link just the entity name, showing full qualified name
+            full_name = match.group(0)[1:-1]  # Remove backticks
+            return f"[`{full_name}`]({rel_path})"
+
+        text = re.sub(qualified_pattern, qualified_replacement, text)
+
+        # Protect the links we just created
+        text = re.sub(r'\[`[^`]+`\]\([^)]+\)', protect, text)
+
+        return text
 
     def _relative_path(self, from_path: str, to_path: str) -> str:
         """Calculate relative path between two wiki pages.

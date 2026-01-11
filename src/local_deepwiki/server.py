@@ -209,6 +209,7 @@ async def handle_index_repository(args: dict[str, Any]) -> list[TextContent]:
             config=config,
             llm_provider=args.get("llm_provider"),
             progress_callback=progress_callback,
+            full_rebuild=full_rebuild,
         )
 
         result = {
