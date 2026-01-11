@@ -31,8 +31,10 @@ def generate_class_diagram(chunks: list) -> str | None:
     """
     from local_deepwiki.models import ChunkType
 
-    # Collect classes and their methods
+    # Collect classes, their methods, and inheritance info
     classes: dict[str, list[str]] = {}
+    class_contents: dict[str, str] = {}  # Store content for method extraction
+    inheritance: dict[str, list[str]] = {}  # child -> [parents]
     standalone_functions: list[str] = []
 
     for chunk in chunks:
@@ -43,6 +45,11 @@ def generate_class_diagram(chunks: list) -> str | None:
             class_name = chunk.name or "Unknown"
             if class_name not in classes:
                 classes[class_name] = []
+                class_contents[class_name] = chunk.content
+            # Extract parent classes from metadata
+            parent_classes = chunk.metadata.get("parent_classes", [])
+            if parent_classes:
+                inheritance[class_name] = parent_classes
         elif chunk.chunk_type == ChunkType.METHOD:
             parent = chunk.parent_name or "Unknown"
             method_name = chunk.name or "unknown"
@@ -56,6 +63,18 @@ def generate_class_diagram(chunks: list) -> str | None:
             if func_name not in standalone_functions:
                 standalone_functions.append(func_name)
 
+    # For classes without METHOD chunks, extract methods from content
+    # Pattern matches: def method_name( or async def method_name(
+    method_pattern = re.compile(r'(?:async\s+)?def\s+(\w+)\s*\(')
+    for class_name, methods in classes.items():
+        if not methods and class_name in class_contents:
+            content = class_contents[class_name]
+            # Skip the first match if it's the class definition line
+            found_methods = method_pattern.findall(content)
+            for method in found_methods:
+                if method not in methods:
+                    methods.append(method)
+
     # Filter to only classes with methods (empty classes cause Mermaid syntax errors)
     classes_with_methods = {k: v for k, v in classes.items() if v}
 
@@ -63,20 +82,31 @@ def generate_class_diagram(chunks: list) -> str | None:
     if not classes_with_methods:
         return None
 
+    # Helper to sanitize names for Mermaid
+    def sanitize(name: str) -> str:
+        return name.replace("<", "_").replace(">", "_").replace(" ", "_")
+
     # Build Mermaid diagram
     lines = ["```mermaid", "classDiagram"]
 
     for class_name, methods in sorted(classes_with_methods.items()):
-        # Sanitize class name for Mermaid (remove special chars)
-        safe_name = class_name.replace("<", "_").replace(">", "_").replace(" ", "_")
+        safe_name = sanitize(class_name)
         lines.append(f"    class {safe_name} {{")
         for method in methods:
             # Mark private methods with - prefix, others with +
             prefix = "-" if method.startswith("_") else "+"
-            # Sanitize method name
-            safe_method = method.replace("<", "_").replace(">", "_")
+            safe_method = sanitize(method)
             lines.append(f"        {prefix}{safe_method}()")
         lines.append("    }")
+
+    # Add inheritance relationships
+    for child, parents in sorted(inheritance.items()):
+        if child in classes_with_methods:
+            safe_child = sanitize(child)
+            for parent in parents:
+                safe_parent = sanitize(parent)
+                # Use --|> for inheritance (child inherits from parent)
+                lines.append(f"    {safe_child} --|> {safe_parent}")
 
     lines.append("```")
 

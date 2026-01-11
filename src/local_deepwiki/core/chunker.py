@@ -55,6 +55,69 @@ IMPORT_NODE_TYPES: dict[Language, set[str]] = {
 }
 
 
+def get_parent_classes(class_node: Node, source: bytes, language: Language) -> list[str]:
+    """Extract parent class names from a class definition.
+
+    Args:
+        class_node: The class AST node.
+        source: Source bytes.
+        language: Programming language.
+
+    Returns:
+        List of parent class names.
+    """
+    parents = []
+
+    if language == Language.PYTHON:
+        # Python: class Child(Parent, Mixin): → argument_list > identifier
+        for child in class_node.children:
+            if child.type == "argument_list":
+                for arg in child.children:
+                    if arg.type == "identifier":
+                        parents.append(get_node_text(arg, source))
+
+    elif language in (Language.TYPESCRIPT, Language.JAVASCRIPT):
+        # TS/JS: class Child extends Parent implements Interface
+        for child in class_node.children:
+            if child.type == "class_heritage":
+                for clause in child.children:
+                    if clause.type in ("extends_clause", "implements_clause"):
+                        for item in clause.children:
+                            if item.type in ("identifier", "type_identifier"):
+                                parents.append(get_node_text(item, source))
+
+    elif language == Language.JAVA:
+        # Java: class Child extends Parent implements Interface
+        for child in class_node.children:
+            if child.type == "superclass":
+                for item in child.children:
+                    if item.type == "type_identifier":
+                        parents.append(get_node_text(item, source))
+            elif child.type == "super_interfaces":
+                for item in find_nodes_by_type(child, {"type_identifier"}):
+                    parents.append(get_node_text(item, source))
+
+    elif language == Language.SWIFT:
+        # Swift: class Child: Parent, Protocol
+        for child in class_node.children:
+            if child.type == "type_inheritance_clause":
+                for item in child.children:
+                    if item.type in ("user_type", "type_identifier"):
+                        # Get the identifier from user_type
+                        text = get_node_text(item, source)
+                        if text and text not in (":", ","):
+                            parents.append(text)
+
+    elif language == Language.CPP:
+        # C++: class Child : public Parent
+        for child in class_node.children:
+            if child.type == "base_class_clause":
+                for item in find_nodes_by_type(child, {"type_identifier"}):
+                    parents.append(get_node_text(item, source))
+
+    return parents
+
+
 class CodeChunker:
     """Extract semantic code chunks from source files using AST analysis."""
 
@@ -249,12 +312,15 @@ class CodeChunker:
         docstring = get_docstring(class_node, source, language)
         content = get_node_text(class_node, source)
 
+        # Extract parent classes for inheritance
+        parent_classes = get_parent_classes(class_node, source, language)
+
         # Check if class is too large and needs to be split
         lines = content.count("\n") + 1
         if lines > 100:
             # For large classes, create a summary chunk and method chunks
             yield self._create_class_summary_chunk(
-                class_node, source, language, file_path, class_name, docstring
+                class_node, source, language, file_path, class_name, docstring, parent_classes
             )
 
             # Extract methods separately
@@ -266,6 +332,9 @@ class CodeChunker:
         else:
             # Small class - include everything in one chunk
             chunk_id = self._generate_id(file_path, f"class_{class_name}", class_node.start_point[0])
+            metadata = {"line_count": lines}
+            if parent_classes:
+                metadata["parent_classes"] = parent_classes
             yield CodeChunk(
                 id=chunk_id,
                 file_path=file_path,
@@ -276,7 +345,7 @@ class CodeChunker:
                 start_line=class_node.start_point[0] + 1,
                 end_line=class_node.end_point[0] + 1,
                 docstring=docstring,
-                metadata={"line_count": lines},
+                metadata=metadata,
             )
 
     def _create_class_summary_chunk(
@@ -287,6 +356,7 @@ class CodeChunker:
         file_path: str,
         class_name: str,
         docstring: str | None,
+        parent_classes: list[str] | None = None,
     ) -> CodeChunk:
         """Create a summary chunk for a large class.
 
@@ -297,6 +367,7 @@ class CodeChunker:
             file_path: Relative file path.
             class_name: Name of the class.
             docstring: Class docstring if any.
+            parent_classes: List of parent class names.
 
         Returns:
             A summary CodeChunk for the class.
@@ -317,6 +388,9 @@ class CodeChunker:
         content = f"{signature}\n    # Methods: {', '.join(method_names)}"
 
         chunk_id = self._generate_id(file_path, f"class_{class_name}", class_node.start_point[0])
+        metadata = {"is_summary": True, "method_count": len(methods)}
+        if parent_classes:
+            metadata["parent_classes"] = parent_classes
         return CodeChunk(
             id=chunk_id,
             file_path=file_path,
@@ -327,7 +401,7 @@ class CodeChunker:
             start_line=class_node.start_point[0] + 1,
             end_line=class_node.end_point[0] + 1,
             docstring=docstring,
-            metadata={"is_summary": True, "method_count": len(methods)},
+            metadata=metadata,
         )
 
     def _create_method_chunk(
