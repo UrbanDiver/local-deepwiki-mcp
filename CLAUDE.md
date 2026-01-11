@@ -90,7 +90,7 @@ Already added to `~/.claude.json`:
 Config file location: `~/.config/local-deepwiki/config.yaml`
 
 Default providers:
-- **LLM**: Ollama (llama3.2) - can switch to anthropic/openai
+- **LLM**: Ollama (qwen3-coder:30b) - can switch to anthropic/openai
 - **Embeddings**: Local (all-MiniLM-L6-v2) - can switch to openai
 
 ## Testing the Server
@@ -123,15 +123,25 @@ asyncio.run(test())
 ## Future Improvements
 
 - [x] Web UI for browsing generated wiki
+- [x] File-level documentation generation
 - [ ] Watch mode for auto-reindexing on file changes
 - [ ] Support for more languages (Ruby, PHP, Kotlin, Swift)
 - [ ] Better diagram generation
 - [ ] Export to other formats (HTML, PDF)
 
+## Wiki Structure
+
+Generated wiki includes:
+- **Overview** (`index.md`) - Project summary and quick start
+- **Architecture** (`architecture.md`) - System design with mermaid diagrams
+- **Dependencies** (`dependencies.md`) - External and internal dependencies
+- **Modules** (`modules/`) - Documentation per top-level directory
+- **Files** (`files/`) - Individual file documentation (up to 20 files)
+
 ## Tested On
 
 This repo itself was used as a test case:
-- 26 Python files indexed
-- 159 code chunks extracted
-- Wiki generated with 6 pages
-- RAG Q&A working with Ollama
+- 28 Python files indexed
+- 172 code chunks extracted
+- 26 wiki pages generated (including file-level docs)
+- RAG Q&A working with Ollama (qwen3-coder:30b)
