@@ -50,11 +50,11 @@ This document tracks planned improvements to the Local DeepWiki documentation ge
 
 ## Diagrams & Visualization
 
-### 7. Call Graph Diagrams
-- [ ] Parse function bodies to find function calls
-- [ ] Generate Mermaid flowchart showing call relationships
-- [ ] Add to file documentation pages
-- **Files**: `core/parser.py`, `generators/diagrams.py`
+### 7. Call Graph Diagrams ✅
+- [x] Parse function bodies to find function calls
+- [x] Generate Mermaid flowchart showing call relationships
+- [x] Add to file documentation pages
+- **Files**: `generators/callgraph.py`, `generators/wiki.py`
 
 ### 8. Enhanced Import/Dependency Graphs
 - [ ] Improve existing dependency graph with better layout
@@ -106,7 +106,7 @@ This document tracks planned improvements to the Local DeepWiki documentation ge
 
 **Larger Features** (1+ day each):
 - #1 Better API Reference
-- #7 Call Graph Diagrams
+- ~~#7 Call Graph Diagrams~~ ✅
 - ~~#12 Watch Mode~~ ✅
 
 ---
@@ -116,4 +116,4 @@ This document tracks planned improvements to the Local DeepWiki documentation ge
 - Current wiki generation uses Ollama (qwen3-coder:30b) by default
 - Cross-linking was added in commit `f933c46`
 - Web UI runs on Flask at port 8080
-- All 141 tests currently pass
+- All 164 tests currently pass

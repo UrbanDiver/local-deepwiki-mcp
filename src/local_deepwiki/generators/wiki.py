@@ -9,6 +9,7 @@ from typing import Any
 
 from local_deepwiki.config import Config, get_config
 from local_deepwiki.core.vectorstore import VectorStore
+from local_deepwiki.generators.callgraph import get_file_call_graph
 from local_deepwiki.generators.crosslinks import EntityRegistry, add_cross_links
 from local_deepwiki.generators.search import write_search_index
 from local_deepwiki.generators.see_also import RelationshipAnalyzer, add_see_also_sections
@@ -942,6 +943,13 @@ Do NOT include mermaid class diagrams - they will be auto-generated."""
             class_diagram = generate_class_diagram(all_file_chunks)
             if class_diagram:
                 content += "\n\n## Class Diagram\n\n" + class_diagram
+
+            # Generate call graph diagram
+            abs_file_path = Path(index_status.repo_path) / file_info.path
+            if abs_file_path.exists():
+                call_graph = get_file_call_graph(abs_file_path, Path(index_status.repo_path))
+                if call_graph:
+                    content += "\n\n## Call Graph\n\n```mermaid\n" + call_graph + "\n```"
 
             # Register entities for cross-linking
             self.entity_registry.register_from_chunks(all_file_chunks, wiki_path)
