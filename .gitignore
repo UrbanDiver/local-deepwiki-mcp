@@ -50,3 +50,4 @@ Thumbs.db
 # Project specific
 *.lance
 .claude/
+html-export/
