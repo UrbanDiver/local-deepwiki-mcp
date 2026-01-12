@@ -99,6 +99,7 @@ class TestWikiGeneratorHelpers:
             }
             generator._previous_status = None
             generator._page_statuses = {}
+            generator._file_line_info = {}  # For source refs with line numbers
             return generator
 
     def test_compute_content_hash(self, mock_wiki_generator):

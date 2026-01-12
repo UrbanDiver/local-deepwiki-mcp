@@ -15,6 +15,8 @@ from local_deepwiki.generators.crosslinks import EntityRegistry, add_cross_links
 from local_deepwiki.generators.manifest import ProjectManifest, get_directory_tree, parse_manifest
 from local_deepwiki.generators.search import write_search_index
 from local_deepwiki.generators.see_also import RelationshipAnalyzer, add_see_also_sections
+from local_deepwiki.generators.source_refs import add_source_refs_sections
+from local_deepwiki.generators.toc import generate_toc, write_toc
 from local_deepwiki.models import (
     IndexStatus,
     WikiGenerationStatus,
@@ -351,6 +353,38 @@ class WikiGenerator:
         # Repository path (set during generation)
         self._repo_path: Path | None = None
 
+        # Line info for source files (computed from chunks)
+        self._file_line_info: dict[str, tuple[int, int]] = {}
+
+    def _get_main_definition_lines(self) -> dict[str, tuple[int, int]]:
+        """Get line range of main definition (first class or function) per file.
+
+        Returns:
+            Dict mapping file_path to (start_line, end_line) tuple.
+        """
+        table = self.vector_store._get_table()
+        if table is None:
+            return {}
+
+        df = table.to_pandas()
+        result: dict[str, tuple[int, int]] = {}
+
+        for file_path, group in df.groupby("file_path"):
+            # Sort by start_line to get first definitions
+            classes = group[group["chunk_type"] == "class"].sort_values("start_line")
+            functions = group[group["chunk_type"] == "function"].sort_values("start_line")
+
+            if not classes.empty:
+                # Use first class definition
+                row = classes.iloc[0]
+                result[str(file_path)] = (int(row["start_line"]), int(row["end_line"]))
+            elif not functions.empty:
+                # Use first function definition
+                row = functions.iloc[0]
+                result[str(file_path)] = (int(row["start_line"]), int(row["end_line"]))
+
+        return result
+
     def _load_wiki_status(self) -> WikiGenerationStatus | None:
         """Load previous wiki generation status.
 
@@ -471,10 +505,18 @@ class WikiGenerator:
             for f in source_files
         }
 
+        # Include line info for source files that have it
+        source_line_info = {
+            f: {"start_line": self._file_line_info[f][0], "end_line": self._file_line_info[f][1]}
+            for f in source_files
+            if f in self._file_line_info
+        }
+
         self._page_statuses[page.path] = WikiPageStatus(
             path=page.path,
             source_files=source_files,
             source_hashes=source_hashes,
+            source_line_info=source_line_info,
             content_hash=self._compute_content_hash(page.content),
             generated_at=page.generated_at,
         )
@@ -511,6 +553,9 @@ class WikiGenerator:
         # Load previous wiki status for incremental updates
         if not full_rebuild:
             self._previous_status = self._load_wiki_status()
+
+        # Pre-compute line info for source files (for source refs with line numbers)
+        self._file_line_info = self._get_main_definition_lines()
 
         # Generate index page (overview) - depends on all files
         if progress_callback:
@@ -612,6 +657,9 @@ class WikiGenerator:
 
         pages = add_cross_links(pages, self.entity_registry)
 
+        # Add Relevant Source Files sections
+        pages = add_source_refs_sections(pages, self._page_statuses)
+
         # Add See Also sections
         if progress_callback:
             progress_callback("Adding See Also sections", 6, total_steps)
@@ -627,6 +675,11 @@ class WikiGenerator:
             progress_callback("Generating search index", 7, total_steps)
 
         write_search_index(self.wiki_path, pages)
+
+        # Generate table of contents with hierarchical numbering
+        page_list = [{"path": p.path, "title": p.title} for p in pages]
+        toc = generate_toc(page_list)
+        write_toc(toc, self.wiki_path)
 
         # Save wiki generation status
         wiki_status = WikiGenerationStatus(

@@ -308,7 +308,16 @@ async def handle_read_wiki_structure(args: dict[str, Any]) -> list[TextContent]:
     if not wiki_path.exists():
         return [TextContent(type="text", text=f"Error: Wiki path does not exist: {wiki_path}")]
 
-    # Find all markdown files
+    # Check for toc.json (numbered hierarchical structure)
+    toc_path = wiki_path / "toc.json"
+    if toc_path.exists():
+        try:
+            toc_data = json.loads(toc_path.read_text())
+            return [TextContent(type="text", text=json.dumps(toc_data, indent=2))]
+        except (json.JSONDecodeError, OSError):
+            pass  # Fall back to dynamic generation
+
+    # Fall back to dynamic generation if no toc.json
     pages = []
     for md_file in wiki_path.rglob("*.md"):
         rel_path = str(md_file.relative_to(wiki_path))
@@ -325,8 +334,8 @@ async def handle_read_wiki_structure(args: dict[str, Any]) -> list[TextContent]:
             "title": title,
         })
 
-    # Build hierarchical structure
-    structure = {"pages": [], "sections": {}}
+    # Build hierarchical structure (legacy format without numbers)
+    structure: dict[str, Any] = {"pages": [], "sections": {}}
 
     for page in sorted(pages, key=lambda p: p["path"]):
         parts = Path(page["path"]).parts

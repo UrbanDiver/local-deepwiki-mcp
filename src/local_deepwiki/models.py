@@ -123,6 +123,10 @@ class WikiPageStatus(BaseModel):
     source_hashes: dict[str, str] = Field(
         default_factory=dict, description="Mapping of source file path to content hash"
     )
+    source_line_info: dict[str, dict[str, int]] = Field(
+        default_factory=dict,
+        description="Mapping of source file path to {start_line, end_line}",
+    )
     content_hash: str = Field(description="Hash of the generated page content")
     generated_at: float = Field(description="Timestamp when page was generated")
 
