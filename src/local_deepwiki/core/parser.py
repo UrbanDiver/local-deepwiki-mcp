@@ -15,6 +15,7 @@ import tree_sitter_cpp
 import tree_sitter_swift
 import tree_sitter_ruby
 import tree_sitter_php
+import tree_sitter_kotlin
 from tree_sitter import Language, Parser, Node
 
 from local_deepwiki.models import Language as LangEnum, FileInfo
@@ -32,6 +33,7 @@ LANGUAGE_MODULES = {
     LangEnum.SWIFT: tree_sitter_swift,
     LangEnum.RUBY: tree_sitter_ruby,
     LangEnum.PHP: tree_sitter_php,
+    LangEnum.KOTLIN: tree_sitter_kotlin,
 }
 
 # File extension to language mapping
@@ -59,6 +61,8 @@ EXTENSION_MAP: dict[str, LangEnum] = {
     ".gemspec": LangEnum.RUBY,
     ".php": LangEnum.PHP,
     ".phtml": LangEnum.PHP,
+    ".kt": LangEnum.KOTLIN,
+    ".kts": LangEnum.KOTLIN,
 }
 
 
@@ -317,6 +321,14 @@ def get_docstring(node: Node, source: bytes, language: LangEnum) -> str | None:
         # PHP uses PHPDoc comments (/** ... */)
         prev = node.prev_sibling
         if prev and prev.type == "comment":
+            text = get_node_text(prev, source)
+            if text.startswith("/**"):
+                return text[3:-2].strip()
+
+    elif language == LangEnum.KOTLIN:
+        # Kotlin uses KDoc comments (/** ... */)
+        prev = node.prev_sibling
+        if prev and prev.type == "multiline_comment":
             text = get_node_text(prev, source)
             if text.startswith("/**"):
                 return text[3:-2].strip()

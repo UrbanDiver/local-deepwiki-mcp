@@ -21,6 +21,7 @@ class Language(str, Enum):
     SWIFT = "swift"
     RUBY = "ruby"
     PHP = "php"
+    KOTLIN = "kotlin"
 
 
 class ChunkType(str, Enum):
