@@ -1,118 +1,117 @@
 # File Overview
 
-This file defines the core data models and enumerations used throughout the local_deepwiki system. It provides the foundational data structures that represent various components of the wiki generation and indexing process, including language specifications, chunk types, file information, wiki pages, and search results.
-
-The models in this file serve as the data contracts between different components of the system, ensuring consistent data representation across the codebase. They work closely with components like [WikiGenerator](generators/wiki.md), [CodeChunker](core/chunker.md), and [VectorStore](core/vectorstore.md) to manage the flow of information during wiki creation and search operations.
+This file defines data models and enumerations used in the local_deepwiki application. It provides the foundational data structures for representing language types, chunk types, file information, wiki pages, and search results. The models are built using Pydantic for data validation and serialization.
 
 # Classes
 
 ## Language
 
-An enumeration representing supported programming languages for code processing.
+An enumeration representing supported programming languages.
 
 ## ChunkType
 
-An enumeration defining the types of chunks that can be processed, including code, documentation, and other content types.
+An enumeration representing different types of code chunks.
 
 ## CodeChunk
 
-A data model representing a chunk of code with metadata including file information, content, and processing details.
+A data model representing a code chunk with fields for content, language, and type.
 
 **Fields:**
-- `file_info`: FileInfo object containing file metadata
-- `content`: The actual code content as a string
-- `chunk_type`: The type of chunk (from ChunkType enum)
-- `start_line`: Starting line number of the chunk
-- `end_line`: Ending line number of the chunk
+- content (str): The content of the code chunk
+- language (Language): The programming language of the chunk
+- type (ChunkType): The type of the chunk
 
 ## FileInfo
 
-A data model containing metadata about source files.
+A data model representing file information.
 
 **Fields:**
-- `path`: Path to the file
-- `name`: Name of the file
-- `extension`: File extension
-- `size`: File size in bytes
-- `language`: Language of the file (from Language enum)
+- path (Path): The file path
+- size (int): The file size in bytes
+- modified_time (float): The last modified timestamp
 
 ## IndexStatus
 
-An enumeration representing the indexing status of wiki pages.
+An enumeration representing the indexing status of a wiki page.
 
 ## WikiPage
 
-A data model representing a wiki page with its content and metadata.
+A data model representing a wiki page.
 
 **Fields:**
-- `title`: Page title
-- `content`: Page content
-- `file_info`: FileInfo object for the source file
-- `status`: IndexStatus indicating the page's indexing state
-- `created_at`: Timestamp when the page was created
-- `updated_at`: Timestamp when the page was last updated
+- title (str): The page title
+- content (str): The page content
+- file_info (FileInfo): Information about the source file
+- status (IndexStatus): The indexing status of the page
+- chunks (list[CodeChunk]): List of code chunks in the page
 
 ## WikiStructure
 
-A data model representing the overall structure of a wiki, including pages and their relationships.
+A data model representing the overall structure of a wiki.
 
 **Fields:**
-- `pages`: List of WikiPage objects
-- `title`: Wiki title
-- `description`: Wiki description
-- `created_at`: Timestamp when the wiki was created
+- pages (list[WikiPage]): List of wiki pages
+- title (str): The wiki title
 
 ## SearchResult
 
-A data model representing the results of a search operation.
+A data model representing a search result.
 
 **Fields:**
-- `query`: The search query
-- `results`: List of matching WikiPage objects
-- `total_matches`: Total number of matches found
-- `score_threshold`: Minimum similarity score for results
+- page (WikiPage): The wiki page containing the result
+- snippet (str): A snippet of text containing the search term
+- score (float): The relevance score of the result
 
 ## WikiPageStatus
 
-An enumeration representing the status of individual wiki pages.
+An enumeration representing the status of a wiki page.
 
 ## WikiGenerationStatus
 
-An enumeration representing the overall status of wiki generation process.
+An enumeration representing the status of a wiki generation process.
+
+# Functions
+
+No functions are defined in this file.
 
 # Usage Examples
 
 ```python
-# Creating a FileInfo object
+from src.local_deepwiki.models import WikiPage, FileInfo, CodeChunk, Language, ChunkType
+
+# Create a file info object
 file_info = FileInfo(
-    path="/path/to/file.py",
-    name="example.py",
-    extension=".py",
+    path=Path("example.py"),
     size=1024,
-    language=Language.PYTHON
+    modified_time=1634567890.0
 )
 
-# Creating a CodeChunk
+# Create a code chunk
 chunk = CodeChunk(
-    file_info=file_info,
-    content="def hello_world():\n    print('Hello, World!')",
-    chunk_type=ChunkType.CODE,
-    start_line=1,
-    end_line=2
+    content="print('Hello World')",
+    language=Language.PYTHON,
+    type=ChunkType.CODE
 )
 
-# Creating a WikiPage
+# Create a wiki page
 page = WikiPage(
     title="Example Page",
-    content="This is an example wiki page",
+    content="This is an example page",
     file_info=file_info,
-    status=IndexStatus.INDEXED
+    status=IndexStatus.INDEXED,
+    chunks=[chunk]
 )
 ```
 
 # Related Components
 
-This file works with [WikiGenerator](generators/wiki.md) to manage the creation and structure of wiki pages. The CodeChunk model is used by [CodeChunker](core/chunker.md) to process source files into manageable pieces. The WikiPage and WikiStructure models integrate with [VectorStore](core/vectorstore.md) to store and retrieve embeddings for search operations. The SearchResult model is returned by search functions that query the [VectorStore](core/vectorstore.md) for relevant wiki content.
+This file imports and uses:
+- `Enum` from `enum` module
+- `Path` from `pathlib` module
+- `Any` from `typing` module
+- `BaseModel` and `Field` from `pydantic` module
+
+The models defined in this file are likely used by other components in the local_deepwiki application for data representation and validation.
 
 ## API Reference
 
@@ -213,10 +212,14 @@ flowchart TD
     class N1 method
 ```
 
+## Relevant Source Files
+
+- `src/local_deepwiki/models.py`
+
 ## See Also
 
-- [chunker](core/chunker.md) - uses this
-- [test_api_docs](../../tests/test_api_docs.md) - uses this
-- [test_crosslinks](../../tests/test_crosslinks.md) - uses this
+- [test_incremental_wiki](../../tests/test_incremental_wiki.md) - uses this
+- [api_docs](generators/api_docs.md) - uses this
+- [test_see_also](../../tests/test_see_also.md) - uses this
 - [wiki](generators/wiki.md) - uses this
-- [server](server.md) - uses this
+- [test_chunker](../../tests/test_chunker.md) - uses this

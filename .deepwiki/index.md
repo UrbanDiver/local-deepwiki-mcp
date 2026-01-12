@@ -5,15 +5,15 @@ Local DeepWiki-style MCP server for private repository documentation
 
 ## Description
 
-This project provides a local MCP server that enables private repository documentation with DeepWiki-style capabilities. It offers tools for parsing, chunking, and searching code documentation while supporting incremental wiki updates and cross-references. The system can be run as a web service or via command-line tools for continuous documentation monitoring.
+This project provides a local MCP (Model Control Protocol) server that enables private repository documentation with DeepWiki-style capabilities. It offers both a web server interface and a file watching functionality to continuously update documentation. The system supports configurable embedding providers and chunking strategies for processing code repositories.
 
 ## Key Features
 
-- **Code parsing and documentation generation** - The `local_deepwiki.parser` module handles parsing source code files and generating documentation chunks
-- **Incremental wiki updates** - The `local_deepwiki.incremental_wiki` module supports updating documentation incrementally as code changes occur
-- **Cross-reference linking** - The `local_deepwiki.crosslinks` module enables creating links between related documentation sections
-- **Search and retrieval** - The `local_deepwiki.search` module provides search capabilities for finding relevant documentation
-- **File watching and monitoring** - The `local_deepwiki.watcher` module monitors file changes and triggers documentation updates automatically
+- **MCP Server Implementation**: The `main` function in `server.py` demonstrates the core MCP server setup using `stdio_server` and `server.run` to handle communication protocols
+- **Configurable Embedding Providers**: The `Indexer.__init__` method in `indexer.py` accepts an `embedding_provider_name` parameter that can be set to "local" or "openai" for different embedding capabilities
+- **Web Server Interface**: The `run_server` function in `web/app.py` provides a web interface for serving documentation with customizable host, port, and debug options
+- **Chunking Configuration**: The `Chunker.__init__` method in `chunker.py` initializes with optional `ChunkingConfig` and uses a `CodeParser` for processing code content
+- **Configuration Management**: The `get_config` function in `config.py` provides global configuration access with lazy loading of the `Config.load()` method
 
 ## Technology Stack
 
@@ -39,10 +39,13 @@ local-deepwiki-mcp/
 │   ├── test_parser.py
 │   ├── test_search.py
 │   ├── test_see_also.py
+│   ├── test_source_refs.py
+│   ├── test_toc.py
 │   ├── test_watcher.py
 │   └── test_web.py
 ├── CLAUDE.md
 ├── README.md
+├── TODO.md
 ├── WIKI_IMPROVEMENTS.md
 ├── pyproject.toml
 └── uv.lock

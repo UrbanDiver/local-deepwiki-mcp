@@ -1,85 +1,51 @@
-# Code Chunker Documentation
+# File Overview
 
-## File Overview
+This file defines the `CodeChunker` class and related functionality for splitting code into logical chunks based on language-specific parsing rules. It uses the `tree_sitter` library to parse code and extract meaningful units such as functions, classes, and methods.
 
-This file implements the core chunking functionality for code files. It provides the CodeChunker class responsible for breaking down code files into meaningful semantic chunks based on the programming language structure. The chunker works with tree-sitter parsers to analyze code syntax and extract relevant code elements such as functions, classes, methods, and their associated documentation.
+# Classes
 
-The chunker integrates with the configuration system to determine chunking strategies and works closely with the parser module to extract node information. It produces [CodeChunk](../models.md) objects that can be used for indexing, retrieval, or other downstream processing tasks.
+## CodeChunker
 
-## Classes
+The `CodeChunker` class is responsible for breaking down code files into logical chunks based on their structure and content. It uses a [`CodeParser`](parser.md) to parse the source code and then extracts nodes of specific types (like functions, classes, etc.) to form chunks.
 
-### CodeChunker
+### Key Methods
 
-The CodeChunker class is responsible for analyzing code files and splitting them into semantic chunks based on language-specific structures. It uses tree-sitter parsing to identify code elements and applies configured chunking strategies to create meaningful portions of code for indexing and retrieval.
+- `__init__(self, language: Language, config: ChunkingConfig = None)`:
+  Initializes the chunker with a specific language and configuration. If no configuration is provided, it retrieves the default configuration using `get_config()`.
 
-Key methods:
-- `chunk_file`: Processes a code file and yields [CodeChunk](../models.md) objects
-- `chunk_node`: Recursively chunks a tree-sitter node and its children
-- `get_chunk_type`: Determines the appropriate chunk type for a given node
+- `chunk(self, file_path: Path, content: str) -> Iterator[CodeChunk]`:
+  Takes a file path and its content and yields [`CodeChunk`](../models.md) objects representing logical units of code. It uses [`find_nodes_by_type`](parser.md) to identify relevant nodes and processes them using helper functions from the parser module.
 
-**Relationships**: This class works with [CodeParser](parser.md) to analyze code structure, uses [ChunkingConfig](../config.md) for configuration settings, and produces [CodeChunk](../models.md) objects for storage and retrieval systems.
+# Functions
 
-## Functions
+## get_parent_classes
 
-### get_parent_classes
+- `get_parent_classes(node: Node) -> list[str]`:
+  Extracts the names of parent classes from a given `Node` object, which is typically a class definition in the parsed AST. Returns a list of strings representing the names of parent classes.
 
-```python
-def get_parent_classes(node: Node, parser: CodeParser) -> list[str]:
-```
+# Usage Examples
 
-Retrieves the names of parent classes for a given node in the tree-sitter AST. This function is used to understand inheritance relationships when chunking class definitions.
-
-**Parameters:**
-- `node`: The tree-sitter Node representing a class definition
-- `parser`: The [CodeParser](parser.md) instance used to analyze the node
-
-**Returns:**
-- A list of strings representing parent class names
-
-## Usage Examples
-
-### Basic Usage
+To use the `CodeChunker` class:
 
 ```python
 from local_deepwiki.core.chunker import CodeChunker
-from local_deepwiki.config import get_config
+from local_deepwiki.models import Language
 
-# Initialize chunker with default configuration
-chunker = CodeChunker()
-
-# Process a Python file
-file_path = Path("example.py")
-chunks = list(chunker.chunk_file(file_path, Language.PYTHON))
-
+chunker = CodeChunker(language=Language.PYTHON)
+chunks = chunker.chunk(Path("example.py"), "def hello():\n    print('Hello')")
 for chunk in chunks:
-    print(f"Chunk type: {chunk.chunk_type}")
-    print(f"Content: {chunk.content[:100]}...")
+    print(chunk)
 ```
 
-### Using Custom Configuration
+# Related Components
 
-```python
-from local_deepwiki.core.chunker import CodeChunker
-from local_deepwiki.config import ChunkingConfig, get_config
+This file works with the following components:
 
-# Create custom chunking configuration
-config = ChunkingConfig(
-    max_chunk_size=1000,
-    min_chunk_size=100,
-    include_docstrings=True
-)
-
-# Initialize chunker with custom config
-chunker = CodeChunker(config)
-
-# Process a file with custom settings
-file_path = Path("example.py")
-chunks = list(chunker.chunk_file(file_path, Language.PYTHON))
-```
-
-## Related Components
-
-This class works with [CodeParser](parser.md) to analyze code structure and extract node information. It integrates with [ChunkingConfig](../config.md) to determine chunking behavior and produces [CodeChunk](../models.md) objects that can be consumed by storage systems like [VectorStore](vectorstore.md) for embedding and retrieval. The chunker also relies on [get_config](../config.md) for accessing global configuration settings and uses [get_node_text](parser.md), [get_node_name](parser.md), and [get_docstring](parser.md) functions from the parser module for extracting specific node information.
+- [`CodeParser`](parser.md) from `local_deepwiki.core.parser`: Used for parsing source code into an Abstract Syntax Tree (AST).
+- [`ChunkingConfig`](../config.md) from `local_deepwiki.config`: Provides configuration options for chunking behavior.
+- [`get_config`](../config.md) from `local_deepwiki.config`: Retrieves the default chunking configuration.
+- [`get_node_text`](parser.md), [`get_node_name`](parser.md), [`get_docstring`](parser.md), [`find_nodes_by_type`](parser.md) from `local_deepwiki.core.parser`: Helper functions for extracting information from parsed nodes.
+- [`CodeChunk`](../models.md), [`ChunkType`](../models.md), [`Language`](../models.md) from `local_deepwiki.models`: Data models representing chunks of code and their metadata.
 
 ## API Reference
 
@@ -246,10 +212,14 @@ flowchart TD
     class N1,N2,N3,N4,N5,N6,N7,N8,N9,N10 method
 ```
 
+## Relevant Source Files
+
+- `src/local_deepwiki/core/chunker.py`
+
 ## See Also
 
 - [api_docs](../generators/api_docs.md) - uses this
 - [test_chunker](../../../tests/test_chunker.md) - uses this
 - [models](../models.md) - dependency
-- [parser](parser.md) - dependency
 - [config](../config.md) - dependency
+- [parser](parser.md) - dependency

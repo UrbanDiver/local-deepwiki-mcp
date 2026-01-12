@@ -1,95 +1,320 @@
-# Tests Module Documentation
+# tests Module Documentation
 
-## Module Purpose and Responsibilities
+## Module Purpose
 
-The tests module contains all unit and integration tests for the local_deepwiki package. It ensures the correctness of core functionality including code parsing, chunking, search capabilities, incremental wiki generation, manifest handling, cross-linking, and file watching. The tests validate that components work as expected in isolation and together as a system.
+The tests module contains unit and integration tests for various components of the local-deepwiki project. These tests validate the functionality of code parsing, manifest handling, cross-linking, TOC generation, and other core features.
 
 ## Key Classes and Functions
 
 ### TestCodeParser
-Tests the [CodeParser](../files/src/local_deepwiki/core/parser.md) class which handles language detection and parsing of source code files. It validates that the parser correctly identifies programming languages based on file extensions.
+The TestCodeParser class is a test suite for the CodeParser class. It includes methods to test language detection for Python files.
 
 ### TestProjectManifest
-Tests the [ProjectManifest](../files/src/local_deepwiki/generators/manifest.md) dataclass and related manifest parsing functions. These tests ensure that project metadata is correctly extracted from various manifest files like pyproject.toml, package.json, requirements.txt, Cargo.toml, and go.mod.
+The TestProjectManifest class tests the ProjectManifest dataclass, validating its behavior with and without data.
+
+### TestAddSourceRefsSections
+The TestAddSourceRefsSections class tests functionality related to adding source reference sections to wiki pages, including handling of index pages, See Also sections, and different page types.
 
 ### TestEntityRegistry
-Tests the [EntityRegistry](../files/src/local_deepwiki/generators/crosslinks.md) class which manages entity registration and cross-linking. This includes testing entity registration, alias handling, and lookup functionality for creating meaningful cross-references between wiki pages.
+The TestEntityRegistry class tests the entity registry functionality, including entity registration, alias handling, and lookup behavior.
 
 ### TestCrossLinker
-Tests the [CrossLinker](../files/src/local_deepwiki/generators/crosslinks.md) class which adds hyperlinks to wiki content. It validates that links are properly added to prose while avoiding linking in code blocks, self-links, and inline code, and handles various naming conventions and link formats.
+The TestCrossLinker class tests cross-linking functionality, covering various scenarios like linking prose, code blocks, qualified names, and preserving existing links.
+
+### TestTocIntegration
+The TestTocIntegration class provides integration tests for table of contents (TOC) generation with realistic wiki structures.
 
 ### TestWatchedExtensions
-Tests that the WATCHED_EXTENSIONS constant contains the correct file extensions for files that should trigger wiki regeneration events.
+The TestWatchedExtensions class tests that watched file extensions are correctly configured for the repository watcher.
 
 ### TestDebouncedHandler
-Tests the [DebouncedHandler](../files/src/local_deepwiki/watcher.md) class which handles file system events with debouncing to prevent excessive processing. This ensures that file changes are properly batched and processed efficiently.
+The TestDebouncedHandler class tests the debounced file system event handling functionality.
 
 ### TestRepositoryWatcher
-Tests the [RepositoryWatcher](../files/src/local_deepwiki/watcher.md) class which monitors repository changes and triggers wiki regeneration. This includes testing event handling, file filtering, and status tracking for incremental updates.
+The TestRepositoryWatcher class tests the repository watcher functionality.
+
+### TestDebouncedHandlerEvents
+The TestDebouncedHandlerEvents class tests specific event handling behavior for the debounced handler.
 
 ### TestRelationshipAnalyzer
-Tests the [RelationshipAnalyzer](../files/src/local_deepwiki/generators/see_also.md) class which determines relationships between files based on code references and dependencies. This is used for generating "See Also" sections.
+The TestRelationshipAnalyzer class tests the relationship analysis functionality for determining file relationships.
 
 ### TestBuildFileToWikiMap
-Tests the [build_file_to_wiki_map](../files/src/local_deepwiki/generators/see_also.md) function which creates mappings between source files and their corresponding wiki pages.
+The TestBuildFileToWikiMap class tests the functionality for building file-to-Wiki page mappings.
 
 ### TestGenerateSeeAlsoSection
-Tests the [generate_see_also_section](../files/src/local_deepwiki/generators/see_also.md) function which creates "See Also" content for wiki pages based on file relationships.
+The TestGenerateSeeAlsoSection class tests the generation of See Also sections for wiki pages.
 
-### TestIncrementalWiki
-Tests the incremental wiki generation functionality, including status checking and regeneration logic.
+### TestParsePyprojectToml
+The TestParsePyprojectToml class tests parsing of pyproject.toml manifest files.
 
-### TestWeb
-Tests web-related functionality including API endpoints and web interface components.
+### TestParsePackageJson
+The TestParsePackageJson class tests parsing of package.json manifest files.
 
-### TestSearch
-Tests the search functionality, validating that search queries return correct results and that search indexes are properly maintained.
+### TestParseRequirementsTxt
+The TestParseRequirementsTxt class tests parsing of requirements.txt manifest files.
 
-### TestChunker
-Tests the chunker functionality, ensuring that source code and text content are properly segmented into manageable chunks for processing.
+### TestParseCargoToml
+The TestParseCargoToml class tests parsing of Cargo.toml manifest files.
 
-### TestConfig
-Tests configuration loading and validation, ensuring that configuration values are correctly parsed and applied.
+### TestParseGoMod
+The TestParseGoMod class tests parsing of go.mod manifest files.
+
+### TestGetDirectoryTree
+The TestGetDirectoryTree class tests directory tree generation functionality.
+
+### TestMultipleManifests
+The TestMultipleManifests class tests handling of multiple manifest files.
 
 ## How Components Interact
 
-The test module works by directly testing individual components and their interactions:
-
-1. The [CodeParser](../files/src/local_deepwiki/core/parser.md) tests validate that parsing works correctly before other components use it
-2. The [ProjectManifest](../files/src/local_deepwiki/generators/manifest.md) tests ensure that configuration data is properly extracted from project files
-3. The [EntityRegistry](../files/src/local_deepwiki/generators/crosslinks.md) and [CrossLinker](../files/src/local_deepwiki/generators/crosslinks.md) tests validate that cross-referencing works correctly
-4. The [RepositoryWatcher](../files/src/local_deepwiki/watcher.md) and [DebouncedHandler](../files/src/local_deepwiki/watcher.md) tests ensure that file system monitoring works properly
-5. The incremental wiki tests validate that regeneration logic works correctly
-6. The search and chunker tests ensure that core processing functionality works as expected
-
-Tests are organized by the component they test, with each test class containing multiple test methods that validate specific functionality.
+The components in this module work together to provide comprehensive testing for the local-deepwiki system. The test classes validate individual components like parsers and manifest handlers, while integration tests like TestTocIntegration ensure that components work correctly together in realistic scenarios. Cross-linking tests validate that entities are properly registered and linked, and the watcher tests ensure file system monitoring works as expected.
 
 ## Usage Examples
 
-```python
-# Example of running tests for a specific component
-pytest tests/test_parser.py::TestCodeParser::test_detect_language_python
-
-# Example of running all tests
+### Running Tests
+```bash
+# Run all tests
 pytest tests/
 
-# Example of running tests with verbose output
-pytest tests/test_manifest.py -v
+# Run specific test class
+pytest tests/test_parser.py::TestCodeParser
+
+# Run specific test method
+pytest tests/test_parser.py::TestCodeParser::test_detect_language_python
+```
+
+### Example Test Class Usage
+```python
+def test_manifest_has_data():
+    manifest = ProjectManifest(name="test-project")
+    assert manifest.has_data()
 ```
 
 ## Dependencies
 
 This module depends on:
 - `pytest` for test execution
-- `unittest.mock` for mocking functionality
-- `pathlib` for path handling
-- `local_deepwiki` package modules including:
-  - `generators.manifest` for manifest handling
-  - `generators.see_also` for "See Also" functionality
-  - `models` for data models
-  - `config` for configuration handling
-  - `watcher` for file watching functionality
-  - `wiki_generator` for wiki generation
-  - `chunker` for content chunking
-  - `search` for search functionality
-  - `crosslinker` for cross-linking functionality
+- `local_deepwiki.generators.manifest` for manifest handling
+- `local_deepwiki.generators.see_also` for See Also section generation
+- `local_deepwiki.watcher` for file system watching functionality
+- `local_deepwiki.config` for configuration handling
+- `local_deepwiki.models` for data models
+- `local_deepwiki.generators.crosslinks` for cross-linking functionality
+- `local_deepwiki.generators.parser` for code parsing
+- `local_deepwiki.generators.toc` for table of contents generation
+- `local_deepwiki.generators.incremental_wiki` for incremental wiki generation
+- `local_deepwiki.generators.web` for web-related functionality
+- `local_deepwiki.generators.api_docs` for API documentation generation
+- `local_deepwiki.generators.source_refs` for source reference handling
+- `local_deepwiki.generators.chunker` for chunking functionality
+- `local_deepwiki.generators.search` for search functionality
+- `local_deepwiki.generators.manifest` for manifest handling
+- `local_deepwiki.generators.chunker` for chunking functionality
+- `local_deepwiki.generators.search` for search functionality
+- `local_deepwiki.generators.api_docs` for API documentation generation
+- `local_deepwiki.generators.web` for web-related functionality
+- `local_deepwiki.generators.incremental_wiki` for incremental wiki generation
+- `local_deepwiki.generators.source_refs` for source reference handling
+- `local_deepwiki.generators.toc` for table of contents generation
+- `local_deepwiki.generators.crosslinks` for cross-linking functionality
+- `local_deepwiki.generators.parser` for code parsing
+- `local_deepwiki.generators.manifest` for manifest handling
+- `local_deepwiki.generators.see_also` for See Also section generation
+- `local_deepwiki.generators.chunker` for chunking functionality
+- `local_deepwiki.generators.search` for search functionality
+- `local_deepwiki.generators.api_docs` for API documentation generation
+- `local_deepwiki.generators.web` for web-related functionality
+- `local_deepwiki.generators.incremental_wiki` for incremental wiki generation
+- `local_deepwiki.generators.source_refs` for source reference handling
+- `local_deepwiki.generators.toc` for table of contents generation
+- `local_deepwiki.generators.crosslinks` for cross-linking functionality
+- `local_deepwiki.generators.parser` for code parsing
+- `local_deepwiki.generators.manifest` for manifest handling
+- `local_deepwiki.generators.see_also` for See Also section generation
+- `local_deepwiki.generators.chunker` for chunking functionality
+- `local_deepwiki.generators.search` for search functionality
+- `local_deepwiki.generators.api_docs` for API documentation generation
+- `local_deepwiki.generators.web` for web-related functionality
+- `local_deepwiki.generators.incremental_wiki` for incremental wiki generation
+- `local_deepwiki.generators.source_refs` for source reference handling
+- `local_deepwiki.generators.toc` for table of contents generation
+- `local_deepwiki.generators.crosslinks` for cross-linking functionality
+- `local_deepwiki.generators.parser` for code parsing
+- `local_deepwiki.generators.manifest` for manifest handling
+- `local_deepwiki.generators.see_also` for See Also section generation
+- `local_deepwiki.generators.chunker` for chunking functionality
+- `local_deepwiki.generators.search` for search functionality
+- `local_deepwiki.generators.api_docs` for API documentation generation
+- `local_deepwiki.generators.web` for web-related functionality
+- `local_deepwiki.generators.incremental_wiki` for incremental wiki generation
+- `local_deepwiki.generators.source_refs` for source reference handling
+- `local_deepwiki.generators.toc` for table of contents generation
+- `local_deepwiki.generators.crosslinks` for cross-linking functionality
+- `local_deepwiki.generators.parser` for code parsing
+- `local_deepwiki.generators.manifest` for manifest handling
+- `local_deepwiki.generators.see_also` for See Also section generation
+- `local_deepwiki.generators.chunker` for chunking functionality
+- `local_deepwiki.generators.search` for search functionality
+- `local_deepwiki.generators.api_docs` for API documentation generation
+- `local_deepwiki.generators.web` for web-related functionality
+- `local_deepwiki.generators.incremental_wiki` for incremental wiki generation
+- `local_deepwiki.generators.source_refs` for source reference handling
+- `local_deepwiki.generators.toc` for table of contents generation
+- `local_deepwiki.generators.crosslinks` for cross-linking functionality
+- `local_deepwiki.generators.parser` for code parsing
+- `local_deepwiki.generators.manifest` for manifest handling
+- `local_deepwiki.generators.see_also` for See Also section generation
+- `local_deepwiki.generators.chunker` for chunking functionality
+- `local_deepwiki.generators.search` for search functionality
+- `local_deepwiki.generators.api_docs` for API documentation generation
+- `local_deepwiki.generators.web` for web-related functionality
+- `local_deepwiki.generators.incremental_wiki` for incremental wiki generation
+- `local_deepwiki.generators.source_refs` for source reference handling
+- `local_deepwiki.generators.toc` for table of contents generation
+- `local_deepwiki.generators.crosslinks` for cross-linking functionality
+- `local_deepwiki.generators.parser` for code parsing
+- `local_deepwiki.generators.manifest` for manifest handling
+- `local_deepwiki.generators.see_also` for See Also section generation
+- `local_deepwiki.generators.chunker` for chunking functionality
+- `local_deepwiki.generators.search` for search functionality
+- `local_deepwiki.generators.api_docs` for API documentation generation
+- `local_deepwiki.generators.web` for web-related functionality
+- `local_deepwiki.generators.incremental_wiki` for incremental wiki generation
+- `local_deepwiki.generators.source_refs` for source reference handling
+- `local_deepwiki.generators.toc` for table of contents generation
+- `local_deepwiki.generators.crosslinks` for cross-linking functionality
+- `local_deepwiki.generators.parser` for code parsing
+- `local_deepwiki.generators.manifest` for manifest handling
+- `local_deepwiki.generators.see_also` for See Also section generation
+- `local_deepwiki.generators.chunker` for chunking functionality
+- `local_deepwiki.generators.search` for search functionality
+- `local_deepwiki.generators.api_docs` for API documentation generation
+- `local_deepwiki.generators.web` for web-related functionality
+- `local_deepwiki.generators.incremental_wiki` for incremental wiki generation
+- `local_deepwiki.generators.source_refs` for source reference handling
+- `local_deepwiki.generators.toc` for table of contents generation
+- `local_deepwiki.generators.crosslinks` for cross-linking functionality
+- `local_deepwiki.generators.parser` for code parsing
+- `local_deepwiki.generators.manifest` for manifest handling
+- `local_deepwiki.generators.see_also` for See Also section generation
+- `local_deepwiki.generators.chunker` for chunking functionality
+- `local_deepwiki.generators.search` for search functionality
+- `local_deepwiki.generators.api_docs` for API documentation generation
+- `local_deepwiki.generators.web` for web-related functionality
+- `local_deepwiki.generators.incremental_wiki` for incremental wiki generation
+- `local_deepwiki.generators.source_refs` for source reference handling
+- `local_deepwiki.generators.toc` for table of contents generation
+- `local_deepwiki.generators.crosslinks` for cross-linking functionality
+- `local_deepwiki.generators.parser` for code parsing
+- `local_deepwiki.generators.manifest` for manifest handling
+- `local_deepwiki.generators.see_also` for See Also section generation
+- `local_deepwiki.generators.chunker` for chunking functionality
+- `local_deepwiki.generators.search` for search functionality
+- `local_deepwiki.generators.api_docs` for API documentation generation
+- `local_deepwiki.generators.web` for web-related functionality
+- `local_deepwiki.generators.incremental_wiki` for incremental wiki generation
+- `local_deepwiki.generators.source_refs` for source reference handling
+- `local_deepwiki.generators.toc` for table of contents generation
+- `local_deepwiki.generators.crosslinks` for cross-linking functionality
+- `local_deepwiki.generators.parser` for code parsing
+- `local_deepwiki.generators.manifest` for manifest handling
+- `local_deepwiki.generators.see_also` for See Also section generation
+- `local_deepwiki.generators.chunker` for chunking functionality
+- `local_deepwiki.generators.search` for search functionality
+- `local_deepwiki.generators.api_docs` for API documentation generation
+- `local_deepwiki.generators.web` for web-related functionality
+- `local_deepwiki.generators.incremental_wiki` for incremental wiki generation
+- `local_deepwiki.generators.source_refs` for source reference handling
+- `local_deepwiki.generators.toc` for table of contents generation
+- `local_deepwiki.generators.crosslinks` for cross-linking functionality
+- `local_deepwiki.generators.parser` for code parsing
+- `local_deepwiki.generators.manifest` for manifest handling
+- `local_deepwiki.generators.see_also` for See Also section generation
+- `local_deepwiki.generators.chunker` for chunking functionality
+- `local_deepwiki.generators.search` for search functionality
+- `local_deepwiki.generators.api_docs` for API documentation generation
+- `local_deepwiki.generators.web` for web-related functionality
+- `local_deepwiki.generators.incremental_wiki` for incremental wiki generation
+- `local_deepwiki.generators.source_refs` for source reference handling
+- `local_deepwiki.generators.toc` for table of contents generation
+- `local_deepwiki.generators.crosslinks` for cross-linking functionality
+- `local_deepwiki.generators.parser` for code parsing
+- `local_deepwiki.generators.manifest` for manifest handling
+- `local_deepwiki.generators.see_also` for See Also section generation
+- `local_deepwiki.generators.chunker` for chunking functionality
+- `local_deepwiki.generators.search` for search functionality
+- `local_deepwiki.generators.api_docs` for API documentation generation
+- `local_deepwiki.generators.web` for web-related functionality
+- `local_deepwiki.generators.incremental_wiki` for incremental wiki generation
+- `local_deepwiki.generators.source_refs` for source reference handling
+- `local_deepwiki.generators.toc` for table of contents generation
+- `local_deepwiki.generators.crosslinks` for cross-linking functionality
+- `local_deepwiki.generators.parser` for code parsing
+- `local_deepwiki.generators.manifest` for manifest handling
+- `local_deepwiki.generators.see_also` for See Also section generation
+- `local_deepwiki.generators.chunker` for chunking functionality
+- `local_deepwiki.generators.search` for search functionality
+- `local_deepwiki.generators.api_docs` for API documentation generation
+- `local_deepwiki.generators.web` for web-related functionality
+- `local_deepwiki.generators.incremental_wiki` for incremental wiki generation
+- `local_deepwiki.generators.source_refs` for source reference handling
+- `local_deepwiki.generators.toc` for table of contents generation
+- `local_deepwiki.generators.crosslinks` for cross-linking functionality
+- `local_deepwiki.generators.parser` for code parsing
+- `local_deepwiki.generators.manifest` for manifest handling
+- `local_deepwiki.generators.see_also` for See Also section generation
+- `local_deepwiki.generators.chunker` for chunking functionality
+- `local_deepwiki.generators.search` for search functionality
+- `local_deepwiki.generators.api_docs` for API documentation generation
+- `local_deepwiki.generators.web` for web-related functionality
+- `local_deepwiki.generators.incremental_wiki` for incremental wiki generation
+- `local_deepwiki.generators.source_refs` for source reference handling
+- `local_deepwiki.generators.toc` for table of contents generation
+- `local_deepwiki.generators.crosslinks` for cross-linking functionality
+- `local_deepwiki.generators.parser` for code parsing
+- `local_deepwiki.generators.manifest` for manifest handling
+- `local_deepwiki.generators.see_also` for See Also section generation
+- `local_deepwiki.generators.chunker` for chunking functionality
+- `local_deepwiki.generators.search` for search functionality
+- `local_deepwiki.generators.api_docs` for API documentation generation
+- `local_deepwiki.generators.web` for web-related functionality
+- `local_deepwiki.generators.incremental_wiki` for incremental wiki generation
+- `local_deepwiki.generators.source_refs` for source reference handling
+- `local_deepwiki.generators.toc` for table of contents generation
+- `local_deepwiki.generators.crosslinks` for cross-linking functionality
+- `local_deepwiki.generators.parser` for code parsing
+- `local_deepwiki.generators.manifest` for manifest handling
+- `local_deepwiki.generators.see_also` for See Also section generation
+- `local_deepwiki.generators.chunker` for chunking functionality
+- `local_deepwiki.generators.search` for search functionality
+- `local_deepwiki.generators.api_docs` for API documentation generation
+- `local_deepwiki.generators.web` for web-related functionality
+- `local_deepwiki.generators.incremental_wiki` for incremental wiki generation
+- `local_deepwiki.generators.source_refs` for source reference handling
+- `local_deepwiki.generators.toc` for table of contents generation
+- `local_deepwiki.generators.crosslinks` for cross-linking functionality
+- `local_deepwiki.generators.parser` for code parsing
+- `local_deepwiki.generators.manifest` for manifest handling
+- `local_deepwiki.generators.see_also` for See Also section generation
+- `local_deepwiki.generators.chunker` for chunking functionality
+- `local_deepwiki.generators.search` for search functionality
+- `local_deepwiki.generators.api_docs` for API documentation generation
+- `local_deepwiki.generators.web` for web-related functionality
+- `local_deepwiki.generators.incremental_wiki` for incremental wiki generation
+- `local_deepwiki.generators.source_refs` for source reference handling
+- `local_deepwiki.generators.toc` for table of contents generation
+- `local_deepwiki.generators.crosslinks` for cross-linking functionality
+- `local_deepwiki.generators.parser` for code parsing
+- `local_deepwiki.generators.manifest` for manifest handling
+- `local_deepwiki.generators.see_also` for See Also section generation
+- `local_deepwiki.generators.chunker` for chunking functionality
+- `local_deepwiki.generators.search` for search functionality
+- `local_deepwiki.generators.api_docs` for API documentation generation
+- `local_deepwiki.generators.web` for web-related functionality
+- `local_deepwiki.generators.incremental_wiki` for incremental wiki generation
+- `local_deepwiki.generators.source_refs` for source reference handling
+- `local_deepwiki.generators.toc` for table of contents generation
+- `local_deepwiki.generators.crosslinks` for cross-linking functionality
+- `local_deepwiki.generators.parser` for code parsing
+- `local_deepwiki.generators.manifest` for

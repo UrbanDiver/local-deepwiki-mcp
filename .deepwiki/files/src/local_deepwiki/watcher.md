@@ -1,97 +1,66 @@
-# Watcher Module Documentation
+# File Overview
 
-## File Overview
+This file implements a repository watcher that monitors file system changes and automatically regenerates wiki documentation when changes occur. It uses the `watchdog` library for file system monitoring and integrates with the `local_deepwiki` documentation generation system.
 
-The watcher.py file implements a file system watcher that monitors repository changes and automatically regenerates wiki documentation. It uses the watchdog library to observe file system events and integrates with the local_deepwiki core components to index and generate documentation.
+# Classes
 
-This file serves as the entry point for the watch command functionality, coordinating file monitoring with the indexing and generation processes. It works closely with the RepositoryIndexer, [WikiGenerator](generators/wiki.md), and configuration management components.
+## FileSystemEventHandler
 
-## Classes
+The FileSystemEventHandler class is a custom event handler that monitors file system events and triggers reindexing when relevant files are modified.
 
-### FileSystemEventHandler
+### Key Methods
 
-The FileSystemEventHandler class extends watchdog's FileSystemEventHandler to provide custom behavior for handling file system events. It tracks file changes and schedules reindexing operations with debouncing to prevent excessive processing.
+- `on_any_event(event: FileSystemEvent)`: Called when any file system event occurs. It checks if the event is relevant and schedules a reindexing operation with debouncing.
 
-Key methods:
-- `on_any_event`: Handles all file system events and schedules reindexing
-- `schedule_reindexing`: Schedules a reindexing operation with debouncing
+# Functions
 
-### RepositoryIndexer
+## main
 
-The RepositoryIndexer class is responsible for indexing repository files and building an in-memory representation of the codebase. It processes files based on their extensions and builds a searchable index.
+The main function serves as the entry point for the watch command. It parses command-line arguments and initializes the file system watcher.
 
-Key methods:
-- `index_repository`: Main method to index all files in the repository
-- `process_file`: Processes individual files and extracts relevant information
-- `get_index`: Returns the current index data
+### Parameters
 
-## Functions
+- `None`
 
-### main
+### Return Value
 
-The main function serves as the entry point for the watch command. It parses command line arguments and initializes the file system watcher.
+- `None`
 
-**Parameters:**
-- None
+### Command-line Arguments
 
-**Return value:**
-- None
+- `repo_path`: Path to the repository to watch (default: current directory)
+- `--debounce`: Seconds to wait after changes before reindexing (default: 2.0)
+- `--include`: Glob pattern for files to include in watching (default: all files)
+- `--exclude`: Glob pattern for files to exclude from watching (default: none)
+- `--config`: Path to configuration file (default: None)
 
-**Purpose:**
-Configures and starts the file system watcher with specified repository path and debounce settings. It sets up argument parsing for repository path, debounce time, and other configuration options.
+# Usage Examples
 
-### create_indexer
-
-Creates a RepositoryIndexer instance with the provided configuration.
-
-**Parameters:**
-- config: Configuration object containing indexing settings
-
-**Return value:**
-RepositoryIndexer instance
-
-**Purpose:**
-Initializes the indexer with proper configuration settings for repository processing.
-
-### generate_wiki
-
-Generates wiki documentation from the indexed repository data.
-
-**Parameters:**
-- indexer: RepositoryIndexer instance containing the indexed data
-- config: Configuration object with generation settings
-
-**Return value:**
-None
-
-**Purpose:**
-Creates wiki documentation files based on the indexed repository information.
-
-## Usage Examples
-
-### Basic Usage
-
-```bash
-# Watch current directory with default debounce
-python -m local_deepwiki.watcher
-
-# Watch specific directory with custom debounce
-python -m local_deepwiki.watcher /path/to/repo --debounce 3.0
+To run the watcher on the current directory with default settings:
+```
+python src/local_deepwiki/watcher.py
 ```
 
-### Programmatic Usage
-
-```python
-from local_deepwiki.watcher import main
-
-# Run the watcher with custom configuration
-if __name__ == "__main__":
-    main()
+To watch a specific repository with a custom debounce time:
+```
+python src/local_deepwiki/watcher.py /path/to/repo --debounce 3.0
 ```
 
-## Related Components
+To watch with custom include and exclude patterns:
+```
+python src/local_deepwiki/watcher.py --include "*.md" --exclude "docs/*"
+```
 
-This module works with the [Config](config.md) class to manage application settings, the RepositoryIndexer to process and index repository files, and the [WikiGenerator](generators/wiki.md) to create documentation from indexed data. It uses the watchdog library for file system monitoring and rich for console output formatting. The EXTENSION_MAP from the parser module determines which files to process during indexing.
+# Related Components
+
+This file works with several other components in the `local_deepwiki` system:
+
+- The [`Config`](config.md) class and [`get_config`](config.md) function for configuration management
+- The `RepositoryIndexer` class for indexing repository contents
+- The [`WikiGenerator`](generators/wiki.md) class for generating wiki documentation
+- The `EXTENSION_MAP` from the `local_deepwiki.core.parser` module for file type handling
+- The `rich.Console` for console output
+- The `watchdog` library for file system monitoring capabilities
 
 ## API Reference
 
@@ -388,3 +357,7 @@ flowchart TD
     classDef method fill:#fff3e0
     class N1,N2,N3,N4,N5,N6,N7,N8,N11,N12 method
 ```
+
+## Relevant Source Files
+
+- `src/local_deepwiki/watcher.py`

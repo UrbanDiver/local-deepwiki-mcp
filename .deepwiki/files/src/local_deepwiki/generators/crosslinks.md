@@ -1,62 +1,137 @@
-# Crosslinks Module Documentation
+# File Overview
 
-## File Overview
+This file implements the cross-linking functionality for wiki pages. It provides the logic to identify entity mentions in wiki content and replace them with hyperlinks to the corresponding wiki pages. The [main](../web/app.md) component is the `CrossLinker` class, which processes wiki pages and adds cross-links based on an entity registry.
 
-The crosslinks module is responsible for adding cross-links to wiki pages by identifying entity mentions and converting them into hyperlinks pointing to their respective documentation pages. It processes wiki content to [find](manifest.md) references to documented entities and replaces them with appropriate markdown links.
+# Classes
 
-This module works as part of the documentation generation pipeline, integrating with the entity registry to understand which entities are documented and where they can be found. It is used by the [main](../web/app.md) documentation generator to enrich wiki pages with internal cross-references.
+## CrossLinker
 
-## Classes
+The CrossLinker class is responsible for adding cross-links to wiki pages by processing their content and replacing entity mentions with appropriate links.
 
-### CrossLinker
+### Methods
 
-The CrossLinker class is the core component that processes wiki pages and adds cross-links based on the entity registry.
+#### `__init__(self, registry: EntityRegistry)`
 
-#### Key Methods
+Initializes the CrossLinker with an entity registry.
 
-- `__init__(self, registry: EntityRegistry)`: Initializes the linker with an entity registry.
-- `add_links(self, page: WikiPage) -> WikiPage`: Adds cross-links to a single wiki page.
-- `_process_content(self, content: str, path: str) -> str`: Processes the content of a page to add cross-links.
-- `_split_by_code_blocks(self, text: str) -> list[tuple[str, bool]]`: Splits text by code blocks to avoid linking inside code.
-- `_add_links_to_text(self, text: str, path: str) -> str`: Adds cross-links to plain text.
-- `_replace_entity_mentions(self, text: str, entity_name: str, path: str) -> str`: Replaces entity mentions with links.
-- `_link_backticked_entities(self, text: str, entity_name: str, rel_path: str, protect: Callable[[re.Match[str]], str]) -> str`: Handles backticked entity names.
-- `_relative_path(self, from_path: str, to_path: str) -> str`: Calculates the relative path between two wiki pages.
+#### `add_links(self, page: WikiPage) -> WikiPage`
 
-#### Usage
-
-The CrossLinker processes wiki pages by analyzing their content and identifying entity mentions. It uses the provided entity registry to [find](manifest.md) the correct paths for each entity and creates appropriate markdown links.
-
-### EntityRegistry
-
-The EntityRegistry class stores information about documented entities and their locations within the wiki. It provides methods to query entities by name and retrieve their paths.
-
-### EntityInfo
-
-The EntityInfo dataclass holds metadata about individual entities, including their name, path, and type.
-
-## Functions
-
-### add_cross_links
-
-```python
-def add_cross_links(pages: list[WikiPage], registry: EntityRegistry) -> list[WikiPage]:
-```
-
-Adds cross-links to all wiki pages in the provided list.
+Add cross-links to a wiki page.
 
 **Parameters:**
-- `pages`: List of [WikiPage](../models.md) objects to process
-- `registry`: EntityRegistry with documented entities
+- `page`: The wiki page to process.
 
 **Returns:**
-- List of [WikiPage](../models.md) objects with cross-links added
+- A new [WikiPage](../models.md) with cross-links added.
 
-This function is the [main](../web/app.md) entry point for applying cross-linking to a collection of wiki pages.
+#### `_process_content(self, content: str, path: str) -> str`
 
-## Usage Examples
+Process the content of a wiki page to add cross-links.
 
-### Basic Usage
+**Parameters:**
+- `content`: The content of the wiki page.
+- `path`: The path of the wiki page.
+
+**Returns:**
+- The content with cross-links added.
+
+#### `_split_by_code_blocks(self, text: str) -> list[tuple[str, bool]]`
+
+Split text by code blocks, keeping track of whether each part is inside a code block.
+
+**Parameters:**
+- `text`: The text to split.
+
+**Returns:**
+- List of tuples containing (text_part, is_code_block).
+
+#### `_add_links_to_text(self, text: str, path: str) -> str`
+
+Add links to text by processing entity mentions.
+
+**Parameters:**
+- `text`: The text to process.
+- `path`: The path of the wiki page.
+
+**Returns:**
+- The text with links added.
+
+#### `_replace_entity_mentions(self, text: str, path: str) -> str`
+
+Replace entity mentions in text with links.
+
+**Parameters:**
+- `text`: The text to process.
+- `path`: The path of the wiki page.
+
+**Returns:**
+- The text with entity mentions replaced by links.
+
+#### `protect(self, match: re.Match[str]) -> str`
+
+Protect matched content from being processed.
+
+**Parameters:**
+- `match`: The regex match object.
+
+**Returns:**
+- The protected content.
+
+#### `_link_backticked_entities(self, text: str, entity_name: str, rel_path: str, protect: Callable[[re.Match[str]], str]) -> str`
+
+Convert backticked entity names to links.
+
+Handles:
+- `EntityName` -> [`EntityName`](path)
+- `module.EntityName` -> [`EntityName`](path)
+- `module.submodule.EntityName` -> [`EntityName`](path)
+
+**Parameters:**
+- `text`: The text to process.
+- `entity_name`: The entity name to [find](manifest.md).
+- `rel_path`: The relative path to the entity's wiki page.
+- `protect`: A function to protect content from processing.
+
+**Returns:**
+- The text with backticked entities converted to links.
+
+#### `qualified_replacement(self, match: re.Match[str], rel_path: str, protect: Callable[[re.Match[str]], str]) -> str`
+
+Perform qualified replacement for entity mentions.
+
+**Parameters:**
+- `match`: The regex match object.
+- `rel_path`: The relative path to the entity's wiki page.
+- `protect`: A function to protect content from processing.
+
+**Returns:**
+- The replacement text.
+
+#### `_relative_path(self, from_path: str, to_path: str) -> str`
+
+Calculate relative path between two wiki pages.
+
+**Parameters:**
+- `from_path`: Path of the source page (e.g., "modules/src.md").
+- `to_path`: Path of the target page (e.g., "files/src/indexer.md").
+
+**Returns:**
+- Relative path from source to target.
+
+# Functions
+
+## add_cross_links
+
+Add cross-links to all wiki pages.
+
+**Parameters:**
+- `pages`: List of wiki pages to process.
+- `registry`: Entity registry with documented entities.
+
+**Returns:**
+- List of wiki pages with cross-links added.
+
+# Usage Examples
 
 ```python
 from local_deepwiki.generators.crosslinks import add_cross_links
@@ -70,23 +145,16 @@ registry = EntityRegistry(...)
 linked_pages = add_cross_links(pages, registry)
 ```
 
-### Processing a Single Page
+# Related Components
 
-```python
-from local_deepwiki.generators.crosslinks import CrossLinker
-from local_deepwiki.models import WikiPage
+This file depends on the following components:
 
-# Create linker with registry
-linker = CrossLinker(registry)
-
-# Process a single page
-page = WikiPage(...)
-linked_page = linker.add_links(page)
-```
-
-## Related Components
-
-This module works with the [WikiPage](../models.md) model to understand page structure and content. It relies on the EntityRegistry to know which entities are documented and where they can be found. The crosslinks functionality integrates with the [main](../web/app.md) documentation generation pipeline to enrich pages with internal references.
+- `EntityRegistry`: Used to provide entity information for linking.
+- [`WikiPage`](../models.md): The data model for wiki pages.
+- [`ChunkType`](../models.md), [`CodeChunk`](../models.md): Imported but not directly used in this file.
+- `re`: Regular expression module for pattern matching.
+- `pathlib.Path`: For path manipulation.
+- `collections.abc.Callable`: For type hints of callable objects.
 
 ## API Reference
 
@@ -380,10 +448,14 @@ flowchart TD
     class N1,N2,N3,N4,N5,N6,N8,N9,N10,N11 method
 ```
 
+## Relevant Source Files
+
+- `src/local_deepwiki/generators/crosslinks.py`
+
 ## See Also
 
-- [wiki](wiki.md) - uses this
 - [test_crosslinks](../../../tests/test_crosslinks.md) - uses this
+- [wiki](wiki.md) - uses this
 - [models](../models.md) - dependency
 - [see_also](see_also.md) - shares 4 dependencies
 - [api_docs](api_docs.md) - shares 4 dependencies

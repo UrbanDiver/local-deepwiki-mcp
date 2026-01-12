@@ -1,145 +1,176 @@
-# Code Parser Documentation
+# File Overview
 
-## File Overview
+This file provides a core parser implementation for source code using the Tree-sitter library. It supports multiple programming languages and provides functionality to parse source files or strings into Abstract Syntax Trees (ASTs), extract information from nodes, and detect the language of a file.
 
-This file provides core parsing functionality for source code using the Tree-sitter library. It enables parsing of multiple programming languages into Abstract Syntax Trees (ASTs), which can then be analyzed or processed further. The [main](../web/app.md) class, CodeParser, serves as a central interface for parsing files and source strings, handling language detection and parser initialization.
+# Classes
 
-This module is a key component in the local_deepwiki system, working with other modules like [VectorStore](vectorstore.md) to process and index source code, and with [WikiGenerator](../generators/wiki.md) to extract information for documentation.
+## CodeParser
 
-## Classes
+The CodeParser class is responsible for managing language parsers and providing methods to parse source code into ASTs.
 
-### CodeParser
+### Methods
 
-The CodeParser class provides methods for parsing source code files and strings into ASTs using Tree-sitter. It manages language-specific parsers and handles language detection for files.
+#### `__init__`
 
-#### Key Methods
+Initialize the parser with language support.
 
-- `__init__()`: Initializes the parser with empty dictionaries for storing parsers and languages.
-- `_get_parser(language)`: Retrieves or creates a Tree-sitter parser for the specified language.
-- `detect_language(file_path)`: Detects the programming language of a file based on its extension.
-- `parse_file(file_path)`: Parses a source file and returns the AST root node, language, and source bytes.
-- `parse_source(source, language)`: Parses a source code string and returns the AST root node.
+#### `_get_parser`
 
-#### Usage
+Get or create a parser for the given language.
+
+**Parameters:**
+- `language` (LangEnum): The programming language.
+
+**Returns:**
+- A tree-sitter Parser configured for the language.
+
+#### `detect_language`
+
+Detect the programming language of a file based on its extension.
+
+**Parameters:**
+- `file_path` (Path): Path to the source file.
+
+**Returns:**
+- The detected language (LangEnum) or None if not supported.
+
+#### `parse_file`
+
+Parse a source file and return the AST root.
+
+**Parameters:**
+- `file_path` (Path): Path to the source file.
+
+**Returns:**
+- Tuple of (AST root node, language, source bytes) or None if not supported.
+
+#### `parse_source`
+
+Parse source code string and return the AST root.
+
+**Parameters:**
+- `source` (str | bytes): The source code.
+- `language` (LangEnum): The programming language.
+
+**Returns:**
+- The AST root node.
+
+#### `get_file_info`
+
+Extract file information including language and hash.
+
+**Parameters:**
+- `file_path` (Path): Path to the source file.
+
+**Returns:**
+- [FileInfo](../models.md) object containing language, hash, and path.
+
+# Functions
+
+## get_node_text
+
+Extract text content from a tree-sitter node.
+
+**Parameters:**
+- `node` (Node): The tree-sitter node.
+- `source` (bytes): The original source bytes.
+
+**Returns:**
+- The text content of the node.
+
+## find_nodes_by_type
+
+Find all nodes of a given type in the AST.
+
+**Parameters:**
+- `node` (Node): The tree-sitter node to search from.
+- `node_type` (str): The type of node to [find](../generators/manifest.md).
+
+**Returns:**
+- List of matching nodes.
+
+## walk
+
+Recursively walk the AST and yield all nodes.
+
+**Parameters:**
+- `node` (Node): The tree-sitter node to start walking from.
+
+**Yields:**
+- All nodes in the AST.
+
+## get_node_name
+
+Extract the name of a node from the AST.
+
+**Parameters:**
+- `node` (Node): The tree-sitter node.
+
+**Returns:**
+- The name of the node as a string, or None if not found.
+
+## get_docstring
+
+Extract docstring from a function/class node.
+
+**Parameters:**
+- `node` (Node): The tree-sitter node.
+- `source` (bytes): The original source bytes.
+- `language` (LangEnum): The programming language.
+
+**Returns:**
+- The docstring or None if not found.
+
+# Usage Examples
+
+### Initialize a parser and parse source code
 
 ```python
-from local_deepwiki.core.parser import CodeParser
-
-parser = CodeParser()
-file_path = Path("example.py")
-result = parser.parse_file(file_path)
-if result:
-    ast_root, language, source_bytes = result
-    print(f"Parsed {language} file")
-```
-
-## Functions
-
-### get_node_text
-
-Extracts the text content from a Tree-sitter node using the original source bytes.
-
-**Parameters:**
-- `node`: The Tree-sitter node to extract text from
-- `source`: The original source bytes
-
-**Returns:**
-- The text content of the node as a string
-
-### find_nodes_by_type
-
-Finds all nodes in an AST that match a specific type.
-
-**Parameters:**
-- `node`: The root node of the AST to search
-- `node_type`: The type of node to [find](../generators/manifest.md)
-
-**Returns:**
-- A list of matching nodes
-
-### walk
-
-Recursively traverses an AST and yields all nodes.
-
-**Parameters:**
-- `node`: The root node to start traversal from
-
-**Returns:**
-- Generator yielding all nodes in the AST
-
-### get_node_name
-
-Extracts the name of a node from a Tree-sitter node.
-
-**Parameters:**
-- `node`: The Tree-sitter node
-- `source`: The original source bytes
-
-**Returns:**
-- The name of the node as a string
-
-### get_docstring
-
-Extracts docstrings from function or class nodes in Python code.
-
-**Parameters:**
-- `node`: The Tree-sitter node
-- `source`: The original source bytes
-- `language`: The programming language
-
-**Returns:**
-- The docstring text or None if not found
-
-## Usage Examples
-
-### Parsing a Source File
-
-```python
-from local_deepwiki.core.parser import CodeParser
-from pathlib import Path
-
-parser = CodeParser()
-file_path = Path("example.py")
-
-result = parser.parse_file(file_path)
-if result:
-    ast_root, language, source_bytes = result
-    print(f"Parsed {language} file with {ast_root.child_count} children")
-```
-
-### Parsing a Source String
-
-```python
-from local_deepwiki.core.parser import CodeParser
-from local_deepwiki.models import Language
+from src.local_deepwiki.core.parser import CodeParser
 
 parser = CodeParser()
 source_code = "def hello():\n    return 'world'"
-language = Language.PYTHON
-
-ast_root = parser.parse_source(source_code, language)
-print(f"AST root type: {ast_root.type}")
+ast_root = parser.parse_source(source_code, LangEnum.PYTHON)
 ```
 
-### Extracting Node Text
+### Parse a file
 
 ```python
-from local_deepwiki.core.parser import CodeParser, get_node_text
 from pathlib import Path
+from src.local_deepwiki.core.parser import CodeParser
 
 parser = CodeParser()
 file_path = Path("example.py")
-
 result = parser.parse_file(file_path)
 if result:
     ast_root, language, source_bytes = result
-    node_text = get_node_text(ast_root, source_bytes)
-    print(f"Node text: {node_text}")
 ```
 
-## Related Components
+### Extract text from a node
 
-This parser module works with the [Language](../models.md) enum to determine supported languages, and integrates with [VectorStore](vectorstore.md) to process and index parsed code. It also interacts with [WikiGenerator](../generators/wiki.md) to extract information from parsed source code for documentation purposes. The module relies on Tree-sitter language libraries for actual parsing functionality.
+```python
+from src.local_deepwiki.core.parser import get_node_text
+
+text = get_node_text(node, source_bytes)
+```
+
+# Related Components
+
+This file works with the following components:
+
+- `LangEnum` from `local_deepwiki.models`: Enum representing supported programming languages.
+- [`FileInfo`](../models.md) from `local_deepwiki.models`: Data structure for file information.
+- Tree-sitter libraries for various programming languages:
+  - `tree_sitter_python`
+  - `tree_sitter_javascript`
+  - `tree_sitter_typescript`
+  - `tree_sitter_go`
+  - `tree_sitter_rust`
+  - `tree_sitter_java`
+  - `tree_sitter_c`
+  - `tree_sitter_cpp`
+  - `tree_sitter_swift`
+- [`Language`](../models.md), `Parser`, and `Node` from `tree_sitter`: Core Tree-sitter classes for language parsing and AST manipulation.
 
 ## API Reference
 
@@ -376,6 +407,10 @@ flowchart TD
     classDef method fill:#fff3e0
     class N0,N1,N2,N3 method
 ```
+
+## Relevant Source Files
+
+- `src/local_deepwiki/core/parser.py`
 
 ## See Also
 

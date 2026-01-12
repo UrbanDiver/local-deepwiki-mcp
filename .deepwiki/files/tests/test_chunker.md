@@ -1,32 +1,30 @@
 # File Overview
 
-This file, `tests/test_chunker.py`, contains unit tests for the [CodeChunker](../src/local_deepwiki/core/chunker.md) class. It verifies that the chunker correctly identifies and extracts code elements (functions, classes, modules) from source files, including their names, docstrings, line numbers, and unique identifiers. The tests cover various programming languages and edge cases to ensure the chunker behaves as expected.
-
-The tests in this file are designed to validate the functionality of the [CodeChunker](../src/local_deepwiki/core/chunker.md) class, which is responsible for breaking down source code files into logical chunks for further processing. This file is part of the local_deepwiki core testing suite and ensures that code chunking logic works correctly across different file types and code structures.
+This file contains tests for the [`CodeChunker`](../src/local_deepwiki/core/chunker.md) class, which is responsible for breaking down code files into logical chunks such as functions, classes, and modules. The tests cover various scenarios including chunking Python and JavaScript files, extracting names and docstrings, setting line numbers, and ensuring unique IDs for chunks.
 
 # Classes
 
 ## TestCodeChunker
 
-The TestCodeChunker class contains a suite of unit tests for the [CodeChunker](../src/local_deepwiki/core/chunker.md) class. It uses pytest fixtures and methods to set up test environments and validate chunker behavior.
+The TestCodeChunker class contains a suite of tests to verify the functionality of the [CodeChunker](../src/local_deepwiki/core/chunker.md) class. It includes methods to test different aspects of code chunking, such as handling different file types, extracting metadata like function and class names, and ensuring correct line number assignments.
 
-### Key Methods
+### Methods
 
-- **setup_method**: Initializes a [CodeChunker](../src/local_deepwiki/core/chunker.md) instance for each test method
-- **test_chunk_python_file**: Tests chunking of Python files
-- **test_chunk_extracts_function_names**: Verifies function name extraction
-- **test_chunk_extracts_class_names**: Verifies class name extraction
-- **test_chunk_extracts_docstrings**: Tests docstring extraction
-- **test_chunk_javascript_file**: Tests chunking of JavaScript files
-- **test_chunk_sets_line_numbers**: Validates line number assignment
-- **test_chunk_generates_unique_ids**: Ensures chunk IDs are unique
-- **test_chunk_unsupported_file_returns_empty**: Tests behavior with unsupported file types
+- **setup_method**: Initializes a [CodeChunker](../src/local_deepwiki/core/chunker.md) instance for each test.
+- **test_chunk_python_file**: Tests chunking a Python file and verifies that the resulting chunks are correctly formed.
+- **test_chunk_extracts_function_names**: Tests that function names are correctly extracted from a Python file.
+- **test_chunk_extracts_class_names**: Tests that class names are correctly extracted from a Python file.
+- **test_chunk_extracts_docstrings**: Tests that docstrings are correctly extracted from functions.
+- **test_chunk_javascript_file**: Tests chunking a JavaScript file and verifies the resulting chunks.
+- **test_chunk_sets_line_numbers**: Tests that line numbers are correctly assigned to chunks.
+- **test_chunk_generates_unique_ids**: Tests that each chunk is assigned a unique ID.
+- **test_chunk_unsupported_file_returns_empty**: Tests that unsupported file types return no chunks.
 
 # Functions
 
 ## setup_method
 
-Initializes the [CodeChunker](../src/local_deepwiki/core/chunker.md) instance used by all test methods in the class.
+Initializes a [`CodeChunker`](../src/local_deepwiki/core/chunker.md) instance for each test method in the class.
 
 **Parameters**: None
 
@@ -34,70 +32,64 @@ Initializes the [CodeChunker](../src/local_deepwiki/core/chunker.md) instance us
 
 ## test_chunk_python_file
 
-Tests that a Python file is correctly chunked into modules, functions, and classes.
+Tests chunking a Python file and verifies that the resulting chunks are correctly formed.
 
-**Parameters**:
-- tmp_path: pytest fixture providing a temporary directory
+**Parameters**: 
+- `tmp_path`: A temporary directory path provided by pytest for test file creation.
 
 **Returns**: None
 
-**Example**:
-```python
-# This test creates a Python file with a module docstring, imports, a function, and a class
-# and verifies that the chunker correctly identifies each component.
-```
-
 ## test_chunk_extracts_function_names
 
-Verifies that function names are correctly extracted from code chunks.
+Tests that function names are correctly extracted from a Python file.
 
-**Parameters**:
-- tmp_path: pytest fixture providing a temporary directory
+**Parameters**: 
+- `tmp_path`: A temporary directory path provided by pytest for test file creation.
 
 **Returns**: None
 
 ## test_chunk_extracts_class_names
 
-Verifies that class names are correctly extracted from code chunks.
+Tests that class names are correctly extracted from a Python file.
 
-**Parameters**:
-- tmp_path: pytest fixture providing a temporary directory
+**Parameters**: 
+- `tmp_path`: A temporary directory path provided by pytest for test file creation.
 
 **Returns**: None
 
 ## test_chunk_extracts_docstrings
 
-Tests that docstrings are correctly extracted from functions and classes.
+Tests that docstrings are correctly extracted from functions in a Python file.
 
-**Parameters**:
-- tmp_path: pytest fixture providing a temporary directory
+**Parameters**: 
+- `tmp_path`: A temporary directory path provided by pytest for test file creation.
 
 **Returns**: None
 
 ## test_chunk_javascript_file
 
-Tests chunking of JavaScript files.
+Tests chunking a JavaScript file and verifies the resulting chunks.
 
-**Parameters**:
-- tmp_path: pytest fixture providing a temporary directory
+**Parameters**: 
+- `tmp_path`: A temporary directory path provided by pytest for test file creation.
 
 **Returns**: None
 
 ## test_chunk_sets_line_numbers
 
-Verifies that line numbers are correctly assigned to code chunks.
+Tests that line numbers are correctly assigned to chunks in a Python file.
 
-**Parameters**:
-- tmp_path: pytest fixture providing a temporary directory
+**Parameters**: 
+- `tmp_path`: A temporary directory path provided by pytest for test file creation.
 
 **Returns**: None
 
 ## test_chunk_generates_unique_ids
 
-Ensures that each chunk generated has a unique identifier.
+Tests that each chunk is assigned a unique ID.
 
-**Parameters**:
-- tmp_path: pytest fixture providing a temporary directory
+**Parameters**: 
+- `tmp_path`: A temporary directory path provided by pytest for test file creation.
 
 **Returns**: None
 
@@ -105,8 +97,8 @@ Ensures that each chunk generated has a unique identifier.
 
 Tests that unsupported file types return no chunks.
 
-**Parameters**:
-- tmp_path: pytest fixture providing a temporary directory
+**Parameters**: 
+- `tmp_path`: A temporary directory path provided by pytest for test file creation.
 
 **Returns**: None
 
@@ -118,24 +110,15 @@ To run the tests in this file, use pytest:
 pytest tests/test_chunker.py
 ```
 
-Example of a typical test structure:
-
-```python
-def test_chunk_python_file(self, tmp_path):
-    code = '''def hello():
-    """Say hello."""
-    return "Hello"
-'''
-    test_file = tmp_path / "test.py"
-    test_file.write_text(code)
-    
-    chunks = list(self.chunker.chunk_file(test_file, tmp_path))
-    # Assertions would verify chunk properties
-```
+Each test method creates a temporary file with specific code content and then calls the `chunk_file` method of the [`CodeChunker`](../src/local_deepwiki/core/chunker.md) instance to generate chunks. The tests assert various properties of the resulting chunks, such as their type, name, docstring, line numbers, and uniqueness of IDs.
 
 # Related Components
 
-This test file works with the [CodeChunker](../src/local_deepwiki/core/chunker.md) class, which is responsible for breaking down source code files into logical chunks. The tests validate that [CodeChunker](../src/local_deepwiki/core/chunker.md) correctly handles different programming languages and code structures. The chunker uses [ChunkType](../src/local_deepwiki/models.md) and [Language](../src/local_deepwiki/models.md) enums from the models module to categorize and identify code elements. The tests ensure that the chunker integrates properly with the rest of the local_deepwiki system for processing source code.
+This file works with the following components:
+
+- **[CodeChunker](../src/local_deepwiki/core/chunker.md)**: The [main](../src/local_deepwiki/web/app.md) class being tested, which performs the actual chunking of code files.
+- **[ChunkType](../src/local_deepwiki/models.md)**: An enum that defines the types of chunks that can be generated (e.g., FUNCTION, CLASS).
+- **[Language](../src/local_deepwiki/models.md)**: An enum that specifies the programming language of the code being chunked.
 
 ## API Reference
 
@@ -315,9 +298,13 @@ flowchart TD
     class N1,N2,N3,N4,N5,N6,N7,N8,N9 method
 ```
 
+## Relevant Source Files
+
+- `tests/test_chunker.py`
+
 ## See Also
 
-- [chunker](../src/local_deepwiki/core/chunker.md) - dependency
 - [models](../src/local_deepwiki/models.md) - dependency
+- [chunker](../src/local_deepwiki/core/chunker.md) - dependency
 - [api_docs](../src/local_deepwiki/generators/api_docs.md) - shares 3 dependencies
 - [test_api_docs](test_api_docs.md) - shares 3 dependencies

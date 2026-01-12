@@ -25,6 +25,6 @@ Detailed documentation for individual source files.
 - [test_chunker.py](tests/test_chunker.md)
 - [test_crosslinks.py](tests/test_crosslinks.md)
 - [test_incremental_wiki.py](tests/test_incremental_wiki.md)
-- [test_manifest.py](tests/test_manifest.md)
 - [test_see_also.py](tests/test_see_also.md)
+- [test_source_refs.py](tests/test_source_refs.md)
 - [test_watcher.py](tests/test_watcher.md)

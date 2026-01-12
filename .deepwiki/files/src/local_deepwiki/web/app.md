@@ -1,104 +1,70 @@
-# DeepWiki Web Application
+# File Overview
 
-## File Overview
+This file, `src/local_deepwiki/web/app.py`, serves as the main entry point for the DeepWiki web server. It provides functionality to create and run a Flask-based web application that serves documentation from a specified wiki directory. The application supports rendering markdown files as HTML, building navigation breadcrumbs, and searching through wiki content.
 
-This file defines the web application for DeepWiki, a documentation system that serves markdown files as a searchable wiki. The module provides the core Flask application setup, routing, and server execution logic. It integrates with the local DeepWiki directory structure to render markdown pages, provide search functionality, and build navigation breadcrumbs.
+# Functions
 
-The file works with the core DeepWiki data structures and serves as the entry point for running the web server. It depends on the local .deepwiki directory structure and integrates with the markdown rendering pipeline to display documentation content.
-
-## Functions
-
-### run_server
+## `run_server`
 
 ```python
 def run_server(wiki_path: str | Path, host: str = "127.0.0.1", port: int = 8080, debug: bool = False):
-    """Run the wiki web server."""
 ```
 
-Starts the Flask web server for the DeepWiki application.
+Run the wiki web server.
 
 **Parameters:**
-- `wiki_path` (str | Path): Path to the .deepwiki directory containing documentation
-- `host` (str): Host address to bind the server to (default: "127.0.0.1")
-- `port` (int): Port number to bind the server to (default: 8080)
-- `debug` (bool): Enable Flask debug mode (default: False)
+- `wiki_path` (str | Path): Path to the wiki directory.
+- `host` (str): Host address to bind the server to. Defaults to `"127.0.0.1"`.
+- `port` (int): Port number to bind the server to. Defaults to `8080`.
+- `debug` (bool): Enable debug mode. Defaults to `False`.
 
-**Usage:**
-```python
-run_server("/path/to/wiki", host="0.0.0.0", port=8080, debug=True)
-```
-
-### create_app
+## `create_app`
 
 ```python
 def create_app(wiki_path: str | Path) -> Flask:
-    """Create Flask app with wiki path configured."""
 ```
 
-Creates and configures a Flask application instance with the specified wiki path.
+Create Flask app with wiki path configured.
 
 **Parameters:**
-- `wiki_path` (str | Path): Path to the .deepwiki directory
+- `wiki_path` (str | Path): Path to the wiki directory.
 
 **Returns:**
-- Flask: Configured Flask application instance
+- `Flask`: A configured Flask application instance.
 
-**Usage:**
-```python
-app = create_app("/path/to/wiki")
-```
-
-### main
+## `main`
 
 ```python
 def main():
-    """CLI entry point."""
 ```
 
-Command-line interface entry point for starting the DeepWiki server.
+CLI entry point.
 
-**Parameters:**
-None (uses command-line arguments)
+Parses command-line arguments and starts the web server using the provided arguments.
 
-**Usage:**
-```bash
-python app.py /path/to/wiki
-python app.py --host 0.0.0.0 --port 8080 --debug
-```
+# Usage Examples
 
-## Usage Examples
-
-### Starting the Server
+To start the DeepWiki server from the command line:
 
 ```bash
-# Start server with default settings
-python app.py
-
-# Start server with custom wiki path
-python app.py /path/to/my/wiki
-
-# Start server with custom host and port
-python app.py --host 0.0.0.0 --port 8080
-
-# Start server in debug mode
-python app.py --debug
+python src/local_deepwiki/web/app.py /path/to/wiki --host 0.0.0.0 --port 8080 --debug
 ```
 
-### Programmatic Usage
+Or with default settings (serving from `.deepwiki` directory):
 
-```python
-from src.local_deepwiki.web.app import create_app, run_server
-
-# Create app instance
-app = create_app("/path/to/wiki")
-
-# Run server
-run_server("/path/to/wiki", host="0.0.0.0", port=8080, debug=True)
+```bash
+python src/local_deepwiki/web/app.py
 ```
 
-## Related Components
+# Related Components
 
-This module works with the core DeepWiki directory structure and integrates with the markdown rendering pipeline. It depends on the local .deepwiki directory format and provides the web interface for browsing documentation. The application uses the [WikiGenerator](../generators/wiki.md) class to understand the wiki structure and build navigation elements. It also works with the search functionality that indexes markdown content for fast retrieval.
+This file imports and uses components from the following modules:
+- `flask`: For creating the web application and handling HTTP requests.
+- `markdown`: For rendering markdown content into HTML.
+- `argparse`: For parsing command-line arguments.
+- `pathlib.Path`: For handling file paths.
+
+The file also references the global variable `WIKI_PATH`, which is set during the `create_app` function call. It depends on the structure of a wiki directory that contains markdown files to be rendered.
 
 ## API Reference
 
@@ -107,17 +73,17 @@ This module works with the core DeepWiki directory structure and integrates with
 #### `get_wiki_structure`
 
 ```python
-def get_wiki_structure(wiki_path: Path) -> tuple[list, dict]
+def get_wiki_structure(wiki_path: Path) -> tuple[list, dict, list | None]
 ```
 
-Get wiki pages and sections.
+Get wiki pages and sections, with optional hierarchical TOC.
 
 
 | [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `wiki_path` | `Path` | - | - |
 
-**Returns:** `tuple[list, dict]`
+**Returns:** `tuple[list, dict, list | None]`
 
 
 #### `extract_title`
@@ -284,6 +250,9 @@ flowchart TD
     N27[title]
     N28[url_for]
     N29[view_page]
+    N11 --> N9
+    N11 --> N18
+    N11 --> N20
     N11 --> N12
     N11 --> N10
     N11 --> N16
@@ -324,7 +293,6 @@ flowchart TD
     class N0,N1,N2,N3,N4,N5,N6,N7,N8,N9,N10,N11,N12,N13,N14,N15,N16,N17,N18,N19,N20,N21,N22,N23,N24,N25,N26,N27,N28,N29 func
 ```
 
-## See Also
+## Relevant Source Files
 
-- [test_manifest](../../../tests/test_manifest.md) - shares 2 dependencies
-- [vectorstore](../core/vectorstore.md) - shares 2 dependencies
+- `src/local_deepwiki/web/app.py`

@@ -1,0 +1,185 @@
+{
+  "entries": [
+    {
+      "number": "1",
+      "title": "Overview",
+      "path": "index.md"
+    },
+    {
+      "number": "2",
+      "title": "Architecture",
+      "path": "architecture.md"
+    },
+    {
+      "number": "3",
+      "title": "Dependencies",
+      "path": "dependencies.md"
+    },
+    {
+      "number": "4",
+      "title": "Modules",
+      "path": "modules/index.md",
+      "children": [
+        {
+          "number": "4.1",
+          "title": "Module: src",
+          "path": "modules/src.md"
+        },
+        {
+          "number": "4.2",
+          "title": "Module: tests",
+          "path": "modules/tests.md"
+        }
+      ]
+    },
+    {
+      "number": "5",
+      "title": "Files",
+      "path": "files/index.md",
+      "children": [
+        {
+          "number": "5.1",
+          "title": "Src",
+          "path": "",
+          "children": [
+            {
+              "number": "5.1.1",
+              "title": "Local Deepwiki",
+              "path": "",
+              "children": [
+                {
+                  "number": "5.1.1.1",
+                  "title": "config.py",
+                  "path": "files/src/local_deepwiki/config.md"
+                },
+                {
+                  "number": "5.1.1.2",
+                  "title": "models.py",
+                  "path": "files/src/local_deepwiki/models.md"
+                },
+                {
+                  "number": "5.1.1.3",
+                  "title": "server.py",
+                  "path": "files/src/local_deepwiki/server.md"
+                },
+                {
+                  "number": "5.1.1.4",
+                  "title": "watcher.py",
+                  "path": "files/src/local_deepwiki/watcher.md"
+                },
+                {
+                  "number": "5.1.1.5",
+                  "title": "Core",
+                  "path": "",
+                  "children": [
+                    {
+                      "number": "5.1.1.5.1",
+                      "title": "chunker.py",
+                      "path": "files/src/local_deepwiki/core/chunker.md"
+                    },
+                    {
+                      "number": "5.1.1.5.2",
+                      "title": "parser.py",
+                      "path": "files/src/local_deepwiki/core/parser.md"
+                    },
+                    {
+                      "number": "5.1.1.5.3",
+                      "title": "vectorstore.py",
+                      "path": "files/src/local_deepwiki/core/vectorstore.md"
+                    }
+                  ]
+                },
+                {
+                  "number": "5.1.1.6",
+                  "title": "Generators",
+                  "path": "",
+                  "children": [
+                    {
+                      "number": "5.1.1.6.1",
+                      "title": "api_docs.py",
+                      "path": "files/src/local_deepwiki/generators/api_docs.md"
+                    },
+                    {
+                      "number": "5.1.1.6.2",
+                      "title": "crosslinks.py",
+                      "path": "files/src/local_deepwiki/generators/crosslinks.md"
+                    },
+                    {
+                      "number": "5.1.1.6.3",
+                      "title": "manifest.py",
+                      "path": "files/src/local_deepwiki/generators/manifest.md"
+                    },
+                    {
+                      "number": "5.1.1.6.4",
+                      "title": "see_also.py",
+                      "path": "files/src/local_deepwiki/generators/see_also.md"
+                    },
+                    {
+                      "number": "5.1.1.6.5",
+                      "title": "wiki.py",
+                      "path": "files/src/local_deepwiki/generators/wiki.md"
+                    }
+                  ]
+                },
+                {
+                  "number": "5.1.1.7",
+                  "title": "Web",
+                  "path": "",
+                  "children": [
+                    {
+                      "number": "5.1.1.7.1",
+                      "title": "app.py",
+                      "path": "files/src/local_deepwiki/web/app.md"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "number": "5.2",
+          "title": "Tests",
+          "path": "",
+          "children": [
+            {
+              "number": "5.2.1",
+              "title": "test_api_docs.py",
+              "path": "files/tests/test_api_docs.md"
+            },
+            {
+              "number": "5.2.2",
+              "title": "test_chunker.py",
+              "path": "files/tests/test_chunker.md"
+            },
+            {
+              "number": "5.2.3",
+              "title": "test_crosslinks.py",
+              "path": "files/tests/test_crosslinks.md"
+            },
+            {
+              "number": "5.2.4",
+              "title": "test_incremental_wiki.py",
+              "path": "files/tests/test_incremental_wiki.md"
+            },
+            {
+              "number": "5.2.5",
+              "title": "test_see_also.py",
+              "path": "files/tests/test_see_also.md"
+            },
+            {
+              "number": "5.2.6",
+              "title": "test_source_refs.py",
+              "path": "files/tests/test_source_refs.md"
+            },
+            {
+              "number": "5.2.7",
+              "title": "test_watcher.py",
+              "path": "files/tests/test_watcher.md"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

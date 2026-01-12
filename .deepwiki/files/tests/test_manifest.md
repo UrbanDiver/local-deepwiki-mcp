@@ -1,150 +1,102 @@
-# test_manifest.py
+# File Overview
 
-## File Overview
+This file contains unit tests for the manifest parsing functionality in the `local_deepwiki.generators.manifest` module. It tests the parsing of various project manifest files including `pyproject.toml`, `package.json`, `requirements.txt`, `Cargo.toml`, and `go.mod`, as well as directory tree generation.
 
-This file contains unit tests for the manifest parsing functionality in the local_deepwiki.generators.manifest module. It tests the ability to parse various project manifest files (like pyproject.toml, package.json, requirements.txt, etc.) and extract project metadata such as name, language, version, and dependencies. The tests ensure that the manifest parser correctly identifies project information from different package management formats and handles precedence when multiple manifest files are present.
+# Classes
 
-## Classes
-
-### TestProjectManifest
+## TestProjectManifest
 
 Tests for [ProjectManifest](../src/local_deepwiki/generators/manifest.md) dataclass.
 
-This class tests the basic functionality of the [ProjectManifest](../src/local_deepwiki/generators/manifest.md) dataclass, specifically the `has_data()` method that determines whether a manifest contains meaningful project information.
+### Methods
 
-Key methods:
-- `test_has_data_empty`: Tests that an empty manifest returns False for has_data()
-- `test_has_data_with_name`: Tests that a manifest with a name returns True for has_data()
-- `test_has_data_with_dependencies`: Tests that a manifest with dependencies returns True for has_data()
+- `test_has_data_empty()`: Tests that an empty manifest has no data.
+- `test_has_data_with_name()`: Tests that a manifest with a name has data.
+- `test_has_data_with_dependencies()`: Tests that a manifest with dependencies has data.
 
-### TestParsePyprojectToml
+## TestParsePyprojectToml
 
 Tests for parsing pyproject.toml files.
 
-This class tests parsing of Python project manifest files using the pyproject.toml format, which is the modern standard for Python package metadata.
+### Methods
 
-Key methods:
-- `test_parse_basic_pyproject`: Tests parsing a basic pyproject.toml file with name, version, description, dependencies, optional dependencies, and scripts
+- `test_parse_basic_pyproject()`: Parses a basic pyproject.toml file and verifies the resulting manifest.
 
-### TestParsePackageJson
+## TestParsePackageJson
 
 Tests for parsing package.json files.
 
-This class tests parsing of Node.js package manifest files, which contain project metadata and dependencies.
+### Methods
 
-Key methods:
-- `test_parse_basic_package_json`: Tests parsing a basic package.json file with name, version, description, dependencies, and devDependencies
+- `test_parse_basic_package_json()`: Parses a basic package.json file and verifies the resulting manifest.
 
-### TestParseRequirementsTxt
+## TestParseRequirementsTxt
 
 Tests for parsing requirements.txt files.
 
-This class tests parsing of Python requirements files, which list project dependencies in a simple text format.
+### Methods
 
-Key methods:
-- `test_parse_basic_requirements`: Tests parsing a basic requirements.txt file with dependencies and comments
+- `test_parse_basic_requirements()`: Parses a basic requirements.txt file and verifies the resulting manifest.
 
-### TestParseCargoToml
+## TestParseCargoToml
 
 Tests for parsing Cargo.toml files.
 
-This class tests parsing of Rust project manifest files, which contain package metadata and dependencies.
+### Methods
 
-Key methods:
-- `test_parse_basic_cargo`: Tests parsing a basic Cargo.toml file with package information and dependencies
+- `test_parse_basic_cargo()`: Parses a basic Cargo.toml file and verifies the resulting manifest.
 
-### TestParseGoMod
+## TestParseGoMod
 
 Tests for parsing go.mod files.
 
-This class tests parsing of Go module manifest files, which contain module information and dependencies.
+### Methods
 
-Key methods:
-- `test_parse_basic_go_mod`: Tests parsing a basic go.mod file with module name and required packages
+- `test_parse_basic_go_mod()`: Parses a basic go.mod file and verifies the resulting manifest.
 
-### TestGetDirectoryTree
+## TestGetDirectoryTree
 
 Tests for directory tree generation.
 
-This class tests the [get_directory_tree](../src/local_deepwiki/generators/manifest.md) function which generates a textual representation of a directory structure.
+### Methods
 
-Key methods:
-- `test_basic_tree`: Tests generating a basic directory tree with nested directories and files
+- `test_basic_tree()`: Generates a basic directory tree and verifies its contents.
 
-### TestMultipleManifests
+## TestMultipleManifests
 
 Tests for handling multiple manifest files.
 
-This class tests the precedence logic when multiple manifest files are present in the same directory, ensuring that pyproject.toml takes precedence over requirements.txt.
+### Methods
 
-Key methods:
-- `test_pyproject_takes_precedence`: Tests that pyproject.toml takes precedence over requirements.txt when both are present
+- `test_pyproject_takes_precedence()`: Tests that pyproject.toml takes precedence over requirements.txt when both are present.
 
-## Functions
+# Functions
 
-### parse_manifest
+The module imports the following functions from `local_deepwiki.generators.manifest`:
 
-Parses a manifest file from a given directory path and returns a [ProjectManifest](../src/local_deepwiki/generators/manifest.md) object.
+- [`ProjectManifest`](../src/local_deepwiki/generators/manifest.md): A dataclass representing a project manifest.
+- [`get_directory_tree`](../src/local_deepwiki/generators/manifest.md): Generates a directory tree representation.
+- [`parse_manifest`](../src/local_deepwiki/generators/manifest.md): Parses manifest files and returns a [ProjectManifest](../src/local_deepwiki/generators/manifest.md).
 
-**Parameters:**
-- `path` (Path): The directory path containing manifest files
+# Usage Examples
 
-**Returns:**
-- [ProjectManifest](../src/local_deepwiki/generators/manifest.md): An object containing parsed project metadata
-
-### get_directory_tree
-
-Generates a textual representation of a directory tree structure.
-
-**Parameters:**
-- `path` (Path): The root directory path
-- `max_depth` (int): Maximum depth to [traverse](../src/local_deepwiki/generators/manifest.md) (default: 3)
-
-**Returns:**
-- str: A formatted string representation of the directory tree
-
-## Usage Examples
-
-### Parsing a Python project manifest
+The tests demonstrate usage of the [`parse_manifest`](../src/local_deepwiki/generators/manifest.md) function with different manifest file types:
 
 ```python
-from pathlib import Path
-from local_deepwiki.generators.manifest import parse_manifest
+# Parsing a pyproject.toml file
+manifest = parse_manifest(Path("/path/to/project"))
 
-# Create a temporary directory with a pyproject.toml file
-with tempfile.TemporaryDirectory() as tmpdir:
-    pyproject = Path(tmpdir) / "pyproject.toml"
-    pyproject.write_text("""
-[project]
-name = "test-project"
-version = "1.0.0"
-dependencies = ["requests>=2.0"]
-""")
-    
-    manifest = parse_manifest(Path(tmpdir))
-    print(manifest.name)  # Output: test-project
-    print(manifest.language)  # Output: Python
+# Generating a directory tree
+tree = get_directory_tree(Path("/path/to/project"), max_depth=2)
 ```
 
-### Generating a directory tree
+# Related Components
 
-```python
-from pathlib import Path
-from local_deepwiki.generators.manifest import get_directory_tree
+This file works with the following components from `local_deepwiki.generators.manifest`:
 
-with tempfile.TemporaryDirectory() as tmpdir:
-    root = Path(tmpdir)
-    (root / "src").mkdir()
-    (root / "src" / "main.py").touch()
-    (root / "README.md").touch()
-    
-    tree = get_directory_tree(root, max_depth=2)
-    print(tree)
-```
-
-## Related Components
-
-This test file works with the [ProjectManifest](../src/local_deepwiki/generators/manifest.md) class to validate manifest parsing functionality. It also interacts with the [get_directory_tree](../src/local_deepwiki/generators/manifest.md) function to test directory structure generation. The tests validate the behavior of the manifest parsing logic that is used by other components in the generators module to extract project metadata for documentation generation.
+- [`ProjectManifest`](../src/local_deepwiki/generators/manifest.md): The dataclass used to represent parsed manifest information.
+- [`get_directory_tree`](../src/local_deepwiki/generators/manifest.md): Function for generating directory tree representations.
+- [`parse_manifest`](../src/local_deepwiki/generators/manifest.md): Main function for parsing manifest files of various types.
 
 ## API Reference
 
