@@ -31,6 +31,7 @@ FUNCTION_NODE_TYPES: dict[Language, set[str]] = {
     Language.RUBY: {"method", "singleton_method"},
     Language.PHP: {"function_definition", "method_declaration"},
     Language.KOTLIN: {"function_declaration"},
+    Language.CSHARP: {"method_declaration", "constructor_declaration"},
 }
 
 CLASS_NODE_TYPES: dict[Language, set[str]] = {
@@ -46,6 +47,7 @@ CLASS_NODE_TYPES: dict[Language, set[str]] = {
     Language.RUBY: {"class", "module"},
     Language.PHP: {"class_declaration", "interface_declaration", "trait_declaration"},
     Language.KOTLIN: {"class_declaration", "object_declaration"},
+    Language.CSHARP: {"class_declaration", "struct_declaration", "interface_declaration", "enum_declaration"},
 }
 
 IMPORT_NODE_TYPES: dict[Language, set[str]] = {
@@ -61,6 +63,7 @@ IMPORT_NODE_TYPES: dict[Language, set[str]] = {
     Language.RUBY: {"call"},  # require/require_relative are method calls in Ruby AST
     Language.PHP: {"namespace_use_declaration"},  # use statements in PHP
     Language.KOTLIN: {"import_header"},
+    Language.CSHARP: {"using_directive"},
 }
 
 
@@ -155,6 +158,15 @@ def get_parent_classes(class_node: Node, source: bytes, language: Language) -> l
                             if text and text not in (":", ","):
                                 parents.append(text)
                                 break  # Only get the type name, not nested parts
+
+    elif language == Language.CSHARP:
+        # C#: class Child : Parent, IInterface1, IInterface2
+        for child in class_node.children:
+            if child.type == "base_list":
+                for item in find_nodes_by_type(child, {"identifier", "generic_name", "qualified_name"}):
+                    text = get_node_text(item, source)
+                    if text:
+                        parents.append(text)
 
     return parents
 

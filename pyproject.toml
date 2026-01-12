@@ -19,6 +19,7 @@ dependencies = [
     "tree-sitter-ruby>=0.23",
     "tree-sitter-php>=0.23",
     "tree-sitter-kotlin>=0.23",
+    "tree-sitter-c-sharp>=0.23",
     "lancedb>=0.15",
     "sentence-transformers>=3.0",
     "openai>=1.0",
