@@ -2,168 +2,49 @@
 
 ## System Overview
 
-Local DeepWiki is a documentation generation system that creates comprehensive technical documentation from codebases. It combines AST-based code parsing with vector search and LLM generation to produce wiki-style documentation automatically.
+The local-deepwiki-mcp system is a documentation and knowledge management system that processes code repositories and generates wikis with cross-references, search capabilities, and incremental updates. Based on the code structure and dependencies, this system appears to be built around a core processing pipeline that handles code parsing, documentation generation, and wiki maintenance.
 
-The system works in three phases:
-1. **Parsing**: Tree-sitter parses source files into ASTs
-2. **Indexing**: Code chunks are embedded and stored in LanceDB
-3. **Generation**: LLMs generate documentation using RAG (Retrieval-Augmented Generation)
+The system leverages multiple AI and data processing libraries including anthropic, openai, ollama for language model interactions, lancedb for vector search, and tree-sitter for code parsing. It uses a Flask web interface for serving documentation and includes components for watching file changes, managing incremental updates, and handling cross-references between documentation sections.
 
 ## Key Components
 
-### RepositoryIndexer
-The [RepositoryIndexer](files/src/local_deepwiki/core/indexer.md) class orchestrates the indexing pipeline. It coordinates file discovery, parsing, chunking, and vector storage. Supports incremental updates by tracking file hashes.
-
-### CodeParser
-The [CodeParser](files/src/local_deepwiki/core/parser.md) class uses tree-sitter to parse source files into ASTs. Supports Python, TypeScript, JavaScript, Go, Rust, Java, C, C++, and Swift.
-
-### CodeChunker
-The [CodeChunker](files/src/local_deepwiki/core/chunker.md) class extracts semantic chunks from parsed ASTs - classes, functions, methods with their docstrings and signatures. Maintains metadata about each chunk (file path, line numbers, language).
-
-### VectorStore
-The [VectorStore](files/src/local_deepwiki/core/vectorstore.md) class manages the LanceDB vector database. Handles embedding generation, storage, and semantic search queries.
-
-### WikiGenerator
-The [WikiGenerator](files/src/local_deepwiki/generators/wiki.md) class produces documentation pages using LLM generation. Queries the vector store for relevant code context, then prompts the LLM to generate markdown documentation.
-
-### LLM Providers
-Abstraction layer for LLM providers (Ollama, Anthropic, OpenAI). Located in `providers/llm.py`. Factory function `get_llm_provider()` returns the configured provider.
-
-### Embedding Providers
-Abstraction for embedding generation. Supports local sentence-transformers (all-MiniLM-L6-v2) and OpenAI embeddings. Located in `providers/embeddings.py`.
-
-### Diagram Functions
-Functions in `generators/diagrams.py` create Mermaid diagrams for architecture visualization, class diagrams, and dependency graphs.
-
-### Config
-The [Config](files/src/local_deepwiki/config.md) class manages configuration loaded from `~/.config/local-deepwiki/config.yaml`. Includes LLM settings, embedding settings, and parsing options.
+The codebase does not contain any explicit class definitions. The system appears to be structured around functional modules and test files that exercise various components of the documentation pipeline. The core functionality is implemented through a combination of:
+- API documentation generation
+- Call graph analysis
+- Code chunking and parsing
+- Configuration management
+- Search functionality
+- Cross-reference handling
+- Wiki incremental updates
+- File watching and manifest management
 
 ## Data Flow
 
-```mermaid
-graph TD
-    A[Source Files] --> B[CodeParser]
-    B --> C[CodeChunker]
-    C --> D[EmbeddingProvider]
-    D --> E[VectorStore/LanceDB]
+The system processes code repositories through a series of steps:
+1. Code parsing and chunking using tree-sitter parsers
+2. Documentation generation through language model interactions (anthropic, openai, ollama)
+3. Cross-reference analysis and linking
+4. Incremental wiki updates based on file changes
+5. Search index building with lancedb
+6. Web serving of generated documentation via Flask
 
-    F[WikiGenerator] --> G[VectorStore Search]
-    G --> H[Relevant Chunks]
-    H --> I[LLM Provider]
-    I --> J[Generated Markdown]
-    J --> K[Wiki Files]
-
-    E --> G
-```
-
-## Indexing Pipeline
-
-```mermaid
-sequenceDiagram
-    participant I as RepositoryIndexer
-    participant P as CodeParser
-    participant C as CodeChunker
-    participant E as EmbeddingProvider
-    participant V as VectorStore
-
-    I->>I: Find source files
-    loop For each file
-        I->>P: Parse file
-        P-->>I: AST
-        I->>C: Chunk AST
-        C-->>I: CodeChunks
-        I->>E: Generate embeddings
-        E-->>I: Vectors
-        I->>V: Store chunks + vectors
-    end
-    I->>I: Save index status
-```
-
-## Wiki Generation Pipeline
-
-```mermaid
-sequenceDiagram
-    participant W as WikiGenerator
-    participant V as VectorStore
-    participant L as LLMProvider
-    participant D as Diagram Functions
-
-    W->>V: Search for overview context
-    V-->>W: Relevant chunks
-    W->>L: Generate index.md
-    L-->>W: Markdown content
-
-    W->>V: Search for architecture context
-    W->>L: Generate architecture.md
-    W->>D: Generate mermaid diagrams
-
-    loop For each module/file
-        W->>V: Search for module context
-        W->>L: Generate module docs
-    end
-
-    W->>W: Apply cross-links
-    W->>W: Add see-also sections
-```
+Data flows through a pipeline where parsed code chunks are processed by language models to generate documentation, then cross-referenced and stored in a vector database for search capabilities.
 
 ## Component Diagram
 
 ```mermaid
-graph LR
-    subgraph Core
-        Parser[CodeParser]
-        Chunker[CodeChunker]
-        Indexer[RepositoryIndexer]
-        VS[VectorStore]
-    end
-
-    subgraph Generators
-        Wiki[WikiGenerator]
-        Diagrams[diagrams.py]
-        CrossLinks[crosslinks.py]
-        ApiDocs[api_docs.py]
-    end
-
-    subgraph Providers
-        LLM[LLM Provider]
-        Embed[Embedding Provider]
-    end
-
-    subgraph Web
-        Flask[Flask App]
-    end
-
-    Indexer --> Parser
-    Indexer --> Chunker
-    Indexer --> VS
-    Chunker --> Embed
-    Wiki --> VS
-    Wiki --> LLM
-    Wiki --> Diagrams
-    Wiki --> CrossLinks
-    Wiki --> ApiDocs
-    Flask --> VS
+graph TD
+    A[Code Repository] --> B[Parser]
+    B --> C[Chunker]
+    C --> D[WikiGenerator]
+    D --> E[CrossLinker]
+    E --> F[SearchIndex]
+    F --> G[WebServer]
+    H[Watcher] --> D
+    I[Config] --> D
+    J[LanguageModels] --> D
 ```
 
 ## Key Design Decisions
 
-### Tree-sitter for Parsing
-Uses tree-sitter for language-agnostic AST parsing. Provides accurate, fast parsing across multiple languages without language-specific parsers.
-
-### LanceDB for Vector Storage
-Embedded vector database that requires no external services. Stores vectors alongside metadata for efficient retrieval.
-
-### Incremental Updates
-Tracks file hashes to detect changes. Only re-indexes modified files and regenerates affected wiki pages.
-
-### Provider Abstraction
-LLM and embedding providers are abstracted behind factory functions. Allows switching between local (Ollama) and cloud (Anthropic/OpenAI) without code changes.
-
-### RAG for Documentation
-Uses Retrieval-Augmented Generation - searches for relevant code context before prompting the LLM. Produces more accurate, grounded documentation.
-
-## See Also
-
-- [Source Files](files/index.md) - Individual file documentation
-- [Dependencies](dependencies.md) - Dependency analysis
-- [Modules](modules/index.md) - Module documentation
+The system uses a modular architecture with separate components for parsing, documentation generation, cross-referencing, and search. The use of tree-sitter parsers suggests a focus on accurate code analysis, while the integration with multiple language model providers (anthropic, openai, ollama) indicates a design for flexibility in AI backend selection. The incremental wiki update approach implies a focus on performance and efficiency when handling large codebases. The Flask web interface design suggests a user-facing component for accessing generated documentation.

@@ -2,13 +2,14 @@
 
 ## File Overview
 
-This file implements the web server for DeepWiki, a documentation system that serves wiki content from a local directory structure. The application is built using Flask and provides functionality to browse, search, and view markdown-based wiki pages.
+This file defines the web application for DeepWiki, a documentation system that serves markdown files as a searchable wiki. The module provides the core Flask application setup, routing, and server execution logic. It integrates with the local DeepWiki directory structure to render markdown pages, provide search functionality, and build navigation breadcrumbs.
 
-The web application works with the local file system to serve documentation content stored in markdown files, building navigation structures and providing search capabilities. It integrates with the core DeepWiki functionality to provide a user-friendly interface for accessing documentation.
+The file works with the core DeepWiki data structures and serves as the entry point for running the web server. It depends on the local .deepwiki directory structure and integrates with the markdown rendering pipeline to display documentation content.
 
 ## Functions
 
 ### run_server
+
 ```python
 def run_server(wiki_path: str | Path, host: str = "127.0.0.1", port: int = 8080, debug: bool = False):
     """Run the wiki web server."""
@@ -17,10 +18,10 @@ def run_server(wiki_path: str | Path, host: str = "127.0.0.1", port: int = 8080,
 Starts the Flask web server for the DeepWiki application.
 
 **Parameters:**
-- `wiki_path` (str | Path): Path to the wiki directory containing markdown files
-- `host` (str): Host address to bind to (default: "127.0.0.1")
-- `port` (int): Port number to bind to (default: 8080)
-- `debug` (bool): Enable debug mode (default: False)
+- `wiki_path` (str | Path): Path to the .deepwiki directory containing documentation
+- `host` (str): Host address to bind the server to (default: "127.0.0.1")
+- `port` (int): Port number to bind the server to (default: 8080)
+- `debug` (bool): Enable Flask debug mode (default: False)
 
 **Usage:**
 ```python
@@ -28,6 +29,7 @@ run_server("/path/to/wiki", host="0.0.0.0", port=8080, debug=True)
 ```
 
 ### create_app
+
 ```python
 def create_app(wiki_path: str | Path) -> Flask:
     """Create Flask app with wiki path configured."""
@@ -36,7 +38,7 @@ def create_app(wiki_path: str | Path) -> Flask:
 Creates and configures a Flask application instance with the specified wiki path.
 
 **Parameters:**
-- `wiki_path` (str | Path): Path to the wiki directory containing markdown files
+- `wiki_path` (str | Path): Path to the .deepwiki directory
 
 **Returns:**
 - Flask: Configured Flask application instance
@@ -47,58 +49,56 @@ app = create_app("/path/to/wiki")
 ```
 
 ### main
+
 ```python
 def main():
     """CLI entry point."""
 ```
 
-Command-line interface entry point that parses arguments and starts the web server.
+Command-line interface entry point for starting the DeepWiki server.
+
+**Parameters:**
+None (uses command-line arguments)
 
 **Usage:**
 ```bash
-python app.py /path/to/wiki --host 0.0.0.0 --port 8080 --debug
+python app.py /path/to/wiki
+python app.py --host 0.0.0.0 --port 8080 --debug
 ```
-
-### view_page
-```python
-def view_page(path: str):
-    """View a wiki page."""
-```
-
-Handles requests to view individual wiki pages by rendering markdown content.
-
-**Parameters:**
-- `path` (str): Path to the wiki page relative to the wiki directory
-
-**Returns:**
-- Rendered HTML content of the wiki page
-
-**Usage:**
-This function is used internally by the Flask routes to display wiki pages.
 
 ## Usage Examples
 
-### Starting the Web Server
-```python
-# Using the CLI
-python app.py /path/to/wiki --host 0.0.0.0 --port 8080 --debug
+### Starting the Server
 
-# Programmatically
-from src.local_deepwiki.web.app import run_server
-run_server("/path/to/wiki", host="0.0.0.0", port=8080, debug=True)
+```bash
+# Start server with default settings
+python app.py
+
+# Start server with custom wiki path
+python app.py /path/to/my/wiki
+
+# Start server with custom host and port
+python app.py --host 0.0.0.0 --port 8080
+
+# Start server in debug mode
+python app.py --debug
 ```
 
-### Creating an Application Instance
+### Programmatic Usage
+
 ```python
-from src.local_deepwiki.web.app import create_app
+from src.local_deepwiki.web.app import create_app, run_server
+
+# Create app instance
 app = create_app("/path/to/wiki")
+
+# Run server
+run_server("/path/to/wiki", host="0.0.0.0", port=8080, debug=True)
 ```
 
 ## Related Components
 
-This web application works with the core DeepWiki functionality to provide a user interface for accessing documentation stored in markdown files. It uses the [WikiGenerator](../generators/wiki.md) class to build navigation structures and the [CodeChunker](../core/chunker.md) to process documentation content. The application integrates with the [VectorStore](../core/vectorstore.md) to provide search capabilities for the documentation content.
-
-The application relies on the markdown module for rendering markdown content to HTML, and uses Flask for the web framework and routing. It expects wiki content to be organized in a specific directory structure with markdown files as the primary content format.
+This module works with the core DeepWiki directory structure and integrates with the markdown rendering pipeline. It depends on the local .deepwiki directory format and provides the web interface for browsing documentation. The application uses the [WikiGenerator](../generators/wiki.md) class to understand the wiki structure and build navigation elements. It also works with the search functionality that indexes markdown content for fast retrieval.
 
 ## API Reference
 
@@ -326,6 +326,5 @@ flowchart TD
 
 ## See Also
 
-- [test_search](../../../tests/test_search.md) - uses this
+- [test_manifest](../../../tests/test_manifest.md) - shares 2 dependencies
 - [vectorstore](../core/vectorstore.md) - shares 2 dependencies
-- [indexer](../core/indexer.md) - shares 2 dependencies

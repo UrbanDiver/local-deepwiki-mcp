@@ -1,42 +1,39 @@
-# Crosslinks Generator
+# Crosslinks Module Documentation
 
 ## File Overview
 
-The crosslinks.py file implements a system for adding cross-links to wiki pages. It provides functionality to identify entity mentions in wiki content and replace them with hyperlinks pointing to the corresponding documentation pages. This module is part of the local_deepwiki package and integrates with the [WikiPage](../models.md) model and EntityRegistry to provide intelligent cross-linking.
+The crosslinks module is responsible for adding cross-links to wiki pages by identifying entity mentions and converting them into hyperlinks pointing to their respective documentation pages. It processes wiki content to [find](manifest.md) references to documented entities and replaces them with appropriate markdown links.
 
-The CrossLinker class is the [main](../web/app.md) component responsible for processing wiki pages and adding appropriate links based on an entity registry. The add_cross_links function serves as the entry point for processing multiple pages at once.
+This module works as part of the documentation generation pipeline, integrating with the entity registry to understand which entities are documented and where they can be found. It is used by the [main](../web/app.md) documentation generator to enrich wiki pages with internal cross-references.
 
 ## Classes
 
 ### CrossLinker
 
-The CrossLinker class processes wiki pages to add cross-links to entity mentions. It uses an EntityRegistry to identify documented entities and creates appropriate relative links to their documentation pages.
+The CrossLinker class is the core component that processes wiki pages and adds cross-links based on the entity registry.
 
-**Key Methods:**
+#### Key Methods
 
-- `__init__(self, registry: EntityRegistry)`: Initializes the linker with an entity registry
-- `add_links(self, page: WikiPage) -> WikiPage`: Adds cross-links to a single wiki page
-- `_process_content(self, content: str, path: str) -> str`: Processes page content to add links
-- `_split_by_code_blocks(self, text: str) -> list[tuple[str, bool]]`: Splits text by code blocks to avoid linking within code
-- `_add_links_to_text(self, text: str, path: str) -> str`: Adds links to text content
-- `_replace_entity_mentions(self, text: str, path: str) -> str`: Replaces entity mentions with links
-- `_link_backticked_entities(self, text: str, entity_name: str, rel_path: str, protect: Callable[[re.Match[str]], str]) -> str`: Converts backticked entity names to links
-- `_relative_path(self, from_path: str, to_path: str) -> str`: Calculates relative paths between wiki pages
+- `__init__(self, registry: EntityRegistry)`: Initializes the linker with an entity registry.
+- `add_links(self, page: WikiPage) -> WikiPage`: Adds cross-links to a single wiki page.
+- `_process_content(self, content: str, path: str) -> str`: Processes the content of a page to add cross-links.
+- `_split_by_code_blocks(self, text: str) -> list[tuple[str, bool]]`: Splits text by code blocks to avoid linking inside code.
+- `_add_links_to_text(self, text: str, path: str) -> str`: Adds cross-links to plain text.
+- `_replace_entity_mentions(self, text: str, entity_name: str, path: str) -> str`: Replaces entity mentions with links.
+- `_link_backticked_entities(self, text: str, entity_name: str, rel_path: str, protect: Callable[[re.Match[str]], str]) -> str`: Handles backticked entity names.
+- `_relative_path(self, from_path: str, to_path: str) -> str`: Calculates the relative path between two wiki pages.
 
-**Usage:**
-```python
-registry = EntityRegistry()
-linker = CrossLinker(registry)
-processed_page = linker.add_links(wiki_page)
-```
+#### Usage
+
+The CrossLinker processes wiki pages by analyzing their content and identifying entity mentions. It uses the provided entity registry to [find](manifest.md) the correct paths for each entity and creates appropriate markdown links.
 
 ### EntityRegistry
 
-The EntityRegistry class maintains a collection of documented entities and their corresponding paths. It's used by CrossLinker to determine where to link to when processing wiki pages.
+The EntityRegistry class stores information about documented entities and their locations within the wiki. It provides methods to query entities by name and retrieve their paths.
 
 ### EntityInfo
 
-The EntityInfo class stores information about a documented entity, including its name, path, and type.
+The EntityInfo dataclass holds metadata about individual entities, including their name, path, and type.
 
 ## Functions
 
@@ -46,84 +43,50 @@ The EntityInfo class stores information about a documented entity, including its
 def add_cross_links(pages: list[WikiPage], registry: EntityRegistry) -> list[WikiPage]:
 ```
 
-Adds cross-links to all wiki pages in a list using the provided entity registry.
+Adds cross-links to all wiki pages in the provided list.
 
 **Parameters:**
-- `pages`: List of wiki pages to process
-- `registry`: Entity registry with documented entities
+- `pages`: List of [WikiPage](../models.md) objects to process
+- `registry`: EntityRegistry with documented entities
 
 **Returns:**
-- List of wiki pages with cross-links added
+- List of [WikiPage](../models.md) objects with cross-links added
 
-**Usage:**
-```python
-pages = [page1, page2, page3]
-registry = EntityRegistry()
-processed_pages = add_cross_links(pages, registry)
-```
-
-### camel_to_spaced
-
-```python
-def camel_to_spaced(text: str) -> str:
-```
-
-Converts camelCase text to spaced words. This helper function is used to normalize entity names for matching.
-
-**Parameters:**
-- `text`: The camelCase text to convert
-
-**Returns:**
-- Spaced version of the input text
+This function is the [main](../web/app.md) entry point for applying cross-linking to a collection of wiki pages.
 
 ## Usage Examples
 
 ### Basic Usage
 
 ```python
-from local_deepwiki.generators.crosslinks import add_cross_links, CrossLinker
+from local_deepwiki.generators.crosslinks import add_cross_links
 from local_deepwiki.models import WikiPage
-from local_deepwiki.generators.entity_registry import EntityRegistry
 
-# Create registry with documented entities
-registry = EntityRegistry()
-# Add entities to registry...
+# Assuming you have a list of pages and an entity registry
+pages = [WikiPage(...), WikiPage(...)]
+registry = EntityRegistry(...)
 
-# Process individual page
-page = WikiPage(
-    path="modules/src.md",
-    title="Source Module",
-    content="This uses the EntityName class and module.FunctionName function."
-)
-linker = CrossLinker(registry)
-processed_page = linker.add_links(page)
-
-# Process multiple pages
-pages = [page1, page2, page3]
-processed_pages = add_cross_links(pages, registry)
+# Add cross-links to all pages
+linked_pages = add_cross_links(pages, registry)
 ```
 
-### Processing Content with Code Blocks
-
-The system correctly handles code blocks to avoid linking within code:
+### Processing a Single Page
 
 ```python
-# Input content:
-# ```
-# def example_function():
-#     return EntityName()  # This should not be linked
-# ```
+from local_deepwiki.generators.crosslinks import CrossLinker
+from local_deepwiki.models import WikiPage
 
-# Output content:
-# ```
-# def example_function():
-#     return EntityName()  # This should not be linked
-# ```
+# Create linker with registry
+linker = CrossLinker(registry)
+
+# Process a single page
+page = WikiPage(...)
+linked_page = linker.add_links(page)
 ```
 
 ## Related Components
 
-This module works with the [WikiPage](../models.md) model to process page content and the EntityRegistry to identify documented entities. It integrates with the broader local_deepwiki package to provide intelligent cross-linking functionality. The CrossLinker class uses regular expressions and path manipulation to create appropriate relative links between wiki pages.
+This module works with the [WikiPage](../models.md) model to understand page structure and content. It relies on the EntityRegistry to know which entities are documented and where they can be found. The crosslinks functionality integrates with the [main](../web/app.md) documentation generation pipeline to enrich pages with internal references.
 
 ## API Reference
 

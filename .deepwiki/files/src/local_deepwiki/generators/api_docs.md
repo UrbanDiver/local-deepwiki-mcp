@@ -2,9 +2,9 @@
 
 ## File Overview
 
-This file implements the API documentation extraction functionality for the local_deepwiki system. It provides tools for parsing Python code and extracting structured documentation information including function signatures, parameters, return types, decorators, and docstrings. The module is designed to work with the tree_sitter parsing library to analyze code structure and extract meaningful API documentation components.
+This file provides functionality for extracting and parsing API documentation from Python source code. It serves as a core component in the local_deepwiki system for generating documentation from code repositories. The module works by parsing Python code using tree-sitter, extracting function and class signatures, docstrings, and other metadata to create structured API documentation.
 
-This file integrates with the core parser and chunker components to process Python code into structured API documentation elements. It serves as a bridge between raw code parsing and the higher-level documentation generation system.
+The API Docs Extractor class is the [main](../web/app.md) entry point for this functionality, working with [CodeParser](../core/parser.md) to analyze source code and extract meaningful documentation information. It integrates with other components like the chunker to identify code elements and the models to represent extracted data.
 
 ## Classes
 
@@ -12,186 +12,188 @@ This file integrates with the core parser and chunker components to process Pyth
 
 Represents a function parameter with its name, type annotation, and default value.
 
-**Attributes:**
-- `name` (str): The parameter name
-- `type_annotation` (str): The type annotation if present
-- `default_value` (str): The default value if specified
-
-**Usage:**
-```python
-param = Parameter(name="x", type_annotation="int", default_value="0")
-```
+**Key Attributes:**
+- `name`: Parameter name
+- `type_annotation`: Type annotation (if available)
+- `default_value`: Default value (if specified)
+- `is_varargs`: Boolean indicating if parameter is *args or **kwargs
 
 ### FunctionSignature
 
 Represents the signature of a Python function including its name, parameters, return type, and decorators.
 
-**Attributes:**
-- `name` (str): Function name
-- `parameters` (list[Parameter]): List of function parameters
-- `return_type` (str): Return type annotation
-- `decorators` (list[str]): List of decorators applied to the function
-- `docstring` (str): Function docstring
+**Key Attributes:**
+- `name`: Function name
+- `parameters`: List of Parameter objects
+- `return_type`: Return type annotation (if available)
+- `decorators`: List of decorators applied to the function
+- `docstring`: Function docstring content
+- `node`: Tree-sitter node reference
 
-**Usage:**
-```python
-signature = FunctionSignature(
-    name="my_function",
-    parameters=[param1, param2],
-    return_type="str",
-    decorators=["@staticmethod"],
-    docstring="This function does something"
-)
-```
+**Key Methods:**
+- `__init__(node, parser)`: Initializes the function signature from a tree-sitter node
+- `from_node(node, parser)`: Factory method to create FunctionSignature from node
 
 ### ClassSignature
 
 Represents the signature of a Python class including its name, methods, and decorators.
 
-**Attributes:**
-- `name` (str): Class name
-- `methods` (list[FunctionSignature]): List of methods defined in the class
-- `decorators` (list[str]): List of decorators applied to the class
-- `docstring` (str): Class docstring
+**Key Attributes:**
+- `name`: Class name
+- `methods`: List of FunctionSignature objects representing class methods
+- `decorators`: List of decorators applied to the class
+- `docstring`: Class docstring content
+- `node`: Tree-sitter node reference
 
-**Usage:**
-```python
-class_sig = ClassSignature(
-    name="MyClass",
-    methods=[method1, method2],
-    decorators=["@dataclass"],
-    docstring="A sample class"
-)
-```
+**Key Methods:**
+- `__init__(node, parser)`: Initializes the class signature from a tree-sitter node
+- `from_node(node, parser)`: Factory method to create ClassSignature from node
 
 ### APIDocExtractor
 
-Main class for extracting API documentation from Python code. This class coordinates the parsing and extraction of function and class signatures from source code.
+Main class for extracting API documentation from Python source code.
 
 **Key Methods:**
-- `extract_from_code(code: str) -> list[FunctionSignature | ClassSignature]`: Extracts all API signatures from the given code string
-- `extract_from_file(file_path: Path) -> list[FunctionSignature | ClassSignature]`: Extracts API signatures from a file
-
-**Usage:**
-```python
-extractor = APIDocExtractor()
-signatures = extractor.extract_from_code("def hello(name: str) -> str: pass")
-```
+- `__init__(parser)`: Initializes the extractor with a [CodeParser](../core/parser.md) instance
+- `extract_from_file(file_path)`: Extracts API documentation from a Python file
+- `extract_from_code(code)`: Extracts API documentation from code string
+- `extract_functions(node, parser)`: Extracts function signatures from a node
+- `extract_classes(node, parser)`: Extracts class signatures from a node
 
 ## Functions
 
 ### extract_python_parameters
 
-Parses function parameters from a tree_sitter node and returns a list of Parameter objects.
+Parses parameters from a function definition node.
 
 **Parameters:**
-- `node` (Node): The tree_sitter node representing function parameters
+- `node`: Tree-sitter node representing a function definition
+- `parser`: [CodeParser](../core/parser.md) instance for text extraction
 
 **Returns:**
-- `list[Parameter]`: List of Parameter objects extracted from the node
+- List of Parameter objects
 
 ### extract_python_return_type
 
 Extracts the return type annotation from a function definition node.
 
 **Parameters:**
-- `node` (Node): The tree_sitter node representing function definition
+- `node`: Tree-sitter node representing a function definition
+- `parser`: [CodeParser](../core/parser.md) instance for text extraction
 
 **Returns:**
-- `str`: Return type annotation as string, or empty string if not found
+- Return type annotation as string or None
 
 ### extract_python_decorators
 
-Extracts decorator information from a function or class definition node.
+Extracts decorators from a function or class definition node.
 
 **Parameters:**
-- `node` (Node): The tree_sitter node representing function or class definition
+- `node`: Tree-sitter node representing a function or class definition
+- `parser`: [CodeParser](../core/parser.md) instance for text extraction
 
 **Returns:**
-- `list[str]`: List of decorator strings
+- List of decorator strings
 
 ### extract_python_docstring
 
-Extracts the docstring from a function or class definition node.
+Extracts docstring content from a function or class definition node.
 
 **Parameters:**
-- `node` (Node): The tree_sitter node representing function or class definition
+- `node`: Tree-sitter node representing a function or class definition
+- `parser`: [CodeParser](../core/parser.md) instance for text extraction
 
 **Returns:**
-- `str`: Docstring content as string, or empty string if not found
+- Docstring content as string or None
 
 ### parse_google_docstring
 
-Parses Google-style docstrings and extracts parameter and return information.
+Parses Google-style docstrings into structured format.
 
 **Parameters:**
-- `docstring` (str): The docstring to parse
+- `docstring`: Raw docstring text
+- `parser`: [CodeParser](../core/parser.md) instance for text extraction
 
 **Returns:**
-- `dict`: Dictionary containing parsed parameter and return information
+- Dictionary containing parsed docstring components
 
 ### parse_num
 
-Parses numeric values from strings, handling various number formats.
+Parses numeric values from strings.
 
 **Parameters:**
-- `s` (str): String to parse
+- `value`: String representation of a number
+- `default`: Default value to return if parsing fails
 
 **Returns:**
-- `int | float | str`: Parsed number or original string if not numeric
+- Parsed numeric value or default
 
 ## Usage Examples
 
-### Basic API Extraction
+### Basic Usage
 
 ```python
 from local_deepwiki.generators.api_docs import APIDocExtractor
+from local_deepwiki.core.parser import CodeParser
 
-# Create extractor
-extractor = APIDocExtractor()
+# Initialize parser and extractor
+parser = CodeParser(Language.PYTHON)
+extractor = APIDocExtractor(parser)
 
-# Extract from code string
+# Extract documentation from a file
+doc = extractor.extract_from_file("path/to/module.py")
+```
+
+### Extracting Function Signatures
+
+```python
+from local_deepwiki.generators.api_docs import FunctionSignature
+from local_deepwiki.core.parser import CodeParser
+
+parser = CodeParser(Language.PYTHON)
+
+# Parse function signature
 code = """
-def process_data(items: list, multiplier: float = 1.0) -> dict:
-    \"\"\"Process a list of items and return results.
-    
-    Args:
-        items: List of items to process
-        multiplier: Scaling factor
-        
-    Returns:
-        Processed results dictionary
-    \"\"\"
-    pass
+def example_function(param1: str, param2: int = 0) -> bool:
+    \"\"\"Example function documentation.\"\"\"
+    return True
+"""
 
-class DataProcessor:
-    \"\"\"Handles data processing operations.\"\"\"
-    
-    def __init__(self, config: dict):
+# Extract function signature
+function_node = parser.parse(code).root_node
+signature = FunctionSignature.from_node(function_node, parser)
+
+print(f"Function name: {signature.name}")
+print(f"Parameters: {len(signature.parameters)}")
+print(f"Return type: {signature.return_type}")
+```
+
+### Working with Class Signatures
+
+```python
+from local_deepwiki.generators.api_docs import ClassSignature
+from local_deepwiki.core.parser import CodeParser
+
+parser = CodeParser(Language.PYTHON)
+
+# Parse class signature
+code = """
+class ExampleClass:
+    def method(self, param: str) -> None:
+        \"\"\"Example method.\"\"\"
         pass
 """
 
-signatures = extractor.extract_from_code(code)
-for sig in signatures:
-    print(f"Name: {sig.name}")
-    if hasattr(sig, 'parameters'):
-        for param in sig.parameters:
-            print(f"  Parameter: {param.name}")
-```
+class_node = parser.parse(code).root_node
+class_signature = ClassSignature.from_node(class_node, parser)
 
-### File-based Extraction
-
-```python
-from local_deepwiki.generators.api_docs import APIDocExtractor
-from pathlib import Path
-
-extractor = APIDocExtractor()
-signatures = extractor.extract_from_file(Path("path/to/module.py"))
+print(f"Class name: {class_signature.name}")
+print(f"Methods: {len(class_signature.methods)}")
 ```
 
 ## Related Components
 
-This module works with [CodeParser](../core/parser.md) to perform the underlying code parsing operations. It integrates with the chunker module through the FUNCTION_NODE_TYPES and CLASS_NODE_TYPES constants to identify code elements to process. The extracted documentation information is used by higher-level documentation generation components to create comprehensive API documentation.
+This module works with [CodeParser](../core/parser.md) to analyze source code and extract information from tree-sitter nodes. It integrates with the chunker module to identify function and class nodes, and relies on the [Language](../models.md) enum from models to determine parsing strategies. The extracted documentation is used by other components in the documentation generation pipeline to create comprehensive API documentation.
 
 ## API Reference
 

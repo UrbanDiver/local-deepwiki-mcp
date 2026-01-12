@@ -2,204 +2,172 @@
 
 ## File Overview
 
-This file implements the main server logic for the local_deepwiki application. It serves as the entry point for running the application as an MCP (Model Control Protocol) server, providing tools for indexing repositories, searching code, generating wikis, and answering questions about codebases. The server integrates with various components including the configuration system, repository indexer, vector store, and language model providers.
+This file implements the main server logic for the Local DeepWiki application. It serves as the core entry point that handles tool execution, repository indexing, question answering, and wiki generation through the MCP (Model Communication Protocol) server interface.
 
-The server acts as the central coordination point that brings together the core functionality of the application and exposes it through the MCP protocol for use by other tools and applications.
+The server integrates with various components including configuration management, repository indexing, vector storage, embedding providers, and LLM providers to create a complete local knowledge base system that can answer questions about code repositories and generate wikis.
 
 ## Classes
 
 ### Server
 
-The Server class is the main entry point for the MCP server implementation. It manages the lifecycle of the server and provides the tool interface for all functionality.
+The Server class is the main entry point for the MCP server implementation. It handles tool registration and execution, managing the lifecycle of various operations such as repository indexing, question answering, and wiki generation.
 
-**Key Methods:**
-- `__init__(self)`: Initializes the server instance with default configuration
-- `list_tools(self)`: Returns a list of available tools for the MCP server
-- `call_tool(self, tool_name, arguments)`: Executes a tool with the given arguments
+Key methods:
+- `list_tools`: Returns a list of available tools for the MCP client
+- `call_tool`: Executes a specific tool based on tool name and arguments
+- `handle_index_repository`: Processes repository indexing operations
+- `handle_ask_question`: Handles question answering operations
+- `handle_read_wiki_structure`: Reads and returns the wiki structure
+- `handle_read_wiki_page`: Reads and returns a specific wiki page
+- `handle_search_code`: Performs code search operations
+- `main`: Entry point for starting the server
+- `run`: Main server execution loop
 
-**Usage:**
-The Server class is instantiated and used to run the MCP server via the main function. It coordinates between different components like the repository indexer, vector store, and LLM providers to provide the full functionality of the local_deepwiki system.
+The Server class works with RepositoryIndexer to process repositories, [VectorStore](core/vectorstore.md) to manage embeddings, and various providers to handle embeddings and LLM operations.
 
 ## Functions
 
 ### list_tools
 
-```python
-async def list_tools(self) -> list[Tool]:
-```
+Returns a list of available tools that can be called by the MCP client.
 
-Returns a list of available tools that can be called through the MCP server. These tools include functions for indexing repositories, searching code, generating wikis, and answering questions.
+**Parameters**: None
 
-**Parameters:** None
-
-**Return Value:** A list of Tool objects describing each available function
+**Returns**: List of Tool objects that define the available operations
 
 ### call_tool
 
-```python
-async def call_tool(self, tool_name: str, arguments: dict[str, Any]) -> Any:
-```
+Executes a specific tool based on the tool name and provided arguments.
 
-Executes a specific tool with the provided arguments.
+**Parameters**:
+- `tool_name` (str): Name of the tool to execute
+- `arguments` (dict): Arguments to pass to the tool
 
-**Parameters:**
-- `tool_name`: Name of the tool to execute
-- `arguments`: Dictionary of arguments for the tool
-
-**Return Value:** The result of executing the tool
+**Returns**: Result of the tool execution
 
 ### handle_index_repository
 
-```python
-async def handle_index_repository(self, repository_path: str, config: dict[str, Any] = None) -> dict[str, Any]:
-```
+Handles the repository indexing operation, which processes a repository to create embeddings and store them in the vector database.
 
-Indexes a repository for later searching and wiki generation.
+**Parameters**:
+- `arguments` (dict): Arguments including repository path and other configuration options
 
-**Parameters:**
-- `repository_path`: Path to the repository to index
-- `config`: Optional configuration parameters for indexing
-
-**Return Value:** Dictionary containing indexing results and metadata
+**Returns**: Status of the indexing operation
 
 ### progress_callback
 
-```python
-def progress_callback(message: str, progress: float = None):
-```
+A callback function that reports progress during long-running operations.
 
-A callback function that can be used to report progress during long-running operations.
+**Parameters**:
+- `progress` (int): Progress percentage
+- `message` (str): Progress message
 
-**Parameters:**
-- `message`: Progress message to report
-- `progress`: Optional progress percentage (0-100)
-
-**Return Value:** None
+**Returns**: None
 
 ### handle_ask_question
 
-```python
-async def handle_ask_question(self, question: str, context: str = None) -> dict[str, Any]:
-```
+Handles question answering operations by retrieving relevant information from the vector store and generating responses using LLM.
 
-Answers a question about the indexed repository using the language model.
+**Parameters**:
+- `arguments` (dict): Arguments including the question and context
 
-**Parameters:**
-- `question`: The question to answer
-- `context`: Optional additional context for the question
-
-**Return Value:** Dictionary containing the answer and any relevant sources
+**Returns**: Answer to the question
 
 ### handle_read_wiki_structure
 
-```python
-async def handle_read_wiki_structure(self) -> dict[str, Any]:
-```
+Reads and returns the current wiki structure from the repository.
 
-Reads and returns the current wiki structure.
+**Parameters**: None
 
-**Parameters:** None
-
-**Return Value:** Dictionary containing the wiki structure
+**Returns**: [WikiStructure](models.md) object containing the wiki structure
 
 ### handle_read_wiki_page
 
-```python
-async def handle_read_wiki_page(self, page_name: str) -> dict[str, Any]:
-```
+Reads and returns a specific wiki page content.
 
-Reads and returns a specific wiki page.
+**Parameters**:
+- `arguments` (dict): Arguments including page name
 
-**Parameters:**
-- `page_name`: Name of the wiki page to read
-
-**Return Value:** Dictionary containing the page content
+**Returns**: Content of the requested wiki page
 
 ### handle_search_code
 
-```python
-async def handle_search_code(self, query: str, limit: int = 10) -> dict[str, Any]:
-```
+Performs code search operations using the vector store to [find](generators/manifest.md) relevant code snippets.
 
-Searches the indexed code for relevant snippets.
+**Parameters**:
+- `arguments` (dict): Arguments including search query and parameters
 
-**Parameters:**
-- `query`: Search query
-- `limit`: Maximum number of results to return
-
-**Return Value:** Dictionary containing search results
+**Returns**: List of search results
 
 ### main
 
-```python
-async def main():
-```
+Entry point for starting the server.
 
-Main entry point for running the MCP server.
+**Parameters**: None
 
-**Parameters:** None
-
-**Return Value:** None
+**Returns**: None
 
 ### run
 
-```python
-async def run():
-```
+Main server execution loop that starts the MCP server.
 
-Runs the server with the configured settings.
+**Parameters**: None
 
-**Parameters:** None
-
-**Return Value:** None
+**Returns**: None
 
 ## Usage Examples
 
 ### Starting the Server
 
 ```python
-import asyncio
-from local_deepwiki.server import main
-
-asyncio.run(main())
+if __name__ == "__main__":
+    main()
 ```
 
 ### Using the Index Repository Tool
 
 ```python
-from local_deepwiki.server import Server
-
-server = Server()
-result = await server.handle_index_repository("/path/to/repo", {
-    "include_patterns": ["*.py", "*.js"],
-    "exclude_patterns": ["node_modules", "__pycache__"]
-})
-print(result)
+# Index a repository
+arguments = {
+    "repository_path": "/path/to/repo",
+    "config": {
+        "chunk_size": 1000,
+        "chunk_overlap": 200
+    }
+}
+result = call_tool("index_repository", arguments)
 ```
 
-### Searching Code
+### Asking a Question
 
 ```python
-from local_deepwiki.server import Server
-
-server = Server()
-results = await server.handle_search_code("database connection", limit=5)
-print(results)
-```
-
-### Asking Questions
-
-```python
-from local_deepwiki.server import Server
-
-server = Server()
-answer = await server.handle_ask_question("How does the authentication work?")
+# Ask a question about the repository
+arguments = {
+    "question": "What does the User class do?",
+    "context": "Repository: /path/to/repo"
+}
+answer = handle_ask_question(arguments)
 print(answer)
+```
+
+### Generating a Wiki
+
+```python
+# Generate wiki structure
+wiki_structure = handle_read_wiki_structure()
+print(wiki_structure)
+
+# Read specific wiki page
+arguments = {
+    "page_name": "README.md"
+}
+page_content = handle_read_wiki_page(arguments)
+print(page_content)
 ```
 
 ## Related Components
 
-This server works with the [Config](config.md) class to manage application settings and the [get_config](config.md) and [set_config](config.md) functions for configuration access. It integrates with [RepositoryIndexer](core/indexer.md) to process and index code repositories, and with [VectorStore](core/vectorstore.md) to store and retrieve embeddings for semantic search. The server uses get_embedding_provider and get_llm_provider functions to access external services for embeddings and language model capabilities. It also works with [WikiStructure](models.md) to manage the wiki organization and [generate_wiki](generators/wiki.md) to create wiki content from the indexed repository data.
+This file works with Configuration to manage settings, RepositoryIndexer to process repositories, [VectorStore](core/vectorstore.md) to store and retrieve embeddings, and various providers to handle embedding and LLM operations. The server integrates with the MCP protocol for communication with clients and uses the [WikiGenerator](generators/wiki.md) to create wiki content from repository information.
 
 ## API Reference
 
@@ -448,4 +416,4 @@ flowchart TD
 - [config](config.md) - dependency
 - [vectorstore](core/vectorstore.md) - dependency
 - [wiki](generators/wiki.md) - dependency
-- [indexer](core/indexer.md) - dependency
+- [chunker](core/chunker.md) - shares 4 dependencies

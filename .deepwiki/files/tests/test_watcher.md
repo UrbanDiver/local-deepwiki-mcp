@@ -1,106 +1,158 @@
-# File: test_watcher.py
+# File Overview
 
-## File Overview
+This file, `tests/test_watcher.py`, contains unit tests for the watcher functionality in the local_deepwiki package. It specifically tests the [`DebouncedHandler`](../src/local_deepwiki/watcher.md) and [`RepositoryWatcher`](../src/local_deepwiki/watcher.md) classes, which are responsible for monitoring file system changes in a repository and scheduling reindexing operations with debouncing to avoid excessive processing.
 
-This file contains unit tests for the watcher module, which is responsible for monitoring file system changes in a repository and scheduling reindexing operations. The tests cover the functionality of [`DebouncedHandler`](../src/local_deepwiki/watcher.md) and [`RepositoryWatcher`](../src/local_deepwiki/watcher.md) classes, ensuring that file events are properly handled and debounced to prevent excessive reindexing.
+The tests ensure that:
+- Only files with specific extensions are watched
+- File creation, modification, and deletion events are properly handled
+- Debouncing works correctly to batch multiple rapid changes
+- Directory events are ignored
+- Non-watched file types are ignored
 
-The watcher module integrates with the configuration system to determine debounce intervals and watched file extensions. It works closely with the indexing system to trigger reindexing when relevant files change.
+This file is essential for verifying that the file watching and reindexing logic works correctly before changes are made to the repository content.
 
-## Classes
+# Classes
 
-### TestWatchedExtensions
+## TestWatchedExtensions
 
-This class tests that the correct file extensions are included in the WATCHED_EXTENSIONS constant. It ensures that Python, JavaScript, and other relevant file types are properly configured for monitoring.
+This class tests that the correct file extensions are included in the `WATCHED_EXTENSIONS` set.
 
-Key methods:
-- `test_python_extensions`: Verifies that Python file extensions (.py, .pyi) are watched
-- `test_javascript_extensions`: Verifies that JavaScript/TypeScript file extensions (.js, .jsx, .ts, .tsx) are watched
-- `test_other_extensions`: Verifies that other common extensions are watched
+### Methods
 
-### TestDebouncedHandler
+#### test_python_extensions
+Verifies that Python file extensions (`.py` and `.pyi`) are included in the watched extensions.
 
-This class tests the [DebouncedHandler](../src/local_deepwiki/watcher.md), which is responsible for handling file system events and scheduling reindexing operations with debouncing to prevent excessive processing.
+#### test_javascript_extensions
+Verifies that JavaScript and TypeScript file extensions (`.js`, `.jsx`, `.ts`, `.tsx`) are included in the watched extensions.
 
-Key methods:
-- `test_should_watch_python_file`: Tests that Python files are correctly identified as watchable
-- `test_should_watch_javascript_file`: Tests that JavaScript files are correctly identified as watchable
-- `test_should_watch_other_file`: Tests that other watched file types are correctly identified
-- `test_should_not_watch_unwatched_file`: Tests that non-watched file types are correctly ignored
-- `test_on_modified_schedules_reindex`: Tests that file modifications schedule reindexing
-- `test_on_created_schedules_reindex`: Tests that file creation schedules reindexing
-- `test_on_deleted_schedules_reindex`: Tests that file deletion schedules reindexing
-- `test_directory_events_ignored`: Tests that directory events are ignored
-- `test_non_watched_file_ignored`: Tests that non-watched file events are ignored
-- `test_multiple_changes_debounced`: Tests that multiple rapid changes are properly debounced
+#### test_other_extensions
+Verifies that other common text-based extensions (`.md`, `.txt`, `.csv`, `.json`, `.yaml`, `.yml`) are included in the watched extensions.
 
-### TestRepositoryWatcher
+## TestDebouncedHandler
 
-This class tests the [RepositoryWatcher](../src/local_deepwiki/watcher.md), which manages the file system monitoring for a repository.
+This class tests the [`DebouncedHandler`](../src/local_deepwiki/watcher.md) class, which handles file system events and schedules reindexing operations with debouncing.
 
-Key methods:
-- `test_create_watcher`: Tests creating a basic watcher with default settings
-- `test_create_watcher_with_options`: Tests creating a watcher with custom configuration options
+### Methods
 
-### TestDebouncedHandlerEvents
+#### handler
+A pytest fixture that creates a [`DebouncedHandler`](../src/local_deepwiki/watcher.md) instance for testing with a temporary directory and a short debounce time.
 
-This class contains comprehensive tests for the event handling functionality of [DebouncedHandler](../src/local_deepwiki/watcher.md).
+#### test_should_watch_python_file
+Tests that Python files are correctly identified as watched files.
 
-## Functions
+#### test_should_watch_javascript_file
+Tests that JavaScript files are correctly identified as watched files.
 
-### handler fixture
+#### test_should_watch_markdown_file
+Tests that Markdown files are correctly identified as watched files.
 
-A pytest fixture that creates a [DebouncedHandler](../src/local_deepwiki/watcher.md) instance for testing with a temporary directory and a short debounce time (0.1 seconds).
+#### test_should_not_watch_unwatched_file
+Tests that files with non-watched extensions are correctly ignored.
 
-### handler_with_mock fixture
+#### test_on_modified_schedules_reindex
+Tests that file modification events schedule a reindex by adding the file to `_pending_files` and starting a timer.
 
-A pytest fixture that creates a [DebouncedHandler](../src/local_deepwiki/watcher.md) instance with mocked dependencies for testing event handling without actual file system operations.
+#### test_on_created_schedules_reindex
+Tests that file creation events schedule a reindex by adding the file to `_pending_files` and starting a timer.
 
-## Usage Examples
+#### test_on_deleted_schedules_reindex
+Tests that file deletion events schedule a reindex by adding the file to `_pending_files` and starting a timer.
 
-### Testing file watching behavior
+#### test_directory_events_ignored
+Tests that directory events are ignored and do not schedule reindexing.
+
+#### test_non_watched_file_ignored
+Tests that non-watched file types are ignored and do not schedule reindexing.
+
+#### test_multiple_changes_debounced
+Tests that multiple rapid changes are debounced, meaning all files are added to `_pending_files` but only one timer is active.
+
+## TestRepositoryWatcher
+
+This class tests the [`RepositoryWatcher`](../src/local_deepwiki/watcher.md) class, which manages the file system watcher for a repository.
+
+### Methods
+
+#### test_create_watcher
+Tests creating a [`RepositoryWatcher`](../src/local_deepwiki/watcher.md) instance with default settings.
+
+#### test_create_watcher_with_options
+Tests creating a [`RepositoryWatcher`](../src/local_deepwiki/watcher.md) instance with custom configuration and debounce settings.
+
+## TestDebouncedHandlerEvents
+
+This class contains tests for the event handling methods of [`DebouncedHandler`](../src/local_deepwiki/watcher.md) using a mocked instance.
+
+### Methods
+
+#### handler_with_mock
+A pytest fixture that creates a [`DebouncedHandler`](../src/local_deepwiki/watcher.md) instance with mocked dependencies for testing event handling without actual file system operations.
+
+#### test_on_modified_schedules_reindex
+Tests that file modification events schedule a reindex by adding the file to `_pending_files` and starting a timer.
+
+#### test_on_created_schedules_reindex
+Tests that file creation events schedule a reindex by adding the file to `_pending_files` and starting a timer.
+
+#### test_on_deleted_schedules_reindex
+Tests that file deletion events schedule a reindex by adding the file to `_pending_files` and starting a timer.
+
+#### test_directory_events_ignored
+Tests that directory events are ignored and do not schedule reindexing.
+
+#### test_non_watched_file_ignored
+Tests that non-watched file types are ignored and do not schedule reindexing.
+
+#### test_multiple_changes_debounced
+Tests that multiple rapid changes are debounced, meaning all files are added to `_pending_files` but only one timer is active.
+
+# Functions
+
+There are no standalone functions in this file. All functionality is encapsulated within the test classes.
+
+# Usage Examples
+
+## Running the Tests
+
+To run the tests in this file, use pytest:
+
+```bash
+pytest tests/test_watcher.py
+```
+
+## Testing File Watching
+
+The tests verify that specific file extensions are watched by the [`DebouncedHandler`](../src/local_deepwiki/watcher.md). For example, to test that Python files are watched:
 
 ```python
-def test_file_watching_behavior(self, handler_with_mock, tmp_path):
-    # Create a test file
+def test_should_watch_python_file(self, handler, tmp_path):
     test_file = tmp_path / "test.py"
     test_file.touch()
-    
-    # Create a mock event for file modification
+    assert handler._should_watch_file(str(test_file)) == True
+```
+
+## Testing Event Handling
+
+To test that file modification events schedule reindexing:
+
+```python
+def test_on_modified_schedules_reindex(self, handler_with_mock, tmp_path):
+    test_file = tmp_path / "test.py"
+    test_file.touch()
+
     event = MagicMock()
     event.is_directory = False
     event.src_path = str(test_file)
-    
-    # Handle the event
+
     handler_with_mock.on_modified(event)
-    
-    # Verify the file was added to pending files
+
     assert str(test_file) in handler_with_mock._pending_files
-```
-
-### Testing debounce functionality
-
-```python
-def test_debounce_behavior(self, handler_with_mock, tmp_path):
-    # Create multiple rapid file changes
-    files = [tmp_path / f"file{i}.py" for i in range(3)]
-    for f in files:
-        f.touch()
-    
-    # Process events rapidly
-    for f in files:
-        event = MagicMock()
-        event.is_directory = False
-        event.src_path = str(f)
-        handler_with_mock.on_modified(event)
-    
-    # Verify all files are pending (debounced)
-    assert len(handler_with_mock._pending_files) == 3
     assert handler_with_mock._timer is not None
 ```
 
-## Related Components
+# Related Components
 
-This file works with the [Config](../src/local_deepwiki/config.md) class to retrieve configuration settings for debounce intervals. It integrates with the [RepositoryWatcher](../src/local_deepwiki/watcher.md) to monitor file system changes and schedule reindexing operations. The tests verify that the [DebouncedHandler](../src/local_deepwiki/watcher.md) properly interacts with the file system monitoring system and that events are correctly processed and debounced to prevent excessive reindexing operations.
+This file works with the [`DebouncedHandler`](../src/local_deepwiki/watcher.md) and [`RepositoryWatcher`](../src/local_deepwiki/watcher.md) classes to test file system monitoring and reindexing functionality. It relies on the [`Config`](../src/local_deepwiki/config.md) class for configuration settings and uses `WATCHED_EXTENSIONS` to determine which file types should be monitored. The tests mock file system events to verify that the handler correctly processes these events without requiring actual file system access.
 
 ## API Reference
 
@@ -589,10 +641,3 @@ flowchart TD
     classDef method fill:#fff3e0
     class N4,N5,N6,N7,N8,N9,N10,N11,N12,N13,N14,N15,N16,N17,N18,N19,N20,N21,N22,N23 method
 ```
-
-## See Also
-
-- [watcher](../src/local_deepwiki/watcher.md) - dependency
-- [config](../src/local_deepwiki/config.md) - dependency
-- [test_incremental_wiki](test_incremental_wiki.md) - shares 4 dependencies
-- [indexer](../src/local_deepwiki/core/indexer.md) - shares 3 dependencies

@@ -2,170 +2,111 @@
 
 ## External Dependencies
 
-The project relies on several third-party libraries for core functionality:
+The following third-party libraries are required for the application to function:
 
-- **tree-sitter** - A parsing library used for parsing code into structured syntax trees, enabling semantic analysis of source code.
-- **sentence-transformers** - Used for generating embeddings from text using pre-trained models.
-- **openai** - Provides access to OpenAI's API for generating embeddings via the OpenAIEmbeddingProvider.
-- **pydantic** - Used for data validation and settings management, particularly in configuration handling.
-- **yaml** - For parsing YAML configuration files.
-- **lancedb** - A vector database used for storing and querying embeddings.
-- **pytest** - Testing framework used for unit and integration tests.
-- **pathlib** - Standard library for handling filesystem paths.
-- **re** - Standard library for regular expressions.
-- **os** - Standard library for interacting with the operating system.
-- **dataclasses** - Standard library for creating data classes.
-- **collections.abc** - Standard library for abstract base classes.
-- **typing** - Standard library for type hints.
+- **anthropic** (>=0.40)  
+  A client library for interacting with the Anthropic AI API, used for accessing Claude models.
+
+- **flask** (>=3.0)  
+  A lightweight web framework for building web applications and APIs.
+
+- **lancedb** (>=0.15)  
+  A vector database for storing and querying embeddings, used for semantic search capabilities.
+
+- **markdown** (>=3.0)  
+  A library for parsing and rendering Markdown text into HTML.
+
+- **mcp** (>=1.2.0)  
+  A library for managing model configuration and prompting, used for orchestrating AI interactions.
+
+- **ollama** (>=0.4)  
+  A client for interacting with the Ollama API, used for local LLM inference.
+
+- **openai** (>=1.0)  
+  A client library for interacting with the OpenAI API, used for accessing OpenAI models.
+
+- **pandas** (>=2.0)  
+  A data manipulation and analysis library, used for handling structured data.
+
+- **pydantic** (>=2.0)  
+  A data validation and settings management library, used for defining data models and validation.
+
+- **pyyaml** (>=6.0)  
+  A library for parsing and emitting YAML, used for configuration file handling.
+
+- **rich** (>=13.0)  
+  A library for rich text formatting in the terminal, used for improved console output.
+
+- **sentence-transformers** (>=3.0)  
+  A library for generating sentence embeddings, used for semantic similarity and vectorization.
+
+- **tree-sitter** (>=0.23)  
+  A parser for programming languages, used for syntax parsing and code analysis.
+
+- **tree-sitter-c** (>=0.23)  
+  Tree-sitter grammar for the C programming language.
+
+- **tree-sitter-cpp** (>=0.23)  
+  Tree-sitter grammar for the C++ programming language.
+
+- **tree-sitter-go** (>=0.23)  
+  Tree-sitter grammar for the Go programming language.
+
+- **tree-sitter-java** (>=0.23)  
+  Tree-sitter grammar for the Java programming language.
+
+- **tree-sitter-javascript** (>=0.23)  
+  Tree-sitter grammar for the JavaScript programming language.
+
+- **tree-sitter-python** (>=0.23)  
+  Tree-sitter grammar for the Python programming language.
+
+- **tree-sitter-rust** (>=0.23)  
+  Tree-sitter grammar for the Rust programming language.
+
+- **tree-sitter-swift** (>=0.0.1)  
+  Tree-sitter grammar for the Swift programming language.
+
+- **tree-sitter-typescript** (>=0.23)  
+  Tree-sitter grammar for the TypeScript programming language.
+
+- **watchdog** (>=4.0)  
+  A library for monitoring file system events, used for watching and reacting to file changes.
+
+## Dev Dependencies
+
+The following dependencies are used for development and testing:
+
+- **pytest** (>=8.0)  
+  A testing framework for Python, used for running unit and integration tests.
+
+- **pytest-asyncio** (>=0.24)  
+  A plugin for pytest to support asyncio testing, used for testing asynchronous code.
 
 ## Internal Module Dependencies
 
-The internal modules are organized in a layered structure with clear dependencies:
+Based on the import statements, the following internal modules depend on each other:
 
-### Core Modules
-- **[CodeChunker](files/src/local_deepwiki/core/chunker.md)** in `core.chunker` depends on:
-  - `parser` for parsing code and extracting nodes
-  - `config` for chunking configuration
-  - `models` for [`CodeChunk`](files/src/local_deepwiki/models.md), [`ChunkType`](files/src/local_deepwiki/models.md), and [`Language`](files/src/local_deepwiki/models.md) models
-
-- **[CodeParser](files/src/local_deepwiki/core/parser.md)** in `core.parser` depends on:
-  - `models` for [`Language`](files/src/local_deepwiki/models.md) and [`FileInfo`](files/src/local_deepwiki/models.md) models
-  - Tree-sitter language parsers for different programming languages
-
-- **[VectorStore](files/src/local_deepwiki/core/vectorstore.md)** in `core.vectorstore` depends on:
-  - `models` for [`CodeChunk`](files/src/local_deepwiki/models.md) and [`SearchResult`](files/src/local_deepwiki/models.md) models
-  - `providers.base` for `EmbeddingProvider` interface
-  - `lancedb` for vector database operations
-
-### Generators
-- **[CrossLinker](files/src/local_deepwiki/generators/crosslinks.md)** in `generators.crosslinks` depends on:
-  - `models` for [`ChunkType`](files/src/local_deepwiki/models.md), [`CodeChunk`](files/src/local_deepwiki/models.md), and [`WikiPage`](files/src/local_deepwiki/models.md)
-  - `core.chunker` for chunking logic
-
-- **SeeAlsoGenerator** in `generators.see_also` depends on:
-  - `models` for [`ChunkType`](files/src/local_deepwiki/models.md), [`CodeChunk`](files/src/local_deepwiki/models.md), and [`WikiPage`](files/src/local_deepwiki/models.md)
-  - `core.chunker` for chunking logic
-
-- **CallGraphGenerator** in `generators.callgraph` depends on:
-  - `core.parser` for parsing code and extracting nodes
-  - `core.chunker` for node type definitions
-
-- **APIDocsGenerator** in `generators.api_docs` depends on:
-  - `core.parser` for parsing code and extracting nodes
-  - `core.chunker` for node type definitions
-
-### Providers
-- **EmbeddingProvider** in `providers.base` is an abstract base class used by:
-  - `providers.embeddings.local` for local embeddings
-  - `providers.embeddings.openai` for OpenAI embeddings
-
-- **LocalEmbeddingProvider** in `providers.embeddings.local` depends on:
-  - `sentence_transformers` for embedding generation
-  - `providers.base` for `EmbeddingProvider` interface
-
-- **OpenAIEmbeddingProvider** in `providers.embeddings.openai` depends on:
-  - `openai` for API access
-  - `providers.base` for `EmbeddingProvider` interface
-
-### Configuration
-- **[Config](files/src/local_deepwiki/config.md)** in `config` depends on:
-  - `pydantic` for model validation
-  - `yaml` for parsing configuration files
-  - `pathlib` for path handling
-
-## Dependency Patterns
-
-### Provider Pattern
-The project implements a provider pattern for embedding generation:
-
-- The `EmbeddingProvider` base class defines the interface for embedding generation.
-- Concrete implementations like `LocalEmbeddingProvider` and `OpenAIEmbeddingProvider` implement this interface.
-- The `EmbeddingProvider` is injected into [`VectorStore`](files/src/local_deepwiki/core/vectorstore.md) to enable flexible embedding generation strategies.
-
-### Dependency Injection
-Several classes use dependency injection for flexibility:
-
-- [`VectorStore`](files/src/local_deepwiki/core/vectorstore.md) receives an `EmbeddingProvider` instance during initialization
-- [`CodeChunker`](files/src/local_deepwiki/core/chunker.md) uses configuration from `get_config()` for chunking behavior
-- [`CrossLinker`](files/src/local_deepwiki/generators/crosslinks.md) and other generators use models and chunking logic from core modules
-
-### Layered Architecture
-The architecture follows a layered approach:
-
-1. **Core Layer** (`core.chunker`, `core.parser`) - Provides parsing and chunking functionality
-2. **Models Layer** (`models`) - Defines data structures and enums used across the system
-3. **Generators Layer** (`generators`) - Uses core modules to generate documentation and cross-links
-4. **Providers Layer** (`providers`) - Handles external integrations like embeddings and LLMs
-5. **Configuration Layer** (`config`) - Manages system-wide settings and configurations
-
-This layered approach ensures that higher-level modules depend only on abstractions defined in lower-level modules, promoting loose coupling and testability.
-
-## Module Dependency Graph
-
-The following diagram shows internal module dependencies:
-
-```mermaid
-flowchart TD
-    M0[config]
-    M1[chunker]
-    M2[indexer]
-    M3[parser]
-    M4[vectorstore]
-    M5[api_docs]
-    M6[callgraph]
-    M7[crosslinks]
-    M8[diagrams]
-    M9[search]
-    M10[see_also]
-    M11[models]
-    M12[base]
-    M13[local]
-    M14[openai]
-    M15[anthropic]
-    M16[ollama]
-    M17[openai]
-    M18[test_api_docs]
-    M19[test_chunker]
-    M20[test_config]
-    M21[test_crosslinks]
-    M22[test_parser]
-    M23[test_see_also]
-    M1 --> M0
-    M1 --> M3
-    M1 --> M11
-    M2 --> M0
-    M2 --> M1
-    M2 --> M3
-    M2 --> M4
-    M2 --> M11
-    M3 --> M11
-    M4 --> M11
-    M4 --> M12
-    M5 --> M1
-    M5 --> M3
-    M5 --> M11
-    M6 --> M1
-    M6 --> M3
-    M6 --> M11
-    M7 --> M11
-    M8 --> M11
-    M9 --> M11
-    M10 --> M11
-    M13 --> M12
-    M14 --> M12
-    M15 --> M12
-    M16 --> M12
-    M17 --> M12
-    M18 --> M3
-    M18 --> M5
-    M18 --> M11
-    M19 --> M1
-    M19 --> M11
-    M20 --> M0
-    M21 --> M7
-    M21 --> M11
-    M22 --> M3
-    M22 --> M11
-    M23 --> M10
-    M23 --> M11
-```
+- **WikiGenerator** depends on **VectorStore**
+- **VectorStore** depends on **EmbeddingModel**
+- **EmbeddingModel** depends on **SentenceTransformer**
+- **SentenceTransformer** depends on **lancedb**
+- **WikiGenerator** depends on **CodeParser**
+- **CodeParser** depends on **tree_sitter**
+- **CodeParser** depends on **tree_sitter_c**
+- **CodeParser** depends on **tree_sitter_cpp**
+- **CodeParser** depends on **tree_sitter_go**
+- **CodeParser** depends on **tree_sitter_java**
+- **CodeParser** depends on **tree_sitter_javascript**
+- **CodeParser** depends on **tree_sitter_python**
+- **CodeParser** depends on **tree_sitter_rust**
+- **CodeParser** depends on **tree_sitter_swift**
+- **CodeParser** depends on **tree_sitter_typescript**
+- **WikiGenerator** depends on **MarkdownRenderer**
+- **MarkdownRenderer** depends on **markdown**
+- **WikiGenerator** depends on **ConfigManager**
+- **ConfigManager** depends on **pyyaml**
+- **WikiGenerator** depends on **Logger**
+- **Logger** depends on **rich**
+- **WikiGenerator** depends on **FileWatcher**
+- **FileWatcher** depends on **watchdog**

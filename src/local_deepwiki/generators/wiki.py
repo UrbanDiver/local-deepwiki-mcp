@@ -12,6 +12,7 @@ from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.generators.api_docs import get_file_api_docs
 from local_deepwiki.generators.callgraph import get_file_call_graph
 from local_deepwiki.generators.crosslinks import EntityRegistry, add_cross_links
+from local_deepwiki.generators.manifest import ProjectManifest, get_directory_tree, parse_manifest
 from local_deepwiki.generators.search import write_search_index
 from local_deepwiki.generators.see_also import RelationshipAnalyzer, add_see_also_sections
 from local_deepwiki.models import (
@@ -25,13 +26,26 @@ from local_deepwiki.providers.llm import get_llm_provider
 
 
 SYSTEM_PROMPT = """You are a technical documentation expert. Generate clear, concise documentation for code.
+
+FORMATTING:
 - Use markdown formatting
 - Include code examples where helpful
-- Focus on explaining what the code does and how to use it
-- Be accurate and avoid speculation
-- Keep explanations practical and actionable
 - When mentioning class or function names in prose explanations, write them as plain text (e.g., "The WikiGenerator class") rather than inline code, so they can be cross-linked
-- Only use backticks for code snippets, variable names in context, or when showing exact syntax"""
+- Only use backticks for code snippets, variable names in context, or when showing exact syntax
+
+ACCURACY CONSTRAINTS - CRITICAL:
+- ONLY describe what you can verify from the code/context provided
+- NEVER invent or guess features, libraries, patterns, or capabilities not explicitly shown
+- NEVER fabricate CLI commands, API endpoints, or configuration options
+- If the context doesn't show something, DO NOT mention it
+- When uncertain, omit the information rather than guess
+- Stick to facts from the provided code - do not extrapolate or assume
+
+CONTENT GUIDELINES:
+- Focus on explaining what the code does and how to use it
+- Keep explanations practical and actionable
+- Base technology stack descriptions ONLY on actual dependencies shown
+- Base directory structure descriptions ONLY on actual files listed"""
 
 
 def generate_class_diagram(chunks: list) -> str | None:
@@ -331,6 +345,12 @@ class WikiGenerator:
         # New page statuses for current generation
         self._page_statuses: dict[str, WikiPageStatus] = {}
 
+        # Cached project manifest (parsed from package files)
+        self._manifest: ProjectManifest | None = None
+
+        # Repository path (set during generation)
+        self._repo_path: Path | None = None
+
     def _load_wiki_status(self) -> WikiGenerationStatus | None:
         """Load previous wiki generation status.
 
@@ -480,6 +500,10 @@ class WikiGenerator:
         pages_generated = 0
         pages_skipped = 0
 
+        # Store repo path and parse manifest for grounded generation
+        self._repo_path = Path(index_status.repo_path)
+        self._manifest = parse_manifest(self._repo_path)
+
         # Build file hash map for incremental generation
         self._file_hashes = {f.path: f.hash for f in index_status.files}
         all_source_files = list(self._file_hashes.keys())
@@ -626,27 +650,149 @@ class WikiGenerator:
         return WikiStructure(root=str(self.wiki_path), pages=pages)
 
     async def _generate_overview(self, index_status: IndexStatus) -> WikiPage:
-        """Generate the main overview/index page."""
-        # Gather context from vector store
-        stats = self.vector_store.get_stats()
+        """Generate the main overview/index page with grounded facts.
 
-        prompt = f"""Generate a README-style overview for this codebase:
+        This method generates structured sections programmatically (tech stack,
+        directory structure, quick start) to avoid LLM hallucination, and only
+        uses the LLM to generate the description and features sections.
+        """
+        repo_name = Path(index_status.repo_path).name
 
-Repository: {Path(index_status.repo_path).name}
-Total Files: {index_status.total_files}
-Languages: {', '.join(f'{lang} ({count} files)' for lang, count in index_status.languages.items())}
-Total Code Chunks: {index_status.total_chunks}
+        # Search for main entry points and key classes for context
+        entry_search = await self.vector_store.search(
+            "main entry point init server app",
+            limit=10,
+        )
+        key_class_search = await self.vector_store.search(
+            "class main core primary",
+            limit=10,
+        )
 
-Generate a clear overview that includes:
-1. Project title and brief description (infer from the code structure)
-2. Key features/capabilities
-3. Technology stack
-4. Directory structure overview
-5. Quick start guide
+        # Combine and deduplicate
+        seen_paths = set()
+        code_context_parts = []
+        for r in entry_search + key_class_search:
+            if r.chunk.file_path not in seen_paths and len(code_context_parts) < 8:
+                seen_paths.add(r.chunk.file_path)
+                code_context_parts.append(
+                    f"File: {r.chunk.file_path}\n"
+                    f"Type: {r.chunk.chunk_type.value}\n"
+                    f"Name: {r.chunk.name}\n"
+                    f"```\n{r.chunk.content[:400]}\n```"
+                )
 
-Format as markdown with proper headings."""
+        # Build a more structured prompt that leaves less room for hallucination
+        prompt_parts = [f"# {repo_name}\n"]
 
-        content = await self.llm.generate(prompt, system_prompt=SYSTEM_PROMPT)
+        # Use manifest description directly if available
+        if self._manifest and self._manifest.description:
+            prompt_parts.append(f"\n{self._manifest.description}\n")
+
+        # Key features - extract from README if available, otherwise from code
+        prompt_parts.append("""
+Based on the code samples below, write a "## Key Features" section listing 3-5 features you can VERIFY from the actual code. Each feature must reference specific code you see.
+""")
+
+        # Technology stack - generate this programmatically, not via LLM
+        if self._manifest and self._manifest.dependencies:
+            tech_lines = ["\n## Technology Stack\n"]
+            if self._manifest.language:
+                lang_str = self._manifest.language
+                if self._manifest.language_version:
+                    lang_str += f" {self._manifest.language_version}"
+                tech_lines.append(f"- **{lang_str}**")
+
+            # Group key dependencies
+            key_deps = []
+            for dep in sorted(self._manifest.dependencies.keys()):
+                key_deps.append(dep)
+            if key_deps:
+                tech_lines.append(f"- **Dependencies**: {', '.join(key_deps[:10])}")
+                if len(key_deps) > 10:
+                    tech_lines.append(f"  - Plus {len(key_deps) - 10} more...")
+
+            prompt_parts.append("\n".join(tech_lines))
+
+        # Directory structure - use actual tree
+        if self._repo_path:
+            dir_tree = get_directory_tree(self._repo_path, max_depth=2, max_items=25)
+            prompt_parts.append(f"\n## Directory Structure\n\n```\n{dir_tree}\n```\n")
+
+        # Quick start - use actual entry points
+        if self._manifest and self._manifest.entry_points:
+            qs_lines = ["\n## Quick Start\n"]
+            for cmd, target in sorted(self._manifest.entry_points.items()):
+                qs_lines.append(f"- `{cmd}` - runs `{target}`")
+            prompt_parts.append("\n".join(qs_lines))
+
+        # Now ask LLM only for the description/features part
+        pre_generated = "\n".join(prompt_parts)
+
+        # Build code samples context
+        code_samples = "\n\n".join(code_context_parts) if code_context_parts else "No code samples available."
+
+        prompt = f"""You are filling in sections of a README. Some sections are already written below. You need to write the "## Description" and "## Key Features" sections ONLY.
+
+ALREADY WRITTEN (do not modify):
+{pre_generated}
+
+CODE SAMPLES FOR CONTEXT:
+{code_samples}
+
+YOUR TASK:
+Write ONLY these two sections:
+
+1. **## Description** (2-3 sentences explaining what this project does based on the code samples and existing content)
+
+2. **## Key Features** (bullet list of 3-5 features you can VERIFY from the code samples shown)
+
+RULES:
+- ONLY describe functionality visible in the code samples
+- Do NOT invent features not shown
+- Do NOT mention libraries not in the Technology Stack section
+- Keep it factual and grounded
+
+Return ONLY the Description and Key Features sections as markdown."""
+
+        llm_content = await self.llm.generate(prompt, system_prompt=SYSTEM_PROMPT)
+
+        # Build final content: title + LLM sections + pre-generated sections
+        final_parts = [f"# {repo_name}\n"]
+
+        # Add manifest description as subtitle if available
+        if self._manifest and self._manifest.description:
+            final_parts.append(f"\n{self._manifest.description}\n")
+
+        # Add LLM-generated description and features
+        final_parts.append(llm_content)
+
+        # Add pre-generated sections (tech stack, directory, quick start)
+        if self._manifest and self._manifest.dependencies:
+            tech_lines = ["\n## Technology Stack\n"]
+            if self._manifest.language:
+                lang_str = self._manifest.language
+                if self._manifest.language_version:
+                    lang_str += f" {self._manifest.language_version}"
+                tech_lines.append(f"- **{lang_str}**")
+
+            key_deps = sorted(self._manifest.dependencies.keys())
+            if key_deps:
+                tech_lines.append(f"- **Dependencies**: {', '.join(key_deps[:12])}")
+                if len(key_deps) > 12:
+                    tech_lines.append(f"  - Plus {len(key_deps) - 12} more...")
+            final_parts.append("\n".join(tech_lines))
+
+        if self._repo_path:
+            dir_tree = get_directory_tree(self._repo_path, max_depth=2, max_items=25)
+            final_parts.append(f"\n## Directory Structure\n\n```\n{dir_tree}\n```")
+
+        if self._manifest and self._manifest.entry_points:
+            qs_lines = ["\n## Quick Start\n"]
+            for cmd, target in sorted(self._manifest.entry_points.items()):
+                qs_lines.append(f"- `{cmd}` → `{target}`")
+            final_parts.append("\n".join(qs_lines))
+
+        content = "\n".join(final_parts)
 
         return WikiPage(
             path="index.md",
@@ -656,30 +802,100 @@ Format as markdown with proper headings."""
         )
 
     async def _generate_architecture(self, index_status: IndexStatus) -> WikiPage:
-        """Generate architecture documentation with diagrams."""
-        # Get module-level chunks for architecture overview
-        search_results = await self.vector_store.search(
-            "architecture structure main module",
-            limit=20,
+        """Generate architecture documentation with diagrams and grounded facts."""
+        # Gather multiple types of context for comprehensive architecture view
+
+        # 1. Search for core/main components
+        core_results = await self.vector_store.search(
+            "main core primary class module",
+            limit=15,
         )
 
-        context = "\n\n".join([
-            f"File: {r.chunk.file_path}\n{r.chunk.content[:500]}"
-            for r in search_results
-        ])
+        # 2. Search for architectural patterns
+        pattern_results = await self.vector_store.search(
+            "factory provider service handler controller",
+            limit=10,
+        )
 
-        prompt = f"""Based on this codebase context, generate architecture documentation:
+        # 3. Search for data flow / pipeline
+        flow_results = await self.vector_store.search(
+            "process pipeline flow parse index generate",
+            limit=10,
+        )
 
-{context}
+        # 4. Get all classes for class list
+        class_results = await self.vector_store.search(
+            "class def __init__",
+            limit=30,
+        )
+
+        # Combine and deduplicate results
+        seen_chunks = set()
+        all_chunks = []
+        for r in core_results + pattern_results + flow_results:
+            chunk_key = (r.chunk.file_path, r.chunk.name)
+            if chunk_key not in seen_chunks:
+                seen_chunks.add(chunk_key)
+                all_chunks.append(r)
+
+        # Build detailed context with more content per chunk
+        context_parts = []
+        for r in all_chunks[:20]:
+            context_parts.append(
+                f"File: {r.chunk.file_path}\n"
+                f"Type: {r.chunk.chunk_type.value}\n"
+                f"Name: {r.chunk.name}\n"
+                f"```\n{r.chunk.content[:800]}\n```"
+            )
+
+        code_context = "\n\n".join(context_parts)
+
+        # Extract class names for reference
+        class_names = set()
+        for r in class_results:
+            if r.chunk.chunk_type.value == "class" and r.chunk.name:
+                class_names.add(r.chunk.name)
+
+        class_list = ", ".join(sorted(class_names)[:30]) if class_names else "No classes found"
+
+        # Include directory structure for module organization
+        dir_structure = ""
+        if self._repo_path:
+            dir_structure = get_directory_tree(self._repo_path, max_depth=2, max_items=25)
+
+        # Include dependencies for technology context
+        dep_context = ""
+        if self._manifest and self._manifest.dependencies:
+            dep_context = "Key dependencies: " + ", ".join(sorted(self._manifest.dependencies.keys())[:15])
+
+        prompt = f"""Generate architecture documentation based ONLY on the code provided below.
+
+CLASSES FOUND IN CODEBASE:
+{class_list}
+
+DIRECTORY STRUCTURE:
+```
+{dir_structure}
+```
+
+{dep_context}
+
+CODE CONTEXT:
+{code_context}
 
 Generate documentation that includes:
-1. System architecture overview - describe how the system works at a high level
-2. Key components and their responsibilities - explain what each major class does and how they interact. When describing classes like WikiGenerator, VectorStore, CodeChunker, etc., write their names as plain text in sentences (not in backticks) so they can be cross-linked.
-3. Data flow between components - explain how data moves through the system, mentioning specific classes involved
-4. A Mermaid diagram showing the architecture (use ```mermaid code blocks)
-5. Design patterns used - describe patterns and which classes implement them
+1. **System Overview** - Describe how the system works based on the classes and code shown
+2. **Key Components** - For each major class shown in the code, explain its responsibility. Write class names as plain text in sentences (not in backticks) so they can be cross-linked.
+3. **Data Flow** - Explain how data moves through the components based on what you see in the code
+4. **Component Diagram** - Create a Mermaid diagram (```mermaid) showing relationships between the classes you found. Only include classes that actually exist in the code.
+5. **Key Design Decisions** - Describe architectural choices visible in the code
 
-IMPORTANT: Write class and component names as plain text in prose (e.g., "The WikiGenerator class uses VectorStore to retrieve code context") rather than using backticks, so they can be automatically linked to their documentation pages.
+CRITICAL CONSTRAINTS:
+- ONLY describe classes and components that are shown in the code above
+- ONLY mention design patterns if you can point to specific classes implementing them
+- Do NOT invent components, patterns, or data flows not shown in the code
+- If you're uncertain about a relationship, omit it rather than guess
+- Write class names as plain text (e.g., "The WikiGenerator class") so they can be cross-linked
 
 Format as markdown with clear sections."""
 
@@ -754,7 +970,7 @@ Format as markdown with clear sections."""
                 for r in relevant_chunks[:10]
             ])
 
-            prompt = f"""Generate documentation for the '{dir_name}' module:
+            prompt = f"""Generate documentation for the '{dir_name}' module based ONLY on the code provided.
 
 Files in module: {', '.join(files[:10])}{'...' if len(files) > 10 else ''}
 
@@ -762,13 +978,17 @@ Code context:
 {context}
 
 Generate documentation that includes:
-1. Module purpose and responsibilities - explain what this module does
-2. Key classes and functions - describe each major class (e.g., WikiGenerator, VectorStore, CodeChunker) and what it does. Write class names as plain text in sentences.
-3. How components interact - explain how classes in this module work together and with other modules
-4. Usage examples (use code blocks for actual code)
-5. Dependencies - what other modules this depends on
+1. **Module Purpose** - Explain what this module does based on the code shown
+2. **Key Classes and Functions** - Describe each class/function visible in the code above. Write class names as plain text for cross-linking.
+3. **How Components Interact** - Explain how the components shown work together
+4. **Usage Examples** - Show how to use the components (use code blocks)
+5. **Dependencies** - What other modules this depends on (based on imports shown)
 
-IMPORTANT: When mentioning class names in prose explanations, write them as plain text (e.g., "The CodeParser class handles parsing") rather than using backticks, so they can be cross-linked to their documentation.
+CRITICAL CONSTRAINTS:
+- ONLY describe classes and functions that appear in the code context above
+- Do NOT invent additional components not shown
+- Do NOT fabricate usage patterns or APIs not visible in the code
+- Write class names as plain text (e.g., "The CodeParser class") for cross-linking
 
 Format as markdown."""
 
@@ -907,7 +1127,7 @@ Format as markdown."""
 
             context = "\n\n".join(context_parts)
 
-            prompt = f"""Generate documentation for the file '{file_info.path}':
+            prompt = f"""Generate documentation for the file '{file_info.path}' based ONLY on the code provided.
 
 Language: {file_info.language}
 Total code chunks: {file_info.chunk_count}
@@ -915,16 +1135,21 @@ Total code chunks: {file_info.chunk_count}
 Code contents:
 {context}
 
-Generate comprehensive documentation that includes:
-1. **File Overview**: Purpose and responsibility of this file. Explain how it relates to other components in the codebase.
-2. **Classes**: Document each class with its purpose, key methods, and usage. Describe relationships with other classes.
-3. **Functions**: Document each function with parameters, return values, and purpose.
-4. **Usage Examples**: Show how to use the main components (use code blocks for examples).
-5. **Related Components**: Mention other classes or modules this file works with, written as plain text in sentences (e.g., "This class works with VectorStore to store embeddings").
+Generate documentation that includes:
+1. **File Overview**: Purpose of this file based on the code shown
+2. **Classes**: Document each class visible in the code with its purpose and key methods
+3. **Functions**: Document each function with parameters and return values as shown
+4. **Usage Examples**: Show how to use the components (based on their actual signatures)
+5. **Related Components**: Mention other classes this file works with (based on imports/references shown)
 
-IMPORTANT: When mentioning class names like VectorStore, WikiGenerator, CodeChunker, etc. in explanatory prose, write them as plain text without backticks so they can be automatically cross-linked. Only use backticks for actual code snippets.
+CRITICAL CONSTRAINTS:
+- ONLY document classes, methods, and functions that appear in the code above
+- Do NOT invent additional methods or parameters not shown
+- Do NOT fabricate usage examples with APIs not visible in the code
+- Write class names as plain text (e.g., "The WikiGenerator class") for cross-linking
+- Only use backticks for actual code snippets
 
-Format as markdown with clear sections. Be specific about the actual code.
+Format as markdown with clear sections.
 Do NOT include mermaid class diagrams - they will be auto-generated."""
 
             content = await self.llm.generate(prompt, system_prompt=SYSTEM_PROMPT)
@@ -1015,32 +1240,64 @@ Do NOT include mermaid class diagrams - they will be auto-generated."""
         return "\n".join(lines)
 
     async def _generate_dependencies(self, index_status: IndexStatus) -> WikiPage:
-        """Generate dependencies documentation."""
-        # Get import chunks - use higher limit for complete dependency graph
+        """Generate dependencies documentation with grounded facts from manifest."""
+        # Build grounded dependency context
+        facts_sections = []
+
+        # 1. External dependencies from manifest (GROUNDED FACTS)
+        if self._manifest and self._manifest.dependencies:
+            deps_list = []
+            for name, version in sorted(self._manifest.dependencies.items()):
+                version_str = f" ({version})" if version and version != "*" else ""
+                deps_list.append(f"- {name}{version_str}")
+            facts_sections.append(
+                "EXTERNAL DEPENDENCIES (from package manifest):\n" + "\n".join(deps_list[:30])
+            )
+
+        # 2. Dev dependencies from manifest (GROUNDED FACTS)
+        if self._manifest and self._manifest.dev_dependencies:
+            dev_deps_list = []
+            for name, version in sorted(self._manifest.dev_dependencies.items()):
+                version_str = f" ({version})" if version and version != "*" else ""
+                dev_deps_list.append(f"- {name}{version_str}")
+            facts_sections.append(
+                "DEV DEPENDENCIES (from package manifest):\n" + "\n".join(dev_deps_list[:20])
+            )
+
+        # 3. Get import chunks for internal dependency analysis
         search_results = await self.vector_store.search(
-            "import require include dependencies",
+            "import require include from",
             limit=100,
         )
 
         import_chunks = [r for r in search_results if r.chunk.chunk_type.value == "import"]
 
-        context = "\n\n".join([
+        # Build import context
+        import_context = "\n\n".join([
             f"File: {r.chunk.file_path}\n{r.chunk.content}"
-            for r in import_chunks[:20]
+            for r in import_chunks[:25]
         ])
 
-        prompt = f"""Based on these import statements, generate a dependencies overview:
+        if import_context:
+            facts_sections.append(f"IMPORT STATEMENTS FROM CODE:\n{import_context}")
 
-{context}
+        grounded_context = "\n\n".join(facts_sections)
+
+        prompt = f"""Generate a dependencies overview based ONLY on the facts provided below.
+
+{grounded_context}
 
 Generate documentation that includes:
-1. External dependencies (libraries, packages) - list third-party libraries and their purposes
-2. Internal module dependencies - explain how internal modules depend on each other. Describe which classes (like WikiGenerator, VectorStore, CodeChunker, RepositoryIndexer) use which other classes.
-3. Dependency patterns - describe notable patterns like dependency injection or the provider pattern, mentioning specific classes involved
+1. **External Dependencies** - List the third-party libraries shown in the manifest above and briefly explain their purpose (infer from common knowledge about these libraries)
+2. **Dev Dependencies** - List development dependencies if shown
+3. **Internal Module Dependencies** - Based on the import statements, describe how internal modules depend on each other. Write class names as plain text for cross-linking.
 
-IMPORTANT: When mentioning class names in explanations, write them as plain text in sentences (e.g., "WikiGenerator depends on VectorStore for code retrieval") rather than using backticks, so they can be cross-linked.
-
-Do NOT include a Mermaid diagram - one will be auto-generated.
+CRITICAL CONSTRAINTS:
+- ONLY list dependencies that appear in the manifest or imports above
+- Do NOT invent or guess additional dependencies
+- For internal dependencies, only describe relationships visible in the import statements
+- When mentioning class names, write them as plain text (e.g., "WikiGenerator depends on VectorStore")
+- Do NOT include a Mermaid diagram - one will be auto-generated
 
 Format as markdown."""
 

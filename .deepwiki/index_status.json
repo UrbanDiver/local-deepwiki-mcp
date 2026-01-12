@@ -1,10 +1,10 @@
 {
   "repo_path": "/Users/brian/Projects/local-deepwiki-mcp",
-  "indexed_at": 1768187540.2944372,
-  "total_files": 42,
-  "total_chunks": 384,
+  "indexed_at": 1768191937.277544,
+  "total_files": 44,
+  "total_chunks": 417,
   "languages": {
-    "python": 42
+    "python": 44
   },
   "files": [
     {
@@ -54,6 +54,14 @@
       "last_modified": 1768083004.3115673,
       "hash": "42b89989233dab911039e474dad9ce131d082dc954ff4fd334f58a46da77bfb8",
       "chunk_count": 1
+    },
+    {
+      "path": "tests/test_manifest.py",
+      "language": "python",
+      "size_bytes": 9845,
+      "last_modified": 1768189447.534809,
+      "hash": "e38e2c93841451a463275dd4d84dc57f8377fdff7762be544e0fee9868d774ed",
+      "chunk_count": 10
     },
     {
       "path": "tests/test_api_docs.py",
@@ -288,6 +296,14 @@
       "chunk_count": 25
     },
     {
+      "path": "src/local_deepwiki/generators/manifest.py",
+      "language": "python",
+      "size_bytes": 19863,
+      "last_modified": 1768189177.3776836,
+      "hash": "9d1c287f0eaedaf24cc68be7ee0afacafd6b4d46c9117de05efa337689266332",
+      "chunk_count": 23
+    },
+    {
       "path": "src/local_deepwiki/generators/callgraph.py",
       "language": "python",
       "size_bytes": 12476,
@@ -338,9 +354,9 @@
     {
       "path": "src/local_deepwiki/generators/wiki.py",
       "language": "python",
-      "size_bytes": 41499,
-      "last_modified": 1768172473.1866152,
-      "hash": "9ce1437ed599bec6790d909cb234a620c0f333c23b81a25d2762becfeb87c25f",
+      "size_bytes": 51873,
+      "last_modified": 1768190982.590676,
+      "hash": "8984bac95d566c69ce4f05973c2f9820dcb982935ce01b3520e998587815efa7",
       "chunk_count": 25
     }
   ]

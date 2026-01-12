@@ -2,122 +2,131 @@
 
 ## File Overview
 
-This module defines the configuration system for the local_deepwiki application. It provides a structured way to manage various configuration settings for embedding models, language models, parsing, chunking, and output handling. The configuration system uses Pydantic models for validation and YAML-based configuration loading.
+This file defines the configuration system for the local_deepwiki application. It provides a structured way to manage various configuration settings for embedding models, language models, parsing, chunking, and output options. The configuration system uses Pydantic for validation and YAML for configuration file parsing.
 
-The module serves as the central configuration hub that other components like EmbeddingEngine, LLMEngine, and [WikiGenerator](generators/wiki.md) rely on to determine their behavior and parameters.
+The module serves as the central configuration hub that other components like EmbeddingEngine, LLMInterface, and [WikiGenerator](generators/wiki.md) rely on to determine their behavior and settings.
 
 ## Classes
 
 ### LocalEmbeddingConfig
 
-Configuration class for local embedding models. Defines parameters for embedding model execution including device selection, model path, and inference settings.
+Configuration class for local embedding models. This class defines settings specific to locally hosted embedding models including model path, device selection, and embedding dimensions.
 
 ```python
 class LocalEmbeddingConfig(BaseModel):
-    device: str = Field(default="cuda", description="Device to run the model on")
-    model_path: str = Field(default="sentence-transformers/all-MiniLM-L6-v2", description="Path or identifier of the embedding model")
-    max_seq_length: int = Field(default=512, description="Maximum sequence length for the model")
-    batch_size: int = Field(default=32, description="Batch size for inference")
+    model_path: str = Field(..., description="Path to the local embedding model")
+    device: str = Field("cpu", description="Device to run the model on (cpu, cuda, etc.)")
+    dimensions: int = Field(384, description="Embedding dimensions")
 ```
 
 ### OpenAIEmbeddingConfig
 
-Configuration class for OpenAI embedding models. Contains API key and model selection parameters.
+Configuration class for OpenAI embedding models. Defines settings for OpenAI's embedding API including API key, model name, and timeout settings.
 
 ```python
 class OpenAIEmbeddingConfig(BaseModel):
-    api_key: str = Field(default="", description="OpenAI API key")
-    model: str = Field(default="text-embedding-3-small", description="OpenAI embedding model to use")
+    api_key: str = Field(..., description="OpenAI API key")
+    model: str = Field("text-embedding-3-small", description="OpenAI embedding model name")
+    timeout: int = Field(30, description="Request timeout in seconds")
 ```
 
 ### EmbeddingConfig
 
-Union configuration class that combines different embedding model configurations. This class allows switching between local and OpenAI embedding models.
+Union configuration class that combines different embedding model configurations. This class allows switching between local and OpenAI embedding models through a discriminated union.
 
 ```python
-EmbeddingConfig = LocalEmbeddingConfig | OpenAIEmbeddingConfig
+class EmbeddingConfig(BaseModel):
+    local: LocalEmbeddingConfig | None = Field(None, description="Local embedding configuration")
+    openai: OpenAIEmbeddingConfig | None = Field(None, description="OpenAI embedding configuration")
 ```
 
 ### OllamaConfig
 
-Configuration class for Ollama language models. Defines parameters for connecting to Ollama service including model name and API endpoint.
+Configuration class for Ollama models. Defines settings for running models through the Ollama API including base URL, model name, and generation parameters.
 
 ```python
 class OllamaConfig(BaseModel):
-    model: str = Field(default="llama3", description="Ollama model to use")
-    host: str = Field(default="http://localhost:11434", description="Ollama API endpoint")
-    temperature: float = Field(default=0.7, description="Sampling temperature")
+    base_url: str = Field("http://localhost:11434", description="Ollama API base URL")
+    model: str = Field("llama3", description="Ollama model name")
+    temperature: float = Field(0.7, description="Generation temperature")
+    max_tokens: int = Field(2048, description="Maximum tokens to generate")
 ```
 
 ### AnthropicConfig
 
-Configuration class for Anthropic language models. Contains API key and model selection parameters.
+Configuration class for Anthropic models. Defines settings for Claude models including API key, model name, and system prompt settings.
 
 ```python
 class AnthropicConfig(BaseModel):
-    api_key: str = Field(default="", description="Anthropic API key")
-    model: str = Field(default="claude-3-haiku-20240307", description="Anthropic model to use")
+    api_key: str = Field(..., description="Anthropic API key")
+    model: str = Field("claude-3-haiku-20240307", description="Anthropic model name")
+    system_prompt: str = Field("", description="System prompt for the model")
 ```
 
 ### OpenAILLMConfig
 
-Configuration class for OpenAI language models. Contains API key and model selection parameters.
+Configuration class for OpenAI language models. Defines settings for OpenAI's chat completion API including API key, model name, and response format.
 
 ```python
 class OpenAILLMConfig(BaseModel):
-    api_key: str = Field(default="", description="OpenAI API key")
-    model: str = Field(default="gpt-4-turbo", description="OpenAI language model to use")
+    api_key: str = Field(..., description="OpenAI API key")
+    model: str = Field("gpt-4-turbo", description="OpenAI language model name")
+    response_format: Literal["text", "json_object"] = Field("text", description="Response format")
+    temperature: float = Field(0.7, description="Generation temperature")
 ```
 
 ### LLMConfig
 
-Union configuration class that combines different language model configurations. This class allows switching between local (Ollama) and cloud (OpenAI/Anthropic) language models.
+Union configuration class that combines different language model configurations. This allows switching between Ollama, Anthropic, and OpenAI language models.
 
 ```python
-LLMConfig = OllamaConfig | OpenAILLMConfig | AnthropicConfig
+class LLMConfig(BaseModel):
+    ollama: OllamaConfig | None = Field(None, description="Ollama configuration")
+    anthropic: AnthropicConfig | None = Field(None, description="Anthropic configuration")
+    openai: OpenAILLMConfig | None = Field(None, description="OpenAI configuration")
 ```
 
 ### ParsingConfig
 
-Configuration class for document parsing settings. Defines how documents should be parsed including file type handling and parsing parameters.
+Configuration class for document parsing settings. Defines how documents should be parsed including document type, encoding, and parsing options.
 
 ```python
 class ParsingConfig(BaseModel):
-    file_types: list[str] = Field(default=["*.md", "*.txt", "*.pdf"], description="Supported file types")
-    max_file_size: int = Field(default=10 * 1024 * 1024, description="Maximum file size in bytes")
-    encoding: str = Field(default="utf-8", description="File encoding")
+    document_type: str = Field("markdown", description="Type of document to parse")
+    encoding: str = Field("utf-8", description="File encoding")
+    include_metadata: bool = Field(True, description="Include document metadata")
 ```
 
 ### ChunkingConfig
 
-Configuration class for document chunking settings. Defines how documents should be split into chunks including chunk size and overlap parameters.
+Configuration class for text chunking settings. Defines how text should be split into chunks including chunk size, overlap, and chunking strategy.
 
 ```python
 class ChunkingConfig(BaseModel):
-    chunk_size: int = Field(default=1000, description="Maximum characters per chunk")
-    chunk_overlap: int = Field(default=200, description="Characters to overlap between chunks")
-    method: Literal["recursive", "token"] = Field(default="recursive", description="Chunking method")
+    chunk_size: int = Field(1000, description="Maximum chunk size in characters")
+    chunk_overlap: int = Field(100, description="Overlap between chunks")
+    strategy: Literal["recursive", "token"] = Field("recursive", description="Chunking strategy")
 ```
 
 ### OutputConfig
 
-Configuration class for output settings. Defines how results should be formatted and stored including output directory and file naming.
+Configuration class for output settings. Defines how results should be formatted and saved including file format and output directory.
 
 ```python
 class OutputConfig(BaseModel):
-    output_dir: str = Field(default="./output", description="Directory to save outputs")
-    file_prefix: str = Field(default="wiki", description="Prefix for output files")
-    format: Literal["json", "yaml", "markdown"] = Field(default="markdown", description="Output format")
+    format: Literal["json", "yaml", "markdown"] = Field("json", description="Output format")
+    output_dir: str = Field("./output", description="Directory to save outputs")
+    include_sources: bool = Field(True, description="Include source references in output")
 ```
 
 ### Config
 
-Main configuration class that combines all other configuration components. This is the primary configuration object used throughout the application.
+Main configuration class that combines all other configuration classes. This is the primary interface for accessing all application settings.
 
 ```python
 class Config(BaseModel):
-    embedding: EmbeddingConfig = Field(default_factory=LocalEmbeddingConfig)
-    llm: LLMConfig = Field(default_factory=OllamaConfig)
+    embedding: EmbeddingConfig = Field(default_factory=EmbeddingConfig)
+    llm: LLMConfig = Field(default_factory=LLMConfig)
     parsing: ParsingConfig = Field(default_factory=ParsingConfig)
     chunking: ChunkingConfig = Field(default_factory=ChunkingConfig)
     output: OutputConfig = Field(default_factory=OutputConfig)
@@ -127,7 +136,7 @@ class Config(BaseModel):
 
 ### get_config
 
-Retrieves the current configuration instance. Loads configuration from YAML file if available, otherwise returns default configuration.
+Retrieves the current configuration instance. This function loads configuration from a YAML file if available, otherwise returns a default configuration.
 
 ```python
 def get_config() -> Config:
@@ -141,12 +150,12 @@ def get_config() -> Config:
 
 ### set_config
 
-Sets the global configuration instance. This function allows updating the configuration during runtime.
+Sets the current configuration instance. This function allows updating the global configuration with a new Config object.
 
 ```python
 def set_config(config: Config) -> None:
     """
-    Set the global configuration instance.
+    Set the current configuration instance.
     
     Args:
         config (Config): The configuration instance to set
@@ -155,14 +164,14 @@ def set_config(config: Config) -> None:
 
 ## Usage Examples
 
-### Loading Configuration from File
+### Basic Configuration Loading
 
 ```python
 from local_deepwiki.config import get_config
 
-# Load configuration from default location or use defaults
+# Load configuration
 config = get_config()
-print(config.embedding.model_path)
+print(config.embedding.local.model_path)
 ```
 
 ### Creating Custom Configuration
@@ -173,38 +182,49 @@ from local_deepwiki.config import Config, LocalEmbeddingConfig, OllamaConfig
 # Create custom configuration
 custom_config = Config(
     embedding=LocalEmbeddingConfig(
-        model_path="all-MiniLM-L6-v2",
-        device="cpu"
+        model_path="./models/my_embedding_model",
+        device="cuda"
     ),
     llm=OllamaConfig(
         model="mistral",
-        host="http://localhost:11434"
+        temperature=0.5
     )
 )
 
 # Set the configuration
-from local_deepwiki.config import set_config
 set_config(custom_config)
 ```
 
-### Using Configuration in Components
+### YAML Configuration File
 
-```python
-from local_deepwiki.config import get_config
-
-# Get configuration
-config = get_config()
-
-# Use in embedding engine
-embedding_engine = EmbeddingEngine(config.embedding)
-
-# Use in LLM engine
-llm_engine = LLMEngine(config.llm)
+```yaml
+# config.yaml
+embedding:
+  local:
+    model_path: "./models/bge-small-en"
+    device: "cuda"
+  openai:
+    api_key: "sk-..."
+    model: "text-embedding-3-small"
+llm:
+  ollama:
+    base_url: "http://localhost:11434"
+    model: "llama3"
+    temperature: 0.7
+parsing:
+  document_type: "markdown"
+  encoding: "utf-8"
+chunking:
+  chunk_size: 1000
+  chunk_overlap: 100
+output:
+  format: "json"
+  output_dir: "./results"
 ```
 
 ## Related Components
 
-This configuration module works with EmbeddingEngine to determine embedding model parameters, with LLMEngine to configure language model settings, and with [WikiGenerator](generators/wiki.md) to control document parsing and output formatting. The configuration system provides a centralized way to manage all settings, making it easier to switch between different model providers and adjust parameters without modifying core logic.
+This configuration module works with EmbeddingEngine to determine which embedding model to use, with LLMInterface to configure language model parameters, and with [WikiGenerator](generators/wiki.md) to control document parsing and chunking behavior. The configuration system is used throughout the application to maintain consistent settings across different components and to enable easy switching between different model providers and configurations.
 
 ## API Reference
 
@@ -389,8 +409,8 @@ flowchart TD
 
 ## See Also
 
-- [indexer](core/indexer.md) - uses this
 - [chunker](core/chunker.md) - uses this
 - [server](server.md) - uses this
-- [watcher](watcher.md) - uses this
 - [wiki](generators/wiki.md) - uses this
+- [models](models.md) - shares 3 dependencies
+- [vectorstore](core/vectorstore.md) - shares 2 dependencies

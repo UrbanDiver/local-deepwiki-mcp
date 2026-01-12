@@ -1,107 +1,141 @@
-# Vector Store Module
+# VectorStore Module Documentation
 
 ## File Overview
 
-This module provides the VectorStore class for managing vector embeddings and search operations using LanceDB. It serves as the core component for storing and retrieving document embeddings, enabling semantic search capabilities within the local deepwiki system. The VectorStore works with embedding providers to convert text into vector representations and integrates with the code chunking and wiki generation components to build searchable knowledge bases.
+This module implements the VectorStore class which provides vector database functionality for storing and retrieving embeddings of code chunks. It serves as the core storage layer for the local deepwiki system, enabling semantic search capabilities through LanceDB integration. The VectorStore works closely with the EmbeddingProvider to generate and manage vector representations of code content, and integrates with [CodeChunk](../models.md) and [SearchResult](../models.md) models for data handling.
 
 ## Classes
 
 ### VectorStore
 
-The VectorStore class manages vector embeddings using LanceDB, providing functionality for storing, searching, and retrieving document embeddings. It serves as the primary interface for semantic search operations in the local deepwiki system.
+The VectorStore class provides an interface for managing vector embeddings in a LanceDB database. It handles the creation, storage, and retrieval of code chunk embeddings, enabling semantic search functionality.
 
 #### Key Methods
 
-**`__init__(self, db_path: str, embedding_provider: EmbeddingProvider)`**
-- Initializes the VectorStore with a database path and embedding provider
-- Parameters:
-  - db_path (str): Path to the LanceDB database
-  - embedding_provider (EmbeddingProvider): Provider for generating embeddings
-- Returns: None
+- `__init__(self, db_path: str, embedding_provider: EmbeddingProvider)`: Initializes the VectorStore with a database path and embedding provider
+- `create_table(self, table_name: str, vector_size: int)`: Creates a new table in the database with the specified vector size
+- `add_chunks(self, table_name: str, chunks: list[CodeChunk])`: Adds code chunks to the specified table
+- `search(self, table_name: str, query: str, limit: int = 10)`: Searches for similar code chunks using semantic similarity
+- `get_table(self, table_name: str) -> Table`: Retrieves a table by name
+- `table_exists(self, table_name: str) -> bool`: Checks if a table exists in the database
 
-**`create_table(self, table_name: str, embedding_dimension: int)`**
-- Creates a new table in the database for storing embeddings
-- Parameters:
-  - table_name (str): Name of the table to create
-  - embedding_dimension (int): Dimension of the embedding vectors
-- Returns: Table object
-
-**`add_chunks(self, table_name: str, chunks: list[CodeChunk])`**
-- Adds code chunks to the vector store
-- Parameters:
-  - table_name (str): Name of the table to add chunks to
-  - chunks (list[[CodeChunk](../models.md)]): List of code chunks to add
-- Returns: None
-
-**`search(self, table_name: str, query: str, limit: int = 10)`**
-- Searches for similar embeddings in the vector store
-- Parameters:
-  - table_name (str): Name of the table to search
-  - query (str): Search query text
-  - limit (int): Maximum number of results to return
-- Returns: list[[SearchResult](../models.md)]
-
-**`get_table(self, table_name: str)`**
-- Retrieves a table from the database
-- Parameters:
-  - table_name (str): Name of the table to retrieve
-- Returns: Table object
-
-**`table_exists(self, table_name: str)`**
-- Checks if a table exists in the database
-- Parameters:
-  - table_name (str): Name of the table to check
-- Returns: bool
-
-## Usage Examples
-
-### Initialize VectorStore
+#### Usage Example
 
 ```python
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.providers.openai import OpenAIEmbeddingProvider
 
-# Initialize embedding provider
+# Initialize vector store
+embedding_provider = OpenAIEmbeddingProvider(api_key="your-api-key")
+vector_store = VectorStore(db_path="./vector_db", embedding_provider=embedding_provider)
+
+# Create a table
+vector_store.create_table("code_chunks", vector_size=1536)
+
+# Add code chunks
+chunks = [
+    CodeChunk(id="1", content="def hello_world():\n    print('Hello, World!')", file_path="example.py"),
+    CodeChunk(id="2", content="class Calculator:\n    def add(self, a, b):\n        return a + b", file_path="calc.py")
+]
+vector_store.add_chunks("code_chunks", chunks)
+
+# Search for similar code
+results = vector_store.search("code_chunks", "function that prints hello world", limit=5)
+```
+
+## Functions
+
+### create_table
+
+Creates a new table in the LanceDB database with the specified name and vector size.
+
+**Parameters:**
+- table_name (str): Name of the table to create
+- vector_size (int): Size of the vector embeddings
+
+**Returns:**
+- Table: The created table object
+
+### add_chunks
+
+Adds multiple code chunks to the specified table in the database.
+
+**Parameters:**
+- table_name (str): Name of the table to add chunks to
+- chunks (list[[CodeChunk](../models.md)]): List of [CodeChunk](../models.md) objects to add
+
+**Returns:**
+- None
+
+### search
+
+Performs a semantic search in the specified table for code chunks similar to the query.
+
+**Parameters:**
+- table_name (str): Name of the table to search in
+- query (str): Search query string
+- limit (int): Maximum number of results to return (default: 10)
+
+**Returns:**
+- list[[SearchResult](../models.md)]: List of search results with similarity scores
+
+### get_table
+
+Retrieves a table from the database by name.
+
+**Parameters:**
+- table_name (str): Name of the table to retrieve
+
+**Returns:**
+- Table: The requested table object
+
+### table_exists
+
+Checks whether a table with the specified name exists in the database.
+
+**Parameters:**
+- table_name (str): Name of the table to check
+
+**Returns:**
+- bool: True if table exists, False otherwise
+
+## Usage Examples
+
+### Basic VectorStore Setup
+
+```python
+from local_deepwiki.core.vectorstore import VectorStore
+from local_deepwiki.providers.openai import OpenAIEmbeddingProvider
+
+# Create embedding provider
 embedding_provider = OpenAIEmbeddingProvider(api_key="your-api-key")
 
 # Initialize vector store
 vector_store = VectorStore(db_path="./vector_db", embedding_provider=embedding_provider)
 ```
 
-### Add Code Chunks
+### Adding and Searching Code Chunks
 
 ```python
-from local_deepwiki.models import CodeChunk
+# Create table
+vector_store.create_table("my_code_chunks", vector_size=1536)
 
-# Create code chunks
+# Add code chunks
 chunks = [
-    CodeChunk(
-        id="chunk_1",
-        content="def hello_world():\n    print('Hello, World!')",
-        file_path="example.py",
-        start_line=1,
-        end_line=3
-    )
+    CodeChunk(id="1", content="def greet(name):\n    return f'Hello, {name}!'", file_path="greeting.py"),
+    CodeChunk(id="2", content="import os\nprint(os.getcwd())", file_path="path.py")
 ]
+vector_store.add_chunks("my_code_chunks", chunks)
 
-# Add chunks to vector store
-vector_store.add_chunks("code_chunks", chunks)
-```
-
-### Perform Search
-
-```python
-# Search for similar code
-results = vector_store.search("code_chunks", "function that prints hello world", limit=5)
-
+# Perform semantic search
+results = vector_store.search("my_code_chunks", "function to print current directory", limit=3)
 for result in results:
-    print(f"Score: {result.score}")
-    print(f"Content: {result.chunk.content}")
+    print(f"Similar code: {result.chunk.content}")
 ```
 
 ## Related Components
 
-This class works with EmbeddingProvider to generate vector representations of text content. It integrates with [CodeChunk](../models.md) to manage document segments and [SearchResult](../models.md) to return search results. The VectorStore serves as a foundational component that supports the [WikiGenerator](../generators/wiki.md) class by providing the underlying vector storage and search capabilities needed for semantic code retrieval.
+This VectorStore class works with the EmbeddingProvider to generate vector representations of code content. It integrates with the [CodeChunk](../models.md) model for representing code segments and [SearchResult](../models.md) for organizing search results. The class also interacts with the [WikiGenerator](../generators/wiki.md) to store and retrieve code embeddings for building documentation. The table management functionality connects with the LanceDB database system for persistent storage of vector embeddings.
 
 ## API Reference
 
@@ -325,5 +359,4 @@ flowchart TD
 
 - [wiki](../generators/wiki.md) - uses this
 - [server](../server.md) - uses this
-- [indexer](indexer.md) - uses this
 - [models](../models.md) - dependency
