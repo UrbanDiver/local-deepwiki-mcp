@@ -1,12 +1,12 @@
 # File Overview
 
-This file implements the cross-linking functionality for wiki pages. It provides the logic to identify entity mentions in wiki content and replace them with hyperlinks to the corresponding wiki pages. The [main](../web/app.md) component is the `CrossLinker` class, which processes wiki pages and adds cross-links based on an entity registry.
+This file implements a cross-linking system for wiki pages. It provides functionality to identify and replace entity mentions in wiki content with links to their corresponding pages, using an entity registry to determine which entities are documented and where they are located.
 
 # Classes
 
 ## CrossLinker
 
-The CrossLinker class is responsible for adding cross-links to wiki pages by processing their content and replacing entity mentions with appropriate links.
+The CrossLinker class processes wiki pages to add cross-links to documented entities.
 
 ### Methods
 
@@ -22,57 +22,57 @@ Add cross-links to a wiki page.
 - `page`: The wiki page to process.
 
 **Returns:**
-- A new [WikiPage](../models.md) with cross-links added.
+- A new WikiPage with cross-links added.
 
 #### `_process_content(self, content: str, path: str) -> str`
 
-Process the content of a wiki page to add cross-links.
+Process the content of a page to add cross-links.
 
 **Parameters:**
-- `content`: The content of the wiki page.
-- `path`: The path of the wiki page.
+- `content`: The content to process.
+- `path`: The path of the page being processed.
 
 **Returns:**
 - The content with cross-links added.
 
-#### `_split_by_code_blocks(self, text: str) -> list[tuple[str, bool]]`
+#### `_split_by_code_blocks(self, text: str) -> list[tuple[bool, str]]`
 
-Split text by code blocks, keeping track of whether each part is inside a code block.
+Split text by code blocks, preserving code blocks as separate entities.
 
 **Parameters:**
 - `text`: The text to split.
 
 **Returns:**
-- List of tuples containing (text_part, is_code_block).
+- A list of tuples where the first element indicates if it's a code block and the second is the content.
 
 #### `_add_links_to_text(self, text: str, path: str) -> str`
 
-Add links to text by processing entity mentions.
+Add links to text by replacing entity mentions.
 
 **Parameters:**
 - `text`: The text to process.
-- `path`: The path of the wiki page.
+- `path`: The path of the page being processed.
 
 **Returns:**
-- The text with links added.
+- The text with entity mentions replaced by links.
 
 #### `_replace_entity_mentions(self, text: str, path: str) -> str`
 
-Replace entity mentions in text with links.
+Replace entity mentions with links.
 
 **Parameters:**
 - `text`: The text to process.
-- `path`: The path of the wiki page.
+- `path`: The path of the page being processed.
 
 **Returns:**
 - The text with entity mentions replaced by links.
 
 #### `protect(self, match: re.Match[str]) -> str`
 
-Protect matched content from being processed.
+Protect matched content from link replacement.
 
 **Parameters:**
-- `match`: The regex match object.
+- `match`: The regex match to protect.
 
 **Returns:**
 - The protected content.
@@ -90,22 +90,22 @@ Handles:
 - `text`: The text to process.
 - `entity_name`: The entity name to [find](manifest.md).
 - `rel_path`: The relative path to the entity's wiki page.
-- `protect`: A function to protect content from processing.
+- `protect`: A function to protect content from link replacement.
 
 **Returns:**
-- The text with backticked entities converted to links.
+- The text with backticked entity names converted to links.
 
-#### `qualified_replacement(self, match: re.Match[str], rel_path: str, protect: Callable[[re.Match[str]], str]) -> str`
+#### `qualified_replacement(self, match: re.Match[str], entity_name: str, rel_path: str) -> str`
 
-Perform qualified replacement for entity mentions.
+Replace a qualified entity name with a link.
 
 **Parameters:**
-- `match`: The regex match object.
+- `match`: The regex match to replace.
+- `entity_name`: The entity name to [find](manifest.md).
 - `rel_path`: The relative path to the entity's wiki page.
-- `protect`: A function to protect content from processing.
 
 **Returns:**
-- The replacement text.
+- The replacement text with a link.
 
 #### `_relative_path(self, from_path: str, to_path: str) -> str`
 
@@ -120,7 +120,7 @@ Calculate relative path between two wiki pages.
 
 # Functions
 
-## add_cross_links
+## `add_cross_links(pages: list[WikiPage], registry: EntityRegistry) -> list[WikiPage]`
 
 Add cross-links to all wiki pages.
 
@@ -133,11 +133,13 @@ Add cross-links to all wiki pages.
 
 # Usage Examples
 
+To add cross-links to a list of wiki pages:
+
 ```python
 from local_deepwiki.generators.crosslinks import add_cross_links
 from local_deepwiki.models import WikiPage
 
-# Assuming you have a list of pages and an entity registry
+# Assuming you have a list of WikiPage objects and an EntityRegistry
 pages = [WikiPage(...), WikiPage(...)]
 registry = EntityRegistry(...)
 
@@ -147,14 +149,14 @@ linked_pages = add_cross_links(pages, registry)
 
 # Related Components
 
-This file depends on the following components:
+This file works with the following components:
 
-- `EntityRegistry`: Used to provide entity information for linking.
-- [`WikiPage`](../models.md): The data model for wiki pages.
-- [`ChunkType`](../models.md), [`CodeChunk`](../models.md): Imported but not directly used in this file.
+- `EntityRegistry`: Provides documented entities and their locations.
+- `WikiPage`: Represents a wiki page with content and metadata.
+- `ChunkType`, `CodeChunk`: Models used for processing content.
+- `pathlib.Path`: Used for path manipulation.
 - `re`: Regular expression module for pattern matching.
-- `pathlib.Path`: For path manipulation.
-- `collections.abc.Callable`: For type hints of callable objects.
+- `collections.abc.Callable`: Used for type hints of callable functions.
 
 ## API Reference
 
@@ -188,7 +190,7 @@ Register a documented entity.
 | [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `name` | `str` | - | The entity name (e.g., "[WikiGenerator](wiki.md)"). |
-| `entity_type` | [`ChunkType`](../models.md) | - | The type of entity (class, function, etc.). |
+| `entity_type` | `ChunkType` | - | The type of entity (class, function, etc.). |
 | `wiki_path` | `str` | - | Path to the wiki page documenting this entity. |
 | `file_path` | `str` | - | Path to the source file containing this entity. |
 | `parent_name` | `str | None` | `None` | Parent entity name (e.g., class name for methods). |
@@ -293,7 +295,7 @@ Add cross-links to a wiki page.
 
 | [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `page` | [`WikiPage`](../models.md) | - | The wiki page to process. |
+| `page` | `WikiPage` | - | The wiki page to process. |
 
 #### `protect`
 
@@ -450,12 +452,12 @@ flowchart TD
 
 ## Relevant Source Files
 
-- `src/local_deepwiki/generators/crosslinks.py`
+- `src/local_deepwiki/generators/crosslinks.py:16-23`
 
 ## See Also
 
-- [test_crosslinks](../../../tests/test_crosslinks.md) - uses this
 - [wiki](wiki.md) - uses this
-- [models](../models.md) - dependency
+- [test_crosslinks](../../../tests/test_crosslinks.md) - uses this
+- [diagrams](diagrams.md) - shares 4 dependencies
 - [see_also](see_also.md) - shares 4 dependencies
 - [api_docs](api_docs.md) - shares 4 dependencies

@@ -1,99 +1,99 @@
 # File Overview
 
-This file, `see_also.py`, provides functionality for generating "See Also" sections in wiki pages. It focuses on building mappings between source files and wiki pages, and then using that mapping to identify related files for inclusion in "See Also" sections.
+This file, `see_also.py`, provides functionality for generating "See Also" sections in wiki pages. It maps source files to corresponding wiki pages and analyzes relationships between files to suggest related content. The [main](../export/html.md) purpose is to enhance wiki navigation by linking related files or concepts.
 
 # Classes
 
 ## FileRelationships
 
-A dataclass used to store information about file relationships, particularly for tracking which files are related to a given file.
+A dataclass used to store file relationship information.
 
 ### Fields:
-- `file_path`: The path to the source file.
-- `related_files`: A list of paths to related files.
+- `file_path` (str): The path of the source file.
+- `related_files` (list[str]): A list of related file paths.
+- `wiki_page_path` (str): The corresponding wiki page path.
 
 ## RelationshipAnalyzer
 
-A class responsible for analyzing relationships between files based on their paths and content, and for generating "See Also" sections.
+A class responsible for analyzing relationships between files and generating "See Also" sections.
 
 ### Methods:
-- `__init__(self, pages: list[WikiPage])`: Initializes the analyzer with a list of wiki pages.
-- `build_file_to_wiki_map(self) -> dict[str, str]`: Builds a mapping from source file paths to wiki page paths.
-- `generate_see_also_section(self, file_path: str, pages: list[WikiPage]) -> str`: Generates a "See Also" section for a given file path.
+- `analyze_relationships(self, pages: list[WikiPage]) -> list[FileRelationships]`: Analyzes file relationships from a list of wiki pages and returns a list of FileRelationships objects.
+- `generate_see_also_section(self, file_path: str, relationships: list[FileRelationships]) -> str`: Generates a "See Also" section for a given file path based on its relationships.
+- `add_see_also_sections(self, pages: list[WikiPage]) -> list[WikiPage]`: Adds "See Also" sections to a list of wiki pages.
 
 # Functions
 
 ## build_file_to_wiki_map
 
 ```python
-def build_file_to_wiki_map(pages: list[WikiPage]) -> dict[str, str]:
+def build_file_to_wiki_map(pages: list[WikiPage]) -> dict[str, str]
 ```
 
 Builds a mapping from source file paths to wiki page paths.
 
 ### Parameters:
-- `pages`: List of wiki pages.
+- `pages` (list[WikiPage]): List of wiki pages.
 
 ### Returns:
-- Dictionary mapping source file path to wiki page path.
+- `dict[str, str]`: Dictionary mapping source file path to wiki page path.
 
 ## generate_see_also_section
 
 ```python
-def generate_see_also_section(file_path: str, pages: list[WikiPage], file_to_wiki_map: dict[str, str]) -> str:
+def generate_see_also_section(file_path: str, related_files: list[str]) -> str
 ```
 
 Generates a "See Also" section for a given file path.
 
 ### Parameters:
-- `file_path`: The path to the source file.
-- `pages`: List of wiki pages.
-- `file_to_wiki_map`: A mapping from source file paths to wiki page paths.
+- `file_path` (str): The path of the source file.
+- `related_files` (list[str]): A list of related file paths.
 
 ### Returns:
-- A string representing the "See Also" section.
+- `str`: The generated "See Also" section as a string.
 
 ## _relative_path
 
 ```python
-def _relative_path(file_path: str, wiki_path: str) -> str:
+def _relative_path(file_path: str, target_path: str) -> str
 ```
 
-Computes the relative path from a wiki page to a source file.
+Calculates the relative path from one file to another.
 
 ### Parameters:
-- `file_path`: The path to the source file.
-- `wiki_path`: The path to the wiki page.
+- `file_path` (str): The source file path.
+- `target_path` (str): The target file path.
 
 ### Returns:
-- A string representing the relative path.
+- `str`: The relative path from file_path to target_path.
 
 ## add_see_also_sections
 
 ```python
-def add_see_also_sections(pages: list[WikiPage]) -> list[WikiPage]:
+def add_see_also_sections(pages: list[WikiPage]) -> list[WikiPage]
 ```
 
 Adds "See Also" sections to a list of wiki pages.
 
 ### Parameters:
-- `pages`: List of wiki pages.
+- `pages` (list[WikiPage]): List of wiki pages to process.
 
 ### Returns:
-- A list of wiki pages with "See Also" sections added.
+- `list[WikiPage]`: List of wiki pages with "See Also" sections added.
 
 # Usage Examples
 
-To use the functionality in this module, you can call the `add_see_also_sections` function with a list of [`WikiPage`](../models.md) objects:
+To use the functionality in this module, you can call the `add_see_also_sections` function with a list of `WikiPage` objects:
 
 ```python
 from local_deepwiki.generators.see_also import add_see_also_sections
 from local_deepwiki.models import WikiPage
 
-# Assuming you have a list of wiki pages
+# Assuming you have a list of WikiPage objects
 wiki_pages = [WikiPage(...), WikiPage(...)]
 
-# Add "See Also" sections to the pages
+# Add See Also sections to the pages
 updated_pages = add_see_also_sections(wiki_pages)
 ```
 
@@ -101,9 +101,12 @@ updated_pages = add_see_also_sections(wiki_pages)
 
 This file works with the following components:
 
-- [`WikiPage`](../models.md) from `local_deepwiki.models`: Represents a wiki page with a path and content.
-- [`ChunkType`](../models.md) from `local_deepwiki.models`: Defines types of chunks in the wiki.
-- [`CodeChunk`](../models.md) from `local_deepwiki.models`: Represents a code chunk within a wiki page.
+- `WikiPage` from `local_deepwiki.models`: Represents a wiki page with a path and content.
+- `ChunkType` and `CodeChunk` from `local_deepwiki.models`: Used for handling code chunks in wiki pages.
+- `Path` from `pathlib`: Used for path manipulation.
+- `defaultdict` from `collections`: Used for grouping relationships.
+- `re`: Used for regular expression operations.
+- `dataclass` and `field` from `dataclasses`: Used for defining `FileRelationships` data structure.
 
 ## API Reference
 
@@ -287,12 +290,11 @@ flowchart TD
 
 ## Relevant Source Files
 
-- `src/local_deepwiki/generators/see_also.py`
+- `src/local_deepwiki/generators/see_also.py:16-22`
 
 ## See Also
 
-- [test_see_also](../../../tests/test_see_also.md) - uses this
 - [wiki](wiki.md) - uses this
-- [models](../models.md) - dependency
 - [crosslinks](crosslinks.md) - shares 4 dependencies
+- [diagrams](diagrams.md) - shares 4 dependencies
 - [api_docs](api_docs.md) - shares 4 dependencies

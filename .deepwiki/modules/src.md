@@ -1,66 +1,87 @@
-# Module: `src.local_deepwiki.generators`
+# Module: `local_deepwiki`
 
 ## Module Purpose
 
-The `src.local_deepwiki.generators` module is responsible for generating various documentation components from source code. It includes functionality for creating wiki pages, managing source references, generating architecture diagrams, and handling manifest files for project metadata.
+The `local_deepwiki` module is a Python package designed to generate documentation from source code, particularly for Python projects. It supports features such as parsing code, generating wiki pages, managing source references, and creating diagrams. The module is structured into core components for code processing, documentation generation, and integration with external providers like LLMs and embeddings.
 
 ## Key Classes and Functions
 
-### `src.local_deepwiki.generators.source_refs`
+### Core Components
 
-#### Functions
-- `build_file_to_wiki_map`: Builds a mapping between source files and wiki pages.
-- `_relative_path`: Converts an absolute path to a relative path.
-- `_format_file_entry`: Formats a file entry for display.
-- `generate_source_refs_section`: Generates a section of source references.
-- `add_source_refs_sections`: Adds source references sections to wiki pages.
+- **CodeChunk**: Represents a chunk of code, likely used for processing and indexing code files.
+- **WikiPage**: Represents a single page in the generated wiki, containing metadata like title, path, and content.
+- **WikiPageStatus**: Enum or class representing the status of a wiki page (e.g., draft, published).
+- **[ProjectManifest](../files/src/local_deepwiki/generators/manifest.md)**: Represents a project manifest, used for parsing configuration files like `pyproject.toml`, `setup.py`, `requirements.txt`, etc.
 
-### `src.local_deepwiki.generators.manifest`
+### Functions
 
-#### Classes
-- `ProjectManifest`: Represents a project's manifest file containing metadata.
+#### `src/local_deepwiki/generators/diagrams.py`
 
-#### Functions
-- `parse_manifest`: Parses a manifest file (e.g., pyproject.toml) to extract project metadata.
-- `_parse_pyproject_toml`: Parses a pyproject.toml file.
-- `_parse_python_dep`: Parses a Python dependency.
-- `_parse_setup_py`: Parses a setup.py file.
-- `_parse_requirements_txt`: Parses a requirements.txt file.
-- `_parse_package_json`: Parses a package.json file.
-- `_parse_xml_manifest`: Parses an XML manifest file.
+- `_path_to_module(file_path: str) -> str | None`
+  - Converts a file path to a module name.
+  - Example: `_path_to_module('src/local_deepwiki/core/indexer.py')` returns `'core.indexer'`.
 
-### `src.local_deepwiki.generators.see_also`
+#### `src/local_deepwiki/core/chunker.py`
 
-#### Methods
-- `_module_matches_file`: Checks if a module name refers to a file path.
+- `_create_module_chunk(self, root: Node, source: bytes, language: Language, file_path: str) -> CodeChunk`
+  - Creates a chunk for a module or file overview.
 
-### `src.local_deepwiki.generators.diagrams`
+#### `src/local_deepwiki/generators/see_also.py`
 
-#### Functions
-- `generate_architecture_diagram`: Generates a Mermaid architecture diagram from code chunks.
+- `_module_matches_file(module: str, file_path: str) -> bool`
+  - Checks if a module name refers to a file path.
 
-### `src.local_deepwiki.generators/wiki.py`
+#### `src/local_deepwiki/generators/wiki.py`
 
-#### Functions
-- `_path_to_module`: Converts a file path to a module name.
+- `_generate_modules_index(self, module_pages: list[WikiPage]) -> str`
+  - Generates an index page listing all modules.
 
-### `src.local_deepwiki.core.chunker`
+#### `src/local_deepwiki/generators/manifest.py`
 
-#### Methods
-- `_create_module_chunk`: Creates a chunk for the module/file overview.
+- `parse_manifest(file_path: Path) -> ProjectManifest`
+  - Parses a manifest file (e.g., `pyproject.toml`) into a structured [`ProjectManifest`](../files/src/local_deepwiki/generators/manifest.md).
+- `_parse_pyproject_toml(file_path: Path) -> dict[str, Any]`
+  - Parses `pyproject.toml` into a dictionary.
+- `_parse_python_dep(dep: str) -> dict[str, str]`
+  - Parses a Python dependency string into a dictionary.
+- `_parse_setup_py(file_path: Path) -> dict[str, Any]`
+  - Parses `setup.py` into a dictionary.
+- `_parse_requirements_txt(file_path: Path) -> list[dict[str, str]]`
+  - Parses `requirements.txt` into a list of dependencies.
+- `_parse_package_json(file_path: Path) -> dict[str, Any]`
+  - Parses `package.json` into a dictionary.
+- `_parse_xml(file_path: Path) -> dict[str, Any]`
+  - Parses XML files (used for parsing `pom.xml` or similar).
+
+#### `src/local_deepwiki/generators/source_refs.py`
+
+- `build_file_to_wiki_map(file_paths: list[Path]) -> dict[Path, str]`
+  - Builds a mapping from file paths to wiki page names.
+- `_relative_path(base: Path, path: Path) -> Path`
+  - Computes a relative path from a base path.
+- `_format_file_entry(file_path: Path, page_name: str) -> str`
+  - Formats a file entry for inclusion in a source reference section.
+- `generate_source_refs_section(file_path: Path, wiki_page: WikiPage) -> str`
+  - Generates a section listing source references for a file.
+- `add_source_refs_sections(wiki_pages: list[WikiPage]) -> None`
+  - Adds source reference sections to wiki pages.
+
+### Providers
+
+#### `src/local_deepwiki/providers/llm/anthropic.py`
+
+- **AnthropicProvider**: A class that implements the `LLMProvider` interface for the Anthropic API.
 
 ## How Components Interact
 
-The components in this module work together to process source code and generate documentation artifacts:
-
-1. The `manifest` module parses project metadata from various configuration files (pyproject.toml, setup.py, requirements.txt, etc.) and stores it in a `ProjectManifest` object.
-2. The `source_refs` module maps source files to wiki pages and generates reference sections.
-3. The `see_also` module helps identify relationships between modules and files.
-4. The `diagrams` module generates architecture diagrams from code chunks.
-5. The `wiki.py` module handles path-to-module name conversions.
-6. The `chunker` module creates code chunks for documentation.
-
-These components are typically used in a pipeline where manifest data is parsed first, followed by source reference generation, then diagram creation, and finally wiki page generation.
+1. The [`ProjectManifest`](../files/src/local_deepwiki/generators/manifest.md) class parses project configuration files to extract dependencies and metadata.
+2. The `CodeChunk` and `_create_module_chunk` function are used to process code files and create structured chunks for documentation.
+3. The `WikiPage` and `WikiPageStatus` are used to represent and manage documentation pages.
+4. The `source_refs` module links code files to wiki pages and generates reference sections.
+5. The `diagrams` module helps in mapping file paths to module names, which is useful for generating diagrams or cross-references.
+6. The `see_also` module ensures that module names match file paths, improving navigation.
+7. The `wiki` module generates an index page listing all modules.
+8. The `AnthropicProvider` integrates with LLMs for generating documentation content.
 
 ## Usage Examples
 
@@ -68,40 +89,58 @@ These components are typically used in a pipeline where manifest data is parsed 
 
 ```python
 from local_deepwiki.generators.manifest import parse_manifest
+from pathlib import Path
 
-manifest = parse_manifest("pyproject.toml")
-print(manifest.name)
+manifest = parse_manifest(Path("pyproject.toml"))
 ```
 
-### Generating Source References
+### Generating a Source Reference Section
 
 ```python
-from local_deepwiki.generators.source_refs import add_source_refs_sections
+from local_deepwiki.generators.source_refs import generate_source_refs_section
+from local_deepwiki.models import WikiPage
 
-# Assuming you have a WikiPage object
-add_source_refs_sections(wiki_page)
+wiki_page = WikiPage(title="Example", path="example.md", content="...")
+section = generate_source_refs_section(Path("src/example.py"), wiki_page)
 ```
 
-### Generating an Architecture Diagram
+### Generating a Module Index
 
 ```python
-from local_deepwiki.generators.diagrams import generate_architecture_diagram
-from local_deepwiki.models import CodeChunk
+from local_deepwiki.generators.wiki import _generate_modules_index
+from local_deepwiki.models import WikiPage
 
-chunks = [CodeChunk(...)]  # List of code chunks
-diagram = generate_architecture_diagram(chunks)
-print(diagram)
+pages = [WikiPage(title="Chunker", path="core/chunker.md", content="...")]
+index = _generate_modules_index(pages)
 ```
 
 ## Dependencies
 
-This module depends on:
-- `pathlib` (standard library)
-- `re` (standard library)
-- `json` (standard library)
-- `dataclasses` (standard library)
-- `tomllib` or `tomli` (for TOML parsing)
-- `xml.etree.ElementTree` (standard library)
-- `local_deepwiki.models` (for `WikiPage`, `WikiPageStatus`, `CodeChunk`)
-- `local_deepwiki.core.chunker` (for `CodeChunk`)
-- `local_deepwiki.generators` (for other generator functions)
+- `pathlib`
+- `typing`
+- `re`
+- `json`
+- `dataclasses`
+- `xml.etree.ElementTree`
+- `tomllib` or `tomli`
+- `anthropic` (for `AnthropicProvider`)
+- `local_deepwiki.models`
+- `local_deepwiki.providers.base`
+
+## Relevant Source Files
+
+The following source files were used to generate this documentation:
+
+- [`src/local_deepwiki/server.py:24-162`](../files/src/local_deepwiki/server.md)
+- [`src/local_deepwiki/config.py:11-14`](../files/src/local_deepwiki/config.md)
+- `src/local_deepwiki/models.py:10-21`
+- `src/local_deepwiki/__init__.py`
+- [`src/local_deepwiki/watcher.py:26-213`](../files/src/local_deepwiki/watcher.md)
+- `src/local_deepwiki/tools/__init__.py`
+- [`src/local_deepwiki/core/chunker.py:121-509`](../files/src/local_deepwiki/core/chunker.md)
+- [`src/local_deepwiki/core/vectorstore.py:14-326`](../files/src/local_deepwiki/core/vectorstore.md)
+- `src/local_deepwiki/core/__init__.py`
+- [`src/local_deepwiki/core/parser.py:56-156`](../files/src/local_deepwiki/core/parser.md)
+
+
+*Showing 10 of 35 source files.*

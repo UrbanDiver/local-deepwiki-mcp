@@ -4,74 +4,113 @@
 
 | Dependency                  | Purpose                                                                 |
 |-----------------------------|-------------------------------------------------------------------------|
-| anthropic                   | Provides access to Anthropic's AI models, likely used for LLM interactions. |
-| flask                       | Web framework for building the application's API and web interface.     |
-| lancedb                     | Vector database for storing and querying embeddings and vector data.    |
-| markdown                    | Library for parsing and rendering Markdown text.                        |
-| mcp                         | Likely used for Model Control Protocol interactions or similar.         |
-| ollama                      | Interface for interacting with locally hosted LLMs via Ollama.          |
-| openai                      | Client library for interacting with OpenAI's API for LLMs and embeddings. |
-| pandas                      | Data manipulation and analysis library.                                 |
-| pydantic                    | Data validation and settings management using Python type annotations.  |
-| pyyaml                      | YAML parsing and serialization.                                         |
-| rich                        | Library for rich text and beautiful formatting in the terminal.         |
-| sentence-transformers       | Provides pre-trained models for generating sentence embeddings.         |
-| tree-sitter                 | Parser library for parsing code in multiple languages.                  |
-| tree-sitter-c               | Tree-sitter grammar for C language parsing.                             |
-| tree-sitter-cpp             | Tree-sitter grammar for C++ language parsing.                           |
-| tree-sitter-go              | Tree-sitter grammar for Go language parsing.                            |
-| tree-sitter-java            | Tree-sitter grammar for Java language parsing.                          |
-| tree-sitter-javascript      | Tree-sitter grammar for JavaScript language parsing.                    |
-| tree-sitter-python          | Tree-sitter grammar for Python language parsing.                        |
-| tree-sitter-rust            | Tree-sitter grammar for Rust language parsing.                          |
-| tree-sitter-swift           | Tree-sitter grammar for Swift language parsing.                         |
-| tree-sitter-typescript      | Tree-sitter grammar for TypeScript language parsing.                    |
-| watchdog                    | File system monitoring library for watching changes in directories.     |
+| anthropic (>=0.40)          | Provides access to Anthropic's AI models, likely used for LLM interactions. |
+| flask (>=3.0)               | Web framework used for building the application's HTTP API.             |
+| lancedb (>=0.15)            | Vector database for storing and querying embeddings.                    |
+| markdown (>=3.0)            | Library for parsing and rendering Markdown text.                        |
+| mcp (>=1.2.0)               | Likely used for Model Communication Protocol interactions.              |
+| ollama (>=0.4)              | Interface to Ollama's local LLM inference engine.                       |
+| openai (>=1.0)              | Client for interacting with OpenAI's API for embeddings and LLMs.       |
+| pandas (>=2.0)              | Data manipulation and analysis library.                                 |
+| pydantic (>=2.0)            | Data validation and settings management using Python type annotations.  |
+| pyyaml (>=6.0)              | YAML parsing and serialization.                                         |
+| rich (>=13.0)               | Library for rich text and beautiful formatting in the terminal.         |
+| sentence-transformers (>=3.0)| Library for generating sentence embeddings.                              |
+| tree-sitter (>=0.23)        | Parser generator tool and an incremental parsing library.               |
+| tree-sitter-c (>=0.23)      | Tree-sitter grammar for C language.                                     |
+| tree-sitter-cpp (>=0.23)    | Tree-sitter grammar for C++ language.                                   |
+| tree-sitter-go (>=0.23)     | Tree-sitter grammar for Go language.                                    |
+| tree-sitter-java (>=0.23)   | Tree-sitter grammar for Java language.                                  |
+| tree-sitter-javascript (>=0.23) | Tree-sitter grammar for JavaScript language.                        |
+| tree-sitter-python (>=0.23) | Tree-sitter grammar for Python language.                                |
+| tree-sitter-rust (>=0.23)   | Tree-sitter grammar for Rust language.                                  |
+| tree-sitter-swift (>=0.0.1) | Tree-sitter grammar for Swift language.                                 |
+| tree-sitter-typescript (>=0.23) | Tree-sitter grammar for TypeScript language.                        |
+| watchdog (>=4.0)            | File system event monitoring library.                                   |
 
 ## Dev Dependencies
 
-| Dependency             | Purpose                                   |
-|------------------------|-------------------------------------------|
-| pytest                 | Testing framework for Python.             |
-| pytest-asyncio         | Plugin for pytest to support async testing. |
+| Dependency             | Purpose                                               |
+|------------------------|-------------------------------------------------------|
+| pytest (>=8.0)         | Testing framework for running unit and integration tests. |
+| pytest-asyncio (>=0.24)| Plugin for testing async code with pytest.             |
 
 ## Internal Module Dependencies
 
-The internal modules of the application are structured with clear dependencies based on import statements. Below is a breakdown of how these modules depend on each other.
+The following describes how internal modules depend on each other based on import statements:
 
-### Configuration and Models
+- **[Config](files/src/local_deepwiki/config.md) Module** (`src/local_deepwiki/config.py`) depends on:
+  - `pyyaml` for YAML parsing
+  - `pydantic` for configuration model definitions
 
-- `local_deepwiki.config` depends on `pyyaml` and `pydantic` for configuration handling and validation.
-- `local_deepwiki.models` depends on `pydantic` for data models and type validation.
+- **Models Module** (`src/local_deepwiki/models.py`) depends on:
+  - `pydantic` for data models
+  - `enum` and `pathlib` for basic type handling
 
-### Core Functionality
+- **Core Chunker Module** (`src/local_deepwiki/core/chunker.py`) depends on:
+  - `tree_sitter` for parsing code
+  - `local_deepwiki.config` for configuration
+  - `local_deepwiki.core.parser` for parsing utilities
+  - `local_deepwiki.models` for data models
 
-- `local_deepwiki.core.chunker` depends on `tree_sitter` and `local_deepwiki.core.parser` for parsing code into chunks.
-- `local_deepwiki.core.parser` depends on `tree_sitter` for parsing code nodes.
-- `local_deepwiki.core.vectorstore` depends on `lancedb` and `local_deepwiki.providers.base` for vector storage and embedding handling.
+- **Core Parser Module** (`src/local_deepwiki/core/parser.py`) depends on:
+  - `tree_sitter` for parsing code
+  - `local_deepwiki.models` for data models
 
-### Providers
+- **Core [Vector Store](files/src/local_deepwiki/core/vectorstore.md) Module** (`src/local_deepwiki/core/vectorstore.py`) depends on:
+  - `lancedb` for vector database operations
+  - `local_deepwiki.models` for data models
+  - `local_deepwiki.providers.base` for embedding provider interface
 
-- `local_deepwiki.providers.base` defines abstract base classes for `EmbeddingProvider` and `LLMProvider`.
-- `local_deepwiki.providers.embeddings` depends on `local_deepwiki.providers.base`, `sentence_transformers`, and `openai` for local and OpenAI embedding providers.
-- `local_deepwiki.providers.llm.ollama` depends on `local_deepwiki.providers.base` and `ollama` for Ollama LLM interactions.
+- **Generators Module**:
+  - `crosslinks.py` depends on:
+    - `local_deepwiki.models`
+  - `diagrams.py` depends on:
+    - `local_deepwiki.models`
+  - `toc.py` depends on:
+    - `local_deepwiki.models`
+  - `see_also.py` depends on:
+    - `local_deepwiki.models`
+  - `callgraph.py` depends on:
+    - `local_deepwiki.core.parser`
+    - `local_deepwiki.core.chunker`
+    - `local_deepwiki.models`
+  - `api_docs.py` depends on:
+    - `local_deepwiki.core.parser`
+    - `local_deepwiki.core.chunker`
+    - `local_deepwiki.models`
+  - `source_refs.py` depends on:
+    - `local_deepwiki.models`
+  - `search.py` depends on:
+    - `local_deepwiki.models`
 
-### Generators
+- **Providers Module**:
+  - `__init__.py` depends on:
+    - `local_deepwiki.providers.base`
+  - `base.py` depends on:
+    - `typing` and `abc` for abstract base classes
+  - `embeddings/local.py` depends on:
+    - `sentence_transformers`
+    - `local_deepwiki.providers.base`
+  - `embeddings/openai.py` depends on:
+    - `openai`
+    - `local_deepwiki.providers.base`
 
-- `local_deepwiki.generators.api_docs` depends on `tree_sitter`, `local_deepwiki.core.parser`, and `local_deepwiki.core.chunker` for extracting and formatting API documentation.
-- `local_deepwiki.generators.callgraph` depends on `tree_sitter`, `local_deepwiki.core.parser`, and `local_deepwiki.core.chunker` for generating call graphs.
-- `local_deepwiki.generators.crosslinks` depends on `local_deepwiki.models` and `re` for adding cross-links.
-- `local_deepwiki.generators.diagrams` depends on `local_deepwiki.models`.
-- `local_deepwiki.generators.search` depends on `local_deepwiki.models`.
-- `local_deepwiki.generators.see_also` depends on `local_deepwiki.models` and `re` for generating "see also" sections.
-- `local_deepwiki.generators.source_refs` depends on `local_deepwiki.models`.
-- `local_deepwiki.generators.toc` depends on `local_deepwiki.models` and `json`.
+- **Export Module**:
+  - `__init__.py` depends on:
+    - `local_deepwiki.export.html`
 
-### Test Modules
-
-- Test modules depend on various internal modules to validate functionality, such as `local_deepwiki.generators.api_docs`, `local_deepwiki.core.chunker`, `local_deepwiki.core.parser`, and `local_deepwiki.models`.
-
-This structure ensures a clear separation of concerns and modularity, allowing for easy maintenance and testing of individual components.
+- **Tests**:
+  - Various test modules depend on:
+    - `pytest`
+    - `local_deepwiki.*` modules depending on the test scope
+    - `local_deepwiki.core.parser`
+    - `local_deepwiki.models`
+    - `local_deepwiki.config`
+    - `local_deepwiki.generators.*`
+    - `local_deepwiki.providers.*`
+    - `local_deepwiki.core.chunker`
+    - `local_deepwiki.core.vectorstore`
 
 ## Module Dependency Graph
 
@@ -101,10 +140,11 @@ flowchart TD
     M19[test_chunker]
     M20[test_config]
     M21[test_crosslinks]
-    M22[test_manifest]
-    M23[test_parser]
-    M24[test_see_also]
-    M25[test_source_refs]
+    M22[test_diagrams]
+    M23[test_manifest]
+    M24[test_parser]
+    M25[test_see_also]
+    M26[test_source_refs]
     M1 --> M0
     M1 --> M12
     M2 --> M0
@@ -133,27 +173,29 @@ flowchart TD
     M20 --> M0
     M21 --> M6
     M21 --> M12
-    M23 --> M12
-    M24 --> M9
+    M22 --> M7
+    M22 --> M12
     M24 --> M12
-    M25 --> M10
+    M25 --> M9
     M25 --> M12
+    M26 --> M10
+    M26 --> M12
 ```
 
 ## Relevant Source Files
 
 The following source files were used to generate this documentation:
 
-- `tests/test_parser.py`
-- [`tests/test_chunker.py`](files/tests/test_chunker.md)
-- `tests/test_search.py`
-- `tests/test_toc.py`
-- [`tests/test_incremental_wiki.py`](files/tests/test_incremental_wiki.md)
-- `tests/test_web.py`
+- `tests/test_parser.py:12-111`
+- `tests/test_chunker.py:11-182`
+- `tests/test_search.py:20-53`
+- `tests/test_toc.py:16-44`
+- [`tests/test_incremental_wiki.py:20-47`](files/tests/test_incremental_wiki.md)
+- `tests/test_web.py:39-103`
 - `tests/__init__.py`
-- `tests/test_manifest.py`
-- [`tests/test_api_docs.py`](files/tests/test_api_docs.md)
-- [`tests/test_see_also.py`](files/tests/test_see_also.md)
+- `tests/test_manifest.py:14-56`
+- [`tests/test_api_docs.py:31-53`](files/tests/test_api_docs.md)
+- `tests/test_see_also.py:16-177`
 
 
-*Showing 10 of 48 source files.*
+*Showing 10 of 52 source files.*

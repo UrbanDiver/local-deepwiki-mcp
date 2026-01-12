@@ -1,178 +1,163 @@
 # File Overview
 
-This file implements the main server logic for the local_deepwiki application. It sets up an MCP (Model Control Protocol) server that provides tools for indexing repositories, searching code, and generating wiki content. The server integrates with various components including repository indexing, vector storage, embedding providers, and LLM providers.
+This file implements the main server logic for the local_deepwiki application. It sets up the MCP (Model Control Protocol) server that handles various tools for repository indexing, question answering, wiki generation, and code searching. The server integrates with embedding and LLM providers to enable intelligent code understanding and documentation generation.
 
 # Classes
 
 ## Config
-
-The [Config](config.md) class manages configuration settings for the local_deepwiki application. It handles loading and storing configuration values needed for the server's operation.
+The [Config](config.md) class manages configuration settings for the local_deepwiki application, including paths, model providers, and other runtime parameters.
 
 ## RepositoryIndexer
-
-The RepositoryIndexer class is responsible for indexing repository contents. It processes files in a repository and prepares them for vector storage and search.
+The RepositoryIndexer class handles the process of indexing source code repositories for later retrieval and analysis.
 
 ## VectorStore
-
-The [VectorStore](core/vectorstore.md) class handles vector-based storage and retrieval of indexed content. It provides functionality for storing embeddings and performing similarity searches.
+The [VectorStore](core/vectorstore.md) class provides vector storage and retrieval capabilities, used for storing and searching embeddings of code content.
 
 ## WikiStructure
+The WikiStructure class represents the hierarchical structure of generated wiki documentation.
 
-The [WikiStructure](models.md) class represents the hierarchical structure of generated wiki content. It organizes pages and sections in a structured format.
+## WikiGenerator
+The [WikiGenerator](generators/wiki.md) class is responsible for generating wiki documentation from repository content.
+
+## Tool
+The Tool class from mcp.types defines the structure of tools that can be called through the MCP protocol.
+
+## TextContent
+The TextContent class from mcp.types represents text content within the MCP protocol.
+
+## Server
+The Server class from mcp.server provides the core server functionality for handling MCP protocol messages.
 
 # Functions
 
 ## list_tools
-
 ```python
 async def list_tools() -> list[Tool]
 ```
-
-Returns a list of available tools that can be called by the MCP server. The tools include:
-- `index-repository`: Index a repository for search
-- `ask-question`: Ask a question about the repository content
-- `read-wiki-structure`: Read the structure of the generated wiki
-- `read-wiki-page`: Read a specific wiki page
-- `search-code`: Search code in the repository
+Lists all available tools for the MCP server.
+Returns a list of Tool objects representing the available tools.
 
 ## call_tool
-
 ```python
-async def call_tool(tool_name: str, tool_arguments: Any) -> Any
+async def call_tool(tool_name: str, arguments: dict[str, Any]) -> Any
 ```
-
-Calls a specific tool by name with the provided arguments. This function routes tool calls to their respective handlers.
+Calls a specific tool with the given arguments.
+- `tool_name`: Name of the tool to call
+- `arguments`: Dictionary of arguments for the tool
+Returns the result of the tool call.
 
 ## handle_index_repository
-
 ```python
-async def handle_index_repository(args: dict[str, Any]) -> str
+async def handle_index_repository(path: str, include_patterns: list[str], exclude_patterns: list[str]) -> dict[str, Any]
 ```
-
-Handles the `index-repository` tool call. Indexes a repository at the specified path and returns a success message.
-
-**Parameters:**
-- `args`: Dictionary containing the repository path
-
-**Returns:**
-- Success message string
+Indexes a repository at the specified path.
+- `path`: Path to the repository to index
+- `include_patterns`: List of patterns to include
+- `exclude_patterns`: List of patterns to exclude
+Returns a dictionary with indexing results.
 
 ## progress_callback
-
 ```python
-def progress_callback(message: str) -> None
+def progress_callback(message: str, progress: float) -> None
 ```
-
-A callback function that logs progress messages during indexing operations.
+Callback function for reporting progress during operations.
+- `message`: Progress message
+- `progress`: Progress percentage (0.0 to 1.0)
 
 ## handle_ask_question
-
 ```python
-async def handle_ask_question(args: dict[str, Any]) -> str
+async def handle_ask_question(question: str, context: str) -> dict[str, Any]
 ```
-
-Handles the `ask-question` tool call. Answers questions about the repository content using the configured LLM provider.
-
-**Parameters:**
-- `args`: Dictionary containing the question
-
-**Returns:**
-- Answer string
+Answers a question about the indexed repository.
+- `question`: The question to answer
+- `context`: Context for the question
+Returns a dictionary with the answer and related information.
 
 ## handle_read_wiki_structure
-
 ```python
-async def handle_read_wiki_structure(args: dict[str, Any]) -> str
+async def handle_read_wiki_structure() -> dict[str, Any]
 ```
-
-Handles the `read-wiki-structure` tool call. Returns the structure of the generated wiki.
-
-**Parameters:**
-- `args`: Dictionary with no required arguments
-
-**Returns:**
-- Wiki structure as JSON string
+Reads the current wiki structure.
+Returns a dictionary with the wiki structure information.
 
 ## handle_read_wiki_page
-
 ```python
-async def handle_read_wiki_page(args: dict[str, Any]) -> str
+async def handle_read_wiki_page(page_name: str) -> dict[str, Any]
 ```
-
-Handles the `read-wiki-page` tool call. Returns the content of a specific wiki page.
-
-**Parameters:**
-- `args`: Dictionary containing the page name
-
-**Returns:**
-- Page content as JSON string
+Reads a specific wiki page.
+- `page_name`: Name of the wiki page to read
+Returns a dictionary with the page content.
 
 ## handle_search_code
-
 ```python
-async def handle_search_code(args: dict[str, Any]) -> str
+async def handle_search_code(query: str, limit: int) -> dict[str, Any]
 ```
+Searches code using the vector store.
+- `query`: Search query
+- `limit`: Maximum number of results to return
+Returns a dictionary with search results.
 
-Handles the `search-code` tool call. Searches for code snippets matching the query.
-
-**Parameters:**
-- `args`: Dictionary containing the search query
-
-**Returns:**
-- Search results as JSON string
-
-## main
-
+## handle_export_wiki_html
 ```python
-async def main() -> None
+async def handle_export_wiki_html(output_path: str) -> dict[str, Any]
 ```
-
-Main entry point for the server. Sets up the MCP server with the defined tools and runs it.
-
-## run
-
-```python
-def run() -> None
-```
-
-Entry point function that runs the main async function using asyncio.
+Exports the wiki to HTML format.
+- `output_path`: Path where the HTML output should be saved
+Returns a dictionary with export status information.
 
 # Usage Examples
 
 ## Starting the Server
-
 ```python
-# Run the server
+async def main():
+    server = Server("local_deepwiki")
+    
+    # Register tools
+    server.tool("index_repository", handle_index_repository)
+    server.tool("ask_question", handle_ask_question)
+    server.tool("read_wiki_structure", handle_read_wiki_structure)
+    server.tool("read_wiki_page", handle_read_wiki_page)
+    server.tool("search_code", handle_search_code)
+    server.tool("export_wiki_html", handle_export_wiki_html)
+    
+    # Run the server
+    async with stdio_server():
+        await server.run()
+
 if __name__ == "__main__":
-    run()
+    asyncio.run(main())
 ```
 
-## Using Tools
-
-The server provides several tools that can be called through the MCP protocol:
-
+## Indexing a Repository
 ```python
-# Index a repository
-await call_tool("index-repository", {"path": "/path/to/repo"})
+result = await handle_index_repository(
+    path="/path/to/repo",
+    include_patterns=["*.py", "*.js"],
+    exclude_patterns=["node_modules/", "__pycache__/"]
+)
+```
 
-# Ask a question about the repository
-await call_tool("ask-question", {"question": "What does this function do?"})
-
-# Search code
-await call_tool("search-code", {"query": "authentication logic"})
+## Asking a Question
+```python
+answer = await handle_ask_question(
+    question="What does this function do?",
+    context="function_name: my_function"
+)
 ```
 
 # Related Components
 
-This file works with the following components:
+This file works with several other components:
 
-- **[WikiGenerator](generators/wiki.md)**: Used for generating wiki content from repository data
-- **get_embedding_provider**: Provides embedding model for vector storage
-- **get_llm_provider**: Provides language model for answering questions
-- **[get_config](config.md)**: Manages configuration settings
-- **[set_config](config.md)**: Sets configuration values
-- **RepositoryIndexer**: Indexes repository contents
-- **[VectorStore](core/vectorstore.md)**: Handles vector storage and search operations
+- **[Config](config.md)**: Manages application configuration
+- **RepositoryIndexer**: Handles repository indexing operations
+- **[VectorStore](core/vectorstore.md)**: Provides vector storage and search capabilities
+- **[WikiGenerator](generators/wiki.md)**: Generates wiki documentation
+- **get_embedding_provider**: Retrieves embedding model providers
+- **get_llm_provider**: Retrieves LLM providers for question answering
+- **stdio_server**: MCP server implementation for stdio communication
+- **Tool**: MCP protocol tool definition
+- **TextContent**: MCP protocol text content representation
 
 ## API Reference
 
@@ -304,6 +289,22 @@ Handle search_code tool call.
 **Returns:** `list[TextContent]`
 
 
+#### `handle_export_wiki_html`
+
+```python
+async def handle_export_wiki_html(args: dict[str, Any]) -> list[TextContent]
+```
+
+Handle export_wiki_html tool call.
+
+
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `args` | `dict[str, Any]` | - | - |
+
+**Returns:** `list[TextContent]`
+
+
 #### `main`
 
 ```python
@@ -342,35 +343,36 @@ flowchart TD
     N14[get_vector_db_path]
     N15[get_wiki_path]
     N16[handle_ask_question]
-    N17[handle_index_repository]
-    N18[handle_read_wiki_page]
-    N19[handle_read_wiki_structure]
-    N20[handle_search_code]
-    N21[is_dir]
-    N22[list_tools]
-    N23[loads]
+    N17[handle_export_wiki_html]
+    N18[handle_index_repository]
+    N19[handle_read_wiki_page]
+    N20[handle_read_wiki_structure]
+    N21[handle_search_code]
+    N22[is_dir]
+    N23[list_tools]
     N24[main]
     N25[read_text]
     N26[resolve]
     N27[run]
     N28[search]
     N29[stdio_server]
-    N22 --> N3
-    N5 --> N17
-    N5 --> N16
-    N5 --> N19
+    N23 --> N3
     N5 --> N18
+    N5 --> N16
     N5 --> N20
+    N5 --> N19
+    N5 --> N21
+    N5 --> N17
     N5 --> N2
-    N17 --> N26
-    N17 --> N0
-    N17 --> N8
-    N17 --> N2
-    N17 --> N21
-    N17 --> N11
-    N17 --> N1
-    N17 --> N10
-    N17 --> N7
+    N18 --> N26
+    N18 --> N0
+    N18 --> N8
+    N18 --> N2
+    N18 --> N22
+    N18 --> N11
+    N18 --> N1
+    N18 --> N10
+    N18 --> N7
     N16 --> N26
     N16 --> N0
     N16 --> N11
@@ -384,28 +386,32 @@ flowchart TD
     N16 --> N13
     N16 --> N9
     N16 --> N7
+    N20 --> N26
+    N20 --> N0
+    N20 --> N8
+    N20 --> N2
+    N20 --> N25
+    N20 --> N7
     N19 --> N26
     N19 --> N0
     N19 --> N8
     N19 --> N2
-    N19 --> N23
     N19 --> N25
-    N19 --> N7
-    N18 --> N26
-    N18 --> N0
-    N18 --> N8
-    N18 --> N2
-    N18 --> N25
-    N20 --> N26
-    N20 --> N0
-    N20 --> N11
-    N20 --> N14
-    N20 --> N8
-    N20 --> N2
-    N20 --> N12
-    N20 --> N4
-    N20 --> N28
-    N20 --> N7
+    N21 --> N26
+    N21 --> N0
+    N21 --> N11
+    N21 --> N14
+    N21 --> N8
+    N21 --> N2
+    N21 --> N12
+    N21 --> N4
+    N21 --> N28
+    N21 --> N7
+    N17 --> N26
+    N17 --> N0
+    N17 --> N8
+    N17 --> N2
+    N17 --> N7
     N24 --> N29
     N24 --> N27
     N24 --> N6
@@ -418,12 +424,12 @@ flowchart TD
 
 ## Relevant Source Files
 
-- `src/local_deepwiki/server.py`
+- `src/local_deepwiki/server.py:24-162`
 
 ## See Also
 
-- [models](models.md) - dependency
 - [wiki](generators/wiki.md) - dependency
-- [config](config.md) - dependency
 - [vectorstore](core/vectorstore.md) - dependency
+- [config](config.md) - dependency
+- [html](export/html.md) - dependency
 - [chunker](core/chunker.md) - shares 4 dependencies

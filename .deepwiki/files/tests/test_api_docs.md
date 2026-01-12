@@ -1,12 +1,12 @@
 # File Overview
 
-This file contains tests for the API documentation generation functionality in the `local_deepwiki.generators.api_docs` module. It tests various components related to extracting and formatting API documentation from Python source code, including function signatures, class signatures, docstring parsing, and markdown generation.
+This file contains tests for the API documentation generation functionality, specifically focusing on the [`get_file_api_docs`](../src/local_deepwiki/generators/api_docs.md) convenience function and the [`APIDocExtractor`](../src/local_deepwiki/generators/api_docs.md) class. It verifies that API documentation can be correctly extracted from Python files with various docstring formats.
 
 # Classes
 
 ## TestGetFileApiDocs
 
-Test the convenience function [`get_file_api_docs`](../src/local_deepwiki/generators/api_docs.md).
+Test the convenience function.
 
 ### Methods
 
@@ -15,7 +15,7 @@ Test the convenience function [`get_file_api_docs`](../src/local_deepwiki/genera
 Test getting API docs for a file with content.
 
 **Parameters:**
-- `tmp_path`: A pytest fixture providing a temporary directory path.
+- `tmp_path`: A pytest fixture providing a temporary directory path for test files.
 
 ## TestAPIDocExtractor
 
@@ -28,98 +28,174 @@ Test [APIDocExtractor](../src/local_deepwiki/generators/api_docs.md) class.
 Test extracting docs from a Python file.
 
 **Parameters:**
-- `tmp_path`: A pytest fixture providing a temporary directory path.
-- `extractor`: A pytest fixture providing an instance of [`APIDocExtractor`](../src/local_deepwiki/generators/api_docs.md).
-
-## TestGenerateApiReferenceMarkdown
-
-Test API reference markdown generation.
-
-### Methods
-
-#### test_empty_input
-
-Test with no functions or classes.
-
-#### test_function_documentation
-
-Test generating function documentation.
-
-**Parameters:**
-- `tmp_path`: A pytest fixture providing a temporary directory path.
-
-#### test_class_documentation
-
-Test generating class documentation.
-
-**Parameters:**
-- `tmp_path`: A pytest fixture providing a temporary directory path.
-
-#### test_combined_documentation
-
-Test generating combined function and class documentation.
-
-**Parameters:**
-- `tmp_path`: A pytest fixture providing a temporary directory path.
+- `tmp_path`: A pytest fixture providing a temporary directory path for test files.
+- `extractor`: A pytest fixture that provides an instance of [APIDocExtractor](../src/local_deepwiki/generators/api_docs.md).
 
 # Functions
 
-The following functions are imported from `local_deepwiki.generators.api_docs` and are tested in this file:
+## get_file_api_docs
 
-- [`APIDocExtractor`](../src/local_deepwiki/generators/api_docs.md): Class for extracting API documentation from Python files.
-- [`FunctionSignature`](../src/local_deepwiki/generators/api_docs.md): Data structure representing a function signature.
-- [`ClassSignature`](../src/local_deepwiki/generators/api_docs.md): Data structure representing a class signature.
-- [`Parameter`](../src/local_deepwiki/generators/api_docs.md): Data structure representing a function or method parameter.
-- [`extract_python_parameters`](../src/local_deepwiki/generators/api_docs.md): Extract parameters from a Python function.
-- [`extract_python_return_type`](../src/local_deepwiki/generators/api_docs.md): Extract the return type from a Python function.
-- [`extract_python_decorators`](../src/local_deepwiki/generators/api_docs.md): Extract decorators from a Python function or class.
-- [`extract_python_docstring`](../src/local_deepwiki/generators/api_docs.md): Extract the docstring from a Python function or class.
-- [`parse_google_docstring`](../src/local_deepwiki/generators/api_docs.md): Parse a Google-style docstring.
-- [`parse_numpy_docstring`](../src/local_deepwiki/generators/api_docs.md): Parse a NumPy-style docstring.
-- [`parse_docstring`](../src/local_deepwiki/generators/api_docs.md): Parse a docstring using the appropriate parser.
-- [`extract_function_signature`](../src/local_deepwiki/generators/api_docs.md): Extract a function signature from a Python function.
-- [`extract_class_signature`](../src/local_deepwiki/generators/api_docs.md): Extract a class signature from a Python class.
-- [`format_parameter`](../src/local_deepwiki/generators/api_docs.md): Format a parameter for documentation.
-- [`format_function_signature_line`](../src/local_deepwiki/generators/api_docs.md): Format a function signature line.
-- [`generate_api_reference_markdown`](../src/local_deepwiki/generators/api_docs.md): Generate markdown documentation for functions and classes.
-- [`get_file_api_docs`](../src/local_deepwiki/generators/api_docs.md): Get API documentation for a file.
+Convenience function to extract API documentation from a Python file.
+
+**Parameters:**
+- `file_path` (Path): Path to the Python file to extract documentation from.
+
+**Returns:**
+- API documentation for the file's contents.
+
+## extract_python_parameters
+
+Extract parameters from a Python function signature.
+
+**Parameters:**
+- `func` (callable): The Python function to extract parameters from.
+
+**Returns:**
+- List of [Parameter](../src/local_deepwiki/generators/api_docs.md) objects.
+
+## extract_python_return_type
+
+Extract the return type from a Python function signature.
+
+**Parameters:**
+- `func` (callable): The Python function to extract return type from.
+
+**Returns:**
+- Return type annotation.
+
+## extract_python_decorators
+
+Extract decorators from a Python function.
+
+**Parameters:**
+- `func` (callable): The Python function to extract decorators from.
+
+**Returns:**
+- List of decorator names.
+
+## extract_python_docstring
+
+Extract docstring from a Python function.
+
+**Parameters:**
+- `func` (callable): The Python function to extract docstring from.
+
+**Returns:**
+- Docstring content.
+
+## parse_google_docstring
+
+Parse a Google-style docstring.
+
+**Parameters:**
+- `docstring` (str): The docstring to parse.
+
+**Returns:**
+- Parsed docstring content.
+
+## parse_numpy_docstring
+
+Parse a NumPy-style docstring.
+
+**Parameters:**
+- `docstring` (str): The docstring to parse.
+
+**Returns:**
+- Parsed docstring content.
+
+## parse_docstring
+
+Parse a docstring using the appropriate parser based on style.
+
+**Parameters:**
+- `docstring` (str): The docstring to parse.
+
+**Returns:**
+- Parsed docstring content.
+
+## extract_function_signature
+
+Extract function signature information.
+
+**Parameters:**
+- `func` (callable): The Python function to extract signature from.
+
+**Returns:**
+- [FunctionSignature](../src/local_deepwiki/generators/api_docs.md) object.
+
+## extract_class_signature
+
+Extract class signature information.
+
+**Parameters:**
+- `cls` (type): The Python class to extract signature from.
+
+**Returns:**
+- [ClassSignature](../src/local_deepwiki/generators/api_docs.md) object.
+
+## format_parameter
+
+Format a parameter for display.
+
+**Parameters:**
+- `param` ([Parameter](../src/local_deepwiki/generators/api_docs.md)): The parameter to format.
+
+**Returns:**
+- Formatted parameter string.
+
+## format_function_signature_line
+
+Format a function signature line.
+
+**Parameters:**
+- `func_sig` ([FunctionSignature](../src/local_deepwiki/generators/api_docs.md)): The function signature to format.
+
+**Returns:**
+- Formatted signature line.
+
+## generate_api_reference_markdown
+
+Generate markdown documentation for API reference.
+
+**Parameters:**
+- `file_path` (Path): Path to the Python file to generate documentation for.
+
+**Returns:**
+- Markdown-formatted API reference.
 
 # Usage Examples
 
-The tests show how to use the API documentation generation components:
+The tests in this file demonstrate usage of the API documentation extraction components. For example, to extract API docs from a file:
 
 ```python
-# Example of using APIDocExtractor
-extractor = APIDocExtractor()
-docs = extractor.extract_from_file("example.py")
+from pathlib import Path
+from local_deepwiki.generators.api_docs import get_file_api_docs
 
-# Example of generating API reference markdown
-functions = [FunctionSignature(name="process", parameters=[], return_type="str")]
-classes = [ClassSignature(name="MyClass", methods=[])]
-markdown = generate_api_reference_markdown(functions, classes)
+# Extract API docs from a Python file
+docs = get_file_api_docs(Path("example.py"))
 ```
 
 # Related Components
 
 This file works with the following components from `local_deepwiki.generators.api_docs`:
 
-- [`APIDocExtractor`](../src/local_deepwiki/generators/api_docs.md): Core class for extracting API documentation.
-- [`FunctionSignature`](../src/local_deepwiki/generators/api_docs.md): Represents function signatures.
-- [`ClassSignature`](../src/local_deepwiki/generators/api_docs.md): Represents class signatures.
-- [`Parameter`](../src/local_deepwiki/generators/api_docs.md): Represents function or method parameters.
-- [`extract_python_parameters`](../src/local_deepwiki/generators/api_docs.md): Extracts parameters from Python functions.
-- [`extract_python_return_type`](../src/local_deepwiki/generators/api_docs.md): Extracts return types from Python functions.
-- [`extract_python_decorators`](../src/local_deepwiki/generators/api_docs.md): Extracts decorators from Python functions or classes.
-- [`extract_python_docstring`](../src/local_deepwiki/generators/api_docs.md): Extracts docstrings from Python functions or classes.
-- [`parse_google_docstring`](../src/local_deepwiki/generators/api_docs.md): Parses Google-style docstrings.
-- [`parse_numpy_docstring`](../src/local_deepwiki/generators/api_docs.md): Parses NumPy-style docstrings.
-- [`parse_docstring`](../src/local_deepwiki/generators/api_docs.md): Parses docstrings using the appropriate parser.
-- [`extract_function_signature`](../src/local_deepwiki/generators/api_docs.md): Extracts function signatures.
-- [`extract_class_signature`](../src/local_deepwiki/generators/api_docs.md): Extracts class signatures.
-- [`format_parameter`](../src/local_deepwiki/generators/api_docs.md): Formats parameters for documentation.
-- [`format_function_signature_line`](../src/local_deepwiki/generators/api_docs.md): Formats function signature lines.
-- [`generate_api_reference_markdown`](../src/local_deepwiki/generators/api_docs.md): Generates markdown documentation.
-- [`get_file_api_docs`](../src/local_deepwiki/generators/api_docs.md): Convenience function to get API docs for a file.
+- [`APIDocExtractor`](../src/local_deepwiki/generators/api_docs.md)
+- [`FunctionSignature`](../src/local_deepwiki/generators/api_docs.md)
+- [`ClassSignature`](../src/local_deepwiki/generators/api_docs.md)
+- [`Parameter`](../src/local_deepwiki/generators/api_docs.md)
+- [`extract_python_parameters`](../src/local_deepwiki/generators/api_docs.md)
+- [`extract_python_return_type`](../src/local_deepwiki/generators/api_docs.md)
+- [`extract_python_decorators`](../src/local_deepwiki/generators/api_docs.md)
+- [`extract_python_docstring`](../src/local_deepwiki/generators/api_docs.md)
+- [`parse_google_docstring`](../src/local_deepwiki/generators/api_docs.md)
+- [`parse_numpy_docstring`](../src/local_deepwiki/generators/api_docs.md)
+- [`parse_docstring`](../src/local_deepwiki/generators/api_docs.md)
+- [`extract_function_signature`](../src/local_deepwiki/generators/api_docs.md)
+- [`extract_class_signature`](../src/local_deepwiki/generators/api_docs.md)
+- [`format_parameter`](../src/local_deepwiki/generators/api_docs.md)
+- [`format_function_signature_line`](../src/local_deepwiki/generators/api_docs.md)
+- [`generate_api_reference_markdown`](../src/local_deepwiki/generators/api_docs.md)
+- [`get_file_api_docs`](../src/local_deepwiki/generators/api_docs.md)
 
 ## API Reference
 
@@ -876,11 +952,9 @@ flowchart TD
 
 ## Relevant Source Files
 
-- `tests/test_api_docs.py`
+- `tests/test_api_docs.py:31-53`
 
 ## See Also
 
 - [api_docs](../src/local_deepwiki/generators/api_docs.md) - dependency
-- [models](../src/local_deepwiki/models.md) - dependency
 - [parser](../src/local_deepwiki/core/parser.md) - dependency
-- [test_chunker](test_chunker.md) - shares 3 dependencies

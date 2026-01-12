@@ -54,38 +54,45 @@
                 },
                 {
                   "number": "5.1.1.2",
-                  "title": "models.py",
-                  "path": "files/src/local_deepwiki/models.md"
-                },
-                {
-                  "number": "5.1.1.3",
                   "title": "server.py",
                   "path": "files/src/local_deepwiki/server.md"
                 },
                 {
-                  "number": "5.1.1.4",
+                  "number": "5.1.1.3",
                   "title": "watcher.py",
                   "path": "files/src/local_deepwiki/watcher.md"
                 },
                 {
-                  "number": "5.1.1.5",
+                  "number": "5.1.1.4",
                   "title": "Core",
                   "path": "",
                   "children": [
                     {
-                      "number": "5.1.1.5.1",
+                      "number": "5.1.1.4.1",
                       "title": "chunker.py",
                       "path": "files/src/local_deepwiki/core/chunker.md"
                     },
                     {
-                      "number": "5.1.1.5.2",
+                      "number": "5.1.1.4.2",
                       "title": "parser.py",
                       "path": "files/src/local_deepwiki/core/parser.md"
                     },
                     {
-                      "number": "5.1.1.5.3",
+                      "number": "5.1.1.4.3",
                       "title": "vectorstore.py",
                       "path": "files/src/local_deepwiki/core/vectorstore.md"
+                    }
+                  ]
+                },
+                {
+                  "number": "5.1.1.5",
+                  "title": "Export",
+                  "path": "",
+                  "children": [
+                    {
+                      "number": "5.1.1.5.1",
+                      "title": "html.py",
+                      "path": "files/src/local_deepwiki/export/html.md"
                     }
                   ]
                 },
@@ -106,30 +113,23 @@
                     },
                     {
                       "number": "5.1.1.6.3",
+                      "title": "diagrams.py",
+                      "path": "files/src/local_deepwiki/generators/diagrams.md"
+                    },
+                    {
+                      "number": "5.1.1.6.4",
                       "title": "manifest.py",
                       "path": "files/src/local_deepwiki/generators/manifest.md"
                     },
                     {
-                      "number": "5.1.1.6.4",
+                      "number": "5.1.1.6.5",
                       "title": "see_also.py",
                       "path": "files/src/local_deepwiki/generators/see_also.md"
                     },
                     {
-                      "number": "5.1.1.6.5",
+                      "number": "5.1.1.6.6",
                       "title": "wiki.py",
                       "path": "files/src/local_deepwiki/generators/wiki.md"
-                    }
-                  ]
-                },
-                {
-                  "number": "5.1.1.7",
-                  "title": "Web",
-                  "path": "",
-                  "children": [
-                    {
-                      "number": "5.1.1.7.1",
-                      "title": "app.py",
-                      "path": "files/src/local_deepwiki/web/app.md"
                     }
                   ]
                 }
@@ -149,23 +149,23 @@
             },
             {
               "number": "5.2.2",
-              "title": "test_chunker.py",
-              "path": "files/tests/test_chunker.md"
-            },
-            {
-              "number": "5.2.3",
               "title": "test_crosslinks.py",
               "path": "files/tests/test_crosslinks.md"
             },
             {
+              "number": "5.2.3",
+              "title": "test_diagrams.py",
+              "path": "files/tests/test_diagrams.md"
+            },
+            {
               "number": "5.2.4",
-              "title": "test_incremental_wiki.py",
-              "path": "files/tests/test_incremental_wiki.md"
+              "title": "test_html_export.py",
+              "path": "files/tests/test_html_export.md"
             },
             {
               "number": "5.2.5",
-              "title": "test_see_also.py",
-              "path": "files/tests/test_see_also.md"
+              "title": "test_incremental_wiki.py",
+              "path": "files/tests/test_incremental_wiki.md"
             },
             {
               "number": "5.2.6",

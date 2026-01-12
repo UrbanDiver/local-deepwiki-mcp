@@ -5,15 +5,15 @@ Local DeepWiki-style MCP server for private repository documentation
 
 ## Description
 
-This project provides a local MCP (Model Control Protocol) server that enables private repository documentation with DeepWiki-style capabilities. It offers both a web server interface and a file watching functionality to continuously update documentation. The system supports configurable embedding providers and chunking strategies for processing code repositories.
+This project provides a local MCP server that enables private repository documentation with DeepWiki-style functionality. It offers tools for exporting documentation, serving a web interface, and watching for changes in the repository. The system supports configurable chunking and embedding providers for processing code and documentation content.
 
 ## Key Features
 
-- **MCP Server Implementation**: The `main` function in `server.py` demonstrates the core MCP server setup using `stdio_server` and `server.run` to handle communication protocols
-- **Configurable Embedding Providers**: The `Indexer.__init__` method in `indexer.py` accepts an `embedding_provider_name` parameter that can be set to "local" or "openai" for different embedding capabilities
-- **Web Server Interface**: The `run_server` function in `web/app.py` provides a web interface for serving documentation with customizable host, port, and debug options
-- **Chunking Configuration**: The `Chunker.__init__` method in `chunker.py` initializes with optional `ChunkingConfig` and uses a `CodeParser` for processing code content
-- **Configuration Management**: The `get_config` function in `config.py` provides global configuration access with lazy loading of the `Config.load()` method
+- **MCP Server Implementation** - The [`main`](files/src/local_deepwiki/export/html.md) function in `src/local_deepwiki/server.py` demonstrates the core MCP server setup using `stdio_server` and `server.run` for handling communication protocols
+- **Configurable Embedding Providers** - The `Indexer.__init__` method in `src/local_deepwiki/core/indexer.py` accepts an `embedding_provider_name` parameter that supports overriding between "local" and "openai" embedding providers
+- **Web Server Interface** - The `run_server` function in `src/local_deepwiki/web/app.py` provides a web server with configurable host, port, and debug options for serving the wiki content
+- **Chunking Configuration Support** - The `Chunker.__init__` method in `src/local_deepwiki/core/chunker.py` initializes with optional [`ChunkingConfig`](files/src/local_deepwiki/config.md) and defaults to global configuration values
+- **Repository Path Handling** - The `Indexer.__init__` method in `src/local_deepwiki/core/indexer.py` accepts a `repo_path` parameter for specifying the repository root directory to be processed
 
 ## Technology Stack
 
@@ -25,6 +25,13 @@ This project provides a local MCP (Model Control Protocol) server that enables p
 
 ```
 local-deepwiki-mcp/
+├── html-export/
+│   ├── files/
+│   ├── modules/
+│   ├── architecture.html
+│   ├── dependencies.html
+│   ├── index.html
+│   └── search.json
 ├── src/
 │   └── local_deepwiki/
 ├── tests/
@@ -34,25 +41,21 @@ local-deepwiki-mcp/
 │   ├── test_chunker.py
 │   ├── test_config.py
 │   ├── test_crosslinks.py
+│   ├── test_diagrams.py
+│   ├── test_html_export.py
 │   ├── test_incremental_wiki.py
 │   ├── test_manifest.py
 │   ├── test_parser.py
 │   ├── test_search.py
 │   ├── test_see_also.py
 │   ├── test_source_refs.py
-│   ├── test_toc.py
-│   ├── test_watcher.py
-│   └── test_web.py
-├── CLAUDE.md
-├── README.md
-├── TODO.md
-├── WIKI_IMPROVEMENTS.md
-├── pyproject.toml
-└── uv.lock
+│   ...
+...
 ```
 
 ## Quick Start
 
+- `deepwiki-export` → `local_deepwiki.export.html:main`
 - `deepwiki-serve` → `local_deepwiki.web.app:main`
 - `deepwiki-watch` → `local_deepwiki.watcher:main`
 - `local-deepwiki` → `local_deepwiki.server:main`

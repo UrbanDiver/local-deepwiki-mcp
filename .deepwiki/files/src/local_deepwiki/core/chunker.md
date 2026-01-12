@@ -1,51 +1,47 @@
 # File Overview
 
-This file defines the `CodeChunker` class and related functionality for splitting code into logical chunks based on language-specific parsing rules. It uses the `tree_sitter` library to parse code and extract meaningful units such as functions, classes, and methods.
+This file defines the `CodeChunker` class and related functionality for breaking down code files into logical chunks. It provides the core logic for parsing code and extracting meaningful segments based on language-specific syntax trees.
 
 # Classes
 
 ## CodeChunker
 
-The `CodeChunker` class is responsible for breaking down code files into logical chunks based on their structure and content. It uses a [`CodeParser`](parser.md) to parse the source code and then extracts nodes of specific types (like functions, classes, etc.) to form chunks.
+The `CodeChunker` class is responsible for chunking code files into logical segments based on their structure. It uses tree-sitter for parsing and extracts code elements like functions, classes, and methods.
 
 ### Key Methods
 
-- `__init__(self, language: Language, config: ChunkingConfig = None)`:
-  Initializes the chunker with a specific language and configuration. If no configuration is provided, it retrieves the default configuration using `get_config()`.
-
-- `chunk(self, file_path: Path, content: str) -> Iterator[CodeChunk]`:
-  Takes a file path and its content and yields [`CodeChunk`](../models.md) objects representing logical units of code. It uses [`find_nodes_by_type`](parser.md) to identify relevant nodes and processes them using helper functions from the parser module.
+- `chunk_file(self, file_path: Path) -> Iterator[CodeChunk]`: 
+  Takes a file path and yields `CodeChunk` objects representing logical segments of the code file.
 
 # Functions
 
 ## get_parent_classes
 
-- `get_parent_classes(node: Node) -> list[str]`:
-  Extracts the names of parent classes from a given `Node` object, which is typically a class definition in the parsed AST. Returns a list of strings representing the names of parent classes.
+- **Parameters**: 
+  - `node: Node` - A tree-sitter node representing an element in the code structure
+- **Returns**: 
+  - `list[str]` - A list of parent class names for the given node
 
 # Usage Examples
 
-To use the `CodeChunker` class:
-
 ```python
+from pathlib import Path
 from local_deepwiki.core.chunker import CodeChunker
-from local_deepwiki.models import Language
 
-chunker = CodeChunker(language=Language.PYTHON)
-chunks = chunker.chunk(Path("example.py"), "def hello():\n    print('Hello')")
-for chunk in chunks:
-    print(chunk)
+chunker = CodeChunker()
+file_path = Path("example.py")
+for chunk in chunker.chunk_file(file_path):
+    print(chunk.content)
 ```
 
 # Related Components
 
 This file works with the following components:
 
-- [`CodeParser`](parser.md) from `local_deepwiki.core.parser`: Used for parsing source code into an Abstract Syntax Tree (AST).
-- [`ChunkingConfig`](../config.md) from `local_deepwiki.config`: Provides configuration options for chunking behavior.
-- [`get_config`](../config.md) from `local_deepwiki.config`: Retrieves the default chunking configuration.
-- [`get_node_text`](parser.md), [`get_node_name`](parser.md), [`get_docstring`](parser.md), [`find_nodes_by_type`](parser.md) from `local_deepwiki.core.parser`: Helper functions for extracting information from parsed nodes.
-- [`CodeChunk`](../models.md), [`ChunkType`](../models.md), [`Language`](../models.md) from `local_deepwiki.models`: Data models representing chunks of code and their metadata.
+- [`CodeParser`](parser.md) from `local_deepwiki.core.parser` - Used for parsing code files
+- [`ChunkingConfig`](../config.md) from `local_deepwiki.config` - Configuration settings for chunking behavior
+- `CodeChunk` from `local_deepwiki.models` - Data model representing a code chunk
+- [`get_node_text`](parser.md), [`get_node_name`](parser.md), [`get_docstring`](parser.md), [`find_nodes_by_type`](parser.md) from `local_deepwiki.core.parser` - Helper functions for extracting information from tree-sitter nodes
 
 ## API Reference
 
@@ -100,7 +96,7 @@ Extract parent class names from a class definition.
 |-----------|------|---------|-------------|
 | `class_node` | `Node` | - | The class AST node. |
 | `source` | `bytes` | - | Source bytes. |
-| `language` | [`Language`](../models.md) | - | Programming language. |
+| `language` | `Language` | - | Programming language. |
 
 **Returns:** `list[str]`
 
@@ -214,12 +210,11 @@ flowchart TD
 
 ## Relevant Source Files
 
-- `src/local_deepwiki/core/chunker.py`
+- `src/local_deepwiki/core/chunker.py:121-509`
 
 ## See Also
 
 - [api_docs](../generators/api_docs.md) - uses this
-- [test_chunker](../../../tests/test_chunker.md) - uses this
-- [models](../models.md) - dependency
 - [config](../config.md) - dependency
 - [parser](parser.md) - dependency
+- [wiki](../generators/wiki.md) - shares 5 dependencies

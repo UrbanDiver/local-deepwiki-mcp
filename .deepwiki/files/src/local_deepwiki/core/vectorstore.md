@@ -1,59 +1,99 @@
 # File Overview
 
-This file defines the `VectorStore` class, which provides functionality for managing vector embeddings using LanceDB. It supports operations like adding, searching, and deleting code chunks in a vector database, and integrates with embedding providers to generate vector representations of code content.
+This file defines the `VectorStore` class, which provides an interface for managing vector embeddings using LanceDB. It supports operations like adding code chunks, searching for similar code chunks, and managing the underlying vector database.
 
 # Classes
 
 ## VectorStore
 
-The VectorStore class manages vector embeddings using LanceDB, enabling storage and retrieval of code chunks as vectors.
+The VectorStore class provides methods to interact with a LanceDB database for storing and retrieving vector embeddings of code chunks.
 
-### Key Methods
+### Methods
 
-- `__init__(self, db_path: str, embedding_provider: EmbeddingProvider)`: Initializes the VectorStore with a database path and an embedding provider.
-- `add_code_chunks(self, code_chunks: list[CodeChunk])`: Adds a list of code chunks to the vector store.
-- `search(self, query: str, limit: int = 10) -> list[SearchResult]`: Searches for code chunks similar to the given query string.
-- `delete(self, ids: list[str])`: Deletes code chunks identified by their IDs from the vector store.
-- `get_all_chunks(self) -> list[CodeChunk]`: Retrieves all code chunks from the vector store.
-- `close(self)`: Closes the connection to the database.
+#### `__init__(self, db_path: str, embedding_provider: EmbeddingProvider)`
+Initializes the VectorStore with a database path and an embedding provider.
 
-### Usage Example
+- **Parameters**:
+  - `db_path` (str): Path to the LanceDB database.
+  - `embedding_provider` (EmbeddingProvider): Provider used to generate embeddings.
 
-```python
-from local_deepwiki.core.vectorstore import VectorStore
-from local_deepwiki.providers.openai import OpenAIEmbeddingProvider
+#### `add_chunk(self, chunk: CodeChunk) -> None`
+Adds a single code chunk to the vector store.
 
-# Initialize embedding provider and vector store
-embedding_provider = OpenAIEmbeddingProvider(api_key="your-api-key")
-vector_store = VectorStore(db_path="vector_db", embedding_provider=embedding_provider)
+- **Parameters**:
+  - `chunk` (CodeChunk): The code chunk to add.
 
-# Add code chunks
-code_chunks = [CodeChunk(id="1", content="def hello():\n    return 'world'", path="example.py")]
-vector_store.add_code_chunks(code_chunks)
+#### `add_chunks(self, chunks: list[CodeChunk]) -> None`
+Adds multiple code chunks to the vector store.
 
-# Search for similar code
-results = vector_store.search("hello function", limit=5)
-for result in results:
-    print(result.chunk.path, result.score)
+- **Parameters**:
+  - `chunks` (list[CodeChunk]): List of code chunks to add.
 
-# Close the vector store
-vector_store.close()
-```
+#### `search(self, query: str, limit: int = 10) -> list[SearchResult]`
+Searches for code chunks similar to the given query.
+
+- **Parameters**:
+  - `query` (str): Query string to search for.
+  - `limit` (int): Maximum number of results to return (default: 10).
+
+- **Returns**:
+  - `list[SearchResult]`: List of search results.
+
+#### `get_table(self) -> Table`
+Retrieves the LanceDB table used for storing vectors.
+
+- **Returns**:
+  - `Table`: The LanceDB table instance.
+
+#### `save(self) -> None`
+Saves the current state of the vector store.
+
+- **Returns**:
+  - `None`
+
+#### `load(self) -> None`
+Loads the vector store from disk.
+
+- **Returns**:
+  - `None`
 
 # Functions
 
 No standalone functions are defined in this file.
 
+# Usage Examples
+
+```python
+from local_deepwiki.core.vectorstore import VectorStore
+from local_deepwiki.providers.openai import OpenAIEmbeddingProvider
+from local_deepwiki.models import CodeChunk
+
+# Initialize the vector store
+embedding_provider = OpenAIEmbeddingProvider(api_key="your-api-key")
+vector_store = VectorStore(db_path="./vector_db", embedding_provider=embedding_provider)
+
+# Add a code chunk
+chunk = CodeChunk(
+    id="chunk-1",
+    content="def hello_world():\n    print('Hello, World!')",
+    file_path="example.py",
+    start_line=1,
+    end_line=3
+)
+vector_store.add_chunk(chunk)
+
+# Search for similar code
+results = vector_store.search("print function", limit=5)
+for result in results:
+    print(result.chunk.content)
+```
+
 # Related Components
 
-- [`CodeChunk`](../models.md): Represents a code chunk with ID, content, and path.
-- [`SearchResult`](../models.md): Represents a search result with a code chunk and its similarity score.
-- `EmbeddingProvider`: Base class for embedding providers used to generate vector representations of code.
-- `lancedb`: Used for database operations.
-- `Table`: Represents a table in LanceDB, used for storing and retrieving vectors.
-- `Path`: Used for handling file paths.
-- `json`: Used for JSON serialization/deserialization.
-- `Any`: Used for type hints.
+- `CodeChunk`: Represents a code chunk with metadata.
+- `SearchResult`: Represents a search result with a code chunk and similarity score.
+- `EmbeddingProvider`: Base class for embedding providers used to generate vector embeddings.
+- `lancedb.table.Table`: LanceDB table used for vector storage and retrieval.
 
 ## API Reference
 
@@ -275,10 +315,9 @@ flowchart TD
 
 ## Relevant Source Files
 
-- `src/local_deepwiki/core/vectorstore.py`
+- `src/local_deepwiki/core/vectorstore.py:14-326`
 
 ## See Also
 
-- [server](../server.md) - uses this
 - [wiki](../generators/wiki.md) - uses this
-- [models](../models.md) - dependency
+- [server](../server.md) - uses this
