@@ -2,74 +2,103 @@
 
 ## External Dependencies
 
-### Core Libraries
-- `yaml` - For YAML configuration parsing
-- `pydantic` - For configuration and data model validation
-- `tree_sitter` - For code parsing and AST traversal
-- `sentence_transformers` - For local embedding generation
-- `openai` - For OpenAI API integration
-- `ollama` - For Ollama LLM integration
-- `anthropic` - For Anthropic Claude API integration
-- `lancedb` - For vector database operations
-- `pytest` - For testing framework (development dependency)
+The project relies on several third-party libraries for core functionality:
 
-### Language Parsers
-- `tree_sitter_python`
-- `tree_sitter_javascript`
-- `tree_sitter_typescript`
-- `tree_sitter_go`
-- `tree_sitter_rust`
-- `tree_sitter_java`
-- `tree_sitter_c`
-- `tree_sitter_cpp`
-- `tree_sitter_swift`
+- **tree-sitter** - A parsing library used for parsing code into structured syntax trees, enabling semantic analysis of source code.
+- **sentence-transformers** - Used for generating embeddings from text using pre-trained models.
+- **openai** - Provides access to OpenAI's API for generating embeddings via the OpenAIEmbeddingProvider.
+- **pydantic** - Used for data validation and settings management, particularly in configuration handling.
+- **yaml** - For parsing YAML configuration files.
+- **lancedb** - A vector database used for storing and querying embeddings.
+- **pytest** - Testing framework used for unit and integration tests.
+- **pathlib** - Standard library for handling filesystem paths.
+- **re** - Standard library for regular expressions.
+- **os** - Standard library for interacting with the operating system.
+- **dataclasses** - Standard library for creating data classes.
+- **collections.abc** - Standard library for abstract base classes.
+- **typing** - Standard library for type hints.
 
 ## Internal Module Dependencies
 
-### Core Modules
-- `local_deepwiki.config` - Configuration management
-- `local_deepwiki.models` - Data models and enums
-- `local_deepwiki.core.chunker` - Code chunking functionality
-- `local_deepwiki.core.parser` - Code parsing utilities
-- `local_deepwiki.core.vectorstore` - Vector database operations
+The internal modules are organized in a layered structure with clear dependencies:
 
-### Providers
-- `local_deepwiki.providers.base` - Abstract provider interfaces
-- `local_deepwiki.providers.embeddings` - Embedding provider implementations
-- `local_deepwiki.providers.llm` - LLM provider implementations
+### Core Modules
+- **[CodeChunker](files/src/local_deepwiki/core/chunker.md)** in `core.chunker` depends on:
+  - `parser` for parsing code and extracting nodes
+  - `config` for chunking configuration
+  - `models` for [`CodeChunk`](files/src/local_deepwiki/models.md), [`ChunkType`](files/src/local_deepwiki/models.md), and [`Language`](files/src/local_deepwiki/models.md) models
+
+- **[CodeParser](files/src/local_deepwiki/core/parser.md)** in `core.parser` depends on:
+  - `models` for [`Language`](files/src/local_deepwiki/models.md) and [`FileInfo`](files/src/local_deepwiki/models.md) models
+  - Tree-sitter language parsers for different programming languages
+
+- **[VectorStore](files/src/local_deepwiki/core/vectorstore.md)** in `core.vectorstore` depends on:
+  - `models` for [`CodeChunk`](files/src/local_deepwiki/models.md) and [`SearchResult`](files/src/local_deepwiki/models.md) models
+  - `providers.base` for `EmbeddingProvider` interface
+  - `lancedb` for vector database operations
 
 ### Generators
-- `local_deepwiki.generators.crosslinks` - Cross-link generation
-- `local_deepwiki.generators.diagrams` - Diagram generation
-- `local_deepwiki.generators.see_also` - "See also" section generation
-- `local_deepwiki.generators.search` - Search functionality
+- **[CrossLinker](files/src/local_deepwiki/generators/crosslinks.md)** in `generators.crosslinks` depends on:
+  - `models` for [`ChunkType`](files/src/local_deepwiki/models.md), [`CodeChunk`](files/src/local_deepwiki/models.md), and [`WikiPage`](files/src/local_deepwiki/models.md)
+  - `core.chunker` for chunking logic
 
-## Notable Dependency Patterns
+- **SeeAlsoGenerator** in `generators.see_also` depends on:
+  - `models` for [`ChunkType`](files/src/local_deepwiki/models.md), [`CodeChunk`](files/src/local_deepwiki/models.md), and [`WikiPage`](files/src/local_deepwiki/models.md)
+  - `core.chunker` for chunking logic
 
-### Configuration Management
-- Uses `pydantic` BaseModel for structured configuration
-- Centralized configuration via `get_config()` function
-- Configurable embedding and chunking parameters
+- **CallGraphGenerator** in `generators.callgraph` depends on:
+  - `core.parser` for parsing code and extracting nodes
+  - `core.chunker` for node type definitions
+
+- **APIDocsGenerator** in `generators.api_docs` depends on:
+  - `core.parser` for parsing code and extracting nodes
+  - `core.chunker` for node type definitions
+
+### Providers
+- **EmbeddingProvider** in `providers.base` is an abstract base class used by:
+  - `providers.embeddings.local` for local embeddings
+  - `providers.embeddings.openai` for OpenAI embeddings
+
+- **LocalEmbeddingProvider** in `providers.embeddings.local` depends on:
+  - `sentence_transformers` for embedding generation
+  - `providers.base` for `EmbeddingProvider` interface
+
+- **OpenAIEmbeddingProvider** in `providers.embeddings.openai` depends on:
+  - `openai` for API access
+  - `providers.base` for `EmbeddingProvider` interface
+
+### Configuration
+- **[Config](files/src/local_deepwiki/config.md)** in `config` depends on:
+  - `pydantic` for model validation
+  - `yaml` for parsing configuration files
+  - `pathlib` for path handling
+
+## Dependency Patterns
 
 ### Provider Pattern
-- Abstract base classes (`EmbeddingProvider`, `LLMProvider`) with concrete implementations
-- Dependency injection through provider factories
-- Support for multiple embedding backends (local, OpenAI)
+The project implements a provider pattern for embedding generation:
 
-### Code Parsing
-- Dynamic language support via tree-sitter language parsers
-- Language-specific parsing with unified interface
-- AST-based code analysis and chunking
+- The `EmbeddingProvider` base class defines the interface for embedding generation.
+- Concrete implementations like `LocalEmbeddingProvider` and `OpenAIEmbeddingProvider` implement this interface.
+- The `EmbeddingProvider` is injected into [`VectorStore`](files/src/local_deepwiki/core/vectorstore.md) to enable flexible embedding generation strategies.
 
-### Data Flow
-- Data models defined in `models.py` used across modules
-- Chunking → Parsing → Embedding → Vector Store pipeline
-- Cross-module data sharing through shared models and configuration
+### Dependency Injection
+Several classes use dependency injection for flexibility:
 
-### Testing
-- Test modules follow same import patterns as source modules
-- Comprehensive test coverage of core functionality
-- Integration testing with actual providers and parsers
+- [`VectorStore`](files/src/local_deepwiki/core/vectorstore.md) receives an `EmbeddingProvider` instance during initialization
+- [`CodeChunker`](files/src/local_deepwiki/core/chunker.md) uses configuration from `get_config()` for chunking behavior
+- [`CrossLinker`](files/src/local_deepwiki/generators/crosslinks.md) and other generators use models and chunking logic from core modules
+
+### Layered Architecture
+The architecture follows a layered approach:
+
+1. **Core Layer** (`core.chunker`, `core.parser`) - Provides parsing and chunking functionality
+2. **Models Layer** (`models`) - Defines data structures and enums used across the system
+3. **Generators Layer** (`generators`) - Uses core modules to generate documentation and cross-links
+4. **Providers Layer** (`providers`) - Handles external integrations like embeddings and LLMs
+5. **Configuration Layer** (`config`) - Manages system-wide settings and configurations
+
+This layered approach ensures that higher-level modules depend only on abstractions defined in lower-level modules, promoting loose coupling and testability.
 
 ## Module Dependency Graph
 
@@ -82,49 +111,61 @@ flowchart TD
     M2[indexer]
     M3[parser]
     M4[vectorstore]
-    M5[crosslinks]
-    M6[diagrams]
-    M7[search]
-    M8[see_also]
-    M9[models]
-    M10[base]
-    M11[local]
-    M12[openai]
-    M13[anthropic]
-    M14[ollama]
-    M15[openai]
-    M16[test_chunker]
-    M17[test_config]
-    M18[test_crosslinks]
-    M19[test_parser]
-    M20[test_see_also]
+    M5[api_docs]
+    M6[callgraph]
+    M7[crosslinks]
+    M8[diagrams]
+    M9[search]
+    M10[see_also]
+    M11[models]
+    M12[base]
+    M13[local]
+    M14[openai]
+    M15[anthropic]
+    M16[ollama]
+    M17[openai]
+    M18[test_api_docs]
+    M19[test_chunker]
+    M20[test_config]
+    M21[test_crosslinks]
+    M22[test_parser]
+    M23[test_see_also]
     M1 --> M0
     M1 --> M3
-    M1 --> M9
+    M1 --> M11
     M2 --> M0
     M2 --> M1
     M2 --> M3
     M2 --> M4
-    M2 --> M9
-    M3 --> M9
-    M4 --> M9
-    M4 --> M10
-    M5 --> M9
-    M6 --> M9
-    M7 --> M9
-    M8 --> M9
-    M11 --> M10
-    M12 --> M10
-    M13 --> M10
-    M14 --> M10
-    M15 --> M10
-    M16 --> M1
-    M16 --> M9
-    M17 --> M0
+    M2 --> M11
+    M3 --> M11
+    M4 --> M11
+    M4 --> M12
+    M5 --> M1
+    M5 --> M3
+    M5 --> M11
+    M6 --> M1
+    M6 --> M3
+    M6 --> M11
+    M7 --> M11
+    M8 --> M11
+    M9 --> M11
+    M10 --> M11
+    M13 --> M12
+    M14 --> M12
+    M15 --> M12
+    M16 --> M12
+    M17 --> M12
+    M18 --> M3
     M18 --> M5
-    M18 --> M9
-    M19 --> M3
-    M19 --> M9
-    M20 --> M8
-    M20 --> M9
+    M18 --> M11
+    M19 --> M1
+    M19 --> M11
+    M20 --> M0
+    M21 --> M7
+    M21 --> M11
+    M22 --> M3
+    M22 --> M11
+    M23 --> M10
+    M23 --> M11
 ```

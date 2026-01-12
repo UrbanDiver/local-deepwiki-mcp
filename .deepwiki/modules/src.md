@@ -1,94 +1,158 @@
-# Module: `src.local_deepwiki`
+# `src` Module Documentation
 
-## Purpose and Responsibilities
+## Module Purpose and Responsibilities
 
-The `src.local_deepwiki` module is a core component for generating and managing local documentation for codebases. It provides tools to parse source code, extract semantic information, and generate structured documentation in various formats such as wikis, diagrams, and cross-referenced pages.
+The `src` module is a core component of the Local DeepWiki system, responsible for processing, analyzing, and generating documentation from source code. It provides tools for parsing code into structured chunks, creating vector representations for semantic search, and generating documentation artifacts such as wikis, diagrams, and cross-links.
 
-This module supports:
-- Parsing Python files into Abstract Syntax Tree (AST) nodes.
-- Chunking code into semantic units for indexing and embedding.
-- Generating Mermaid architecture diagrams from code chunks.
-- Creating cross-linked wiki documentation with module-level and file-level organization.
-- Integrating with embedding and language model providers for advanced documentation generation.
+This module supports both local development workflows and integration with large language models (LLMs) for intelligent code documentation generation.
+
+---
 
 ## Key Classes and Functions
 
-### `CodeChunker` class
-Handles breaking down source code into semantic chunks for indexing and embedding. It uses AST parsing to identify code structures and generates `CodeChunk` objects that represent logical units of code.
-
-### `CodeParser` class
-Responsible for parsing source code files into AST nodes using Tree-sitter. It supports multiple programming languages and is used by the `CodeChunker` to extract meaningful code segments.
-
-### `VectorStore` class
-Manages storage and retrieval of code embeddings. It stores semantic representations of code chunks and allows for similarity search to find related code sections.
-
-### `WikiGenerator` class
-Generates structured wiki documentation from code chunks. It creates index pages, module documentation, and cross-links between related code elements.
-
-### `CodeChunk` class
-Represents a semantic unit of code, including metadata such as file path, source code, and language. It's used throughout the documentation pipeline to organize and process code.
-
-### `generate_architecture_diagram` function
-Takes a list of `CodeChunk` objects and generates a Mermaid architecture diagram showing relationships between modules and files.
-
-### `_path_to_module` function
-Converts a file path to a Python module name (e.g., `src/local_deepwiki/core/indexer.py` → `core.indexer`).
-
-### `_module_matches_file` function
-Checks whether a module name refers to a specific file path.
-
-## How Components Interact
-
-The workflow starts with `CodeParser` parsing source files into AST nodes. These are then processed by `CodeChunker` to create `CodeChunk` objects. The chunks are stored in a `VectorStore` for semantic search capabilities. `WikiGenerator` uses these chunks to build wiki documentation with cross-links and index pages. The `generate_architecture_diagram` function visualizes module relationships based on the chunks.
-
-The `WikiGenerator` interacts with `CrossLinker` to resolve relative paths between documentation pages and with `VectorStore` to find related code chunks for cross-referencing.
-
-## Usage Examples
-
-### Generating a Mermaid Diagram
-
-```python
-from local_deepwiki.generators.diagrams import generate_architecture_diagram
-from local_deepwiki.models import CodeChunk
-
-chunks = [CodeChunk(...)]  # List of code chunks
-diagram = generate_architecture_diagram(chunks)
-print(diagram)
-```
-
-### Creating a Wiki Page
+### `WikiGenerator`
+Handles the generation of a structured wiki from source code files. It manages:
+- Parsing files into chunks
+- Generating module-level documentation
+- Creating cross-links between related code elements
+- Producing Mermaid architecture diagrams
 
 ```python
 from local_deepwiki.generators.wiki import WikiGenerator
-from local_deepwiki.models import CodeChunk
 
 generator = WikiGenerator()
-chunks = [CodeChunk(...)]
-wiki_page = generator.generate_module_page(chunks)
 ```
 
-### Parsing a File
+### `VectorStore`
+Manages vector embeddings of code chunks for semantic search and retrieval. It supports:
+- Storing and retrieving code vectors
+- Searching similar code chunks using embeddings
+
+```python
+from local_deepwiki.core.vectorstore import VectorStore
+
+vector_store = VectorStore()
+```
+
+### `CodeChunker`
+Breaks down source code into logical chunks based on AST structure. It supports:
+- Creating file-level overview chunks
+- Chunking code by function, class, or other AST nodes
+
+```python
+from local_deepwiki.core.chunker import CodeChunker
+
+chunker = CodeChunker()
+```
+
+### `CodeParser`
+Parses source code into an Abstract Syntax Tree (AST) for semantic analysis.
 
 ```python
 from local_deepwiki.core.parser import CodeParser
 
 parser = CodeParser()
-ast_root = parser.parse_file("src/local_deepwiki/core/indexer.py")
 ```
+
+### `EmbeddingProvider`
+Interface for providing vector embeddings for code. Used by [`VectorStore`](../files/src/local_deepwiki/core/vectorstore.md).
+
+```python
+from local_deepwiki.providers.base import EmbeddingProvider
+```
+
+### `LLMProvider`
+Interface for interacting with large language models to generate natural language documentation or summaries.
+
+```python
+from local_deepwiki.providers.base import LLMProvider
+```
+
+### `generate_architecture_diagram`
+Generates a Mermaid diagram visualizing the architecture of code modules.
+
+```python
+from local_deepwiki.generators.diagrams import generate_architecture_diagram
+```
+
+---
+
+## How Components Interact
+
+The `src` module works through a series of interconnected steps:
+
+1. **Parsing**: [`CodeParser`](../files/src/local_deepwiki/core/parser.md) takes source files and creates ASTs.
+2. **Chunking**: [`CodeChunker`](../files/src/local_deepwiki/core/chunker.md) breaks ASTs into logical chunks.
+3. **Vectorization**: [`VectorStore`](../files/src/local_deepwiki/core/vectorstore.md) creates embeddings for each chunk.
+4. **Documentation Generation**:
+   - [`WikiGenerator`](../files/src/local_deepwiki/generators/wiki.md) uses chunks to build documentation pages.
+   - `generate_architecture_diagram` visualizes module relationships.
+5. **Cross-linking**: [`CrossLinker`](../files/src/local_deepwiki/generators/crosslinks.md) adds links between related documentation pages.
+
+These components work together with external providers like `LLMProvider` and `EmbeddingProvider` to support advanced features like intelligent search and LLM-powered summarization.
+
+---
+
+## Usage Examples
+
+### Index a Repository and Generate Wiki
+
+```python
+import asyncio
+from pathlib import Path
+from local_deepwiki.core.indexer import RepositoryIndexer
+
+async def main():
+    repo = Path("/path/to/repo")
+    indexer = RepositoryIndexer(repo)
+
+    # Index and generate wiki
+    status = await indexer.index(full_rebuild=True)
+    print(f"Indexed {status.total_files} files")
+
+asyncio.run(main())
+```
+
+### Search the Codebase
+
+```python
+from local_deepwiki.core.vectorstore import VectorStore
+from local_deepwiki.providers.embeddings import get_embedding_provider
+
+embedding_provider = get_embedding_provider()
+vector_store = VectorStore(wiki_path, embedding_provider)
+
+# Semantic search
+results = await vector_store.search("authentication logic", limit=5)
+for result in results:
+    print(f"{result.chunk.file_path}: {result.chunk.name}")
+```
+
+### Generate Architecture Diagram
+
+```python
+from local_deepwiki.generators.diagrams import generate_architecture_diagram
+
+chunks = [...]  # List of CodeChunk objects
+diagram = generate_architecture_diagram(chunks)
+print(diagram)  # Mermaid diagram string
+```
+
+---
 
 ## Dependencies
 
 This module depends on:
-- `tree_sitter` for AST parsing
-- `pathlib` for path manipulation
-- `local_deepwiki.core.chunker` for chunking logic
-- `local_deepwiki.core.parser` for parsing logic
-- `local_deepwiki.models` for data models
-- `local_deepwiki.generators.crosslinks` for cross-linking
-- `local_deepwiki.generators.wiki` for wiki generation
-- `local_deepwiki.providers` for embedding and LLM providers
 
-It also integrates with:
-- `local_deepwiki.core.vectorstore` for semantic search
-- `local_deepwiki.generators.diagrams` for diagram generation
-- `local_deepwiki.generators.see_also` for related content discovery
+- `pathlib` – For path manipulation.
+- `typing` – For type hints.
+- `local_deepwiki.providers.base` – For embedding and LLM provider interfaces.
+- `local_deepwiki.core.parser` – For AST parsing.
+- `local_deepwiki.core.chunker` – For breaking code into chunks.
+- `local_deepwiki.generators.wiki` – For wiki generation.
+- `local_deepwiki.generators.diagrams` – For Mermaid diagram generation.
+
+It also integrates with external libraries like:
+- `anthropic` – For Anthropic LLM support.
+- `lancedb` – For vector store implementation.
+- `tree-sitter` – For code parsing (via [`CodeParser`](../files/src/local_deepwiki/core/parser.md)).

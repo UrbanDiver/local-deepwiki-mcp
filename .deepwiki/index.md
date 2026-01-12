@@ -1,114 +1,131 @@
 # Local DeepWiki MCP
 
-A local implementation of the DeepWiki Multi-Client Protocol (MCP) for building and managing local knowledge bases with multi-client support and semantic search capabilities.
+A local, privacy-focused MCP server that generates DeepWiki-style documentation for private repositories with RAG-based Q&A capabilities.
 
 ## Description
 
-Local DeepWiki MCP provides a self-hosted solution for creating and managing local knowledge bases with support for multiple client connections. It implements the DeepWiki protocol to enable semantic search, knowledge graph construction, and multi-client collaboration in a local environment.
+Local DeepWiki MCP automatically generates comprehensive wiki documentation for codebases by parsing source files with tree-sitter, extracting semantic code chunks, generating embeddings for vector search, and using LLMs to create human-readable documentation. All processing happens locally for privacy.
 
 ## Key Features
 
-- **Multi-Client Support**: Handle multiple concurrent client connections with isolated knowledge contexts
-- **Semantic Search**: Advanced search capabilities with vector embeddings and semantic similarity
-- **Knowledge Graph Construction**: Build and maintain interconnected knowledge structures
-- **Local Storage**: All data stored locally without external dependencies
-- **Protocol Compliance**: Implements the DeepWiki Multi-Client Protocol for interoperability
-- **Modular Architecture**: Clean separation of concerns for easy extension and maintenance
+- **Automatic Wiki Generation**: Creates module docs, file docs, architecture diagrams, and dependency graphs
+- **RAG-based Q&A**: Ask natural language questions about your codebase with semantic search
+- **Multi-Language Support**: Python, TypeScript, JavaScript, Go, Rust, Java, C, C++, Swift
+- **Incremental Updates**: Only regenerates documentation for changed files
+- **Cross-linking**: Automatic linking between related classes, functions, and modules
+- **Web UI**: Flask-based interface for browsing generated documentation
+- **Local & Private**: All processing runs locally - no code leaves your machine
 
 ## Technology Stack
 
-- **Core Language**: Python 3.8+
-- **Web Framework**: FastAPI for REST API endpoints
-- **Database**: SQLite with SQLAlchemy ORM
-- **Vector Storage**: ChromaDB for vector embeddings
-- **Search**: Semantic search with embedding models
-- **Authentication**: JWT-based authentication system
-- **Documentation**: Markdown-based documentation generation
+- **Python 3.11+** with FastMCP for MCP server implementation
+- **Tree-sitter**: Multi-language AST parsing for accurate code understanding
+- **LanceDB**: Embedded vector database for semantic search
+- **sentence-transformers**: Local embeddings with all-MiniLM-L6-v2
+- **Ollama/Anthropic/OpenAI**: Configurable LLM providers for documentation generation
+- **Flask**: Web UI for browsing generated wiki
+- **Pydantic**: Data validation and models
 
 ## Directory Structure
 
 ```
 local-deepwiki-mcp/
-├── app/                    # Main application modules
-│   ├── core/             # Core functionality and business logic
-│   ├── models/           # Data models and database schemas
-│   ├── services/         # Service layer for business operations
-│   ├── api/              # API endpoints and routing
-│   └── utils/            # Utility functions and helpers
-├── data/                 # Local data storage and configuration
-├── tests/                # Test suite
-├── docs/                 # Documentation files
-├── config/               # Configuration files
-├── migrations/           # Database migration scripts
-└── requirements.txt      # Python dependencies
+├── src/local_deepwiki/
+│   ├── core/              # Core indexing components
+│   │   ├── parser.py      # Tree-sitter multi-language parser
+│   │   ├── chunker.py     # AST-based code chunking
+│   │   ├── vectorstore.py # LanceDB vector storage
+│   │   └── indexer.py     # Indexing orchestration
+│   ├── generators/        # Documentation generators
+│   │   ├── wiki.py        # LLM-powered wiki generation
+│   │   ├── crosslinks.py  # Cross-reference linking
+│   │   └── api_docs.py    # API reference generation
+│   ├── providers/         # LLM and embedding providers
+│   ├── web/               # Flask web UI
+│   ├── server.py          # MCP server entry point
+│   ├── config.py          # Configuration management
+│   └── models.py          # Pydantic data models
+└── tests/                 # Test suite
 ```
 
 ## Quick Start Guide
 
-### Prerequisites
-
-- Python 3.8 or higher
-- pip package manager
-
 ### Installation
 
 ```bash
-# Clone the repository
-git clone https://github.com/your-username/local-deepwiki-mcp.git
+# Clone and install
+git clone https://github.com/your-repo/local-deepwiki-mcp.git
 cd local-deepwiki-mcp
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
+uv sync
 ```
 
-### Running the Application
+### MCP Tools
+
+The server exposes 5 MCP tools:
+
+- **index_repository**: Parse files, generate embeddings, create wiki documentation
+- **ask_question**: RAG Q&A about the codebase
+- **read_wiki_structure**: Get wiki table of contents
+- **read_wiki_page**: Read specific wiki page
+- **search_code**: Semantic code search
+
+### Basic Usage
+
+```python
+import asyncio
+from pathlib import Path
+from local_deepwiki.core.indexer import RepositoryIndexer
+
+async def main():
+    repo = Path("/path/to/repo")
+    indexer = RepositoryIndexer(repo)
+
+    # Index repository and generate wiki
+    status = await indexer.index(full_rebuild=True)
+    print(f"Indexed {status.total_files} files, {status.total_chunks} chunks")
+
+    # Search the codebase
+    results = await indexer.search("authentication logic", limit=5)
+    for r in results:
+        print(f"{r['file_path']}: {r['name']}")
+
+asyncio.run(main())
+```
+
+### Web UI
 
 ```bash
-# Start the application
-python main.py
-
-# Or run with specific configuration
-python main.py --config config/local.json
+# Serve the generated wiki
+uv run deepwiki-serve .deepwiki --port 8080
 ```
-
-### API Endpoints
-
-The API is available at `http://localhost:8000` with the following endpoints:
-
-- `POST /clients` - Register new client
-- `POST /knowledge` - Add knowledge to knowledge base
-- `POST /search` - Perform semantic search
-- `GET /status` - Get system status
 
 ### Configuration
 
-Create a configuration file in `config/local.json`:
+Config file: `~/.config/local-deepwiki/config.yaml`
 
-```json
-{
-    "database": {
-        "path": "data/local.db"
-    },
-    "embedding": {
-        "model": "all-MiniLM-L6-v2"
-    },
-    "server": {
-        "host": "0.0.0.0",
-        "port": 8000
-    }
-}
+```yaml
+llm:
+  provider: ollama  # or anthropic, openai
+  ollama:
+    model: qwen3-coder:30b
+    base_url: http://localhost:11434
+
+embedding:
+  provider: local  # or openai
+  local:
+    model: all-MiniLM-L6-v2
 ```
 
-### Testing
+## Generated Wiki Structure
 
-Run the test suite:
+- **Overview** (`index.md`) - Project summary and quick start
+- **Architecture** (`architecture.md`) - System design with mermaid diagrams
+- **Dependencies** (`dependencies.md`) - External and internal dependencies
+- **Modules** (`modules/`) - Documentation per top-level directory
+- **Files** (`files/`) - Individual file documentation with API references
 
-```bash
-python -m pytest tests/
-```
+## See Also
 
-For detailed documentation and usage examples, refer to the documentation in the docs/ directory.
+- [System Architecture](architecture.md) - Detailed architecture documentation
+- [Dependencies](dependencies.md) - Dependency analysis
+- [Source Files](files/index.md) - File-level documentation

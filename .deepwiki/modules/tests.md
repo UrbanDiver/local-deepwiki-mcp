@@ -2,51 +2,64 @@
 
 ## Module Purpose and Responsibilities
 
-The tests module contains all unit and integration tests for the local_deepwiki package. It ensures that core functionality works correctly and helps maintain code quality by validating behavior across different components like parsing, chunking, cross-linking, configuration, and web application features.
+The tests module contains comprehensive test suites for the local_deepwiki package. It ensures the correctness and reliability of core components including code parsing, chunking, search functionality, incremental wiki generation, cross-linking, and file watching capabilities.
 
 ## Key Classes and Functions
 
 ### TestCodeParser
-The TestCodeParser class tests the CodeParser class which handles parsing code files and detecting programming languages. It verifies that the parser correctly identifies Python files and extracts language information from file paths.
-
-### TestNodeHelpers
-The TestNodeHelpers class tests helper functions for working with parsed code nodes. It ensures that text can be correctly extracted from parsed code nodes and that node names are properly retrieved.
+Tests the [CodeParser](../files/src/local_deepwiki/core/parser.md) class which handles language detection and code parsing for various file types. The test suite verifies that Python files are correctly identified and processed.
 
 ### TestEntityRegistry
-The TestEntityRegistry class tests the entity registration functionality, which manages how code entities (functions, classes, etc.) are registered and looked up for cross-linking. It includes tests for registering entities with aliases, skipping short/private/excluded names, and handling camelCase aliases.
+Tests the [EntityRegistry](../files/src/local_deepwiki/generators/crosslinks.md) class that manages entity registration and lookup for cross-linking functionality. Tests include:
+- Registering entities with proper naming conventions
+- Skipping short, private, and excluded names
+- Registering from chunks and retrieving page entities
+- Handling camelCase aliases and alias lookups
 
 ### TestCrossLinker
-The TestCrossLinker class tests the cross-linking functionality that adds links between related entities in documentation. It ensures proper linking behavior in prose, code blocks, and various naming scenarios, including qualified names, bold text, and existing links.
+Tests the [CrossLinker](../files/src/local_deepwiki/generators/crosslinks.md) class responsible for creating cross-references between wiki pages. Tests cover:
+- Adding links to prose text while avoiding code blocks
+- Preventing self-linking and handling relative paths
+- Linking backticked entities and qualified names
+- Preserving existing links and handling bold text
+- Managing spaced aliases and qualified names
+
+### TestWatchedExtensions
+Validates that the [RepositoryWatcher](../files/src/local_deepwiki/watcher.md) correctly identifies and watches files with specific extensions. Tests verify that Python (.py, .pyi) and JavaScript/TypeScript (.js, .ts) extensions are included in the watched extensions list.
+
+### TestDebouncedHandler
+Tests the [DebouncedHandler](../files/src/local_deepwiki/watcher.md) class which manages file system events with debouncing to prevent excessive processing. The test suite covers event handling and Python file watching behavior.
+
+### TestRepositoryWatcher
+Tests the [RepositoryWatcher](../files/src/local_deepwiki/watcher.md) class that monitors repository changes and triggers wiki regeneration when necessary.
+
+### TestWikiGeneratorHelpers
+Tests helper methods for the [WikiGenerator](../files/src/local_deepwiki/generators/wiki.md) class including:
+- Content hash computation
+- Regeneration logic for different scenarios (no previous status, changed sources, etc.)
+- Page status recording and retrieval
+
+### TestAPIDocExtractor
+Tests the [APIDocExtractor](../files/src/local_deepwiki/generators/api_docs.md) class which extracts API documentation from source code files. The test suite verifies extraction from Python files with docstrings and type annotations.
 
 ### TestRelationshipAnalyzer
-The TestRelationshipAnalyzer class tests the relationship analysis functionality that determines how files relate to each other in the documentation. It ensures that relationships between files are correctly identified and analyzed.
+Tests the [RelationshipAnalyzer](../files/src/local_deepwiki/generators/see_also.md) class that determines relationships between files for see-also section generation.
 
 ### TestBuildFileToWikiMap
-The TestBuildFileToWikiMap class tests the functionality that maps file paths to wiki pages, which is essential for organizing documentation content.
+Tests the [build_file_to_wiki_map](../files/src/local_deepwiki/generators/see_also.md) function that creates mappings between source files and wiki pages.
 
 ### TestGenerateSeeAlsoSection
-The TestGenerateSeeAlsoSection class tests the generation of "See Also" sections that link to related documentation.
+Tests the [generate_see_also_section](../files/src/local_deepwiki/generators/see_also.md) function that creates see-also sections for wiki pages.
 
-### TestConfig
-The TestConfig class tests the configuration system, ensuring that default values are correctly set and that configuration can be properly loaded and modified.
+## Component Interactions
 
-### TestCodeChunker
-The TestCodeChunker class tests the code chunking functionality that splits code files into manageable chunks for processing and embedding. It verifies chunking behavior for different languages, line number handling, and unique ID generation.
+The test module verifies how different components work together:
 
-### TestBuildBreadcrumb
-The TestBuildBreadcrumb class tests the breadcrumb navigation building functionality in the web application.
-
-### TestFlaskApp
-The TestFlaskApp class tests the Flask web application setup and behavior.
-
-## How Components Interact
-
-The test suite exercises components in isolation and in combination. For example:
-
-1. The CodeParser and CodeChunker work together in the parsing pipeline
-2. The EntityRegistry and CrossLinker collaborate to create meaningful links between related code entities
-3. Configuration tests ensure that all components receive correct settings
-4. The web application tests validate that the UI components work correctly with the backend processing
+1. **[CodeParser](../files/src/local_deepwiki/core/parser.md)** feeds parsed code into the **[EntityRegistry](../files/src/local_deepwiki/generators/crosslinks.md)** for entity extraction
+2. **[EntityRegistry](../files/src/local_deepwiki/generators/crosslinks.md)** provides data to the **[CrossLinker](../files/src/local_deepwiki/generators/crosslinks.md)** for creating cross-references
+3. **[RepositoryWatcher](../files/src/local_deepwiki/watcher.md)** triggers **[WikiGenerator](../files/src/local_deepwiki/generators/wiki.md)** regeneration when files change
+4. **[APIDocExtractor](../files/src/local_deepwiki/generators/api_docs.md)** works with **[WikiGenerator](../files/src/local_deepwiki/generators/wiki.md)** to include API documentation in wiki pages
+5. **[RelationshipAnalyzer](../files/src/local_deepwiki/generators/see_also.md)** helps generate see-also sections that reference related files
 
 ## Usage Examples
 
@@ -76,14 +89,12 @@ def test_detect_language_python(self):
 ## Dependencies
 
 This module depends on:
-- `local_deepwiki.core.parser` - for CodeParser functionality
-- `local_deepwiki.models` - for Language and other data models
-- `local_deepwiki.config` - for configuration testing
-- `local_deepwiki.web.app` - for web application testing
-- `local_deepwiki.generators.see_also` - for see also section generation
-- `pytest` - for testing framework
-- `tempfile` and `pathlib` - for file system operations
-- `local_deepwiki.chunker` - for chunking functionality
-- `local_deepwiki.crosslinks` - for cross-linking functionality
+- `local_deepwiki.config` - Configuration management
+- `local_deepwiki.parser` - Code parsing functionality
+- `local_deepwiki.watcher` - File system watching capabilities
+- `local_deepwiki.generators` - Wiki generation components
+- `local_deepwiki.models` - Data models used throughout the system
+- `pytest` - Testing framework
+- `unittest.mock` - Mocking utilities for testing
 
-The tests module serves as the quality assurance layer for the entire local_deepwiki package, ensuring that each component functions correctly and as expected.
+The tests module ensures that all core functionality works correctly and provides confidence in the reliability of the local_deepwiki package.

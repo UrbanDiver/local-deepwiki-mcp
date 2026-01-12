@@ -2,94 +2,168 @@
 
 ## System Overview
 
-The Local DeepWiki system is a documentation generation tool that leverages vector search and LLMs to automatically create comprehensive documentation for codebases. It works by indexing code chunks, storing them in a vector database, and then using LLMs to generate structured documentation including architecture diagrams, module overviews, and class documentation.
+Local DeepWiki is a documentation generation system that creates comprehensive technical documentation from codebases. It combines AST-based code parsing with vector search and LLM generation to produce wiki-style documentation automatically.
 
-## Key Components and Responsibilities
+The system works in three phases:
+1. **Parsing**: Tree-sitter parses source files into ASTs
+2. **Indexing**: Code chunks are embedded and stored in LanceDB
+3. **Generation**: LLMs generate documentation using RAG (Retrieval-Augmented Generation)
 
-### WikiGenerator
-The WikiGenerator class is the core component responsible for generating all documentation. It orchestrates the entire documentation generation process by:
-- Managing the index status and tracking what has been generated
-- Using VectorStore to search for relevant code chunks
-- Generating different types of documentation pages including architecture, modules, and class diagrams
-- Rendering Mermaid diagrams for visual representation of system structure
+## Key Components
 
-### VectorStore
-The VectorStore class handles all vector-based operations including:
-- Storing code chunks with their embeddings
-- Searching for relevant code chunks based on natural language queries
-- Managing the similarity search for context retrieval during documentation generation
+### RepositoryIndexer
+The [RepositoryIndexer](files/src/local_deepwiki/core/indexer.md) class orchestrates the indexing pipeline. It coordinates file discovery, parsing, chunking, and vector storage. Supports incremental updates by tracking file hashes.
+
+### CodeParser
+The [CodeParser](files/src/local_deepwiki/core/parser.md) class uses tree-sitter to parse source files into ASTs. Supports Python, TypeScript, JavaScript, Go, Rust, Java, C, C++, and Swift.
 
 ### CodeChunker
-The CodeChunker class is responsible for:
-- Breaking down source code into manageable chunks
-- Processing code files and extracting meaningful code segments
-- Creating CodeChunk objects that contain file paths, content, and metadata
+The [CodeChunker](files/src/local_deepwiki/core/chunker.md) class extracts semantic chunks from parsed ASTs - classes, functions, methods with their docstrings and signatures. Maintains metadata about each chunk (file path, line numbers, language).
 
-### LLMProvider and EmbeddingProvider
-These abstract base classes define the interface for language model and embedding providers:
-- LLMProvider handles natural language generation tasks
-- EmbeddingProvider handles vector embeddings for code chunks
-- Concrete implementations exist for Ollama, Anthropic, and OpenAI providers
+### VectorStore
+The [VectorStore](files/src/local_deepwiki/core/vectorstore.md) class manages the LanceDB vector database. Handles embedding generation, storage, and semantic search queries.
+
+### WikiGenerator
+The [WikiGenerator](files/src/local_deepwiki/generators/wiki.md) class produces documentation pages using LLM generation. Queries the vector store for relevant code context, then prompts the LLM to generate markdown documentation.
+
+### LLM Providers
+Abstraction layer for LLM providers (Ollama, Anthropic, OpenAI). Located in `providers/llm.py`. Factory function `get_llm_provider()` returns the configured provider.
+
+### Embedding Providers
+Abstraction for embedding generation. Supports local sentence-transformers (all-MiniLM-L6-v2) and OpenAI embeddings. Located in `providers/embeddings.py`.
+
+### Diagram Functions
+Functions in `generators/diagrams.py` create Mermaid diagrams for architecture visualization, class diagrams, and dependency graphs.
 
 ### Config
-The Config class manages all system configuration:
-- LLM configuration including provider selection and model settings
-- Embedding configuration for different embedding providers
-- Output settings for generated documentation
+The [Config](files/src/local_deepwiki/config.md) class manages configuration loaded from `~/.config/local-deepwiki/config.yaml`. Includes LLM settings, embedding settings, and parsing options.
 
-## Data Flow Between Components
-
-1. **Indexing Phase**: 
-   - CodeChunker processes source code files and creates CodeChunk objects
-   - These chunks are stored in VectorStore with their embeddings
-   - IndexStatus tracks the indexing progress
-
-2. **Documentation Generation Phase**:
-   - WikiGenerator uses IndexStatus to determine what needs to be generated
-   - It queries VectorStore for relevant code chunks using natural language queries
-   - Context from search results is passed to LLM providers for documentation generation
-   - Mermaid diagrams are generated by DiagramGenerator classes
-   - Generated pages are saved to the wiki directory structure
-
-3. **Configuration Management**:
-   - Config class loads and provides configuration to all components
-   - Providers (LLMProvider, EmbeddingProvider) use configuration to initialize connections
-
-## Architecture Diagram
+## Data Flow
 
 ```mermaid
 graph TD
-    A[Source Code Files] --> B[CodeChunker]
-    B --> C[VectorStore]
-    C --> D[WikiGenerator]
-    D --> E[LLMProvider]
-    D --> F[DiagramGenerator]
-    E --> G[Generated Wiki Pages]
-    F --> H[Mermaid Diagrams]
-    C --> I[Search Results]
-    I --> D
-    D --> J[Config]
-    J --> E
-    J --> C
-    J --> B
+    A[Source Files] --> B[CodeParser]
+    B --> C[CodeChunker]
+    C --> D[EmbeddingProvider]
+    D --> E[VectorStore/LanceDB]
+
+    F[WikiGenerator] --> G[VectorStore Search]
+    G --> H[Relevant Chunks]
+    H --> I[LLM Provider]
+    I --> J[Generated Markdown]
+    J --> K[Wiki Files]
+
+    E --> G
 ```
 
-## Design Patterns Used
+## Indexing Pipeline
 
-### Strategy Pattern
-The system uses the Strategy pattern through the LLMProvider and EmbeddingProvider abstract classes. Different concrete implementations (OllamaProvider, AnthropicProvider, OpenAIProvider) can be used interchangeably based on configuration.
+```mermaid
+sequenceDiagram
+    participant I as RepositoryIndexer
+    participant P as CodeParser
+    participant C as CodeChunker
+    participant E as EmbeddingProvider
+    participant V as VectorStore
 
-### Factory Pattern
-The system uses factory methods to create provider instances based on configuration. This allows for easy extension with new providers without modifying existing code.
+    I->>I: Find source files
+    loop For each file
+        I->>P: Parse file
+        P-->>I: AST
+        I->>C: Chunk AST
+        C-->>I: CodeChunks
+        I->>E: Generate embeddings
+        E-->>I: Vectors
+        I->>V: Store chunks + vectors
+    end
+    I->>I: Save index status
+```
 
-### Singleton Pattern
-The Config class implements a singleton pattern through get_config and set_config functions, ensuring consistent configuration access throughout the application.
+## Wiki Generation Pipeline
 
-### Observer Pattern
-IndexStatus acts as an observer pattern implementation, tracking the state of indexing and documentation generation processes.
+```mermaid
+sequenceDiagram
+    participant W as WikiGenerator
+    participant V as VectorStore
+    participant L as LLMProvider
+    participant D as Diagram Functions
 
-### Template Method Pattern
-The WikiGenerator class implements a template method pattern where specific generation steps are defined in abstract methods that concrete implementations can override.
+    W->>V: Search for overview context
+    V-->>W: Relevant chunks
+    W->>L: Generate index.md
+    L-->>W: Markdown content
 
-### Repository Pattern
-VectorStore implements a repository pattern for code chunks, providing a clean interface for storage and retrieval operations while abstracting the underlying storage mechanism.
+    W->>V: Search for architecture context
+    W->>L: Generate architecture.md
+    W->>D: Generate mermaid diagrams
+
+    loop For each module/file
+        W->>V: Search for module context
+        W->>L: Generate module docs
+    end
+
+    W->>W: Apply cross-links
+    W->>W: Add see-also sections
+```
+
+## Component Diagram
+
+```mermaid
+graph LR
+    subgraph Core
+        Parser[CodeParser]
+        Chunker[CodeChunker]
+        Indexer[RepositoryIndexer]
+        VS[VectorStore]
+    end
+
+    subgraph Generators
+        Wiki[WikiGenerator]
+        Diagrams[diagrams.py]
+        CrossLinks[crosslinks.py]
+        ApiDocs[api_docs.py]
+    end
+
+    subgraph Providers
+        LLM[LLM Provider]
+        Embed[Embedding Provider]
+    end
+
+    subgraph Web
+        Flask[Flask App]
+    end
+
+    Indexer --> Parser
+    Indexer --> Chunker
+    Indexer --> VS
+    Chunker --> Embed
+    Wiki --> VS
+    Wiki --> LLM
+    Wiki --> Diagrams
+    Wiki --> CrossLinks
+    Wiki --> ApiDocs
+    Flask --> VS
+```
+
+## Key Design Decisions
+
+### Tree-sitter for Parsing
+Uses tree-sitter for language-agnostic AST parsing. Provides accurate, fast parsing across multiple languages without language-specific parsers.
+
+### LanceDB for Vector Storage
+Embedded vector database that requires no external services. Stores vectors alongside metadata for efficient retrieval.
+
+### Incremental Updates
+Tracks file hashes to detect changes. Only re-indexes modified files and regenerates affected wiki pages.
+
+### Provider Abstraction
+LLM and embedding providers are abstracted behind factory functions. Allows switching between local (Ollama) and cloud (Anthropic/OpenAI) without code changes.
+
+### RAG for Documentation
+Uses Retrieval-Augmented Generation - searches for relevant code context before prompting the LLM. Produces more accurate, grounded documentation.
+
+## See Also
+
+- [Source Files](files/index.md) - Individual file documentation
+- [Dependencies](dependencies.md) - Dependency analysis
+- [Modules](modules/index.md) - Module documentation
