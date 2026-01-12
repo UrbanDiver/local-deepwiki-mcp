@@ -27,6 +27,15 @@ HTML_TEMPLATE = """
             --code-bg: #1f2428;
             --heading-color: #f0f6fc;
         }
+        [data-theme="light"] {
+            --bg-color: #ffffff;
+            --text-color: #24292f;
+            --link-color: #0969da;
+            --border-color: #d0d7de;
+            --sidebar-bg: #f6f8fa;
+            --code-bg: #f6f8fa;
+            --heading-color: #1f2328;
+        }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
@@ -44,6 +53,51 @@ HTML_TEMPLATE = """
             position: fixed;
             height: 100vh;
             overflow-y: auto;
+        }
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .sidebar-header h2 {
+            color: var(--heading-color);
+            font-size: 1.2em;
+            margin: 0;
+            padding: 0;
+            border: none;
+        }
+        .theme-toggle {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 4px 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.2s;
+        }
+        .theme-toggle:hover {
+            background: var(--border-color);
+        }
+        .sidebar-toggle {
+            display: none;
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            z-index: 1001;
+            background: var(--sidebar-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 18px;
+            cursor: pointer;
+            color: var(--text-color);
+            transition: background 0.2s;
+        }
+        .sidebar-toggle:hover {
+            background: var(--border-color);
         }
         .sidebar h2 {
             color: var(--heading-color);
@@ -82,6 +136,33 @@ HTML_TEMPLATE = """
             color: #8b949e;
             margin-bottom: 8px;
             letter-spacing: 0.5px;
+        }
+        .sidebar .toc-number {
+            color: #6e7681;
+            font-size: 0.85em;
+            margin-right: 6px;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+        }
+        .sidebar .toc-nested {
+            margin-left: 12px;
+            border-left: 1px solid var(--border-color);
+            padding-left: 8px;
+        }
+        .sidebar .toc-item {
+            margin: 4px 0;
+        }
+        .sidebar .toc-item > a {
+            display: flex;
+            align-items: baseline;
+        }
+        .sidebar .toc-parent {
+            font-weight: 500;
+            color: var(--heading-color);
+            margin-top: 12px;
+            margin-bottom: 4px;
+        }
+        .sidebar .toc-parent:first-child {
+            margin-top: 0;
         }
         .content {
             margin-left: 280px;
@@ -265,28 +346,76 @@ HTML_TEMPLATE = """
             max-width: 100%;
         }
         @media (max-width: 768px) {
+            .sidebar-toggle {
+                display: block;
+            }
             .sidebar {
-                position: relative;
-                width: 100%;
-                height: auto;
+                position: fixed;
+                width: 280px;
+                height: 100vh;
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+                z-index: 1000;
+            }
+            .sidebar.open {
+                transform: translateX(0);
             }
             .content {
                 margin-left: 0;
                 padding: 20px;
+                padding-top: 60px;
             }
             body {
                 flex-direction: column;
             }
         }
     </style>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css" id="hljs-theme">
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
 </head>
 <body>
+    <button id="sidebar-toggle" class="sidebar-toggle" title="Toggle sidebar">&#9776;</button>
     <nav class="sidebar">
-        <h2>DeepWiki</h2>
+        <div class="sidebar-header">
+            <h2>DeepWiki</h2>
+            <button id="theme-toggle" class="theme-toggle" title="Toggle theme">&#127769;</button>
+        </div>
         <div class="search-container">
             <input type="text" class="search-input" id="search-input" placeholder="Search docs..." autocomplete="off">
             <div class="search-results" id="search-results"></div>
         </div>
+        {% if toc_entries %}
+        {# Hierarchical numbered TOC #}
+        <div class="toc">
+            {% macro render_toc_entry(entry, depth=0) %}
+            <div class="toc-item {% if entry.children %}toc-parent{% endif %}">
+                {% if entry.path %}
+                <a href="{{ url_for('view_page', path=entry.path) }}"
+                   class="{{ 'active' if entry.path == current_path else '' }}">
+                    <span class="toc-number">{{ entry.number }}</span>
+                    <span>{{ entry.title }}</span>
+                </a>
+                {% else %}
+                <span class="toc-parent">
+                    <span class="toc-number">{{ entry.number }}</span>
+                    <span>{{ entry.title }}</span>
+                </span>
+                {% endif %}
+                {% if entry.children %}
+                <div class="toc-nested">
+                    {% for child in entry.children %}
+                    {{ render_toc_entry(child, depth + 1) }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% endmacro %}
+            {% for entry in toc_entries %}
+            {{ render_toc_entry(entry) }}
+            {% endfor %}
+        </div>
+        {% else %}
+        {# Fallback to flat structure #}
         <ul>
             {% for page in pages %}
             <li><a href="{{ url_for('view_page', path=page.path) }}"
@@ -304,6 +433,7 @@ HTML_TEMPLATE = """
             </ul>
         </div>
         {% endfor %}
+        {% endif %}
     </nav>
     <main class="content">
         {% if breadcrumb %}
@@ -510,15 +640,83 @@ HTML_TEMPLATE = """
             });
         })();
     </script>
+    <script>
+        // Theme toggle
+        (function() {
+            const themeToggle = document.getElementById('theme-toggle');
+            const hljsTheme = document.getElementById('hljs-theme');
+
+            function setTheme(theme) {
+                document.documentElement.setAttribute('data-theme', theme);
+                localStorage.setItem('deepwiki-theme', theme);
+                themeToggle.innerHTML = theme === 'dark' ? '&#127769;' : '&#9728;';
+                // Switch highlight.js theme
+                if (hljsTheme) {
+                    hljsTheme.href = theme === 'dark'
+                        ? 'https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css'
+                        : 'https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github.min.css';
+                }
+            }
+
+            // Load saved theme or default to dark
+            const savedTheme = localStorage.getItem('deepwiki-theme') || 'dark';
+            setTheme(savedTheme);
+
+            themeToggle.addEventListener('click', () => {
+                const current = document.documentElement.getAttribute('data-theme') || 'dark';
+                setTheme(current === 'dark' ? 'light' : 'dark');
+            });
+        })();
+
+        // Sidebar toggle for mobile
+        (function() {
+            const sidebarToggle = document.getElementById('sidebar-toggle');
+            const sidebar = document.querySelector('.sidebar');
+
+            sidebarToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                sidebar.classList.toggle('open');
+            });
+
+            // Close sidebar when clicking outside on mobile
+            document.addEventListener('click', (e) => {
+                if (window.innerWidth <= 768 &&
+                    !e.target.closest('.sidebar') &&
+                    !e.target.closest('.sidebar-toggle')) {
+                    sidebar.classList.remove('open');
+                }
+            });
+        })();
+
+        // Syntax highlighting
+        if (typeof hljs !== 'undefined') {
+            hljs.highlightAll();
+        }
+    </script>
 </body>
 </html>
 """
 
 
-def get_wiki_structure(wiki_path: Path) -> tuple[list, dict]:
-    """Get wiki pages and sections."""
+def get_wiki_structure(wiki_path: Path) -> tuple[list, dict, list | None]:
+    """Get wiki pages and sections, with optional hierarchical TOC.
+
+    Returns:
+        Tuple of (pages, sections, toc_entries) where toc_entries is the
+        hierarchical numbered TOC if toc.json exists, None otherwise.
+    """
     pages = []
     sections = {}
+    toc_entries = None
+
+    # Try to load toc.json for hierarchical numbered structure
+    toc_path = wiki_path / "toc.json"
+    if toc_path.exists():
+        try:
+            toc_data = json.loads(toc_path.read_text())
+            toc_entries = toc_data.get("entries", [])
+        except (json.JSONDecodeError, OSError):
+            pass  # Fall back to flat structure
 
     # Get root pages
     for md_file in sorted(wiki_path.glob("*.md")):
@@ -528,7 +726,7 @@ def get_wiki_structure(wiki_path: Path) -> tuple[list, dict]:
             "title": title
         })
 
-    # Get section pages
+    # Get section pages (used as fallback if no toc.json)
     for section_dir in sorted(wiki_path.iterdir()):
         if section_dir.is_dir() and not section_dir.name.startswith('.'):
             section_pages = []
@@ -541,7 +739,7 @@ def get_wiki_structure(wiki_path: Path) -> tuple[list, dict]:
             if section_pages:
                 sections[section_dir.name.replace("_", " ").title()] = section_pages
 
-    return pages, sections
+    return pages, sections, toc_entries
 
 
 def extract_title(md_file: Path) -> str:
@@ -658,7 +856,7 @@ def view_page(path: str):
     except Exception as e:
         abort(500, f"Error reading page: {e}")
 
-    pages, sections = get_wiki_structure(WIKI_PATH)
+    pages, sections, toc_entries = get_wiki_structure(WIKI_PATH)
     title = extract_title(file_path)
 
     # Build breadcrumb navigation
@@ -670,6 +868,7 @@ def view_page(path: str):
         title=title,
         pages=pages,
         sections=sections,
+        toc_entries=toc_entries,
         current_path=path,
         breadcrumb=breadcrumb
     )
