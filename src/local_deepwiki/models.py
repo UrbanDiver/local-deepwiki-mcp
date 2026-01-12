@@ -19,6 +19,7 @@ class Language(str, Enum):
     C = "c"
     CPP = "cpp"
     SWIFT = "swift"
+    RUBY = "ruby"
 
 
 class ChunkType(str, Enum):

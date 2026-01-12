@@ -28,6 +28,7 @@ FUNCTION_NODE_TYPES: dict[Language, set[str]] = {
     Language.C: {"function_definition"},
     Language.CPP: {"function_definition"},
     Language.SWIFT: {"function_declaration", "init_declaration"},
+    Language.RUBY: {"method", "singleton_method"},
 }
 
 CLASS_NODE_TYPES: dict[Language, set[str]] = {
@@ -40,6 +41,7 @@ CLASS_NODE_TYPES: dict[Language, set[str]] = {
     Language.C: {"struct_specifier"},
     Language.CPP: {"class_specifier", "struct_specifier"},
     Language.SWIFT: {"class_declaration", "struct_declaration", "protocol_declaration", "enum_declaration", "extension_declaration"},
+    Language.RUBY: {"class", "module"},
 }
 
 IMPORT_NODE_TYPES: dict[Language, set[str]] = {
@@ -52,6 +54,7 @@ IMPORT_NODE_TYPES: dict[Language, set[str]] = {
     Language.C: {"preproc_include"},
     Language.CPP: {"preproc_include"},
     Language.SWIFT: {"import_declaration"},
+    Language.RUBY: {"call"},  # require/require_relative are method calls in Ruby AST
 }
 
 
@@ -114,6 +117,14 @@ def get_parent_classes(class_node: Node, source: bytes, language: Language) -> l
             if child.type == "base_class_clause":
                 for item in find_nodes_by_type(child, {"type_identifier"}):
                     parents.append(get_node_text(item, source))
+
+    elif language == Language.RUBY:
+        # Ruby: class Child < Parent
+        for child in class_node.children:
+            if child.type == "superclass":
+                for sc in child.children:
+                    if sc.type == "constant" or sc.type == "scope_resolution":
+                        parents.append(get_node_text(sc, source))
 
     return parents
 

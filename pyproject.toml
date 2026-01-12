@@ -16,6 +16,7 @@ dependencies = [
     "tree-sitter-c>=0.23",
     "tree-sitter-cpp>=0.23",
     "tree-sitter-swift>=0.0.1",
+    "tree-sitter-ruby>=0.23",
     "lancedb>=0.15",
     "sentence-transformers>=3.0",
     "openai>=1.0",
