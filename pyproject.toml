@@ -40,6 +40,7 @@ dev = [
 local-deepwiki = "local_deepwiki.server:main"
 deepwiki-serve = "local_deepwiki.web.app:main"
 deepwiki-watch = "local_deepwiki.watcher:main"
+deepwiki-export = "local_deepwiki.export.html:main"
 
 [build-system]
 requires = ["hatchling"]

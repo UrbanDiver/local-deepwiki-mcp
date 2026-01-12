@@ -6,7 +6,7 @@
 
 ## Current Status: ✅ Complete & Working
 
-The project is fully implemented and tested. All 141 tests pass.
+The project is fully implemented and tested. All 280 tests pass.
 
 ## Architecture
 
@@ -20,6 +20,7 @@ The project is fully implemented and tested. All 141 tests pass.
 │  - read_wiki_structure - Get wiki table of contents             │
 │  - read_wiki_page      - Read specific wiki page                │
 │  - search_code         - Semantic code search                   │
+│  - export_wiki_html    - Export wiki to static HTML             │
 └─────────────────────────────────────────────────────────────────┘
            │                    │                    │
            ▼                    ▼                    ▼
@@ -33,7 +34,7 @@ The project is fully implemented and tested. All 141 tests pass.
 
 | File | Purpose |
 |------|---------|
-| `src/local_deepwiki/server.py` | MCP server entry point with 5 tools |
+| `src/local_deepwiki/server.py` | MCP server entry point with 6 tools |
 | `src/local_deepwiki/core/parser.py` | Tree-sitter multi-language code parser |
 | `src/local_deepwiki/core/chunker.py` | AST-based code chunking |
 | `src/local_deepwiki/core/vectorstore.py` | LanceDB vector storage |
@@ -44,6 +45,7 @@ The project is fully implemented and tested. All 141 tests pass.
 | `src/local_deepwiki/models.py` | Pydantic data models |
 | `src/local_deepwiki/web/app.py` | Flask web UI for browsing wiki |
 | `src/local_deepwiki/watcher.py` | File watcher for auto-reindexing |
+| `src/local_deepwiki/export/html.py` | Static HTML export |
 
 ## Tech Stack
 
@@ -71,6 +73,9 @@ uv run deepwiki-serve .deepwiki --port 8080
 
 # Watch mode - auto-reindex on file changes
 uv run deepwiki-watch /path/to/repo
+
+# Export wiki to static HTML
+uv run deepwiki-export .deepwiki --output ./html-export
 ```
 
 ## MCP Server Configuration
@@ -130,9 +135,10 @@ asyncio.run(test())
 - [x] File-level documentation generation
 - [x] Watch mode for auto-reindexing on file changes
 - [x] Swift language support
+- [x] Export to HTML (static site)
 - [ ] Support for more languages (Ruby, PHP, Kotlin)
 - [ ] Better diagram generation
-- [ ] Export to other formats (HTML, PDF)
+- [ ] Export to PDF
 
 ## Wiki Structure
 

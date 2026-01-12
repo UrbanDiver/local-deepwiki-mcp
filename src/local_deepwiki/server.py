@@ -141,6 +141,24 @@ async def list_tools() -> list[Tool]:
                 "required": ["repo_path", "query"],
             },
         ),
+        Tool(
+            name="export_wiki_html",
+            description="Export wiki documentation to static HTML files. Creates a self-contained website that can be viewed without a server.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "wiki_path": {
+                        "type": "string",
+                        "description": "Path to the wiki directory (typically {repo}/.deepwiki)",
+                    },
+                    "output_path": {
+                        "type": "string",
+                        "description": "Output directory for HTML files (default: {wiki_path}_html)",
+                    },
+                },
+                "required": ["wiki_path"],
+            },
+        ),
     ]
 
 
@@ -157,6 +175,8 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         return await handle_read_wiki_page(arguments)
     elif name == "search_code":
         return await handle_search_code(arguments)
+    elif name == "export_wiki_html":
+        return await handle_export_wiki_html(arguments)
     else:
         return [TextContent(type="text", text=f"Unknown tool: {name}")]
 
@@ -404,6 +424,38 @@ async def handle_search_code(args: dict[str, Any]) -> list[TextContent]:
         })
 
     return [TextContent(type="text", text=json.dumps(output, indent=2))]
+
+
+async def handle_export_wiki_html(args: dict[str, Any]) -> list[TextContent]:
+    """Handle export_wiki_html tool call."""
+    from local_deepwiki.export.html import export_to_html
+
+    wiki_path = Path(args["wiki_path"]).resolve()
+    output_path = args.get("output_path")
+
+    if not wiki_path.exists():
+        return [TextContent(type="text", text=f"Error: Wiki path does not exist: {wiki_path}")]
+
+    try:
+        if output_path:
+            output_path = Path(output_path).resolve()
+
+        result = export_to_html(wiki_path, output_path)
+
+        # Get actual output path for the response
+        actual_output = output_path or (wiki_path.parent / f"{wiki_path.name}_html")
+
+        response = {
+            "status": "success",
+            "message": result,
+            "output_path": str(actual_output),
+            "open_with": f"open {actual_output}/index.html",
+        }
+
+        return [TextContent(type="text", text=json.dumps(response, indent=2))]
+
+    except Exception as e:
+        return [TextContent(type="text", text=f"Error exporting wiki: {str(e)}")]
 
 
 def main():
