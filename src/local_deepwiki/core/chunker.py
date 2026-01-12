@@ -29,6 +29,7 @@ FUNCTION_NODE_TYPES: dict[Language, set[str]] = {
     Language.CPP: {"function_definition"},
     Language.SWIFT: {"function_declaration", "init_declaration"},
     Language.RUBY: {"method", "singleton_method"},
+    Language.PHP: {"function_definition", "method_declaration"},
 }
 
 CLASS_NODE_TYPES: dict[Language, set[str]] = {
@@ -42,6 +43,7 @@ CLASS_NODE_TYPES: dict[Language, set[str]] = {
     Language.CPP: {"class_specifier", "struct_specifier"},
     Language.SWIFT: {"class_declaration", "struct_declaration", "protocol_declaration", "enum_declaration", "extension_declaration"},
     Language.RUBY: {"class", "module"},
+    Language.PHP: {"class_declaration", "interface_declaration", "trait_declaration"},
 }
 
 IMPORT_NODE_TYPES: dict[Language, set[str]] = {
@@ -55,6 +57,7 @@ IMPORT_NODE_TYPES: dict[Language, set[str]] = {
     Language.CPP: {"preproc_include"},
     Language.SWIFT: {"import_declaration"},
     Language.RUBY: {"call"},  # require/require_relative are method calls in Ruby AST
+    Language.PHP: {"namespace_use_declaration"},  # use statements in PHP
 }
 
 
@@ -125,6 +128,18 @@ def get_parent_classes(class_node: Node, source: bytes, language: Language) -> l
                 for sc in child.children:
                     if sc.type == "constant" or sc.type == "scope_resolution":
                         parents.append(get_node_text(sc, source))
+
+    elif language == Language.PHP:
+        # PHP: class Child extends Parent implements Interface1, Interface2
+        for child in class_node.children:
+            if child.type == "base_clause":
+                # extends clause
+                for item in find_nodes_by_type(child, {"name", "qualified_name"}):
+                    parents.append(get_node_text(item, source))
+            elif child.type == "class_interface_clause":
+                # implements clause
+                for item in find_nodes_by_type(child, {"name", "qualified_name"}):
+                    parents.append(get_node_text(item, source))
 
     return parents
 

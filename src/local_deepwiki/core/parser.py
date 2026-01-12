@@ -14,6 +14,7 @@ import tree_sitter_c
 import tree_sitter_cpp
 import tree_sitter_swift
 import tree_sitter_ruby
+import tree_sitter_php
 from tree_sitter import Language, Parser, Node
 
 from local_deepwiki.models import Language as LangEnum, FileInfo
@@ -30,6 +31,7 @@ LANGUAGE_MODULES = {
     LangEnum.CPP: tree_sitter_cpp,
     LangEnum.SWIFT: tree_sitter_swift,
     LangEnum.RUBY: tree_sitter_ruby,
+    LangEnum.PHP: tree_sitter_php,
 }
 
 # File extension to language mapping
@@ -55,6 +57,8 @@ EXTENSION_MAP: dict[str, LangEnum] = {
     ".rb": LangEnum.RUBY,
     ".rake": LangEnum.RUBY,
     ".gemspec": LangEnum.RUBY,
+    ".php": LangEnum.PHP,
+    ".phtml": LangEnum.PHP,
 }
 
 
@@ -80,7 +84,11 @@ class CodeParser:
             if module is None:
                 raise ValueError(f"Unsupported language: {language}")
 
-            lang = Language(module.language())
+            # PHP module uses language_php() instead of language()
+            if language == LangEnum.PHP:
+                lang = Language(module.language_php())
+            else:
+                lang = Language(module.language())
             self._languages[language] = lang
 
             parser = Parser(lang)
@@ -304,5 +312,13 @@ def get_docstring(node: Node, source: bytes, language: LangEnum) -> str | None:
             if text.startswith("#"):
                 return text.lstrip("#").strip()
             prev = prev.prev_sibling
+
+    elif language == LangEnum.PHP:
+        # PHP uses PHPDoc comments (/** ... */)
+        prev = node.prev_sibling
+        if prev and prev.type == "comment":
+            text = get_node_text(prev, source)
+            if text.startswith("/**"):
+                return text[3:-2].strip()
 
     return None
