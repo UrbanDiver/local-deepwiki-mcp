@@ -6,7 +6,7 @@
 
 ## Current Status: ✅ Complete & Working
 
-The project is fully implemented and tested. All 280 tests pass.
+The project is fully implemented and tested. All 320 tests pass.
 
 ## Architecture
 
@@ -40,6 +40,8 @@ The project is fully implemented and tested. All 280 tests pass.
 | `src/local_deepwiki/core/vectorstore.py` | LanceDB vector storage |
 | `src/local_deepwiki/core/indexer.py` | Indexing orchestration (incremental/full) |
 | `src/local_deepwiki/generators/wiki.py` | LLM-powered wiki generation |
+| `src/local_deepwiki/generators/diagrams.py` | Enhanced Mermaid diagram generation |
+| `src/local_deepwiki/generators/callgraph.py` | Call graph analysis and visualization |
 | `src/local_deepwiki/providers/` | LLM and embedding provider abstractions |
 | `src/local_deepwiki/config.py` | Configuration management |
 | `src/local_deepwiki/models.py` | Pydantic data models |
@@ -136,8 +138,8 @@ asyncio.run(test())
 - [x] Watch mode for auto-reindexing on file changes
 - [x] Swift language support
 - [x] Export to HTML (static site)
+- [x] Enhanced diagram generation (class diagrams with attributes/types, circular dependency detection, sequence diagrams, module overview)
 - [ ] Support for more languages (Ruby, PHP, Kotlin)
-- [ ] Better diagram generation
 - [ ] Export to PDF
 
 ## Wiki Structure

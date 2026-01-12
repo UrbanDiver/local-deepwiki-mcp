@@ -1,124 +1,659 @@
-"""Mermaid diagram generation for code visualization."""
+"""Enhanced Mermaid diagram generation for code visualization."""
 
-from local_deepwiki.models import CodeChunk, IndexStatus
+import re
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+from local_deepwiki.models import ChunkType, CodeChunk, IndexStatus
 
 
-def generate_architecture_diagram(chunks: list[CodeChunk]) -> str:
-    """Generate a Mermaid architecture diagram from code chunks.
+@dataclass
+class ClassInfo:
+    """Information about a class for diagram generation."""
+
+    name: str
+    methods: list[str]
+    attributes: list[str]
+    parents: list[str]
+    is_abstract: bool = False
+    is_dataclass: bool = False
+    docstring: str | None = None
+
+
+def sanitize_mermaid_name(name: str) -> str:
+    """Sanitize a name for use in Mermaid diagrams.
 
     Args:
-        chunks: List of code chunks to visualize.
+        name: Original name.
 
     Returns:
-        Mermaid diagram string.
+        Sanitized name safe for Mermaid syntax.
     """
-    # Group chunks by file/module
-    modules: dict[str, list[CodeChunk]] = {}
+    # Replace problematic characters
+    result = name.replace("<", "_").replace(">", "_").replace(" ", "_")
+    result = result.replace("[", "_").replace("]", "_").replace(".", "_")
+    result = result.replace("-", "_").replace(":", "_")
+    # Ensure it starts with a letter
+    if result and result[0].isdigit():
+        result = "C" + result
+    return result
+
+
+def generate_class_diagram(
+    chunks: list,
+    show_attributes: bool = True,
+    show_types: bool = True,
+    max_methods: int = 15,
+) -> str | None:
+    """Generate an enhanced Mermaid class diagram from code chunks.
+
+    Features:
+    - Shows class attributes/properties (not just methods)
+    - Shows type annotations for parameters and return types
+    - Distinguishes abstract classes, dataclasses, protocols
+    - Shows inheritance relationships
+
+    Args:
+        chunks: List of CodeChunk or SearchResult objects.
+        show_attributes: Whether to show class attributes.
+        show_types: Whether to show type annotations.
+        max_methods: Maximum methods to show per class.
+
+    Returns:
+        Mermaid class diagram markdown string, or None if no classes found.
+    """
+    # Collect class information
+    classes: dict[str, ClassInfo] = {}
+    methods_by_class: dict[str, list[tuple[str, str | None]]] = {}  # class -> [(method, signature)]
+
     for chunk in chunks:
-        module = chunk.file_path.split("/")[0] if "/" in chunk.file_path else "root"
-        modules.setdefault(module, []).append(chunk)
+        # Handle SearchResult objects
+        if hasattr(chunk, "chunk"):
+            chunk = chunk.chunk
 
-    lines = ["graph TD"]
+        if chunk.chunk_type == ChunkType.CLASS:
+            class_name = chunk.name or "Unknown"
+            if class_name not in classes:
+                # Extract attributes from class content
+                attributes = _extract_class_attributes(chunk.content, chunk.language.value if hasattr(chunk, 'language') else 'python')
 
-    # Add module nodes
-    for module_name, module_chunks in modules.items():
-        safe_name = module_name.replace("-", "_").replace(".", "_")
-        class_count = sum(1 for c in module_chunks if c.chunk_type.value == "class")
-        func_count = sum(1 for c in module_chunks if c.chunk_type.value == "function")
+                # Check for special class types
+                is_abstract = "ABC" in str(chunk.metadata.get("parent_classes", [])) or "abstract" in chunk.content.lower()
+                is_dataclass = "@dataclass" in chunk.content or "BaseModel" in str(chunk.metadata.get("parent_classes", []))
 
-        label = f"{module_name}"
-        if class_count or func_count:
-            label += f"<br/>{class_count} classes, {func_count} functions"
+                classes[class_name] = ClassInfo(
+                    name=class_name,
+                    methods=[],
+                    attributes=attributes if show_attributes else [],
+                    parents=chunk.metadata.get("parent_classes", []),
+                    is_abstract=is_abstract,
+                    is_dataclass=is_dataclass,
+                    docstring=chunk.docstring,
+                )
+                methods_by_class[class_name] = []
 
-        lines.append(f"    {safe_name}[{label}]")
+        elif chunk.chunk_type == ChunkType.METHOD:
+            parent = chunk.parent_name or "Unknown"
+            method_name = chunk.name or "unknown"
 
-    return "\n".join(lines)
+            # Extract signature with types if available
+            signature = _extract_method_signature(chunk.content) if show_types else None
 
+            if parent not in methods_by_class:
+                methods_by_class[parent] = []
 
-def generate_class_diagram(chunks: list[CodeChunk]) -> str:
-    """Generate a Mermaid class diagram from code chunks.
+            # Avoid duplicates
+            existing = [m[0] for m in methods_by_class[parent]]
+            if method_name not in existing:
+                methods_by_class[parent].append((method_name, signature))
 
-    Args:
-        chunks: List of code chunks to visualize.
+    # For classes without METHOD chunks, extract from content
+    method_pattern = re.compile(r"(?:async\s+)?def\s+(\w+)\s*\([^)]*\)(?:\s*->\s*([^:]+))?:")
+    for class_name, class_info in classes.items():
+        if not methods_by_class.get(class_name):
+            # Look for class chunk content
+            for chunk in chunks:
+                if hasattr(chunk, "chunk"):
+                    chunk = chunk.chunk
+                if chunk.chunk_type == ChunkType.CLASS and chunk.name == class_name:
+                    for match in method_pattern.finditer(chunk.content):
+                        method_name = match.group(1)
+                        return_type = match.group(2)
+                        if method_name not in [m[0] for m in methods_by_class.get(class_name, [])]:
+                            if class_name not in methods_by_class:
+                                methods_by_class[class_name] = []
+                            sig = f"() -> {return_type.strip()}" if return_type and show_types else "()"
+                            methods_by_class[class_name].append((method_name, sig))
 
-    Returns:
-        Mermaid class diagram string.
-    """
-    lines = ["classDiagram"]
+    # Build class info with methods
+    for class_name, method_list in methods_by_class.items():
+        if class_name in classes:
+            classes[class_name].methods = [m[0] for m in method_list[:max_methods]]
 
-    # Find class and method chunks
-    classes = [c for c in chunks if c.chunk_type.value == "class"]
-    methods = [c for c in chunks if c.chunk_type.value == "method"]
+    # Filter empty classes
+    classes_with_content = {k: v for k, v in classes.items() if v.methods or v.attributes}
 
-    for class_chunk in classes:
-        safe_name = class_chunk.name.replace("-", "_") if class_chunk.name else "Unknown"
-        lines.append(f"    class {safe_name} {{")
+    if not classes_with_content:
+        return None
 
-        # Find methods for this class
-        class_methods = [m for m in methods if m.parent_name == class_chunk.name]
-        for method in class_methods[:10]:  # Limit to 10 methods
-            method_name = method.name or "unknown"
-            lines.append(f"        +{method_name}()")
+    # Build Mermaid diagram
+    lines = ["```mermaid", "classDiagram"]
+
+    for class_name, class_info in sorted(classes_with_content.items()):
+        safe_name = sanitize_mermaid_name(class_name)
+
+        # Add stereotype annotation
+        if class_info.is_dataclass:
+            lines.append(f"    class {safe_name} {{")
+            lines.append(f"        <<dataclass>>")
+        elif class_info.is_abstract:
+            lines.append(f"    class {safe_name} {{")
+            lines.append(f"        <<abstract>>")
+        else:
+            lines.append(f"    class {safe_name} {{")
+
+        # Add attributes
+        for attr in class_info.attributes[:10]:  # Limit attributes
+            lines.append(f"        {attr}")
+
+        # Add methods
+        method_list = methods_by_class.get(class_name, [])
+        for method_name, signature in method_list[:max_methods]:
+            prefix = "-" if method_name.startswith("_") else "+"
+            safe_method = sanitize_mermaid_name(method_name)
+            if signature and show_types:
+                lines.append(f"        {prefix}{safe_method}{signature}")
+            else:
+                lines.append(f"        {prefix}{safe_method}()")
 
         lines.append("    }")
 
-    return "\n".join(lines)
+    # Add inheritance relationships
+    for class_name, class_info in sorted(classes_with_content.items()):
+        safe_child = sanitize_mermaid_name(class_name)
+        for parent in class_info.parents:
+            safe_parent = sanitize_mermaid_name(parent)
+            lines.append(f"    {safe_child} --|> {safe_parent}")
 
-
-def generate_dependency_diagram(index_status: IndexStatus) -> str:
-    """Generate a Mermaid dependency diagram from index status.
-
-    Args:
-        index_status: Index status with file information.
-
-    Returns:
-        Mermaid diagram string.
-    """
-    # Group by language
-    lines = ["pie title Languages in Repository"]
-
-    for lang, count in index_status.languages.items():
-        lines.append(f'    "{lang}" : {count}')
+    lines.append("```")
 
     return "\n".join(lines)
 
 
-def generate_file_tree_diagram(index_status: IndexStatus, max_depth: int = 3) -> str:
-    """Generate a text-based file tree.
+def _extract_class_attributes(content: str, language: str = "python") -> list[str]:
+    """Extract class attributes from content.
+
+    Args:
+        content: Class source code.
+        language: Programming language.
+
+    Returns:
+        List of attribute strings like "+name: str" or "-_count: int".
+    """
+    attributes = []
+
+    if language in ("python", "py"):
+        # Match class-level type annotations: name: Type or self.name: Type
+        # Also match __init__ assignments
+        attr_pattern = re.compile(r"^\s{4}(\w+)\s*:\s*([^=\n]+?)(?:\s*=|$)", re.MULTILINE)
+        init_pattern = re.compile(r"self\.(\w+)\s*(?::\s*([^\s=]+))?\s*=")
+
+        for match in attr_pattern.finditer(content):
+            name, type_hint = match.groups()
+            if name not in ("self", "cls") and not name.startswith("__"):
+                prefix = "-" if name.startswith("_") else "+"
+                type_str = type_hint.strip() if type_hint else ""
+                if type_str:
+                    attributes.append(f"{prefix}{name}: {type_str}")
+                else:
+                    attributes.append(f"{prefix}{name}")
+
+        for match in init_pattern.finditer(content):
+            name, type_hint = match.groups()
+            if name not in [a.split(":")[0].strip("+-") for a in attributes]:
+                if not name.startswith("__"):
+                    prefix = "-" if name.startswith("_") else "+"
+                    if type_hint:
+                        attributes.append(f"{prefix}{name}: {type_hint}")
+                    else:
+                        attributes.append(f"{prefix}{name}")
+
+    return attributes[:10]  # Limit to 10 attributes
+
+
+def _extract_method_signature(content: str) -> str | None:
+    """Extract method signature with types from content.
+
+    Args:
+        content: Method source code.
+
+    Returns:
+        Signature string like "(x: int, y: str) -> bool" or None.
+    """
+    # Match def method(params) -> return_type:
+    sig_pattern = re.compile(r"def\s+\w+\s*\(([^)]*)\)(?:\s*->\s*([^:]+))?:")
+    match = sig_pattern.search(content)
+    if not match:
+        return None
+
+    params_str = match.group(1)
+    return_type = match.group(2)
+
+    # Simplify params (remove defaults, keep just name: type)
+    params = []
+    for param in params_str.split(","):
+        param = param.strip()
+        if not param or param == "self" or param == "cls":
+            continue
+        # Extract name and type
+        if ":" in param:
+            name_type = param.split("=")[0].strip()  # Remove default
+            params.append(name_type)
+        else:
+            name = param.split("=")[0].strip()
+            if name:
+                params.append(name)
+
+    sig = f"({', '.join(params[:4])})"  # Limit to 4 params for readability
+    if len(params) > 4:
+        sig = f"({', '.join(params[:3])}, ...)"
+
+    if return_type:
+        sig += f" {return_type.strip()}"
+
+    return sig
+
+
+def generate_dependency_graph(
+    chunks: list,
+    project_name: str = "project",
+    detect_circular: bool = True,
+) -> str | None:
+    """Generate a Mermaid flowchart showing module dependencies with circular detection.
+
+    Args:
+        chunks: List of CodeChunk objects (should include IMPORT chunks).
+        project_name: Name of the project for filtering internal imports.
+        detect_circular: Whether to highlight circular dependencies.
+
+    Returns:
+        Mermaid flowchart markdown string, or None if no dependencies found.
+    """
+    # Collect dependencies: module -> set of imports
+    dependencies: dict[str, set[str]] = {}
+
+    for chunk in chunks:
+        if hasattr(chunk, "chunk"):
+            chunk = chunk.chunk
+        if chunk.chunk_type != ChunkType.IMPORT:
+            continue
+
+        file_path = chunk.file_path
+        module = _path_to_module(file_path)
+        if not module:
+            continue
+
+        if module not in dependencies:
+            dependencies[module] = set()
+
+        # Parse imports from content
+        for line in chunk.content.split("\n"):
+            line = line.strip()
+            if not line:
+                continue
+
+            imported = _parse_import_line(line, project_name)
+            if imported:
+                dependencies[module].add(imported)
+
+    if not dependencies:
+        return None
+
+    # Filter to only internal dependencies
+    internal_modules = set(dependencies.keys())
+    internal_deps: dict[str, set[str]] = {}
+
+    for module, imports in dependencies.items():
+        internal_imports = {imp for imp in imports if imp in internal_modules}
+        if internal_imports:
+            internal_deps[module] = internal_imports
+
+    if not internal_deps:
+        return None
+
+    # Detect circular dependencies
+    circular_edges: set[tuple[str, str]] = set()
+    if detect_circular:
+        circular_edges = _find_circular_dependencies(internal_deps)
+
+    # Build Mermaid flowchart
+    lines = ["```mermaid", "flowchart TD"]
+
+    # Create node definitions
+    node_ids: dict[str, str] = {}
+    for i, module in enumerate(sorted(internal_modules)):
+        node_id = f"M{i}"
+        node_ids[module] = node_id
+        display_name = module.split(".")[-1]
+        lines.append(f"    {node_id}[{display_name}]")
+
+    # Add edges
+    for module, imports in sorted(internal_deps.items()):
+        from_id = node_ids.get(module)
+        if not from_id:
+            continue
+        for imp in sorted(imports):
+            to_id = node_ids.get(imp)
+            if to_id and from_id != to_id:
+                if (module, imp) in circular_edges or (imp, module) in circular_edges:
+                    # Highlight circular dependency in red
+                    lines.append(f"    {from_id} -.->|circular| {to_id}")
+                else:
+                    lines.append(f"    {from_id} --> {to_id}")
+
+    # Style circular dependencies
+    if circular_edges:
+        lines.append("    linkStyle default stroke:#666")
+        # Find indices of circular links
+        link_idx = 0
+        for module, imports in sorted(internal_deps.items()):
+            from_id = node_ids.get(module)
+            if not from_id:
+                continue
+            for imp in sorted(imports):
+                to_id = node_ids.get(imp)
+                if to_id and from_id != to_id:
+                    if (module, imp) in circular_edges or (imp, module) in circular_edges:
+                        lines.append(f"    linkStyle {link_idx} stroke:#f00,stroke-width:2px")
+                    link_idx += 1
+
+    lines.append("```")
+
+    return "\n".join(lines)
+
+
+def _find_circular_dependencies(deps: dict[str, set[str]]) -> set[tuple[str, str]]:
+    """Find circular dependencies in a dependency graph.
+
+    Args:
+        deps: Mapping of module to its dependencies.
+
+    Returns:
+        Set of (from, to) tuples that form circular dependencies.
+    """
+    circular: set[tuple[str, str]] = set()
+
+    def dfs(node: str, path: list[str], visited: set[str]) -> None:
+        if node in path:
+            # Found a cycle - mark all edges in the cycle
+            cycle_start = path.index(node)
+            cycle = path[cycle_start:] + [node]
+            for i in range(len(cycle) - 1):
+                circular.add((cycle[i], cycle[i + 1]))
+            return
+
+        if node in visited:
+            return
+
+        visited.add(node)
+        path.append(node)
+
+        for dep in deps.get(node, []):
+            dfs(dep, path.copy(), visited)
+
+    for module in deps:
+        dfs(module, [], set())
+
+    return circular
+
+
+def _path_to_module(file_path: str) -> str | None:
+    """Convert file path to module name.
+
+    Args:
+        file_path: Path like 'src/local_deepwiki/core/indexer.py'
+
+    Returns:
+        Module name like 'core.indexer', or None if not applicable.
+    """
+    p = Path(file_path)
+    if p.suffix != ".py":
+        return None
+    if p.name.startswith("__"):
+        return None
+
+    parts = list(p.parts)
+
+    # Find main package (look for src/ or similar patterns)
+    try:
+        if "src" in parts:
+            idx = parts.index("src")
+            parts = parts[idx + 1 :]
+        # Skip the package directory itself
+        if len(parts) > 1:
+            parts = parts[1:]  # Skip e.g. 'local_deepwiki'
+    except (ValueError, IndexError):
+        pass
+
+    # Remove .py extension from last part
+    if parts:
+        parts[-1] = parts[-1].replace(".py", "")
+
+    return ".".join(parts) if parts else None
+
+
+def _parse_import_line(line: str, project_name: str) -> str | None:
+    """Parse an import line to extract module name.
+
+    Args:
+        line: Import line like 'from local_deepwiki.core import parser'
+        project_name: Project name to filter internal imports.
+
+    Returns:
+        Module name if internal import, None otherwise.
+    """
+    # from X import Y
+    from_match = re.match(r"from\s+([\w.]+)\s+import", line)
+    if from_match:
+        module = from_match.group(1)
+        if project_name in module:
+            # Extract relative module path
+            parts = module.split(".")
+            if project_name in parts:
+                idx = parts.index(project_name)
+                rel_parts = parts[idx + 1 :]
+                if rel_parts:
+                    return ".".join(rel_parts)
+        return None
+
+    # import X
+    import_match = re.match(r"import\s+([\w.]+)", line)
+    if import_match:
+        module = import_match.group(1)
+        if project_name in module:
+            parts = module.split(".")
+            if project_name in parts:
+                idx = parts.index(project_name)
+                rel_parts = parts[idx + 1 :]
+                if rel_parts:
+                    return ".".join(rel_parts)
+
+    return None
+
+
+def generate_module_overview(
+    index_status: IndexStatus,
+    show_file_counts: bool = True,
+) -> str | None:
+    """Generate a high-level module overview diagram.
+
+    Shows package structure with subgraphs for major directories.
 
     Args:
         index_status: Index status with file information.
-        max_depth: Maximum directory depth to show.
+        show_file_counts: Whether to show file counts in nodes.
 
     Returns:
-        File tree string.
+        Mermaid diagram string, or None if not enough structure.
     """
-    lines = ["```"]
-    lines.append(f"{index_status.repo_path.split('/')[-1]}/")
+    if not index_status.files:
+        return None
 
-    # Build tree structure
-    tree: dict = {}
+    # Group files by top-level directory
+    directories: dict[str, dict[str, int]] = {}  # dir -> {subdir: count}
+
     for file_info in index_status.files:
         parts = file_info.path.split("/")
-        current = tree
-        for part in parts[:-1][:max_depth]:
-            current = current.setdefault(part, {})
-        if len(parts) <= max_depth:
-            current[parts[-1]] = None
+        if len(parts) < 2:
+            continue
 
-    def render_tree(node: dict, prefix: str = "") -> list[str]:
-        result = []
-        items = sorted(node.items())
-        for i, (name, children) in enumerate(items):
-            is_last = i == len(items) - 1
-            connector = "└── " if is_last else "├── "
-            result.append(f"{prefix}{connector}{name}")
-            if children is not None:
-                extension = "    " if is_last else "│   "
-                result.extend(render_tree(children, prefix + extension))
-        return result
+        top_dir = parts[0]
+        if top_dir in ("src", "lib", "pkg"):
+            if len(parts) > 1:
+                top_dir = parts[1]
+                parts = parts[1:]
 
-    lines.extend(render_tree(tree))
+        if top_dir not in directories:
+            directories[top_dir] = {}
+
+        if len(parts) > 1:
+            subdir = parts[1]
+            directories[top_dir][subdir] = directories[top_dir].get(subdir, 0) + 1
+        else:
+            directories[top_dir]["_root"] = directories[top_dir].get("_root", 0) + 1
+
+    if not directories:
+        return None
+
+    # Build diagram
+    lines = ["```mermaid", "graph TB"]
+
+    node_id = 0
+    for top_dir, subdirs in sorted(directories.items()):
+        safe_dir = sanitize_mermaid_name(top_dir)
+        total_files = sum(subdirs.values())
+
+        if len(subdirs) > 1 and "_root" not in subdirs:
+            # Create subgraph for directories with multiple subdirs
+            lines.append(f"    subgraph {safe_dir}[{top_dir}]")
+            for subdir, count in sorted(subdirs.items()):
+                if subdir != "_root":
+                    safe_sub = sanitize_mermaid_name(f"{top_dir}_{subdir}")
+                    label = f"{subdir}"
+                    if show_file_counts:
+                        label += f" ({count})"
+                    lines.append(f"        {safe_sub}[{label}]")
+            lines.append("    end")
+        else:
+            # Single node for simple directories
+            label = top_dir
+            if show_file_counts:
+                label += f" ({total_files})"
+            lines.append(f"    {safe_dir}[{label}]")
+
+    lines.append("```")
+
+    return "\n".join(lines)
+
+
+def generate_language_pie_chart(index_status: IndexStatus) -> str | None:
+    """Generate a pie chart showing language distribution.
+
+    Args:
+        index_status: Index status with language counts.
+
+    Returns:
+        Mermaid pie chart string, or None if no languages.
+    """
+    if not index_status.languages:
+        return None
+
+    lines = ["```mermaid", "pie title Language Distribution"]
+
+    for lang, count in sorted(index_status.languages.items(), key=lambda x: -x[1]):
+        lines.append(f'    "{lang}" : {count}')
+
+    lines.append("```")
+
+    return "\n".join(lines)
+
+
+def generate_sequence_diagram(
+    call_graph: dict[str, list[str]],
+    entry_point: str | None = None,
+    max_depth: int = 5,
+) -> str | None:
+    """Generate a sequence diagram from a call graph.
+
+    Shows the sequence of calls starting from an entry point.
+
+    Args:
+        call_graph: Mapping of caller to list of callees.
+        entry_point: Starting function (if None, uses most-called function).
+        max_depth: Maximum call depth to show.
+
+    Returns:
+        Mermaid sequence diagram string, or None if empty.
+    """
+    if not call_graph:
+        return None
+
+    # Find entry point if not specified
+    if not entry_point:
+        # Find function with most outgoing calls
+        entry_point = max(call_graph.keys(), key=lambda k: len(call_graph.get(k, [])), default=None)
+
+    if not entry_point or entry_point not in call_graph:
+        return None
+
+    # Build sequence
+    lines = ["```mermaid", "sequenceDiagram"]
+
+    # Collect participants
+    participants: set[str] = {entry_point}
+
+    def collect_participants(func: str, depth: int) -> None:
+        if depth > max_depth:
+            return
+        for callee in call_graph.get(func, []):
+            participants.add(callee)
+            collect_participants(callee, depth + 1)
+
+    collect_participants(entry_point, 0)
+
+    # Add participants
+    for p in sorted(participants):
+        safe_name = sanitize_mermaid_name(p)
+        display = p.split(".")[-1] if "." in p else p
+        lines.append(f"    participant {safe_name} as {display}")
+
+    # Add calls
+    visited: set[tuple[str, str]] = set()
+
+    def add_calls(caller: str, depth: int) -> None:
+        if depth > max_depth:
+            return
+        safe_caller = sanitize_mermaid_name(caller)
+        for callee in call_graph.get(caller, []):
+            if (caller, callee) in visited:
+                continue
+            visited.add((caller, callee))
+
+            safe_callee = sanitize_mermaid_name(callee)
+            lines.append(f"    {safe_caller}->>+{safe_callee}: call")
+
+            # Recurse
+            if callee in call_graph:
+                add_calls(callee, depth + 1)
+
+            lines.append(f"    {safe_callee}-->>-{safe_caller}: return")
+
+    add_calls(entry_point, 0)
+
+    if len(lines) <= 3:  # Only header and participants
+        return None
+
     lines.append("```")
 
     return "\n".join(lines)
