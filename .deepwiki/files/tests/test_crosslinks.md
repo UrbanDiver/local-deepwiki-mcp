@@ -1,122 +1,93 @@
 # File Overview
 
-This file contains unit tests for the cross-linking functionality in the local_deepwiki documentation generator. It tests how entities are linked across wiki pages, including handling of code blocks, qualified names, and existing links.
+This file contains unit tests for the cross-linking functionality of the documentation generator. It tests various scenarios for how entities are linked within wiki pages, including handling of code blocks, qualified names, bold text, and existing links.
 
 # Classes
 
 ## TestCrossLinker
 
-The TestCrossLinker class contains unit tests for the [CrossLinker](../src/local_deepwiki/generators/crosslinks.md) class functionality. It tests various scenarios for adding cross-links to wiki pages, including:
-
-- Basic linking in prose text
-- Handling of code blocks (no linking)
-- Self-linking prevention
-- Relative path calculation
-- Linking of backticked entities
-- Handling of non-entity inline code
-- Qualified name linking (module.ClassName)
-- Simple qualified name linking (module.Class)
-- Preservation of existing links
-- Bold text linking
-- Spaced aliases linking
-- Bold spaced aliases linking
+The TestCrossLinker class contains unit tests for the [CrossLinker](../src/local_deepwiki/generators/crosslinks.md) class functionality.
 
 ### Methods
 
-- `test_adds_links_to_prose`: Tests that links are added to prose text
-- `test_does_not_link_in_code_blocks`: Tests that links are not added inside code blocks
-- `test_does_not_self_link`: Tests that entities are not linked on their own page
-- `test_relative_paths`: Tests relative path calculation between pages
-- `test_links_backticked_entities`: Tests that backticked entity names get linked
-- `test_does_not_link_non_entity_inline_code`: Tests that non-entity inline code is preserved unchanged
-- `test_links_qualified_names`: Tests that qualified names like module.ClassName get linked
-- `test_links_simple_qualified_names`: Tests that simple qualified names like module.Class get linked
-- `test_preserves_existing_links`: Tests that existing markdown links are preserved
-- `test_links_bold_text`: Tests that bold entity names get linked
-- `test_links_spaced_aliases`: Tests that spaced aliases like '[Vector Store](../src/local_deepwiki/core/vectorstore.md)' get linked
-- `test_links_bold_spaced_aliases`: Tests that bold spaced aliases get linked
+- `test_adds_links_to_prose`: Test that links are added to prose text.
+- `test_does_not_link_in_code_blocks`: Test that links are not added inside code blocks.
+- `test_does_not_self_link`: Test that entities are not linked on their own page.
+- `test_relative_paths`: Test relative path calculation between pages.
+- `test_links_backticked_entities`: Test that backticked entity names get linked.
+- `test_does_not_link_non_entity_inline_code`: Test that non-entity inline code is preserved unchanged.
+- `test_links_qualified_names`: Test that qualified names like module.ClassName get linked.
+- `test_links_simple_qualified_names`: Test that simple qualified names like module.Class get linked.
+- `test_preserves_existing_links`: Test that existing markdown links are preserved.
+- `test_links_bold_text`: Test that bold entity names get linked.
+- `test_links_spaced_aliases`: Test that spaced aliases like '[Vector Store](../src/local_deepwiki/core/vectorstore.md)' get linked.
+- `test_links_bold_spaced_aliases`: Test that bold spaced aliases get linked.
 
 ## TestAddCrossLinks
 
-The TestAddCrossLinks class contains tests for the [add_cross_links](../src/local_deepwiki/generators/crosslinks.md) function, which processes multiple wiki pages for cross-linking.
+The TestAddCrossLinks class contains unit tests for the [add_cross_links](../src/local_deepwiki/generators/crosslinks.md) function.
 
 ### Methods
 
-- `test_processes_all_pages`: Tests that all pages are processed
+- `test_processes_all_pages`: Test that all pages are processed.
 
 # Functions
 
 ## add_cross_links
 
-The [add_cross_links](../src/local_deepwiki/generators/crosslinks.md) function processes a list of WikiPage objects using a [CrossLinker](../src/local_deepwiki/generators/crosslinks.md) and [EntityRegistry](../src/local_deepwiki/generators/crosslinks.md) to add cross-links between entities.
+This function processes a list of WikiPage objects and adds cross-links to them using the provided [EntityRegistry](../src/local_deepwiki/generators/crosslinks.md).
 
 ### Parameters
 
-- `pages` (list[WikiPage]): List of WikiPage objects to process
-- `registry` ([EntityRegistry](../src/local_deepwiki/generators/crosslinks.md)): Entity registry containing entity information
-- `linker` ([CrossLinker](../src/local_deepwiki/generators/crosslinks.md)): [CrossLinker](../src/local_deepwiki/generators/crosslinks.md) instance to use for linking
+- `pages`: List of WikiPage objects to process.
+- `registry`: [EntityRegistry](../src/local_deepwiki/generators/crosslinks.md) object containing entity information.
 
 ### Return Value
 
-None (modifies pages in-place)
+None
 
 # Usage Examples
 
-## Using CrossLinker
+The tests in this file demonstrate how the cross-linker handles various scenarios:
 
 ```python
-from local_deepwiki.generators.crosslinks import CrossLinker, EntityRegistry
-from local_deepwiki.models import ChunkType, WikiPage
-
-registry = EntityRegistry()
-registry.register_entity(
-    name="VectorStore",
-    entity_type=ChunkType.CLASS,
-    wiki_path="files/vectorstore.md",
-    file_path="vectorstore.py",
-)
-
-linker = CrossLinker(registry)
-page = WikiPage(
-    path="files/indexer.md",
-    title="Indexer",
-    content="The indexer uses VectorStore to store embeddings.",
-    generated_at=0,
-)
-
-result = linker.add_links(page)
+# Test basic linking in prose
+def test_adds_links_to_prose(self):
+    registry = EntityRegistry()
+    registry.register_entity(
+        name="VectorStore",
+        entity_type=ChunkType.CLASS,
+        wiki_path="files/vectorstore.md",
+        file_path="vectorstore.py",
+    )
+    linker = CrossLinker(registry)
+    page = WikiPage(
+        path="files/indexer.md",
+        title="Indexer",
+        content="The indexer uses VectorStore to store embeddings.",
+        generated_at=0,
+    )
+    result = linker.add_links(page)
 ```
 
-## Using add_cross_links function
-
 ```python
-from local_deepwiki.generators.crosslinks import add_cross_links, EntityRegistry
-from local_deepwiki.models import ChunkType, WikiPage
-
-registry = EntityRegistry()
-registry.register_entity(
-    name="ClassA",
-    entity_type=ChunkType.CLASS,
-    wiki_path="files/a.md",
-    file_path="a.py",
-)
-
-pages = [
-    WikiPage(
-        path="files/a.md",
-        title="Class A",
-        content="Description of Class A.",
+# Test that code blocks are not linked
+def test_does_not_link_in_code_blocks(self):
+    registry = EntityRegistry()
+    registry.register_entity(
+        name="VectorStore",
+        entity_type=ChunkType.CLASS,
+        wiki_path="files/vectorstore.md",
+        file_path="vectorstore.py",
+    )
+    linker = CrossLinker(registry)
+    page = WikiPage(
+        path="files/indexer.md",
+        title="Indexer",
+        content="Example:\n```python\nstore = [VectorStore](../src/local_deepwiki/core/vectorstore.md)()\n```\nDone.",
         generated_at=0,
-    ),
-    WikiPage(
-        path="files/b.md",
-        title="Class B",
-        content="Description of Class B.",
-        generated_at=0,
-    ),
-]
-
-add_cross_links(pages, registry)
+    )
+    result = linker.add_links(page)
 ```
 
 # Related Components
@@ -125,9 +96,9 @@ This file works with the following components:
 
 - [`CrossLinker`](../src/local_deepwiki/generators/crosslinks.md): Main class for adding cross-links to wiki pages
 - [`EntityRegistry`](../src/local_deepwiki/generators/crosslinks.md): Registry for managing entity information
-- `WikiPage`: Model representing a wiki page with content to be processed
-- `ChunkType`: Enum defining types of code chunks (CLASS, FUNCTION, etc.)
-- [`camel_to_spaced`](../src/local_deepwiki/generators/crosslinks.md): Helper function for converting camelCase to spaced names
+- `WikiPage`: Model representing a wiki page
+- `ChunkType`: Enum for defining chunk types (CLASS, etc.)
+- [`camel_to_spaced`](../src/local_deepwiki/generators/crosslinks.md): Function for converting camelCase to spaced names
 
 ## API Reference
 

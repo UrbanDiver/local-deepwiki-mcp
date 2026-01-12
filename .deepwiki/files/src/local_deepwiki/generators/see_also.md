@@ -1,26 +1,28 @@
 # File Overview
 
-This file, `see_also.py`, provides functionality for generating "See Also" sections in wiki pages. It maps source files to corresponding wiki pages and analyzes relationships between files to suggest related content. The [main](../export/html.md) purpose is to enhance wiki navigation by linking related files or concepts.
+This file, `see_also.py`, provides functionality for generating "See Also" sections in wiki pages. It handles mapping source files to wiki pages and analyzing relationships between files to suggest related content.
 
 # Classes
 
 ## FileRelationships
 
-A dataclass used to store file relationship information.
+A dataclass that stores information about file relationships, including source file paths, target file paths, and the type of relationship.
 
-### Fields:
-- `file_path` (str): The path of the source file.
-- `related_files` (list[str]): A list of related file paths.
-- `wiki_page_path` (str): The corresponding wiki page path.
+### Fields
+
+- `source_file`: Path to the source file
+- `target_file`: Path to the target file
+- `relationship_type`: Type of relationship between files
 
 ## RelationshipAnalyzer
 
-A class responsible for analyzing relationships between files and generating "See Also" sections.
+A class that analyzes relationships between files and generates "See Also" sections for wiki pages.
 
-### Methods:
-- `analyze_relationships(self, pages: list[WikiPage]) -> list[FileRelationships]`: Analyzes file relationships from a list of wiki pages and returns a list of FileRelationships objects.
-- `generate_see_also_section(self, file_path: str, relationships: list[FileRelationships]) -> str`: Generates a "See Also" section for a given file path based on its relationships.
-- `add_see_also_sections(self, pages: list[WikiPage]) -> list[WikiPage]`: Adds "See Also" sections to a list of wiki pages.
+### Methods
+
+- `__init__(self, pages: list[WikiPage])`: Initializes the analyzer with a list of wiki pages.
+- `analyze(self, chunk: CodeChunk) -> list[FileRelationships]`: Analyzes a code chunk and returns a list of file relationships.
+- `get_related_files(self, chunk: CodeChunk) -> list[str]`: Gets a list of related file paths for a given code chunk.
 
 # Functions
 
@@ -30,83 +32,97 @@ A class responsible for analyzing relationships between files and generating "Se
 def build_file_to_wiki_map(pages: list[WikiPage]) -> dict[str, str]
 ```
 
-Builds a mapping from source file paths to wiki page paths.
+Build a mapping from source file paths to wiki page paths.
 
-### Parameters:
-- `pages` (list[WikiPage]): List of wiki pages.
+### Parameters
 
-### Returns:
-- `dict[str, str]`: Dictionary mapping source file path to wiki page path.
+- `pages`: List of wiki pages.
+
+### Returns
+
+- Dictionary mapping source file path to wiki page path.
 
 ## generate_see_also_section
 
 ```python
-def generate_see_also_section(file_path: str, related_files: list[str]) -> str
+def generate_see_also_section(related_files: list[str]) -> str
 ```
 
-Generates a "See Also" section for a given file path.
+Generate a "See Also" section for a wiki page based on a list of related files.
 
-### Parameters:
-- `file_path` (str): The path of the source file.
-- `related_files` (list[str]): A list of related file paths.
+### Parameters
 
-### Returns:
-- `str`: The generated "See Also" section as a string.
+- `related_files`: List of file paths related to the current page.
+
+### Returns
+
+- String containing the formatted "See Also" section.
 
 ## _relative_path
 
 ```python
-def _relative_path(file_path: str, target_path: str) -> str
+def _relative_path(source_path: str, target_path: str) -> str
 ```
 
-Calculates the relative path from one file to another.
+Calculate the relative path from a source file to a target file.
 
-### Parameters:
-- `file_path` (str): The source file path.
-- `target_path` (str): The target file path.
+### Parameters
 
-### Returns:
-- `str`: The relative path from file_path to target_path.
+- `source_path`: Path to the source file.
+- `target_path`: Path to the target file.
+
+### Returns
+
+- String representing the relative path from source to target.
 
 ## add_see_also_sections
 
 ```python
-def add_see_also_sections(pages: list[WikiPage]) -> list[WikiPage]
+def add_see_also_sections(pages: list[WikiPage], analyzer: RelationshipAnalyzer) -> list[WikiPage]
 ```
 
-Adds "See Also" sections to a list of wiki pages.
+Add "See Also" sections to a list of wiki pages based on file relationships.
 
-### Parameters:
-- `pages` (list[WikiPage]): List of wiki pages to process.
+### Parameters
 
-### Returns:
-- `list[WikiPage]`: List of wiki pages with "See Also" sections added.
+- `pages`: List of wiki pages to update.
+- `analyzer`: Instance of RelationshipAnalyzer to use for finding relationships.
+
+### Returns
+
+- List of wiki pages with "See Also" sections added.
 
 # Usage Examples
 
-To use the functionality in this module, you can call the `add_see_also_sections` function with a list of `WikiPage` objects:
+To use the functionality in this module, you would typically:
+
+1. Create a `RelationshipAnalyzer` instance with a list of `WikiPage` objects.
+2. Use the `add_see_also_sections` function to update your wiki pages with "See Also" content.
+
+Example usage:
 
 ```python
-from local_deepwiki.generators.see_also import add_see_also_sections
-from local_deepwiki.models import WikiPage
+from local_deepwiki.generators.see_also import add_see_also_sections, RelationshipAnalyzer
 
-# Assuming you have a list of WikiPage objects
-wiki_pages = [WikiPage(...), WikiPage(...)]
+# Assuming you have a list of wiki pages
+pages = [...]  # List of WikiPage objects
 
-# Add See Also sections to the pages
-updated_pages = add_see_also_sections(wiki_pages)
+# Create an analyzer
+analyzer = RelationshipAnalyzer(pages)
+
+# Add see also sections to pages
+updated_pages = add_see_also_sections(pages, analyzer)
 ```
 
 # Related Components
 
-This file works with the following components:
+This module works with the following components:
 
-- `WikiPage` from `local_deepwiki.models`: Represents a wiki page with a path and content.
-- `ChunkType` and `CodeChunk` from `local_deepwiki.models`: Used for handling code chunks in wiki pages.
-- `Path` from `pathlib`: Used for path manipulation.
-- `defaultdict` from `collections`: Used for grouping relationships.
-- `re`: Used for regular expression operations.
-- `dataclass` and `field` from `dataclasses`: Used for defining `FileRelationships` data structure.
+- `WikiPage` from `local_deepwiki.models`: Represents wiki pages in the system
+- `CodeChunk` from `local_deepwiki.models`: Represents code chunks within wiki pages
+- `ChunkType` from `local_deepwiki.models`: Defines types of chunks in the system
+
+The module also depends on standard Python libraries including `re`, `collections`, `dataclasses`, and `pathlib`.
 
 ## API Reference
 

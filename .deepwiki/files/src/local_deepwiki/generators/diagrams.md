@@ -1,6 +1,6 @@
 # File Overview
 
-This module provides functions for generating various Mermaid diagrams from code analysis data. It supports generating class diagrams, dependency graphs, module overviews, language distribution charts, and sequence diagrams based on code chunks and index status information.
+This module provides functions to generate various Mermaid diagrams from code analysis data. It supports generating class diagrams, dependency graphs, module overviews, language distribution charts, and sequence diagrams. The module is designed to work with `CodeChunk` and `IndexStatus` objects to extract and visualize structural information from codebases.
 
 # Classes
 
@@ -49,11 +49,11 @@ Generate an enhanced Mermaid class diagram from code chunks.
 
 ## _extract_class_attributes
 
-[Function definition not fully shown in provided code]
+[Function not fully shown in code]
 
 ## _extract_method_signature
 
-[Function definition not fully shown in provided code]
+[Function not fully shown in code]
 
 ## generate_dependency_graph
 
@@ -83,15 +83,15 @@ Find circular dependencies in a dependency graph.
 
 ## dfs
 
-[Function definition not fully shown in provided code]
+[Function not fully shown in code]
 
 ## _path_to_module
 
-[Function definition not fully shown in provided code]
+[Function not fully shown in code]
 
 ## _parse_import_line
 
-[Function definition not fully shown in provided code]
+[Function not fully shown in code]
 
 ## generate_module_overview
 
@@ -134,42 +134,42 @@ Generate a sequence diagram from a call graph.
 
 ## collect_participants
 
-[Function definition not fully shown in provided code]
+[Function not fully shown in code]
 
 ## add_calls
 
-[Function definition not fully shown in provided code]
+[Function not fully shown in code]
 
 # Usage Examples
 
-## Generate a class diagram
+## Generating a Class Diagram
 
 ```python
-diagram = generate_class_diagram(chunks, show_attributes=True, show_types=True, max_methods=10)
+diagram = generate_class_diagram(chunks, show_attributes=True, show_types=True)
 ```
 
-## Generate a dependency graph
+## Generating a Dependency Graph
 
 ```python
-graph = generate_dependency_graph(chunks, project_name="myproject", detect_circular=True)
+diagram = generate_dependency_graph(chunks, project_name="my_project")
 ```
 
-## Generate a module overview
+## Generating a Module Overview
 
 ```python
-overview = generate_module_overview(index_status, show_file_counts=True)
+diagram = generate_module_overview(index_status)
 ```
 
-## Generate a language pie chart
+## Generating a Language Pie Chart
 
 ```python
-pie_chart = generate_language_pie_chart(index_status)
+diagram = generate_language_pie_chart(index_status)
 ```
 
-## Generate a sequence diagram
+## Generating a Sequence Diagram
 
 ```python
-sequence = generate_sequence_diagram(call_graph, entry_point="main", max_depth=3)
+diagram = generate_sequence_diagram(call_graph, entry_point="main")
 ```
 
 # Related Components

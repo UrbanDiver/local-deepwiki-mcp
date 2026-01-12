@@ -1,127 +1,102 @@
-# File Overview
+# HTML Exporter Documentation
 
-This file provides functionality to export a DeepWiki documentation set to static HTML files. It includes the `HtmlExporter` class for handling the export process, along with utility functions for rendering markdown and extracting titles, and a command-line interface entry point.
+## File Overview
 
-# Classes
+This module provides functionality to export a DeepWiki documentation set to static HTML files. It includes classes and functions to handle the conversion of markdown files into HTML, manage table of contents (TOC) rendering, and support command-line interface (CLI) usage.
 
-## HtmlExporter
+## Classes
 
-The HtmlExporter class is responsible for exporting all pages from a DeepWiki directory to static HTML files.
+### HtmlExporter
 
-### Methods
+The HtmlExporter class is responsible for managing the export process from a DeepWiki directory to static HTML files. It handles loading the table of contents, copying necessary files, and converting individual markdown files into HTML.
 
-#### `__init__(self, wiki_path: Path, output_path: Path)`
+#### Methods
 
-Initialize the exporter.
+- **`__init__(self, wiki_path: Path, output_path: Path)`**
+  - Initializes the exporter with paths to the DeepWiki directory and the output directory.
+  - **Parameters:**
+    - `wiki_path`: Path to the .deepwiki directory
+    - `output_path`: Output directory for HTML files
+  - **Attributes:**
+    - `wiki_path`: Path to the .deepwiki directory
+    - `output_path`: Output directory for HTML files
+    - `toc_entries`: List of table of contents entries
 
-**Parameters:**
-- `wiki_path`: Path to the .deepwiki directory
-- `output_path`: Output directory for HTML files
+- **`export(self) -> int`**
+  - Exports all wiki pages to HTML.
+  - **Returns:**
+    - Number of pages exported
 
-#### `export(self) -> int`
+- **`_export_page(self, md_file: Path, rel_path: Path) -> None`**
+  - Exports a single markdown page to HTML.
+  - **Parameters:**
+    - `md_file`: Path to the markdown file
+    - `rel_path`: Relative path from wiki root
 
-Export all wiki pages to HTML.
+## Functions
 
-**Returns:**
-- Number of pages exported
+### `render_markdown(content: str) -> str`
 
-#### `_export_page(self, md_file: Path, rel_path: Path) -> None`
+Converts markdown content into HTML using the `markdown` library.
 
-Export a single markdown page to HTML.
+### `extract_title(md_file: Path) -> str`
 
-**Parameters:**
-- `md_file`: Path to the markdown file
-- `rel_path`: Relative path from wiki root
+Extracts the title from a markdown file. (Implementation not shown in provided code)
 
-#### `_render_toc(self) -> str`
+### `export_to_html(wiki_path: str | Path, output_path: str | Path | None = None) -> str`
 
-Render the table of contents as HTML.
+Exports wiki to static HTML files.
 
-#### `_render_toc_entry(self, entry: dict) -> str`
+- **Parameters:**
+  - `wiki_path`: Path to the .deepwiki directory
+  - `output_path`: Output directory (default: `{wiki_path}_html`)
+- **Returns:**
+  - Path to the output directory
 
-Render a single table of contents entry as HTML.
+### `main()`
 
-#### `_build_breadcrumb(self, rel_path: Path) -> str`
+CLI entry point for HTML export. Parses command-line arguments and triggers the export process.
 
-Build breadcrumb navigation for a page.
+## Usage Examples
 
-# Functions
-
-## render_markdown(content: str) -> str
-
-Convert markdown content to HTML.
-
-**Parameters:**
-- `content`: Markdown text to convert
-
-**Returns:**
-- HTML string
-
-## extract_title(md_file: Path) -> str
-
-Extract the title from a markdown file.
-
-**Parameters:**
-- `md_file`: Path to the markdown file
-
-**Returns:**
-- Title string
-
-## export_to_html(wiki_path: str | Path, output_path: str | Path | None = None) -> str
-
-Export wiki to static HTML files.
-
-**Parameters:**
-- `wiki_path`: Path to the .deepwiki directory
-- `output_path`: Output directory (default: `{wiki_path}_html`)
-
-**Returns:**
-- Path to the output directory
-
-## main()
-
-CLI entry point for HTML export.
-
-# Usage Examples
-
-### Using the export_to_html function directly:
+### Using the export_to_html function directly
 
 ```python
 from src.local_deepwiki.export.html import export_to_html
 
 # Export to default output directory
-output_dir = export_to_html(".deepwiki")
+output_dir = export_to_html("./my_wiki.deepwiki")
 
 # Export to custom output directory
-output_dir = export_to_html(".deepwiki", "my_output_dir")
+output_dir = export_to_html("./my_wiki.deepwiki", "./output/html")
 ```
 
-### Using the command-line interface:
+### Using the command-line interface
 
 ```bash
 # Export to default output directory
 python -m src.local_deepwiki.export.html
 
 # Export to custom output directory
-python -m src.local_deepwiki.export.html --output my_output_dir
+python -m src.local_deepwiki.export.html --output ./custom_output
+
+# Export from a specific wiki directory
+python -m src.local_deepwiki.export.html ./path/to/my_wiki.deepwiki
 ```
 
-# Related Components
+## Related Components
 
-This file imports and uses:
+This module imports and uses:
 - `argparse` for command-line argument parsing
-- `json` for loading table of contents and search data
+- `json` for handling JSON data (TOC and search files)
 - `shutil` for copying files
 - `pathlib.Path` for path manipulation
-- `markdown` for markdown rendering
+- `markdown` for markdown to HTML conversion
 
-It works with:
-- The `HtmlExporter` class which orchestrates the export process
-- The `render_markdown` function for converting markdown to HTML
-- The `extract_title` function for getting page titles
-- The `toc.json` file for table of contents data
-- The `search.json` file for search functionality
-- Markdown files in the DeepWiki directory structure
+The HtmlExporter class works with:
+- `toc.json` file for table of contents data
+- `search.json` file for search functionality
+- Markdown files within the wiki directory structure
 
 ## API Reference
 

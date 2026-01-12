@@ -1,47 +1,58 @@
 # File Overview
 
-This file defines the `CodeChunker` class and related functionality for breaking down code files into logical chunks. It provides the core logic for parsing code and extracting meaningful segments based on language-specific syntax trees.
+This file defines the core chunking functionality for processing code files. It provides the `CodeChunker` class responsible for breaking down code files into logical chunks based on various code elements like functions, classes, and methods. The chunker uses the Tree-sitter parser to analyze code structure and extract meaningful segments.
 
 # Classes
 
 ## CodeChunker
 
-The `CodeChunker` class is responsible for chunking code files into logical segments based on their structure. It uses tree-sitter for parsing and extracts code elements like functions, classes, and methods.
+The CodeChunker class is responsible for analyzing code files and splitting them into logical chunks based on code structure.
 
 ### Key Methods
 
 - `chunk_file(self, file_path: Path) -> Iterator[CodeChunk]`: 
-  Takes a file path and yields `CodeChunk` objects representing logical segments of the code file.
+  Takes a file path and yields CodeChunk objects representing different parts of the code file.
+  
+- `chunk_node(self, node: Node, file_path: Path, language: Language) -> Iterator[CodeChunk]`:
+  Processes a tree-sitter Node and yields CodeChunk objects for that node and its children.
+
+### Usage Example
+
+```python
+chunker = CodeChunker()
+for chunk in chunker.chunk_file(Path("example.py")):
+    print(chunk.content)
+```
 
 # Functions
 
 ## get_parent_classes
 
-- **Parameters**: 
-  - `node: Node` - A tree-sitter node representing an element in the code structure
-- **Returns**: 
-  - `list[str]` - A list of parent class names for the given node
-
-# Usage Examples
-
 ```python
-from pathlib import Path
-from local_deepwiki.core.chunker import CodeChunker
-
-chunker = CodeChunker()
-file_path = Path("example.py")
-for chunk in chunker.chunk_file(file_path):
-    print(chunk.content)
+def get_parent_classes(node: Node) -> list[str]
 ```
+
+Extracts the names of parent classes from a class definition node.
+
+### Parameters
+- `node`: A tree-sitter Node representing a class definition
+
+### Returns
+- A list of parent class names as strings
 
 # Related Components
 
 This file works with the following components:
 
-- [`CodeParser`](parser.md) from `local_deepwiki.core.parser` - Used for parsing code files
-- [`ChunkingConfig`](../config.md) from `local_deepwiki.config` - Configuration settings for chunking behavior
-- `CodeChunk` from `local_deepwiki.models` - Data model representing a code chunk
-- [`get_node_text`](parser.md), [`get_node_name`](parser.md), [`get_docstring`](parser.md), [`find_nodes_by_type`](parser.md) from `local_deepwiki.core.parser` - Helper functions for extracting information from tree-sitter nodes
+- **[CodeParser](parser.md)**: Used for parsing code files and creating tree-sitter nodes
+- **[ChunkingConfig](../config.md)**: Configuration settings for chunking behavior
+- **CodeChunk**: Model representing a code chunk with content, type, and metadata
+- **Language**: Enum defining supported programming languages
+- **[get_config](../config.md)**: Function to retrieve configuration settings
+- **[get_node_text](parser.md), [get_node_name](parser.md), [get_docstring](parser.md)**: Helper functions for extracting information from tree-sitter nodes
+- **[find_nodes_by_type](parser.md)**: Function for finding nodes of specific types in the parse tree
+
+The chunker integrates with the Tree-sitter parsing library to understand code structure and the local_deepwiki configuration system to control chunking behavior.
 
 ## API Reference
 
@@ -210,7 +221,7 @@ flowchart TD
 
 ## Relevant Source Files
 
-- `src/local_deepwiki/core/chunker.py:121-509`
+- `src/local_deepwiki/core/chunker.py:162-550`
 
 ## See Also
 

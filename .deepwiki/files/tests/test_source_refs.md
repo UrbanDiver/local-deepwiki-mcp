@@ -1,107 +1,66 @@
 # File Overview
 
-This file contains unit tests for the source references functionality in the `local_deepwiki.generators.source_refs` module. It tests various aspects of adding source reference sections to wiki pages, including handling of file paths, wiki page mapping, line information, and different types of wiki pages such as file, module, and architecture pages.
+This file contains test cases for the `source_refs` module, which is responsible for generating and inserting source reference sections into wiki pages. The tests cover various scenarios including handling file pages, module pages, architecture pages, and line information.
 
 # Classes
 
 ## TestAddSourceRefsSections
 
-Tests for the `add_source_refs_sections` function.
+Tests for the `add_source_refs_sections` function. This class contains tests for adding source reference sections to different types of wiki pages.
 
-### Methods
-
-#### test_adds_sections_to_file_pages
-Test that sections are added to file documentation pages.
-
-#### test_skips_index_pages
-Test that sections are not added to index pages.
-
-#### test_inserts_before_see_also
-Test that sections are inserted before the "See Also" section.
-
-#### test_handles_missing_status
-Test that sections are handled correctly when status information is missing.
-
-#### test_adds_section_to_module_pages
-Test that sections are added to module pages.
-
-#### test_adds_section_to_architecture_page
-Test that sections are added to architecture pages.
+Key methods:
+- `test_adds_sections_to_file_pages`: Tests that sections are added to file documentation pages
+- `test_skips_index_pages`: Tests that sections are not added to index pages
+- `test_inserts_before_see_also`: Tests that sections are inserted before the "See Also" section
+- `test_handles_missing_status`: Tests handling of pages with missing status information
+- `test_adds_section_to_module_pages`: Tests that sections are added to module pages
+- `test_adds_section_to_architecture_page`: Tests that sections are added to architecture pages
 
 ## TestBuildFileToWikiMap
 
-Tests for the [`build_file_to_wiki_map`](../src/local_deepwiki/generators/see_also.md) function.
-
-*Note: This class is defined in the code but its methods are not shown in the provided snippet.*
+Tests for the [`build_file_to_wiki_map`](../src/local_deepwiki/generators/see_also.md) function. This class tests mapping of source files to wiki page paths.
 
 ## TestRelativePath
 
-Tests for the `_relative_path` function.
+Tests for the `_relative_path` function. This function calculates relative paths between wiki pages.
 
-### Methods
-
-#### test_same_directory
-Test relative path in same directory.
-
-#### test_parent_directory
-Test relative path to parent directory.
-
-#### test_child_directory
-Test relative path to child directory.
-
-#### test_root_directory
-Test relative path to root directory.
+Key methods:
+- `test_same_directory`: Tests relative path calculation in the same directory
+- `test_parent_directory`: Tests relative path calculation to a parent directory
+- `test_child_directory`: Tests relative path calculation to a child directory
 
 ## TestGenerateSourceRefsSection
 
-Tests for the `generate_source_refs_section` function.
+Tests for the `generate_source_refs_section` function. This function generates source reference sections for wiki pages.
 
-### Methods
-
-#### test_single_file_with_wiki_link
-Test generating section for single file with wiki page.
-
-#### test_single_file_without_wiki_link
-Test generating section for single file without wiki page.
-
-#### test_multiple_files_with_wiki_links
-Test generating section for multiple files with wiki pages.
-
-#### test_multiple_files_mixed_wiki_links
-Test generating section for multiple files with mixed wiki page presence.
+Key methods:
+- `test_single_file_with_wiki_link`: Tests generating section for a single file with a wiki page
+- `test_single_file_without_wiki_link`: Tests generating section for a single file without a wiki page
+- `test_multiple_files_with_wiki_links`: Tests generating section for multiple files with wiki pages
+- `test_multiple_files_mixed_links`: Tests generating section for multiple files with mixed wiki page links
 
 ## TestAddSourceRefsSectionsWithLineInfo
 
-Tests for `add_source_refs_sections` with line info in status.
+Tests for the `add_source_refs_sections` function with line information in status.
 
-### Methods
-
-#### test_passes_line_info_to_section_generator
-Test that line info from status is used in generated section.
-
-## TestFormatFileEntry
-
-Tests for the `_format_file_entry` function.
-
-### Methods
-
-#### test_without_line_info
-Test formatting without line info.
-
-#### test_with_line_info
-Test formatting with line info shows start-end range.
+Key methods:
+- `test_passes_line_info_to_section_generator`: Tests that line info from status is used in generated section
 
 ## TestGenerateSourceRefsSectionWithLineInfo
 
-Tests for `generate_source_refs_section` with line info.
+Tests for the `generate_source_refs_section` function with line information.
 
-### Methods
+Key methods:
+- `test_single_file_with_line_info`: Tests single file displays line numbers
+- `test_multiple_files_with_line_info`: Tests multiple files display line numbers
 
-#### test_single_file_with_line_info
-Test single file displays line numbers.
+## TestFormatFileEntry
 
-#### test_multiple_files_with_line_info
-Test multiple files display line numbers.
+Tests for the `_format_file_entry` function. This function formats individual file entries for source reference sections.
+
+Key methods:
+- `test_without_line_info`: Tests formatting without line information
+- `test_with_line_info`: Tests formatting with line information showing start-end range
 
 # Functions
 
@@ -109,77 +68,66 @@ Test multiple files display line numbers.
 
 Adds source reference sections to wiki pages based on page status information.
 
-### Parameters
+Parameters:
+- `pages`: List of WikiPage objects to process
+- `page_statuses`: Dictionary mapping page paths to WikiPageStatus objects
 
-- `pages` (list): List of `WikiPage` objects.
-- `page_statuses` (dict): Dictionary mapping page paths to `WikiPageStatus` objects.
-
-### Returns
-
-- None
+Returns:
+- List of updated WikiPage objects with source reference sections added
 
 ## build_file_to_wiki_map
 
 Builds a mapping from source file paths to wiki page paths.
 
-### Parameters
+Parameters:
+- `pages`: List of WikiPage objects to process
 
-- `pages` (list): List of `WikiPage` objects.
-
-### Returns
-
-- dict: Mapping from source file paths to wiki page paths.
+Returns:
+- Dictionary mapping source file paths to wiki page paths
 
 ## generate_source_refs_section
 
-Generates a source references section for a list of source files.
+Generates a source references section for a wiki page.
 
-### Parameters
+Parameters:
+- `source_files`: List of source file paths
+- `current_wiki_path`: Path of the current wiki page
+- `file_to_wiki`: Dictionary mapping source file paths to wiki page paths
+- `file_line_info`: Optional dictionary mapping file paths to line information
 
-- `source_files` (list): List of source file paths.
-- `current_wiki_path` (str): Path of the current wiki page.
-- `file_to_wiki` (dict): Mapping from source file paths to wiki page paths.
-- `file_line_info` (dict): Optional mapping from source file paths to line information.
-
-### Returns
-
-- str or None: The generated section content or None if no files are provided.
+Returns:
+- String containing the formatted source references section
 
 ## _format_file_entry
 
-Formats a single file entry for display in a source references section.
+Formats a single file entry for a source references section.
 
-### Parameters
+Parameters:
+- `file_path`: Path of the source file
+- `wiki_path`: Path of the corresponding wiki page (optional)
+- `current_wiki_path`: Path of the current wiki page
+- `line_info`: Optional line information dictionary with "start_line" and "end_line" keys
 
-- `file_path` (str): Path to the source file.
-- `wiki_path` (str or None): Path to the corresponding wiki page.
-- `current_wiki_path` (str): Path of the current wiki page.
-- `line_info` (dict or None): Line information for the file.
-
-### Returns
-
-- str: Formatted file entry.
+Returns:
+- String formatted file entry
 
 ## _relative_path
 
 Calculates the relative path from one wiki page to another.
 
-### Parameters
+Parameters:
+- `from_path`: Source wiki page path
+- `to_path`: Target wiki page path
 
-- `from_path` (str): Source wiki page path.
-- `to_path` (str): Target wiki page path.
-
-### Returns
-
-- str: Relative path from `from_path` to `to_path`.
+Returns:
+- String representing the relative path
 
 # Usage Examples
 
-## Using `add_source_refs_sections`
+## Basic usage of `add_source_refs_sections`
 
 ```python
 from local_deepwiki.models import WikiPage, WikiPageStatus
-from local_deepwiki.generators.source_refs import add_source_refs_sections
 
 pages = [
     WikiPage(
@@ -200,18 +148,22 @@ page_statuses = {
     ),
 }
 
-add_source_refs_sections(pages, page_statuses)
+updated_pages = add_source_refs_sections(pages, page_statuses)
 ```
 
 ## Using `generate_source_refs_section`
 
 ```python
-from local_deepwiki.generators.source_refs import generate_source_refs_section
-
 result = generate_source_refs_section(
-    source_files=["src/parser.py"],
+    source_files=["src/parser.py", "src/models.py"],
     current_wiki_path="files/src/chunker.md",
-    file_to_wiki={},
+    file_to_wiki={
+        "src/parser.py": "files/src/parser.md",
+        "src/models.py": "files/src/models.md",
+    },
+    file_line_info={
+        "src/parser.py": {"start_line": 42, "end_line": 150},
+    },
 )
 ```
 
@@ -219,8 +171,7 @@ result = generate_source_refs_section(
 
 This file works with the following components:
 
-- `WikiPage` class from `local_deepwiki.models`
-- `WikiPageStatus` class from `local_deepwiki.models`
+- `WikiPage` and `WikiPageStatus` models from `local_deepwiki.models`
 - `add_source_refs_sections` function from `local_deepwiki.generators.source_refs`
 - [`build_file_to_wiki_map`](../src/local_deepwiki/generators/see_also.md) function from `local_deepwiki.generators.source_refs`
 - `generate_source_refs_section` function from `local_deepwiki.generators.source_refs`

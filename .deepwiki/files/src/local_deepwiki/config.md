@@ -1,129 +1,100 @@
 # File Overview
 
-This file defines configuration classes and functions for the local_deepwiki application. It provides structured configuration management using Pydantic models for embedding, LLM, parsing, and output settings. The configuration system supports loading from YAML files and provides utilities for accessing and setting configuration values.
+This file defines configuration classes and functions for the local_deepwiki application. It provides a structured way to manage various configuration settings related to embedding models, language models, parsing, chunking, and output settings. The configuration system uses Pydantic for validation and YAML for configuration file handling.
 
 # Classes
 
 ## LocalEmbeddingConfig
 
-Configuration class for local embedding models. This class defines settings for embedding models that run locally.
+Configuration class for local embedding models. This class inherits from BaseModel and defines settings specific to local embedding models.
 
 ## OpenAIEmbeddingConfig
 
-Configuration class for OpenAI embedding models. This class defines settings for OpenAI embedding models.
+Configuration class for OpenAI embedding models. This class inherits from BaseModel and defines settings specific to OpenAI embedding models.
 
 ## EmbeddingConfig
 
-Base configuration class for embedding settings. This class serves as a parent class for different embedding model configurations.
+Base configuration class for embedding models. This class inherits from BaseModel and serves as a base for other embedding configuration classes.
 
 ## OllamaConfig
 
-Configuration class for Ollama settings. This class defines settings for the Ollama inference engine.
+Configuration class for Ollama models. This class inherits from BaseModel and defines settings specific to Ollama models.
 
 ## AnthropicConfig
 
-Configuration class for Anthropic settings. This class defines settings for Anthropic models.
+Configuration class for Anthropic models. This class inherits from BaseModel and defines settings specific to Anthropic models.
 
 ## OpenAILLMConfig
 
-Configuration class for OpenAI LLM settings. This class defines settings for OpenAI large language models.
+Configuration class for OpenAI language models. This class inherits from BaseModel and defines settings specific to OpenAI language models.
 
 ## LLMConfig
 
-Base configuration class for LLM settings. This class serves as a parent class for different LLM configurations.
+Base configuration class for language models. This class inherits from BaseModel and serves as a base for other language model configuration classes.
 
 ## ParsingConfig
 
-Configuration class for parsing settings. This class defines settings for document parsing.
+Configuration class for parsing settings. This class inherits from BaseModel and defines settings for parsing documents.
 
 ## ChunkingConfig
 
-Configuration class for chunking settings. This class defines settings for text chunking operations.
+Configuration class for chunking settings. This class inherits from BaseModel and defines settings for chunking documents.
 
 ## OutputConfig
 
-Configuration class for output settings. This class defines settings for output formatting and storage.
+Configuration class for output settings. This class inherits from BaseModel and defines settings for output formatting.
 
 ## Config
 
-Main configuration class that aggregates all other configuration components. This class combines all configuration settings into a single structured object.
+Main configuration class that aggregates all other configuration classes. This class inherits from BaseModel and contains fields for embedding, LLM, parsing, chunking, and output configurations.
 
 # Functions
 
 ## get_config
 
-```python
-def get_config() -> Config:
-```
-
-Retrieves the current configuration instance.
-
-**Returns:**
-- Config: The current configuration instance
+Retrieves the application configuration. This function does not take any parameters and returns a Config instance.
 
 ## set_config
 
-```python
-def set_config(config: Config) -> None:
-```
-
-Sets the global configuration instance.
-
-**Parameters:**
-- config (Config): The configuration instance to set as global
-
-**Returns:**
-- None
+Sets the application configuration. This function takes a Config instance as a parameter and does not return a value.
 
 # Usage Examples
 
-## Loading Configuration from YAML
+## Loading Configuration
 
 ```python
-# Load configuration from a YAML file
-config_path = "config.yaml"
-with open(config_path, 'r') as f:
-    config_dict = yaml.safe_load(f)
-    
-# Create a Config instance
-config = Config(**config_dict)
+from local_deepwiki.config import get_config
 
-# Set the global configuration
-set_config(config)
-
-# Retrieve the global configuration
-current_config = get_config()
+# Get the current configuration
+config = get_config()
 ```
 
-## Creating Configuration Instances
+## Setting Configuration
 
 ```python
-# Create individual configuration components
-embedding_config = EmbeddingConfig(
-    # ... embedding settings
+from local_deepwiki.config import set_config, Config, EmbeddingConfig
+
+# Create a new configuration
+new_config = Config(
+    embedding=EmbeddingConfig(
+        model="text-embedding-3-small"
+    )
 )
 
-llm_config = LLMConfig(
-    # ... LLM settings
-)
-
-# Combine into main configuration
-config = Config(
-    embedding=embedding_config,
-    llm=llm_config
-    # ... other components
-)
+# Set the configuration
+set_config(new_config)
 ```
 
 # Related Components
 
-This file imports and depends on:
-- `yaml` for YAML parsing
-- `pydantic` for configuration validation
-- `pathlib.Path` for path handling
-- `typing` for type hints
+This file works with the following components based on imports and references:
 
-The configuration system is designed to work with Pydantic models for validation and structured data handling. The classes are intended to be used together as part of a larger configuration management system, with `Config` serving as the [main](export/html.md) entry point that aggregates all other configuration components.
+- **pydantic**: Used for data validation and settings management
+- **yaml**: Used for parsing configuration files
+- **pathlib.Path**: Used for handling file paths
+- **os**: Used for environment variable access and OS-related operations
+
+The configuration system is designed to be used with Pydantic's BaseModel for validation and YAML for configuration file parsing. The classes are structured to allow for easy extension and composition of different configuration settings.
 
 ## API Reference
 

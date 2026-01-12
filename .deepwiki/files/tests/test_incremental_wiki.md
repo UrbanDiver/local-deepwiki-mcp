@@ -1,40 +1,40 @@
 # File Overview
 
-This file, `tests/test_incremental_wiki.py`, contains unit tests for the incremental wiki generation functionality. It tests the behavior of the [WikiGenerator](../src/local_deepwiki/generators/wiki.md) class and related models, focusing on how the system determines whether wiki pages need regeneration based on source file changes.
+This file contains unit tests for the incremental wiki generation functionality. It tests various aspects of the WikiGenerationStatus, WikiPageStatus, and [WikiGenerator](../src/local_deepwiki/generators/wiki.md) classes to ensure correct behavior when generating wikis incrementally based on source file changes.
 
 # Classes
 
 ## TestWikiPageStatus
 
-Test class for the `WikiPageStatus` model.
+Test class for the WikiPageStatus model.
 
 ### Methods
 
-- **test_create_page_status**: Tests creating a `WikiPageStatus` instance with specified parameters.
+- `test_create_page_status`: Tests creating a WikiPageStatus instance with expected attributes.
 
 ## TestWikiGenerationStatus
 
-Test class for the `WikiGenerationStatus` model.
+Test class for the WikiGenerationStatus model.
 
 ### Methods
 
-- **test_create_generation_status**: Tests creating a `WikiGenerationStatus` instance.
-- **test_generation_status_with_pages**: Tests generation status with page statuses (incomplete in provided code).
+- `test_create_generation_status`: Tests creating a WikiGenerationStatus instance with expected attributes.
+- `test_generation_status_with_pages`: Tests generation status with page statuses (incomplete in provided code).
 
 ## TestWikiGeneratorHelpers
 
-Test class for helper methods in the [`WikiGenerator`](../src/local_deepwiki/generators/wiki.md) class.
+Test class for helper methods in the [WikiGenerator](../src/local_deepwiki/generators/wiki.md) class.
 
 ### Methods
 
-- **mock_wiki_generator**: Creates a mock [`WikiGenerator`](../src/local_deepwiki/generators/wiki.md) instance for testing.
-- **test_compute_content_hash**: Tests computing content hash (not shown in full code).
-- **test_needs_regeneration_no_previous_status**: Tests regeneration logic when no previous status exists.
-- **test_needs_regeneration_page_not_in_status**: Tests regeneration logic when a page is not in the previous status.
-- **test_needs_regeneration_source_hash_changed**: Tests regeneration logic when a source file hash has changed.
-- **test_needs_regeneration_no_changes**: Tests regeneration logic when nothing has changed.
-- **test_needs_regeneration_source_files_changed**: Tests regeneration logic when source files list has changed.
-- **test_record_page_status**: Tests recording page status.
+- `mock_wiki_generator`: Creates a mock [WikiGenerator](../src/local_deepwiki/generators/wiki.md) instance for testing.
+- `test_compute_content_hash`: Tests content hash computation (not fully shown in provided code).
+- `test_needs_regeneration_no_previous_status`: Tests needs_regeneration when no previous status exists.
+- `test_needs_regeneration_page_not_in_status`: Tests needs_regeneration when page not in previous status.
+- `test_needs_regeneration_source_hash_changed`: Tests needs_regeneration when source file hash changed.
+- `test_needs_regeneration_no_changes`: Tests needs_regeneration when nothing changed.
+- `test_needs_regeneration_source_files_changed`: Tests needs_regeneration when source files list changed.
+- `test_record_page_status`: Tests recording page status.
 
 ## TestWikiStatusPersistence
 
@@ -42,7 +42,7 @@ Test class for wiki status file persistence functionality.
 
 ### Methods
 
-- **test_save_and_load_wiki_status**: Tests saving and loading wiki status to/from disk.
+- `test_save_and_load_wiki_status`: Tests saving and loading wiki status to/from disk.
 
 ## TestLoadExistingPage
 
@@ -50,13 +50,13 @@ Test class for loading existing wiki pages from disk.
 
 ### Methods
 
-- **test_load_existing_page**: Tests loading an existing page from disk.
+- `test_load_existing_page`: Tests loading an existing page from disk.
 
 # Functions
 
 ## mock_wiki_generator
 
-Creates a mock [`WikiGenerator`](../src/local_deepwiki/generators/wiki.md) instance for testing purposes.
+Creates and returns a mock [WikiGenerator](../src/local_deepwiki/generators/wiki.md) instance with predefined test data.
 
 ### Parameters
 
@@ -64,7 +64,119 @@ Creates a mock [`WikiGenerator`](../src/local_deepwiki/generators/wiki.md) insta
 
 ### Returns
 
-- A mock [`WikiGenerator`](../src/local_deepwiki/generators/wiki.md) instance with predefined attributes for testing.
+- A mock [WikiGenerator](../src/local_deepwiki/generators/wiki.md) instance with:
+  - `wiki_path` set to `/tmp/test_wiki`
+  - `_file_hashes` containing test file hashes
+  - `_previous_status` set to None
+  - `_page_statuses` as an empty dictionary
+
+## test_compute_content_hash
+
+Tests the content hash computation method (not fully shown in provided code).
+
+### Parameters
+
+- None
+
+### Returns
+
+- None
+
+## test_needs_regeneration_no_previous_status
+
+Tests the `_needs_regeneration` method when no previous status exists.
+
+### Parameters
+
+- `mock_wiki_generator`: A mock [WikiGenerator](../src/local_deepwiki/generators/wiki.md) instance
+
+### Returns
+
+- None
+
+## test_needs_regeneration_page_not_in_status
+
+Tests the `_needs_regeneration` method when page is not in previous status.
+
+### Parameters
+
+- `mock_wiki_generator`: A mock [WikiGenerator](../src/local_deepwiki/generators/wiki.md) instance
+
+### Returns
+
+- None
+
+## test_needs_regeneration_source_hash_changed
+
+Tests the `_needs_regeneration` method when source file hash has changed.
+
+### Parameters
+
+- `mock_wiki_generator`: A mock [WikiGenerator](../src/local_deepwiki/generators/wiki.md) instance
+
+### Returns
+
+- None
+
+## test_needs_regeneration_no_changes
+
+Tests the `_needs_regeneration` method when nothing has changed.
+
+### Parameters
+
+- `mock_wiki_generator`: A mock [WikiGenerator](../src/local_deepwiki/generators/wiki.md) instance
+
+### Returns
+
+- None
+
+## test_needs_regeneration_source_files_changed
+
+Tests the `_needs_regeneration` method when source files list has changed.
+
+### Parameters
+
+- `mock_wiki_generator`: A mock [WikiGenerator](../src/local_deepwiki/generators/wiki.md) instance
+
+### Returns
+
+- None
+
+## test_record_page_status
+
+Tests recording page status in the [WikiGenerator](../src/local_deepwiki/generators/wiki.md).
+
+### Parameters
+
+- `mock_wiki_generator`: A mock [WikiGenerator](../src/local_deepwiki/generators/wiki.md) instance
+
+### Returns
+
+- None
+
+## test_save_and_load_wiki_status
+
+Tests saving and loading wiki status to/from disk.
+
+### Parameters
+
+- `tmp_path`: A temporary path for test files
+
+### Returns
+
+- None
+
+## test_load_existing_page
+
+Tests loading an existing page from disk.
+
+### Parameters
+
+- `tmp_path`: A temporary path for test files
+
+### Returns
+
+- None
 
 # Usage Examples
 
@@ -72,7 +184,6 @@ Creates a mock [`WikiGenerator`](../src/local_deepwiki/generators/wiki.md) insta
 
 ```python
 def test_create_page_status(self):
-    """Test creating a WikiPageStatus."""
     status = WikiPageStatus(
         path="files/test.md",
         source_files=["src/test.py"],
@@ -86,34 +197,25 @@ def test_create_page_status(self):
     assert status.content_hash == "def456"
 ```
 
-## Testing Regeneration Logic
+## Testing Generation Status with Pages
 
 ```python
-def test_needs_regeneration_no_changes(self, mock_wiki_generator):
-    """Test needs_regeneration when nothing changed."""
-    mock_wiki_generator._previous_status = WikiGenerationStatus(
-        repo_path="/repo",
+def test_create_generation_status(self):
+    status = WikiGenerationStatus(
+        repo_path="/path/to/repo",
         generated_at=time.time(),
-        total_pages=1,
-        pages={
-            "index.md": WikiPageStatus(
-                path="index.md",
-                source_files=["src/test.py"],
-                source_hashes={"src/test.py": "current_hash"},  # Same as current
-                content_hash="contenthash",
-                generated_at=time.time(),
-            )
-        },
+        total_pages=5,
+        index_status_hash="abc123",
+        pages={},
     )
-    result = mock_wiki_generator._needs_regeneration("index.md", ["src/test.py"])
-    assert result is False
+    assert status.repo_path == "/path/to/repo"
+    assert status.total_pages == 5
 ```
 
 ## Testing Page Status Recording
 
 ```python
 def test_record_page_status(self, mock_wiki_generator):
-    """Test recording page status."""
     page = WikiPage(
         path="test.md",
         title="Test",
@@ -121,7 +223,7 @@ def test_record_page_status(self, mock_wiki_generator):
         generated_at=time.time(),
     )
     mock_wiki_generator._record_page_status(page, ["src/test.py"])
-
+    
     assert "test.md" in mock_wiki_generator._page_statuses
     status = mock_wiki_generator._page_statuses["test.md"]
     assert status.source_files == ["src/test.py"]
@@ -130,15 +232,17 @@ def test_record_page_status(self, mock_wiki_generator):
 
 # Related Components
 
-This test file works with the following components:
+This file works with the following components:
 
-- [`WikiGenerator`](../src/local_deepwiki/generators/wiki.md) class: The [main](../src/local_deepwiki/export/html.md) class being tested for incremental wiki generation
-- `WikiPageStatus` model: Represents the status of individual wiki pages
-- `WikiGenerationStatus` model: Represents the overall status of wiki generation
-- `WikiPage` model: Represents individual wiki pages
-- `FileInfo`, `IndexStatus`, `Language` models: Supporting models used in the system
+- `WikiGenerationStatus`: Model for tracking wiki generation status
+- `WikiPageStatus`: Model for tracking individual page status
+- [`WikiGenerator`](../src/local_deepwiki/generators/wiki.md): Main class for wiki generation functionality
+- `WikiPage`: Model for wiki page content
+- `FileInfo`: Model for file information
+- `IndexStatus`: Model for index status tracking
+- `Language`: Enum for language types
 
-The tests use `unittest.mock` for mocking and `pytest` for test execution. The tests also interact with `local_deepwiki.generators.wiki` module and `local_deepwiki.models` module.
+The tests make use of pytest for testing framework and unittest.mock for creating mock objects. The tests also utilize temporary file paths for persistence testing.
 
 ## API Reference
 

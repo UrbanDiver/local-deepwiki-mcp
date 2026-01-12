@@ -5,21 +5,21 @@ Local DeepWiki-style MCP server for private repository documentation
 
 ## Description
 
-This project provides a local MCP server that enables private repository documentation with DeepWiki-style functionality. It offers tools for exporting documentation, serving a web interface, and watching for changes in the repository. The system supports configurable chunking and embedding providers for processing code and documentation content.
+This project provides a local MCP server that enables private repository documentation generation and serving, similar to DeepWiki. It offers tools for indexing code repositories, generating documentation, and serving that documentation via a web interface. The system supports both local and external embedding providers for semantic search and documentation generation.
 
 ## Key Features
 
-- **MCP Server Implementation** - The [`main`](files/src/local_deepwiki/export/html.md) function in `src/local_deepwiki/server.py` demonstrates the core MCP server setup using `stdio_server` and `server.run` for handling communication protocols
-- **Configurable Embedding Providers** - The `Indexer.__init__` method in `src/local_deepwiki/core/indexer.py` accepts an `embedding_provider_name` parameter that supports overriding between "local" and "openai" embedding providers
-- **Web Server Interface** - The `run_server` function in `src/local_deepwiki/web/app.py` provides a web server with configurable host, port, and debug options for serving the wiki content
-- **Chunking Configuration Support** - The `Chunker.__init__` method in `src/local_deepwiki/core/chunker.py` initializes with optional [`ChunkingConfig`](files/src/local_deepwiki/config.md) and defaults to global configuration values
-- **Repository Path Handling** - The `Indexer.__init__` method in `src/local_deepwiki/core/indexer.py` accepts a `repo_path` parameter for specifying the repository root directory to be processed
+- **MCP Server Implementation**: The [`main`](files/src/local_deepwiki/export/html.md) function in `server.py` demonstrates the core MCP server setup using `stdio_server` and `server.run` for handling MCP protocol communication
+- **Configurable Embedding Providers**: The `Indexer.__init__` method accepts an `embedding_provider_name` parameter that allows switching between "local" and "openai" embedding providers
+- **Web Server for Documentation Serving**: The `run_server` function in `web/app.py` creates and runs a Flask web application to serve documentation from a specified wiki path
+- **Chunking Configuration Support**: The `Chunker.__init__` method initializes with optional [`ChunkingConfig`](files/src/local_deepwiki/config.md) and uses `get_config().chunking` as default when no config is provided
+- **Repository Indexing**: The `Indexer.__init__` method accepts a `repo_path` parameter to initialize indexing of code repositories for documentation generation
 
 ## Technology Stack
 
 - **Python >=3.11**
 - **Dependencies**: anthropic, flask, lancedb, markdown, mcp, ollama, openai, pandas, pydantic, pyyaml, rich, sentence-transformers
-  - Plus 11 more...
+  - Plus 14 more...
 
 ## Directory Structure
 

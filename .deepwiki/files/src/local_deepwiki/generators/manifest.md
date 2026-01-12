@@ -1,14 +1,12 @@
 # File Overview
 
-This file, `src/local_deepwiki/generators/manifest.py`, provides functionality for parsing various project manifest files across different programming languages. It extracts metadata such as project name, version, dependencies, and language information from files like `pyproject.toml`, `setup.py`, `package.json`, and others.
-
-The [main](../export/html.md) entry point is the `parse_manifest` function, which attempts to parse a repository's project manifest using a prioritized list of parsers for different formats.
+This file provides functionality for parsing project manifest files across multiple programming languages to extract metadata and dependencies. It supports parsing various package manifests such as `pyproject.toml`, `setup.py`, `requirements.txt`, `package.json`, `Cargo.toml`, `go.mod`, `pom.xml`, `build.gradle`, and `Gemfile`. The extracted data is stored in a `ProjectManifest` object for further processing.
 
 # Classes
 
 ## ProjectManifest
 
-The `ProjectManifest` class holds metadata extracted from project manifest files. It stores information like project name, version, dependencies, and language.
+The `ProjectManifest` class holds metadata and dependency information extracted from project manifest files.
 
 ### Methods
 
@@ -29,11 +27,15 @@ Returns:
 def get_tech_stack_summary(self) -> dict
 ```
 
+Get a summary of the technology stack based on extracted data.
+
 #### _categorize_dependencies
 
 ```python
 def _categorize_dependencies(self) -> None
 ```
+
+Categorize dependencies into regular and development dependencies.
 
 #### get_dependency_list
 
@@ -41,11 +43,15 @@ def _categorize_dependencies(self) -> None
 def get_dependency_list(self) -> list
 ```
 
+Get a list of all dependencies.
+
 #### get_entry_points_summary
 
 ```python
 def get_entry_points_summary(self) -> dict
 ```
+
+Get a summary of entry points.
 
 # Functions
 
@@ -171,22 +177,47 @@ Parameters:
 - `filepath`: Path to the `Gemfile` file.
 - `manifest`: The `ProjectManifest` object to populate.
 
+## _parse_python_dep
+
+```python
+def _parse_python_dep(line: str) -> tuple[str, str]
+```
+
+Parse a line from a Python dependency file (e.g., `requirements.txt`) to extract name and version.
+
+Parameters:
+- `line`: A line from a dependency file.
+
+Returns:
+- A tuple of `(name, version)`.
+
 ## find
 
 ```python
 def find(path: str) -> Any
 ```
 
-Helper function to find elements in XML with namespace support.
+Find an element in an XML tree, handling namespaces.
 
 Parameters:
-- `path`: XPath to search for.
+- `path`: XPath-like path to the element.
+
+Returns:
+- The found element or `None`.
 
 ## get_directory_tree
 
 ```python
-def get_directory_tree(repo_path: Path) -> dict
+def get_directory_tree(repo_path: Path) -> list
 ```
+
+Get a list of all files in the repository directory tree.
+
+Parameters:
+- `repo_path`: Path to the repository root.
+
+Returns:
+- List of file paths.
 
 ## should_skip
 
@@ -194,34 +225,51 @@ def get_directory_tree(repo_path: Path) -> dict
 def should_skip(filepath: Path) -> bool
 ```
 
+Determine if a file should be skipped during parsing.
+
+Parameters:
+- `filepath`: Path to the file.
+
+Returns:
+- `True` if the file should be skipped; otherwise `False`.
+
 ## traverse
 
 ```python
-def traverse(repo_path: Path, callback: callable) -> None
+def traverse(repo_path: Path, skip_patterns: list[str]) -> list[Path]
 ```
+
+Traverse the repository directory tree and return paths to files matching the criteria.
+
+Parameters:
+- `repo_path`: Path to the repository root.
+- `skip_patterns`: List of patterns to skip.
+
+Returns:
+- List of file paths.
 
 # Usage Examples
 
-To parse a repository's manifest:
+To parse a repository and extract manifest data:
 
 ```python
 from pathlib import Path
-from manifest import parse_manifest
+from src.local_deepwiki.generators.manifest import parse_manifest
 
 repo_path = Path("/path/to/repo")
 manifest = parse_manifest(repo_path)
-print(manifest.name)
-print(manifest.dependencies)
 ```
 
 # Related Components
 
-This file works with:
-- `Path` from `pathlib`
-- `json` and `re` standard library modules
-- `tomllib` and `tomli` for TOML parsing
-- `xml.etree.ElementTree` for XML parsing
-- `ProjectManifest` class for storing parsed data
+This file works with the following components:
+
+- `ProjectManifest`: The class used to store extracted metadata and dependencies.
+- `Path`: Used for handling file paths.
+- `tomllib` and `tomli`: Used for parsing TOML files.
+- `xml.etree.ElementTree`: Used for parsing XML files like `pom.xml`.
+- `json`: Used for parsing JSON files like `package.json`.
+- `re`: Used for regular expression matching in various parsers.
 
 ## API Reference
 
