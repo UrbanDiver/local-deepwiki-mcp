@@ -3,11 +3,11 @@
 import pytest
 
 from local_deepwiki.generators.source_refs import (
+    _format_file_entry,
+    _relative_path,
     add_source_refs_sections,
     build_file_to_wiki_map,
     generate_source_refs_section,
-    _format_file_entry,
-    _relative_path,
 )
 from local_deepwiki.models import WikiPage, WikiPageStatus
 

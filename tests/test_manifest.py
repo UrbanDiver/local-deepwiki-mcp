@@ -2,10 +2,15 @@
 
 import json
 import tempfile
+import time
 from pathlib import Path
 
 from local_deepwiki.generators.manifest import (
+    ManifestCacheEntry,
     ProjectManifest,
+    _get_manifest_mtimes,
+    _is_cache_valid,
+    get_cached_manifest,
     get_directory_tree,
     parse_manifest,
 )
@@ -63,7 +68,8 @@ class TestParsePyprojectToml:
         """Parse a basic pyproject.toml."""
         with tempfile.TemporaryDirectory() as tmpdir:
             pyproject = Path(tmpdir) / "pyproject.toml"
-            pyproject.write_text("""
+            pyproject.write_text(
+                """
 [project]
 name = "test-project"
 version = "1.0.0"
@@ -79,7 +85,8 @@ dev = ["pytest>=7.0"]
 
 [project.scripts]
 test-cli = "test_project:main"
-""")
+"""
+            )
             manifest = parse_manifest(Path(tmpdir))
 
             assert manifest.name == "test-project"
@@ -100,24 +107,28 @@ class TestParsePackageJson:
         """Parse a basic package.json."""
         with tempfile.TemporaryDirectory() as tmpdir:
             package_json = Path(tmpdir) / "package.json"
-            package_json.write_text(json.dumps({
-                "name": "test-package",
-                "version": "1.0.0",
-                "description": "A test package",
-                "dependencies": {
-                    "express": "^4.0.0",
-                    "lodash": "^4.0.0",
-                },
-                "devDependencies": {
-                    "typescript": "^5.0.0",
-                    "jest": "^29.0.0",
-                },
-                "scripts": {
-                    "build": "tsc",
-                    "test": "jest",
-                },
-                "main": "index.js",
-            }))
+            package_json.write_text(
+                json.dumps(
+                    {
+                        "name": "test-package",
+                        "version": "1.0.0",
+                        "description": "A test package",
+                        "dependencies": {
+                            "express": "^4.0.0",
+                            "lodash": "^4.0.0",
+                        },
+                        "devDependencies": {
+                            "typescript": "^5.0.0",
+                            "jest": "^29.0.0",
+                        },
+                        "scripts": {
+                            "build": "tsc",
+                            "test": "jest",
+                        },
+                        "main": "index.js",
+                    }
+                )
+            )
             manifest = parse_manifest(Path(tmpdir))
 
             assert manifest.name == "test-package"
@@ -138,7 +149,8 @@ class TestParseRequirementsTxt:
         """Parse a basic requirements.txt."""
         with tempfile.TemporaryDirectory() as tmpdir:
             requirements = Path(tmpdir) / "requirements.txt"
-            requirements.write_text("""
+            requirements.write_text(
+                """
 # Main dependencies
 requests>=2.0
 flask==2.0.0
@@ -146,7 +158,8 @@ pydantic
 
 # Skip these
 -r other-requirements.txt
-""")
+"""
+            )
             manifest = parse_manifest(Path(tmpdir))
 
             assert manifest.language == "Python"
@@ -162,7 +175,8 @@ class TestParseCargoToml:
         """Parse a basic Cargo.toml."""
         with tempfile.TemporaryDirectory() as tmpdir:
             cargo = Path(tmpdir) / "Cargo.toml"
-            cargo.write_text("""
+            cargo.write_text(
+                """
 [package]
 name = "test-crate"
 version = "0.1.0"
@@ -174,7 +188,8 @@ tokio = { version = "1.0", features = ["full"] }
 
 [dev-dependencies]
 criterion = "0.5"
-""")
+"""
+            )
             manifest = parse_manifest(Path(tmpdir))
 
             assert manifest.name == "test-crate"
@@ -193,7 +208,8 @@ class TestParseGoMod:
         """Parse a basic go.mod."""
         with tempfile.TemporaryDirectory() as tmpdir:
             go_mod = Path(tmpdir) / "go.mod"
-            go_mod.write_text("""
+            go_mod.write_text(
+                """
 module github.com/user/test-project
 
 go 1.21
@@ -202,7 +218,8 @@ require (
     github.com/gin-gonic/gin v1.9.0
     github.com/stretchr/testify v1.8.0
 )
-""")
+"""
+            )
             manifest = parse_manifest(Path(tmpdir))
 
             assert manifest.name == "test-project"
@@ -282,11 +299,13 @@ class TestMultipleManifests:
         """pyproject.toml takes precedence over requirements.txt."""
         with tempfile.TemporaryDirectory() as tmpdir:
             pyproject = Path(tmpdir) / "pyproject.toml"
-            pyproject.write_text("""
+            pyproject.write_text(
+                """
 [project]
 name = "from-pyproject"
 dependencies = ["flask"]
-""")
+"""
+            )
             requirements = Path(tmpdir) / "requirements.txt"
             requirements.write_text("requests")
 
@@ -300,3 +319,182 @@ dependencies = ["flask"]
             # Both manifest files recorded
             assert "pyproject.toml" in manifest.manifest_files
             assert "requirements.txt" in manifest.manifest_files
+
+
+class TestManifestCaching:
+    """Tests for manifest caching functionality."""
+
+    def test_get_manifest_mtimes_empty_repo(self):
+        """Empty repo returns no mtimes."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            mtimes = _get_manifest_mtimes(Path(tmpdir))
+            assert mtimes == {}
+
+    def test_get_manifest_mtimes_with_files(self):
+        """Returns mtimes for existing manifest files."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / "pyproject.toml").write_text("[project]\nname = 'test'")
+            (root / "package.json").write_text('{"name": "test"}')
+
+            mtimes = _get_manifest_mtimes(root)
+
+            assert "pyproject.toml" in mtimes
+            assert "package.json" in mtimes
+            assert mtimes["pyproject.toml"] > 0
+            assert mtimes["package.json"] > 0
+
+    def test_cache_entry_serialization(self):
+        """Cache entry can be serialized and deserialized."""
+        entry = ManifestCacheEntry(
+            manifest_data={"name": "test", "dependencies": {"flask": "^2.0"}},
+            file_mtimes={"pyproject.toml": 1234567890.0},
+        )
+
+        # Serialize
+        data = entry.to_dict()
+        assert "manifest_data" in data
+        assert "file_mtimes" in data
+
+        # Deserialize
+        restored = ManifestCacheEntry.from_dict(data)
+        assert restored.manifest_data == entry.manifest_data
+        assert restored.file_mtimes == entry.file_mtimes
+
+    def test_cache_valid_when_unchanged(self):
+        """Cache is valid when files haven't changed."""
+        mtimes = {"pyproject.toml": 1234567890.0}
+        entry = ManifestCacheEntry(
+            manifest_data={"name": "test"},
+            file_mtimes=mtimes,
+        )
+
+        assert _is_cache_valid(entry, mtimes) is True
+
+    def test_cache_invalid_when_file_modified(self):
+        """Cache is invalid when a file is modified."""
+        old_mtimes = {"pyproject.toml": 1234567890.0}
+        new_mtimes = {"pyproject.toml": 1234567899.0}  # Different mtime
+
+        entry = ManifestCacheEntry(
+            manifest_data={"name": "test"},
+            file_mtimes=old_mtimes,
+        )
+
+        assert _is_cache_valid(entry, new_mtimes) is False
+
+    def test_cache_invalid_when_file_added(self):
+        """Cache is invalid when a new manifest file is added."""
+        old_mtimes = {"pyproject.toml": 1234567890.0}
+        new_mtimes = {"pyproject.toml": 1234567890.0, "package.json": 1234567890.0}
+
+        entry = ManifestCacheEntry(
+            manifest_data={"name": "test"},
+            file_mtimes=old_mtimes,
+        )
+
+        assert _is_cache_valid(entry, new_mtimes) is False
+
+    def test_cache_invalid_when_file_removed(self):
+        """Cache is invalid when a manifest file is removed."""
+        old_mtimes = {"pyproject.toml": 1234567890.0, "package.json": 1234567890.0}
+        new_mtimes = {"pyproject.toml": 1234567890.0}
+
+        entry = ManifestCacheEntry(
+            manifest_data={"name": "test"},
+            file_mtimes=old_mtimes,
+        )
+
+        assert _is_cache_valid(entry, new_mtimes) is False
+
+    def test_get_cached_manifest_creates_cache(self):
+        """get_cached_manifest creates cache file on first call."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            cache_dir = root / ".deepwiki"
+
+            (root / "pyproject.toml").write_text(
+                """
+[project]
+name = "cached-project"
+dependencies = ["requests"]
+"""
+            )
+
+            manifest = get_cached_manifest(root, cache_dir=cache_dir)
+
+            assert manifest.name == "cached-project"
+            assert (cache_dir / "manifest_cache.json").exists()
+
+    def test_get_cached_manifest_uses_cache(self):
+        """get_cached_manifest uses cache on subsequent calls."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            cache_dir = root / ".deepwiki"
+
+            (root / "pyproject.toml").write_text(
+                """
+[project]
+name = "cached-project"
+dependencies = ["requests"]
+"""
+            )
+
+            # First call creates cache
+            manifest1 = get_cached_manifest(root, cache_dir=cache_dir)
+
+            # Modify the file content but keep same mtime (simulate using cache)
+            # Since we can't easily control mtime, we verify cache file exists
+            assert (cache_dir / "manifest_cache.json").exists()
+
+            # Second call should use cache
+            manifest2 = get_cached_manifest(root, cache_dir=cache_dir)
+
+            assert manifest1.name == manifest2.name
+            assert manifest1.dependencies == manifest2.dependencies
+
+    def test_get_cached_manifest_invalidates_on_change(self):
+        """get_cached_manifest re-parses when file changes."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            cache_dir = root / ".deepwiki"
+
+            pyproject = root / "pyproject.toml"
+            pyproject.write_text(
+                """
+[project]
+name = "original-name"
+"""
+            )
+
+            # First call
+            manifest1 = get_cached_manifest(root, cache_dir=cache_dir)
+            assert manifest1.name == "original-name"
+
+            # Wait a tiny bit to ensure different mtime
+            time.sleep(0.01)
+
+            # Modify the file
+            pyproject.write_text(
+                """
+[project]
+name = "updated-name"
+"""
+            )
+
+            # Second call should re-parse
+            manifest2 = get_cached_manifest(root, cache_dir=cache_dir)
+            assert manifest2.name == "updated-name"
+
+    def test_get_cached_manifest_default_cache_dir(self):
+        """get_cached_manifest uses .deepwiki in repo by default."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+
+            (root / "package.json").write_text('{"name": "test-pkg"}')
+
+            # Call without explicit cache_dir
+            manifest = get_cached_manifest(root)
+
+            assert manifest.name == "test-pkg"
+            assert (root / ".deepwiki" / "manifest_cache.json").exists()

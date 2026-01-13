@@ -2,16 +2,12 @@
 
 import time
 from pathlib import Path
-from unittest.mock import MagicMock, patch, AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from local_deepwiki.config import Config
-from local_deepwiki.watcher import (
-    DebouncedHandler,
-    RepositoryWatcher,
-    WATCHED_EXTENSIONS,
-)
+from local_deepwiki.watcher import WATCHED_EXTENSIONS, DebouncedHandler, RepositoryWatcher
 
 
 class TestWatchedExtensions:

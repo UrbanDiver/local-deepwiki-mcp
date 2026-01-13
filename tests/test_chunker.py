@@ -54,13 +54,13 @@ class Greeter:
 
     def test_chunk_extracts_function_names(self, tmp_path):
         """Test that function names are extracted."""
-        code = '''
+        code = """
 def process_data(data):
     return data
 
 def analyze_results(results):
     return results
-'''
+"""
         test_file = tmp_path / "test.py"
         test_file.write_text(code)
 
@@ -73,13 +73,13 @@ def analyze_results(results):
 
     def test_chunk_extracts_class_names(self, tmp_path):
         """Test that class names are extracted."""
-        code = '''
+        code = """
 class DataProcessor:
     pass
 
 class ResultAnalyzer:
     pass
-'''
+"""
         test_file = tmp_path / "test.py"
         test_file.write_text(code)
 
@@ -110,7 +110,7 @@ def documented_function():
 
     def test_chunk_javascript_file(self, tmp_path):
         """Test chunking a JavaScript file."""
-        code = '''
+        code = """
 import { something } from 'somewhere';
 
 function processData(data) {
@@ -126,7 +126,7 @@ class DataHandler {
         return processData(this.data);
     }
 }
-'''
+"""
         test_file = tmp_path / "test.js"
         test_file.write_text(code)
 
@@ -141,11 +141,11 @@ class DataHandler {
 
     def test_chunk_sets_line_numbers(self, tmp_path):
         """Test that line numbers are set correctly."""
-        code = '''# Line 1
+        code = """# Line 1
 # Line 2
 def my_function():  # Line 3
     pass  # Line 4
-'''
+"""
         test_file = tmp_path / "test.py"
         test_file.write_text(code)
 
@@ -159,11 +159,11 @@ def my_function():  # Line 3
 
     def test_chunk_generates_unique_ids(self, tmp_path):
         """Test that chunk IDs are unique."""
-        code = '''
+        code = """
 def func1(): pass
 def func2(): pass
 def func3(): pass
-'''
+"""
         test_file = tmp_path / "test.py"
         test_file.write_text(code)
 

@@ -1,10 +1,11 @@
 """Tests for the web UI functionality."""
 
-import pytest
-from pathlib import Path
 import tempfile
+from pathlib import Path
 
-from local_deepwiki.web.app import build_breadcrumb, create_app
+import pytest
+
+from local_deepwiki.web.app import _MODULE_DIR, app, build_breadcrumb, create_app
 
 
 @pytest.fixture
@@ -74,8 +75,8 @@ class TestBuildBreadcrumb:
         assert '<a href="/wiki/files/index.md">Files</a>' in result
 
         # src and core don't have index.md, should be plain text
-        assert '<span>Src</span>' in result
-        assert '<span>Core</span>' in result
+        assert "<span>Src</span>" in result
+        assert "<span>Core</span>" in result
 
         # Current page
         assert '<span class="current">Parser</span>' in result
@@ -152,3 +153,46 @@ class TestFlaskApp:
 
         response = client.get("/wiki/nonexistent.md")
         assert response.status_code == 404
+
+
+class TestTemplateConfiguration:
+    """Tests for Jinja2 template configuration."""
+
+    def test_template_folder_exists(self):
+        """Test that the templates folder exists."""
+        template_folder = _MODULE_DIR / "templates"
+        assert template_folder.exists()
+        assert template_folder.is_dir()
+
+    def test_page_template_exists(self):
+        """Test that the page.html template exists."""
+        template_path = _MODULE_DIR / "templates" / "page.html"
+        assert template_path.exists()
+        assert template_path.is_file()
+
+    def test_app_configured_with_template_folder(self):
+        """Test that Flask app has correct template folder configured."""
+        expected_path = str(_MODULE_DIR / "templates")
+        assert app.template_folder == expected_path
+
+    def test_template_contains_required_blocks(self):
+        """Test that the template contains essential Jinja2 variables."""
+        template_path = _MODULE_DIR / "templates" / "page.html"
+        content = template_path.read_text()
+
+        # Check for required template variables
+        assert "{{ title }}" in content
+        assert "{{ content | safe }}" in content
+        assert "{{ breadcrumb | safe }}" in content
+        assert "{% if toc_entries %}" in content
+        assert "{% for page in pages %}" in content
+
+    def test_template_caching_enabled_in_production(self, wiki_dir):
+        """Test that template caching is enabled when debug=False."""
+        flask_app = create_app(wiki_dir)
+
+        # When debug is False (default), auto_reload should be False
+        # and templates should be cached
+        assert flask_app.debug is False
+        # jinja_env.auto_reload follows debug setting
+        assert flask_app.jinja_env.auto_reload is False

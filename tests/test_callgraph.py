@@ -5,15 +5,15 @@ from textwrap import dedent
 
 import pytest
 
+from local_deepwiki.core.parser import CodeParser
 from local_deepwiki.generators.callgraph import (
     CallGraphExtractor,
+    _is_builtin_or_noise,
     extract_call_name,
     extract_calls_from_function,
     generate_call_graph_diagram,
     get_file_call_graph,
-    _is_builtin_or_noise,
 )
-from local_deepwiki.core.parser import CodeParser
 from local_deepwiki.models import Language
 
 
@@ -48,10 +48,12 @@ class TestExtractCallsPython:
 
     def test_simple_function_call(self, parser):
         """Test extracting a simple function call."""
-        source = dedent("""
+        source = dedent(
+            """
             def main():
                 process_data()
-        """).strip()
+        """
+        ).strip()
         root = parser.parse_source(source, Language.PYTHON)
         func_node = root.children[0]  # function_definition
 
@@ -60,12 +62,14 @@ class TestExtractCallsPython:
 
     def test_multiple_function_calls(self, parser):
         """Test extracting multiple function calls."""
-        source = dedent("""
+        source = dedent(
+            """
             def main():
                 load_data()
                 process_data()
                 save_results()
-        """).strip()
+        """
+        ).strip()
         root = parser.parse_source(source, Language.PYTHON)
         func_node = root.children[0]
 
@@ -76,11 +80,13 @@ class TestExtractCallsPython:
 
     def test_method_call(self, parser):
         """Test extracting method calls."""
-        source = dedent("""
+        source = dedent(
+            """
             def process():
                 data = loader.load()
                 result = processor.transform(data)
-        """).strip()
+        """
+        ).strip()
         root = parser.parse_source(source, Language.PYTHON)
         func_node = root.children[0]
 
@@ -90,10 +96,12 @@ class TestExtractCallsPython:
 
     def test_nested_calls(self, parser):
         """Test extracting nested function calls."""
-        source = dedent("""
+        source = dedent(
+            """
             def complex():
                 result = outer(inner(value))
-        """).strip()
+        """
+        ).strip()
         root = parser.parse_source(source, Language.PYTHON)
         func_node = root.children[0]
 
@@ -103,12 +111,14 @@ class TestExtractCallsPython:
 
     def test_filters_builtins(self, parser):
         """Test that built-ins are filtered out."""
-        source = dedent("""
+        source = dedent(
+            """
             def main():
                 items = list(range(10))
                 process(items)
                 print(len(items))
-        """).strip()
+        """
+        ).strip()
         root = parser.parse_source(source, Language.PYTHON)
         func_node = root.children[0]
 
@@ -121,12 +131,14 @@ class TestExtractCallsPython:
 
     def test_deduplicates_calls(self, parser):
         """Test that duplicate calls are removed."""
-        source = dedent("""
+        source = dedent(
+            """
             def main():
                 process()
                 process()
                 process()
-        """).strip()
+        """
+        ).strip()
         root = parser.parse_source(source, Language.PYTHON)
         func_node = root.children[0]
 
@@ -143,14 +155,16 @@ class TestCallGraphExtractor:
 
     def test_extract_from_simple_file(self, tmp_path, extractor):
         """Test extracting call graph from a simple Python file."""
-        source = dedent("""
+        source = dedent(
+            """
             def helper():
                 pass
 
             def main():
                 helper()
                 process()
-        """).strip()
+        """
+        ).strip()
 
         test_file = tmp_path / "test.py"
         test_file.write_text(source)
@@ -165,7 +179,8 @@ class TestCallGraphExtractor:
 
     def test_extract_class_methods(self, tmp_path, extractor):
         """Test extracting call graph with class methods."""
-        source = dedent("""
+        source = dedent(
+            """
             class Processor:
                 def process(self):
                     self.validate()
@@ -176,7 +191,8 @@ class TestCallGraphExtractor:
 
                 def transform(self):
                     pass
-        """).strip()
+        """
+        ).strip()
 
         test_file = tmp_path / "test.py"
         test_file.write_text(source)
@@ -189,14 +205,16 @@ class TestCallGraphExtractor:
 
     def test_extract_mixed_functions_and_methods(self, tmp_path, extractor):
         """Test extracting from file with both functions and class methods."""
-        source = dedent("""
+        source = dedent(
+            """
             def standalone():
                 helper()
 
             class MyClass:
                 def method(self):
                     external_func()
-        """).strip()
+        """
+        ).strip()
 
         test_file = tmp_path / "test.py"
         test_file.write_text(source)
@@ -249,9 +267,7 @@ class TestGenerateCallGraphDiagram:
     def test_limits_nodes(self):
         """Test that diagram limits number of nodes."""
         # Create a large call graph
-        call_graph = {
-            f"func_{i}": [f"callee_{i}"] for i in range(50)
-        }
+        call_graph = {f"func_{i}": [f"callee_{i}"] for i in range(50)}
 
         result = generate_call_graph_diagram(call_graph, max_nodes=10)
 
@@ -278,13 +294,15 @@ class TestGetFileCallGraph:
 
     def test_returns_diagram_for_file_with_calls(self, tmp_path):
         """Test that diagram is returned for file with function calls."""
-        source = dedent("""
+        source = dedent(
+            """
             def main():
                 helper()
 
             def helper():
                 pass
-        """).strip()
+        """
+        ).strip()
 
         test_file = tmp_path / "test.py"
         test_file.write_text(source)
@@ -296,10 +314,12 @@ class TestGetFileCallGraph:
 
     def test_returns_none_for_file_without_calls(self, tmp_path):
         """Test that None is returned for file without function calls."""
-        source = dedent("""
+        source = dedent(
+            """
             x = 1
             y = 2
-        """).strip()
+        """
+        ).strip()
 
         test_file = tmp_path / "test.py"
         test_file.write_text(source)
@@ -327,12 +347,14 @@ class TestJavaScriptCallExtraction:
 
     def test_simple_js_call(self, parser):
         """Test extracting calls from JavaScript function."""
-        source = dedent("""
+        source = dedent(
+            """
             function main() {
                 processData();
                 saveResults();
             }
-        """).strip()
+        """
+        ).strip()
         root = parser.parse_source(source, Language.JAVASCRIPT)
         func_node = root.children[0]
 
@@ -342,11 +364,13 @@ class TestJavaScriptCallExtraction:
 
     def test_js_method_call(self, parser):
         """Test extracting method calls in JavaScript."""
-        source = dedent("""
+        source = dedent(
+            """
             function process() {
                 const result = service.transform(data);
             }
-        """).strip()
+        """
+        ).strip()
         root = parser.parse_source(source, Language.JAVASCRIPT)
         func_node = root.children[0]
 
@@ -363,18 +387,21 @@ class TestGoCallExtraction:
 
     def test_simple_go_call(self, parser):
         """Test extracting calls from Go function."""
-        source = dedent("""
+        source = dedent(
+            """
             package main
 
             func main() {
                 processData()
                 saveResults()
             }
-        """).strip()
+        """
+        ).strip()
         root = parser.parse_source(source, Language.GO)
 
         # Find the function declaration
         from local_deepwiki.core.parser import find_nodes_by_type
+
         funcs = find_nodes_by_type(root, {"function_declaration"})
         assert len(funcs) == 1
         func_node = funcs[0]

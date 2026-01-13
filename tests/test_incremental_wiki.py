@@ -114,9 +114,7 @@ class TestWikiGeneratorHelpers:
 
     def test_needs_regeneration_no_previous_status(self, mock_wiki_generator):
         """Test needs_regeneration when no previous status exists."""
-        result = mock_wiki_generator._needs_regeneration(
-            "index.md", ["src/test.py"]
-        )
+        result = mock_wiki_generator._needs_regeneration("index.md", ["src/test.py"])
         assert result is True
 
     def test_needs_regeneration_page_not_in_status(self, mock_wiki_generator):
@@ -127,9 +125,7 @@ class TestWikiGeneratorHelpers:
             total_pages=1,
             pages={},
         )
-        result = mock_wiki_generator._needs_regeneration(
-            "new_page.md", ["src/test.py"]
-        )
+        result = mock_wiki_generator._needs_regeneration("new_page.md", ["src/test.py"])
         assert result is True
 
     def test_needs_regeneration_source_hash_changed(self, mock_wiki_generator):
@@ -148,9 +144,7 @@ class TestWikiGeneratorHelpers:
                 )
             },
         )
-        result = mock_wiki_generator._needs_regeneration(
-            "index.md", ["src/test.py"]
-        )
+        result = mock_wiki_generator._needs_regeneration("index.md", ["src/test.py"])
         assert result is True  # Hash changed, should regenerate
 
     def test_needs_regeneration_no_changes(self, mock_wiki_generator):
@@ -169,9 +163,7 @@ class TestWikiGeneratorHelpers:
                 )
             },
         )
-        result = mock_wiki_generator._needs_regeneration(
-            "index.md", ["src/test.py"]
-        )
+        result = mock_wiki_generator._needs_regeneration("index.md", ["src/test.py"])
         assert result is False  # No changes, should skip
 
     def test_needs_regeneration_source_files_changed(self, mock_wiki_generator):
@@ -216,7 +208,7 @@ class TestWikiGeneratorHelpers:
 class TestWikiStatusPersistence:
     """Test wiki status file persistence."""
 
-    def test_save_and_load_wiki_status(self, tmp_path):
+    async def test_save_and_load_wiki_status(self, tmp_path):
         """Test saving and loading wiki status."""
         from local_deepwiki.generators.wiki import WikiGenerator
 
@@ -241,21 +233,21 @@ class TestWikiStatusPersistence:
             )
 
             # Save
-            generator._save_wiki_status(status)
+            await generator._save_wiki_status(status)
 
             # Check file exists
             status_file = tmp_path / "wiki_status.json"
             assert status_file.exists()
 
             # Load
-            loaded = generator._load_wiki_status()
+            loaded = await generator._load_wiki_status()
             assert loaded is not None
             assert loaded.repo_path == "/test/repo"
             assert loaded.total_pages == 1
             assert "index.md" in loaded.pages
             assert loaded.pages["index.md"].source_files == ["src/main.py"]
 
-    def test_load_missing_status(self, tmp_path):
+    async def test_load_missing_status(self, tmp_path):
         """Test loading when status file doesn't exist."""
         from local_deepwiki.generators.wiki import WikiGenerator
 
@@ -263,10 +255,10 @@ class TestWikiStatusPersistence:
             generator = WikiGenerator.__new__(WikiGenerator)
             generator.wiki_path = tmp_path
 
-            loaded = generator._load_wiki_status()
+            loaded = await generator._load_wiki_status()
             assert loaded is None
 
-    def test_load_corrupted_status(self, tmp_path):
+    async def test_load_corrupted_status(self, tmp_path):
         """Test loading when status file is corrupted."""
         from local_deepwiki.generators.wiki import WikiGenerator
 
@@ -278,14 +270,14 @@ class TestWikiStatusPersistence:
             status_file = tmp_path / "wiki_status.json"
             status_file.write_text("not valid json {{{")
 
-            loaded = generator._load_wiki_status()
+            loaded = await generator._load_wiki_status()
             assert loaded is None
 
 
 class TestLoadExistingPage:
     """Test loading existing wiki pages."""
 
-    def test_load_existing_page(self, tmp_path):
+    async def test_load_existing_page(self, tmp_path):
         """Test loading an existing page from disk."""
         from local_deepwiki.generators.wiki import WikiGenerator
 
@@ -298,12 +290,12 @@ class TestLoadExistingPage:
             page_path = tmp_path / "test.md"
             page_path.write_text("# Test Page\n\nSome content")
 
-            loaded = generator._load_existing_page("test.md")
+            loaded = await generator._load_existing_page("test.md")
             assert loaded is not None
             assert loaded.path == "test.md"
             assert "# Test Page" in loaded.content
 
-    def test_load_missing_page(self, tmp_path):
+    async def test_load_missing_page(self, tmp_path):
         """Test loading a page that doesn't exist."""
         from local_deepwiki.generators.wiki import WikiGenerator
 
@@ -312,10 +304,10 @@ class TestLoadExistingPage:
             generator.wiki_path = tmp_path
             generator._previous_status = None
 
-            loaded = generator._load_existing_page("nonexistent.md")
+            loaded = await generator._load_existing_page("nonexistent.md")
             assert loaded is None
 
-    def test_load_page_uses_previous_timestamp(self, tmp_path):
+    async def test_load_page_uses_previous_timestamp(self, tmp_path):
         """Test that loaded page uses timestamp from previous status."""
         from local_deepwiki.generators.wiki import WikiGenerator
 
@@ -344,6 +336,6 @@ class TestLoadExistingPage:
             page_path = tmp_path / "test.md"
             page_path.write_text("# Test\nContent")
 
-            loaded = generator._load_existing_page("test.md")
+            loaded = await generator._load_existing_page("test.md")
             assert loaded is not None
             assert loaded.generated_at == prev_time

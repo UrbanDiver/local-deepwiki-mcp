@@ -5,12 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from local_deepwiki.export.html import (
-    HtmlExporter,
-    export_to_html,
-    render_markdown,
-    extract_title,
-)
+from local_deepwiki.export.html import HtmlExporter, export_to_html, extract_title, render_markdown
 
 
 class TestRenderMarkdown:

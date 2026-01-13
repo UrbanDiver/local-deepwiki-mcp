@@ -1,15 +1,16 @@
 """Tests for table of contents generation."""
 
 import json
-import pytest
 from pathlib import Path
 
+import pytest
+
 from local_deepwiki.generators.toc import (
-    TocEntry,
     TableOfContents,
+    TocEntry,
     generate_toc,
-    write_toc,
     read_toc,
+    write_toc,
 )
 
 
@@ -38,9 +39,7 @@ class TestTocEntry:
             "number": "1",
             "title": "Overview",
             "path": "index.md",
-            "children": [
-                {"number": "1.1", "title": "Getting Started", "path": "start.md"}
-            ],
+            "children": [{"number": "1.1", "title": "Getting Started", "path": "start.md"}],
         }
 
 
@@ -52,9 +51,7 @@ class TestTableOfContents:
         toc = TableOfContents(entries=[entry])
         json_str = toc.to_json()
         data = json.loads(json_str)
-        assert data == {
-            "entries": [{"number": "1", "title": "Overview", "path": "index.md"}]
-        }
+        assert data == {"entries": [{"number": "1", "title": "Overview", "path": "index.md"}]}
 
     def test_from_dict(self):
         data = {
@@ -63,9 +60,7 @@ class TestTableOfContents:
                     "number": "1",
                     "title": "Overview",
                     "path": "index.md",
-                    "children": [
-                        {"number": "1.1", "title": "Start", "path": "start.md"}
-                    ],
+                    "children": [{"number": "1.1", "title": "Start", "path": "start.md"}],
                 }
             ]
         }
@@ -133,9 +128,7 @@ class TestGenerateToc:
         toc = generate_toc(pages)
 
         # Find the modules section
-        modules_entry = next(
-            (e for e in toc.entries if e.title == "Modules"), None
-        )
+        modules_entry = next((e for e in toc.entries if e.title == "Modules"), None)
         assert modules_entry is not None
         assert modules_entry.number == "2"  # After index.md which is "1"
         assert len(modules_entry.children) == 1

@@ -5,26 +5,26 @@ from textwrap import dedent
 
 import pytest
 
+from local_deepwiki.core.parser import CodeParser
 from local_deepwiki.generators.api_docs import (
     APIDocExtractor,
-    FunctionSignature,
     ClassSignature,
+    FunctionSignature,
     Parameter,
-    extract_python_parameters,
-    extract_python_return_type,
+    extract_class_signature,
+    extract_function_signature,
     extract_python_decorators,
     extract_python_docstring,
-    parse_google_docstring,
-    parse_numpy_docstring,
-    parse_docstring,
-    extract_function_signature,
-    extract_class_signature,
-    format_parameter,
+    extract_python_parameters,
+    extract_python_return_type,
     format_function_signature_line,
+    format_parameter,
     generate_api_reference_markdown,
     get_file_api_docs,
+    parse_docstring,
+    parse_google_docstring,
+    parse_numpy_docstring,
 )
-from local_deepwiki.core.parser import CodeParser
 from local_deepwiki.models import Language
 
 
@@ -62,10 +62,12 @@ class TestExtractPythonParameters:
 
     def test_simple_parameters(self, parser):
         """Test extracting simple parameters without types."""
-        source = dedent("""
+        source = dedent(
+            """
             def func(a, b, c):
                 pass
-        """).strip()
+        """
+        ).strip()
         root = parser.parse_source(source, Language.PYTHON)
         func_node = root.children[0]
 
@@ -77,10 +79,12 @@ class TestExtractPythonParameters:
 
     def test_typed_parameters(self, parser):
         """Test extracting parameters with type hints."""
-        source = dedent("""
+        source = dedent(
+            """
             def func(name: str, count: int):
                 pass
-        """).strip()
+        """
+        ).strip()
         root = parser.parse_source(source, Language.PYTHON)
         func_node = root.children[0]
 
@@ -93,10 +97,12 @@ class TestExtractPythonParameters:
 
     def test_default_parameters(self, parser):
         """Test extracting parameters with default values."""
-        source = dedent("""
+        source = dedent(
+            """
             def func(name="default", count=10):
                 pass
-        """).strip()
+        """
+        ).strip()
         root = parser.parse_source(source, Language.PYTHON)
         func_node = root.children[0]
 
@@ -109,10 +115,12 @@ class TestExtractPythonParameters:
 
     def test_typed_default_parameters(self, parser):
         """Test extracting parameters with types and defaults."""
-        source = dedent("""
+        source = dedent(
+            """
             def func(name: str = "test", count: int = 5):
                 pass
-        """).strip()
+        """
+        ).strip()
         root = parser.parse_source(source, Language.PYTHON)
         func_node = root.children[0]
 
@@ -127,10 +135,12 @@ class TestExtractPythonParameters:
 
     def test_excludes_self(self, parser):
         """Test that self is excluded from method parameters."""
-        source = dedent("""
+        source = dedent(
+            """
             def method(self, value: int):
                 pass
-        """).strip()
+        """
+        ).strip()
         root = parser.parse_source(source, Language.PYTHON)
         func_node = root.children[0]
 
@@ -140,10 +150,12 @@ class TestExtractPythonParameters:
 
     def test_excludes_cls(self, parser):
         """Test that cls is excluded from classmethod parameters."""
-        source = dedent("""
+        source = dedent(
+            """
             def classmethod_func(cls, value: int):
                 pass
-        """).strip()
+        """
+        ).strip()
         root = parser.parse_source(source, Language.PYTHON)
         func_node = root.children[0]
 
@@ -161,10 +173,12 @@ class TestExtractPythonReturnType:
 
     def test_simple_return_type(self, parser):
         """Test extracting a simple return type."""
-        source = dedent("""
+        source = dedent(
+            """
             def func() -> str:
                 pass
-        """).strip()
+        """
+        ).strip()
         root = parser.parse_source(source, Language.PYTHON)
         func_node = root.children[0]
 
@@ -173,10 +187,12 @@ class TestExtractPythonReturnType:
 
     def test_complex_return_type(self, parser):
         """Test extracting a complex return type."""
-        source = dedent("""
+        source = dedent(
+            """
             def func() -> list[str]:
                 pass
-        """).strip()
+        """
+        ).strip()
         root = parser.parse_source(source, Language.PYTHON)
         func_node = root.children[0]
 
@@ -185,10 +201,12 @@ class TestExtractPythonReturnType:
 
     def test_no_return_type(self, parser):
         """Test function with no return type."""
-        source = dedent("""
+        source = dedent(
+            """
             def func():
                 pass
-        """).strip()
+        """
+        ).strip()
         root = parser.parse_source(source, Language.PYTHON)
         func_node = root.children[0]
 
@@ -205,11 +223,13 @@ class TestExtractPythonDocstring:
 
     def test_triple_quote_docstring(self, parser):
         """Test extracting triple-quoted docstring."""
-        source = dedent('''
+        source = dedent(
+            '''
             def func():
                 """This is the docstring."""
                 pass
-        ''').strip()
+        '''
+        ).strip()
         root = parser.parse_source(source, Language.PYTHON)
         func_node = root.children[0]
 
@@ -218,14 +238,16 @@ class TestExtractPythonDocstring:
 
     def test_multiline_docstring(self, parser):
         """Test extracting multiline docstring."""
-        source = dedent('''
+        source = dedent(
+            '''
             def func():
                 """
                 This is a multiline
                 docstring.
                 """
                 pass
-        ''').strip()
+        '''
+        ).strip()
         root = parser.parse_source(source, Language.PYTHON)
         func_node = root.children[0]
 
@@ -235,10 +257,12 @@ class TestExtractPythonDocstring:
 
     def test_no_docstring(self, parser):
         """Test function with no docstring."""
-        source = dedent("""
+        source = dedent(
+            """
             def func():
                 x = 1
-        """).strip()
+        """
+        ).strip()
         root = parser.parse_source(source, Language.PYTHON)
         func_node = root.children[0]
 
@@ -257,13 +281,15 @@ class TestParseGoogleDocstring:
 
     def test_args_section(self):
         """Test parsing Args section."""
-        docstring = dedent("""
+        docstring = dedent(
+            """
             Do something.
 
             Args:
                 name: The name to use.
                 count: How many items.
-        """).strip()
+        """
+        ).strip()
         result = parse_google_docstring(docstring)
 
         assert "name" in result["args"]
@@ -273,13 +299,15 @@ class TestParseGoogleDocstring:
 
     def test_args_with_types(self):
         """Test parsing Args with type annotations."""
-        docstring = dedent("""
+        docstring = dedent(
+            """
             Do something.
 
             Args:
                 name (str): The name to use.
                 count (int): How many items.
-        """).strip()
+        """
+        ).strip()
         result = parse_google_docstring(docstring)
 
         assert result["args"]["name"]["type"] == "str"
@@ -287,12 +315,14 @@ class TestParseGoogleDocstring:
 
     def test_returns_section(self):
         """Test parsing Returns section."""
-        docstring = dedent("""
+        docstring = dedent(
+            """
             Do something.
 
             Returns:
                 The result string.
-        """).strip()
+        """
+        ).strip()
         result = parse_google_docstring(docstring)
         assert result["returns"] == "The result string."
 
@@ -308,7 +338,8 @@ class TestParseNumpyDocstring:
 
     def test_parameters_section(self):
         """Test parsing Parameters section."""
-        docstring = dedent("""
+        docstring = dedent(
+            """
             Do something.
 
             Parameters
@@ -317,7 +348,8 @@ class TestParseNumpyDocstring:
                 The name to use.
             count : int
                 How many items.
-        """).strip()
+        """
+        ).strip()
         result = parse_numpy_docstring(docstring)
 
         assert "name" in result["args"]
@@ -335,11 +367,13 @@ class TestExtractFunctionSignature:
 
     def test_simple_function(self, parser):
         """Test extracting simple function signature."""
-        source = dedent('''
+        source = dedent(
+            '''
             def greet(name: str) -> str:
                 """Say hello."""
                 return f"Hello, {name}"
-        ''').strip()
+        '''
+        ).strip()
         root = parser.parse_source(source, Language.PYTHON)
         func_node = root.children[0]
 
@@ -355,11 +389,13 @@ class TestExtractFunctionSignature:
 
     def test_async_function(self, parser):
         """Test extracting async function signature."""
-        source = dedent('''
+        source = dedent(
+            '''
             async def fetch_data(url: str) -> bytes:
                 """Fetch data from URL."""
                 pass
-        ''').strip()
+        '''
+        ).strip()
         root = parser.parse_source(source, Language.PYTHON)
         func_node = root.children[0]
 
@@ -379,14 +415,16 @@ class TestExtractClassSignature:
 
     def test_simple_class(self, parser):
         """Test extracting simple class signature."""
-        source = dedent('''
+        source = dedent(
+            '''
             class MyClass:
                 """A simple class."""
 
                 def method(self, value: int) -> bool:
                     """A method."""
                     pass
-        ''').strip()
+        '''
+        ).strip()
         root = parser.parse_source(source, Language.PYTHON)
         class_node = root.children[0]
 
@@ -400,11 +438,13 @@ class TestExtractClassSignature:
 
     def test_class_with_inheritance(self, parser):
         """Test extracting class with base classes."""
-        source = dedent('''
+        source = dedent(
+            '''
             class Child(Parent, Mixin):
                 """A child class."""
                 pass
-        ''').strip()
+        '''
+        ).strip()
         root = parser.parse_source(source, Language.PYTHON)
         class_node = root.children[0]
 
@@ -561,7 +601,8 @@ class TestAPIDocExtractor:
 
     def test_extract_from_file(self, tmp_path, extractor):
         """Test extracting docs from a Python file."""
-        source = dedent('''
+        source = dedent(
+            '''
             """Module docstring."""
 
             def helper(value: int) -> bool:
@@ -578,7 +619,8 @@ class TestAPIDocExtractor:
                 def process(self, data: list) -> dict:
                     """Process the data."""
                     return {}
-        ''').strip()
+        '''
+        ).strip()
 
         test_file = tmp_path / "test_module.py"
         test_file.write_text(source)
@@ -608,7 +650,8 @@ class TestGetFileApiDocs:
 
     def test_file_with_content(self, tmp_path):
         """Test getting API docs for a file with content."""
-        source = dedent('''
+        source = dedent(
+            '''
             def process(value: int = 10) -> str:
                 """Process a value.
 
@@ -619,7 +662,8 @@ class TestGetFileApiDocs:
                     The processed string.
                 """
                 return str(value)
-        ''').strip()
+        '''
+        ).strip()
 
         test_file = tmp_path / "processor.py"
         test_file.write_text(source)
@@ -633,10 +677,12 @@ class TestGetFileApiDocs:
 
     def test_file_without_functions(self, tmp_path):
         """Test getting API docs for file without functions."""
-        source = dedent("""
+        source = dedent(
+            """
             X = 1
             Y = 2
-        """).strip()
+        """
+        ).strip()
 
         test_file = tmp_path / "constants.py"
         test_file.write_text(source)

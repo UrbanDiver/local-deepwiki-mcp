@@ -3,14 +3,14 @@
 import pytest
 
 from local_deepwiki.generators.see_also import (
-    RelationshipAnalyzer,
     FileRelationships,
+    RelationshipAnalyzer,
+    _relative_path,
+    add_see_also_sections,
     build_file_to_wiki_map,
     generate_see_also_section,
-    add_see_also_sections,
-    _relative_path,
 )
-from local_deepwiki.models import ChunkType, CodeChunk, WikiPage, Language
+from local_deepwiki.models import ChunkType, CodeChunk, Language, WikiPage
 
 
 class TestRelationshipAnalyzer:
@@ -205,7 +205,10 @@ class TestBuildFileToWikiMap:
 
         mapping = build_file_to_wiki_map(pages)
 
-        assert mapping["src/local_deepwiki/core/chunker.py"] == "files/src/local_deepwiki/core/chunker.md"
+        assert (
+            mapping["src/local_deepwiki/core/chunker.py"]
+            == "files/src/local_deepwiki/core/chunker.md"
+        )
         assert mapping["src/local_deepwiki/models.py"] == "files/src/local_deepwiki/models.md"
         # index.md shouldn't be mapped (not a file doc)
         assert "index.py" not in mapping
@@ -279,7 +282,9 @@ class TestGenerateSeeAlsoSection:
         """Test that See Also doesn't include the current page."""
         relationships = FileRelationships(
             file_path="src/local_deepwiki/core/chunker.py",
-            imports={"src/local_deepwiki/core/chunker.py"},  # Self-import (shouldn't happen but test)
+            imports={
+                "src/local_deepwiki/core/chunker.py"
+            },  # Self-import (shouldn't happen but test)
         )
         file_to_wiki = {
             "src/local_deepwiki/core/chunker.py": "files/src/local_deepwiki/core/chunker.md",

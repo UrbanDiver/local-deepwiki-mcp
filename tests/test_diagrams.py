@@ -4,19 +4,19 @@ import pytest
 
 from local_deepwiki.generators.diagrams import (
     ClassInfo,
-    sanitize_mermaid_name,
-    generate_class_diagram,
-    generate_dependency_graph,
-    generate_module_overview,
-    generate_language_pie_chart,
-    generate_sequence_diagram,
     _extract_class_attributes,
     _extract_method_signature,
     _find_circular_dependencies,
-    _path_to_module,
     _parse_import_line,
+    _path_to_module,
+    generate_class_diagram,
+    generate_dependency_graph,
+    generate_language_pie_chart,
+    generate_module_overview,
+    generate_sequence_diagram,
+    sanitize_mermaid_name,
 )
-from local_deepwiki.models import ChunkType, CodeChunk, Language, IndexStatus, FileInfo
+from local_deepwiki.models import ChunkType, CodeChunk, FileInfo, IndexStatus, Language
 
 
 class TestSanitizeMermaidName:
@@ -383,9 +383,30 @@ class TestGenerateModuleOverview:
             total_chunks=10,
             languages={"python": 3},
             files=[
-                FileInfo(path="src/core/parser.py", language="python", hash="a", chunk_count=5, size_bytes=100, last_modified=1234567890.0),
-                FileInfo(path="src/core/chunker.py", language="python", hash="b", chunk_count=3, size_bytes=100, last_modified=1234567890.0),
-                FileInfo(path="src/utils/helpers.py", language="python", hash="c", chunk_count=2, size_bytes=100, last_modified=1234567890.0),
+                FileInfo(
+                    path="src/core/parser.py",
+                    language="python",
+                    hash="a",
+                    chunk_count=5,
+                    size_bytes=100,
+                    last_modified=1234567890.0,
+                ),
+                FileInfo(
+                    path="src/core/chunker.py",
+                    language="python",
+                    hash="b",
+                    chunk_count=3,
+                    size_bytes=100,
+                    last_modified=1234567890.0,
+                ),
+                FileInfo(
+                    path="src/utils/helpers.py",
+                    language="python",
+                    hash="c",
+                    chunk_count=2,
+                    size_bytes=100,
+                    last_modified=1234567890.0,
+                ),
             ],
         )
         diagram = generate_module_overview(status)

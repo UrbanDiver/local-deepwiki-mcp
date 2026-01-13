@@ -214,7 +214,9 @@ class TestSearchJsonEndpoint:
             # Create a minimal wiki
             (wiki_path / "index.md").write_text("# Home\n")
             # Create search index
-            search_data = [{"path": "index.md", "title": "Home", "headings": [], "terms": [], "snippet": ""}]
+            search_data = [
+                {"path": "index.md", "title": "Home", "headings": [], "terms": [], "snippet": ""}
+            ]
             (wiki_path / "search.json").write_text(json.dumps(search_data))
 
             app = create_app(wiki_path)
