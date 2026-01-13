@@ -196,7 +196,9 @@ def add_source_refs_sections(
             if see_also_marker in content:
                 # Insert before See Also
                 parts = content.split(see_also_marker, 1)
-                new_content = parts[0].rstrip() + "\n\n" + source_refs + "\n" + see_also_marker + parts[1]
+                new_content = (
+                    parts[0].rstrip() + "\n\n" + source_refs + "\n" + see_also_marker + parts[1]
+                )
             else:
                 # Add at end
                 new_content = content + "\n\n" + source_refs + "\n"

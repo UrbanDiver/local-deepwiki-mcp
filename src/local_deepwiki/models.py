@@ -1,10 +1,29 @@
 """Data models for local-deepwiki."""
 
+import json
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
 from pydantic import BaseModel, Field
+
+
+class ProgressCallback(Protocol):
+    """Protocol for progress callback functions.
+
+    Progress callbacks are used to report progress during long-running
+    operations like indexing and wiki generation.
+    """
+
+    def __call__(self, msg: str, current: int, total: int) -> None:
+        """Report progress.
+
+        Args:
+            msg: Description of current operation.
+            current: Current step number.
+            total: Total number of steps.
+        """
+        ...
 
 
 class Language(str, Enum):
@@ -52,6 +71,40 @@ class CodeChunk(BaseModel):
     parent_name: str | None = Field(default=None, description="Parent class/module name")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
+    def to_vector_record(self, vector: list[float] | None = None) -> dict[str, Any]:
+        """Convert chunk to a dict suitable for vector store storage.
+
+        Args:
+            vector: Optional embedding vector to include in the record.
+
+        Returns:
+            Dict with all fields formatted for LanceDB storage.
+        """
+        record: dict[str, Any] = {
+            "id": self.id,
+            "file_path": self.file_path,
+            "language": self.language.value,
+            "chunk_type": self.chunk_type.value,
+            "name": self.name or "",
+            "content": self.content,
+            "start_line": self.start_line,
+            "end_line": self.end_line,
+            "docstring": self.docstring or "",
+            "parent_name": self.parent_name or "",
+            "metadata": json.dumps(self.metadata),
+        }
+        if vector is not None:
+            record["vector"] = vector
+        return record
+
+    def __repr__(self) -> str:
+        """Return a concise representation for debugging."""
+        name_part = f" {self.name}" if self.name else ""
+        return (
+            f"<CodeChunk {self.chunk_type.value}{name_part} "
+            f"at {self.file_path}:{self.start_line}-{self.end_line}>"
+        )
+
 
 class FileInfo(BaseModel):
     """Information about a source file."""
@@ -63,6 +116,11 @@ class FileInfo(BaseModel):
     hash: str = Field(description="Content hash for change detection")
     chunk_count: int = Field(default=0, description="Number of chunks extracted")
 
+    def __repr__(self) -> str:
+        """Return a concise representation for debugging."""
+        lang = self.language.value if self.language else "unknown"
+        return f"<FileInfo {self.path} ({lang}, {self.chunk_count} chunks)>"
+
 
 class IndexStatus(BaseModel):
     """Status of repository indexing."""
@@ -73,6 +131,14 @@ class IndexStatus(BaseModel):
     total_chunks: int = Field(description="Total chunks extracted")
     languages: dict[str, int] = Field(default_factory=dict, description="Files per language")
     files: list[FileInfo] = Field(default_factory=list, description="Indexed file info")
+    schema_version: int = Field(default=1, description="Schema version for migration support")
+
+    def __repr__(self) -> str:
+        """Return a concise representation for debugging."""
+        return (
+            f"<IndexStatus {self.repo_path} "
+            f"({self.total_files} files, {self.total_chunks} chunks)>"
+        )
 
 
 class WikiPage(BaseModel):
@@ -83,12 +149,20 @@ class WikiPage(BaseModel):
     content: str = Field(description="Markdown content")
     generated_at: float = Field(description="Generation timestamp")
 
+    def __repr__(self) -> str:
+        """Return a concise representation for debugging."""
+        return f"<WikiPage {self.path} ({self.title!r})>"
+
 
 class WikiStructure(BaseModel):
     """Structure of the generated wiki."""
 
     root: str = Field(description="Wiki root directory")
     pages: list[WikiPage] = Field(default_factory=list, description="All wiki pages")
+
+    def __repr__(self) -> str:
+        """Return a concise representation for debugging."""
+        return f"<WikiStructure {self.root} ({len(self.pages)} pages)>"
 
     def to_toc(self) -> dict[str, Any]:
         """Generate table of contents."""
@@ -102,10 +176,7 @@ class WikiStructure(BaseModel):
                     section = {"name": part, "sections": [], "pages": []}
                     current.setdefault("sections", []).append(section)
                 current = section
-            current.setdefault("pages", []).append({
-                "path": page.path,
-                "title": page.title
-            })
+            current.setdefault("pages", []).append({"path": page.path, "title": page.title})
         return toc
 
 
@@ -115,6 +186,11 @@ class SearchResult(BaseModel):
     chunk: CodeChunk = Field(description="The matched code chunk")
     score: float = Field(description="Similarity score")
     highlights: list[str] = Field(default_factory=list, description="Relevant snippets")
+
+    def __repr__(self) -> str:
+        """Return a concise representation for debugging."""
+        name = self.chunk.name or self.chunk.chunk_type.value
+        return f"<SearchResult {name} score={self.score:.3f}>"
 
 
 class WikiPageStatus(BaseModel):
@@ -134,6 +210,10 @@ class WikiPageStatus(BaseModel):
     content_hash: str = Field(description="Hash of the generated page content")
     generated_at: float = Field(description="Timestamp when page was generated")
 
+    def __repr__(self) -> str:
+        """Return a concise representation for debugging."""
+        return f"<WikiPageStatus {self.path} ({len(self.source_files)} sources)>"
+
 
 class WikiGenerationStatus(BaseModel):
     """Status of wiki generation for tracking incremental updates."""
@@ -147,3 +227,7 @@ class WikiGenerationStatus(BaseModel):
     pages: dict[str, WikiPageStatus] = Field(
         default_factory=dict, description="Mapping of page path to status"
     )
+
+    def __repr__(self) -> str:
+        """Return a concise representation for debugging."""
+        return f"<WikiGenerationStatus {self.repo_path} ({self.total_pages} pages)>"

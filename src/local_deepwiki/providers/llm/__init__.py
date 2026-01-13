@@ -2,6 +2,7 @@
 
 from local_deepwiki.config import LLMConfig, get_config
 from local_deepwiki.providers.base import LLMProvider
+from local_deepwiki.providers.llm.ollama import OllamaConnectionError, OllamaModelNotFoundError
 
 
 def get_llm_provider(config: LLMConfig | None = None) -> LLMProvider:
@@ -35,4 +36,9 @@ def get_llm_provider(config: LLMConfig | None = None) -> LLMProvider:
         raise ValueError(f"Unknown LLM provider: {config.provider}")
 
 
-__all__ = ["get_llm_provider", "LLMProvider"]
+__all__ = [
+    "get_llm_provider",
+    "LLMProvider",
+    "OllamaConnectionError",
+    "OllamaModelNotFoundError",
+]

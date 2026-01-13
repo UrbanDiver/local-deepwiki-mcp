@@ -35,9 +35,7 @@ class TableOfContents:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
-        return {
-            "entries": [entry.to_dict() for entry in self.entries]
-        }
+        return {"entries": [entry.to_dict() for entry in self.entries]}
 
     def to_json(self, indent: int = 2) -> str:
         """Convert to JSON string."""
@@ -46,10 +44,9 @@ class TableOfContents:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "TableOfContents":
         """Create from dictionary."""
+
         def parse_entry(entry_data: dict[str, Any]) -> TocEntry:
-            children = [
-                parse_entry(child) for child in entry_data.get("children", [])
-            ]
+            children = [parse_entry(child) for child in entry_data.get("children", [])]
             return TocEntry(
                 number=entry_data["number"],
                 title=entry_data["title"],
@@ -97,11 +94,13 @@ def generate_toc(pages: list[dict[str, str]]) -> TableOfContents:
             # Clean up title if needed
             if title == page_path.replace(".md", ""):
                 title = default_title
-            entries.append(TocEntry(
-                number=str(current_number),
-                title=title,
-                path=page_path,
-            ))
+            entries.append(
+                TocEntry(
+                    number=str(current_number),
+                    title=title,
+                    path=page_path,
+                )
+            )
             current_number += 1
 
     # Now handle sections (modules, files)
@@ -164,7 +163,7 @@ def _build_section_tree(
             continue  # Skip index page, it's the section root
 
         # Get path relative to section
-        rel_path = page["path"][len(section_name) + 1:]  # Remove "section/"
+        rel_path = page["path"][len(section_name) + 1 :]  # Remove "section/"
         parts = Path(rel_path).parts
 
         current = tree
@@ -206,11 +205,13 @@ def _tree_to_entries(
     # First add direct pages at this level (sorted by path)
     for page in sorted(tree["_pages"], key=lambda p: p["path"]):
         number = f"{parent_number}.{child_num}"
-        entries.append(TocEntry(
-            number=number,
-            title=page["title"],
-            path=page["path"],
-        ))
+        entries.append(
+            TocEntry(
+                number=number,
+                title=page["title"],
+                path=page["path"],
+            )
+        )
         child_num += 1
 
     # Then add subdirectories (sorted by name)
@@ -219,22 +220,21 @@ def _tree_to_entries(
         number = f"{parent_number}.{child_num}"
 
         # Check if this directory has an index page
-        dir_index = next(
-            (p for p in subtree["_pages"] if Path(p["path"]).stem == "index"),
-            None
-        )
+        dir_index = next((p for p in subtree["_pages"] if Path(p["path"]).stem == "index"), None)
 
         # Get children for this directory
         children = _tree_to_entries(subtree, number)
 
         # Create entry for directory
         dir_title = dir_name.replace("_", " ").replace("-", " ").title()
-        entries.append(TocEntry(
-            number=number,
-            title=dir_title,
-            path=dir_index["path"] if dir_index else "",
-            children=children,
-        ))
+        entries.append(
+            TocEntry(
+                number=number,
+                title=dir_title,
+                path=dir_index["path"] if dir_index else "",
+                children=children,
+            )
+        )
         child_num += 1
 
     return entries

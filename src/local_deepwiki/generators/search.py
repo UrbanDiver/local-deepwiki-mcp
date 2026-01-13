@@ -21,13 +21,13 @@ def extract_headings(content: str) -> list[str]:
         List of heading texts (without # prefixes).
     """
     headings = []
-    for line in content.split('\n'):
+    for line in content.split("\n"):
         line = line.strip()
-        if line.startswith('#'):
+        if line.startswith("#"):
             # Remove # prefix and clean up
-            heading = re.sub(r'^#+\s*', '', line)
+            heading = re.sub(r"^#+\s*", "", line)
             # Remove markdown formatting like ** or `
-            heading = re.sub(r'[*`]', '', heading)
+            heading = re.sub(r"[*`]", "", heading)
             if heading:
                 headings.append(heading)
     return headings
@@ -44,12 +44,12 @@ def extract_code_terms(content: str) -> list[str]:
     """
     terms = set()
     # Match inline code: `term`
-    for match in re.finditer(r'`([^`]+)`', content):
+    for match in re.finditer(r"`([^`]+)`", content):
         term = match.group(1)
         # Skip code that looks like a full statement or has spaces
-        if len(term) < 50 and '\n' not in term:
+        if len(term) < 50 and "\n" not in term:
             # Extract the main identifier if it's a qualified name
-            parts = term.split('.')
+            parts = term.split(".")
             if parts:
                 terms.add(parts[-1])  # Last part of qualified name
             if len(parts) > 1:
@@ -68,18 +68,18 @@ def extract_snippet(content: str, max_length: int = 200) -> str:
         Plain text snippet.
     """
     # Remove code blocks
-    text = re.sub(r'```[\s\S]*?```', '', content)
+    text = re.sub(r"```[\s\S]*?```", "", content)
     # Remove headings
-    text = re.sub(r'^#+\s+.*$', '', text, flags=re.MULTILINE)
+    text = re.sub(r"^#+\s+.*$", "", text, flags=re.MULTILINE)
     # Remove links but keep text: [text](url) -> text
-    text = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', text)
+    text = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", text)
     # Remove markdown formatting
-    text = re.sub(r'[*_`]', '', text)
+    text = re.sub(r"[*_`]", "", text)
     # Collapse whitespace
-    text = ' '.join(text.split())
+    text = " ".join(text.split())
 
     if len(text) > max_length:
-        text = text[:max_length].rsplit(' ', 1)[0] + '...'
+        text = text[:max_length].rsplit(" ", 1)[0] + "..."
 
     return text.strip()
 
@@ -98,11 +98,11 @@ def generate_search_entry(page: WikiPage) -> dict:
     snippet = extract_snippet(page.content)
 
     return {
-        'path': page.path,
-        'title': page.title,
-        'headings': headings,
-        'terms': terms,
-        'snippet': snippet,
+        "path": page.path,
+        "title": page.title,
+        "headings": headings,
+        "terms": terms,
+        "snippet": snippet,
     }
 
 
@@ -129,6 +129,6 @@ def write_search_index(wiki_path: Path, pages: list[WikiPage]) -> Path:
         Path to the generated search.json file.
     """
     index = generate_search_index(pages)
-    index_path = wiki_path / 'search.json'
+    index_path = wiki_path / "search.json"
     index_path.write_text(json.dumps(index, indent=2))
     return index_path

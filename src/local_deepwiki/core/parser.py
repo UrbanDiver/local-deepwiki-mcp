@@ -1,25 +1,91 @@
 """Tree-sitter code parser for multi-language support."""
 
 import hashlib
+import mmap
 from pathlib import Path
 from typing import Any
 
-import tree_sitter_python
-import tree_sitter_javascript
-import tree_sitter_typescript
-import tree_sitter_go
-import tree_sitter_rust
-import tree_sitter_java
 import tree_sitter_c
-import tree_sitter_cpp
-import tree_sitter_swift
-import tree_sitter_ruby
-import tree_sitter_php
-import tree_sitter_kotlin
 import tree_sitter_c_sharp
-from tree_sitter import Language, Parser, Node
+import tree_sitter_cpp
+import tree_sitter_go
+import tree_sitter_java
+import tree_sitter_javascript
+import tree_sitter_kotlin
+import tree_sitter_php
+import tree_sitter_python
+import tree_sitter_ruby
+import tree_sitter_rust
+import tree_sitter_swift
+import tree_sitter_typescript
+from tree_sitter import Language, Node, Parser
 
-from local_deepwiki.models import Language as LangEnum, FileInfo
+from local_deepwiki.logging import get_logger
+from local_deepwiki.models import FileInfo
+from local_deepwiki.models import Language as LangEnum
+
+logger = get_logger(__name__)
+
+# Threshold for using memory-mapped files (1 MB)
+MMAP_THRESHOLD_BYTES = 1 * 1024 * 1024
+
+# Chunk size for computing file hashes (64 KB)
+HASH_CHUNK_SIZE = 64 * 1024
+
+
+def _read_file_content(file_path: Path) -> bytes:
+    """Read file content, using memory-mapping for large files.
+
+    For files larger than MMAP_THRESHOLD_BYTES, uses memory mapping
+    which allows the OS to manage memory more efficiently.
+
+    Args:
+        file_path: Path to the file to read.
+
+    Returns:
+        The file content as bytes.
+    """
+    file_size = file_path.stat().st_size
+
+    if file_size <= MMAP_THRESHOLD_BYTES:
+        # Small files: direct read is faster
+        return file_path.read_bytes()
+
+    # Large files: use memory mapping
+    logger.debug(f"Using mmap for large file ({file_size} bytes): {file_path.name}")
+    with open(file_path, "rb") as f:
+        # Memory-map the file (read-only)
+        with mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ) as mm:
+            # Return a copy as bytes since mmap is closed after context
+            return bytes(mm)
+
+
+def _compute_file_hash(file_path: Path) -> str:
+    """Compute SHA-256 hash of a file using chunked reading.
+
+    This is more memory-efficient for large files as it doesn't
+    require loading the entire file into memory at once.
+
+    Args:
+        file_path: Path to the file to hash.
+
+    Returns:
+        Hexadecimal SHA-256 hash string.
+    """
+    file_size = file_path.stat().st_size
+
+    if file_size <= MMAP_THRESHOLD_BYTES:
+        # Small files: direct read is fine
+        return hashlib.sha256(file_path.read_bytes()).hexdigest()
+
+    # Large files: read in chunks
+    logger.debug(f"Using chunked hashing for large file ({file_size} bytes): {file_path.name}")
+    hasher = hashlib.sha256()
+    with open(file_path, "rb") as f:
+        while chunk := f.read(HASH_CHUNK_SIZE):
+            hasher.update(chunk)
+    return hasher.hexdigest()
+
 
 # Language modules mapping
 LANGUAGE_MODULES = {
@@ -126,13 +192,16 @@ class CodeParser:
         """
         language = self.detect_language(file_path)
         if language is None:
+            logger.debug(f"Unsupported file type: {file_path}")
             return None
 
         try:
-            source = file_path.read_bytes()
-        except (OSError, IOError):
+            source = _read_file_content(file_path)
+        except (OSError, IOError) as e:
+            logger.warning(f"Failed to read file {file_path}: {e}")
             return None
 
+        logger.debug(f"Parsing {file_path.name} as {language.value}")
         parser = self._get_parser(language)
         tree = parser.parse(source)
         return tree.root_node, language, source
@@ -157,6 +226,9 @@ class CodeParser:
     def get_file_info(self, file_path: Path, repo_root: Path) -> FileInfo:
         """Get information about a source file.
 
+        Uses chunked reading for large files to avoid loading
+        the entire file into memory just for hash computation.
+
         Args:
             file_path: Absolute path to the file.
             repo_root: Root directory of the repository.
@@ -165,14 +237,13 @@ class CodeParser:
             FileInfo with file metadata.
         """
         stat = file_path.stat()
-        content = file_path.read_bytes()
 
         return FileInfo(
             path=str(file_path.relative_to(repo_root)),
             language=self.detect_language(file_path),
             size_bytes=stat.st_size,
             last_modified=stat.st_mtime,
-            hash=hashlib.sha256(content).hexdigest(),
+            hash=_compute_file_hash(file_path),
         )
 
 
@@ -186,7 +257,7 @@ def get_node_text(node: Node, source: bytes) -> str:
     Returns:
         The text content of the node.
     """
-    return source[node.start_byte:node.end_byte].decode("utf-8", errors="replace")
+    return source[node.start_byte : node.end_byte].decode("utf-8", errors="replace")
 
 
 def find_nodes_by_type(root: Node, node_types: set[str]) -> list[Node]:
@@ -243,6 +314,58 @@ def get_node_name(node: Node, source: bytes, language: LangEnum) -> str | None:
     return None
 
 
+def _collect_preceding_comments(
+    node: Node,
+    source: bytes,
+    comment_types: set[str],
+    prefix: str | None = None,
+) -> list[str]:
+    """Collect all consecutive preceding comment lines.
+
+    Args:
+        node: The tree-sitter node to look before.
+        source: The original source bytes.
+        comment_types: Set of comment node type names (e.g., {"comment", "line_comment"}).
+        prefix: Optional prefix that comments must start with (e.g., "///" for doc comments).
+
+    Returns:
+        List of comment text lines in order (first comment first).
+    """
+    comments = []
+    prev = node.prev_sibling
+
+    while prev and prev.type in comment_types:
+        text = get_node_text(prev, source)
+        if prefix is None or text.startswith(prefix):
+            comments.insert(0, text)
+            prev = prev.prev_sibling
+        else:
+            # Stop at non-matching comment (e.g., regular // after ///)
+            break
+
+    return comments
+
+
+def _strip_line_comment_prefix(lines: list[str], prefix: str) -> str:
+    """Strip prefix from comment lines and join them.
+
+    Args:
+        lines: List of comment lines.
+        prefix: The prefix to strip (e.g., "//", "///", "#").
+
+    Returns:
+        Joined docstring with prefixes removed.
+    """
+    stripped = []
+    for line in lines:
+        # Remove the prefix and optional leading space
+        content = line[len(prefix) :]
+        if content.startswith(" "):
+            content = content[1:]
+        stripped.append(content)
+    return "\n".join(stripped).strip()
+
+
 def get_docstring(node: Node, source: bytes, language: LangEnum) -> str | None:
     """Extract docstring from a function/class node.
 
@@ -270,55 +393,60 @@ def get_docstring(node: Node, source: bytes, language: LangEnum) -> str | None:
                         return text[1:-1].strip()
 
     elif language in (LangEnum.JAVASCRIPT, LangEnum.TYPESCRIPT):
-        # JSDoc comments precede the function
+        # JSDoc comments precede the function (/** */ block or multi-line //)
+        prev = node.prev_sibling
+        if prev and prev.type == "comment":
+            text = get_node_text(prev, source)
+            if text.startswith("/**"):
+                return text[3:-2].strip()
+        # Also try multi-line // comments
+        comments = _collect_preceding_comments(node, source, {"comment"}, "//")
+        if comments:
+            return _strip_line_comment_prefix(comments, "//")
+
+    elif language == LangEnum.GO:
+        # Go doc comments precede the function (can be multi-line // comments)
+        comments = _collect_preceding_comments(node, source, {"comment"}, "//")
+        if comments:
+            return _strip_line_comment_prefix(comments, "//")
+
+    elif language in (LangEnum.JAVA, LangEnum.C, LangEnum.CPP):
+        # Javadoc/Doxygen comments precede the function
+        # First check for /** */ block comment (Java uses block_comment, C/C++ uses comment)
+        prev = node.prev_sibling
+        if prev and prev.type in ("comment", "block_comment"):
+            text = get_node_text(prev, source)
+            if text.startswith("/**"):
+                return text[3:-2].strip()
+        # Also try multi-line /// comments (Doxygen style)
+        comments = _collect_preceding_comments(node, source, {"comment"}, "///")
+        if comments:
+            return _strip_line_comment_prefix(comments, "///")
+
+    elif language == LangEnum.RUST:
+        # Rust doc comments (/// can be multi-line)
+        comments = _collect_preceding_comments(node, source, {"line_comment"}, "///")
+        if comments:
+            return _strip_line_comment_prefix(comments, "///")
+
+    elif language == LangEnum.SWIFT:
+        # Swift doc comments (/// can be multi-line, or /** */ block)
+        # First try multi-line /// comments
+        comments = _collect_preceding_comments(node, source, {"comment"}, "///")
+        if comments:
+            return _strip_line_comment_prefix(comments, "///")
+        # Fall back to /** */ block comment
         prev = node.prev_sibling
         if prev and prev.type == "comment":
             text = get_node_text(prev, source)
             if text.startswith("/**"):
                 return text[3:-2].strip()
 
-    elif language == LangEnum.GO:
-        # Go doc comments precede the function
-        prev = node.prev_sibling
-        if prev and prev.type == "comment":
-            text = get_node_text(prev, source)
-            if text.startswith("//"):
-                return text[2:].strip()
-
-    elif language in (LangEnum.JAVA, LangEnum.C, LangEnum.CPP):
-        # Javadoc/Doxygen comments precede the function
-        prev = node.prev_sibling
-        if prev and prev.type == "comment":
-            text = get_node_text(prev, source)
-            if text.startswith("/**") or text.startswith("///"):
-                return text.lstrip("/*").rstrip("*/").strip()
-
-    elif language == LangEnum.RUST:
-        # Rust doc comments (///)
-        prev = node.prev_sibling
-        if prev and prev.type == "line_comment":
-            text = get_node_text(prev, source)
-            if text.startswith("///"):
-                return text[3:].strip()
-
-    elif language == LangEnum.SWIFT:
-        # Swift doc comments (/// or /** */)
-        prev = node.prev_sibling
-        if prev and prev.type == "comment":
-            text = get_node_text(prev, source)
-            if text.startswith("///"):
-                return text[3:].strip()
-            elif text.startswith("/**"):
-                return text[3:-2].strip()
-
     elif language == LangEnum.RUBY:
-        # Ruby comments precede the definition
-        prev = node.prev_sibling
-        while prev and prev.type == "comment":
-            text = get_node_text(prev, source)
-            if text.startswith("#"):
-                return text.lstrip("#").strip()
-            prev = prev.prev_sibling
+        # Ruby doc comments (# can be multi-line)
+        comments = _collect_preceding_comments(node, source, {"comment"}, "#")
+        if comments:
+            return _strip_line_comment_prefix(comments, "#")
 
     elif language == LangEnum.PHP:
         # PHP uses PHPDoc comments (/** ... */)
@@ -337,11 +465,9 @@ def get_docstring(node: Node, source: bytes, language: LangEnum) -> str | None:
                 return text[3:-2].strip()
 
     elif language == LangEnum.CSHARP:
-        # C# uses XML doc comments (///)
-        prev = node.prev_sibling
-        if prev and prev.type == "comment":
-            text = get_node_text(prev, source)
-            if text.startswith("///"):
-                return text[3:].strip()
+        # C# uses XML doc comments (/// can be multi-line)
+        comments = _collect_preceding_comments(node, source, {"comment"}, "///")
+        if comments:
+            return _strip_line_comment_prefix(comments, "///")
 
     return None

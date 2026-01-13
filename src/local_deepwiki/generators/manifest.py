@@ -10,6 +10,47 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from local_deepwiki.logging import get_logger
+
+logger = get_logger(__name__)
+
+
+# Manifest files to check for caching
+MANIFEST_FILES = [
+    "pyproject.toml",
+    "setup.py",
+    "requirements.txt",
+    "package.json",
+    "Cargo.toml",
+    "go.mod",
+    "pom.xml",
+    "build.gradle",
+    "Gemfile",
+]
+
+
+@dataclass
+class ManifestCacheEntry:
+    """Cache entry storing manifest data and file modification times."""
+
+    manifest_data: dict[str, Any]
+    file_mtimes: dict[str, float]  # filename -> mtime
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary for JSON serialization."""
+        return {
+            "manifest_data": self.manifest_data,
+            "file_mtimes": self.file_mtimes,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "ManifestCacheEntry":
+        """Create from dictionary."""
+        return cls(
+            manifest_data=data.get("manifest_data", {}),
+            file_mtimes=data.get("file_mtimes", {}),
+        )
+
 
 @dataclass
 class ProjectManifest:
@@ -39,12 +80,7 @@ class ProjectManifest:
 
     def has_data(self) -> bool:
         """Check if any meaningful data was extracted."""
-        return bool(
-            self.name
-            or self.dependencies
-            or self.dev_dependencies
-            or self.entry_points
-        )
+        return bool(self.name or self.dependencies or self.dev_dependencies or self.entry_points)
 
     def get_tech_stack_summary(self) -> str:
         """Generate a factual tech stack summary."""
@@ -77,11 +113,42 @@ class ProjectManifest:
         }
 
         # Known package categories
-        web_frameworks = {"flask", "fastapi", "django", "starlette", "aiohttp", "tornado", "express", "koa", "hapi"}
-        databases = {"sqlalchemy", "pymongo", "redis", "lancedb", "chromadb", "psycopg2", "mysql", "sqlite", "prisma", "typeorm", "sequelize"}
+        web_frameworks = {
+            "flask",
+            "fastapi",
+            "django",
+            "starlette",
+            "aiohttp",
+            "tornado",
+            "express",
+            "koa",
+            "hapi",
+        }
+        databases = {
+            "sqlalchemy",
+            "pymongo",
+            "redis",
+            "lancedb",
+            "chromadb",
+            "psycopg2",
+            "mysql",
+            "sqlite",
+            "prisma",
+            "typeorm",
+            "sequelize",
+        }
         testing = {"pytest", "unittest", "nose", "jest", "mocha", "vitest"}
         cli = {"click", "typer", "argparse", "commander", "yargs"}
-        ai_ml = {"openai", "anthropic", "langchain", "transformers", "torch", "tensorflow", "sentence-transformers", "ollama"}
+        ai_ml = {
+            "openai",
+            "anthropic",
+            "langchain",
+            "transformers",
+            "torch",
+            "tensorflow",
+            "sentence-transformers",
+            "ollama",
+        }
 
         for dep in self.dependencies:
             dep_lower = dep.lower().replace("-", "").replace("_", "")
@@ -138,8 +205,179 @@ class ProjectManifest:
         return "\n".join(lines) if lines else ""
 
 
+def _get_manifest_mtimes(repo_path: Path) -> dict[str, float]:
+    """Get modification times for all manifest files.
+
+    Args:
+        repo_path: Path to the repository root.
+
+    Returns:
+        Dictionary mapping filename to modification time (0 if file doesn't exist).
+    """
+    mtimes = {}
+    for filename in MANIFEST_FILES:
+        filepath = repo_path / filename
+        if filepath.exists():
+            try:
+                mtimes[filename] = filepath.stat().st_mtime
+            except OSError as e:
+                logger.debug(f"Could not get mtime for {filename}: {e}")
+                mtimes[filename] = 0
+    return mtimes
+
+
+def _is_cache_valid(cache_entry: ManifestCacheEntry, current_mtimes: dict[str, float]) -> bool:
+    """Check if cached manifest is still valid.
+
+    Args:
+        cache_entry: The cached manifest entry.
+        current_mtimes: Current modification times of manifest files.
+
+    Returns:
+        True if cache is valid, False if any file has changed.
+    """
+    # Check if same set of files exist
+    cached_files = set(cache_entry.file_mtimes.keys())
+    current_files = set(current_mtimes.keys())
+
+    if cached_files != current_files:
+        logger.debug(
+            f"Manifest cache invalid: file set changed ({cached_files} vs {current_files})"
+        )
+        return False
+
+    # Check if any file has been modified
+    for filename, cached_mtime in cache_entry.file_mtimes.items():
+        current_mtime = current_mtimes.get(filename, 0)
+        if cached_mtime != current_mtime:
+            logger.debug(f"Manifest cache invalid: {filename} modified")
+            return False
+
+    return True
+
+
+def _load_manifest_cache(cache_path: Path) -> ManifestCacheEntry | None:
+    """Load manifest cache from disk.
+
+    Args:
+        cache_path: Path to the cache file.
+
+    Returns:
+        ManifestCacheEntry or None if not found/invalid.
+    """
+    if not cache_path.exists():
+        return None
+
+    try:
+        with open(cache_path) as f:
+            data = json.load(f)
+        return ManifestCacheEntry.from_dict(data)
+    except Exception as e:
+        logger.debug(f"Could not load manifest cache: {e}")
+        return None
+
+
+def _save_manifest_cache(cache_path: Path, entry: ManifestCacheEntry) -> None:
+    """Save manifest cache to disk.
+
+    Args:
+        cache_path: Path to the cache file.
+        entry: The cache entry to save.
+    """
+    try:
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(cache_path, "w") as f:
+            json.dump(entry.to_dict(), f, indent=2)
+        logger.debug(f"Saved manifest cache to {cache_path}")
+    except Exception as e:
+        logger.warning(f"Could not save manifest cache: {e}")
+
+
+def _manifest_to_dict(manifest: "ProjectManifest") -> dict[str, Any]:
+    """Convert ProjectManifest to dictionary for caching."""
+    return {
+        "name": manifest.name,
+        "version": manifest.version,
+        "description": manifest.description,
+        "language": manifest.language,
+        "language_version": manifest.language_version,
+        "dependencies": manifest.dependencies,
+        "dev_dependencies": manifest.dev_dependencies,
+        "entry_points": manifest.entry_points,
+        "scripts": manifest.scripts,
+        "repository": manifest.repository,
+        "license": manifest.license,
+        "authors": manifest.authors,
+        "manifest_files": manifest.manifest_files,
+    }
+
+
+def _manifest_from_dict(data: dict[str, Any]) -> "ProjectManifest":
+    """Create ProjectManifest from dictionary."""
+    return ProjectManifest(
+        name=data.get("name"),
+        version=data.get("version"),
+        description=data.get("description"),
+        language=data.get("language"),
+        language_version=data.get("language_version"),
+        dependencies=data.get("dependencies", {}),
+        dev_dependencies=data.get("dev_dependencies", {}),
+        entry_points=data.get("entry_points", {}),
+        scripts=data.get("scripts", {}),
+        repository=data.get("repository"),
+        license=data.get("license"),
+        authors=data.get("authors", []),
+        manifest_files=data.get("manifest_files", []),
+    )
+
+
+def get_cached_manifest(repo_path: Path, cache_dir: Path | None = None) -> ProjectManifest:
+    """Get project manifest, using cache if available and valid.
+
+    This function checks if a cached manifest exists and is still valid
+    (no manifest files have been modified). If valid, returns cached data.
+    Otherwise, parses fresh and updates the cache.
+
+    Args:
+        repo_path: Path to the repository root.
+        cache_dir: Directory for cache storage (defaults to repo_path/.deepwiki).
+
+    Returns:
+        ProjectManifest with extracted metadata.
+    """
+    if cache_dir is None:
+        cache_dir = repo_path / ".deepwiki"
+
+    cache_path = cache_dir / "manifest_cache.json"
+
+    # Get current modification times
+    current_mtimes = _get_manifest_mtimes(repo_path)
+
+    # Try to use cache
+    cache_entry = _load_manifest_cache(cache_path)
+    if cache_entry is not None and _is_cache_valid(cache_entry, current_mtimes):
+        logger.debug("Using cached manifest data")
+        return _manifest_from_dict(cache_entry.manifest_data)
+
+    # Parse fresh
+    logger.debug("Parsing manifest files (cache miss or invalid)")
+    manifest = parse_manifest(repo_path)
+
+    # Save to cache
+    new_entry = ManifestCacheEntry(
+        manifest_data=_manifest_to_dict(manifest),
+        file_mtimes=current_mtimes,
+    )
+    _save_manifest_cache(cache_path, new_entry)
+
+    return manifest
+
+
 def parse_manifest(repo_path: Path) -> ProjectManifest:
     """Parse all recognized package manifests in a repository.
+
+    Note: For incremental updates, prefer get_cached_manifest() which
+    avoids re-parsing when manifest files haven't changed.
 
     Args:
         repo_path: Path to the repository root.
@@ -168,9 +406,9 @@ def parse_manifest(repo_path: Path) -> ProjectManifest:
             try:
                 parser(filepath, manifest)
                 manifest.manifest_files.append(filename)
-            except Exception:
-                # Skip files that fail to parse
-                pass
+            except Exception as e:
+                # Skip files that fail to parse but log the issue
+                logger.warning(f"Failed to parse manifest file {filename}: {e}")
 
     return manifest
 
@@ -192,7 +430,11 @@ def _parse_pyproject_toml(filepath: Path, manifest: ProjectManifest) -> None:
     manifest.name = project.get("name")
     manifest.version = project.get("version")
     manifest.description = project.get("description")
-    manifest.license = project.get("license", {}).get("text") if isinstance(project.get("license"), dict) else project.get("license")
+    manifest.license = (
+        project.get("license", {}).get("text")
+        if isinstance(project.get("license"), dict)
+        else project.get("license")
+    )
 
     # Python version
     requires_python = project.get("requires-python")
@@ -241,7 +483,7 @@ def _parse_pyproject_toml(filepath: Path, manifest: ProjectManifest) -> None:
 def _parse_python_dep(dep: str) -> tuple[str, str]:
     """Parse a Python dependency string like 'requests>=2.0'."""
     # Match: package_name followed by optional version specifier
-    match = re.match(r'^([a-zA-Z0-9_-]+)\s*(.*)$', dep.strip())
+    match = re.match(r"^([a-zA-Z0-9_-]+)\s*(.*)$", dep.strip())
     if match:
         return match.group(1), match.group(2).strip() or "*"
     return dep, "*"
@@ -263,7 +505,7 @@ def _parse_setup_py(filepath: Path, manifest: ProjectManifest) -> None:
         manifest.version = version_match.group(1)
 
     # Extract install_requires
-    requires_match = re.search(r'install_requires\s*=\s*\[(.*?)\]', content, re.DOTALL)
+    requires_match = re.search(r"install_requires\s*=\s*\[(.*?)\]", content, re.DOTALL)
     if requires_match:
         deps_str = requires_match.group(1)
         for dep_match in re.finditer(r'["\']([^"\']+)["\']', deps_str):
@@ -312,7 +554,11 @@ def _parse_package_json(filepath: Path, manifest: ProjectManifest) -> None:
     manifest.version = data.get("version")
     manifest.description = data.get("description")
     manifest.license = data.get("license")
-    manifest.repository = data.get("repository", {}).get("url") if isinstance(data.get("repository"), dict) else data.get("repository")
+    manifest.repository = (
+        data.get("repository", {}).get("url")
+        if isinstance(data.get("repository"), dict)
+        else data.get("repository")
+    )
 
     # Dependencies
     for name, version in deps.items():
@@ -382,17 +628,17 @@ def _parse_go_mod(filepath: Path, manifest: ProjectManifest) -> None:
     manifest.language = "Go"
 
     # Module name
-    module_match = re.search(r'^module\s+(\S+)', content, re.MULTILINE)
+    module_match = re.search(r"^module\s+(\S+)", content, re.MULTILINE)
     if module_match:
         manifest.name = module_match.group(1).split("/")[-1]
 
     # Go version
-    go_match = re.search(r'^go\s+(\S+)', content, re.MULTILINE)
+    go_match = re.search(r"^go\s+(\S+)", content, re.MULTILINE)
     if go_match:
         manifest.language_version = go_match.group(1)
 
     # Dependencies (require block)
-    require_block = re.search(r'require\s*\((.*?)\)', content, re.DOTALL)
+    require_block = re.search(r"require\s*\((.*?)\)", content, re.DOTALL)
     if require_block:
         for line in require_block.group(1).splitlines():
             line = line.strip()
@@ -469,13 +715,17 @@ def _parse_build_gradle(filepath: Path, manifest: ProjectManifest) -> None:
 
     # Extract dependencies
     # Match: implementation 'group:artifact:version' or implementation "group:artifact:version"
-    dep_pattern = re.compile(r'(?:implementation|api|compile)\s*[(\s]*["\']([^"\']+):([^"\']+):([^"\']+)["\']')
+    dep_pattern = re.compile(
+        r'(?:implementation|api|compile)\s*[(\s]*["\']([^"\']+):([^"\']+):([^"\']+)["\']'
+    )
     for match in dep_pattern.finditer(content):
         artifact, version = match.group(2), match.group(3)
         manifest.dependencies[artifact] = version
 
     # Test dependencies
-    test_pattern = re.compile(r'(?:testImplementation|testCompile)\s*[(\s]*["\']([^"\']+):([^"\']+):([^"\']+)["\']')
+    test_pattern = re.compile(
+        r'(?:testImplementation|testCompile)\s*[(\s]*["\']([^"\']+):([^"\']+):([^"\']+)["\']'
+    )
     for match in test_pattern.finditer(content):
         artifact, version = match.group(2), match.group(3)
         manifest.dev_dependencies[artifact] = version
@@ -511,14 +761,26 @@ def get_directory_tree(repo_path: Path, max_depth: int = 3, max_items: int = 50)
 
     # Common directories/files to skip
     skip = {
-        ".git", ".hg", ".svn",
-        "node_modules", "__pycache__", ".pytest_cache",
-        ".venv", "venv", ".env",
-        ".idea", ".vscode",
-        "dist", "build", "target",
-        ".egg-info", "*.egg",
-        ".tox", ".nox",
-        ".mypy_cache", ".ruff_cache",
+        ".git",
+        ".hg",
+        ".svn",
+        "node_modules",
+        "__pycache__",
+        ".pytest_cache",
+        ".venv",
+        "venv",
+        ".env",
+        ".idea",
+        ".vscode",
+        "dist",
+        "build",
+        "target",
+        ".egg-info",
+        "*.egg",
+        ".tox",
+        ".nox",
+        ".mypy_cache",
+        ".ruff_cache",
     }
 
     def should_skip(name: str) -> bool:

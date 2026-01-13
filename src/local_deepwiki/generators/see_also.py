@@ -52,7 +52,7 @@ class RelationshipAnalyzer:
             self._known_files.add(file_path)
 
             # Parse imports from content
-            for line in chunk.content.split('\n'):
+            for line in chunk.content.split("\n"):
                 line = line.strip()
                 if not line:
                     continue
@@ -74,15 +74,15 @@ class RelationshipAnalyzer:
         module = None
 
         # Handle: from local_deepwiki.core.chunker import CodeChunker
-        if line.startswith('from '):
+        if line.startswith("from "):
             parts = line.split()
             if len(parts) >= 2:
                 module = parts[1]
         # Handle: import local_deepwiki.core.chunker
-        elif line.startswith('import '):
+        elif line.startswith("import "):
             parts = line.split()
             if len(parts) >= 2:
-                module = parts[1].split(',')[0].strip()
+                module = parts[1].split(",")[0].strip()
 
         if not module:
             return None
@@ -102,7 +102,7 @@ class RelationshipAnalyzer:
             Matching file path or None.
         """
         # Convert module to potential file paths
-        parts = module.replace('.', '/')
+        parts = module.replace(".", "/")
         candidates = [
             f"{parts}.py",
             f"src/{parts}.py",
@@ -165,11 +165,11 @@ class RelationshipAnalyzer:
             True if they match.
         """
         # Convert file path to module-like format
-        path_parts = Path(file_path).with_suffix('').parts
+        path_parts = Path(file_path).with_suffix("").parts
         # Remove 'src' prefix if present
-        if path_parts and path_parts[0] == 'src':
+        if path_parts and path_parts[0] == "src":
             path_parts = path_parts[1:]
-        path_module = '.'.join(path_parts)
+        path_module = ".".join(path_parts)
 
         return module == path_module or module.endswith(path_module)
 
@@ -199,7 +199,7 @@ def build_file_to_wiki_map(pages: list[WikiPage]) -> dict[str, str]:
         if page.path.startswith("files/"):
             # Remove "files/" prefix and change .md to .py
             source_path = page.path[6:]  # Remove "files/"
-            source_path = re.sub(r'\.md$', '.py', source_path)
+            source_path = re.sub(r"\.md$", ".py", source_path)
             file_to_wiki[source_path] = page.path
 
     return file_to_wiki
@@ -239,11 +239,7 @@ def generate_see_also_section(
             related.append((wiki_path, title, "dependency"))
 
     # Add files with shared dependencies (sorted by count)
-    shared_sorted = sorted(
-        relationships.shared_deps_with.items(),
-        key=lambda x: x[1],
-        reverse=True
-    )
+    shared_sorted = sorted(relationships.shared_deps_with.items(), key=lambda x: x[1], reverse=True)
     for file_path, count in shared_sorted[:3]:  # Limit shared deps
         wiki_path = file_to_wiki.get(file_path)
         if wiki_path and wiki_path != current_wiki_path:
@@ -328,7 +324,7 @@ def add_see_also_sections(
 
         # Get source file path from wiki path
         source_path = page.path[6:]  # Remove "files/"
-        source_path = re.sub(r'\.md$', '.py', source_path)
+        source_path = re.sub(r"\.md$", ".py", source_path)
 
         # Get relationships for this file
         relationships = analyzer.get_relationships(source_path)
@@ -343,12 +339,14 @@ def add_see_also_sections(
         if see_also:
             # Add See Also section to end of page
             new_content = page.content.rstrip() + "\n\n" + see_also + "\n"
-            updated_pages.append(WikiPage(
-                path=page.path,
-                title=page.title,
-                content=new_content,
-                generated_at=page.generated_at,
-            ))
+            updated_pages.append(
+                WikiPage(
+                    path=page.path,
+                    title=page.title,
+                    content=new_content,
+                    generated_at=page.generated_at,
+                )
+            )
         else:
             updated_pages.append(page)
 

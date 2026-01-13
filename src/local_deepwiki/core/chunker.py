@@ -9,19 +9,32 @@ from tree_sitter import Node
 from local_deepwiki.config import ChunkingConfig, get_config
 from local_deepwiki.core.parser import (
     CodeParser,
-    get_node_text,
-    get_node_name,
-    get_docstring,
     find_nodes_by_type,
+    get_docstring,
+    get_node_name,
+    get_node_text,
 )
-from local_deepwiki.models import CodeChunk, ChunkType, Language
+from local_deepwiki.logging import get_logger
+from local_deepwiki.models import ChunkType, CodeChunk, Language
+
+logger = get_logger(__name__)
 
 
 # Node types that represent extractable code units per language
 FUNCTION_NODE_TYPES: dict[Language, set[str]] = {
     Language.PYTHON: {"function_definition", "async_function_definition"},
-    Language.JAVASCRIPT: {"function_declaration", "arrow_function", "function_expression", "method_definition"},
-    Language.TYPESCRIPT: {"function_declaration", "arrow_function", "function_expression", "method_definition"},
+    Language.JAVASCRIPT: {
+        "function_declaration",
+        "arrow_function",
+        "function_expression",
+        "method_definition",
+    },
+    Language.TYPESCRIPT: {
+        "function_declaration",
+        "arrow_function",
+        "function_expression",
+        "method_definition",
+    },
     Language.GO: {"function_declaration", "method_declaration"},
     Language.RUST: {"function_item"},
     Language.JAVA: {"method_declaration", "constructor_declaration"},
@@ -43,11 +56,22 @@ CLASS_NODE_TYPES: dict[Language, set[str]] = {
     Language.JAVA: {"class_declaration", "interface_declaration", "enum_declaration"},
     Language.C: {"struct_specifier"},
     Language.CPP: {"class_specifier", "struct_specifier"},
-    Language.SWIFT: {"class_declaration", "struct_declaration", "protocol_declaration", "enum_declaration", "extension_declaration"},
+    Language.SWIFT: {
+        "class_declaration",
+        "struct_declaration",
+        "protocol_declaration",
+        "enum_declaration",
+        "extension_declaration",
+    },
     Language.RUBY: {"class", "module"},
     Language.PHP: {"class_declaration", "interface_declaration", "trait_declaration"},
     Language.KOTLIN: {"class_declaration", "object_declaration"},
-    Language.CSHARP: {"class_declaration", "struct_declaration", "interface_declaration", "enum_declaration"},
+    Language.CSHARP: {
+        "class_declaration",
+        "struct_declaration",
+        "interface_declaration",
+        "enum_declaration",
+    },
 }
 
 IMPORT_NODE_TYPES: dict[Language, set[str]] = {
@@ -163,7 +187,9 @@ def get_parent_classes(class_node: Node, source: bytes, language: Language) -> l
         # C#: class Child : Parent, IInterface1, IInterface2
         for child in class_node.children:
             if child.type == "base_list":
-                for item in find_nodes_by_type(child, {"identifier", "generic_name", "qualified_name"}):
+                for item in find_nodes_by_type(
+                    child, {"identifier", "generic_name", "qualified_name"}
+                ):
                     text = get_node_text(item, source)
                     if text:
                         parents.append(text)
@@ -195,10 +221,12 @@ class CodeChunker:
         """
         result = self.parser.parse_file(file_path)
         if result is None:
+            logger.debug(f"Skipping unsupported file: {file_path}")
             return
 
         root, language, source = result
         rel_path = str(file_path.relative_to(repo_root))
+        logger.debug(f"Chunking {rel_path} ({language.value})")
 
         # Extract module-level chunk (file overview)
         yield self._create_module_chunk(root, source, language, rel_path)
@@ -299,7 +327,8 @@ class CodeChunker:
         # List functions
         function_types = FUNCTION_NODE_TYPES.get(language, set())
         functions = [
-            f for f in find_nodes_by_type(root, function_types)
+            f
+            for f in find_nodes_by_type(root, function_types)
             if not self._is_inside_class(f, class_types)
         ]
         if functions:
@@ -370,7 +399,7 @@ class CodeChunker:
 
         # Check if class is too large and needs to be split
         lines = content.count("\n") + 1
-        if lines > 100:
+        if lines > self.config.class_split_threshold:
             # For large classes, create a summary chunk and method chunks
             yield self._create_class_summary_chunk(
                 class_node, source, language, file_path, class_name, docstring, parent_classes
@@ -384,7 +413,9 @@ class CodeChunker:
                 )
         else:
             # Small class - include everything in one chunk
-            chunk_id = self._generate_id(file_path, f"class_{class_name}", class_node.start_point[0])
+            chunk_id = self._generate_id(
+                file_path, f"class_{class_name}", class_node.start_point[0]
+            )
             metadata = {"line_count": lines}
             if parent_classes:
                 metadata["parent_classes"] = parent_classes
@@ -437,7 +468,9 @@ class CodeChunker:
                 signature_end = child.start_byte
                 break
 
-        signature = source[class_node.start_byte:signature_end].decode("utf-8", errors="replace").strip()
+        signature = (
+            source[class_node.start_byte : signature_end].decode("utf-8", errors="replace").strip()
+        )
         content = f"{signature}\n    # Methods: {', '.join(method_names)}"
 
         chunk_id = self._generate_id(file_path, f"class_{class_name}", class_node.start_point[0])
@@ -481,7 +514,9 @@ class CodeChunker:
         content = get_node_text(method_node, source)
         docstring = get_docstring(method_node, source, language)
 
-        chunk_id = self._generate_id(file_path, f"{class_name}.{method_name}", method_node.start_point[0])
+        chunk_id = self._generate_id(
+            file_path, f"{class_name}.{method_name}", method_node.start_point[0]
+        )
         return CodeChunk(
             id=chunk_id,
             file_path=file_path,

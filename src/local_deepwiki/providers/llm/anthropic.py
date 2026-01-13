@@ -5,7 +5,10 @@ from typing import AsyncIterator
 
 from anthropic import AsyncAnthropic
 
-from local_deepwiki.providers.base import LLMProvider
+from local_deepwiki.logging import get_logger
+from local_deepwiki.providers.base import LLMProvider, with_retry
+
+logger = get_logger(__name__)
 
 
 class AnthropicProvider(LLMProvider):
@@ -21,6 +24,7 @@ class AnthropicProvider(LLMProvider):
         self._model = model
         self._client = AsyncAnthropic(api_key=api_key or os.environ.get("ANTHROPIC_API_KEY"))
 
+    @with_retry(max_attempts=3, base_delay=1.0, max_delay=30.0)
     async def generate(
         self,
         prompt: str,
@@ -49,8 +53,13 @@ class AnthropicProvider(LLMProvider):
         if temperature > 0:
             kwargs["temperature"] = temperature
 
+        logger.debug(f"Generating with Anthropic model {self._model}, prompt length: {len(prompt)}")
+
         response = await self._client.messages.create(**kwargs)
-        return response.content[0].text
+        content = response.content[0].text
+
+        logger.debug(f"Anthropic response length: {len(content)}")
+        return content
 
     async def generate_stream(
         self,

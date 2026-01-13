@@ -79,15 +79,62 @@ class EntityRegistry:
         # Set of common words to exclude from linking
         self._excluded_names: set[str] = {
             # Python builtins and common names
-            "self", "cls", "None", "True", "False", "str", "int", "float",
-            "bool", "list", "dict", "set", "tuple", "type", "object",
-            "Exception", "Error", "Any", "Optional", "List", "Dict", "Set",
-            "Tuple", "Union", "Callable", "Type", "Path", "Field",
+            "self",
+            "cls",
+            "None",
+            "True",
+            "False",
+            "str",
+            "int",
+            "float",
+            "bool",
+            "list",
+            "dict",
+            "set",
+            "tuple",
+            "type",
+            "object",
+            "Exception",
+            "Error",
+            "Any",
+            "Optional",
+            "List",
+            "Dict",
+            "Set",
+            "Tuple",
+            "Union",
+            "Callable",
+            "Type",
+            "Path",
+            "Field",
             # Common short names that cause false positives
-            "id", "name", "path", "data", "config", "result", "value",
-            "key", "item", "index", "count", "size", "length", "text",
-            "content", "status", "info", "error", "message", "query",
-            "file", "line", "chunk", "page", "model", "base", "test",
+            "id",
+            "name",
+            "path",
+            "data",
+            "config",
+            "result",
+            "value",
+            "key",
+            "item",
+            "index",
+            "count",
+            "size",
+            "length",
+            "text",
+            "content",
+            "status",
+            "info",
+            "error",
+            "message",
+            "query",
+            "file",
+            "line",
+            "chunk",
+            "page",
+            "model",
+            "base",
+            "test",
         }
 
     def register_entity(
@@ -290,13 +337,13 @@ class CrossLinker:
         parts: list[tuple[str, bool]] = []
 
         # Pattern for fenced code blocks
-        fenced_pattern = re.compile(r'(```[\s\S]*?```|~~~[\s\S]*?~~~)')
+        fenced_pattern = re.compile(r"(```[\s\S]*?```|~~~[\s\S]*?~~~)")
 
         last_end = 0
         for match in fenced_pattern.finditer(content):
             # Add text before the code block
             if match.start() > last_end:
-                parts.append((content[last_end:match.start()], False))
+                parts.append((content[last_end : match.start()], False))
             # Add the code block
             parts.append((match.group(0), True))
             last_end = match.end()
@@ -406,28 +453,26 @@ class CrossLinker:
             return placeholder
 
         # Protect existing markdown links and headings
-        temp_text = re.sub(r'\[([^\]]+)\]\([^)]+\)', protect, text)
-        temp_text = re.sub(r'^(#{1,6}\s+.+)$', protect, temp_text, flags=re.MULTILINE)
+        temp_text = re.sub(r"\[([^\]]+)\]\([^)]+\)", protect, text)
+        temp_text = re.sub(r"^(#{1,6}\s+.+)$", protect, temp_text, flags=re.MULTILINE)
 
         # Convert backticked entity names to links: `EntityName` -> [`EntityName`](path)
         # Also handle qualified names like `module.EntityName` -> [`EntityName`](path)
-        temp_text = self._link_backticked_entities(
-            temp_text, entity_name, rel_path, protect
-        )
+        temp_text = self._link_backticked_entities(temp_text, entity_name, rel_path, protect)
 
         # Protect all remaining inline code (that didn't match entities)
-        temp_text = re.sub(r'`[^`]+`', protect, temp_text)
+        temp_text = re.sub(r"`[^`]+`", protect, temp_text)
 
         # Replace bold entity mentions: **EntityName** -> **[EntityName](path)**
-        bold_pattern = rf'\*\*{re.escape(entity_name)}\*\*'
+        bold_pattern = rf"\*\*{re.escape(entity_name)}\*\*"
         bold_link = f"**[{entity_name}]({rel_path})**"
         temp_text = re.sub(bold_pattern, bold_link, temp_text)
 
         # Protect links we just created to avoid double-linking
-        temp_text = re.sub(r'\[([^\]]+)\]\([^)]+\)', protect, temp_text)
+        temp_text = re.sub(r"\[([^\]]+)\]\([^)]+\)", protect, temp_text)
 
         # Also replace plain entity mentions (but not inside headings to avoid breaking them)
-        pattern = rf'\b{re.escape(entity_name)}\b'
+        pattern = rf"\b{re.escape(entity_name)}\b"
         temp_text = re.sub(pattern, link, temp_text)
 
         # Restore protected content
@@ -460,13 +505,13 @@ class CrossLinker:
             Text with backticked entities converted to links.
         """
         # Pattern for exact match: `EntityName`
-        exact_pattern = rf'`{re.escape(entity_name)}`'
+        exact_pattern = rf"`{re.escape(entity_name)}`"
         exact_replacement = f"[`{entity_name}`]({rel_path})"
         text = re.sub(exact_pattern, exact_replacement, text)
 
         # Pattern for qualified names: `something.EntityName` or `a.b.EntityName`
         # Captures the entity name at the end after a dot
-        qualified_pattern = rf'`([a-zA-Z_][a-zA-Z0-9_]*\.)+{re.escape(entity_name)}`'
+        qualified_pattern = rf"`([a-zA-Z_][a-zA-Z0-9_]*\.)+{re.escape(entity_name)}`"
 
         def qualified_replacement(match: re.Match) -> str:
             # Link just the entity name, showing full qualified name
@@ -476,7 +521,7 @@ class CrossLinker:
         text = re.sub(qualified_pattern, qualified_replacement, text)
 
         # Protect the links we just created
-        text = re.sub(r'\[`[^`]+`\]\([^)]+\)', protect, text)
+        text = re.sub(r"\[`[^`]+`\]\([^)]+\)", protect, text)
 
         return text
 

@@ -5,7 +5,10 @@ from typing import AsyncIterator
 
 from openai import AsyncOpenAI
 
-from local_deepwiki.providers.base import LLMProvider
+from local_deepwiki.logging import get_logger
+from local_deepwiki.providers.base import LLMProvider, with_retry
+
+logger = get_logger(__name__)
 
 
 class OpenAILLMProvider(LLMProvider):
@@ -21,6 +24,7 @@ class OpenAILLMProvider(LLMProvider):
         self._model = model
         self._client = AsyncOpenAI(api_key=api_key or os.environ.get("OPENAI_API_KEY"))
 
+    @with_retry(max_attempts=3, base_delay=1.0, max_delay=30.0)
     async def generate(
         self,
         prompt: str,
@@ -44,13 +48,18 @@ class OpenAILLMProvider(LLMProvider):
             messages.append({"role": "system", "content": system_prompt})
         messages.append({"role": "user", "content": prompt})
 
+        logger.debug(f"Generating with OpenAI model {self._model}, prompt length: {len(prompt)}")
+
         response = await self._client.chat.completions.create(
             model=self._model,
             messages=messages,
             max_tokens=max_tokens,
             temperature=temperature,
         )
-        return response.choices[0].message.content or ""
+        content = response.choices[0].message.content or ""
+
+        logger.debug(f"OpenAI response length: {len(content)}")
+        return content
 
     async def generate_stream(
         self,

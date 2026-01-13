@@ -7,6 +7,10 @@ from pathlib import Path
 
 import markdown
 
+from local_deepwiki.logging import get_logger
+
+logger = get_logger(__name__)
+
 
 # Static HTML template - adapted from web/app.py for offline use
 # Uses relative paths instead of Flask url_for()
@@ -627,12 +631,14 @@ STATIC_HTML_TEMPLATE = """<!DOCTYPE html>
 
 def render_markdown(content: str) -> str:
     """Render markdown to HTML."""
-    md = markdown.Markdown(extensions=[
-        'fenced_code',
-        'tables',
-        'toc',
-        'nl2br',
-    ])
+    md = markdown.Markdown(
+        extensions=[
+            "fenced_code",
+            "tables",
+            "toc",
+            "nl2br",
+        ]
+    )
     return md.convert(content)
 
 
@@ -640,14 +646,14 @@ def extract_title(md_file: Path) -> str:
     """Extract title from markdown file."""
     try:
         content = md_file.read_text()
-        for line in content.split('\n'):
+        for line in content.split("\n"):
             line = line.strip()
-            if line.startswith('# '):
+            if line.startswith("# "):
                 return line[2:].strip()
-            if line.startswith('**') and line.endswith('**'):
+            if line.startswith("**") and line.endswith("**"):
                 return line[2:-2].strip()
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"Could not extract title from {md_file}: {e}")
     return md_file.stem.replace("_", " ").replace("-", " ").title()
 
 
@@ -671,11 +677,14 @@ class HtmlExporter:
         Returns:
             Number of pages exported
         """
+        logger.info(f"Starting HTML export from {self.wiki_path} to {self.output_path}")
+
         # Load TOC
         toc_path = self.wiki_path / "toc.json"
         if toc_path.exists():
             toc_data = json.loads(toc_path.read_text())
             self.toc_entries = toc_data.get("entries", [])
+            logger.debug(f"Loaded {len(self.toc_entries)} TOC entries")
 
         # Create output directory
         self.output_path.mkdir(parents=True, exist_ok=True)
@@ -684,6 +693,7 @@ class HtmlExporter:
         search_src = self.wiki_path / "search.json"
         if search_src.exists():
             shutil.copy(search_src, self.output_path / "search.json")
+            logger.debug("Copied search.json to output directory")
 
         # Find and export all markdown files
         exported = 0
@@ -692,6 +702,7 @@ class HtmlExporter:
             self._export_page(md_file, rel_path)
             exported += 1
 
+        logger.info(f"Exported {exported} pages to HTML")
         return exported
 
     def _export_page(self, md_file: Path, rel_path: Path) -> None:
@@ -701,6 +712,8 @@ class HtmlExporter:
             md_file: Path to the markdown file
             rel_path: Relative path from wiki root
         """
+        logger.debug(f"Exporting page: {rel_path}")
+
         # Read and convert markdown
         content = md_file.read_text()
         html_content = render_markdown(content)
@@ -770,24 +783,24 @@ class HtmlExporter:
             # Convert .md to .html for static export
             html_path = entry["path"].replace(".md", ".html")
             active = "active" if entry["path"] == current_path else ""
-            html += f'''<a href="{root_path}{html_path}" class="{active}">
+            html += f"""<a href="{root_path}{html_path}" class="{active}">
                 <span class="toc-number">{entry.get("number", "")}</span>
                 <span>{entry.get("title", "")}</span>
-            </a>'''
+            </a>"""
         else:
             # No link, just a grouping label
-            html += f'''<span class="toc-parent">
+            html += f"""<span class="toc-parent">
                 <span class="toc-number">{entry.get("number", "")}</span>
                 <span>{entry.get("title", "")}</span>
-            </span>'''
+            </span>"""
 
         if has_children:
             html += '<div class="toc-nested">'
             for child in entry["children"]:
                 html += self._render_toc_entry(child, current_path, root_path)
-            html += '</div>'
+            html += "</div>"
 
-        html += '</div>'
+        html += "</div>"
         return html
 
     def _build_breadcrumb(self, rel_path: Path, root_path: str) -> str:
@@ -827,18 +840,20 @@ class HtmlExporter:
                 link_path = f"{cumulative_path}/index.html"
                 breadcrumb_items.append(f'<a href="{root_path}{link_path}">{display_name}</a>')
             else:
-                breadcrumb_items.append(f'<span>{display_name}</span>')
+                breadcrumb_items.append(f"<span>{display_name}</span>")
 
         # Add current page name
         current_page = parts[-1]
-        if current_page.endswith('.md'):
+        if current_page.endswith(".md"):
             current_page = current_page[:-3]
         current_page = current_page.replace("_", " ").replace("-", " ").title()
         breadcrumb_items.append(f'<span class="current">{current_page}</span>')
 
-        return '<div class="breadcrumb">' + \
-            ' <span class="separator">&rsaquo;</span> '.join(breadcrumb_items) + \
-            '</div>'
+        return (
+            '<div class="breadcrumb">'
+            + ' <span class="separator">&rsaquo;</span> '.join(breadcrumb_items)
+            + "</div>"
+        )
 
 
 def export_to_html(wiki_path: str | Path, output_path: str | Path | None = None) -> str:
@@ -857,27 +872,24 @@ def export_to_html(wiki_path: str | Path, output_path: str | Path | None = None)
     else:
         output_path = Path(output_path)
 
+    logger.info(f"Exporting wiki from {wiki_path} to {output_path}")
     exporter = HtmlExporter(wiki_path, output_path)
     count = exporter.export()
 
+    logger.info(f"HTML export complete: {count} pages")
     return f"Exported {count} pages to {output_path}"
 
 
 def main():
     """CLI entry point for HTML export."""
-    parser = argparse.ArgumentParser(
-        description="Export DeepWiki documentation to static HTML"
-    )
+    parser = argparse.ArgumentParser(description="Export DeepWiki documentation to static HTML")
     parser.add_argument(
         "wiki_path",
         nargs="?",
         default=".deepwiki",
-        help="Path to the .deepwiki directory (default: .deepwiki)"
+        help="Path to the .deepwiki directory (default: .deepwiki)",
     )
-    parser.add_argument(
-        "--output", "-o",
-        help="Output directory (default: {wiki_path}_html)"
-    )
+    parser.add_argument("--output", "-o", help="Output directory (default: {wiki_path}_html)")
 
     args = parser.parse_args()
 

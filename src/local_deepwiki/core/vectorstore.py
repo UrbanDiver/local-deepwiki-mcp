@@ -7,8 +7,31 @@ from typing import Any
 import lancedb
 from lancedb.table import Table
 
-from local_deepwiki.models import CodeChunk, SearchResult
+from local_deepwiki.logging import get_logger
+from local_deepwiki.models import ChunkType, CodeChunk, Language, SearchResult
 from local_deepwiki.providers.base import EmbeddingProvider
+
+logger = get_logger(__name__)
+
+
+# Valid values for filtering - used to prevent injection attacks
+VALID_LANGUAGES = {lang.value for lang in Language}
+VALID_CHUNK_TYPES = {ct.value for ct in ChunkType}
+
+
+def _sanitize_string_value(value: str) -> str:
+    """Sanitize a string value for use in LanceDB filter expressions.
+
+    Escapes single quotes to prevent injection attacks.
+
+    Args:
+        value: The string to sanitize.
+
+    Returns:
+        Sanitized string safe for use in filter expressions.
+    """
+    # Escape single quotes by doubling them
+    return value.replace("'", "''")
 
 
 class VectorStore:
@@ -39,9 +62,58 @@ class VectorStore:
         """Get the chunks table if it exists."""
         if self._table is None:
             db = self._connect()
-            if self.TABLE_NAME in db.table_names():
+            if self.TABLE_NAME in db.list_tables().tables:
                 self._table = db.open_table(self.TABLE_NAME)
+                # Ensure indexes exist (may have been created by older code version)
+                self._ensure_scalar_indexes()
         return self._table
+
+    def _ensure_scalar_indexes(self) -> None:
+        """Ensure scalar indexes exist, creating them if needed.
+
+        This is called when opening an existing table to ensure indexes
+        are present even if the table was created by an older version.
+        """
+        if self._table is None:
+            return
+
+        # Check existing indexes
+        try:
+            existing_indexes = {idx["name"] for idx in self._table.list_indices()}
+        except Exception as e:
+            logger.debug(f"Could not list existing indexes: {e}")
+            existing_indexes = set()
+
+        # Create missing indexes
+        if "id_idx" not in existing_indexes:
+            self._create_index_safe("id")
+        if "file_path_idx" not in existing_indexes:
+            self._create_index_safe("file_path")
+
+    def _create_index_safe(self, column: str) -> None:
+        """Safely create a scalar index on a column.
+
+        Args:
+            column: The column name to index.
+        """
+        if self._table is None:
+            return
+
+        try:
+            self._table.create_scalar_index(column)
+            logger.debug(f"Created scalar index on '{column}' column")
+        except Exception as e:
+            # Index may already exist or column type not supported
+            logger.debug(f"Could not create index on '{column}': {e}")
+
+    def _create_scalar_indexes(self) -> None:
+        """Create scalar indexes for efficient lookups.
+
+        Creates indexes on 'id' and 'file_path' columns to optimize
+        get_chunk_by_id() and get_chunks_by_file() operations.
+        """
+        self._create_index_safe("id")
+        self._create_index_safe("file_path")
 
     async def create_or_update_table(self, chunks: list[CodeChunk]) -> int:
         """Create or update the vector table with code chunks.
@@ -53,8 +125,10 @@ class VectorStore:
             Number of chunks stored.
         """
         if not chunks:
+            logger.debug("No chunks to store, skipping table creation")
             return 0
 
+        logger.info(f"Creating/updating vector table with {len(chunks)} chunks")
         db = self._connect()
 
         # Generate embeddings for all chunks
@@ -62,28 +136,19 @@ class VectorStore:
         embeddings = await self.embedding_provider.embed(texts)
 
         # Prepare data for LanceDB
-        data = []
-        for chunk, embedding in zip(chunks, embeddings):
-            data.append({
-                "id": chunk.id,
-                "file_path": chunk.file_path,
-                "language": chunk.language.value,
-                "chunk_type": chunk.chunk_type.value,
-                "name": chunk.name or "",
-                "content": chunk.content,
-                "start_line": chunk.start_line,
-                "end_line": chunk.end_line,
-                "docstring": chunk.docstring or "",
-                "parent_name": chunk.parent_name or "",
-                "metadata": json.dumps(chunk.metadata),
-                "vector": embedding,
-            })
+        data = [
+            chunk.to_vector_record(vector=embedding) for chunk, embedding in zip(chunks, embeddings)
+        ]
 
         # Drop existing table and create new one
-        if self.TABLE_NAME in db.table_names():
+        if self.TABLE_NAME in db.list_tables().tables:
             db.drop_table(self.TABLE_NAME)
 
         self._table = db.create_table(self.TABLE_NAME, data)
+
+        # Create scalar indexes for efficient lookups
+        self._create_scalar_indexes()
+
         return len(data)
 
     async def add_chunks(self, chunks: list[CodeChunk]) -> int:
@@ -98,6 +163,7 @@ class VectorStore:
         if not chunks:
             return 0
 
+        logger.debug(f"Adding {len(chunks)} chunks to existing table")
         table = self._get_table()
         if table is None:
             return await self.create_or_update_table(chunks)
@@ -107,22 +173,9 @@ class VectorStore:
         embeddings = await self.embedding_provider.embed(texts)
 
         # Prepare data
-        data = []
-        for chunk, embedding in zip(chunks, embeddings):
-            data.append({
-                "id": chunk.id,
-                "file_path": chunk.file_path,
-                "language": chunk.language.value,
-                "chunk_type": chunk.chunk_type.value,
-                "name": chunk.name or "",
-                "content": chunk.content,
-                "start_line": chunk.start_line,
-                "end_line": chunk.end_line,
-                "docstring": chunk.docstring or "",
-                "parent_name": chunk.parent_name or "",
-                "metadata": json.dumps(chunk.metadata),
-                "vector": embedding,
-            })
+        data = [
+            chunk.to_vector_record(vector=embedding) for chunk, embedding in zip(chunks, embeddings)
+        ]
 
         table.add(data)
         return len(data)
@@ -147,7 +200,10 @@ class VectorStore:
         """
         table = self._get_table()
         if table is None:
+            logger.debug("No table found for search")
             return []
+
+        logger.debug(f"Searching for: '{query[:50]}...' limit={limit}")
 
         # Generate query embedding
         query_embedding = (await self.embedding_provider.embed([query]))[0]
@@ -155,11 +211,15 @@ class VectorStore:
         # Build search query
         search = table.search(query_embedding).limit(limit)
 
-        # Apply filters
+        # Apply filters with validation to prevent injection
         filters = []
         if language:
+            if language not in VALID_LANGUAGES:
+                raise ValueError(f"Invalid language filter: {language}")
             filters.append(f"language = '{language}'")
         if chunk_type:
+            if chunk_type not in VALID_CHUNK_TYPES:
+                raise ValueError(f"Invalid chunk_type filter: {chunk_type}")
             filters.append(f"chunk_type = '{chunk_type}'")
 
         if filters:
@@ -184,11 +244,13 @@ class VectorStore:
                 parent_name=row["parent_name"] or None,
                 metadata=json.loads(row["metadata"]) if row["metadata"] else {},
             )
-            search_results.append(SearchResult(
-                chunk=chunk,
-                score=1.0 - row.get("_distance", 0),  # Convert distance to similarity
-                highlights=[],
-            ))
+            search_results.append(
+                SearchResult(
+                    chunk=chunk,
+                    score=1.0 - row.get("_distance", 0),  # Convert distance to similarity
+                    highlights=[],
+                )
+            )
 
         return search_results
 
@@ -205,7 +267,8 @@ class VectorStore:
         if table is None:
             return None
 
-        results = table.search().where(f"id = '{chunk_id}'").limit(1).to_list()
+        safe_id = _sanitize_string_value(chunk_id)
+        results = table.search().where(f"id = '{safe_id}'").limit(1).to_list()
         if not results:
             return None
 
@@ -237,22 +300,25 @@ class VectorStore:
         if table is None:
             return []
 
-        results = table.search().where(f"file_path = '{file_path}'").to_list()
+        safe_path = _sanitize_string_value(file_path)
+        results = table.search().where(f"file_path = '{safe_path}'").to_list()
         chunks = []
         for row in results:
-            chunks.append(CodeChunk(
-                id=row["id"],
-                file_path=row["file_path"],
-                language=row["language"],
-                chunk_type=row["chunk_type"],
-                name=row["name"] or None,
-                content=row["content"],
-                start_line=row["start_line"],
-                end_line=row["end_line"],
-                docstring=row["docstring"] or None,
-                parent_name=row["parent_name"] or None,
-                metadata=json.loads(row["metadata"]) if row["metadata"] else {},
-            ))
+            chunks.append(
+                CodeChunk(
+                    id=row["id"],
+                    file_path=row["file_path"],
+                    language=row["language"],
+                    chunk_type=row["chunk_type"],
+                    name=row["name"] or None,
+                    content=row["content"],
+                    start_line=row["start_line"],
+                    end_line=row["end_line"],
+                    docstring=row["docstring"] or None,
+                    parent_name=row["parent_name"] or None,
+                    metadata=json.loads(row["metadata"]) if row["metadata"] else {},
+                )
+            )
         return chunks
 
     async def delete_chunks_by_file(self, file_path: str) -> int:
@@ -268,11 +334,14 @@ class VectorStore:
         if table is None:
             return 0
 
+        # Sanitize path to prevent injection
+        safe_path = _sanitize_string_value(file_path)
+
         # Count before delete
-        before = len(table.search().where(f"file_path = '{file_path}'").to_list())
+        before = len(table.search().where(f"file_path = '{safe_path}'").to_list())
 
         # Delete matching rows
-        table.delete(f"file_path = '{file_path}'")
+        table.delete(f"file_path = '{safe_path}'")
 
         return before
 

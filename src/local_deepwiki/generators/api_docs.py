@@ -6,22 +6,15 @@ from pathlib import Path
 
 from tree_sitter import Node
 
-from local_deepwiki.core.parser import (
-    CodeParser,
-    find_nodes_by_type,
-    get_node_text,
-    get_node_name,
-)
-from local_deepwiki.core.chunker import (
-    FUNCTION_NODE_TYPES,
-    CLASS_NODE_TYPES,
-)
+from local_deepwiki.core.chunker import CLASS_NODE_TYPES, FUNCTION_NODE_TYPES
+from local_deepwiki.core.parser import CodeParser, find_nodes_by_type, get_node_name, get_node_text
 from local_deepwiki.models import Language
 
 
 @dataclass
 class Parameter:
     """Represents a function parameter."""
+
     name: str
     type_hint: str | None = None
     default_value: str | None = None
@@ -31,6 +24,7 @@ class Parameter:
 @dataclass
 class FunctionSignature:
     """Represents a function/method signature."""
+
     name: str
     parameters: list[Parameter] = field(default_factory=list)
     return_type: str | None = None
@@ -44,6 +38,7 @@ class FunctionSignature:
 @dataclass
 class ClassSignature:
     """Represents a class signature."""
+
     name: str
     bases: list[str] = field(default_factory=list)
     docstring: str | None = None
@@ -112,7 +107,9 @@ def extract_python_parameters(func_node: Node, source: bytes) -> list[Parameter]
                 if name not in ("self", "cls"):
                     type_hint = get_node_text(type_node, source) if type_node else None
                     default = get_node_text(value_node, source) if value_node else None
-                    parameters.append(Parameter(name=name, type_hint=type_hint, default_value=default))
+                    parameters.append(
+                        Parameter(name=name, type_hint=type_hint, default_value=default)
+                    )
 
         elif child.type in ("list_splat_pattern", "dictionary_splat_pattern"):
             # *args or **kwargs
@@ -479,7 +476,9 @@ class APIDocExtractor:
         """Initialize the extractor."""
         self.parser = CodeParser()
 
-    def extract_from_file(self, file_path: Path) -> tuple[list[FunctionSignature], list[ClassSignature]]:
+    def extract_from_file(
+        self, file_path: Path
+    ) -> tuple[list[FunctionSignature], list[ClassSignature]]:
         """Extract API documentation from a source file.
 
         Args:
@@ -594,7 +593,12 @@ def generate_api_reference_markdown(
         # Filter methods
         methods = cls.methods
         if not include_private:
-            methods = [m for m in methods if not m.name.startswith("_") or m.name in ("__init__", "__call__", "__enter__", "__exit__")]
+            methods = [
+                m
+                for m in methods
+                if not m.name.startswith("_")
+                or m.name in ("__init__", "__call__", "__enter__", "__exit__")
+            ]
 
         if methods:
             lines.append("\n**Methods:**\n")
@@ -616,7 +620,9 @@ def generate_api_reference_markdown(
                         type_str = f"`{param.type_hint}`" if param.type_hint else "-"
                         default_str = f"`{param.default_value}`" if param.default_value else "-"
                         desc_str = param.description or "-"
-                        lines.append(f"| `{param.name}` | {type_str} | {default_str} | {desc_str} |")
+                        lines.append(
+                            f"| `{param.name}` | {type_str} | {default_str} | {desc_str} |"
+                        )
                     lines.append("")
 
         lines.append("")

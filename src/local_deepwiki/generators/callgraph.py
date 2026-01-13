@@ -4,18 +4,9 @@ from pathlib import Path
 
 from tree_sitter import Node
 
-from local_deepwiki.core.parser import (
-    CodeParser,
-    find_nodes_by_type,
-    get_node_text,
-    get_node_name,
-)
-from local_deepwiki.core.chunker import (
-    FUNCTION_NODE_TYPES,
-    CLASS_NODE_TYPES,
-)
+from local_deepwiki.core.chunker import CLASS_NODE_TYPES, FUNCTION_NODE_TYPES
+from local_deepwiki.core.parser import CodeParser, find_nodes_by_type, get_node_name, get_node_text
 from local_deepwiki.models import Language
-
 
 # Node types that represent function calls per language
 CALL_NODE_TYPES: dict[Language, set[str]] = {
@@ -168,17 +159,75 @@ def _is_builtin_or_noise(name: str, language: Language) -> bool:
     """
     # Common built-ins/noise to filter across languages
     common_noise = {
-        "print", "println", "printf", "len", "str", "int", "float", "bool",
-        "list", "dict", "set", "tuple", "range", "enumerate", "zip", "map",
-        "filter", "sorted", "reversed", "min", "max", "sum", "any", "all",
-        "isinstance", "issubclass", "hasattr", "getattr", "setattr", "delattr",
-        "type", "id", "repr", "hash", "format", "open", "close",
-        "append", "extend", "insert", "remove", "pop", "clear",
-        "get", "keys", "values", "items", "update",
-        "join", "split", "strip", "replace", "startswith", "endswith",
-        "lower", "upper", "find", "index", "count",
-        "log", "debug", "info", "warn", "warning", "error",
-        "console", "assert", "require", "include",
+        "print",
+        "println",
+        "printf",
+        "len",
+        "str",
+        "int",
+        "float",
+        "bool",
+        "list",
+        "dict",
+        "set",
+        "tuple",
+        "range",
+        "enumerate",
+        "zip",
+        "map",
+        "filter",
+        "sorted",
+        "reversed",
+        "min",
+        "max",
+        "sum",
+        "any",
+        "all",
+        "isinstance",
+        "issubclass",
+        "hasattr",
+        "getattr",
+        "setattr",
+        "delattr",
+        "type",
+        "id",
+        "repr",
+        "hash",
+        "format",
+        "open",
+        "close",
+        "append",
+        "extend",
+        "insert",
+        "remove",
+        "pop",
+        "clear",
+        "get",
+        "keys",
+        "values",
+        "items",
+        "update",
+        "join",
+        "split",
+        "strip",
+        "replace",
+        "startswith",
+        "endswith",
+        "lower",
+        "upper",
+        "find",
+        "index",
+        "count",
+        "log",
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error",
+        "console",
+        "assert",
+        "require",
+        "include",
     }
 
     if name.lower() in common_noise:
@@ -191,7 +240,14 @@ def _is_builtin_or_noise(name: str, language: Language) -> bool:
             return True
 
     elif language in (Language.JAVASCRIPT, Language.TYPESCRIPT):
-        js_noise = {"setTimeout", "setInterval", "clearTimeout", "clearInterval", "fetch", "Promise"}
+        js_noise = {
+            "setTimeout",
+            "setInterval",
+            "clearTimeout",
+            "clearInterval",
+            "fetch",
+            "Promise",
+        }
         if name in js_noise:
             return True
 

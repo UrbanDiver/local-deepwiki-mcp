@@ -76,11 +76,18 @@ def generate_class_diagram(
             class_name = chunk.name or "Unknown"
             if class_name not in classes:
                 # Extract attributes from class content
-                attributes = _extract_class_attributes(chunk.content, chunk.language.value if hasattr(chunk, 'language') else 'python')
+                attributes = _extract_class_attributes(
+                    chunk.content, chunk.language.value if hasattr(chunk, "language") else "python"
+                )
 
                 # Check for special class types
-                is_abstract = "ABC" in str(chunk.metadata.get("parent_classes", [])) or "abstract" in chunk.content.lower()
-                is_dataclass = "@dataclass" in chunk.content or "BaseModel" in str(chunk.metadata.get("parent_classes", []))
+                is_abstract = (
+                    "ABC" in str(chunk.metadata.get("parent_classes", []))
+                    or "abstract" in chunk.content.lower()
+                )
+                is_dataclass = "@dataclass" in chunk.content or "BaseModel" in str(
+                    chunk.metadata.get("parent_classes", [])
+                )
 
                 classes[class_name] = ClassInfo(
                     name=class_name,
@@ -123,7 +130,11 @@ def generate_class_diagram(
                         if method_name not in [m[0] for m in methods_by_class.get(class_name, [])]:
                             if class_name not in methods_by_class:
                                 methods_by_class[class_name] = []
-                            sig = f"() -> {return_type.strip()}" if return_type and show_types else "()"
+                            sig = (
+                                f"() -> {return_type.strip()}"
+                                if return_type and show_types
+                                else "()"
+                            )
                             methods_by_class[class_name].append((method_name, sig))
 
     # Build class info with methods
@@ -504,7 +515,7 @@ def generate_module_overview(
     directories: dict[str, dict[str, int]] = {}  # dir -> {subdir: count}
 
     for file_info in index_status.files:
-        parts = file_info.path.split("/")
+        parts = list(Path(file_info.path).parts)
         if len(parts) < 2:
             continue
 

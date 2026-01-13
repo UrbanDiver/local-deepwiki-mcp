@@ -1,8 +1,10 @@
 """Configuration management for local-deepwiki."""
 
-import os
+import threading
+from contextlib import contextmanager
+from contextvars import ContextVar
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Generator, Literal
 
 import yaml
 from pydantic import BaseModel, Field
@@ -11,7 +13,9 @@ from pydantic import BaseModel, Field
 class LocalEmbeddingConfig(BaseModel):
     """Configuration for local embedding model."""
 
-    model: str = Field(default="all-MiniLM-L6-v2", description="Model name for sentence-transformers")
+    model: str = Field(
+        default="all-MiniLM-L6-v2", description="Model name for sentence-transformers"
+    )
 
 
 class OpenAIEmbeddingConfig(BaseModel):
@@ -62,8 +66,22 @@ class ParsingConfig(BaseModel):
     """Code parsing configuration."""
 
     languages: list[str] = Field(
-        default=["python", "typescript", "javascript", "go", "rust", "java", "c", "cpp", "swift"],
-        description="Languages to parse"
+        default=[
+            "python",
+            "typescript",
+            "javascript",
+            "go",
+            "rust",
+            "java",
+            "c",
+            "cpp",
+            "swift",
+            "ruby",
+            "php",
+            "kotlin",
+            "csharp",
+        ],
+        description="Languages to parse",
     )
     max_file_size: int = Field(default=1048576, description="Max file size in bytes (1MB)")
     exclude_patterns: list[str] = Field(
@@ -81,7 +99,7 @@ class ParsingConfig(BaseModel):
             "target/**",
             "vendor/**",
         ],
-        description="Glob patterns to exclude"
+        description="Glob patterns to exclude",
     )
 
 
@@ -90,6 +108,30 @@ class ChunkingConfig(BaseModel):
 
     max_chunk_tokens: int = Field(default=512, description="Max tokens per chunk")
     overlap_tokens: int = Field(default=50, description="Overlap between chunks")
+    batch_size: int = Field(
+        default=500, description="Number of chunks to process in each batch for memory efficiency"
+    )
+    class_split_threshold: int = Field(
+        default=100,
+        description="Line count threshold above which classes are split into summary + method chunks",
+    )
+
+
+class WikiConfig(BaseModel):
+    """Wiki generation configuration."""
+
+    max_file_docs: int = Field(
+        default=20, description="Maximum number of file-level documentation pages to generate"
+    )
+    import_search_limit: int = Field(
+        default=200, description="Maximum chunks to search for import/relationship analysis"
+    )
+    context_search_limit: int = Field(
+        default=50, description="Maximum chunks to search for context when generating documentation"
+    )
+    fallback_search_limit: int = Field(
+        default=30, description="Maximum chunks to search in fallback queries"
+    )
 
 
 class OutputConfig(BaseModel):
@@ -106,6 +148,7 @@ class Config(BaseModel):
     llm: LLMConfig = Field(default_factory=LLMConfig)
     parsing: ParsingConfig = Field(default_factory=ParsingConfig)
     chunking: ChunkingConfig = Field(default_factory=ChunkingConfig)
+    wiki: WikiConfig = Field(default_factory=WikiConfig)
     output: OutputConfig = Field(default_factory=OutputConfig)
 
     @classmethod
@@ -138,19 +181,83 @@ class Config(BaseModel):
         return self.get_wiki_path(repo_path) / self.output.vector_db_name
 
 
-# Global config instance
+# Thread-safe global config singleton
 _config: Config | None = None
+_config_lock = threading.Lock()
+
+# Context-local config override for async contexts
+_context_config: ContextVar[Config | None] = ContextVar("config", default=None)
 
 
 def get_config() -> Config:
-    """Get the global configuration instance."""
+    """Get the configuration instance.
+
+    Returns the context-local config if set, otherwise the global config.
+    Thread-safe for concurrent access.
+
+    Returns:
+        The active configuration instance.
+    """
+    # Check for context-local override first (async-safe)
+    context_cfg = _context_config.get()
+    if context_cfg is not None:
+        return context_cfg
+
+    # Fall back to global singleton (thread-safe)
     global _config
-    if _config is None:
-        _config = Config.load()
-    return _config
+    with _config_lock:
+        if _config is None:
+            _config = Config.load()
+        return _config
 
 
 def set_config(config: Config) -> None:
-    """Set the global configuration instance."""
+    """Set the global configuration instance.
+
+    Thread-safe. Note: This sets the global config, not a context-local one.
+    Use config_context() for temporary context-local overrides.
+
+    Args:
+        config: The configuration to set globally.
+    """
     global _config
-    _config = config
+    with _config_lock:
+        _config = config
+
+
+def reset_config() -> None:
+    """Reset the global configuration to uninitialized state.
+
+    Useful for testing to ensure a fresh config is loaded.
+    Also clears any context-local override.
+    """
+    global _config
+    with _config_lock:
+        _config = None
+    _context_config.set(None)
+
+
+@contextmanager
+def config_context(config: Config) -> Generator[Config, None, None]:
+    """Context manager for temporary config override.
+
+    Sets a context-local configuration that takes precedence over the global
+    config within the context. Useful for testing or per-request config.
+
+    Args:
+        config: The configuration to use within the context.
+
+    Yields:
+        The provided configuration.
+
+    Example:
+        with config_context(custom_config):
+            # get_config() returns custom_config here
+            do_something()
+        # get_config() returns global config again
+    """
+    token = _context_config.set(config)
+    try:
+        yield config
+    finally:
+        _context_config.reset(token)
