@@ -6,7 +6,7 @@
 
 ## Current Status: ✅ Complete & Working
 
-The project is fully implemented and tested. All 320 tests pass.
+The project is fully implemented and tested. All 543 tests pass.
 
 ## Architecture
 
@@ -157,7 +157,7 @@ Generated wiki includes:
 ## Tested On
 
 This repo itself was used as a test case:
-- 28 Python files indexed
-- 172 code chunks extracted
-- 26 wiki pages generated (including file-level docs)
+- 61 Python files indexed
+- 733 code chunks extracted
+- 27 wiki pages generated (including file-level docs)
 - RAG Q&A working with Ollama (qwen3-coder:30b)
