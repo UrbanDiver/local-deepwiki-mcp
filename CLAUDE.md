@@ -6,7 +6,7 @@
 
 ## Current Status: ✅ Complete & Working
 
-The project is fully implemented and tested. All 571 tests pass.
+The project is fully implemented and tested. All 585 tests pass.
 
 ## Architecture
 
@@ -86,6 +86,9 @@ uv run deepwiki-export-pdf .deepwiki -o documentation.pdf
 
 # Export each page as separate PDF
 uv run deepwiki-export-pdf .deepwiki --separate -o ./pdfs/
+
+# For mermaid diagrams in PDF, install mermaid-cli (optional)
+npm install -g @mermaid-js/mermaid-cli
 ```
 
 ## MCP Server Configuration
