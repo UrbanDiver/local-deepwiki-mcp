@@ -46,7 +46,7 @@ Tests for Flask application functionality including initialization and routing.
 
 ### `wiki_dir`
 
-**Purpose:** 
+**Purpose:**
 A pytest fixture that creates a temporary directory structure for testing wiki content.
 
 **Parameters:**

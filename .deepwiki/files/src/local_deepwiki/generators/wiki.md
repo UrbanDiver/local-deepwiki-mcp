@@ -2,17 +2,25 @@
 
 ## File Overview
 
-This file contains the core implementation for generating wiki documentation from code repositories. It provides functionality to create structured documentation including module overviews, architecture diagrams, API documentation, and cross-referenced content. The [main](../export/html.md) entry point is the `WikiGenerator` class which orchestrates the wiki generation process.
+This file defines the `WikiGenerator` class and the `generate_wiki` function, which are responsible for generating wiki documentation from a codebase. It uses a vector store for code indexing and integrates with various code analysis tools to produce structured documentation including module overviews, architecture diagrams, and cross-referenced pages.
 
 ## Classes
 
 ### WikiGenerator
 
-The WikiGenerator class is responsible for generating comprehensive wiki documentation from code repositories. It uses a vector store for code indexing and integrates with various code analysis generators to produce structured documentation.
+The WikiGenerator class is responsible for generating wiki documentation from a codebase using a vector store and configuration.
 
-#### Methods
+#### Constructor
 
-##### `__init__`
+```python
+def __init__(
+    self,
+    wiki_path: Path,
+    vector_store: VectorStore,
+    config: Config | None = None,
+    llm_provider_name: str | None = None,
+)
+```
 
 Initialize the wiki generator.
 
@@ -22,147 +30,22 @@ Initialize the wiki generator.
 - `config`: Optional configuration.
 - `llm_provider_name`: Override LLM provider ("ollama", "anthropic", "openai").
 
-##### `generate`
-
-Main method to generate the wiki documentation.
-
-**Parameters:**
-- `repo_path`: Path to the repository.
-- `index_status`: Index status.
-- [`progress_callback`](../server.md): Optional progress callback function.
-- `full_rebuild`: Whether to perform a full rebuild.
-
-**Returns:**
-- `WikiStructure`: The generated wiki structure.
-
-##### `_get_main_definition_lines`
-
-Extract [main](../export/html.md) definition lines from a file.
-
-**Parameters:**
-- `file_path`: Path to the file.
-- `definitions`: List of definitions.
-
-**Returns:**
-- `list[str]`: Lines containing [main](../export/html.md) definitions.
-
-##### `_load_wiki_status`
-
-Load existing wiki status from disk.
-
-**Returns:**
-- `dict[str, Any]`: Wiki status data.
-
-##### `_save_wiki_status`
-
-Save wiki status to disk.
-
-**Parameters:**
-- `status`: Wiki status data to save.
-
-##### `_compute_content_hash`
-
-Compute content hash for a file.
-
-**Parameters:**
-- `content`: File content.
-
-**Returns:**
-- `str`: Content hash.
-
-##### `_needs_regeneration`
-
-Check if regeneration is needed for a file.
-
-**Parameters:**
-- `file_path`: Path to the file.
-- `status`: Current status.
-
-**Returns:**
-- `bool`: Whether regeneration is needed.
-
-##### `_load_existing_page`
-
-Load an existing wiki page.
-
-**Parameters:**
-- `page_name`: Name of the page.
-- `status`: Current status.
-
-**Returns:**
-- `str`: Page content or empty string.
-
-##### `_record_page_status`
-
-Record page status.
-
-**Parameters:**
-- `page_name`: Name of the page.
-- `status`: Page status data.
-
-##### `_generate_overview`
-
-Generate overview documentation.
-
-**Parameters:**
-- `repo_path`: Path to the repository.
-
-##### `_generate_architecture`
-
-Generate architecture documentation.
-
-**Parameters:**
-- `repo_path`: Path to the repository.
-
-##### `_generate_module_docs`
-
-Generate module documentation.
-
-**Parameters:**
-- `repo_path`: Path to the repository.
-- `module_name`: Name of the module.
-
-##### `_generate_modules_index`
-
-Generate modules index page.
-
-**Parameters:**
-- `repo_path`: Path to the repository.
-
-##### `_generate_file_docs`
-
-Generate file documentation.
-
-**Parameters:**
-- `repo_path`: Path to the repository.
-- `file_path`: Path to the file.
-
-##### `_generate_files_index`
-
-Generate files index page.
-
-**Parameters:**
-- `repo_path`: Path to the repository.
-
-##### `_generate_dependencies`
-
-Generate dependency documentation.
-
-**Parameters:**
-- `repo_path`: Path to the repository.
-
-##### `_write_page`
-
-Write a page to disk.
-
-**Parameters:**
-- `page_name`: Name of the page.
-- `content`: Page content.
-- `status`: Page status.
-
 ## Functions
 
 ### generate_wiki
+
+```python
+async def generate_wiki(
+    repo_path: Path,
+    wiki_path: Path,
+    vector_store: VectorStore,
+    index_status: IndexStatus,
+    config: Config | None = None,
+    llm_provider: str | None = None,
+    progress_callback: Any = None,
+    full_rebuild: bool = False,
+) -> WikiStructure:
+```
 
 Convenience function to generate wiki documentation.
 
@@ -173,7 +56,7 @@ Convenience function to generate wiki documentation.
 - `index_status`: Index status.
 - `config`: Optional configuration.
 - `llm_provider`: Optional LLM provider name.
-- [`progress_callback`](../server.md): Optional progress callback function.
+- [`progress_callback`](../server.md): Optional callback for progress updates.
 - `full_rebuild`: Whether to perform a full rebuild.
 
 **Returns:**
@@ -181,70 +64,67 @@ Convenience function to generate wiki documentation.
 
 ## Usage Examples
 
-### Basic Usage
+### Using WikiGenerator
 
 ```python
 from pathlib import Path
 from local_deepwiki.core.vectorstore import VectorStore
-from local_deepwiki.generators.wiki import generate_wiki
 from local_deepwiki.config import Config
-
-# Initialize components
-repo_path = Path("path/to/repo")
-wiki_path = Path("path/to/wiki")
-vector_store = VectorStore()
-config = Config()
-
-# Generate wiki
-wiki_structure = await generate_wiki(
-    repo_path=repo_path,
-    wiki_path=wiki_path,
-    vector_store=vector_store,
-    index_status={},
-    config=config
-)
-```
-
-### Using WikiGenerator Class
-
-```python
-from pathlib import Path
-from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.generators.wiki import WikiGenerator
 
 # Initialize components
-wiki_path = Path("path/to/wiki")
+wiki_path = Path("output/wiki")
 vector_store = VectorStore()
+config = Config()
 
-# Create generator instance
-wiki_generator = WikiGenerator(
+# Create generator
+generator = WikiGenerator(
     wiki_path=wiki_path,
-    vector_store=vector_store
+    vector_store=vector_store,
+    config=config
 )
+
+# Generate wiki (example usage)
+# generator.generate()
+```
+
+### Using generate_wiki
+
+```python
+from pathlib import Path
+from local_deepwiki.core.vectorstore import VectorStore
+from local_deepwiki.config import Config
+from local_deepwiki.generators.wiki import generate_wiki
+from local_deepwiki.core.index_status import IndexStatus
+
+# Setup paths and components
+repo_path = Path("path/to/repo")
+wiki_path = Path("output/wiki")
+vector_store = VectorStore()
+index_status = IndexStatus()
 
 # Generate wiki
-wiki_structure = await wiki_generator.generate(
-    repo_path=Path("path/to/repo"),
-    index_status={}
-)
+# wiki_structure = await generate_wiki(
+#     repo_path=repo_path,
+#     wiki_path=wiki_path,
+#     vector_store=vector_store,
+#     index_status=index_status,
+#     config=Config(),
+#     llm_provider="openai"
+# )
 ```
 
 ## Related Components
 
 This file works with the following components:
 
-- [`VectorStore`](../core/vectorstore.md): For code indexing and retrieval
-- [`Config`](../config.md): Configuration management
-- [`get_file_api_docs`](api_docs.md): API documentation generator
-- `get_file_call_graph`: Call graph generator
-- [`generate_class_diagram`](diagrams.md): Class diagram generator
-- [`generate_dependency_graph`](diagrams.md): Dependency graph generator
-- [`generate_language_pie_chart`](diagrams.md): Language pie chart generator
-- [`generate_module_overview`](diagrams.md): Module overview generator
-- [`EntityRegistry`](crosslinks.md): Cross-linking entity registry
-- [`add_cross_links`](crosslinks.md): Cross-linking functionality
-
-The file also imports and uses `IndexStatus` and `WikiStructure` types which are referenced in the function signatures but not defined in this file.
+- [`VectorStore`](../core/vectorstore.md): Used for code indexing and retrieval.
+- [`Config`](../config.md): Configuration settings for the wiki generation.
+- `IndexStatus`: Tracks the status of code indexing.
+- [`EntityRegistry`](crosslinks.md) and [`add_cross_links`](crosslinks.md): For managing and adding cross-references.
+- [`get_file_api_docs`](api_docs.md), `get_file_call_graph`: For generating API documentation and call graphs.
+- [`generate_class_diagram`](diagrams.md), [`generate_dependency_graph`](diagrams.md), [`generate_language_pie_chart`](diagrams.md), [`generate_module_overview`](diagrams.md): For generating various diagrams and overviews.
+- `WikiStructure`: The structure of the generated wiki.
 
 ## API Reference
 

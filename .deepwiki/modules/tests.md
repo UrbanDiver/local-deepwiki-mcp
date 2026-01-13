@@ -2,143 +2,109 @@
 
 ## Module Purpose
 
-The tests module contains unit and integration tests for various components of the local-deepwiki project. These tests validate the functionality of code parsing, manifest handling, cross-linking, TOC generation, and other core features. The tests are organized into individual files, each focusing on a specific component or functionality.
+The tests module contains unit and integration tests for various components of the local_deepwiki project. These tests verify the functionality of code parsing, manifest handling, cross-linking, TOC generation, and other core features.
 
 ## Key Classes and Functions
 
 ### TestCodeParser
-Test suite for [CodeParser](../files/src/local_deepwiki/core/parser.md).
-- `setup_method`: Sets up test fixtures by creating a [CodeParser](../files/src/local_deepwiki/core/parser.md) instance.
-- `test_detect_language_python`: Tests Python language detection for .py and .pyi files.
+The TestCodeParser class tests the [CodeParser](../files/src/local_deepwiki/core/parser.md) functionality, including language detection for Python files.
 
 ### TestProjectManifest
-Tests for [ProjectManifest](../files/src/local_deepwiki/generators/manifest.md) dataclass.
-- `test_has_data_empty`: Tests that an empty manifest has no data.
-- `test_has_data_with_name`: Tests that a manifest with a name has data.
-
-### TestParsePyprojectToml
-Tests for parsing pyproject.toml files.
-- `test_parses_pyproject_toml`: Tests parsing of a pyproject.toml file.
-
-### TestParsePackageJson
-Tests for parsing package.json files.
-- `test_parses_package_json`: Tests parsing of a package.json file.
-
-### TestParseRequirementsTxt
-Tests for parsing requirements.txt files.
-- `test_parses_requirements_txt`: Tests parsing of a requirements.txt file.
-
-### TestParseCargoToml
-Tests for parsing Cargo.toml files.
-- `test_parses_cargo_toml`: Tests parsing of a Cargo.toml file.
-
-### TestParseGoMod
-Tests for parsing go.mod files.
-- `test_parses_go_mod`: Tests parsing of a go.mod file.
-
-### TestGetDirectoryTree
-Tests for getting directory tree.
-- `test_gets_directory_tree`: Tests getting directory tree from a path.
-
-### TestMultipleManifests
-Tests for handling multiple manifests.
-- `test_handles_multiple_manifests`: Tests handling of multiple manifests.
+The TestProjectManifest class tests the [ProjectManifest](../files/src/local_deepwiki/generators/manifest.md) dataclass, verifying its behavior with and without data.
 
 ### TestPathToModule
-Tests for _path_to_module function.
-- `test_converts_simple_path`: Tests basic path conversion.
-- `test_skips_init_files`: Tests that __init__.py files return None.
+The [TestPathToModule](../files/tests/test_diagrams.md) class tests the `_path_to_module` function, which converts file paths to module names while skipping `__init__.py` files.
 
 ### TestAddSourceRefsSections
-Tests for adding source references sections.
-- `test_adds_sections_to_file_pages`: Tests adding sections to file pages.
-- `test_skips_index_pages`: Tests skipping index pages.
-- `test_inserts_before_see_also`: Tests inserting before see also section.
-- `test_handles_missing_status`: Tests handling missing status.
-- `test_adds_section_to_module_pages`: Tests adding section to module pages.
-- `test_adds_section_to_architecture_page`: Tests adding section to architecture page.
+The [TestAddSourceRefsSections](../files/tests/test_source_refs.md) class tests the addition of source references sections to wiki pages, handling various scenarios including index pages and see also sections.
 
 ### TestEntityRegistry
-Tests for [EntityRegistry](../files/src/local_deepwiki/generators/crosslinks.md).
-- `test_register_entity`: Tests registering an entity.
-- `test_skips_short_names`: Tests skipping short names.
-- `test_skips_private_names`: Tests skipping private names.
-- `test_skips_excluded_names`: Tests skipping excluded names.
-- `test_register_from_chunks`: Tests registering from chunks.
-- `test_get_page_entities`: Tests getting page entities.
-- `test_registers_camelcase_aliases`: Tests registering camelcase aliases.
-- `test_alias_lookup`: Tests alias lookup.
+The [TestEntityRegistry](../files/tests/test_crosslinks.md) class tests the entity registry functionality, including entity registration, alias handling, and lookup behavior.
 
 ### TestCrossLinker
-Tests for [CrossLinker](../files/src/local_deepwiki/generators/crosslinks.md).
-- `test_adds_links_to_prose`: Tests adding links to prose.
-- `test_does_not_link_in_code_blocks`: Tests that code blocks are not linked.
-- `test_does_not_self_link`: Tests that self-links are not created.
-- `test_relative_paths`: Tests relative paths.
-- `test_links_backticked_entities`: Tests linking backticked entities.
-- `test_does_not_link_non_entity_inline_code`: Tests that non-entity inline code is not linked.
-- `test_links_qualified_names`: Tests linking qualified names.
-- `test_links_simple_qualified_names`: Tests linking simple qualified names.
-- `test_preserves_existing_links`: Tests preserving existing links.
-- `test_links_bold_text`: Tests linking bold text.
-- `test_links_spaced_aliases`: Tests linking spaced aliases.
-- `test_links_bold_spaced_aliases`: Tests linking bold spaced aliases.
+The [TestCrossLinker](../files/tests/test_crosslinks.md) class tests cross-linking functionality, including linking prose, code blocks, qualified names, and handling of existing links.
 
 ### TestTocIntegration
-Integration tests for TOC generation.
-- `test_full_wiki_structure`: Tests TOC generation with a realistic wiki structure.
-
-### TestRelationshipAnalyzer
-Tests for [RelationshipAnalyzer](../files/src/local_deepwiki/generators/see_also.md).
-- `test_analyzes_relationships`: Tests analyzing file relationships.
-
-### TestBuildFileToWikiMap
-Tests for [build_file_to_wiki_map](../files/src/local_deepwiki/generators/see_also.md).
-- `test_builds_file_to_wiki_map`: Tests building file to wiki map.
-
-### TestGenerateSeeAlsoSection
-Tests for [generate_see_also_section](../files/src/local_deepwiki/generators/see_also.md).
-- `test_generates_see_also_section`: Tests generating see also section.
+The TestTocIntegration class performs integration tests for table of contents (TOC) generation with realistic wiki structures.
 
 ### TestWatchedExtensions
-Tests for watched extensions.
-- `test_python_extensions`: Tests that Python extensions are watched.
-- `test_javascript_extensions`: Tests that JavaScript/TypeScript extensions are watched.
+The [TestWatchedExtensions](../files/tests/test_watcher.md) class verifies that watched file extensions include Python and JavaScript/TypeScript extensions.
+
+### TestRelationshipAnalyzer
+The TestRelationshipAnalyzer class tests the relationship analysis functionality for determining file relationships.
+
+### TestBuildFileToWikiMap
+The [TestBuildFileToWikiMap](../files/tests/test_source_refs.md) class tests the creation of mappings between files and wiki pages.
+
+### TestGenerateSeeAlsoSection
+The TestGenerateSeeAlsoSection class tests the generation of "See Also" sections for wiki pages.
+
+### TestParsePyprojectToml
+The TestParsePyprojectToml class tests parsing of pyproject.toml manifest files.
+
+### TestParsePackageJson
+The TestParsePackageJson class tests parsing of package.json manifest files.
+
+### TestParseRequirementsTxt
+The TestParseRequirementsTxt class tests parsing of requirements.txt manifest files.
+
+### TestParseCargoToml
+The TestParseCargoToml class tests parsing of Cargo.toml manifest files.
+
+### TestParseGoMod
+The TestParseGoMod class tests parsing of go.mod manifest files.
+
+### TestGetDirectoryTree
+The TestGetDirectoryTree class tests the directory tree generation functionality.
+
+### TestMultipleManifests
+The TestMultipleManifests class tests handling of multiple manifest files.
 
 ## How Components Interact
 
-The components in this module work together to provide comprehensive testing for the local-deepwiki system. The test classes validate the functionality of parsing, manifest handling, cross-linking, and TOC generation. Each test file focuses on a specific area of functionality, ensuring that changes to the core system don't break existing features.
-
-For example, the TestCodeParser tests the code parsing functionality, while TestProjectManifest tests the manifest handling. The [TestCrossLinker](../files/tests/test_crosslinks.md) tests cross-linking behavior, and TestTocIntegration tests TOC generation with realistic wiki structures.
+The components in this module work together to provide comprehensive testing coverage for the local_deepwiki project. The test classes for parsing, manifest handling, and cross-linking verify core functionality, while integration tests like TestTocIntegration ensure that components work together properly in realistic scenarios. The test suite validates both individual functions and end-to-end workflows.
 
 ## Usage Examples
 
 ```python
-# Running a specific test class
-pytest tests/test_parser.py::TestCodeParser::test_detect_language_python
+# Run all tests in the module
+pytest tests/
 
-# Running all tests in a module
-pytest tests/test_manifest.py
+# Run specific test class
+pytest tests/test_parser.py::TestCodeParser
 
-# Running a specific test method
-pytest tests/test_crosslinks.py::TestEntityRegistry::test_register_entity
+# Run specific test method
+pytest tests/test_manifest.py::TestProjectManifest::test_has_data_empty
 ```
 
 ## Dependencies
 
-This module depends on:
+The tests module depends on:
 - `pytest` for test execution
-- `local_deepwiki.generators.manifest` for manifest handling
+- `local_deepwiki.generators.manifest` for manifest-related functionality
 - `local_deepwiki.generators.see_also` for see also section generation
 - `local_deepwiki.models` for data models
-- `local_deepwiki.generators.crosslink` for cross-linking functionality
-- `local_deepwiki.generators.toc` for TOC generation
+- `local_deepwiki.generators.crosslinks` for cross-linking functionality
 - `local_deepwiki.generators.parser` for code parsing
+- `local_deepwiki.generators.toc` for table of contents generation
 - `local_deepwiki.generators.wiki` for wiki generation
-- `local_deepwiki.utils` for utility functions
-- `pathlib` for path manipulation
-- `json` for JSON handling
-- `tempfile` for temporary file handling
+- `local_deepwiki.generators.incremental_wiki` for incremental wiki generation
+- `local_deepwiki.generators.web` for web-related functionality
+- `local_deepwiki.generators.api_docs` for API documentation generation
+- `local_deepwiki.generators.chunker` for chunking functionality
+- `local_deepwiki.generators.search` for search functionality
+- `local_deepwiki.generators.diagrams` for diagram generation
+- `local_deepwiki.generators.source_refs` for source reference handling
+- `local_deepwiki.generators.watcher` for file watching functionality
+- `local_deepwiki.generators.toc` for table of contents generation
+- `local_deepwiki.generators.incremental_wiki` for incremental wiki generation
+- `local_deepwiki.generators.web` for web-related functionality
+- `local_deepwiki.generators.api_docs` for API documentation generation
+- `local_deepwiki.generators.chunker` for chunking functionality
+- `local_deepwiki.generators.search` for search functionality
+- `local_deepwiki.generators.diagrams` for diagram generation
+- `local_deepwiki.generators.source_refs` for source reference handling
+- `local_deepwiki.generators.watcher` for file watching functionality
 
 ## Relevant Source Files
 

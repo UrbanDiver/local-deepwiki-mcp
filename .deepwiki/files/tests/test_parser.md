@@ -105,7 +105,7 @@ This file imports:
 - `tempfile`: For temporary file handling
 - `pathlib.Path`: For path manipulation
 - `pytest`: Testing framework
-- `local_deepwiki.core.parser`: 
+- `local_deepwiki.core.parser`:
   - `CodeParser`: Main parser class
   - `get_node_text`: Function to extract node text
   - `get_node_name`: Function to extract node names

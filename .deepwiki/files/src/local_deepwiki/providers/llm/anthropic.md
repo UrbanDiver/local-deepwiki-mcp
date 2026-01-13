@@ -8,7 +8,7 @@ This file implements the Anthropic LLM provider for the local_deepwiki system. I
 
 ### `AnthropicProvider`
 
-**Purpose**: 
+**Purpose**:
 An asynchronous provider that implements the LLMProvider interface for Anthropic's Claude models. This class handles authentication, model selection, and asynchronous generation of responses from Anthropic's API.
 
 **Key Methods**:
@@ -31,7 +31,7 @@ async for chunk in provider.generate("Hello, world!"):
 **Parameters**:
 - `model` (str): The name of the Anthropic model to use (default: "claude-3-haiku-20240307")
 
-**Purpose**: 
+**Purpose**:
 Initializes the Anthropic provider with the specified model and sets up the AsyncAnthropic client using the API key from the environment.
 
 ### `generate(self, prompt: str) -> AsyncIterator[str]`
@@ -42,7 +42,7 @@ Initializes the Anthropic provider with the specified model and sets up the Asyn
 **Return Value**:
 - `AsyncIterator[str]`: An asynchronous iterator that yields response chunks from the LLM
 
-**Purpose**: 
+**Purpose**:
 Generates text responses from the configured Anthropic model asynchronously, yielding response chunks as they become available.
 
 ### `get_model_name(self) -> str`
@@ -50,7 +50,7 @@ Generates text responses from the configured Anthropic model asynchronously, yie
 **Return Value**:
 - `str`: The name of the configured Anthropic model
 
-**Purpose**: 
+**Purpose**:
 Returns the name of the model currently configured for use with this provider.
 
 ## Usage Examples

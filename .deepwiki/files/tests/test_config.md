@@ -8,7 +8,7 @@ This file contains the test suite for the configuration system of the local_deep
 
 ### `TestConfig`
 
-**Purpose**: 
+**Purpose**:
 Test suite for validating the `Config` class functionality and default configuration values.
 
 **Key Methods**:

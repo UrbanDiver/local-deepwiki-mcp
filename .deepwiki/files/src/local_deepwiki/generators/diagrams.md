@@ -1,6 +1,6 @@
 # File Overview
 
-This module provides functions to generate various Mermaid diagrams from code analysis data. It supports generating class diagrams, dependency graphs, module overviews, language distribution charts, and sequence diagrams. The module is designed to work with `CodeChunk` and `IndexStatus` objects to extract and visualize structural information from codebases.
+This module provides functionality for generating various Mermaid diagrams from code analysis data. It includes functions for creating class diagrams, dependency graphs, module overviews, language pie charts, and sequence diagrams based on code chunks and index status information.
 
 # Classes
 
@@ -26,11 +26,11 @@ Sanitize a name for use in Mermaid diagrams.
 
 ### Parameters
 
-- `name` (str): Original name.
+- `name`: str - Original name.
 
 ### Returns
 
-- `str`: Sanitized name safe for Mermaid syntax.
+- `str` - Sanitized name safe for Mermaid syntax.
 
 ## generate_class_diagram
 
@@ -38,22 +38,22 @@ Generate an enhanced Mermaid class diagram from code chunks.
 
 ### Parameters
 
-- `chunks` (list): List of CodeChunk or SearchResult objects.
-- `show_attributes` (bool): Whether to show class attributes.
-- `show_types` (bool): Whether to show type annotations.
-- `max_methods` (int): Maximum number of methods to show.
+- `chunks`: list - List of CodeChunk or SearchResult objects.
+- `show_attributes`: bool = True - Whether to show class attributes.
+- `show_types`: bool = True - Whether to show type annotations.
+- `max_methods`: int = 15 - Maximum number of methods to show.
 
 ### Returns
 
-- `str | None`: Mermaid class diagram string, or None if empty.
+- `str | None` - Mermaid class diagram string, or None if empty.
 
 ## _extract_class_attributes
 
-[Function not fully shown in code]
+[Function not fully shown in provided code]
 
 ## _extract_method_signature
 
-[Function not fully shown in code]
+[Function not fully shown in provided code]
 
 ## generate_dependency_graph
 
@@ -61,13 +61,13 @@ Generate a Mermaid flowchart showing module dependencies with circular detection
 
 ### Parameters
 
-- `chunks` (list): List of CodeChunk objects (should include IMPORT chunks).
-- `project_name` (str): Name of the project for filtering internal imports.
-- `detect_circular` (bool): Whether to highlight circular dependencies.
+- `chunks`: list - List of CodeChunk objects (should include IMPORT chunks).
+- `project_name`: str = "project" - Name of the project for filtering internal imports.
+- `detect_circular`: bool = True - Whether to highlight circular dependencies.
 
 ### Returns
 
-- `str | None`: Mermaid flowchart markdown string, or None if no dependencies found.
+- `str | None` - Mermaid flowchart markdown string, or None if no dependencies found.
 
 ## _find_circular_dependencies
 
@@ -75,23 +75,23 @@ Find circular dependencies in a dependency graph.
 
 ### Parameters
 
-- `deps` (dict[str, set[str]]): Mapping of module to its dependencies.
+- `deps`: dict[str, set[str]] - Mapping of module to its dependencies.
 
 ### Returns
 
-- `set[tuple[str, str]]`: Set of (from, to) tuples that form circular dependencies.
+- `set[tuple[str, str]]` - Set of (from, to) tuples that form circular dependencies.
 
 ## dfs
 
-[Function not fully shown in code]
+[Function not fully shown in provided code]
 
 ## _path_to_module
 
-[Function not fully shown in code]
+[Function not fully shown in provided code]
 
 ## _parse_import_line
 
-[Function not fully shown in code]
+[Function not fully shown in provided code]
 
 ## generate_module_overview
 
@@ -99,12 +99,12 @@ Generate a high-level module overview diagram.
 
 ### Parameters
 
-- `index_status` (IndexStatus): Index status with file information.
-- `show_file_counts` (bool): Whether to show file counts in nodes.
+- `index_status`: IndexStatus - Index status with file information.
+- `show_file_counts`: bool = True - Whether to show file counts in nodes.
 
 ### Returns
 
-- `str | None`: Mermaid diagram string, or None if not enough structure.
+- `str | None` - Mermaid diagram string, or None if not enough structure.
 
 ## generate_language_pie_chart
 
@@ -112,11 +112,11 @@ Generate a pie chart showing language distribution.
 
 ### Parameters
 
-- `index_status` (IndexStatus): Index status with language counts.
+- `index_status`: IndexStatus - Index status with language counts.
 
 ### Returns
 
-- `str | None`: Mermaid pie chart string, or None if no languages.
+- `str | None` - Mermaid pie chart string, or None if no languages.
 
 ## generate_sequence_diagram
 
@@ -124,21 +124,21 @@ Generate a sequence diagram from a call graph.
 
 ### Parameters
 
-- `call_graph` (dict[str, list[str]]): Mapping of caller to list of callees.
-- `entry_point` (str | None): Starting function (if None, uses most-called function).
-- `max_depth` (int): Maximum call depth to show.
+- `call_graph`: dict[str, list[str]] - Mapping of caller to list of callees.
+- `entry_point`: str | None = None - Starting function (if None, uses most-called function).
+- `max_depth`: int = 5 - Maximum call depth to show.
 
 ### Returns
 
-- `str | None`: Mermaid sequence diagram string, or None if empty.
+- `str | None` - Mermaid sequence diagram string, or None if empty.
 
 ## collect_participants
 
-[Function not fully shown in code]
+[Function not fully shown in provided code]
 
 ## add_calls
 
-[Function not fully shown in code]
+[Function not fully shown in provided code]
 
 # Usage Examples
 
@@ -176,9 +176,9 @@ diagram = generate_sequence_diagram(call_graph, entry_point="main")
 
 This module works with the following components:
 
+- `ChunkType` from `local_deepwiki.models`
 - `CodeChunk` from `local_deepwiki.models`
 - `IndexStatus` from `local_deepwiki.models`
-- `ChunkType` from `local_deepwiki.models`
 
 ## API Reference
 

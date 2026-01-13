@@ -8,7 +8,7 @@ This file implements an LLM provider that interfaces with local Ollama instances
 
 ### `OllamaProvider`
 
-**Purpose**: 
+**Purpose**:
 An asynchronous LLM provider that communicates with a local Ollama instance to generate text responses.
 
 **Key Methods**:
@@ -27,7 +27,7 @@ async for chunk in provider.generate("Hello, world!"):
 
 ### `generate`
 
-**Purpose**: 
+**Purpose**:
 Asynchronously generates text using the configured Ollama model.
 
 **Parameters**:

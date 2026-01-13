@@ -1,16 +1,18 @@
 # File Overview
 
-This file, `src/local_deepwiki/watcher.py`, implements a file system watcher that monitors a repository for changes and automatically regenerates wiki documentation. It uses the `watchdog` library to observe file system events and integrates with the `local_deepwiki` package's indexing and generation capabilities.
+This file implements a repository watcher that monitors file system changes and automatically regenerates wiki documentation when changes occur. It uses the `watchdog` library to observe file system events and integrates with the `local_deepwiki` documentation generation system.
 
 # Classes
 
 ## FileSystemEventHandler
 
-The FileSystemEventHandler class is a custom event handler for the watchdog library. It inherits from `FileSystemEventHandler` and is responsible for detecting file system events and triggering a debounce mechanism to delay reindexing.
+The FileSystemEventHandler class is a custom event handler that monitors file system changes and triggers reindexing when relevant files are modified.
 
 ### Key Methods
 
-- `on_any_event(event: FileSystemEvent)`: Called when any file system event occurs. It resets the debounce timer and schedules a new one to trigger reindexing after a specified delay.
+- `on_any_event(event)`: Handles all file system events and schedules a reindexing operation with debouncing
+- `schedule_reindex()`: Schedules a reindexing operation after a delay to avoid excessive processing
+- `reindex()`: Performs the actual reindexing and wiki generation
 
 # Functions
 
@@ -20,34 +22,49 @@ The main function serves as the entry point for the watch command. It parses com
 
 ### Parameters
 
-- `repo_path` (str): Path to the repository to watch. Default is the current directory.
-- `--debounce` (float): Seconds to wait after changes before reindexing. Default is 2.0 seconds.
+- `None`
 
 ### Return Value
 
-This function does not return a value. It runs indefinitely, monitoring the file system and triggering reindexing when changes occur.
+- `None`
+
+### Command-line Arguments
+
+- `repo_path`: Path to the repository to watch (default: current directory)
+- `--debounce`: Seconds to wait after changes before reindexing (default: 2.0)
+- `--ignore`: Glob pattern for files to ignore (default: `.*`)
 
 # Usage Examples
 
-To use the watcher, run the following command from the terminal:
+To watch a repository for changes and automatically regenerate wiki documentation:
 
-```bash
-python -m local_deepwiki.watcher /path/to/repo --debounce 3.0
+```
+python src/local_deepwiki/watcher.py /path/to/repo --debounce 3.0
 ```
 
-This command watches the repository at `/path/to/repo` and waits 3 seconds after any file change before reindexing and regenerating the wiki.
+To watch with custom ignore patterns:
+
+```
+python src/local_deepwiki/watcher.py --ignore "node_modules/*" --ignore "*.log"
+```
 
 # Related Components
 
 This file works with the following components:
 
-- [`Config`](config.md) and [`get_config`](config.md) from `local_deepwiki.config`: Used for configuration management.
-- `RepositoryIndexer` from `local_deepwiki.core.indexer`: Responsible for indexing repository files.
-- `EXTENSION_MAP` from `local_deepwiki.core.parser`: Maps file extensions to their respective parsers.
-- [`generate_wiki`](generators/wiki.md) from `local_deepwiki.generators.wiki`: Generates wiki documentation from indexed repository data.
-- `Console` from `rich.console`: Used for console output.
-- `Observer` from `watchdog.observers`: Monitors file system changes.
-- `FileSystemEvent` and `FileSystemEventHandler` from `watchdog.events`: Base classes for handling file system events.
+- The [`Config`](config.md) class from `local_deepwiki.config` for configuration management
+- The `RepositoryIndexer` class from `local_deepwiki.core.indexer` for indexing repository content
+- The [`WikiGenerator`](generators/wiki.md) class from `local_deepwiki.generators.wiki` for generating wiki documentation
+- The `EXTENSION_MAP` from `local_deepwiki.core.parser` for file type mapping
+- The `Observer` class from `watchdog.observers` for file system monitoring
+- The `FileSystemEvent` class from `watchdog.events` for handling file system events
+- The `Console` class from `rich.console` for console output
+- The `Timer` class from `threading` for scheduling delayed operations
+- The `argparse` module for command-line argument parsing
+- The `asyncio` module for asynchronous operations
+- The `fnmatch` module for pattern matching
+- The `time` module for time-related operations
+- The `pathlib` module for path manipulation
 
 ## API Reference
 

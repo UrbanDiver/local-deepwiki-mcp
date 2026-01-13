@@ -1,211 +1,179 @@
 # File Overview
 
-This file contains unit tests for the diagram generation functions in the `local_deepwiki.generators.diagrams` module. It tests various aspects of diagram generation including class diagrams, dependency graphs, module overviews, language pie charts, and sequence diagrams. The tests use the `pytest` framework and rely on mock data structures from `local_deepwiki.models`.
+This file contains unit tests for various diagram generation functions within the `local_deepwiki.generators.diagrams` module. The tests cover functions that generate class diagrams, dependency graphs, module overviews, language pie charts, and sequence diagrams from code chunks and import information.
 
 # Classes
 
-## TestGenerateModuleOverview
-
-Tests for [`generate_module_overview`](../src/local_deepwiki/generators/diagrams.md) function.
-
-### Methods
-
-- **test_generates_diagram**: Test module overview generation with mock data.
-
-## TestGenerateClassDiagram
-
-Tests for [`generate_class_diagram`](../src/local_deepwiki/generators/diagrams.md) function.
-
-### Methods
-
-- **test_generates_diagram_with_class**: Test diagram generation with a single class.
-
-## TestPathToModule
-
-Tests for `_path_to_module` function.
-
-### Methods
-
-- **test_converts_simple_path**: Test basic path conversion.
-- **test_skips_init_files**: Test __init__.py files return None.
-- **test_skips_non_python**: Test non-Python files return None.
-
-## TestGenerateSequenceDiagram
-
-Tests for [`generate_sequence_diagram`](../src/local_deepwiki/generators/diagrams.md) function.
-
-### Methods
-
-- **test_generates_sequence**: Test sequence diagram generation.
-- **test_returns_none_for_empty**: Test that None is returned for empty call graphs.
-
-## TestGenerateDependencyGraph
-
-Tests for [`generate_dependency_graph`](../src/local_deepwiki/generators/diagrams.md) function.
-
-### Methods
-
-- **test_generates_flowchart**: Test basic flowchart generation.
-
 ## TestSanitizeMermaidName
 
-Tests for [`sanitize_mermaid_name`](../src/local_deepwiki/generators/diagrams.md) function.
-
-### Methods
-
-- **test_sanitizes_name**: Test that names are sanitized for Mermaid compatibility.
+Tests for the [`sanitize_mermaid_name`](../src/local_deepwiki/generators/diagrams.md) function, which ensures names used in Mermaid diagrams are valid.
 
 ## TestExtractClassAttributes
 
-Tests for `_extract_class_attributes` function.
-
-### Methods
-
-- **test_extracts_attributes**: Test that class attributes are extracted correctly.
+Tests for the `_extract_class_attributes` function, which extracts attributes from class definitions.
 
 ## TestExtractMethodSignature
 
-Tests for `_extract_method_signature` function.
+Tests for the `_extract_method_signature` function, which extracts method signatures from code.
+
+## TestGenerateClassDiagram
+
+Tests for the [`generate_class_diagram`](../src/local_deepwiki/generators/diagrams.md) function, which generates Mermaid class diagrams from code chunks.
 
 ### Methods
 
-- **test_extracts_signature**: Test that method signatures are extracted correctly.
+- `test_generates_diagram_with_class`: Tests diagram generation with a single class.
+- `test_generates_diagram_with_multiple_classes`: Tests diagram generation with multiple classes.
+- `test_handles_inheritance`: Tests diagram generation with class inheritance.
+- `test_handles_method_signatures`: Tests diagram generation with method signatures.
+- `test_handles_attributes`: Tests diagram generation with class attributes.
 
-## TestClassInfo
+## TestGenerateDependencyGraph
 
-Tests for [`ClassInfo`](../src/local_deepwiki/generators/diagrams.md) class.
-
-### Methods
-
-- **test_class_info_initialization**: Test initialization of [ClassInfo](../src/local_deepwiki/generators/diagrams.md).
-- **test_class_info_repr**: Test string representation of [ClassInfo](../src/local_deepwiki/generators/diagrams.md).
-
-## TestFindCircularDependencies
-
-Tests for `_find_circular_dependencies` function.
+Tests for the [`generate_dependency_graph`](../src/local_deepwiki/generators/diagrams.md) function, which generates Mermaid flowcharts showing module dependencies.
 
 ### Methods
 
-- **test_finds_circular**: Test detection of circular dependencies.
+- `test_generates_flowchart`: Tests basic flowchart generation from code chunks.
+- `test_handles_multiple_imports`: Tests handling of multiple import statements.
 
-## TestParseImportLine
+## TestGenerateModuleOverview
 
-Tests for `_parse_import_line` function.
+Tests for the [`generate_module_overview`](../src/local_deepwiki/generators/diagrams.md) function, which generates Mermaid diagrams showing the structure of a module.
 
 ### Methods
 
-- **test_parses_import**: Test parsing of import lines.
+- `test_generates_diagram`: Tests module overview generation from index status data.
+
+## TestPathToModule
+
+Tests for the `_path_to_module` function, which converts file paths to module names.
+
+### Methods
+
+- `test_converts_simple_path`: Tests basic path conversion.
+- `test_skips_init_files`: Tests that `__init__.py` files return `None`.
+- `test_skips_non_python`: Tests that non-Python files return `None`.
+
+## TestGenerateSequenceDiagram
+
+Tests for the [`generate_sequence_diagram`](../src/local_deepwiki/generators/diagrams.md) function, which generates Mermaid sequence diagrams from call graphs.
+
+### Methods
+
+- `test_generates_sequence`: Tests sequence diagram generation from a call graph.
+- `test_returns_none_for_empty_call_graph`: Tests that an empty call graph returns `None`.
 
 # Functions
 
 ## sanitize_mermaid_name
 
-Sanitizes names for use in Mermaid diagrams.
+Sanitizes names for use in Mermaid diagrams by replacing invalid characters.
 
 ### Parameters
 
-- **name** (str): The name to sanitize.
+- `name` (str): The name to sanitize.
 
 ### Returns
 
-- **str**: Sanitized name.
+- `str`: The sanitized name.
 
 ## generate_class_diagram
 
-Generates a class diagram from code chunks.
+Generates a Mermaid class diagram from a list of code chunks.
 
 ### Parameters
 
-- **chunks** (list[CodeChunk]): List of code chunks to analyze.
+- `chunks` (list[CodeChunk]): The code chunks to analyze.
 
 ### Returns
 
-- **str**: Mermaid class diagram string.
+- `str`: The Mermaid diagram as a string.
 
 ## generate_dependency_graph
 
-Generates a dependency graph from code chunks.
+Generates a Mermaid flowchart showing dependencies between modules.
 
 ### Parameters
 
-- **chunks** (list[CodeChunk]): List of code chunks to analyze.
+- `chunks` (list[CodeChunk]): The code chunks containing import statements.
 
 ### Returns
 
-- **str**: Mermaid flowchart string.
+- `str`: The Mermaid flowchart as a string.
 
 ## generate_module_overview
 
-Generates a module overview diagram from index status.
+Generates a Mermaid diagram showing the structure of a module based on index status.
 
 ### Parameters
 
-- **status** (IndexStatus): Index status data.
+- `status` (IndexStatus): The index status information.
 
 ### Returns
 
-- **str**: Mermaid diagram string.
+- `str`: The Mermaid diagram as a string.
 
 ## generate_language_pie_chart
 
-Generates a pie chart showing language distribution.
+Generates a Mermaid pie chart showing the distribution of languages in a repository.
 
 ### Parameters
 
-- **status** (IndexStatus): Index status data.
+- `languages` (dict[str, int]): A dictionary mapping language names to counts.
 
 ### Returns
 
-- **str**: Mermaid pie chart string.
+- `str`: The Mermaid pie chart as a string.
 
 ## generate_sequence_diagram
 
-Generates a sequence diagram from a call graph.
+Generates a Mermaid sequence diagram from a call graph.
 
 ### Parameters
 
-- **call_graph** (dict): Dictionary mapping function names to their callers.
-- **main_function** (str): Name of the [main](../src/local_deepwiki/export/html.md) function.
+- `call_graph` (dict[str, list[str]]): A dictionary mapping function names to their called functions.
+- `main_function` (str): The [main](../src/local_deepwiki/export/html.md) function to start the diagram from.
 
 ### Returns
 
-- **str**: Mermaid sequence diagram string.
+- `str`: The Mermaid sequence diagram as a string or `None` if the call graph is empty.
 
 ## _extract_class_attributes
 
-Extracts class attributes from a class definition.
+Extracts attributes from a class definition.
 
 ### Parameters
 
-- **class_def** (str): Class definition string.
+- `class_def` (str): The class definition string.
 
 ### Returns
 
-- **list[str]**: List of attribute names.
+- `list[str]`: A list of attribute names.
 
 ## _extract_method_signature
 
-Extracts method signature from a method definition.
+Extracts a method signature from a method definition.
 
 ### Parameters
 
-- **method_def** (str): Method definition string.
+- `method_def` (str): The method definition string.
 
 ### Returns
 
-- **str**: Method signature.
+- `str`: The method signature.
 
 ## _find_circular_dependencies
 
-Finds circular dependencies in a dependency graph.
+Finds circular dependencies in a list of import statements.
 
 ### Parameters
 
-- **dependencies** (dict): Dictionary mapping modules to their dependencies.
+- `imports` (list[str]): A list of import statements.
 
 ### Returns
 
-- **list[list[str]]**: List of circular dependency paths.
+- `list[tuple[str, str]]`: A list of tuples representing circular dependencies.
 
 ## _path_to_module
 
@@ -213,73 +181,97 @@ Converts a file path to a module name.
 
 ### Parameters
 
-- **path** (str): File path.
+- `path` (str): The file path.
 
 ### Returns
 
-- **str or None**: Module name or None if path is invalid.
+- `str | None`: The module name or `None` if the path is not valid.
 
 ## _parse_import_line
 
-Parses an import line to extract module information.
+Parses an import line to extract the module name.
 
 ### Parameters
 
-- **line** (str): Import line string.
+- `line` (str): The import line.
 
 ### Returns
 
-- **str or None**: Module name or None if line is invalid.
+- `str | None`: The module name or `None` if parsing fails.
 
 # Usage Examples
 
-## Example: Testing Class Diagram Generation
+## Generating a Class Diagram
 
 ```python
-def test_generates_diagram_with_class():
-    chunks = [
-        CodeChunk(
-            id="1",
-            file_path="test.py",
-            content="class MyClass:\n    def method(self): pass",
-            chunk_type=ChunkType.CLASS,
-            language=Language.PYTHON,
-            start_line=1,
-            end_line=2,
-            name="MyClass",
-            metadata={},
-        )
-    ]
-    diagram = generate_class_diagram(chunks)
-    assert diagram is not None
+chunks = [
+    CodeChunk(
+        id="1",
+        file_path="test.py",
+        content="class MyClass:\n    def method(self): pass",
+        chunk_type=ChunkType.CLASS,
+        language=Language.PYTHON,
+        start_line=1,
+        end_line=2,
+        name="MyClass",
+        metadata={},
+    )
+]
+diagram = generate_class_diagram(chunks)
 ```
 
-## Example: Testing Dependency Graph Generation
+## Generating a Dependency Graph
 
 ```python
-def test_generates_flowchart():
-    chunks = [
-        CodeChunk(
-            id="1",
-            file_path="src/local_deepwiki/core/parser.py",
-            content="from local_deepwiki.models import ChunkType",
-            chunk_type=ChunkType.IMPORT,
-            language=Language.PYTHON,
-            start_line=1,
-            end_line=1,
-        )
+chunks = [
+    CodeChunk(
+        id="1",
+        file_path="src/local_deepwiki/core/parser.py",
+        content="from local_deepwiki.models import ChunkType",
+        chunk_type=ChunkType.IMPORT,
+        language=Language.PYTHON,
+        start_line=1,
+        end_line=1,
+    )
+]
+graph = generate_dependency_graph(chunks)
+```
+
+## Generating a Module Overview
+
+```python
+status = IndexStatus(
+    repo_path="/test",
+    indexed_at=1234567890.0,
+    total_files=3,
+    total_chunks=10,
+    languages={"python": 3},
+    files=[
+        FileInfo(path="src/core/parser.py", language="python", hash="a", chunk_count=5, size_bytes=100, last_modified=1234567890.0),
+        FileInfo(path="src/core/chunker.py", language="python", hash="b", chunk_count=3, size_bytes=150, last_modified=1234567890.0),
     ]
-    diagram = generate_dependency_graph(chunks)
-    assert diagram is not None
+)
+overview = generate_module_overview(status)
+```
+
+## Generating a Sequence Diagram
+
+```python
+call_graph = {
+    "main": ["process", "validate"],
+    "process": ["transform"],
+    "validate": [],
+    "transform": [],
+}
+diagram = generate_sequence_diagram(call_graph, "main")
 ```
 
 # Related Components
 
-This file works with:
+This file works with the following components:
 
-- `local_deepwiki.generators.diagrams`: Contains the diagram generation functions being tested
-- `local_deepwiki.models`: Provides data models including `ChunkType`, `CodeChunk`, `Language`, `IndexStatus`, and `FileInfo`
-- `pytest`: Testing framework used for running the tests
+- `local_deepwiki.generators.diagrams` module: Contains the actual diagram generation functions.
+- `local_deepwiki.models`: Provides data models like `ChunkType`, `CodeChunk`, `Language`, `IndexStatus`, and `FileInfo` used in tests.
 
 ## API Reference
 

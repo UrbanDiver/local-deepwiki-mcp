@@ -1,81 +1,82 @@
-# System Overview
+# System Architecture Documentation
 
-The system is a local documentation generator that creates architecture documentation from code repositories. It uses LLMs for generating content and vector databases for semantic search and indexing. The system supports multiple LLM providers (Ollama, Anthropic, OpenAI) and can be configured for different embedding providers and parsing settings.
+## System Overview
 
-# Key Components
+The system is a local documentation generator that creates architecture documentation, API documentation, and cross-links between code components. It uses LLMs for content generation and vector stores for semantic search and retrieval. The system supports multiple LLM providers (Ollama, Anthropic, OpenAI) and can be configured through a YAML configuration file.
 
-## Config
-The [Config](files/src/local_deepwiki/config.md) class serves as the [main](files/src/local_deepwiki/export/html.md) configuration holder for the entire system. It aggregates various configuration settings including embedding, LLM, parsing, chunking, and output configurations. It provides a method to load configuration from files or use defaults.
+## Key Components
 
-## LLMConfig
-The [LLMConfig](files/src/local_deepwiki/config.md) class manages configuration for Large Language Model providers. It supports three providers: Ollama, Anthropic, and OpenAI, each with their own specific configurations.
+### Config
+The [Config](files/src/local_deepwiki/config.md) class manages the overall system configuration, including embedding settings, LLM provider configurations, parsing settings, chunking configurations, and output options. It supports loading configuration from files or using defaults.
 
-## OllamaConfig
+### LLMConfig
+The [LLMConfig](files/src/local_deepwiki/config.md) class defines the configuration for LLM providers, supporting Ollama, Anthropic, and OpenAI providers with their respective model configurations.
+
+### OllamaConfig
 The [OllamaConfig](files/src/local_deepwiki/config.md) class holds configuration specific to the Ollama LLM provider, including the model name and base URL for the Ollama API.
 
-## AnthropicConfig
+### AnthropicConfig
 The [AnthropicConfig](files/src/local_deepwiki/config.md) class holds configuration specific to the Anthropic LLM provider, including the model name.
 
-## OpenAILLMConfig
+### OpenAILLMConfig
 The [OpenAILLMConfig](files/src/local_deepwiki/config.md) class holds configuration specific to the OpenAI LLM provider, including the model name.
 
-## EmbeddingConfig
-The [EmbeddingConfig](files/src/local_deepwiki/config.md) class manages configuration for embedding providers, supporting both local and OpenAI embedding providers.
+### EmbeddingConfig
+The [EmbeddingConfig](files/src/local_deepwiki/config.md) class manages embedding provider configuration, supporting both local and OpenAI embedding providers.
 
-## ProjectManifest
-The [ProjectManifest](files/src/local_deepwiki/generators/manifest.md) class processes project data to generate summaries including technology stack, dependencies, and entry points. It categorizes dependencies and provides methods to retrieve various project information.
+### ProjectManifest
+The [ProjectManifest](files/src/local_deepwiki/generators/manifest.md) class collects and summarizes project information including technology stack, dependencies, and entry points.
 
-## ChunkType
+### ChunkType
 The ChunkType class defines the types of code chunks that can be processed, including functions, classes, methods, modules, imports, comments, and other code elements.
 
-## Language
-The Language class defines the supported programming languages for the system, including Python, JavaScript, TypeScript, Go, Rust, Java, C, C++, Swift, Ruby, PHP, and Kotlin.
+### Language
+The Language class enumerates the supported programming languages for code processing.
 
-## CodeChunker
-The [CodeChunker](files/src/local_deepwiki/core/chunker.md) class is responsible for splitting code into semantic chunks for processing and indexing. It handles different chunk types and supports various programming languages.
+### WikiGenerator
+The [WikiGenerator](files/src/local_deepwiki/generators/wiki.md) class is responsible for generating documentation pages, including architecture documentation with diagrams and grounded facts.
 
-## DebouncedHandler
-The [DebouncedHandler](files/src/local_deepwiki/watcher.md) class manages file system changes with debouncing to avoid excessive processing. It accumulates file changes and processes them after a specified delay.
+### CodeChunker
+The [CodeChunker](files/src/local_deepwiki/core/chunker.md) class handles breaking down code into semantic chunks for processing and indexing.
 
-## EntityRegistry
-The [EntityRegistry](files/src/local_deepwiki/generators/crosslinks.md) class maintains a registry of entities (classes, functions, etc.) found in the codebase, providing methods to access and manage these entities.
+### DebouncedHandler
+The [DebouncedHandler](files/src/local_deepwiki/watcher.md) class manages file system changes with debouncing to batch multiple changes before triggering reindexing operations.
 
-## TestAPIDocExtractor
+### EntityRegistry
+The [EntityRegistry](files/src/local_deepwiki/generators/crosslinks.md) class maintains a registry of code entities for cross-linking and semantic understanding.
+
+### TestAPIDocExtractor
 The [TestAPIDocExtractor](files/tests/test_api_docs.md) class is used for testing API documentation extraction functionality.
 
-## TestExtractClassAttributes
-The [TestExtractClassAttributes](files/tests/test_diagrams.md) class tests the extraction of class attributes from code.
+### TestExtractClassAttributes
+The [TestExtractClassAttributes](files/tests/test_diagrams.md) class is used for testing class attribute extraction.
 
-## TestExtractClassSignature
-The [TestExtractClassSignature](files/tests/test_api_docs.md) class tests the extraction of class signatures from code.
+### TestExtractClassSignature
+The [TestExtractClassSignature](files/tests/test_api_docs.md) class is used for testing class signature extraction.
 
-## TestGenerateClassDiagram
-The [TestGenerateClassDiagram](files/tests/test_diagrams.md) class tests the generation of class diagrams.
+### TestGenerateClassDiagram
+The [TestGenerateClassDiagram](files/tests/test_diagrams.md) class is used for testing class diagram generation.
 
-## TestNodeHelpers
-The TestNodeHelpers class tests helper functions for node processing.
+### TestNodeHelpers
+The TestNodeHelpers class is used for testing node helper functionality.
 
-## TestPathToModule
-The [TestPathToModule](files/tests/test_diagrams.md) class tests the conversion of file paths to module names.
+### TestPathToModule
+The [TestPathToModule](files/tests/test_diagrams.md) class is used for testing path to module conversion functionality.
 
-## TestClassInfo
-The [TestClassInfo](files/tests/test_diagrams.md) class tests class information extraction.
+### TestClassInfo
+The [TestClassInfo](files/tests/test_diagrams.md) class is used for testing class information handling.
 
-## WikiGenerator
-The [WikiGenerator](files/src/local_deepwiki/generators/wiki.md) class is responsible for generating wiki pages including architecture documentation with diagrams and grounded facts.
+## Data Flow
 
-# Data Flow
+1. The system starts by loading configuration from a file or using defaults through the [Config](files/src/local_deepwiki/config.md) class
+2. Code is processed through the [CodeChunker](files/src/local_deepwiki/core/chunker.md) to break it into semantic chunks
+3. These chunks are indexed into a vector store for semantic search
+4. When generating documentation, the [WikiGenerator](files/src/local_deepwiki/generators/wiki.md) class searches the vector store for relevant context
+5. The system uses the configured LLM provider (via get_llm_provider function) to generate content
+6. File system changes are handled by the [DebouncedHandler](files/src/local_deepwiki/watcher.md) which batches changes and triggers reindexing
+7. Project manifest information is gathered through the [ProjectManifest](files/src/local_deepwiki/generators/manifest.md) class to provide technology stack summaries
 
-1. The system starts by loading configuration from files or defaults using the [Config](files/src/local_deepwiki/config.md) class
-2. File system changes are monitored by the [DebouncedHandler](files/src/local_deepwiki/watcher.md), which accumulates changes and processes them after a debounce period
-3. When processing occurs, the [CodeChunker](files/src/local_deepwiki/core/chunker.md) splits code into semantic chunks based on ChunkType
-4. The [EntityRegistry](files/src/local_deepwiki/generators/crosslinks.md) maintains information about classes, functions, and other entities found in the codebase
-5. The [ProjectManifest](files/src/local_deepwiki/generators/manifest.md) processes project data to generate summaries and dependency information
-6. LLM providers (Ollama, Anthropic, OpenAI) are selected based on configuration and used for generating content
-7. The [WikiGenerator](files/src/local_deepwiki/generators/wiki.md) class creates architecture documentation using semantic search and LLMs to generate grounded facts
-8. Generated documentation is exported to HTML files in the html-export directory
-
-# Component Diagram
+## Component Diagram
 
 ```mermaid
 graph TD
@@ -84,51 +85,50 @@ graph TD
     A --> D[ParsingConfig]
     A --> E[ChunkingConfig]
     A --> F[OutputConfig]
-    
+
     B --> G[OllamaConfig]
     B --> H[AnthropicConfig]
     B --> I[OpenAILLMConfig]
-    
-    C --> J[LocalEmbeddingConfig]
-    C --> K[OpenAIEmbeddingConfig]
-    
-    L[DebouncedHandler] --> M[CodeChunker]
-    L --> N[EntityRegistry]
-    L --> O[WikiGenerator]
-    
-    P[WikiGenerator] --> Q[ProjectManifest]
-    P --> R[LLMProvider]
-    
-    S[CodeChunker] --> T[ChunkType]
-    S --> U[Language]
-    
-    V[LLMProvider] --> W[OllamaProvider]
-    V --> X[AnthropicProvider]
-    V --> Y[OpenAIProvider]
-    
-    Z[ProjectManifest] --> AA[DependencyList]
-    Z --> AB[TechStackSummary]
-    Z --> AC[EntryPointsSummary]
-    
-    classDef component fill:#f9f,stroke:#333;
-    class A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,AA,AB,AC component;
+
+    G --> J[OllamaProvider]
+    H --> K[AnthropicProvider]
+    I --> L[OpenAIProvider]
+
+    A --> M[CodeChunker]
+    A --> N[ProjectManifest]
+    A --> O[DebouncedHandler]
+    A --> P[EntityRegistry]
+    A --> Q[WikiGenerator]
+
+    M --> R[ChunkType]
+    M --> S[Language]
+
+    Q --> T[WikiPage]
+    Q --> U[VectorStore]
+
+    O --> V[FileSystemWatcher]
+
+    N --> W[DependencyList]
+    N --> X[TechnologyStack]
+
+    J --> Y[LLMProvider]
+    K --> Y
+    L --> Y
 ```
 
-# Key Design Decisions
+## Key Design Decisions
 
-1. **Modular Configuration**: The system uses a layered configuration approach where the [main](files/src/local_deepwiki/export/html.md) [Config](files/src/local_deepwiki/config.md) class aggregates specific configuration classes for different subsystems (LLM, embedding, parsing, etc.)
+1. **Modular Configuration**: The system uses a modular configuration approach where each major component has its own configuration class, allowing for easy extension and modification.
 
-2. **Plugin Architecture for LLM Providers**: The system uses a factory function get_llm_provider to dynamically select and instantiate LLM providers based on configuration, supporting multiple providers without tight coupling
+2. **Provider Pattern**: The system implements a provider pattern for both LLM and embedding services, allowing support for multiple providers through a common interface.
 
-3. **Debounced File Watching**: The [DebouncedHandler](files/src/local_deepwiki/watcher.md) uses a timer-based approach to batch file system changes, preventing excessive processing during rapid changes
+3. **Debounced File Handling**: The [DebouncedHandler](files/src/local_deepwiki/watcher.md) uses a timer-based approach to batch file system changes, preventing excessive reindexing operations during rapid file modifications.
 
-4. **Semantic Chunking**: The [CodeChunker](files/src/local_deepwiki/core/chunker.md) breaks code into semantic chunks defined by ChunkType, enabling more precise indexing and processing
+4. **Semantic Search Integration**: The system integrates vector stores for semantic search and retrieval, enabling more intelligent documentation generation based on code relationships.
 
-5. **Separation of Concerns**: Different classes handle distinct responsibilities - configuration, file watching, chunking, entity registry, documentation generation, and testing
+5. **Test-Driven Development**: The system includes comprehensive test classes for each major functionality, ensuring reliability and maintainability.
 
-6. **Extensible Language Support**: The Language class defines supported languages, making it easy to add new language support
-
-7. **Test Coverage**: Multiple test classes are included for different components, ensuring reliability of core functionality
+6. **Extensible Architecture**: The system is designed to be extensible, with clear separation of concerns and dependency injection patterns that allow for easy addition of new providers or components.
 
 ## Relevant Source Files
 

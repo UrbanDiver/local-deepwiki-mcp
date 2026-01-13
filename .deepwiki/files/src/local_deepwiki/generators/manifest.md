@@ -1,275 +1,156 @@
 # File Overview
 
-This file provides functionality for parsing project manifest files across multiple programming languages to extract metadata and dependencies. It supports parsing various package manifests such as `pyproject.toml`, `setup.py`, `requirements.txt`, `package.json`, `Cargo.toml`, `go.mod`, `pom.xml`, `build.gradle`, and `Gemfile`. The extracted data is stored in a `ProjectManifest` object for further processing.
+This file, `src/local_deepwiki/generators/manifest.py`, provides functionality for parsing various project manifest files to extract metadata about software projects. It supports parsing of manifests from multiple languages including Python, Node.js, Rust, Go, Java, Kotlin, and Ruby. The parsed data is stored in a `ProjectManifest` object, which serves as a standardized representation of project metadata.
 
 # Classes
 
 ## ProjectManifest
 
-The `ProjectManifest` class holds metadata and dependency information extracted from project manifest files.
+The `ProjectManifest` class is used to store metadata extracted from project manifest files. It holds information such as project name, version, language, dependencies, and other relevant data.
 
 ### Methods
 
-#### has_data
+- **has_data()**
+  - Checks if any meaningful data was extracted.
+  - Returns: `bool`
 
-```python
-def has_data(self) -> bool
-```
+- **get_tech_stack_summary()**
+  - (Not fully shown in the provided code)
 
-Check if any meaningful data was extracted.
+- **_categorize_dependencies()**
+  - (Not fully shown in the provided code)
 
-Returns:
-- `True` if any of `name`, `dependencies`, `dev_dependencies`, or `entry_points` are set; otherwise `False`.
+- **get_dependency_list()**
+  - (Not fully shown in the provided code)
 
-#### get_tech_stack_summary
-
-```python
-def get_tech_stack_summary(self) -> dict
-```
-
-Get a summary of the technology stack based on extracted data.
-
-#### _categorize_dependencies
-
-```python
-def _categorize_dependencies(self) -> None
-```
-
-Categorize dependencies into regular and development dependencies.
-
-#### get_dependency_list
-
-```python
-def get_dependency_list(self) -> list
-```
-
-Get a list of all dependencies.
-
-#### get_entry_points_summary
-
-```python
-def get_entry_points_summary(self) -> dict
-```
-
-Get a summary of entry points.
+- **get_entry_points_summary()**
+  - (Not fully shown in the provided code)
 
 # Functions
 
 ## parse_manifest
 
-```python
-def parse_manifest(repo_path: Path) -> ProjectManifest
-```
+Parses all recognized package manifests in a repository.
 
-Parse all recognized package manifests in a repository.
+- **Parameters**:
+  - `repo_path`: `Path` - Path to the repository root.
 
-Parameters:
-- `repo_path`: Path to the repository root.
-
-Returns:
-- `ProjectManifest` with extracted metadata.
+- **Returns**:
+  - `ProjectManifest` with extracted metadata.
 
 ## _parse_pyproject_toml
 
-```python
-def _parse_pyproject_toml(filepath: Path, manifest: ProjectManifest) -> None
-```
+Parses `pyproject.toml` (Python).
 
-Parse `pyproject.toml` (Python).
-
-Parameters:
-- `filepath`: Path to the `pyproject.toml` file.
-- `manifest`: The `ProjectManifest` object to populate.
+- **Parameters**:
+  - `filepath`: `Path` - Path to the `pyproject.toml` file.
+  - `manifest`: `ProjectManifest` - The manifest object to populate.
 
 ## _parse_setup_py
 
-```python
-def _parse_setup_py(filepath: Path, manifest: ProjectManifest) -> None
-```
+Parses `setup.py` (Python legacy).
 
-Parse `setup.py` (Python legacy).
-
-Parameters:
-- `filepath`: Path to the `setup.py` file.
-- `manifest`: The `ProjectManifest` object to populate.
+- **Parameters**:
+  - `filepath`: `Path` - Path to the `setup.py` file.
+  - `manifest`: `ProjectManifest` - The manifest object to populate.
 
 ## _parse_requirements_txt
 
-```python
-def _parse_requirements_txt(filepath: Path, manifest: ProjectManifest) -> None
-```
+Parses `requirements.txt` (Python).
 
-Parse `requirements.txt` (Python).
-
-Parameters:
-- `filepath`: Path to the `requirements.txt` file.
-- `manifest`: The `ProjectManifest` object to populate.
+- **Parameters**:
+  - `filepath`: `Path` - Path to the `requirements.txt` file.
+  - `manifest`: `ProjectManifest` - The manifest object to populate.
 
 ## _parse_package_json
 
-```python
-def _parse_package_json(filepath: Path, manifest: ProjectManifest) -> None
-```
+Parses `package.json` (Node.js).
 
-Parse `package.json` (Node.js).
-
-Parameters:
-- `filepath`: Path to the `package.json` file.
-- `manifest`: The `ProjectManifest` object to populate.
+- **Parameters**:
+  - `filepath`: `Path` - Path to the `package.json` file.
+  - `manifest`: `ProjectManifest` - The manifest object to populate.
 
 ## _parse_cargo_toml
 
-```python
-def _parse_cargo_toml(filepath: Path, manifest: ProjectManifest) -> None
-```
+Parses `Cargo.toml` (Rust).
 
-Parse `Cargo.toml` (Rust).
-
-Parameters:
-- `filepath`: Path to the `Cargo.toml` file.
-- `manifest`: The `ProjectManifest` object to populate.
+- **Parameters**:
+  - `filepath`: `Path` - Path to the `Cargo.toml` file.
+  - `manifest`: `ProjectManifest` - The manifest object to populate.
 
 ## _parse_go_mod
 
-```python
-def _parse_go_mod(filepath: Path, manifest: ProjectManifest) -> None
-```
+Parses `go.mod` (Go).
 
-Parse `go.mod` (Go).
-
-Parameters:
-- `filepath`: Path to the `go.mod` file.
-- `manifest`: The `ProjectManifest` object to populate.
+- **Parameters**:
+  - `filepath`: `Path` - Path to the `go.mod` file.
+  - `manifest`: `ProjectManifest` - The manifest object to populate.
 
 ## _parse_pom_xml
 
-```python
-def _parse_pom_xml(filepath: Path, manifest: ProjectManifest) -> None
-```
+Parses `pom.xml` (Java/Maven).
 
-Parse `pom.xml` (Java/Maven).
-
-Parameters:
-- `filepath`: Path to the `pom.xml` file.
-- `manifest`: The `ProjectManifest` object to populate.
+- **Parameters**:
+  - `filepath`: `Path` - Path to the `pom.xml` file.
+  - `manifest`: `ProjectManifest` - The manifest object to populate.
 
 ## _parse_build_gradle
 
-```python
-def _parse_build_gradle(filepath: Path, manifest: ProjectManifest) -> None
-```
+Parses `build.gradle` (Java/Kotlin Gradle).
 
-Parse `build.gradle` (Java/Kotlin Gradle).
-
-Parameters:
-- `filepath`: Path to the `build.gradle` file.
-- `manifest`: The `ProjectManifest` object to populate.
+- **Parameters**:
+  - `filepath`: `Path` - Path to the `build.gradle` file.
+  - `manifest`: `ProjectManifest` - The manifest object to populate.
 
 ## _parse_gemfile
 
-```python
-def _parse_gemfile(filepath: Path, manifest: ProjectManifest) -> None
-```
+Parses `Gemfile` (Ruby).
 
-Parse `Gemfile` (Ruby).
-
-Parameters:
-- `filepath`: Path to the `Gemfile` file.
-- `manifest`: The `ProjectManifest` object to populate.
-
-## _parse_python_dep
-
-```python
-def _parse_python_dep(line: str) -> tuple[str, str]
-```
-
-Parse a line from a Python dependency file (e.g., `requirements.txt`) to extract name and version.
-
-Parameters:
-- `line`: A line from a dependency file.
-
-Returns:
-- A tuple of `(name, version)`.
+- **Parameters**:
+  - `filepath`: `Path` - Path to the `Gemfile` file.
+  - `manifest`: `ProjectManifest` - The manifest object to populate.
 
 ## find
 
-```python
-def find(path: str) -> Any
-```
-
-Find an element in an XML tree, handling namespaces.
-
-Parameters:
-- `path`: XPath-like path to the element.
-
-Returns:
-- The found element or `None`.
+(Not fully shown in the provided code)
 
 ## get_directory_tree
 
-```python
-def get_directory_tree(repo_path: Path) -> list
-```
-
-Get a list of all files in the repository directory tree.
-
-Parameters:
-- `repo_path`: Path to the repository root.
-
-Returns:
-- List of file paths.
+(Not fully shown in the provided code)
 
 ## should_skip
 
-```python
-def should_skip(filepath: Path) -> bool
-```
-
-Determine if a file should be skipped during parsing.
-
-Parameters:
-- `filepath`: Path to the file.
-
-Returns:
-- `True` if the file should be skipped; otherwise `False`.
+(Not fully shown in the provided code)
 
 ## traverse
 
-```python
-def traverse(repo_path: Path, skip_patterns: list[str]) -> list[Path]
-```
-
-Traverse the repository directory tree and return paths to files matching the criteria.
-
-Parameters:
-- `repo_path`: Path to the repository root.
-- `skip_patterns`: List of patterns to skip.
-
-Returns:
-- List of file paths.
+(Not fully shown in the provided code)
 
 # Usage Examples
 
-To parse a repository and extract manifest data:
+To parse a repository's manifest files and extract metadata:
 
 ```python
 from pathlib import Path
-from src.local_deepwiki.generators.manifest import parse_manifest
+from manifest import parse_manifest
 
 repo_path = Path("/path/to/repo")
 manifest = parse_manifest(repo_path)
 ```
 
+This will attempt to parse various manifest files in the repository and populate the `ProjectManifest` object with extracted data.
+
 # Related Components
 
-This file works with the following components:
+This file imports and uses the following components:
 
-- `ProjectManifest`: The class used to store extracted metadata and dependencies.
-- `Path`: Used for handling file paths.
-- `tomllib` and `tomli`: Used for parsing TOML files.
-- `xml.etree.ElementTree`: Used for parsing XML files like `pom.xml`.
-- `json`: Used for parsing JSON files like `package.json`.
-- `re`: Used for regular expression matching in various parsers.
+- `json` - For parsing `package.json`
+- `re` - For regular expression matching in various parsers
+- `dataclasses` - For the `ProjectManifest` class
+- `pathlib.Path` - For handling file paths
+- `typing.Any` - For type hints
+- `tomllib` and `tomli` - For parsing TOML files like `pyproject.toml` and `Cargo.toml`
+- `xml.etree.ElementTree` - For parsing XML files like `pom.xml`
 
 ## API Reference
 

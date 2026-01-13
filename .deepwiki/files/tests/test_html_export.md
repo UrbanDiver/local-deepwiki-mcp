@@ -10,9 +10,9 @@ Tests for markdown rendering functionality.
 
 ### Methods
 
-- **test_basic_markdown**: Tests basic markdown conversion including headers and paragraphs.
-- **test_code_blocks**: Tests fenced code block conversion.
-- **test_tables**: Tests table conversion (method signature incomplete in provided code).
+- `test_basic_markdown()`: Tests basic markdown conversion to HTML
+- `test_code_blocks()`: Tests fenced code block rendering
+- `test_tables()`: Tests table rendering
 
 ## TestExtractTitle
 
@@ -20,9 +20,9 @@ Tests for title extraction functionality.
 
 ### Methods
 
-- **test_h1_title**: Tests extracting title from H1 markdown header.
-- **test_bold_title**: Tests extracting title from bold markdown text.
-- **test_fallback_to_filename**: Tests fallback to filename when no title is found (method signature incomplete in provided code).
+- `test_h1_title(tmp_path: Path)`: Tests extracting title from H1 markdown header
+- `test_bold_title(tmp_path: Path)`: Tests extracting title from bold markdown text
+- `test_fallback_to_filename(tmp_path: Path)`: Tests fallback to filename when no title found
 
 ## TestHtmlExporter
 
@@ -30,15 +30,15 @@ Tests for the [HtmlExporter](../src/local_deepwiki/export/html.md) class functio
 
 ### Methods
 
-- **sample_wiki**: Creates a sample wiki structure for testing.
-- **test_export_creates_output_directory**: Tests that export creates the output directory.
-- **test_export_creates_html_files**: Tests that export creates HTML files for each markdown file.
-- **test_export_copies_search_json**: Tests that export copies search.json.
-- **test_html_contains_content**: Tests that HTML files contain the converted content.
-- **test_html_contains_toc**: Tests that HTML files contain the table of contents.
-- **test_html_has_relative_links**: Tests that HTML files use relative links.
-- **test_html_has_breadcrumb_for_nested_pages**: Tests that nested pages have breadcrumb navigation.
-- **test_html_has_theme_toggle**: Tests that HTML files have theme toggle functionality.
+- `sample_wiki(tmp_path: Path) -> Path`: Creates a sample wiki structure for testing
+- `test_export_creates_output_directory(sample_wiki: Path, tmp_path: Path)`: Tests that export creates the output directory
+- `test_export_creates_html_files(sample_wiki: Path, tmp_path: Path)`: Tests that export creates HTML files for each markdown file
+- `test_export_copies_search_json(sample_wiki: Path, tmp_path: Path)`: Tests that export copies search.json
+- `test_html_contains_content(sample_wiki: Path, tmp_path: Path)`: Tests that HTML files contain the converted content
+- `test_html_contains_toc(sample_wiki: Path, tmp_path: Path)`: Tests that HTML files contain the table of contents
+- `test_html_has_relative_links(sample_wiki: Path, tmp_path: Path)`: Tests that HTML files use relative links
+- `test_html_has_breadcrumb_for_nested_pages(sample_wiki: Path, tmp_path: Path)`: Tests that nested pages have breadcrumb navigation
+- `test_html_has_theme_toggle(sample_wiki: Path, tmp_path: Path)`: Tests that HTML files have theme toggle functionality
 
 ## TestExportToHtml
 
@@ -46,56 +46,73 @@ Tests for the [export_to_html](../src/local_deepwiki/export/html.md) convenience
 
 ### Methods
 
-- **simple_wiki**: Creates a simple wiki for testing.
-- **test_default_output_path**: Tests that default output path is {wiki_path}_html.
+- `test_default_output_path(simple_wiki: Path)`: Tests that default output path is {wiki_path}_html
 
 # Functions
 
 ## export_to_html
 
-Exports a wiki to HTML format.
+Convenience function for exporting wiki to HTML.
 
 ### Parameters
 
-- **wiki_path**: Path to the wiki directory.
-- **output_path**: Optional path for output directory (defaults to wiki_path_html).
+- `wiki_path: Path`: Path to the wiki directory
+- `output_path: Path | None`: Optional output directory path
 
-### Return Value
+### Returns
 
-Returns the number of files exported.
+- `int`: Number of files exported
 
 # Usage Examples
 
-## Using HtmlExporter directly
+## Testing HTML Export
 
 ```python
-from pathlib import Path
-from local_deepwiki.export.html import HtmlExporter
+# Test that export creates the output directory
+def test_export_creates_output_directory(self, sample_wiki: Path, tmp_path: Path):
+    output_path = tmp_path / "html_output"
+    exporter = HtmlExporter(sample_wiki, output_path)
+    exporter.export()
 
-wiki_path = Path("/path/to/wiki")
-output_path = Path("/path/to/output")
-exporter = HtmlExporter(wiki_path, output_path)
-count = exporter.export()
+    assert output_path.exists()
+    assert output_path.is_dir()
 ```
 
-## Using export_to_html convenience function
+## Testing HTML Content
 
 ```python
-from pathlib import Path
-from local_deepwiki.export.html import export_to_html
+# Test that HTML files contain the converted content
+def test_html_contains_content(self, sample_wiki: Path, tmp_path: Path):
+    output_path = tmp_path / "html_output"
+    exporter = HtmlExporter(sample_wiki, output_path)
+    exporter.export()
 
-wiki_path = Path("/path/to/wiki")
-count = export_to_html(wiki_path)
+    html = (output_path / "index.html").read_text()
+    assert "Overview" in html
+    assert "Welcome to the wiki" in html
+    assert "<!DOCTYPE html>" in html
+```
+
+## Testing Markdown Rendering
+
+```python
+# Test basic markdown conversion
+def test_basic_markdown(self):
+    md = "# Hello\n\nThis is a paragraph."
+    html = render_markdown(md)
+    assert "<h1" in html
+    assert "Hello" in html
+    assert "<p>" in html
 ```
 
 # Related Components
 
-This file works with the following components from the `local_deepwiki.export.html` module:
+This file works with the following components from `local_deepwiki.export.html`:
 
-- **[HtmlExporter](../src/local_deepwiki/export/html.md)**: Main class for exporting wiki to HTML
-- **[export_to_html](../src/local_deepwiki/export/html.md)**: Convenience function for exporting wiki to HTML
-- **[render_markdown](../src/local_deepwiki/export/html.md)**: Function for converting markdown to HTML
-- **[extract_title](../src/local_deepwiki/export/html.md)**: Function for extracting titles from markdown files
+- [`HtmlExporter`](../src/local_deepwiki/export/html.md): Main class for exporting wiki to HTML
+- [`export_to_html`](../src/local_deepwiki/export/html.md): Convenience function for exporting wiki to HTML
+- [`render_markdown`](../src/local_deepwiki/export/html.md): Function for converting markdown to HTML
+- [`extract_title`](../src/local_deepwiki/export/html.md): Function for extracting titles from markdown files
 
 ## API Reference
 

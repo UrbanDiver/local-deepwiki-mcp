@@ -1,6 +1,6 @@
 {
   "repo_path": "/Users/brian/Projects/local-deepwiki-mcp",
-  "indexed_at": 1768259168.1765702,
+  "indexed_at": 1768266806.390387,
   "total_files": 52,
   "total_chunks": 506,
   "languages": {
@@ -162,9 +162,9 @@
     {
       "path": "src/local_deepwiki/models.py",
       "language": "python",
-      "size_bytes": 5560,
-      "last_modified": 1768258053.4353535,
-      "hash": "10c68a52c932227d4ab247869f327bc323f834d20accd27b04fe42dc64fbad96",
+      "size_bytes": 5582,
+      "last_modified": 1768261024.8606951,
+      "hash": "12936e083e15718da85e49fda6f3b1a684ac2cb53dc5d35910f79144c025bb77",
       "chunk_count": 12
     },
     {
@@ -194,9 +194,9 @@
     {
       "path": "src/local_deepwiki/core/chunker.py",
       "language": "python",
-      "size_bytes": 21047,
-      "last_modified": 1768258111.9885097,
-      "hash": "3e20a2147eea90c971a3c714bf0c0f42f2b252f033fafdcf725c85f057d28cb8",
+      "size_bytes": 21690,
+      "last_modified": 1768261138.961916,
+      "hash": "f1f368ad6e0593f1ec555f4b88e5ec3d94cf89286d9b81553a2ac3123b05efff",
       "chunk_count": 15
     },
     {
@@ -218,9 +218,9 @@
     {
       "path": "src/local_deepwiki/core/parser.py",
       "language": "python",
-      "size_bytes": 10509,
-      "last_modified": 1768258077.8163676,
-      "hash": "d6c32c45a178f8305802a3f6a588085af0be8711c1828b7a4736c744d34a1093",
+      "size_bytes": 10889,
+      "last_modified": 1768261101.594736,
+      "hash": "2bdcf70de23b8867672612d33a009e653a16c0395a0f110ccfe1f2ee3ca59bef",
       "chunk_count": 14
     },
     {

@@ -34,7 +34,7 @@ Initializes a [`CodeChunker`](../src/local_deepwiki/core/chunker.md) instance fo
 
 Tests chunking a Python file and verifies that the resulting chunks are correctly formed.
 
-**Parameters**: 
+**Parameters**:
 - `tmp_path`: A temporary directory path provided by pytest for test file creation.
 
 **Returns**: None
@@ -43,7 +43,7 @@ Tests chunking a Python file and verifies that the resulting chunks are correctl
 
 Tests that function names are correctly extracted from a Python file.
 
-**Parameters**: 
+**Parameters**:
 - `tmp_path`: A temporary directory path provided by pytest for test file creation.
 
 **Returns**: None
@@ -52,7 +52,7 @@ Tests that function names are correctly extracted from a Python file.
 
 Tests that class names are correctly extracted from a Python file.
 
-**Parameters**: 
+**Parameters**:
 - `tmp_path`: A temporary directory path provided by pytest for test file creation.
 
 **Returns**: None
@@ -61,7 +61,7 @@ Tests that class names are correctly extracted from a Python file.
 
 Tests that docstrings are correctly extracted from functions in a Python file.
 
-**Parameters**: 
+**Parameters**:
 - `tmp_path`: A temporary directory path provided by pytest for test file creation.
 
 **Returns**: None
@@ -70,7 +70,7 @@ Tests that docstrings are correctly extracted from functions in a Python file.
 
 Tests chunking a JavaScript file and verifies the resulting chunks.
 
-**Parameters**: 
+**Parameters**:
 - `tmp_path`: A temporary directory path provided by pytest for test file creation.
 
 **Returns**: None
@@ -79,7 +79,7 @@ Tests chunking a JavaScript file and verifies the resulting chunks.
 
 Tests that line numbers are correctly assigned to chunks in a Python file.
 
-**Parameters**: 
+**Parameters**:
 - `tmp_path`: A temporary directory path provided by pytest for test file creation.
 
 **Returns**: None
@@ -88,7 +88,7 @@ Tests that line numbers are correctly assigned to chunks in a Python file.
 
 Tests that each chunk is assigned a unique ID.
 
-**Parameters**: 
+**Parameters**:
 - `tmp_path`: A temporary directory path provided by pytest for test file creation.
 
 **Returns**: None
@@ -97,7 +97,7 @@ Tests that each chunk is assigned a unique ID.
 
 Tests that unsupported file types return no chunks.
 
-**Parameters**: 
+**Parameters**:
 - `tmp_path`: A temporary directory path provided by pytest for test file creation.
 
 **Returns**: None

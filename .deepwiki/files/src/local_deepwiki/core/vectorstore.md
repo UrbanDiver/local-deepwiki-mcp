@@ -1,60 +1,59 @@
 # File Overview
 
-This file defines the `VectorStore` class for managing vector embeddings and search operations using LanceDB. It provides functionality for storing, indexing, and searching code chunks based on their semantic embeddings.
+This file defines the `VectorStore` class for managing vector embeddings and search operations using LanceDB. It provides functionality for storing, indexing, and retrieving code chunks based on their vector representations.
 
 # Classes
 
 ## VectorStore
 
-The VectorStore class manages vector embeddings and search operations using LanceDB. It handles the creation, storage, and retrieval of code chunk embeddings for semantic search.
+The VectorStore class manages vector embeddings using LanceDB for efficient similarity search operations on code chunks.
 
 ### Key Methods
 
-- `__init__(self, db_path: str, embedding_provider: EmbeddingProvider)` - Initializes the VectorStore with a database path and embedding provider
-- `create_table(self, table_name: str)` - Creates a new table in the database for storing embeddings
-- `add_chunks(self, chunks: list[CodeChunk], table_name: str)` - Adds code chunks to the specified table
-- `search(self, query: str, table_name: str, limit: int = 10)` - Searches for similar code chunks based on a query string
-- `get_table(self, table_name: str) -> Table` - Retrieves a table by name
-- `table_exists(self, table_name: str) -> bool` - Checks if a table exists in the database
+- `__init__(self, db_path: str, embedding_provider: EmbeddingProvider)`: Initializes the vector store with a database path and embedding provider
+- `create_table(self, table_name: str, embedding_dimension: int)`: Creates a new table in the database with the specified embedding dimension
+- `add_chunks(self, table_name: str, chunks: list[CodeChunk])`: Adds code chunks to the specified table
+- `search(self, table_name: str, query: str, limit: int = 10)`: Searches for similar code chunks based on a query string
+- `get_table(self, table_name: str)`: Retrieves a table by name
+- `list_tables(self)`: Lists all available tables in the database
 
-# Functions
-
-No standalone functions are defined in this file.
-
-# Usage Examples
+### Usage Example
 
 ```python
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.providers.openai import OpenAIEmbeddingProvider
-from local_deepwiki.models import CodeChunk
 
-# Initialize the vector store
+# Initialize vector store
+db_path = "vector_db"
 embedding_provider = OpenAIEmbeddingProvider(api_key="your-api-key")
-vector_store = VectorStore(db_path="./vector_db", embedding_provider=embedding_provider)
+vector_store = VectorStore(db_path, embedding_provider)
 
 # Create a table
-vector_store.create_table("code_chunks")
+vector_store.create_table("code_chunks", 1536)
 
-# Add code chunks
-chunks = [
-    CodeChunk(id="1", content="def hello():\n    return 'world'", file_path="example.py"),
-    CodeChunk(id="2", content="print('hello world')", file_path="main.py")
-]
-vector_store.add_chunks(chunks, "code_chunks")
+# Add chunks
+chunks = [CodeChunk(id="1", content="print('hello')", path="example.py")]
+vector_store.add_chunks("code_chunks", chunks)
 
-# Search for similar code
-results = vector_store.search("print function", "code_chunks", limit=5)
+# Search
+results = vector_store.search("code_chunks", "print statement", limit=5)
 ```
+
+# Functions
+
+No standalone functions are defined in this file. All functionality is encapsulated within the `VectorStore` class.
 
 # Related Components
 
 This file works with the following components:
 
-- `EmbeddingProvider` from `local_deepwiki.providers.base` - Provides the embedding functionality for converting text to vectors
-- `CodeChunk` from `local_deepwiki.models` - Represents individual code chunks with metadata
-- `SearchResult` from `local_deepwiki.models` - Represents search results
-- `lancedb` - Database backend for storing and searching vector embeddings
-- `Table` from `lancedb.table` - LanceDB table interface for database operations
+- `EmbeddingProvider` from `local_deepwiki.providers.base`: Provides the embedding functionality for converting text into vector representations
+- `CodeChunk` from `local_deepwiki.models`: Represents individual code chunks with id, content, and path attributes
+- `SearchResult` from `local_deepwiki.models`: Represents search results with relevance scores and chunk information
+- `lancedb`: Database backend for storing and querying vector embeddings
+- `Table` from `lancedb.table`: LanceDB table interface for database operations
+
+The class integrates with the `lancedb` library for vector storage and retrieval operations, and depends on embedding providers to generate vector representations of code content.
 
 ## API Reference
 
@@ -193,7 +192,7 @@ classDiagram
 ```mermaid
 flowchart TD
     N0[CodeChunk]
-    N1[SearchResult]
+    N1[ValueError]
     N2[VectorStore._connect]
     N3[VectorStore._get_table]
     N4[VectorStore.add_chunks]
@@ -206,11 +205,11 @@ flowchart TD
     N11[_chunk_to_text]
     N12[_connect]
     N13[_get_table]
-    N14[add]
-    N15[connect]
-    N16[create_or_update_table]
-    N17[create_table]
-    N18[delete]
+    N14[_sanitize_string_value]
+    N15[add]
+    N16[connect]
+    N17[create_or_update_table]
+    N18[create_table]
     N19[drop_table]
     N20[dumps]
     N21[embed]
@@ -223,7 +222,7 @@ flowchart TD
     N28[to_list]
     N29[where]
     N2 --> N24
-    N2 --> N15
+    N2 --> N16
     N3 --> N12
     N3 --> N27
     N3 --> N25
@@ -233,23 +232,24 @@ flowchart TD
     N5 --> N20
     N5 --> N27
     N5 --> N19
-    N5 --> N17
+    N5 --> N18
     N4 --> N13
-    N4 --> N16
+    N4 --> N17
     N4 --> N11
     N4 --> N21
     N4 --> N20
-    N4 --> N14
+    N4 --> N15
     N10 --> N13
     N10 --> N21
     N10 --> N22
     N10 --> N26
+    N10 --> N1
     N10 --> N29
     N10 --> N28
     N10 --> N0
     N10 --> N23
-    N10 --> N1
     N7 --> N13
+    N7 --> N14
     N7 --> N28
     N7 --> N22
     N7 --> N29
@@ -257,16 +257,17 @@ flowchart TD
     N7 --> N0
     N7 --> N23
     N8 --> N13
+    N8 --> N14
     N8 --> N28
     N8 --> N29
     N8 --> N26
     N8 --> N0
     N8 --> N23
     N6 --> N13
+    N6 --> N14
     N6 --> N28
     N6 --> N29
     N6 --> N26
-    N6 --> N18
     N9 --> N13
     classDef func fill:#e1f5fe
     class N0,N1,N11,N12,N13,N14,N15,N16,N17,N18,N19,N20,N21,N22,N23,N24,N25,N26,N27,N28,N29 func

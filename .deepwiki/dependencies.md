@@ -4,197 +4,119 @@
 
 The following external libraries are required for the project:
 
-- **anthropic** (>=0.40)  
-  A Python client for the Anthropic API, used for interacting with Claude models.
+- **anthropic** (>=0.40)
+  A Python client for the Anthropic API, used for interacting with Claude language models.
 
-- **flask** (>=3.0)  
-  A lightweight WSGI web application framework for building web applications.
+- **flask** (>=3.0)
+  A lightweight WSGI web application framework used for building web interfaces.
 
-- **lancedb** (>=0.15)  
-  A vector database for storing and querying embeddings.
+- **lancedb** (>=0.15)
+  A vector database for building AI-powered applications, used for storing and querying embeddings.
 
-- **markdown** (>=3.0)  
+- **markdown** (>=3.0)
   A Python library for parsing Markdown text into HTML.
 
-- **mcp** (>=1.2.0)  
-  A library for managing model communication protocols.
+- **mcp** (>=1.2.0)
+  A Python client for the Model Control Protocol, used for controlling LLM interactions.
 
-- **ollama** (>=0.4)  
-  A Python client for the Ollama API, used for interacting with local LLMs.
+- **ollama** (>=0.4)
+  A Python client for the Ollama API, used for interacting with locally hosted LLMs.
 
-- **openai** (>=1.0)  
-  A Python client for the OpenAI API, used for interacting with OpenAI models.
+- **openai** (>=1.0)
+  A Python client for the OpenAI API, used for interacting with OpenAI's language models.
 
-- **pandas** (>=2.0)  
+- **pandas** (>=2.0)
   A powerful data manipulation and analysis library.
 
-- **pydantic** (>=2.0)  
-  A data validation and settings management library using Python type hints.
+- **pydantic** (>=2.0)
+  A data validation and settings management library based on Python type hints.
 
-- **pyyaml** (>=6.0)  
-  A YAML parser and emitter for Python.
+- **pyyaml** (>=6.0)
+  A YAML parser and emitter for Python, used for configuration files.
 
-- **rich** (>=13.0)  
-  A library for rich text and beautiful formatting in the terminal.
+- **rich** (>=13.0)
+  A Python library for rich text and beautiful formatting in the terminal.
 
-- **sentence-transformers** (>=3.0)  
-  A library for loading and using sentence transformers for embedding generation.
+- **sentence-transformers** (>=3.0)
+  A library for computing sentence and text embeddings, used for embedding generation.
 
-- **tree-sitter** (>=0.23)  
-  A parser for programming languages, used for code analysis.
+- **tree-sitter** (>=0.23)
+  A parser for programming languages, used for parsing code into structured data.
 
-- **tree-sitter-c** (>=0.23)  
+- **tree-sitter-c** (>=0.23)
   Tree-sitter grammar for C language.
 
-- **tree-sitter-cpp** (>=0.23)  
+- **tree-sitter-c-sharp** (>=0.23)
+  Tree-sitter grammar for C# language.
+
+- **tree-sitter-cpp** (>=0.23)
   Tree-sitter grammar for C++ language.
 
-- **tree-sitter-go** (>=0.23)  
+- **tree-sitter-go** (>=0.23)
   Tree-sitter grammar for Go language.
 
-- **tree-sitter-java** (>=0.23)  
+- **tree-sitter-java** (>=0.23)
   Tree-sitter grammar for Java language.
 
-- **tree-sitter-javascript** (>=0.23)  
+- **tree-sitter-javascript** (>=0.23)
   Tree-sitter grammar for JavaScript language.
 
-- **tree-sitter-kotlin** (>=0.23)  
+- **tree-sitter-kotlin** (>=0.23)
   Tree-sitter grammar for Kotlin language.
 
-- **tree-sitter-php** (>=0.23)  
+- **tree-sitter-php** (>=0.23)
   Tree-sitter grammar for PHP language.
 
-- **tree-sitter-python** (>=0.23)  
+- **tree-sitter-python** (>=0.23)
   Tree-sitter grammar for Python language.
 
-- **tree-sitter-ruby** (>=0.23)  
+- **tree-sitter-ruby** (>=0.23)
   Tree-sitter grammar for Ruby language.
 
-- **tree-sitter-rust** (>=0.23)  
+- **tree-sitter-rust** (>=0.23)
   Tree-sitter grammar for Rust language.
 
-- **tree-sitter-swift** (>=0.0.1)  
+- **tree-sitter-swift** (>=0.0.1)
   Tree-sitter grammar for Swift language.
 
-- **tree-sitter-typescript** (>=0.23)  
+- **tree-sitter-typescript** (>=0.23)
   Tree-sitter grammar for TypeScript language.
 
-- **watchdog** (>=4.0)  
-  A library for monitoring file system events.
+- **watchdog** (>=4.0)
+  A library for monitoring file system events, used for watching changes in source code.
 
 ## Dev Dependencies
 
-The following development dependencies are used for testing:
+The following dependencies are used for development and testing:
 
-- **pytest** (>=8.0)  
-  A testing framework for Python.
+- **pytest** (>=8.0)
+  A testing framework for Python, used for running tests.
 
-- **pytest-asyncio** (>=0.24)  
-  A plugin for pytest to support async tests.
+- **pytest-asyncio** (>=0.24)
+  A plugin for pytest to support asyncio testing.
 
 ## Internal Module Dependencies
 
 The following internal modules depend on each other based on import statements:
 
-- **ChunkType** and **CodeChunk** from `local_deepwiki.models` are imported by:
-  - `src/local_deepwiki/generators/crosslinks.py`
-  - `src/local_deepwiki/generators/diagrams.py`
-  - `src/local_deepwiki/generators/see_also.py`
-  - `src/local_deepwiki/generators/callgraph.py`
-  - `src/local_deepwiki/core/chunker.py`
-  - `src/local_deepwiki/generators/api_docs.py`
-  - `src/local_deepwiki/core/vectorstore.py`
-  - `src/local_deepwiki/generators/source_refs.py`
-  - `src/local_deepwiki/generators/search.py`
-  - `src/local_deepwiki/models.py`
+- **[CodeChunker](files/src/local_deepwiki/core/chunker.md)** depends on **[CodeParser](files/src/local_deepwiki/core/parser.md)**, **[ChunkingConfig](files/src/local_deepwiki/config.md)**, and **[get_config](files/src/local_deepwiki/config.md)** from the **core** module.
+- **[CodeParser](files/src/local_deepwiki/core/parser.md)** depends on **tree_sitter** and **[get_node_text](files/src/local_deepwiki/core/parser.md)**, **[get_node_name](files/src/local_deepwiki/core/parser.md)**, **[get_docstring](files/src/local_deepwiki/core/parser.md)**, and **[find_nodes_by_type](files/src/local_deepwiki/core/parser.md)** from the **core.parser** module.
+- **EmbeddingProvider** (base class) is used by **LocalEmbeddingProvider** and **OpenAIEmbeddingProvider** in the **providers.embeddings** module.
+- **[VectorStore](files/src/local_deepwiki/core/vectorstore.md)** depends on **lancedb**, **Table**, **CodeChunk**, and **SearchResult** from the **models** module, and **EmbeddingProvider** from the **providers.base** module.
+- **WikiPage** and **CodeChunk** models depend on **BaseModel** from **pydantic**.
+- **[Config](files/src/local_deepwiki/config.md)** depends on **yaml**, **BaseModel**, and **Field** from **pydantic**.
+- **[APIDocExtractor](files/src/local_deepwiki/generators/api_docs.md)** depends on **[CodeParser](files/src/local_deepwiki/core/parser.md)**, **FUNCTION_NODE_TYPES**, **CLASS_NODE_TYPES**, and **Language** from the **core** and **models** modules.
+- **[RelationshipAnalyzer](files/src/local_deepwiki/generators/see_also.md)** depends on **ChunkType**, **CodeChunk**, and **WikiPage** from the **models** module.
+- **SeeAlsoGenerator** depends on **ChunkType**, **CodeChunk**, **WikiPage**, and **Language** from the **models** module.
+- **CrosslinksGenerator** depends on **ChunkType**, **CodeChunk**, and **WikiPage** from the **models** module.
+- **DiagramGenerator** depends on **ChunkType**, **CodeChunk**, **IndexStatus**, and **Language** from the **models** module.
+- **SearchGenerator** depends on **WikiPage** from the **models** module.
+- **SourceRefsGenerator** depends on **WikiPage** and **WikiPageStatus** from the **models** module.
+- **ManifestGenerator** depends on **[ProjectManifest](files/src/local_deepwiki/generators/manifest.md)**, **[get_directory_tree](files/src/local_deepwiki/generators/manifest.md)**, and **[parse_manifest](files/src/local_deepwiki/generators/manifest.md)** from the **generators.manifest** module.
+- **CallgraphGenerator** depends on **[CodeParser](files/src/local_deepwiki/core/parser.md)**, **[find_nodes_by_type](files/src/local_deepwiki/core/parser.md)**, **[get_node_text](files/src/local_deepwiki/core/parser.md)**, **[get_node_name](files/src/local_deepwiki/core/parser.md)**, **FUNCTION_NODE_TYPES**, **CLASS_NODE_TYPES**, and **Language** from the **core** and **models** modules.
+- **[HtmlExporter](files/src/local_deepwiki/export/html.md)** depends on **WikiPage** from the **models** module.
 
-- **WikiPage** from `local_deepwiki.models` is imported by:
-  - `src/local_deepwiki/generators/see_also.py`
-  - `src/local_deepwiki/generators/source_refs.py`
-  - `src/local_deepwiki/generators/search.py`
-
-- **Language** from `local_deepwiki.models` is imported by:
-  - `src/local_deepwiki/core/chunker.py`
-  - `src/local_deepwiki/generators/callgraph.py`
-  - `src/local_deepwiki/generators/api_docs.py`
-  - `src/local_deepwiki/generators/diagrams.py`
-  - `src/local_deepwiki/generators/see_also.py`
-  - `src/local_deepwiki/generators/toc.py`
-  - `src/local_deepwiki/generators/search.py`
-  - `src/local_deepwiki/core/parser.py`
-  - `src/local_deepwiki/models.py`
-
-- **IndexStatus** from `local_deepwiki.models` is imported by:
-  - `src/local_deepwiki/generators/diagrams.py`
-
-- **FileInfo** from `local_deepwiki.models` is imported by:
-  - `src/local_deepwiki/generators/diagrams.py`
-
-- **EmbeddingProvider** and **LLMProvider** from `local_deepwiki.providers.base` are imported by:
-  - `src/local_deepwiki/providers/__init__.py`
-
-- **[EmbeddingConfig](files/src/local_deepwiki/config.md)** and **[get_config](files/src/local_deepwiki/config.md)** from `local_deepwiki.config` are imported by:
-  - `src/local_deepwiki/providers/embeddings/__init__.py`
-
-- **LocalEmbeddingProvider** and **OpenAIEmbeddingProvider** from `local_deepwiki.providers.embeddings.local` and `local_deepwiki.providers.embeddings.openai` respectively are imported by:
-  - `src/local_deepwiki/providers/embeddings/__init__.py`
-
-- **[CodeParser](files/src/local_deepwiki/core/parser.md)** from `local_deepwiki.core.parser` is imported by:
-  - `src/local_deepwiki/generators/callgraph.py`
-  - `src/local_deepwiki/generators/api_docs.py`
-  - `src/local_deepwiki/core/chunker.py`
-  - `src/local_deepwiki/core/parser.py`
-  - `src/local_deepwiki/generators/see_also.py`
-
-- **[ChunkingConfig](files/src/local_deepwiki/config.md)** and **[get_config](files/src/local_deepwiki/config.md)** from `local_deepwiki.config` are imported by:
-  - `src/local_deepwiki/core/chunker.py`
-
-- **SearchResult** from `local_deepwiki.models` is imported by:
-  - `src/local_deepwiki/core/vectorstore.py`
-
-- **WikiPageStatus** from `local_deepwiki.models` is imported by:
-  - `src/local_deepwiki/generators/source_refs.py`
-
-- **[Config](files/src/local_deepwiki/config.md)**, **[get_config](files/src/local_deepwiki/config.md)**, and **[set_config](files/src/local_deepwiki/config.md)** from `local_deepwiki.config` are imported by:
-  - `tests/test_config.py`
-
-- **[ProjectManifest](files/src/local_deepwiki/generators/manifest.md)**, **[get_directory_tree](files/src/local_deepwiki/generators/manifest.md)**, and **[parse_manifest](files/src/local_deepwiki/generators/manifest.md)** from `local_deepwiki.generators.manifest` are imported by:
-  - `tests/test_manifest.py`
-
-- **[APIDocExtractor](files/src/local_deepwiki/generators/api_docs.md)**, **[FunctionSignature](files/src/local_deepwiki/generators/api_docs.md)**, **[ClassSignature](files/src/local_deepwiki/generators/api_docs.md)**, **[Parameter](files/src/local_deepwiki/generators/api_docs.md)**, and related functions from `local_deepwiki.generators.api_docs` are imported by:
-  - `tests/test_api_docs.py`
-
-- **[CodeChunker](files/src/local_deepwiki/core/chunker.md)** from `local_deepwiki.core.chunker` is imported by:
-  - `tests/test_chunker.py`
-
-- **[CodeParser](files/src/local_deepwiki/core/parser.md)**, **[get_node_text](files/src/local_deepwiki/core/parser.md)**, and **[get_node_name](files/src/local_deepwiki/core/parser.md)** from `local_deepwiki.core.parser` are imported by:
-  - `tests/test_parser.py`
-
-- **[HtmlExporter](files/src/local_deepwiki/export/html.md)** and **[export_to_html](files/src/local_deepwiki/export/html.md)** from `local_deepwiki.export.html` are imported by:
-  - `src/local_deepwiki/export/__init__.py`
-
-- **[RelationshipAnalyzer](files/src/local_deepwiki/generators/see_also.md)**, **[FileRelationships](files/src/local_deepwiki/generators/see_also.md)**, **[build_file_to_wiki_map](files/src/local_deepwiki/generators/see_also.md)**, **[generate_see_also_section](files/src/local_deepwiki/generators/see_also.md)**, **[add_see_also_sections](files/src/local_deepwiki/generators/see_also.md)**, and **_relative_path** from `local_deepwiki.generators.see_also` are imported by:
-  - `tests/test_see_also.py`
-
-- **[ClassInfo](files/src/local_deepwiki/generators/diagrams.md)**, **[sanitize_mermaid_name](files/src/local_deepwiki/generators/diagrams.md)**, **[generate_class_diagram](files/src/local_deepwiki/generators/diagrams.md)**, **[generate_dependency_graph](files/src/local_deepwiki/generators/diagrams.md)**, **[generate_module_overview](files/src/local_deepwiki/generators/diagrams.md)**, **[generate_language_pie_chart](files/src/local_deepwiki/generators/diagrams.md)**, **[generate_sequence_diagram](files/src/local_deepwiki/generators/diagrams.md)**, **_extract_class_attributes**, **_extract_method_signature**, **_find_circular_dependencies**, **_path_to_module**, and **_parse_import_line** from `local_deepwiki.generators.diagrams` are imported by:
-  - `tests/test_diagrams.py`
-
-- **FUNCTION_NODE_TYPES** and **CLASS_NODE_TYPES** from `local_deepwiki.core.chunker` are imported by:
-  - `src/local_deepwiki/generators/callgraph.py`
-  - `src/local_deepwiki/generators/api_docs.py`
-
-- **[find_nodes_by_type](files/src/local_deepwiki/core/parser.md)** from `local_deepwiki.core.parser` is imported by:
-  - `src/local_deepwiki/generators/callgraph.py`
-  - `src/local_deepwiki/generators/api_docs.py`
-
-- **[get_node_text](files/src/local_deepwiki/core/parser.md)**, **[get_node_name](files/src/local_deepwiki/core/parser.md)**, **[get_docstring](files/src/local_deepwiki/core/parser.md)**, and **[find_nodes_by_type](files/src/local_deepwiki/core/parser.md)** from `local_deepwiki.core.parser` are imported by:
-  - `src/local_deepwiki/core/chunker.py`
-
-- **[get_node_text](files/src/local_deepwiki/core/parser.md)**, **[get_node_name](files/src/local_deepwiki/core/parser.md)**, and **[get_docstring](files/src/local_deepwiki/core/parser.md)** from `local_deepwiki.core.parser` are imported by:
-  - `src/local_deepwiki/generators/see_also.py`
-
-- **Node** and **Tree** from `local_deepwiki.core.parser` are imported by:
-  - `src/local_deepwiki/generators/callgraph.py`
+These dependencies reflect the structure and interaction between the internal modules of the project.
 
 ## Module Dependency Graph
 

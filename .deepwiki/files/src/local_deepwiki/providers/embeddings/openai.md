@@ -65,13 +65,13 @@ import asyncio
 
 async def example():
     provider = OpenAIEmbeddingProvider()
-    
+
     texts = [
         "Hello world",
         "How are you?",
         "OpenAI embeddings"
     ]
-    
+
     embeddings = await provider.embed(texts)
     print(embeddings)
 

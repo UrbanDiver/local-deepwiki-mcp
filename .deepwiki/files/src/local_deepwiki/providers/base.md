@@ -67,11 +67,11 @@ from base import EmbeddingProvider
 class MyEmbeddingProvider(EmbeddingProvider):
     def __init__(self):
         self._dimension = 768
-    
+
     async def embed(self, texts: list[str]) -> list[list[float]]:
         # Implementation here
         pass
-    
+
     def get_dimension(self) -> int:
         return self._dimension
 
