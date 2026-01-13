@@ -6,7 +6,7 @@
 
 ## Current Status: ✅ Complete & Working
 
-The project is fully implemented and tested. All 543 tests pass.
+The project is fully implemented and tested. All 571 tests pass.
 
 ## Architecture
 
@@ -21,6 +21,7 @@ The project is fully implemented and tested. All 543 tests pass.
 │  - read_wiki_page      - Read specific wiki page                │
 │  - search_code         - Semantic code search                   │
 │  - export_wiki_html    - Export wiki to static HTML             │
+│  - export_wiki_pdf     - Export wiki to PDF format              │
 └─────────────────────────────────────────────────────────────────┘
            │                    │                    │
            ▼                    ▼                    ▼
@@ -34,7 +35,7 @@ The project is fully implemented and tested. All 543 tests pass.
 
 | File | Purpose |
 |------|---------|
-| `src/local_deepwiki/server.py` | MCP server entry point with 6 tools |
+| `src/local_deepwiki/server.py` | MCP server entry point with 7 tools |
 | `src/local_deepwiki/core/parser.py` | Tree-sitter multi-language code parser |
 | `src/local_deepwiki/core/chunker.py` | AST-based code chunking |
 | `src/local_deepwiki/core/vectorstore.py` | LanceDB vector storage |
@@ -48,6 +49,7 @@ The project is fully implemented and tested. All 543 tests pass.
 | `src/local_deepwiki/web/app.py` | Flask web UI for browsing wiki |
 | `src/local_deepwiki/watcher.py` | File watcher for auto-reindexing |
 | `src/local_deepwiki/export/html.py` | Static HTML export |
+| `src/local_deepwiki/export/pdf.py` | PDF export with WeasyPrint |
 
 ## Tech Stack
 
@@ -78,6 +80,12 @@ uv run deepwiki-watch /path/to/repo
 
 # Export wiki to static HTML
 uv run deepwiki-export .deepwiki --output ./html-export
+
+# Export wiki to PDF (requires pango system dependency)
+uv run deepwiki-export-pdf .deepwiki -o documentation.pdf
+
+# Export each page as separate PDF
+uv run deepwiki-export-pdf .deepwiki --separate -o ./pdfs/
 ```
 
 ## MCP Server Configuration
@@ -143,7 +151,7 @@ asyncio.run(test())
 - [x] PHP language support
 - [x] Kotlin language support
 - [x] C# language support
-- [ ] Export to PDF
+- [x] Export to PDF (WeasyPrint)
 
 ## Wiki Structure
 

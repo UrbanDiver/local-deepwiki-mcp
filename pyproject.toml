@@ -32,6 +32,7 @@ dependencies = [
     "flask>=3.0",
     "markdown>=3.0",
     "watchdog>=4.0",
+    "weasyprint>=62.0",
 ]
 
 [project.optional-dependencies]
@@ -49,6 +50,7 @@ local-deepwiki = "local_deepwiki.server:main"
 deepwiki-serve = "local_deepwiki.web.app:main"
 deepwiki-watch = "local_deepwiki.watcher:main"
 deepwiki-export = "local_deepwiki.export.html:main"
+deepwiki-export-pdf = "local_deepwiki.export.pdf:main"
 
 [build-system]
 requires = ["hatchling"]

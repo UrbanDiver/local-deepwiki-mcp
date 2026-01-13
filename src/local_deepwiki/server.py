@@ -281,6 +281,28 @@ async def list_tools() -> list[Tool]:
                 "required": ["wiki_path"],
             },
         ),
+        Tool(
+            name="export_wiki_pdf",
+            description="Export wiki documentation to PDF format. Creates a printable PDF document with proper formatting, page numbers, and table of contents.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "wiki_path": {
+                        "type": "string",
+                        "description": "Path to the wiki directory (typically {repo}/.deepwiki)",
+                    },
+                    "output_path": {
+                        "type": "string",
+                        "description": "Output path for PDF file (default: {wiki_path}.pdf)",
+                    },
+                    "single_file": {
+                        "type": "boolean",
+                        "description": "If true, combine all pages into one PDF. If false, create separate PDFs for each page. Default: true",
+                    },
+                },
+                "required": ["wiki_path"],
+            },
+        ),
     ]
 
 
@@ -302,6 +324,8 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         return await handle_search_code(arguments)
     elif name == "export_wiki_html":
         return await handle_export_wiki_html(arguments)
+    elif name == "export_wiki_pdf":
+        return await handle_export_wiki_pdf(arguments)
     else:
         logger.warning(f"Unknown tool requested: {name}")
         return [TextContent(type="text", text=f"Unknown tool: {name}")]
@@ -662,6 +686,41 @@ async def handle_export_wiki_html(args: dict[str, Any]) -> list[TextContent]:
 
     except Exception as e:
         return [TextContent(type="text", text=f"Error exporting wiki: {str(e)}")]
+
+
+async def handle_export_wiki_pdf(args: dict[str, Any]) -> list[TextContent]:
+    """Handle export_wiki_pdf tool call."""
+    from local_deepwiki.export.pdf import export_to_pdf
+
+    wiki_path = Path(args["wiki_path"]).resolve()
+    output_path = args.get("output_path")
+    single_file = args.get("single_file", True)
+
+    if not wiki_path.exists():
+        return [TextContent(type="text", text=f"Error: Wiki path does not exist: {wiki_path}")]
+
+    try:
+        if output_path:
+            output_path = Path(output_path).resolve()
+
+        result = export_to_pdf(wiki_path, output_path, single_file=single_file)
+
+        # Get actual output path for the response
+        if single_file:
+            actual_output = output_path or (wiki_path.parent / f"{wiki_path.name}.pdf")
+        else:
+            actual_output = output_path or (wiki_path.parent / f"{wiki_path.name}_pdfs")
+
+        response = {
+            "status": "success",
+            "message": result,
+            "output_path": str(actual_output),
+        }
+
+        return [TextContent(type="text", text=json.dumps(response, indent=2))]
+
+    except Exception as e:
+        return [TextContent(type="text", text=f"Error exporting wiki to PDF: {str(e)}")]
 
 
 def main():
