@@ -52,7 +52,7 @@ The project is fully implemented and tested. All 320 tests pass.
 ## Tech Stack
 
 - **Python 3.11+** with FastMCP
-- **Tree-sitter** - Multi-language parsing (Python, TS/JS, Go, Rust, Java, C/C++, Swift, Ruby, PHP, Kotlin)
+- **Tree-sitter** - Multi-language parsing (Python, TS/JS, Go, Rust, Java, C/C++, Swift, Ruby, PHP, Kotlin, C#)
 - **LanceDB** - Embedded vector database
 - **sentence-transformers** - Local embeddings
 - **Ollama/Anthropic/OpenAI** - LLM providers (configurable)
@@ -129,7 +129,7 @@ asyncio.run(test())
 
 1. **Wiki quality depends on LLM** - Local Ollama models produce decent but sometimes hallucinated content. Use Anthropic/OpenAI for better quality.
 2. **Large repos** - Very large repositories may take time to index initially.
-3. **Language support** - Currently supports: Python, TypeScript, JavaScript, Go, Rust, Java, C, C++, Swift, Ruby, PHP, Kotlin
+3. **Language support** - Currently supports: Python, TypeScript, JavaScript, Go, Rust, Java, C, C++, Swift, Ruby, PHP, Kotlin, C#
 
 ## Future Improvements
 
@@ -142,6 +142,7 @@ asyncio.run(test())
 - [x] Ruby language support
 - [x] PHP language support
 - [x] Kotlin language support
+- [x] C# language support
 - [ ] Export to PDF
 
 ## Wiki Structure
