@@ -206,6 +206,28 @@ async def list_tools() -> list[Tool]:
             },
         ),
         Tool(
+            name="deep_research",
+            description="Perform deep research on a codebase question using multi-step reasoning. Unlike ask_question (single retrieval), this performs query decomposition, parallel retrieval, gap analysis, and comprehensive synthesis. Best for complex architectural questions.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "repo_path": {
+                        "type": "string",
+                        "description": "Path to the indexed repository",
+                    },
+                    "question": {
+                        "type": "string",
+                        "description": "Complex architectural question about the codebase",
+                    },
+                    "max_chunks": {
+                        "type": "integer",
+                        "description": "Maximum total code chunks to analyze (default: 30)",
+                    },
+                },
+                "required": ["repo_path", "question"],
+            },
+        ),
+        Tool(
             name="read_wiki_structure",
             description="Get the table of contents and structure of a generated wiki.",
             inputSchema={
@@ -316,6 +338,8 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         return await handle_index_repository(arguments)
     elif name == "ask_question":
         return await handle_ask_question(arguments)
+    elif name == "deep_research":
+        return await handle_deep_research(arguments)
     elif name == "read_wiki_structure":
         return await handle_read_wiki_structure(arguments)
     elif name == "read_wiki_page":
@@ -516,6 +540,107 @@ Provide a clear, accurate answer based only on the code provided. If the code do
     except Exception as e:
         logger.exception(f"Error generating answer: {e}")
         return [TextContent(type="text", text=f"Error generating answer: {str(e)}")]
+
+
+# Deep research validation constants
+MIN_DEEP_RESEARCH_CHUNKS = 10
+MAX_DEEP_RESEARCH_CHUNKS = 50
+DEFAULT_DEEP_RESEARCH_CHUNKS = 30
+
+
+async def handle_deep_research(args: dict[str, Any]) -> list[TextContent]:
+    """Handle deep_research tool call for multi-step reasoning."""
+    repo_path = Path(args["repo_path"]).resolve()
+
+    # Validate inputs
+    try:
+        question = _validate_non_empty_string(args.get("question", ""), "question")
+        max_chunks = _validate_positive_int(
+            args.get("max_chunks"),
+            "max_chunks",
+            MIN_DEEP_RESEARCH_CHUNKS,
+            MAX_DEEP_RESEARCH_CHUNKS,
+            default=DEFAULT_DEEP_RESEARCH_CHUNKS,
+        )
+    except ValueError as e:
+        logger.error(f"Invalid input: {e}")
+        return [TextContent(type="text", text=f"Error: {e}")]
+
+    logger.info(f"Deep research on {repo_path}: {question[:100]}...")
+    logger.debug(f"Max chunks: {max_chunks}")
+
+    config = get_config()
+    vector_db_path = config.get_vector_db_path(repo_path)
+
+    if not vector_db_path.exists():
+        logger.error(f"Repository not indexed: {repo_path}")
+        return [
+            TextContent(
+                type="text",
+                text="Error: Repository not indexed. Run index_repository first.",
+            )
+        ]
+
+    # Create vector store and LLM provider
+    embedding_provider = get_embedding_provider(config.embedding)
+    vector_store = VectorStore(vector_db_path, embedding_provider)
+
+    from local_deepwiki.core.deep_research import DeepResearchPipeline
+    from local_deepwiki.providers.llm import get_llm_provider
+
+    llm = get_llm_provider(config.llm)
+
+    # Create and run the deep research pipeline
+    pipeline = DeepResearchPipeline(
+        vector_store=vector_store,
+        llm_provider=llm,
+        max_total_chunks=max_chunks,
+    )
+
+    try:
+        result = await pipeline.research(question)
+
+        # Format the response
+        response = {
+            "question": result.question,
+            "answer": result.answer,
+            "sub_questions": [
+                {"question": sq.question, "category": sq.category}
+                for sq in result.sub_questions
+            ],
+            "sources": [
+                {
+                    "file": src.file_path,
+                    "lines": f"{src.start_line}-{src.end_line}",
+                    "type": src.chunk_type,
+                    "name": src.name,
+                    "relevance": round(src.relevance_score, 3),
+                }
+                for src in result.sources
+            ],
+            "research_trace": [
+                {
+                    "step": step.step_type.value,
+                    "description": step.description,
+                    "duration_ms": step.duration_ms,
+                }
+                for step in result.reasoning_trace
+            ],
+            "stats": {
+                "chunks_analyzed": result.total_chunks_analyzed,
+                "llm_calls": result.total_llm_calls,
+            },
+        }
+
+        logger.info(
+            f"Deep research complete: {result.total_chunks_analyzed} chunks, "
+            f"{result.total_llm_calls} LLM calls"
+        )
+        return [TextContent(type="text", text=json.dumps(response, indent=2))]
+
+    except Exception as e:
+        logger.exception(f"Error in deep research: {e}")
+        return [TextContent(type="text", text=f"Error in deep research: {str(e)}")]
 
 
 async def handle_read_wiki_structure(args: dict[str, Any]) -> list[TextContent]:

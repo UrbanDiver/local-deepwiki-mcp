@@ -231,3 +231,81 @@ class WikiGenerationStatus(BaseModel):
     def __repr__(self) -> str:
         """Return a concise representation for debugging."""
         return f"<WikiGenerationStatus {self.repo_path} ({self.total_pages} pages)>"
+
+
+# Deep Research Models
+
+
+class ResearchStepType(str, Enum):
+    """Types of steps in the deep research process."""
+
+    DECOMPOSITION = "decomposition"
+    RETRIEVAL = "retrieval"
+    GAP_ANALYSIS = "gap_analysis"
+    SYNTHESIS = "synthesis"
+
+
+class ResearchStep(BaseModel):
+    """A single step in the deep research process."""
+
+    step_type: ResearchStepType = Field(description="Type of research step")
+    description: str = Field(description="Description of what was done")
+    duration_ms: int = Field(description="Duration of this step in milliseconds")
+
+    def __repr__(self) -> str:
+        """Return a concise representation for debugging."""
+        return f"<ResearchStep {self.step_type.value} ({self.duration_ms}ms)>"
+
+
+class SubQuestion(BaseModel):
+    """A decomposed sub-question for deep research."""
+
+    question: str = Field(description="The sub-question to investigate")
+    category: str = Field(
+        description="Category: structure, flow, dependencies, impact, or comparison"
+    )
+
+    def __repr__(self) -> str:
+        """Return a concise representation for debugging."""
+        return f"<SubQuestion [{self.category}] {self.question[:50]}...>"
+
+
+class SourceReference(BaseModel):
+    """A reference to a source code location."""
+
+    file_path: str = Field(description="Path to the source file")
+    start_line: int = Field(description="Starting line number")
+    end_line: int = Field(description="Ending line number")
+    chunk_type: str = Field(description="Type of code chunk")
+    name: str | None = Field(default=None, description="Name of the code element")
+    relevance_score: float = Field(description="Relevance score from search")
+
+    def __repr__(self) -> str:
+        """Return a concise representation for debugging."""
+        name = self.name or self.chunk_type
+        return f"<Source {self.file_path}:{self.start_line}-{self.end_line} ({name})>"
+
+
+class DeepResearchResult(BaseModel):
+    """Result from deep research analysis."""
+
+    question: str = Field(description="Original question asked")
+    answer: str = Field(description="Comprehensive answer with citations")
+    sub_questions: list[SubQuestion] = Field(
+        default_factory=list, description="Decomposed sub-questions investigated"
+    )
+    sources: list[SourceReference] = Field(
+        default_factory=list, description="Source code references used"
+    )
+    reasoning_trace: list[ResearchStep] = Field(
+        default_factory=list, description="Steps taken during research"
+    )
+    total_chunks_analyzed: int = Field(description="Total code chunks analyzed")
+    total_llm_calls: int = Field(description="Total LLM calls made")
+
+    def __repr__(self) -> str:
+        """Return a concise representation for debugging."""
+        return (
+            f"<DeepResearchResult {len(self.sub_questions)} sub-questions, "
+            f"{len(self.sources)} sources, {self.total_llm_calls} LLM calls>"
+        )

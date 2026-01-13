@@ -15,7 +15,7 @@
 
 ## Lower Priority (Nice to have)
 
-- [ ] **Deep Research mode** - Multi-step reasoning for complex architectural questions
+- [x] **Deep Research mode** - Multi-step reasoning for complex architectural questions *(completed 2026-01-13)*
 - [x] **More languages** - Added support for Ruby, PHP, Kotlin, C# *(completed)*
 - [x] **Static HTML export** - Generate deployable static site for GitHub Pages or internal hosting *(completed)*
 

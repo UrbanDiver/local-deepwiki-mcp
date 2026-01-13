@@ -6,7 +6,7 @@
 
 ## Current Status: ✅ Complete & Working
 
-The project is fully implemented and tested. All 488 tests pass.
+The project is fully implemented and tested. All 508 tests pass.
 
 ## Architecture
 
@@ -17,6 +17,7 @@ The project is fully implemented and tested. All 488 tests pass.
 │  Tools:                                                         │
 │  - index_repository    - Generate wiki + embeddings             │
 │  - ask_question        - RAG Q&A about codebase                 │
+│  - deep_research       - Multi-step reasoning for complex Q&A   │
 │  - read_wiki_structure - Get wiki table of contents             │
 │  - read_wiki_page      - Read specific wiki page                │
 │  - search_code         - Semantic code search                   │
@@ -35,11 +36,12 @@ The project is fully implemented and tested. All 488 tests pass.
 
 | File | Purpose |
 |------|---------|
-| `src/local_deepwiki/server.py` | MCP server entry point with 7 tools |
+| `src/local_deepwiki/server.py` | MCP server entry point with 8 tools |
 | `src/local_deepwiki/core/parser.py` | Tree-sitter multi-language code parser |
 | `src/local_deepwiki/core/chunker.py` | AST-based code chunking |
 | `src/local_deepwiki/core/vectorstore.py` | LanceDB vector storage |
 | `src/local_deepwiki/core/indexer.py` | Indexing orchestration (incremental/full) |
+| `src/local_deepwiki/core/deep_research.py` | Multi-step reasoning pipeline for complex Q&A |
 | `src/local_deepwiki/generators/wiki.py` | LLM-powered wiki generation |
 | `src/local_deepwiki/generators/diagrams.py` | Enhanced Mermaid diagram generation |
 | `src/local_deepwiki/generators/callgraph.py` | Call graph analysis and visualization |
@@ -155,6 +157,7 @@ asyncio.run(test())
 - [x] Kotlin language support
 - [x] C# language support
 - [x] Export to PDF (WeasyPrint)
+- [x] Deep Research mode (multi-step reasoning for complex architectural questions)
 
 ## Wiki Structure
 
