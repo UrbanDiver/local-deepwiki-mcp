@@ -2,6 +2,8 @@
 
 A local, privacy-focused MCP server that generates DeepWiki-style documentation for private repositories with RAG-based Q&A capabilities.
 
+**[View PDF Documentation](docs.pdf)**
+
 ## Features
 
 - **Multi-language code parsing** using tree-sitter (Python, TypeScript/JavaScript, Go, Rust, Java, C/C++, Swift, Ruby, PHP, Kotlin, C#)
