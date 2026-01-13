@@ -69,16 +69,11 @@
                   "children": [
                     {
                       "number": "5.1.1.4.1",
-                      "title": "chunker.py",
-                      "path": "files/src/local_deepwiki/core/chunker.md"
-                    },
-                    {
-                      "number": "5.1.1.4.2",
                       "title": "parser.py",
                       "path": "files/src/local_deepwiki/core/parser.md"
                     },
                     {
-                      "number": "5.1.1.4.3",
+                      "number": "5.1.1.4.2",
                       "title": "vectorstore.py",
                       "path": "files/src/local_deepwiki/core/vectorstore.md"
                     }
@@ -86,48 +81,31 @@
                 },
                 {
                   "number": "5.1.1.5",
-                  "title": "Export",
-                  "path": "",
-                  "children": [
-                    {
-                      "number": "5.1.1.5.1",
-                      "title": "html.py",
-                      "path": "files/src/local_deepwiki/export/html.md"
-                    }
-                  ]
-                },
-                {
-                  "number": "5.1.1.6",
                   "title": "Generators",
                   "path": "",
                   "children": [
                     {
-                      "number": "5.1.1.6.1",
+                      "number": "5.1.1.5.1",
                       "title": "api_docs.py",
                       "path": "files/src/local_deepwiki/generators/api_docs.md"
                     },
                     {
-                      "number": "5.1.1.6.2",
+                      "number": "5.1.1.5.2",
                       "title": "crosslinks.py",
                       "path": "files/src/local_deepwiki/generators/crosslinks.md"
                     },
                     {
-                      "number": "5.1.1.6.3",
+                      "number": "5.1.1.5.3",
                       "title": "diagrams.py",
                       "path": "files/src/local_deepwiki/generators/diagrams.md"
                     },
                     {
-                      "number": "5.1.1.6.4",
+                      "number": "5.1.1.5.4",
                       "title": "manifest.py",
                       "path": "files/src/local_deepwiki/generators/manifest.md"
                     },
                     {
-                      "number": "5.1.1.6.5",
-                      "title": "see_also.py",
-                      "path": "files/src/local_deepwiki/generators/see_also.md"
-                    },
-                    {
-                      "number": "5.1.1.6.6",
+                      "number": "5.1.1.5.5",
                       "title": "wiki.py",
                       "path": "files/src/local_deepwiki/generators/wiki.md"
                     }
@@ -149,33 +127,48 @@
             },
             {
               "number": "5.2.2",
+              "title": "test_callgraph.py",
+              "path": "files/tests/test_callgraph.md"
+            },
+            {
+              "number": "5.2.3",
               "title": "test_crosslinks.py",
               "path": "files/tests/test_crosslinks.md"
             },
             {
-              "number": "5.2.3",
-              "title": "test_diagrams.py",
-              "path": "files/tests/test_diagrams.md"
-            },
-            {
               "number": "5.2.4",
-              "title": "test_html_export.py",
-              "path": "files/tests/test_html_export.md"
-            },
-            {
-              "number": "5.2.5",
               "title": "test_incremental_wiki.py",
               "path": "files/tests/test_incremental_wiki.md"
             },
             {
+              "number": "5.2.5",
+              "title": "test_indexer.py",
+              "path": "files/tests/test_indexer.md"
+            },
+            {
               "number": "5.2.6",
-              "title": "test_source_refs.py",
-              "path": "files/tests/test_source_refs.md"
+              "title": "test_manifest.py",
+              "path": "files/tests/test_manifest.md"
             },
             {
               "number": "5.2.7",
-              "title": "test_watcher.py",
-              "path": "files/tests/test_watcher.md"
+              "title": "test_models.py",
+              "path": "files/tests/test_models.md"
+            },
+            {
+              "number": "5.2.8",
+              "title": "test_parser.py",
+              "path": "files/tests/test_parser.md"
+            },
+            {
+              "number": "5.2.9",
+              "title": "test_retry.py",
+              "path": "files/tests/test_retry.md"
+            },
+            {
+              "number": "5.2.10",
+              "title": "test_vectorstore.py",
+              "path": "files/tests/test_vectorstore.md"
             }
           ]
         }

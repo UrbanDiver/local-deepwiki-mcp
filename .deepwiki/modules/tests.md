@@ -2,124 +2,172 @@
 
 ## Module Purpose
 
-The tests module contains unit and integration tests for various components of the local_deepwiki project. These tests verify the functionality of code parsing, manifest handling, cross-linking, TOC generation, and other core features.
+The tests module contains unit tests for various components of the local_deepwiki system. It includes tests for code parsing, manifest handling, model representations, cross-linking, call graphs, Ollama health checks, web application functionality, and server handlers. The tests ensure the correct behavior of core functionalities such as language detection, file processing, and API interactions.
 
 ## Key Classes and Functions
 
 ### TestCodeParser
-The TestCodeParser class tests the [CodeParser](../files/src/local_deepwiki/core/parser.md) functionality, including language detection for Python files.
+The [TestCodeParser](../files/tests/test_parser.md) class contains tests for the [CodeParser](../files/src/local_deepwiki/core/parser.md) class, which is responsible for parsing code files and detecting programming languages.
+
+Methods:
+- `test_detect_language_python`: Tests Python language detection for files with .py and .pyi extensions
 
 ### TestProjectManifest
-The TestProjectManifest class tests the [ProjectManifest](../files/src/local_deepwiki/generators/manifest.md) dataclass, verifying its behavior with and without data.
+The [TestProjectManifest](../files/tests/test_manifest.md) class tests the [ProjectManifest](../files/src/local_deepwiki/generators/manifest.md) class, which handles project manifest data including caching and parsing of various manifest files.
 
-### TestPathToModule
-The [TestPathToModule](../files/tests/test_diagrams.md) class tests the `_path_to_module` function, which converts file paths to module names while skipping `__init__.py` files.
+Methods:
+- `test_get_manifest_mtimes`: Tests getting modification times of manifest files
+- `test_is_cache_valid`: Tests cache validity checking
+- `test_get_cached_manifest`: Tests retrieving cached manifests
+- `test_get_directory_tree`: Tests directory tree generation
+- `test_parse_manifest`: Tests manifest parsing functionality
 
 ### TestAddSourceRefsSections
-The [TestAddSourceRefsSections](../files/tests/test_source_refs.md) class tests the addition of source references sections to wiki pages, handling various scenarios including index pages and see also sections.
+The TestAddSourceRefsSections class tests functionality for adding source references sections to wiki pages.
+
+Methods:
+- `test_adds_sections_to_file_pages`: Tests adding sections to file pages
+- `test_skips_index_pages`: Tests skipping index pages
+- `test_inserts_before_see_also`: Tests inserting sections before "See Also" sections
+- `test_handles_missing_status`: Tests handling of missing status information
+- `test_adds_section_to_module_pages`: Tests adding sections to module pages
+- `test_adds_section_to_architecture_page`: Tests adding sections to architecture pages
+
+### TestPathToModule
+The TestPathToModule class tests the `_path_to_module` function, which converts file paths to Python module names.
+
+Methods:
+- `test_converts_simple_path`: Tests basic path conversion
+- `test_skips_init_files`: Tests that __init__.py files return None
 
 ### TestEntityRegistry
-The [TestEntityRegistry](../files/tests/test_crosslinks.md) class tests the entity registry functionality, including entity registration, alias handling, and lookup behavior.
+The [TestEntityRegistry](../files/tests/test_crosslinks.md) class tests the [EntityRegistry](../files/src/local_deepwiki/generators/crosslinks.md) class, which manages entity registration and lookup for cross-linking.
 
-### TestCrossLinker
-The [TestCrossLinker](../files/tests/test_crosslinks.md) class tests cross-linking functionality, including linking prose, code blocks, qualified names, and handling of existing links.
+Methods:
+- `test_register_entity`: Tests entity registration
+- `test_skips_short_names`: Tests skipping short names
+- `test_skips_private_names`: Tests skipping private names
+- `test_skips_excluded_names`: Tests skipping excluded names
+- `test_register_from_chunks`: Tests registering entities from chunks
+- `test_get_page_entities`: Tests getting page entities
+- `test_registers_camelcase_aliases`: Tests registering camelcase aliases
+- `test_alias_lookup`: Tests alias lookup functionality
 
-### TestTocIntegration
-The TestTocIntegration class performs integration tests for table of contents (TOC) generation with realistic wiki structures.
+### TestExtractCallsPython
+The [TestExtractCallsPython](../files/tests/test_callgraph.md) class tests the Python call extraction functionality.
 
-### TestWatchedExtensions
-The [TestWatchedExtensions](../files/tests/test_watcher.md) class verifies that watched file extensions include Python and JavaScript/TypeScript extensions.
+Methods:
+- `test_simple_function_call`: Tests simple function call extraction
+- `test_multiple_function_calls`: Tests multiple function calls extraction
+- `test_method_call`: Tests method call extraction
+- `test_nested_calls`: Tests nested calls extraction
+- `test_filters_builtins`: Tests filtering of built-in calls
+- `test_deduplicates_calls`: Tests deduplication of calls
 
-### TestRelationshipAnalyzer
-The TestRelationshipAnalyzer class tests the relationship analysis functionality for determining file relationships.
+### TestOllamaConnectionError
+The TestOllamaConnectionError class tests the OllamaConnectionError exception handling.
 
-### TestBuildFileToWikiMap
-The [TestBuildFileToWikiMap](../files/tests/test_source_refs.md) class tests the creation of mappings between files and wiki pages.
+### TestOllamaModelNotFoundError
+The TestOllamaModelNotFoundError class tests the OllamaModelNotFoundError exception handling.
 
-### TestGenerateSeeAlsoSection
-The TestGenerateSeeAlsoSection class tests the generation of "See Also" sections for wiki pages.
+### TestOllamaProviderHealthCheck
+The TestOllamaProviderHealthCheck class tests the health check functionality of the OllamaProvider.
 
-### TestParsePyprojectToml
-The TestParsePyprojectToml class tests parsing of pyproject.toml manifest files.
+### TestOllamaProviderGenerate
+The TestOllamaProviderGenerate class tests the generate functionality of the OllamaProvider.
 
-### TestParsePackageJson
-The TestParsePackageJson class tests parsing of package.json manifest files.
+### TestOllamaProviderGenerateStream
+The TestOllamaProviderGenerateStream class tests the stream generation functionality of the OllamaProvider.
 
-### TestParseRequirementsTxt
-The TestParseRequirementsTxt class tests parsing of requirements.txt manifest files.
+### TestBuildBreadcrumb
+The TestBuildBreadcrumb class tests the breadcrumb building functionality in the web application.
 
-### TestParseCargoToml
-The TestParseCargoToml class tests parsing of Cargo.toml manifest files.
+### TestFlaskApp
+The TestFlaskApp class tests the Flask web application functionality.
 
-### TestParseGoMod
-The TestParseGoMod class tests parsing of go.mod manifest files.
+### TestTemplateConfiguration
+The TestTemplateConfiguration class tests template configuration handling in the web application.
 
-### TestGetDirectoryTree
-The TestGetDirectoryTree class tests the directory tree generation functionality.
+### TestHandleIndexRepository
+The TestHandleIndexRepository class tests the index repository handler.
 
-### TestMultipleManifests
-The TestMultipleManifests class tests handling of multiple manifest files.
+### TestHandleAskQuestion
+The TestHandleAskQuestion class tests the ask question handler.
+
+### TestHandleSearchCode
+The TestHandleSearchCode class tests the search code handler.
+
+### TestHandleReadWikiStructure
+The TestHandleReadWikiStructure class tests the read wiki structure handler.
+
+### TestHandleReadWikiPage
+The TestHandleReadWikiPage class tests the read wiki page handler.
+
+### TestHandleExportWikiHtml
+The TestHandleExportWikiHtml class tests the export wiki HTML handler.
+
+### test_wiki_page_repr
+The test_wiki_page_repr function tests the string representation of WikiPage objects.
 
 ## How Components Interact
 
-The components in this module work together to provide comprehensive testing coverage for the local_deepwiki project. The test classes for parsing, manifest handling, and cross-linking verify core functionality, while integration tests like TestTocIntegration ensure that components work together properly in realistic scenarios. The test suite validates both individual functions and end-to-end workflows.
+The test components work together to provide comprehensive testing for the local_deepwiki system. The test suite covers parsing functionality, manifest handling, cross-linking systems, LLM provider health checks, web application components, and server API handlers. Each test class focuses on a specific component or functionality area, ensuring that individual parts of the system work correctly in isolation and together.
 
 ## Usage Examples
 
 ```python
-# Run all tests in the module
-pytest tests/
+# Example of testing code language detection
+def test_language_detection():
+    parser = CodeParser()
+    assert parser.detect_language(Path("test.py")) == Language.PYTHON
+```
 
-# Run specific test class
-pytest tests/test_parser.py::TestCodeParser
+```python
+# Example of testing manifest parsing
+def test_manifest_parsing():
+    manifest = parse_manifest("pyproject.toml")
+    assert manifest is not None
+```
 
-# Run specific test method
-pytest tests/test_manifest.py::TestProjectManifest::test_has_data_empty
+```python
+# Example of testing web application functionality
+def test_breadcrumb_building():
+    breadcrumb = build_breadcrumb("modules/core.md")
+    assert breadcrumb is not None
 ```
 
 ## Dependencies
 
 The tests module depends on:
-- `pytest` for test execution
-- `local_deepwiki.generators.manifest` for manifest-related functionality
-- `local_deepwiki.generators.see_also` for see also section generation
-- `local_deepwiki.models` for data models
-- `local_deepwiki.generators.crosslinks` for cross-linking functionality
-- `local_deepwiki.generators.parser` for code parsing
-- `local_deepwiki.generators.toc` for table of contents generation
-- `local_deepwiki.generators.wiki` for wiki generation
-- `local_deepwiki.generators.incremental_wiki` for incremental wiki generation
-- `local_deepwiki.generators.web` for web-related functionality
-- `local_deepwiki.generators.api_docs` for API documentation generation
-- `local_deepwiki.generators.chunker` for chunking functionality
-- `local_deepwiki.generators.search` for search functionality
-- `local_deepwiki.generators.diagrams` for diagram generation
-- `local_deepwiki.generators.source_refs` for source reference handling
-- `local_deepwiki.generators.watcher` for file watching functionality
-- `local_deepwiki.generators.toc` for table of contents generation
-- `local_deepwiki.generators.incremental_wiki` for incremental wiki generation
-- `local_deepwiki.generators.web` for web-related functionality
-- `local_deepwiki.generators.api_docs` for API documentation generation
-- `local_deepwiki.generators.chunker` for chunking functionality
-- `local_deepwiki.generators.search` for search functionality
-- `local_deepwiki.generators.diagrams` for diagram generation
-- `local_deepwiki.generators.source_refs` for source reference handling
-- `local_deepwiki.generators.watcher` for file watching functionality
+- `local_deepwiki.generators.manifest` - For manifest handling tests
+- `local_deepwiki.providers.llm.ollama` - For Ollama provider tests
+- `local_deepwiki.web.app` - For web application tests
+- `local_deepwiki.server` - For server handler tests
+- `local_deepwiki.generators.parser` - For parser tests
+- `local_deepwiki.models.wiki` - For WikiPage tests
+- `local_deepwiki.crosslinks` - For cross-linking tests
+- `local_deepwiki.callgraph` - For call graph tests
+- `pytest` - Testing framework
+- `unittest.mock` - For mocking in tests
+- `pathlib.Path` - For path handling
+- `json` - For JSON handling
+- `tempfile` - For temporary file handling
+- `time` - For time handling
 
 ## Relevant Source Files
 
 The following source files were used to generate this documentation:
 
-- `tests/test_parser.py:12-111`
+- [`tests/test_parser.py:24-123`](../files/tests/test_parser.md)
+- [`tests/test_retry.py:8-144`](../files/tests/test_retry.md)
+- `tests/test_ollama_health.py:13-32`
+- `tests/test_server_handlers.py:15-69`
 - `tests/test_chunker.py:11-182`
+- [`tests/test_vectorstore.py:9-28`](../files/tests/test_vectorstore.md)
 - `tests/test_search.py:20-53`
-- `tests/test_toc.py:16-44`
+- `tests/test_toc.py:17-43`
 - [`tests/test_incremental_wiki.py:20-47`](../files/tests/test_incremental_wiki.md)
-- `tests/test_web.py:39-103`
-- `tests/__init__.py`
-- `tests/test_manifest.py:14-56`
-- [`tests/test_api_docs.py:31-53`](../files/tests/test_api_docs.md)
-- `tests/test_see_also.py:16-177`
+- `tests/test_web.py:40-104`
 
 
-*Showing 10 of 17 source files.*
+*Showing 10 of 25 source files.*

@@ -1,184 +1,55 @@
 # File Overview
 
-This module provides functionality for generating various Mermaid diagrams from code analysis data. It includes functions for creating class diagrams, dependency graphs, module overviews, language pie charts, and sequence diagrams based on code chunks and index status information.
+This file contains the diagram generation logic for the local_deepwiki project. It defines data structures and functionality for handling code chunks and their associated diagrams, particularly focusing on parsing and organizing code elements for visualization purposes.
 
 # Classes
 
-## ClassInfo
+## CodeChunk
 
-Information about a class for diagram generation.
+The CodeChunk class represents a chunk of code that can be processed for diagram generation. It stores information about the code content, its type, and associated metadata.
 
-### Attributes
+Key attributes:
+- `content`: The actual code content as a string
+- `chunk_type`: The type of chunk, represented by the ChunkType enum
+- `index_status`: The indexing status of the chunk, represented by the IndexStatus enum
 
-- `name`: str
-- `methods`: list[str]
-- `attributes`: list[str]
-- `parents`: list[str]
-- `is_abstract`: bool = False
-- `is_dataclass`: bool = False
-- `docstring`: str | None = None
+## ChunkType
+
+The ChunkType enum defines the different types of code chunks that can be processed.
+
+## IndexStatus
+
+The IndexStatus enum defines the indexing status of chunks.
 
 # Functions
 
-## sanitize_mermaid_name
-
-Sanitize a name for use in Mermaid diagrams.
-
-### Parameters
-
-- `name`: str - Original name.
-
-### Returns
-
-- `str` - Sanitized name safe for Mermaid syntax.
-
-## generate_class_diagram
-
-Generate an enhanced Mermaid class diagram from code chunks.
-
-### Parameters
-
-- `chunks`: list - List of CodeChunk or SearchResult objects.
-- `show_attributes`: bool = True - Whether to show class attributes.
-- `show_types`: bool = True - Whether to show type annotations.
-- `max_methods`: int = 15 - Maximum number of methods to show.
-
-### Returns
-
-- `str | None` - Mermaid class diagram string, or None if empty.
-
-## _extract_class_attributes
-
-[Function not fully shown in provided code]
-
-## _extract_method_signature
-
-[Function not fully shown in provided code]
-
-## generate_dependency_graph
-
-Generate a Mermaid flowchart showing module dependencies with circular detection.
-
-### Parameters
-
-- `chunks`: list - List of CodeChunk objects (should include IMPORT chunks).
-- `project_name`: str = "project" - Name of the project for filtering internal imports.
-- `detect_circular`: bool = True - Whether to highlight circular dependencies.
-
-### Returns
-
-- `str | None` - Mermaid flowchart markdown string, or None if no dependencies found.
-
-## _find_circular_dependencies
-
-Find circular dependencies in a dependency graph.
-
-### Parameters
-
-- `deps`: dict[str, set[str]] - Mapping of module to its dependencies.
-
-### Returns
-
-- `set[tuple[str, str]]` - Set of (from, to) tuples that form circular dependencies.
-
-## dfs
-
-[Function not fully shown in provided code]
-
-## _path_to_module
-
-[Function not fully shown in provided code]
-
-## _parse_import_line
-
-[Function not fully shown in provided code]
-
-## generate_module_overview
-
-Generate a high-level module overview diagram.
-
-### Parameters
-
-- `index_status`: IndexStatus - Index status with file information.
-- `show_file_counts`: bool = True - Whether to show file counts in nodes.
-
-### Returns
-
-- `str | None` - Mermaid diagram string, or None if not enough structure.
-
-## generate_language_pie_chart
-
-Generate a pie chart showing language distribution.
-
-### Parameters
-
-- `index_status`: IndexStatus - Index status with language counts.
-
-### Returns
-
-- `str | None` - Mermaid pie chart string, or None if no languages.
-
-## generate_sequence_diagram
-
-Generate a sequence diagram from a call graph.
-
-### Parameters
-
-- `call_graph`: dict[str, list[str]] - Mapping of caller to list of callees.
-- `entry_point`: str | None = None - Starting function (if None, uses most-called function).
-- `max_depth`: int = 5 - Maximum call depth to show.
-
-### Returns
-
-- `str | None` - Mermaid sequence diagram string, or None if empty.
-
-## collect_participants
-
-[Function not fully shown in provided code]
-
-## add_calls
-
-[Function not fully shown in provided code]
+No functions are defined in this file.
 
 # Usage Examples
 
-## Generating a Class Diagram
-
 ```python
-diagram = generate_class_diagram(chunks, show_attributes=True, show_types=True)
-```
+# Creating a CodeChunk instance
+chunk = CodeChunk(
+    content="def hello():\n    print('Hello')",
+    chunk_type=ChunkType.FUNCTION,
+    index_status=IndexStatus.INDEXED
+)
 
-## Generating a Dependency Graph
-
-```python
-diagram = generate_dependency_graph(chunks, project_name="my_project")
-```
-
-## Generating a Module Overview
-
-```python
-diagram = generate_module_overview(index_status)
-```
-
-## Generating a Language Pie Chart
-
-```python
-diagram = generate_language_pie_chart(index_status)
-```
-
-## Generating a Sequence Diagram
-
-```python
-diagram = generate_sequence_diagram(call_graph, entry_point="main")
+# Accessing chunk properties
+print(chunk.content)
+print(chunk.chunk_type)
+print(chunk.index_status)
 ```
 
 # Related Components
 
-This module works with the following components:
+This file imports and works with the following components:
 
-- `ChunkType` from `local_deepwiki.models`
-- `CodeChunk` from `local_deepwiki.models`
-- `IndexStatus` from `local_deepwiki.models`
+- `ChunkType` enum from `local_deepwiki.models`: Defines the types of code chunks
+- `CodeChunk` class from `local_deepwiki.models`: Represents individual code elements
+- `IndexStatus` enum from `local_deepwiki.models`: Represents the indexing status of chunks
+
+The file is part of the diagram generation system and integrates with the broader local_deepwiki framework for processing and visualizing code documentation.
 
 ## API Reference
 
@@ -396,6 +267,7 @@ flowchart TD
     N6 --> N1
     N5 --> N21
     N5 --> N18
+    N16 --> N1
     N16 --> N22
     N17 --> N7
     N17 --> N9
@@ -416,8 +288,5 @@ flowchart TD
 
 ## See Also
 
-- [wiki](wiki.md) - uses this
-- [test_diagrams](../../../tests/test_diagrams.md) - uses this
 - [crosslinks](crosslinks.md) - shares 4 dependencies
-- [see_also](see_also.md) - shares 4 dependencies
 - [api_docs](api_docs.md) - shares 4 dependencies

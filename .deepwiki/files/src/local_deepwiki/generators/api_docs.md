@@ -1,84 +1,81 @@
 # File Overview
 
-This file provides functionality for extracting API documentation from source code, specifically for Python files. It leverages the `tree_sitter` library for parsing code and extracts information such as function signatures, parameters, return types, decorators, and docstrings. The extracted information can be used to generate API documentation.
+This file, `api_docs.py`, provides functionality for extracting and parsing API documentation from Python code. It uses the Tree-sitter library for code parsing and supports extracting information such as function signatures, parameters, return types, decorators, and docstrings from Python source code. The module is part of the `local_deepwiki` package and is designed to work with Python code analysis.
 
 # Classes
 
 ## Parameter
 
-The Parameter class represents a function parameter with its name, type, and default value.
+The Parameter class represents a function parameter, storing its name, type, and default value.
 
-### Attributes
+### Key Methods
 
-- `name` (str): The name of the parameter.
-- `type` (str): The type annotation of the parameter.
-- `default` (str): The default value of the parameter.
+- `__init__(self, name: str, type_annotation: str = "", default_value: str = "")`: Initializes a Parameter instance with the given name, type annotation, and default value.
 
 ## FunctionSignature
 
 The FunctionSignature class holds information about a function's signature, including its name, parameters, return type, and decorators.
 
-### Attributes
+### Key Methods
 
-- `name` (str): The name of the function.
-- `parameters` (list[Parameter]): A list of Parameter objects representing the function's parameters.
-- `return_type` (str): The return type annotation of the function.
-- `decorators` (list[str]): A list of decorators applied to the function.
-- `docstring` (str): The docstring of the function.
+- `__init__(self, name: str, parameters: list, return_type: str = "", decorators: list = None)`: Initializes a FunctionSignature instance with the function's name, list of parameters, return type, and decorators.
 
 ## ClassSignature
 
-The ClassSignature class holds information about a class's signature, including its name, methods, and decorators.
+The ClassSignature class stores information about a class, including its name, methods, and decorators.
 
-### Attributes
+### Key Methods
 
-- `name` (str): The name of the class.
-- `methods` (list[FunctionSignature]): A list of FunctionSignature objects representing the class's methods.
-- `decorators` (list[str]): A list of decorators applied to the class.
-- `docstring` (str): The docstring of the class.
+- `__init__(self, name: str, methods: list, decorators: list = None)`: Initializes a ClassSignature instance with the class's name, list of methods, and decorators.
 
 ## APIDocExtractor
 
-The APIDocExtractor class is responsible for extracting API documentation from Python source code using tree_sitter parsing.
+The APIDocExtractor class is responsible for extracting API documentation from Python code using Tree-sitter parsing.
 
-### Methods
+### Key Methods
 
-- `extract_from_file(file_path: str) -> list[FunctionSignature | ClassSignature]`: Extracts function and class signatures from a Python file.
-- `extract_from_code(code: str) -> list[FunctionSignature | ClassSignature]`: Extracts function and class signatures from a string of Python code.
+- `__init__(self, parser: CodeParser)`: Initializes the APIDocExtractor with a [CodeParser](../core/parser.md) instance.
+- `extract_from_file(self, file_path: Path)`: Extracts API documentation from a given file path.
+- `extract_from_code(self, code: str)`: Extracts API documentation from a string of code.
+- `extract_classes(self, node: Node)`: Extracts class information from a Tree-sitter node.
+- `extract_functions(self, node: Node)`: Extracts function information from a Tree-sitter node.
+- `extract_class_methods(self, node: Node)`: Extracts methods from a class node.
+- `extract_function_signature(self, node: Node)`: Extracts the signature of a function from a Tree-sitter node.
+- `extract_class_signature(self, node: Node)`: Extracts the signature of a class from a Tree-sitter node.
 
 # Functions
 
 ## extract_python_parameters
 
-Extracts parameter information from a function node.
+Extracts parameters from a Tree-sitter node representing a function.
 
 ### Parameters
 
-- `node` (Node): The tree_sitter node representing the function.
+- `node: Node`: A Tree-sitter node representing a function.
 
 ### Returns
 
-- `list[Parameter]`: A list of Parameter objects.
+- `list[Parameter]`: A list of Parameter objects extracted from the function node.
 
 ## extract_python_return_type
 
-Extracts the return type annotation from a function node.
+Extracts the return type annotation from a Tree-sitter node representing a function.
 
 ### Parameters
 
-- `node` (Node): The tree_sitter node representing the function.
+- `node: Node`: A Tree-sitter node representing a function.
 
 ### Returns
 
-- `str`: The return type annotation as a string.
+- `str`: The return type annotation as a string, or an empty string if not found.
 
 ## extract_python_decorators
 
-Extracts decorators from a function or class node.
+Extracts decorators from a Tree-sitter node representing a function or class.
 
 ### Parameters
 
-- `node` (Node): The tree_sitter node representing the function or class.
+- `node: Node`: A Tree-sitter node representing a function or class.
 
 ### Returns
 
@@ -86,71 +83,100 @@ Extracts decorators from a function or class node.
 
 ## extract_python_docstring
 
-Extracts the docstring from a function or class node.
+Extracts the docstring from a Tree-sitter node representing a function or class.
 
 ### Parameters
 
-- `node` (Node): The tree_sitter node representing the function or class.
+- `node: Node`: A Tree-sitter node representing a function or class.
 
 ### Returns
 
-- `str`: The docstring as a string.
+- `str`: The docstring content as a string, or an empty string if not found.
 
 ## parse_google_docstring
 
-Parses a Google-style docstring to extract information.
+Parses a Google-style docstring into structured information.
 
 ### Parameters
 
-- `docstring` (str): The docstring to parse.
+- `docstring: str`: The Google-style docstring to parse.
 
 ### Returns
 
 - `dict`: A dictionary containing parsed information from the docstring.
 
-## parse_num
+## parse_numpy_docstring
 
-Parses a number from a string.
+Parses a NumPy-style docstring into structured information.
 
 ### Parameters
 
-- `s` (str): The string to parse.
+- `docstring: str`: The NumPy-style docstring to parse.
 
 ### Returns
 
-- `int`: The parsed integer.
+- `dict`: A dictionary containing parsed information from the docstring.
+
+## parse_docstring
+
+Parses a docstring using either Google or NumPy style parsing based on content.
+
+### Parameters
+
+- `docstring: str`: The docstring to parse.
+
+### Returns
+
+- `dict`: A dictionary containing parsed information from the docstring.
+
+## ext
+
+A utility function for extracting information from Tree-sitter nodes.
+
+### Parameters
+
+- `node: Node`: A Tree-sitter node to extract information from.
+
+### Returns
+
+- `str`: The extracted text content from the node.
 
 # Usage Examples
 
-To extract API documentation from a Python file:
+To use the APIDocExtractor for extracting API documentation from Python code:
 
 ```python
 from local_deepwiki.generators.api_docs import APIDocExtractor
+from local_deepwiki.core.parser import CodeParser
+from pathlib import Path
 
-extractor = APIDocExtractor()
-signatures = extractor.extract_from_file("example.py")
-```
+# Initialize the parser and extractor
+parser = CodeParser(Language.PYTHON)
+extractor = APIDocExtractor(parser)
 
-To extract API documentation from a string of Python code:
+# Extract API documentation from a file
+file_path = Path("example.py")
+api_docs = extractor.extract_from_file(file_path)
 
-```python
-from local_deepwiki.generators.api_docs import APIDocExtractor
-
-extractor = APIDocExtractor()
-signatures = extractor.extract_from_code("def example_function(x: int) -> str:\n    pass")
+# Extract API documentation from a code string
+code = '''
+def example_function(param1: str, param2: int = 0) -> bool:
+    """This is an example function."""
+    return True
+'''
+api_docs = extractor.extract_from_code(code)
 ```
 
 # Related Components
 
-This file works with the following components:
+This module works with the following components:
 
-- [`CodeParser`](../core/parser.md) from `local_deepwiki.core.parser`
-- [`find_nodes_by_type`](../core/parser.md) from `local_deepwiki.core.parser`
-- [`get_node_text`](../core/parser.md) from `local_deepwiki.core.parser`
-- [`get_node_name`](../core/parser.md) from `local_deepwiki.core.parser`
-- `FUNCTION_NODE_TYPES` from `local_deepwiki.core.chunker`
-- `CLASS_NODE_TYPES` from `local_deepwiki.core.chunker`
-- `Language` from `local_deepwiki.models`
+- [`CodeParser`](../core/parser.md) from `local_deepwiki.core.parser`: Used for parsing Python code into Tree-sitter nodes.
+- `CLASS_NODE_TYPES` and `FUNCTION_NODE_TYPES` from `local_deepwiki.core.chunker`: Used to identify node types for classes and functions.
+- `Language` from `local_deepwiki.models`: Used to specify the language for parsing.
+- `Node` from `tree_sitter`: Used for representing parsed code elements.
+- [`get_node_name`](../core/parser.md) and [`get_node_text`](../core/parser.md) from `local_deepwiki.core.parser`: Utility functions for extracting node information.
+- [`find_nodes_by_type`](../core/parser.md) from `local_deepwiki.core.parser`: Used to [find](manifest.md) nodes of specific types in the parsed code.
 
 ## API Reference
 
@@ -511,12 +537,10 @@ flowchart TD
 
 ## Relevant Source Files
 
-- `src/local_deepwiki/generators/api_docs.py:23-28`
+- `src/local_deepwiki/generators/api_docs.py:15-21`
 
 ## See Also
 
 - [test_api_docs](../../../tests/test_api_docs.md) - uses this
-- [wiki](wiki.md) - uses this
-- [chunker](../core/chunker.md) - dependency
-- [parser](../core/parser.md) - dependency
 - [crosslinks](crosslinks.md) - shares 4 dependencies
+- [diagrams](diagrams.md) - shares 4 dependencies

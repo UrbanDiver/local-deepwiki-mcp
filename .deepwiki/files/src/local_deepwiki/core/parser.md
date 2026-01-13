@@ -1,101 +1,195 @@
 # File Overview
 
-This file provides a core parser implementation for source code analysis using the Tree-sitter library. It supports multiple programming languages and provides functionality to parse source code into Abstract Syntax Trees (ASTs), extract text content from nodes, and identify programming languages from file paths.
+This file, `src/local_deepwiki/core/parser.py`, provides functionality for parsing source code using the Tree-sitter library. It supports multiple programming languages and includes utilities for extracting information from parsed ASTs, such as node text and docstrings.
 
 # Classes
 
 ## CodeParser
 
-The CodeParser class is responsible for managing language parsers and providing methods to parse source code files or strings into ASTs. It handles language detection, parser creation, and AST traversal.
+The `CodeParser` class is responsible for initializing parsers for various programming languages and providing methods to parse source code files or strings into ASTs (Abstract Syntax Trees). It also offers utilities for extracting specific parts of the code like docstrings and node text.
 
-### Key Methods
+### Methods
 
-- `__init__`: Initializes the parser with empty dictionaries for storing parsers and language configurations.
-- `_get_parser`: Retrieves or creates a Tree-sitter parser for a given language.
-- `detect_language`: Determines the programming language of a file based on its extension.
-- `parse_file`: Parses a source file and returns the AST root node, language, and source bytes.
-- `parse_source`: Parses a source code string and returns the AST root node.
-- `get_file_info`: Extracts file information including language and file path.
+#### `__init__`
+
+Initializes the parser with empty dictionaries for storing parsers and language configurations.
+
+#### `_get_parser`
+
+Retrieves or creates a Tree-sitter parser for a given language.
+
+- **Parameters**:
+  - `language` (`LangEnum`): The programming language.
+- **Returns**:
+  - A Tree-sitter `Parser` configured for the specified language.
+
+#### `detect_language`
+
+Detects the programming language of a file based on its extension.
+
+- **Parameters**:
+  - `file_path` (`Path`): The path to the file.
+- **Returns**:
+  - The detected `LangEnum` language.
+
+#### `parse_file`
+
+Parses a file and returns the root node of its AST.
+
+- **Parameters**:
+  - `file_path` (`Path`): The path to the file.
+- **Returns**:
+  - The AST root node.
+
+#### `parse_source`
+
+Parses a source code string and returns the AST root.
+
+- **Parameters**:
+  - `source` (`str | bytes`): The source code.
+  - `language` (`LangEnum`): The programming language.
+- **Returns**:
+  - The AST root node.
+
+#### `get_file_info`
+
+Retrieves file information including content, hash, and language.
+
+- **Parameters**:
+  - `file_path` (`Path`): The path to the file.
+- **Returns**:
+  - A tuple containing file content (`bytes`), hash (`str`), and language (`LangEnum`).
 
 # Functions
 
-## get_node_text
+## `_read_file_content`
 
-Extracts the text content from a Tree-sitter node using the original source bytes.
+Reads the content of a file as bytes.
 
-### Parameters
+- **Parameters**:
+  - `file_path` (`Path`): The path to the file.
+- **Returns**:
+  - The file content as bytes.
 
-- `node`: The tree-sitter node.
-- `source`: The original source bytes.
+## `_compute_file_hash`
 
-### Returns
+Computes the SHA256 hash of a file's content.
 
-The text content of the node as a string.
+- **Parameters**:
+  - `content` (`bytes`): The file content.
+- **Returns**:
+  - The SHA256 hash of the content as a hexadecimal string.
 
-## find_nodes_by_type
+## `get_node_text`
 
-(Not fully shown in the code snippet, but mentioned in the imports)
+Extracts the text content of a Tree-sitter node from the source.
 
-## walk
+- **Parameters**:
+  - `node` (`Node`): The Tree-sitter node.
+  - `source` (`bytes`): The original source bytes.
+- **Returns**:
+  - The text content of the node.
 
-(Not fully shown in the code snippet, but mentioned in the imports)
+## `find_nodes_by_type`
 
-## get_node_name
+Finds all nodes in the AST that match a given node type.
 
-(Not fully shown in the code snippet, but mentioned in the imports)
+- **Parameters**:
+  - `node` (`Node`): The root node of the AST.
+  - `node_type` (`str`): The type of node to search for.
+- **Returns**:
+  - A list of matching nodes.
 
-## get_docstring
+## `walk`
 
-Extracts docstring from a function or class node.
+Recursively traverses the AST and yields all nodes.
 
-### Parameters
+- **Parameters**:
+  - `node` (`Node`): The root node of the AST.
+- **Returns**:
+  - An iterator over all nodes in the AST.
 
-- `node`: The tree-sitter node.
-- `source`: The original source bytes.
-- `language`: The programming language.
+## `get_node_name`
 
-### Returns
+Extracts the name of a node from its children.
 
-The docstring or None if not found.
+- **Parameters**:
+  - `node` (`Node`): The Tree-sitter node.
+- **Returns**:
+  - The name of the node as a string or `None` if not found.
+
+## `_collect_preceding_comments`
+
+Collects comments that precede a node.
+
+- **Parameters**:
+  - `node` (`Node`): The Tree-sitter node.
+  - `source` (`bytes`): The original source bytes.
+- **Returns**:
+  - A list of comment strings.
+
+## `_strip_line_comment_prefix`
+
+Strips the comment prefix from a line comment.
+
+- **Parameters**:
+  - `line` (`str`): A line comment.
+- **Returns**:
+  - The comment without the prefix.
+
+## `get_docstring`
+
+Extracts the docstring from a function or class node.
+
+- **Parameters**:
+  - `node` (`Node`): The Tree-sitter node.
+  - `source` (`bytes`): The original source bytes.
+  - `language` (`LangEnum`): The programming language.
+- **Returns**:
+  - The docstring or `None` if not found.
 
 # Usage Examples
 
-## Initialize a CodeParser
+### Parsing Source Code
 
 ```python
+from local_deepwiki.core.parser import CodeParser
+from local_deepwiki.core.types import LangEnum
+
 parser = CodeParser()
-```
-
-## Parse a Source String
-
-```python
-source_code = "def hello(): pass"
+source_code = "def hello():\n    return 'world'"
 ast_root = parser.parse_source(source_code, LangEnum.PYTHON)
 ```
 
-## Parse a Source File
+### Getting Node Text
 
 ```python
-file_path = Path("example.py")
-result = parser.parse_file(file_path)
-if result:
-    ast_root, language, source_bytes = result
+from local_deepwiki.core.parser import get_node_text
+
+node_text = get_node_text(node, source_bytes)
 ```
 
-## Get Text Content from a Node
+### Extracting Docstrings
 
 ```python
-node_text = get_node_text(ast_root, source_bytes)
+from local_deepwiki.core.parser import get_docstring
+
+docstring = get_docstring(node, source_bytes, LangEnum.PYTHON)
 ```
 
 # Related Components
 
-This file works with the following components:
+This file depends on the following external components:
 
-- `LangEnum` from `local_deepwiki.models`: Represents programming languages.
-- `FileInfo` from `local_deepwiki.models`: Stores file information.
-- Tree-sitter language modules (e.g., `tree_sitter_python`, `tree_sitter_javascript`, etc.): Used to create parsers for specific languages.
-- `Language`, `Parser`, and `Node` from `tree_sitter`: Core Tree-sitter classes for language parsing and AST representation.
+- `tree_sitter_c`
+- `tree_sitter_c_sharp`
+- `tree_sitter_cpp`
+- `tree_sitter_go`
+- `tree_sitter_java`
+- `tree_sitter_javascript`
+- And 11 more Tree-sitter language modules
+
+It also uses types from `local_deepwiki.core.types`, specifically `LangEnum` and `Parser`.
 
 ## API Reference
 
@@ -159,7 +253,7 @@ Parse source code string and return the AST root.
 def get_file_info(file_path: Path, repo_root: Path) -> FileInfo
 ```
 
-Get information about a source file.
+Get information about a source file.  Uses chunked reading for large files to avoid loading the entire file into memory just for hash computation.
 
 
 | [Parameter](../generators/api_docs.md) | Type | Default | Description |
@@ -277,72 +371,78 @@ flowchart TD
     N1[CodeParser.get_file_info]
     N2[CodeParser.parse_file]
     N3[CodeParser.parse_source]
-    N4[FileInfo]
-    N5[Language]
-    N6[Parser]
-    N7[ValueError]
+    N4[Language]
+    N5[ValueError]
+    N6[_collect_preceding_comments]
+    N7[_compute_file_hash]
     N8[_get_parser]
-    N9[child_by_field_name]
-    N10[decode]
-    N11[detect_language]
-    N12[encode]
-    N13[find_nodes_by_type]
-    N14[get_docstring]
-    N15[get_node_name]
-    N16[get_node_text]
-    N17[hexdigest]
-    N18[language]
-    N19[language_php]
-    N20[lstrip]
-    N21[parse]
-    N22[read_bytes]
-    N23[relative_to]
-    N24[rstrip]
-    N25[sha256]
-    N26[stat]
-    N27[walk]
-    N16 --> N10
-    N13 --> N27
-    N27 --> N27
-    N15 --> N16
-    N15 --> N9
-    N14 --> N9
-    N14 --> N16
-    N14 --> N24
-    N14 --> N20
-    N0 --> N7
+    N9[_read_file_content]
+    N10[_strip_line_comment_prefix]
+    N11[bytes]
+    N12[child_by_field_name]
+    N13[decode]
+    N14[detect_language]
+    N15[fileno]
+    N16[find_nodes_by_type]
+    N17[get_docstring]
+    N18[get_node_name]
+    N19[get_node_text]
+    N20[hexdigest]
+    N21[language]
+    N22[language_php]
+    N23[mmap]
+    N24[parse]
+    N25[read]
+    N26[read_bytes]
+    N27[sha256]
+    N28[stat]
+    N29[walk]
+    N9 --> N28
+    N9 --> N26
+    N9 --> N23
+    N9 --> N15
+    N9 --> N11
+    N7 --> N28
+    N7 --> N20
+    N7 --> N27
+    N7 --> N26
+    N7 --> N25
+    N19 --> N13
+    N16 --> N29
+    N29 --> N29
+    N18 --> N19
+    N18 --> N12
+    N6 --> N19
+    N17 --> N12
+    N17 --> N19
+    N17 --> N6
+    N17 --> N10
     N0 --> N5
-    N0 --> N19
-    N0 --> N18
-    N0 --> N6
-    N2 --> N11
-    N2 --> N22
+    N0 --> N4
+    N0 --> N22
+    N0 --> N21
+    N2 --> N14
+    N2 --> N9
     N2 --> N8
-    N2 --> N21
-    N3 --> N12
+    N2 --> N24
     N3 --> N8
-    N3 --> N21
-    N1 --> N26
-    N1 --> N22
-    N1 --> N4
-    N1 --> N23
-    N1 --> N11
-    N1 --> N17
-    N1 --> N25
+    N3 --> N24
+    N1 --> N28
+    N1 --> N14
+    N1 --> N7
     classDef func fill:#e1f5fe
-    class N4,N5,N6,N7,N8,N9,N10,N11,N12,N13,N14,N15,N16,N17,N18,N19,N20,N21,N22,N23,N24,N25,N26,N27 func
+    class N4,N5,N6,N7,N8,N9,N10,N11,N12,N13,N14,N15,N16,N17,N18,N19,N20,N21,N22,N23,N24,N25,N26,N27,N28,N29 func
     classDef method fill:#fff3e0
     class N0,N1,N2,N3 method
 ```
 
 ## Relevant Source Files
 
-- `src/local_deepwiki/core/parser.py:72-176`
+- `src/local_deepwiki/core/parser.py:138-247`
 
 ## See Also
 
+- [test_parser](../../../tests/test_parser.md) - uses this
 - [api_docs](../generators/api_docs.md) - uses this
-- [chunker](chunker.md) - uses this
 - [test_api_docs](../../../tests/test_api_docs.md) - uses this
-- [wiki](../generators/wiki.md) - shares 4 dependencies
-- [diagrams](../generators/diagrams.md) - shares 3 dependencies
+- [test_callgraph](../../../tests/test_callgraph.md) - uses this

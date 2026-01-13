@@ -1,21 +1,22 @@
 # File Overview
 
-This file defines the `VectorStore` class for managing vector embeddings and search operations using LanceDB. It provides functionality for storing, indexing, and retrieving code chunks based on their vector representations.
+This file defines the `VectorStore` class for managing vector embeddings and search operations using LanceDB. It provides functionality to store, index, and retrieve document chunks based on their vector representations, with support for various chunk types and languages.
 
 # Classes
 
 ## VectorStore
 
-The VectorStore class manages vector embeddings using LanceDB for efficient similarity search operations on code chunks.
+The VectorStore class manages vector embeddings and search operations using LanceDB. It handles storing document chunks, performing similarity searches, and managing the underlying database table.
 
 ### Key Methods
 
-- `__init__(self, db_path: str, embedding_provider: EmbeddingProvider)`: Initializes the vector store with a database path and embedding provider
-- `create_table(self, table_name: str, embedding_dimension: int)`: Creates a new table in the database with the specified embedding dimension
-- `add_chunks(self, table_name: str, chunks: list[CodeChunk])`: Adds code chunks to the specified table
-- `search(self, table_name: str, query: str, limit: int = 10)`: Searches for similar code chunks based on a query string
-- `get_table(self, table_name: str)`: Retrieves a table by name
-- `list_tables(self)`: Lists all available tables in the database
+- `__init__(self, db_path: str, embedding_provider: EmbeddingProvider, table_name: str = "chunks")` - Initializes the vector store with a database path, embedding provider, and table name
+- `create_table(self)` - Creates the database table if it doesn't exist
+- `add_chunks(self, chunks: list[ChunkType])` - Adds chunks to the vector store
+- `search(self, query: str, limit: int = 10)` - Searches for similar chunks based on a query string
+- `get_chunk(self, chunk_id: str) -> ChunkType` - Retrieves a specific chunk by its ID
+- `delete_chunk(self, chunk_id: str)` - Deletes a chunk from the store
+- `list_chunks(self, limit: int = 100) -> list[ChunkType]` - Lists chunks in the store
 
 ### Usage Example
 
@@ -23,37 +24,63 @@ The VectorStore class manages vector embeddings using LanceDB for efficient simi
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.providers.openai import OpenAIEmbeddingProvider
 
-# Initialize vector store
-db_path = "vector_db"
+# Initialize the vector store
 embedding_provider = OpenAIEmbeddingProvider(api_key="your-api-key")
-vector_store = VectorStore(db_path, embedding_provider)
+vector_store = VectorStore(
+    db_path="./vector_db",
+    embedding_provider=embedding_provider,
+    table_name="my_chunks"
+)
 
-# Create a table
-vector_store.create_table("code_chunks", 1536)
+# Create the table
+vector_store.create_table()
 
 # Add chunks
-chunks = [CodeChunk(id="1", content="print('hello')", path="example.py")]
-vector_store.add_chunks("code_chunks", chunks)
-
-# Search
-results = vector_store.search("code_chunks", "print statement", limit=5)
+chunks = [
+    CodeChunk(
+        id="chunk_1",
+        content="def hello(): pass",
+        language=Language.PYTHON,
+        file_path="example.py",
+        start_line=1,
+        end_line=2
+    )
+]
+vector_store.add_chunks(chunks)
 ```
 
 # Functions
 
-No standalone functions are defined in this file. All functionality is encapsulated within the `VectorStore` class.
+## _sanitize_string_value
+
+```python
+def _sanitize_string_value(value: str) -> str
+```
+
+Sanitizes a string value by removing or replacing characters that might cause issues in database operations.
+
+### Parameters
+
+- `value: str` - The input string to sanitize
+
+### Returns
+
+- `str` - The sanitized string
 
 # Related Components
 
 This file works with the following components:
 
-- `EmbeddingProvider` from `local_deepwiki.providers.base`: Provides the embedding functionality for converting text into vector representations
-- `CodeChunk` from `local_deepwiki.models`: Represents individual code chunks with id, content, and path attributes
-- `SearchResult` from `local_deepwiki.models`: Represents search results with relevance scores and chunk information
-- `lancedb`: Database backend for storing and querying vector embeddings
-- `Table` from `lancedb.table`: LanceDB table interface for database operations
+- `EmbeddingProvider` from `local_deepwiki.providers.base` - Provides the embedding functionality used for vectorizing chunks
+- `ChunkType` from `local_deepwiki.models` - Defines the chunk data structure
+- `CodeChunk` from `local_deepwiki.models` - Represents code chunks with additional metadata
+- `Language` from `local_deepwiki.models` - Enum defining supported programming languages
+- `SearchResult` from `local_deepwiki.models` - Represents search results
+- `get_logger` from `local_deepwiki.logging` - Provides logging functionality
+- `lancedb` - Database library used for vector storage and search operations
+- `Table` from `lancedb.table` - LanceDB table interface for database operations
 
-The class integrates with the `lancedb` library for vector storage and retrieval operations, and depends on embedding providers to generate vector representations of code content.
+The class integrates with the `lancedb` library for vector storage and search capabilities, and relies on embedding providers to generate vector representations of document chunks.
 
 ## API Reference
 
@@ -176,6 +203,9 @@ classDiagram
         -__init__()
         -_connect()
         -_get_table()
+        -_ensure_scalar_indexes()
+        -_create_index_safe()
+        -_create_scalar_indexes()
         +create_or_update_table()
         +add_chunks()
         +search()
@@ -192,94 +222,92 @@ classDiagram
 ```mermaid
 flowchart TD
     N0[CodeChunk]
-    N1[ValueError]
-    N2[VectorStore._connect]
-    N3[VectorStore._get_table]
-    N4[VectorStore.add_chunks]
-    N5[VectorStore.create_or_updat...]
-    N6[VectorStore.delete_chunks_b...]
-    N7[VectorStore.get_chunk_by_id]
-    N8[VectorStore.get_chunks_by_file]
-    N9[VectorStore.get_stats]
-    N10[VectorStore.search]
-    N11[_chunk_to_text]
-    N12[_connect]
-    N13[_get_table]
-    N14[_sanitize_string_value]
-    N15[add]
-    N16[connect]
-    N17[create_or_update_table]
-    N18[create_table]
-    N19[drop_table]
-    N20[dumps]
-    N21[embed]
-    N22[limit]
+    N1[VectorStore._connect]
+    N2[VectorStore._create_index_safe]
+    N3[VectorStore._ensure_scalar_...]
+    N4[VectorStore._get_table]
+    N5[VectorStore.add_chunks]
+    N6[VectorStore.create_or_updat...]
+    N7[VectorStore.delete_chunks_b...]
+    N8[VectorStore.get_chunk_by_id]
+    N9[VectorStore.get_chunks_by_file]
+    N10[VectorStore.get_stats]
+    N11[VectorStore.search]
+    N12[_chunk_to_text]
+    N13[_connect]
+    N14[_create_index_safe]
+    N15[_ensure_scalar_indexes]
+    N16[_get_table]
+    N17[_sanitize_string_value]
+    N18[connect]
+    N19[embed]
+    N20[limit]
+    N21[list_indices]
+    N22[list_tables]
     N23[loads]
     N24[mkdir]
     N25[open_table]
     N26[search]
-    N27[table_names]
-    N28[to_list]
+    N27[to_list]
+    N28[to_vector_record]
     N29[where]
-    N2 --> N24
-    N2 --> N16
-    N3 --> N12
-    N3 --> N27
-    N3 --> N25
-    N5 --> N12
-    N5 --> N11
-    N5 --> N21
-    N5 --> N20
-    N5 --> N27
-    N5 --> N19
-    N5 --> N18
+    N1 --> N24
+    N1 --> N18
     N4 --> N13
-    N4 --> N17
-    N4 --> N11
-    N4 --> N21
-    N4 --> N20
+    N4 --> N22
+    N4 --> N25
     N4 --> N15
-    N10 --> N13
-    N10 --> N21
-    N10 --> N22
-    N10 --> N26
-    N10 --> N1
-    N10 --> N29
-    N10 --> N28
-    N10 --> N0
-    N10 --> N23
-    N7 --> N13
-    N7 --> N14
-    N7 --> N28
-    N7 --> N22
-    N7 --> N29
-    N7 --> N26
-    N7 --> N0
-    N7 --> N23
-    N8 --> N13
-    N8 --> N14
-    N8 --> N28
+    N3 --> N21
+    N3 --> N14
+    N6 --> N13
+    N6 --> N12
+    N6 --> N19
+    N6 --> N28
+    N6 --> N22
+    N5 --> N16
+    N5 --> N12
+    N5 --> N19
+    N5 --> N28
+    N11 --> N16
+    N11 --> N19
+    N11 --> N20
+    N11 --> N26
+    N11 --> N29
+    N11 --> N27
+    N11 --> N0
+    N11 --> N23
+    N8 --> N16
+    N8 --> N17
+    N8 --> N27
+    N8 --> N20
     N8 --> N29
     N8 --> N26
     N8 --> N0
     N8 --> N23
-    N6 --> N13
-    N6 --> N14
-    N6 --> N28
-    N6 --> N29
-    N6 --> N26
-    N9 --> N13
+    N9 --> N16
+    N9 --> N17
+    N9 --> N27
+    N9 --> N29
+    N9 --> N26
+    N9 --> N0
+    N9 --> N23
+    N7 --> N16
+    N7 --> N17
+    N7 --> N27
+    N7 --> N29
+    N7 --> N26
+    N10 --> N16
     classDef func fill:#e1f5fe
-    class N0,N1,N11,N12,N13,N14,N15,N16,N17,N18,N19,N20,N21,N22,N23,N24,N25,N26,N27,N28,N29 func
+    class N0,N12,N13,N14,N15,N16,N17,N18,N19,N20,N21,N22,N23,N24,N25,N26,N27,N28,N29 func
     classDef method fill:#fff3e0
-    class N2,N3,N4,N5,N6,N7,N8,N9,N10 method
+    class N1,N2,N3,N4,N5,N6,N7,N8,N9,N10,N11 method
 ```
 
 ## Relevant Source Files
 
-- `src/local_deepwiki/core/vectorstore.py:14-326`
+- `src/local_deepwiki/core/vectorstore.py:37-395`
 
 ## See Also
 
-- [wiki](../generators/wiki.md) - uses this
 - [server](../server.md) - uses this
+- [test_vectorstore](../../../tests/test_vectorstore.md) - uses this

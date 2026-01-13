@@ -5,19 +5,15 @@ Local DeepWiki-style MCP server for private repository documentation
 
 ## Description
 
-This project provides a local MCP server that enables private repository documentation with DeepWiki-style capabilities. It offers tools for exporting documentation to HTML, serving a web interface for browsing, and watching for changes in the repository. The system supports configurable indexing, chunking, and embedding of code and documentation content.
+This project provides a local MCP server that enables private repository documentation generation and serving, similar to DeepWiki. It supports both local and cloud-based LLM providers for processing repository content and generating documentation. The system can be run as a web server or as a command-line tool for exporting documentation.
 
 ## Key Features
 
-- **MCP Server Implementation**: The [`main`](files/src/local_deepwiki/export/html.md) function in `src/local_deepwiki/server.py` demonstrates the core MCP server setup using `stdio_server` and `server.run` for handling communication protocols.
-
-- **Configurable Indexing and Embedding**: The `src/local_deepwiki/core/indexer.py` class supports initialization with repository paths and optional embedding provider configuration, allowing selection between local and OpenAI embedding models.
-
-- **Web Server for Documentation Browsing**: The `run_server` function in `src/local_deepwiki/web/app.py` creates and runs a Flask web application that serves documentation from a specified wiki path with customizable host, port, and debug options.
-
-- **Chunking Configuration Support**: The `src/local_deepwiki/core/chunker.py` class initializes with optional chunking configuration and uses a [`CodeParser`](files/src/local_deepwiki/core/parser.md) for processing code content during the chunking process.
-
-- **Global Configuration Management**: The [`get_config`](files/src/local_deepwiki/config.md) function in `src/local_deepwiki/config.py` provides access to a global configuration instance that can be loaded and reused throughout the application.
+- **MCP Server Implementation**: The [`main`](files/src/local_deepwiki/watcher.md) function in `src/local_deepwiki/server.py` demonstrates the core MCP server setup using `stdio_server` and `server.run` for handling MCP protocol communication
+- **Ollama LLM Integration**: The [`OllamaConfig`](files/src/local_deepwiki/config.md) and `OllamaProvider` classes in `src/local_deepwiki/providers/llm/ollama.py` show support for local LLM inference through Ollama API
+- **Repository Indexing**: The `Indexer` class in `src/local_deepwiki/core/indexer.py` provides repository indexing capabilities with configurable embedding providers
+- **Web Server Interface**: The `run_server` function in `src/local_deepwiki/web/app.py` enables serving documentation via a web interface with configurable host, port, and debug options
+- **Configuration Management**: The [`Config`](files/src/local_deepwiki/config.md) class in `src/local_deepwiki/config.py` provides structured configuration handling with support for multiple embedding and LLM providers
 
 ## Technology Stack
 
@@ -48,11 +44,11 @@ local-deepwiki-mcp/
 │   ├── test_diagrams.py
 │   ├── test_html_export.py
 │   ├── test_incremental_wiki.py
+│   ├── test_indexer.py
 │   ├── test_manifest.py
+│   ├── test_models.py
+│   ├── test_ollama_health.py
 │   ├── test_parser.py
-│   ├── test_search.py
-│   ├── test_see_also.py
-│   ├── test_source_refs.py
 │   ...
 ...
 ```
