@@ -1,257 +1,110 @@
-# File Overview
+# test_parser.py
 
-This file contains the test suite for the [`CodeParser`](../src/local_deepwiki/core/parser.md) class and related parsing utilities. It includes tests for language detection, node helper functions, comment and docstring extraction, and large file handling.
+## File Overview
 
-# Classes
+This file contains comprehensive test suites for the code parsing functionality in the local_deepwiki system. It tests the [CodeParser](../src/local_deepwiki/core/parser.md) class and various helper functions for parsing source code, extracting metadata, and handling different programming languages.
 
-## TestCodeParser
+## Classes
 
-Test suite for [CodeParser](../src/local_deepwiki/core/parser.md).
+### TestCodeParser
 
-### Methods
+Test suite for the [CodeParser](../src/local_deepwiki/core/parser.md) class that handles source code parsing and language detection.
 
-#### setup_method
-Set up test fixtures.
+**Key Methods:**
+- `setup_method()` - Initializes a [CodeParser](../src/local_deepwiki/core/parser.md) instance for testing
+- `test_detect_language_python()` - Tests Python file detection based on file extensions (.py, .pyi)
+- `test_detect_language_javascript()` - Tests JavaScript file detection based on file extensions
 
-#### test_detect_language_python
-Test Python language detection.
+### TestNodeHelpers
 
-#### test_detect_language_javascript
-Test JavaScript language detection.
+Test suite for node helper functions that extract information from parsed syntax tree nodes.
 
-## TestNodeHelpers
+**Key Methods:**
+- `setup_method()` - Sets up test fixtures with a [CodeParser](../src/local_deepwiki/core/parser.md) instance
+- `test_get_node_text()` - Tests extracting source code text from syntax tree nodes
+- `test_get_node_name_python_function()` - Tests extracting function names from Python syntax nodes
 
-Test node helper functions.
+### TestCommentHelpers
 
-### Methods
+Test suite for comment-related helper functions (referenced but implementation not shown in provided code).
 
-#### setup_method
-Set up test fixtures.
+### TestDocstringExtraction
 
-#### test_get_node_text
-Test extracting text from nodes.
+Comprehensive test suite for extracting documentation strings from various programming languages.
 
-#### test_get_node_name_python_function
-Test getting name from Python function node.
+**Key Methods:**
+- `setup_method()` - Initializes parser for docstring extraction tests
+- `test_python_docstring()` - Tests Python docstring extraction from function definitions
+- `test_go_single_line_comment()` - Tests Go single-line comment extraction
+- `test_go_multi_line_comments()` - Tests Go multi-line comment extraction
+- `test_rust_single_line_doc_comment()` - Tests Rust single-line documentation comment extraction
+- `test_rust_multi_line_doc_comments()` - Tests Rust multi-line documentation comment extraction
+- `test_ruby_single_line_comment()` - Tests Ruby single-line comment extraction
+- `test_ruby_multi_line_comments()` - Tests Ruby multi-line comment extraction
+- `test_javascript_jsdoc_block()` - Tests JavaScript JSDoc block extraction
+- `test_java_javadoc_block()` - Tests Java Javadoc block extraction
+- `test_cpp_doxygen_triple_slash()` - Tests C++ Doxygen triple-slash comment extraction
+- `test_no_docstring()` - Tests handling of code without documentation
 
-#### test_get_node_name_python_class
-Test getting name from Python class node.
+### TestLargeFileHandling
 
-#### test_get_node_name_python_method
-Test getting name from Python method node.
+Test suite for handling large source code files (referenced but implementation not shown in provided code).
 
-#### test_get_node_name_javascript_function
-Test getting name from JavaScript function node.
+## Functions
 
-## TestCommentHelpers
+The tests verify various imported helper functions:
 
-Test comment helper functions.
+- `_collect_preceding_comments()` - Collects comments that precede code elements
+- `_compute_file_hash()` - Computes hash values for files
+- `_read_file_content()` - Reads file content with appropriate handling
+- `_strip_line_comment_prefix()` - Removes comment prefixes from lines
+- `find_nodes_by_type()` - Finds syntax tree nodes by their type
+- `get_docstring()` - Extracts documentation strings from code
+- `get_node_name()` - Gets the name identifier from syntax tree nodes
+- `get_node_text()` - Extracts source text from syntax tree nodes
 
-### Methods
+## Usage Examples
 
-#### setup_method
-Set up test fixtures.
-
-#### test_strip_line_comment_prefix
-Test stripping line comment prefix.
-
-#### test_collect_preceding_comments
-Test collecting preceding comments.
-
-## TestDocstringExtraction
-
-Test docstring extraction functions for various languages.
-
-### Methods
-
-#### setup_method
-Set up test fixtures.
-
-#### test_python_docstring
-Test extracting Python docstring.
-
-#### test_go_single_line_comment
-Test extracting Go single-line comment.
-
-#### test_go_multi_line_comments
-Test extracting Go multi-line comments.
-
-#### test_rust_single_line_doc_comment
-Test extracting Rust single-line doc comment.
-
-#### test_rust_multi_line_doc_comments
-Test extracting Rust multi-line doc comments.
-
-#### test_ruby_single_line_comment
-Test extracting Ruby single-line comment.
-
-#### test_ruby_multi_line_comments
-Test extracting Ruby multi-line comments.
-
-#### test_javascript_jsdoc_block
-Test extracting JavaScript JSDoc block.
-
-#### test_java_javadoc_block
-Test extracting Java Javadoc block.
-
-#### test_cpp_doxygen_triple_slash
-Test extracting C++ Doxygen triple-slash comment.
-
-#### test_no_docstring
-Test extracting docstring from node with no docstring.
-
-## TestLargeFileHandling
-
-Test large file handling functions.
-
-### Methods
-
-#### setup_method
-Set up test fixtures.
-
-#### test_compute_file_hash
-Test computing file hash.
-
-#### test_read_file_content
-Test reading file content with different strategies.
-
-#### test_read_file_content_large_file
-Test reading large file content with memory mapping.
-
-#### test_read_file_content_small_file
-Test reading small file content with direct reading.
-
-# Functions
-
-## _collect_preceding_comments
-Collect comments that appear before a node.
-
-### Parameters
-- `node` (tree_sitter.Node): The node to collect comments for.
-- `code` (bytes): The source code.
-
-### Returns
-- `list[str]`: List of comment strings.
-
-## _compute_file_hash
-Compute hash of file content.
-
-### Parameters
-- `file_path` (Path): Path to the file.
-- `chunk_size` (int): Size of chunks to read at a time.
-
-### Returns
-- `str`: Hexadecimal hash string.
-
-## _read_file_content
-Read file content using appropriate strategy based on file size.
-
-### Parameters
-- `file_path` (Path): Path to the file.
-- `mm_threshold` (int): Threshold for memory mapping.
-
-### Returns
-- `bytes`: File content.
-
-## _strip_line_comment_prefix
-Strip comment prefix from line.
-
-### Parameters
-- `line` (str): Line of code.
-
-### Returns
-- `str`: Line with comment prefix removed.
-
-## find_nodes_by_type
-Find all nodes of a given type.
-
-### Parameters
-- `root` (tree_sitter.Node): Root node to search from.
-- `node_type` (str): Type of node to [find](../src/local_deepwiki/generators/manifest.md).
-
-### Returns
-- `list[tree_sitter.Node]`: List of matching nodes.
-
-## get_docstring
-Extract docstring from node.
-
-### Parameters
-- `node` (tree_sitter.Node): Node to extract docstring from.
-- `code` (bytes): Source code.
-- `language` (Language): Language of the source code.
-
-### Returns
-- `str`: Extracted docstring.
-
-## get_node_name
-Get name from node.
-
-### Parameters
-- `node` (tree_sitter.Node): Node to get name from.
-- `code` (bytes): Source code.
-
-### Returns
-- `str`: Node name.
-
-## get_node_text
-Get text from node.
-
-### Parameters
-- `node` (tree_sitter.Node): Node to get text from.
-- `code` (bytes): Source code.
-
-### Returns
-- `str`: Node text.
-
-# Usage Examples
-
-## Testing Language Detection
+### Testing Language Detection
 
 ```python
-def test_detect_language_python(self):
-    assert self.parser.detect_language(Path("test.py")) == Language.PYTHON
-    assert self.parser.detect_language(Path("test.pyi")) == Language.PYTHON
+parser = CodeParser()
+assert parser.detect_language(Path("test.py")) == Language.PYTHON
+assert parser.detect_language(Path("test.js")) == Language.JAVASCRIPT
 ```
 
-## Testing Docstring Extraction
+### Testing Docstring Extraction
 
 ```python
-def test_python_docstring(self):
-    code = b'''def hello():
+code = b'''def hello():
     """This is a docstring."""
     pass'''
-    root = self.parser.parse_source(code, Language.PYTHON)
-    func_node = root.children[0]
-
-    docstring = get_docstring(func_node, code, Language.PYTHON)
-    assert docstring == "This is a docstring."
+root = parser.parse_source(code, Language.PYTHON)
+func_node = root.children[0]
+docstring = get_docstring(func_node, code, Language.PYTHON)
+assert docstring == "This is a docstring."
 ```
 
-## Testing Node Text Extraction
+### Testing Node Text Extraction
 
 ```python
-def test_get_node_text(self):
-    code = b"def foo(): pass"
-    root = self.parser.parse_source(code, Language.PYTHON)
-
-    func_node = root.children[0]
-    text = get_node_text(func_node, code)
-    assert text == "def foo(): pass"
+code = b"def foo(): pass"
+root = parser.parse_source(code, Language.PYTHON)
+func_node = root.children[0]
+text = get_node_text(func_node, code)
+assert text == "def foo(): pass"
 ```
 
-# Related Components
+## Related Components
 
-This file works with the following components:
+This test file works with several core components:
 
-- [`CodeParser`](../src/local_deepwiki/core/parser.md) class: Core parsing functionality
-- `Language` enum: Language identifiers
-- `tree_sitter.Node`: Tree-sitter node objects
-- `Path` from pathlib: File path handling
-- `tempfile`: Temporary file handling
-- `hashlib`: Hash computation
-- `pytest`: Testing framework
+- **[CodeParser](../src/local_deepwiki/core/parser.md)** - The [main](../src/local_deepwiki/watcher.md) parser class being tested
+- **Language** - Enumeration of supported programming languages
+- Various helper functions from the `local_deepwiki.core.parser` module
+- Constants like `HASH_CHUNK_SIZE` and `MMAP_THRESHOLD_BYTES` for file processing configuration
 
-The file imports and tests functions from `local_deepwiki.core.parser` and `local_deepwiki.models` modules.
+The tests use pytest fixtures and temporary files for isolated testing of parsing functionality across multiple programming languages.
 
 ## API Reference
 
@@ -631,6 +484,7 @@ Test that hash is consistent regardless of file size.
 ```mermaid
 classDiagram
     class TestCodeParser {
+        +parser
         +setup_method()
         +test_detect_language_python()
         +test_detect_language_javascript()
@@ -639,8 +493,8 @@ classDiagram
         +test_detect_language_rust()
         +test_detect_language_unsupported()
         +test_parse_python_file()
-        +hello()
-        +greet()
+        +hello() -> str
+        +greet() -> str
         +test_parse_javascript_file()
         +test_parse_source_string()
         +foo()
@@ -678,6 +532,7 @@ classDiagram
         +test_hash_consistency_small_and_large()
     }
     class TestNodeHelpers {
+        +parser
         +setup_method()
         +test_get_node_text()
         +foo()

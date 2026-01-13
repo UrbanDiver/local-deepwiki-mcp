@@ -1,86 +1,37 @@
-# File Overview
+# vectorstore.py
 
-This file defines the `VectorStore` class for managing vector embeddings and search operations using LanceDB. It provides functionality to store, index, and retrieve document chunks based on their vector representations, with support for various chunk types and languages.
+## File Overview
 
-# Classes
+This module provides vector storage functionality for the local_deepwiki system using LanceDB as the underlying vector database. The VectorStore class handles embedding storage, similarity search, and retrieval operations for code chunks and documentation content.
 
-## VectorStore
+## Classes
 
-The VectorStore class manages vector embeddings and search operations using LanceDB. It handles storing document chunks, performing similarity searches, and managing the underlying database table.
+### VectorStore
 
-### Key Methods
+The VectorStore class manages vector embeddings storage and retrieval operations using LanceDB. It provides functionality to store code chunks with their embeddings and perform similarity searches.
 
-- `__init__(self, db_path: str, embedding_provider: EmbeddingProvider, table_name: str = "chunks")` - Initializes the vector store with a database path, embedding provider, and table name
-- `create_table(self)` - Creates the database table if it doesn't exist
-- `add_chunks(self, chunks: list[ChunkType])` - Adds chunks to the vector store
-- `search(self, query: str, limit: int = 10)` - Searches for similar chunks based on a query string
-- `get_chunk(self, chunk_id: str) -> ChunkType` - Retrieves a specific chunk by its ID
-- `delete_chunk(self, chunk_id: str)` - Deletes a chunk from the store
-- `list_chunks(self, limit: int = 100) -> list[ChunkType]` - Lists chunks in the store
+**Key Dependencies:**
+- Uses LanceDB for vector storage operations
+- Integrates with EmbeddingProvider for generating embeddings
+- Works with CodeChunk and SearchResult models for data handling
 
-### Usage Example
+## Functions
 
-```python
-from local_deepwiki.core.vectorstore import VectorStore
-from local_deepwiki.providers.openai import OpenAIEmbeddingProvider
+### _sanitize_string_value
 
-# Initialize the vector store
-embedding_provider = OpenAIEmbeddingProvider(api_key="your-api-key")
-vector_store = VectorStore(
-    db_path="./vector_db",
-    embedding_provider=embedding_provider,
-    table_name="my_chunks"
-)
+A utility function for sanitizing string values, likely used for data preprocessing before storage operations.
 
-# Create the table
-vector_store.create_table()
+## Related Components
 
-# Add chunks
-chunks = [
-    CodeChunk(
-        id="chunk_1",
-        content="def hello(): pass",
-        language=Language.PYTHON,
-        file_path="example.py",
-        start_line=1,
-        end_line=2
-    )
-]
-vector_store.add_chunks(chunks)
-```
+This module integrates with several other components of the local_deepwiki system:
 
-# Functions
+- **EmbeddingProvider**: Used for generating vector embeddings
+- **CodeChunk**: Data model for code content that gets stored
+- **SearchResult**: Data model for search operation results
+- **ChunkType and Language**: Enums for categorizing content types
+- **Logging system**: Uses the local_deepwiki logging utilities
 
-## _sanitize_string_value
-
-```python
-def _sanitize_string_value(value: str) -> str
-```
-
-Sanitizes a string value by removing or replacing characters that might cause issues in database operations.
-
-### Parameters
-
-- `value: str` - The input string to sanitize
-
-### Returns
-
-- `str` - The sanitized string
-
-# Related Components
-
-This file works with the following components:
-
-- `EmbeddingProvider` from `local_deepwiki.providers.base` - Provides the embedding functionality used for vectorizing chunks
-- `ChunkType` from `local_deepwiki.models` - Defines the chunk data structure
-- `CodeChunk` from `local_deepwiki.models` - Represents code chunks with additional metadata
-- `Language` from `local_deepwiki.models` - Enum defining supported programming languages
-- `SearchResult` from `local_deepwiki.models` - Represents search results
-- `get_logger` from `local_deepwiki.logging` - Provides logging functionality
-- `lancedb` - Database library used for vector storage and search operations
-- `Table` from `lancedb.table` - LanceDB table interface for database operations
-
-The class integrates with the `lancedb` library for vector storage and search capabilities, and relies on embedding providers to generate vector representations of document chunks.
+The module serves as a core component for the vector storage layer, enabling semantic search capabilities across code documentation and chunks.
 
 ## API Reference
 
@@ -200,20 +151,20 @@ Get statistics about the vector store.
 ```mermaid
 classDiagram
     class VectorStore {
-        -__init__()
-        -_connect()
-        -_get_table()
-        -_ensure_scalar_indexes()
-        -_create_index_safe()
-        -_create_scalar_indexes()
-        +create_or_update_table()
-        +add_chunks()
-        +search()
-        +get_chunk_by_id()
-        +get_chunks_by_file()
-        +delete_chunks_by_file()
-        +get_stats()
-        -_chunk_to_text()
+        -__init__(db_path: Path, embedding_provider: EmbeddingProvider)
+        -_connect() lancedb.DBConnection
+        -_get_table() Table | None
+        -_ensure_scalar_indexes() None
+        -_create_index_safe(column: str) None
+        -_create_scalar_indexes() None
+        +create_or_update_table(chunks: list[CodeChunk]) int
+        +add_chunks(chunks: list[CodeChunk]) int
+        +search(query: str, limit: int, language: str | None, chunk_type: str | None) list[SearchResult]
+        +get_chunk_by_id(chunk_id: str) CodeChunk | None
+        +get_chunks_by_file(file_path: str) list[CodeChunk]
+        +delete_chunks_by_file(file_path: str) int
+        +get_stats() dict[str, Any]
+        -_chunk_to_text(chunk: CodeChunk) str
     }
 ```
 
@@ -309,5 +260,5 @@ flowchart TD
 
 ## See Also
 
-- [server](../server.md) - uses this
 - [test_vectorstore](../../../tests/test_vectorstore.md) - uses this
+- [server](../server.md) - uses this

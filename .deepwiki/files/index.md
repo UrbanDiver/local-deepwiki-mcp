@@ -11,6 +11,7 @@ Detailed documentation for individual source files.
 - [diagrams.py](src/local_deepwiki/generators/diagrams.md)
 - [manifest.py](src/local_deepwiki/generators/manifest.md)
 - [parser.py](src/local_deepwiki/core/parser.md)
+- [pdf.py](src/local_deepwiki/export/pdf.md)
 - [server.py](src/local_deepwiki/server.md)
 - [vectorstore.py](src/local_deepwiki/core/vectorstore.md)
 - [watcher.py](src/local_deepwiki/watcher.md)
@@ -19,12 +20,11 @@ Detailed documentation for individual source files.
 ## tests
 
 - [test_api_docs.py](tests/test_api_docs.md)
-- [test_callgraph.py](tests/test_callgraph.md)
 - [test_crosslinks.py](tests/test_crosslinks.md)
-- [test_incremental_wiki.py](tests/test_incremental_wiki.md)
 - [test_indexer.py](tests/test_indexer.md)
 - [test_manifest.py](tests/test_manifest.md)
 - [test_models.py](tests/test_models.md)
 - [test_parser.py](tests/test_parser.md)
+- [test_pdf_export.py](tests/test_pdf_export.md)
 - [test_retry.py](tests/test_retry.md)
 - [test_vectorstore.py](tests/test_vectorstore.md)

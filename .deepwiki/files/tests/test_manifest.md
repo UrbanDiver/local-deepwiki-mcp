@@ -1,230 +1,128 @@
-# File Overview
+# test_manifest.py
 
-This file contains unit tests for the manifest parsing and caching functionality in the `local_deepwiki.generators.manifest` module. It tests the parsing of various manifest files (like `pyproject.toml`, `package.json`, `requirements.txt`, `go.mod`, etc.), the caching mechanism, and the handling of multiple manifest files in a project directory.
+## File Overview
 
-# Classes
+This test file contains comprehensive unit tests for the manifest parsing and caching functionality in the local_deepwiki project. It tests the ability to parse various project manifest files (pyproject.toml, package.json, requirements.txt, go.mod, Cargo.toml) and includes sophisticated caching mechanisms to improve performance.
 
-## TestProjectManifest
+## Classes
 
-Tests for the [ProjectManifest](../src/local_deepwiki/generators/manifest.md) dataclass.
+### TestProjectManifest
 
-### Methods
+Tests the [ProjectManifest](../src/local_deepwiki/generators/manifest.md) dataclass functionality, focusing on data validation and state checking.
 
-#### test_has_data_empty
-Empty manifest has no data.
+**Key Methods:**
+- `test_has_data_empty()` - Verifies that empty manifests correctly report having no data
+- `test_has_data_with_name()` - Tests that manifests with names are detected as having data
+- `test_has_data_with_dependencies()` - Confirms that manifests with dependencies are recognized as containing data
 
-#### test_has_data_with_name
-Manifest with name has data.
+### TestParsePyprojectToml
 
-#### test_has_data_with_dependencies
-Manifest with dependencies has data.
+Tests parsing of Python pyproject.toml files, which contain project metadata, dependencies, and configuration.
 
-## TestParsePyprojectToml
+**Key Methods:**
+- `test_parse_basic_pyproject()` - Tests parsing of a complete pyproject.toml with project metadata, dependencies, optional dependencies, and scripts
 
-Tests for parsing `pyproject.toml` files.
+### TestParseRequirementsTxt
 
-### Methods
+Tests parsing of Python requirements.txt files for dependency management.
 
-#### test_parse_basic_pyproject
-Parse a basic `pyproject.toml`.
+**Key Methods:**
+- `test_parse_basic_requirements()` - Tests parsing of requirements.txt files with version specifications and comments
 
-## TestParsePackageJson
+### TestParseGoMod
 
-Tests for parsing `package.json` files.
+Tests parsing of Go module files (go.mod) for Go project dependency management.
 
-### Methods
+**Key Methods:**
+- `test_parse_basic_go_mod()` - Tests parsing of go.mod files with module names, Go versions, and dependencies
 
-#### test_parse_basic_package_json
-Parse a basic `package.json`.
+### TestMultipleManifests
 
-## TestParseRequirementsTxt
+Tests handling of projects that contain multiple manifest files and the precedence rules between them.
 
-Tests for parsing `requirements.txt` files.
+**Key Methods:**
+- `test_pyproject_takes_precedence()` - Verifies that pyproject.toml takes precedence over requirements.txt when both are present
 
-### Methods
+### TestManifestCaching
 
-#### test_parse_basic_requirements
-Parse a basic `requirements.txt`.
+Tests the sophisticated caching system that improves performance by avoiding re-parsing unchanged manifest files.
 
-## TestParseCargoToml
+**Key Methods:**
+- `test_get_manifest_mtimes_empty_repo()` - Tests modification time retrieval for repositories without manifest files
+- `test_get_manifest_mtimes_with_files()` - Tests modification time retrieval when manifest files are present
+- `test_cache_entry_serialization()` - Tests serialization and deserialization of cache entries
+- `test_cache_valid_when_unchanged()` - Verifies cache validity when files haven't changed
+- `test_cache_invalid_when_file_modified()` - Tests cache invalidation when files are modified
+- `test_cache_invalid_when_file_added()` - Tests cache invalidation when new manifest files are added
+- `test_cache_invalid_when_file_removed()` - Tests cache invalidation when manifest files are removed
+- `test_get_cached_manifest_creates_cache()` - Tests cache file creation on first use
+- `test_get_cached_manifest_uses_cache()` - Tests cache utilization on subsequent calls
+- `test_get_cached_manifest_invalidates_on_change()` - Tests cache invalidation and re-parsing when files change
+- `test_get_cached_manifest_default_cache_dir()` - Tests default cache directory usage
 
-Tests for parsing `Cargo.toml` files.
+## Functions Tested
 
-### Methods
+The test file validates several functions from the manifest module:
 
-#### test_parse_basic_cargo_toml
-Parse a basic `Cargo.toml`.
+### `_get_manifest_mtimes(root)`
+Returns modification times for manifest files in a directory.
 
-## TestParseGoMod
+### `_is_cache_valid(entry, new_mtimes)`
+Determines if a cache entry is still valid by comparing file modification times.
 
-Tests for parsing `go.mod` files.
+### `get_cached_manifest(root, cache_dir=None)`
+Retrieves a parsed manifest, using cache when possible or creating/updating cache as needed.
 
-### Methods
+### `parse_manifest(path)`
+Parses manifest files in a directory and returns a [ProjectManifest](../src/local_deepwiki/generators/manifest.md) object.
 
-#### test_parse_basic_go_mod
-Parse a basic `go.mod`.
+## Usage Examples
 
-## TestGetDirectoryTree
-
-Tests for getting directory tree.
-
-### Methods
-
-#### test_get_directory_tree
-Get directory tree.
-
-## TestMultipleManifests
-
-Tests for handling multiple manifest files.
-
-### Methods
-
-#### test_pyproject_takes_precedence
-`pyproject.toml` takes precedence over `requirements.txt`.
-
-## TestManifestCaching
-
-Tests for manifest caching functionality.
-
-### Methods
-
-#### test_get_manifest_mtimes_empty_repo
-Returns mtimes for existing manifest files.
-
-#### test_get_manifest_mtimes_with_files
-Returns mtimes for existing manifest files.
-
-#### test_cache_entry_serialization
-Cache entry can be serialized and deserialized.
-
-#### test_cache_valid_when_unchanged
-Cache is valid when no manifest files have changed.
-
-#### test_cache_invalid_when_file_modified
-Cache is invalid when a manifest file is modified.
-
-#### test_cache_invalid_when_file_added
-Cache is invalid when a new manifest file is added.
-
-#### test_cache_invalid_when_file_removed
-Cache is invalid when a manifest file is removed.
-
-#### test_get_cached_manifest_creates_cache
-[`get_cached_manifest`](../src/local_deepwiki/generators/manifest.md) creates cache file on first call.
-
-#### test_get_cached_manifest_uses_cache
-[`get_cached_manifest`](../src/local_deepwiki/generators/manifest.md) uses cache on subsequent calls.
-
-#### test_get_cached_manifest_invalidates_on_change
-[`get_cached_manifest`](../src/local_deepwiki/generators/manifest.md) re-parses when file changes.
-
-#### test_get_cached_manifest_default_cache_dir
-[`get_cached_manifest`](../src/local_deepwiki/generators/manifest.md) uses `.deepwiki` in repo by default.
-
-# Functions
-
-## _get_manifest_mtimes
-
-Returns mtimes for existing manifest files.
-
-### Parameters
-
-- `root` (Path): The root directory to scan for manifest files.
-
-### Returns
-
-- `dict`: A dictionary mapping manifest file names to their modification times.
-
-## _is_cache_valid
-
-Checks if the cache is still valid based on file modification times.
-
-### Parameters
-
-- `entry` ([ManifestCacheEntry](../src/local_deepwiki/generators/manifest.md)): The cache entry to validate.
-- `mtimes` (dict): Current modification times of manifest files.
-
-### Returns
-
-- `bool`: True if the cache is valid, False otherwise.
-
-## get_cached_manifest
-
-Retrieves a cached manifest or parses a new one if the cache is invalid.
-
-### Parameters
-
-- `root` (Path): The root directory to parse.
-- `cache_dir` (Path, optional): The directory to use for caching. Defaults to `.deepwiki` in the root.
-
-### Returns
-
-- [`ProjectManifest`](../src/local_deepwiki/generators/manifest.md): The parsed or cached manifest.
-
-## get_directory_tree
-
-Generates a directory tree structure.
-
-### Parameters
-
-- `root` (Path): The root directory to scan.
-
-### Returns
-
-- `dict`: A dictionary representing the directory tree.
-
-## parse_manifest
-
-Parses manifest files in a directory and returns a [ProjectManifest](../src/local_deepwiki/generators/manifest.md).
-
-### Parameters
-
-- `root` (Path): The root directory to scan for manifest files.
-
-### Returns
-
-- [`ProjectManifest`](../src/local_deepwiki/generators/manifest.md): The parsed manifest.
-
-# Usage Examples
-
-## Parsing a Manifest
+### Testing Cache Functionality
 
 ```python
-from pathlib import Path
-from local_deepwiki.generators.manifest import parse_manifest
+# Create a project with manifest
+root = Path("/path/to/project")
+(root / "pyproject.toml").write_text("""
+[project]
+name = "my-project"
+dependencies = ["requests"]
+""")
 
-manifest = parse_manifest(Path("/path/to/project"))
+# Get cached manifest (creates cache on first call)
+manifest = get_cached_manifest(root)
+assert manifest.name == "my-project"
+
+# Subsequent calls use cache
+cached_manifest = get_cached_manifest(root)
 ```
 
-## Using Cached Manifest
+### Testing Multiple Manifest Precedence
 
 ```python
-from pathlib import Path
-from local_deepwiki.generators.manifest import get_cached_manifest
+# Create directory with both pyproject.toml and requirements.txt
+root = Path("/path/to/project")
+(root / "pyproject.toml").write_text("""
+[project]
+name = "from-pyproject"
+dependencies = ["flask"]
+""")
+(root / "requirements.txt").write_text("requests")
 
-manifest = get_cached_manifest(Path("/path/to/project"), cache_dir=Path("/path/to/cache"))
+# pyproject.toml takes precedence
+manifest = parse_manifest(root)
+assert manifest.name == "from-pyproject"
 ```
 
-## Getting Manifest Modification Times
+## Related Components
 
-```python
-from pathlib import Path
-from local_deepwiki.generators.manifest import _get_manifest_mtimes
+This test file works with several components from the local_deepwiki.generators.manifest module:
 
-mtimes = _get_manifest_mtimes(Path("/path/to/project"))
-```
+- **[ManifestCacheEntry](../src/local_deepwiki/generators/manifest.md)** - Handles cache entry serialization and validation
+- **[ProjectManifest](../src/local_deepwiki/generators/manifest.md)** - Core data structure representing parsed project metadata
+- **[get_directory_tree](../src/local_deepwiki/generators/manifest.md)** - Function for directory structure analysis (imported but not shown in test methods)
 
-# Related Components
-
-This file works with the following components from `local_deepwiki.generators.manifest`:
-
-- [`ManifestCacheEntry`](../src/local_deepwiki/generators/manifest.md)
-- [`ProjectManifest`](../src/local_deepwiki/generators/manifest.md)
-- `_get_manifest_mtimes`
-- `_is_cache_valid`
-- [`get_cached_manifest`](../src/local_deepwiki/generators/manifest.md)
-- [`get_directory_tree`](../src/local_deepwiki/generators/manifest.md)
-- [`parse_manifest`](../src/local_deepwiki/generators/manifest.md)
+The caching system uses JSON serialization and file modification time tracking to provide efficient manifest parsing across multiple tool invocations.
 
 ## API Reference
 
@@ -674,4 +572,3 @@ flowchart TD
 
 - [manifest](../src/local_deepwiki/generators/manifest.md) - dependency
 - [test_indexer](test_indexer.md) - shares 3 dependencies
-- [test_incremental_wiki](test_incremental_wiki.md) - shares 3 dependencies

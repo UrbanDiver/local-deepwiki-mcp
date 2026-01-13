@@ -1,126 +1,76 @@
-# File Overview
+# test_api_docs.py
 
-This file contains tests for the API documentation generation functionality, specifically for the [`get_file_api_docs`](../src/local_deepwiki/generators/api_docs.md) convenience function and the [`APIDocExtractor`](../src/local_deepwiki/generators/api_docs.md) class. It verifies that API documentation can be correctly extracted from Python files.
+## File Overview
 
-# Classes
+This test file contains unit tests for the API documentation generation functionality in the local_deepwiki project. It tests various components involved in extracting and formatting API documentation from Python source code, including docstring parsing, function signature extraction, and class signature extraction.
 
-## TestGetFileApiDocs
+## Classes
 
-Test class for the [`get_file_api_docs`](../src/local_deepwiki/generators/api_docs.md) convenience function.
+### TestAPIDocExtractor
 
-### Methods
+Test class for the [APIDocExtractor](../src/local_deepwiki/generators/api_docs.md) functionality.
 
-#### test_file_with_content
+**Key Methods:**
+- `extractor()` - Pytest fixture that returns an [APIDocExtractor](../src/local_deepwiki/generators/api_docs.md) instance
+- `test_extract_from_file()` - Tests extracting documentation from a Python file by creating a temporary file with sample code and verifying the extraction process
 
-Test getting API docs for a file with content.
+### TestGetFileApiDocs
 
-**Parameters:**
+Test class for the convenience function that gets API documentation for files.
 
-- `tmp_path`: A pytest fixture providing a temporary directory path.
+**Key Methods:**
+- `test_file_with_content()` - Tests getting API docs for a file containing a function with proper docstring formatting, parameters, and return type annotations
 
-## TestAPIDocExtractor
+## Usage Examples
 
-Test class for the [`APIDocExtractor`](../src/local_deepwiki/generators/api_docs.md) class.
-
-### Methods
-
-#### test_extract_from_file
-
-Test extracting docs from a Python file.
-
-**Parameters:**
-
-- `tmp_path`: A pytest fixture providing a temporary directory path.
-- `extractor`: A pytest fixture that provides an instance of [`APIDocExtractor`](../src/local_deepwiki/generators/api_docs.md).
-
-# Functions
-
-## get_file_api_docs
-
-Extracts API documentation from a Python file.
-
-**Parameters:**
-
-- `file_path` (Path): The path to the Python file to extract documentation from.
-
-**Returns:**
-
-- The extracted API documentation.
-
-# Usage Examples
-
-## Example: Testing `get_file_api_docs`
+Based on the test structure shown, the components are used as follows:
 
 ```python
-def test_file_with_content(self, tmp_path):
-    source = dedent(
-        '''
-        def process(value: int = 10) -> str:
-            """Process a value.
+# Creating an extractor instance
+extractor = APIDocExtractor()
 
-            Args:
-                value: The value to process.
+# Testing file extraction with sample content
+source = '''
+def process(value: int = 10) -> str:
+    """Process a value.
 
-            Returns:
-                The processed string.
-            """
-            return str(value)
-        '''
-    ).strip()
+    Args:
+        value: The value to process.
 
-    test_file = tmp_path / "processor.py"
-    test_file.write_text(source)
-    docs = get_file_api_docs(test_file)
-    # Assertions would go here
+    Returns:
+        The processed string.
+    """
+    return str(value)
+'''
+
+# Writing to temporary file for testing
+test_file = tmp_path / "processor.py"
+test_file.write_text(source)
 ```
 
-## Example: Testing `APIDocExtractor`
+## Related Components
 
-```python
-def test_extract_from_file(self, tmp_path, extractor):
-    source = dedent(
-        '''
-        """Module docstring."""
+This test file imports and tests functionality from several modules:
 
-        def helper(value: int) -> bool:
-            """A helper function."""
-            return value > 0
+- **[CodeParser](../src/local_deepwiki/core/parser.md)** from `local_deepwiki.core.parser` - Used for parsing Python source code
+- **[APIDocExtractor](../src/local_deepwiki/generators/api_docs.md)** - Main class for extracting API documentation
+- **[ClassSignature](../src/local_deepwiki/generators/api_docs.md) and [FunctionSignature](../src/local_deepwiki/generators/api_docs.md)** - Data structures for representing code signatures
+- **[Parameter](../src/local_deepwiki/generators/api_docs.md)** - Represents function/method parameters
+- Various utility functions including:
+  - [`extract_class_signature`](../src/local_deepwiki/generators/api_docs.md)
+  - [`extract_function_signature`](../src/local_deepwiki/generators/api_docs.md)
+  - [`extract_python_decorators`](../src/local_deepwiki/generators/api_docs.md)
+  - [`extract_python_docstring`](../src/local_deepwiki/generators/api_docs.md)
+  - [`extract_python_parameters`](../src/local_deepwiki/generators/api_docs.md)
+  - [`extract_python_return_type`](../src/local_deepwiki/generators/api_docs.md)
+  - [`format_function_signature_line`](../src/local_deepwiki/generators/api_docs.md)
+  - [`format_parameter`](../src/local_deepwiki/generators/api_docs.md)
+  - [`generate_api_reference_markdown`](../src/local_deepwiki/generators/api_docs.md)
+  - [`get_file_api_docs`](../src/local_deepwiki/generators/api_docs.md)
+  - [`parse_docstring`](../src/local_deepwiki/generators/api_docs.md)
+  - [`parse_google_docstring`](../src/local_deepwiki/generators/api_docs.md)
 
-        class MyClass:
-            """A sample class."""
-
-            def __init__(self, name: str):
-                """Initialize the class."""
-                self.name = name
-        '''
-    ).strip()
-
-    test_file = tmp_path / "test_module.py"
-    test_file.write_text(source)
-    docs = extractor.extract_from_file(test_file)
-    # Assertions would go here
-```
-
-# Related Components
-
-This file works with the following components from the `local_deepwiki.generators.api_docs` module:
-
-- [`APIDocExtractor`](../src/local_deepwiki/generators/api_docs.md)
-- [`ClassSignature`](../src/local_deepwiki/generators/api_docs.md)
-- [`FunctionSignature`](../src/local_deepwiki/generators/api_docs.md)
-- [`Parameter`](../src/local_deepwiki/generators/api_docs.md)
-- [`extract_class_signature`](../src/local_deepwiki/generators/api_docs.md)
-- [`extract_function_signature`](../src/local_deepwiki/generators/api_docs.md)
-- [`extract_python_decorators`](../src/local_deepwiki/generators/api_docs.md)
-- [`extract_python_docstring`](../src/local_deepwiki/generators/api_docs.md)
-- [`extract_python_parameters`](../src/local_deepwiki/generators/api_docs.md)
-- [`extract_python_return_type`](../src/local_deepwiki/generators/api_docs.md)
-- [`format_function_signature_line`](../src/local_deepwiki/generators/api_docs.md)
-- [`format_parameter`](../src/local_deepwiki/generators/api_docs.md)
-- [`generate_api_reference_markdown`](../src/local_deepwiki/generators/api_docs.md)
-- [`get_file_api_docs`](../src/local_deepwiki/generators/api_docs.md)
-- [`parse_docstring`](../src/local_deepwiki/generators/api_docs.md)
-- [`parse_google_docstring`](../src/local_deepwiki/generators/api_docs.md)
+The tests use pytest fixtures and temporary file handling via `tmp_path` to create isolated test environments for validating the API documentation extraction functionality.
 
 ## API Reference
 
@@ -687,25 +637,26 @@ Test getting API docs for file without functions.
 ```mermaid
 classDiagram
     class TestAPIDocExtractor {
+        +name
         +extractor()
         +test_extract_from_file()
-        +helper()
+        +helper() -> bool
         -__init__()
-        +process()
+        +process() -> dict
         +test_extract_unsupported_file()
     }
     class TestExtractClassSignature {
         +parser()
         +test_simple_class()
-        +method()
+        +method() -> bool
         +test_class_with_inheritance()
     }
     class TestExtractFunctionSignature {
         +parser()
         +test_simple_function()
-        +greet()
+        +greet() -> str
         +test_async_function()
-        +fetch_data()
+        +fetch_data() -> bytes
     }
     class TestExtractPythonDocstring {
         +parser()
@@ -716,26 +667,27 @@ classDiagram
     }
     class TestExtractPythonParameters {
         +parser()
-        +test_simple_parameters()
-        +test_typed_parameters()
-        +test_default_parameters()
-        +test_typed_default_parameters()
-        +test_excludes_self()
-        +test_excludes_cls()
+        +test_simple_parameters(parser)
+        +test_typed_parameters(parser)
+        +test_default_parameters(parser)
+        +test_typed_default_parameters(parser)
+        +test_excludes_self(parser)
+        +test_excludes_cls(parser)
     }
     class TestExtractPythonReturnType {
         +parser()
         +test_simple_return_type()
-        +func()
+        +func() -> str
         +test_complex_return_type()
         +test_no_return_type()
     }
     class TestFormatFunctionSignatureLine {
         +test_simple_function()
-        +func()
         +test_function_with_params()
         +test_function_with_return_type()
-        +test_async_function()
+        +func() -> bool"
+
+    def test_async_function(self)
     }
     class TestFormatParameter {
         +test_simple_param()
@@ -746,14 +698,17 @@ classDiagram
     class TestGenerateApiReferenceMarkdown {
         +test_empty_input()
         +test_function_documentation()
-        +process()
+        +process() -> bool" in result
+        assert "Process the input data." in result
+        assert "| `data` |" in result
+        assert "**Returns
         +test_class_documentation()
         +test_filters_private_items()
         +test_includes_private_when_requested()
     }
     class TestGetFileApiDocs {
         +test_file_with_content()
-        +process()
+        +process() -> str
         +test_file_without_functions()
     }
     class TestParameter {
@@ -879,5 +834,4 @@ flowchart TD
 ## See Also
 
 - [api_docs](../src/local_deepwiki/generators/api_docs.md) - dependency
-- [test_callgraph](test_callgraph.md) - shares 5 dependencies
 - [test_parser](test_parser.md) - shares 4 dependencies

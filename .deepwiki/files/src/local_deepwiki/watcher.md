@@ -1,67 +1,52 @@
-# File Overview
+# watcher.py
 
-This file, `src/local_deepwiki/watcher.py`, implements a file system watcher that monitors a repository for changes and automatically regenerates wiki documentation. It uses the `watchdog` library to observe file system events and integrates with the `local_deepwiki` documentation generation system.
+## File Overview
 
-# Classes
+This file implements a file system watcher that monitors repository changes and automatically regenerates wiki documentation. It uses the watchdog library to detect file system events and triggers reindexing when relevant files are modified.
 
-## FileSystemEventHandler
+## Functions
 
-The FileSystemEventHandler class is a custom event handler that extends the watchdog library's event handler. It is responsible for managing file system events and triggering reindexing operations when relevant files are modified.
+### main()
 
-Key methods:
-- `on_any_event`: Handles any file system event and schedules a reindexing operation with a debounce delay.
-
-## Timer
-
-The Timer class from the threading module is used to delay the execution of the reindexing operation, preventing excessive reindexing when multiple file changes occur in quick succession.
-
-# Functions
-
-## main
-
-The main function serves as the entry point for the watch command. It parses command-line arguments and initializes the file system watcher.
+Main entry point for the watch command that sets up command-line argument parsing for the file watcher.
 
 **Parameters:**
+- None
+
+**Returns:**
 - `None`
 
-**Return value:**
-- `None`
-
-**Command-line arguments:**
-- `repo_path`: Path to the repository to watch (default: current directory)
+**Command-line Arguments:**
+- `repo_path` (optional): Path to the repository to watch (defaults to current directory)
 - `--debounce`: Seconds to wait after changes before reindexing (default: 2.0)
-- `--include`: Glob pattern to include files for watching (default: all files)
-- `--exclude`: Glob pattern to exclude files from watching (default: none)
-- `--config`: Path to the configuration file (default: config.yaml)
 
-# Usage Examples
+## Usage Examples
 
-To run the watcher on the current directory with default settings:
-```
-python watcher.py
-```
+The main function can be called directly to start the file watcher:
 
-To watch a specific repository with a custom debounce time:
-```
-python watcher.py /path/to/repo --debounce 5.0
+```python
+from local_deepwiki.watcher import main
+
+# Start the watcher
+main()
 ```
 
-To watch with custom include and exclude patterns:
-```
-python watcher.py --include "*.md" --exclude "docs/*"
-```
+## Related Components
 
-# Related Components
+This module integrates with several other components based on the imports:
 
-This file works with the following components:
+- **[Config](config.md)**: Uses [get_config](config.md) function and [Config](config.md) class for configuration management
+- **RepositoryIndexer**: Core indexing functionality from the indexer module
+- **EXTENSION_MAP**: File extension mapping from the parser module
+- **[generate_wiki](generators/wiki.md)**: Wiki generation functionality from the generators module
+- **get_logger**: Logging utilities from the logging module
 
-- The [`Config`](config.md) class from `local_deepwiki.config` for configuration management
-- The `RepositoryIndexer` class from `local_deepwiki.core.indexer` for indexing repository contents
-- The [`WikiGenerator`](generators/wiki.md) class from `local_deepwiki.generators.wiki` for generating wiki documentation
-- The `get_logger` function from `local_deepwiki.logging` for logging
-- The `EXTENSION_MAP` from `local_deepwiki.core.parser` for file extension handling
-
-The file uses the `watchdog` library for file system monitoring and `rich` for console output.
+The module also uses external libraries:
+- `watchdog` for file system monitoring
+- `rich.console` for console output
+- `argparse` for command-line interface
+- `asyncio` for asynchronous operations
+- `pathlib` for path handling
 
 ## API Reference
 
@@ -258,22 +243,27 @@ Main entry point for the watch command.
 ```mermaid
 classDiagram
     class DebouncedHandler {
-        -__init__()
-        -_should_watch_file()
-        -_schedule_reindex()
-        -_trigger_reindex()
-        -_do_reindex()
-        +progress_callback()
-        +on_modified()
-        +on_created()
-        +on_deleted()
-        +on_moved()
+        -__init__(repo_path: Path, config: Config, debounce_seconds: float, llm_provider: str | None)
+        -_should_watch_file(path: str) bool
+        -_schedule_reindex() None
+        -_trigger_reindex() None
+        -_do_reindex(changed_files: list[str]) None
+        +progress_callback(msg: str, current: int, total: int) None
+        +on_modified(event: FileSystemEvent) None
+        +on_created(event: FileSystemEvent) None
+        +on_deleted(event: FileSystemEvent) None
+        +on_moved(event: FileSystemEvent) None
     }
     class RepositoryWatcher {
+        +repo_path
+        +config
+        +debounce_seconds
+        +llm_provider
+        -_observer
         -__init__()
-        +start()
-        +stop()
-        +is_running()
+        +start() -> None
+        +stop() -> None
+        +is_running() -> bool
     }
     DebouncedHandler --|> FileSystemEventHandler
 ```

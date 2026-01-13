@@ -81,31 +81,43 @@
                 },
                 {
                   "number": "5.1.1.5",
-                  "title": "Generators",
+                  "title": "Export",
                   "path": "",
                   "children": [
                     {
                       "number": "5.1.1.5.1",
+                      "title": "pdf.py",
+                      "path": "files/src/local_deepwiki/export/pdf.md"
+                    }
+                  ]
+                },
+                {
+                  "number": "5.1.1.6",
+                  "title": "Generators",
+                  "path": "",
+                  "children": [
+                    {
+                      "number": "5.1.1.6.1",
                       "title": "api_docs.py",
                       "path": "files/src/local_deepwiki/generators/api_docs.md"
                     },
                     {
-                      "number": "5.1.1.5.2",
+                      "number": "5.1.1.6.2",
                       "title": "crosslinks.py",
                       "path": "files/src/local_deepwiki/generators/crosslinks.md"
                     },
                     {
-                      "number": "5.1.1.5.3",
+                      "number": "5.1.1.6.3",
                       "title": "diagrams.py",
                       "path": "files/src/local_deepwiki/generators/diagrams.md"
                     },
                     {
-                      "number": "5.1.1.5.4",
+                      "number": "5.1.1.6.4",
                       "title": "manifest.py",
                       "path": "files/src/local_deepwiki/generators/manifest.md"
                     },
                     {
-                      "number": "5.1.1.5.5",
+                      "number": "5.1.1.6.5",
                       "title": "wiki.py",
                       "path": "files/src/local_deepwiki/generators/wiki.md"
                     }
@@ -127,46 +139,41 @@
             },
             {
               "number": "5.2.2",
-              "title": "test_callgraph.py",
-              "path": "files/tests/test_callgraph.md"
-            },
-            {
-              "number": "5.2.3",
               "title": "test_crosslinks.py",
               "path": "files/tests/test_crosslinks.md"
             },
             {
-              "number": "5.2.4",
-              "title": "test_incremental_wiki.py",
-              "path": "files/tests/test_incremental_wiki.md"
-            },
-            {
-              "number": "5.2.5",
+              "number": "5.2.3",
               "title": "test_indexer.py",
               "path": "files/tests/test_indexer.md"
             },
             {
-              "number": "5.2.6",
+              "number": "5.2.4",
               "title": "test_manifest.py",
               "path": "files/tests/test_manifest.md"
             },
             {
-              "number": "5.2.7",
+              "number": "5.2.5",
               "title": "test_models.py",
               "path": "files/tests/test_models.md"
             },
             {
-              "number": "5.2.8",
+              "number": "5.2.6",
               "title": "test_parser.py",
               "path": "files/tests/test_parser.md"
             },
             {
-              "number": "5.2.9",
+              "number": "5.2.7",
+              "title": "test_pdf_export.py",
+              "path": "files/tests/test_pdf_export.md"
+            },
+            {
+              "number": "5.2.8",
               "title": "test_retry.py",
               "path": "files/tests/test_retry.md"
             },
             {
-              "number": "5.2.10",
+              "number": "5.2.9",
               "title": "test_vectorstore.py",
               "path": "files/tests/test_vectorstore.md"
             }

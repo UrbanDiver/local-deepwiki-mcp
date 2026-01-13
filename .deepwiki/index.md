@@ -5,21 +5,21 @@ Local DeepWiki-style MCP server for private repository documentation
 
 ## Description
 
-This project provides a local MCP server that enables private repository documentation generation and serving, similar to DeepWiki. It supports both local and cloud-based LLM providers for processing repository content and generating documentation. The system can be run as a web server or as a command-line tool for exporting documentation.
+Local DeepWiki MCP is a Model Context Protocol (MCP) server that generates documentation for private repositories. It provides both a server interface for MCP clients and a web application for browsing generated documentation, with support for multiple LLM providers including Ollama, OpenAI, and Anthropic.
 
 ## Key Features
 
-- **MCP Server Implementation**: The [`main`](files/src/local_deepwiki/watcher.md) function in `src/local_deepwiki/server.py` demonstrates the core MCP server setup using `stdio_server` and `server.run` for handling MCP protocol communication
-- **Ollama LLM Integration**: The [`OllamaConfig`](files/src/local_deepwiki/config.md) and `OllamaProvider` classes in `src/local_deepwiki/providers/llm/ollama.py` show support for local LLM inference through Ollama API
-- **Repository Indexing**: The `Indexer` class in `src/local_deepwiki/core/indexer.py` provides repository indexing capabilities with configurable embedding providers
-- **Web Server Interface**: The `run_server` function in `src/local_deepwiki/web/app.py` enables serving documentation via a web interface with configurable host, port, and debug options
-- **Configuration Management**: The [`Config`](files/src/local_deepwiki/config.md) class in `src/local_deepwiki/config.py` provides structured configuration handling with support for multiple embedding and LLM providers
+- **MCP Server Integration** - Implements a Model Context Protocol server with stdio communication for integration with MCP clients
+- **Multiple LLM Provider Support** - Configurable support for Ollama (with local hosting), OpenAI, and Anthropic language models through dedicated provider classes
+- **Repository Indexing** - Core indexer functionality that processes repository contents with configurable embedding providers (local or OpenAI)
+- **Web Interface** - Built-in Flask web server for browsing and serving generated wiki documentation
+- **Export Capabilities** - Multiple export formats including HTML and PDF through dedicated command-line tools
 
 ## Technology Stack
 
 - **Python >=3.11**
 - **Dependencies**: anthropic, flask, lancedb, markdown, mcp, ollama, openai, pandas, pydantic, pyyaml, rich, sentence-transformers
-  - Plus 15 more...
+  - Plus 16 more...
 
 ## Directory Structure
 
@@ -56,6 +56,7 @@ local-deepwiki-mcp/
 ## Quick Start
 
 - `deepwiki-export` → `local_deepwiki.export.html:main`
+- `deepwiki-export-pdf` → `local_deepwiki.export.pdf:main`
 - `deepwiki-serve` → `local_deepwiki.web.app:main`
 - `deepwiki-watch` → `local_deepwiki.watcher:main`
 - `local-deepwiki` → `local_deepwiki.server:main`

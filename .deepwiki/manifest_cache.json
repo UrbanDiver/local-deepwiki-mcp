@@ -1,0 +1,64 @@
+{
+  "manifest_data": {
+    "name": "local-deepwiki",
+    "version": "0.1.0",
+    "description": "Local DeepWiki-style MCP server for private repository documentation",
+    "language": "Python",
+    "language_version": ">=3.11",
+    "dependencies": {
+      "mcp": ">=1.2.0",
+      "tree-sitter": ">=0.23",
+      "tree-sitter-python": ">=0.23",
+      "tree-sitter-javascript": ">=0.23",
+      "tree-sitter-typescript": ">=0.23",
+      "tree-sitter-go": ">=0.23",
+      "tree-sitter-rust": ">=0.23",
+      "tree-sitter-java": ">=0.23",
+      "tree-sitter-c": ">=0.23",
+      "tree-sitter-cpp": ">=0.23",
+      "tree-sitter-swift": ">=0.0.1",
+      "tree-sitter-ruby": ">=0.23",
+      "tree-sitter-php": ">=0.23",
+      "tree-sitter-kotlin": ">=0.23",
+      "tree-sitter-c-sharp": ">=0.23",
+      "lancedb": ">=0.15",
+      "sentence-transformers": ">=3.0",
+      "openai": ">=1.0",
+      "anthropic": ">=0.40",
+      "ollama": ">=0.4",
+      "pydantic": ">=2.0",
+      "pyyaml": ">=6.0",
+      "rich": ">=13.0",
+      "pandas": ">=2.0",
+      "flask": ">=3.0",
+      "markdown": ">=3.0",
+      "watchdog": ">=4.0",
+      "weasyprint": ">=62.0"
+    },
+    "dev_dependencies": {
+      "pytest": ">=8.0",
+      "pytest-asyncio": ">=0.24",
+      "pre-commit": ">=3.0",
+      "black": ">=24.0",
+      "isort": ">=5.0",
+      "mypy": ">=1.0"
+    },
+    "entry_points": {
+      "local-deepwiki": "local_deepwiki.server:main",
+      "deepwiki-serve": "local_deepwiki.web.app:main",
+      "deepwiki-watch": "local_deepwiki.watcher:main",
+      "deepwiki-export": "local_deepwiki.export.html:main",
+      "deepwiki-export-pdf": "local_deepwiki.export.pdf:main"
+    },
+    "scripts": {},
+    "repository": null,
+    "license": null,
+    "authors": [],
+    "manifest_files": [
+      "pyproject.toml"
+    ]
+  },
+  "file_mtimes": {
+    "pyproject.toml": 1768317231.1681826
+  }
+}

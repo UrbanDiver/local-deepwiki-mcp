@@ -1,230 +1,96 @@
-# File Overview
+# Manifest Generator Module
 
-This file provides functionality for parsing and managing project manifests, including support for various manifest formats like `pyproject.toml`, `setup.py`, `requirements.txt`, and `package.json`. It also includes caching mechanisms to improve performance when repeatedly loading manifests.
+## File Overview
 
-# Classes
+The `manifest.py` module provides functionality for parsing and caching project manifest information from various file formats. It handles project metadata extraction from Python projects (pyproject.toml, setup.py, requirements.txt) and Node.js projects (package.json), with built-in caching mechanisms to improve performance.
 
-## ManifestCacheEntry
+## Classes
 
-A dataclass representing a cached manifest entry with the following fields:
-- `path`: The path to the manifest file
-- `mtime`: The last modification time of the manifest file
-- `manifest`: The parsed manifest data
+### ManifestCacheEntry
 
-## ProjectManifest
+A dataclass that represents a cached manifest entry, storing both the manifest data and metadata for cache validation.
 
-A dataclass representing a project manifest with the following fields:
-- `name`: The name of the project
-- `version`: The version of the project
-- `description`: A description of the project
-- `dependencies`: A list of dependencies
-- `dev_dependencies`: A list of development dependencies
-- `license`: The license of the project
-- `authors`: A list of authors
-- `homepage`: The homepage URL of the project
-- `repository`: The repository URL of the project
-- `keywords`: A list of keywords
-- `readme`: The path to the README file
-- `pyproject_toml`: The path to the pyproject.toml file
-- `setup_py`: The path to the setup.py file
-- `requirements_txt`: The path to the requirements.txt file
-- `package_json`: The path to the package.json file
-- `metadata`: A dictionary of additional metadata
+### ProjectManifest
 
-# Functions
+A dataclass that contains parsed project manifest information including dependencies, metadata, and project structure details.
 
-## _get_manifest_mtimes
+## Functions
 
-Retrieves modification times for a list of manifest files.
+### Cache Management Functions
 
-**Parameters:**
-- `manifest_paths`: A list of paths to manifest files
+**_get_manifest_mtimes**
+Retrieves modification times for manifest files to determine if cache is still valid.
 
-**Returns:**
-- A dictionary mapping manifest paths to their modification times
+**_is_cache_valid**
+Validates whether the cached manifest data is still current by comparing file modification times.
 
-## _is_cache_valid
+**_load_manifest_cache**
+Loads cached manifest data from disk storage.
 
-Checks if the cache is valid based on modification times.
+**_save_manifest_cache**
+Persists manifest data to cache storage for future use.
 
-**Parameters:**
-- `cache`: A `ManifestCacheEntry` object
-- `manifest_paths`: A list of paths to manifest files
+### Serialization Functions
 
-**Returns:**
-- A boolean indicating whether the cache is valid
+**_manifest_to_dict**
+Converts a ProjectManifest object to a dictionary format suitable for serialization.
 
-## _load_manifest_cache
+**_manifest_from_dict**
+Reconstructs a ProjectManifest object from a dictionary representation.
 
-Loads the manifest cache from a file.
+### Main Interface Functions
 
-**Parameters:**
-- `cache_file`: The path to the cache file
+**get_cached_manifest**
+Primary function that retrieves manifest data, using cache when valid or parsing fresh when needed.
 
-**Returns:**
-- A dictionary representing the loaded cache
+**parse_manifest**
+Parses project manifest files and returns a ProjectManifest object with extracted information.
 
-## _save_manifest_cache
+### Format-Specific Parsers
 
-Saves the manifest cache to a file.
+**_parse_pyproject_toml**
+Parses Python project configuration from pyproject.toml files using the `tomllib` library.
 
-**Parameters:**
-- `cache_file`: The path to the cache file
-- `cache`: A dictionary representing the cache to be saved
+**_parse_python_dep**
+Extracts and normalizes Python dependency information.
 
-## _manifest_to_dict
+**_parse_setup_py**
+Processes setup.py files to extract project metadata and dependencies.
 
-Converts a `ProjectManifest` object to a dictionary.
+**_parse_requirements_txt**
+Parses requirements.txt files for Python dependency lists.
 
-**Parameters:**
-- `manifest`: A `ProjectManifest` object
+**_parse_package_json**
+Handles Node.js package.json files for JavaScript/TypeScript project information.
 
-**Returns:**
-- A dictionary representation of the manifest
-
-## _manifest_from_dict
-
-Converts a dictionary to a `ProjectManifest` object.
-
-**Parameters:**
-- `data`: A dictionary representing a manifest
-
-**Returns:**
-- A `ProjectManifest` object
-
-## get_cached_manifest
-
-Retrieves a manifest from the cache or parses it if the cache is invalid.
-
-**Parameters:**
-- `manifest_paths`: A list of paths to manifest files
-- `cache_file`: The path to the cache file
-
-**Returns:**
-- A `ProjectManifest` object
-
-## parse_manifest
-
-Parses a list of manifest files and returns a `ProjectManifest` object.
-
-**Parameters:**
-- `manifest_paths`: A list of paths to manifest files
-
-**Returns:**
-- A `ProjectManifest` object
-
-## _parse_pyproject_toml
-
-Parses a `pyproject.toml` file and extracts project metadata.
-
-**Parameters:**
-- `path`: The path to the `pyproject.toml` file
-
-**Returns:**
-- A dictionary containing the parsed metadata
-
-## _parse_python_dep
-
-Parses a Python dependency string.
-
-**Parameters:**
-- `dep`: A string representing a Python dependency
-
-**Returns:**
-- A dictionary containing the dependency's name and version
-
-## _parse_setup_py
-
-Parses a `setup.py` file and extracts project metadata.
-
-**Parameters:**
-- `path`: The path to the `setup.py` file
-
-**Returns:**
-- A dictionary containing the parsed metadata
-
-## _parse_requirements_txt
-
-Parses a `requirements.txt` file and extracts dependencies.
-
-**Parameters:**
-- `path`: The path to the `requirements.txt` file
-
-**Returns:**
-- A list of dependencies
-
-## _parse_package_json
-
-Parses a `package.json` file and extracts project metadata.
-
-**Parameters:**
-- `path`: The path to the `package.json` file
-
-**Returns:**
-- A dictionary containing the parsed metadata
-
-## _parse_project_manifest
-
-Parses a project manifest file and returns a dictionary of metadata.
-
-**Parameters:**
-- `path`: The path to the manifest file
-- `manifest_type`: The type of the manifest file
-
-**Returns:**
-- A dictionary containing the parsed metadata
-
-# Usage Examples
-
-To parse a manifest file:
+## Usage Examples
 
 ```python
-manifest = parse_manifest(["pyproject.toml"])
+from local_deepwiki.generators.manifest import get_cached_manifest, parse_manifest
+from pathlib import Path
+
+# Get cached manifest (preferred method)
+project_path = Path("./my_project")
+manifest = get_cached_manifest(project_path)
+
+# Parse manifest directly
+manifest = parse_manifest(project_path)
+
+# Access manifest data
+print(f"Project dependencies: {manifest.dependencies}")
+print(f"Project metadata: {manifest.metadata}")
 ```
 
-To get a manifest from cache:
+## Related Components
 
-```python
-manifest = get_cached_manifest(["pyproject.toml"], "cache.json")
-```
+This module integrates with:
 
-To parse a `pyproject.toml` file:
+- **local_deepwiki.logging**: Uses the logging system via `get_logger` for operation tracking
+- **pathlib.Path**: Extensively uses Path objects for file system operations
+- **tomllib/tomli**: Handles TOML file parsing for Python project configurations
+- **json**: Processes JSON files for Node.js projects and cache serialization
 
-```python
-metadata = _parse_pyproject_toml("pyproject.toml")
-```
-
-To parse a `setup.py` file:
-
-```python
-metadata = _parse_setup_py("setup.py")
-```
-
-To parse a `requirements.txt` file:
-
-```python
-dependencies = _parse_requirements_txt("requirements.txt")
-```
-
-To parse a `package.json` file:
-
-```python
-metadata = _parse_package_json("package.json")
-```
-
-# Related Components
-
-This file imports and uses:
-- `json` and `tomli` for parsing TOML files
-- `pathlib.Path` for handling file paths
-- `dataclasses.dataclass` for defining structured data
-- `local_deepwiki.logging.get_logger` for logging
-- `typing.Any` for type annotations
-
-It also references:
-- `ManifestCacheEntry` and `ProjectManifest` dataclasses
-- The `get_logger` function for logging
-- The `tomli` library for TOML parsing
+The module serves as a foundational component for project analysis, providing standardized manifest information that other parts of the deepwiki system can consume for documentation generation and project understanding.
 
 ## API Reference
 
@@ -400,15 +266,17 @@ def traverse(path: Path, prefix: str, depth: int) -> None
 ```mermaid
 classDiagram
     class ManifestCacheEntry {
-        +to_dict()
-        +from_dict()
+        +manifest_data: dict[str, Any]
+        +file_mtimes: dict[str, float]  # filename -> mtime
+        +to_dict() -> dict[str, Any]
+        +from_dict() -> "ManifestCacheEntry"
     }
     class ProjectManifest {
-        +has_data()
-        +get_tech_stack_summary()
-        -_categorize_dependencies()
-        +get_dependency_list()
-        +get_entry_points_summary()
+        +has_data() bool
+        +get_tech_stack_summary() str
+        -_categorize_dependencies() dict[str, list[str]]
+        +get_dependency_list() str
+        +get_entry_points_summary() str
     }
 ```
 

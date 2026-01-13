@@ -1,55 +1,210 @@
-# File Overview
+# diagrams.py
 
-This file contains the diagram generation logic for the local_deepwiki project. It defines data structures and functionality for handling code chunks and their associated diagrams, particularly focusing on parsing and organizing code elements for visualization purposes.
+## File Overview
 
-# Classes
+The `diagrams.py` module provides functionality for generating various types of Mermaid diagrams from code analysis data. It creates visual representations including class diagrams, dependency graphs, module overviews, language distribution charts, and sequence diagrams to help understand code structure and relationships.
 
-## CodeChunk
+## Classes
 
-The CodeChunk class represents a chunk of code that can be processed for diagram generation. It stores information about the code content, its type, and associated metadata.
+### ClassInfo
 
-Key attributes:
-- `content`: The actual code content as a string
-- `chunk_type`: The type of chunk, represented by the ChunkType enum
-- `index_status`: The indexing status of the chunk, represented by the IndexStatus enum
+A dataclass that stores information about a class for diagram generation purposes.
 
-## ChunkType
+**Attributes:**
+- `name`: The class name
+- `methods`: List of method names
+- `attributes`: List of attribute names  
+- `parents`: List of parent class names
+- `is_abstract`: Boolean indicating if the class is abstract (default: False)
+- `is_dataclass`: Boolean indicating if the class is a dataclass (default: False)
+- `docstring`: Optional docstring content
 
-The ChunkType enum defines the different types of code chunks that can be processed.
+## Functions
 
-## IndexStatus
-
-The IndexStatus enum defines the indexing status of chunks.
-
-# Functions
-
-No functions are defined in this file.
-
-# Usage Examples
+### sanitize_mermaid_name
 
 ```python
-# Creating a CodeChunk instance
-chunk = CodeChunk(
-    content="def hello():\n    print('Hello')",
-    chunk_type=ChunkType.FUNCTION,
-    index_status=IndexStatus.INDEXED
-)
-
-# Accessing chunk properties
-print(chunk.content)
-print(chunk.chunk_type)
-print(chunk.index_status)
+def sanitize_mermaid_name(name: str) -> str
 ```
 
-# Related Components
+Sanitizes a name to make it safe for use in Mermaid diagram syntax by replacing problematic characters with underscores and ensuring the name starts with a letter.
 
-This file imports and works with the following components:
+**Parameters:**
+- `name`: Original name to sanitize
 
-- `ChunkType` enum from `local_deepwiki.models`: Defines the types of code chunks
-- `CodeChunk` class from `local_deepwiki.models`: Represents individual code elements
-- `IndexStatus` enum from `local_deepwiki.models`: Represents the indexing status of chunks
+**Returns:**
+- Sanitized name safe for Mermaid syntax
 
-The file is part of the diagram generation system and integrates with the broader local_deepwiki framework for processing and visualizing code documentation.
+### generate_class_diagram
+
+```python
+def generate_class_diagram(
+    chunks: list,
+    show_attributes: bool = True,
+    show_types: bool = True,
+    max_methods: int = 15,
+) -> str | None
+```
+
+Generates an enhanced Mermaid class diagram from code chunks with support for showing class attributes, type annotations, inheritance relationships, and distinguishing special class types like abstract classes and dataclasses.
+
+**Parameters:**
+- `chunks`: List of CodeChunk or SearchResult objects
+- `show_attributes`: Whether to display class attributes (default: True)
+- `show_types`: Whether to show type annotations (default: True) 
+- `max_methods`: Maximum number of methods to display per class (default: 15)
+
+**Returns:**
+- Mermaid class diagram string, or None if no classes found
+
+### generate_dependency_graph
+
+```python
+def generate_dependency_graph(
+    chunks: list,
+    project_name: str = "project",
+    detect_circular: bool = True,
+) -> str | None
+```
+
+Creates a Mermaid flowchart showing module dependencies with optional circular dependency detection and highlighting.
+
+**Parameters:**
+- `chunks`: List of CodeChunk objects (should include IMPORT chunks)
+- `project_name`: Name of the project for filtering internal imports (default: "project")
+- `detect_circular`: Whether to highlight circular dependencies (default: True)
+
+**Returns:**
+- Mermaid flowchart markdown string, or None if no dependencies found
+
+### generate_module_overview
+
+```python
+def generate_module_overview(
+    index_status: IndexStatus,
+    show_file_counts: bool = True,
+) -> str | None
+```
+
+Generates a high-level module overview diagram showing package structure with subgraphs for major directories.
+
+**Parameters:**
+- `index_status`: IndexStatus object containing file information
+- `show_file_counts`: Whether to show file counts in diagram nodes (default: True)
+
+**Returns:**
+- Mermaid diagram string, or None if insufficient structure
+
+### generate_language_pie_chart
+
+```python
+def generate_language_pie_chart(index_status: IndexStatus) -> str | None
+```
+
+Creates a pie chart showing the distribution of programming languages in the codebase.
+
+**Parameters:**
+- `index_status`: IndexStatus object with language count data
+
+**Returns:**
+- Mermaid pie chart string, or None if no languages found
+
+### generate_sequence_diagram
+
+```python
+def generate_sequence_diagram(
+    call_graph: dict[str, list[str]],
+    entry_point: str | None = None,
+    max_depth: int = 5,
+) -> str | None
+```
+
+Generates a sequence diagram from a call graph showing the sequence of function calls starting from an entry point.
+
+**Parameters:**
+- `call_graph`: Dictionary mapping caller functions to lists of callees
+- `entry_point`: Starting function name (if None, uses most-called function)
+- `max_depth`: Maximum call depth to display (default: 5)
+
+**Returns:**
+- Mermaid sequence diagram string, or None if call graph is empty
+
+### _find_circular_dependencies
+
+```python
+def _find_circular_dependencies(deps: dict[str, set[str]]) -> set[tuple[str, str]]
+```
+
+Internal function that finds circular dependencies in a dependency graph using depth-first search.
+
+**Parameters:**
+- `deps`: Dictionary mapping modules to their dependency sets
+
+**Returns:**
+- Set of (from, to) tuples representing circular dependency edges
+
+### collect_participants
+
+```python
+def collect_participants(func: str, depth: int) -> None
+```
+
+Internal helper function for collecting participants in a sequence diagram by traversing the call graph recursively up to a maximum depth.
+
+**Parameters:**
+- `func`: Function name to start collection from
+- `depth`: Current traversal depth
+
+## Usage Examples
+
+### Generating a Class Diagram
+
+```python
+from local_deepwiki.generators.diagrams import generate_class_diagram
+
+# Generate diagram with default settings
+diagram = generate_class_diagram(code_chunks)
+
+# Generate diagram without attributes but with type info
+diagram = generate_class_diagram(
+    code_chunks, 
+    show_attributes=False, 
+    show_types=True, 
+    max_methods=10
+)
+```
+
+### Creating a Dependency Graph
+
+```python
+from local_deepwiki.generators.diagrams import generate_dependency_graph
+
+# Generate dependency graph with circular detection
+graph = generate_dependency_graph(
+    import_chunks, 
+    project_name="my_project", 
+    detect_circular=True
+)
+```
+
+### Generating Language Distribution
+
+```python
+from local_deepwiki.generators.diagrams import generate_language_pie_chart
+
+# Create pie chart from index status
+chart = generate_language_pie_chart(index_status)
+```
+
+## Related Components
+
+This module works with several other components from the local_deepwiki system:
+
+- **CodeChunk**: Used as input for analyzing code structure and generating diagrams
+- **IndexStatus**: Provides file and language statistics for overview diagrams  
+- **ChunkType**: Referenced for filtering specific types of code chunks (like IMPORT chunks)
+
+The module imports from `local_deepwiki.models` to access these data structures and uses standard library modules like `re`, `dataclasses`, `pathlib`, and `typing` for its functionality.
 
 ## API Reference
 
@@ -211,6 +366,22 @@ def add_calls(caller: str, depth: int) -> None
 **Returns:** `None`
 
 
+
+## Class Diagram
+
+```mermaid
+classDiagram
+    class ClassInfo {
+        <<abstract>>
+        +name: str
+        +methods: list[str]
+        +attributes: list[str]
+        +parents: list[str]
+        +is_abstract: bool
+        +is_dataclass: bool
+        +docstring: str | None
+    }
+```
 
 ## Call Graph
 

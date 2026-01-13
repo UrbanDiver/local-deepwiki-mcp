@@ -1,61 +1,40 @@
-# File Overview
+# test_models.py
 
-This file contains tests for the model representations (repr) of various classes used in the local_deepwiki library. It ensures that the string representations of these models are correctly formatted and contain expected information.
+## File Overview
 
-# Classes
+This file contains unit tests for the string representation (`__repr__`) methods of model classes in the local_deepwiki package. The tests verify that model objects display meaningful and properly formatted string representations.
 
-## TestModelRepr
+## Classes
 
-A test class containing methods to verify the string representation (repr) of various model objects.
+### TestModelRepr
 
-### Methods
+A test class that contains methods to verify the string representation of various model objects from the local_deepwiki.models module.
 
-#### test_code_chunk_repr_with_name
-Test the repr of a CodeChunk with a named chunk.
+**Methods:**
+- `test_code_chunk_repr_with_name` - Tests CodeChunk repr for named chunks
+- `test_code_chunk_repr_without_name` - Tests CodeChunk repr for unnamed chunks  
+- `test_file_info_repr` - Tests FileInfo repr
+- `test_file_info_repr_no_language` - Tests FileInfo repr without language
+- `test_index_status_repr` - Tests IndexStatus repr
+- `test_wiki_page_repr` - Tests WikiPage repr
+- `test_wiki_structure_repr` - Tests WikiStructure repr
+- `test_search_result_repr` - Tests SearchResult repr
+- `test_search_result_repr_no_name` - Tests SearchResult repr without name
+- `test_wiki_page_status_repr` - Tests WikiPageStatus repr
+- `test_wiki_generation_status_repr` - Tests WikiGenerationStatus repr
 
-#### test_code_chunk_repr_without_name
-Test the repr of a CodeChunk without a name.
+### TestCodeChunkToVectorRecord
 
-#### test_file_info_repr
-Test the repr of a FileInfo object.
+A test class for testing conversion of CodeChunk objects to vector records (implementation not shown in provided code).
 
-#### test_file_info_repr_no_language
-*This method is not shown in the provided code.*
+## Test Methods
 
-#### test_index_status_repr
-Test the repr of an IndexStatus object.
+### test_code_chunk_repr_with_name
 
-#### test_wiki_page_repr
-Test the repr of a WikiPage object.
-
-#### test_wiki_structure_repr
-*This method is not shown in the provided code.*
-
-#### test_search_result_repr
-*This method is not shown in the provided code.*
-
-#### test_search_result_repr_no_name
-*This method is not shown in the provided code.*
-
-#### test_wiki_page_status_repr
-*This method is not shown in the provided code.*
-
-#### test_wiki_generation_status_repr
-*This method is not shown in the provided code.*
-
-# Functions
-
-There are no standalone functions defined in this file. All functionality is contained within the methods of the TestModelRepr class.
-
-# Usage Examples
-
-The tests in this file are run using pytest. Each test method creates an instance of a model class and verifies that its string representation contains expected values.
-
-Example usage of a CodeChunk repr test:
+Tests the string representation of a CodeChunk object that has a name.
 
 ```python
 def test_code_chunk_repr_with_name(self):
-    """Test CodeChunk repr with a named chunk."""
     chunk = CodeChunk(
         id="test_id",
         file_path="src/main.py",
@@ -67,26 +46,94 @@ def test_code_chunk_repr_with_name(self):
         end_line=15,
     )
     result = repr(chunk)
-    assert "CodeChunk" in result
-    assert "function" in result
-    assert "my_function" in result
-    assert "src/main.py:10-15" in result
+    # Verifies result contains "CodeChunk", "function", "my_function", "src/main.py:10-15"
 ```
 
-# Related Components
+### test_code_chunk_repr_without_name
 
-This file works with the following classes imported from `local_deepwiki.models`:
+Tests the string representation of a CodeChunk object without a name.
 
-- ChunkType
-- CodeChunk
-- FileInfo
-- IndexStatus
-- Language
-- SearchResult
-- WikiGenerationStatus
-- WikiPage
-- WikiPageStatus
-- WikiStructure
+```python
+def test_code_chunk_repr_without_name(self):
+    chunk = CodeChunk(
+        id="test_id",
+        file_path="src/module.py",
+        language=Language.PYTHON,
+        chunk_type=ChunkType.MODULE,
+        content="# module",
+        start_line=1,
+        end_line=5,
+    )
+    result = repr(chunk)
+    # Verifies result contains "CodeChunk", "module", "src/module.py:1-5"
+```
+
+### test_file_info_repr
+
+Tests the string representation of a FileInfo object.
+
+```python
+def test_file_info_repr(self):
+    info = FileInfo(
+        path="src/utils.py",
+        language=Language.PYTHON,
+        size_bytes=1024,
+        last_modified=1234567890.0,
+        hash="abc123",
+        chunk_count=5,
+    )
+    result = repr(info)
+    # Verifies result contains "FileInfo", "src/utils.py", "python", "5 chunks"
+```
+
+### test_index_status_repr
+
+Tests the string representation of an IndexStatus object.
+
+```python
+def test_index_status_repr(self):
+    status = IndexStatus(
+        repo_path="/home/user/project",
+        indexed_at=1234567890.0,
+        total_files=25,
+        total_chunks=150,
+    )
+    result = repr(status)
+    # Verifies result contains "IndexStatus", "/home/user/project", "25 files", "150 chunks"
+```
+
+### test_wiki_page_repr
+
+Tests the string representation of a WikiPage object.
+
+```python
+def test_wiki_page_repr(self):
+    page = WikiPage(
+        path="modules/core.md",
+        title="Core Module",
+        content="# Core Module\n\nContent here.",
+        generated_at=1234567890.0,
+    )
+    result = repr(page)
+    # Verifies result contains "WikiPage", "modules/core.md", "Core Module"
+```
+
+## Related Components
+
+This test file works with the following model classes from `local_deepwiki.models`:
+
+- **ChunkType** - Enumeration for code chunk types
+- **CodeChunk** - Represents a chunk of code with metadata
+- **FileInfo** - Contains file metadata and statistics
+- **IndexStatus** - Tracks repository indexing status
+- **Language** - Enumeration for programming languages
+- **SearchResult** - Represents search results
+- **WikiGenerationStatus** - Tracks wiki generation progress
+- **WikiPage** - Represents a generated wiki page
+- **WikiPageStatus** - Tracks wiki page status
+- **WikiStructure** - Represents wiki organization structure
+
+The tests use pytest framework for test execution and assertions.
 
 ## API Reference
 
@@ -339,4 +386,3 @@ flowchart TD
 ## See Also
 
 - [test_indexer](test_indexer.md) - shares 3 dependencies
-- [test_incremental_wiki](test_incremental_wiki.md) - shares 3 dependencies

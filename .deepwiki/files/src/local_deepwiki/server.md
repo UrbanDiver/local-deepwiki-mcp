@@ -1,134 +1,69 @@
-# File Overview
+# server.py
 
-This file implements the main server logic for the Local DeepWiki application. It sets up and runs an MCP (Model Control Protocol) server that provides tools for indexing repositories and generating wikis. The server integrates with various components including configuration management, repository indexing, vector storage, and embedding providers.
+## File Overview
 
-# Classes
+The server.py file implements an MCP (Model Context Protocol) server that provides tools for repository indexing and wiki generation. It serves as the main server interface for the local-deepwiki system, exposing functionality through MCP tools that can be called by compatible clients.
 
-## Server
+## Functions
 
-The Server class is the main entry point for the MCP server implementation. It handles tool registration, server startup, and communication with the MCP protocol.
+### Validation Functions
 
-Key methods:
-- `__init__`: Initializes the server with configuration and components
-- `list_tools`: Returns the list of available tools
-- `call_tool`: Executes a tool based on the provided request
-- `start`: Starts the server using stdio communication
-
-# Functions
-
-## _validate_positive_int
-
+#### `_validate_positive_int`
 Validates that a value is a positive integer.
 
-Parameters:
-- `value`: The value to validate
-
-Returns:
-- `int`: The validated positive integer
-
-## _validate_non_empty_string
-
+#### `_validate_non_empty_string`
 Validates that a value is a non-empty string.
 
-Parameters:
-- `value`: The value to validate
+#### `_validate_language`
+Validates that a language value is a valid Language enum member.
 
-Returns:
-- `str`: The validated non-empty string
+#### `_validate_languages_list`
+Validates that a value is a list of valid Language enum members.
 
-## _validate_language
+#### `_validate_provider`
+Validates that a provider value is supported.
 
-Validates that a value is a valid Language enum value.
+### MCP Server Functions
 
-Parameters:
-- `value`: The value to validate
+#### `list_tools`
+Returns the list of available MCP tools that the server provides. This function defines the tools interface for the MCP server.
 
-Returns:
-- `Language`: The validated Language enum value
+#### `call_tool`
+Handles incoming tool calls from MCP clients. Routes tool requests to the appropriate handler functions based on the tool name.
 
-## _validate_languages_list
+### Tool Handlers
 
-Validates that a value is a list of valid Language enum values.
+#### `handle_index_repository`
+Handles the repository indexing tool call. This function:
+- Takes repository path and configuration parameters
+- Creates a RepositoryIndexer instance
+- Indexes the specified repository
+- Returns status information about the indexing operation
 
-Parameters:
-- `value`: The value to validate
+#### `progress_callback`
+Callback function used during repository indexing to handle progress updates from the indexing process.
 
-Returns:
-- `list[Language]`: The validated list of Language enum values
+## Related Components
 
-## _validate_provider
+The server integrates with several other components from the local-deepwiki system:
 
-Validates that a value is a valid provider string.
+- **[Config](config.md)**: Uses [get_config](config.md) and [set_config](config.md) for configuration management
+- **RepositoryIndexer**: Core component for indexing repository contents
+- **[VectorStore](core/vectorstore.md)**: Storage system for embeddings and indexed content
+- **WikiStructure and Language**: Data models for wiki generation
+- **Embedding providers**: Through get_embedding_provider for vector embeddings
+- **Wiki generation**: Through [generate_wiki](generators/wiki.md) function
+- **Logging**: Uses get_logger for logging functionality
 
-Parameters:
-- `value`: The value to validate
+## Usage Context
 
-Returns:
-- `str`: The validated provider string
+This server is designed to be run as an MCP server, communicating over stdio with MCP-compatible clients. The server exposes repository indexing and wiki generation capabilities as tools that can be invoked remotely through the MCP protocol.
 
-## list_tools
-
-Returns the list of available tools for the server.
-
-Parameters:
-- `server`: The Server instance
-
-Returns:
-- `list[Tool]`: List of available tools
-
-## call_tool
-
-Executes a tool based on the provided request.
-
-Parameters:
-- `server`: The Server instance
-- `request`: The tool call request
-
-Returns:
-- `Any`: The result of the tool execution
-
-## handle_index_repository
-
-Handles the repository indexing process.
-
-Parameters:
-- `server`: The Server instance
-- `request`: The index repository request
-- `progress_callback`: Optional callback for progress updates
-
-Returns:
-- `dict`: The result of the indexing operation
-
-## progress_callback
-
-A callback function for reporting progress during indexing.
-
-Parameters:
-- `message`: The progress message to report
-
-# Usage Examples
-
-```python
-# Initialize the server
-config = get_config()
-server = Server(config)
-
-# Start the server
-asyncio.run(server.start())
-```
-
-# Related Components
-
-This file works with the following components:
-- The [Config](config.md) class for configuration management
-- The RepositoryIndexer for repository indexing functionality
-- The [VectorStore](core/vectorstore.md) for vector storage operations
-- The [WikiGenerator](generators/wiki.md) for wiki generation
-- The embedding providers through the get_embedding_provider function
-- The Language enum for language validation
-- The WikiStructure for wiki structure definitions
-- The MCP server protocol components for communication
-- The logging system through the get_logger function
+The server handles:
+- Repository indexing with configurable parameters
+- Progress tracking during long-running operations
+- Error handling and validation of input parameters
+- Integration with the broader local-deepwiki ecosystem
 
 ## API Reference
 
@@ -276,6 +211,22 @@ Handle export_wiki_html tool call.
 **Returns:** `list[TextContent]`
 
 
+#### `handle_export_wiki_pdf`
+
+```python
+async def handle_export_wiki_pdf(args: dict[str, Any]) -> list[TextContent]
+```
+
+Handle export_wiki_pdf tool call.
+
+
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `args` | `dict[str, Any]` | - | - |
+
+**Returns:** `list[TextContent]`
+
+
 #### `main`
 
 ```python
@@ -316,11 +267,11 @@ flowchart TD
     N16[get_vector_db_path]
     N17[handle_ask_question]
     N18[handle_export_wiki_html]
-    N19[handle_index_repository]
-    N20[handle_read_wiki_page]
-    N21[handle_read_wiki_structure]
-    N22[handle_search_code]
-    N23[list_tools]
+    N19[handle_export_wiki_pdf]
+    N20[handle_index_repository]
+    N21[handle_read_wiki_page]
+    N22[handle_read_wiki_structure]
+    N23[handle_search_code]
     N24[main]
     N25[read_text]
     N26[resolve]
@@ -332,22 +283,23 @@ flowchart TD
     N4 --> N2
     N5 --> N2
     N8 --> N2
-    N9 --> N19
-    N9 --> N17
-    N9 --> N21
     N9 --> N20
+    N9 --> N17
     N9 --> N22
+    N9 --> N21
+    N9 --> N23
     N9 --> N18
+    N9 --> N19
     N9 --> N1
-    N19 --> N26
-    N19 --> N0
-    N19 --> N13
-    N19 --> N1
-    N19 --> N5
-    N19 --> N8
-    N19 --> N14
-    N19 --> N11
-    N19 --> N12
+    N20 --> N26
+    N20 --> N0
+    N20 --> N13
+    N20 --> N1
+    N20 --> N5
+    N20 --> N8
+    N20 --> N14
+    N20 --> N11
+    N20 --> N12
     N17 --> N26
     N17 --> N0
     N17 --> N6
@@ -361,35 +313,40 @@ flowchart TD
     N17 --> N28
     N17 --> N11
     N17 --> N12
-    N21 --> N26
-    N21 --> N0
-    N21 --> N13
-    N21 --> N1
-    N21 --> N25
-    N21 --> N11
-    N20 --> N26
-    N20 --> N0
-    N20 --> N1
-    N20 --> N13
-    N20 --> N25
     N22 --> N26
     N22 --> N0
-    N22 --> N6
-    N22 --> N7
-    N22 --> N4
-    N22 --> N1
-    N22 --> N14
-    N22 --> N16
     N22 --> N13
-    N22 --> N15
-    N22 --> N3
-    N22 --> N28
+    N22 --> N1
+    N22 --> N25
     N22 --> N11
+    N21 --> N26
+    N21 --> N0
+    N21 --> N1
+    N21 --> N13
+    N21 --> N25
+    N23 --> N26
+    N23 --> N0
+    N23 --> N6
+    N23 --> N7
+    N23 --> N4
+    N23 --> N1
+    N23 --> N14
+    N23 --> N16
+    N23 --> N13
+    N23 --> N15
+    N23 --> N3
+    N23 --> N28
+    N23 --> N11
     N18 --> N26
     N18 --> N0
     N18 --> N13
     N18 --> N1
     N18 --> N11
+    N19 --> N26
+    N19 --> N0
+    N19 --> N13
+    N19 --> N1
+    N19 --> N11
     N24 --> N29
     N24 --> N27
     N24 --> N10
@@ -408,3 +365,4 @@ flowchart TD
 
 - [vectorstore](core/vectorstore.md) - dependency
 - [config](config.md) - dependency
+- [pdf](export/pdf.md) - dependency

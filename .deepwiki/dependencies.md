@@ -2,116 +2,82 @@
 
 ## External Dependencies
 
-| Dependency                | Version   | Purpose                                                                 |
-|--------------------------|-----------|-------------------------------------------------------------------------|
-| anthropic                | >=0.40    | Provides access to Anthropic's AI models, used for language processing. |
-| flask                    | >=3.0     | Web framework for building the application's HTTP server.               |
-| lancedb                  | >=0.15    | Vector database for storing and querying embeddings.                    |
-| markdown                 | >=3.0     | Library for parsing and rendering Markdown text.                        |
-| mcp                      | >=1.2.0   | Provides tools for managing and processing code.                        |
-| ollama                   | >=0.4     | Interface for running local LLMs via Ollama.                            |
-| openai                   | >=1.0     | Client library for interacting with OpenAI's API.                       |
-| pandas                   | >=2.0     | Data manipulation and analysis library.                                 |
-| pydantic                 | >=2.0     | Data validation and settings management using Python type annotations.  |
-| pyyaml                   | >=6.0     | YAML parsing and emitting library.                                      |
-| rich                     | >=13.0    | Library for rich text and beautiful formatting in the terminal.         |
-| sentence-transformers    | >=3.0     | Provides state-of-the-art sentence embeddings.                          |
-| tree-sitter              | >=0.23    | Parsing library for code analysis.                                      |
-| tree-sitter-c            | >=0.23    | Tree-sitter parser for C language.                                      |
-| tree-sitter-c-sharp      | >=0.23    | Tree-sitter parser for C# language.                                     |
-| tree-sitter-cpp          | >=0.23    | Tree-sitter parser for C++ language.                                    |
-| tree-sitter-go           | >=0.23    | Tree-sitter parser for Go language.                                     |
-| tree-sitter-java         | >=0.23    | Tree-sitter parser for Java language.                                   |
-| tree-sitter-javascript   | >=0.23    | Tree-sitter parser for JavaScript language.                             |
-| tree-sitter-kotlin       | >=0.23    | Tree-sitter parser for Kotlin language.                                 |
-| tree-sitter-php          | >=0.23    | Tree-sitter parser for PHP language.                                    |
-| tree-sitter-python       | >=0.23    | Tree-sitter parser for Python language.                                 |
-| tree-sitter-ruby         | >=0.23    | Tree-sitter parser for Ruby language.                                   |
-| tree-sitter-rust         | >=0.23    | Tree-sitter parser for Rust language.                                   |
-| tree-sitter-swift        | >=0.0.1   | Tree-sitter parser for Swift language.                                  |
-| tree-sitter-typescript   | >=0.23    | Tree-sitter parser for TypeScript language.                             |
-| watchdog                 | >=4.0     | File system monitoring library for watching file changes.               |
+The project relies on the following third-party libraries:
+
+### AI and Language Processing
+- **anthropic** (>=0.40) - Anthropic's Claude API client for AI language model interactions
+- **openai** (>=1.0) - OpenAI API client for GPT models and embeddings
+- **ollama** (>=0.4) - Local LLM inference server client
+- **sentence-transformers** (>=3.0) - Pre-trained models for generating text embeddings
+- **mcp** (>=1.2.0) - Model Context Protocol for AI model communication
+
+### Code Analysis and Parsing
+- **tree-sitter** (>=0.23) - Incremental parsing library for syntax trees
+- **tree-sitter-c** (>=0.23) - C language grammar for tree-sitter
+- **tree-sitter-c-sharp** (>=0.23) - C# language grammar
+- **tree-sitter-cpp** (>=0.23) - C++ language grammar
+- **tree-sitter-go** (>=0.23) - Go language grammar
+- **tree-sitter-java** (>=0.23) - Java language grammar
+- **tree-sitter-javascript** (>=0.23) - JavaScript language grammar
+- **tree-sitter-kotlin** (>=0.23) - Kotlin language grammar
+- **tree-sitter-php** (>=0.23) - PHP language grammar
+- **tree-sitter-python** (>=0.23) - Python language grammar
+- **tree-sitter-ruby** (>=0.23) - Ruby language grammar
+- **tree-sitter-rust** (>=0.23) - Rust language grammar
+- **tree-sitter-swift** (>=0.0.1) - Swift language grammar
+- **tree-sitter-typescript** (>=0.23) - TypeScript language grammar
+
+### Data Storage and Processing
+- **lancedb** (>=0.15) - Vector database for embeddings storage and similarity search
+- **pandas** (>=2.0) - Data manipulation and analysis library
+
+### Web and Document Generation
+- **flask** (>=3.0) - Web framework for server functionality
+- **markdown** (>=3.0) - Markdown to HTML conversion
+- **weasyprint** (>=62.0) - HTML/CSS to PDF rendering
+
+### Utilities
+- **pydantic** (>=2.0) - Data validation and settings management
+- **pyyaml** (>=6.0) - YAML file parsing and generation
+- **rich** (>=13.0) - Rich text and beautiful formatting in terminal
+- **watchdog** (>=4.0) - File system event monitoring
 
 ## Dev Dependencies
 
-| Dependency           | Version  | Purpose                                                  |
-|----------------------|----------|----------------------------------------------------------|
-| black                | >=24.0   | Code formatter to enforce consistent code style.         |
-| isort                | >=5.0    | Tool to sort and organize import statements.             |
-| mypy                 | >=1.0    | Static type checker for Python code.                     |
-| pre-commit           | >=3.0    | Framework for managing and maintaining pre-commit hooks. |
-| pytest               | >=8.0    | Testing framework for running tests.                     |
-| pytest-asyncio       | >=0.24   | Plugin for pytest to support async testing.              |
+Development and testing tools:
+
+- **black** (>=24.0) - Python code formatter
+- **isort** (>=5.0) - Import statement organizer
+- **mypy** (>=1.0) - Static type checker
+- **pre-commit** (>=3.0) - Git pre-commit hooks framework
+- **pytest** (>=8.0) - Testing framework
+- **pytest-asyncio** (>=0.24) - Async testing support for pytest
 
 ## Internal Module Dependencies
 
-The internal modules have the following dependencies based on import statements:
+Based on the import statements, the internal module structure shows these key relationships:
 
-- `local_deepwiki.generators.crosslinks` depends on:
-  - `local_deepwiki.models` (ChunkType, CodeChunk, WikiPage)
-- `local_deepwiki.generators.diagrams` depends on:
-  - `local_deepwiki.models` (ChunkType, CodeChunk, IndexStatus)
-- `local_deepwiki.providers` depends on:
-  - `local_deepwiki.providers.base` (EmbeddingProvider, LLMProvider)
-- `local_deepwiki.generators.toc` depends on:
-  - No direct dependencies beyond standard library.
-- `local_deepwiki.generators.see_also` depends on:
-  - `local_deepwiki.models` (ChunkType, CodeChunk, WikiPage)
-- `local_deepwiki.export` depends on:
-  - `local_deepwiki.export.html` (HtmlExporter, export_to_html)
-- `local_deepwiki.generators.api_docs` depends on:
-  - `local_deepwiki.core.chunker` (CLASS_NODE_TYPES, FUNCTION_NODE_TYPES)
-  - `local_deepwiki.core.parser` ([CodeParser](files/src/local_deepwiki/core/parser.md), [find_nodes_by_type](files/src/local_deepwiki/core/parser.md), [get_node_name](files/src/local_deepwiki/core/parser.md), [get_node_text](files/src/local_deepwiki/core/parser.md))
-  - `local_deepwiki.models` (Language)
-- `local_deepwiki.generators.source_refs` depends on:
-  - `local_deepwiki.models` (WikiPage, WikiPageStatus)
-- `local_deepwiki.providers.embeddings.local` depends on:
-  - `sentence_transformers` (SentenceTransformer)
-  - `local_deepwiki.providers.base` (EmbeddingProvider)
-- `local_deepwiki.providers.embeddings.openai` depends on:
-  - `openai` (AsyncOpenAI)
-  - `local_deepwiki.providers.base` (EmbeddingProvider)
-- `local_deepwiki.generators.search` depends on:
-  - `local_deepwiki.models` (WikiPage)
-- `local_deepwiki.generators.callgraph` depends on:
-  - `local_deepwiki.core.chunker` (CLASS_NODE_TYPES, FUNCTION_NODE_TYPES)
-  - `local_deepwiki.core.parser` ([CodeParser](files/src/local_deepwiki/core/parser.md), [find_nodes_by_type](files/src/local_deepwiki/core/parser.md), [get_node_name](files/src/local_deepwiki/core/parser.md), [get_node_text](files/src/local_deepwiki/core/parser.md))
-  - `local_deepwiki.models` (Language)
-- `local_deepwiki.core.chunker` depends on:
-  - `local_deepwiki.config` ([ChunkingConfig](files/src/local_deepwiki/config.md), [get_config](files/src/local_deepwiki/config.md))
-  - `local_deepwiki.core.parser` ([CodeParser](files/src/local_deepwiki/core/parser.md), [find_nodes_by_type](files/src/local_deepwiki/core/parser.md), [get_docstring](files/src/local_deepwiki/core/parser.md), [get_node_name](files/src/local_deepwiki/core/parser.md), [get_node_text](files/src/local_deepwiki/core/parser.md))
-  - `local_deepwiki.logging` (get_logger)
-  - `local_deepwiki.models` (ChunkType, CodeChunk, Language)
-- `local_deepwiki.providers.embeddings` depends on:
-  - `local_deepwiki.config` ([EmbeddingConfig](files/src/local_deepwiki/config.md), [get_config](files/src/local_deepwiki/config.md))
-  - `local_deepwiki.providers.base` (EmbeddingProvider)
-  - `local_deepwiki.providers.embeddings.local` (LocalEmbeddingProvider)
-  - `local_deepwiki.providers.embeddings.openai` (OpenAIEmbeddingProvider)
-- `local_deepwiki.core.indexer` depends on:
-  - `local_deepwiki.config` ([ChunkingConfig](files/src/local_deepwiki/config.md), [Config](files/src/local_deepwiki/config.md))
-  - `local_deepwiki.models` (CodeChunk, IndexStatus, Language, ChunkType)
-- `local_deepwiki.core.vectorstore` depends on:
-  - `local_deepwiki.models` (ChunkType, CodeChunk, Language)
-  - `local_deepwiki.providers.base` (EmbeddingProvider)
-- `local_deepwiki.server` depends on:
-  - `local_deepwiki.generators.crosslinks` ([CrossLinker](files/src/local_deepwiki/generators/crosslinks.md), [EntityRegistry](files/src/local_deepwiki/generators/crosslinks.md), [add_cross_links](files/src/local_deepwiki/generators/crosslinks.md), [camel_to_spaced](files/src/local_deepwiki/generators/crosslinks.md))
-  - `local_deepwiki.generators.diagrams` ([ClassInfo](files/src/local_deepwiki/generators/diagrams.md), _extract_class_attributes, _extract_method_signature, _find_circular_dependencies, _parse_import_line, _path_to_module, [generate_class_diagram](files/src/local_deepwiki/generators/diagrams.md), [generate_dependency_graph](files/src/local_deepwiki/generators/diagrams.md), [generate_language_pie_chart](files/src/local_deepwiki/generators/diagrams.md), [generate_module_overview](files/src/local_deepwiki/generators/diagrams.md), [generate_sequence_diagram](files/src/local_deepwiki/generators/diagrams.md), [sanitize_mermaid_name](files/src/local_deepwiki/generators/diagrams.md))
-  - `local_deepwiki.generators.see_also` (FileRelationships, RelationshipAnalyzer, _relative_path, add_see_also_sections, build_file_to_wiki_map, generate_see_also_section)
-  - `local_deepwiki.generators.api_docs` ([APIDocExtractor](files/src/local_deepwiki/generators/api_docs.md), Class, Method, [get_node_name](files/src/local_deepwiki/core/parser.md), [get_node_text](files/src/local_deepwiki/core/parser.md), [find_nodes_by_type](files/src/local_deepwiki/core/parser.md))
-  - `local_deepwiki.generators.source_refs` (_format_file_entry, _relative_path, add_source_refs_sections, build_file_to_wiki_map, generate_source_refs_section)
-  - `local_deepwiki.models` (WikiPage, WikiPageStatus)
-  - `local_deepwiki.core.indexer` (RepositoryIndexer, _migrate_status, _needs_migration)
-  - `local_deepwiki.core.chunker` (CLASS_NODE_TYPES, FUNCTION_NODE_TYPES)
-  - `local_deepwiki.core.parser` ([CodeParser](files/src/local_deepwiki/core/parser.md), [find_nodes_by_type](files/src/local_deepwiki/core/parser.md), [get_docstring](files/src/local_deepwiki/core/parser.md), [get_node_name](files/src/local_deepwiki/core/parser.md), [get_node_text](files/src/local_deepwiki/core/parser.md))
-  - `local_deepwiki.providers.embeddings` (EmbeddingProvider)
-  - `local_deepwiki.providers.embeddings.local` (LocalEmbeddingProvider)
-  - `local_deepwiki.providers.embeddings.openai` (OpenAIEmbeddingProvider)
-  - `local_deepwiki.generators.callgraph` (generate_callgraph)
-  - `local_deepwiki.generators.search` (search)
-  - `local_deepwiki.generators.toc` (generate_toc)
-  - `local_deepwiki.export` (export_to_html)
-  - `local_deepwiki.config` ([Config](files/src/local_deepwiki/config.md))
-  - `local_deepwiki.logging` (get_logger)
+### Core Modules
+- **CodeChunker** depends on [CodeParser](files/src/local_deepwiki/core/parser.md) for parsing functionality and uses models like ChunkType, CodeChunk, and Language
+- **[CodeParser](files/src/local_deepwiki/core/parser.md)** provides parsing utilities used by multiple generators and the chunker
+- **[VectorStore](files/src/local_deepwiki/core/vectorstore.md)** works with embedding providers and code chunks for similarity search
+- **RepositoryIndexer** coordinates chunking, parsing, and indexing operations
+
+### Generator Modules
+- **[CrossLinker](files/src/local_deepwiki/generators/crosslinks.md)** and [EntityRegistry](files/src/local_deepwiki/generators/crosslinks.md) work with WikiPage and CodeChunk models to create cross-references
+- **[APIDocExtractor](files/src/local_deepwiki/generators/api_docs.md)** uses [CodeParser](files/src/local_deepwiki/core/parser.md) to extract API documentation from code
+- **RelationshipAnalyzer** and FileRelationships analyze code relationships for "See Also" sections
+- Multiple generators (diagrams, search, source refs, TOC) depend on core models and parsing functionality
+
+### Provider System
+- **EmbeddingProvider** and **LLMProvider** serve as base classes for AI service integrations
+- **LocalEmbeddingProvider** uses sentence-transformers for local embeddings
+- **OpenAIEmbeddingProvider** integrates with OpenAI's embedding API
+
+### Server Components
+- Server handlers coordinate various generators and core functionality for web API endpoints
+
+The architecture follows a layered approach where core parsing and chunking functionality supports multiple specialized generators, all coordinated through a provider system for AI services and a web server for user interaction.
 
 ## Module Dependency Graph
 
@@ -170,10 +136,10 @@ The following source files were used to generate this documentation:
 - `tests/test_server_handlers.py:15-69`
 - `tests/test_chunker.py:11-182`
 - [`tests/test_vectorstore.py:9-28`](files/tests/test_vectorstore.md)
+- [`tests/test_pdf_export.py:21-80`](files/tests/test_pdf_export.md)
 - `tests/test_search.py:20-53`
 - `tests/test_toc.py:17-43`
-- [`tests/test_incremental_wiki.py:20-47`](files/tests/test_incremental_wiki.md)
-- `tests/test_web.py:40-104`
+- `tests/test_incremental_wiki.py:20-47`
 
 
-*Showing 10 of 61 source files.*
+*Showing 10 of 63 source files.*

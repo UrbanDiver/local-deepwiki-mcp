@@ -1,14 +1,14 @@
-# Wiki Generator Documentation
+# Wiki Generator Module
 
-## File Overview
+## Overview
 
-This file contains the core logic for generating wiki documentation from a codebase. It defines the `WikiGenerator` class and a convenience function `generate_wiki` that orchestrates the wiki generation process. The generator uses a vector store to index code and LLMs to create documentation.
+The `wiki.py` module provides the core functionality for generating documentation wikis from indexed code repositories. It contains the WikiGenerator class that orchestrates the creation of comprehensive documentation including overview pages, architecture diagrams, module documentation, and file-level documentation.
 
 ## Classes
 
 ### WikiGenerator
 
-The WikiGenerator class is responsible for generating wiki documentation from a codebase using a vector store and LLMs.
+The WikiGenerator class is the [main](../watcher.md) component responsible for generating wiki documentation from a vector store of indexed code.
 
 #### Constructor
 
@@ -19,39 +19,22 @@ def __init__(
     vector_store: VectorStore,
     config: Config | None = None,
     llm_provider_name: str | None = None,
-)
+):
 ```
 
-Initialize the wiki generator.
-
 **Parameters:**
-- `wiki_path`: Path to wiki output directory.
-- `vector_store`: Vector store with indexed code.
-- `config`: Optional configuration.
-- `llm_provider_name`: Override LLM provider ("ollama", "anthropic", "openai").
+- `wiki_path`: Path to the wiki output directory where documentation will be generated
+- `vector_store`: [VectorStore](../core/vectorstore.md) instance containing the indexed code repository
+- `config`: Optional [Config](../config.md) instance for customization (defaults to global config if not provided)
+- `llm_provider_name`: Optional override for the LLM provider ("ollama", "anthropic", "openai")
 
 #### Key Methods
 
-- `_get_main_definition_lines`: Extracts [main](../watcher.md) definition lines from a file.
-- `_load_wiki_status`: Loads the wiki status from disk.
-- `_read_status`: Reads the status file.
-- `_save_wiki_status`: Saves the wiki status to disk.
-- `_write_status`: Writes the status file.
-- `_compute_content_hash`: Computes a hash of file content.
-- `_needs_regeneration`: Determines if a page needs regeneration.
-- `_load_existing_page`: Loads an existing wiki page.
-- `_read_page`: Reads a wiki page.
-- `_record_page_status`: Records the status of a page.
-- `generate`: Main method to generate the wiki.
-- `_generate_overview`: Generates an overview page.
-- `_generate_architecture`: Generates an architecture page.
-- `_generate_module_docs`: Generates documentation for modules.
-- `_generate_modules_index`: Generates an index of modules.
-- `_generate_file_docs`: Generates documentation for individual files.
-- `_generate_files_index`: Generates an index of files.
-- `_generate_dependencies`: Generates dependency information.
-- `_write_page`: Writes a wiki page to disk.
-- `_sync_write`: Synchronous write operation.
+The WikiGenerator class includes several methods for managing the documentation generation process:
+
+- **Status Management**: Methods for loading and saving wiki generation status to track which pages need regeneration
+- **Content Generation**: Methods for generating different types of documentation pages including overviews, architecture documentation, module docs, and file-level documentation
+- **Page Management**: Methods for writing pages to disk and managing the wiki structure
 
 ## Functions
 
@@ -70,64 +53,70 @@ async def generate_wiki(
 ) -> WikiStructure:
 ```
 
-Convenience function to generate wiki documentation.
+A convenience function that provides a high-level interface for generating wiki documentation.
 
 **Parameters:**
-- `repo_path`: Path to the repository.
-- `wiki_path`: Path for wiki output.
-- `vector_store`: Indexed vector store.
-- `index_status`: Index status.
-- `config`: Optional configuration.
-- `llm_provider`: LLM provider name ("ollama", "anthropic", "openai").
-- [`progress_callback`](../watcher.md): Optional callback for progress updates.
-- `full_rebuild`: Whether to perform a full rebuild.
+- `repo_path`: Path to the source repository
+- `wiki_path`: Path where the wiki documentation should be generated
+- `vector_store`: [VectorStore](../core/vectorstore.md) instance with indexed repository content
+- `index_status`: IndexStatus object tracking the indexing state
+- `config`: Optional [Config](../config.md) instance for customization
+- `llm_provider`: Optional LLM provider override
+- [`progress_callback`](../watcher.md): Optional callback for tracking generation progress
+- `full_rebuild`: Boolean flag to force complete regeneration of all pages
 
 **Returns:**
-- `WikiStructure`: The generated wiki structure.
+- `WikiStructure`: Object representing the generated wiki structure
 
 ## Usage Examples
 
-### Basic Usage
+### Basic Wiki Generation
 
 ```python
-from local_deepwiki.generators.wiki import generate_wiki
-from local_deepwiki.core.vectorstore import VectorStore
-from local_deepwiki.config import Config
 from pathlib import Path
+from local_deepwiki.generators.wiki import generate_wiki
 
-# Assuming you have a vector store and config ready
-vector_store = VectorStore()
-config = Config()
-
-# Generate wiki
+# Generate wiki documentation
 wiki_structure = await generate_wiki(
-    repo_path=Path("path/to/repo"),
-    wiki_path=Path("path/to/wiki"),
-    vector_store=vector_store,
-    index_status=index_status,
-    config=config,
-    llm_provider="openai"
+    repo_path=Path("./my-project"),
+    wiki_path=Path("./wiki-output"),
+    vector_store=my_vector_store,
+    index_status=my_index_status
+)
+```
+
+### Custom Configuration
+
+```python
+from local_deepwiki.generators.wiki import WikiGenerator
+
+# Create generator with custom configuration
+generator = WikiGenerator(
+    wiki_path=Path("./docs"),
+    vector_store=my_vector_store,
+    config=my_config,
+    llm_provider_name="anthropic"
+)
+
+# Generate the wiki
+await generator.generate(
+    repo_path=Path("./my-project"),
+    index_status=my_index_status
 )
 ```
 
 ## Related Components
 
-This file works with the following components:
+The WikiGenerator integrates with several other components from the local_deepwiki system:
 
-- [`VectorStore`](../core/vectorstore.md): Used for indexing code and retrieving relevant information.
-- [`Config`](../config.md): Configuration settings for the wiki generation.
-- [`get_config`](../config.md): Function to retrieve configuration.
-- `get_logger`: Function to get logger instance.
-- [`get_file_api_docs`](api_docs.md): Function to extract API documentation from files.
-- `get_file_call_graph`: Function to generate call graphs.
-- [`EntityRegistry`](crosslinks.md): Registry for cross-linking entities.
-- [`add_cross_links`](crosslinks.md): Function to add cross-links to documentation.
-- [`generate_class_diagram`](diagrams.md): Function to generate class diagrams.
-- [`generate_dependency_graph`](diagrams.md): Function to generate dependency graphs.
-- [`generate_language_pie_chart`](diagrams.md): Function to generate language distribution charts.
-- `IndexStatus`: Status tracking for code indexing.
-- `ProgressCallback`: Callback for progress updates.
-- `WikiStructure`: Structure representing the generated wiki.
+- **[VectorStore](../core/vectorstore.md)**: Provides indexed code content for documentation generation
+- **[Config](../config.md)**: Supplies configuration settings for the generation process
+- **[EntityRegistry](crosslinks.md)**: Manages cross-linking between documentation pages
+- **API Documentation Generator**: Generates API documentation for files
+- **Call Graph Generator**: Creates call graph information for code analysis
+- **Diagram Generators**: Creates various types of diagrams including class diagrams, dependency graphs, and language charts
+
+The module also works with external components for LLM integration through providers like Ollama, Anthropic, and OpenAI to generate intelligent documentation content.
 
 ## API Reference
 
@@ -202,27 +191,21 @@ Convenience function to generate wiki documentation.
 ```mermaid
 classDiagram
     class WikiGenerator {
-        -__init__()
-        -_get_main_definition_lines()
-        -_load_wiki_status()
-        -_read_status()
-        -_save_wiki_status()
-        -_write_status()
-        -_compute_content_hash()
-        -_needs_regeneration()
-        -_load_existing_page()
-        -_read_page()
-        -_record_page_status()
-        +generate()
-        -_generate_overview()
-        -_generate_architecture()
-        -_generate_module_docs()
-        -_generate_modules_index()
-        -_generate_file_docs()
-        -_generate_files_index()
-        -_generate_dependencies()
-        -_write_page()
-        -_sync_write()
+        -__init__(wiki_path: Path, vector_store: VectorStore, config: Config | None, llm_provider_name: str | None)
+        -_get_main_definition_lines() dict[str, tuple[int, int]]
+        -_load_wiki_status() WikiGenerationStatus | None
+        -_read_status() WikiGenerationStatus | None
+        -_save_wiki_status(status: WikiGenerationStatus) None
+        -_write_status() None
+        -_compute_content_hash(content: str) str
+        -_needs_regeneration(page_path: str, source_files: list[str]) bool
+        -_load_existing_page(page_path: str) WikiPage | None
+        -_read_page() WikiPage | None
+        -_record_page_status(page: WikiPage, source_files: list[str]) None
+        +generate(index_status: IndexStatus, progress_callback: ProgressCallback | None, full_rebuild: bool) WikiStructure
+        -_generate_overview(index_status: IndexStatus) WikiPage
+        -_generate_architecture(index_status: IndexStatus) WikiPage
+        -_generate_module_docs(index_status: IndexStatus, full_rebuild: bool) tuple[list[WikiPage], int, int]
     }
 ```
 
@@ -327,5 +310,4 @@ flowchart TD
 
 ## See Also
 
-- [test_incremental_wiki](../../../tests/test_incremental_wiki.md) - uses this
 - [server](../server.md) - uses this

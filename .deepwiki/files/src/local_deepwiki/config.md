@@ -1,150 +1,116 @@
-# File Overview
+# config.py
 
-This file defines configuration classes and utilities for the local_deepwiki application. It provides a structured way to manage various configuration settings related to embeddings, language models, parsing, chunking, and output handling. The configuration system supports both static and contextual configuration management using Python's contextvars and threading capabilities.
+## File Overview
 
-# Classes
+This module provides configuration management for the local_deepwiki application using Pydantic models and context variables. It handles various configuration aspects including embedding providers, language models, parsing settings, chunking parameters, and output configurations. The module implements thread-safe configuration management with context-aware configuration switching.
 
-## LocalEmbeddingConfig
+## Classes
 
-Configuration class for local embedding models. This class inherits from BaseModel and is used to define settings specific to local embedding models.
+### LocalEmbeddingConfig
+A Pydantic model for configuring local embedding settings. This class handles configuration for locally-hosted embedding models.
 
-## OpenAIEmbeddingConfig
+### OpenAIEmbeddingConfig  
+A Pydantic model for configuring OpenAI embedding API settings. This class manages OpenAI-specific embedding parameters and authentication.
 
-Configuration class for OpenAI embedding models. This class inherits from BaseModel and is used to define settings specific to OpenAI embedding models.
+### EmbeddingConfig
+A unified configuration model that handles different embedding provider configurations. This class serves as a wrapper for various embedding backends.
 
-## EmbeddingConfig
+### OllamaConfig
+A Pydantic model for configuring Ollama language model settings. This class manages connection and model parameters for Ollama instances.
 
-Base configuration class for embedding settings. This class inherits from BaseModel and serves as a parent class for different embedding model configurations.
+### AnthropicConfig
+A Pydantic model for configuring Anthropic language model settings. This class handles Anthropic API configuration and model parameters.
 
-## OllamaConfig
+### OpenAILLMConfig
+A Pydantic model for configuring OpenAI language model settings. This class manages OpenAI LLM API parameters and authentication.
 
-Configuration class for Ollama models. This class inherits from BaseModel and is used to define settings specific to Ollama models.
+### LLMConfig
+A unified configuration model that handles different language model provider configurations. This class serves as a wrapper for various LLM backends.
 
-## AnthropicConfig
+### ParsingConfig
+A Pydantic model for configuring document parsing settings. This class manages parameters related to how documents are processed and parsed.
 
-Configuration class for Anthropic models. This class inherits from BaseModel and is used to define settings specific to Anthropic models.
+### ChunkingConfig
+A Pydantic model for configuring text chunking parameters. This class handles settings for how text is split into chunks for processing.
 
-## OpenAILLMConfig
+### WikiConfig
+A Pydantic model for configuring wiki-specific settings. This class manages parameters related to wiki generation and formatting.
 
-Configuration class for OpenAI language models. This class inherits from BaseModel and is used to define settings specific to OpenAI language models.
+### OutputConfig
+A Pydantic model for configuring output settings. This class handles parameters for how results are formatted and saved.
 
-## LLMConfig
+### Config
+The [main](watcher.md) configuration class that combines all configuration sections. This class serves as the root configuration model containing all other configuration components.
 
-Base configuration class for language model settings. This class inherits from BaseModel and serves as a parent class for different language model configurations.
+## Functions
 
-## ParsingConfig
+### get_config()
+Retrieves the current configuration from the context variable.
 
-Configuration class for parsing settings. This class inherits from BaseModel and is used to define settings related to document parsing.
+**Returns:** The current Config instance
 
-## ChunkingConfig
+### set_config(config)
+Sets the configuration in the current context.
 
-Configuration class for chunking settings. This class inherits from BaseModel and is used to define settings related to document chunking.
+**Parameters:**
+- `config`: The Config instance to set as current
 
-## WikiConfig
+### reset_config()
+Resets the configuration context variable to its default state.
 
-Configuration class for wiki-related settings. This class inherits from BaseModel and is used to define settings related to wiki generation.
+### config_context(config)
+A context manager that temporarily sets a configuration for the duration of the context.
 
-## OutputConfig
+**Parameters:**
+- `config`: The Config instance to use within the context
 
-Configuration class for output settings. This class inherits from BaseModel and is used to define settings related to output handling.
+**Returns:** A context manager that handles configuration switching
 
-## Config
+## Usage Examples
 
-Main configuration class that aggregates all other configuration settings. This class inherits from BaseModel and combines all the other configuration classes into a single configuration object.
-
-# Functions
-
-## get_config
-
-Retrieves the current configuration. This function returns the current configuration object stored in a context variable.
-
-**Parameters**: None
-
-**Returns**: The current configuration object
-
-## set_config
-
-Sets the current configuration. This function stores a new configuration object in a context variable.
-
-**Parameters**:
-- config (Config): The configuration object to set
-
-**Returns**: None
-
-## reset_config
-
-Resets the configuration to its default state. This function clears the current configuration from the context variable.
-
-**Parameters**: None
-
-**Returns**: None
-
-## config_context
-
-Context manager for managing configuration within a specific scope. This function provides a way to temporarily change the configuration within a code block.
-
-**Parameters**:
-- config (Config): The configuration object to use within the context
-
-**Returns**: A generator that yields the context
-
-# Usage Examples
-
-## Getting the current configuration
-
+### Basic Configuration Access
 ```python
-from local_deepwiki.config import get_config
+from local_deepwiki.config import get_config, set_config
 
-config = get_config()
-print(config)
-```
+# Get current configuration
+current_config = get_config()
 
-## Setting a new configuration
-
-```python
-from local_deepwiki.config import set_config
-from local_deepwiki.config import Config
-
-# Create a new configuration
+# Set a new configuration
 new_config = Config(...)
 set_config(new_config)
 ```
 
-## Using config_context
-
+### Using Configuration Context
 ```python
-from local_deepwiki.config import config_context, get_config
-from local_deepwiki.config import Config
+from local_deepwiki.config import config_context, Config
 
-# Create a temporary configuration
-temp_config = Config(...)
-
+# Temporarily use a different configuration
 with config_context(temp_config):
-    # Use the temporary configuration
-    config = get_config()
-    # Do something with config
+    # Operations here use temp_config
+    current = get_config()  # Returns temp_config
+    
+# Outside context, original config is restored
 ```
 
-## Resetting configuration
-
+### Configuration Reset
 ```python
 from local_deepwiki.config import reset_config
 
+# Reset to default configuration
 reset_config()
 ```
 
-# Related Components
+## Related Components
 
-This file works with the following components:
+This module integrates with several external libraries:
+- **pydantic**: Used for configuration model validation and serialization through BaseModel and Field
+- **yaml**: Handles YAML configuration file parsing
+- **pathlib**: Manages file system paths through the Path class
+- **threading**: Provides thread-safe configuration management
+- **contextlib**: Enables context manager functionality for configuration switching
+- **contextvars**: Implements context-aware configuration storage
 
-- **pydantic**: Used for data validation and settings management through BaseModel
-- **yaml**: Used for configuration file parsing
-- **threading**: Used for thread-safe configuration management
-- **contextvars**: Used for context-aware configuration management
-- **pathlib**: Used for path handling in configuration files
-- **contextlib**: Used for context manager implementation
-
-The configuration classes are designed to work together as part of a larger system for managing local deep wiki generation settings. They provide a structured way to define and manage various aspects of the wiki generation process including embedding models, language models, parsing, chunking, and output settings.
+The configuration models support various provider integrations including OpenAI, Anthropic, and Ollama services, making this module central to the application's provider abstraction layer.
 
 ## API Reference
 
@@ -327,12 +293,89 @@ Context manager for temporary config override.  Sets a context-local configurati
 
 ```mermaid
 classDiagram
-    class Config {
-        +load()
-        +get_wiki_path()
-        +get_vector_db_path()
+    class AnthropicConfig {
+        <<dataclass>>
+        +model: str
     }
+    class ChunkingConfig {
+        <<dataclass>>
+        +max_chunk_tokens: int
+        +overlap_tokens: int
+        +batch_size: int
+        +class_split_threshold: int
+    }
+    class Config {
+        <<dataclass>>
+        +embedding: EmbeddingConfig
+        +llm: LLMConfig
+        +parsing: ParsingConfig
+        +chunking: ChunkingConfig
+        +wiki: WikiConfig
+        +output: OutputConfig
+        +load() -> "Config"
+        +get_wiki_path() -> Path
+        +get_vector_db_path() -> Path
+    }
+    class EmbeddingConfig {
+        <<dataclass>>
+        +provider: Literal["local", "openai"]
+        +local: LocalEmbeddingConfig
+        +openai: OpenAIEmbeddingConfig
+    }
+    class LLMConfig {
+        <<dataclass>>
+        +provider: Literal["ollama", "anthropic", "openai"]
+        +ollama: OllamaConfig
+        +anthropic: AnthropicConfig
+        +openai: OpenAILLMConfig
+    }
+    class LocalEmbeddingConfig {
+        <<dataclass>>
+        +model: str
+    }
+    class OllamaConfig {
+        <<dataclass>>
+        +model: str
+        +base_url: str
+    }
+    class OpenAIEmbeddingConfig {
+        <<dataclass>>
+        +model: str
+    }
+    class OpenAILLMConfig {
+        <<dataclass>>
+        +model: str
+    }
+    class OutputConfig {
+        <<dataclass>>
+        +wiki_dir: str
+        +vector_db_name: str
+    }
+    class ParsingConfig {
+        <<dataclass>>
+        +languages: list[str]
+        +max_file_size: int
+        +exclude_patterns: list[str]
+    }
+    class WikiConfig {
+        <<dataclass>>
+        +max_file_docs: int
+        +import_search_limit: int
+        +context_search_limit: int
+        +fallback_search_limit: int
+    }
+    AnthropicConfig --|> BaseModel
+    ChunkingConfig --|> BaseModel
     Config --|> BaseModel
+    EmbeddingConfig --|> BaseModel
+    LLMConfig --|> BaseModel
+    LocalEmbeddingConfig --|> BaseModel
+    OllamaConfig --|> BaseModel
+    OpenAIEmbeddingConfig --|> BaseModel
+    OpenAILLMConfig --|> BaseModel
+    OutputConfig --|> BaseModel
+    ParsingConfig --|> BaseModel
+    WikiConfig --|> BaseModel
 ```
 
 ## Call Graph
@@ -371,6 +414,6 @@ flowchart TD
 
 ## See Also
 
-- [test_indexer](../../tests/test_indexer.md) - uses this
 - [server](server.md) - uses this
+- [test_indexer](../../tests/test_indexer.md) - uses this
 - [diagrams](generators/diagrams.md) - shares 2 dependencies

@@ -1,10 +1,10 @@
 {
   "repo_path": "/Users/brian/Projects/local-deepwiki-mcp",
-  "indexed_at": 1768313297.8184278,
-  "total_files": 61,
-  "total_chunks": 733,
+  "indexed_at": 1768329902.961035,
+  "total_files": 63,
+  "total_chunks": 774,
   "languages": {
-    "python": 61
+    "python": 63
   },
   "files": [
     {
@@ -54,6 +54,14 @@
       "last_modified": 1768271044.8103743,
       "hash": "cfc5e4d734012d651923fda244dcb202e1c192684ebe61191f5374d39160a6e4",
       "chunk_count": 29
+    },
+    {
+      "path": "tests/test_pdf_export.py",
+      "language": "python",
+      "size_bytes": 23088,
+      "last_modified": 1768322777.8324988,
+      "hash": "7ccabcdae73b30518f6a7a93e8543b24718f78b76c10c1cad82bad7b7bd184a0",
+      "chunk_count": 21
     },
     {
       "path": "tests/test_search.py",
@@ -218,10 +226,10 @@
     {
       "path": "src/local_deepwiki/server.py",
       "language": "python",
-      "size_bytes": 23689,
-      "last_modified": 1768272883.1422544,
-      "hash": "f9db1f592af5c6f87a3b5c6f1c7acb5021b651cf9dad19ce1076057830d15edb",
-      "chunk_count": 18
+      "size_bytes": 26035,
+      "last_modified": 1768317378.5249386,
+      "hash": "e8fbc4337e8f3d410f09bf91f924a60187120210579dda4a2b414179d69e93b2",
+      "chunk_count": 19
     },
     {
       "path": "src/local_deepwiki/config.py",
@@ -490,10 +498,19 @@
     {
       "path": "src/local_deepwiki/export/__init__.py",
       "language": "python",
-      "size_bytes": 170,
-      "last_modified": 1768251832.4501727,
-      "hash": "36ade58a024c2663e0365057b14200fecd36103d72f76804f5196249ed6dc378",
+      "size_bytes": 459,
+      "last_modified": 1768322785.787211,
+      "hash": "b01b7b7936c12090441ed0e05330de154666b1c15c82aa9bee27fbb87bb2541c",
       "chunk_count": 2
+    },
+    {
+      "path": "src/local_deepwiki/export/pdf.py",
+      "language": "python",
+      "size_bytes": 19945,
+      "last_modified": 1768322742.6431348,
+      "hash": "c113ec7a5b3a85ddf815c0eaa7d0d00b4f11bf59370c23f455ec831012ef1980",
+      "chunk_count": 19
     }
-  ]
+  ],
+  "schema_version": 2
 }

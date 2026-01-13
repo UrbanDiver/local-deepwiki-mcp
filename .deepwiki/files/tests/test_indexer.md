@@ -1,121 +1,121 @@
-# File Overview
+# test_indexer.py
 
-This file, `tests/test_indexer.py`, contains unit tests for the `RepositoryIndexer` class and related functionality in the `local_deepwiki.core.indexer` module. It tests batched processing of code chunks, schema version handling, and migration logic for index status data.
+## File Overview
 
-# Classes
+This test module validates the functionality of the repository indexer component, focusing on batched processing capabilities and schema migration features. The tests ensure that the indexer can handle large datasets efficiently through batching and maintains backward compatibility through proper schema versioning.
 
-## TestBatchedProcessing
+## Classes
 
-This class contains tests for the batched processing functionality of the indexer, ensuring that chunks are correctly processed in batches and that incremental updates work as expected.
+### TestBatchedProcessing
 
-### Methods
+Tests the batched processing functionality of the repository indexer to ensure efficient handling of large code repositories.
 
-#### test_processes_chunks_in_batches
-Tests that chunks are correctly processed in batches.
+**Key Test Methods:**
+- `test_processes_chunks_in_batches` - Validates that code chunks are processed in configurable batch sizes
+- `test_incremental_update_with_batching` - Tests incremental updates using batched operations
+- `test_empty_batch_handling` - Ensures proper handling of empty batches
 
-#### test_incremental_update_with_batching
-Tests incremental update functionality with batching enabled.
+### TestSchemaMigration
 
-#### test_empty_batch_handling
-Tests handling of empty batches during processing.
+Tests the schema migration system that handles version upgrades of the index status format.
 
-## TestSchemaMigration
+**Key Test Methods:**
+- `test_current_schema_version_exists` - Verifies the current schema version constant is defined
+- `test_needs_migration_old_version` - Tests detection of outdated schema versions requiring migration
+- `test_needs_migration_current_version` - Validates that current schema versions don't trigger migration
+- `test_migrate_status_updates_version` - Tests that migration properly updates schema version
+- `test_migrate_status_preserves_data` - Ensures data integrity during migration
+- `test_load_status_handles_legacy_files` - Tests loading of legacy status files
+- `test_save_status_includes_schema_version` - Validates schema version is saved with status
+- `test_migration_triggered_on_load` - Tests automatic migration triggering during status loading
 
-This class contains tests for schema migration logic, ensuring that index status data can be properly migrated between schema versions.
+### TestChunkingConfigBatchSize
 
-### Methods
+Tests configuration of batch sizes for chunking operations (class definition not shown in provided code).
 
-#### test_current_schema_version_exists
-Verifies that the current schema version constant is defined correctly.
+### TestBatchSizeConfiguration
 
-#### test_needs_migration_old_version
-Tests that migration is triggered for old schema versions.
+Tests batch size configuration settings (class definition not shown in provided code).
 
-#### test_needs_migration_current_version
-Tests that migration is not triggered for current schema versions.
+## Functions
 
-#### test_migrate_status_updates_version
-Tests that migration updates the schema version correctly.
-
-#### test_migrate_status_preserves_data
-Tests that migration preserves existing data.
-
-#### test_load_status_handles_legacy_files
-Tests that loading status handles legacy files correctly.
-
-#### test_save_status_includes_schema_version
-Tests that saving status includes the schema version.
-
-#### test_index_status_model_default_schema_version
-Tests that the IndexStatus model defaults to schema_version=1.
-
-#### test_migration_triggered_on_load
-Tests that migration is triggered when loading legacy status files.
-
-# Functions
-
-## _migrate_status
-
-Migrates an IndexStatus object to the current schema version.
-
-### Parameters
-- `status` (IndexStatus): The status object to migrate.
-
-### Returns
-- `tuple`: A tuple containing the migrated status and a boolean indicating if migration occurred.
-
-## _needs_migration
-
-Determines if an IndexStatus object needs migration to the current schema version.
-
-### Parameters
-- `status` (IndexStatus): The status object to check.
-
-### Returns
-- `bool`: True if migration is needed, False otherwise.
-
-# Usage Examples
-
-## Testing Batched Processing
+### test_index_status_model_default_schema_version
 
 ```python
-# Test that chunks are processed in batches
-def test_processes_chunks_in_batches():
-    # This test would mock the relevant methods and verify batch behavior
-    pass
+async def test_index_status_model_default_schema_version(self):
 ```
 
-## Testing Schema Migration
+Tests that the IndexStatus model defaults to `schema_version=1` when created without explicitly setting the version.
+
+**Test Validation:**
+- Creates an IndexStatus instance with basic required fields
+- Asserts the default schema_version is set to 1
+
+### test_migrate_status_preserves_data
 
 ```python
-# Test that migration preserves existing data
-def test_migrate_status_preserves_data():
-    status = IndexStatus(
-        repo_path="/test/repo",
-        indexed_at=1234567890.0,
-        total_files=10,
-        total_chunks=100,
-        languages={"python": 8, "javascript": 2},
-        schema_version=1,
-    )
-    migrated, _ = _migrate_status(status)
-    
-    assert migrated.repo_path == "/test/repo"
-    assert migrated.indexed_at == 1234567890.0
-    assert migrated.total_files == 10
-    assert migrated.total_chunks == 100
+def test_migrate_status_preserves_data(self):
 ```
 
-# Related Components
+Validates that schema migration preserves all existing data fields during the upgrade process.
 
-This file works with the following components:
+**Test Process:**
+- Creates an IndexStatus with sample data including repository path, timestamps, file counts, and language statistics
+- Performs migration using the `_migrate_status` function
+- Verifies all original data is preserved in the migrated status
 
-- `RepositoryIndexer` from `local_deepwiki.core.indexer`
-- `IndexStatus` from `local_deepwiki.models`
-- [`ChunkingConfig`](../src/local_deepwiki/config.md) from `local_deepwiki.config`
-- `CodeChunk` from `local_deepwiki.models`
-- `Language` from `local_deepwiki.models`
-- `ChunkType` from `local_deepwiki.models`
+## Usage Examples
+
+### Testing Schema Migration
+
+```python
+# Create a status with old schema version
+status = IndexStatus(
+    repo_path="/test/repo",
+    indexed_at=1234567890.0,
+    total_files=10,
+    total_chunks=100,
+    languages={"python": 8, "javascript": 2},
+    schema_version=1,
+)
+
+# Migrate to current schema
+migrated, _ = _migrate_status(status)
+
+# Verify data preservation
+assert migrated.repo_path == "/test/repo"
+assert migrated.total_files == 10
+```
+
+### Testing Default Schema Version
+
+```python
+# Create status without explicit schema version
+status = IndexStatus(
+    repo_path="/test",
+    indexed_at=1.0,
+    total_files=0,
+    total_chunks=0,
+)
+
+# Verify default schema version
+assert status.schema_version == 1
+```
+
+## Related Components
+
+This test module works with several core components:
+
+- **RepositoryIndexer** - The [main](../src/local_deepwiki/watcher.md) indexer class being tested
+- **IndexStatus** - Model for tracking indexing status and metadata
+- **CodeChunk** - Represents individual code chunks in the index
+- **[ChunkingConfig](../src/local_deepwiki/config.md)** and **[Config](../src/local_deepwiki/config.md)** - Configuration classes for indexing behavior
+- **Language** and **ChunkType** - Enums for categorizing code content
+
+The tests also utilize migration helper functions:
+- `_migrate_status` - Handles schema version upgrades
+- `_needs_migration` - Determines if migration is required
+- `CURRENT_SCHEMA_VERSION` - Constant defining the current schema version
 
 ## API Reference
 
@@ -381,12 +381,12 @@ classDiagram
         +test_batch_size_validation()
     }
     class TestBatchedProcessing {
-        +test_processes_chunks_in_batches()
-        +mock_create_or_update_table()
-        +mock_add_chunks()
-        +mock_delete_chunks_by_file()
-        +test_incremental_update_with_batching()
-        +test_empty_batch_handling()
+        +test_processes_chunks_in_batches(tmp_path)
+        +mock_create_or_update_table(chunks)
+        +mock_add_chunks(chunks)
+        +mock_delete_chunks_by_file(file_path)
+        +test_incremental_update_with_batching(tmp_path)
+        +test_empty_batch_handling(tmp_path)
     }
     class TestChunkingConfigBatchSize {
         +test_default_batch_size()
@@ -398,10 +398,10 @@ classDiagram
         +test_needs_migration_current_version()
         +test_migrate_status_updates_version()
         +test_migrate_status_preserves_data()
-        +test_load_status_handles_legacy_files()
-        +test_save_status_includes_schema_version()
+        +test_load_status_handles_legacy_files(tmp_path)
+        +test_save_status_includes_schema_version(tmp_path)
         +test_index_status_model_default_schema_version()
-        +test_migration_triggered_on_load()
+        +test_migration_triggered_on_load(tmp_path)
     }
 ```
 
@@ -510,4 +510,3 @@ flowchart TD
 
 - [config](../src/local_deepwiki/config.md) - dependency
 - [server](../src/local_deepwiki/server.md) - shares 5 dependencies
-- [test_incremental_wiki](test_incremental_wiki.md) - shares 5 dependencies
