@@ -13,6 +13,7 @@ A local, privacy-focused MCP server that generates DeepWiki-style documentation 
 - **Configurable embeddings** - local (sentence-transformers) or OpenAI
 - **Incremental indexing** - only re-process changed files
 - **RAG-based Q&A** - ask questions about your codebase
+- **Deep Research mode** - multi-step reasoning for complex architectural questions
 - **Web UI** - browse generated wiki in your browser
 - **Export to HTML** - generate static HTML site for sharing
 - **Export to PDF** - generate printable PDF documentation with mermaid diagrams
@@ -125,6 +126,29 @@ Ask a question about the codebase using RAG.
   "max_context": 5
 }
 ```
+
+### `deep_research`
+
+Perform deep research on complex architectural questions using multi-step reasoning. Unlike `ask_question` (single retrieval), this performs query decomposition, parallel retrieval, gap analysis, and comprehensive synthesis.
+
+```json
+{
+  "repo_path": "/path/to/repo",
+  "question": "How does the authentication system interact with the database layer?",
+  "max_chunks": 30
+}
+```
+
+Returns a detailed answer with:
+- Sub-questions that were investigated
+- Source references with file paths and line numbers
+- Reasoning trace showing each step's duration
+- Comprehensive answer with citations
+
+Best for questions like:
+- "How does data flow from API to database?"
+- "What would break if we change the auth module?"
+- "How are these services coupled?"
 
 ### `read_wiki_structure`
 
@@ -286,6 +310,7 @@ uv run local-deepwiki
 │  Tools:                                                         │
 │  - index_repository    - Generate wiki + embeddings             │
 │  - ask_question        - RAG Q&A about codebase                 │
+│  - deep_research       - Multi-step reasoning for complex Q&A   │
 │  - read_wiki_structure - Get wiki table of contents             │
 │  - read_wiki_page      - Read specific wiki page                │
 │  - search_code         - Semantic code search                   │
