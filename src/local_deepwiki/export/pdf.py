@@ -1,6 +1,7 @@
 """PDF export functionality for DeepWiki documentation."""
 
 import argparse
+import base64
 import json
 import re
 import shutil
@@ -38,8 +39,65 @@ def is_mmdc_available() -> bool:
     return _mmdc_available
 
 
+def render_mermaid_to_png(diagram_code: str, timeout: int = 30) -> bytes | None:
+    """Render a mermaid diagram to PNG using mermaid-cli.
+
+    Args:
+        diagram_code: The mermaid diagram code.
+        timeout: Timeout in seconds for the mmdc command.
+
+    Returns:
+        PNG bytes if successful, None if rendering failed.
+    """
+    if not is_mmdc_available():
+        return None
+
+    try:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            input_file = tmp_path / "diagram.mmd"
+            output_file = tmp_path / "diagram.png"
+
+            # Write diagram to temp file
+            input_file.write_text(diagram_code)
+
+            # Run mmdc to generate PNG (embeds fonts as pixels)
+            result = subprocess.run(
+                [
+                    "mmdc",
+                    "-i", str(input_file),
+                    "-o", str(output_file),
+                    "-b", "white",  # White background for PDF
+                    "-s", "2",  # Scale 2x for better quality
+                    "--quiet",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+            )
+
+            if result.returncode != 0:
+                logger.warning(f"Mermaid CLI failed: {result.stderr}")
+                return None
+
+            if not output_file.exists():
+                logger.warning("Mermaid CLI did not produce output file")
+                return None
+
+            return output_file.read_bytes()
+
+    except subprocess.TimeoutExpired:
+        logger.warning(f"Mermaid CLI timed out after {timeout}s")
+        return None
+    except Exception as e:
+        logger.warning(f"Error rendering mermaid diagram: {e}")
+        return None
+
+
 def render_mermaid_to_svg(diagram_code: str, timeout: int = 30) -> str | None:
     """Render a mermaid diagram to SVG using mermaid-cli.
+
+    Note: SVG may have font issues in PDF. Use render_mermaid_to_png for PDF export.
 
     Args:
         diagram_code: The mermaid diagram code.
@@ -348,13 +406,15 @@ def render_markdown_for_pdf(content: str, render_mermaid: bool = True) -> str:
 
     # Process mermaid blocks
     if render_mermaid and is_mmdc_available():
-        # Try to render mermaid diagrams to SVG
+        # Try to render mermaid diagrams to PNG (better font support than SVG)
         mermaid_blocks = extract_mermaid_blocks(content)
         for full_block, diagram_code in mermaid_blocks:
-            svg = render_mermaid_to_svg(diagram_code)
-            if svg:
-                # Wrap SVG in a container div
-                replacement = f'<div class="mermaid-diagram">{svg}</div>'
+            png_bytes = render_mermaid_to_png(diagram_code)
+            if png_bytes:
+                # Embed PNG as base64 data URI
+                b64_data = base64.b64encode(png_bytes).decode("ascii")
+                img_tag = f'<img src="data:image/png;base64,{b64_data}" alt="Mermaid diagram">'
+                replacement = f'<div class="mermaid-diagram">{img_tag}</div>'
                 processed_content = processed_content.replace(full_block, replacement)
             else:
                 # Fall back to placeholder on render failure

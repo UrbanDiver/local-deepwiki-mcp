@@ -5,6 +5,7 @@ from local_deepwiki.export.pdf import (
     PdfExporter,
     export_to_pdf,
     is_mmdc_available,
+    render_mermaid_to_png,
     render_mermaid_to_svg,
 )
 
@@ -14,5 +15,6 @@ __all__ = [
     "PdfExporter",
     "export_to_pdf",
     "is_mmdc_available",
+    "render_mermaid_to_png",
     "render_mermaid_to_svg",
 ]

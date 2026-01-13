@@ -13,6 +13,7 @@ from local_deepwiki.export.pdf import (
     extract_title,
     is_mmdc_available,
     render_markdown_for_pdf,
+    render_mermaid_to_png,
     render_mermaid_to_svg,
 )
 
@@ -596,15 +597,50 @@ class TestRenderMermaidToSvg:
             assert result is None
 
 
-class TestMermaidCliRendering:
-    """Tests for mermaid rendering with CLI available."""
+class TestRenderMermaidToPng:
+    """Tests for mermaid to PNG rendering."""
 
-    @patch("local_deepwiki.export.pdf.render_mermaid_to_svg")
+    @patch("local_deepwiki.export.pdf.is_mmdc_available")
+    def test_returns_none_when_mmdc_unavailable(self, mock_available):
+        """Test that None is returned when mmdc is not available."""
+        mock_available.return_value = False
+
+        result = render_mermaid_to_png("graph TD\nA-->B")
+        assert result is None
+
+    @patch("local_deepwiki.export.pdf.subprocess.run")
+    @patch("local_deepwiki.export.pdf.is_mmdc_available")
+    def test_returns_none_on_cli_error(self, mock_available, mock_run):
+        """Test that None is returned on CLI error."""
+        mock_available.return_value = True
+        mock_run.return_value = MagicMock(returncode=1, stderr="Error")
+
+        result = render_mermaid_to_png("invalid diagram")
+        assert result is None
+
+    @patch("local_deepwiki.export.pdf.is_mmdc_available")
+    def test_handles_timeout(self, mock_available):
+        """Test that timeout is handled gracefully."""
+        import subprocess
+
+        mock_available.return_value = True
+
+        with patch("local_deepwiki.export.pdf.subprocess.run") as mock_run:
+            mock_run.side_effect = subprocess.TimeoutExpired("mmdc", 30)
+            result = render_mermaid_to_png("graph TD\nA-->B")
+            assert result is None
+
+
+class TestMermaidCliRendering:
+    """Tests for mermaid rendering with CLI available (uses PNG)."""
+
+    @patch("local_deepwiki.export.pdf.render_mermaid_to_png")
     @patch("local_deepwiki.export.pdf.is_mmdc_available")
     def test_renders_mermaid_when_cli_available(self, mock_available, mock_render):
-        """Test that mermaid diagrams are rendered when CLI is available."""
+        """Test that mermaid diagrams are rendered as PNG when CLI is available."""
         mock_available.return_value = True
-        mock_render.return_value = '<svg>test diagram</svg>'
+        # Return fake PNG bytes
+        mock_render.return_value = b'\x89PNG\r\n\x1a\n' + b'\x00' * 100
 
         md = """# Test
 
@@ -616,11 +652,11 @@ graph TD
         html = render_markdown_for_pdf(md, render_mermaid=True)
 
         assert "mermaid-diagram" in html
-        assert "<svg>test diagram</svg>" in html
+        assert "data:image/png;base64," in html
         assert "mermaid-note" not in html
         mock_render.assert_called_once()
 
-    @patch("local_deepwiki.export.pdf.render_mermaid_to_svg")
+    @patch("local_deepwiki.export.pdf.render_mermaid_to_png")
     @patch("local_deepwiki.export.pdf.is_mmdc_available")
     def test_falls_back_on_render_failure(self, mock_available, mock_render):
         """Test fallback to placeholder when render fails."""
@@ -639,12 +675,16 @@ graph TD
         assert "mermaid-note" in html
         assert "rendering failed" in html.lower()
 
-    @patch("local_deepwiki.export.pdf.render_mermaid_to_svg")
+    @patch("local_deepwiki.export.pdf.render_mermaid_to_png")
     @patch("local_deepwiki.export.pdf.is_mmdc_available")
     def test_renders_multiple_diagrams(self, mock_available, mock_render):
-        """Test rendering multiple mermaid diagrams."""
+        """Test rendering multiple mermaid diagrams as PNG."""
         mock_available.return_value = True
-        mock_render.side_effect = ['<svg>diagram1</svg>', '<svg>diagram2</svg>']
+        # Return different fake PNG bytes for each diagram
+        mock_render.side_effect = [
+            b'\x89PNG\r\n\x1a\ndiagram1',
+            b'\x89PNG\r\n\x1a\ndiagram2',
+        ]
 
         md = """# Test
 
@@ -661,6 +701,5 @@ sequenceDiagram
         html = render_markdown_for_pdf(md, render_mermaid=True)
 
         assert html.count("mermaid-diagram") == 2
-        assert "<svg>diagram1</svg>" in html
-        assert "<svg>diagram2</svg>" in html
+        assert html.count("data:image/png;base64,") == 2
         assert mock_render.call_count == 2
