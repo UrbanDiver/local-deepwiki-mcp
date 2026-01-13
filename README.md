@@ -222,6 +222,48 @@ For PDF export:
   - Ubuntu/Debian: `apt install libpango-1.0-0 libpangocairo-1.0-0`
 - Optional for mermaid diagrams: `npm install -g @mermaid-js/mermaid-cli`
 
+## Troubleshooting
+
+### Ollama Connection Errors
+
+If you see "Failed to connect to Ollama":
+1. Ensure Ollama is running: `ollama serve`
+2. Verify the model is pulled: `ollama list`
+3. Check if the default URL works: `curl http://localhost:11434/api/tags`
+4. If using a custom port, update `config.yaml` with the correct `base_url`
+
+### PDF Export Fails
+
+**"pango not found" or similar Cairo/Pango errors:**
+- macOS: `brew install pango cairo gdk-pixbuf`
+- Ubuntu/Debian: `apt install libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf2.0-0`
+- Fedora: `dnf install pango cairo gdk-pixbuf2`
+
+**Mermaid diagrams not rendering in PDF:**
+- Install mermaid-cli: `npm install -g @mermaid-js/mermaid-cli`
+- Verify with: `mmdc --version`
+- Without mermaid-cli, diagrams show as code blocks
+
+### Memory Issues on Large Repositories
+
+For repositories with 100k+ lines of code:
+1. Increase batch size limits in config if you have more RAM
+2. Use `full_rebuild: false` for incremental updates after initial indexing
+3. Consider excluding large generated files via `exclude_patterns` in config
+
+### LLM Quality Issues
+
+If wiki content has hallucinations or low quality:
+1. Switch from Ollama to Anthropic or OpenAI for better results
+2. Try a larger local model (e.g., `qwen3-coder:30b` instead of `llama3.2`)
+3. Ensure source files are properly parsed (check supported languages)
+
+### Web UI Not Loading
+
+1. Check if port 8080 is in use: `lsof -i :8080`
+2. Try a different port: `uv run deepwiki-serve .deepwiki --port 8081`
+3. Ensure `.deepwiki` directory exists and contains generated wiki
+
 ## Development
 
 ```bash

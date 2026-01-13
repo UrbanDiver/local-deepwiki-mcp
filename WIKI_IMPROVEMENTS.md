@@ -116,4 +116,4 @@ This document tracks planned improvements to the Local DeepWiki documentation ge
 - Current wiki generation uses Ollama (qwen3-coder:30b) by default
 - Cross-linking was added in commit `f933c46`
 - Web UI runs on Flask at port 8080
-- All 205 tests currently pass
+- All 488 tests currently pass

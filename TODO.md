@@ -16,8 +16,8 @@
 ## Lower Priority (Nice to have)
 
 - [ ] **Deep Research mode** - Multi-step reasoning for complex architectural questions
-- [ ] **More languages** - Add support for Ruby, PHP, Kotlin
-- [ ] **Static HTML export** - Generate deployable static site for GitHub Pages or internal hosting
+- [x] **More languages** - Added support for Ruby, PHP, Kotlin, C# *(completed)*
+- [x] **Static HTML export** - Generate deployable static site for GitHub Pages or internal hosting *(completed)*
 
 ## Context
 
