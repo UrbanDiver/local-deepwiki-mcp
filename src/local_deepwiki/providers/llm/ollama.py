@@ -79,7 +79,8 @@ class OllamaProvider(LLMProvider):
         try:
             # Try to list models to verify connection
             models_response = await self._client.list()
-            available_models = [m["name"] for m in models_response.get("models", [])]
+            # ollama library returns typed objects with .models list and .model attribute
+            available_models = [m.model for m in models_response.models]
             logger.debug(f"Ollama available models: {available_models}")
 
             # Check if our model is available (handle both "model" and "model:tag" formats)

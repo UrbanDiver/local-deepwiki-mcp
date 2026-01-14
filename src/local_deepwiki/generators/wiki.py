@@ -33,6 +33,7 @@ from local_deepwiki.generators.see_also import RelationshipAnalyzer, add_see_als
 from local_deepwiki.generators.source_refs import add_source_refs_sections
 from local_deepwiki.generators.toc import generate_toc, write_toc
 from local_deepwiki.models import (
+    FileInfo,
     IndexStatus,
     ProgressCallback,
     WikiGenerationStatus,
@@ -889,98 +890,80 @@ Format as markdown."""
 
         return "\n".join(lines)
 
-    async def _generate_file_docs(
+    async def _generate_single_file_doc(
         self,
+        file_info: FileInfo,
         index_status: IndexStatus,
-        progress_callback: ProgressCallback | None = None,
-        full_rebuild: bool = False,
-    ) -> tuple[list[WikiPage], int, int]:
-        """Generate documentation for individual source files.
+        full_rebuild: bool,
+    ) -> tuple[WikiPage | None, bool]:
+        """Generate documentation for a single source file.
 
         Args:
-            index_status: Index status with file information.
-            progress_callback: Optional progress callback.
-            full_rebuild: If True, regenerate all pages.
+            file_info: File status information.
+            index_status: Index status with repo information.
+            full_rebuild: If True, regenerate even if unchanged.
 
         Returns:
-            Tuple of (pages list, generated count, skipped count).
+            Tuple of (WikiPage or None, was_skipped).
+            Returns (None, False) if file should be skipped entirely.
+            Returns (page, True) if existing page was reused.
+            Returns (page, False) if new page was generated.
         """
-        pages = []
-        pages_generated = 0
-        pages_skipped = 0
+        file_path = Path(file_info.path)
 
-        # Filter to significant files (skip __init__.py, test files for now)
-        significant_files = [
-            f
-            for f in index_status.files
-            if not f.path.endswith("__init__.py") and f.chunk_count >= 2  # Has meaningful content
-        ]
+        # Create nested path structure: files/module/filename.md
+        parts = file_path.parts
+        if len(parts) > 1:
+            wiki_path = f"files/{'/'.join(parts[:-1])}/{file_path.stem}.md"
+        else:
+            wiki_path = f"files/{file_path.stem}.md"
 
-        # Limit to avoid too many LLM calls
-        max_files = self.config.wiki.max_file_docs
-        if len(significant_files) > max_files:
-            # Prioritize files with more chunks (more complex)
-            significant_files = sorted(
-                significant_files, key=lambda x: x.chunk_count, reverse=True
-            )[:max_files]
+        source_files = [file_info.path]
 
-        for file_info in significant_files:
-            file_path = Path(file_info.path)
+        # Check if this file page needs regeneration
+        if not full_rebuild and not self._needs_regeneration(wiki_path, source_files):
+            existing_page = await self._load_existing_page(wiki_path)
+            if existing_page is not None:
+                # Still need to register entities for cross-linking
+                all_file_chunks = await self.vector_store.get_chunks_by_file(file_info.path)
+                self.entity_registry.register_from_chunks(all_file_chunks, wiki_path)
+                self._record_page_status(existing_page, source_files)
+                return existing_page, True  # Skipped (reused existing)
 
-            # Create nested path structure: files/module/filename.md
-            parts = file_path.parts
-            if len(parts) > 1:
-                wiki_path = f"files/{'/'.join(parts[:-1])}/{file_path.stem}.md"
-            else:
-                wiki_path = f"files/{file_path.stem}.md"
+        # Get all chunks for this file
+        search_results = await self.vector_store.search(
+            f"file:{file_info.path}",
+            limit=self.config.wiki.context_search_limit,
+        )
 
-            # Check if this file page needs regeneration (depends only on this source file)
-            source_files = [file_info.path]
-            if not full_rebuild and not self._needs_regeneration(wiki_path, source_files):
-                existing_page = await self._load_existing_page(wiki_path)
-                if existing_page is not None:
-                    # Still need to register entities for cross-linking
-                    all_file_chunks = await self.vector_store.get_chunks_by_file(file_info.path)
-                    self.entity_registry.register_from_chunks(all_file_chunks, wiki_path)
-                    pages.append(existing_page)
-                    self._record_page_status(existing_page, source_files)
-                    pages_skipped += 1
-                    continue
+        # Filter to chunks from this specific file
+        file_chunks = [r for r in search_results if r.chunk.file_path == file_info.path]
 
-            # Get all chunks for this file
+        if not file_chunks:
+            # Fallback: search by filename
             search_results = await self.vector_store.search(
-                f"file:{file_info.path}",
-                limit=self.config.wiki.context_search_limit,
+                file_path.stem,
+                limit=self.config.wiki.fallback_search_limit,
             )
-
-            # Filter to chunks from this specific file
             file_chunks = [r for r in search_results if r.chunk.file_path == file_info.path]
 
-            if not file_chunks:
-                # Fallback: search by filename
-                search_results = await self.vector_store.search(
-                    file_path.stem,
-                    limit=self.config.wiki.fallback_search_limit,
-                )
-                file_chunks = [r for r in search_results if r.chunk.file_path == file_info.path]
+        if not file_chunks:
+            return None, False  # No content to document
 
-            if not file_chunks:
-                continue
+        # Build context from chunks
+        context_parts = []
+        for r in file_chunks[:15]:  # Limit context size
+            chunk = r.chunk
+            context_parts.append(
+                f"Type: {chunk.chunk_type.value}\n"
+                f"Name: {chunk.name}\n"
+                f"Lines: {chunk.start_line}-{chunk.end_line}\n"
+                f"```\n{chunk.content[:600]}\n```"
+            )
 
-            # Build context from chunks
-            context_parts = []
-            for r in file_chunks[:15]:  # Limit context size
-                chunk = r.chunk
-                context_parts.append(
-                    f"Type: {chunk.chunk_type.value}\n"
-                    f"Name: {chunk.name}\n"
-                    f"Lines: {chunk.start_line}-{chunk.end_line}\n"
-                    f"```\n{chunk.content[:600]}\n```"
-                )
+        context = "\n\n".join(context_parts)
 
-            context = "\n\n".join(context_parts)
-
-            prompt = f"""Generate documentation for the file '{file_info.path}' based ONLY on the code provided.
+        prompt = f"""Generate documentation for the file '{file_info.path}' based ONLY on the code provided.
 
 Language: {file_info.language}
 Total code chunks: {file_info.chunk_count}
@@ -1005,65 +988,139 @@ CRITICAL CONSTRAINTS:
 Format as markdown with clear sections.
 Do NOT include mermaid class diagrams - they will be auto-generated."""
 
-            content = await self.llm.generate(prompt, system_prompt=self._system_prompt)
+        content = await self.llm.generate(prompt, system_prompt=self._system_prompt)
 
-            # Strip any LLM-generated class diagram sections (we add our own)
-            # Remove "## Class Diagram" section and any mermaid classDiagram blocks
-            content = re.sub(
-                r"\n*##\s*Class\s*Diagram\s*\n+```mermaid\s*\n+classDiagram.*?```",
-                "",
-                content,
-                flags=re.DOTALL | re.IGNORECASE,
+        # Strip any LLM-generated class diagram sections (we add our own)
+        content = re.sub(
+            r"\n*##\s*Class\s*Diagram\s*\n+```mermaid\s*\n+classDiagram.*?```",
+            "",
+            content,
+            flags=re.DOTALL | re.IGNORECASE,
+        )
+
+        # Generate API reference section with type signatures
+        abs_file_path = Path(index_status.repo_path) / file_info.path
+        if abs_file_path.exists():
+            api_docs = get_file_api_docs(abs_file_path)
+            if api_docs:
+                content += "\n\n## API Reference\n\n" + api_docs
+
+        # Generate class diagram if file has classes
+        all_file_chunks = await self.vector_store.get_chunks_by_file(file_info.path)
+        class_diagram = generate_class_diagram(all_file_chunks)
+        if class_diagram:
+            content += "\n\n## Class Diagram\n\n" + class_diagram
+
+        # Generate call graph diagram
+        if abs_file_path.exists():
+            call_graph = get_file_call_graph(abs_file_path, Path(index_status.repo_path))
+            if call_graph:
+                content += "\n\n## Call Graph\n\n```mermaid\n" + call_graph + "\n```"
+
+        # Add usage examples from test files
+        entity_names = [
+            chunk.name for chunk in all_file_chunks
+            if chunk.name and len(chunk.name) > 2
+        ]
+        if entity_names:
+            examples_md = get_file_examples(
+                source_file=abs_file_path,
+                repo_root=Path(index_status.repo_path),
+                entity_names=entity_names,
+                max_examples=5,
             )
+            if examples_md:
+                content += "\n\n" + examples_md
 
-            # Generate API reference section with type signatures
-            abs_file_path = Path(index_status.repo_path) / file_info.path
-            if abs_file_path.exists():
-                api_docs = get_file_api_docs(abs_file_path)
-                if api_docs:
-                    content += "\n\n## API Reference\n\n" + api_docs
+        # Register entities for cross-linking
+        self.entity_registry.register_from_chunks(all_file_chunks, wiki_path)
 
-            # Generate class diagram if file has classes
-            # Use get_chunks_by_file for complete chunk list (not just search results)
-            all_file_chunks = await self.vector_store.get_chunks_by_file(file_info.path)
-            class_diagram = generate_class_diagram(all_file_chunks)
-            if class_diagram:
-                content += "\n\n## Class Diagram\n\n" + class_diagram
+        page = WikiPage(
+            path=wiki_path,
+            title=f"{file_path.name}",
+            content=content,
+            generated_at=time.time(),
+        )
+        self._record_page_status(page, source_files)
+        return page, False  # Generated new
 
-            # Generate call graph diagram
-            abs_file_path = Path(index_status.repo_path) / file_info.path
-            if abs_file_path.exists():
-                call_graph = get_file_call_graph(abs_file_path, Path(index_status.repo_path))
-                if call_graph:
-                    content += "\n\n## Call Graph\n\n```mermaid\n" + call_graph + "\n```"
+    async def _generate_file_docs(
+        self,
+        index_status: IndexStatus,
+        progress_callback: ProgressCallback | None = None,
+        full_rebuild: bool = False,
+    ) -> tuple[list[WikiPage], int, int]:
+        """Generate documentation for individual source files.
 
-            # Add usage examples from test files
-            entity_names = [
-                chunk.name for chunk in all_file_chunks
-                if chunk.name and len(chunk.name) > 2
-            ]
-            if entity_names:
-                examples_md = get_file_examples(
-                    source_file=abs_file_path,
-                    repo_root=Path(index_status.repo_path),
-                    entity_names=entity_names,
-                    max_examples=5,
+        Uses parallel LLM calls for faster generation, controlled by
+        config.wiki.max_concurrent_llm_calls.
+
+        Args:
+            index_status: Index status with file information.
+            progress_callback: Optional progress callback.
+            full_rebuild: If True, regenerate all pages.
+
+        Returns:
+            Tuple of (pages list, generated count, skipped count).
+        """
+        # Filter to significant files (skip __init__.py, test files for now)
+        significant_files = [
+            f
+            for f in index_status.files
+            if not f.path.endswith("__init__.py") and f.chunk_count >= 2  # Has meaningful content
+        ]
+
+        # Limit to avoid too many LLM calls
+        max_files = self.config.wiki.max_file_docs
+        if len(significant_files) > max_files:
+            # Prioritize files with more chunks (more complex)
+            significant_files = sorted(
+                significant_files, key=lambda x: x.chunk_count, reverse=True
+            )[:max_files]
+
+        if not significant_files:
+            return [], 0, 0
+
+        # Use semaphore to limit concurrent LLM calls
+        max_concurrent = self.config.wiki.max_concurrent_llm_calls
+        semaphore = asyncio.Semaphore(max_concurrent)
+        logger.info(
+            f"Generating file docs for {len(significant_files)} files "
+            f"(max {max_concurrent} concurrent)"
+        )
+
+        async def generate_with_semaphore(
+            file_info: FileInfo,
+        ) -> tuple[WikiPage | None, bool]:
+            async with semaphore:
+                logger.debug(f"Generating doc for {file_info.path}")
+                return await self._generate_single_file_doc(
+                    file_info, index_status, full_rebuild
                 )
-                if examples_md:
-                    content += "\n\n" + examples_md
 
-            # Register entities for cross-linking
-            self.entity_registry.register_from_chunks(all_file_chunks, wiki_path)
+        # Run all file doc generations concurrently (limited by semaphore)
+        results = await asyncio.gather(
+            *[generate_with_semaphore(f) for f in significant_files],
+            return_exceptions=True,
+        )
 
-            page = WikiPage(
-                path=wiki_path,
-                title=f"{file_path.name}",
-                content=content,
-                generated_at=time.time(),
-            )
-            pages.append(page)
-            self._record_page_status(page, source_files)
-            pages_generated += 1
+        # Process results
+        pages = []
+        pages_generated = 0
+        pages_skipped = 0
+
+        for file_info, result in zip(significant_files, results):
+            if isinstance(result, Exception):
+                logger.error(f"Error generating doc for {file_info.path}: {result}")
+                continue
+
+            page, was_skipped = result
+            if page is not None:
+                pages.append(page)
+                if was_skipped:
+                    pages_skipped += 1
+                else:
+                    pages_generated += 1
 
         # Create files index (always regenerate since it depends on all file pages)
         if pages:
@@ -1077,6 +1134,9 @@ Do NOT include mermaid class diagrams - they will be auto-generated."""
             pages.insert(0, files_index)
             self._record_page_status(files_index, all_file_paths)
 
+        logger.info(
+            f"File docs complete: {pages_generated} generated, {pages_skipped} skipped"
+        )
         return pages, pages_generated, pages_skipped
 
     def _generate_files_index(self, file_pages: list[WikiPage]) -> str:

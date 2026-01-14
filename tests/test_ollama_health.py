@@ -1,5 +1,7 @@
 """Tests for Ollama provider health check functionality."""
 
+from dataclasses import dataclass
+
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
 
@@ -8,6 +10,25 @@ from local_deepwiki.providers.llm.ollama import (
     OllamaConnectionError,
     OllamaModelNotFoundError,
 )
+
+
+@dataclass
+class MockModel:
+    """Mock ollama Model object."""
+
+    model: str
+
+
+@dataclass
+class MockListResponse:
+    """Mock ollama ListResponse object."""
+
+    models: list[MockModel]
+
+
+def make_list_response(model_names: list[str]) -> MockListResponse:
+    """Create a mock list response with the given model names."""
+    return MockListResponse(models=[MockModel(model=name) for name in model_names])
 
 
 class TestOllamaConnectionError:
@@ -71,12 +92,7 @@ class TestOllamaProviderHealthCheck:
     @pytest.mark.asyncio
     async def test_health_check_passes_when_model_available(self, provider):
         """Health check should pass when Ollama is running and model exists."""
-        mock_response = {
-            "models": [
-                {"name": "llama3.2:latest"},
-                {"name": "mistral:latest"},
-            ]
-        }
+        mock_response = make_list_response(["llama3.2:latest", "mistral:latest"])
 
         with patch.object(provider._client, "list", new_callable=AsyncMock) as mock_list:
             mock_list.return_value = mock_response
@@ -88,7 +104,7 @@ class TestOllamaProviderHealthCheck:
     @pytest.mark.asyncio
     async def test_health_check_passes_with_exact_model_match(self, provider):
         """Health check should pass with exact model name match."""
-        mock_response = {"models": [{"name": "llama3.2"}]}
+        mock_response = make_list_response(["llama3.2"])
 
         with patch.object(provider._client, "list", new_callable=AsyncMock) as mock_list:
             mock_list.return_value = mock_response
@@ -99,7 +115,7 @@ class TestOllamaProviderHealthCheck:
     @pytest.mark.asyncio
     async def test_health_check_passes_with_tagged_model(self, provider):
         """Health check should pass when model has a tag suffix."""
-        mock_response = {"models": [{"name": "llama3.2:8b"}]}
+        mock_response = make_list_response(["llama3.2:8b"])
 
         with patch.object(provider._client, "list", new_callable=AsyncMock) as mock_list:
             mock_list.return_value = mock_response
@@ -110,7 +126,7 @@ class TestOllamaProviderHealthCheck:
     @pytest.mark.asyncio
     async def test_health_check_raises_when_model_not_found(self, provider):
         """Health check should raise OllamaModelNotFoundError when model doesn't exist."""
-        mock_response = {"models": [{"name": "mistral:latest"}]}
+        mock_response = make_list_response(["mistral:latest"])
 
         with patch.object(provider._client, "list", new_callable=AsyncMock) as mock_list:
             mock_list.return_value = mock_response
@@ -153,7 +169,7 @@ class TestOllamaProviderGenerate:
     @pytest.mark.asyncio
     async def test_generate_checks_health_on_first_call(self, provider):
         """Generate should check health on the first call."""
-        mock_list_response = {"models": [{"name": "llama3.2:latest"}]}
+        mock_list_response = make_list_response(["llama3.2:latest"])
         mock_chat_response = {"message": {"content": "Hello!"}}
 
         with patch.object(provider._client, "list", new_callable=AsyncMock) as mock_list:
@@ -196,7 +212,7 @@ class TestOllamaProviderGenerate:
     @pytest.mark.asyncio
     async def test_generate_raises_model_not_found_with_suggestions(self, provider):
         """Generate should raise helpful error when model doesn't exist."""
-        mock_response = {"models": [{"name": "mistral:latest"}, {"name": "codellama:7b"}]}
+        mock_response = make_list_response(["mistral:latest", "codellama:7b"])
 
         with patch.object(provider._client, "list", new_callable=AsyncMock) as mock_list:
             mock_list.return_value = mock_response
@@ -220,7 +236,7 @@ class TestOllamaProviderGenerateStream:
     @pytest.mark.asyncio
     async def test_generate_stream_checks_health_on_first_call(self, provider):
         """Generate stream should check health on the first call."""
-        mock_list_response = {"models": [{"name": "llama3.2:latest"}]}
+        mock_list_response = make_list_response(["llama3.2:latest"])
 
         async def mock_stream():
             yield {"message": {"content": "Hello"}}

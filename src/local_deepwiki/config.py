@@ -161,6 +161,13 @@ class WikiConfig(BaseModel):
     max_file_docs: int = Field(
         default=20, description="Maximum number of file-level documentation pages to generate"
     )
+    max_concurrent_llm_calls: int = Field(
+        default=3,
+        ge=1,
+        le=10,
+        description="Maximum concurrent LLM calls for file documentation generation. "
+        "Higher values speed up generation but increase memory/API usage.",
+    )
     import_search_limit: int = Field(
         default=200, description="Maximum chunks to search for import/relationship analysis"
     )

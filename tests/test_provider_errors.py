@@ -1,5 +1,6 @@
 """Tests for provider error handling."""
 
+from dataclasses import dataclass
 from unittest.mock import patch
 
 import pytest
@@ -9,6 +10,25 @@ from local_deepwiki.providers.llm.ollama import (
     OllamaModelNotFoundError,
     OllamaProvider,
 )
+
+
+@dataclass
+class MockModel:
+    """Mock ollama Model object."""
+
+    model: str
+
+
+@dataclass
+class MockListResponse:
+    """Mock ollama ListResponse object."""
+
+    models: list[MockModel]
+
+
+def make_list_response(model_names: list[str]) -> MockListResponse:
+    """Create a mock list response with the given model names."""
+    return MockListResponse(models=[MockModel(model=name) for name in model_names])
 
 
 class TestOllamaConnectionError:
@@ -69,9 +89,7 @@ class TestOllamaProviderHealthCheck:
         provider = OllamaProvider(model="llama3.2")
 
         with patch.object(provider._client, "list") as mock_list:
-            mock_list.return_value = {
-                "models": [{"name": "llama3.2:latest"}]
-            }
+            mock_list.return_value = make_list_response(["llama3.2:latest"])
 
             result = await provider.check_health()
             assert result is True
@@ -82,9 +100,7 @@ class TestOllamaProviderHealthCheck:
         provider = OllamaProvider(model="nonexistent-model")
 
         with patch.object(provider._client, "list") as mock_list:
-            mock_list.return_value = {
-                "models": [{"name": "llama3.2:latest"}]
-            }
+            mock_list.return_value = make_list_response(["llama3.2:latest"])
 
             with pytest.raises(OllamaModelNotFoundError) as exc_info:
                 await provider.check_health()
