@@ -71,7 +71,7 @@ graph TB
     LLMConfig --> AnthropicConfig
     LLMConfig --> OpenAILLMConfig
     
-    LLMProvider <|-- OllamaProvider
+    OllamaProvider -.->|extends| LLMProvider
     
     get_llm_provider --> LLMProvider
     get_llm_provider --> LLMConfig
