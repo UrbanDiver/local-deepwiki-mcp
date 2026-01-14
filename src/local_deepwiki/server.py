@@ -223,6 +223,11 @@ async def list_tools() -> list[Tool]:
                         "type": "integer",
                         "description": "Maximum total code chunks to analyze (default: 30)",
                     },
+                    "preset": {
+                        "type": "string",
+                        "enum": ["quick", "default", "thorough"],
+                        "description": "Research mode preset: 'quick' (fast, fewer sub-questions), 'default' (balanced), 'thorough' (comprehensive, more analysis)",
+                    },
                 },
                 "required": ["repo_path", "question"],
             },
@@ -572,8 +577,11 @@ async def handle_deep_research(args: dict[str, Any]) -> list[TextContent]:
         logger.error(f"Invalid input: {e}")
         return [TextContent(type="text", text=f"Error: {e}")]
 
+    # Get preset parameter (optional)
+    preset = args.get("preset")
+
     logger.info(f"Deep research on {repo_path}: {question[:100]}...")
-    logger.debug(f"Max chunks: {max_chunks}")
+    logger.debug(f"Max chunks: {max_chunks}, preset: {preset or 'default'}")
 
     config = get_config()
     vector_db_path = config.get_vector_db_path(repo_path)
@@ -629,13 +637,18 @@ async def handle_deep_research(args: dict[str, Any]) -> list[TextContent]:
             logger.warning(f"Failed to send progress notification: {e}")
 
     # Create and run the deep research pipeline with config parameters
-    dr_config = config.deep_research
+    # Apply preset if specified (overrides config file values)
+    dr_config = config.deep_research.with_preset(preset)
+
+    # Use max_chunks from args if provided, otherwise use preset/config value
+    effective_max_chunks = max_chunks if args.get("max_chunks") is not None else dr_config.max_total_chunks
+
     pipeline = DeepResearchPipeline(
         vector_store=vector_store,
         llm_provider=llm,
         max_sub_questions=dr_config.max_sub_questions,
         chunks_per_subquestion=dr_config.chunks_per_subquestion,
-        max_total_chunks=max_chunks,  # CLI parameter takes precedence
+        max_total_chunks=effective_max_chunks,
         max_follow_up_queries=dr_config.max_follow_up_queries,
         synthesis_temperature=dr_config.synthesis_temperature,
         synthesis_max_tokens=dr_config.synthesis_max_tokens,

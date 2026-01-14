@@ -3,11 +3,49 @@
 import threading
 from contextlib import contextmanager
 from contextvars import ContextVar
+from enum import Enum
 from pathlib import Path
 from typing import Any, Generator, Literal
 
 import yaml
 from pydantic import BaseModel, Field
+
+
+class ResearchPreset(str, Enum):
+    """Research mode presets for deep research pipeline."""
+
+    QUICK = "quick"
+    DEFAULT = "default"
+    THOROUGH = "thorough"
+
+
+# Preset parameter values for each research mode
+RESEARCH_PRESETS: dict[ResearchPreset, dict[str, Any]] = {
+    ResearchPreset.QUICK: {
+        "max_sub_questions": 2,
+        "chunks_per_subquestion": 3,
+        "max_total_chunks": 15,
+        "max_follow_up_queries": 1,
+        "synthesis_temperature": 0.3,
+        "synthesis_max_tokens": 2048,
+    },
+    ResearchPreset.DEFAULT: {
+        "max_sub_questions": 4,
+        "chunks_per_subquestion": 5,
+        "max_total_chunks": 30,
+        "max_follow_up_queries": 3,
+        "synthesis_temperature": 0.5,
+        "synthesis_max_tokens": 4096,
+    },
+    ResearchPreset.THOROUGH: {
+        "max_sub_questions": 6,
+        "chunks_per_subquestion": 8,
+        "max_total_chunks": 50,
+        "max_follow_up_queries": 5,
+        "synthesis_temperature": 0.5,
+        "synthesis_max_tokens": 8192,
+    },
+}
 
 
 class LocalEmbeddingConfig(BaseModel):
@@ -173,6 +211,36 @@ class DeepResearchConfig(BaseModel):
         le=16000,
         description="Maximum tokens in synthesis response",
     )
+
+    def with_preset(self, preset: ResearchPreset | str | None) -> "DeepResearchConfig":
+        """Return a new config with preset values applied.
+
+        The preset values override the current config values. If preset is None
+        or "default", returns a copy of the current config unchanged.
+
+        Args:
+            preset: The research preset to apply ("quick", "default", "thorough").
+
+        Returns:
+            A new DeepResearchConfig with preset values applied.
+        """
+        if preset is None:
+            return self.model_copy()
+
+        # Convert string to enum if needed
+        if isinstance(preset, str):
+            try:
+                preset = ResearchPreset(preset.lower())
+            except ValueError:
+                # Invalid preset name, return unchanged
+                return self.model_copy()
+
+        if preset == ResearchPreset.DEFAULT:
+            return self.model_copy()
+
+        # Get preset values and merge with current config
+        preset_values = RESEARCH_PRESETS.get(preset, {})
+        return self.model_copy(update=preset_values)
 
 
 class OutputConfig(BaseModel):

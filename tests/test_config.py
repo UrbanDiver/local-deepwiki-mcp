@@ -6,7 +6,16 @@ from pathlib import Path
 
 import pytest
 
-from local_deepwiki.config import Config, config_context, get_config, reset_config, set_config
+from local_deepwiki.config import (
+    Config,
+    DeepResearchConfig,
+    RESEARCH_PRESETS,
+    ResearchPreset,
+    config_context,
+    get_config,
+    reset_config,
+    set_config,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -260,3 +269,122 @@ class TestConfigContext:
         with config_context(custom_config) as cfg:
             assert cfg is custom_config
             assert cfg.chunking.max_chunk_tokens == 768
+
+
+class TestResearchPresets:
+    """Tests for research preset functionality."""
+
+    def test_research_preset_enum_values(self):
+        """Test ResearchPreset enum has expected values."""
+        assert ResearchPreset.QUICK.value == "quick"
+        assert ResearchPreset.DEFAULT.value == "default"
+        assert ResearchPreset.THOROUGH.value == "thorough"
+
+    def test_research_presets_dict_has_all_presets(self):
+        """Test RESEARCH_PRESETS has all preset configurations."""
+        assert ResearchPreset.QUICK in RESEARCH_PRESETS
+        assert ResearchPreset.DEFAULT in RESEARCH_PRESETS
+        assert ResearchPreset.THOROUGH in RESEARCH_PRESETS
+
+    def test_quick_preset_values(self):
+        """Test quick preset has fewer resources."""
+        quick = RESEARCH_PRESETS[ResearchPreset.QUICK]
+        default = RESEARCH_PRESETS[ResearchPreset.DEFAULT]
+
+        # Quick should use fewer sub-questions and chunks
+        assert quick["max_sub_questions"] < default["max_sub_questions"]
+        assert quick["chunks_per_subquestion"] < default["chunks_per_subquestion"]
+        assert quick["max_total_chunks"] < default["max_total_chunks"]
+        assert quick["max_follow_up_queries"] < default["max_follow_up_queries"]
+        assert quick["synthesis_max_tokens"] < default["synthesis_max_tokens"]
+
+    def test_thorough_preset_values(self):
+        """Test thorough preset uses more resources."""
+        thorough = RESEARCH_PRESETS[ResearchPreset.THOROUGH]
+        default = RESEARCH_PRESETS[ResearchPreset.DEFAULT]
+
+        # Thorough should use more sub-questions and chunks
+        assert thorough["max_sub_questions"] > default["max_sub_questions"]
+        assert thorough["chunks_per_subquestion"] > default["chunks_per_subquestion"]
+        assert thorough["max_total_chunks"] > default["max_total_chunks"]
+        assert thorough["max_follow_up_queries"] > default["max_follow_up_queries"]
+        assert thorough["synthesis_max_tokens"] > default["synthesis_max_tokens"]
+
+    def test_with_preset_none_returns_copy(self):
+        """Test with_preset(None) returns unchanged copy."""
+        config = DeepResearchConfig()
+        result = config.with_preset(None)
+
+        assert result.max_sub_questions == config.max_sub_questions
+        assert result.chunks_per_subquestion == config.chunks_per_subquestion
+        assert result is not config  # Should be a copy
+
+    def test_with_preset_default_returns_copy(self):
+        """Test with_preset('default') returns unchanged copy."""
+        config = DeepResearchConfig()
+        result = config.with_preset("default")
+
+        assert result.max_sub_questions == config.max_sub_questions
+        assert result is not config
+
+    def test_with_preset_quick_applies_values(self):
+        """Test with_preset('quick') applies quick preset values."""
+        config = DeepResearchConfig()
+        result = config.with_preset("quick")
+
+        quick = RESEARCH_PRESETS[ResearchPreset.QUICK]
+        assert result.max_sub_questions == quick["max_sub_questions"]
+        assert result.chunks_per_subquestion == quick["chunks_per_subquestion"]
+        assert result.max_total_chunks == quick["max_total_chunks"]
+        assert result.max_follow_up_queries == quick["max_follow_up_queries"]
+        assert result.synthesis_temperature == quick["synthesis_temperature"]
+        assert result.synthesis_max_tokens == quick["synthesis_max_tokens"]
+
+    def test_with_preset_thorough_applies_values(self):
+        """Test with_preset('thorough') applies thorough preset values."""
+        config = DeepResearchConfig()
+        result = config.with_preset("thorough")
+
+        thorough = RESEARCH_PRESETS[ResearchPreset.THOROUGH]
+        assert result.max_sub_questions == thorough["max_sub_questions"]
+        assert result.chunks_per_subquestion == thorough["chunks_per_subquestion"]
+        assert result.max_total_chunks == thorough["max_total_chunks"]
+        assert result.max_follow_up_queries == thorough["max_follow_up_queries"]
+        assert result.synthesis_temperature == thorough["synthesis_temperature"]
+        assert result.synthesis_max_tokens == thorough["synthesis_max_tokens"]
+
+    def test_with_preset_accepts_enum(self):
+        """Test with_preset accepts ResearchPreset enum."""
+        config = DeepResearchConfig()
+        result = config.with_preset(ResearchPreset.QUICK)
+
+        quick = RESEARCH_PRESETS[ResearchPreset.QUICK]
+        assert result.max_sub_questions == quick["max_sub_questions"]
+
+    def test_with_preset_case_insensitive(self):
+        """Test with_preset is case-insensitive for string input."""
+        config = DeepResearchConfig()
+
+        result_lower = config.with_preset("quick")
+        result_upper = config.with_preset("QUICK")
+        result_mixed = config.with_preset("Quick")
+
+        assert result_lower.max_sub_questions == result_upper.max_sub_questions
+        assert result_lower.max_sub_questions == result_mixed.max_sub_questions
+
+    def test_with_preset_invalid_returns_copy(self):
+        """Test with_preset with invalid string returns unchanged copy."""
+        config = DeepResearchConfig()
+        result = config.with_preset("invalid_preset")
+
+        assert result.max_sub_questions == config.max_sub_questions
+        assert result is not config
+
+    def test_with_preset_does_not_modify_original(self):
+        """Test with_preset does not modify the original config."""
+        config = DeepResearchConfig()
+        original_value = config.max_sub_questions
+
+        _ = config.with_preset("quick")
+
+        assert config.max_sub_questions == original_value
