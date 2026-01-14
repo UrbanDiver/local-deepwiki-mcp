@@ -2,91 +2,42 @@
 
 ## Module Purpose
 
-The tests module contains the test suite for the local_deepwiki project, providing comprehensive unit and integration tests for various components including parsers, generators, web interfaces, and external service integrations.
+The tests module provides comprehensive test coverage for the local_deepwiki project. It contains unit tests for various components including parsers, configuration, manifest generation, documentation generators, and utility functions. The tests ensure the reliability and correctness of the wiki generation system.
 
 ## Key Classes and Functions
 
-### Parser Testing
+### TestCodeParser
 
-**[TestCodeParser](../files/tests/test_parser.md)**
-Tests the [CodeParser](../files/src/local_deepwiki/core/parser.md) functionality, including language detection capabilities. The test suite verifies that the parser can correctly identify Python files by their extensions.
+The [TestCodeParser](../files/tests/test_parser.md) class tests the CodeParser functionality, specifically focusing on language detection capabilities. It includes setup methods and tests for detecting Python file types based on file extensions.
 
-**TestPathToModule**
-Tests the `_path_to_module` function which converts file paths to module names. Includes tests for basic path conversion and handling of special files like `__init__.py`.
+### TestPathToModule
 
-### Generator Testing
+The TestPathToModule class tests the `_path_to_module` function, which converts file paths to module names. It verifies basic path conversion and ensures that `__init__.py` files are properly handled by returning None.
 
-**[TestProjectManifest](../files/tests/test_manifest.md)**
-Tests manifest generation functionality for project metadata extraction.
+### TestAddSourceRefsSections
 
-**TestAddSourceRefsSections**
-Tests the addition of source reference sections to generated documentation pages. Verifies proper handling of different page types including file pages, index pages, and module pages.
+The TestAddSourceRefsSections class tests functionality for adding source reference sections to documentation pages. It includes tests for adding sections to different page types, handling missing status information, and proper insertion placement.
 
-### Web Interface Testing
+### TestGetFileExamples
 
-**TestBuildBreadcrumb**
-Tests breadcrumb navigation generation for the web interface.
+The TestGetFileExamples class tests the file examples extraction system. It verifies that examples are returned in markdown format, handles cases where test files don't exist, filters out short test names, and manages non-Python files appropriately.
 
-**TestFlaskApp**
-Tests Flask application functionality and routing.
+### TestProjectManifest
 
-**TestTemplateConfiguration**
-Tests template configuration for the web interface.
+The [TestProjectManifest](../files/tests/test_manifest.md) class tests the project manifest generation system, which appears to handle project metadata and dependency information.
 
-### Server Handler Testing
+### TestConfig
 
-**TestHandleIndexRepository**
-Tests repository indexing functionality.
-
-**TestHandleAskQuestion**
-Tests question handling capabilities.
-
-**TestHandleSearchCode**
-Tests code search functionality.
-
-**TestHandleReadWikiStructure**
-Tests wiki structure reading operations.
-
-**TestHandleReadWikiPage**
-Tests individual wiki page reading operations.
-
-**TestHandleExportWikiHtml**
-Tests HTML export functionality.
-
-### External Service Testing
-
-**TestOllamaConnectionError**
-Tests error handling for Ollama connection issues.
-
-**TestOllamaModelNotFoundError**
-Tests error handling when Ollama models are not found.
-
-**TestOllamaProviderHealthCheck**
-Tests health checking for the Ollama service provider.
-
-**TestOllamaProviderGenerate**
-Tests text generation via the Ollama provider.
-
-**TestOllamaProviderGenerateStream**
-Tests streaming text generation via the Ollama provider.
-
-### Cross-linking and Analysis Testing
-
-**[TestEntityRegistry](../files/tests/test_crosslinks.md)**
-Tests entity registration and lookup functionality for cross-linking between documentation pages. Includes tests for entity registration, name filtering, and alias lookup.
-
-**TestExtractCallsPython**
-Tests call graph extraction from Python code, including function calls, method calls, and nested call detection.
+The [TestConfig](../files/tests/test_config.md) class provides comprehensive testing for the configuration system. It includes tests for various configuration sections including embedding, LLM, parsing, chunking, wiki, and deep research configurations. It also tests configuration validation and path resolution methods.
 
 ## How Components Interact
 
-The test classes work together to provide comprehensive coverage of the application's functionality:
+The test classes work together to ensure the entire documentation generation pipeline functions correctly:
 
-1. **Parser tests** verify that code analysis components correctly process source files
-2. **Generator tests** ensure that documentation generation works properly
-3. **Web interface tests** validate the user-facing components
-4. **Server handler tests** verify API endpoints and request processing
-5. **External service tests** ensure proper integration with services like Ollama
+1. **Configuration Testing**: [TestConfig](../files/tests/test_config.md) validates that all configuration options work properly and that the system can resolve paths and provider-specific settings
+2. **Parser Testing**: [TestCodeParser](../files/tests/test_parser.md) ensures that source code can be properly analyzed and categorized by language
+3. **Content Generation**: TestAddSourceRefsSections and TestGetFileExamples verify that documentation content is properly generated and formatted
+4. **Project Analysis**: [TestProjectManifest](../files/tests/test_manifest.md) ensures that project structure and dependencies are correctly identified
 
 ## Usage Examples
 
@@ -99,42 +50,38 @@ result = parser.detect_language(Path("test.py"))
 assert result == Language.PYTHON
 ```
 
-### Testing WikiPage Model
+### Testing Configuration
 
 ```python
-# Test WikiPage representation
-page = WikiPage(
-    path="modules/core.md",
-    title="Core Module", 
-    content="# Core Module\n\nContent here.",
-    generated_at=1234567890.0,
-)
-result = repr(page)
-assert "WikiPage" in result
+# Test default configuration
+config = Config()
+assert config.llm.provider == "ollama"
+
+# Test prompt retrieval
+prompts = config.get_prompts()
+assert prompts == config.prompts.ollama
 ```
 
-### Testing Web Interface
+### Testing File Examples
 
 ```python
-# Test breadcrumb generation
-breadcrumb = build_breadcrumb("/modules/core/parser")
-# Verify breadcrumb structure
+# Test example extraction
+examples = get_file_examples("path/to/file.py")
+# Verify markdown format and content filtering
 ```
 
 ## Dependencies
 
-Based on the imports shown, the tests module depends on:
+Based on the imports shown in the code context, the tests module depends on:
 
-- **Standard library**: `json`, `tempfile`, `time`, `pathlib.Path`
-- **Testing framework**: `pytest`
-- **Mocking**: `unittest.mock` (AsyncMock, patch, MagicMock)
-- **Application modules**:
-  - `local_deepwiki.generators.manifest`
-  - `local_deepwiki.providers.llm.ollama`
-  - `local_deepwiki.web.app`
-  - `local_deepwiki.server`
+- **Standard Library**: `json`, `tempfile`, `time`, `pathlib.Path`, `textwrap.dedent`
+- **Testing Framework**: `pytest`
+- **Local Modules**:
+  - `local_deepwiki.generators.manifest` - For manifest generation functionality
+  - `local_deepwiki.generators.test_examples` - For test example extraction
+  - Various parser and configuration modules from the [main](../files/src/local_deepwiki/web/app.md) codebase
 
-The test suite uses pytest as the primary testing framework with extensive use of mocking for external dependencies and asynchronous operations.
+The tests use pytest as the testing framework and include both unit tests and integration tests to ensure comprehensive coverage of the documentation generation system.
 
 ## Relevant Source Files
 
@@ -142,14 +89,14 @@ The following source files were used to generate this documentation:
 
 - [`tests/test_parser.py:24-123`](../files/tests/test_parser.md)
 - [`tests/test_retry.py:8-144`](../files/tests/test_retry.md)
-- `tests/test_ollama_health.py:13-32`
+- `tests/test_ollama_health.py:16-19`
 - `tests/test_server_handlers.py:15-69`
 - `tests/test_chunker.py:11-182`
+- `tests/test_changelog.py:18-96`
 - [`tests/test_vectorstore.py:9-28`](../files/tests/test_vectorstore.md)
 - [`tests/test_pdf_export.py:21-80`](../files/tests/test_pdf_export.md)
 - `tests/test_search.py:20-53`
 - `tests/test_toc.py:17-43`
-- `tests/test_incremental_wiki.py:20-47`
 
 
-*Showing 10 of 26 source files.*
+*Showing 10 of 31 source files.*

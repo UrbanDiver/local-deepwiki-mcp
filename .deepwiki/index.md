@@ -5,15 +5,15 @@ Local DeepWiki-style MCP server for private repository documentation
 
 ## Description
 
-Local DeepWiki MCP is a Model Context Protocol (MCP) server that generates documentation for private repositories. It provides both a server interface for MCP clients and a web application for browsing generated documentation, with support for multiple LLM providers including Ollama, OpenAI, and Anthropic.
+Local DeepWiki MCP is a Model Context Protocol (MCP) server that generates and serves documentation for private code repositories. The system provides both a web interface for browsing documentation and command-line tools for exporting documentation in various formats including HTML and PDF.
 
 ## Key Features
 
-- **MCP Server Integration** - Implements a Model Context Protocol server with stdio communication for integration with MCP clients
-- **Multiple LLM Provider Support** - Configurable support for Ollama (with local hosting), OpenAI, and Anthropic language models through dedicated provider classes
-- **Repository Indexing** - Core indexer functionality that processes repository contents with configurable embedding providers (local or OpenAI)
-- **Web Interface** - Built-in Flask web server for browsing and serving generated wiki documentation
-- **Export Capabilities** - Multiple export formats including HTML and PDF through dedicated command-line tools
+- **MCP Server Integration** - Implements a Model Context Protocol server with stdio communication for integration with MCP-compatible tools
+- **Multiple LLM Provider Support** - Configurable support for different language model providers including Ollama, OpenAI, and Anthropic through a plugin-based architecture
+- **Web Server Interface** - Built-in Flask web server for serving and browsing generated documentation with configurable host and port settings
+- **Repository Indexing** - Core indexing functionality that processes repository contents with configurable embedding providers for document search and retrieval
+- **Multiple Export Formats** - Command-line tools for exporting documentation to HTML and PDF formats, plus a file watcher for automated regeneration
 
 ## Technology Stack
 
@@ -38,17 +38,17 @@ local-deepwiki-mcp/
 │   ├── __init__.py
 │   ├── test_api_docs.py
 │   ├── test_callgraph.py
+│   ├── test_changelog.py
 │   ├── test_chunker.py
 │   ├── test_config.py
 │   ├── test_crosslinks.py
+│   ├── test_deep_research.py
 │   ├── test_diagrams.py
+│   ├── test_git_utils.py
 │   ├── test_html_export.py
 │   ├── test_incremental_wiki.py
 │   ├── test_indexer.py
-│   ├── test_manifest.py
-│   ├── test_models.py
-│   ├── test_ollama_health.py
-│   ├── test_parser.py
+│   ├── test_llm_cache.py
 │   ...
 ...
 ```

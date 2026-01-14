@@ -2,126 +2,132 @@
 
 ## File Overview
 
-This test file contains comprehensive unit tests for the PDF export functionality in the local_deepwiki package. It tests various components including the [PdfExporter](../src/local_deepwiki/export/pdf.md) class, mermaid diagram handling, markdown rendering for PDF output, and the [export_to_pdf](../src/local_deepwiki/export/pdf.md) convenience function.
+This test file provides comprehensive testing for PDF export functionality in the local_deepwiki package. It tests the PdfExporter class and related utility functions for converting wiki content to PDF format, including mermaid diagram handling and markdown rendering.
 
-## Test Classes
+## Classes
+
+### TestPdfExporter
+
+Tests the core PdfExporter class functionality for converting wiki content to PDF format.
+
+**Key Methods:**
+- `test_collect_pages_in_order` - Verifies that pages are collected according to TOC ordering
+- `test_extract_paths_from_toc` - Tests extraction of file paths from table of contents
+- `test_build_toc_html` - Tests generation of HTML table of contents
+- `test_export_single_creates_pdf` - Verifies single PDF creation functionality
+- `test_export_single_with_directory_output` - Tests PDF creation when output is a directory
+- `test_export_separate_creates_multiple_pdfs` - Tests creation of separate PDFs for each page
+- `test_export_separate_preserves_directory_structure` - Verifies directory structure preservation
+
+### TestExportToPdf
+
+Tests the `export_to_pdf` convenience function for PDF export operations.
+
+**Key Methods:**
+- `test_raises_for_nonexistent_wiki` - Verifies error handling for invalid wiki paths
+
+**Fixtures:**
+- `simple_wiki` - Creates a minimal wiki structure for testing
 
 ### TestRenderMarkdownForPdf
 
 Tests PDF-specific markdown rendering functionality.
 
-**Methods:**
-- `test_basic_markdown()` - Verifies basic markdown to HTML conversion
-- `test_code_blocks()` - Tests fenced code block rendering
-- `test_table()` - Tests table rendering (method signature visible but implementation truncated)
-
-### TestPdfExporter
-
-Main test class for the [PdfExporter](../src/local_deepwiki/export/pdf.md) functionality.
-
-**Fixtures:**
-- `sample_wiki(tmp_path)` - Creates a sample wiki structure for testing
-
-**Methods:**
-- `test_collect_pages_in_order()` - Verifies pages are collected according to TOC order
-- `test_extract_paths_from_toc()` - Tests TOC path extraction (method visible but implementation not shown)
-- `test_build_toc_html()` - Tests HTML generation for table of contents
-- `test_export_single_creates_pdf()` - Verifies single PDF export functionality
-- `test_export_single_with_directory_output()` - Tests export when output is a directory
-- `test_export_separate_creates_multiple_pdfs()` - Tests creation of multiple PDF files
-- `test_export_separate_preserves_directory_structure()` - Verifies directory structure preservation
-
-### TestExportToPdf
-
-Tests for the [export_to_pdf](../src/local_deepwiki/export/pdf.md) convenience function.
-
-**Fixtures:**
-- `simple_wiki(tmp_path)` - Creates a minimal wiki structure for testing
-
-**Methods:**
-- `test_raises_for_nonexistent_wiki()` - Tests error handling for invalid wiki paths (implementation truncated)
+**Key Methods:**
+- `test_basic_markdown` - Tests basic markdown to HTML conversion
+- `test_code_blocks` - Tests fenced code block rendering
+- `test_tables` - Tests table rendering for PDF output
 
 ### TestMermaidHandling
 
-Tests mermaid diagram handling when CLI is not available.
+Tests mermaid diagram handling when CLI tools are not available.
 
-**Methods:**
-- `test_mermaid_replaced_with_note()` - Verifies mermaid diagrams are replaced with informational notes
-- `test_regular_code_blocks_preserved()` - Ensures regular code blocks remain unchanged (implementation truncated)
+**Key Methods:**
+- `test_mermaid_replaced_with_note` - Verifies mermaid diagrams are replaced with informational notes
+- `test_regular_code_blocks_preserved` - Ensures regular code blocks remain unaffected
 
 ### TestIsMmdcAvailable
 
-Tests the mermaid CLI availability detection.
+Tests the mermaid CLI availability detection functionality.
 
-**Methods:**
-- `test_mmdc_available()` - Tests when mmdc CLI tool is available
-- `test_mmdc_not_av()` - Tests when mmdc CLI tool is not available (implementation truncated)
+**Key Methods:**
+- `test_mmdc_available` - Tests detection when mermaid CLI is available
+- `test_mmdc_not_available` - Tests behavior when CLI is unavailable
 
 ### TestRenderMermaidToPng
 
-Tests PNG rendering functionality for mermaid diagrams.
+Tests PNG rendering of mermaid diagrams using the CLI.
 
-**Methods:**
-- `test_returns_none_when_mmdc_unavailable()` - Verifies None return when mmdc is unavailable
-- `test_returns_none_on_cli_error()` - Tests error handling for CLI failures (implementation truncated)
+**Key Methods:**
+- `test_returns_none_when_mmdc_unavailable` - Tests fallback when CLI is unavailable
+- `test_returns_none_on_cli_error` - Tests error handling for CLI failures
 
 ### TestMermaidCliRendering
 
-Tests mermaid rendering when CLI is available.
+Tests mermaid diagram rendering when CLI tools are available.
 
-**Methods:**
-- `test_renders_mermaid_when_cli_available()` - Tests PNG rendering when mmdc CLI is present
+**Key Methods:**
+- `test_renders_mermaid_when_cli_available` - Tests PNG rendering when CLI is present
 
-## Imported Components
+## Functions Tested
 
-The test file imports and tests the following components from `local_deepwiki.export.pdf`:
+The test file validates these imported functions:
 
-- [`PdfExporter`](../src/local_deepwiki/export/pdf.md) - Main class for PDF export operations
-- [`export_to_pdf`](../src/local_deepwiki/export/pdf.md) - Convenience function for PDF export
-- [`extract_mermaid_blocks`](../src/local_deepwiki/export/pdf.md) - Function to extract mermaid diagram blocks
-- [`extract_title`](../src/local_deepwiki/export/pdf.md) - Function to extract document titles
-- [`is_mmdc_available`](../src/local_deepwiki/export/pdf.md) - Function to check mermaid CLI availability
-- [`render_markdown_for_pdf`](../src/local_deepwiki/export/pdf.md) - Function for PDF-specific markdown rendering
-- [`render_mermaid_to_png`](../src/local_deepwiki/export/pdf.md) - Function to render mermaid diagrams as PNG
-- [`render_mermaid_to_svg`](../src/local_deepwiki/export/pdf.md) - Function to render mermaid diagrams as SVG
-- `PRINT_CSS` - CSS constants for PDF styling
+- `export_to_pdf` - Main convenience function for PDF export
+- `extract_mermaid_blocks` - Extracts mermaid diagram blocks from markdown
+- [`extract_title`](../src/local_deepwiki/web/app.md) - Extracts title from markdown content
+- `is_mmdc_available` - Checks if mermaid CLI is available
+- `render_markdown_for_pdf` - Renders markdown optimized for PDF output
+- `render_mermaid_to_png` - Renders mermaid diagrams as PNG images
+- `render_mermaid_to_svg` - Renders mermaid diagrams as SVG images
 
 ## Usage Examples
 
 ### Testing PDF Export
 
 ```python
-# Create a PdfExporter instance
+# Test single PDF creation
 exporter = PdfExporter(sample_wiki, output_path)
-
-# Export as single PDF
 result = exporter.export_single()
+assert result == output_path
 
-# Export as separate PDFs
+# Test separate PDF creation
 results = exporter.export_separate()
+assert len(results) == 4  # Number of markdown files
 ```
 
 ### Testing Markdown Rendering
 
 ```python
-# Render markdown for PDF
-html = render_markdown_for_pdf(markdown_content)
-
-# Render with mermaid handling disabled
-html = render_markdown_for_pdf(markdown_content, render_mermaid=False)
+# Test basic markdown conversion
+md = "# Hello\n\nThis is a paragraph."
+html = render_markdown_for_pdf(md)
+assert "<h1" in html
+assert "Hello" in html
 ```
 
-### Testing Mermaid CLI Availability
+### Testing Mermaid Handling
 
 ```python
-# Check if mermaid CLI is available
-available = is_mmdc_available()
-
-# Render mermaid to PNG (returns None if unavailable)
-png_data = render_mermaid_to_png("graph TD\nA-->B")
+# Test mermaid diagram replacement
+md = '''```mermaid
+graph TD
+    A[Start] --> B[End]
+```'''
+html = render_markdown_for_pdf(md, render_mermaid=False)
+assert "mermaid-note" in html
 ```
 
-The tests use mocking extensively to isolate functionality and avoid dependencies on external tools like WeasyPrint and the mermaid CLI during testing.
+## Related Components
+
+This test file works with several components from the `local_deepwiki.export.pdf` module:
+
+- **PdfExporter** - Main class for PDF export operations
+- **PRINT_CSS** - CSS constants for PDF styling
+- **WeasyPrint integration** - Mocked HTML-to-PDF conversion
+- **Subprocess operations** - For mermaid CLI interaction
+
+The tests use pytest fixtures and mocking to isolate functionality and test various scenarios including CLI availability, file system operations, and error conditions.
 
 ## API Reference
 
@@ -187,7 +193,7 @@ def test_h1_title(tmp_path: Path)
 Test extracting H1 title.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `tmp_path` | `Path` | - | - |
 
@@ -200,7 +206,7 @@ def test_bold_title(tmp_path: Path)
 Test extracting bold title.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `tmp_path` | `Path` | - | - |
 
@@ -213,7 +219,7 @@ def test_fallback_to_filename(tmp_path: Path)
 Test fallback to filename when no title found.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `tmp_path` | `Path` | - | - |
 
@@ -226,14 +232,14 @@ def test_h1_with_leading_whitespace(tmp_path: Path)
 Test extracting H1 title with leading whitespace.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `tmp_path` | `Path` | - | - |
 
 
 ### class `TestPdfExporter`
 
-Tests for [PdfExporter](../src/local_deepwiki/export/pdf.md) class.
+Tests for PdfExporter class.
 
 **Methods:**
 
@@ -246,7 +252,7 @@ def sample_wiki(tmp_path: Path) -> Path
 Create a sample wiki structure for testing.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `tmp_path` | `Path` | - | - |
 
@@ -259,7 +265,7 @@ def test_collect_pages_in_order(sample_wiki: Path, tmp_path: Path)
 Test that pages are collected in TOC order.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `sample_wiki` | `Path` | - | - |
 | `tmp_path` | `Path` | - | - |
@@ -273,7 +279,7 @@ def test_extract_paths_from_toc(sample_wiki: Path, tmp_path: Path)
 Test extracting paths from nested TOC.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `sample_wiki` | `Path` | - | - |
 | `tmp_path` | `Path` | - | - |
@@ -287,7 +293,7 @@ def test_build_toc_html(sample_wiki: Path, tmp_path: Path)
 Test building TOC HTML.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `sample_wiki` | `Path` | - | - |
 | `tmp_path` | `Path` | - | - |
@@ -301,7 +307,7 @@ def test_export_single_creates_pdf(mock_html_class, sample_wiki: Path, tmp_path:
 Test that export_single creates a PDF file.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_html_class` | - | - | - |
 | `sample_wiki` | `Path` | - | - |
@@ -316,7 +322,7 @@ def test_export_single_with_directory_output(mock_html_class, sample_wiki: Path,
 Test export_single with directory as output path.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_html_class` | - | - | - |
 | `sample_wiki` | `Path` | - | - |
@@ -331,7 +337,7 @@ def test_export_separate_creates_multiple_pdfs(mock_html_class, sample_wiki: Pat
 Test that export_separate creates multiple PDF files.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_html_class` | - | - | - |
 | `sample_wiki` | `Path` | - | - |
@@ -346,7 +352,7 @@ def test_export_separate_preserves_directory_structure(mock_html_class, sample_w
 Test that export_separate preserves directory structure.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_html_class` | - | - | - |
 | `sample_wiki` | `Path` | - | - |
@@ -355,7 +361,7 @@ Test that export_separate preserves directory structure.
 
 ### class `TestExportToPdf`
 
-Tests for the [export_to_pdf](../src/local_deepwiki/export/pdf.md) convenience function.
+Tests for the export_to_pdf convenience function.
 
 **Methods:**
 
@@ -368,7 +374,7 @@ def simple_wiki(tmp_path: Path) -> Path
 Create a simple wiki for testing.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `tmp_path` | `Path` | - | - |
 
@@ -381,7 +387,7 @@ def test_raises_for_nonexistent_wiki(tmp_path: Path)
 Test that export raises for nonexistent wiki path.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `tmp_path` | `Path` | - | - |
 
@@ -394,7 +400,7 @@ def test_default_output_path_single(mock_html_class, simple_wiki: Path)
 Test default output path for single file mode.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_html_class` | - | - | - |
 | `simple_wiki` | `Path` | - | - |
@@ -408,7 +414,7 @@ def test_default_output_path_separate(mock_html_class, simple_wiki: Path)
 Test default output path for separate file mode.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_html_class` | - | - | - |
 | `simple_wiki` | `Path` | - | - |
@@ -422,7 +428,7 @@ def test_custom_output_path(mock_html_class, simple_wiki: Path, tmp_path: Path)
 Test custom output path.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_html_class` | - | - | - |
 | `simple_wiki` | `Path` | - | - |
@@ -437,7 +443,7 @@ def test_string_paths_accepted(mock_html_class, simple_wiki: Path, tmp_path: Pat
 Test that string paths are accepted.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_html_class` | - | - | - |
 | `simple_wiki` | `Path` | - | - |
@@ -568,7 +574,7 @@ def test_mmdc_available(mock_which)
 Test when mmdc is available.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_which` | - | - | - |
 
@@ -581,7 +587,7 @@ def test_mmdc_not_available(mock_which)
 Test when mmdc is not available.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_which` | - | - | - |
 
@@ -594,7 +600,7 @@ def test_result_is_cached(mock_which)
 Test that the result is cached.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_which` | - | - | - |
 
@@ -614,7 +620,7 @@ def test_returns_none_when_mmdc_unavailable(mock_available)
 Test that None is returned when mmdc is not available.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_available` | - | - | - |
 
@@ -627,7 +633,7 @@ def test_renders_svg_successfully(mock_available, mock_run, tmp_path)
 Test successful SVG rendering.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_available` | - | - | - |
 | `mock_run` | - | - | - |
@@ -642,7 +648,7 @@ def test_returns_none_on_cli_error(mock_available, mock_run)
 Test that None is returned on CLI error.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_available` | - | - | - |
 | `mock_run` | - | - | - |
@@ -656,7 +662,7 @@ def test_handles_timeout(mock_available)
 Test that timeout is handled gracefully.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_available` | - | - | - |
 
@@ -676,7 +682,7 @@ def test_returns_none_when_mmdc_unavailable(mock_available)
 Test that None is returned when mmdc is not available.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_available` | - | - | - |
 
@@ -689,7 +695,7 @@ def test_returns_none_on_cli_error(mock_available, mock_run)
 Test that None is returned on CLI error.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_available` | - | - | - |
 | `mock_run` | - | - | - |
@@ -703,7 +709,7 @@ def test_handles_timeout(mock_available)
 Test that timeout is handled gracefully.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_available` | - | - | - |
 
@@ -723,7 +729,7 @@ def test_renders_mermaid_when_cli_available(mock_available, mock_render)
 Test that mermaid diagrams are rendered as PNG when CLI is available.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_available` | - | - | - |
 | `mock_render` | - | - | - |
@@ -737,7 +743,7 @@ def test_falls_back_on_render_failure(mock_available, mock_render)
 Test fallback to placeholder when render fails.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_available` | - | - | - |
 | `mock_render` | - | - | - |
@@ -751,7 +757,7 @@ def test_renders_multiple_diagrams(mock_available, mock_render)
 Test rendering multiple mermaid diagrams as PNG.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_available` | - | - | - |
 | `mock_render` | - | - | - |
@@ -915,5 +921,4 @@ flowchart TD
 
 ## See Also
 
-- [pdf](../src/local_deepwiki/export/pdf.md) - dependency
 - [test_indexer](test_indexer.md) - shares 4 dependencies

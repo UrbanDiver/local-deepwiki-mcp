@@ -2,36 +2,57 @@
 
 ## File Overview
 
-This module provides vector storage functionality for the local_deepwiki system using LanceDB as the underlying vector database. The VectorStore class handles embedding storage, similarity search, and retrieval operations for code chunks and documentation content.
-
-## Classes
-
-### VectorStore
-
-The VectorStore class manages vector embeddings storage and retrieval operations using LanceDB. It provides functionality to store code chunks with their embeddings and perform similarity searches.
-
-**Key Dependencies:**
-- Uses LanceDB for vector storage operations
-- Integrates with EmbeddingProvider for generating embeddings
-- Works with CodeChunk and SearchResult models for data handling
+The vectorstore module provides vector database functionality for storing and retrieving code chunks with semantic search capabilities. It uses LanceDB as the underlying vector database and integrates with embedding providers to enable similarity-based code search.
 
 ## Functions
 
 ### _sanitize_string_value
 
-A utility function for sanitizing string values, likely used for data preprocessing before storage operations.
+```python
+def _sanitize_string_value(value: Any) -> str
+```
+
+A utility function that sanitizes string values for database storage by converting various data types to clean string representations.
+
+**Parameters:**
+- `value: Any` - The value to sanitize
+
+**Returns:**
+- `str` - The sanitized string value
+
+## Classes
+
+### VectorStore
+
+The VectorStore class manages vector database operations for code chunks, providing functionality to store, search, and retrieve semantically similar code segments.
+
+**Dependencies:**
+- Uses `lancedb` for vector database operations
+- Integrates with EmbeddingProvider for generating embeddings
+- Works with [CodeChunk](../models.md) and [SearchResult](../models.md) models
+- Supports [ChunkType](../models.md) and [Language](../models.md) enums
+
+**Key Features:**
+- Vector-based semantic search for code chunks
+- Integration with embedding providers
+- Support for different programming languages and chunk types
+- Persistent storage using LanceDB
 
 ## Related Components
 
-This module integrates with several other components of the local_deepwiki system:
+This module integrates with several other components:
 
-- **EmbeddingProvider**: Used for generating vector embeddings
-- **CodeChunk**: Data model for code content that gets stored
-- **SearchResult**: Data model for search operation results
-- **ChunkType and Language**: Enums for categorizing content types
-- **Logging system**: Uses the local_deepwiki logging utilities
+- **EmbeddingProvider**: Base class for generating embeddings from text
+- **[CodeChunk](../models.md)**: Model representing a code chunk with metadata
+- **[SearchResult](../models.md)**: Model for search results from vector queries
+- **[ChunkType](../models.md)**: Enumeration of different types of code chunks
+- **[Language](../models.md)**: Enumeration of supported programming languages
 
-The module serves as a core component for the vector storage layer, enabling semantic search capabilities across code documentation and chunks.
+The module uses the logging system from `local_deepwiki.logging` for operational logging.
+
+## Usage Context
+
+The VectorStore serves as the core component for semantic code search functionality, enabling the system to [find](../generators/manifest.md) relevant code chunks based on similarity rather than exact text matching. It bridges the gap between raw code content and intelligent search capabilities through vector embeddings.
 
 ## API Reference
 
@@ -262,3 +283,4 @@ flowchart TD
 
 - [test_vectorstore](../../../tests/test_vectorstore.md) - uses this
 - [server](../server.md) - uses this
+- [models](../models.md) - dependency

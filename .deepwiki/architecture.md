@@ -2,57 +2,48 @@
 
 ## System Overview
 
-Local DeepWiki is a documentation generation system that processes codebases to create comprehensive wiki-style documentation. The system is built around a modular architecture with configurable providers for language models and embeddings, supporting multiple AI providers including Ollama, Anthropic, and OpenAI.
+The local-deepwiki system is a documentation generation platform that analyzes codebases and creates comprehensive wiki-style documentation. The system is built around a modular architecture with pluggable providers for LLM services and embeddings, configuration management, and specialized generators for different types of documentation.
 
-The core workflow involves parsing code into chunks, generating embeddings for semantic search, and using large language models to create structured documentation with architecture diagrams and cross-references.
+The core workflow involves indexing source code, generating embeddings for semantic search, and using LLM providers to create structured documentation including architecture overviews, API documentation, and code analysis.
 
 ## Key Components
 
-### Configuration Management
-
+### Configuration System
 The **[Config](files/src/local_deepwiki/config.md)** class serves as the central configuration hub, managing settings for all system components. It coordinates with specialized configuration classes:
 
-- **[LLMConfig](files/src/local_deepwiki/config.md)** manages language model provider selection and settings
-- **[EmbeddingConfig](files/src/local_deepwiki/config.md)** handles embedding provider configuration  
-- **[OllamaConfig](files/src/local_deepwiki/config.md)**, **[AnthropicConfig](files/src/local_deepwiki/config.md)**, and **[OpenAILLMConfig](files/src/local_deepwiki/config.md)** provide provider-specific settings
+- **[LLMConfig](files/src/local_deepwiki/config.md)** manages LLM provider settings, supporting Ollama, Anthropic, and OpenAI providers
+- **[OllamaConfig](files/src/local_deepwiki/config.md)**, **[AnthropicConfig](files/src/local_deepwiki/config.md)**, and **[OpenAILLMConfig](files/src/local_deepwiki/config.md)** provide provider-specific configurations
+- **[EmbeddingConfig](files/src/local_deepwiki/config.md)** handles embedding provider configuration with local and OpenAI options
 
-The configuration system supports context-aware overrides through the [`config_context`](files/src/local_deepwiki/config.md) function and maintains thread-safe global state.
+### LLM Provider Architecture
+The system implements a provider pattern for LLM services:
 
-### Code Processing
-
-**CodeChunker** breaks down source code into semantic units represented by **ChunkType** enumeration values (function, class, method, module, import, comment, other). This chunking enables fine-grained analysis and documentation generation.
-
-**[ProjectManifest](files/src/local_deepwiki/generators/manifest.md)** analyzes project structure and dependencies, providing technology stack summaries and entry point identification for architectural documentation.
-
-### LLM Provider System
-
-The system implements a provider pattern for language model integration:
-
-- **LLMProvider** defines the abstract interface for language model operations
-- **OllamaProvider** implements local Ollama model integration with health checking
-- The `get_llm_provider` factory function creates appropriate provider instances based on configuration
+- **LLMProvider** serves as the abstract base class defining the interface for language model interactions
+- **OllamaProvider** implements local Ollama integration with health checking and streaming capabilities
+- The `get_llm_provider` function acts as a factory, instantiating the appropriate provider based on configuration
 
 ### Documentation Generation
+The **[WikiGenerator](files/src/local_deepwiki/generators/wiki.md)** class is the primary documentation generator, responsible for creating architecture documentation and other wiki content. It integrates with vector stores for semantic search and uses LLM providers to generate comprehensive documentation.
 
-**[WikiGenerator](files/src/local_deepwiki/generators/wiki.md)** orchestrates the documentation creation process, including architecture documentation generation through the `_generate_architecture` method. It coordinates with vector stores for semantic search and uses configured LLM providers to generate comprehensive documentation.
+### Code Analysis and Modeling
+Several classes handle code structure analysis:
 
-**[EntityRegistry](files/src/local_deepwiki/generators/crosslinks.md)** manages code entities and their relationships for cross-referencing and navigation.
+- **[ChunkType](files/src/local_deepwiki/models.md)** enumerates different types of code elements (functions, classes, methods, modules, imports, comments)
+- **[ClassInfo](files/src/local_deepwiki/generators/diagrams.md)**, **ClassSignature**, **FunctionSignature**, and **Parameter** model code structure for analysis
+- **[EntityRegistry](files/src/local_deepwiki/generators/crosslinks.md)** manages code entities and their relationships
+- **[ProjectManifest](files/src/local_deepwiki/generators/manifest.md)** analyzes project dependencies and provides technology stack summaries
 
 ### Utility Components
-
-**[DebouncedHandler](files/src/local_deepwiki/watcher.md)** provides rate-limiting capabilities for operations that may be triggered frequently.
-
-The **with_retry** decorator implements retry logic for operations that may fail transiently, particularly useful for network-based provider operations.
+- **UsageExample** represents code usage examples
+- **ResearchCancelledError** handles cancellation scenarios in research operations
 
 ## Data Flow
 
-1. **Configuration Loading**: The system loads configuration through [Config](files/src/local_deepwiki/config.md) and its specialized sub-configurations
-2. **Code Parsing**: CodeChunker processes source files into semantic chunks categorized by ChunkType
-3. **Project Analysis**: [ProjectManifest](files/src/local_deepwiki/generators/manifest.md) analyzes the codebase structure and dependencies
-4. **Entity Registration**: [EntityRegistry](files/src/local_deepwiki/generators/crosslinks.md) catalogs discovered code entities and their relationships
-5. **Vector Storage**: Code chunks are embedded and stored for semantic search capabilities
-6. **Documentation Generation**: [WikiGenerator](files/src/local_deepwiki/generators/wiki.md) uses LLM providers to create documentation, leveraging vector search for context gathering
-7. **Architecture Analysis**: The `_generate_architecture` method performs multiple semantic searches to gather comprehensive architectural context
+1. **Configuration Loading**: The system starts by loading configuration through the [Config](files/src/local_deepwiki/config.md) class, which determines LLM and embedding providers
+2. **Provider Initialization**: Based on configuration, appropriate providers are instantiated via factory functions
+3. **Code Analysis**: Source code is parsed and analyzed, with entities registered in the [EntityRegistry](files/src/local_deepwiki/generators/crosslinks.md)
+4. **Documentation Generation**: The [WikiGenerator](files/src/local_deepwiki/generators/wiki.md) coordinates with LLM providers to create documentation, using vector search for context gathering
+5. **Output Generation**: Generated documentation is structured and exported, with HTML export capabilities available
 
 ## Component Diagram
 
@@ -62,40 +53,47 @@ graph TB
     Config --> EmbeddingConfig
     
     LLMConfig --> OllamaConfig
-    LLMConfig --> AnthropicConfig  
+    LLMConfig --> AnthropicConfig
     LLMConfig --> OpenAILLMConfig
     
     LLMProvider --> OllamaProvider
+    get_llm_provider --> LLMProvider
+    get_llm_provider --> LLMConfig
     
-    CodeChunker --> ChunkType
-    
-    WikiGenerator --> EntityRegistry
-    WikiGenerator --> ProjectManifest
     WikiGenerator --> LLMProvider
+    WikiGenerator --> EntityRegistry
+    
+    EntityRegistry --> ClassInfo
+    EntityRegistry --> FunctionSignature
+    EntityRegistry --> ClassSignature
+    
+    ClassInfo --> Parameter
+    FunctionSignature --> Parameter
+    ClassSignature --> Parameter
     
     ProjectManifest --> Config
-    OllamaProvider --> Config
+    
+    ChunkType --> WikiGenerator
+    
+    UsageExample --> WikiGenerator
 ```
 
 ## Key Design Decisions
 
 ### Provider Pattern Implementation
-The system uses a provider pattern for LLM integration, allowing seamless switching between different AI services (Ollama, Anthropic, OpenAI) through configuration. The `get_llm_provider` factory function centralizes provider instantiation logic.
+The system uses a provider pattern for LLM services, allowing runtime selection between different AI providers (Ollama, Anthropic, OpenAI). This design enables flexibility in deployment scenarios and easy switching between local and cloud-based models.
 
-### Configuration Context Management
-The configuration system supports both global and context-specific settings through the [`config_context`](files/src/local_deepwiki/config.md) context manager, enabling different configurations for different operations without affecting global state.
+### Configuration-Driven Architecture
+All major components are configured through a centralized configuration system using Pydantic models. This approach provides type safety, validation, and clear separation of configuration from implementation.
 
-### Semantic Code Chunking
-Code is processed into semantic chunks categorized by ChunkType enumeration, enabling more intelligent documentation generation by preserving code structure and meaning rather than arbitrary text splitting.
+### Modular Code Analysis
+Code structure is modeled through specialized classes ([ClassInfo](files/src/local_deepwiki/generators/diagrams.md), FunctionSignature, etc.) that capture different aspects of source code. The [ChunkType](files/src/local_deepwiki/models.md) enumeration provides a taxonomy for different code elements, enabling targeted analysis and documentation generation.
 
-### Health Checking for External Services
-The OllamaProvider implements health checking through the `check_health` and `_ensure_healthy` methods, ensuring robust operation when working with external services that may be unavailable.
+### Factory Pattern for Provider Instantiation
+The `get_llm_provider` function implements a factory pattern, abstracting provider instantiation and allowing the system to create appropriate provider instances based on configuration without tight coupling.
 
-### Multi-Modal Search Strategy
-The `_generate_architecture` method demonstrates a sophisticated approach to gathering architectural context by performing multiple targeted searches (core components, architectural patterns, data flow) rather than a single broad search.
-
-### Retry Mechanism
-The `with_retry` decorator provides configurable retry logic for operations that may fail due to network issues or temporary service unavailability, improving system reliability.
+### Health Monitoring
+The OllamaProvider includes health checking capabilities, indicating the system's focus on reliability and operational monitoring, particularly important for local LLM deployments.
 
 ## Relevant Source Files
 
@@ -103,14 +101,14 @@ The following source files were used to generate this documentation:
 
 - [`tests/test_parser.py:24-123`](files/tests/test_parser.md)
 - [`tests/test_retry.py:8-144`](files/tests/test_retry.md)
-- `tests/test_ollama_health.py:13-32`
+- `tests/test_ollama_health.py:16-19`
 - `tests/test_server_handlers.py:15-69`
 - `tests/test_chunker.py:11-182`
+- `tests/test_changelog.py:18-96`
 - [`tests/test_vectorstore.py:9-28`](files/tests/test_vectorstore.md)
 - [`tests/test_pdf_export.py:21-80`](files/tests/test_pdf_export.md)
 - `tests/test_search.py:20-53`
 - `tests/test_toc.py:17-43`
-- `tests/test_incremental_wiki.py:20-47`
 
 
-*Showing 10 of 63 source files.*
+*Showing 10 of 74 source files.*

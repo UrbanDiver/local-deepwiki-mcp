@@ -2,66 +2,67 @@
 
 ## File Overview
 
-This file contains comprehensive test suites for the [VectorStore](../src/local_deepwiki/core/vectorstore.md) component, covering search functionality, index operations, statistics, chunk management, and edge cases. The tests ensure the vector store correctly handles data operations, SQL injection attempts, and various edge conditions.
+This file contains comprehensive test suites for the VectorStore class functionality. It tests vector storage operations, search capabilities, statistics reporting, indexing, and edge cases including SQL injection protection and Unicode handling.
 
 ## Classes
 
 ### MockEmbeddingProvider
 
-A mock implementation of the EmbeddingProvider interface used for testing purposes. This class provides fake embeddings to isolate vector store functionality from actual embedding generation.
+A mock implementation of the EmbeddingProvider interface used for testing purposes.
 
 ### TestVectorStoreIndexes
 
-Tests for vector store scalar indexes functionality. This test class verifies that the vector store correctly manages and utilizes indexes for efficient data retrieval.
+Tests for vector store scalar indexes functionality.
 
 **Key Methods:**
-- `vector_store`: Fixture that creates a [VectorStore](../src/local_deepwiki/core/vectorstore.md) instance with a temporary database path and MockEmbeddingProvider
-- `populated_store`: Fixture that creates a vector store with test data including chunks from "src/[main](../src/local_deepwiki/watcher.md).py"
+- `vector_store(tmp_path)`: Pytest fixture that creates a VectorStore instance for testing with a temporary database path
+- `populated_store(vector_store)`: Pytest fixture that creates a vector store populated with test data
 
 ### TestVectorStoreSearch
 
-Tests for vector store search functionality. This class validates that search operations work correctly across different scenarios.
+Tests for vector store search functionality.
 
 **Key Methods:**
-- `vector_store`: Fixture that creates a [VectorStore](../src/local_deepwiki/core/vectorstore.md) instance for testing
-- `test_search_empty_store`: Verifies that searching an empty store returns empty results
+- `vector_store(tmp_path)`: Pytest fixture that creates a VectorStore instance for testing
+- `test_search_empty_store(vector_store)`: Tests that searching an empty store returns empty results
 
 ### TestVectorStoreStats
 
-Tests for vector store statistics functionality. This class ensures that the statistics reporting features work correctly.
+Tests for vector store statistics functionality.
 
 **Key Methods:**
-- `vector_store`: Fixture that creates a [VectorStore](../src/local_deepwiki/core/vectorstore.md) instance for testing
-- `test_stats_empty_store`: Tests that statistics for an empty store return correct values (total_chunks: 0, languages: {})
+- `vector_store(tmp_path)`: Pytest fixture that creates a VectorStore instance for testing
+- `test_stats_empty_store(vector_store)`: Tests statistics reporting for an empty store, verifying that `total_chunks` is 0 and `languages` is an empty dictionary
 
 ### TestVectorStoreAddChunks
 
-Tests for adding chunks to existing tables. This class verifies that the vector store correctly handles adding new chunks to the database.
+Tests for adding chunks to existing tables.
 
 **Key Methods:**
-- `vector_store`: Fixture that creates a [VectorStore](../src/local_deepwiki/core/vectorstore.md) instance for testing
-- `test_add_to_empty_creates_table`: Tests that adding chunks to an empty store creates the necessary table structure
+- `vector_store(tmp_path)`: Pytest fixture that creates a VectorStore instance for testing
+- `test_add_to_empty_creates_table(vector_store)`: Tests that adding chunks to an empty store creates the table
 
 ### TestVectorStoreEdgeCases
 
-Comprehensive tests for edge cases and error conditions. This class covers security concerns, data integrity, and boundary conditions.
+Tests for edge cases and error conditions in vector store operations.
 
 **Key Methods:**
-- `vector_store`: Fixture that creates a [VectorStore](../src/local_deepwiki/core/vectorstore.md) instance for testing
-- `test_get_chunk_by_id_empty_db`: Tests that retrieving a chunk by ID from an empty database returns None
-- `test_get_chunks_by_file_empty_db`: Tests that retrieving chunks by file from an empty database returns an empty list
-- `test_delete_chunks_by_file_empty_db`: Tests that deleting chunks by file from an empty database returns 0
-- `test_create_or_update_empty_list`: Tests that creating or updating with an empty list returns 0 and maintains empty statistics
-- `test_file_path_with_quotes`: Tests that file paths containing quotes are handled safely without causing injection issues
-- `test_delete_file_path_with_quotes`: Tests that deleting files with quotes in their paths works correctly
-- `test_file_path_injection_attempt`: Tests that SQL-like injection attempts in file paths are neutralized and don't cause errors
-- `test_search_limit_zero_raises`: Tests that searching with limit=0 raises a ValueError as required by LanceDB
+- `vector_store(tmp_path)`: Pytest fixture that creates a VectorStore instance for testing
+- `test_get_chunk_by_id_empty_db(vector_store)`: Tests that retrieving a chunk by ID from an empty database returns None
+- `test_get_chunks_by_file_empty_db(vector_store)`: Tests that retrieving chunks by file from an empty database returns an empty list
+- `test_delete_chunks_by_file_empty_db(vector_store)`: Tests that deleting chunks by file from an empty database returns 0
+- `test_create_or_update_empty_list(vector_store)`: Tests that creating or updating with an empty list returns 0
+- `test_file_path_with_quotes(vector_store)`: Tests that file paths containing quotes are handled safely without causing injection issues
+- `test_delete_file_path_with_quotes(vector_store)`: Tests that deleting files with quotes in their paths works correctly
+- `test_file_path_injection_attempt(vector_store)`: Tests protection against SQL-like injection attempts in file paths
+- `test_search_limit_zero_raises(vector_store)`: Tests that searching with a limit of 0 raises a ValueError with the message "Limit is required"
 
 ## Usage Examples
 
 ### Creating a Test Vector Store
 
 ```python
+# Using the fixture pattern shown in the tests
 @pytest.fixture
 def vector_store(self, tmp_path):
     from local_deepwiki.core.vectorstore import VectorStore
@@ -74,7 +75,7 @@ def vector_store(self, tmp_path):
 ### Testing Empty Store Statistics
 
 ```python
-def test_stats_empty_store(self, vector_store):
+async def test_stats_empty_store(self, vector_store):
     stats = vector_store.get_stats()
     assert stats["total_chunks"] == 0
     assert stats["languages"] == {}
@@ -95,12 +96,13 @@ async def test_search_limit_zero_raises(self, vector_store):
 
 This test file works with several components from the local_deepwiki package:
 
-- **[VectorStore](../src/local_deepwiki/core/vectorstore.md)**: The [main](../src/local_deepwiki/watcher.md) class being tested, imported from `local_deepwiki.core.vectorstore`
-- **EmbeddingProvider**: Base class from `local_deepwiki.providers.base` that MockEmbeddingProvider implements
-- **CodeChunk**: Model from `local_deepwiki.models` used for creating test data
-- **ChunkType and Language**: Enums from `local_deepwiki.models` used in chunk creation
+- **VectorStore**: The [main](../src/local_deepwiki/web/app.md) class being tested, imported from `local_deepwiki.core.vectorstore`
+- **EmbeddingProvider**: Base class for embedding providers, imported from `local_deepwiki.providers.base`
+- **[CodeChunk](../src/local_deepwiki/models.md)**: Data model for code chunks, imported from `local_deepwiki.models`
+- **[ChunkType](../src/local_deepwiki/models.md)**: Enumeration for chunk types, imported from `local_deepwiki.models`
+- **[Language](../src/local_deepwiki/models.md)**: Enumeration for programming languages, imported from `local_deepwiki.models`
 
-The tests use pytest fixtures and async/await patterns, indicating the [VectorStore](../src/local_deepwiki/core/vectorstore.md) operations are asynchronous and the codebase uses modern Python async functionality.
+The tests verify vector store operations including chunk storage, retrieval, search, statistics, and proper handling of edge cases like SQL injection attempts and special characters in file paths.
 
 ## API Reference
 
@@ -119,7 +121,7 @@ def __init__(dimension: int = 384)
 ```
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `dimension` | `int` | `384` | - |
 
@@ -148,7 +150,7 @@ async def embed(texts: list[str]) -> list[list[float]]
 Generate mock embeddings.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `texts` | `list[str]` | - | - |
 
@@ -168,7 +170,7 @@ def vector_store(tmp_path)
 Create a vector store for testing.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `tmp_path` | - | - | - |
 
@@ -181,7 +183,7 @@ async def populated_store(vector_store)
 Create a vector store with test data.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `vector_store` | - | - | - |
 
@@ -194,7 +196,7 @@ async def test_create_table_creates_indexes(populated_store)
 Test that creating a table creates scalar indexes.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `populated_store` | - | - | - |
 
@@ -207,7 +209,7 @@ async def test_get_chunk_by_id_uses_index(populated_store)
 Test that get_chunk_by_id can [find](../src/local_deepwiki/generators/manifest.md) chunks efficiently.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `populated_store` | - | - | - |
 
@@ -220,7 +222,7 @@ async def test_get_chunks_by_file_uses_index(populated_store)
 Test that get_chunks_by_file can [find](../src/local_deepwiki/generators/manifest.md) chunks efficiently.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `populated_store` | - | - | - |
 
@@ -233,7 +235,7 @@ async def test_delete_chunks_by_file_uses_index(populated_store)
 Test that delete_chunks_by_file works efficiently.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `populated_store` | - | - | - |
 
@@ -246,7 +248,7 @@ async def test_ensure_indexes_on_existing_table(vector_store, tmp_path)
 Test that opening an existing table ensures indexes exist.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `vector_store` | - | - | - |
 | `tmp_path` | - | - | - |
@@ -267,7 +269,7 @@ def vector_store(tmp_path)
 Create a vector store for testing.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `tmp_path` | - | - | - |
 
@@ -280,7 +282,7 @@ async def test_search_empty_store(vector_store)
 Test searching an empty store returns empty results.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `vector_store` | - | - | - |
 
@@ -293,7 +295,7 @@ async def test_search_with_results(vector_store)
 Test searching returns results.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `vector_store` | - | - | - |
 
@@ -306,7 +308,7 @@ async def test_search_with_language_filter(vector_store)
 Test searching with language filter.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `vector_store` | - | - | - |
 
@@ -319,7 +321,7 @@ async def test_search_invalid_language_raises(vector_store)
 Test searching with invalid language raises ValueError.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `vector_store` | - | - | - |
 
@@ -332,7 +334,7 @@ async def test_search_with_chunk_type_filter(vector_store)
 Test searching with chunk type filter.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `vector_store` | - | - | - |
 
@@ -345,7 +347,7 @@ async def test_search_invalid_chunk_type_raises(vector_store)
 Test searching with invalid chunk type raises ValueError.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `vector_store` | - | - | - |
 
@@ -365,7 +367,7 @@ def vector_store(tmp_path)
 Create a vector store for testing.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `tmp_path` | - | - | - |
 
@@ -378,7 +380,7 @@ def test_stats_empty_store(vector_store)
 Test stats for empty store.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `vector_store` | - | - | - |
 
@@ -391,7 +393,7 @@ async def test_stats_with_data(vector_store)
 Test stats with data.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `vector_store` | - | - | - |
 
@@ -411,7 +413,7 @@ def vector_store(tmp_path)
 Create a vector store for testing.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `tmp_path` | - | - | - |
 
@@ -424,7 +426,7 @@ async def test_add_to_empty_creates_table(vector_store)
 Test adding to empty store creates table.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `vector_store` | - | - | - |
 
@@ -437,7 +439,7 @@ async def test_add_to_existing_table(vector_store)
 Test adding chunks to existing table.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `vector_store` | - | - | - |
 
@@ -450,7 +452,7 @@ async def test_add_empty_list(vector_store)
 Test adding empty list returns 0.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `vector_store` | - | - | - |
 
@@ -470,7 +472,7 @@ def vector_store(tmp_path)
 Create a vector store for testing.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `tmp_path` | - | - | - |
 
@@ -483,7 +485,7 @@ async def test_get_chunk_by_id_empty_db(vector_store)
 Test get_chunk_by_id on empty database returns None.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `vector_store` | - | - | - |
 
@@ -496,7 +498,7 @@ async def test_get_chunks_by_file_empty_db(vector_store)
 Test get_chunks_by_file on empty database returns empty list.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `vector_store` | - | - | - |
 
@@ -509,7 +511,7 @@ async def test_delete_chunks_by_file_empty_db(vector_store)
 Test delete_chunks_by_file on empty database returns 0.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `vector_store` | - | - | - |
 
@@ -522,7 +524,7 @@ async def test_create_or_update_empty_list(vector_store)
 Test create_or_update_table with empty list returns 0.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `vector_store` | - | - | - |
 
@@ -535,7 +537,7 @@ async def test_chunk_id_with_quotes(vector_store)
 Test chunk ID with single quotes is handled safely.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `vector_store` | - | - | - |
 
@@ -548,7 +550,7 @@ async def test_file_path_with_quotes(vector_store)
 Test file path with quotes is handled safely.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `vector_store` | - | - | - |
 
@@ -561,7 +563,7 @@ async def test_delete_file_path_with_quotes(vector_store)
 Test deleting file path with quotes is handled safely.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `vector_store` | - | - | - |
 
@@ -574,7 +576,7 @@ async def test_chunk_id_injection_attempt(vector_store)
 Test that SQL-like injection in chunk_id is neutralized.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `vector_store` | - | - | - |
 
@@ -587,7 +589,7 @@ async def test_file_path_injection_attempt(vector_store)
 Test that SQL-like injection in file_path is neutralized.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `vector_store` | - | - | - |
 
@@ -600,7 +602,7 @@ async def test_unicode_content(vector_store)
 Test handling of Unicode content in chunks.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `vector_store` | - | - | - |
 
@@ -613,7 +615,7 @@ async def test_reopen_database(tmp_path)
 Test reopening database preserves data.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `tmp_path` | - | - | - |
 
@@ -626,7 +628,7 @@ async def test_replace_existing_table(vector_store)
 Test create_or_update_table replaces existing data.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `vector_store` | - | - | - |
 
@@ -639,7 +641,7 @@ async def test_db_path_created_if_not_exists(tmp_path)
 Test that database directory is created if it doesn't exist.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `tmp_path` | - | - | - |
 
@@ -652,7 +654,7 @@ async def test_single_chunk_operations(vector_store)
 Test operations with single chunk.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `vector_store` | - | - | - |
 
@@ -665,7 +667,7 @@ async def test_empty_content_chunk(vector_store)
 Test chunk with empty content.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `vector_store` | - | - | - |
 
@@ -678,7 +680,7 @@ async def test_large_content_chunk(vector_store)
 Test chunk with large content.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `vector_store` | - | - | - |
 
@@ -691,7 +693,7 @@ async def test_many_chunks_same_file(vector_store)
 Test many chunks from same file.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `vector_store` | - | - | - |
 
@@ -704,7 +706,7 @@ async def test_search_limit_zero_raises(vector_store)
 Test search with limit=0 raises ValueError.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `vector_store` | - | - | - |
 
@@ -717,7 +719,7 @@ async def test_search_very_long_query(vector_store)
 Test search with very long query string.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `vector_store` | - | - | - |
 
@@ -735,15 +737,15 @@ def make_chunk(id: str, file_path: str = "test.py", content: str = "test code", 
 Create a test code chunk.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `id` | `str` | - | - |
 | `file_path` | `str` | `"test.py"` | - |
 | `content` | `str` | `"test code"` | - |
-| `language` | `Language` | `Language.PYTHON` | - |
-| `chunk_type` | `ChunkType` | `ChunkType.FUNCTION` | - |
+| `language` | [`Language`](../src/local_deepwiki/models.md) | `Language.PYTHON` | - |
+| `chunk_type` | [`ChunkType`](../src/local_deepwiki/models.md) | `ChunkType.FUNCTION` | - |
 
-**Returns:** `CodeChunk`
+**Returns:** [`CodeChunk`](../src/local_deepwiki/models.md)
 
 
 
@@ -930,5 +932,4 @@ flowchart TD
 
 ## See Also
 
-- [vectorstore](../src/local_deepwiki/core/vectorstore.md) - dependency
-- [test_api_docs](test_api_docs.md) - shares 2 dependencies
+- [models](../src/local_deepwiki/models.md) - dependency

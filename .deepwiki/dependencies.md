@@ -2,82 +2,87 @@
 
 ## External Dependencies
 
-The project relies on the following third-party libraries:
+The project relies on several third-party libraries for different functional areas:
 
-### AI and Language Processing
-- **anthropic** (>=0.40) - Anthropic's Claude API client for AI language model interactions
+### AI and Machine Learning
+- **anthropic** (>=0.40) - Anthropic's API client for Claude models
 - **openai** (>=1.0) - OpenAI API client for GPT models and embeddings
-- **ollama** (>=0.4) - Local LLM inference server client
-- **sentence-transformers** (>=3.0) - Pre-trained models for generating text embeddings
-- **mcp** (>=1.2.0) - Model Context Protocol for AI model communication
+- **ollama** (>=0.4) - Local LLM inference client
+- **sentence-transformers** (>=3.0) - Local text embedding models
+- **mcp** (>=1.2.0) - Model Context Protocol implementation
 
-### Code Analysis and Parsing
-- **tree-sitter** (>=0.23) - Incremental parsing library for syntax trees
-- **tree-sitter-c** (>=0.23) - C language grammar for tree-sitter
-- **tree-sitter-c-sharp** (>=0.23) - C# language grammar
-- **tree-sitter-cpp** (>=0.23) - C++ language grammar
-- **tree-sitter-go** (>=0.23) - Go language grammar
-- **tree-sitter-java** (>=0.23) - Java language grammar
-- **tree-sitter-javascript** (>=0.23) - JavaScript language grammar
-- **tree-sitter-kotlin** (>=0.23) - Kotlin language grammar
-- **tree-sitter-php** (>=0.23) - PHP language grammar
-- **tree-sitter-python** (>=0.23) - Python language grammar
-- **tree-sitter-ruby** (>=0.23) - Ruby language grammar
-- **tree-sitter-rust** (>=0.23) - Rust language grammar
-- **tree-sitter-swift** (>=0.0.1) - Swift language grammar
-- **tree-sitter-typescript** (>=0.23) - TypeScript language grammar
+### Code Analysis
+- **tree-sitter** (>=0.23) - Core syntax tree parsing library
+- **tree-sitter-c** (>=0.23) - C language parser
+- **tree-sitter-c-sharp** (>=0.23) - C# language parser
+- **tree-sitter-cpp** (>=0.23) - C++ language parser
+- **tree-sitter-go** (>=0.23) - Go language parser
+- **tree-sitter-java** (>=0.23) - Java language parser
+- **tree-sitter-javascript** (>=0.23) - JavaScript language parser
+- **tree-sitter-kotlin** (>=0.23) - Kotlin language parser
+- **tree-sitter-php** (>=0.23) - PHP language parser
+- **tree-sitter-python** (>=0.23) - Python language parser
+- **tree-sitter-ruby** (>=0.23) - Ruby language parser
+- **tree-sitter-rust** (>=0.23) - Rust language parser
+- **tree-sitter-swift** (>=0.0.1) - Swift language parser
+- **tree-sitter-typescript** (>=0.23) - TypeScript language parser
 
-### Data Storage and Processing
-- **lancedb** (>=0.15) - Vector database for embeddings storage and similarity search
-- **pandas** (>=2.0) - Data manipulation and analysis library
+### Data Processing and Storage
+- **lancedb** (>=0.15) - Vector database for embeddings storage
+- **pandas** (>=2.0) - Data manipulation and analysis
+- **pydantic** (>=2.0) - Data validation and serialization
 
-### Web and Document Generation
+### Web and Output Generation
 - **flask** (>=3.0) - Web framework for server functionality
-- **markdown** (>=3.0) - Markdown to HTML conversion
-- **weasyprint** (>=62.0) - HTML/CSS to PDF rendering
+- **markdown** (>=3.0) - Markdown processing
+- **weasyprint** (>=62.0) - HTML to PDF conversion
 
 ### Utilities
-- **pydantic** (>=2.0) - Data validation and settings management
-- **pyyaml** (>=6.0) - YAML file parsing and generation
-- **rich** (>=13.0) - Rich text and beautiful formatting in terminal
-- **watchdog** (>=4.0) - File system event monitoring
+- **pyyaml** (>=6.0) - YAML configuration file parsing
+- **rich** (>=13.0) - Rich text and terminal formatting
+- **watchdog** (>=4.0) - File system monitoring
 
 ## Dev Dependencies
 
 Development and testing tools:
 
-- **black** (>=24.0) - Python code formatter
-- **isort** (>=5.0) - Import statement organizer
-- **mypy** (>=1.0) - Static type checker
-- **pre-commit** (>=3.0) - Git pre-commit hooks framework
+- **black** (>=24.0) - Code formatting
+- **isort** (>=5.0) - Import sorting
+- **mypy** (>=1.0) - Static type checking
+- **pre-commit** (>=3.0) - Git pre-commit hooks
 - **pytest** (>=8.0) - Testing framework
-- **pytest-asyncio** (>=0.24) - Async testing support for pytest
+- **pytest-asyncio** (>=0.24) - Async testing support
 
 ## Internal Module Dependencies
 
-Based on the import statements, the internal module structure shows these key relationships:
+Based on the import statements, the internal modules have the following dependency relationships:
 
-### Core Modules
-- **CodeChunker** depends on [CodeParser](files/src/local_deepwiki/core/parser.md) for parsing functionality and uses models like ChunkType, CodeChunk, and Language
-- **[CodeParser](files/src/local_deepwiki/core/parser.md)** provides parsing utilities used by multiple generators and the chunker
-- **[VectorStore](files/src/local_deepwiki/core/vectorstore.md)** works with embedding providers and code chunks for similarity search
-- **RepositoryIndexer** coordinates chunking, parsing, and indexing operations
+### Core Infrastructure
+- **CodeParser** - Used by CodeChunker, APIDocExtractor, and CallGraph generator for parsing source code
+- **CodeChunker** - Used by RepositoryIndexer for breaking code into analyzable chunks
+- **VectorStore** - Used for embedding storage and similarity search operations
+- **RepositoryIndexer** - Coordinates the indexing process using CodeParser and CodeChunker
 
-### Generator Modules
-- **[CrossLinker](files/src/local_deepwiki/generators/crosslinks.md)** and [EntityRegistry](files/src/local_deepwiki/generators/crosslinks.md) work with WikiPage and CodeChunk models to create cross-references
-- **[APIDocExtractor](files/src/local_deepwiki/generators/api_docs.md)** uses [CodeParser](files/src/local_deepwiki/core/parser.md) to extract API documentation from code
-- **RelationshipAnalyzer** and FileRelationships analyze code relationships for "See Also" sections
-- Multiple generators (diagrams, search, source refs, TOC) depend on core models and parsing functionality
+### Data Models
+- **Models module** - Provides core data structures ([CodeChunk](files/src/local_deepwiki/models.md), [WikiPage](files/src/local_deepwiki/models.md), [Language](files/src/local_deepwiki/models.md), [ChunkType](files/src/local_deepwiki/models.md), etc.) used throughout the system
+- **[Config](files/src/local_deepwiki/config.md) module** - Provides configuration classes used by core components
 
-### Provider System
-- **EmbeddingProvider** and **LLMProvider** serve as base classes for AI service integrations
-- **LocalEmbeddingProvider** uses sentence-transformers for local embeddings
-- **OpenAIEmbeddingProvider** integrates with OpenAI's embedding API
+### Providers
+- **EmbeddingProvider and LLMProvider** - Base classes for AI service integrations
+- **LocalEmbeddingProvider** - Uses sentence-transformers for local embeddings
+- **OpenAIEmbeddingProvider** - Uses OpenAI API for embeddings
+
+### Generators
+- **[CrossLinker](files/src/local_deepwiki/generators/crosslinks.md)** - Uses [EntityRegistry](files/src/local_deepwiki/generators/crosslinks.md) to add cross-references between wiki pages
+- **APIDocExtractor** - Uses CodeParser to extract API documentation from code
+- **Diagram generators** - Use various models and parsing utilities to create visual documentation
+- **Search generator** - Works with [WikiPage](files/src/local_deepwiki/models.md) models to create search functionality
+- **See Also generator** - Uses RelationshipAnalyzer and FileRelationships to suggest related content
 
 ### Server Components
-- Server handlers coordinate various generators and core functionality for web API endpoints
+- **Server handlers** - Coordinate between core indexing, search, and wiki generation functionality
 
-The architecture follows a layered approach where core parsing and chunking functionality supports multiple specialized generators, all coordinated through a provider system for AI services and a web server for user interaction.
+The architecture follows a layered approach with core parsing and chunking at the base, provider abstractions for AI services, and specialized generators for different types of documentation output.
 
 ## Module Dependency Graph
 
@@ -93,37 +98,35 @@ flowchart TD
     M5[diagrams]
     M6[search]
     M7[see_also]
-    M8[source_refs]
-    M9[toc]
-    M10[logging]
-    M11[local]
-    M12[openai]
-    M13[test_api_docs]
-    M14[test_chunker]
-    M15[test_crosslinks]
-    M16[test_diagrams]
-    M17[test_indexer]
-    M18[test_models]
-    M19[test_parser]
-    M20[test_see_also]
-    M21[test_server_handlers]
-    M22[test_server_validation]
-    M23[test_source_refs]
-    M24[test_toc]
-    M25[test_vectorstore]
-    M26[test_web]
-    M0 --> M10
-    M1 --> M10
+    M8[toc]
+    M9[logging]
+    M10[local]
+    M11[openai]
+    M12[test_api_docs]
+    M13[test_chunker]
+    M14[test_crosslinks]
+    M15[test_diagrams]
+    M16[test_indexer]
+    M17[test_models]
+    M18[test_parser]
+    M19[test_see_also]
+    M20[test_server_handlers]
+    M21[test_source_refs]
+    M22[test_test_examples]
+    M23[test_toc]
+    M24[test_vectorstore]
+    M25[test_web]
+    M0 --> M9
+    M1 --> M9
     M2 --> M0
     M3 --> M0
-    M13 --> M2
-    M14 --> M0
-    M15 --> M4
-    M16 --> M5
-    M20 --> M7
+    M12 --> M2
+    M13 --> M0
+    M14 --> M4
+    M15 --> M5
+    M19 --> M7
     M23 --> M8
-    M24 --> M9
-    M25 --> M1
+    M24 --> M1
 ```
 
 ## Relevant Source Files
@@ -132,14 +135,14 @@ The following source files were used to generate this documentation:
 
 - [`tests/test_parser.py:24-123`](files/tests/test_parser.md)
 - [`tests/test_retry.py:8-144`](files/tests/test_retry.md)
-- `tests/test_ollama_health.py:13-32`
+- `tests/test_ollama_health.py:16-19`
 - `tests/test_server_handlers.py:15-69`
 - `tests/test_chunker.py:11-182`
+- `tests/test_changelog.py:18-96`
 - [`tests/test_vectorstore.py:9-28`](files/tests/test_vectorstore.md)
 - [`tests/test_pdf_export.py:21-80`](files/tests/test_pdf_export.md)
 - `tests/test_search.py:20-53`
 - `tests/test_toc.py:17-43`
-- `tests/test_incremental_wiki.py:20-47`
 
 
-*Showing 10 of 63 source files.*
+*Showing 10 of 74 source files.*

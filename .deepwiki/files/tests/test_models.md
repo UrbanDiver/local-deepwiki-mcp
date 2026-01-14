@@ -2,144 +2,147 @@
 
 ## File Overview
 
-This file contains unit tests for the string representation (`__repr__`) methods of model classes in the local_deepwiki package. The tests verify that model objects display meaningful and properly formatted string representations.
+This file contains unit tests for the data model classes in the local_deepwiki.models module. It focuses on testing the string representation (`__repr__`) methods of various model classes and data conversion functionality.
 
 ## Classes
 
 ### TestModelRepr
 
-A test class that contains methods to verify the string representation of various model objects from the local_deepwiki.models module.
+A test class that verifies the string representation methods of various model classes from the local_deepwiki.models module.
 
-**Methods:**
-- `test_code_chunk_repr_with_name` - Tests CodeChunk repr for named chunks
-- `test_code_chunk_repr_without_name` - Tests CodeChunk repr for unnamed chunks  
-- `test_file_info_repr` - Tests FileInfo repr
-- `test_file_info_repr_no_language` - Tests FileInfo repr without language
-- `test_index_status_repr` - Tests IndexStatus repr
-- `test_wiki_page_repr` - Tests WikiPage repr
-- `test_wiki_structure_repr` - Tests WikiStructure repr
-- `test_search_result_repr` - Tests SearchResult repr
-- `test_search_result_repr_no_name` - Tests SearchResult repr without name
-- `test_wiki_page_status_repr` - Tests WikiPageStatus repr
-- `test_wiki_generation_status_repr` - Tests WikiGenerationStatus repr
+**Key Methods:**
+- `test_code_chunk_repr_with_name` - Tests [CodeChunk](../src/local_deepwiki/models.md) repr when the chunk has a name
+- `test_code_chunk_repr_without_name` - Tests [CodeChunk](../src/local_deepwiki/models.md) repr when the chunk has no name  
+- `test_file_info_repr` - Tests [FileInfo](../src/local_deepwiki/models.md) repr functionality
+- `test_file_info_repr_no_language` - Tests [FileInfo](../src/local_deepwiki/models.md) repr without language specified
+- `test_index_status_repr` - Tests [IndexStatus](../src/local_deepwiki/models.md) repr functionality
+- `test_wiki_page_repr` - Tests [WikiPage](../src/local_deepwiki/models.md) repr functionality
+- `test_wiki_structure_repr` - Tests [WikiStructure](../src/local_deepwiki/models.md) repr functionality
+- `test_search_result_repr` - Tests [SearchResult](../src/local_deepwiki/models.md) repr with name
+- `test_search_result_repr_no_name` - Tests [SearchResult](../src/local_deepwiki/models.md) repr without name
+- `test_wiki_page_status_repr` - Tests [WikiPageStatus](../src/local_deepwiki/models.md) repr functionality
+- `test_wiki_generation_status_repr` - Tests [WikiGenerationStatus](../src/local_deepwiki/models.md) repr functionality
 
 ### TestCodeChunkToVectorRecord
 
-A test class for testing conversion of CodeChunk objects to vector records (implementation not shown in provided code).
+A test class for testing data conversion functionality related to [CodeChunk](../src/local_deepwiki/models.md) objects, though the specific methods are not visible in the provided code.
 
 ## Test Methods
 
 ### test_code_chunk_repr_with_name
 
-Tests the string representation of a CodeChunk object that has a name.
+Tests the string representation of a [CodeChunk](../src/local_deepwiki/models.md) object that has a name attribute.
 
-```python
-def test_code_chunk_repr_with_name(self):
-    chunk = CodeChunk(
-        id="test_id",
-        file_path="src/main.py",
-        language=Language.PYTHON,
-        chunk_type=ChunkType.FUNCTION,
-        name="my_function",
-        content="def my_function(): pass",
-        start_line=10,
-        end_line=15,
-    )
-    result = repr(chunk)
-    # Verifies result contains "CodeChunk", "function", "my_function", "src/main.py:10-15"
-```
+**Test Setup:**
+- Creates a [CodeChunk](../src/local_deepwiki/models.md) with function type
+- Sets name to "my_function"
+- Specifies file path "src/[main](../src/local_deepwiki/web/app.md).py" and lines 10-15
+
+**Assertions:**
+- Verifies "[CodeChunk](../src/local_deepwiki/models.md)" appears in repr
+- Verifies "function" appears in repr
+- Verifies function name "my_function" appears in repr
+- Verifies file location "src/[main](../src/local_deepwiki/web/app.md).py:10-15" appears in repr
 
 ### test_code_chunk_repr_without_name
 
-Tests the string representation of a CodeChunk object without a name.
+Tests the string representation of a [CodeChunk](../src/local_deepwiki/models.md) object without a name attribute.
 
-```python
-def test_code_chunk_repr_without_name(self):
-    chunk = CodeChunk(
-        id="test_id",
-        file_path="src/module.py",
-        language=Language.PYTHON,
-        chunk_type=ChunkType.MODULE,
-        content="# module",
-        start_line=1,
-        end_line=5,
-    )
-    result = repr(chunk)
-    # Verifies result contains "CodeChunk", "module", "src/module.py:1-5"
-```
+**Test Setup:**
+- Creates a [CodeChunk](../src/local_deepwiki/models.md) with module type
+- No name specified
+- File path "src/module.py" and lines 1-5
+
+**Assertions:**
+- Verifies "[CodeChunk](../src/local_deepwiki/models.md)" appears in repr
+- Verifies "module" appears in repr
+- Verifies file location "src/module.py:1-5" appears in repr
 
 ### test_file_info_repr
 
-Tests the string representation of a FileInfo object.
+Tests the string representation of a [FileInfo](../src/local_deepwiki/models.md) object.
 
-```python
-def test_file_info_repr(self):
-    info = FileInfo(
-        path="src/utils.py",
-        language=Language.PYTHON,
-        size_bytes=1024,
-        last_modified=1234567890.0,
-        hash="abc123",
-        chunk_count=5,
-    )
-    result = repr(info)
-    # Verifies result contains "FileInfo", "src/utils.py", "python", "5 chunks"
-```
+**Test Setup:**
+- Creates [FileInfo](../src/local_deepwiki/models.md) with path "src/utils.py"
+- [Language](../src/local_deepwiki/models.md) set to Python
+- Size of 1024 bytes, 5 chunks
 
-### test_index_status_repr
-
-Tests the string representation of an IndexStatus object.
-
-```python
-def test_index_status_repr(self):
-    status = IndexStatus(
-        repo_path="/home/user/project",
-        indexed_at=1234567890.0,
-        total_files=25,
-        total_chunks=150,
-    )
-    result = repr(status)
-    # Verifies result contains "IndexStatus", "/home/user/project", "25 files", "150 chunks"
-```
+**Assertions:**
+- Verifies "[FileInfo](../src/local_deepwiki/models.md)" appears in repr
+- Verifies file path "src/utils.py" appears in repr
+- Verifies language "python" appears in repr
+- Verifies chunk count "5 chunks" appears in repr
 
 ### test_wiki_page_repr
 
-Tests the string representation of a WikiPage object.
+Tests the string representation of a [WikiPage](../src/local_deepwiki/models.md) object.
+
+**Test Setup:**
+- Creates [WikiPage](../src/local_deepwiki/models.md) with path "modules/core.md"
+- Title "Core Module"
+- Sample markdown content
+
+**Assertions:**
+- Verifies "[WikiPage](../src/local_deepwiki/models.md)" appears in repr
+- Verifies file path "modules/core.md" appears in repr
+- Verifies title "Core Module" appears in repr
+
+## Usage Examples
 
 ```python
-def test_wiki_page_repr(self):
-    page = WikiPage(
-        path="modules/core.md",
-        title="Core Module",
-        content="# Core Module\n\nContent here.",
-        generated_at=1234567890.0,
-    )
-    result = repr(page)
-    # Verifies result contains "WikiPage", "modules/core.md", "Core Module"
+# Example of how the tested models would be used
+from local_deepwiki.models import CodeChunk, FileInfo, WikiPage, Language, ChunkType
+
+# Creating a CodeChunk for testing
+chunk = CodeChunk(
+    id="test_id",
+    file_path="src/main.py",
+    language=Language.PYTHON,
+    chunk_type=ChunkType.FUNCTION,
+    name="my_function",
+    content="def my_function(): pass",
+    start_line=10,
+    end_line=15,
+)
+
+# Creating a FileInfo for testing
+info = FileInfo(
+    path="src/utils.py",
+    language=Language.PYTHON,
+    size_bytes=1024,
+    last_modified=1234567890.0,
+    hash="abc123",
+    chunk_count=5,
+)
+
+# Creating a WikiPage for testing
+page = WikiPage(
+    path="modules/core.md",
+    title="Core Module",
+    content="# Core Module\n\nContent here.",
+    generated_at=1234567890.0,
+)
 ```
 
 ## Related Components
 
-This test file works with the following model classes from `local_deepwiki.models`:
-
-- **ChunkType** - Enumeration for code chunk types
-- **CodeChunk** - Represents a chunk of code with metadata
-- **FileInfo** - Contains file metadata and statistics
-- **IndexStatus** - Tracks repository indexing status
-- **Language** - Enumeration for programming languages
-- **SearchResult** - Represents search results
-- **WikiGenerationStatus** - Tracks wiki generation progress
-- **WikiPage** - Represents a generated wiki page
-- **WikiPageStatus** - Tracks wiki page status
-- **WikiStructure** - Represents wiki organization structure
-
-The tests use pytest framework for test execution and assertions.
+This test file imports and tests the following model classes:
+- [ChunkType](../src/local_deepwiki/models.md) - Enumeration for different types of code chunks
+- [CodeChunk](../src/local_deepwiki/models.md) - Represents a chunk of code with metadata
+- [FileInfo](../src/local_deepwiki/models.md) - Contains information about source files
+- [IndexStatus](../src/local_deepwiki/models.md) - Status information for indexing operations
+- [Language](../src/local_deepwiki/models.md) - Enumeration for programming languages
+- [SearchResult](../src/local_deepwiki/models.md) - Results from search operations
+- [WikiGenerationStatus](../src/local_deepwiki/models.md) - Status of wiki generation processes
+- [WikiPage](../src/local_deepwiki/models.md) - Represents a generated wiki page
+- [WikiPageStatus](../src/local_deepwiki/models.md) - Status information for wiki pages
+- [WikiStructure](../src/local_deepwiki/models.md) - Structure information for wiki organization
 
 ## API Reference
 
 ### class `TestCodeChunkToVectorRecord`
 
-Tests for CodeChunk.to_vector_record method.
+Tests for [CodeChunk](../src/local_deepwiki/models.md).to_vector_record method.
 
 **Methods:**
 
@@ -204,7 +207,7 @@ Tests for model __repr__ methods.
 def test_code_chunk_repr_with_name()
 ```
 
-Test CodeChunk repr with a named chunk.
+Test [CodeChunk](../src/local_deepwiki/models.md) repr with a named chunk.
 
 #### `test_code_chunk_repr_without_name`
 
@@ -212,7 +215,7 @@ Test CodeChunk repr with a named chunk.
 def test_code_chunk_repr_without_name()
 ```
 
-Test CodeChunk repr without a name.
+Test [CodeChunk](../src/local_deepwiki/models.md) repr without a name.
 
 #### `test_file_info_repr`
 
@@ -220,7 +223,7 @@ Test CodeChunk repr without a name.
 def test_file_info_repr()
 ```
 
-Test FileInfo repr.
+Test [FileInfo](../src/local_deepwiki/models.md) repr.
 
 #### `test_file_info_repr_no_language`
 
@@ -228,7 +231,7 @@ Test FileInfo repr.
 def test_file_info_repr_no_language()
 ```
 
-Test FileInfo repr with no detected language.
+Test [FileInfo](../src/local_deepwiki/models.md) repr with no detected language.
 
 #### `test_index_status_repr`
 
@@ -236,7 +239,7 @@ Test FileInfo repr with no detected language.
 def test_index_status_repr()
 ```
 
-Test IndexStatus repr.
+Test [IndexStatus](../src/local_deepwiki/models.md) repr.
 
 #### `test_wiki_page_repr`
 
@@ -244,7 +247,7 @@ Test IndexStatus repr.
 def test_wiki_page_repr()
 ```
 
-Test WikiPage repr.
+Test [WikiPage](../src/local_deepwiki/models.md) repr.
 
 #### `test_wiki_structure_repr`
 
@@ -252,7 +255,7 @@ Test WikiPage repr.
 def test_wiki_structure_repr()
 ```
 
-Test WikiStructure repr.
+Test [WikiStructure](../src/local_deepwiki/models.md) repr.
 
 #### `test_search_result_repr`
 
@@ -260,7 +263,7 @@ Test WikiStructure repr.
 def test_search_result_repr()
 ```
 
-Test SearchResult repr.
+Test [SearchResult](../src/local_deepwiki/models.md) repr.
 
 #### `test_search_result_repr_no_name`
 
@@ -268,7 +271,7 @@ Test SearchResult repr.
 def test_search_result_repr_no_name()
 ```
 
-Test SearchResult repr when chunk has no name.
+Test [SearchResult](../src/local_deepwiki/models.md) repr when chunk has no name.
 
 #### `test_wiki_page_status_repr`
 
@@ -276,7 +279,7 @@ Test SearchResult repr when chunk has no name.
 def test_wiki_page_status_repr()
 ```
 
-Test WikiPageStatus repr.
+Test [WikiPageStatus](../src/local_deepwiki/models.md) repr.
 
 #### `test_wiki_generation_status_repr`
 
@@ -284,7 +287,7 @@ Test WikiPageStatus repr.
 def test_wiki_generation_status_repr()
 ```
 
-Test WikiGenerationStatus repr.
+Test [WikiGenerationStatus](../src/local_deepwiki/models.md) repr.
 
 
 
@@ -385,4 +388,5 @@ flowchart TD
 
 ## See Also
 
+- [models](../src/local_deepwiki/models.md) - dependency
 - [test_indexer](test_indexer.md) - shares 3 dependencies

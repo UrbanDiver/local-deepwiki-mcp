@@ -2,51 +2,53 @@
 
 ## File Overview
 
-This file implements a file system watcher that monitors repository changes and automatically regenerates wiki documentation. It uses the watchdog library to detect file system events and triggers reindexing when relevant files are modified.
+This module provides file system watching capabilities for automatically regenerating wiki documentation when repository files change. It uses the watchdog library to monitor file system events and triggers wiki regeneration with configurable debouncing to prevent excessive rebuilds.
 
 ## Functions
 
-### main()
+### main
 
-Main entry point for the watch command that sets up command-line argument parsing for the file watcher.
+```python
+def main() -> None
+```
+
+Main entry point for the watch command. Sets up command-line argument parsing for the file watcher functionality.
 
 **Parameters:**
 - None
 
 **Returns:**
-- `None`
+- None
 
 **Command-line Arguments:**
 - `repo_path` (optional): Path to the repository to watch (defaults to current directory)
 - `--debounce`: Seconds to wait after changes before reindexing (default: 2.0)
 
+## Related Components
+
+This module integrates with several other components in the local_deepwiki system:
+
+- **[Config](config.md)**: Uses the [Config](config.md) class and [get_config](config.md) function for configuration management
+- **RepositoryIndexer**: Works with the RepositoryIndexer class from the core.indexer module for processing repository content
+- **Parser**: Utilizes EXTENSION_MAP from the core.parser module for file type handling
+- **[Wiki Generator](generators/wiki.md)**: Integrates with the [generate_wiki](generators/wiki.md) function from the generators.wiki module for documentation generation
+- **Logging**: Uses the logging system via get_logger for operation tracking
+
+The module also leverages external libraries including:
+- `watchdog` for file system monitoring (Observer and FileSystemEventHandler)
+- `rich.console` for enhanced console output
+- Standard library modules for argument parsing, async operations, and file system utilities
+
 ## Usage Examples
 
-The main function can be called directly to start the file watcher:
+Based on the main function signature, this module is designed to be used as a command-line tool:
 
 ```python
-from local_deepwiki.watcher import main
-
-# Start the watcher
+# The main function can be called directly
 main()
 ```
 
-## Related Components
-
-This module integrates with several other components based on the imports:
-
-- **[Config](config.md)**: Uses [get_config](config.md) function and [Config](config.md) class for configuration management
-- **RepositoryIndexer**: Core indexing functionality from the indexer module
-- **EXTENSION_MAP**: File extension mapping from the parser module
-- **[generate_wiki](generators/wiki.md)**: Wiki generation functionality from the generators module
-- **get_logger**: Logging utilities from the logging module
-
-The module also uses external libraries:
-- `watchdog` for file system monitoring
-- `rich.console` for console output
-- `argparse` for command-line interface
-- `asyncio` for asynchronous operations
-- `pathlib` for path handling
+The function sets up argument parsing for command-line usage with the repository path and debounce timing configuration options.
 
 ## API Reference
 
