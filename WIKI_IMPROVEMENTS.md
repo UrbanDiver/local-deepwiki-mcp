@@ -136,8 +136,8 @@ This document tracks planned improvements to the Local DeepWiki documentation ge
 - [ ] Configurable cache TTL and size limits
 - **Files**: New `core/cache.py`, `core/deep_research.py`
 
-### 19. Configurable Deep Research
-- [ ] Expose parameters in config.yaml (sub-question count, chunk limits, etc.)
+### 19. Configurable Deep Research ✅
+- [x] Expose parameters in config.yaml (sub-question count, chunk limits, etc.)
 - [ ] Allow per-query overrides via MCP tool arguments
 - [ ] Add presets for "quick" vs "thorough" research modes
 - **Files**: `config.py`, `core/deep_research.py`, `server.py`
