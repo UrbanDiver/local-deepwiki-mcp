@@ -309,3 +309,40 @@ class DeepResearchResult(BaseModel):
             f"<DeepResearchResult {len(self.sub_questions)} sub-questions, "
             f"{len(self.sources)} sources, {self.total_llm_calls} LLM calls>"
         )
+
+
+class ResearchProgressType(str, Enum):
+    """Types of deep research progress events."""
+
+    STARTED = "started"
+    DECOMPOSITION_COMPLETE = "decomposition_complete"
+    RETRIEVAL_COMPLETE = "retrieval_complete"
+    GAP_ANALYSIS_COMPLETE = "gap_analysis_complete"
+    FOLLOWUP_COMPLETE = "followup_complete"
+    SYNTHESIS_STARTED = "synthesis_started"
+    COMPLETE = "complete"
+
+
+class ResearchProgress(BaseModel):
+    """Progress update from deep research pipeline.
+
+    Sent via MCP progress notifications to provide real-time feedback
+    during long-running deep research operations.
+    """
+
+    step: int = Field(description="Current step number (0-5)")
+    total_steps: int = Field(default=5, description="Total number of steps")
+    step_type: ResearchProgressType = Field(description="Type of progress event")
+    message: str = Field(description="Human-readable progress message")
+    sub_questions: list[SubQuestion] | None = Field(
+        default=None, description="Sub-questions after decomposition"
+    )
+    chunks_retrieved: int | None = Field(
+        default=None, description="Number of chunks retrieved so far"
+    )
+    follow_up_queries: list[str] | None = Field(
+        default=None, description="Follow-up queries from gap analysis"
+    )
+    duration_ms: int | None = Field(
+        default=None, description="Duration of completed step in milliseconds"
+    )

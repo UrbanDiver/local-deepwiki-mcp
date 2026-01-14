@@ -586,9 +586,35 @@ async def handle_deep_research(args: dict[str, Any]) -> list[TextContent]:
     vector_store = VectorStore(vector_db_path, embedding_provider)
 
     from local_deepwiki.core.deep_research import DeepResearchPipeline
+    from local_deepwiki.models import ResearchProgress
     from local_deepwiki.providers.llm import get_llm_provider
 
     llm = get_llm_provider(config.llm)
+
+    # Get progress token from MCP request context (if client provided one)
+    progress_token: str | int | None = None
+    try:
+        ctx = server.request_context
+        if ctx.meta and ctx.meta.progressToken:
+            progress_token = ctx.meta.progressToken
+    except LookupError:
+        # Not in a request context (e.g., testing)
+        pass
+
+    # Create progress callback that sends MCP notifications
+    async def progress_callback(progress: ResearchProgress) -> None:
+        if progress_token is None:
+            return
+        try:
+            ctx = server.request_context
+            await ctx.session.send_progress_notification(
+                progress_token=progress_token,
+                progress=float(progress.step),
+                total=float(progress.total_steps),
+                message=progress.model_dump_json(),
+            )
+        except Exception as e:
+            logger.warning(f"Failed to send progress notification: {e}")
 
     # Create and run the deep research pipeline with config parameters
     dr_config = config.deep_research
@@ -604,7 +630,7 @@ async def handle_deep_research(args: dict[str, Any]) -> list[TextContent]:
     )
 
     try:
-        result = await pipeline.research(question)
+        result = await pipeline.research(question, progress_callback=progress_callback)
 
         # Format the response
         response = {

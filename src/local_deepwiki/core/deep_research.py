@@ -4,11 +4,14 @@ import asyncio
 import json
 import re
 import time
+from collections.abc import Awaitable, Callable
 
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import (
     DeepResearchResult,
+    ResearchProgress,
+    ResearchProgressType,
     ResearchStep,
     ResearchStepType,
     SearchResult,
@@ -16,6 +19,9 @@ from local_deepwiki.models import (
     SubQuestion,
 )
 from local_deepwiki.providers.base import LLMProvider
+
+# Type alias for progress callback
+ProgressCallback = Callable[[ResearchProgress], Awaitable[None]] | None
 
 logger = get_logger(__name__)
 
@@ -135,11 +141,16 @@ class DeepResearchPipeline:
         self.synthesis_temperature = synthesis_temperature
         self.synthesis_max_tokens = synthesis_max_tokens
 
-    async def research(self, question: str) -> DeepResearchResult:
+    async def research(
+        self,
+        question: str,
+        progress_callback: ProgressCallback = None,
+    ) -> DeepResearchResult:
         """Execute the full research pipeline.
 
         Args:
             question: The complex question to research.
+            progress_callback: Optional async callback for progress updates.
 
         Returns:
             DeepResearchResult with answer, sources, and reasoning trace.
@@ -147,30 +158,66 @@ class DeepResearchPipeline:
         trace: list[ResearchStep] = []
         llm_calls = 0
 
+        # Helper to report progress
+        async def report_progress(
+            step: int,
+            step_type: ResearchProgressType,
+            message: str,
+            **kwargs,
+        ) -> None:
+            if progress_callback:
+                await progress_callback(
+                    ResearchProgress(
+                        step=step,
+                        step_type=step_type,
+                        message=message,
+                        **kwargs,
+                    )
+                )
+
+        # Report start
+        await report_progress(0, ResearchProgressType.STARTED, "Starting deep research...")
+
         # Step 1: Decompose question
         start_time = time.time()
         sub_questions = await self._decompose_question(question)
         llm_calls += 1
+        duration_ms = int((time.time() - start_time) * 1000)
         trace.append(
             ResearchStep(
                 step_type=ResearchStepType.DECOMPOSITION,
                 description=f"Decomposed into {len(sub_questions)} sub-questions",
-                duration_ms=int((time.time() - start_time) * 1000),
+                duration_ms=duration_ms,
             )
         )
         logger.info(f"Decomposed question into {len(sub_questions)} sub-questions")
+        await report_progress(
+            1,
+            ResearchProgressType.DECOMPOSITION_COMPLETE,
+            f"Decomposed into {len(sub_questions)} sub-questions",
+            sub_questions=sub_questions,
+            duration_ms=duration_ms,
+        )
 
         # Step 2: Parallel retrieval for sub-questions
         start_time = time.time()
         initial_results = await self._parallel_retrieve(sub_questions)
+        duration_ms = int((time.time() - start_time) * 1000)
         trace.append(
             ResearchStep(
                 step_type=ResearchStepType.RETRIEVAL,
                 description=f"Retrieved {len(initial_results)} code chunks",
-                duration_ms=int((time.time() - start_time) * 1000),
+                duration_ms=duration_ms,
             )
         )
         logger.info(f"Initial retrieval found {len(initial_results)} chunks")
+        await report_progress(
+            2,
+            ResearchProgressType.RETRIEVAL_COMPLETE,
+            f"Retrieved {len(initial_results)} code chunks",
+            chunks_retrieved=len(initial_results),
+            duration_ms=duration_ms,
+        )
 
         # Step 3: Gap analysis
         start_time = time.time()
@@ -178,28 +225,44 @@ class DeepResearchPipeline:
             question, sub_questions, initial_results
         )
         llm_calls += 1
+        duration_ms = int((time.time() - start_time) * 1000)
         trace.append(
             ResearchStep(
                 step_type=ResearchStepType.GAP_ANALYSIS,
                 description=f"Identified {len(follow_up_queries)} gaps to fill",
-                duration_ms=int((time.time() - start_time) * 1000),
+                duration_ms=duration_ms,
             )
         )
         logger.info(f"Gap analysis generated {len(follow_up_queries)} follow-up queries")
+        await report_progress(
+            3,
+            ResearchProgressType.GAP_ANALYSIS_COMPLETE,
+            f"Identified {len(follow_up_queries)} follow-up queries",
+            follow_up_queries=follow_up_queries if follow_up_queries else None,
+            duration_ms=duration_ms,
+        )
 
         # Step 4: Follow-up retrieval
         additional_results: list[SearchResult] = []
         if follow_up_queries:
             start_time = time.time()
             additional_results = await self._targeted_retrieve(follow_up_queries)
+            duration_ms = int((time.time() - start_time) * 1000)
             trace.append(
                 ResearchStep(
                     step_type=ResearchStepType.RETRIEVAL,
                     description=f"Follow-up retrieved {len(additional_results)} chunks",
-                    duration_ms=int((time.time() - start_time) * 1000),
+                    duration_ms=duration_ms,
                 )
             )
             logger.info(f"Follow-up retrieval found {len(additional_results)} chunks")
+            await report_progress(
+                4,
+                ResearchProgressType.FOLLOWUP_COMPLETE,
+                f"Follow-up retrieved {len(additional_results)} additional chunks",
+                chunks_retrieved=len(initial_results) + len(additional_results),
+                duration_ms=duration_ms,
+            )
 
         # Step 5: Deduplicate and synthesize
         all_results = self._deduplicate_results(initial_results + additional_results)
@@ -208,17 +271,35 @@ class DeepResearchPipeline:
             all_results = all_results[: self.max_total_chunks]
             logger.info(f"Limited to {self.max_total_chunks} chunks for synthesis")
 
+        # Notify synthesis is starting (it's the longest step)
+        await report_progress(
+            4,
+            ResearchProgressType.SYNTHESIS_STARTED,
+            f"Synthesizing answer from {len(all_results)} chunks...",
+            chunks_retrieved=len(all_results),
+        )
+
         start_time = time.time()
         answer = await self._synthesize(question, sub_questions, all_results)
         llm_calls += 1
+        duration_ms = int((time.time() - start_time) * 1000)
         trace.append(
             ResearchStep(
                 step_type=ResearchStepType.SYNTHESIS,
                 description=f"Synthesized answer from {len(all_results)} chunks",
-                duration_ms=int((time.time() - start_time) * 1000),
+                duration_ms=duration_ms,
             )
         )
         logger.info("Synthesis complete")
+
+        # Report completion
+        await report_progress(
+            5,
+            ResearchProgressType.COMPLETE,
+            f"Research complete: {len(all_results)} chunks analyzed, {llm_calls} LLM calls",
+            chunks_retrieved=len(all_results),
+            duration_ms=duration_ms,
+        )
 
         # Build source references
         sources = self._build_sources(all_results)

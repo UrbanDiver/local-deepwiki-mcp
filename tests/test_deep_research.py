@@ -12,6 +12,8 @@ from local_deepwiki.models import (
     CodeChunk,
     DeepResearchResult,
     Language,
+    ResearchProgress,
+    ResearchProgressType,
     ResearchStepType,
     SearchResult,
     SubQuestion,
@@ -594,3 +596,211 @@ class TestHandleDeepResearch:
 
         # Will fail on "not indexed" but that's after validation
         assert "Error" in result[0].text
+
+
+class TestDeepResearchProgress:
+    """Tests for progress callback functionality."""
+
+    @pytest.fixture
+    def mock_vector_store(self):
+        """Create a mock vector store."""
+        store = MagicMock()
+        store.search = AsyncMock(return_value=[
+            make_search_result(make_chunk("c1")),
+        ])
+        return store
+
+    async def test_progress_callback_receives_all_steps(self, mock_vector_store):
+        """Test that progress callback receives expected events."""
+        events: list[ResearchProgress] = []
+
+        async def capture(p: ResearchProgress) -> None:
+            events.append(p)
+
+        llm = MockLLMProvider(responses=[
+            json.dumps({
+                "sub_questions": [{"question": "Q?", "category": "structure"}]
+            }),
+            json.dumps({"gaps": [], "follow_up_queries": []}),
+            "Final answer",
+        ])
+
+        pipeline = DeepResearchPipeline(
+            vector_store=mock_vector_store,
+            llm_provider=llm,
+        )
+
+        await pipeline.research("Question", progress_callback=capture)
+
+        # Should have at least: started, decomposition, retrieval, gap_analysis, synthesis_started, complete
+        assert len(events) >= 5
+        types = [e.step_type for e in events]
+        assert ResearchProgressType.STARTED in types
+        assert ResearchProgressType.DECOMPOSITION_COMPLETE in types
+        assert ResearchProgressType.RETRIEVAL_COMPLETE in types
+        assert ResearchProgressType.GAP_ANALYSIS_COMPLETE in types
+        assert ResearchProgressType.COMPLETE in types
+
+    async def test_progress_callback_includes_sub_questions(self, mock_vector_store):
+        """Test that decomposition progress includes sub-questions."""
+        captured: ResearchProgress | None = None
+
+        async def capture(p: ResearchProgress) -> None:
+            nonlocal captured
+            if p.step_type == ResearchProgressType.DECOMPOSITION_COMPLETE:
+                captured = p
+
+        llm = MockLLMProvider(responses=[
+            json.dumps({
+                "sub_questions": [
+                    {"question": "What is the architecture?", "category": "structure"},
+                ]
+            }),
+            json.dumps({"gaps": [], "follow_up_queries": []}),
+            "Answer",
+        ])
+
+        pipeline = DeepResearchPipeline(
+            vector_store=mock_vector_store,
+            llm_provider=llm,
+        )
+
+        await pipeline.research("Question", progress_callback=capture)
+
+        assert captured is not None
+        assert captured.sub_questions is not None
+        assert len(captured.sub_questions) == 1
+        assert captured.sub_questions[0].question == "What is the architecture?"
+
+    async def test_progress_callback_includes_chunk_counts(self, mock_vector_store):
+        """Test that retrieval progress includes chunk counts."""
+        captured: ResearchProgress | None = None
+
+        async def capture(p: ResearchProgress) -> None:
+            nonlocal captured
+            if p.step_type == ResearchProgressType.RETRIEVAL_COMPLETE:
+                captured = p
+
+        llm = MockLLMProvider(responses=[
+            json.dumps({"sub_questions": [{"question": "Q?", "category": "structure"}]}),
+            json.dumps({"gaps": [], "follow_up_queries": []}),
+            "Answer",
+        ])
+
+        pipeline = DeepResearchPipeline(
+            vector_store=mock_vector_store,
+            llm_provider=llm,
+        )
+
+        await pipeline.research("Question", progress_callback=capture)
+
+        assert captured is not None
+        assert captured.chunks_retrieved is not None
+        assert captured.chunks_retrieved >= 0
+
+    async def test_progress_callback_includes_follow_up_queries(self, mock_vector_store):
+        """Test that gap analysis progress includes follow-up queries."""
+        captured: ResearchProgress | None = None
+
+        async def capture(p: ResearchProgress) -> None:
+            nonlocal captured
+            if p.step_type == ResearchProgressType.GAP_ANALYSIS_COMPLETE:
+                captured = p
+
+        llm = MockLLMProvider(responses=[
+            json.dumps({"sub_questions": [{"question": "Q?", "category": "structure"}]}),
+            json.dumps({
+                "gaps": ["Missing info"],
+                "follow_up_queries": ["search query 1", "search query 2"],
+            }),
+            "Answer",
+        ])
+
+        pipeline = DeepResearchPipeline(
+            vector_store=mock_vector_store,
+            llm_provider=llm,
+        )
+
+        await pipeline.research("Question", progress_callback=capture)
+
+        assert captured is not None
+        assert captured.follow_up_queries is not None
+        assert len(captured.follow_up_queries) == 2
+
+    async def test_progress_callback_none_works(self, mock_vector_store):
+        """Test that pipeline works without progress callback."""
+        llm = MockLLMProvider(responses=[
+            json.dumps({"sub_questions": []}),
+            json.dumps({"gaps": [], "follow_up_queries": []}),
+            "Answer",
+        ])
+
+        pipeline = DeepResearchPipeline(
+            vector_store=mock_vector_store,
+            llm_provider=llm,
+        )
+
+        # Should not raise
+        result = await pipeline.research("Question", progress_callback=None)
+        assert result.answer is not None
+
+    async def test_progress_callback_includes_duration(self, mock_vector_store):
+        """Test that progress events include duration."""
+        events: list[ResearchProgress] = []
+
+        async def capture(p: ResearchProgress) -> None:
+            events.append(p)
+
+        llm = MockLLMProvider(responses=[
+            json.dumps({"sub_questions": [{"question": "Q?", "category": "structure"}]}),
+            json.dumps({"gaps": [], "follow_up_queries": []}),
+            "Answer",
+        ])
+
+        pipeline = DeepResearchPipeline(
+            vector_store=mock_vector_store,
+            llm_provider=llm,
+        )
+
+        await pipeline.research("Question", progress_callback=capture)
+
+        # Completed steps should have duration
+        for event in events:
+            if event.step_type in {
+                ResearchProgressType.DECOMPOSITION_COMPLETE,
+                ResearchProgressType.RETRIEVAL_COMPLETE,
+                ResearchProgressType.GAP_ANALYSIS_COMPLETE,
+                ResearchProgressType.COMPLETE,
+            }:
+                assert event.duration_ms is not None
+                assert event.duration_ms >= 0
+
+    async def test_progress_step_numbers_increase(self, mock_vector_store):
+        """Test that step numbers increase monotonically."""
+        events: list[ResearchProgress] = []
+
+        async def capture(p: ResearchProgress) -> None:
+            events.append(p)
+
+        llm = MockLLMProvider(responses=[
+            json.dumps({"sub_questions": [{"question": "Q?", "category": "structure"}]}),
+            json.dumps({"gaps": [], "follow_up_queries": []}),
+            "Answer",
+        ])
+
+        pipeline = DeepResearchPipeline(
+            vector_store=mock_vector_store,
+            llm_provider=llm,
+        )
+
+        await pipeline.research("Question", progress_callback=capture)
+
+        # Step numbers should be non-decreasing
+        prev_step = -1
+        for event in events:
+            assert event.step >= prev_step
+            prev_step = event.step
+
+        # Final step should be 5 (COMPLETE)
+        assert events[-1].step == 5
+        assert events[-1].step_type == ResearchProgressType.COMPLETE
