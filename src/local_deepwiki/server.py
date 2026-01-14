@@ -590,11 +590,17 @@ async def handle_deep_research(args: dict[str, Any]) -> list[TextContent]:
 
     llm = get_llm_provider(config.llm)
 
-    # Create and run the deep research pipeline
+    # Create and run the deep research pipeline with config parameters
+    dr_config = config.deep_research
     pipeline = DeepResearchPipeline(
         vector_store=vector_store,
         llm_provider=llm,
-        max_total_chunks=max_chunks,
+        max_sub_questions=dr_config.max_sub_questions,
+        chunks_per_subquestion=dr_config.chunks_per_subquestion,
+        max_total_chunks=max_chunks,  # CLI parameter takes precedence
+        max_follow_up_queries=dr_config.max_follow_up_queries,
+        synthesis_temperature=dr_config.synthesis_temperature,
+        synthesis_max_tokens=dr_config.synthesis_max_tokens,
     )
 
     try:

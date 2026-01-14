@@ -134,6 +134,47 @@ class WikiConfig(BaseModel):
     )
 
 
+class DeepResearchConfig(BaseModel):
+    """Deep research pipeline configuration."""
+
+    max_sub_questions: int = Field(
+        default=4,
+        ge=1,
+        le=10,
+        description="Maximum sub-questions generated from query decomposition",
+    )
+    chunks_per_subquestion: int = Field(
+        default=5,
+        ge=1,
+        le=20,
+        description="Code chunks retrieved per sub-question",
+    )
+    max_total_chunks: int = Field(
+        default=30,
+        ge=10,
+        le=100,
+        description="Maximum total chunks used in synthesis",
+    )
+    max_follow_up_queries: int = Field(
+        default=3,
+        ge=0,
+        le=10,
+        description="Maximum follow-up queries from gap analysis",
+    )
+    synthesis_temperature: float = Field(
+        default=0.5,
+        ge=0.0,
+        le=2.0,
+        description="LLM temperature for synthesis (higher = more creative)",
+    )
+    synthesis_max_tokens: int = Field(
+        default=4096,
+        ge=512,
+        le=16000,
+        description="Maximum tokens in synthesis response",
+    )
+
+
 class OutputConfig(BaseModel):
     """Output configuration."""
 
@@ -149,6 +190,7 @@ class Config(BaseModel):
     parsing: ParsingConfig = Field(default_factory=ParsingConfig)
     chunking: ChunkingConfig = Field(default_factory=ChunkingConfig)
     wiki: WikiConfig = Field(default_factory=WikiConfig)
+    deep_research: DeepResearchConfig = Field(default_factory=DeepResearchConfig)
     output: OutputConfig = Field(default_factory=OutputConfig)
 
     @classmethod

@@ -70,6 +70,35 @@ class TestConfig:
         assert config.wiki.context_search_limit == 50
         assert config.wiki.fallback_search_limit == 30
 
+    def test_deep_research_config(self):
+        """Test deep research configuration."""
+        config = Config()
+
+        assert config.deep_research.max_sub_questions == 4
+        assert config.deep_research.chunks_per_subquestion == 5
+        assert config.deep_research.max_total_chunks == 30
+        assert config.deep_research.max_follow_up_queries == 3
+        assert config.deep_research.synthesis_temperature == 0.5
+        assert config.deep_research.synthesis_max_tokens == 4096
+
+    def test_deep_research_config_validation(self):
+        """Test deep research config validation bounds."""
+        from pydantic import ValidationError
+
+        # Test max_sub_questions bounds
+        with pytest.raises(ValidationError):
+            Config(deep_research={"max_sub_questions": 0})  # Below min
+
+        with pytest.raises(ValidationError):
+            Config(deep_research={"max_sub_questions": 11})  # Above max
+
+        # Test temperature bounds
+        with pytest.raises(ValidationError):
+            Config(deep_research={"synthesis_temperature": -0.1})  # Below min
+
+        with pytest.raises(ValidationError):
+            Config(deep_research={"synthesis_temperature": 2.5})  # Above max
+
     def test_get_wiki_path(self, tmp_path):
         """Test wiki path generation."""
         config = Config()

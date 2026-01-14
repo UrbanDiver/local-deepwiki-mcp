@@ -111,6 +111,8 @@ class DeepResearchPipeline:
         chunks_per_subquestion: int = 5,
         max_total_chunks: int = 30,
         max_follow_up_queries: int = 3,
+        synthesis_temperature: float = 0.5,
+        synthesis_max_tokens: int = 4096,
     ):
         """Initialize the deep research pipeline.
 
@@ -121,6 +123,8 @@ class DeepResearchPipeline:
             chunks_per_subquestion: Chunks to retrieve per sub-question.
             max_total_chunks: Maximum total chunks to use in synthesis.
             max_follow_up_queries: Maximum follow-up queries in gap analysis.
+            synthesis_temperature: LLM temperature for synthesis (0.0-2.0).
+            synthesis_max_tokens: Maximum tokens in synthesis response.
         """
         self.vector_store = vector_store
         self.llm = llm_provider
@@ -128,6 +132,8 @@ class DeepResearchPipeline:
         self.chunks_per_subquestion = chunks_per_subquestion
         self.max_total_chunks = max_total_chunks
         self.max_follow_up_queries = max_follow_up_queries
+        self.synthesis_temperature = synthesis_temperature
+        self.synthesis_max_tokens = synthesis_max_tokens
 
     async def research(self, question: str) -> DeepResearchResult:
         """Execute the full research pipeline.
@@ -517,8 +523,8 @@ class DeepResearchPipeline:
         answer = await self.llm.generate(
             prompt=prompt,
             system_prompt=SYNTHESIS_SYSTEM_PROMPT,
-            temperature=0.5,
-            max_tokens=4096,
+            temperature=self.synthesis_temperature,
+            max_tokens=self.synthesis_max_tokens,
         )
 
         return answer
