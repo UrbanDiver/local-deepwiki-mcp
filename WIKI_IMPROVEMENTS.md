@@ -118,9 +118,9 @@ This document tracks planned improvements to the Local DeepWiki documentation ge
 
 ## Performance & Quality
 
-### 16. Streaming Deep Research
-- [ ] Stream `deep_research` output for better UX on long queries
-- [ ] Show progress for each research step in real-time
+### 16. Streaming Deep Research ✅
+- [x] Stream `deep_research` output for better UX on long queries
+- [x] Show progress for each research step in real-time
 - [ ] Support cancellation of in-progress research
 - **Files**: `core/deep_research.py`, `server.py`
 
