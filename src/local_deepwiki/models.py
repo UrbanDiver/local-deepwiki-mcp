@@ -321,6 +321,7 @@ class ResearchProgressType(str, Enum):
     FOLLOWUP_COMPLETE = "followup_complete"
     SYNTHESIS_STARTED = "synthesis_started"
     COMPLETE = "complete"
+    CANCELLED = "cancelled"
 
 
 class ResearchProgress(BaseModel):

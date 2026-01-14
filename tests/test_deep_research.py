@@ -6,7 +6,10 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from local_deepwiki.core.deep_research import DeepResearchPipeline
+from local_deepwiki.core.deep_research import (
+    DeepResearchPipeline,
+    ResearchCancelledError,
+)
 from local_deepwiki.models import (
     ChunkType,
     CodeChunk,
@@ -804,3 +807,226 @@ class TestDeepResearchProgress:
         # Final step should be 5 (COMPLETE)
         assert events[-1].step == 5
         assert events[-1].step_type == ResearchProgressType.COMPLETE
+
+
+class TestResearchCancellation:
+    """Tests for research cancellation functionality."""
+
+    @pytest.fixture
+    def mock_vector_store(self):
+        """Create a mock vector store."""
+        store = MagicMock()
+        store.search = AsyncMock(return_value=[
+            make_search_result(make_chunk("c1")),
+        ])
+        return store
+
+    def test_research_cancelled_error_creation(self):
+        """Test ResearchCancelledError can be created with step info."""
+        error = ResearchCancelledError("decomposition")
+        assert error.step == "decomposition"
+        assert "decomposition" in str(error)
+
+    def test_research_cancelled_error_default_step(self):
+        """Test ResearchCancelledError with default step."""
+        error = ResearchCancelledError()
+        assert error.step == "unknown"
+
+    async def test_cancellation_before_decomposition(self, mock_vector_store):
+        """Test cancellation before decomposition starts."""
+        llm = MockLLMProvider(responses=[
+            json.dumps({"sub_questions": []}),
+            json.dumps({"gaps": [], "follow_up_queries": []}),
+            "Answer",
+        ])
+
+        pipeline = DeepResearchPipeline(
+            vector_store=mock_vector_store,
+            llm_provider=llm,
+        )
+
+        # Cancel immediately
+        def always_cancelled() -> bool:
+            return True
+
+        with pytest.raises(ResearchCancelledError) as exc_info:
+            await pipeline.research(
+                "Question",
+                cancellation_check=always_cancelled,
+            )
+
+        assert exc_info.value.step == "decomposition"
+
+    async def test_cancellation_after_decomposition(self, mock_vector_store):
+        """Test cancellation after decomposition completes."""
+        call_count = 0
+
+        def cancel_after_first_step() -> bool:
+            nonlocal call_count
+            call_count += 1
+            # Cancel after first check (decomposition)
+            return call_count > 1
+
+        llm = MockLLMProvider(responses=[
+            json.dumps({
+                "sub_questions": [{"question": "Q?", "category": "structure"}]
+            }),
+            json.dumps({"gaps": [], "follow_up_queries": []}),
+            "Answer",
+        ])
+
+        pipeline = DeepResearchPipeline(
+            vector_store=mock_vector_store,
+            llm_provider=llm,
+        )
+
+        with pytest.raises(ResearchCancelledError) as exc_info:
+            await pipeline.research(
+                "Question",
+                cancellation_check=cancel_after_first_step,
+            )
+
+        assert exc_info.value.step == "retrieval"
+
+    async def test_cancellation_before_gap_analysis(self, mock_vector_store):
+        """Test cancellation before gap analysis."""
+        call_count = 0
+
+        def cancel_before_gap_analysis() -> bool:
+            nonlocal call_count
+            call_count += 1
+            # Cancel on third check (gap analysis)
+            return call_count >= 3
+
+        llm = MockLLMProvider(responses=[
+            json.dumps({
+                "sub_questions": [{"question": "Q?", "category": "structure"}]
+            }),
+            json.dumps({"gaps": [], "follow_up_queries": []}),
+            "Answer",
+        ])
+
+        pipeline = DeepResearchPipeline(
+            vector_store=mock_vector_store,
+            llm_provider=llm,
+        )
+
+        with pytest.raises(ResearchCancelledError) as exc_info:
+            await pipeline.research(
+                "Question",
+                cancellation_check=cancel_before_gap_analysis,
+            )
+
+        assert exc_info.value.step == "gap_analysis"
+
+    async def test_cancellation_before_synthesis(self, mock_vector_store):
+        """Test cancellation before synthesis."""
+        call_count = 0
+
+        def cancel_before_synthesis() -> bool:
+            nonlocal call_count
+            call_count += 1
+            # Cancel on fifth check (synthesis)
+            return call_count >= 5
+
+        llm = MockLLMProvider(responses=[
+            json.dumps({
+                "sub_questions": [{"question": "Q?", "category": "structure"}]
+            }),
+            json.dumps({
+                "gaps": ["missing"],
+                "follow_up_queries": ["follow up"],
+            }),
+            "Answer",
+        ])
+
+        pipeline = DeepResearchPipeline(
+            vector_store=mock_vector_store,
+            llm_provider=llm,
+        )
+
+        with pytest.raises(ResearchCancelledError) as exc_info:
+            await pipeline.research(
+                "Question",
+                cancellation_check=cancel_before_synthesis,
+            )
+
+        assert exc_info.value.step == "synthesis"
+
+    async def test_no_cancellation_when_check_is_none(self, mock_vector_store):
+        """Test that pipeline completes when cancellation_check is None."""
+        llm = MockLLMProvider(responses=[
+            json.dumps({"sub_questions": []}),
+            json.dumps({"gaps": [], "follow_up_queries": []}),
+            "Answer",
+        ])
+
+        pipeline = DeepResearchPipeline(
+            vector_store=mock_vector_store,
+            llm_provider=llm,
+        )
+
+        result = await pipeline.research(
+            "Question",
+            cancellation_check=None,
+        )
+
+        assert result.answer is not None
+
+    async def test_no_cancellation_when_check_returns_false(self, mock_vector_store):
+        """Test that pipeline completes when cancellation check returns False."""
+        llm = MockLLMProvider(responses=[
+            json.dumps({"sub_questions": []}),
+            json.dumps({"gaps": [], "follow_up_queries": []}),
+            "Answer",
+        ])
+
+        pipeline = DeepResearchPipeline(
+            vector_store=mock_vector_store,
+            llm_provider=llm,
+        )
+
+        def never_cancelled() -> bool:
+            return False
+
+        result = await pipeline.research(
+            "Question",
+            cancellation_check=never_cancelled,
+        )
+
+        assert result.answer is not None
+
+    async def test_cancellation_stops_llm_calls(self, mock_vector_store):
+        """Test that cancellation prevents further LLM calls."""
+        llm = MockLLMProvider(responses=[
+            json.dumps({
+                "sub_questions": [{"question": "Q?", "category": "structure"}]
+            }),
+            json.dumps({"gaps": [], "follow_up_queries": []}),
+            "Answer",
+        ])
+
+        pipeline = DeepResearchPipeline(
+            vector_store=mock_vector_store,
+            llm_provider=llm,
+        )
+
+        # Cancel after decomposition
+        call_count = 0
+        def cancel_after_decomposition() -> bool:
+            nonlocal call_count
+            call_count += 1
+            return call_count > 1
+
+        with pytest.raises(ResearchCancelledError):
+            await pipeline.research(
+                "Question",
+                cancellation_check=cancel_after_decomposition,
+            )
+
+        # Should only have made 1 LLM call (decomposition)
+        assert llm.call_count == 1
+
+    async def test_cancelled_progress_type_exists(self):
+        """Test that CANCELLED progress type exists."""
+        assert ResearchProgressType.CANCELLED == "cancelled"

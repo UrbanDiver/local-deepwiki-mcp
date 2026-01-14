@@ -599,8 +599,8 @@ async def handle_deep_research(args: dict[str, Any]) -> list[TextContent]:
     embedding_provider = get_embedding_provider(config.embedding)
     vector_store = VectorStore(vector_db_path, embedding_provider)
 
-    from local_deepwiki.core.deep_research import DeepResearchPipeline
-    from local_deepwiki.models import ResearchProgress
+    from local_deepwiki.core.deep_research import DeepResearchPipeline, ResearchCancelledError
+    from local_deepwiki.models import ResearchProgress, ResearchProgressType
     from local_deepwiki.providers.llm import get_cached_llm_provider
 
     cache_path = config.get_wiki_path(repo_path) / "llm_cache.lance"
@@ -621,6 +621,23 @@ async def handle_deep_research(args: dict[str, Any]) -> list[TextContent]:
         # Not in a request context (e.g., testing)
         pass
 
+    # Create cancellation event for cooperative cancellation
+    cancellation_event = asyncio.Event()
+
+    def is_cancelled() -> bool:
+        """Check if the research should be cancelled."""
+        # Check both our event and the current task's cancellation state
+        if cancellation_event.is_set():
+            return True
+        # Check if current asyncio task is being cancelled
+        try:
+            task = asyncio.current_task()
+            if task and task.cancelled():
+                return True
+        except RuntimeError:
+            pass
+        return False
+
     # Create progress callback that sends MCP notifications
     async def progress_callback(progress: ResearchProgress) -> None:
         if progress_token is None:
@@ -635,6 +652,26 @@ async def handle_deep_research(args: dict[str, Any]) -> list[TextContent]:
             )
         except Exception as e:
             logger.warning(f"Failed to send progress notification: {e}")
+
+    async def send_cancellation_notification(step: str) -> None:
+        """Send a cancellation progress notification."""
+        if progress_token is None:
+            return
+        try:
+            ctx = server.request_context
+            progress = ResearchProgress(
+                step=0,
+                step_type=ResearchProgressType.CANCELLED,
+                message=f"Research cancelled during {step}",
+            )
+            await ctx.session.send_progress_notification(
+                progress_token=progress_token,
+                progress=0.0,
+                total=5.0,
+                message=progress.model_dump_json(),
+            )
+        except Exception as e:
+            logger.warning(f"Failed to send cancellation notification: {e}")
 
     # Create and run the deep research pipeline with config parameters
     # Apply preset if specified (overrides config file values)
@@ -655,7 +692,11 @@ async def handle_deep_research(args: dict[str, Any]) -> list[TextContent]:
     )
 
     try:
-        result = await pipeline.research(question, progress_callback=progress_callback)
+        result = await pipeline.research(
+            question,
+            progress_callback=progress_callback,
+            cancellation_check=is_cancelled,
+        )
 
         # Format the response
         response = {
@@ -694,6 +735,24 @@ async def handle_deep_research(args: dict[str, Any]) -> list[TextContent]:
             f"{result.total_llm_calls} LLM calls"
         )
         return [TextContent(type="text", text=json.dumps(response, indent=2))]
+
+    except ResearchCancelledError as e:
+        logger.info(f"Deep research cancelled: {e}")
+        await send_cancellation_notification(e.step)
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps({
+                    "status": "cancelled",
+                    "message": f"Research cancelled during {e.step}",
+                }),
+            )
+        ]
+
+    except asyncio.CancelledError:
+        logger.info("Deep research task cancelled")
+        await send_cancellation_notification("task_cancellation")
+        raise  # Re-raise to properly propagate cancellation
 
     except Exception as e:
         logger.exception(f"Error in deep research: {e}")

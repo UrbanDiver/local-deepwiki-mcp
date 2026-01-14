@@ -23,7 +23,19 @@ from local_deepwiki.providers.base import LLMProvider
 # Type alias for progress callback
 ProgressCallback = Callable[[ResearchProgress], Awaitable[None]] | None
 
+# Type alias for cancellation check callback
+# Returns True if the operation should be cancelled
+CancellationCallback = Callable[[], bool] | None
+
 logger = get_logger(__name__)
+
+
+class ResearchCancelledError(Exception):
+    """Raised when a deep research operation is cancelled."""
+
+    def __init__(self, step: str = "unknown"):
+        self.step = step
+        super().__init__(f"Research cancelled during {step}")
 
 
 # Prompts for each research step
@@ -145,18 +157,29 @@ class DeepResearchPipeline:
         self,
         question: str,
         progress_callback: ProgressCallback = None,
+        cancellation_check: CancellationCallback = None,
     ) -> DeepResearchResult:
         """Execute the full research pipeline.
 
         Args:
             question: The complex question to research.
             progress_callback: Optional async callback for progress updates.
+            cancellation_check: Optional callback that returns True if cancelled.
 
         Returns:
             DeepResearchResult with answer, sources, and reasoning trace.
+
+        Raises:
+            ResearchCancelledError: If the operation is cancelled.
         """
         trace: list[ResearchStep] = []
         llm_calls = 0
+
+        def check_cancelled(step_name: str) -> None:
+            """Check if cancelled and raise if so."""
+            if cancellation_check and cancellation_check():
+                logger.info(f"Research cancelled during {step_name}")
+                raise ResearchCancelledError(step_name)
 
         # Helper to report progress
         async def report_progress(
@@ -179,6 +202,7 @@ class DeepResearchPipeline:
         await report_progress(0, ResearchProgressType.STARTED, "Starting deep research...")
 
         # Step 1: Decompose question
+        check_cancelled("decomposition")
         start_time = time.time()
         sub_questions = await self._decompose_question(question)
         llm_calls += 1
@@ -200,6 +224,7 @@ class DeepResearchPipeline:
         )
 
         # Step 2: Parallel retrieval for sub-questions
+        check_cancelled("retrieval")
         start_time = time.time()
         initial_results = await self._parallel_retrieve(sub_questions)
         duration_ms = int((time.time() - start_time) * 1000)
@@ -220,6 +245,7 @@ class DeepResearchPipeline:
         )
 
         # Step 3: Gap analysis
+        check_cancelled("gap_analysis")
         start_time = time.time()
         follow_up_queries = await self._analyze_gaps(
             question, sub_questions, initial_results
@@ -245,6 +271,7 @@ class DeepResearchPipeline:
         # Step 4: Follow-up retrieval
         additional_results: list[SearchResult] = []
         if follow_up_queries:
+            check_cancelled("follow_up_retrieval")
             start_time = time.time()
             additional_results = await self._targeted_retrieve(follow_up_queries)
             duration_ms = int((time.time() - start_time) * 1000)
@@ -279,6 +306,8 @@ class DeepResearchPipeline:
             chunks_retrieved=len(all_results),
         )
 
+        # Step 5: Synthesis
+        check_cancelled("synthesis")
         start_time = time.time()
         answer = await self._synthesize(question, sub_questions, all_results)
         llm_calls += 1
