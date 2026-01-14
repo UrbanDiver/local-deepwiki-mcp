@@ -21,6 +21,7 @@ from local_deepwiki.generators.diagrams import (
     generate_dependency_graph,
     generate_language_pie_chart,
     generate_module_overview,
+    generate_workflow_sequences,
 )
 from local_deepwiki.generators.manifest import (
     ProjectManifest,
@@ -751,6 +752,11 @@ CRITICAL CONSTRAINTS:
 Format as markdown with clear sections."""
 
         content = await self.llm.generate(prompt, system_prompt=SYSTEM_PROMPT)
+
+        # Add workflow sequence diagrams
+        content += "\n\n## Workflow Sequences\n\n"
+        content += "The following diagrams show how data flows through key operations:\n\n"
+        content += generate_workflow_sequences()
 
         return WikiPage(
             path="architecture.md",

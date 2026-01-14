@@ -10,10 +10,14 @@ from local_deepwiki.generators.diagrams import (
     _parse_import_line,
     _path_to_module,
     generate_class_diagram,
+    generate_deep_research_sequence,
     generate_dependency_graph,
+    generate_indexing_sequence,
     generate_language_pie_chart,
     generate_module_overview,
     generate_sequence_diagram,
+    generate_wiki_generation_sequence,
+    generate_workflow_sequences,
     sanitize_mermaid_name,
 )
 from local_deepwiki.models import ChunkType, CodeChunk, FileInfo, IndexStatus, Language
@@ -491,3 +495,97 @@ class TestGenerateSequenceDiagram:
         diagram = generate_sequence_diagram(call_graph)
         assert diagram is not None
         assert "main" in diagram
+
+
+class TestWorkflowSequenceDiagrams:
+    """Tests for workflow-specific sequence diagram generators."""
+
+    def test_indexing_sequence_valid_mermaid(self):
+        """Test indexing sequence generates valid Mermaid."""
+        result = generate_indexing_sequence()
+        assert "```mermaid" in result
+        assert "sequenceDiagram" in result
+        assert "RepositoryIndexer" in result
+        assert "VectorStore" in result
+        assert "CodeParser" in result
+        assert "CodeChunker" in result
+        assert "EmbeddingProvider" in result
+
+    def test_indexing_sequence_shows_loop(self):
+        """Test indexing sequence contains loop for file batches."""
+        result = generate_indexing_sequence()
+        assert "loop For each file batch" in result
+        assert "end" in result
+
+    def test_wiki_generation_sequence_valid_mermaid(self):
+        """Test wiki generation sequence is valid Mermaid."""
+        result = generate_wiki_generation_sequence()
+        assert "```mermaid" in result
+        assert "sequenceDiagram" in result
+        assert "WikiGenerator" in result
+        assert "LLMProvider" in result
+        assert "VectorStore" in result
+
+    def test_wiki_generation_sequence_has_parallel(self):
+        """Test wiki generation sequence contains parallel operations."""
+        result = generate_wiki_generation_sequence()
+        assert "par Parallel searches" in result
+        assert "rect rgb" in result  # Has colored sections
+
+    def test_wiki_generation_sequence_shows_phases(self):
+        """Test wiki generation shows all generation phases."""
+        result = generate_wiki_generation_sequence()
+        assert "Generate Overview" in result
+        assert "Generate Architecture" in result
+        assert "Generate Module Docs" in result
+
+    def test_deep_research_sequence_valid_mermaid(self):
+        """Test deep research sequence is valid Mermaid."""
+        result = generate_deep_research_sequence()
+        assert "```mermaid" in result
+        assert "sequenceDiagram" in result
+        assert "DeepResearchPipeline" in result
+        assert "LLMProvider" in result
+        assert "VectorStore" in result
+
+    def test_deep_research_sequence_shows_all_steps(self):
+        """Test deep research shows all 5 steps."""
+        result = generate_deep_research_sequence()
+        assert "Step 1: Decomposition" in result
+        assert "Step 2: Parallel Retrieval" in result
+        assert "Step 3: Gap Analysis" in result
+        assert "Step 4: Follow-up Retrieval" in result
+        assert "Step 5: Synthesis" in result
+
+    def test_deep_research_sequence_has_parallel(self):
+        """Test deep research contains parallel operations."""
+        result = generate_deep_research_sequence()
+        assert "par For each sub-question" in result
+        assert "par For each follow-up" in result
+
+    def test_workflow_sequences_contains_all(self):
+        """Test combined workflow has all three sequences."""
+        result = generate_workflow_sequences()
+        assert "### Indexing Pipeline" in result
+        assert "### Wiki Generation Pipeline" in result
+        assert "### Deep Research Pipeline" in result
+
+    def test_workflow_sequences_contains_all_diagrams(self):
+        """Test combined workflow includes all diagram content."""
+        result = generate_workflow_sequences()
+        # Should contain content from all three diagrams
+        assert "RepositoryIndexer" in result  # From indexing
+        assert "WikiGenerator" in result  # From wiki generation
+        assert "DeepResearchPipeline" in result  # From deep research
+
+    def test_all_sequences_close_mermaid_blocks(self):
+        """Test all sequences properly close mermaid code blocks."""
+        for func in [
+            generate_indexing_sequence,
+            generate_wiki_generation_sequence,
+            generate_deep_research_sequence,
+        ]:
+            result = func()
+            # Should have opening and closing backticks
+            assert result.count("```mermaid") == 1
+            assert result.count("```") == 2  # Opening and closing

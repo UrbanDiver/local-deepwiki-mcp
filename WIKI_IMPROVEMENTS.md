@@ -62,10 +62,10 @@ This document tracks planned improvements to the Local DeepWiki documentation ge
 - [ ] Show external vs internal dependencies differently
 - **Files**: `generators/diagrams.py`
 
-### 9. Sequence Diagrams for Workflows
-- [ ] Identify key workflows (indexing, wiki generation, search)
-- [ ] Generate Mermaid sequence diagrams
-- [ ] Add to architecture documentation
+### 9. Sequence Diagrams for Workflows ✅
+- [x] Identify key workflows (indexing, wiki generation, deep research)
+- [x] Generate Mermaid sequence diagrams
+- [x] Add to architecture documentation
 - **Files**: `generators/diagrams.py`, `generators/wiki.py`
 
 ---
