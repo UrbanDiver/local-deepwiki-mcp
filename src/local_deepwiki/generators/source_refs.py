@@ -2,11 +2,14 @@
 
 This module adds a "Relevant Source Files" section to wiki pages,
 listing the source code files that informed the documentation.
+When the repository has a git remote, source references link to
+GitHub/GitLab with line number anchors.
 """
 
 import re
 from pathlib import Path
 
+from local_deepwiki.core.git_utils import GitRepoInfo, build_source_url, get_repo_info
 from local_deepwiki.models import WikiPage, WikiPageStatus
 
 
@@ -66,6 +69,7 @@ def _format_file_entry(
     wiki_path: str | None,
     current_wiki_path: str,
     line_info: dict[str, int] | None = None,
+    repo_info: GitRepoInfo | None = None,
 ) -> str:
     """Format a single source file entry with optional line numbers.
 
@@ -74,6 +78,7 @@ def _format_file_entry(
         wiki_path: Wiki page path for this file (if exists).
         current_wiki_path: Path of the current wiki page.
         line_info: Optional dict with 'start_line' and 'end_line' keys.
+        repo_info: Optional git repository info for GitHub/GitLab links.
 
     Returns:
         Formatted markdown list item.
@@ -84,12 +89,32 @@ def _format_file_entry(
     else:
         display = f"`{file_path}`"
 
-    # Add link if wiki page exists and is different from current
-    if wiki_path and wiki_path != current_wiki_path:
-        rel_path = _relative_path(current_wiki_path, wiki_path)
-        return f"- [{display}]({rel_path})"
+    # Try to build GitHub/GitLab link if repo_info is available
+    source_url = None
+    if repo_info and repo_info.remote_url:
+        source_url = build_source_url(
+            repo_info,
+            file_path,
+            line_info.get("start_line") if line_info else None,
+            line_info.get("end_line") if line_info else None,
+        )
+
+    # Format the entry based on available links
+    if source_url:
+        # Primary link to GitHub/GitLab
+        if wiki_path and wiki_path != current_wiki_path:
+            # Both GitHub link and wiki link
+            rel_path = _relative_path(current_wiki_path, wiki_path)
+            return f"- [{display}]({source_url}) ([wiki]({rel_path}))"
+        else:
+            return f"- [{display}]({source_url})"
     else:
-        return f"- {display}"
+        # Fallback to wiki-only links (existing behavior)
+        if wiki_path and wiki_path != current_wiki_path:
+            rel_path = _relative_path(current_wiki_path, wiki_path)
+            return f"- [{display}]({rel_path})"
+        else:
+            return f"- {display}"
 
 
 def generate_source_refs_section(
@@ -98,6 +123,7 @@ def generate_source_refs_section(
     file_to_wiki: dict[str, str],
     file_line_info: dict[str, dict[str, int]] | None = None,
     max_items: int = 10,
+    repo_info: GitRepoInfo | None = None,
 ) -> str | None:
     """Generate a Relevant Source Files section for a wiki page.
 
@@ -107,6 +133,7 @@ def generate_source_refs_section(
         file_to_wiki: Mapping of source files to wiki paths.
         file_line_info: Optional mapping of file paths to line info dicts.
         max_items: Maximum number of files to list.
+        repo_info: Optional git repository info for GitHub/GitLab links.
 
     Returns:
         Markdown string for Relevant Source Files section, or None if no files.
@@ -132,7 +159,9 @@ def generate_source_refs_section(
         file_path = files_to_show[0]
         wiki_path = file_to_wiki.get(file_path)
         line_info = file_line_info.get(file_path) if file_line_info else None
-        lines.append(_format_file_entry(file_path, wiki_path, current_wiki_path, line_info))
+        lines.append(
+            _format_file_entry(file_path, wiki_path, current_wiki_path, line_info, repo_info)
+        )
     else:
         # Multiple files - list format for overview/module pages
         lines.append("The following source files were used to generate this documentation:")
@@ -141,7 +170,9 @@ def generate_source_refs_section(
         for file_path in files_to_show:
             wiki_path = file_to_wiki.get(file_path)
             line_info = file_line_info.get(file_path) if file_line_info else None
-            lines.append(_format_file_entry(file_path, wiki_path, current_wiki_path, line_info))
+            lines.append(
+                _format_file_entry(file_path, wiki_path, current_wiki_path, line_info, repo_info)
+            )
 
     if summary_note:
         lines.append(summary_note)
@@ -152,18 +183,23 @@ def generate_source_refs_section(
 def add_source_refs_sections(
     pages: list[WikiPage],
     page_statuses: dict[str, WikiPageStatus],
+    repo_path: Path | None = None,
 ) -> list[WikiPage]:
     """Add Relevant Source Files sections to wiki pages.
 
     Args:
         pages: List of wiki pages.
         page_statuses: Dictionary mapping page paths to their status (with source_files).
+        repo_path: Optional path to repository root for GitHub/GitLab links.
 
     Returns:
         List of wiki pages with Relevant Source Files sections added.
     """
     # Build file to wiki path mapping
     file_to_wiki = build_file_to_wiki_map(pages)
+
+    # Get git repo info if repo_path is provided
+    repo_info = get_repo_info(repo_path) if repo_path else None
 
     updated_pages = []
     for page in pages:
@@ -179,12 +215,13 @@ def add_source_refs_sections(
             updated_pages.append(page)
             continue
 
-        # Generate Relevant Source Files section with line info
+        # Generate Relevant Source Files section with line info and GitHub links
         source_refs = generate_source_refs_section(
             status.source_files,
             page.path,
             file_to_wiki,
             file_line_info=status.source_line_info,
+            repo_info=repo_info,
         )
 
         if source_refs:

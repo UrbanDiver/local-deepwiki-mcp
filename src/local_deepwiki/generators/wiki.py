@@ -434,8 +434,8 @@ class WikiGenerator:
 
         pages = add_cross_links(pages, self.entity_registry)
 
-        # Add Relevant Source Files sections
-        pages = add_source_refs_sections(pages, self._page_statuses)
+        # Add Relevant Source Files sections (with GitHub/GitLab links if available)
+        pages = add_source_refs_sections(pages, self._page_statuses, self._repo_path)
 
         # Add See Also sections
         if progress_callback:

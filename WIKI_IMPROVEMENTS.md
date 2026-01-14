@@ -102,11 +102,11 @@ This document tracks planned improvements to the Local DeepWiki documentation ge
 - [ ] Support streaming responses for real-time feedback
 - **Files**: `web/app.py`, new `web/chat.py`
 
-### 14. GitHub/GitLab Links
-- [ ] Detect remote origin URL from git config
-- [ ] Convert source references to clickable GitHub/GitLab URLs
-- [ ] Support branch/commit-specific links for reproducibility
-- **Files**: `generators/source_refs.py`, `generators/wiki.py`
+### 14. GitHub/GitLab Links ✅
+- [x] Detect remote origin URL from git config
+- [x] Convert source references to clickable GitHub/GitLab URLs
+- [x] Support branch-specific links for reproducibility
+- **Files**: `core/git_utils.py`, `generators/source_refs.py`, `generators/wiki.py`
 
 ### 15. Multi-Repository Support
 - [ ] Index and cross-reference multiple related repositories
@@ -167,4 +167,4 @@ This document tracks planned improvements to the Local DeepWiki documentation ge
 - Current wiki generation uses Ollama (qwen3-coder:30b) by default
 - Cross-linking was added in commit `f933c46`
 - Web UI runs on Flask at port 8080
-- All 564 tests currently pass
+- All 589 tests currently pass
