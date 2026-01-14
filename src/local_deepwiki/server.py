@@ -680,6 +680,9 @@ async def handle_deep_research(args: dict[str, Any]) -> list[TextContent]:
     # Use max_chunks from args if provided, otherwise use preset/config value
     effective_max_chunks = max_chunks if args.get("max_chunks") is not None else dr_config.max_total_chunks
 
+    # Get provider-specific prompts
+    prompts = config.get_prompts()
+
     pipeline = DeepResearchPipeline(
         vector_store=vector_store,
         llm_provider=llm,
@@ -689,6 +692,9 @@ async def handle_deep_research(args: dict[str, Any]) -> list[TextContent]:
         max_follow_up_queries=dr_config.max_follow_up_queries,
         synthesis_temperature=dr_config.synthesis_temperature,
         synthesis_max_tokens=dr_config.synthesis_max_tokens,
+        decomposition_prompt=prompts.research_decomposition,
+        gap_analysis_prompt=prompts.research_gap_analysis,
+        synthesis_prompt=prompts.research_synthesis,
     )
 
     try:

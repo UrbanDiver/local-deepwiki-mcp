@@ -95,6 +95,9 @@ class WikiGenerator:
 
         self.llm = get_llm_provider(self.config.llm)
 
+        # Get provider-specific system prompt
+        self._system_prompt = self.config.get_prompts().wiki_system
+
         # Entity registry for cross-linking
         self.entity_registry = EntityRegistry()
 
@@ -604,7 +607,7 @@ RULES:
 
 Return ONLY the Description and Key Features sections as markdown."""
 
-        llm_content = await self.llm.generate(prompt, system_prompt=SYSTEM_PROMPT)
+        llm_content = await self.llm.generate(prompt, system_prompt=self._system_prompt)
 
         # Build final content: title + LLM sections + pre-generated sections
         final_parts = [f"# {repo_name}\n"]
@@ -751,7 +754,7 @@ CRITICAL CONSTRAINTS:
 
 Format as markdown with clear sections."""
 
-        content = await self.llm.generate(prompt, system_prompt=SYSTEM_PROMPT)
+        content = await self.llm.generate(prompt, system_prompt=self._system_prompt)
 
         # Add workflow sequence diagrams
         content += "\n\n## Workflow Sequences\n\n"
@@ -848,7 +851,7 @@ CRITICAL CONSTRAINTS:
 
 Format as markdown."""
 
-            content = await self.llm.generate(prompt, system_prompt=SYSTEM_PROMPT)
+            content = await self.llm.generate(prompt, system_prompt=self._system_prompt)
 
             page = WikiPage(
                 path=page_path,
@@ -1002,7 +1005,7 @@ CRITICAL CONSTRAINTS:
 Format as markdown with clear sections.
 Do NOT include mermaid class diagrams - they will be auto-generated."""
 
-            content = await self.llm.generate(prompt, system_prompt=SYSTEM_PROMPT)
+            content = await self.llm.generate(prompt, system_prompt=self._system_prompt)
 
             # Strip any LLM-generated class diagram sections (we add our own)
             # Remove "## Class Diagram" section and any mermaid classDiagram blocks
@@ -1165,7 +1168,7 @@ CRITICAL CONSTRAINTS:
 
 Format as markdown."""
 
-        content = await self.llm.generate(prompt, system_prompt=SYSTEM_PROMPT)
+        content = await self.llm.generate(prompt, system_prompt=self._system_prompt)
 
         # Generate auto-generated module dependency graph
         dep_graph = generate_dependency_graph(import_chunks, "local_deepwiki")

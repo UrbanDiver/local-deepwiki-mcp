@@ -9,8 +9,14 @@ import pytest
 from local_deepwiki.config import (
     Config,
     DeepResearchConfig,
+    ProviderPromptsConfig,
+    PromptsConfig,
     RESEARCH_PRESETS,
     ResearchPreset,
+    WIKI_SYSTEM_PROMPTS,
+    RESEARCH_DECOMPOSITION_PROMPTS,
+    RESEARCH_GAP_ANALYSIS_PROMPTS,
+    RESEARCH_SYNTHESIS_PROMPTS,
     config_context,
     get_config,
     reset_config,
@@ -388,3 +394,135 @@ class TestResearchPresets:
         _ = config.with_preset("quick")
 
         assert config.max_sub_questions == original_value
+
+
+class TestProviderPrompts:
+    """Tests for provider-specific prompts configuration."""
+
+    def test_provider_prompts_config_has_all_fields(self):
+        """Test ProviderPromptsConfig has all required prompt fields."""
+        prompts = ProviderPromptsConfig(
+            wiki_system="wiki",
+            research_decomposition="decomp",
+            research_gap_analysis="gap",
+            research_synthesis="synth",
+        )
+        assert prompts.wiki_system == "wiki"
+        assert prompts.research_decomposition == "decomp"
+        assert prompts.research_gap_analysis == "gap"
+        assert prompts.research_synthesis == "synth"
+
+    def test_prompts_config_has_all_providers(self):
+        """Test PromptsConfig has configurations for all providers."""
+        config = PromptsConfig()
+        assert config.ollama is not None
+        assert config.anthropic is not None
+        assert config.openai is not None
+
+    def test_default_prompts_are_different_per_provider(self):
+        """Test that default prompts are optimized differently per provider."""
+        config = PromptsConfig()
+
+        # Ollama prompts should be shorter (for smaller context windows)
+        assert len(config.ollama.wiki_system) < len(config.anthropic.wiki_system)
+
+        # All providers should have non-empty prompts
+        for provider in [config.ollama, config.anthropic, config.openai]:
+            assert len(provider.wiki_system) > 0
+            assert len(provider.research_decomposition) > 0
+            assert len(provider.research_gap_analysis) > 0
+            assert len(provider.research_synthesis) > 0
+
+    def test_get_for_provider_ollama(self):
+        """Test get_for_provider returns ollama prompts."""
+        config = PromptsConfig()
+        prompts = config.get_for_provider("ollama")
+        assert prompts == config.ollama
+
+    def test_get_for_provider_anthropic(self):
+        """Test get_for_provider returns anthropic prompts."""
+        config = PromptsConfig()
+        prompts = config.get_for_provider("anthropic")
+        assert prompts == config.anthropic
+
+    def test_get_for_provider_openai(self):
+        """Test get_for_provider returns openai prompts."""
+        config = PromptsConfig()
+        prompts = config.get_for_provider("openai")
+        assert prompts == config.openai
+
+    def test_get_for_provider_unknown_defaults_to_anthropic(self):
+        """Test get_for_provider defaults to anthropic for unknown providers."""
+        config = PromptsConfig()
+        prompts = config.get_for_provider("unknown_provider")
+        assert prompts == config.anthropic
+
+    def test_config_get_prompts_uses_current_provider(self):
+        """Test Config.get_prompts() returns prompts for current LLM provider."""
+        config = Config()
+        # Default provider is ollama
+        assert config.llm.provider == "ollama"
+        prompts = config.get_prompts()
+        assert prompts == config.prompts.ollama
+
+    def test_config_get_prompts_changes_with_provider(self):
+        """Test Config.get_prompts() changes when provider changes."""
+        config = Config()
+
+        # Test with different providers
+        config.llm.provider = "anthropic"  # type: ignore
+        prompts_anthropic = config.get_prompts()
+        assert prompts_anthropic == config.prompts.anthropic
+
+        config.llm.provider = "openai"  # type: ignore
+        prompts_openai = config.get_prompts()
+        assert prompts_openai == config.prompts.openai
+
+    def test_wiki_system_prompts_dict_has_all_providers(self):
+        """Test WIKI_SYSTEM_PROMPTS has entries for all providers."""
+        assert "ollama" in WIKI_SYSTEM_PROMPTS
+        assert "anthropic" in WIKI_SYSTEM_PROMPTS
+        assert "openai" in WIKI_SYSTEM_PROMPTS
+
+    def test_research_prompts_dicts_have_all_providers(self):
+        """Test all research prompt dicts have entries for all providers."""
+        for prompts_dict in [
+            RESEARCH_DECOMPOSITION_PROMPTS,
+            RESEARCH_GAP_ANALYSIS_PROMPTS,
+            RESEARCH_SYNTHESIS_PROMPTS,
+        ]:
+            assert "ollama" in prompts_dict
+            assert "anthropic" in prompts_dict
+            assert "openai" in prompts_dict
+
+    def test_prompts_contain_essential_instructions(self):
+        """Test that prompts contain essential instructions."""
+        config = PromptsConfig()
+
+        # Wiki prompts should mention documentation
+        assert "documentation" in config.anthropic.wiki_system.lower()
+
+        # Decomposition prompts should mention JSON
+        assert "json" in config.anthropic.research_decomposition.lower()
+
+        # Gap analysis prompts should mention JSON
+        assert "json" in config.anthropic.research_gap_analysis.lower()
+
+        # Synthesis prompts should mention code/architecture
+        assert "code" in config.anthropic.research_synthesis.lower() or \
+               "architecture" in config.anthropic.research_synthesis.lower()
+
+    def test_custom_prompts_can_override_defaults(self):
+        """Test that custom prompts can be provided via config."""
+        custom_prompt = "Custom wiki prompt for testing"
+        custom_ollama = ProviderPromptsConfig(
+            wiki_system=custom_prompt,
+            research_decomposition="custom decomp",
+            research_gap_analysis="custom gap",
+            research_synthesis="custom synth",
+        )
+        config = Config(
+            prompts=PromptsConfig(ollama=custom_ollama)
+        )
+
+        assert config.prompts.ollama.wiki_system == custom_prompt

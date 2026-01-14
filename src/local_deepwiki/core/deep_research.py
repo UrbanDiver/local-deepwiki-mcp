@@ -131,6 +131,9 @@ class DeepResearchPipeline:
         max_follow_up_queries: int = 3,
         synthesis_temperature: float = 0.5,
         synthesis_max_tokens: int = 4096,
+        decomposition_prompt: str | None = None,
+        gap_analysis_prompt: str | None = None,
+        synthesis_prompt: str | None = None,
     ):
         """Initialize the deep research pipeline.
 
@@ -143,6 +146,9 @@ class DeepResearchPipeline:
             max_follow_up_queries: Maximum follow-up queries in gap analysis.
             synthesis_temperature: LLM temperature for synthesis (0.0-2.0).
             synthesis_max_tokens: Maximum tokens in synthesis response.
+            decomposition_prompt: Custom system prompt for decomposition (optional).
+            gap_analysis_prompt: Custom system prompt for gap analysis (optional).
+            synthesis_prompt: Custom system prompt for synthesis (optional).
         """
         self.vector_store = vector_store
         self.llm = llm_provider
@@ -152,6 +158,11 @@ class DeepResearchPipeline:
         self.max_follow_up_queries = max_follow_up_queries
         self.synthesis_temperature = synthesis_temperature
         self.synthesis_max_tokens = synthesis_max_tokens
+
+        # Use custom prompts if provided, otherwise use defaults
+        self.decomposition_prompt = decomposition_prompt or DECOMPOSITION_SYSTEM_PROMPT
+        self.gap_analysis_prompt = gap_analysis_prompt or GAP_ANALYSIS_SYSTEM_PROMPT
+        self.synthesis_prompt = synthesis_prompt or SYNTHESIS_SYSTEM_PROMPT
 
     async def research(
         self,
@@ -356,7 +367,7 @@ class DeepResearchPipeline:
 
         response = await self.llm.generate(
             prompt=prompt,
-            system_prompt=DECOMPOSITION_SYSTEM_PROMPT,
+            system_prompt=self.decomposition_prompt,
             temperature=0.3,  # Lower temperature for structured output
         )
 
@@ -472,7 +483,7 @@ class DeepResearchPipeline:
 
         response = await self.llm.generate(
             prompt=prompt,
-            system_prompt=GAP_ANALYSIS_SYSTEM_PROMPT,
+            system_prompt=self.gap_analysis_prompt,
             temperature=0.3,
         )
 
@@ -632,7 +643,7 @@ class DeepResearchPipeline:
 
         answer = await self.llm.generate(
             prompt=prompt,
-            system_prompt=SYNTHESIS_SYSTEM_PROMPT,
+            system_prompt=self.synthesis_prompt,
             temperature=self.synthesis_temperature,
             max_tokens=self.synthesis_max_tokens,
         )

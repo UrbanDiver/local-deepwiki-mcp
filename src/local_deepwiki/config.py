@@ -280,6 +280,149 @@ class LLMCacheConfig(BaseModel):
     )
 
 
+# Default prompts optimized for each provider
+# Ollama: Concise, direct (local models have limited context)
+# Anthropic: Detailed, nuanced (Claude excels at complex instructions)
+# OpenAI: Balanced, structured
+
+WIKI_SYSTEM_PROMPTS = {
+    "ollama": """You are a technical documentation expert. Generate clear, concise documentation.
+
+RULES:
+- Use markdown formatting
+- Write class/function names as plain text for cross-linking
+- ONLY describe what you see in the code - never guess or invent
+- If uncertain, omit the information""",
+    "anthropic": """You are a technical documentation expert. Generate clear, concise documentation for code.
+
+FORMATTING:
+- Use markdown formatting
+- Include code examples where helpful
+- When mentioning class or function names in prose explanations, write them as plain text (e.g., "The WikiGenerator class") rather than inline code, so they can be cross-linked
+- Only use backticks for code snippets, variable names in context, or when showing exact syntax
+
+ACCURACY CONSTRAINTS - CRITICAL:
+- ONLY describe what you can verify from the code/context provided
+- NEVER invent or guess features, libraries, patterns, or capabilities not explicitly shown
+- NEVER fabricate CLI commands, API endpoints, or configuration options
+- If the context doesn't show something, DO NOT mention it
+- When uncertain, omit the information rather than guess
+- Stick to facts from the provided code - do not extrapolate or assume
+
+CONTENT GUIDELINES:
+- Focus on explaining what the code does and how to use it
+- Keep explanations practical and actionable
+- Base technology stack descriptions ONLY on actual dependencies shown
+- Base directory structure descriptions ONLY on actual files listed""",
+    "openai": """You are a technical documentation expert. Generate clear, concise documentation for code.
+
+FORMATTING:
+- Use markdown formatting
+- Include code examples where helpful
+- Write class/function names as plain text (not in backticks) so they can be cross-linked
+- Only use backticks for actual code snippets
+
+ACCURACY RULES:
+- ONLY describe what is shown in the provided code
+- NEVER invent features, patterns, or capabilities not explicitly shown
+- If uncertain about something, omit it rather than guess
+- Base all descriptions on actual code/dependencies provided""",
+}
+
+RESEARCH_DECOMPOSITION_PROMPTS = {
+    "ollama": """Break complex questions into simpler sub-questions. Respond with JSON only.""",
+    "anthropic": """You are analyzing questions about codebases. Your task is to break down complex questions into simpler sub-questions that can be investigated independently.
+
+Always respond with valid JSON only, no other text.""",
+    "openai": """You are analyzing questions about codebases. Break down complex questions into simpler sub-questions for investigation.
+
+Always respond with valid JSON only.""",
+}
+
+RESEARCH_GAP_ANALYSIS_PROMPTS = {
+    "ollama": """Identify missing information needed to answer the question. Respond with JSON only.""",
+    "anthropic": """You are analyzing code context to identify missing information. Your task is to determine what additional context would help answer the question more completely.
+
+Always respond with valid JSON only, no other text.""",
+    "openai": """You are analyzing code context to identify gaps. Determine what additional context would help answer the question.
+
+Always respond with valid JSON only.""",
+}
+
+RESEARCH_SYNTHESIS_PROMPTS = {
+    "ollama": """You are a senior software engineer. Explain code architecture clearly based on the provided context. Cite specific files and line numbers.""",
+    "anthropic": """You are a senior software engineer explaining code architecture. Provide clear, accurate answers based on the code context provided. Always cite specific files and line numbers when referencing code.
+
+When explaining:
+- Be precise and accurate
+- Reference specific code locations
+- Explain architectural decisions and patterns
+- Note any limitations or uncertainties in your analysis""",
+    "openai": """You are a senior software engineer explaining code architecture. Provide clear, accurate answers based on the code context provided.
+
+Guidelines:
+- Cite specific files and line numbers when referencing code
+- Explain architectural reasoning
+- Note any limitations or uncertainties""",
+}
+
+
+class ProviderPromptsConfig(BaseModel):
+    """Prompts configuration for a specific provider."""
+
+    wiki_system: str = Field(description="System prompt for wiki documentation generation")
+    research_decomposition: str = Field(description="System prompt for question decomposition")
+    research_gap_analysis: str = Field(description="System prompt for gap analysis")
+    research_synthesis: str = Field(description="System prompt for answer synthesis")
+
+
+class PromptsConfig(BaseModel):
+    """Provider-specific prompts configuration."""
+
+    ollama: ProviderPromptsConfig = Field(
+        default_factory=lambda: ProviderPromptsConfig(
+            wiki_system=WIKI_SYSTEM_PROMPTS["ollama"],
+            research_decomposition=RESEARCH_DECOMPOSITION_PROMPTS["ollama"],
+            research_gap_analysis=RESEARCH_GAP_ANALYSIS_PROMPTS["ollama"],
+            research_synthesis=RESEARCH_SYNTHESIS_PROMPTS["ollama"],
+        )
+    )
+    anthropic: ProviderPromptsConfig = Field(
+        default_factory=lambda: ProviderPromptsConfig(
+            wiki_system=WIKI_SYSTEM_PROMPTS["anthropic"],
+            research_decomposition=RESEARCH_DECOMPOSITION_PROMPTS["anthropic"],
+            research_gap_analysis=RESEARCH_GAP_ANALYSIS_PROMPTS["anthropic"],
+            research_synthesis=RESEARCH_SYNTHESIS_PROMPTS["anthropic"],
+        )
+    )
+    openai: ProviderPromptsConfig = Field(
+        default_factory=lambda: ProviderPromptsConfig(
+            wiki_system=WIKI_SYSTEM_PROMPTS["openai"],
+            research_decomposition=RESEARCH_DECOMPOSITION_PROMPTS["openai"],
+            research_gap_analysis=RESEARCH_GAP_ANALYSIS_PROMPTS["openai"],
+            research_synthesis=RESEARCH_SYNTHESIS_PROMPTS["openai"],
+        )
+    )
+
+    def get_for_provider(self, provider: str) -> ProviderPromptsConfig:
+        """Get prompts for a specific provider.
+
+        Args:
+            provider: Provider name ("ollama", "anthropic", "openai").
+
+        Returns:
+            ProviderPromptsConfig for the specified provider.
+            Falls back to anthropic prompts for unknown providers.
+        """
+        if provider == "ollama":
+            return self.ollama
+        elif provider == "openai":
+            return self.openai
+        else:
+            # Default to anthropic (most detailed prompts)
+            return self.anthropic
+
+
 class Config(BaseModel):
     """Main configuration."""
 
@@ -291,6 +434,15 @@ class Config(BaseModel):
     wiki: WikiConfig = Field(default_factory=WikiConfig)
     deep_research: DeepResearchConfig = Field(default_factory=DeepResearchConfig)
     output: OutputConfig = Field(default_factory=OutputConfig)
+    prompts: PromptsConfig = Field(default_factory=PromptsConfig)
+
+    def get_prompts(self) -> ProviderPromptsConfig:
+        """Get prompts for the currently configured LLM provider.
+
+        Returns:
+            ProviderPromptsConfig for the current LLM provider.
+        """
+        return self.prompts.get_for_provider(self.llm.provider)
 
     @classmethod
     def load(cls, config_path: Path | None = None) -> "Config":

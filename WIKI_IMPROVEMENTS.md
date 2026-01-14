@@ -124,10 +124,10 @@ This document tracks planned improvements to the Local DeepWiki documentation ge
 - [x] Support cancellation of in-progress research
 - **Files**: `core/deep_research.py`, `server.py`
 
-### 17. Provider-Specific Prompts
-- [ ] Tune prompts for Anthropic vs Ollama vs OpenAI strengths
-- [ ] Add prompt templates per provider in config
-- [ ] Optimize token usage for each provider's pricing
+### 17. Provider-Specific Prompts ✅
+- [x] Tune prompts for Anthropic vs Ollama vs OpenAI strengths
+- [x] Add prompt templates per provider in config
+- [x] Optimize token usage for each provider's pricing
 - **Files**: `core/deep_research.py`, `generators/wiki.py`, `config.py`
 
 ### 18. Response Caching ✅
@@ -167,4 +167,4 @@ This document tracks planned improvements to the Local DeepWiki documentation ge
 - Current wiki generation uses Ollama (qwen3-coder:30b) by default
 - Cross-linking was added in commit `f933c46`
 - Web UI runs on Flask at port 8080
-- All 603 tests currently pass
+- All 686 tests currently pass
