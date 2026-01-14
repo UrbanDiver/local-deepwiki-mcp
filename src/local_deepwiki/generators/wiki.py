@@ -1230,11 +1230,20 @@ Format as markdown."""
 
         content = await self.llm.generate(prompt, system_prompt=self._system_prompt)
 
-        # Generate auto-generated module dependency graph
-        dep_graph = generate_dependency_graph(import_chunks, "local_deepwiki")
+        # Generate auto-generated module dependency graph with enhanced features
+        dep_graph = generate_dependency_graph(
+            import_chunks,
+            "local_deepwiki",
+            detect_circular=True,
+            show_external=True,
+            max_external=10,
+            wiki_base_path="files/",
+        )
         if dep_graph:
             content += "\n\n## Module Dependency Graph\n\n"
-            content += "The following diagram shows internal module dependencies:\n\n"
+            content += "The following diagram shows module dependencies. "
+            content += "Click on a module to view its documentation. "
+            content += "External dependencies are shown with dashed borders.\n\n"
             content += dep_graph
 
         return WikiPage(

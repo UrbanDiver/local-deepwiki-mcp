@@ -280,19 +280,35 @@ def generate_dependency_graph(
     chunks: list,
     project_name: str = "project",
     detect_circular: bool = True,
+    show_external: bool = False,
+    max_external: int = 10,
+    wiki_base_path: str = "",
 ) -> str | None:
-    """Generate a Mermaid flowchart showing module dependencies with circular detection.
+    """Generate an enhanced Mermaid flowchart showing module dependencies.
+
+    Features:
+    - Subgraphs grouping modules by top-level directory
+    - Clickable nodes linking to wiki pages (when wiki_base_path provided)
+    - Optional external dependency display with different styling
+    - Circular dependency detection and highlighting
 
     Args:
         chunks: List of CodeChunk objects (should include IMPORT chunks).
         project_name: Name of the project for filtering internal imports.
         detect_circular: Whether to highlight circular dependencies.
+        show_external: Whether to show external (third-party) dependencies.
+        max_external: Maximum number of external dependencies to display.
+        wiki_base_path: Base path for wiki links (e.g., "files/"). Empty disables links.
 
     Returns:
         Mermaid flowchart markdown string, or None if no dependencies found.
     """
-    # Collect dependencies: module -> set of imports
+    # Collect dependencies: module -> set of internal imports
     dependencies: dict[str, set[str]] = {}
+    # Collect external dependencies: ext_module -> count of imports
+    external_deps: dict[str, int] = {}
+    # Track which modules import which external deps
+    module_external_deps: dict[str, set[str]] = {}
 
     for chunk in chunks:
         if hasattr(chunk, "chunk"):
@@ -307,6 +323,8 @@ def generate_dependency_graph(
 
         if module not in dependencies:
             dependencies[module] = set()
+        if module not in module_external_deps:
+            module_external_deps[module] = set()
 
         # Parse imports from content
         for line in chunk.content.split("\n"):
@@ -314,9 +332,16 @@ def generate_dependency_graph(
             if not line:
                 continue
 
+            # Check for internal import
             imported = _parse_import_line(line, project_name)
             if imported:
                 dependencies[module].add(imported)
+            elif show_external:
+                # Parse external import
+                ext_module = _parse_external_import(line)
+                if ext_module:
+                    external_deps[ext_module] = external_deps.get(ext_module, 0) + 1
+                    module_external_deps[module].add(ext_module)
 
     if not dependencies:
         return None
@@ -330,26 +355,57 @@ def generate_dependency_graph(
         if internal_imports:
             internal_deps[module] = internal_imports
 
-    if not internal_deps:
-        return None
+    # Group modules by top-level directory for subgraphs
+    module_groups: dict[str, list[str]] = {}
+    for module in sorted(internal_modules):
+        parts = module.split(".")
+        group = parts[0] if parts else "other"
+        if group not in module_groups:
+            module_groups[group] = []
+        module_groups[group].append(module)
 
     # Detect circular dependencies
     circular_edges: set[tuple[str, str]] = set()
-    if detect_circular:
+    if detect_circular and internal_deps:
         circular_edges = _find_circular_dependencies(internal_deps)
 
     # Build Mermaid flowchart
     lines = ["```mermaid", "flowchart TD"]
 
-    # Create node definitions
+    # Create node IDs mapping
     node_ids: dict[str, str] = {}
-    for i, module in enumerate(sorted(internal_modules)):
-        node_id = f"M{i}"
-        node_ids[module] = node_id
-        display_name = module.split(".")[-1]
-        lines.append(f"    {node_id}[{display_name}]")
+    node_idx = 0
+    for module in sorted(internal_modules):
+        node_ids[module] = f"M{node_idx}"
+        node_idx += 1
 
-    # Add edges
+    # Add subgraphs for each module group
+    for group_name in sorted(module_groups.keys()):
+        modules = module_groups[group_name]
+        safe_group = sanitize_mermaid_name(group_name)
+        display_group = group_name.replace("_", " ").title()
+        lines.append(f"    subgraph {safe_group}[{display_group}]")
+        for module in sorted(modules):
+            node_id = node_ids[module]
+            display_name = module.split(".")[-1]
+            lines.append(f"        {node_id}[{display_name}]")
+        lines.append("    end")
+
+    # Add external dependencies if enabled
+    ext_node_ids: dict[str, str] = {}
+    if show_external and external_deps:
+        # Get top external deps by import count
+        top_external = sorted(external_deps.items(), key=lambda x: -x[1])[:max_external]
+        if top_external:
+            lines.append("    subgraph external[External Dependencies]")
+            for i, (ext, _count) in enumerate(top_external):
+                ext_id = f"E{i}"
+                ext_node_ids[ext] = ext_id
+                # Use rounded rectangle for external deps
+                lines.append(f"        {ext_id}([{ext}]):::external")
+            lines.append("    end")
+
+    # Add internal dependency edges
     for module, imports in sorted(internal_deps.items()):
         from_id = node_ids.get(module)
         if not from_id:
@@ -358,10 +414,29 @@ def generate_dependency_graph(
             to_id = node_ids.get(imp)
             if to_id and from_id != to_id:
                 if (module, imp) in circular_edges or (imp, module) in circular_edges:
-                    # Highlight circular dependency in red
                     lines.append(f"    {from_id} -.->|circular| {to_id}")
                 else:
                     lines.append(f"    {from_id} --> {to_id}")
+
+    # Add external dependency edges
+    if show_external and ext_node_ids:
+        for module, ext_imports in sorted(module_external_deps.items()):
+            from_id = node_ids.get(module)
+            if not from_id:
+                continue
+            for ext in sorted(ext_imports):
+                ext_id = ext_node_ids.get(ext)
+                if ext_id:
+                    lines.append(f"    {from_id} -.-> {ext_id}")
+
+    # Add click handlers for wiki links
+    if wiki_base_path:
+        for module, node_id in sorted(node_ids.items()):
+            wiki_path = _module_to_wiki_path(module, project_name)
+            lines.append(f'    click {node_id} "{wiki_base_path}{wiki_path}"')
+
+    # Add styling
+    lines.append("    classDef external fill:#2d2d3d,stroke:#666,stroke-dasharray: 5 5")
 
     # Style circular dependencies
     if circular_edges:
@@ -382,6 +457,50 @@ def generate_dependency_graph(
     lines.append("```")
 
     return "\n".join(lines)
+
+
+def _parse_external_import(line: str) -> str | None:
+    """Parse an import line to extract external module name.
+
+    Args:
+        line: Import line like 'from pathlib import Path' or 'import os'
+
+    Returns:
+        Top-level module name if external import, None otherwise.
+    """
+    # from X import Y - extract X's top-level module
+    from_match = re.match(r"from\s+([\w.]+)\s+import", line)
+    if from_match:
+        module = from_match.group(1)
+        # Get top-level package name
+        top_level = module.split(".")[0]
+        # Skip relative imports and stdlib typing
+        if top_level and not top_level.startswith("_"):
+            return top_level
+        return None
+
+    # import X - extract X's top-level module
+    import_match = re.match(r"import\s+([\w.]+)", line)
+    if import_match:
+        module = import_match.group(1)
+        top_level = module.split(".")[0]
+        if top_level and not top_level.startswith("_"):
+            return top_level
+
+    return None
+
+
+def _module_to_wiki_path(module: str, project_name: str) -> str:
+    """Convert module name to wiki file path.
+
+    Args:
+        module: Module name like 'core.parser'
+        project_name: Project name like 'local_deepwiki'
+
+    Returns:
+        Wiki path like 'src/local_deepwiki/core/parser.md'
+    """
+    return f"src/{project_name}/{module.replace('.', '/')}.md"
 
 
 def _find_circular_dependencies(deps: dict[str, set[str]]) -> set[tuple[str, str]]:

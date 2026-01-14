@@ -7,6 +7,8 @@ from local_deepwiki.generators.diagrams import (
     _extract_class_attributes,
     _extract_method_signature,
     _find_circular_dependencies,
+    _module_to_wiki_path,
+    _parse_external_import,
     _parse_import_line,
     _path_to_module,
     generate_class_diagram,
@@ -589,3 +591,201 @@ class TestWorkflowSequenceDiagrams:
             # Should have opening and closing backticks
             assert result.count("```mermaid") == 1
             assert result.count("```") == 2  # Opening and closing
+
+
+class TestEnhancedDependencyGraph:
+    """Tests for enhanced dependency graph features."""
+
+    def test_subgraph_grouping(self):
+        """Test modules are grouped by directory in subgraphs."""
+        chunks = [
+            CodeChunk(
+                id="1",
+                file_path="src/myproject/core/parser.py",
+                content="from myproject.core.chunker import chunk",
+                chunk_type=ChunkType.IMPORT,
+                language=Language.PYTHON,
+                start_line=1,
+                end_line=1,
+            ),
+            CodeChunk(
+                id="2",
+                file_path="src/myproject/core/chunker.py",
+                content="from myproject.generators.wiki import WikiGen",
+                chunk_type=ChunkType.IMPORT,
+                language=Language.PYTHON,
+                start_line=1,
+                end_line=1,
+            ),
+            CodeChunk(
+                id="3",
+                file_path="src/myproject/generators/wiki.py",
+                content="# wiki generator",
+                chunk_type=ChunkType.MODULE,
+                language=Language.PYTHON,
+                start_line=1,
+                end_line=1,
+            ),
+        ]
+        diagram = generate_dependency_graph(chunks, "myproject")
+        assert diagram is not None
+        assert "subgraph" in diagram
+        assert "core" in diagram.lower() or "Core" in diagram
+
+    def test_clickable_links(self):
+        """Test click handlers are added when wiki_base_path provided."""
+        chunks = [
+            CodeChunk(
+                id="1",
+                file_path="src/myproject/core/parser.py",
+                content="from myproject.core.chunker import chunk",
+                chunk_type=ChunkType.IMPORT,
+                language=Language.PYTHON,
+                start_line=1,
+                end_line=1,
+            ),
+            CodeChunk(
+                id="2",
+                file_path="src/myproject/core/chunker.py",
+                content="# chunker",
+                chunk_type=ChunkType.MODULE,
+                language=Language.PYTHON,
+                start_line=1,
+                end_line=1,
+            ),
+        ]
+        diagram = generate_dependency_graph(chunks, "myproject", wiki_base_path="files/")
+        assert diagram is not None
+        assert "click" in diagram
+        assert "files/" in diagram
+
+    def test_no_clickable_links_without_base_path(self):
+        """Test click handlers are not added when wiki_base_path is empty."""
+        chunks = [
+            CodeChunk(
+                id="1",
+                file_path="src/myproject/core/parser.py",
+                content="from myproject.core.chunker import chunk",
+                chunk_type=ChunkType.IMPORT,
+                language=Language.PYTHON,
+                start_line=1,
+                end_line=1,
+            ),
+            CodeChunk(
+                id="2",
+                file_path="src/myproject/core/chunker.py",
+                content="# chunker",
+                chunk_type=ChunkType.MODULE,
+                language=Language.PYTHON,
+                start_line=1,
+                end_line=1,
+            ),
+        ]
+        diagram = generate_dependency_graph(chunks, "myproject", wiki_base_path="")
+        assert diagram is not None
+        assert "click" not in diagram
+
+    def test_external_dependencies_shown(self):
+        """Test external deps shown with different styling when enabled."""
+        chunks = [
+            CodeChunk(
+                id="1",
+                file_path="src/myproject/core/parser.py",
+                content="from pathlib import Path\nimport os\nfrom pydantic import BaseModel",
+                chunk_type=ChunkType.IMPORT,
+                language=Language.PYTHON,
+                start_line=1,
+                end_line=3,
+            ),
+        ]
+        diagram = generate_dependency_graph(chunks, "myproject", show_external=True)
+        # May or may not have internal deps, but if external shown
+        if diagram:
+            assert "external" in diagram.lower() or "External" in diagram
+            assert "stroke-dasharray" in diagram
+
+    def test_external_dependencies_hidden(self):
+        """Test external deps hidden when show_external=False."""
+        chunks = [
+            CodeChunk(
+                id="1",
+                file_path="src/myproject/core/parser.py",
+                content="from pathlib import Path\nimport os",
+                chunk_type=ChunkType.IMPORT,
+                language=Language.PYTHON,
+                start_line=1,
+                end_line=2,
+            ),
+        ]
+        diagram = generate_dependency_graph(chunks, "myproject", show_external=False)
+        # External deps should not appear
+        if diagram:
+            # External subgraph should not exist
+            assert "External Dependencies" not in diagram
+
+    def test_max_external_limit(self):
+        """Test max_external limits number of external deps shown."""
+        chunks = [
+            CodeChunk(
+                id="1",
+                file_path="src/myproject/core/parser.py",
+                content="import os\nimport sys\nimport json\nimport re\nimport pathlib",
+                chunk_type=ChunkType.IMPORT,
+                language=Language.PYTHON,
+                start_line=1,
+                end_line=5,
+            ),
+        ]
+        diagram = generate_dependency_graph(
+            chunks, "myproject", show_external=True, max_external=2
+        )
+        if diagram and "External" in diagram:
+            # Count external nodes (E0, E1, etc.)
+            import re as regex
+
+            ext_nodes = regex.findall(r"E\d+\(\[", diagram)
+            assert len(ext_nodes) <= 2
+
+
+class TestParseExternalImport:
+    """Tests for _parse_external_import function."""
+
+    def test_parses_from_import(self):
+        """Test parsing 'from X import Y' style."""
+        result = _parse_external_import("from pathlib import Path")
+        assert result == "pathlib"
+
+    def test_parses_import_statement(self):
+        """Test parsing 'import X' style."""
+        result = _parse_external_import("import os")
+        assert result == "os"
+
+    def test_parses_nested_import(self):
+        """Test parsing nested module imports."""
+        result = _parse_external_import("from os.path import join")
+        assert result == "os"
+
+    def test_returns_none_for_invalid(self):
+        """Test returns None for non-import lines."""
+        assert _parse_external_import("def func():") is None
+        assert _parse_external_import("# comment") is None
+        assert _parse_external_import("") is None
+
+
+class TestModuleToWikiPath:
+    """Tests for _module_to_wiki_path function."""
+
+    def test_simple_module(self):
+        """Test simple module path conversion."""
+        result = _module_to_wiki_path("core.parser", "local_deepwiki")
+        assert result == "src/local_deepwiki/core/parser.md"
+
+    def test_nested_module(self):
+        """Test nested module path conversion."""
+        result = _module_to_wiki_path("providers.llm.ollama", "local_deepwiki")
+        assert result == "src/local_deepwiki/providers/llm/ollama.md"
+
+    def test_single_level_module(self):
+        """Test single-level module path conversion."""
+        result = _module_to_wiki_path("models", "local_deepwiki")
+        assert result == "src/local_deepwiki/models.md"
