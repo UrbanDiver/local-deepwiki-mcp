@@ -196,3 +196,105 @@ class TestTemplateConfiguration:
         assert flask_app.debug is False
         # jinja_env.auto_reload follows debug setting
         assert flask_app.jinja_env.auto_reload is False
+
+    def test_chat_template_exists(self):
+        """Test that the chat.html template exists."""
+        template_path = _MODULE_DIR / "templates" / "chat.html"
+        assert template_path.exists()
+        assert template_path.is_file()
+
+
+class TestChatEndpoints:
+    """Tests for chat functionality."""
+
+    def test_chat_page_renders(self, wiki_dir):
+        """Test that the chat page renders successfully."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+
+        response = client.get("/chat")
+        assert response.status_code == 200
+        assert b"DeepWiki Chat" in response.data
+        assert b"Ask questions" in response.data
+
+    def test_chat_page_has_input_elements(self, wiki_dir):
+        """Test that the chat page has required input elements."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+
+        response = client.get("/chat")
+        assert response.status_code == 200
+        # Check for input elements
+        assert b'id="question-input"' in response.data
+        assert b'id="send-btn"' in response.data
+        assert b'id="research-mode"' in response.data
+
+    def test_api_chat_requires_question(self, wiki_dir):
+        """Test that /api/chat returns error for missing question."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+
+        # Empty body
+        response = client.post("/api/chat", json={})
+        assert response.status_code == 400
+        data = response.get_json()
+        assert "error" in data
+        assert "required" in data["error"].lower()
+
+        # Empty question
+        response = client.post("/api/chat", json={"question": ""})
+        assert response.status_code == 400
+
+        # Whitespace only
+        response = client.post("/api/chat", json={"question": "   "})
+        assert response.status_code == 400
+
+    def test_api_research_requires_question(self, wiki_dir):
+        """Test that /api/research returns error for missing question."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+
+        # Empty body
+        response = client.post("/api/research", json={})
+        assert response.status_code == 400
+        data = response.get_json()
+        assert "error" in data
+
+        # Empty question
+        response = client.post("/api/research", json={"question": ""})
+        assert response.status_code == 400
+
+    def test_api_chat_returns_sse(self, wiki_dir):
+        """Test that /api/chat returns Server-Sent Events content type."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+
+        response = client.post(
+            "/api/chat",
+            json={"question": "test question"},
+        )
+        # Should return SSE or error (no indexed data)
+        # We check content type for valid responses
+        assert response.content_type.startswith("text/event-stream") or response.status_code == 500
+
+    def test_api_research_returns_sse(self, wiki_dir):
+        """Test that /api/research returns Server-Sent Events content type."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+
+        response = client.post(
+            "/api/research",
+            json={"question": "test question"},
+        )
+        # Should return SSE or error (no indexed data)
+        assert response.content_type.startswith("text/event-stream") or response.status_code == 500
+
+    def test_page_template_has_chat_link(self, wiki_dir):
+        """Test that wiki pages have a link to the chat interface."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+
+        response = client.get("/wiki/index.md")
+        assert response.status_code == 200
+        assert b'href="/chat"' in response.data
+        assert b"Chat" in response.data

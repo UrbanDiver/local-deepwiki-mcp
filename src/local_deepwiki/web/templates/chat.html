@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat - DeepWiki</title>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --text-color: #c9d1d9;
+            --link-color: #58a6ff;
+            --border-color: #30363d;
+            --sidebar-bg: #161b22;
+            --code-bg: #1f2428;
+            --heading-color: #f0f6fc;
+            --user-msg-bg: #1f6feb;
+            --assistant-msg-bg: #21262d;
+            --progress-bg: #161b22;
+        }
+        [data-theme="light"] {
+            --bg-color: #ffffff;
+            --text-color: #24292f;
+            --link-color: #0969da;
+            --border-color: #d0d7de;
+            --sidebar-bg: #f6f8fa;
+            --code-bg: #f6f8fa;
+            --heading-color: #1f2328;
+            --user-msg-bg: #0969da;
+            --assistant-msg-bg: #f6f8fa;
+            --progress-bg: #f6f8fa;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            background: var(--sidebar-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .header h1 {
+            font-size: 1.2em;
+            color: var(--heading-color);
+        }
+        .header a {
+            color: var(--link-color);
+            text-decoration: none;
+            font-size: 0.9em;
+        }
+        .header a:hover {
+            text-decoration: underline;
+        }
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .theme-toggle, .clear-btn {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 14px;
+            color: var(--text-color);
+            transition: background 0.2s;
+        }
+        .theme-toggle:hover, .clear-btn:hover {
+            background: var(--border-color);
+        }
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .message {
+            max-width: 85%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            animation: fadeIn 0.2s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .message.user {
+            background: var(--user-msg-bg);
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+        .message.assistant {
+            background: var(--assistant-msg-bg);
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+        .message-content {
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .message-content code {
+            background: var(--code-bg);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        .message-content pre {
+            background: var(--code-bg);
+            padding: 12px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 8px 0;
+        }
+        .message-content pre code {
+            background: none;
+            padding: 0;
+        }
+        .sources {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border-color);
+        }
+        .sources-header {
+            font-size: 0.85em;
+            color: #8b949e;
+            margin-bottom: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .sources-header:hover {
+            color: var(--link-color);
+        }
+        .sources-list {
+            display: none;
+            font-size: 0.85em;
+        }
+        .sources-list.expanded {
+            display: block;
+        }
+        .source-item {
+            padding: 4px 0;
+            display: flex;
+            gap: 8px;
+            align-items: baseline;
+        }
+        .source-file {
+            color: var(--link-color);
+        }
+        .source-lines {
+            color: #8b949e;
+        }
+        .source-score {
+            color: #238636;
+            font-size: 0.8em;
+        }
+        .progress-panel {
+            background: var(--progress-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 8px;
+        }
+        .progress-step {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 0;
+            font-size: 0.9em;
+        }
+        .progress-step.active {
+            color: var(--link-color);
+        }
+        .progress-step.completed {
+            color: #238636;
+        }
+        .progress-step .spinner {
+            width: 14px;
+            height: 14px;
+            border: 2px solid var(--border-color);
+            border-top-color: var(--link-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .progress-step .check {
+            color: #238636;
+        }
+        .sub-questions {
+            margin: 8px 0 8px 24px;
+            font-size: 0.85em;
+            color: #8b949e;
+        }
+        .input-area {
+            background: var(--sidebar-bg);
+            border-top: 1px solid var(--border-color);
+            padding: 16px 20px;
+        }
+        .input-container {
+            display: flex;
+            gap: 12px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .input-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .question-input {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-color);
+            font-size: 14px;
+            resize: none;
+            min-height: 44px;
+            max-height: 200px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .question-input:focus {
+            border-color: var(--link-color);
+        }
+        .input-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .mode-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9em;
+            color: #8b949e;
+        }
+        .mode-toggle input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        .send-btn {
+            padding: 10px 20px;
+            background: var(--link-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            white-space: nowrap;
+        }
+        .send-btn:hover:not(:disabled) {
+            opacity: 0.9;
+        }
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            padding: 8px 12px;
+        }
+        .typing-indicator span {
+            width: 8px;
+            height: 8px;
+            background: #8b949e;
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-4px); }
+        }
+        .welcome-message {
+            text-align: center;
+            color: #8b949e;
+            padding: 40px 20px;
+        }
+        .welcome-message h2 {
+            color: var(--heading-color);
+            margin-bottom: 12px;
+        }
+        .welcome-message p {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        @media (max-width: 768px) {
+            .messages {
+                padding: 12px;
+            }
+            .message {
+                max-width: 95%;
+            }
+            .input-container {
+                flex-direction: column;
+            }
+            .input-controls {
+                justify-content: space-between;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css" id="hljs-theme">
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+    <header class="header">
+        <div class="header-left">
+            <h1>DeepWiki Chat</h1>
+            <a href="/">Back to Wiki</a>
+        </div>
+        <div class="header-controls">
+            <button id="clear-btn" class="clear-btn">Clear Chat</button>
+            <button id="theme-toggle" class="theme-toggle" title="Toggle theme">&#127769;</button>
+        </div>
+    </header>
+
+    <div class="messages" id="messages">
+        <div class="welcome-message">
+            <h2>Ask questions about your codebase</h2>
+            <p>I can help you understand the code, find specific implementations, and explain how different parts work together.</p>
+            <p style="margin-top: 12px; font-size: 0.9em;">Enable "Deep Research" for complex architectural questions.</p>
+        </div>
+    </div>
+
+    <div class="input-area">
+        <div class="input-container">
+            <div class="input-wrapper">
+                <textarea
+                    id="question-input"
+                    class="question-input"
+                    placeholder="Ask a question about the code..."
+                    rows="1"
+                ></textarea>
+                <div class="input-controls">
+                    <label class="mode-toggle">
+                        <input type="checkbox" id="research-mode">
+                        <span>Deep Research</span>
+                    </label>
+                    <button id="send-btn" class="send-btn">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let conversationHistory = [];
+        let isProcessing = false;
+        let currentEventSource = null;
+
+        // DOM elements
+        const messagesEl = document.getElementById('messages');
+        const questionInput = document.getElementById('question-input');
+        const sendBtn = document.getElementById('send-btn');
+        const clearBtn = document.getElementById('clear-btn');
+        const researchMode = document.getElementById('research-mode');
+        const themeToggle = document.getElementById('theme-toggle');
+        const hljsTheme = document.getElementById('hljs-theme');
+
+        // Load conversation from localStorage
+        function loadConversation() {
+            try {
+                const saved = localStorage.getItem('deepwiki-chat-history');
+                if (saved) {
+                    conversationHistory = JSON.parse(saved);
+                    renderConversation();
+                }
+            } catch (e) {
+                console.error('Failed to load conversation:', e);
+            }
+        }
+
+        // Save conversation to localStorage
+        function saveConversation() {
+            try {
+                localStorage.setItem('deepwiki-chat-history', JSON.stringify(conversationHistory));
+            } catch (e) {
+                console.error('Failed to save conversation:', e);
+            }
+        }
+
+        // Render the full conversation
+        function renderConversation() {
+            if (conversationHistory.length === 0) {
+                messagesEl.innerHTML = `
+                    <div class="welcome-message">
+                        <h2>Ask questions about your codebase</h2>
+                        <p>I can help you understand the code, find specific implementations, and explain how different parts work together.</p>
+                        <p style="margin-top: 12px; font-size: 0.9em;">Enable "Deep Research" for complex architectural questions.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            messagesEl.innerHTML = '';
+            conversationHistory.forEach(msg => {
+                addMessageToUI(msg.role, msg.content, msg.sources, msg.researchTrace, false);
+            });
+            scrollToBottom();
+        }
+
+        // Add a message to the UI
+        function addMessageToUI(role, content, sources = null, researchTrace = null, animate = true) {
+            const msgEl = document.createElement('div');
+            msgEl.className = `message ${role}`;
+            if (!animate) msgEl.style.animation = 'none';
+
+            let html = `<div class="message-content">${role === 'assistant' ? renderMarkdown(content) : escapeHtml(content)}</div>`;
+
+            if (sources && sources.length > 0) {
+                html += `
+                    <div class="sources">
+                        <div class="sources-header" onclick="this.nextElementSibling.classList.toggle('expanded')">
+                            <span>&#9654;</span> ${sources.length} source${sources.length > 1 ? 's' : ''}
+                        </div>
+                        <div class="sources-list">
+                            ${sources.map(s => `
+                                <div class="source-item">
+                                    <span class="source-file">${escapeHtml(s.file)}</span>
+                                    <span class="source-lines">:${s.lines}</span>
+                                    ${s.score ? `<span class="source-score">${(s.score * 100).toFixed(0)}%</span>` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (researchTrace && researchTrace.length > 0) {
+                html += `
+                    <div class="sources">
+                        <div class="sources-header" onclick="this.nextElementSibling.classList.toggle('expanded')">
+                            <span>&#9654;</span> Research trace
+                        </div>
+                        <div class="sources-list">
+                            ${researchTrace.map(t => `
+                                <div class="source-item">
+                                    <span>${escapeHtml(t.step)}</span>
+                                    <span class="source-lines">${t.duration_ms}ms</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            msgEl.innerHTML = html;
+            messagesEl.appendChild(msgEl);
+
+            // Highlight code blocks
+            msgEl.querySelectorAll('pre code').forEach(block => {
+                hljs.highlightElement(block);
+            });
+
+            return msgEl;
+        }
+
+        // Create typing indicator
+        function createTypingIndicator() {
+            const el = document.createElement('div');
+            el.className = 'message assistant';
+            el.id = 'typing-indicator';
+            el.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
+            return el;
+        }
+
+        // Create progress panel for research
+        function createProgressPanel() {
+            const el = document.createElement('div');
+            el.className = 'message assistant';
+            el.id = 'progress-panel';
+            el.innerHTML = `
+                <div class="progress-panel">
+                    <div class="progress-step active" id="step-decompose">
+                        <div class="spinner"></div>
+                        <span>Analyzing question...</span>
+                    </div>
+                    <div id="sub-questions" class="sub-questions" style="display: none;"></div>
+                    <div class="progress-step" id="step-retrieve">
+                        <div class="spinner" style="display: none;"></div>
+                        <span>Searching codebase...</span>
+                    </div>
+                    <div class="progress-step" id="step-analyze">
+                        <div class="spinner" style="display: none;"></div>
+                        <span>Gap analysis...</span>
+                    </div>
+                    <div class="progress-step" id="step-synthesize">
+                        <div class="spinner" style="display: none;"></div>
+                        <span>Synthesizing answer...</span>
+                    </div>
+                </div>
+            `;
+            return el;
+        }
+
+        // Update progress panel
+        function updateProgress(data) {
+            const panel = document.getElementById('progress-panel');
+            if (!panel) return;
+
+            const steps = {
+                'started': 'step-decompose',
+                'decomposition_complete': 'step-retrieve',
+                'retrieval_complete': 'step-analyze',
+                'gap_analysis_complete': 'step-synthesize',
+                'followup_complete': 'step-synthesize',
+                'synthesis_started': 'step-synthesize',
+            };
+
+            // Mark previous steps as complete
+            const allSteps = ['step-decompose', 'step-retrieve', 'step-analyze', 'step-synthesize'];
+            const currentStepId = steps[data.step_type];
+            if (currentStepId) {
+                const currentIndex = allSteps.indexOf(currentStepId);
+                allSteps.forEach((stepId, index) => {
+                    const stepEl = document.getElementById(stepId);
+                    if (!stepEl) return;
+
+                    if (index < currentIndex) {
+                        stepEl.className = 'progress-step completed';
+                        stepEl.querySelector('.spinner').style.display = 'none';
+                        stepEl.innerHTML = `<span class="check">&#10003;</span> ${stepEl.querySelector('span:last-child').textContent}`;
+                    } else if (index === currentIndex) {
+                        stepEl.className = 'progress-step active';
+                        stepEl.querySelector('.spinner').style.display = 'block';
+                    }
+                });
+            }
+
+            // Show sub-questions if available
+            if (data.sub_questions && data.sub_questions.length > 0) {
+                const subQ = document.getElementById('sub-questions');
+                if (subQ) {
+                    subQ.style.display = 'block';
+                    subQ.innerHTML = data.sub_questions.map(q =>
+                        `<div>&#8226; ${escapeHtml(q.question)}</div>`
+                    ).join('');
+                }
+            }
+
+            // Update step text with stats
+            if (data.chunks_retrieved !== undefined) {
+                const retrieveStep = document.getElementById('step-retrieve');
+                if (retrieveStep) {
+                    const span = retrieveStep.querySelector('span:last-child');
+                    if (span) span.textContent = `Found ${data.chunks_retrieved} code chunks`;
+                }
+            }
+        }
+
+        // Send a message
+        async function sendMessage() {
+            const question = questionInput.value.trim();
+            if (!question || isProcessing) return;
+
+            isProcessing = true;
+            sendBtn.disabled = true;
+            questionInput.value = '';
+            autoResizeTextarea();
+
+            // Remove welcome message if present
+            const welcome = messagesEl.querySelector('.welcome-message');
+            if (welcome) welcome.remove();
+
+            // Add user message
+            addMessageToUI('user', question);
+            scrollToBottom();
+
+            // Add typing indicator or progress panel
+            const useResearch = researchMode.checked;
+            if (useResearch) {
+                messagesEl.appendChild(createProgressPanel());
+            } else {
+                messagesEl.appendChild(createTypingIndicator());
+            }
+            scrollToBottom();
+
+            // Setup SSE connection
+            const endpoint = useResearch ? '/api/research' : '/api/chat';
+            let responseContent = '';
+            let responseSources = null;
+            let responseTrace = null;
+            let currentResponseEl = null;
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        question: question,
+                        history: conversationHistory.slice(-6), // Last 3 exchanges
+                    }),
+                });
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+
+                    for (const line of lines) {
+                        if (!line.startsWith('data: ')) continue;
+
+                        try {
+                            const data = JSON.parse(line.slice(6));
+
+                            if (data.type === 'sources') {
+                                responseSources = data.sources;
+                            } else if (data.type === 'token') {
+                                // Remove typing indicator and create response element
+                                const typing = document.getElementById('typing-indicator');
+                                if (typing) typing.remove();
+
+                                if (!currentResponseEl) {
+                                    currentResponseEl = document.createElement('div');
+                                    currentResponseEl.className = 'message assistant';
+                                    currentResponseEl.innerHTML = '<div class="message-content"></div>';
+                                    messagesEl.appendChild(currentResponseEl);
+                                }
+
+                                responseContent += data.content;
+                                currentResponseEl.querySelector('.message-content').innerHTML = renderMarkdown(responseContent);
+
+                                // Highlight code
+                                currentResponseEl.querySelectorAll('pre code').forEach(block => {
+                                    if (!block.dataset.highlighted) {
+                                        hljs.highlightElement(block);
+                                        block.dataset.highlighted = 'true';
+                                    }
+                                });
+
+                                scrollToBottom();
+                            } else if (data.type === 'progress') {
+                                updateProgress(data);
+                            } else if (data.type === 'result') {
+                                // Remove progress panel
+                                const progress = document.getElementById('progress-panel');
+                                if (progress) progress.remove();
+
+                                responseContent = data.answer;
+                                responseSources = data.sources;
+                                responseTrace = data.reasoning_trace;
+                            } else if (data.type === 'error') {
+                                throw new Error(data.message);
+                            } else if (data.type === 'done') {
+                                // Finalize response
+                                break;
+                            }
+                        } catch (e) {
+                            console.error('Error parsing SSE data:', e, line);
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Error:', e);
+                responseContent = `Error: ${e.message}`;
+            }
+
+            // Remove any remaining indicators
+            const typing = document.getElementById('typing-indicator');
+            if (typing) typing.remove();
+            const progress = document.getElementById('progress-panel');
+            if (progress) progress.remove();
+
+            // Add final response if not already shown (for research mode)
+            if (!currentResponseEl && responseContent) {
+                addMessageToUI('assistant', responseContent, responseSources, responseTrace);
+            } else if (currentResponseEl && responseSources) {
+                // Add sources to existing response
+                let sourcesHtml = '';
+                if (responseSources && responseSources.length > 0) {
+                    sourcesHtml = `
+                        <div class="sources">
+                            <div class="sources-header" onclick="this.nextElementSibling.classList.toggle('expanded')">
+                                <span>&#9654;</span> ${responseSources.length} source${responseSources.length > 1 ? 's' : ''}
+                            </div>
+                            <div class="sources-list">
+                                ${responseSources.map(s => `
+                                    <div class="source-item">
+                                        <span class="source-file">${escapeHtml(s.file)}</span>
+                                        <span class="source-lines">:${s.lines}</span>
+                                        ${s.score ? `<span class="source-score">${(s.score * 100).toFixed(0)}%</span>` : ''}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+                currentResponseEl.innerHTML += sourcesHtml;
+            }
+
+            scrollToBottom();
+
+            // Save to history
+            conversationHistory.push({ role: 'user', content: question });
+            conversationHistory.push({
+                role: 'assistant',
+                content: responseContent,
+                sources: responseSources,
+                researchTrace: responseTrace,
+            });
+            saveConversation();
+
+            isProcessing = false;
+            sendBtn.disabled = false;
+            questionInput.focus();
+        }
+
+        // Render markdown
+        function renderMarkdown(text) {
+            if (!text) return '';
+            try {
+                return marked.parse(text);
+            } catch (e) {
+                return escapeHtml(text);
+            }
+        }
+
+        // Escape HTML
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Scroll to bottom
+        function scrollToBottom() {
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        // Auto-resize textarea
+        function autoResizeTextarea() {
+            questionInput.style.height = 'auto';
+            questionInput.style.height = Math.min(questionInput.scrollHeight, 200) + 'px';
+        }
+
+        // Theme toggle
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('deepwiki-theme', theme);
+            themeToggle.innerHTML = theme === 'dark' ? '&#127769;' : '&#9728;';
+            if (hljsTheme) {
+                hljsTheme.href = theme === 'dark'
+                    ? 'https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css'
+                    : 'https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github.min.css';
+            }
+        }
+
+        // Event listeners
+        sendBtn.addEventListener('click', sendMessage);
+
+        questionInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        questionInput.addEventListener('input', autoResizeTextarea);
+
+        clearBtn.addEventListener('click', () => {
+            conversationHistory = [];
+            saveConversation();
+            renderConversation();
+        });
+
+        themeToggle.addEventListener('click', () => {
+            const current = document.documentElement.getAttribute('data-theme') || 'dark';
+            setTheme(current === 'dark' ? 'light' : 'dark');
+        });
+
+        // Initialize
+        const savedTheme = localStorage.getItem('deepwiki-theme') || 'dark';
+        setTheme(savedTheme);
+        loadConversation();
+        questionInput.focus();
+    </script>
+</body>
+</html>

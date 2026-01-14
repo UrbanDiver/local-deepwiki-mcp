@@ -95,12 +95,12 @@ This document tracks planned improvements to the Local DeepWiki documentation ge
 
 ## New Features
 
-### 13. Conversational Mode
-- [ ] Add chat interface to web UI for interactive Q&A
-- [ ] Use `deep_research` pipeline behind the scenes
-- [ ] Maintain conversation history for follow-up questions
-- [ ] Support streaming responses for real-time feedback
-- **Files**: `web/app.py`, new `web/chat.py`
+### 13. Conversational Mode ✅
+- [x] Add chat interface to web UI for interactive Q&A
+- [x] Use `deep_research` pipeline behind the scenes
+- [x] Maintain conversation history for follow-up questions
+- [x] Support streaming responses for real-time feedback
+- **Files**: `web/app.py`, `web/templates/chat.html`
 
 ### 14. GitHub/GitLab Links ✅
 - [x] Detect remote origin URL from git config

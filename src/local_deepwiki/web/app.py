@@ -4,11 +4,15 @@ Uses Jinja2 template files with automatic caching for production performance.
 Templates are loaded from the 'templates' subdirectory relative to this module.
 """
 
+import asyncio
 import json
+import queue
+import threading
 from pathlib import Path
+from typing import Any, AsyncIterator, Callable, Iterator
 
 import markdown
-from flask import Flask, abort, jsonify, redirect, render_template, url_for
+from flask import Flask, Response, abort, jsonify, redirect, render_template, request, url_for
 
 from local_deepwiki.logging import get_logger
 
@@ -199,6 +203,386 @@ def view_page(path: str):
         toc_entries=toc_entries,
         current_path=path,
         breadcrumb=breadcrumb,
+    )
+
+
+def stream_async_generator(async_gen_factory: Callable[[], AsyncIterator[str]]) -> Iterator[str]:
+    """Bridge an async generator to a sync generator using a queue.
+
+    This allows streaming async results through Flask's synchronous response handling.
+
+    Args:
+        async_gen_factory: A callable that returns an async iterator.
+
+    Yields:
+        Items from the async generator.
+    """
+    result_queue: queue.Queue[str | None | Exception] = queue.Queue()
+
+    def run_async() -> None:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+
+            async def collect() -> None:
+                try:
+                    async for item in async_gen_factory():
+                        result_queue.put(item)
+                except Exception as e:
+                    result_queue.put(e)
+                finally:
+                    result_queue.put(None)  # Sentinel to signal completion
+
+            loop.run_until_complete(collect())
+        finally:
+            loop.close()
+
+    thread = threading.Thread(target=run_async)
+    thread.start()
+
+    while True:
+        item = result_queue.get()
+        if item is None:
+            break
+        if isinstance(item, Exception):
+            logger.error(f"Error in async generator: {item}")
+            yield f"data: {json.dumps({'type': 'error', 'message': str(item)})}\n\n"
+            break
+        yield item
+
+    thread.join()
+
+
+def format_sources(search_results: list[Any]) -> list[dict[str, Any]]:
+    """Format search results as source citations.
+
+    Args:
+        search_results: List of SearchResult objects.
+
+    Returns:
+        List of source dictionaries with file, lines, type, and score.
+    """
+    sources = []
+    for r in search_results:
+        chunk = r.chunk
+        sources.append({
+            "file": chunk.file_path,
+            "lines": f"{chunk.start_line}-{chunk.end_line}",
+            "type": chunk.chunk_type.value,
+            "name": chunk.name,
+            "score": round(r.score, 3),
+        })
+    return sources
+
+
+def build_prompt_with_history(
+    question: str, history: list[dict[str, str]], context: str
+) -> str:
+    """Build a prompt that includes conversation history for follow-up questions.
+
+    Args:
+        question: The current question.
+        history: Previous Q&A exchanges.
+        context: Code context from search results.
+
+    Returns:
+        A prompt string with history and context.
+    """
+    history_text = ""
+    # Include last 3 exchanges for context
+    for exchange in history[-3:]:
+        history_text += f"User: {exchange.get('question', '')}\n"
+        history_text += f"Assistant: {exchange.get('answer', '')}\n\n"
+
+    if history_text:
+        return f"""Previous conversation:
+{history_text}
+Current question: {question}
+
+Code context:
+{context}
+
+Answer the current question, taking into account the conversation history if relevant.
+Provide a clear, accurate answer based on the code provided."""
+    else:
+        return f"""Question: {question}
+
+Code context:
+{context}
+
+Provide a clear, accurate answer based on the code provided."""
+
+
+@app.route("/chat")
+def chat_page():
+    """Render the chat interface."""
+    if WIKI_PATH is None:
+        abort(500, "Wiki path not configured")
+    return render_template("chat.html", wiki_path=str(WIKI_PATH))
+
+
+@app.route("/api/chat", methods=["POST"])
+def api_chat():
+    """Handle chat Q&A with streaming response.
+
+    Expects JSON body with:
+        - question: The user's question
+        - history: Optional list of previous Q&A exchanges
+
+    Returns:
+        Server-Sent Events stream with tokens and sources.
+    """
+    if WIKI_PATH is None:
+        return jsonify({"error": "Wiki path not configured"}), 500
+
+    data = request.get_json() or {}
+    question = data.get("question", "").strip()
+    history = data.get("history", [])
+
+    if not question:
+        return jsonify({"error": "Question is required"}), 400
+
+    # Determine the repository path from wiki path
+    repo_path = WIKI_PATH.parent
+    if WIKI_PATH.name == ".deepwiki":
+        repo_path = WIKI_PATH.parent
+
+    async def generate_response() -> AsyncIterator[str]:
+        """Async generator that streams the chat response."""
+        from local_deepwiki.config import get_config
+        from local_deepwiki.core.vectorstore import VectorStore
+        from local_deepwiki.providers.embeddings import get_embedding_provider
+        from local_deepwiki.providers.llm import get_cached_llm_provider
+
+        config = get_config()
+        vector_db_path = config.get_vector_db_path(repo_path)
+
+        if not vector_db_path.exists():
+            yield f"data: {json.dumps({'type': 'error', 'message': 'Repository not indexed. Please run index_repository first.'})}\n\n"
+            return
+
+        # Setup providers
+        embedding_provider = get_embedding_provider(config.embedding)
+        vector_store = VectorStore(vector_db_path, embedding_provider)
+        cache_path = config.get_wiki_path(repo_path) / "llm_cache.lance"
+        llm = get_cached_llm_provider(
+            cache_path=cache_path,
+            embedding_provider=embedding_provider,
+            cache_config=config.llm_cache,
+            llm_config=config.llm,
+        )
+
+        # Search for relevant context
+        search_results = await vector_store.search(question, limit=5)
+
+        # Send sources first
+        sources = format_sources(search_results)
+        yield f"data: {json.dumps({'type': 'sources', 'sources': sources})}\n\n"
+
+        if not search_results:
+            yield f"data: {json.dumps({'type': 'token', 'content': 'No relevant code found for your question.'})}\n\n"
+            yield f"data: {json.dumps({'type': 'done'})}\n\n"
+            return
+
+        # Build context from search results
+        context_parts = []
+        for result in search_results:
+            chunk = result.chunk
+            context_parts.append(
+                f"File: {chunk.file_path} (lines {chunk.start_line}-{chunk.end_line})\n"
+                f"Type: {chunk.chunk_type.value}\n"
+                f"```\n{chunk.content}\n```"
+            )
+        context = "\n\n---\n\n".join(context_parts)
+
+        # Build prompt with history
+        prompt = build_prompt_with_history(question, history, context)
+        system_prompt = (
+            "You are a helpful code assistant. Answer questions about code clearly and accurately. "
+            "Reference specific files and line numbers when relevant."
+        )
+
+        # Stream the response
+        try:
+            async for chunk in llm.generate_stream(
+                prompt, system_prompt=system_prompt, temperature=0.3
+            ):
+                yield f"data: {json.dumps({'type': 'token', 'content': chunk})}\n\n"
+        except Exception as e:
+            logger.exception(f"Error generating response: {e}")
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+        yield f"data: {json.dumps({'type': 'done'})}\n\n"
+
+    return Response(
+        stream_async_generator(generate_response),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@app.route("/api/research", methods=["POST"])
+def api_research():
+    """Handle deep research with streaming progress updates.
+
+    Expects JSON body with:
+        - question: The user's question
+
+    Returns:
+        Server-Sent Events stream with progress updates and final result.
+    """
+    if WIKI_PATH is None:
+        return jsonify({"error": "Wiki path not configured"}), 500
+
+    data = request.get_json() or {}
+    question = data.get("question", "").strip()
+
+    if not question:
+        return jsonify({"error": "Question is required"}), 400
+
+    # Determine the repository path from wiki path
+    repo_path = WIKI_PATH.parent
+    if WIKI_PATH.name == ".deepwiki":
+        repo_path = WIKI_PATH.parent
+
+    # Queue for progress updates from async callback
+    progress_queue: queue.Queue[dict[str, Any] | None] = queue.Queue()
+
+    async def run_research() -> AsyncIterator[str]:
+        """Async generator that runs deep research with progress updates."""
+        from local_deepwiki.config import get_config
+        from local_deepwiki.core.deep_research import DeepResearchPipeline
+        from local_deepwiki.core.vectorstore import VectorStore
+        from local_deepwiki.models import ResearchProgress
+        from local_deepwiki.providers.embeddings import get_embedding_provider
+        from local_deepwiki.providers.llm import get_cached_llm_provider
+
+        config = get_config()
+        vector_db_path = config.get_vector_db_path(repo_path)
+
+        if not vector_db_path.exists():
+            yield f"data: {json.dumps({'type': 'error', 'message': 'Repository not indexed. Please run index_repository first.'})}\n\n"
+            return
+
+        # Setup providers
+        embedding_provider = get_embedding_provider(config.embedding)
+        vector_store = VectorStore(vector_db_path, embedding_provider)
+        cache_path = config.get_wiki_path(repo_path) / "llm_cache.lance"
+        llm = get_cached_llm_provider(
+            cache_path=cache_path,
+            embedding_provider=embedding_provider,
+            cache_config=config.llm_cache,
+            llm_config=config.llm,
+        )
+
+        # Progress callback
+        async def on_progress(progress: ResearchProgress) -> None:
+            progress_data = {
+                "type": "progress",
+                "step": progress.step,
+                "total_steps": progress.total_steps,
+                "step_type": progress.step_type.value,
+                "message": progress.message,
+            }
+            if progress.sub_questions:
+                progress_data["sub_questions"] = [
+                    {"question": sq.question, "category": sq.category}
+                    for sq in progress.sub_questions
+                ]
+            if progress.chunks_retrieved is not None:
+                progress_data["chunks_retrieved"] = progress.chunks_retrieved
+            if progress.follow_up_queries:
+                progress_data["follow_up_queries"] = progress.follow_up_queries
+            if progress.duration_ms is not None:
+                progress_data["duration_ms"] = progress.duration_ms
+
+            # Put in queue for the main generator to pick up
+            progress_queue.put(progress_data)
+
+        # Create pipeline with config parameters
+        dr_config = config.deep_research
+        pipeline = DeepResearchPipeline(
+            vector_store=vector_store,
+            llm_provider=llm,
+            max_sub_questions=dr_config.max_sub_questions,
+            chunks_per_subquestion=dr_config.chunks_per_subquestion,
+            max_total_chunks=dr_config.max_total_chunks,
+            max_follow_up_queries=dr_config.max_follow_up_queries,
+            synthesis_temperature=dr_config.synthesis_temperature,
+            synthesis_max_tokens=dr_config.synthesis_max_tokens,
+        )
+
+        # Run research in background, yielding progress as it comes
+        research_task = asyncio.create_task(
+            pipeline.research(question, progress_callback=on_progress)
+        )
+
+        # Yield progress updates as they come in
+        while not research_task.done():
+            try:
+                progress_data = progress_queue.get(timeout=0.1)
+                if progress_data is not None:
+                    yield f"data: {json.dumps(progress_data)}\n\n"
+            except queue.Empty:
+                await asyncio.sleep(0.05)
+
+        # Drain any remaining progress updates
+        while not progress_queue.empty():
+            progress_data = progress_queue.get_nowait()
+            if progress_data is not None:
+                yield f"data: {json.dumps(progress_data)}\n\n"
+
+        try:
+            result = await research_task
+
+            # Format the result
+            response = {
+                "type": "result",
+                "answer": result.answer,
+                "sub_questions": [
+                    {"question": sq.question, "category": sq.category}
+                    for sq in result.sub_questions
+                ],
+                "sources": [
+                    {
+                        "file": src.file_path,
+                        "lines": f"{src.start_line}-{src.end_line}",
+                        "type": src.chunk_type,
+                        "name": src.name,
+                        "relevance": round(src.relevance_score, 3),
+                    }
+                    for src in result.sources
+                ],
+                "reasoning_trace": [
+                    {
+                        "step": step.step_type.value,
+                        "description": step.description,
+                        "duration_ms": step.duration_ms,
+                    }
+                    for step in result.reasoning_trace
+                ],
+                "stats": {
+                    "chunks_analyzed": result.total_chunks_analyzed,
+                    "llm_calls": result.total_llm_calls,
+                },
+            }
+            yield f"data: {json.dumps(response)}\n\n"
+        except Exception as e:
+            logger.exception(f"Error in deep research: {e}")
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+        yield f"data: {json.dumps({'type': 'done'})}\n\n"
+
+    return Response(
+        stream_async_generator(run_research),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
     )
 
 
