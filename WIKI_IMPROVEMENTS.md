@@ -11,11 +11,11 @@ This document tracks planned improvements to the Local DeepWiki documentation ge
 - [x] Show default values for optional parameters
 - **Files**: `generators/api_docs.py`, `generators/wiki.py`
 
-### 2. Usage Examples from Tests
-- [ ] Scan test files for usage patterns of documented classes/functions
-- [ ] Extract relevant code snippets that demonstrate real usage
-- [ ] Add "Examples from Tests" section to file documentation
-- **Files**: `generators/wiki.py`, `core/parser.py`
+### 2. Usage Examples from Tests ✅
+- [x] Scan test files for usage patterns of documented classes/functions
+- [x] Extract relevant code snippets that demonstrate real usage
+- [x] Add "Usage Examples" section to file documentation
+- **Files**: `generators/test_examples.py`, `generators/wiki.py`
 
 ### 3. Changelog/History Page
 - [ ] Generate page showing recent git commits
@@ -167,4 +167,4 @@ This document tracks planned improvements to the Local DeepWiki documentation ge
 - Current wiki generation uses Ollama (qwen3-coder:30b) by default
 - Cross-linking was added in commit `f933c46`
 - Web UI runs on Flask at port 8080
-- All 508 tests currently pass
+- All 564 tests currently pass

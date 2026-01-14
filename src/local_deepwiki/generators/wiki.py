@@ -14,6 +14,7 @@ logger = get_logger(__name__)
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.generators.api_docs import get_file_api_docs
 from local_deepwiki.generators.callgraph import get_file_call_graph
+from local_deepwiki.generators.test_examples import get_file_examples
 from local_deepwiki.generators.crosslinks import EntityRegistry, add_cross_links
 from local_deepwiki.generators.diagrams import (
     generate_class_diagram,
@@ -1015,6 +1016,21 @@ Do NOT include mermaid class diagrams - they will be auto-generated."""
                 call_graph = get_file_call_graph(abs_file_path, Path(index_status.repo_path))
                 if call_graph:
                     content += "\n\n## Call Graph\n\n```mermaid\n" + call_graph + "\n```"
+
+            # Add usage examples from test files
+            entity_names = [
+                chunk.name for chunk in all_file_chunks
+                if chunk.name and len(chunk.name) > 2
+            ]
+            if entity_names:
+                examples_md = get_file_examples(
+                    source_file=abs_file_path,
+                    repo_root=Path(index_status.repo_path),
+                    entity_names=entity_names,
+                    max_examples=5,
+                )
+                if examples_md:
+                    content += "\n\n" + examples_md
 
             # Register entities for cross-linking
             self.entity_registry.register_from_chunks(all_file_chunks, wiki_path)
