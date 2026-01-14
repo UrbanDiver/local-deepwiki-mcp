@@ -130,11 +130,11 @@ This document tracks planned improvements to the Local DeepWiki documentation ge
 - [ ] Optimize token usage for each provider's pricing
 - **Files**: `core/deep_research.py`, `generators/wiki.py`, `config.py`
 
-### 18. Response Caching
-- [ ] Cache LLM responses for repeated similar queries
-- [ ] Use embedding similarity to detect cache hits
-- [ ] Configurable cache TTL and size limits
-- **Files**: New `core/cache.py`, `core/deep_research.py`
+### 18. Response Caching ✅
+- [x] Cache LLM responses for repeated similar queries
+- [x] Use embedding similarity to detect cache hits
+- [x] Configurable cache TTL and size limits
+- **Files**: `core/llm_cache.py`, `providers/llm/cached.py`, `server.py`
 
 ### 19. Configurable Deep Research ✅
 - [x] Expose parameters in config.yaml (sub-question count, chunk limits, etc.)

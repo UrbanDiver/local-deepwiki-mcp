@@ -501,10 +501,16 @@ async def handle_ask_question(args: dict[str, Any]) -> list[TextContent]:
 
     context = "\n\n---\n\n".join(context_parts)
 
-    # Generate answer using LLM
-    from local_deepwiki.providers.llm import get_llm_provider
+    # Generate answer using LLM (with caching if enabled)
+    from local_deepwiki.providers.llm import get_cached_llm_provider
 
-    llm = get_llm_provider(config.llm)
+    cache_path = wiki_path / "llm_cache.lance"
+    llm = get_cached_llm_provider(
+        cache_path=cache_path,
+        embedding_provider=embedding_provider,
+        cache_config=config.llm_cache,
+        llm_config=config.llm,
+    )
 
     prompt = f"""Based on the following code context, answer this question: {question}
 
@@ -587,9 +593,15 @@ async def handle_deep_research(args: dict[str, Any]) -> list[TextContent]:
 
     from local_deepwiki.core.deep_research import DeepResearchPipeline
     from local_deepwiki.models import ResearchProgress
-    from local_deepwiki.providers.llm import get_llm_provider
+    from local_deepwiki.providers.llm import get_cached_llm_provider
 
-    llm = get_llm_provider(config.llm)
+    cache_path = config.get_wiki_path(repo_path) / "llm_cache.lance"
+    llm = get_cached_llm_provider(
+        cache_path=cache_path,
+        embedding_provider=embedding_provider,
+        cache_config=config.llm_cache,
+        llm_config=config.llm,
+    )
 
     # Get progress token from MCP request context (if client provided one)
     progress_token: str | int | None = None
