@@ -56,10 +56,10 @@ This document tracks planned improvements to the Local DeepWiki documentation ge
 - [x] Add to file documentation pages
 - **Files**: `generators/callgraph.py`, `generators/wiki.py`
 
-### 8. Enhanced Import/Dependency Graphs
-- [ ] Improve existing dependency graph with better layout
-- [ ] Add interactive SVG or clickable links in Mermaid
-- [ ] Show external vs internal dependencies differently
+### 8. Enhanced Import/Dependency Graphs ✅
+- [x] Improve existing dependency graph with better layout (subgraphs by directory)
+- [x] Add interactive SVG or clickable links in Mermaid (click directive to wiki pages)
+- [x] Show external vs internal dependencies differently (dashed borders for external)
 - **Files**: `generators/diagrams.py`
 
 ### 9. Sequence Diagrams for Workflows ✅
