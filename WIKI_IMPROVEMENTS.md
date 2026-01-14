@@ -17,11 +17,11 @@ This document tracks planned improvements to the Local DeepWiki documentation ge
 - [x] Add "Usage Examples" section to file documentation
 - **Files**: `generators/test_examples.py`, `generators/wiki.py`
 
-### 3. Changelog/History Page
-- [ ] Generate page showing recent git commits
-- [ ] Group changes by file/module
-- [ ] Link commits to affected documentation pages
-- **Files**: New `generators/changelog.py`
+### 3. Changelog/History Page ✅
+- [x] Generate page showing recent git commits
+- [x] Group commits by date with file changes
+- [x] Link commits to GitHub/GitLab
+- **Files**: `generators/changelog.py`, `generators/wiki.py`
 
 ---
 
@@ -167,4 +167,4 @@ This document tracks planned improvements to the Local DeepWiki documentation ge
 - Current wiki generation uses Ollama (qwen3-coder:30b) by default
 - Cross-linking was added in commit `f933c46`
 - Web UI runs on Flask at port 8080
-- All 589 tests currently pass
+- All 603 tests currently pass

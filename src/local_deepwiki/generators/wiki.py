@@ -314,7 +314,7 @@ class WikiGenerator:
 
         pages: list[WikiPage] = []
         total_steps = (
-            8  # overview, architecture, modules, files, dependencies, cross-links, see-also, search
+            9  # overview, architecture, modules, files, dependencies, changelog, cross-links, see-also, search
         )
         pages_generated = 0
         pages_skipped = 0
@@ -428,9 +428,20 @@ class WikiGenerator:
         self._record_page_status(deps_page, all_source_files)
         await self._write_page(deps_page)
 
+        # Generate changelog page from git history
+        if progress_callback:
+            progress_callback("Generating changelog", 5, total_steps)
+
+        changelog_page = await self._generate_changelog()
+        if changelog_page:
+            pages.append(changelog_page)
+            self._record_page_status(changelog_page, all_source_files)
+            await self._write_page(changelog_page)
+            pages_generated += 1
+
         # Apply cross-links to all pages
         if progress_callback:
-            progress_callback("Adding cross-links", 5, total_steps)
+            progress_callback("Adding cross-links", 6, total_steps)
 
         pages = add_cross_links(pages, self.entity_registry)
 
@@ -439,7 +450,7 @@ class WikiGenerator:
 
         # Add See Also sections
         if progress_callback:
-            progress_callback("Adding See Also sections", 6, total_steps)
+            progress_callback("Adding See Also sections", 7, total_steps)
 
         pages = add_see_also_sections(pages, self.relationship_analyzer)
 
@@ -449,7 +460,7 @@ class WikiGenerator:
 
         # Generate search index
         if progress_callback:
-            progress_callback("Generating search index", 7, total_steps)
+            progress_callback("Generating search index", 8, total_steps)
 
         write_search_index(self.wiki_path, pages)
 
@@ -1160,6 +1171,26 @@ Format as markdown."""
         return WikiPage(
             path="dependencies.md",
             title="Dependencies",
+            content=content,
+            generated_at=time.time(),
+        )
+
+    async def _generate_changelog(self) -> WikiPage | None:
+        """Generate changelog page from git history.
+
+        Returns:
+            WikiPage with changelog content, or None if not a git repo.
+        """
+        from local_deepwiki.generators.changelog import generate_changelog_content
+
+        content = generate_changelog_content(self._repo_path)
+        if not content:
+            logger.debug("No changelog generated (not a git repo or no commits)")
+            return None
+
+        return WikiPage(
+            path="changelog.md",
+            title="Changelog",
             content=content,
             generated_at=time.time(),
         )
