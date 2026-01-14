@@ -117,6 +117,38 @@ Default providers:
 - **LLM**: Ollama (qwen3-coder:30b) - can switch to anthropic/openai
 - **Embeddings**: Local (all-MiniLM-L6-v2) - can switch to openai
 
+### Cloud Provider for GitHub Repos
+
+For public GitHub repositories, you can automatically use a cloud LLM provider (Claude Sonnet) for faster, higher-quality documentation generation:
+
+```yaml
+# ~/.config/local-deepwiki/config.yaml
+wiki:
+  use_cloud_for_github: true      # Auto-switch to cloud for GitHub repos
+  github_llm_provider: anthropic  # Options: anthropic, openai
+  max_concurrent_llm_calls: 3     # Parallel file doc generation (1-10)
+
+llm:
+  anthropic:
+    api_key: ${ANTHROPIC_API_KEY}  # Or set directly
+    model: claude-sonnet-4-20250514
+```
+
+When `use_cloud_for_github` is enabled, the system automatically detects if a repository is hosted on GitHub and switches to the cloud provider for wiki generation. This provides:
+- **Faster generation** - Cloud APIs are typically faster than local Ollama
+- **Higher quality docs** - Claude Sonnet produces more accurate, detailed documentation
+- **Privacy for private repos** - Non-GitHub repos continue using local Ollama
+
+You can also override the provider per-request via the MCP tool:
+```
+index_repository(repo_path="/path/to/repo", use_cloud_for_github=true)
+```
+
+Or specify the provider directly:
+```
+index_repository(repo_path="/path/to/repo", llm_provider="anthropic")
+```
+
 ## Testing the Server
 
 ```python
@@ -158,6 +190,8 @@ asyncio.run(test())
 - [x] C# language support
 - [x] Export to PDF (WeasyPrint)
 - [x] Deep Research mode (multi-step reasoning for complex architectural questions)
+- [x] Cloud provider auto-switching for GitHub repos (faster, higher-quality docs)
+- [x] Parallel file documentation generation (configurable concurrency)
 
 ## Wiki Structure
 
