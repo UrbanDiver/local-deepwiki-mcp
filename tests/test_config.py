@@ -81,6 +81,9 @@ class TestConfig:
         config = Config()
 
         assert config.wiki.max_file_docs == 20
+        assert config.wiki.max_concurrent_llm_calls == 3
+        assert config.wiki.use_cloud_for_github is False
+        assert config.wiki.github_llm_provider == "anthropic"
         assert config.wiki.import_search_limit == 200
         assert config.wiki.context_search_limit == 50
         assert config.wiki.fallback_search_limit == 30

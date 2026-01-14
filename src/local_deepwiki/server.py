@@ -179,6 +179,10 @@ async def list_tools() -> list[Tool]:
                         "enum": ["local", "openai"],
                         "description": "Embedding provider for semantic search (default: from config)",
                     },
+                    "use_cloud_for_github": {
+                        "type": "boolean",
+                        "description": "Use cloud LLM (Anthropic Claude) for GitHub repos. Faster and higher quality but requires API key. (default: from config)",
+                    },
                 },
                 "required": ["repo_path"],
             },
@@ -394,6 +398,11 @@ async def handle_index_repository(args: dict[str, Any]) -> list[TextContent]:
     # Override languages if specified
     if languages:
         config.parsing.languages = languages
+
+    # Override use_cloud_for_github if specified
+    use_cloud_for_github = args.get("use_cloud_for_github")
+    if use_cloud_for_github is not None:
+        config.wiki.use_cloud_for_github = use_cloud_for_github
 
     # Create indexer
     indexer = RepositoryIndexer(

@@ -170,6 +170,21 @@ def get_repo_info(repo_path: Path) -> GitRepoInfo:
     )
 
 
+def is_github_repo(repo_path: Path) -> bool:
+    """Check if a repository is hosted on GitHub.
+
+    Args:
+        repo_path: Path to the repository.
+
+    Returns:
+        True if the repo has a GitHub remote, False otherwise.
+    """
+    repo_info = get_repo_info(repo_path)
+    if repo_info.host:
+        return "github.com" in repo_info.host.lower()
+    return False
+
+
 def build_source_url(
     repo_info: GitRepoInfo,
     file_path: str,

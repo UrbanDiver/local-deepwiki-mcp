@@ -168,6 +168,15 @@ class WikiConfig(BaseModel):
         description="Maximum concurrent LLM calls for file documentation generation. "
         "Higher values speed up generation but increase memory/API usage.",
     )
+    use_cloud_for_github: bool = Field(
+        default=False,
+        description="Use cloud LLM provider (Anthropic Claude) for GitHub repos. "
+        "Provides faster, higher-quality documentation but requires API key.",
+    )
+    github_llm_provider: Literal["anthropic", "openai"] = Field(
+        default="anthropic",
+        description="Cloud LLM provider to use for GitHub repos when use_cloud_for_github is enabled.",
+    )
     import_search_limit: int = Field(
         default=200, description="Maximum chunks to search for import/relationship analysis"
     )

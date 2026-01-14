@@ -11,6 +11,7 @@ from local_deepwiki.core.git_utils import (
     get_default_branch,
     get_git_remote_url,
     get_repo_info,
+    is_github_repo,
     parse_remote_url,
 )
 
@@ -282,3 +283,50 @@ class TestGetRepoInfo:
         assert result.owner is None
         assert result.repo is None
         assert result.default_branch == "main"  # Fallback
+
+
+class TestIsGithubRepo:
+    """Tests for is_github_repo function."""
+
+    def test_github_https_returns_true(self, tmp_path: Path) -> None:
+        """Test returns True for GitHub HTTPS remote."""
+        subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True)
+        subprocess.run(
+            ["git", "remote", "add", "origin", "https://github.com/owner/repo.git"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+
+        assert is_github_repo(tmp_path) is True
+
+    def test_github_ssh_returns_true(self, tmp_path: Path) -> None:
+        """Test returns True for GitHub SSH remote."""
+        subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True)
+        subprocess.run(
+            ["git", "remote", "add", "origin", "git@github.com:owner/repo.git"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+
+        assert is_github_repo(tmp_path) is True
+
+    def test_gitlab_returns_false(self, tmp_path: Path) -> None:
+        """Test returns False for GitLab remote."""
+        subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True)
+        subprocess.run(
+            ["git", "remote", "add", "origin", "https://gitlab.com/owner/repo.git"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+
+        assert is_github_repo(tmp_path) is False
+
+    def test_no_remote_returns_false(self, tmp_path: Path) -> None:
+        """Test returns False for repo without remote."""
+        subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True)
+
+        assert is_github_repo(tmp_path) is False
+
+    def test_non_git_dir_returns_false(self, tmp_path: Path) -> None:
+        """Test returns False for non-git directory."""
+        assert is_github_repo(tmp_path) is False

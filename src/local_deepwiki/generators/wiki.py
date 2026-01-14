@@ -1301,10 +1301,23 @@ async def generate_wiki(
     Returns:
         WikiStructure with generated pages.
     """
+    from local_deepwiki.core.git_utils import is_github_repo
+
+    config = config or get_config()
+
+    # Auto-switch to cloud provider for GitHub repos if configured
+    effective_provider = llm_provider
+    if effective_provider is None and config.wiki.use_cloud_for_github:
+        if is_github_repo(repo_path):
+            effective_provider = config.wiki.github_llm_provider
+            logger.info(
+                f"GitHub repo detected, using cloud provider: {effective_provider}"
+            )
+
     generator = WikiGenerator(
         wiki_path=wiki_path,
         vector_store=vector_store,
         config=config,
-        llm_provider_name=llm_provider,
+        llm_provider_name=effective_provider,
     )
     return await generator.generate(index_status, progress_callback, full_rebuild)
