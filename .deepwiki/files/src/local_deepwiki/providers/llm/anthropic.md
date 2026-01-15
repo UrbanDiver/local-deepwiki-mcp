@@ -1,47 +1,36 @@
-# anthropic.py
+# Anthropic LLM Provider
 
 ## File Overview
 
-This module provides an Anthropic-based implementation of the LLM (Large [Language](../../models.md) Model) provider interface. It integrates with Anthropic's API through the AsyncAnthropic client to provide language model capabilities within the local_deepwiki system.
+This module provides an Anthropic LLM provider implementation for the local_deepwiki system. It integrates with Anthropic's API through the AsyncAnthropic client to provide language model capabilities.
 
 ## Classes
 
 ### AnthropicProvider
 
-The AnthropicProvider class implements the [LLMProvider](../base.md) interface to provide access to Anthropic's language models. This class handles authentication and communication with Anthropic's API services.
-
-**Inheritance:**
-- Extends: [LLMProvider](../base.md)
-
-**Key Features:**
-- Asynchronous API integration with Anthropic
-- Built-in retry mechanism through the [`with_retry`](../base.md) [decorator](../base.md)
-- Environment-based configuration support
+The AnthropicProvider class serves as the [main](../../export/pdf.md) interface for interacting with Anthropic's language models within the local_deepwiki system. This class inherits from the [LLMProvider](../base.md) base class and implements Anthropic-specific functionality.
 
 ## Dependencies
 
-The module relies on several key components:
+The module imports the following components:
 
-- **AsyncAnthropic**: The official Anthropic Python client for asynchronous API calls
-- **[LLMProvider](../base.md)**: Base class that defines the provider interface
-- **[with_retry](../base.md)**: Decorator for implementing retry logic on API calls
-- **[get_logger](../../logging.md)**: Logging utility for the local_deepwiki system
-
-## Environment Configuration
-
-The module uses `os` for environment variable access, suggesting it supports configuration through environment variables for API authentication and settings.
+- `os`: Standard library for environment variable access
+- `AsyncIterator` from `typing`: Type hint for asynchronous iteration
+- `AsyncAnthropic`: The official Anthropic Python client for API interactions
+- [`get_logger`](../../logging.md) from `local_deepwiki.logging`: Logging functionality
+- [`LLMProvider`](../base.md) and [`with_retry`](../base.md) from `local_deepwiki.providers.base`: Base provider class and retry [decorator](../base.md)
 
 ## Related Components
 
-This provider works within the broader local_deepwiki ecosystem:
+This provider integrates with the broader local_deepwiki provider system through:
 
-- Implements the [LLMProvider](../base.md) base class interface
-- Integrates with the logging system through [get_logger](../../logging.md)
-- Uses the retry mechanism provided by the base provider module
+- **[LLMProvider](../base.md)**: The base class that defines the common interface for all LLM providers
+- **[with_retry](../base.md)**: A [decorator](../base.md) from the base module that likely provides retry functionality for API calls
+- **Logging system**: Uses the centralized logging system for consistent log formatting
 
 ## Usage Context
 
-As an LLM provider implementation, this module would typically be instantiated and used by higher-level components that need to interact with language models for tasks such as content generation, analysis, or processing within the wiki system.
+This provider would typically be instantiated and used by other components in the local_deepwiki system that need to interact with Anthropic's language models. The class follows the provider pattern established by the [LLMProvider](../base.md) base class, ensuring consistent interfaces across different LLM implementations.
 
 ## API Reference
 

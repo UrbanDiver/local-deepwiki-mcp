@@ -1,20 +1,20 @@
-# CallGraph Module
+# callgraph.py
 
 ## File Overview
 
-The `callgraph.py` module provides functionality for extracting and visualizing call graphs from source code files. It analyzes code to identify function calls and generates Mermaid diagrams showing the relationships between functions.
+This module provides functionality for extracting and visualizing call graphs from source code files. It analyzes code to identify function calls and generates Mermaid diagrams showing the relationships between functions.
 
 ## Classes
 
 ### CallGraphExtractor
 
-Extracts call graphs from source files by parsing the code and identifying function call relationships.
+Extracts call graphs from source files by parsing code and identifying function calls.
 
 **Constructor:**
-- `__init__()`: Initializes the extractor with a [CodeParser](../core/parser.md) instance
+- `__init__()`: Initializes the extractor with a CodeParser instance
 
 **Methods:**
-- `extract_from_file(file_path: Path, repo_root: Path) -> dict[str, list[str]]`: Extracts call graph from a source file, returning a dictionary that maps function names to lists of called functions
+- `extract_from_file(file_path: Path, repo_root: Path) -> dict[str, list[str]]`: Extracts call graph from a source file, returning a dictionary mapping function names to lists of called functions
 
 ## Functions
 
@@ -24,23 +24,30 @@ Extracts call graphs from source files by parsing the code and identifying funct
 def get_file_call_graph(file_path: Path, repo_root: Path) -> str | None
 ```
 
-Generates a call graph diagram for a single file.
+Gets a call graph diagram for a single file.
 
 **Parameters:**
-- `file_path`: Path to the source file to analyze
-- `repo_root`: Repository root path for context
+- `file_path`: Path to the source file
+- `repo_root`: Repository root path
 
 **Returns:**
-- Mermaid diagram string representing the call graph, or `None` if no calls are found
+- Mermaid diagram string or None if no calls found
 
-### Supporting Functions
+### extract_call_name
 
-The module also includes several helper functions for call extraction and diagram generation:
+Extracts function names from call expressions in the parsed code.
 
-- `extract_call_name`: Extracts function names from call expressions
-- `extract_calls_from_function`: Identifies function calls within a given function
-- `_is_builtin_or_noise`: Filters out built-in functions and noise from call analysis
-- `generate_call_graph_diagram`: Converts call graph data into Mermaid diagram format
+### extract_calls_from_function
+
+Identifies all function calls within a given function's code block.
+
+### _is_builtin_or_noise
+
+Helper function to filter out built-in functions or irrelevant calls from the call graph analysis.
+
+### generate_call_graph_diagram
+
+Converts call graph data into a Mermaid diagram format for visualization.
 
 ## Usage Examples
 
@@ -51,34 +58,44 @@ from pathlib import Path
 from local_deepwiki.generators.callgraph import get_file_call_graph
 
 # Generate call graph for a single file
-file_path = Path("src/my_module.py")
+file_path = Path("src/example.py")
 repo_root = Path(".")
 diagram = get_file_call_graph(file_path, repo_root)
 
 if diagram:
-    print(diagram)  # Outputs Mermaid diagram string
+    print(diagram)
 ```
 
 ### Using CallGraphExtractor Directly
 
 ```python
+from pathlib import Path
 from local_deepwiki.generators.callgraph import CallGraphExtractor
 
+# Create extractor instance
 extractor = CallGraphExtractor()
-call_graph = extractor.extract_from_file(file_path, repo_root)
+
+# Extract call graph data
+call_graph = extractor.extract_from_file(
+    file_path=Path("src/example.py"),
+    repo_root=Path(".")
+)
+
 # call_graph is a dict mapping function names to their called functions
+for function, calls in call_graph.items():
+    print(f"{function} calls: {calls}")
 ```
 
 ## Related Components
 
 This module integrates with several other components:
 
-- **[CodeParser](../core/parser.md)**: Used for parsing source code files and extracting syntax tree information
-- **[Language](../models.md)**: Provides language-specific parsing configuration
-- **Core chunker**: Utilizes `CLASS_NODE_TYPES` and `FUNCTION_NODE_TYPES` constants for identifying code structures
-- **Parser utilities**: Uses functions like [`find_nodes_by_type`](../core/parser.md), [`get_node_name`](../core/parser.md), and [`get_node_text`](../core/parser.md) for syntax tree analysis
+- **CodeParser**: Used for parsing source code files and extracting syntax tree information
+- **[Language](../models.md)**: Enum for specifying programming language types
+- **Core chunker**: Provides constants for identifying class and function node types (`CLASS_NODE_TYPES`, `FUNCTION_NODE_TYPES`)
+- **Parser utilities**: Uses functions like `find_nodes_by_type`, `get_node_name`, and `get_node_text` for AST navigation
 
-The module works with Tree-sitter Node objects for precise code analysis and supports multiple programming languages through the [Language](../models.md) model.
+The module works with Tree-sitter Node objects for precise code analysis and supports the broader local_deepwiki documentation generation system.
 
 ## API Reference
 
@@ -314,8 +331,7 @@ assert result is None
 
 ## See Also
 
-- [wiki](wiki.md) - uses this
-- [test_callgraph](../../../tests/test_callgraph.md) - uses this
 - [chunker](../core/chunker.md) - dependency
 - [models](../models.md) - dependency
 - [api_docs](api_docs.md) - shares 5 dependencies
+- [test_examples](test_examples.md) - shares 4 dependencies

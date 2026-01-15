@@ -2,7 +2,7 @@
 
 ## File Overview
 
-This file contains comprehensive test coverage for the diagram generation functionality in the local_deepwiki project. It tests various diagram generation functions including class diagrams, dependency graphs, sequence diagrams, module overviews, and utility functions for parsing and processing code structures.
+This file contains comprehensive unit tests for the diagram generation functionality in the local_deepwiki project. It tests various diagram types including class diagrams, dependency graphs, sequence diagrams, and module overviews using pytest as the testing framework.
 
 ## Test Classes
 
@@ -11,21 +11,21 @@ This file contains comprehensive test coverage for the diagram generation functi
 Tests the [generate_module_overview](../src/local_deepwiki/generators/diagrams.md) function which creates visual representations of module structures.
 
 **Key Test Methods:**
-- `test_generates_diagram()` - Verifies that module overview diagrams are properly generated from [IndexStatus](../src/local_deepwiki/models.md) data containing file information, languages, and repository statistics
+- `test_generates_diagram()` - Verifies that module overview diagrams are properly generated using IndexStatus data containing repository information, file counts, and language statistics
 
-### TestGenerateClassDiagram
+### TestGenerateClassDiagram  
 
 Tests the [generate_class_diagram](../src/local_deepwiki/generators/diagrams.md) function for creating UML-style class diagrams from code chunks.
 
 **Key Test Methods:**
-- `test_generates_diagram_with_class()` - Validates diagram generation when processing [CodeChunk](../src/local_deepwiki/models.md) objects containing class definitions with methods
+- `test_generates_diagram_with_class()` - Tests diagram generation with a single class, using CodeChunk objects containing class definitions with methods
 
 ### TestPathToModule
 
-Tests the _path_to_module utility function for converting file paths to module names.
+Tests the _path_to_module utility function that converts file paths to module names.
 
 **Key Test Methods:**
-- `test_converts_simple_path()` - Verifies conversion of standard Python file paths to module names
+- `test_converts_simple_path()` - Verifies conversion of file paths like "src/mypackage/core/parser.py" to module names
 - `test_skips_init_files()` - Ensures `__init__.py` files return None as expected
 - `test_skips_non_python()` - Confirms non-Python files are properly filtered out
 
@@ -34,89 +34,79 @@ Tests the _path_to_module utility function for converting file paths to module n
 Tests the [generate_sequence_diagram](../src/local_deepwiki/generators/diagrams.md) function for creating sequence diagrams from call graphs.
 
 **Key Test Methods:**
-- `test_generates_sequence()` - Validates sequence diagram generation from call graph dictionaries
-- `test_returns_none_for_empty()` - Ensures proper handling of empty call graphs
+- `test_generates_sequence()` - Tests sequence diagram generation using call graph dictionaries that map function names to their called functions
+- `test_returns_none_for_empty()` - Verifies handling of empty or invalid inputs
 
 ## Test Methods
 
 ### test_external_dependencies_shown
 
-Tests dependency graph generation with external dependencies visible.
-
-**Parameters tested:**
-- `chunks` - List of [CodeChunk](../src/local_deepwiki/models.md) objects containing import statements
-- `show_external=True` - Flag to include external dependencies in the diagram
+Tests that external dependencies are properly displayed in dependency graphs when the `show_external=True` parameter is used. Uses CodeChunk objects with import statements to verify external library visualization.
 
 ### test_external_dependencies_hidden
 
-Tests dependency graph generation with external dependencies filtered out.
+Tests that external dependencies are filtered out when `show_external=False` is specified, ensuring only internal project dependencies appear in the generated diagrams.
 
-**Parameters tested:**
-- `chunks` - List of [CodeChunk](../src/local_deepwiki/models.md) objects with import statements
-- `show_external=False` - Flag to exclude external dependencies
+## Tested Components
 
-## Imported Components
+The test file validates the following diagram generation functions:
 
-This test file works with the following components from `local_deepwiki.generators.diagrams`:
+- **[generate_class_diagram](../src/local_deepwiki/generators/diagrams.md)** - Creates class relationship diagrams
+- **[generate_dependency_graph](../src/local_deepwiki/generators/diagrams.md)** - Generates module dependency visualizations  
+- **[generate_module_overview](../src/local_deepwiki/generators/diagrams.md)** - Produces high-level module structure diagrams
+- **[generate_sequence_diagram](../src/local_deepwiki/generators/diagrams.md)** - Creates sequence diagrams from call graphs
+- **[generate_deep_research_sequence](../src/local_deepwiki/generators/diagrams.md)** - Generates research workflow sequences
+- **[generate_indexing_sequence](../src/local_deepwiki/generators/diagrams.md)** - Creates indexing process diagrams
+- **[generate_wiki_generation_sequence](../src/local_deepwiki/generators/diagrams.md)** - Visualizes wiki generation workflows
+- **[generate_workflow_sequences](../src/local_deepwiki/generators/diagrams.md)** - Produces various workflow diagrams
+- **[generate_language_pie_chart](../src/local_deepwiki/generators/diagrams.md)** - Creates language distribution charts
 
-**Data Classes:**
-- [ClassInfo](../src/local_deepwiki/generators/diagrams.md) - Represents class structure information
+## Utility Functions Tested
 
-**Utility Functions:**
-- _extract_class_attributes - Extracts class attributes from code
-- _extract_method_signature - Parses method signatures
-- _find_circular_dependencies - Identifies circular import dependencies
-- _module_to_wiki_path - Converts module names to wiki paths
-- _parse_external_import - Parses external import statements
-- _parse_import_line - Parses individual import lines
-- _path_to_module - Converts file paths to module names
-- [sanitize_mermaid_name](../src/local_deepwiki/generators/diagrams.md) - Sanitizes names for Mermaid diagram compatibility
+- **_path_to_module** - Converts file paths to Python module names
+- **_extract_class_attributes** - Extracts class attribute information
+- **_extract_method_signature** - Parses method signatures from code
+- **_find_circular_dependencies** - Detects circular import dependencies
+- **_module_to_wiki_path** - Converts module names to wiki paths
+- **_parse_external_import** - Parses external import statements
+- **_parse_import_line** - Processes individual import lines
+- **[sanitize_mermaid_name](../src/local_deepwiki/generators/diagrams.md)** - Sanitizes names for Mermaid diagram compatibility
 
-**Diagram Generation Functions:**
-- [generate_class_diagram](../src/local_deepwiki/generators/diagrams.md) - Creates UML class diagrams
-- [generate_deep_research_sequence](../src/local_deepwiki/generators/diagrams.md) - Generates research workflow sequences
-- [generate_dependency_graph](../src/local_deepwiki/generators/diagrams.md) - Creates module dependency visualizations
-- [generate_indexing_sequence](../src/local_deepwiki/generators/diagrams.md) - Generates indexing workflow diagrams
-- [generate_language_pie_chart](../src/local_deepwiki/generators/diagrams.md) - Creates language distribution charts
-- [generate_module_overview](../src/local_deepwiki/generators/diagrams.md) - Generates module structure overviews
-- [generate_sequence_diagram](../src/local_deepwiki/generators/diagrams.md) - Creates sequence diagrams from call graphs
-- [generate_wiki_generation_sequence](../src/local_deepwiki/generators/diagrams.md) - Generates wiki creation workflows
-- [generate_workflow_sequences](../src/local_deepwiki/generators/diagrams.md) - Creates various workflow diagrams
-
-## Usage Examples
+## Usage Example
 
 ```python
-# Testing class diagram generation
+# Example of how the tested functions work based on the test code
 chunks = [
     CodeChunk(
         id="1",
-        file_path="test.py",
+        file_path="test.py", 
         content="class MyClass:\n    def method(self): pass",
         chunk_type=ChunkType.CLASS,
         language=Language.PYTHON,
         start_line=1,
         end_line=2,
         name="MyClass",
-        metadata={},
+        metadata={}
     )
 ]
-# Function would be called in actual implementation
 
-# Testing path conversion
-result = _path_to_module("src/mypackage/core/parser.py")
-assert "parser" in result
+# Generate class diagram
+diagram = generate_class_diagram(chunks)
 
-# Testing sequence diagram generation
-call_graph = {
-    "main": ["process", "validate"],
-    "process": ["transform"],
-    "validate": [],
-    "transform": [],
-}
-diagram = generate_sequence_diagram(call_graph, "main")
+# Generate dependency graph with external dependencies
+dependency_diagram = generate_dependency_graph(chunks, "myproject", show_external=True)
 ```
 
-The test file uses pytest framework and covers various scenarios including edge cases, error handling, and different configuration options for the diagram generation system.
+## Related Components
+
+The tests work with several data structures and enums from the local_deepwiki project:
+
+- **CodeChunk** - Represents parsed code segments
+- **ChunkType** - Enum for different code chunk types (CLASS, IMPORT, etc.)
+- **Language** - Enum for programming languages  
+- **IndexStatus** - Contains repository indexing information
+- **FileInfo** - Represents individual file metadata
+- **[ClassInfo](../src/local_deepwiki/generators/diagrams.md)** - Stores class structure information
 
 ## API Reference
 
@@ -927,11 +917,9 @@ flowchart TD
 
 ## Relevant Source Files
 
-- `tests/test_diagrams.py:28-57`
+- [`tests/test_diagrams.py:28-57`](https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/tests/test_diagrams.py#L28-L57)
 
 ## See Also
 
 - [diagrams](../src/local_deepwiki/generators/diagrams.md) - dependency
-- [models](../src/local_deepwiki/models.md) - dependency
-- [wiki](../src/local_deepwiki/generators/wiki.md) - shares 3 dependencies
 - [crosslinks](../src/local_deepwiki/generators/crosslinks.md) - shares 2 dependencies

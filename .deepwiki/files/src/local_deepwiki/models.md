@@ -1,121 +1,153 @@
-# models.py
+# Models Module
 
 ## File Overview
 
-This file contains the core data models and type definitions for the local_deepwiki system. It defines data structures for representing code chunks, wiki pages, search results, research processes, and various status enums using Pydantic models and Python enums.
+The `models.py` file defines the core data models and type definitions for the local_deepwiki system. It uses Pydantic for data validation and includes models for representing wiki pages, research results, file processing status, and various enumeration types used throughout the application.
 
-## Imports
+## Dependencies
 
-The module depends on:
-- `json` - Standard JSON handling
-- `enum.Enum` - For enumeration types
-- `pathlib.Path` - For file path operations
-- `typing` - Type hints including `Any` and `Protocol`
-- `pydantic` - `BaseModel` and `Field` for data validation
+- `json`: Standard library for JSON operations
+- `enum.Enum`: For creating enumeration types
+- `pathlib.Path`: For file path handling
+- `typing.Any`, `typing.Protocol`: Type hints and protocols
+- `pydantic.BaseModel`, `pydantic.Field`: Data validation and modeling
 
 ## Classes
 
 ### ProgressCallback
 
-A Protocol class that defines the interface for progress callback functions.
+A Protocol class that defines the interface for progress callback functions used throughout the system.
 
 ### Language
 
-An Enum that represents supported programming languages in the system.
+An enumeration class that defines supported programming languages for code analysis.
 
 ### ChunkType
 
-An Enum that categorizes different types of code chunks that can be processed.
+An enumeration that categorizes different types of code chunks that can be processed.
 
 ### CodeChunk
 
-A Pydantic model representing a chunk of code with associated metadata. This is a fundamental data structure for representing parsed code segments.
+A Pydantic model representing a segment of code with associated metadata including:
+- Chunk type classification
+- Content and location information
+- Language specification
 
 ### FileInfo
 
-A Pydantic model that stores information about files in the system, including metadata and processing status.
+A model that stores metadata about processed files, including file paths, types, and processing status.
 
 ### IndexStatus
 
-An Enum representing the various states a file or component can be in during the indexing process.
+An enumeration representing the various states a file can be in during the indexing process.
 
 ### WikiPage
 
-A Pydantic model representing a wiki page with content and metadata. This is the core structure for generated documentation pages.
+A comprehensive model for wiki page content that includes:
+- Page metadata (title, file path)
+- Generated content sections
+- Cross-references and links
+- Processing status information
 
 ### WikiStructure
 
-A Pydantic model that defines the overall structure and organization of the wiki system.
+A model that represents the overall structure of the generated wiki, containing collections of WikiPage objects and organizational metadata.
 
 ### SearchResult
 
-A Pydantic model representing search results returned from queries against the wiki content.
+A model for representing search results within the wiki system, including relevance scoring and result metadata.
 
 ### WikiPageStatus
 
-An Enum indicating the current status of wiki page generation or processing.
+An enumeration defining the possible states of wiki page generation and processing.
 
 ### WikiGenerationStatus
 
-An Enum representing the overall status of the wiki generation process.
+A model tracking the overall status of wiki generation processes.
 
 ### ResearchStepType
 
-An Enum that categorizes different types of research steps in the deep research process.
+An enumeration categorizing different types of research steps in the deep research process.
 
 ### ResearchStep
 
-A Pydantic model representing an individual step in the research process, with type and associated data.
+A model representing individual steps in the research process, including step type, content, and execution status.
 
 ### SubQuestion
 
-A Pydantic model representing sub-questions generated during the research process.
+A model for representing sub-questions generated during deep research, with associated research steps and results.
 
 ### SourceReference
 
-A Pydantic model that represents references to source materials or code locations.
+A model for tracking source references used in research, including file paths, line numbers, and relevance information.
 
 ### DeepResearchResult
 
-A Pydantic model containing the complete results of a deep research operation, including findings and references.
+A comprehensive model containing the results of deep research operations, including:
+- Main research findings
+- Sub-questions and their results
+- Source references
+- Confidence metrics
 
 ### ResearchProgressType
 
-An Enum representing different types of progress updates during research operations.
+An enumeration defining different types of research progress updates.
 
 ### ResearchProgress
 
-A Pydantic model for tracking and reporting progress during research operations.
+A model for tracking and reporting research progress, including progress type, completion status, and descriptive messages.
 
 ## Usage Examples
 
+### Creating a CodeChunk
+
 ```python
-from local_deepwiki.models import CodeChunk, Language, ChunkType
+from local_deepwiki.models import CodeChunk, ChunkType, Language
 
-# Create a code chunk
 chunk = CodeChunk(
-    content="def example(): pass",
+    type=ChunkType.FUNCTION,
+    content="def example_function():\n    pass",
     language=Language.PYTHON,
-    chunk_type=ChunkType.FUNCTION
+    start_line=10,
+    end_line=12
 )
+```
 
-# Create a wiki page
+### Working with WikiPage
+
+```python
+from local_deepwiki.models import WikiPage, WikiPageStatus
+
 page = WikiPage(
     title="Example Documentation",
-    content="# Example\nThis is example content."
+    file_path="src/example.py",
+    content="# Example\n\nThis is example documentation.",
+    status=WikiPageStatus.COMPLETED
+)
+```
+
+### Creating Research Progress
+
+```python
+from local_deepwiki.models import ResearchProgress, ResearchProgressType
+
+progress = ResearchProgress(
+    type=ResearchProgressType.ANALYSIS,
+    message="Analyzing code structure",
+    completion_percentage=75
 )
 ```
 
 ## Related Components
 
-This models file serves as the foundation for the entire local_deepwiki system. The data structures defined here are used throughout the codebase for:
-- Code parsing and chunking operations
-- Wiki generation and management
-- Search functionality
-- Research and analysis processes
-- Progress tracking and status reporting
+This models file serves as the foundation for data structures used throughout the local_deepwiki system. The models defined here are likely used by:
 
-The Pydantic models provide data validation and serialization capabilities, while the Enum classes ensure type safety for status and categorization fields throughout the system.
+- Code analysis and processing components
+- Wiki generation systems
+- Research and documentation engines
+- File indexing and status tracking systems
+
+The Protocol-based ProgressCallback interface suggests integration with asynchronous processing systems that provide progress updates during long-running operations.
 
 ## API Reference
 
@@ -537,8 +569,8 @@ assert record["vector"] == [0.1, 0.2, 0.3]
 
 ## See Also
 
-- [source_refs](generators/source_refs.md) - uses this
 - [crosslinks](generators/crosslinks.md) - uses this
-- [test_models](../../tests/test_models.md) - uses this
-- [test_crosslinks](../../tests/test_crosslinks.md) - uses this
-- [api_docs](generators/api_docs.md) - uses this
+- [test_examples](generators/test_examples.md) - uses this
+- [source_refs](generators/source_refs.md) - uses this
+- [search](generators/search.md) - uses this
+- [diagrams](generators/diagrams.md) - uses this

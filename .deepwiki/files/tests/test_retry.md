@@ -2,40 +2,41 @@
 
 ## File Overview
 
-This file contains comprehensive tests for the retry functionality in the local_deepwiki providers module. It tests the [`with_retry`](../src/local_deepwiki/providers/base.md) [decorator](../src/local_deepwiki/providers/base.md) and the `RETRYABLE_EXCEPTIONS` tuple to ensure proper retry behavior for various error conditions.
+This test file validates the retry functionality provided by the `with_retry` decorator and the `RETRYABLE_EXCEPTIONS` tuple from the `local_deepwiki.providers.base` module. It ensures that the retry mechanism properly handles various error conditions and respects configuration parameters.
 
 ## Classes
 
 ### TestWithRetry
 
-The [main](../src/local_deepwiki/export/html.md) test class that validates the behavior of the [`with_retry`](../src/local_deepwiki/providers/base.md) [decorator](../src/local_deepwiki/providers/base.md) across different scenarios.
+Tests the behavior of the `with_retry` decorator across different scenarios including successful operations, retryable errors, non-retryable errors, and configuration parameters.
 
-**Key Test Methods:**
-
+**Key Methods:**
 - `test_succeeds_on_first_attempt` - Verifies successful execution without retries
-- `test_retries_on_connection_error` - Tests retry behavior for connection errors
-- `test_retries_on_timeout_error` - Tests retry behavior for timeout errors
-- `test_gives_up_after_max_attempts` - Verifies the [decorator](../src/local_deepwiki/providers/base.md) respects max attempt limits
-- `test_does_not_retry_non_retryable_errors` - Ensures non-retryable errors fail immediately
-- `test_retries_on_rate_limit` - Tests retry behavior for rate limiting scenarios
-- `test_retries_on_server_overload` - Tests retry behavior for server overload (503 errors)
-- `test_preserves_function_metadata` - Verifies the [decorator](../src/local_deepwiki/providers/base.md) preserves function metadata
-- `test_custom_max_attempts` - Tests custom max_attempts parameter configuration
+- `test_retries_on_connection_error` - Tests retry behavior for ConnectionError
+- `test_retries_on_timeout_error` - Tests retry behavior for TimeoutError  
+- `test_gives_up_after_max_attempts` - Verifies retry limit enforcement
+- `test_does_not_retry_non_retryable_errors` - Tests immediate failure for non-retryable errors
+- `test_retries_on_rate_limit` - Tests retry behavior for rate limiting errors
+- `test_retries_on_server_overload` - Tests retry behavior for 503 service unavailable errors
+- `test_preserves_function_metadata` - Verifies decorator preserves function metadata
+- `test_custom_max_attempts` - Tests custom retry attempt configuration
 
 ### TestRetryableExceptions
 
-A focused test class that validates the contents of the `RETRYABLE_EXCEPTIONS` tuple.
+Tests the `RETRYABLE_EXCEPTIONS` tuple to ensure it contains the expected exception types.
 
-**Test Methods:**
+**Key Methods:**
+- `test_includes_connection_error` - Verifies ConnectionError is retryable
+- `test_includes_timeout_error` - Verifies TimeoutError is retryable
+- `test_includes_os_error` - Verifies OSError is retryable
 
-- `test_includes_connection_error` - Verifies ConnectionError is in retryable exceptions
-- `test_includes_timeout_error` - Verifies TimeoutError is in retryable exceptions  
-- `test_includes_os_error` - Verifies OSError is in retryable exceptions
+## Functions
 
-## Key Test Patterns
+The test methods are all async functions that use the pytest framework. They create decorated test functions using the `with_retry` decorator and verify the retry behavior through call counting and exception handling.
 
-### Retry on Connection Errors
+### Key Test Patterns
 
+**Retry Success Pattern:**
 ```python
 @with_retry(max_attempts=3, base_delay=0.01)
 async def flaky_func():
@@ -46,66 +47,58 @@ async def flaky_func():
     return "success"
 ```
 
-### Immediate Failure for Non-Retryable Errors
-
+**Non-Retryable Error Pattern:**
 ```python
 @with_retry(max_attempts=3, base_delay=0.01)
 async def value_error_func():
     nonlocal call_count
     call_count += 1
-    raise ValueError("Invalid value")  # Not retried
-```
-
-### Custom Attempt Configuration
-
-```python
-@with_retry(max_attempts=5, base_delay=0.01)
-async def func_with_custom_attempts():
-    # Function will retry up to 5 times
-    pass
+    raise ValueError("Invalid value")
 ```
 
 ## Usage Examples
 
-### Running the Tests
+### Testing Retry Behavior
 
 ```python
-# Test that connection errors trigger retries
-async def test_connection_retry():
-    # Function will retry on ConnectionError up to max_attempts
-    result = await decorated_function()
-    assert result == "success"
+# Test successful retry after failures
+async def test_retries_on_connection_error(self):
+    call_count = 0
 
-# Test that non-retryable errors fail immediately  
-async def test_immediate_failure():
-    with pytest.raises(ValueError):
-        await function_that_raises_value_error()
+    @with_retry(max_attempts=3, base_delay=0.01)
+    async def flaky_func():
+        nonlocal call_count
+        call_count += 1
+        if call_count < 3:
+            raise ConnectionError("Connection refused")
+        return "success"
+
+    result = await flaky_func()
+    assert result == "success"
+    assert call_count == 3
 ```
 
-### Validating Retryable Exceptions
+### Testing Exception Types
 
 ```python
-# Verify specific exception types are retryable
-assert ConnectionError in RETRYABLE_EXCEPTIONS
-assert TimeoutError in RETRYABLE_EXCEPTIONS
-assert OSError in RETRYABLE_EXCEPTIONS
+def test_includes_connection_error(self):
+    assert ConnectionError in RETRYABLE_EXCEPTIONS
 ```
 
 ## Related Components
 
-This test file depends on:
+This test file works with:
+- `with_retry` decorator from `local_deepwiki.providers.base`
+- `RETRYABLE_EXCEPTIONS` tuple from `local_deepwiki.providers.base`
+- `pytest` framework for test execution and assertions
 
-- [`local_deepwiki.providers.base.with_retry`](../src/local_deepwiki/providers/base.md) - The retry [decorator](../src/local_deepwiki/providers/base.md) being tested
-- `local_deepwiki.providers.base.RETRYABLE_EXCEPTIONS` - The tuple of retryable exception types
-- `pytest` - Testing framework for async test execution and assertion handling
-
-The tests validate the retry mechanism used throughout the local_deepwiki providers to handle transient network and system errors gracefully.
+The tests validate that the retry mechanism properly handles network-related errors (ConnectionError, TimeoutError, OSError) while immediately failing on application errors (ValueError) that shouldn't be retried.
 
 ## API Reference
 
 ### class `TestWithRetry`
 
-Tests for the [with_retry](../src/local_deepwiki/providers/base.md) [decorator](../src/local_deepwiki/providers/base.md).
+Tests for the with_retry decorator.
 
 **Methods:**
 
@@ -213,7 +206,7 @@ async def overloaded_func()
 async def test_preserves_function_metadata()
 ```
 
-Test that [decorator](../src/local_deepwiki/providers/base.md) preserves function name and docstring.
+Test that decorator preserves function name and docstring.
 
 #### `documented_func`
 
@@ -373,9 +366,8 @@ flowchart TD
 
 ## Relevant Source Files
 
-- `tests/test_retry.py:8-144`
+- [`tests/test_retry.py:8-144`](https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/tests/test_retry.py#L8-L144)
 
 ## See Also
 
 - [test_vectorstore](test_vectorstore.md) - shares 2 dependencies
-- [test_provider_errors](test_provider_errors.md) - shares 2 dependencies

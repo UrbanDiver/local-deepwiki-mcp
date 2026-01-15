@@ -1,112 +1,120 @@
-# config.py
+# Configuration Module
 
 ## File Overview
 
-The config.py module provides a comprehensive configuration system for the local_deepwiki application. It defines configuration models using Pydantic for various components including LLM providers, embedding services, parsing, chunking, and wiki generation. The module implements both global and context-local configuration management with thread-safe access patterns.
+The `config.py` module provides configuration management for the local_deepwiki application. It implements a thread-safe singleton pattern with support for context-local configuration overrides, allowing different configurations to be used in different execution contexts (useful for testing or per-request scenarios).
 
-## Classes
+## Configuration Classes
 
 ### Config
 
-The [main](export/html.md) configuration class that aggregates all component configurations.
+The [main](export/pdf.md) configuration class that aggregates all configuration sections.
 
 **Fields:**
-- `embedding`: EmbeddingConfig instance for embedding service configuration
-- `llm`: LLMConfig instance for LLM provider configuration  
-- `llm_cache`: LLMCacheConfig instance for LLM caching settings
-- `parsing`: ParsingConfig instance for document parsing configuration
-- `chunking`: ChunkingConfig instance for text chunking settings
-- `wiki`: WikiConfig instance for wiki generation configuration
-- `deep_research`: DeepResearchConfig instance for research functionality
-- `output`: OutputConfig instance for output formatting settings
-- `prompts`: Configuration for provider-specific prompts
+- `embedding`: EmbeddingConfig - Embedding provider configuration
+- `llm`: LLMConfig - [Language](models.md) model provider configuration  
+- `llm_cache`: LLMCacheConfig - LLM caching configuration
+- `parsing`: ParsingConfig - Document parsing configuration
+- `chunking`: ChunkingConfig - Text chunking configuration
+- `wiki`: WikiConfig - Wiki generation configuration
+- `deep_research`: DeepResearchConfig - Deep research functionality configuration
+- `output`: OutputConfig - Output formatting configuration
+- `prompts`: PromptsConfig - System prompts configuration
 
-### LLMConfig
+### LLM Provider Configurations
 
-Configuration for LLM (Large [Language](models.md) Model) providers.
+#### LLMConfig
 
-**Fields:**
-- `provider`: Literal type accepting "ollama", "anthropic", or "openai" (default: "ollama")
-- `ollama`: OllamaConfig instance for Ollama-specific settings
-- `anthropic`: AnthropicConfig instance for Anthropic-specific settings  
-- `openai`: OpenAILLMConfig instance for OpenAI-specific settings
-
-### OllamaConfig
-
-Configuration specific to the Ollama LLM provider.
+Main LLM provider configuration that supports multiple providers.
 
 **Fields:**
-- `model`: Model name to use (default: "qwen3-coder:30b")
-- `base_url`: API endpoint URL (default: "http://localhost:11434")
+- `provider`: Literal["ollama", "anthropic", "openai"] - Selected LLM provider (default: "ollama")
+- `ollama`: OllamaConfig - Ollama-specific configuration
+- `anthropic`: AnthropicConfig - Anthropic-specific configuration  
+- `openai`: OpenAILLMConfig - OpenAI-specific configuration
 
-### AnthropicConfig
+#### OllamaConfig
 
-Configuration specific to the Anthropic LLM provider.
-
-**Fields:**
-- `model`: Model name to use (default: "claude-sonnet-4-20250514")
-
-### OpenAILLMConfig
-
-Configuration specific to the OpenAI LLM provider.
+Configuration for Ollama LLM provider.
 
 **Fields:**
-- `model`: Model name to use (default: "gpt-4o")
+- `model`: str - Ollama model name (default: "qwen3-coder:30b")
+- `base_url`: str - Ollama API URL (default: "http://localhost:11434")
 
-### ProviderPromptsConfig
+#### AnthropicConfig
 
-Defines prompts configuration for specific providers.
+Configuration for Anthropic LLM provider.
 
 **Fields:**
-- `wiki_system`: System prompt for wiki documentation generation
-- `research_decomposition`: System prompt for question decomposition
-- `research_gap_analysis`: System prompt for gap analysis
-- `research_synthesis`: System prompt for answer synthesis
+- `model`: str - Anthropic model name (default: "claude-sonnet-4-20250514")
+
+#### OpenAILLMConfig
+
+Configuration for OpenAI LLM provider.
+
+**Fields:**
+- `model`: str - OpenAI model name (default: "gpt-4o")
+
+### Prompts Configuration
+
+#### ProviderPromptsConfig
+
+Prompts configuration for a specific LLM provider.
+
+**Fields:**
+- `wiki_system`: str - System prompt for wiki documentation generation
+- `research_decomposition`: str - System prompt for question decomposition
+- `research_gap_analysis`: str - System prompt for gap analysis
+- `research_synthesis`: str - System prompt for answer synthesis
 
 ## Functions
 
 ### get_config()
 
-Retrieves the active configuration instance with support for context-local overrides.
+Retrieves the active configuration instance with context-local override support.
 
-**Returns:** The active Config instance
+**Returns:**
+- `Config` - The active configuration instance
 
 **Behavior:**
-- Returns context-local config if set via context manager
+- Returns context-local config if set via config_context
 - Falls back to global singleton configuration
 - Thread-safe for concurrent access
-- Automatically loads configuration if not yet initialized
+- Automatically loads configuration if not initialized
 
-### set_config(config)
+### set_config(config: Config)
 
-Sets the global configuration instance in a thread-safe manner.
+Sets the global configuration instance.
 
 **Parameters:**
-- `config`: Config instance to set as the global configuration
+- `config`: Config - The configuration to set globally
 
-**Note:** This affects the global config only, not context-local overrides.
+**Notes:**
+- Thread-safe operation
+- Sets global config, not context-local
+- Use config_context() for temporary overrides
 
 ### reset_config()
 
-Resets the global configuration to an uninitialized state and clears any context-local overrides.
+Resets the global configuration to uninitialized state.
 
-**Use Cases:**
-- Testing scenarios requiring fresh configuration
-- Clearing cached configuration state
+**Purpose:**
+- Useful for testing to ensure fresh config loading
+- Clears any context-local override
+- Thread-safe operation
 
-### config_context(config)
+### config_context(config: Config)
 
 Context manager for temporary configuration overrides.
 
 **Parameters:**
-- `config`: Config instance to use within the context
+- `config`: Config - The configuration to use within the context
 
-**Yields:** The provided configuration instance
+**Yields:**
+- `Config` - The provided configuration
 
-**Behavior:**
-- Sets context-local configuration that takes precedence over global config
-- Automatically restores previous configuration when exiting context
-- Useful for testing or per-request configuration scenarios
+**Usage:**
+Sets a context-local configuration that takes precedence over the global config within the context scope.
 
 ## Usage Examples
 
@@ -116,57 +124,54 @@ Context manager for temporary configuration overrides.
 # Get the current configuration
 config = get_config()
 
-# Access LLM provider settings
-provider = config.llm.provider
-model_name = config.llm.ollama.model
+# Access LLM settings
+llm_provider = config.llm.provider
+ollama_model = config.llm.ollama.model
 ```
 
 ### Setting Global Configuration
 
 ```python
-# Create and set a new configuration
-new_config = Config()
-set_config(new_config)
+# Create and set a custom configuration
+custom_config = Config()
+custom_config.llm.provider = "openai"
+custom_config.llm.openai.model = "gpt-4"
+
+set_config(custom_config)
 ```
 
 ### Temporary Configuration Override
 
 ```python
-# Use a custom configuration temporarily
-custom_config = Config()
-custom_config.llm.provider = "openai"
+# Use a different configuration temporarily
+test_config = Config()
+test_config.llm.provider = "anthropic"
 
-with config_context(custom_config):
-    # get_config() returns custom_config here
+with config_context(test_config):
+    # get_config() returns test_config here
     current_config = get_config()
-    print(current_config.llm.provider)  # "openai"
+    assert current_config.llm.provider == "anthropic"
 
 # get_config() returns global config again
 ```
 
-### Configuration Reset
+### Testing with Fresh Configuration
 
 ```python
-# Reset configuration (useful for testing)
+# Reset for clean testing
 reset_config()
 
-# Next call to get_config() will reload from default sources
+# Configuration will be reloaded on next get_config() call
 config = get_config()
 ```
 
 ## Related Components
 
-The configuration system integrates with several other components through its field definitions:
-
-- **EmbeddingConfig**: Manages embedding service configuration
-- **ParsingConfig**: Controls document parsing behavior  
-- **ChunkingConfig**: Defines text chunking strategies
-- **WikiConfig**: Configures wiki generation parameters
-- **DeepResearchConfig**: Settings for research functionality
-- **OutputConfig**: Output formatting and destination settings
-- **LLMCacheConfig**: LLM response caching configuration
-
-The module uses Pydantic BaseModel for configuration validation and YAML for configuration file parsing, providing robust configuration management with type safety and validation.
+The configuration system integrates with:
+- **Pydantic BaseModel**: All configuration classes inherit from BaseModel for validation
+- **YAML**: Configuration loading from YAML files (imported)
+- **Threading**: Thread-safe access using locks and context variables
+- **Context Variables**: Support for context-local configuration overrides
 
 ## API Reference
 
@@ -525,6 +530,7 @@ classDiagram
         +max_concurrent_llm_calls: int
         +use_cloud_for_github: bool
         +github_llm_provider: Literal["anthropic", "openai"]
+        +chat_llm_provider: Literal["default", "anthropic", "openai", "ollama"]
         +import_search_limit: int
         +context_search_limit: int
         +fallback_search_limit: int
@@ -648,7 +654,4 @@ assert config1 is config2
 ## See Also
 
 - [llm_cache](core/llm_cache.md) - uses this
-- [test_indexer](../../tests/test_indexer.md) - uses this
 - [chunker](core/chunker.md) - uses this
-- [test_config](../../tests/test_config.md) - uses this
-- [wiki](generators/wiki.md) - uses this

@@ -1,37 +1,80 @@
-# tests/test_api_docs.py
+# test_api_docs.py
 
 ## File Overview
 
-This test module provides comprehensive test coverage for the API documentation generation functionality in the local_deepwiki project. It tests various components including API doc extraction, function/class signature parsing, docstring processing, and markdown generation for API references.
+This test file contains comprehensive test cases for the API documentation generation functionality in the local_deepwiki project. It tests various components that extract, parse, and format API documentation from Python source code, including docstring parsing, signature extraction, and markdown generation.
 
 ## Classes
 
 ### TestAPIDocExtractor
 
-Tests the [APIDocExtractor](../src/local_deepwiki/generators/api_docs.md) class functionality for extracting API documentation from Python source files.
+Test class for the APIDocExtractor functionality.
 
-**Key Methods:**
-- `test_extract_from_file()` - Tests extracting documentation from a Python file containing functions and classes
-
-**Fixtures:**
-- `extractor()` - Creates and returns an [APIDocExtractor](../src/local_deepwiki/generators/api_docs.md) instance for testing
+**Methods:**
+- `extractor()`: Pytest fixture that returns an APIDocExtractor instance
+- `test_extract_from_file()`: Tests extracting API documentation from a Python file by creating a temporary file with sample code including a helper function and a class with an `__init__` method
 
 ### TestGetFileApiDocs
 
-Tests the convenience function for getting API documentation from files.
+Test class for the convenience function that gets API documentation for files.
 
-**Key Methods:**
-- `test_file_with_content()` - Tests getting API docs for a file that contains actual Python code with docstrings
+**Methods:**
+- `test_file_with_content()`: Tests getting API docs for a file with content by creating a temporary Python file with a `process` function that has type hints, docstring with Args and Returns sections, and tests the file processing functionality
+
+## Test Coverage
+
+The test file covers the following API documentation components based on the imports:
+
+### Core Functions Tested
+- `extract_class_signature`: Extracts class signatures from Python code
+- `extract_function_signature`: Extracts function signatures from Python code  
+- `extract_python_decorators`: Extracts decorators from Python functions/classes
+- `extract_python_docstring`: Extracts docstrings from Python code elements
+- `extract_python_parameters`: Extracts parameter information from functions
+- `extract_python_return_type`: Extracts return type annotations
+- `format_function_signature_line`: Formats function signatures for documentation
+- `format_parameter`: Formats parameter information for display
+- `generate_api_reference_markdown`: Generates markdown API reference documentation
+- `get_file_api_docs`: Convenience function for getting file API documentation
+- `parse_docstring`: Parses docstrings into structured format
+- `parse_google_docstring`: Parses Google-style docstrings
+
+### Data Classes Tested
+- `ClassSignature`: Represents class signature information
+- `FunctionSignature`: Represents function signature information  
+- `Parameter`: Represents function parameter information
 
 ## Usage Examples
 
-Based on the test structure visible in the code:
+### Testing API Documentation Extraction
 
 ```python
-# Creating an extractor instance
+# Create an APIDocExtractor instance (via fixture)
 extractor = APIDocExtractor()
 
-# Testing file extraction (as shown in test)
+# Test extracting docs from a file
+source_code = '''
+def helper(value: int) -> bool:
+    """A helper function."""
+    return value > 0
+
+class MyClass:
+    """A sample class."""
+    
+    def __init__(self, name: str):
+        """Initialize the class."""
+        pass
+'''
+
+# Write to temporary file and test extraction
+test_file = tmp_path / "test_module.py"
+test_file.write_text(source_code)
+```
+
+### Testing File API Documentation
+
+```python
+# Test processing a file with documented functions
 source = '''
 def process(value: int = 10) -> str:
     """Process a value.
@@ -45,45 +88,26 @@ def process(value: int = 10) -> str:
     return str(value)
 '''
 
-# Write to test file and extract docs
-test_file = tmp_path / "processor.py" 
+test_file = tmp_path / "processor.py"
 test_file.write_text(source)
 ```
 
 ## Related Components
 
-This test module works with several components from the local_deepwiki package:
+This test file works with several core components of the local_deepwiki system:
 
-**Core Components:**
-- [CodeParser](../src/local_deepwiki/core/parser.md) - For parsing Python source code
-- [APIDocExtractor](../src/local_deepwiki/generators/api_docs.md) - Main class for extracting API documentation
+- **[CodeParser](../src/local_deepwiki/core/parser.md)**: Used for parsing Python source code (from `local_deepwiki.core.parser`)
+- **APIDocExtractor**: Main class for extracting API documentation
+- **Path**: For file system operations with temporary test files
+- **pytest**: Testing framework with fixtures and test organization
 
-**Utility Functions:**
-- `extract_class_signature()` - Extracts class signature information
-- `extract_function_signature()` - Extracts function signature details
-- `extract_python_decorators()` - Parses Python decorators
-- `extract_python_docstring()` - Extracts docstring content
-- `extract_python_parameters()` - Parses function parameters
-- `extract_python_return_type()` - Extracts return type information
-- `format_function_signature_line()` - Formats function signatures
-- `format_parameter()` - Formats parameter information
-- `generate_api_reference_markdown()` - Generates markdown documentation
-- `get_file_api_docs()` - Convenience function for file-based doc extraction
-- `parse_docstring()` - Parses docstring content
-- `parse_google_docstring()` - Specifically handles Google-style docstrings
-
-**Data Classes:**
-- [ClassSignature](../src/local_deepwiki/generators/api_docs.md) - Represents class signature information
-- [FunctionSignature](../src/local_deepwiki/generators/api_docs.md) - Represents function signature details  
-- [Parameter](../src/local_deepwiki/generators/api_docs.md) - Represents function parameter information
-
-The test suite validates that these components work together correctly to extract, parse, and format API documentation from Python source code files.
+The tests verify the integration between code parsing, docstring extraction, signature analysis, and markdown generation components that make up the API documentation system.
 
 ## API Reference
 
 ### class `TestParameter`
 
-Test [Parameter](../src/local_deepwiki/generators/api_docs.md) dataclass.
+Test Parameter dataclass.
 
 **Methods:**
 
@@ -125,7 +149,7 @@ def test_simple_parameters(parser)
 Test extracting simple parameters without types.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `parser` | - | - | - |
 
@@ -138,7 +162,7 @@ def test_typed_parameters(parser)
 Test extracting parameters with type hints.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `parser` | - | - | - |
 
@@ -151,7 +175,7 @@ def test_default_parameters(parser)
 Test extracting parameters with default values.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `parser` | - | - | - |
 
@@ -164,7 +188,7 @@ def test_typed_default_parameters(parser)
 Test extracting parameters with types and defaults.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `parser` | - | - | - |
 
@@ -177,7 +201,7 @@ def test_excludes_self(parser)
 Test that self is excluded from method parameters.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `parser` | - | - | - |
 
@@ -190,7 +214,7 @@ def test_excludes_cls(parser)
 Test that cls is excluded from classmethod parameters.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `parser` | - | - | - |
 
@@ -216,7 +240,7 @@ def test_simple_return_type(parser)
 Test extracting a simple return type.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `parser` | - | - | - |
 
@@ -229,7 +253,7 @@ def test_complex_return_type(parser)
 Test extracting a complex return type.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `parser` | - | - | - |
 
@@ -242,7 +266,7 @@ def test_no_return_type(parser)
 Test function with no return type.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `parser` | - | - | - |
 
@@ -268,7 +292,7 @@ def test_triple_quote_docstring(parser)
 Test extracting triple-quoted docstring.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `parser` | - | - | - |
 
@@ -281,7 +305,7 @@ def test_multiline_docstring(parser)
 Test extracting multiline docstring.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `parser` | - | - | - |
 
@@ -294,7 +318,7 @@ def test_no_docstring(parser)
 Test function with no docstring.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `parser` | - | - | - |
 
@@ -382,7 +406,7 @@ def test_simple_function(parser)
 Test extracting simple function signature.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `parser` | - | - | - |
 
@@ -395,7 +419,7 @@ def test_async_function(parser)
 Test extracting async function signature.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `parser` | - | - | - |
 
@@ -421,7 +445,7 @@ def test_simple_class(parser)
 Test extracting simple class signature.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `parser` | - | - | - |
 
@@ -434,7 +458,7 @@ def test_class_with_inheritance(parser)
 Test extracting class with base classes.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `parser` | - | - | - |
 
@@ -566,7 +590,7 @@ Test including private items when specified.
 
 ### class `TestAPIDocExtractor`
 
-Test [APIDocExtractor](../src/local_deepwiki/generators/api_docs.md) class.
+Test APIDocExtractor class.
 
 **Methods:**
 
@@ -585,7 +609,7 @@ def test_extract_from_file(tmp_path, extractor)
 Test extracting docs from a Python file.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `tmp_path` | - | - | - |
 | `extractor` | - | - | - |
@@ -599,7 +623,7 @@ def test_extract_unsupported_file(tmp_path, extractor)
 Test extracting from unsupported file type.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `tmp_path` | - | - | - |
 | `extractor` | - | - | - |
@@ -620,7 +644,7 @@ def test_file_with_content(tmp_path)
 Test getting API docs for a file with content.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `tmp_path` | - | - | - |
 
@@ -633,7 +657,7 @@ def test_file_without_functions(tmp_path)
 Test getting API docs for file without functions.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `tmp_path` | - | - | - |
 
@@ -836,12 +860,8 @@ flowchart TD
 
 ## Relevant Source Files
 
-- `tests/test_api_docs.py:31-53`
+- [`tests/test_api_docs.py:31-53`](https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/tests/test_api_docs.py#L31-L53)
 
 ## See Also
 
-- [models](../src/local_deepwiki/models.md) - dependency
-- [api_docs](../src/local_deepwiki/generators/api_docs.md) - dependency
-- [test_callgraph](test_callgraph.md) - shares 5 dependencies
 - [test_parser](test_parser.md) - shares 4 dependencies
-- [test_examples](../src/local_deepwiki/generators/test_examples.md) - shares 4 dependencies

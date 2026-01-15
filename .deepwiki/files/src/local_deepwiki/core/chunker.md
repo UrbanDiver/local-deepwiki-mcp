@@ -2,45 +2,46 @@
 
 ## File Overview
 
-The chunker module provides functionality for breaking down source code files into semantic chunks for analysis and documentation generation. It works with parsed code to identify and extract meaningful code segments like classes, functions, and other structural elements.
+This module provides code chunking functionality for the local_deepwiki system. It contains the CodeChunker class and utility functions for breaking down source code into meaningful chunks for documentation generation.
 
 ## Classes
 
 ### CodeChunker
 
-The CodeChunker class is responsible for analyzing parsed code and splitting it into logical chunks based on the code structure. It integrates with the parsing system to identify semantic boundaries and create structured representations of code segments.
+The [main](../export/pdf.md) class responsible for chunking source code into analyzable segments. It uses tree-sitter parsing to identify and extract different types of code constructs.
+
+**Purpose**: Processes parsed code into structured chunks that can be used for documentation generation.
+
+**Dependencies**: 
+- Uses CodeParser for syntax tree parsing
+- Integrates with [ChunkingConfig](../config.md) for configuration settings
+- Creates [CodeChunk](../models.md) model instances for output
 
 ## Functions
 
 ### get_parent_classes
 
-A utility function that appears to work with code structure analysis, likely for identifying class inheritance relationships or hierarchical code organization.
-
-## Usage Examples
-
-```python
-from local_deepwiki.core.chunker import CodeChunker, get_parent_classes
-from local_deepwiki.config import get_config
-
-# Initialize chunker with configuration
-config = get_config()
-chunker = CodeChunker()
-
-# Process code chunks
-# (Specific usage patterns would depend on the actual method signatures)
-```
+A utility function that appears to be related to extracting parent class information from code structures.
 
 ## Related Components
 
 This module integrates with several other components of the local_deepwiki system:
 
-- **[CodeParser](parser.md)**: Used for parsing source code files and working with syntax trees
+- **CodeParser**: Used for parsing source code into syntax trees
 - **[ChunkingConfig](../config.md)**: Provides configuration settings for chunking behavior
-- **[CodeChunk](../models.md) and [ChunkType](../models.md) models**: Data structures for representing code chunks
-- **[Language](../models.md) model**: Handles language-specific processing
-- **Parser utilities**: Functions like [`find_nodes_by_type`](parser.md), [`get_docstring`](parser.md), [`get_node_name`](parser.md), and [`get_node_text`](parser.md) for working with parsed code nodes
+- **[CodeChunk](../models.md)**: The model class used to represent individual code chunks
+- **[ChunkType](../models.md)**: Enumeration defining different types of code chunks
+- **[Language](../models.md)**: Enumeration for programming language identification
 
-The module uses tree-sitter for syntax tree manipulation and includes logging capabilities for debugging and monitoring the chunking process.
+The module also uses utility functions from the parser module including:
+- `find_nodes_by_type`: For locating specific node types in syntax trees
+- `get_docstring`: For extracting documentation strings
+- `get_node_name`: For retrieving node identifiers
+- `get_node_text`: For extracting text content from nodes
+
+## Usage Context
+
+Based on the imports and structure, this chunker module serves as a core component in the code analysis pipeline, taking parsed code and organizing it into meaningful segments for further processing by the documentation generation system.
 
 ## API Reference
 
@@ -281,8 +282,8 @@ assert "process_data" in function_names
 
 ## See Also
 
-- [test_chunker](../../../tests/test_chunker.md) - uses this
-- [api_docs](../generators/api_docs.md) - uses this
 - [callgraph](../generators/callgraph.md) - uses this
+- [api_docs](../generators/api_docs.md) - uses this
+- [logging](../logging.md) - dependency
 - [models](../models.md) - dependency
-- [config](../config.md) - dependency
+- [test_examples](../generators/test_examples.md) - shares 5 dependencies

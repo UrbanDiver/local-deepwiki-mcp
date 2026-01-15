@@ -2,7 +2,7 @@
 
 ## File Overview
 
-The `git_utils.py` module provides utilities for extracting information from Git repositories. It focuses on parsing Git remote URLs, determining repository metadata, and building source URLs for linking to remote repositories.
+The `git_utils.py` module provides utilities for working with Git repositories, including extracting repository information, parsing remote URLs, and building source URLs. It focuses on Git repository metadata extraction and URL manipulation for repository hosting services.
 
 ## Classes
 
@@ -11,52 +11,49 @@ The `git_utils.py` module provides utilities for extracting information from Git
 A dataclass that stores information about a Git repository.
 
 **Attributes:**
-- `remote_url`: The remote repository URL (e.g., "https://github.com/owner/repo")
-- `host`: The hosting service domain (e.g., "github.com", "gitlab.com") 
-- `owner`: The repository owner or organization name (e.g., "UrbanDiver")
-- `repo`: The repository name (e.g., "local-deepwiki-mcp")
-- `default_branch`: The default branch name (e.g., "[main](../export/html.md)")
+- `remote_url` (str | None): The remote repository URL (e.g., "https://github.com/owner/repo")
+- `host` (str | None): The hosting service domain (e.g., "github.com", "gitlab.com")
+- `owner` (str | None): The repository owner/organization name (e.g., "UrbanDiver")
+- `repo` (str | None): The repository name (e.g., "local-deepwiki-mcp")
+- `default_branch` (str): The default branch name (e.g., "[main](../export/pdf.md)")
 
 ## Functions
 
-Based on the module structure, this file contains the following functions:
+Based on the module structure shown, this file contains the following functions:
 
-### get_git_remote_url
-Retrieves the remote URL from a Git repository.
-
-### parse_remote_url
-Parses a Git remote URL to extract host, owner, and repository information.
-
-### get_default_branch
-Determines the default branch of a Git repository.
-
-### get_repo_info
-Gathers comprehensive repository information and returns a GitRepoInfo instance.
-
-### is_github_repo
-Checks if a repository is hosted on GitHub.
-
-### build_source_url
-Constructs URLs for linking to source files in the remote repository.
+- `get_git_remote_url`: Retrieves the remote URL of a Git repository
+- `parse_remote_url`: Parses a Git remote URL to extract host, owner, and repository information
+- `get_default_branch`: Determines the default branch of a Git repository
+- `get_repo_info`: Gathers comprehensive repository information
+- `is_github_repo`: Checks if a repository is hosted on GitHub
+- `build_source_url`: Constructs source URLs for repository files
 
 ## Usage Examples
 
 ```python
 from local_deepwiki.core.git_utils import GitRepoInfo, get_repo_info
+from pathlib import Path
 
 # Get repository information
-repo_info = get_repo_info(Path("/path/to/repo"))
+repo_path = Path("/path/to/git/repo")
+repo_info = get_repo_info(repo_path)
 
 # Access repository details
-if repo_info:
-    print(f"Repository: {repo_info.owner}/{repo_info.repo}")
+if repo_info.remote_url:
+    print(f"Repository URL: {repo_info.remote_url}")
     print(f"Host: {repo_info.host}")
+    print(f"Owner: {repo_info.owner}")
+    print(f"Repository: {repo_info.repo}")
     print(f"Default branch: {repo_info.default_branch}")
 ```
 
-## Related Components
+## Dependencies
 
-This module integrates with the local_deepwiki logging system through the [`get_logger`](../logging.md) function. It uses standard Python libraries including `subprocess` for Git command execution, `re` for URL parsing, and `pathlib` for file system operations.
+This module relies on:
+- Standard library modules: `re`, `subprocess`, `dataclasses`, `pathlib`
+- Internal logging utilities from `local_deepwiki.logging`
+
+The module uses subprocess calls to interact with Git commands and regular expressions for URL parsing.
 
 ## API Reference
 
@@ -106,7 +103,7 @@ Parse remote URL to extract host, owner, and repo name.  Handles various URL for
 def get_default_branch(repo_path: Path) -> str
 ```
 
-Get the default branch name for the repository.  Tries to detect the default branch from: 1. Current HEAD if on a branch 2. Remote HEAD reference 3. Falls back to '[main](../export/html.md)'
+Get the default branch name for the repository.  Tries to detect the default branch from: 1. Current HEAD if on a branch 2. Remote HEAD reference 3. Falls back to '[main](../export/pdf.md)'
 
 
 | [Parameter](../generators/api_docs.md) | Type | Default | Description |
@@ -278,7 +275,6 @@ assert result == "https://github.com/owner/repo/blob/main/src/file.py#L42"
 
 ## See Also
 
-- [wiki](../generators/wiki.md) - uses this
 - [logging](../logging.md) - dependency
 - [crosslinks](../generators/crosslinks.md) - shares 3 dependencies
 - [diagrams](../generators/diagrams.md) - shares 3 dependencies

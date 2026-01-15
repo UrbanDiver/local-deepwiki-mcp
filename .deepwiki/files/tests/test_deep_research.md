@@ -1,69 +1,69 @@
-# Test Deep Research Module
-
-This file contains comprehensive test suites for the deep research functionality in the local_deepwiki system, including tests for the [DeepResearchResult](../src/local_deepwiki/models.md) model and the MCP server handler.
+# test_deep_research.py
 
 ## File Overview
 
-The `tests/test_deep_research.py` file provides unit tests for the deep research pipeline components. It tests both the data models and server handlers that enable deep research capabilities across codebases.
+This file contains unit tests for the deep research functionality of the local_deepwiki system. It tests the [DeepResearchPipeline](../src/local_deepwiki/core/deep_research.md), DeepResearchResult model, and the MCP server handler for deep research operations.
 
 ## Classes
 
 ### TestDeepResearchResult
 
-Tests for the [DeepResearchResult](../src/local_deepwiki/models.md) model that represents the output of deep research operations.
+Tests for the DeepResearchResult model class.
 
 #### Methods
 
-- **test_create_result()**: Tests the creation of a deep research result with all required fields including question, answer, sub_questions, sources, reasoning_trace, and metrics for chunks analyzed and LLM calls.
+**test_create_result()**
+- Tests the creation of a DeepResearchResult instance
+- Verifies that all fields are properly set including question, answer, sub_questions, sources, reasoning_trace, total_chunks_analyzed, and total_llm_calls
+- Validates that the created result has the expected properties
 
-### TestHandleDeepResearch  
+### TestHandleDeepResearch
 
 Tests for the MCP server handler that processes deep research requests.
 
 #### Methods
 
-- **test_returns_error_for_empty_question()**: Verifies that the handler returns an appropriate error message when an empty question is provided. Tests that the result contains error text indicating the question cannot be empty.
+**test_returns_error_for_empty_question()**
+- Async test method that verifies error handling for empty questions
+- Calls the [handle_deep_research](../src/local_deepwiki/handlers.md) function with an empty question string
+- Asserts that an error message is returned containing "Error" and "cannot be empty"
 
-- **test_returns_error_for_unindexed_repo()**: Tests error handling for repositories that haven't been indexed yet (implementation details not fully visible in the provided code).
+**test_returns_error_for_unindexed_repo(tmp_path)**
+- Async test method that checks error handling for repositories that haven't been indexed
+- Uses a temporary path fixture for testing
+- Tests the scenario where a repository path is provided but the repository is not indexed
 
 ## Functions
 
-Based on the imports, this file tests the [`handle_deep_research`](../src/local_deepwiki/server.md) function from the server module, which processes deep research requests with parameters including:
-
-- `repo_path`: Path to the repository
-- `question`: The research question to investigate
+Based on the code shown, the file imports and tests the [`handle_deep_research`](../src/local_deepwiki/handlers.md) function from the handlers module, but the complete function definitions are not visible in the provided code chunks.
 
 ## Usage Examples
 
-### Testing Deep Research Results
+### Testing DeepResearchResult Creation
 
 ```python
-# Create a deep research result for testing
 result = DeepResearchResult(
     question="Test question",
-    answer="Test answer", 
+    answer="Test answer",
     sub_questions=[],
     sources=[],
     reasoning_trace=[],
     total_chunks_analyzed=5,
     total_llm_calls=3,
 )
-
-# Verify the result properties
 assert result.question == "Test question"
 assert result.total_llm_calls == 3
 ```
 
-### Testing Server Handler
+### Testing Handler Error Cases
 
 ```python
-# Test error handling for empty questions
+# Test empty question handling
 result = await handle_deep_research({
     "repo_path": "/some/path",
     "question": "",
 })
 
-# Verify error response
 assert len(result) == 1
 assert "Error" in result[0].text
 assert "cannot be empty" in result[0].text
@@ -71,25 +71,25 @@ assert "cannot be empty" in result[0].text
 
 ## Related Components
 
-This test file works with several core components:
+This test file works with several components from the local_deepwiki system:
 
-- **[DeepResearchPipeline](../src/local_deepwiki/core/deep_research.md)**: The [main](../src/local_deepwiki/export/html.md) pipeline class for conducting deep research
-- **[ResearchCancelledError](../src/local_deepwiki/core/deep_research.md)**: Exception for handling cancelled research operations  
-- **[DeepResearchResult](../src/local_deepwiki/models.md)**: Model representing research results with questions, answers, sources, and metrics
-- **[ResearchProgress](../src/local_deepwiki/models.md)**: Model for tracking research progress
-- **[SubQuestion](../src/local_deepwiki/models.md)**: Model for research sub-questions
-- **[SearchResult](../src/local_deepwiki/models.md)**: Model for search results
-- **[CodeChunk](../src/local_deepwiki/models.md)**: Model representing code segments
-- **[EmbeddingProvider](../src/local_deepwiki/providers/base.md)** and **[LLMProvider](../src/local_deepwiki/providers/base.md)**: Base provider interfaces
-- **[handle_deep_research](../src/local_deepwiki/server.md)**: Server handler function for processing research requests
+- **[DeepResearchPipeline](../src/local_deepwiki/core/deep_research.md)**: Core pipeline for conducting deep research
+- **[ResearchCancelledError](../src/local_deepwiki/core/deep_research.md)**: Exception class for cancelled research operations
+- **DeepResearchResult**: Model for storing research results
+- **ResearchProgress**: Model for tracking research progress
+- **SearchResult**: Model for search results
+- **SubQuestion**: Model for sub-questions generated during research
+- **CodeChunk**: Model for code chunks with ChunkType and Language enums
+- **EmbeddingProvider** and **LLMProvider**: Base provider classes for embeddings and language models
+- **[handle_deep_research](../src/local_deepwiki/handlers.md)**: Handler function for processing deep research requests
 
-The tests use standard Python testing tools including `pytest` for test framework, `AsyncMock` and `MagicMock` for mocking async and sync operations respectively.
+The tests use standard Python testing libraries including `pytest` for test framework, `unittest.mock` for mocking (AsyncMock, MagicMock), and `json` for data serialization.
 
 ## API Reference
 
 ### class `MockEmbeddingProvider`
 
-**Inherits from:** [`EmbeddingProvider`](../src/local_deepwiki/providers/base.md)
+**Inherits from:** `EmbeddingProvider`
 
 Mock embedding provider for testing.
 
@@ -102,7 +102,7 @@ def __init__(dimension: int = 384)
 ```
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `dimension` | `int` | `384` | - |
 
@@ -125,14 +125,14 @@ async def embed(texts: list[str]) -> list[list[float]]
 ```
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `texts` | `list[str]` | - | - |
 
 
 ### class `MockLLMProvider`
 
-**Inherits from:** [`LLMProvider`](../src/local_deepwiki/providers/base.md)
+**Inherits from:** `LLMProvider`
 
 Mock LLM provider for testing.
 
@@ -145,7 +145,7 @@ def __init__(responses: list[str] | None = None)
 ```
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `responses` | `list[str] | None` | `None` | - |
 
@@ -162,7 +162,7 @@ async def generate(prompt: str, system_prompt: str | None = None, max_tokens: in
 ```
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `prompt` | `str` | - | - |
 | `system_prompt` | `str | None` | `None` | - |
@@ -176,7 +176,7 @@ async def generate_stream(prompt: str, system_prompt: str | None = None, max_tok
 ```
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `prompt` | `str` | - | - |
 | `system_prompt` | `str | None` | `None` | - |
@@ -186,7 +186,7 @@ async def generate_stream(prompt: str, system_prompt: str | None = None, max_tok
 
 ### class `TestSubQuestion`
 
-Tests for [SubQuestion](../src/local_deepwiki/models.md) model.
+Tests for SubQuestion model.
 
 **Methods:**
 
@@ -209,7 +209,7 @@ Test string representation.
 
 ### class `TestDeepResearchResult`
 
-Tests for [DeepResearchResult](../src/local_deepwiki/models.md) model.
+Tests for DeepResearchResult model.
 
 **Methods:**
 
@@ -245,7 +245,7 @@ async def test_decompose_simple_question(mock_vector_store)
 Test decomposition of a simple question.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_vector_store` | - | - | - |
 
@@ -258,7 +258,7 @@ async def test_decompose_limits_sub_questions(mock_vector_store)
 Test that decomposition limits sub-questions to max.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_vector_store` | - | - | - |
 
@@ -271,7 +271,7 @@ async def test_decompose_handles_invalid_json(mock_vector_store)
 Test graceful handling of invalid JSON response.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_vector_store` | - | - | - |
 
@@ -284,7 +284,7 @@ async def test_decompose_validates_categories(mock_vector_store)
 Test that invalid categories are replaced with default.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_vector_store` | - | - | - |
 
@@ -312,7 +312,7 @@ async def test_parallel_retrieval_calls_search(mock_llm)
 Test that parallel retrieval calls search for each sub-question.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_llm` | - | - | - |
 
@@ -325,7 +325,7 @@ async def test_retrieval_deduplicates_results(mock_llm)
 Test that duplicate chunks are deduplicated.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_llm` | - | - | - |
 
@@ -353,7 +353,7 @@ async def test_gap_analysis_generates_follow_ups(mock_vector_store)
 Test that gap analysis can generate follow-up queries.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_vector_store` | - | - | - |
 
@@ -366,7 +366,7 @@ async def test_gap_analysis_limits_follow_ups(mock_vector_store)
 Test that follow-up queries are limited.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_vector_store` | - | - | - |
 
@@ -394,7 +394,7 @@ async def test_synthesis_includes_context(mock_vector_store)
 Test that synthesis prompt includes code context.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_vector_store` | - | - | - |
 
@@ -428,7 +428,7 @@ async def test_trace_includes_all_steps(mock_vector_store)
 Test that reasoning trace includes all steps.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_vector_store` | - | - | - |
 
@@ -441,7 +441,7 @@ async def test_trace_records_duration(mock_vector_store)
 Test that each step has duration recorded.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_vector_store` | - | - | - |
 
@@ -492,7 +492,7 @@ async def test_returns_error_for_unindexed_repo(tmp_path)
 Test error returned when repository is not indexed.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `tmp_path` | - | - | - |
 
@@ -528,7 +528,7 @@ async def test_progress_callback_receives_all_steps(mock_vector_store)
 Test that progress callback receives expected events.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_vector_store` | - | - | - |
 
@@ -539,9 +539,9 @@ async def capture(p: ResearchProgress) -> None
 ```
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `p` | [`ResearchProgress`](../src/local_deepwiki/models.md) | - | - |
+| `p` | `ResearchProgress` | - | - |
 
 #### `test_progress_callback_includes_sub_questions`
 
@@ -552,7 +552,7 @@ async def test_progress_callback_includes_sub_questions(mock_vector_store)
 Test that decomposition progress includes sub-questions.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_vector_store` | - | - | - |
 
@@ -563,9 +563,9 @@ async def capture(p: ResearchProgress) -> None
 ```
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `p` | [`ResearchProgress`](../src/local_deepwiki/models.md) | - | - |
+| `p` | `ResearchProgress` | - | - |
 
 #### `test_progress_callback_includes_chunk_counts`
 
@@ -576,7 +576,7 @@ async def test_progress_callback_includes_chunk_counts(mock_vector_store)
 Test that retrieval progress includes chunk counts.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_vector_store` | - | - | - |
 
@@ -587,9 +587,9 @@ async def capture(p: ResearchProgress) -> None
 ```
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `p` | [`ResearchProgress`](../src/local_deepwiki/models.md) | - | - |
+| `p` | `ResearchProgress` | - | - |
 
 #### `test_progress_callback_includes_follow_up_queries`
 
@@ -600,7 +600,7 @@ async def test_progress_callback_includes_follow_up_queries(mock_vector_store)
 Test that gap analysis progress includes follow-up queries.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_vector_store` | - | - | - |
 
@@ -611,9 +611,9 @@ async def capture(p: ResearchProgress) -> None
 ```
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `p` | [`ResearchProgress`](../src/local_deepwiki/models.md) | - | - |
+| `p` | `ResearchProgress` | - | - |
 
 #### `test_progress_callback_none_works`
 
@@ -624,7 +624,7 @@ async def test_progress_callback_none_works(mock_vector_store)
 Test that pipeline works without progress callback.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_vector_store` | - | - | - |
 
@@ -637,7 +637,7 @@ async def test_progress_callback_includes_duration(mock_vector_store)
 Test that progress events include duration.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_vector_store` | - | - | - |
 
@@ -648,9 +648,9 @@ async def capture(p: ResearchProgress) -> None
 ```
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `p` | [`ResearchProgress`](../src/local_deepwiki/models.md) | - | - |
+| `p` | `ResearchProgress` | - | - |
 
 #### `test_progress_step_numbers_increase`
 
@@ -661,7 +661,7 @@ async def test_progress_step_numbers_increase(mock_vector_store)
 Test that step numbers increase monotonically.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_vector_store` | - | - | - |
 
@@ -672,9 +672,9 @@ async def capture(p: ResearchProgress) -> None
 ```
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `p` | [`ResearchProgress`](../src/local_deepwiki/models.md) | - | - |
+| `p` | `ResearchProgress` | - | - |
 
 
 ### class `TestResearchCancellation`
@@ -716,7 +716,7 @@ async def test_cancellation_before_decomposition(mock_vector_store)
 Test cancellation before decomposition starts.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_vector_store` | - | - | - |
 
@@ -735,7 +735,7 @@ async def test_cancellation_after_decomposition(mock_vector_store)
 Test cancellation after decomposition completes.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_vector_store` | - | - | - |
 
@@ -754,7 +754,7 @@ async def test_cancellation_before_gap_analysis(mock_vector_store)
 Test cancellation before gap analysis.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_vector_store` | - | - | - |
 
@@ -773,7 +773,7 @@ async def test_cancellation_before_synthesis(mock_vector_store)
 Test cancellation before synthesis.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_vector_store` | - | - | - |
 
@@ -792,7 +792,7 @@ async def test_no_cancellation_when_check_is_none(mock_vector_store)
 Test that pipeline completes when cancellation_check is None.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_vector_store` | - | - | - |
 
@@ -805,7 +805,7 @@ async def test_no_cancellation_when_check_returns_false(mock_vector_store)
 Test that pipeline completes when cancellation check returns False.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_vector_store` | - | - | - |
 
@@ -824,7 +824,7 @@ async def test_cancellation_stops_llm_calls(mock_vector_store)
 Test that cancellation prevents further LLM calls.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_vector_store` | - | - | - |
 
@@ -856,14 +856,14 @@ def make_chunk(id: str, file_path: str = "test.py", content: str = "test code", 
 Create a test code chunk.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `id` | `str` | - | - |
 | `file_path` | `str` | `"test.py"` | - |
 | `content` | `str` | `"test code"` | - |
 | `name` | `str` | `"test_func"` | - |
 
-**Returns:** [`CodeChunk`](../src/local_deepwiki/models.md)
+**Returns:** `CodeChunk`
 
 
 #### `make_search_result`
@@ -875,12 +875,12 @@ def make_search_result(chunk: CodeChunk, score: float = 0.8) -> SearchResult
 Create a test search result.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `chunk` | [`CodeChunk`](../src/local_deepwiki/models.md) | - | - |
+| `chunk` | `CodeChunk` | - | - |
 | `score` | `float` | `0.8` | - |
 
-**Returns:** [`SearchResult`](../src/local_deepwiki/models.md)
+**Returns:** `SearchResult`
 
 
 
@@ -1128,4 +1128,4 @@ flowchart TD
 
 ## Relevant Source Files
 
-- `tests/test_deep_research.py:27-41`
+- [`tests/test_deep_research.py:27-41`](https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/tests/test_deep_research.py#L27-L41)

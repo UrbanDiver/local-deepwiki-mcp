@@ -1,8 +1,8 @@
-# logging.py
+# Logging Module
 
 ## File Overview
 
-This module provides logging configuration functionality for the local-deepwiki package. It contains utilities to set up and configure loggers with customizable output formats, levels, and destinations.
+The `logging.py` module provides centralized logging configuration for the local-deepwiki package. It offers a simple interface to set up logging with customizable levels, formats, and output destinations.
 
 ## Functions
 
@@ -14,23 +14,23 @@ def setup_logging(
     format_style: Literal["simple", "detailed"] = "simple",
     stream: bool = True,
     log_file: str | None = None,
-) -> logging.Logger
+) -> logging.Logger:
 ```
 
-Configures logging for the local-deepwiki package with flexible options for output format and destination.
+Configures logging for the local-deepwiki package with flexible options for different use cases.
 
 **Parameters:**
-- `level` (str | int | None): Log level specification (DEBUG, INFO, WARNING, ERROR, CRITICAL). Defaults to INFO, or uses the DEEPWIKI_LOG_LEVEL environment variable if set
-- `format_style` (Literal["simple", "detailed"]): Format style for log messages. "simple" provides basic formatting, while "detailed" includes file and line information
-- `stream` (bool): Whether to enable logging to stderr. Defaults to True
-- `log_file` (str | None): Optional file path for writing log output to a file
+- `level` (str | int | None): Log level specification. Accepts standard logging levels (DEBUG, INFO, WARNING, ERROR, CRITICAL). Defaults to INFO, or can be overridden by the `DEEPWIKI_LOG_LEVEL` environment variable
+- `format_style` (Literal["simple", "detailed"]): Output format style. "simple" provides basic log format, while "detailed" includes file and line information
+- `stream` (bool): Whether to output logs to stderr. Defaults to True
+- `log_file` (str | None): Optional file path for writing logs to a file
 
 **Returns:**
 - `logging.Logger`: The configured logger instance
 
 ### get_logger
 
-A function for retrieving logger instances (signature not fully visible in the provided code).
+The module also includes a `get_logger` function, though its complete signature and implementation details are not visible in the provided code.
 
 ## Usage Examples
 
@@ -39,41 +39,45 @@ A function for retrieving logger instances (signature not fully visible in the p
 ```python
 from local_deepwiki.logging import setup_logging
 
-# Simple setup with default INFO level
+# Simple logging to stderr
 logger = setup_logging()
 
-# Setup with specific log level
+# Set specific log level
 logger = setup_logging(level="DEBUG")
 
-# Setup with detailed formatting
+# Use detailed format with file/line info
 logger = setup_logging(format_style="detailed")
 ```
 
-### File and Stream Logging
+### File Logging
 
 ```python
-# Log to both stderr and a file
+# Log to both stderr and file
 logger = setup_logging(
-    level="WARNING",
+    level="INFO",
     format_style="detailed",
     stream=True,
-    log_file="app.log"
+    log_file="deepwiki.log"
 )
 
 # Log only to file
 logger = setup_logging(
     stream=False,
-    log_file="debug.log"
+    log_file="deepwiki.log"
 )
 ```
 
 ### Environment Variable Configuration
 
-The setup_logging function respects the `DEEPWIKI_LOG_LEVEL` environment variable for default log level configuration when no explicit level is provided.
+The logging level can be controlled via environment variable:
+
+```bash
+export DEEPWIKI_LOG_LEVEL=DEBUG
+```
 
 ## Related Components
 
-This module uses Python's standard `logging` module and integrates with the broader local-deepwiki package ecosystem. It provides the logging infrastructure that other components in the package can utilize for consistent log output formatting and management.
+This module uses Python's standard `logging` library and integrates with the `os` and `sys` modules for environment variable access and stream handling. The typing module provides type hints for better code clarity and IDE support.
 
 ## API Reference
 
@@ -146,8 +150,8 @@ flowchart TD
 
 ## See Also
 
-- [llm_cache](core/llm_cache.md) - uses this
 - [git_utils](core/git_utils.md) - uses this
+- [server](server.md) - uses this
 - [test_examples](generators/test_examples.md) - uses this
-- [chunker](core/chunker.md) - uses this
+- [llm_cache](core/llm_cache.md) - uses this
 - [vectorstore](core/vectorstore.md) - uses this

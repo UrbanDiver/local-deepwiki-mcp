@@ -1,8 +1,8 @@
-# diagrams.py
+# Diagrams Generator Module
 
 ## File Overview
 
-This module provides diagram generation functionality for the local_deepwiki system. It generates various types of diagrams including class diagrams, dependency graphs, module overviews, language distribution charts, sequence diagrams, and indexing progress charts using Mermaid syntax.
+The `diagrams.py` module provides functionality for generating various types of diagrams and visualizations for code documentation. It specializes in creating Mermaid diagrams including class diagrams, dependency graphs, module overviews, language distribution charts, and sequence diagrams based on code analysis.
 
 ## Classes
 
@@ -10,149 +10,93 @@ This module provides diagram generation functionality for the local_deepwiki sys
 
 A dataclass that stores information about a class extracted from code analysis.
 
-**Purpose**: Holds structured data about classes including their attributes and methods for diagram generation.
-
 ## Functions
 
 ### sanitize_mermaid_name
 
-Sanitizes names to be compatible with Mermaid diagram syntax.
-
-**Parameters**:
-- Input name to be sanitized
-
-**Returns**: Sanitized name safe for use in Mermaid diagrams
+Sanitizes names to be compatible with Mermaid diagram syntax by handling special characters and reserved words.
 
 ### generate_class_diagram
 
-Generates a Mermaid class diagram for the provided code chunks.
-
-**Parameters**:
-- Code chunks to analyze for class relationships
-
-**Returns**: Mermaid class diagram as a string
+Generates a Mermaid class diagram representation from code chunks. Analyzes class structures, attributes, and methods to create a visual representation of the codebase architecture.
 
 ### _extract_class_attributes
 
-Extracts class attributes from code analysis.
-
-**Purpose**: Helper function to identify and extract class attributes for diagram generation.
+Helper function that extracts class attributes from code chunks for use in class diagram generation.
 
 ### _extract_method_signature
 
-Extracts method signatures from code for class diagram generation.
-
-**Purpose**: Helper function to parse and format method signatures for display in class diagrams.
+Helper function that extracts method signatures from code to display in class diagrams, showing parameters and return types where available.
 
 ### _is_test_module
 
-Determines if a module is a test module.
-
-**Returns**: Boolean indicating whether the module is for testing
+Utility function that determines whether a given module is a test module based on naming conventions or file paths.
 
 ### generate_dependency_graph
 
-Generates a dependency graph showing relationships between modules.
-
-**Purpose**: Creates a visual representation of module dependencies using Mermaid syntax.
+Creates a Mermaid dependency graph showing relationships between modules and packages in the codebase. Analyzes import statements to map dependencies.
 
 ### _parse_external_import
 
-Parses external import statements to identify dependencies.
-
-**Purpose**: Helper function to extract external library dependencies from import statements.
+Helper function that parses external import statements to identify dependencies outside the current project.
 
 ### _module_to_wiki_path
 
-Converts module paths to wiki page paths.
-
-**Purpose**: Helper function for generating proper links in dependency graphs.
+Converts module names to wiki path format for proper linking in generated documentation.
 
 ### _find_circular_dependencies
 
-Identifies circular dependencies in the module structure.
-
-**Purpose**: Detects and reports circular import dependencies for debugging.
+Analyzes the dependency graph to identify circular dependencies between modules, which can indicate architectural issues.
 
 ### dfs
 
-Implements depth-first search algorithm.
-
-**Purpose**: Utility function used in dependency analysis and circular dependency detection.
+Implements depth-first search algorithm used in dependency analysis and circular dependency detection.
 
 ### _path_to_module
 
-Converts file paths to module names.
-
-**Purpose**: Helper function to transform file system paths into Python module notation.
+Converts file paths to module names following Python module naming conventions.
 
 ### _parse_import_line
 
-Parses individual import statements.
-
-**Purpose**: Extracts module and item information from import lines for dependency analysis.
+Parses individual import lines to extract module and symbol information for dependency analysis.
 
 ### generate_module_overview
 
-Generates an overview diagram of the module structure.
-
-**Purpose**: Creates a high-level view of the project's module organization.
+Creates a high-level overview diagram showing the structure and organization of modules within the project.
 
 ### generate_language_pie_chart
 
-Generates a pie chart showing language distribution in the codebase.
-
-**Purpose**: Creates a visual representation of programming languages used in the project.
+Generates a pie chart visualization showing the distribution of different programming languages or file types in the codebase.
 
 ### generate_sequence_diagram
 
-Generates sequence diagrams showing interaction flows.
-
-**Purpose**: Creates Mermaid sequence diagrams to visualize method call flows and interactions.
+Creates Mermaid sequence diagrams showing the flow of method calls and interactions between different components.
 
 ### collect_participants
 
-Collects participants for sequence diagram generation.
-
-**Purpose**: Helper function to identify entities that participate in sequence interactions.
+Helper function that identifies all participants (classes, modules) involved in a sequence diagram.
 
 ### add_calls
 
-Adds method calls to sequence diagrams.
-
-**Purpose**: Helper function to add interaction arrows and messages to sequence diagrams.
+Helper function that adds method call information to sequence diagrams, showing the flow of execution.
 
 ### generate_indexin
 
-Generates indexing progress visualization.
-
-**Purpose**: Creates diagrams showing the progress of code indexing operations.
+Generates indexing information for diagram components, likely used for cross-referencing and navigation.
 
 ## Related Components
 
-This module works with:
+This module works with several other components from the local_deepwiki system:
 
-- [ChunkType](../models.md): Enumeration for different types of code chunks
-- [CodeChunk](../models.md): Data structure representing analyzed code segments  
-- [IndexStatus](../models.md): Status tracking for indexing operations
+- **[ChunkType](../models.md)**: Enumeration used to identify different types of code chunks
+- **[CodeChunk](../models.md)**: Data structure representing analyzed code segments
+- **[IndexStatus](../models.md)**: Status information for indexing operations
 
-The module integrates with the broader local_deepwiki system to provide visual documentation through various diagram types, enhancing the generated wiki with graphical representations of code structure and relationships.
+The module integrates with the broader documentation generation system by analyzing code chunks and producing visual diagrams that enhance the generated wiki documentation.
 
-## Usage Examples
+## Usage Context
 
-```python
-# Generate a class diagram from code chunks
-class_diagram = generate_class_diagram(code_chunks)
-
-# Create a dependency graph
-dependency_graph = generate_dependency_graph(modules)
-
-# Generate module overview
-overview = generate_module_overview(project_structure)
-
-# Create language distribution chart
-language_chart = generate_language_pie_chart(file_analysis)
-```
+The functions in this module are typically called as part of the documentation generation pipeline, taking analyzed code chunks as input and producing Mermaid diagram markup as output. The generated diagrams are then embedded into the final documentation to provide visual representations of code structure and relationships.
 
 ## API Reference
 
@@ -516,8 +460,7 @@ assert "bool" in sig
 
 ## See Also
 
-- [test_diagrams](../../../tests/test_diagrams.md) - uses this
-- [wiki](wiki.md) - uses this
 - [models](../models.md) - dependency
 - [crosslinks](crosslinks.md) - shares 4 dependencies
 - [see_also](see_also.md) - shares 4 dependencies
+- [api_docs](api_docs.md) - shares 4 dependencies

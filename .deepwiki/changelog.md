@@ -6,6 +6,36 @@ Recent changes to this repository.
 
 ### January 14, 2026
 
+- [`b8f8b68`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/b8f8b68) Refactor: Extract page generators from wiki.py to wiki_pages.py
+  - Files: `src/local_deepwiki/generators/wiki.py`, `src/local_deepwiki/generators/wiki_pages.py`
+
+- [`8457af3`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/8457af3) Refactor: Split server.py into server.py and handlers.py
+  - Files: `src/local_deepwiki/handlers.py`, `src/local_deepwiki/server.py`, `tests/test_deep_research.py`, `tests/test_server_handlers.py`, `tests/test_server_validation.py`
+
+- [`1ef3ff4`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/1ef3ff4) Refactor: Replace nested conditionals in get_docstring with dispatch dictionary
+  - Files: `src/local_deepwiki/core/parser.py`
+
+- [`43b1ef2`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/43b1ef2) Refactor: Extract step methods from [DeepResearchPipeline](files/src/local_deepwiki/core/deep_research.md).research()
+  - Files: `src/local_deepwiki/core/deep_research.py`
+
+- [`e90b8f7`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/e90b8f7) Refactor: Add [handle_tool_errors](files/src/local_deepwiki/handlers.md) [decorator](files/src/local_deepwiki/providers/base.md) for consistent error handling
+  - Files: `src/local_deepwiki/server.py`
+
+- [`7172b23`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/7172b23) Refactor: Use dispatch dictionary for tool handlers
+  - Files: `src/local_deepwiki/server.py`
+
+- [`51c0806`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/51c0806) Refactor: Extract _row_to_chunk() helper in [VectorStore](files/src/local_deepwiki/core/vectorstore.md)
+  - Files: `src/local_deepwiki/core/vectorstore.py`
+
+- [`5fee5a2`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/5fee5a2) Regenerate wiki documentation with all file pages
+  - Files: `.deepwiki/architecture.md`, `.deepwiki/changelog.md`, `.deepwiki/dependencies.md`, `.deepwiki/files/index.md`, `.deepwiki/files/src/local_deepwiki/config.md` (+71 more)
+
+- [`8945a3d`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/8945a3d) Add chat_llm_provider config for web chat/research endpoints
+  - Files: `src/local_deepwiki/config.py`, `src/local_deepwiki/web/app.py`, `src/local_deepwiki/web/templates/chat.html`, `tests/test_config.py`
+
+- [`1d64f39`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/1d64f39) Increase max_file_docs from 20 to 75
+  - Files: `src/local_deepwiki/config.py`
+
 - [`5f52f84`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/5f52f84) Fix source refs to link all existing wiki pages
   - Files: `src/local_deepwiki/generators/source_refs.py`, `src/local_deepwiki/generators/wiki.py`
 
@@ -68,36 +98,6 @@ Recent changes to this repository.
 - [`cd866df`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/cd866df) Add configurable deep research parameters
   - Files: `src/local_deepwiki/config.py`, `src/local_deepwiki/core/deep_research.py`, `src/local_deepwiki/server.py`, `tests/test_config.py`
 
-- [`15e7e64`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/15e7e64) Add changelog wiki page from git history
-  - Files: `CLAUDE.md`, `WIKI_IMPROVEMENTS.md`, `src/local_deepwiki/generators/changelog.py`, `src/local_deepwiki/generators/wiki.py`, `tests/test_changelog.py`
-
-- [`2708dc5`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/2708dc5) Add GitHub/GitLab links to source file references
-  - Files: `CLAUDE.md`, `WIKI_IMPROVEMENTS.md`, `src/local_deepwiki/core/git_utils.py`, `src/local_deepwiki/generators/source_refs.py`, `src/local_deepwiki/generators/wiki.py` (+1 more)
-
-- [`e579b0a`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/e579b0a) Add usage examples from test files to wiki documentation
-  - Files: `CLAUDE.md`, `WIKI_IMPROVEMENTS.md`, `src/local_deepwiki/generators/test_examples.py`, `src/local_deepwiki/generators/wiki.py`, `tests/test_test_examples.py`
-
-- [`c010b5b`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/c010b5b) Add new feature ideas to WIKI_IMPROVEMENTS.md
-  - Files: `WIKI_IMPROVEMENTS.md`
-
-- [`d15def0`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/d15def0) Add deep_research tool to README documentation
-  - Files: `README.md`
-
-- [`2d97082`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/2d97082) Add Deep Research mode for multi-step reasoning
-  - Files: `CLAUDE.md`, `TODO.md`, `src/local_deepwiki/core/deep_research.py`, `src/local_deepwiki/models.py`, `src/local_deepwiki/server.py` (+1 more)
-
-- [`e441e6b`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/e441e6b) Update documentation to reflect current project state
-  - Files: `CLAUDE.md`, `README.md`, `TODO.md`, `WIKI_IMPROVEMENTS.md`
-
-- [`b2b1759`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/b2b1759) Add PDF documentation link to README
-  - Files: `README.md`
-
-- [`fb681bb`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/fb681bb) Add generated PDF documentation
-  - Files: `docs.pdf`
-
-- [`9e05ee2`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/9e05ee2) Regenerate wiki with PDF export documentation
-  - Files: `.deepwiki/architecture.md`, `.deepwiki/dependencies.md`, `.deepwiki/files/index.md`, `.deepwiki/files/src/local_deepwiki/config.md`, `.deepwiki/files/src/local_deepwiki/core/parser.md` (+26 more)
-
 ## Statistics
 
 - **Commits shown**: 30
@@ -108,16 +108,16 @@ Recent changes to this repository.
 
 The following source files were used to generate this documentation:
 
-- [`src/local_deepwiki/config.py:14-19`](files/src/local_deepwiki/config.md)
 - [`tests/test_parser.py:24-123`](files/tests/test_parser.md)
 - [`tests/test_retry.py:8-144`](files/tests/test_retry.md)
-- [`tests/test_ollama_health.py:16-19`](files/tests/test_ollama_health.md)
-- [`tests/test_server_handlers.py:15-69`](files/tests/test_server_handlers.md)
-- [`tests/test_chunker.py:11-182`](files/tests/test_chunker.md)
-- [`tests/test_changelog.py:18-96`](files/tests/test_changelog.md)
+- `tests/test_ollama_health.py:16-19`
+- `tests/test_server_handlers.py:15-69`
+- `tests/test_chunker.py:11-182`
+- `tests/test_changelog.py:18-96`
 - [`tests/test_vectorstore.py:9-28`](files/tests/test_vectorstore.md)
-- [`tests/test_pdf_export.py:21-80`](files/tests/test_pdf_export.md)
-- [`tests/test_search.py:20-53`](files/tests/test_search.md)
+- `tests/test_pdf_export.py:21-80`
+- `tests/test_search.py:20-53`
+- `tests/test_toc.py:17-43`
 
 
-*Showing 10 of 74 source files.*
+*Showing 10 of 76 source files.*

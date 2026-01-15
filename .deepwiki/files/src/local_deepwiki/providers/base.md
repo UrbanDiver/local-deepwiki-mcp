@@ -2,48 +2,72 @@
 
 ## File Overview
 
-This file defines the abstract base class for embedding providers in the local_deepwiki system. It establishes the interface that all embedding provider implementations must follow.
+This file defines the abstract base class for embedding providers in the local_deepwiki system. It establishes the interface that all concrete embedding provider implementations must follow.
 
 ## Classes
 
 ### EmbeddingProvider
 
-The EmbeddingProvider class serves as an abstract base class that defines the standard interface for all embedding providers. It uses Python's ABC (Abstract Base Class) to ensure that concrete implementations provide the required methods.
+An abstract base class that defines the contract for embedding providers. This class uses Python's ABC (Abstract Base Class) mechanism to ensure that all concrete implementations provide the required methods.
 
 #### Abstract Methods
 
-**embed(texts: list[str]) -> list[list[float]]**
-- Generates embeddings for a list of text strings
-- Parameters:
-  - `texts`: List of text strings to embed
-- Returns: List of embedding vectors as lists of floats
-- This method must be implemented by all concrete embedding providers
+##### embed
 
-**get_dimension() -> int**
-- Retrieves the embedding dimension for the provider
-- Returns: The dimension of the embedding vectors as an integer
-- This method must be implemented by all concrete embedding providers
+```python
+async def embed(self, texts: list[str]) -> list[list[float]]
+```
+
+Generate embeddings for a list of texts.
+
+**Parameters:**
+- `texts` (list[str]): List of text strings to embed
+
+**Returns:**
+- list[list[float]]: List of embedding vectors
+
+This method is asynchronous and must be implemented by all concrete embedding provider classes.
+
+##### get_dimension
+
+```python
+def get_dimension(self) -> int
+```
+
+Get the embedding dimension.
+
+**Returns:**
+- int: The dimension of the embedding vectors
+
+This method returns the dimensionality of the embedding vectors produced by the provider.
+
+#### Abstract Properties
+
+The class also defines abstract properties (implementation not shown in the provided code), which concrete implementations must provide.
 
 ## Usage Examples
 
-Since this is an abstract base class, it cannot be instantiated directly. Instead, it serves as a template for concrete implementations:
+To create a concrete embedding provider, inherit from EmbeddingProvider and implement all abstract methods:
 
 ```python
-from abc import ABC, abstractmethod
+from src.local_deepwiki.providers.base import EmbeddingProvider
 
-class CustomEmbeddingProvider(EmbeddingProvider):
+class MyEmbeddingProvider(EmbeddingProvider):
     async def embed(self, texts: list[str]) -> list[list[float]]:
-        # Implementation for generating embeddings
+        # Implementation here
         pass
     
     def get_dimension(self) -> int:
-        # Implementation for returning embedding dimension
+        # Return the dimension of your embeddings
         return 768
 ```
 
-## Related Components
+## Implementation Notes
 
-This base class is designed to be extended by concrete embedding provider implementations throughout the local_deepwiki system. Any class that provides embedding functionality should inherit from EmbeddingProvider to ensure a consistent interface.
+- All embedding providers must inherit from this base class
+- The `embed` method is asynchronous, allowing for efficient batch processing of texts
+- Concrete implementations must specify the exact dimension of their embedding vectors
+- The class follows Python's ABC pattern to enforce interface compliance at runtime
 
 ## API Reference
 
@@ -240,8 +264,7 @@ flowchart TD
 
 ## See Also
 
-- [llm_cache](../core/llm_cache.md) - uses this
 - [local](embeddings/local.md) - uses this
 - [openai](embeddings/openai.md) - uses this
-- [test_vectorstore](../../../tests/test_vectorstore.md) - uses this
 - [vectorstore](../core/vectorstore.md) - uses this
+- [llm_cache](../core/llm_cache.md) - uses this

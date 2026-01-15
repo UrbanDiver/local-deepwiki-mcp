@@ -5,15 +5,15 @@ Local DeepWiki-style MCP server for private repository documentation
 
 ## Description
 
-Local DeepWiki MCP is a Model Context Protocol (MCP) server that generates documentation for private code repositories. It provides both a server interface for MCP clients and a web application for browsing generated documentation, with support for multiple LLM providers including Ollama, OpenAI, and Anthropic.
+Local DeepWiki MCP is a Model Context Protocol (MCP) server that generates documentation for private code repositories. It provides both a web interface and command-line tools for creating, serving, and exporting wiki-style documentation from your codebase.
 
 ## Key Features
 
-- **MCP Server Integration** - Runs as an MCP server with stdio communication for integration with MCP-compatible clients, as shown in the [main](files/src/local_deepwiki/export/html.md) server entry point
-- **Multiple [LLM Provider](files/src/local_deepwiki/providers/base.md) Support** - Configurable support for Ollama (with local hosting at localhost:11434), OpenAI, and Anthropic providers through the [LLMConfig](files/src/local_deepwiki/config.md) system
-- **Web Interface** - Built-in Flask web server (`deepwiki-serve`) that serves generated documentation at a configurable host and port
-- **Repository Indexing** - Core indexer that processes repository contents with configurable embedding providers (local or OpenAI) for document search and retrieval
-- **Multiple Export Formats** - Supports both HTML export (`deepwiki-export`) and PDF export (`deepwiki-export-pdf`) with a file watcher mode (`deepwiki-watch`) for continuous updates
+- **MCP Server Integration** - Implements a Model Context Protocol server with stdio communication for integration with MCP-compatible tools
+- **Multiple [LLM Provider](files/src/local_deepwiki/providers/base.md) Support** - Configurable support for Ollama, OpenAI, and Anthropic language models through a unified provider system
+- **Web Server Interface** - Built-in Flask web server for browsing generated documentation locally with configurable host and port settings
+- **Code Indexing and Embedding** - Repository indexing system with support for both local and OpenAI embedding providers for semantic code search
+- **Multiple Export Formats** - Command-line tools for exporting documentation to HTML and PDF formats
 
 ## Technology Stack
 

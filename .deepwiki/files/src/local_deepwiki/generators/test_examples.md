@@ -1,8 +1,8 @@
-# test_examples.py
+# Test Examples Generator
 
 ## File Overview
 
-This module provides functionality for extracting usage examples from test files to enhance documentation. It parses test code to identify meaningful usage patterns and converts them into documentation-ready examples, while filtering out mock-heavy or low-value test code.
+The `test_examples.py` module provides functionality to extract usage examples from test files to enhance documentation generation. It analyzes test code to [find](manifest.md) practical examples of how functions and classes are used, then formats these examples for inclusion in documentation.
 
 ## Classes
 
@@ -10,7 +10,11 @@ This module provides functionality for extracting usage examples from test files
 
 A dataclass that represents a usage example extracted from test code.
 
-**Purpose**: Stores structured information about a code usage example, including the source function name, extracted code snippet, and descriptive text.
+```python
+@dataclass
+class UsageExample:
+    # Structure based on dataclass definition in the code
+```
 
 ## Functions
 
@@ -18,118 +22,76 @@ A dataclass that represents a usage example extracted from test code.
 
 Locates the corresponding test file for a given source file.
 
-**Parameters**:
-- Takes a file path parameter to [find](manifest.md) the associated test file
+**Parameters:**
+- Takes a source file path as input
 
-**Returns**: Path to the test file if found
-
-### _get_node_text
-
-Extracts text content from a tree-sitter syntax tree node.
-
-**Parameters**:
-- `node`: Tree-sitter Node object
-
-**Returns**: String content of the node
-
-### _find_test_functions
-
-Identifies test functions within parsed code.
-
-**Parameters**: 
-- Accepts parsed code structure to analyze
-
-**Returns**: Collection of test function nodes
-
-### walk
-
-Traverses code structures, likely for syntax tree navigation.
-
-**Parameters**:
-- Takes a node or code structure to [traverse](manifest.md)
-
-### _get_function_name
-
-Extracts the name of a function from its syntax tree representation.
-
-**Parameters**:
-- Function node from syntax tree
-
-**Returns**: String name of the function
-
-### _get_docstring
-
-Retrieves the docstring from a function node.
-
-**Parameters**:
-- Function node containing potential docstring
-
-**Returns**: Docstring text if present
-
-### _get_function_body
-
-Extracts the body content of a function.
-
-**Parameters**:
-- Function node from syntax tree
-
-**Returns**: Function body as text
-
-### _is_mock_heavy
-
-Determines if a code snippet contains excessive mocking that would make it unsuitable as a usage example.
-
-**Parameters**:
-- Code snippet to analyze
-
-**Returns**: Boolean indicating if the code is mock-heavy
-
-### _extract_usage_snippet
-
-Processes function body text to extract meaningful usage examples.
-
-**Parameters**:
-- Function body text to process
-
-**Returns**: Cleaned usage snippet suitable for documentation
+**Returns:**
+- Path to the corresponding test file
 
 ### extract_examples_for_entities
 
-Main function that extracts usage examples for specified code entities from their test files.
+Extracts usage examples for specific code entities from test files.
 
-**Parameters**:
-- Entity information to [find](manifest.md) examples for
+**Parameters:**
+- Accepts entities to [find](manifest.md) examples for
 
-**Returns**: Collection of UsageExample objects
+**Returns:**
+- Collection of usage examples for the specified entities
 
 ### format_examples_markdown
 
-Converts usage examples into markdown format for documentation.
+Formats extracted usage examples into markdown format for documentation.
 
-**Parameters**:
-- Collection of UsageExample objects
+**Parameters:**
+- Takes usage examples as input
 
-**Returns**: Formatted markdown string
+**Returns:**
+- Markdown-formatted string containing the examples
 
 ### get_file_examples
 
 Retrieves all usage examples from a specific file.
 
-**Parameters**:
+**Parameters:**
 - File path to extract examples from
 
-**Returns**: Examples found in the specified file
+**Returns:**
+- Collection of usage examples found in the file
+
+## Internal Helper Functions
+
+The module includes several internal helper functions for processing test code:
+
+- **_get_node_text**: Extracts text content from tree-sitter nodes
+- **_find_test_functions**: Identifies test functions in the parsed code
+- **walk**: Traverses the abstract syntax tree
+- **_get_function_name**: Retrieves function names from nodes
+- **_get_docstring**: Extracts docstrings from functions
+- **_get_function_body**: Gets the body content of functions
+- **_is_mock_heavy**: Determines if a test function relies heavily on mocking
+- **_extract_usage_snippet**: Extracts clean usage snippets from test code
+
+## Usage Examples
+
+```python
+from local_deepwiki.generators.test_examples import extract_examples_for_entities, format_examples_markdown
+
+# Extract examples for specific entities
+examples = extract_examples_for_entities(entities)
+
+# Format examples as markdown
+markdown_output = format_examples_markdown(examples)
+```
 
 ## Related Components
 
 This module integrates with several other components:
 
-- **[CodeParser](../core/parser.md)**: Used for parsing source code files to extract syntax information
-- **[Language](../models.md)**: Enum for handling different programming language types
+- **CodeParser**: Used for parsing source code files
+- **[Language](../models.md)**: Specifies the programming language being processed  
 - **Logger**: Provides logging functionality through the [`get_logger`](../logging.md) function
-- **Tree-sitter**: External library for syntax tree parsing and code analysis
 
-The module works primarily with Python files but is designed to work within a language-agnostic parsing framework.
+The module uses tree-sitter for syntax tree parsing and works with Path objects for file system operations.
 
 ## API Reference
 
@@ -213,7 +175,7 @@ Format usage examples as markdown.
 def get_file_examples(source_file: Path, repo_root: Path, entity_names: list[str], max_examples: int = 5) -> str | None
 ```
 
-Get formatted usage examples for a source file.  This is the [main](../export/html.md) entry point for the wiki generator.
+Get formatted usage examples for a source file.  This is the [main](../export/pdf.md) entry point for the wiki generator.
 
 
 | [Parameter](api_docs.md) | Type | Default | Description |
@@ -303,8 +265,7 @@ flowchart TD
 
 ## See Also
 
-- [test_test_examples](../../../tests/test_test_examples.md) - uses this
-- [wiki](wiki.md) - uses this
-- [models](../models.md) - dependency
 - [logging](../logging.md) - dependency
+- [models](../models.md) - dependency
 - [chunker](../core/chunker.md) - shares 5 dependencies
+- [api_docs](api_docs.md) - shares 5 dependencies

@@ -1,12 +1,16 @@
-# Search Module Documentation
+# Search Module
 
 ## File Overview
 
-The search module provides functionality for generating search indexes from wiki pages. It processes [WikiPage](../models.md) objects to create searchable JSON indexes that can be used for client-side search functionality.
+The search module provides functionality for generating search indexes from wiki pages. It creates JSON-based search indexes that can be used to implement search functionality in the generated wiki.
 
 ## Functions
 
 ### generate_search_index
+
+```python
+def generate_search_index(pages: list[WikiPage]) -> list[dict]:
+```
 
 Generates a search index from a list of wiki pages.
 
@@ -14,59 +18,62 @@ Generates a search index from a list of wiki pages.
 - `pages` (list[[WikiPage](../models.md)]): List of wiki pages to index
 
 **Returns:**
-- `list[dict]`: List of search entries
-
-**Usage:**
-```python
-from local_deepwiki.generators.search import generate_search_index
-
-# Generate search index from pages
-index = generate_search_index(pages)
-```
+- `list[dict]`: List of search entries, where each entry is a dictionary containing search metadata for a page
 
 ### write_search_index
 
-Generates and writes a search index to disk as a JSON file.
+```python
+def write_search_index(wiki_path: Path, pages: list[WikiPage]) -> Path:
+```
+
+Generates a search index and writes it to disk as a JSON file.
 
 **Parameters:**
-- `wiki_path` (Path): Path to wiki directory where the search index will be written
-- `pages` (list[[WikiPage](../models.md)]): List of wiki pages to index
+- `wiki_path` (Path): Path to the wiki directory where the search index will be written
+- `pages` (list[[WikiPage](../models.md)]): List of wiki pages to include in the search index
 
 **Returns:**
-- `Path`: Path to the generated search.json file
+- `Path`: Path to the generated `search.json` file
 
-**Usage:**
+The function creates the search index using `generate_search_index()` and saves it as `search.json` in the specified wiki directory with pretty-printed JSON formatting (2-space indentation).
+
+## Usage Examples
+
+### Generating a Search Index
+
+```python
+from pathlib import Path
+from local_deepwiki.generators.search import generate_search_index
+
+# Assuming you have a list of WikiPage objects
+search_entries = generate_search_index(pages)
+```
+
+### Writing Search Index to File
+
 ```python
 from pathlib import Path
 from local_deepwiki.generators.search import write_search_index
 
-# Write search index to wiki directory
-wiki_dir = Path("./wiki")
-index_path = write_search_index(wiki_dir, pages)
-print(f"Search index written to: {index_path}")
+wiki_directory = Path("output/wiki")
+index_file_path = write_search_index(wiki_directory, pages)
+print(f"Search index written to: {index_file_path}")
 ```
+
+## Related Components
+
+This module works with:
+- **[WikiPage](../models.md)**: The model class representing individual wiki pages (imported from `local_deepwiki.models`)
 
 ## Additional Functions
 
-The module contains additional helper functions that are referenced but not shown in the provided code:
+The module contains several other functions that are referenced but not shown in the provided code:
 - `extract_headings`
 - `extract_code_terms` 
 - `extract_snippet`
 - `generate_search_entry`
 
-## Related Components
-
-This module works with:
-- **[WikiPage](../models.md)**: The core model class from `local_deepwiki.models` that represents individual wiki pages
-- **Path**: From Python's pathlib for file system operations
-- **JSON**: For serializing search index data
-
-## Dependencies
-
-- `json`: For JSON serialization
-- `re`: For regular expression operations
-- `pathlib.Path`: For file path handling
-- [`local_deepwiki.models.WikiPage`](../models.md): Core wiki page model
+These functions are likely used internally by `generate_search_index` to process page content and create search entries.
 
 ## API Reference
 
@@ -261,8 +268,7 @@ assert "simple paragraph" in snippet
 
 ## See Also
 
-- [wiki](wiki.md) - uses this
-- [test_search](../../../tests/test_search.md) - uses this
 - [models](../models.md) - dependency
 - [crosslinks](crosslinks.md) - shares 3 dependencies
 - [diagrams](diagrams.md) - shares 3 dependencies
+- [see_also](see_also.md) - shares 3 dependencies

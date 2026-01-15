@@ -1,135 +1,90 @@
 # PDF Export Module
 
-This module provides functionality to export DeepWiki documentation to PDF format. It supports both single-file and separate-file export modes, with Mermaid diagram rendering capabilities.
+This module provides functionality to export DeepWiki documentation to PDF format, supporting both single combined PDFs and separate PDF files for each page.
 
 ## Overview
 
-The PDF export module handles the conversion of markdown-based wiki content to PDF files. It processes markdown files, renders Mermaid diagrams, and generates formatted PDF output using HTML as an intermediate format.
+The `pdf.py` module handles the conversion of markdown wiki content to PDF format using external tools. It processes markdown files, handles Mermaid diagrams, and generates well-formatted PDF output with proper table of contents integration.
 
 ## Classes
 
 ### PdfExporter
 
-The main class responsible for handling PDF export operations.
+The main class responsible for exporting wiki content to PDF format.
 
-**Purpose**: Manages the export process for converting wiki pages to PDF format, supporting both combined and separate file outputs.
+**Initialization:**
+- `wiki_path`: Path to the .deepwiki directory
+- `output_path`: Output path for PDF file(s)
+- `toc_entries`: List to store table of contents entries
 
-**Key Methods**:
-- `__init__(wiki_path, output_path)` - Initialize the exporter with source and destination paths
-- `export_single()` - Export all wiki pages to a single PDF file
-- `export_separate()` - Export each wiki page as a separate PDF file
-
-#### Constructor
-
-```python
-def __init__(self, wiki_path: Path, output_path: Path):
-```
-
-Initializes the PDF exporter with the specified wiki path and output destination.
-
-**Parameters**:
-- `wiki_path`: Path to the .deepwiki directory containing the wiki content
-- `output_path`: Output path for the generated PDF file(s)
+**Key Methods:**
 
 #### export_single
+Exports all wiki pages to a single combined PDF file.
 
-```python
-def export_single(self) -> Path:
-```
+**Returns:** Path to the generated PDF file
 
-Exports all wiki pages to a single combined PDF file. The method loads table of contents data if available and collects pages in the proper order.
-
-**Returns**: Path to the generated PDF file
+The method loads TOC data from `toc.json` if available and collects pages in the proper order for export.
 
 #### export_separate
+Exports each wiki page as a separate PDF file.
 
-```python
-def export_separate(self) -> list[Path]:
-```
+**Returns:** List of paths to generated PDF files
 
-Exports each wiki page as an individual PDF file, maintaining the directory structure.
-
-**Returns**: List of paths to the generated PDF files
+Creates an output directory and generates individual PDF files for each markdown file found in the wiki.
 
 ## Functions
 
 ### export_to_pdf
+Main export function that provides a convenient interface for PDF generation.
 
+**Parameters:**
+- `wiki_path`: Path to the .deepwiki directory (Path or str)
+- `output_path`: Output path, defaults to "wiki.pdf" or "wiki_pdfs/" (Path, str, or None)
+- `single_file`: Boolean flag to combine all pages into one PDF (default: True)
+
+**Returns:** Success message string with output path
+
+**[Usage Example](../generators/test_examples.md):**
 ```python
-def export_to_pdf(
-    wiki_path: Path | str,
-    output_path: Path | str | None = None,
-    single_file: bool = True,
-) -> str:
-```
-
-Main function for exporting wiki content to PDF format.
-
-**Parameters**:
-- `wiki_path`: Path to the .deepwiki directory
-- `output_path`: Output path (defaults to wiki.pdf or wiki_pdfs/ depending on mode)
-- `single_file`: If True, combines all pages into one PDF; if False, creates separate PDFs
-
-**Returns**: Success message with the output path
-
-### main
-
-```python
-def main() -> None:
-```
-
-CLI entry point for PDF export functionality. Provides command-line interface for the export operations.
-
-## Usage Examples
-
-### Basic PDF Export
-
-```python
-from pathlib import Path
 from local_deepwiki.export.pdf import export_to_pdf
 
 # Export to single PDF
 result = export_to_pdf(".deepwiki", "output.pdf", single_file=True)
-print(result)
 
 # Export to separate PDFs
-result = export_to_pdf(".deepwiki", "output_dir/", single_file=False)
-print(result)
+result = export_to_pdf(".deepwiki", "pdf_output/", single_file=False)
 ```
 
-### Using PdfExporter Class
+### main
+CLI entry point for PDF export functionality. Provides command-line interface with argument parsing for:
+- Wiki path (defaults to `.deepwiki`)
+- Output path option (`-o`, `--output`)
+- Separate files option (`--separate`)
 
-```python
-from pathlib import Path
-from local_deepwiki.export.pdf import PdfExporter
+## Utility Functions
 
-# Create exporter instance
-exporter = PdfExporter(Path(".deepwiki"), Path("wiki.pdf"))
+The module includes several utility functions for processing content:
 
-# Export as single file
-pdf_path = exporter.export_single()
-print(f"Generated: {pdf_path}")
-
-# Or export as separate files
-pdf_paths = exporter.export_separate()
-print(f"Generated {len(pdf_paths)} PDF files")
-```
+- `is_mmdc_available`: Checks availability of Mermaid CLI tool
+- `render_mermaid_to_png`: Converts Mermaid diagrams to PNG format
+- `render_mermaid_to_svg`: Converts Mermaid diagrams to SVG format
+- `extract_mermaid_blocks`: Extracts Mermaid diagram blocks from markdown
+- `render_markdown_for_pdf`: Processes markdown content for PDF rendering
+- `extract_title`: Extracts title from markdown content
 
 ## Dependencies
 
-The module relies on several key dependencies:
-- `markdown` - For processing markdown content
-- `argparse` - For CLI argument parsing
-- `pathlib.Path` - For file system path operations
-- Standard library modules for file operations and subprocess management
+The module relies on:
+- `argparse` for command-line interface
+- `markdown` for markdown processing
+- `pathlib.Path` for file system operations
+- `json` for TOC data handling
+- `subprocess` for external tool execution
 
-## Related Components
+## Usage
 
-This module works with:
-- Wiki content stored in `.deepwiki` directories
-- Table of contents data from `toc.json` files
-- Mermaid diagram rendering utilities
-- HTML generation for PDF conversion
+The module can be used programmatically through the PdfExporter class or the export_to_pdf function, or via command line through the main function entry point.
 
 ## API Reference
 
@@ -404,7 +359,3 @@ flowchart TD
 ## Relevant Source Files
 
 - `src/local_deepwiki/export/pdf.py:480-664`
-
-## See Also
-
-- [test_pdf_export](../../../tests/test_pdf_export.md) - uses this

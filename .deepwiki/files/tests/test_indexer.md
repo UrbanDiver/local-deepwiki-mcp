@@ -1,44 +1,46 @@
-# Test Indexer Module Documentation
+# test_indexer.py
 
 ## File Overview
 
-The `test_indexer.py` file contains comprehensive test suites for the repository indexer functionality. It focuses on testing chunking configuration, batched processing operations, and schema migration capabilities of the [RepositoryIndexer](../src/local_deepwiki/core/indexer.md) system.
+This test file contains comprehensive unit tests for the indexer functionality in the local_deepwiki system. It focuses on testing batched processing capabilities, schema migration features, and the RepositoryIndexer class behavior.
 
 ## Test Classes
 
 ### TestChunkingConfigBatchSize
 
-This test class validates the batch size configuration functionality for chunking operations. Based on the imports and class name, it tests how [ChunkingConfig](../src/local_deepwiki/config.md) handles batch size settings.
+Tests configuration aspects related to batch size settings for chunking operations.
 
 ### TestBatchedProcessing
 
-The TestBatchedProcessing class tests the batched processing capabilities of the indexer system. It includes the following test methods:
+Tests the batched processing functionality of the indexer system. This class verifies that chunks are processed in batches correctly and handles various batch-related scenarios.
 
-- **test_processes_chunks_in_batches**: Validates that chunks are processed in appropriately sized batches
-- **test_incremental_update_with_batching**: Tests incremental updates using batched operations
-- **test_empty_batch_handling**: Ensures proper handling of empty batch scenarios
+**Key Test Methods:**
+- `test_processes_chunks_in_batches` - Verifies chunks are processed in appropriate batch sizes
+- `test_incremental_update_with_batching` - Tests incremental updates with batch processing
+- `test_empty_batch_handling` - Ensures proper handling of empty batches
 
-The class uses mock objects including:
-- `mock_create_or_update_table`: Mocks table creation/update operations
-- `mock_add_chunks`: Mocks chunk addition operations  
-- `mock_delete_chunks_by_file`: Mocks file-based chunk deletion
+**Mock Methods:**
+- `mock_create_or_update_table` - Mocks table creation/update operations
+- `mock_add_chunks` - Mocks chunk addition operations
+- `mock_delete_chunks_by_file` - Mocks file-based chunk deletion
 
 ### TestBatchSizeConfiguration
 
-This test class focuses on validating batch size configuration settings and their impact on processing behavior.
+Tests configuration settings specifically related to batch size parameters.
 
 ### TestSchemaMigration
 
-The TestSchemaMigration class provides comprehensive testing for database schema migration functionality. It includes the following test methods:
+Comprehensive test class for schema migration functionality, ensuring backward compatibility and proper version handling.
 
-- **test_current_schema_version_exists**: Verifies that the current schema version constant is properly defined
-- **test_needs_migration_old_version**: Tests migration detection for older schema versions
-- **test_needs_migration_current_version**: Validates that current versions don't trigger unnecessary migrations
-- **test_migrate_status_updates_version**: Ensures the migration process correctly updates version numbers
-- **test_migrate_status_preserves_data**: Verifies that existing data is preserved during migration
-- **test_load_status_handles_legacy_files**: Tests loading of legacy status files without schema versions
-- **test_save_status_includes_schema_version**: Validates that saved status includes proper schema version
-- **test_migration_triggered_on_load**: Tests automatic migration triggering during status loading
+**Key Test Methods:**
+- `test_current_schema_version_exists` - Verifies the current schema version constant exists
+- `test_needs_migration_old_version` - Tests migration detection for older versions
+- `test_needs_migration_current_version` - Tests migration detection for current version
+- `test_migrate_status_updates_version` - Verifies status migration updates version correctly
+- `test_migrate_status_preserves_data` - Ensures data preservation during migration
+- `test_load_status_handles_legacy_files` - Tests loading of legacy status files
+- `test_save_status_includes_schema_version` - Verifies schema version inclusion in saved status
+- `test_migration_triggered_on_load` - Tests automatic migration triggering on load
 
 ## Test Functions
 
@@ -56,17 +58,14 @@ async def test_index_status_model_default_schema_version(self):
     assert status.schema_version == 1
 ```
 
-This async test function validates that the [IndexStatus](../src/local_deepwiki/models.md) model correctly defaults to schema version 1 when created with basic parameters.
-
-**Parameters**: None (self reference only)
-**Returns**: None (assertion-based test)
+Tests that the IndexStatus model correctly defaults to schema version 1 when created with basic parameters.
 
 ## Usage Examples
 
-### Testing IndexStatus Creation
+### Testing Schema Migration
 
 ```python
-# Create an IndexStatus instance for testing
+# Create an IndexStatus instance with default schema version
 status = IndexStatus(
     repo_path="/test",
     indexed_at=1.0,
@@ -77,31 +76,38 @@ status = IndexStatus(
 assert status.schema_version == 1
 ```
 
-### Running Schema Migration Tests
+### Testing with Mocks
 
-The test classes can be executed using pytest to validate migration functionality:
+The test file extensively uses unittest.mock components:
 
 ```python
-# Example of how the test class structure supports pytest execution
-class TestSchemaMigration:
-    async def test_needs_migration_old_version(self):
-        # Test implementation validates migration detection
-        pass
+from unittest.mock import AsyncMock, MagicMock, patch
 ```
+
+These mocks are used to isolate functionality and test specific behaviors without dependencies on external systems.
 
 ## Related Components
 
-This test file works with several core components from the local_deepwiki system:
+This test file works with several core components:
 
-- **[Config](../src/local_deepwiki/config.md) and [ChunkingConfig](../src/local_deepwiki/config.md)**: Configuration classes that manage indexing parameters
-- **[RepositoryIndexer](../src/local_deepwiki/core/indexer.md)**: The [main](../src/local_deepwiki/export/html.md) indexer class being tested
-- **[IndexStatus](../src/local_deepwiki/models.md)**: Model representing the current indexing status
-- **[CodeChunk](../src/local_deepwiki/models.md)**: Model representing individual code chunks
-- **[Language](../src/local_deepwiki/models.md) and [ChunkType](../src/local_deepwiki/models.md)**: Enumeration types for code classification
-- **Migration functions**: `_migrate_status` and `_needs_migration` utility functions
-- **CURRENT_SCHEMA_VERSION**: Constant defining the current schema version
+- **RepositoryIndexer** - The [main](../src/local_deepwiki/web/app.md) indexer class being tested
+- **IndexStatus** - Model for tracking indexing status and schema versions
+- **CodeChunk** - Model representing code chunks
+- **[ChunkingConfig](../src/local_deepwiki/config.md)** and **[Config](../src/local_deepwiki/config.md)** - Configuration classes
+- **Language** and **ChunkType** - Enumeration types for code classification
 
-The tests use standard Python testing libraries including pytest for test execution, unittest.mock for mocking dependencies, and tempfile/pathlib for file system operations during testing.
+The tests also reference migration utilities:
+- `_migrate_status` - Function for migrating status data
+- `_needs_migration` - Function for determining if migration is needed
+- `CURRENT_SCHEMA_VERSION` - Constant defining the current schema version
+
+## Test Dependencies
+
+The tests use:
+- `pytest` for the testing framework
+- `tempfile` and `pathlib.Path` for file system operations
+- `json` for data serialization
+- `unittest.mock` for mocking external dependencies
 
 ## API Reference
 
@@ -143,7 +149,7 @@ async def test_processes_chunks_in_batches(tmp_path)
 Test that chunks are processed in batches to limit memory usage.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `tmp_path` | - | - | - |
 
@@ -154,7 +160,7 @@ async def mock_create_or_update_table(chunks)
 ```
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `chunks` | - | - | - |
 
@@ -165,7 +171,7 @@ async def mock_add_chunks(chunks)
 ```
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `chunks` | - | - | - |
 
@@ -176,7 +182,7 @@ async def mock_delete_chunks_by_file(file_path)
 ```
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `file_path` | - | - | - |
 
@@ -189,7 +195,7 @@ async def test_incremental_update_with_batching(tmp_path)
 Test that incremental updates work with batched processing.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `tmp_path` | - | - | - |
 
@@ -200,7 +206,7 @@ async def mock_add_chunks(chunks)
 ```
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `chunks` | - | - | - |
 
@@ -211,7 +217,7 @@ async def mock_delete_chunks_by_file(file_path)
 ```
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `file_path` | - | - | - |
 
@@ -222,7 +228,7 @@ async def mock_create_or_update_table(chunks)
 ```
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `chunks` | - | - | - |
 
@@ -235,7 +241,7 @@ async def test_empty_batch_handling(tmp_path)
 Test that empty repositories are handled correctly.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `tmp_path` | - | - | - |
 
@@ -318,7 +324,7 @@ async def test_load_status_handles_legacy_files(tmp_path)
 Test that loading status handles legacy files without schema_version.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `tmp_path` | - | - | - |
 
@@ -331,7 +337,7 @@ async def test_save_status_includes_schema_version(tmp_path)
 Test that saved status includes the current schema version.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `tmp_path` | - | - | - |
 
@@ -341,7 +347,7 @@ Test that saved status includes the current schema version.
 async def test_index_status_model_default_schema_version()
 ```
 
-Test that [IndexStatus](../src/local_deepwiki/models.md) defaults to schema_version=1.
+Test that IndexStatus defaults to schema_version=1.
 
 #### `test_migration_triggered_on_load`
 
@@ -352,7 +358,7 @@ async def test_migration_triggered_on_load(tmp_path)
 Test that migration is triggered when loading old schema version.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `tmp_path` | - | - | - |
 
@@ -490,12 +496,8 @@ flowchart TD
 
 ## Relevant Source Files
 
-- `tests/test_indexer.py:20-31`
+- [`tests/test_indexer.py:20-31`](https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/tests/test_indexer.py#L20-L31)
 
 ## See Also
 
-- [models](../src/local_deepwiki/models.md) - dependency
-- [config](../src/local_deepwiki/config.md) - dependency
-- [test_search](test_search.md) - shares 5 dependencies
-- [test_incremental_wiki](test_incremental_wiki.md) - shares 5 dependencies
 - [test_parser](test_parser.md) - shares 4 dependencies

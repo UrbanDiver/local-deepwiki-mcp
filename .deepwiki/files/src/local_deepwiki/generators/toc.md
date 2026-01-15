@@ -1,10 +1,53 @@
-# Table of Contents Generator (toc.py)
+# Table of Contents Generator
 
 ## File Overview
 
-This file provides functionality for writing table of contents data to the wiki filesystem. It contains utilities for serializing TableOfContents objects to JSON format and saving them to the appropriate location within a wiki directory structure.
+This module provides functionality for generating, reading, and writing hierarchical table of contents (TOC) structures for wiki documentation. It creates numbered sections and manages the organizational structure of wiki pages through JSON serialization.
+
+## Classes
+
+### TocEntry
+
+A single entry in the table of contents that represents a page or section with hierarchical numbering.
+
+**Attributes:**
+- `number`: String representing the section number (e.g., "1.2.3")
+- `title`: Display title for the entry
+- `path`: File path to the wiki page
+- `children`: List of child TocEntry objects for nested sections
+
+**Methods:**
+- `to_dict()`: Converts the entry to a dictionary suitable for JSON serialization, including all child entries recursively
+
+### TableOfContents
+
+The [main](../export/pdf.md) container class for managing a complete hierarchical table of contents structure.
+
+**Attributes:**
+- `entries`: List of top-level TocEntry objects
+
+**Methods:**
+- `to_dict()`: Converts the entire table of contents to a dictionary format
+- `to_json(indent=2)`: Serializes the table of contents to a JSON string with optional indentation
+- `from_dict(data)`: Class method to create a TableOfContents instance from a dictionary
 
 ## Functions
+
+### generate_toc
+
+```python
+def generate_toc(pages: list[dict[str, str]]) -> TableOfContents
+```
+
+Generates a hierarchical numbered table of contents from a list of wiki pages.
+
+**Parameters:**
+- `pages`: List of dictionaries, each containing 'path' and 'title' keys
+
+**Returns:**
+- TableOfContents object with numbered entries organized hierarchically
+
+The function implements a fixed ordering system with predefined root pages and section organization.
 
 ### write_toc
 
@@ -12,41 +55,72 @@ This file provides functionality for writing table of contents data to the wiki 
 def write_toc(toc: TableOfContents, wiki_path: Path) -> None
 ```
 
-Writes a table of contents to a JSON file in the specified wiki directory.
+Writes a table of contents to a `toc.json` file in the specified wiki directory.
 
 **Parameters:**
-- `toc` (TableOfContents): The TableOfContents object to serialize and write
-- `wiki_path` (Path): Path to the wiki directory where the table of contents file will be created
+- `toc`: The TableOfContents object to serialize and write
+- `wiki_path`: Path to the wiki directory where the file will be created
+
+### read_toc
+
+```python
+def read_toc(wiki_path: Path) -> TableOfContents | None
+```
+
+Reads and deserializes a table of contents from a `toc.json` file.
+
+**Parameters:**
+- `wiki_path`: Path to the wiki directory containing the TOC file
 
 **Returns:**
-- None
+- TableOfContents object if the file exists and is valid, None otherwise
 
-**Behavior:**
-- Creates a `toc.json` file in the specified wiki directory
-- Serializes the TableOfContents object using its `to_json()` method
-- Overwrites any existing `toc.json` file
+The function handles missing files and JSON parsing errors gracefully by returning None.
 
 ## Usage Examples
 
-### Writing a Table of Contents
+### Creating and Writing a TOC
 
 ```python
 from pathlib import Path
 
-# Assuming you have a TableOfContents object
-wiki_directory = Path("/path/to/wiki")
-write_toc(my_toc, wiki_directory)
+# Generate TOC from page data
+pages = [
+    {"path": "index.md", "title": "Overview"},
+    {"path": "modules/core.md", "title": "Core Module"}
+]
+toc = generate_toc(pages)
+
+# Write to file
+wiki_path = Path("./wiki")
+write_toc(toc, wiki_path)
 ```
 
-This will create or update a `toc.json` file at `/path/to/wiki/toc.json`.
+### Reading an Existing TOC
+
+```python
+# Read TOC from file
+toc = read_toc(Path("./wiki"))
+if toc:
+    json_output = toc.to_json()
+```
+
+### Working with TOC Entries
+
+```python
+# Access TOC structure
+for entry in toc.entries:
+    print(f"{entry.number}: {entry.title} ({entry.path})")
+    for child in entry.children:
+        print(f"  {child.number}: {child.title}")
+```
 
 ## Related Components
 
-This file works with:
-- TableOfContents class (referenced as parameter type)
-- Path objects from the pathlib module for filesystem operations
-
-The function expects the TableOfContents class to have a `to_json()` method that returns a JSON string representation of the table of contents data.
+This module works with:
+- `json` module for serialization/deserialization
+- `pathlib.Path` for file system operations
+- Dictionary structures containing page metadata with 'path' and 'title' keys
 
 ## API Reference
 
@@ -336,8 +410,6 @@ assert len(toc.entries) == 1
 
 ## See Also
 
-- [test_toc](../../../tests/test_toc.md) - uses this
-- [wiki](wiki.md) - uses this
 - [diagrams](diagrams.md) - shares 3 dependencies
 - [vectorstore](../core/vectorstore.md) - shares 3 dependencies
 - [models](../models.md) - shares 3 dependencies

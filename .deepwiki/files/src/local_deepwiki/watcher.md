@@ -1,56 +1,44 @@
-# Watcher Module
+# watcher.py
 
 ## File Overview
 
-The `watcher.py` module provides file system monitoring capabilities for automatically regenerating wiki documentation when repository files change. It uses the watchdog library to monitor file system events and triggers wiki regeneration with configurable debouncing to avoid excessive rebuilds.
+The watcher module provides file system monitoring capabilities for automatically regenerating wiki documentation when repository files change. It implements a debounced file watching system using the watchdog library to detect changes and trigger wiki regeneration.
 
 ## Functions
 
-### main
+### main()
 
-```python
-def main() -> None
-```
-
-Main entry point for the watch command that sets up command-line argument parsing for the file watcher functionality.
+Main entry point for the watch command that sets up argument parsing for the file watching functionality.
 
 **Parameters:**
 - None
 
-**Returns:**
-- None
+**Return Value:**
+- `None`
 
-**Command-line Arguments:**
-- `repo_path` (optional): Path to the repository to watch, defaults to current directory
-- `--debounce`: Seconds to wait after changes before reindexing, defaults to 2.0 seconds
-
-## Usage Examples
-
-The main function can be called directly to start the file watcher:
-
-```python
-from local_deepwiki.watcher import main
-
-# Start the watcher with default settings
-main()
-```
-
-The module is designed to be used as a command-line tool, parsing arguments for repository path and debounce timing.
+**Description:**
+Sets up command line argument parsing with the following options:
+- `repo_path`: Path to the repository to watch (defaults to current directory)
+- `--debounce`: Seconds to wait after changes before reindexing (defaults to 2.0)
 
 ## Related Components
 
-This module integrates with several other components of the local_deepwiki system:
+This module integrates with several other components of the local-deepwiki system:
 
 - **[Config](config.md)**: Uses the [Config](config.md) class and [get_config](config.md) function for configuration management
-- **[RepositoryIndexer](core/indexer.md)**: Works with the [RepositoryIndexer](core/indexer.md) class from the core.indexer module for repository analysis
-- **EXTENSION_MAP**: References the parser module's EXTENSION_MAP for file type handling  
-- **[generate_wiki](generators/wiki.md)**: Uses the wiki generator function for creating documentation
-- **Logger**: Integrates with the logging system via [get_logger](logging.md)
+- **[RepositoryIndexer](core/indexer.md)**: Leverages the core indexer for processing repository changes
+- **EXTENSION_MAP**: References the parser's extension mapping for file type handling
+- **[generate_wiki](generators/wiki.md)**: Calls the wiki generator to create updated documentation
+- **Logger**: Uses the logging system for operation tracking
 
 The module also depends on external libraries:
-- `watchdog` for file system monitoring (Observer and FileSystemEventHandler)
-- `rich.console` for enhanced console output
-- Standard library modules for argument parsing, async operations, file matching, and timing
+- `watchdog`: For file system event monitoring
+- `rich.console`: For enhanced console output
+- Standard library modules for argument parsing, async operations, and file pattern matching
+
+## Usage Context
+
+Based on the imports and structure, this module appears to be part of a CLI tool that can monitor repository changes and automatically regenerate documentation. The debouncing mechanism helps prevent excessive regeneration when multiple files are modified in quick succession.
 
 ## API Reference
 

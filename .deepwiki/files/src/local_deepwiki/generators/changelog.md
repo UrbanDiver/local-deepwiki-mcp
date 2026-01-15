@@ -1,50 +1,46 @@
-# Changelog Generator
+# Changelog Generator Module
 
 ## File Overview
 
-The `changelog.py` module provides functionality for generating changelog documentation from Git commit history. It processes Git commits and formats them into structured changelog content, organizing commits by date and providing links to the repository when available.
+The `changelog.py` module provides functionality for generating changelog documentation from Git repository history. It processes Git commits to create structured changelog content, leveraging Git repository information and commit history analysis.
 
 ## Classes
 
 ### CommitInfo
 
-A data class that represents information about a Git commit. This class stores the essential metadata needed to generate changelog entries from commit history.
+A dataclass that represents information about a Git commit. This class is used to structure and store commit data for changelog generation.
 
 ## Functions
 
 ### get_commit_history
 
-Retrieves the Git commit history for changelog generation. This function processes the repository's commit log to extract relevant information for documentation purposes.
+Retrieves the commit history from a Git repository. This function processes Git commits to extract relevant information for changelog generation.
 
 ### build_commit_url
 
-Constructs URLs linking to specific commits in the repository. This function generates web links to commits when the repository has remote hosting information available.
+Constructs URLs for individual commits, likely for linking commits in the generated changelog to their corresponding repository views.
 
 ### generate_changelog_content
 
-Generates formatted changelog content from Git commit history. This is the [main](../export/html.md) function that orchestrates the changelog creation process, combining commit information with formatting to produce the final documentation.
+Generates the actual changelog content based on processed commit information. This is the [main](../export/pdf.md) function that creates the formatted changelog output.
 
 ## Dependencies
 
-The module relies on several external components:
+The module relies on several key dependencies:
 
-- **subprocess**: Used for executing Git commands to retrieve commit history
-- **collections.defaultdict**: Provides efficient grouping of commits by date or category
-- **dataclasses**: Enables the CommitInfo data structure with field definitions
-- **datetime**: Handles date processing and formatting for changelog organization
-- **pathlib.Path**: Manages file system paths for repository operations
+- **Standard Library**: `subprocess` for Git command execution, `collections.defaultdict` for data organization, `dataclasses` for structured data, `datetime` for timestamp handling, and `pathlib` for file system operations
+- **Internal Dependencies**: 
+  - [GitRepoInfo](../core/git_utils.md) and [get_repo_info](../core/git_utils.md) from `local_deepwiki.core.git_utils` for Git repository information
+  - Logging utilities from `local_deepwiki.logging`
 
 ## Related Components
 
-This module integrates with other parts of the local_deepwiki system:
+This module integrates with:
 
-- **[GitRepoInfo](../core/git_utils.md)**: Uses repository information from the git_utils module to access Git metadata
-- **[get_repo_info](../core/git_utils.md)**: Retrieves repository details needed for changelog generation
-- **Logging system**: Utilizes the project's logging infrastructure for operation tracking
+- **Git Utilities**: Uses [GitRepoInfo](../core/git_utils.md) and [get_repo_info](../core/git_utils.md) for accessing repository information
+- **Logging System**: Incorporates the project's logging framework for operation tracking
 
-## Usage Context
-
-The changelog generator is designed to work within the local_deepwiki documentation system, automatically creating changelog documentation from Git commit history. It processes repository commits and formats them into readable changelog entries that can be integrated into the generated documentation.
+The changelog generator appears to be part of a larger documentation generation system, processing Git history to create human-readable changelog documentation.
 
 ## API Reference
 
@@ -206,7 +202,3 @@ assert content is not None
 ## Relevant Source Files
 
 - `src/local_deepwiki/generators/changelog.py:20-28`
-
-## See Also
-
-- [wiki](wiki.md) - uses this

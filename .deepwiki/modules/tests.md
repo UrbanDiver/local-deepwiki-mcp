@@ -2,118 +2,93 @@
 
 ## Module Purpose
 
-The tests module contains comprehensive test suites for validating the functionality of the local_deepwiki project components. It includes tests for core parsing, configuration, documentation generation, and various utility functions used throughout the system.
+The tests module contains comprehensive test suites for validating the functionality of the local_deepwiki project components. It includes unit tests for various core features including parsing, configuration management, manifest handling, diagram generation, source references, and test example extraction.
 
 ## Key Classes and Functions
 
-### TestCodeParser
+### Test Configuration Classes
 
-Test suite for the [CodeParser](../files/src/local_deepwiki/core/parser.md) class that validates code parsing functionality.
+**TestConfig**
+Tests configuration management functionality including default settings, embedding configuration, LLM configuration, parsing settings, chunking parameters, and wiki configuration validation.
 
-**Key Methods:**
-- `setup_method()` - Sets up test fixtures by initializing a [CodeParser](../files/src/local_deepwiki/core/parser.md) instance
-- `test_detect_language_python()` - Validates Python language detection for `.py` and `.pyi` files
+### Test Parser Classes
 
-### TestConfig
+**TestCodeParser**
+Test suite for the CodeParser functionality, including language detection capabilities for Python files. Contains setup methods for test fixtures and validation of language detection for `.py` and `.pyi` files.
 
-Comprehensive test suite for configuration management and validation.
+### Test Manifest Classes
 
-**Key Methods:**
-- `test_default_config()` - Tests default configuration settings
-- `test_embedding_config()` - Validates embedding configuration
-- `test_llm_config()` - Tests LLM provider configuration
-- `test_parsing_config()` - Validates parsing configuration options
-- `test_chunking_config()` - Tests chunking configuration
-- `test_wiki_config()` - Validates wiki generation settings
-- `test_deep_research_config()` - Tests deep research configuration
-- `test_get_wiki_path()` - Validates wiki path generation
-- `test_get_vector_db_path()` - Tests vector database path configuration
-- `test_config_get_prompts_uses_current_provider()` - Ensures prompts are retrieved for the current LLM provider
+**TestProjectManifest**
+Tests project manifest functionality including parsing of various configuration files like `pyproject.toml`, `package.json`, and `requirements.txt`. Validates manifest caching, directory tree generation, and cache validity checking.
 
-### TestProjectManifest
+### Test Diagram Classes
 
-Test suite for project manifest functionality, validating how project metadata is parsed and managed.
+**TestPathToModule**
+Tests the `_path_to_module` function for converting file paths to module names. Validates basic path conversion and proper handling of `__init__.py` files.
 
-### TestAddSourceRefsSections
+**TestModuleToWikiPath**
+Tests the `_module_to_wiki_path` function for converting module names to wiki page paths. Handles both simple and nested module path conversions.
 
-Tests for adding source reference sections to documentation pages.
+### Test Source Reference Classes
 
-**Key Methods:**
-- `test_adds_sections_to_file_pages()` - Validates source reference addition to file pages
-- `test_skips_index_pages()` - Ensures index pages are skipped appropriately
-- `test_inserts_before_see_also()` - Tests proper insertion order relative to "See Also" sections
-- `test_handles_missing_status()` - Validates handling of missing status information
-- `test_adds_section_to_module_pages()` - Tests source reference addition to module pages
-- `test_adds_section_to_architecture_page()` - Validates architecture page handling
+**TestAddSourceRefsSections**
+Tests functionality for adding source reference sections to wiki pages. Validates section addition to file pages, module pages, and architecture pages while properly handling index pages and missing status conditions.
 
-### TestPathToModule
+### Test Example Classes
 
-Tests for the `_path_to_module` function that converts file paths to module names.
+**TestFindTestFile**
+Tests the functionality for locating test files corresponding to source files.
 
-**Key Methods:**
-- `test_converts_simple_path()` - Tests basic path to module conversion
-- `test_skips_init_files()` - Validates that `__init__.py` files return None
+**TestExtractExamplesForEntities**
+Tests extraction of usage examples from test files for specific code entities.
 
-### TestModuleToWikiPath
+**TestFormatExamplesMarkdown**
+Tests formatting of extracted examples into markdown format.
 
-Tests for the `_module_to_wiki_path` function that converts module names to wiki paths.
-
-**Key Methods:**
-- `test_simple_module()` - Tests simple module path conversion
-- `test_nested_module()` - Validates nested module path handling
-
-### TestFindTestFile, TestExtractExamplesForEntities, TestFormatExamplesMarkdown, TestGetFileExamples
-
-Test suites for the test examples functionality that extracts usage examples from test files.
-
-**Key Methods in [TestGetFileExamples](../files/tests/test_test_examples.md):**
-- `test_get_file_examples_returns_markdown()` - Validates markdown generation from test examples
-- `test_get_file_examples_no_test_file()` - Tests behavior when no test file exists
-- `test_get_file_examples_non_python()` - Validates handling of non-Python files
-- `test_get_file_examples_filters_short_names()` - Tests filtering of short test names
-- `test_get_file_examples_no_matching_tests()` - Validates behavior with no matching tests
-
-### Test Functions
-
-- `test_wiki_page_repr()` - Tests the string representation of [WikiPage](../files/src/local_deepwiki/models.md) objects, validating that the repr includes the path, title, and class name
+**TestGetFileExamples**
+Tests the complete workflow of getting file examples, including markdown generation, handling of non-existent test files, filtering of short test names, and validation of matching test patterns.
 
 ## How Components Interact
 
-The test module components work together to validate the entire local_deepwiki system:
+The test classes work together to validate the entire documentation generation pipeline:
 
-1. **Configuration Testing**: [TestConfig](../files/tests/test_config.md) ensures all configuration options work correctly and integrate properly with different providers
-2. **Parser Testing**: [TestCodeParser](../files/tests/test_parser.md) validates that code parsing works across different file types and languages
-3. **Documentation Generation**: Various test classes validate the wiki generation pipeline, from manifest creation to final output
-4. **Path Conversion**: [TestPathToModule](../files/tests/test_diagrams.md) and [TestModuleToWikiPath](../files/tests/test_diagrams.md) ensure proper conversion between file paths, module names, and wiki paths
-5. **Example Extraction**: Test example classes validate the extraction and formatting of usage examples from test files
+1. **Configuration Testing**: TestConfig ensures proper configuration loading and validation
+2. **Parsing Testing**: TestCodeParser validates code analysis capabilities
+3. **Manifest Testing**: TestProjectManifest ensures project structure detection works correctly
+4. **Path Conversion Testing**: TestPathToModule and TestModuleToWikiPath validate the conversion between file paths and wiki page paths
+5. **Content Enhancement Testing**: TestAddSourceRefsSections and test example classes ensure proper enhancement of generated documentation with references and examples
 
 ## Usage Examples
 
-### Running Parser Tests
-
+### Running Configuration Tests
 ```python
-# Set up and test code parser
-parser = CodeParser()
-language = parser.detect_language(Path("test.py"))
-assert language == Language.PYTHON
-```
-
-### Testing Configuration
-
-```python
-# Test configuration retrieval
+# Test configuration management
 config = Config()
+assert config.llm.provider == "ollama"
 prompts = config.get_prompts()
-assert prompts == config.prompts.ollama  # Default provider
+assert prompts == config.prompts.ollama
 ```
 
-### Testing WikiPage Representation
-
+### Testing Code Parser
 ```python
-# Create and test WikiPage
+# Test language detection
+parser = CodeParser()
+assert parser.detect_language(Path("test.py")) == Language.PYTHON
+```
+
+### Testing Path Conversion
+```python
+# Test module path conversion
+result = _module_to_wiki_path("core.parser", "local_deepwiki")
+assert result == "src/local_deepwiki/core/parser.md"
+```
+
+### Testing WikiPage Model
+```python
+# Test WikiPage representation
 page = WikiPage(
     path="modules/core.md",
-    title="Core Module", 
+    title="Core Module",
     content="# Core Module\n\nContent here.",
     generated_at=1234567890.0,
 )
@@ -124,16 +99,18 @@ assert "modules/core.md" in result
 
 ## Dependencies
 
-Based on the imports shown, the tests module depends on:
+Based on the imports shown in the code context:
 
-- **Standard Library**: `json`, `tempfile`, `time`, `pathlib.Path`, `textwrap.dedent`
-- **Testing Framework**: `pytest`
-- **Core Modules**:
-  - `local_deepwiki.generators.manifest` - For manifest generation testing
-  - `local_deepwiki.generators.test_examples` - For test example extraction
-  - Various other local_deepwiki modules for comprehensive testing
+- **json**: For JSON data handling in manifest tests
+- **tempfile**: For temporary file operations during testing
+- **time**: For timestamp operations in manifest caching tests
+- **pathlib.Path**: For file path operations
+- **textwrap.dedent**: For formatting test strings
+- **pytest**: Testing framework for test execution and fixtures
 
-The test suite provides comprehensive coverage of the local_deepwiki system's core functionality, ensuring reliable operation across all major components.
+### Internal Dependencies
+- **local_deepwiki.generators.manifest**: Manifest generation components
+- **local_deepwiki.generators.test_examples**: Test example extraction functionality
 
 ## Relevant Source Files
 
@@ -141,14 +118,14 @@ The following source files were used to generate this documentation:
 
 - [`tests/test_parser.py:24-123`](../files/tests/test_parser.md)
 - [`tests/test_retry.py:8-144`](../files/tests/test_retry.md)
-- [`tests/test_ollama_health.py:16-19`](../files/tests/test_ollama_health.md)
-- [`tests/test_server_handlers.py:15-69`](../files/tests/test_server_handlers.md)
-- [`tests/test_chunker.py:11-182`](../files/tests/test_chunker.md)
-- [`tests/test_changelog.py:18-96`](../files/tests/test_changelog.md)
+- `tests/test_ollama_health.py:16-19`
+- `tests/test_server_handlers.py:15-69`
+- `tests/test_chunker.py:11-182`
+- `tests/test_changelog.py:18-96`
 - [`tests/test_vectorstore.py:9-28`](../files/tests/test_vectorstore.md)
-- [`tests/test_pdf_export.py:21-80`](../files/tests/test_pdf_export.md)
-- [`tests/test_search.py:20-53`](../files/tests/test_search.md)
-- [`tests/test_toc.py:17-43`](../files/tests/test_toc.md)
+- `tests/test_pdf_export.py:21-80`
+- `tests/test_search.py:20-53`
+- `tests/test_toc.py:17-43`
 
 
 *Showing 10 of 31 source files.*

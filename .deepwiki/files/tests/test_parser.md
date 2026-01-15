@@ -2,109 +2,104 @@
 
 ## File Overview
 
-This file contains comprehensive test suites for the [CodeParser](../src/local_deepwiki/core/parser.md) class and related parser utility functions. It validates language detection, node manipulation, comment extraction, docstring parsing, and large file handling capabilities.
+This file contains comprehensive test suites for the code parsing functionality, specifically testing the [CodeParser](../src/local_deepwiki/core/parser.md) class and related helper functions. It validates language detection, node manipulation, comment processing, docstring extraction, and large file handling capabilities.
 
 ## Classes
 
 ### TestCodeParser
 
-Test suite for the [CodeParser](../src/local_deepwiki/core/parser.md) class that validates core parsing functionality.
+Test suite for the [CodeParser](../src/local_deepwiki/core/parser.md) class functionality.
 
 **Key Methods:**
-
-- `setup_method()`: Initializes a [CodeParser](../src/local_deepwiki/core/parser.md) instance for each test
-- `test_detect_language_python()`: Validates Python file detection for `.py` and `.pyi` extensions
-- `test_detect_language_javascript()`: Validates JavaScript file detection for `.js` extensions
+- `setup_method()` - Initializes a [CodeParser](../src/local_deepwiki/core/parser.md) instance for testing
+- `test_detect_language_python()` - Validates Python file detection by extension (.py, .pyi)
+- `test_detect_language_javascript()` - Validates JavaScript file detection by extension (.js)
 
 ### TestNodeHelpers
 
-Test suite for node helper functions that work with parsed syntax trees.
+Test suite for node helper functions that work with parsed code syntax trees.
 
 **Key Methods:**
-
-- `setup_method()`: Sets up a [CodeParser](../src/local_deepwiki/core/parser.md) instance for testing node operations
-- `test_get_node_text()`: Validates text extraction from syntax tree nodes
-- `test_get_node_name_python_function()`: Tests function name extraction from Python function nodes
+- `setup_method()` - Initializes a [CodeParser](../src/local_deepwiki/core/parser.md) instance for testing
+- `test_get_node_text()` - Tests extracting text content from syntax tree nodes
+- `test_get_node_name_python_function()` - Tests extracting function names from Python syntax nodes
 
 ### TestCommentHelpers
 
-Test suite for comment processing utilities (referenced in imports but implementation not shown in provided code).
+Test suite for comment processing functionality (class structure visible in module overview).
 
 ### TestDocstringExtraction
 
-Test suite for docstring extraction functionality.
+Test suite for extracting docstrings from code.
 
 **Key Methods:**
-
-- `setup_method()`: Initializes [CodeParser](../src/local_deepwiki/core/parser.md) for docstring testing
-- `test_python_docstring()`: Validates extraction of Python docstrings from function definitions
+- `setup_method()` - Initializes a [CodeParser](../src/local_deepwiki/core/parser.md) instance for testing
+- `test_python_docstring()` - Tests extraction of Python function docstrings
 
 ### TestLargeFileHandling
 
-Test suite for large file processing capabilities (referenced in imports but implementation not shown in provided code).
+Test suite for handling large files during parsing (class structure visible in module overview).
 
 ## Functions
 
-The test file validates several imported utility functions:
+The file imports and tests several utility functions:
 
-- `_collect_preceding_comments`: Processes comments before code elements
-- `_compute_file_hash`: Generates file hashes for content identification
-- `_read_file_content`: Handles file reading operations
-- `_strip_line_comment_prefix`: Removes comment prefixes from lines
-- [`find_nodes_by_type`](../src/local_deepwiki/core/parser.md): Locates specific node types in syntax trees
-- [`get_docstring`](../src/local_deepwiki/core/parser.md): Extracts docstrings from code nodes
-- [`get_node_name`](../src/local_deepwiki/core/parser.md): Retrieves names from syntax tree nodes
-- [`get_node_text`](../src/local_deepwiki/core/parser.md): Converts syntax tree nodes back to text
+- `_collect_preceding_comments` - Collects comments that precede code elements
+- `_compute_file_hash` - Computes hash values for files
+- `_read_file_content` - Reads file content with appropriate handling
+- `_strip_line_comment_prefix` - Removes comment prefixes from lines
+- [`find_nodes_by_type`](../src/local_deepwiki/core/parser.md) - Finds syntax tree nodes by their type
+- [`get_docstring`](../src/local_deepwiki/core/parser.md) - Extracts docstrings from code nodes
+- [`get_node_name`](../src/local_deepwiki/core/parser.md) - Gets the name identifier from syntax nodes
+- [`get_node_text`](../src/local_deepwiki/core/parser.md) - Extracts text content from syntax nodes
 
 ## Usage Examples
 
 ### Testing Language Detection
 
 ```python
-def test_detect_language_python(self):
-    """Test Python language detection."""
-    assert self.parser.detect_language(Path("test.py")) == Language.PYTHON
-    assert self.parser.detect_language(Path("test.pyi")) == Language.PYTHON
-```
-
-### Testing Node Text Extraction
-
-```python
-def test_get_node_text(self):
-    """Test extracting text from nodes."""
-    code = b"def foo(): pass"
-    root = self.parser.parse_source(code, Language.PYTHON)
-    
-    func_node = root.children[0]
-    text = get_node_text(func_node, code)
-    assert text == "def foo(): pass"
+parser = CodeParser()
+assert parser.detect_language(Path("test.py")) == Language.PYTHON
+assert parser.detect_language(Path("test.js")) == Language.JAVASCRIPT
 ```
 
 ### Testing Docstring Extraction
 
 ```python
-def test_python_docstring(self):
-    """Test extracting Python docstring."""
-    code = b'''def hello():
+code = b'''def hello():
     """This is a docstring."""
     pass'''
-    root = self.parser.parse_source(code, Language.PYTHON)
-    func_node = root.children[0]
-    
-    docstring = get_docstring(func_node, code, Language.PYTHON)
-    assert docstring == "This is a docstring."
+root = parser.parse_source(code, Language.PYTHON)
+func_node = root.children[0]
+docstring = get_docstring(func_node, code, Language.PYTHON)
+assert docstring == "This is a docstring."
+```
+
+### Testing Node Text Extraction
+
+```python
+code = b"def foo(): pass"
+root = parser.parse_source(code, Language.PYTHON)
+func_node = root.children[0]
+text = get_node_text(func_node, code)
+assert text == "def foo(): pass"
 ```
 
 ## Related Components
 
 This test file works with several core components:
 
-- **[CodeParser](../src/local_deepwiki/core/parser.md)**: The [main](../src/local_deepwiki/export/html.md) parser class being tested
-- **[Language](../src/local_deepwiki/models.md)**: Enumeration for supported programming languages
-- **Parser utility functions**: Various helper functions for syntax tree manipulation
-- **File handling constants**: `HASH_CHUNK_SIZE` and `MMAP_THRESHOLD_BYTES` for large file processing
+- **[CodeParser](../src/local_deepwiki/core/parser.md)** - The [main](../src/local_deepwiki/web/app.md) parsing class being tested
+- **Language** - Enumeration for supported programming languages
+- **Helper Functions** - Various utility functions for node and comment processing
 
-The tests use `pytest` as the testing framework and `tempfile` for creating temporary test files during validation.
+## Test Configuration
+
+The tests use:
+- `pytest` framework for test execution
+- `tempfile` for temporary file operations during testing
+- `pathlib.Path` for file path handling
+- Constants like `HASH_CHUNK_SIZE` and `MMAP_THRESHOLD_BYTES` for configuration testing
 
 ## API Reference
 
@@ -179,7 +174,7 @@ def test_parse_python_file(tmp_path)
 Test parsing a Python file.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `tmp_path` | - | - | - |
 
@@ -192,7 +187,7 @@ def test_parse_javascript_file(tmp_path)
 Test parsing a JavaScript file.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `tmp_path` | - | - | - |
 
@@ -213,7 +208,7 @@ def test_get_file_info(tmp_path)
 Test getting file info.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `tmp_path` | - | - | - |
 
@@ -646,11 +641,9 @@ flowchart TD
 
 ## Relevant Source Files
 
-- `tests/test_parser.py:24-123`
+- [`tests/test_parser.py:24-123`](https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/tests/test_parser.py#L24-L123)
 
 ## See Also
 
-- [models](../src/local_deepwiki/models.md) - dependency
 - [test_api_docs](test_api_docs.md) - shares 4 dependencies
-- [chunker](../src/local_deepwiki/core/chunker.md) - shares 4 dependencies
 - [test_indexer](test_indexer.md) - shares 4 dependencies

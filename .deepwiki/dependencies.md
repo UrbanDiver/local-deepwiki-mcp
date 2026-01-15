@@ -6,13 +6,13 @@ The project relies on several third-party libraries for different functionality 
 
 ### AI and Machine Learning
 - **anthropic** (>=0.40) - Anthropic's Claude AI API client
-- **openai** (>=1.0) - OpenAI API client for GPT models
+- **openai** (>=1.0) - OpenAI API client for GPT models and embeddings
 - **ollama** (>=0.4) - Local LLM inference server client
-- **sentence-transformers** (>=3.0) - Pre-trained models for text embeddings
+- **sentence-transformers** (>=3.0) - Local text embedding models
 - **mcp** (>=1.2.0) - Model Context Protocol implementation
 
 ### Code Analysis
-- **tree-sitter** (>=0.23) - Incremental parsing library for syntax analysis
+- **tree-sitter** (>=0.23) - Syntax tree parsing library
 - **tree-sitter-c** (>=0.23) - C language parser
 - **tree-sitter-c-sharp** (>=0.23) - C# language parser
 - **tree-sitter-cpp** (>=0.23) - C++ language parser
@@ -27,20 +27,20 @@ The project relies on several third-party libraries for different functionality 
 - **tree-sitter-swift** (>=0.0.1) - Swift language parser
 - **tree-sitter-typescript** (>=0.23) - TypeScript language parser
 
-### Data Storage and Processing
-- **lancedb** (>=0.15) - Vector database for embeddings storage
+### Data Processing and Storage
+- **lancedb** (>=0.15) - Vector database for embeddings
 - **pandas** (>=2.0) - Data manipulation and analysis
 - **pydantic** (>=2.0) - Data validation and serialization
 
 ### Web and File Processing
-- **flask** (>=3.0) - Web framework for server functionality
+- **flask** (>=3.0) - Web framework for serving the application
 - **markdown** (>=3.0) - Markdown processing
 - **weasyprint** (>=62.0) - HTML to PDF conversion
-- **watchdog** (>=4.0) - File system monitoring
+- **watchdog** (>=4.0) - File system event monitoring
 
-### Utilities
+### Configuration and Utilities
 - **pyyaml** (>=6.0) - YAML configuration file parsing
-- **rich** (>=13.0) - Rich text and beautiful formatting in terminal
+- **rich** (>=13.0) - Rich text and terminal formatting
 
 ## Dev Dependencies
 
@@ -49,36 +49,38 @@ Development and testing tools:
 - **black** (>=24.0) - Code formatting
 - **isort** (>=5.0) - Import sorting
 - **mypy** (>=1.0) - Static type checking
-- **pre-commit** (>=3.0) - Git hooks for code quality
+- **pre-commit** (>=3.0) - Git pre-commit hooks
 - **pytest** (>=8.0) - Testing framework
 - **pytest-asyncio** (>=0.24) - Async testing support
 
 ## Internal Module Dependencies
 
-Based on the import statements, the internal modules have the following dependency relationships:
+Based on the import statements, the internal modules have the following relationships:
 
-### Core Infrastructure
-- **[CodeChunker](files/src/local_deepwiki/core/chunker.md)** depends on **[CodeParser](files/src/local_deepwiki/core/parser.md)** for syntax analysis and tree-sitter integration
-- **[VectorStore](files/src/local_deepwiki/core/vectorstore.md)** is used by multiple components for embedding storage and retrieval
-- **[RepositoryIndexer](files/src/local_deepwiki/core/indexer.md)** orchestrates the indexing process using **[CodeChunker](files/src/local_deepwiki/core/chunker.md)** and configuration
-
-### Generator Components
-- **[CrossLinker](files/src/local_deepwiki/generators/crosslinks.md)** and **[EntityRegistry](files/src/local_deepwiki/generators/crosslinks.md)** work together to add cross-references between wiki pages
-- **[APIDocExtractor](files/src/local_deepwiki/generators/api_docs.md)** uses **[CodeParser](files/src/local_deepwiki/core/parser.md)** to extract API documentation from code
-- **[RelationshipAnalyzer](files/src/local_deepwiki/generators/see_also.md)** and **[FileRelationships](files/src/local_deepwiki/generators/see_also.md)** analyze code relationships for see-also sections
-- Multiple generators depend on core models: **[WikiPage](files/src/local_deepwiki/models.md)**, **[CodeChunk](files/src/local_deepwiki/models.md)**, **[ChunkType](files/src/local_deepwiki/models.md)**, and **[Language](files/src/local_deepwiki/models.md)**
+### Core Modules
+- **[CodeChunker](files/src/local_deepwiki/core/chunker.md)** depends on CodeParser for syntax tree analysis
+- **CodeParser** uses tree-sitter libraries for multi-language parsing
+- **[VectorStore](files/src/local_deepwiki/core/vectorstore.md)** integrates with embedding providers for semantic search
+- **[RepositoryIndexer](files/src/local_deepwiki/core/indexer.md)** coordinates chunking, parsing, and vector storage
 
 ### Provider System
-- **[EmbeddingProvider](files/src/local_deepwiki/providers/base.md)** serves as the base class for embedding implementations
+- **[EmbeddingProvider](files/src/local_deepwiki/providers/base.md)** serves as base class for embedding implementations
 - **[LocalEmbeddingProvider](files/src/local_deepwiki/providers/embeddings/local.md)** uses sentence-transformers for local embeddings
 - **[OpenAIEmbeddingProvider](files/src/local_deepwiki/providers/embeddings/openai.md)** integrates with OpenAI's embedding API
-- Provider selection is managed through configuration classes
+- **[LLMProvider](files/src/local_deepwiki/providers/base.md)** provides base interface for language model providers
 
-### Server and Handlers
-- Server handlers depend on core indexing, search, and wiki generation functionality
-- Multiple test files validate the integration between different components
+### Generator Components
+- **[CrossLinker](files/src/local_deepwiki/generators/crosslinks.md)** and **[EntityRegistry](files/src/local_deepwiki/generators/crosslinks.md)** work together for cross-reference generation
+- **[APIDocExtractor](files/src/local_deepwiki/generators/api_docs.md)** uses CodeParser for extracting API documentation
+- **[RelationshipAnalyzer](files/src/local_deepwiki/generators/see_also.md)** and **[FileRelationships](files/src/local_deepwiki/generators/see_also.md)** analyze code relationships
+- Multiple generators depend on core models like [WikiPage](files/src/local_deepwiki/models.md), [CodeChunk](files/src/local_deepwiki/models.md), and [ChunkType](files/src/local_deepwiki/models.md)
 
-The architecture follows a layered approach where core parsing and chunking functionality supports higher-level generators, which in turn produce wiki content that can be served through the web interface.
+### Models and Configuration
+- Most modules depend on shared models ([WikiPage](files/src/local_deepwiki/models.md), [CodeChunk](files/src/local_deepwiki/models.md), [Language](files/src/local_deepwiki/models.md), [ChunkType](files/src/local_deepwiki/models.md))
+- Configuration management is centralized and used across core components
+- Logging utilities are shared across the application
+
+The architecture follows a layered approach with core parsing and indexing components at the base, provider abstractions for external services, and specialized generators for different wiki content types.
 
 ## Module Dependency Graph
 
@@ -115,29 +117,33 @@ flowchart TD
         M19[test_examples]
         M20[toc]
         M21[wiki]
+        M22[wiki_pages]
+    end
+    subgraph handlers[Handlers]
+        M23[handlers]
     end
     subgraph logging[Logging]
-        M22[logging]
+        M24[logging]
     end
     subgraph models[Models]
-        M23[models]
+        M25[models]
     end
     subgraph providers[Providers]
-        M24[base]
-        M25[embeddings]
-        M26[local]
-        M27[openai]
-        M28[llm]
-        M29[anthropic]
-        M30[cached]
-        M31[ollama]
-        M32[openai]
+        M26[base]
+        M27[embeddings]
+        M28[local]
+        M29[openai]
+        M30[llm]
+        M31[anthropic]
+        M32[cached]
+        M33[ollama]
+        M34[openai]
     end
     subgraph server[Server]
-        M33[server]
+        M35[server]
     end
     subgraph web[Web]
-        M34[app]
+        M36[app]
     end
     subgraph external[External Dependencies]
         E0([pathlib]):::external
@@ -145,58 +151,57 @@ flowchart TD
         E2([json]):::external
         E3([re]):::external
         E4([dataclasses]):::external
-        E5([collections]):::external
-        E6([asyncio]):::external
-        E7([os]):::external
-        E8([tree_sitter]):::external
-        E9([hashlib]):::external
+        E5([asyncio]):::external
+        E6([collections]):::external
+        E7([time]):::external
+        E8([os]):::external
+        E9([tree_sitter]):::external
     end
     M1 --> M0
     M1 --> M6
-    M1 --> M22
-    M1 --> M23
+    M1 --> M24
+    M1 --> M25
     M2 --> M7
-    M2 --> M22
-    M2 --> M23
     M2 --> M24
-    M3 --> M22
+    M2 --> M25
+    M2 --> M26
+    M3 --> M24
     M4 --> M0
     M4 --> M1
     M4 --> M6
     M4 --> M7
-    M4 --> M22
-    M4 --> M23
+    M4 --> M24
     M4 --> M25
+    M4 --> M27
     M5 --> M0
-    M5 --> M22
     M5 --> M24
-    M6 --> M22
-    M6 --> M23
-    M7 --> M22
-    M7 --> M23
+    M5 --> M26
+    M6 --> M24
+    M6 --> M25
     M7 --> M24
-    M8 --> M22
-    M9 --> M22
+    M7 --> M25
+    M7 --> M26
+    M8 --> M24
+    M9 --> M24
     M10 --> M1
     M10 --> M6
-    M10 --> M23
+    M10 --> M25
     M11 --> M1
     M11 --> M6
-    M11 --> M23
+    M11 --> M25
     M12 --> M3
-    M12 --> M22
-    M13 --> M23
-    M14 --> M23
-    M15 --> M22
-    M16 --> M23
-    M17 --> M23
-    M18 --> M23
+    M12 --> M24
+    M13 --> M25
+    M14 --> M25
+    M15 --> M24
+    M16 --> M25
+    M17 --> M25
+    M18 --> M25
     M21 --> M0
     M21 --> M3
     M21 --> M7
     M21 --> M10
     M21 --> M11
-    M21 --> M12
     M21 --> M13
     M21 --> M14
     M21 --> M15
@@ -205,59 +210,70 @@ flowchart TD
     M21 --> M18
     M21 --> M19
     M21 --> M20
-    M21 --> M22
-    M21 --> M23
-    M21 --> M28
-    M26 --> M24
-    M27 --> M24
-    M29 --> M22
-    M29 --> M24
-    M30 --> M5
-    M30 --> M22
-    M30 --> M24
-    M31 --> M22
+    M21 -.->|circular| M22
+    M21 --> M24
+    M21 --> M25
+    M21 --> M30
+    M22 --> M7
+    M22 --> M12
+    M22 --> M14
+    M22 --> M15
+    M22 -.->|circular| M21
+    M22 --> M24
+    M22 --> M25
+    M22 --> M26
+    M23 --> M0
+    M23 --> M2
+    M23 --> M4
+    M23 --> M7
+    M23 --> M8
+    M23 --> M9
+    M23 --> M21
+    M23 --> M24
+    M23 --> M25
+    M23 --> M27
+    M23 --> M30
+    M28 --> M26
+    M29 --> M26
     M31 --> M24
-    M32 --> M22
+    M31 --> M26
+    M32 --> M5
     M32 --> M24
-    M33 --> M0
-    M33 --> M2
-    M33 --> M4
-    M33 --> M7
-    M33 --> M8
-    M33 --> M9
-    M33 --> M21
-    M33 --> M22
-    M33 --> M23
-    M33 --> M25
-    M33 --> M28
-    M34 --> M0
-    M34 --> M2
-    M34 --> M7
-    M34 --> M22
-    M34 --> M23
-    M34 --> M25
-    M34 --> M28
+    M32 --> M26
+    M33 --> M24
+    M33 --> M26
+    M34 --> M24
+    M34 --> M26
+    M35 --> M23
+    M35 --> M24
+    M36 --> M0
+    M36 --> M2
+    M36 --> M7
+    M36 --> M24
+    M36 --> M25
+    M36 --> M27
+    M36 --> M30
     M0 -.-> E0
     M0 -.-> E1
-    M1 -.-> E9
     M1 -.-> E0
-    M1 -.-> E8
+    M1 -.-> E9
     M1 -.-> E1
-    M2 -.-> E6
     M2 -.-> E5
+    M2 -.-> E6
     M2 -.-> E2
     M2 -.-> E3
+    M2 -.-> E7
     M3 -.-> E4
     M3 -.-> E0
     M3 -.-> E3
     M4 -.-> E2
     M4 -.-> E0
-    M5 -.-> E9
+    M4 -.-> E7
     M5 -.-> E0
+    M5 -.-> E7
     M5 -.-> E1
-    M6 -.-> E9
     M6 -.-> E0
-    M6 -.-> E8
+    M6 -.-> E9
     M6 -.-> E1
     M7 -.-> E2
     M7 -.-> E0
@@ -270,13 +286,13 @@ flowchart TD
     M10 -.-> E4
     M10 -.-> E0
     M10 -.-> E3
-    M10 -.-> E8
+    M10 -.-> E9
     M11 -.-> E0
-    M11 -.-> E8
-    M12 -.-> E5
+    M11 -.-> E9
+    M12 -.-> E6
     M12 -.-> E4
     M12 -.-> E0
-    M13 -.-> E5
+    M13 -.-> E6
     M13 -.-> E4
     M13 -.-> E0
     M13 -.-> E3
@@ -292,7 +308,7 @@ flowchart TD
     M16 -.-> E2
     M16 -.-> E0
     M16 -.-> E3
-    M17 -.-> E5
+    M17 -.-> E6
     M17 -.-> E4
     M17 -.-> E0
     M17 -.-> E3
@@ -302,33 +318,38 @@ flowchart TD
     M20 -.-> E2
     M20 -.-> E0
     M20 -.-> E1
-    M21 -.-> E6
-    M21 -.-> E9
+    M21 -.-> E5
     M21 -.-> E2
     M21 -.-> E0
     M21 -.-> E3
+    M21 -.-> E7
+    M22 -.-> E0
     M22 -.-> E7
     M22 -.-> E1
+    M23 -.-> E5
     M23 -.-> E2
     M23 -.-> E0
     M23 -.-> E1
-    M24 -.-> E6
+    M24 -.-> E8
     M24 -.-> E1
-    M27 -.-> E7
-    M29 -.-> E7
-    M29 -.-> E1
-    M30 -.-> E5
+    M25 -.-> E2
+    M25 -.-> E0
+    M25 -.-> E1
+    M26 -.-> E5
+    M26 -.-> E1
+    M29 -.-> E8
+    M31 -.-> E8
     M31 -.-> E1
-    M32 -.-> E7
-    M32 -.-> E1
-    M33 -.-> E6
-    M33 -.-> E2
-    M33 -.-> E0
+    M32 -.-> E6
     M33 -.-> E1
-    M34 -.-> E6
-    M34 -.-> E2
-    M34 -.-> E0
+    M34 -.-> E8
     M34 -.-> E1
+    M35 -.-> E5
+    M35 -.-> E1
+    M36 -.-> E5
+    M36 -.-> E2
+    M36 -.-> E0
+    M36 -.-> E1
     click M0 "files/src/local_deepwiki/config.md"
     click M1 "files/src/local_deepwiki/core/chunker.md"
     click M2 "files/src/local_deepwiki/core/deep_research.md"
@@ -351,20 +372,25 @@ flowchart TD
     click M19 "files/src/local_deepwiki/generators/test_examples.md"
     click M20 "files/src/local_deepwiki/generators/toc.md"
     click M21 "files/src/local_deepwiki/generators/wiki.md"
-    click M22 "files/src/local_deepwiki/logging.md"
-    click M23 "files/src/local_deepwiki/models.md"
-    click M24 "files/src/local_deepwiki/providers/base.md"
-    click M25 "files/src/local_deepwiki/providers/embeddings.md"
-    click M26 "files/src/local_deepwiki/providers/embeddings/local.md"
-    click M27 "files/src/local_deepwiki/providers/embeddings/openai.md"
-    click M28 "files/src/local_deepwiki/providers/llm.md"
-    click M29 "files/src/local_deepwiki/providers/llm/anthropic.md"
-    click M30 "files/src/local_deepwiki/providers/llm/cached.md"
-    click M31 "files/src/local_deepwiki/providers/llm/ollama.md"
-    click M32 "files/src/local_deepwiki/providers/llm/openai.md"
-    click M33 "files/src/local_deepwiki/server.md"
-    click M34 "files/src/local_deepwiki/web/app.md"
+    click M22 "files/src/local_deepwiki/generators/wiki_pages.md"
+    click M23 "files/src/local_deepwiki/handlers.md"
+    click M24 "files/src/local_deepwiki/logging.md"
+    click M25 "files/src/local_deepwiki/models.md"
+    click M26 "files/src/local_deepwiki/providers/base.md"
+    click M27 "files/src/local_deepwiki/providers/embeddings.md"
+    click M28 "files/src/local_deepwiki/providers/embeddings/local.md"
+    click M29 "files/src/local_deepwiki/providers/embeddings/openai.md"
+    click M30 "files/src/local_deepwiki/providers/llm.md"
+    click M31 "files/src/local_deepwiki/providers/llm/anthropic.md"
+    click M32 "files/src/local_deepwiki/providers/llm/cached.md"
+    click M33 "files/src/local_deepwiki/providers/llm/ollama.md"
+    click M34 "files/src/local_deepwiki/providers/llm/openai.md"
+    click M35 "files/src/local_deepwiki/server.md"
+    click M36 "files/src/local_deepwiki/web/app.md"
     classDef external fill:#2d2d3d,stroke:#666,stroke-dasharray: 5 5
+    linkStyle default stroke:#666
+    linkStyle 53 stroke:#f00,stroke-width:2px
+    linkStyle 61 stroke:#f00,stroke-width:2px
 ```
 
 ## Relevant Source Files
@@ -383,4 +409,4 @@ The following source files were used to generate this documentation:
 - [`src/local_deepwiki/generators/search.py:14-33`](files/src/local_deepwiki/generators/search.md)
 
 
-*Showing 10 of 65 source files.*
+*Showing 10 of 67 source files.*

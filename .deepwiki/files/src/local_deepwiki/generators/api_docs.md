@@ -2,137 +2,149 @@
 
 ## File Overview
 
-The `api_docs.py` module provides functionality for extracting API documentation from Python source code. It parses Python files using tree-sitter to extract class and function signatures, docstrings, parameters, and other relevant documentation elements. The module is designed to work with the local_deepwiki system for generating comprehensive API documentation.
+The `api_docs.py` module provides functionality for extracting and parsing API documentation from Python source code. It analyzes Python files using tree-sitter parsing to extract function signatures, class definitions, docstrings, and other API-relevant information.
 
 ## Classes
 
 ### Parameter
 
-A dataclass that represents a function or method parameter.
+A dataclass that represents a function parameter with its metadata.
 
 **Fields:**
-- Contains parameter information extracted from Python function signatures
+- `name`: The parameter name
+- `type_hint`: Optional type annotation for the parameter
+- `default_value`: Optional default value if the parameter has one
+- `description`: Optional description extracted from docstrings
 
 ### FunctionSignature
 
-A dataclass that represents a complete function signature including parameters, return types, and decorators.
+A dataclass that captures the complete signature and metadata of a function.
 
 **Fields:**
-- Stores comprehensive function signature information extracted from Python code
+- `name`: The function name
+- `parameters`: List of Parameter objects representing function arguments
+- `return_type`: Optional return type annotation
+- `decorators`: List of [decorator](../providers/base.md) names applied to the function
+- `docstring`: The function's docstring if present
+- `description`: Parsed description from the docstring
+- `args_description`: Dictionary mapping parameter names to their descriptions
+- `returns_description`: Description of what the function returns
 
 ### ClassSignature
 
-A dataclass that represents a class signature and its associated metadata.
+A dataclass that represents a class definition with its methods and metadata.
 
 **Fields:**
-- Contains class-level information extracted from Python source code
+- `name`: The class name
+- `methods`: List of FunctionSignature objects for class methods
+- `docstring`: The class docstring if present
+- `description`: Parsed description from the class docstring
+- `base_classes`: List of base class names this class inherits from
 
 ### APIDocExtractor
 
-The [main](../export/html.md) class responsible for extracting API documentation from Python source code.
+The [main](../export/pdf.md) class responsible for extracting API documentation from Python source code.
 
-**Purpose:**
-- Parses Python files to extract structured documentation information
-- Works with tree-sitter nodes to analyze code structure
-- Generates documentation data for classes and functions
+**Methods:**
+- Processes Python files using the CodeParser
+- Extracts function and class signatures
+- Parses docstrings in various formats (Google, NumPy styles)
+- Generates structured API documentation data
 
 ## Functions
 
 ### extract_python_parameters
 
-Extracts parameter information from Python function definitions.
+Extracts parameter information from a Python function node.
 
-**Purpose:**
-- Parses function parameter lists from tree-sitter nodes
-- Returns structured parameter data
+**Parameters:**
+- Function node from tree-sitter parsing
+- Returns list of Parameter objects
 
 ### extract_python_return_type
 
-Extracts return type annotations from Python functions.
+Extracts return type annotation from a Python function node.
 
-**Purpose:**
-- Identifies and extracts return type information from function signatures
-- Handles Python type annotations
+**Parameters:**
+- Function node from tree-sitter parsing
+- Returns optional return type string
 
 ### extract_python_decorators
 
-Extracts [decorator](../providers/base.md) information from Python functions and classes.
+Extracts [decorator](../providers/base.md) names applied to a Python function.
 
-**Purpose:**
-- Identifies decorators applied to functions and classes
-- Returns [decorator](../providers/base.md) names and arguments
+**Parameters:**
+- Function node from tree-sitter parsing
+- Returns list of [decorator](../providers/base.md) name strings
 
 ### extract_python_docstring
 
-Extracts docstring content from Python code elements.
+Extracts the docstring from a Python function or class node.
 
-**Purpose:**
-- Retrieves docstring text from functions, classes, and modules
-- Handles various docstring formats and locations
+**Parameters:**
+- Node from tree-sitter parsing
+- Returns optional docstring text
 
 ### parse_google_docstring
 
-Parses docstrings following the Google docstring format.
+Parses docstrings following Google docstring format.
 
-**Purpose:**
-- Extracts structured information from Google-style docstrings
-- Identifies sections like Args, Returns, Raises, etc.
+**Parameters:**
+- Docstring text
+- Returns structured docstring data with descriptions and parameter info
 
 ### parse_numpy_docstring
 
-Parses docstrings following the NumPy docstring format.
+Parses docstrings following NumPy docstring format.
 
-**Purpose:**
-- Extracts structured information from NumPy-style docstrings
-- Handles NumPy documentation conventions
+**Parameters:**
+- Docstring text
+- Returns structured docstring data with descriptions and parameter info
 
 ### parse_docstring
 
-General docstring parsing function that handles multiple formats.
+General docstring parser that attempts to detect and parse different docstring formats.
 
-**Purpose:**
-- Provides unified interface for parsing different docstring styles
-- Delegates to specific parsers based on docstring format detection
+**Parameters:**
+- Docstring text
+- Returns structured docstring data
 
 ## Usage Examples
 
 ```python
 from local_deepwiki.generators.api_docs import APIDocExtractor
-from local_deepwiki.models import Language
+from pathlib import Path
 
 # Create an API documentation extractor
 extractor = APIDocExtractor()
 
-# Extract documentation from a Python file
-# (Actual usage would depend on the specific methods available in APIDocExtractor)
-```
+# Extract API documentation from a Python file
+python_file = Path("src/my_module.py")
+api_docs = extractor.extract_from_file(python_file)
 
-```python
-# Working with extracted parameters
-from local_deepwiki.generators.api_docs import Parameter
+# Access extracted function signatures
+for func_sig in api_docs.functions:
+    print(f"Function: {func_sig.name}")
+    print(f"Parameters: {[p.name for p in func_sig.parameters]}")
+    print(f"Description: {func_sig.description}")
 
-# Parameters would be created during the extraction process
-# and contain information about function arguments
+# Access extracted class signatures
+for class_sig in api_docs.classes:
+    print(f"Class: {class_sig.name}")
+    print(f"Methods: {[m.name for m in class_sig.methods]}")
+    print(f"Description: {class_sig.description}")
 ```
 
 ## Related Components
 
-This module integrates with several other components in the local_deepwiki system:
+This module works with several other components from the local_deepwiki system:
 
-- **[CodeParser](../core/parser.md)**: Used for parsing source code files and working with tree-sitter nodes
-- **[Language](../models.md)**: Enum or model representing different programming languages, specifically Python
-- **Core chunker**: Utilizes `CLASS_NODE_TYPES` and `FUNCTION_NODE_TYPES` constants for identifying relevant code structures
+- **CodeParser**: Used for parsing Python source code with tree-sitter
+- **[Language](../models.md)**: Enum defining supported programming languages
+- Various utility functions from `local_deepwiki.core.parser` for node manipulation
+- Node type constants from `local_deepwiki.core.chunker` for identifying classes and functions
 
-The module also depends on:
-- `tree_sitter.Node`: For working with parsed code syntax trees
-- Standard library modules: `re`, `dataclasses`, `pathlib`
-
-## Dependencies
-
-- `tree_sitter`: For parsing Python source code into syntax trees
-- `local_deepwiki.core.chunker`: Provides node type constants
-- `local_deepwiki.core.parser`: Provides parsing utilities and helper functions
-- `local_deepwiki.models`: Provides the [Language](../models.md) model
+The module integrates with the broader documentation generation pipeline by providing structured API data that can be formatted into various documentation formats.
 
 ## API Reference
 
@@ -603,8 +615,8 @@ assert return_type == "str"
 
 ## See Also
 
-- [test_api_docs](../../../tests/test_api_docs.md) - uses this
-- [wiki](wiki.md) - uses this
 - [chunker](../core/chunker.md) - dependency
 - [models](../models.md) - dependency
 - [callgraph](callgraph.md) - shares 5 dependencies
+- [test_examples](test_examples.md) - shares 5 dependencies
+- [crosslinks](crosslinks.md) - shares 4 dependencies

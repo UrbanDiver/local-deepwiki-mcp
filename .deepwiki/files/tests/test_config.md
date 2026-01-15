@@ -2,75 +2,71 @@
 
 ## File Overview
 
-This file contains comprehensive test suites for the configuration system of the local_deepwiki package. It tests default configuration values, provider-specific settings, global configuration management, and configuration validation across different components including embeddings, LLMs, parsing, chunking, wiki generation, and deep research functionality.
+This file contains comprehensive test suites for the configuration system of the local_deepwiki package. It validates default configuration values, provider-specific settings, global configuration management, thread safety, and prompt configurations across different LLM providers.
 
 ## Classes
 
 ### TestConfig
 
-The [main](../src/local_deepwiki/export/html.md) test class that validates the core configuration system functionality.
+The [main](../src/local_deepwiki/web/app.md) test class that validates core configuration functionality and default values.
 
-**Key Test Methods:**
-- `test_default_config` - Verifies default configuration values are set correctly
-- `test_embedding_config` - Tests embedding provider configuration 
-- `test_llm_config` - Validates LLM provider settings including Ollama, Anthropic, and OpenAI models
-- `test_parsing_config` - Tests file parsing configuration including exclusion patterns and file size limits
-- `test_chunking_config` - Verifies text chunking parameters
-- `test_wiki_config` - Tests wiki generation settings
-- `test_deep_research_config` - Validates deep research functionality parameters
-- `test_deep_research_config_validation` - Tests configuration validation rules
+**Key Methods:**
+- `test_default_config` - Verifies default configuration values including embedding provider, LLM provider, parsing languages, and chunking settings
+- `test_embedding_config` - Tests embedding configuration settings
+- `test_llm_config` - Validates LLM provider configurations for Ollama, Anthropic, and OpenAI
+- `test_parsing_config` - Tests parsing configuration including exclude patterns and file size limits
+- `test_chunking_config` - Validates chunking configuration parameters
+- `test_wiki_config` - Tests wiki-specific configuration settings
+- `test_deep_research_config` - Validates deep research configuration parameters like max sub-questions and chunk limits
+- `test_deep_research_config_validation` - Tests validation rules for deep research settings
 - `test_get_wiki_path` - Tests wiki path generation functionality
 - `test_get_vector_db_path` - Tests vector database path generation
 - `test_global_config` - Validates global configuration singleton behavior
-- `test_set_config` - Tests global configuration updates
+- `test_set_config` - Tests setting and retrieving global configuration
 
 ### TestThreadSafeConfig
 
-Tests thread safety of the configuration system (class structure shown but methods not detailed in provided code).
+Tests thread safety of the configuration system to ensure proper behavior in concurrent environments.
 
 ### TestConfigContext
 
-Tests configuration context management functionality (class structure shown but methods not detailed in provided code).
+Tests configuration context management functionality for scoped configuration changes.
 
 ### TestResearchPresets
 
-Tests research preset functionality with a method for validating that presets don't modify original configurations:
+Validates research preset functionality and configuration inheritance.
 
 **Key Methods:**
-- `test_with_preset_does_not_modify_original` - Ensures applying presets creates new instances without modifying the original
+- `test_with_preset_does_not_modify_original` - Ensures that applying presets creates new instances without modifying the original configuration
 
 ### TestProviderPrompts
 
-Tests provider-specific prompt configurations across different LLM providers.
+Comprehensive test suite for provider-specific prompt configurations across different LLM providers.
 
-**Key Test Methods:**
-- `test_provider_prompts_config_has_all_fields` - Validates all required prompt fields are present
-- `test_prompts_config_has_all_providers` - Ensures configurations exist for all supported providers (Ollama, Anthropic, OpenAI)
-- `test_default_prompts_are_different_per_provider` - Verifies provider-specific prompt variations
-- `test_get_for_provider_ollama` - Tests Ollama-specific prompt retrieval
-- `test_get_for_provider_anthropic` - Tests Anthropic-specific prompt retrieval
-- `test_get_for_provider_openai` - Tests OpenAI-specific prompt retrieval
+**Key Methods:**
+- `test_provider_prompts_config_has_all_fields` - Validates that provider prompt configurations contain all required fields
+- `test_prompts_config_has_all_providers` - Ensures [PromptsConfig](../src/local_deepwiki/config.md) supports all LLM providers (Ollama, Anthropic, OpenAI)
+- `test_default_prompts_are_different_per_provider` - Verifies that each provider has distinct default prompts
+- `test_get_for_provider_ollama` - Tests prompt retrieval for Ollama provider
+- `test_get_for_provider_anthropic` - Tests prompt retrieval for Anthropic provider
+- `test_get_for_provider_openai` - Tests prompt retrieval for OpenAI provider
 - `test_get_for_provider_unknown_defaults_to_anthropic` - Validates fallback behavior for unknown providers
-- `test_config_get_prompts_uses_current_provider` - Tests dynamic prompt selection based on current provider
-- `test_config_get_prompts_changes_with_provider` - Verifies prompt updates when provider changes
-- `test_wiki_system_prompts_dict_has_all_providers` - Tests system prompt availability
-- `test_research_prompts_dicts_have_all_providers` - Tests research prompt availability
-- `test_prompts_contain_essential_instructions` - Validates prompt content quality
-- `test_custom_prompts_can_override_defaults` - Tests custom prompt override functionality
+- `test_config_get_prompts_uses_current_provider` - Tests that [Config](../src/local_deepwiki/config.md).get_prompts() uses the current provider setting
+- `test_config_get_prompts_changes_with_provider` - Validates that prompts change when the provider is switched
+- `test_wiki_system_prompts_dict_has_all_providers` - Ensures system prompts are available for all providers
+- `test_research_prompts_dicts_have_all_providers` - Validates research-specific prompts for all providers
+- `test_prompts_contain_essential_instructions` - Tests that prompts contain necessary instructions
+- `test_custom_prompts_can_override_defaults` - Validates custom prompt override functionality
 
 ## Functions
 
 ### reset_global_config
 
-A pytest fixture that resets the global configuration state before and after each test.
-
 ```python
 def reset_global_config():
-    """Reset global config before and after each test."""
-    reset_config()
-    yield
-    reset_config()
 ```
+
+A pytest fixture that resets the global configuration before and after each test to ensure test isolation.
 
 ## Usage Examples
 
@@ -78,22 +74,20 @@ def reset_global_config():
 
 ```python
 def test_default_config(self):
-    """Test default configuration values."""
     config = Config()
-
+    
     assert config.embedding.provider == "local"
     assert config.llm.provider == "ollama"
     assert "python" in config.parsing.languages
     assert config.chunking.max_chunk_tokens == 512
 ```
 
-### Testing LLM Configuration
+### Testing LLM Provider Configuration
 
 ```python
 def test_llm_config(self):
-    """Test LLM configuration."""
     config = Config()
-
+    
     assert config.llm.ollama.model == "qwen3-coder:30b"
     assert config.llm.ollama.base_url == "http://localhost:11434"
     assert config.llm.anthropic.model == "claude-sonnet-4-20250514"
@@ -104,53 +98,43 @@ def test_llm_config(self):
 
 ```python
 def test_set_config(self):
-    """Test setting global config."""
     new_config = Config()
     new_config.chunking.max_chunk_tokens = 1024
-
+    
     set_config(new_config)
     retrieved = get_config()
-
+    
     assert retrieved.chunking.max_chunk_tokens == 1024
 ```
 
-### Testing Provider-Specific Prompts
+### Testing Path Generation
 
 ```python
-def test_config_get_prompts_changes_with_provider(self):
-    """Test Config.get_prompts() changes when provider changes."""
+def test_get_wiki_path(self, tmp_path):
     config = Config()
-
-    # Test with different providers
-    config.llm.provider = "anthropic"
-    prompts_anthropic = config.get_prompts()
-    assert prompts_anthropic == config.prompts.anthropic
-
-    config.llm.provider = "openai"
-    prompts_openai = config.get_prompts()
-    assert prompts_openai == config.prompts.openai
+    wiki_path = config.get_wiki_path(tmp_path)
+    
+    assert wiki_path == tmp_path / ".deepwiki"
 ```
 
 ## Related Components
 
 This test file works with several configuration-related components:
 
-- **[Config](../src/local_deepwiki/config.md)** - Main configuration class
-- **[DeepResearchConfig](../src/local_deepwiki/config.md)** - Deep research functionality configuration
+- **[Config](../src/local_deepwiki/config.md)** - Main configuration class being tested
+- **[DeepResearchConfig](../src/local_deepwiki/config.md)** - Deep research specific configuration settings
 - **[ProviderPromptsConfig](../src/local_deepwiki/config.md)** - Provider-specific prompt configurations
-- **[PromptsConfig](../src/local_deepwiki/config.md)** - Overall prompts configuration
-- **[ResearchPreset](../src/local_deepwiki/config.md)** - Research preset configurations
-- **RESEARCH_PRESETS** - Available research presets
-- **WIKI_SYSTEM_PROMPTS** - System prompts for wiki generation
-- **RESEARCH_DECOMPOSITION_PROMPTS** - Prompts for research decomposition
-- **RESEARCH_GAP_ANALYSIS_PROMPTS** - Prompts for gap analysis
-- **RESEARCH_SYNTHESIS_PROMPTS** - Prompts for research synthesis
+- **[PromptsConfig](../src/local_deepwiki/config.md)** - Main prompts configuration class
+- **[ResearchPreset](../src/local_deepwiki/config.md)** - Research preset definitions
+- **[config_context](../src/local_deepwiki/config.md)** - Configuration context manager
+- **[get_config](../src/local_deepwiki/config.md), [set_config](../src/local_deepwiki/config.md), [reset_config](../src/local_deepwiki/config.md)** - Global configuration management functions
 
-The tests also utilize configuration management functions:
-- [`config_context`](../src/local_deepwiki/config.md) - Configuration context manager
-- [`get_config`](../src/local_deepwiki/config.md) - Global configuration retrieval
-- [`reset_config`](../src/local_deepwiki/config.md) - Configuration reset functionality  
-- [`set_config`](../src/local_deepwiki/config.md) - Global configuration updates
+The tests also reference various configuration constants:
+- `RESEARCH_PRESETS` - Available research preset configurations
+- `WIKI_SYSTEM_PROMPTS` - System prompts for wiki generation
+- `RESEARCH_DECOMPOSITION_PROMPTS` - Prompts for research decomposition
+- `RESEARCH_GAP_ANALYSIS_PROMPTS` - Prompts for gap analysis
+- `RESEARCH_SYNTHESIS_PROMPTS` - Prompts for research synthesis
 
 ## API Reference
 
@@ -233,7 +217,7 @@ def test_get_wiki_path(tmp_path)
 Test wiki path generation.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `tmp_path` | - | - | - |
 
@@ -246,7 +230,7 @@ def test_get_vector_db_path(tmp_path)
 Test vector database path generation.
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `tmp_path` | - | - | - |
 
@@ -310,7 +294,7 @@ def modify_config(value: int)
 ```
 
 
-| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `value` | `int` | - | - |
 
@@ -732,10 +716,9 @@ flowchart TD
 
 ## Relevant Source Files
 
-- `tests/test_config.py:35-150`
+- [`tests/test_config.py:35-151`](https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/tests/test_config.py#L35-L151)
 
 ## See Also
 
-- [config](../src/local_deepwiki/config.md) - dependency
 - [test_indexer](test_indexer.md) - shares 3 dependencies
-- [test_chunker](test_chunker.md) - shares 2 dependencies
+- [test_api_docs](test_api_docs.md) - shares 2 dependencies

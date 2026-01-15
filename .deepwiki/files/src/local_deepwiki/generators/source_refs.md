@@ -1,8 +1,8 @@
-# Source References Generator
+# source_refs.py
 
 ## File Overview
 
-The `source_refs.py` module provides functionality for adding "Relevant Source Files" sections to wiki pages. It creates cross-references between wiki pages and the source code files that contributed to their content, helping users navigate from documentation back to the original source code.
+This module provides functionality for generating and managing "Relevant Source Files" sections in wiki pages. It builds mappings between source files and wiki pages, formats file references, and adds source reference sections to wiki pages based on their contributing source files.
 
 ## Functions
 
@@ -13,18 +13,18 @@ def add_source_refs_sections(
     pages: list[WikiPage],
     page_statuses: dict[str, WikiPageStatus],
     wiki_path: Path | None = None,
-) -> list[WikiPage]
+) -> list[WikiPage]:
 ```
 
-Adds "Relevant Source Files" sections to wiki pages based on their associated source files.
+Add Relevant Source Files sections to wiki pages.
 
 **Parameters:**
-- `pages`: List of [WikiPage](../models.md) objects to process
-- `page_statuses`: Dictionary mapping page paths to [WikiPageStatus](../models.md) objects containing source file information
-- `wiki_path`: Optional path to wiki directory for finding existing file pages
+- `pages`: List of wiki pages to process
+- `page_statuses`: Dictionary mapping page paths to their [WikiPageStatus](../models.md) objects (containing source_files information)
+- `wiki_path`: Optional path to wiki directory to [find](manifest.md) existing file pages
 
 **Returns:**
-- List of [WikiPage](../models.md) objects with "Relevant Source Files" sections added
+- List of wiki pages with Relevant Source Files sections added
 
 ### generate_source_refs_section
 
@@ -35,89 +35,102 @@ def generate_source_refs_section(
     file_to_wiki: dict[str, str],
     file_line_info: dict[str, dict[str, int]] | None = None,
     max_items: int = 10,
-) -> str | None
+) -> str | None:
 ```
 
-Generates a "Relevant Source Files" section for a single wiki page.
+Generate a Relevant Source Files section for a wiki page.
 
 **Parameters:**
-- `source_files`: List of source file paths that contributed to the page
-- `current_wiki_path`: Path of the current wiki page being processed
-- `file_to_wiki`: Mapping of source file paths to their corresponding wiki page paths
-- `file_line_info`: Optional mapping of file paths to line information dictionaries
-- `max_items`: Maximum number of items to include in the section (default: 10)
+- `source_files`: List of source file paths that contributed to this page
+- `current_wiki_path`: Path of the current wiki page
+- `file_to_wiki`: Mapping of source files to wiki paths
+- `file_line_info`: Optional mapping of file paths to line info dictionaries
+- `max_items`: Maximum number of items to include in the section
 
 **Returns:**
-- String containing the formatted "Relevant Source Files" section, or None if no valid references found
+- Generated Relevant Source Files section as a string, or None if no content
 
 ### build_file_to_wiki_map
 
-Creates a mapping between source files and their corresponding wiki pages.
+```python
+def build_file_to_wiki_map(...)
+```
+
+Builds a mapping between source files and their corresponding wiki pages.
 
 ### _relative_path
 
-Calculates relative paths between files for generating proper cross-references.
+```python
+def _relative_path(...)
+```
+
+Helper function for generating relative paths between files.
 
 ### _format_file_entry
 
-Formats individual file entries in the source references section.
+```python
+def _format_file_entry(...)
+```
+
+Helper function for formatting individual file entries in the source references section.
 
 ### _strip_existing_source_refs
 
-Removes existing "Relevant Source Files" sections from wiki page content to avoid duplication.
+```python
+def _strip_existing_source_refs(...)
+```
+
+Helper function for removing existing source reference sections from wiki content.
 
 ## Usage Examples
 
-### Basic Usage
+### Adding Source References to Wiki Pages
 
 ```python
-from pathlib import Path
-from local_deepwiki.models import WikiPage, WikiPageStatus
 from local_deepwiki.generators.source_refs import add_source_refs_sections
+from local_deepwiki.models import WikiPage, WikiPageStatus
+from pathlib import Path
 
-# Prepare wiki pages and their status information
-pages = [WikiPage(...), WikiPage(...)]
+# Prepare wiki pages and their statuses
+pages = [wiki_page1, wiki_page2]
 page_statuses = {
-    "path/to/page.md": WikiPageStatus(...),
-    # ... more page statuses
+    "page1.md": WikiPageStatus(...),
+    "page2.md": WikiPageStatus(...)
 }
 
-# Add source references sections
+# Add source reference sections
 updated_pages = add_source_refs_sections(
     pages=pages,
     page_statuses=page_statuses,
-    wiki_path=Path("wiki")
+    wiki_path=Path("wiki/")
 )
 ```
 
-### Generating Individual Section
+### Generating a Source References Section
 
 ```python
 from local_deepwiki.generators.source_refs import generate_source_refs_section
 
-source_files = ["src/module.py", "tests/test_module.py"]
-file_to_wiki = {
-    "src/module.py": "wiki/module.md",
-    "tests/test_module.py": "wiki/test_module.md"
-}
+# Generate source references for a specific page
+source_files = ["src/main.py", "src/utils.py"]
+file_to_wiki = {"src/main.py": "main.md", "src/utils.py": "utils.md"}
 
 section = generate_source_refs_section(
     source_files=source_files,
-    current_wiki_path="wiki/overview.md",
+    current_wiki_path="overview.md",
     file_to_wiki=file_to_wiki,
-    max_items=5
+    max_items=10
 )
 ```
 
 ## Related Components
 
-This module works closely with:
+This module works with:
+- [WikiPage](../models.md): Represents individual wiki pages with content and metadata
+- [WikiPageStatus](../models.md): Contains status information including source_files that contributed to a page
+- Path: Used for file system path operations
 
-- **[WikiPage](../models.md)**: The primary data model for wiki pages that this module modifies
-- **[WikiPageStatus](../models.md)**: Contains metadata about pages including their associated source files
-- **Path**: Used for file system operations and path manipulation
-
-The module uses regular expressions (`re`) for text processing and manipulation of existing wiki content.
+The module uses regular expressions for content manipulation and integrates with the broader wiki generation system to maintain references between source code and documentation.
 
 ## API Reference
 
@@ -284,8 +297,7 @@ assert result is not None
 
 ## See Also
 
-- [test_source_refs](../../../tests/test_source_refs.md) - uses this
-- [wiki](wiki.md) - uses this
 - [models](../models.md) - dependency
 - [crosslinks](crosslinks.md) - shares 3 dependencies
 - [diagrams](diagrams.md) - shares 3 dependencies
+- [see_also](see_also.md) - shares 3 dependencies

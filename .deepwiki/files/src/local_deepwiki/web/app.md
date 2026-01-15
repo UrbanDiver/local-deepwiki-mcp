@@ -2,13 +2,17 @@
 
 ## File Overview
 
-This module implements the Flask web application for the DeepWiki server. It provides a web interface for serving wiki content with markdown rendering, search functionality, and chat capabilities powered by LLM providers.
+The `app.py` file implements a Flask web application for serving a DeepWiki server. It provides functionality to create and run a web server that serves wiki content from a specified path, with features for viewing pages, searching, and chat functionality.
 
 ## Functions
 
 ### create_app
 
-Creates and configures a Flask application instance for serving wiki content.
+```python
+def create_app(wiki_path: str | Path) -> Flask:
+```
+
+Creates a Flask application instance configured with the specified wiki path.
 
 **Parameters:**
 - `wiki_path` (str | Path): Path to the wiki directory to serve
@@ -16,60 +20,62 @@ Creates and configures a Flask application instance for serving wiki content.
 **Returns:**
 - Flask: Configured Flask application instance
 
-**Raises:**
-- ValueError: If the specified wiki path does not exist
-
-```python
-app = create_app("/path/to/wiki")
-```
+**Behavior:**
+- Sets the global `WIKI_PATH` variable to the provided path
+- Validates that the wiki path exists, raising a `ValueError` if not found
+- Logs the configured wiki path
+- Returns the Flask app instance
 
 ### run_server
 
-Starts the DeepWiki web server with the specified configuration.
+```python
+def run_server(
+    wiki_path: str | Path, 
+    host: str = "127.0.0.1", 
+    port: int = 8080, 
+    debug: bool = False
+):
+```
+
+Runs the wiki web server with the specified configuration.
 
 **Parameters:**
 - `wiki_path` (str | Path): Path to the wiki directory to serve
-- `host` (str, optional): Host address to bind to. Defaults to "127.0.0.1"
-- `port` (int, optional): Port number to listen on. Defaults to 8080
-- `debug` (bool, optional): Enable Flask debug mode. Defaults to False
+- `host` (str): Host address to bind to (defaults to "127.0.0.1")
+- `port` (int): Port number to listen on (defaults to 8080)
+- `debug` (bool): Whether to run in debug mode (defaults to False)
+
+**Behavior:**
+- Creates a Flask app using create_app
+- Logs and prints server startup information including host, port, and wiki path
+- Starts the Flask development server
+
+## Usage Examples
+
+### Basic Server Setup
 
 ```python
-run_server("/path/to/wiki", host="0.0.0.0", port=8000, debug=True)
+# Create and configure a Flask app
+app = create_app("/path/to/wiki")
+
+# Run the server with default settings
+run_server("/path/to/wiki")
+
+# Run with custom host and port
+run_server("/path/to/wiki", host="0.0.0.0", port=9000, debug=True)
 ```
-
-## Route Handlers
-
-The module includes several route handler functions (referenced but not fully shown in the provided code):
-
-- `index`: Handles the main wiki index page
-- `search_json`: Provides JSON search API endpoint
-- `view_page`: Renders individual wiki pages
-- `chat_page`: Handles chat interface functionality
-- `api_chat`: Provides chat API endpoint
-
-## Utility Functions
-
-- `get_wiki_structure`: Extracts the structure of the wiki directory
-- `extract_title`: Extracts title from markdown content
-- `render_markdown`: Converts markdown content to HTML
-- `build_breadcrumb`: Creates navigation breadcrumbs
-- `stream_async_generator`: Handles streaming of asynchronous content
-- `run_async`: Executes async functions in the Flask context
-- `collect`: Collects streaming responses
-- `format_sources`: Formats source references for display
-- `build_prompt_with_history`: Constructs prompts with conversation history
 
 ## Related Components
 
-This module integrates with several other components:
+This file integrates with several other components based on the visible imports:
 
-- [VectorStore](../core/vectorstore.md): For semantic search capabilities
-- LLM providers: For chat functionality through get_cached_llm_provider
-- Embedding providers: For content vectorization via get_embedding_provider
-- Configuration system: Through [get_config](../config.md) for application settings
-- Logging system: Via [get_logger](../logging.md) for application logging
+- **[VectorStore](../core/vectorstore.md)**: Used for vector-based search functionality
+- **Embedding providers**: Through `get_embedding_provider` for text embeddings
+- **LLM providers**: Through `get_cached_llm_provider` for language model functionality
+- **Configuration system**: Through [`get_config`](../config.md) for application settings
+- **Logging system**: Through [`get_logger`](../logging.md) for application logging
 
-The Flask application serves as the main entry point for the web interface, coordinating between the wiki content management, search functionality, and AI-powered chat features.
+The application uses Flask for the web framework and Markdown for content rendering, supporting both synchronous and asynchronous operations through asyncio integration.
 
 ## API Reference
 
@@ -366,23 +372,23 @@ flowchart TD
     N1[abort]
     N2[api_chat]
     N3[api_research]
-    N4[async_gen_factory]
-    N5[build_breadcrumb]
-    N6[collect]
-    N7[create_app]
-    N8[dumps]
-    N9[exception]
-    N10[exists]
-    N11[extract_title]
-    N12[generate_response]
-    N13[get_cached_llm_provider]
-    N14[get_config]
-    N15[get_embedding_provider]
-    N16[get_vector_db_path]
-    N17[get_wiki_path]
-    N18[get_wiki_structure]
-    N19[jsonify]
-    N20[main]
+    N4[build_breadcrumb]
+    N5[collect]
+    N6[create_app]
+    N7[dumps]
+    N8[exception]
+    N9[exists]
+    N10[extract_title]
+    N11[generate_response]
+    N12[get_cached_llm_provider]
+    N13[get_config]
+    N14[get_embedding_provider]
+    N15[get_vector_db_path]
+    N16[get_wiki_path]
+    N17[get_wiki_structure]
+    N18[jsonify]
+    N19[main]
+    N20[model_copy]
     N21[put]
     N22[read_text]
     N23[render_markdown]
@@ -392,77 +398,78 @@ flowchart TD
     N27[stream_async_generator]
     N28[title]
     N29[view_page]
-    N18 --> N10
-    N18 --> N22
-    N18 --> N11
-    N18 --> N28
-    N11 --> N22
-    N11 --> N28
-    N5 --> N28
-    N5 --> N10
+    N17 --> N9
+    N17 --> N22
+    N17 --> N10
+    N17 --> N28
+    N10 --> N22
+    N10 --> N28
+    N4 --> N28
+    N4 --> N9
     N26 --> N1
-    N26 --> N10
-    N26 --> N19
+    N26 --> N9
+    N26 --> N18
     N26 --> N22
     N29 --> N1
-    N29 --> N10
+    N29 --> N9
     N29 --> N22
     N29 --> N23
-    N29 --> N18
-    N29 --> N11
-    N29 --> N5
-    N27 --> N4
+    N29 --> N17
+    N29 --> N10
+    N29 --> N4
     N27 --> N21
-    N27 --> N6
-    N27 --> N8
-    N24 --> N4
+    N27 --> N5
+    N27 --> N7
     N24 --> N21
-    N24 --> N6
-    N6 --> N4
-    N6 --> N21
-    N2 --> N19
-    N2 --> N14
-    N2 --> N16
-    N2 --> N10
-    N2 --> N8
-    N2 --> N15
-    N2 --> N0
-    N2 --> N17
+    N24 --> N5
+    N5 --> N21
+    N2 --> N18
     N2 --> N13
+    N2 --> N15
     N2 --> N9
+    N2 --> N7
+    N2 --> N14
+    N2 --> N0
+    N2 --> N16
+    N2 --> N20
+    N2 --> N12
+    N2 --> N8
     N2 --> N27
-    N12 --> N14
-    N12 --> N16
-    N12 --> N10
-    N12 --> N8
-    N12 --> N15
-    N12 --> N0
-    N12 --> N17
-    N12 --> N13
-    N12 --> N9
-    N3 --> N19
-    N3 --> N14
-    N3 --> N16
-    N3 --> N10
-    N3 --> N8
-    N3 --> N15
-    N3 --> N0
-    N3 --> N17
+    N11 --> N13
+    N11 --> N15
+    N11 --> N9
+    N11 --> N7
+    N11 --> N14
+    N11 --> N0
+    N11 --> N16
+    N11 --> N20
+    N11 --> N12
+    N11 --> N8
+    N3 --> N18
     N3 --> N13
-    N3 --> N21
+    N3 --> N15
     N3 --> N9
+    N3 --> N7
+    N3 --> N14
+    N3 --> N0
+    N3 --> N16
+    N3 --> N20
+    N3 --> N12
+    N3 --> N21
+    N3 --> N8
     N3 --> N27
-    N25 --> N14
-    N25 --> N16
-    N25 --> N10
-    N25 --> N8
-    N25 --> N15
-    N25 --> N0
-    N25 --> N17
     N25 --> N13
-    N25 --> N21
+    N25 --> N15
     N25 --> N9
-    N7 --> N10
+    N25 --> N7
+    N25 --> N14
+    N25 --> N0
+    N25 --> N16
+    N25 --> N20
+    N25 --> N12
+    N25 --> N21
+    N25 --> N8
+    N6 --> N9
     classDef func fill:#e1f5fe
     class N0,N1,N2,N3,N4,N5,N6,N7,N8,N9,N10,N11,N12,N13,N14,N15,N16,N17,N18,N19,N20,N21,N22,N23,N24,N25,N26,N27,N28,N29 func
 ```
@@ -470,8 +477,3 @@ flowchart TD
 ## Relevant Source Files
 
 - `src/local_deepwiki/web/app.py:32-67`
-
-## See Also
-
-- [test_web](../../../tests/test_web.md) - uses this
-- [test_search](../../../tests/test_search.md) - uses this
