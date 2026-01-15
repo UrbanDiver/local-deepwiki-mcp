@@ -6,16 +6,20 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from local_deepwiki.export.pdf import (
-    PdfExporter,
-    export_to_pdf,
-    extract_mermaid_blocks,
-    extract_title,
-    is_mmdc_available,
-    render_markdown_for_pdf,
-    render_mermaid_to_png,
-    render_mermaid_to_svg,
-)
+# Skip all tests in this module if WeasyPrint is not available
+try:
+    from local_deepwiki.export.pdf import (
+        PdfExporter,
+        export_to_pdf,
+        extract_mermaid_blocks,
+        extract_title,
+        is_mmdc_available,
+        render_markdown_for_pdf,
+        render_mermaid_to_png,
+        render_mermaid_to_svg,
+    )
+except (ImportError, OSError) as e:
+    pytest.skip(f"WeasyPrint not available: {e}", allow_module_level=True)
 
 
 class TestRenderMarkdownForPdf:
