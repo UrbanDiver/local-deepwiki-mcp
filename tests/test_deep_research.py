@@ -562,7 +562,7 @@ class TestHandleDeepResearch:
 
     async def test_returns_error_for_empty_question(self):
         """Test error returned for empty question."""
-        from local_deepwiki.server import handle_deep_research
+        from local_deepwiki.handlers import handle_deep_research
 
         result = await handle_deep_research({
             "repo_path": "/some/path",
@@ -575,7 +575,7 @@ class TestHandleDeepResearch:
 
     async def test_returns_error_for_unindexed_repo(self, tmp_path):
         """Test error returned when repository is not indexed."""
-        from local_deepwiki.server import handle_deep_research
+        from local_deepwiki.handlers import handle_deep_research
 
         result = await handle_deep_research({
             "repo_path": str(tmp_path),
@@ -588,7 +588,7 @@ class TestHandleDeepResearch:
 
     async def test_validates_max_chunks(self):
         """Test that max_chunks is validated."""
-        from local_deepwiki.server import handle_deep_research
+        from local_deepwiki.handlers import handle_deep_research
 
         # Should not error, but clamp to valid range
         result = await handle_deep_research({

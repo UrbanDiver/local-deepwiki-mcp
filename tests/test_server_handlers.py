@@ -2,7 +2,7 @@
 
 import json
 
-from local_deepwiki.server import (
+from local_deepwiki.handlers import (
     handle_ask_question,
     handle_export_wiki_html,
     handle_index_repository,

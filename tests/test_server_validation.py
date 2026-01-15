@@ -2,7 +2,7 @@
 
 import pytest
 
-from local_deepwiki.server import (
+from local_deepwiki.handlers import (
     MAX_CONTEXT_CHUNKS,
     MAX_SEARCH_LIMIT,
     MIN_CONTEXT_CHUNKS,
