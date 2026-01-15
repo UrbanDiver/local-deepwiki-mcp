@@ -3,7 +3,7 @@
 import asyncio
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Awaitable, Callable
 
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
@@ -343,25 +343,12 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
     logger.info(f"Tool call received: {name}")
     logger.debug(f"Tool arguments: {arguments}")
 
-    if name == "index_repository":
-        return await handle_index_repository(arguments)
-    elif name == "ask_question":
-        return await handle_ask_question(arguments)
-    elif name == "deep_research":
-        return await handle_deep_research(arguments)
-    elif name == "read_wiki_structure":
-        return await handle_read_wiki_structure(arguments)
-    elif name == "read_wiki_page":
-        return await handle_read_wiki_page(arguments)
-    elif name == "search_code":
-        return await handle_search_code(arguments)
-    elif name == "export_wiki_html":
-        return await handle_export_wiki_html(arguments)
-    elif name == "export_wiki_pdf":
-        return await handle_export_wiki_pdf(arguments)
-    else:
+    handler = TOOL_HANDLERS.get(name)
+    if handler is None:
         logger.warning(f"Unknown tool requested: {name}")
         return [TextContent(type="text", text=f"Unknown tool: {name}")]
+
+    return await handler(arguments)
 
 
 async def handle_index_repository(args: dict[str, Any]) -> list[TextContent]:
@@ -977,6 +964,21 @@ async def handle_export_wiki_pdf(args: dict[str, Any]) -> list[TextContent]:
 
     except Exception as e:
         return [TextContent(type="text", text=f"Error exporting wiki to PDF: {str(e)}")]
+
+
+# Tool handler dispatch dictionary
+# Maps tool names to their async handler functions
+ToolHandler = Callable[[dict[str, Any]], Awaitable[list[TextContent]]]
+TOOL_HANDLERS: dict[str, ToolHandler] = {
+    "index_repository": handle_index_repository,
+    "ask_question": handle_ask_question,
+    "deep_research": handle_deep_research,
+    "read_wiki_structure": handle_read_wiki_structure,
+    "read_wiki_page": handle_read_wiki_page,
+    "search_code": handle_search_code,
+    "export_wiki_html": handle_export_wiki_html,
+    "export_wiki_pdf": handle_export_wiki_pdf,
+}
 
 
 def main():
