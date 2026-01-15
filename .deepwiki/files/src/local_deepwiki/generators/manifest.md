@@ -1,74 +1,55 @@
-# Manifest Parser Module
+# manifest.py
 
-The manifest module provides functionality for parsing and caching project manifest files from various package managers and build systems. It extracts metadata like project name, version, dependencies, and other configuration details from files such as `pyproject.toml`, `setup.py`, `package.json`, and `build.gradle`.
+## File Overview
+
+The manifest module provides functionality for parsing and caching project metadata from various package manifest files. It supports multiple languages and build systems, extracting information like project name, version, dependencies, and other metadata. The module includes intelligent caching to avoid re-parsing when manifest files haven't changed.
 
 ## Classes
 
-### ProjectManifest
-
-A dataclass that stores extracted project metadata from manifest files.
-
-**Key Attributes:**
-- `name`: Project name
-- `version`: Project version
-- `description`: Project description
-- `language`: Programming language
-- `language_version`: Version of the programming language
-- `dependencies`: Runtime dependencies dictionary
-- `dev_dependencies`: Development dependencies dictionary
-- `entry_points`: Entry points configuration
-- `scripts`: Available scripts
-- `repository`: Repository URL
-- `license`: License information
-
-**Key Methods:**
-- `has_data()`: Check if manifest contains any data
-- `get_tech_stack_summary()`: Get summary of technology stack
-- `get_dependency_list()`: Get list of dependencies
-- `get_entry_points_summary()`: Get summary of entry points
-
 ### ManifestCacheEntry
 
-A dataclass for storing cached manifest data along with file modification times to enable cache validation.
+A dataclass that stores cached manifest data along with file modification times for cache validation.
 
 **Attributes:**
-- `manifest_data`: Dictionary containing the manifest data
-- `file_mtimes`: Dictionary mapping filenames to modification times
+- `manifest_data`: Dictionary containing the parsed manifest information
+- `file_mtimes`: Dictionary mapping filename to modification time for cache validation
 
 **Methods:**
-- `to_dict()`: Convert to dictionary for JSON serialization
-- `from_dict(data)`: Create instance from dictionary (class method)
+- `to_dict()`: Converts the cache entry to a dictionary for JSON serialization
+- `from_dict(data)`: Class method that creates a ManifestCacheEntry from a dictionary
+
+### ProjectManifest
+
+The [main](../export/html.md) class representing parsed project metadata from various manifest files.
+
+**Attributes:**
+Based on the code shown, this class contains fields for project information like name, version, description, language, dependencies, and other metadata.
+
+**Methods:**
+- `has_data()`: Checks if the manifest contains any meaningful data
+- `get_tech_stack_summary()`: Returns a summary of the technology stack
+- `_categorize_dependencies()`: Internal method for categorizing dependencies
+- `get_dependency_list()`: Returns a list of dependencies
+- `get_entry_points_summary()`: Returns a summary of entry points
 
 ## Functions
 
-### Core Functions
+### Cache Management
 
-#### `parse_manifest(repo_path: Path) -> ProjectManifest`
+#### `get_cached_manifest(repo_path, cache_dir=None)`
 
-Parse all recognized package manifests in a repository without using cache.
+Gets project manifest using cache if available and valid. This is the recommended entry point for manifest parsing as it provides caching benefits.
 
 **Parameters:**
 - `repo_path`: Path to the repository root
+- `cache_dir`: Optional directory for cache storage (defaults to `repo_path/.deepwiki`)
 
 **Returns:**
 - ProjectManifest with extracted metadata
 
-#### `get_cached_manifest(repo_path: Path, cache_dir: Path | None = None) -> ProjectManifest`
+#### `_load_manifest_cache(cache_path)`
 
-Get project manifest using cache if available and valid. Checks if cached manifest exists and is still valid by comparing file modification times.
-
-**Parameters:**
-- `repo_path`: Path to the repository root
-- `cache_dir`: Directory for cache storage (defaults to `repo_path/.deepwiki`)
-
-**Returns:**
-- ProjectManifest with extracted metadata
-
-### Cache Management Functions
-
-#### `_load_manifest_cache(cache_path: Path) -> ManifestCacheEntry | None`
-
-Load manifest cache from disk.
+Loads manifest cache from disk.
 
 **Parameters:**
 - `cache_path`: Path to the cache file
@@ -76,17 +57,17 @@ Load manifest cache from disk.
 **Returns:**
 - ManifestCacheEntry or None if not found/invalid
 
-#### `_save_manifest_cache(cache_path: Path, entry: ManifestCacheEntry) -> None`
+#### `_save_manifest_cache(cache_path, entry)`
 
-Save manifest cache to disk.
+Saves manifest cache to disk.
 
 **Parameters:**
 - `cache_path`: Path to the cache file
-- `entry`: The cache entry to save
+- `entry`: The ManifestCacheEntry to save
 
-#### `_is_cache_valid(cache_entry: ManifestCacheEntry, current_mtimes: dict[str, float]) -> bool`
+#### `_is_cache_valid(cache_entry, current_mtimes)`
 
-Check if cached manifest is still valid by comparing file modification times.
+Checks if cached manifest is still valid by comparing file modification times.
 
 **Parameters:**
 - `cache_entry`: The cached manifest entry
@@ -95,9 +76,9 @@ Check if cached manifest is still valid by comparing file modification times.
 **Returns:**
 - True if cache is valid, False if any file has changed
 
-#### `_get_manifest_mtimes(repo_path: Path) -> dict[str, float]`
+#### `_get_manifest_mtimes(repo_path)`
 
-Get modification times for all manifest files.
+Gets modification times for all manifest files.
 
 **Parameters:**
 - `repo_path`: Path to the repository root
@@ -105,11 +86,57 @@ Get modification times for all manifest files.
 **Returns:**
 - Dictionary mapping filename to modification time (0 if file doesn't exist)
 
-### Data Conversion Functions
+### Manifest Parsing
 
-#### `_manifest_to_dict(manifest: ProjectManifest) -> dict[str, Any]`
+#### `parse_manifest(repo_path)`
 
-Convert ProjectManifest to dictionary for caching.
+Parses all recognized package manifests in a repository. For incremental updates, prefer `get_cached_manifest()` which avoids re-parsing when manifest files haven't changed.
+
+**Parameters:**
+- `repo_path`: Path to the repository root
+
+**Returns:**
+- ProjectManifest with extracted metadata
+
+### Format-Specific Parsers
+
+#### `_parse_pyproject_toml(filepath, manifest)`
+
+Parses `pyproject.toml` files for Python projects.
+
+**Parameters:**
+- `filepath`: Path to the pyproject.toml file
+- `manifest`: ProjectManifest instance to populate
+
+#### `_parse_setup_py(filepath, manifest)`
+
+Parses legacy `setup.py` files for Python projects.
+
+**Parameters:**
+- `filepath`: Path to the setup.py file
+- `manifest`: ProjectManifest instance to populate
+
+#### `_parse_requirements_txt(filepath, manifest)`
+
+Parses `requirements.txt` files for Python dependencies.
+
+**Parameters:**
+- `filepath`: Path to the requirements.txt file
+- `manifest`: ProjectManifest instance to populate
+
+#### `_parse_build_gradle(filepath, manifest)`
+
+Parses `build.gradle` files for Java/Kotlin Gradle projects.
+
+**Parameters:**
+- `filepath`: Path to the build.gradle file
+- `manifest`: ProjectManifest instance to populate
+
+### Utility Functions
+
+#### `_manifest_to_dict(manifest)`
+
+Converts ProjectManifest to dictionary for caching.
 
 **Parameters:**
 - `manifest`: ProjectManifest instance to convert
@@ -117,9 +144,9 @@ Convert ProjectManifest to dictionary for caching.
 **Returns:**
 - Dictionary representation of the manifest
 
-#### `_manifest_from_dict(data: dict[str, Any]) -> ProjectManifest`
+#### `_manifest_from_dict(data)`
 
-Create ProjectManifest from dictionary.
+Creates ProjectManifest from dictionary.
 
 **Parameters:**
 - `data`: Dictionary containing manifest data
@@ -127,23 +154,15 @@ Create ProjectManifest from dictionary.
 **Returns:**
 - ProjectManifest instance
 
-### Parser Functions
+#### `_parse_python_dep(line)`
 
-#### `_parse_pyproject_toml(filepath: Path, manifest: ProjectManifest) -> None`
+Parses a Python dependency line (referenced in `_parse_requirements_txt`).
 
-Parse `pyproject.toml` file for Python projects. Extracts project metadata including name, version, description, and dependencies.
+**Parameters:**
+- `line`: Dependency specification line
 
-#### `_parse_setup_py(filepath: Path, manifest: ProjectManifest) -> None`
-
-Parse legacy `setup.py` file for Python projects using regex patterns to extract metadata.
-
-#### `_parse_requirements_txt(filepath: Path, manifest: ProjectManifest) -> None`
-
-Parse `requirements.txt` file for Python dependencies.
-
-#### `_parse_build_gradle(filepath: Path, manifest: ProjectManifest) -> None`
-
-Parse `build.gradle` files for Java/Kotlin Gradle projects. Detects language based on content and file extension.
+**Returns:**
+- Tuple of (name, version)
 
 ## Usage Examples
 
@@ -151,61 +170,56 @@ Parse `build.gradle` files for Java/Kotlin Gradle projects. Detects language bas
 
 ```python
 from pathlib import Path
-from local_deepwiki.generators.manifest import parse_manifest
+from local_deepwiki.generators.manifest import get_cached_manifest
 
-# Parse manifest files directly
-repo_path = Path("/path/to/repository")
-manifest = parse_manifest(repo_path)
+# Parse project manifest with caching
+repo_path = Path("/path/to/project")
+manifest = get_cached_manifest(repo_path)
 
+# Access manifest data
 print(f"Project: {manifest.name}")
 print(f"Version: {manifest.version}")
 print(f"Language: {manifest.language}")
 ```
 
-### Using Cached Manifest
+### Cache Management
 
 ```python
 from pathlib import Path
-from local_deepwiki.generators.manifest import get_cached_manifest
+from local_deepwiki.generators.manifest import parse_manifest
 
-# Use cached parsing for better performance
-repo_path = Path("/path/to/repository")
-manifest = get_cached_manifest(repo_path)
-
-# Check if manifest has data
-if manifest.has_data():
-    print("Found project metadata")
-    dependencies = manifest.get_dependency_list()
-    print(f"Dependencies: {dependencies}")
+# Parse without caching (always fresh)
+repo_path = Path("/path/to/project")
+manifest = parse_manifest(repo_path)
 ```
 
 ### Working with Cache Entries
 
 ```python
-from pathlib import Path
-from local_deepwiki.generators.manifest import ManifestCacheEntry, _manifest_to_dict
+from local_deepwiki.generators.manifest import ManifestCacheEntry
 
 # Create cache entry
-manifest_dict = _manifest_to_dict(manifest)
-file_mtimes = {"pyproject.toml": 1234567890.0}
-cache_entry = ManifestCacheEntry(
-    manifest_data=manifest_dict,
-    file_mtimes=file_mtimes
+entry = ManifestCacheEntry(
+    manifest_data={"name": "example", "version": "1.0.0"},
+    file_mtimes={"pyproject.toml": 1234567890.0}
 )
 
 # Serialize for storage
-cache_dict = cache_entry.to_dict()
+cache_dict = entry.to_dict()
+
+# Deserialize from storage
+restored_entry = ManifestCacheEntry.from_dict(cache_dict)
 ```
 
 ## Related Components
 
-This module works with:
-- **Logger**: Uses `get_logger` from `local_deepwiki.logging` for debug and warning messages
-- **File System**: Extensively uses `pathlib.Path` for file operations
-- **JSON**: Uses standard `json` module for cache serialization
-- **TOML Libraries**: Uses `tomllib` (Python 3.11+) or `tomli` fallback for parsing TOML files
+The module integrates with:
+- `local_deepwiki.logging` for logging functionality
+- JSON for cache serialization
+- `tomllib`/`tomli` for TOML parsing
+- Standard library modules like `pathlib`, `re`, and `dataclasses`
 
-The module supports multiple manifest file formats and provides efficient caching to avoid re-parsing unchanged files during incremental operations.
+The parsed ProjectManifest objects are likely used by other components in the deepwiki system for generating documentation and understanding project structure.
 
 ## API Reference
 
@@ -232,7 +246,7 @@ def from_dict(data: dict[str, Any]) -> "ManifestCacheEntry"
 Create from dictionary.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `data` | `dict[str, Any]` | - | - |
 
@@ -289,7 +303,7 @@ def get_cached_manifest(repo_path: Path, cache_dir: Path | None = None) -> Proje
 Get project manifest, using cache if available and valid.  This function checks if a cached manifest exists and is still valid (no manifest files have been modified). If valid, returns cached data. Otherwise, parses fresh and updates the cache.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `repo_path` | `Path` | - | Path to the repository root. |
 | `cache_dir` | `Path | None` | `None` | Directory for cache storage (defaults to repo_path/.deepwiki). |
@@ -306,7 +320,7 @@ def parse_manifest(repo_path: Path) -> ProjectManifest
 Parse all recognized package manifests in a repository.  Note: For incremental updates, prefer get_cached_manifest() which avoids re-parsing when manifest files haven't changed.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `repo_path` | `Path` | - | Path to the repository root. |
 
@@ -320,7 +334,7 @@ def find(path: str) -> Any
 ```
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `path` | `str` | - | - |
 
@@ -336,7 +350,7 @@ def get_directory_tree(repo_path: Path, max_depth: int = 3, max_items: int = 50)
 Generate a directory tree structure for the repository.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `repo_path` | `Path` | - | Path to repository root. |
 | `max_depth` | `int` | `3` | Maximum depth to traverse. |
@@ -352,7 +366,7 @@ def should_skip(name: str) -> bool
 ```
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `name` | `str` | - | - |
 
@@ -366,7 +380,7 @@ def traverse(path: Path, prefix: str, depth: int) -> None
 ```
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `path` | `Path` | - | - |
 | `prefix` | `str` | - | - |
@@ -479,11 +493,59 @@ flowchart TD
     class N0,N1,N2,N3,N4,N5,N6,N7,N8,N9,N10,N11,N12,N13,N14,N15,N16,N17,N18,N19,N20,N21,N22,N23,N24,N25,N26,N27,N28,N29 func
 ```
 
+## Usage Examples
+
+*Examples extracted from test files*
+
+### Empty manifest has no data
+
+From `test_manifest.py::test_has_data_empty`:
+
+```python
+manifest = ProjectManifest()
+assert not manifest.has_data()
+```
+
+### Empty manifest has no data
+
+From `test_manifest.py::test_has_data_empty`:
+
+```python
+manifest = ProjectManifest()
+assert not manifest.has_data()
+```
+
+### Empty manifest has no data
+
+From `test_manifest.py::test_has_data_empty`:
+
+```python
+assert not manifest.has_data()
+```
+
+### Manifest with name has data
+
+From `test_manifest.py::test_has_data_with_name`:
+
+```python
+manifest = ProjectManifest(name="test-project")
+assert manifest.has_data()
+```
+
+### Manifest with name has data
+
+From `test_manifest.py::test_has_data_with_name`:
+
+```python
+manifest = ProjectManifest(name="test-project")
+assert manifest.has_data()
+```
+
 ## Relevant Source Files
 
 - `src/local_deepwiki/generators/manifest.py:33-52`
 
 ## See Also
 
-- [test_manifest](../../../tests/test_manifest.md) - uses this
 - [wiki](wiki.md) - uses this
+- [test_manifest](../../../tests/test_manifest.md) - uses this

@@ -1,98 +1,158 @@
-# Diagrams Module Documentation
+# diagrams.py
 
 ## File Overview
 
-The `diagrams.py` module provides functionality for generating various types of diagrams and visualizations for code analysis. This module creates Mermaid-formatted diagrams including class diagrams, dependency graphs, module overviews, and sequence diagrams to help visualize code structure and relationships.
+This module provides diagram generation functionality for the local_deepwiki system. It generates various types of diagrams including class diagrams, dependency graphs, module overviews, language distribution charts, sequence diagrams, and indexing progress charts using Mermaid syntax.
 
 ## Classes
 
 ### ClassInfo
 
-A dataclass that stores information about classes extracted from code for diagram generation purposes.
+A dataclass that stores information about a class extracted from code analysis.
+
+**Purpose**: Holds structured data about classes including their attributes and methods for diagram generation.
 
 ## Functions
 
 ### sanitize_mermaid_name
 
-Sanitizes names to be compatible with Mermaid diagram syntax by handling special characters and formatting requirements.
+Sanitizes names to be compatible with Mermaid diagram syntax.
+
+**Parameters**:
+- Input name to be sanitized
+
+**Returns**: Sanitized name safe for use in Mermaid diagrams
 
 ### generate_class_diagram
 
-Generates a Mermaid class diagram representation from code chunks. This function analyzes code structure to create visual class relationships and hierarchies.
+Generates a Mermaid class diagram for the provided code chunks.
+
+**Parameters**:
+- Code chunks to analyze for class relationships
+
+**Returns**: Mermaid class diagram as a string
 
 ### _extract_class_attributes
 
-Private helper function that extracts class attributes from code for use in class diagram generation.
+Extracts class attributes from code analysis.
+
+**Purpose**: Helper function to identify and extract class attributes for diagram generation.
 
 ### _extract_method_signature
 
-Private helper function that extracts method signatures from code to include in class diagrams with proper formatting.
+Extracts method signatures from code for class diagram generation.
+
+**Purpose**: Helper function to parse and format method signatures for display in class diagrams.
+
+### _is_test_module
+
+Determines if a module is a test module.
+
+**Returns**: Boolean indicating whether the module is for testing
 
 ### generate_dependency_graph
 
-Creates a dependency graph showing relationships between modules and components in the codebase.
+Generates a dependency graph showing relationships between modules.
+
+**Purpose**: Creates a visual representation of module dependencies using Mermaid syntax.
+
+### _parse_external_import
+
+Parses external import statements to identify dependencies.
+
+**Purpose**: Helper function to extract external library dependencies from import statements.
+
+### _module_to_wiki_path
+
+Converts module paths to wiki page paths.
+
+**Purpose**: Helper function for generating proper links in dependency graphs.
 
 ### _find_circular_dependencies
 
-Private helper function that identifies circular dependencies in the code structure using graph analysis.
+Identifies circular dependencies in the module structure.
+
+**Purpose**: Detects and reports circular import dependencies for debugging.
 
 ### dfs
 
-Implements depth-first search algorithm, likely used for traversing dependency graphs and detecting cycles.
+Implements depth-first search algorithm.
+
+**Purpose**: Utility function used in dependency analysis and circular dependency detection.
 
 ### _path_to_module
 
-Private helper function that converts file paths to module names for use in dependency analysis.
+Converts file paths to module names.
+
+**Purpose**: Helper function to transform file system paths into Python module notation.
 
 ### _parse_import_line
 
-Private helper function that parses import statements to extract dependency information from code.
+Parses individual import statements.
+
+**Purpose**: Extracts module and item information from import lines for dependency analysis.
 
 ### generate_module_overview
 
-Creates an overview diagram showing the structure and organization of modules within the project.
+Generates an overview diagram of the module structure.
+
+**Purpose**: Creates a high-level view of the project's module organization.
 
 ### generate_language_pie_chart
 
-Generates a pie chart visualization showing the distribution of programming languages in the codebase.
+Generates a pie chart showing language distribution in the codebase.
+
+**Purpose**: Creates a visual representation of programming languages used in the project.
 
 ### generate_sequence_diagram
 
-Creates sequence diagrams to visualize the flow of operations and interactions between components.
+Generates sequence diagrams showing interaction flows.
+
+**Purpose**: Creates Mermaid sequence diagrams to visualize method call flows and interactions.
 
 ### collect_participants
 
-Helper function that identifies and collects participants (actors/components) for sequence diagram generation.
+Collects participants for sequence diagram generation.
+
+**Purpose**: Helper function to identify entities that participate in sequence interactions.
 
 ### add_calls
 
-Helper function that adds function/method calls to sequence diagrams to show interaction flow.
+Adds method calls to sequence diagrams.
 
-### generate_indexing_sequence
+**Purpose**: Helper function to add interaction arrows and messages to sequence diagrams.
 
-Generates a sequence diagram specifically showing the indexing process flow.
+### generate_indexin
 
-### generate_wiki_generation_sequence
+Generates indexing progress visualization.
 
-Creates a sequence diagram that visualizes the wiki generation process and its steps.
-
-### generate_deep_re
-
-Function for generating deep analysis diagrams (specific functionality not fully visible from the provided code).
+**Purpose**: Creates diagrams showing the progress of code indexing operations.
 
 ## Related Components
 
-This module works with several components from the local_deepwiki system:
+This module works with:
 
-- **[ChunkType](../models.md)**: Enumeration used to categorize different types of code chunks
-- **[CodeChunk](../models.md)**: Data structure representing analyzed code segments
-- **[IndexStatus](../models.md)**: Status tracking for the indexing process
+- [ChunkType](../models.md): Enumeration for different types of code chunks
+- [CodeChunk](../models.md): Data structure representing analyzed code segments  
+- [IndexStatus](../models.md): Status tracking for indexing operations
 
-The module uses these models to analyze code structure and generate appropriate visual representations through Mermaid diagrams.
+The module integrates with the broader local_deepwiki system to provide visual documentation through various diagram types, enhancing the generated wiki with graphical representations of code structure and relationships.
 
-## Usage Context
+## Usage Examples
 
-This module is part of a documentation generation system that analyzes codebases and creates visual diagrams to help understand code structure, dependencies, and workflows. The generated diagrams support various formats including class relationships, module dependencies, and process flows.
+```python
+# Generate a class diagram from code chunks
+class_diagram = generate_class_diagram(code_chunks)
+
+# Create a dependency graph
+dependency_graph = generate_dependency_graph(modules)
+
+# Generate module overview
+overview = generate_module_overview(project_structure)
+
+# Create language distribution chart
+language_chart = generate_language_pie_chart(file_analysis)
+```
 
 ## API Reference
 
@@ -113,7 +173,7 @@ def sanitize_mermaid_name(name: str) -> str
 Sanitize a name for use in Mermaid diagrams.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `name` | `str` | - | Original name. |
 
@@ -129,7 +189,7 @@ def generate_class_diagram(chunks: list, show_attributes: bool = True, show_type
 Generate an enhanced Mermaid class diagram from code chunks.  Features: - Shows class attributes/properties (not just methods) - Shows type annotations for parameters and return types - Distinguishes abstract classes, dataclasses, protocols - Shows inheritance relationships
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `chunks` | `list` | - | List of [CodeChunk](../models.md) or [SearchResult](../models.md) objects. |
 | `show_attributes` | `bool` | `True` | Whether to show class attributes. |
@@ -142,17 +202,21 @@ Generate an enhanced Mermaid class diagram from code chunks.  Features: - Shows 
 #### `generate_dependency_graph`
 
 ```python
-def generate_dependency_graph(chunks: list, project_name: str = "project", detect_circular: bool = True) -> str | None
+def generate_dependency_graph(chunks: list, project_name: str = "project", detect_circular: bool = True, show_external: bool = False, max_external: int = 10, wiki_base_path: str = "", exclude_tests: bool = True) -> str | None
 ```
 
-Generate a Mermaid flowchart showing module dependencies with circular detection.
+Generate an enhanced Mermaid flowchart showing module dependencies.  Features: - Subgraphs grouping modules by top-level directory - Clickable nodes linking to wiki pages (when wiki_base_path provided) - Optional external dependency display with different styling - Circular dependency detection and highlighting
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `chunks` | `list` | - | List of [CodeChunk](../models.md) objects (should include IMPORT chunks). |
 | `project_name` | `str` | `"project"` | Name of the project for filtering internal imports. |
 | `detect_circular` | `bool` | `True` | Whether to highlight circular dependencies. |
+| `show_external` | `bool` | `False` | Whether to show external (third-party) dependencies. |
+| `max_external` | `int` | `10` | Maximum number of external dependencies to display. |
+| `wiki_base_path` | `str` | `""` | Base path for wiki links (e.g., "files/"). Empty disables links. |
+| `exclude_tests` | `bool` | `True` | Whether to exclude test modules from the graph (default: True). |
 
 **Returns:** `str | None`
 
@@ -164,7 +228,7 @@ def dfs(node: str, path: list[str], visited: set[str]) -> None
 ```
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `node` | `str` | - | - |
 | `path` | `list[str]` | - | - |
@@ -182,7 +246,7 @@ def generate_module_overview(index_status: IndexStatus, show_file_counts: bool =
 Generate a high-level module overview diagram.  Shows package structure with subgraphs for major directories.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `index_status` | [`IndexStatus`](../models.md) | - | Index status with file information. |
 | `show_file_counts` | `bool` | `True` | Whether to show file counts in nodes. |
@@ -199,7 +263,7 @@ def generate_language_pie_chart(index_status: IndexStatus) -> str | None
 Generate a pie chart showing language distribution.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `index_status` | [`IndexStatus`](../models.md) | - | Index status with language counts. |
 
@@ -215,7 +279,7 @@ def generate_sequence_diagram(call_graph: dict[str, list[str]], entry_point: str
 Generate a sequence diagram from a call graph.  Shows the sequence of calls starting from an entry point.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `call_graph` | `dict[str, list[str]]` | - | Mapping of caller to list of callees. |
 | `entry_point` | `str | None` | `None` | Starting function (if None, uses most-called function). |
@@ -231,7 +295,7 @@ def collect_participants(func: str, depth: int) -> None
 ```
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `func` | `str` | - | - |
 | `depth` | `int` | - | - |
@@ -246,7 +310,7 @@ def add_calls(caller: str, depth: int) -> None
 ```
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `caller` | `str` | - | - |
 | `depth` | `int` | - | - |
@@ -324,72 +388,126 @@ flowchart TD
     N2[_extract_class_attributes]
     N3[_extract_method_signature]
     N4[_find_circular_dependencies]
-    N5[_parse_import_line]
-    N6[_path_to_module]
-    N7[add]
-    N8[add_calls]
-    N9[collect_participants]
-    N10[compile]
-    N11[copy]
-    N12[dfs]
-    N13[finditer]
-    N14[generate_class_diagram]
-    N15[generate_deep_research_sequ...]
-    N16[generate_dependency_graph]
-    N17[generate_indexing_sequence]
-    N18[generate_module_overview]
-    N19[generate_sequence_diagram]
-    N20[generate_wiki_generation_se...]
-    N21[generate_workflow_sequences]
-    N22[group]
-    N23[groups]
-    N24[isdigit]
-    N25[match]
-    N26[sanitize_mermaid_name]
-    N27[search]
-    N26 --> N24
-    N14 --> N2
-    N14 --> N0
-    N14 --> N3
-    N14 --> N10
-    N14 --> N13
-    N14 --> N22
-    N14 --> N26
-    N2 --> N10
+    N5[_is_test_module]
+    N6[_module_to_wiki_path]
+    N7[_parse_external_import]
+    N8[_parse_import_line]
+    N9[_path_to_module]
+    N10[add]
+    N11[add_calls]
+    N12[collect_participants]
+    N13[compile]
+    N14[copy]
+    N15[dfs]
+    N16[finditer]
+    N17[generate_class_diagram]
+    N18[generate_dependency_graph]
+    N19[generate_indexing_sequence]
+    N20[generate_module_overview]
+    N21[generate_sequence_diagram]
+    N22[generate_workflow_sequences]
+    N23[group]
+    N24[groups]
+    N25[isdigit]
+    N26[match]
+    N27[sanitize_mermaid_name]
+    N28[search]
+    N29[title]
+    N27 --> N25
+    N17 --> N2
+    N17 --> N0
+    N17 --> N3
+    N17 --> N13
+    N17 --> N16
+    N17 --> N23
+    N17 --> N27
     N2 --> N13
-    N2 --> N23
-    N3 --> N10
-    N3 --> N27
-    N3 --> N22
-    N16 --> N6
-    N16 --> N5
-    N16 --> N7
-    N16 --> N4
-    N4 --> N7
-    N4 --> N12
-    N4 --> N11
-    N12 --> N7
-    N12 --> N12
-    N12 --> N11
-    N6 --> N1
-    N5 --> N25
-    N5 --> N22
-    N18 --> N1
-    N18 --> N26
-    N19 --> N7
-    N19 --> N9
-    N19 --> N26
-    N19 --> N8
-    N9 --> N7
-    N9 --> N9
+    N2 --> N16
+    N2 --> N24
+    N3 --> N13
+    N3 --> N28
+    N3 --> N23
+    N18 --> N9
+    N18 --> N5
+    N18 --> N10
+    N18 --> N8
+    N18 --> N7
+    N18 --> N4
+    N18 --> N27
+    N18 --> N29
+    N18 --> N6
+    N7 --> N26
+    N7 --> N23
+    N4 --> N10
+    N4 --> N15
+    N4 --> N14
+    N15 --> N10
+    N15 --> N15
+    N15 --> N14
+    N9 --> N1
     N8 --> N26
-    N8 --> N7
-    N8 --> N8
-    N21 --> N17
-    N21 --> N20
-    N21 --> N15
+    N8 --> N23
+    N20 --> N1
+    N20 --> N27
+    N21 --> N10
+    N21 --> N12
+    N21 --> N27
+    N21 --> N11
+    N12 --> N10
+    N12 --> N12
+    N11 --> N27
+    N11 --> N10
+    N11 --> N11
+    N22 --> N19
     classDef func fill:#e1f5fe
-    class N0,N1,N2,N3,N4,N5,N6,N7,N8,N9,N10,N11,N12,N13,N14,N15,N16,N17,N18,N19,N20,N21,N22,N23,N24,N25,N26,N27 func
+    class N0,N1,N2,N3,N4,N5,N6,N7,N8,N9,N10,N11,N12,N13,N14,N15,N16,N17,N18,N19,N20,N21,N22,N23,N24,N25,N26,N27,N28,N29 func
+```
+
+## Usage Examples
+
+*Examples extracted from test files*
+
+### Test basic name passes through
+
+From `test_diagrams.py::test_basic_name`:
+
+```python
+assert sanitize_mermaid_name("MyClass") == "MyClass"
+```
+
+### Test angle brackets are replaced
+
+From `test_diagrams.py::test_replaces_brackets`:
+
+```python
+assert sanitize_mermaid_name("List<int>") == "List_int_"
+```
+
+### Test extraction of class-level type annotations
+
+From `test_diagrams.py::test_extracts_type_annotations`:
+
+```python
+attrs = _extract_class_attributes(content, "python")
+assert "+name: str" in attrs
+```
+
+### Test extraction from __init__ assignments
+
+From `test_diagrams.py::test_extracts_init_assignments`:
+
+```python
+attrs = _extract_class_attributes(content, "python")
+assert "+value" in attrs
+```
+
+### Test extraction of return type
+
+From `test_diagrams.py::test_extracts_return_type`:
+
+```python
+sig = _extract_method_signature(content)
+assert "bool" in sig
 ```
 
 ## Relevant Source Files
@@ -398,6 +516,8 @@ flowchart TD
 
 ## See Also
 
+- [test_diagrams](../../../tests/test_diagrams.md) - uses this
 - [wiki](wiki.md) - uses this
 - [models](../models.md) - dependency
 - [crosslinks](crosslinks.md) - shares 4 dependencies
+- [see_also](see_also.md) - shares 4 dependencies

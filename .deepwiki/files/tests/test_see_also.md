@@ -1,139 +1,79 @@
-# File Overview
+# test_see_also.py
 
-This file, `tests/test_see_also.py`, contains unit tests for the see also section generation functionality within the `local_deepwiki` project. It tests various components related to analyzing file relationships and generating "See Also" sections for documentation pages.
+## File Overview
 
-# Classes
+This test file contains comprehensive unit tests for the "See Also" functionality in the local_deepwiki project. The tests verify the behavior of components that analyze file relationships and generate cross-reference sections for wiki documentation pages.
 
-## TestRelationshipAnalyzer
+## Test Classes
 
-Tests for the [RelationshipAnalyzer](../src/local_deepwiki/generators/see_also.md) class, which is responsible for analyzing file import relationships.
+### TestRelationshipAnalyzer
 
-### Methods
+Tests for the [RelationshipAnalyzer](../src/local_deepwiki/generators/see_also.md) class, which analyzes code relationships between files.
 
-- `test_analyze_python_imports`: Tests the analysis of Python import statements.
-- `test_get_relationships_imports`: Tests retrieving imported files from a given file.
-- `test_get_relationships_imported_by`: Tests retrieving files that import a given file.
-- `test_ignores_non_import_chunks`: Tests that non-import chunks are ignored during analysis.
-- `test_shared_dependencies`: Tests shared dependencies between files.
+### TestBuildFileToWikiMap
 
-## TestBuildFileToWikiMap
+Tests for the [build_file_to_wiki_map](../src/local_deepwiki/generators/see_also.md) function, which creates mappings between source files and their corresponding wiki documentation pages.
 
-Tests for the [`build_file_to_wiki_map`](../src/local_deepwiki/generators/see_also.md) function.
+### TestGenerateSeeAlsoSection
 
-### Methods
+Tests for the [generate_see_also_section](../src/local_deepwiki/generators/see_also.md) function, which creates "See Also" sections for documentation pages.
 
-- `test_builds_map`: Tests building a mapping from file paths to wiki page paths.
+**Key Test Methods:**
+- `test_generates_section_with_importers()` - Verifies that the function properly generates See Also sections when files import the current file
 
-## TestGenerateSeeAlsoSection
+### TestRelativePath
 
-Tests for the [`generate_see_also_section`](../src/local_deepwiki/generators/see_also.md) function.
+Tests for the _relative_path function, which calculates relative paths between documentation files.
 
-### Methods
+**Key Test Methods:**
+- `test_same_directory()` - Tests relative path calculation for files in the same directory
+- `test_parent_directory()` - Tests relative path calculation to parent directories  
+- `test_sibling_directory()` - Tests relative path calculation between sibling directories
 
-- `test_generates_section_with_importers`: Tests generating a See Also section with files that import the current file.
+### TestAddSeeAlsoSections
 
-## TestRelativePath
+Tests for the [add_see_also_sections](../src/local_deepwiki/generators/see_also.md) function, which adds See Also sections to file documentation pages.
 
-Tests for the `_relative_path` function.
+**Key Test Methods:**
+- `test_adds_sections_to_file_pages()` - Verifies that See Also sections are properly added to file documentation pages
 
-### Methods
+## Test Data and Fixtures
 
-- `test_same_directory`: Tests relative path calculation in the same directory.
-- `test_parent_directory`: Tests relative path calculation to a parent directory.
-- `test_sibling_directory`: Tests relative path calculation to a sibling directory.
+The tests use various test data structures including:
 
-## TestAddSeeAlsoSections
+- **[FileRelationships](../src/local_deepwiki/generators/see_also.md)** objects with file paths and import relationships
+- **[CodeChunk](../src/local_deepwiki/models.md)** objects representing different types of code elements (imports, classes, functions)
+- **[WikiPage](../src/local_deepwiki/models.md)** objects representing documentation pages
+- File-to-wiki mapping dictionaries
 
-Tests for the [`add_see_also_sections`](../src/local_deepwiki/generators/see_also.md) function.
+## Usage Examples
 
-### Methods
-
-- `test_adds_sections_to_file_pages`: Tests that See Also sections are added to file documentation pages.
-
-# Functions
-
-## generate_see_also_section
-
-Generates a "See Also" section for a given file based on its relationships.
-
-### Parameters
-
-- `relationships` ([FileRelationships](../src/local_deepwiki/generators/see_also.md)): The file relationships object containing import and imported_by information.
-- `file_to_wiki` (dict): A mapping of file paths to wiki page paths.
-- `file_path` (str): The path of the file for which to generate the section.
-
-### Returns
-
-- `str`: The generated "See Also" section content.
-
-## add_see_also_sections
-
-Adds "See Also" sections to a list of wiki pages.
-
-### Parameters
-
-- `analyzer` ([RelationshipAnalyzer](../src/local_deepwiki/generators/see_also.md)): The analyzer to use for determining relationships.
-- `wiki_pages` (list): List of [WikiPage](../src/local_deepwiki/models.md) objects to process.
-- `file_to_wiki` (dict): A mapping of file paths to wiki page paths.
-
-### Returns
-
-- `list`: The list of [WikiPage](../src/local_deepwiki/models.md) objects with "See Also" sections added.
-
-## _relative_path
-
-Calculates the relative path from one file to another.
-
-### Parameters
-
-- `from_path` (str): The source file path.
-- `to_path` (str): The target file path.
-
-### Returns
-
-- `str`: The relative path from `from_path` to `to_path`.
-
-# Usage Examples
-
-## Using `generate_see_also_section`
+The tests demonstrate how the See Also functionality works:
 
 ```python
-from local_deepwiki.generators.see_also import generate_see_also_section, FileRelationships
-
+# Example relationship data used in tests
 relationships = FileRelationships(
     file_path="src/local_deepwiki/core/chunker.py",
     imported_by={"src/local_deepwiki/core/indexer.py"},
 )
+
+# Example file-to-wiki mapping
 file_to_wiki = {
     "src/local_deepwiki/core/chunker.py": "files/src/local_deepwiki/core/chunker.md",
     "src/local_deepwiki/core/indexer.py": "files/src/local_deepwiki/core/indexer.md",
 }
-section = generate_see_also_section(relationships, file_to_wiki, "src/local_deepwiki/core/chunker.py")
 ```
 
-## Using `add_see_also_sections`
+## Related Components
 
-```python
-from local_deepwiki.generators.see_also import add_see_also_sections, RelationshipAnalyzer
-from local_deepwiki.models import WikiPage
+This test file works with several core components from the local_deepwiki.generators.see_also module:
 
-analyzer = RelationshipAnalyzer()
-wiki_pages = [WikiPage(...)]
-file_to_wiki = {...}
-updated_pages = add_see_also_sections(analyzer, wiki_pages, file_to_wiki)
-```
+- **[FileRelationships](../src/local_deepwiki/generators/see_also.md)** - Data structure for storing file relationship information
+- **[RelationshipAnalyzer](../src/local_deepwiki/generators/see_also.md)** - Analyzes code relationships between files
+- **[WikiPage](../src/local_deepwiki/models.md)** - Represents documentation pages
+- **[CodeChunk](../src/local_deepwiki/models.md)** - Represents code elements with metadata like file path, language, and chunk type
 
-# Related Components
-
-This file works with the following components:
-
-- [`RelationshipAnalyzer`](../src/local_deepwiki/generators/see_also.md): Analyzes file import relationships.
-- [`FileRelationships`](../src/local_deepwiki/generators/see_also.md): Represents file relationships including imports and being imported by.
-- [`WikiPage`](../src/local_deepwiki/models.md): Represents a wiki page with content and metadata.
-- [`ChunkType`](../src/local_deepwiki/models.md): Defines types of code chunks.
-- [`CodeChunk`](../src/local_deepwiki/models.md): Represents a code chunk with metadata.
-- [`Language`](../src/local_deepwiki/models.md): Defines programming languages.
-- [`build_file_to_wiki_map`](../src/local_deepwiki/generators/see_also.md): Builds a mapping from file paths to wiki page paths.
+The tests also use models from local_deepwiki.models including [ChunkType](../src/local_deepwiki/models.md), [Language](../src/local_deepwiki/models.md), and various code representation classes.
 
 ## API Reference
 
@@ -416,7 +356,7 @@ flowchart TD
 
 ## Relevant Source Files
 
-- `tests/test_see_also.py`
+- `tests/test_see_also.py:16-177`
 
 ## See Also
 
@@ -424,3 +364,4 @@ flowchart TD
 - [models](../src/local_deepwiki/models.md) - dependency
 - [test_chunker](test_chunker.md) - shares 2 dependencies
 - [test_api_docs](test_api_docs.md) - shares 2 dependencies
+- [test_diagrams](test_diagrams.md) - shares 2 dependencies

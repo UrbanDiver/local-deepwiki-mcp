@@ -2,18 +2,7 @@
 
 ## File Overview
 
-This file implements an MCP (Model Context Protocol) server that provides tools for repository indexing and wiki generation. The server exposes functionality through various tools that can index repositories, generate documentation, and manage configuration settings.
-
-## Imports and Dependencies
-
-The server integrates with several core components:
-
-- **MCP Framework**: Uses `mcp.server.Server` and `mcp.server.stdio.stdio_server` for the server implementation
-- **Configuration**: Imports [Config](config.md), [get_config](config.md), and [set_config](config.md) from the config module
-- **Core Components**: Integrates with RepositoryIndexer and VectorStore for indexing operations
-- **Wiki Generation**: Uses the [generate_wiki](generators/wiki.md) function for documentation generation
-- **Models**: Works with [Language](models.md) and [WikiStructure](models.md) models
-- **Providers**: Utilizes embedding providers through get_embedding_provider
+The `server.py` module implements an MCP (Model Context Protocol) server that provides tools for managing repository indexing, vector storage, and wiki generation. The server exposes functionality through a set of tools that can be called remotely to configure settings, index repositories, search content, and generate documentation.
 
 ## Functions
 
@@ -22,74 +11,131 @@ The server integrates with several core components:
 #### `_validate_positive_int`
 Validates that a value is a positive integer.
 
-#### `_validate_non_empty_string`  
+**Parameters:**
+- `value: Any` - The value to validate
+- `field_name: str` - The name of the field being validated for error messages
+
+**Returns:**
+- `int` - The validated positive integer
+
+#### `_validate_non_empty_string`
 Validates that a value is a non-empty string.
 
+**Parameters:**
+- `value: Any` - The value to validate
+- `field_name: str` - The name of the field being validated for error messages
+
+**Returns:**
+- `str` - The validated non-empty string
+
 #### `_validate_language`
-Validates language parameter values.
+Validates that a value is a valid [Language](models.md) enum value.
+
+**Parameters:**
+- `value: Any` - The value to validate
+- `field_name: str` - The name of the field being validated for error messages
+
+**Returns:**
+- [`Language`](models.md) - The validated [Language](models.md) enum value
 
 #### `_validate_languages_list`
-Validates a list of language values.
+Validates that a value is a list of valid [Language](models.md) enum values.
+
+**Parameters:**
+- `value: Any` - The value to validate
+- `field_name: str` - The name of the field being validated for error messages
+
+**Returns:**
+- `list[Language]` - The validated list of [Language](models.md) enum values
 
 #### `_validate_provider`
-Validates embedding provider configurations.
+Validates that a value is a valid embedding provider name.
 
-### Core Server Functions
+**Parameters:**
+- `value: Any` - The value to validate
+- `field_name: str` - The name of the field being validated for error messages
+
+**Returns:**
+- `str` - The validated provider name
+
+### Server Handler Functions
 
 #### `list_tools`
-Returns the list of available tools that the MCP server provides.
+Returns the list of available tools that the server provides.
 
-**Returns**: List of Tool objects representing the available functionality
+**Returns:**
+- `list[Tool]` - List of Tool objects describing available functionality
 
 #### `call_tool`
 Handles tool execution requests from MCP clients.
 
-**Parameters**:
-- Tool name and arguments for execution
+**Parameters:**
+- `name: str` - The name of the tool to execute
+- `arguments: dict[str, Any] | None` - Arguments for the tool execution
 
-**Returns**: Tool execution results
+**Returns:**
+- `list[TextContent]` - The results of the tool execution
 
 #### `handle_index_repository`
-Processes repository indexing requests.
+Handles repository indexing operations with progress tracking.
 
-**Parameters**:
-- Repository path and indexing configuration
+**Parameters:**
+- `repo_path: str` - Path to the repository to index
+- `languages: list[Language]` - List of programming languages to index
+- `chunk_size: int` - Size of chunks for processing
+- `chunk_overlap: int` - Overlap between chunks
+
+**Returns:**
+- `str` - Success message upon completion
 
 #### `progress_callback`
 Callback function for tracking indexing progress.
 
+**Parameters:**
+- `current: int` - Current progress count
+- `total: int` - Total items to process
+
 ## Usage Examples
 
-### Starting the Server
+### Running the Server
 
 ```python
-# The server runs as an MCP server using stdio transport
-server = Server("local-deepwiki")
+import asyncio
+from local_deepwiki.server import main
+
+# Run the MCP server
+asyncio.run(main())
 ```
 
-### Tool Execution
+### Tool Execution Pattern
+
+The server handles various tools through the `call_tool` function:
 
 ```python
-# Tools are called through the MCP protocol
-# Example tool call structure (actual implementation handles MCP message format)
-result = call_tool(name="index_repository", arguments={
-    "path": "/path/to/repository",
-    "languages": ["python", "javascript"]
-})
+# Example tool call structure (handled internally by MCP)
+result = await call_tool(
+    name="index_repository",
+    arguments={
+        "repo_path": "/path/to/repository",
+        "languages": ["PYTHON", "JAVASCRIPT"],
+        "chunk_size": 1000,
+        "chunk_overlap": 200
+    }
+)
 ```
 
 ## Related Components
 
-This server module integrates with several other components:
+This module integrates with several other components:
 
-- **[Config](config.md)**: Manages server configuration settings
-- **RepositoryIndexer**: Handles the actual repository indexing process  
-- **VectorStore**: Provides vector storage capabilities for indexed content
-- **[WikiStructure](models.md)**: Defines the structure of generated documentation
-- **[Language](models.md)**: Represents supported programming languages
-- **Embedding Providers**: Handles different embedding model integrations
+- **[Config](config.md)** - Manages configuration settings through [`get_config`](config.md) and [`set_config`](config.md)
+- **[RepositoryIndexer](core/indexer.md)** - Handles the actual repository indexing process
+- **[VectorStore](core/vectorstore.md)** - Manages vector storage and similarity search operations
+- **[WikiGenerator](generators/wiki.md)** - Generates wiki documentation from indexed content
+- **[Language](models.md)** - Enum for supported programming languages
+- **[WikiStructure](models.md)** - Data structure for wiki organization
 
-The server acts as the main entry point that orchestrates these components to provide repository analysis and documentation generation capabilities through the MCP protocol.
+The server acts as a bridge between MCP clients and the core local-deepwiki functionality, providing a standardized interface for repository analysis and documentation generation.
 
 ## API Reference
 
@@ -119,7 +165,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]
 Handle tool calls.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `name` | `str` | - | - |
 | `arguments` | `dict[str, Any]` | - | - |
@@ -136,7 +182,7 @@ async def handle_index_repository(args: dict[str, Any]) -> list[TextContent]
 Handle index_repository tool call.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `args` | `dict[str, Any]` | - | - |
 
@@ -150,7 +196,7 @@ def progress_callback(msg: str, current: int, total: int)
 ```
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `msg` | `str` | - | - |
 | `current` | `int` | - | - |
@@ -166,7 +212,7 @@ async def handle_ask_question(args: dict[str, Any]) -> list[TextContent]
 Handle ask_question tool call.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `args` | `dict[str, Any]` | - | - |
 
@@ -182,7 +228,7 @@ async def handle_deep_research(args: dict[str, Any]) -> list[TextContent]
 Handle deep_research tool call for multi-step reasoning.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `args` | `dict[str, Any]` | - | - |
 
@@ -207,7 +253,7 @@ async def progress_callback(progress: ResearchProgress) -> None
 ```
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `progress` | [`ResearchProgress`](models.md) | - | - |
 
@@ -223,7 +269,7 @@ async def send_cancellation_notification(step: str) -> None
 Send a cancellation progress notification.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `step` | `str` | - | - |
 
@@ -239,7 +285,7 @@ async def handle_read_wiki_structure(args: dict[str, Any]) -> list[TextContent]
 Handle read_wiki_structure tool call.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `args` | `dict[str, Any]` | - | - |
 
@@ -255,7 +301,7 @@ async def handle_read_wiki_page(args: dict[str, Any]) -> list[TextContent]
 Handle read_wiki_page tool call.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `args` | `dict[str, Any]` | - | - |
 
@@ -271,7 +317,7 @@ async def handle_search_code(args: dict[str, Any]) -> list[TextContent]
 Handle search_code tool call.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `args` | `dict[str, Any]` | - | - |
 
@@ -287,7 +333,7 @@ async def handle_export_wiki_html(args: dict[str, Any]) -> list[TextContent]
 Handle export_wiki_html tool call.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `args` | `dict[str, Any]` | - | - |
 
@@ -303,7 +349,7 @@ async def handle_export_wiki_pdf(args: dict[str, Any]) -> list[TextContent]
 Handle export_wiki_pdf tool call.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `args` | `dict[str, Any]` | - | - |
 
@@ -451,3 +497,8 @@ flowchart TD
 ## Relevant Source Files
 
 - `src/local_deepwiki/server.py:33-53`
+
+## See Also
+
+- [test_server_validation](../../tests/test_server_validation.md) - uses this
+- [test_server_handlers](../../tests/test_server_handlers.md) - uses this

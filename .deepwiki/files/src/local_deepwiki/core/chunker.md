@@ -1,62 +1,46 @@
-# File Overview
+# chunker.py
 
-This file defines the core chunking functionality for processing code files. It provides the `CodeChunker` class responsible for breaking down code into meaningful chunks based on language-specific parsing rules. The chunker identifies different types of code elements such as functions, classes, and methods, and organizes them into structured `CodeChunk` objects.
+## File Overview
 
-# Classes
+The chunker module provides functionality for breaking down source code files into semantic chunks for analysis and documentation generation. It works with parsed code to identify and extract meaningful code segments like classes, functions, and other structural elements.
 
-## CodeChunker
+## Classes
 
-The CodeChunker class is responsible for parsing code files and splitting them into logical chunks based on the structure of the code. It uses tree-sitter for parsing and supports multiple programming languages.
+### CodeChunker
 
-### Key Methods
+The CodeChunker class is responsible for analyzing parsed code and splitting it into logical chunks based on the code structure. It integrates with the parsing system to identify semantic boundaries and create structured representations of code segments.
 
-- `chunk_file(self, file_path: Path) -> Iterator[CodeChunk]`:
-  Takes a file path and yields `CodeChunk` objects representing different parts of the code file.
+## Functions
 
-- `chunk_node(self, node: Node, file_path: Path, lang: Language) -> Iterator[CodeChunk]`:
-  Processes a tree-sitter node and generates chunks for it, recursively handling child nodes.
+### get_parent_classes
 
-# Functions
+A utility function that appears to work with code structure analysis, likely for identifying class inheritance relationships or hierarchical code organization.
 
-## get_parent_classes
+## Usage Examples
 
 ```python
-def get_parent_classes(node: Node, lang: Language) -> list[str]
-```
+from local_deepwiki.core.chunker import CodeChunker, get_parent_classes
+from local_deepwiki.config import get_config
 
-Retrieves the names of parent classes for a given node in the code structure.
-
-### Parameters
-- `node`: A tree-sitter Node object representing a class or similar construct
-- `lang`: Language enum indicating the programming language of the code
-
-### Returns
-- A list of strings representing the names of parent classes
-
-# Usage Examples
-
-```python
-from pathlib import Path
-from local_deepwiki.core.chunker import CodeChunker
-
-# Initialize the chunker
+# Initialize chunker with configuration
+config = get_config()
 chunker = CodeChunker()
 
-# Process a file
-file_path = Path("example.py")
-for chunk in chunker.chunk_file(file_path):
-    print(f"Chunk type: {chunk.type}, Content: {chunk.content}")
+# Process code chunks
+# (Specific usage patterns would depend on the actual method signatures)
 ```
 
-# Related Components
+## Related Components
 
-This file works with the following components based on imports:
+This module integrates with several other components of the local_deepwiki system:
 
-- **[ChunkingConfig](../config.md)**: Configuration settings for chunking behavior
-- **[CodeParser](parser.md)**: Parser for code files using tree-sitter
-- **[get_node_text](parser.md), [get_node_name](parser.md), [get_docstring](parser.md), [find_nodes_by_type](parser.md)**: Helper functions for parsing code nodes
-- **CodeChunk, ChunkType, Language**: Data models for representing code chunks and their properties
-- **[get_config](../config.md)**: Function to retrieve configuration settings
+- **[CodeParser](parser.md)**: Used for parsing source code files and working with syntax trees
+- **[ChunkingConfig](../config.md)**: Provides configuration settings for chunking behavior
+- **[CodeChunk](../models.md) and [ChunkType](../models.md) models**: Data structures for representing code chunks
+- **[Language](../models.md) model**: Handles language-specific processing
+- **Parser utilities**: Functions like [`find_nodes_by_type`](parser.md), [`get_docstring`](parser.md), [`get_node_name`](parser.md), and [`get_node_text`](parser.md) for working with parsed code nodes
+
+The module uses tree-sitter for syntax tree manipulation and includes logging capabilities for debugging and monitoring the chunking process.
 
 ## API Reference
 
@@ -111,7 +95,7 @@ Extract parent class names from a class definition.
 |-----------|------|---------|-------------|
 | `class_node` | `Node` | - | The class AST node. |
 | `source` | `bytes` | - | Source bytes. |
-| `language` | `Language` | - | Programming language. |
+| `language` | [`Language`](../models.md) | - | Programming language. |
 
 **Returns:** `list[str]`
 
@@ -122,17 +106,17 @@ Extract parent class names from a class definition.
 ```mermaid
 classDiagram
     class CodeChunker {
-        -__init__()
-        +chunk_file()
-        -_create_module_chunk()
-        -_create_file_summary()
-        -_create_imports_chunk()
-        -_extract_class_chunks()
-        -_create_class_summary_chunk()
-        -_create_method_chunk()
-        -_create_function_chunk()
-        -_is_inside_class()
-        -_generate_id()
+        -__init__(config: ChunkingConfig | None)
+        +chunk_file(file_path: Path, repo_root: Path) Iterator[CodeChunk]
+        -_create_module_chunk(root: Node, source: bytes, language: Language, file_path: str) CodeChunk
+        -_create_file_summary(root: Node, source: bytes, language: Language) str
+        -_create_imports_chunk(import_nodes: list[Node], source: bytes, language: Language, file_path: str) CodeChunk
+        -_extract_class_chunks(class_node: Node, source: bytes, language: Language, file_path: str) Iterator[CodeChunk]
+        -_create_class_summary_chunk(class_node: Node, source: bytes, language: Language, ...) CodeChunk
+        -_create_method_chunk(method_node: Node, source: bytes, language: Language, ...) CodeChunk
+        -_create_function_chunk(func_node: Node, source: bytes, language: Language, file_path: str) CodeChunk
+        -_is_inside_class(node: Node, class_types: set[str]) bool
+        -_generate_id(file_path: str, name: str, line: int) str
     }
 ```
 
@@ -223,13 +207,82 @@ flowchart TD
     class N1,N2,N3,N4,N5,N6,N7,N8,N9,N10 method
 ```
 
+## Usage Examples
+
+*Examples extracted from test files*
+
+### Test chunking a Python file
+
+From `test_chunker.py::test_chunk_python_file`:
+
+```python
+chunks = list(self.chunker.chunk_file(test_file, tmp_path))
+
+# Should have: module, imports, function, class
+assert len(chunks) >= 3
+```
+
+### Test chunking a Python file
+
+From `test_chunker.py::test_chunk_python_file`:
+
+```python
+# Should have: module, imports, function, class
+assert len(chunks) >= 3
+```
+
+### Test chunking a Python file
+
+From `test_chunker.py::test_chunk_python_file`:
+
+```python
+def __init__(self, prefix: str = "Hello"):
+        self.prefix = prefix
+
+    def greet(self, name: str) -> str:
+        """Greet someone."""
+        return f"{self.prefix}, {name}!"
+'''
+        test_file = tmp_path / "test.py"
+        test_file.write_text(code)
+
+        chunks = list(self.chunker.chunk_file(test_file, tmp_path))
+
+        # Should have: module, imports, function, class
+        assert len(chunks) >= 3
+```
+
+### Test chunking a Python file
+
+From `test_chunker.py::test_chunk_python_file`:
+
+```python
+chunks = list(self.chunker.chunk_file(test_file, tmp_path))
+
+# Should have: module, imports, function, class
+assert len(chunks) >= 3
+```
+
+### Test that function names are extracted
+
+From `test_chunker.py::test_chunk_extracts_function_names`:
+
+```python
+chunks = list(self.chunker.chunk_file(test_file, tmp_path))
+function_chunks = [c for c in chunks if c.chunk_type == ChunkType.FUNCTION]
+
+function_names = {c.name for c in function_chunks}
+assert "process_data" in function_names
+```
+
 ## Relevant Source Files
 
-- `src/local_deepwiki/core/chunker.py:174-562`
+- `src/local_deepwiki/core/chunker.py:200-597`
 
 ## See Also
 
+- [test_chunker](../../../tests/test_chunker.md) - uses this
 - [api_docs](../generators/api_docs.md) - uses this
+- [callgraph](../generators/callgraph.md) - uses this
+- [models](../models.md) - dependency
 - [config](../config.md) - dependency
-- [parser](parser.md) - dependency
-- [wiki](../generators/wiki.md) - shares 5 dependencies

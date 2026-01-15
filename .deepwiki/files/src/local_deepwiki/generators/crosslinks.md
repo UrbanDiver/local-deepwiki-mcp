@@ -1,39 +1,104 @@
-# crosslinks.py
+# CrossLinks Module
 
 ## File Overview
 
-This module provides functionality for adding cross-links between wiki pages. It processes wiki page content to identify entity references and converts them into markdown links to other pages in the wiki, enabling automatic cross-referencing throughout the documentation.
+The crosslinks module provides functionality for automatically adding cross-links between wiki pages. It identifies entity mentions in markdown content and converts them to clickable links that reference other pages in the wiki.
 
 ## Classes
 
 ### EntityInfo
 
-A data class that stores information about documented entities for cross-linking purposes.
+A data class that stores information about documented entities.
 
 ### EntityRegistry
 
-A registry that manages collections of documented entities that can be cross-referenced in wiki pages.
+A registry that manages and provides access to documented entities for cross-linking purposes.
 
 ### CrossLinker
 
-The [main](../web/app.md) class responsible for processing wiki pages and adding cross-links to entity references.
+The [main](../export/html.md) class responsible for processing wiki pages and adding cross-links to entity mentions.
 
-#### Methods
+#### Key Methods
 
-- **add_links(page)**: Processes a [WikiPage](../models.md) and returns a new [WikiPage](../models.md) with cross-links added to the content
-- **_process_content(content, path)**: Internal method for processing page content
-- **_split_by_code_blocks()**: Splits content by code blocks for selective processing
-- **_add_links_to_text()**: Adds links to text sections
-- **_replace_entity_mentions()**: Replaces entity mentions with markdown links
-- **protect()**: Protects certain text patterns during processing
-- **_link_backticked_entities()**: Converts backticked entity names to markdown links
-- **qualified_replacement()**: Handles qualified entity name replacements
-- **_relative_path()**: Calculates relative paths between wiki pages
+##### `__init__`
+Initializes the CrossLinker with an entity registry.
+
+##### `add_links`
+```python
+def add_links(self, page: WikiPage) -> WikiPage:
+```
+
+Processes a wiki page and returns a new [WikiPage](../models.md) instance with cross-links added to the content.
+
+**Parameters:**
+- `page`: The [WikiPage](../models.md) to process
+
+**Returns:**
+- A new [WikiPage](../models.md) with cross-links added
+
+##### `_process_content`
+Internal method that handles the actual content processing for cross-link insertion.
+
+##### `_split_by_code_blocks`
+Internal method for handling code block boundaries during link processing.
+
+##### `_add_links_to_text`
+Internal method that adds links to text content outside of code blocks.
+
+##### `_replace_entity_mentions`
+Internal method that replaces entity mentions with markdown links.
+
+##### `protect`
+Internal method for protecting certain text patterns during processing.
+
+##### `_link_backticked_entities`
+```python
+def _link_backticked_entities(
+    self,
+    text: str,
+    entity_name: str,
+    rel_path: str,
+    protect: Callable[[re.Match[str]], str],
+) -> str:
+```
+
+Converts backticked entity names to markdown links. Handles various formats:
+- `EntityName` → [`EntityName`](path)
+- `module.EntityName` → [`EntityName`](path)  
+- `module.submodule.EntityName` → [`EntityName`](path)
+
+**Parameters:**
+- `text`: The text content to process
+- `entity_name`: The entity name to [find](manifest.md) and link
+- `rel_path`: The relative path to the entity's wiki page
+- `protect`: Function for protecting certain patterns
+
+**Returns:**
+- Text with backticked entities converted to links
+
+##### `qualified_replacement`
+Internal method for handling qualified entity name replacements.
+
+##### `_relative_path`
+```python
+def _relative_path(self, from_path: str, to_path: str) -> str:
+```
+
+Calculates the relative path between two wiki pages.
+
+**Parameters:**
+- `from_path`: Path of the source page (e.g., "modules/src.md")
+- `to_path`: Path of the target page (e.g., "files/src/indexer.md")
+
+**Returns:**
+- Relative path from source to target
 
 ## Functions
 
-### add_cross_links
+### `camel_to_spaced`
+Utility function for converting camelCase names to spaced format.
 
+### `add_cross_links`
 ```python
 def add_cross_links(
     pages: list[WikiPage],
@@ -45,47 +110,39 @@ Processes a list of wiki pages and adds cross-links to all of them.
 
 **Parameters:**
 - `pages`: List of [WikiPage](../models.md) objects to process
-- `registry`: EntityRegistry containing documented entities for cross-linking
+- `registry`: EntityRegistry containing documented entities
 
 **Returns:**
 - List of [WikiPage](../models.md) objects with cross-links added
 
-### camel_to_spaced
-
-Converts camel case strings to spaced format (referenced in module structure but implementation not shown).
-
 ## Usage Examples
 
-### Basic Cross-linking
+### Processing a Single Page
 
 ```python
-from local_deepwiki.generators.crosslinks import add_cross_links
+# Create a CrossLinker with an entity registry
+linker = CrossLinker(registry)
 
-# Process multiple pages with cross-links
-linked_pages = add_cross_links(wiki_pages, entity_registry)
+# Add cross-links to a page
+linked_page = linker.add_links(original_page)
 ```
 
-### Single Page Processing
+### Processing Multiple Pages
 
 ```python
-from local_deepwiki.generators.crosslinks import CrossLinker
-
-# Create a cross-linker instance
-linker = CrossLinker(entity_registry)
-
-# Process a single page
-linked_page = linker.add_links(wiki_page)
+# Process all pages at once
+linked_pages = add_cross_links(pages, registry)
 ```
 
 ## Related Components
 
-This module works with several other components:
+This module works with:
 
-- **[WikiPage](../models.md)**: The core page model from `local_deepwiki.models`
-- **[CodeChunk](../models.md)** and **[ChunkType](../models.md)**: Used for processing code content
-- **EntityRegistry**: Manages the entities available for cross-linking
+- **[WikiPage](../models.md)**: The data model representing individual wiki pages
+- **[CodeChunk](../models.md)**: Referenced for handling code content
+- **[ChunkType](../models.md)**: Used for identifying different types of content chunks
 
-The module integrates with the broader wiki generation system by taking processed wiki pages and enhancing them with automatic cross-references to create a more interconnected documentation structure.
+The module uses the `re` module for regular expression processing and `pathlib.Path` for path manipulation.
 
 ## API Reference
 
@@ -116,7 +173,7 @@ def register_entity(name: str, entity_type: ChunkType, wiki_path: str, file_path
 Register a documented entity.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `name` | `str` | - | The entity name (e.g., "[WikiGenerator](wiki.md)"). |
 | `entity_type` | [`ChunkType`](../models.md) | - | The type of entity (class, function, etc.). |
@@ -133,7 +190,7 @@ def register_from_chunks(chunks: list[CodeChunk], wiki_path: str) -> None
 Register entities from a list of code chunks.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `chunks` | `list[CodeChunk]` | - | List of code chunks from a file. |
 | `wiki_path` | `str` | - | Path to the wiki page for these chunks. |
@@ -147,7 +204,7 @@ def get_entity(name: str) -> EntityInfo | None
 Get entity info by name.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `name` | `str` | - | The entity name to look up. |
 
@@ -160,9 +217,9 @@ def get_entity_by_alias(alias: str) -> tuple[str, EntityInfo] | None
 Get entity info by alias (spaced name).
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `alias` | `str` | - | The spaced alias to look up (e.g., "Vector Store"). |
+| `alias` | `str` | - | The spaced alias to look up (e.g., "[Vector Store](../core/vectorstore.md)"). |
 
 #### `get_all_aliases`
 
@@ -189,7 +246,7 @@ def get_page_entities(wiki_path: str) -> list[str]
 Get all entities defined in a specific wiki page.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `wiki_path` | `str` | - | The wiki page path. |
 
@@ -209,7 +266,7 @@ def __init__(registry: EntityRegistry) -> None
 Initialize the cross-linker.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `registry` | `EntityRegistry` | - | The entity registry to use for lookups. |
 
@@ -222,7 +279,7 @@ def add_links(page: WikiPage) -> WikiPage
 Add cross-links to a wiki page.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `page` | [`WikiPage`](../models.md) | - | The wiki page to process. |
 
@@ -233,7 +290,7 @@ def protect(match: re.Match) -> str
 ```
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `match` | `re.Match` | - | - |
 
@@ -244,7 +301,7 @@ def qualified_replacement(match: re.Match) -> str
 ```
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `match` | `re.Match` | - | - |
 
@@ -262,7 +319,7 @@ def camel_to_spaced(name: str) -> str | None
 Convert CamelCase to 'Spaced Words'.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `name` | `str` | - | The CamelCase name. |
 
@@ -278,7 +335,7 @@ def add_cross_links(pages: list[WikiPage], registry: EntityRegistry) -> list[Wik
 Add cross-links to all wiki pages.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `pages` | `list[WikiPage]` | - | List of wiki pages to process. |
 | `registry` | `EntityRegistry` | - | Entity registry with documented entities. |
@@ -386,6 +443,67 @@ flowchart TD
     class N1,N2,N3,N4,N5,N6,N8,N9,N10,N11 method
 ```
 
+## Usage Examples
+
+*Examples extracted from test files*
+
+### Test simple CamelCase conversion
+
+From `test_crosslinks.py::test_simple_camel_case`:
+
+```python
+assert camel_to_spaced("VectorStore") == "Vector Store"
+```
+
+### Test multi-word CamelCase
+
+From `test_crosslinks.py::test_multi_word`:
+
+```python
+assert camel_to_spaced("CrossLinker") == "Cross Linker"
+```
+
+### Test multi-word CamelCase
+
+From `test_crosslinks.py::test_multi_word`:
+
+```python
+assert camel_to_spaced("RepositoryIndexer") == "Repository Indexer"
+```
+
+### Test registering an entity
+
+From `test_crosslinks.py::test_register_entity`:
+
+```python
+registry = EntityRegistry()
+registry.register_entity(
+    name="WikiGenerator",
+    entity_type=ChunkType.CLASS,
+    wiki_path="files/wiki.md",
+    file_path="src/wiki.py",
+)
+
+entity = registry.get_entity("WikiGenerator")
+assert entity is not None
+```
+
+### Test registering an entity
+
+From `test_crosslinks.py::test_register_entity`:
+
+```python
+registry.register_entity(
+    name="WikiGenerator",
+    entity_type=ChunkType.CLASS,
+    wiki_path="files/wiki.md",
+    file_path="src/wiki.py",
+)
+
+entity = registry.get_entity("WikiGenerator")
+assert entity is not None
+```
+
 ## Relevant Source Files
 
 - `src/local_deepwiki/generators/crosslinks.py:16-23`
@@ -396,3 +514,4 @@ flowchart TD
 - [wiki](wiki.md) - uses this
 - [models](../models.md) - dependency
 - [diagrams](diagrams.md) - shares 4 dependencies
+- [see_also](see_also.md) - shares 4 dependencies

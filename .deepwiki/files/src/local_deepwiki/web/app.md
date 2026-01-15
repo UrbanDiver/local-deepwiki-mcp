@@ -2,7 +2,7 @@
 
 ## File Overview
 
-This file contains the main Flask web application for DeepWiki, providing a web interface for browsing and interacting with wiki content. It serves as the entry point for the web server and handles HTTP routes for viewing pages, searching, and chat functionality.
+This module implements the Flask web application for the DeepWiki server. It provides a web interface for serving wiki content with markdown rendering, search functionality, and chat capabilities powered by LLM providers.
 
 ## Functions
 
@@ -19,7 +19,9 @@ Creates and configures a Flask application instance for serving wiki content.
 **Raises:**
 - ValueError: If the specified wiki path does not exist
 
-The function sets up the global `WIKI_PATH` variable and validates that the wiki directory exists before returning the Flask app.
+```python
+app = create_app("/path/to/wiki")
+```
 
 ### run_server
 
@@ -29,77 +31,45 @@ Starts the DeepWiki web server with the specified configuration.
 - `wiki_path` (str | Path): Path to the wiki directory to serve
 - `host` (str, optional): Host address to bind to. Defaults to "127.0.0.1"
 - `port` (int, optional): Port number to listen on. Defaults to 8080
-- `debug` (bool, optional): Whether to run in debug mode. Defaults to False
+- `debug` (bool, optional): Enable Flask debug mode. Defaults to False
 
-This function creates the Flask app using create_app, logs startup information, and starts the development server.
+```python
+run_server("/path/to/wiki", host="0.0.0.0", port=8000, debug=True)
+```
 
 ## Route Handlers
 
-The file contains several route handler functions that process HTTP requests:
+The module includes several route handler functions (referenced but not fully shown in the provided code):
 
-### get_wiki_structure
-Analyzes the wiki directory structure for navigation purposes.
+- `index`: Handles the main wiki index page
+- `search_json`: Provides JSON search API endpoint
+- `view_page`: Renders individual wiki pages
+- `chat_page`: Handles chat interface functionality
+- `api_chat`: Provides chat API endpoint
 
-### extract_title
-Extracts page titles from markdown content.
+## Utility Functions
 
-### render_markdown
-Converts markdown content to HTML for display.
-
-### build_breadcrumb
-Generates navigation breadcrumbs for wiki pages.
-
-### index
-Handles the root route for the wiki homepage.
-
-### search_json
-Provides JSON search functionality for wiki content.
-
-### view_page
-Renders individual wiki pages from markdown files.
-
-### chat_page
-Handles the chat interface route.
-
-### api_chat
-Processes chat API requests with streaming responses.
-
-## Streaming Support
-
-The application includes several utility functions for handling asynchronous streaming:
-
-### stream_async_generator
-Converts async generators to synchronous streams for Flask responses.
-
-### run_async
-Executes async functions in a separate thread.
-
-### collect
-Collects streaming responses for processing.
+- `get_wiki_structure`: Extracts the structure of the wiki directory
+- `extract_title`: Extracts title from markdown content
+- `render_markdown`: Converts markdown content to HTML
+- `build_breadcrumb`: Creates navigation breadcrumbs
+- `stream_async_generator`: Handles streaming of asynchronous content
+- `run_async`: Executes async functions in the Flask context
+- `collect`: Collects streaming responses
+- `format_sources`: Formats source references for display
+- `build_prompt_with_history`: Constructs prompts with conversation history
 
 ## Related Components
 
-This file integrates with several other components of the DeepWiki system:
+This module integrates with several other components:
 
-- **VectorStore**: Used for semantic search capabilities
-- **Embedding providers**: For generating content embeddings
-- **LLM providers**: For chat functionality
-- **Configuration system**: Via [get_config](../config.md) for application settings
-- **Logging system**: Via get_logger for application logging
+- [VectorStore](../core/vectorstore.md): For semantic search capabilities
+- LLM providers: For chat functionality through get_cached_llm_provider
+- Embedding providers: For content vectorization via get_embedding_provider
+- Configuration system: Through [get_config](../config.md) for application settings
+- Logging system: Via [get_logger](../logging.md) for application logging
 
-## Usage Example
-
-```python
-from local_deepwiki.web.app import create_app, run_server
-
-# Create app programmatically
-app = create_app("/path/to/wiki")
-
-# Or run server directly
-run_server("/path/to/wiki", host="0.0.0.0", port=8080, debug=True)
-```
-
-The web application provides a complete interface for browsing wiki content, performing searches, and interacting with AI chat functionality through a web browser.
+The Flask application serves as the main entry point for the web interface, coordinating between the wiki content management, search functionality, and AI-powered chat features.
 
 ## API Reference
 
@@ -114,7 +84,7 @@ def get_wiki_structure(wiki_path: Path) -> tuple[list, dict, list | None]
 Get wiki pages and sections, with optional hierarchical TOC.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `wiki_path` | `Path` | - | - |
 
@@ -130,7 +100,7 @@ def extract_title(md_file: Path) -> str
 Extract title from markdown file.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `md_file` | `Path` | - | - |
 
@@ -146,7 +116,7 @@ def render_markdown(content: str) -> str
 Render markdown to HTML.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `content` | `str` | - | - |
 
@@ -162,7 +132,7 @@ def build_breadcrumb(wiki_path: Path, current_path: str) -> str
 Build breadcrumb navigation HTML with clickable links.  For a path like 'files/src/local_deepwiki/core/chunker.md', generates: Home > Files > src > local_deepwiki > core > chunker  Each segment links to its index.md if one exists in that folder.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `wiki_path` | `Path` | - | - |
 | `current_path` | `str` | - | - |
@@ -203,7 +173,7 @@ def view_page(path: str)
 View a wiki page.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `path` | `str` | - | - |
 
@@ -217,7 +187,7 @@ def stream_async_generator(async_gen_factory: Callable[[], AsyncIterator[str]]) 
 Bridge an async generator to a sync generator using a queue.  This allows streaming async results through Flask's synchronous response handling.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `async_gen_factory` | `Callable[[], AsyncIterator[str]]` | - | A callable that returns an async iterator. |
 
@@ -251,7 +221,7 @@ def format_sources(search_results: list[Any]) -> list[dict[str, Any]]
 Format search results as source citations.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `search_results` | `list[Any]` | - | List of [SearchResult](../models.md) objects. |
 
@@ -267,7 +237,7 @@ def build_prompt_with_history(question: str, history: list[dict[str, str]], cont
 Build a prompt that includes conversation history for follow-up questions.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `question` | `str` | - | The current question. |
 | `history` | `list[dict[str, str]]` | - | Previous Q&A exchanges. |
@@ -338,7 +308,7 @@ async def on_progress(progress: ResearchProgress) -> None
 ```
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `progress` | [`ResearchProgress`](../models.md) | - | - |
 
@@ -354,7 +324,7 @@ def create_app(wiki_path: str | Path) -> Flask
 Create Flask app with wiki path configured.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `wiki_path` | `str | Path` | - | - |
 
@@ -370,7 +340,7 @@ def run_server(wiki_path: str | Path, host: str = "127.0.0.1", port: int = 8080,
 Run the wiki web server.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `wiki_path` | `str | Path` | - | - |
 | `host` | `str` | `"127.0.0.1"` | - |
@@ -500,3 +470,8 @@ flowchart TD
 ## Relevant Source Files
 
 - `src/local_deepwiki/web/app.py:32-67`
+
+## See Also
+
+- [test_web](../../../tests/test_web.md) - uses this
+- [test_search](../../../tests/test_search.md) - uses this

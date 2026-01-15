@@ -1,209 +1,92 @@
-# File Overview
+# test_diagrams.py
 
-This file contains unit tests for various diagram generation functions within the `local_deepwiki.generators.diagrams` module. The tests cover functions that generate class diagrams, dependency graphs, module overviews, language pie charts, and sequence diagrams from code chunks and import information.
+## File Overview
 
-# Classes
+This file contains comprehensive test coverage for the diagram generation functionality in the local_deepwiki project. It tests various diagram generation functions including class diagrams, dependency graphs, sequence diagrams, module overviews, and utility functions for parsing and processing code structures.
 
-## TestSanitizeMermaidName
+## Test Classes
 
-Tests for the [`sanitize_mermaid_name`](../src/local_deepwiki/generators/diagrams.md) function, which ensures names used in Mermaid diagrams are valid.
+### TestGenerateModuleOverview
 
-## TestExtractClassAttributes
+Tests the [generate_module_overview](../src/local_deepwiki/generators/diagrams.md) function which creates visual representations of module structures.
 
-Tests for the `_extract_class_attributes` function, which extracts attributes from class definitions.
+**Key Test Methods:**
+- `test_generates_diagram()` - Verifies that module overview diagrams are properly generated from [IndexStatus](../src/local_deepwiki/models.md) data containing file information, languages, and repository statistics
 
-## TestExtractMethodSignature
+### TestGenerateClassDiagram
 
-Tests for the `_extract_method_signature` function, which extracts method signatures from code.
+Tests the [generate_class_diagram](../src/local_deepwiki/generators/diagrams.md) function for creating UML-style class diagrams from code chunks.
 
-## TestGenerateClassDiagram
+**Key Test Methods:**
+- `test_generates_diagram_with_class()` - Validates diagram generation when processing [CodeChunk](../src/local_deepwiki/models.md) objects containing class definitions with methods
 
-Tests for the [`generate_class_diagram`](../src/local_deepwiki/generators/diagrams.md) function, which generates Mermaid class diagrams from code chunks.
+### TestPathToModule
 
-### Methods
+Tests the _path_to_module utility function for converting file paths to module names.
 
-- `test_generates_diagram_with_class`: Tests diagram generation with a single class.
-- `test_generates_diagram_with_multiple_classes`: Tests diagram generation with multiple classes.
-- `test_handles_inheritance`: Tests diagram generation with class inheritance.
-- `test_handles_method_signatures`: Tests diagram generation with method signatures.
-- `test_handles_attributes`: Tests diagram generation with class attributes.
+**Key Test Methods:**
+- `test_converts_simple_path()` - Verifies conversion of standard Python file paths to module names
+- `test_skips_init_files()` - Ensures `__init__.py` files return None as expected
+- `test_skips_non_python()` - Confirms non-Python files are properly filtered out
 
-## TestGenerateDependencyGraph
+### TestGenerateSequenceDiagram
 
-Tests for the [`generate_dependency_graph`](../src/local_deepwiki/generators/diagrams.md) function, which generates Mermaid flowcharts showing module dependencies.
+Tests the [generate_sequence_diagram](../src/local_deepwiki/generators/diagrams.md) function for creating sequence diagrams from call graphs.
 
-### Methods
+**Key Test Methods:**
+- `test_generates_sequence()` - Validates sequence diagram generation from call graph dictionaries
+- `test_returns_none_for_empty()` - Ensures proper handling of empty call graphs
 
-- `test_generates_flowchart`: Tests basic flowchart generation from code chunks.
-- `test_handles_multiple_imports`: Tests handling of multiple import statements.
+## Test Methods
 
-## TestGenerateModuleOverview
+### test_external_dependencies_shown
 
-Tests for the [`generate_module_overview`](../src/local_deepwiki/generators/diagrams.md) function, which generates Mermaid diagrams showing the structure of a module.
+Tests dependency graph generation with external dependencies visible.
 
-### Methods
+**Parameters tested:**
+- `chunks` - List of [CodeChunk](../src/local_deepwiki/models.md) objects containing import statements
+- `show_external=True` - Flag to include external dependencies in the diagram
 
-- `test_generates_diagram`: Tests module overview generation from index status data.
+### test_external_dependencies_hidden
 
-## TestPathToModule
+Tests dependency graph generation with external dependencies filtered out.
 
-Tests for the `_path_to_module` function, which converts file paths to module names.
+**Parameters tested:**
+- `chunks` - List of [CodeChunk](../src/local_deepwiki/models.md) objects with import statements
+- `show_external=False` - Flag to exclude external dependencies
 
-### Methods
+## Imported Components
 
-- `test_converts_simple_path`: Tests basic path conversion.
-- `test_skips_init_files`: Tests that `__init__.py` files return `None`.
-- `test_skips_non_python`: Tests that non-Python files return `None`.
+This test file works with the following components from `local_deepwiki.generators.diagrams`:
 
-## TestGenerateSequenceDiagram
+**Data Classes:**
+- [ClassInfo](../src/local_deepwiki/generators/diagrams.md) - Represents class structure information
 
-Tests for the [`generate_sequence_diagram`](../src/local_deepwiki/generators/diagrams.md) function, which generates Mermaid sequence diagrams from call graphs.
+**Utility Functions:**
+- _extract_class_attributes - Extracts class attributes from code
+- _extract_method_signature - Parses method signatures
+- _find_circular_dependencies - Identifies circular import dependencies
+- _module_to_wiki_path - Converts module names to wiki paths
+- _parse_external_import - Parses external import statements
+- _parse_import_line - Parses individual import lines
+- _path_to_module - Converts file paths to module names
+- [sanitize_mermaid_name](../src/local_deepwiki/generators/diagrams.md) - Sanitizes names for Mermaid diagram compatibility
 
-### Methods
+**Diagram Generation Functions:**
+- [generate_class_diagram](../src/local_deepwiki/generators/diagrams.md) - Creates UML class diagrams
+- [generate_deep_research_sequence](../src/local_deepwiki/generators/diagrams.md) - Generates research workflow sequences
+- [generate_dependency_graph](../src/local_deepwiki/generators/diagrams.md) - Creates module dependency visualizations
+- [generate_indexing_sequence](../src/local_deepwiki/generators/diagrams.md) - Generates indexing workflow diagrams
+- [generate_language_pie_chart](../src/local_deepwiki/generators/diagrams.md) - Creates language distribution charts
+- [generate_module_overview](../src/local_deepwiki/generators/diagrams.md) - Generates module structure overviews
+- [generate_sequence_diagram](../src/local_deepwiki/generators/diagrams.md) - Creates sequence diagrams from call graphs
+- [generate_wiki_generation_sequence](../src/local_deepwiki/generators/diagrams.md) - Generates wiki creation workflows
+- [generate_workflow_sequences](../src/local_deepwiki/generators/diagrams.md) - Creates various workflow diagrams
 
-- `test_generates_sequence`: Tests sequence diagram generation from a call graph.
-- `test_returns_none_for_empty_call_graph`: Tests that an empty call graph returns `None`.
-
-# Functions
-
-## sanitize_mermaid_name
-
-Sanitizes names for use in Mermaid diagrams by replacing invalid characters.
-
-### Parameters
-
-- `name` (str): The name to sanitize.
-
-### Returns
-
-- `str`: The sanitized name.
-
-## generate_class_diagram
-
-Generates a Mermaid class diagram from a list of code chunks.
-
-### Parameters
-
-- `chunks` (list[CodeChunk]): The code chunks to analyze.
-
-### Returns
-
-- `str`: The Mermaid diagram as a string.
-
-## generate_dependency_graph
-
-Generates a Mermaid flowchart showing dependencies between modules.
-
-### Parameters
-
-- `chunks` (list[CodeChunk]): The code chunks containing import statements.
-
-### Returns
-
-- `str`: The Mermaid flowchart as a string.
-
-## generate_module_overview
-
-Generates a Mermaid diagram showing the structure of a module based on index status.
-
-### Parameters
-
-- `status` (IndexStatus): The index status information.
-
-### Returns
-
-- `str`: The Mermaid diagram as a string.
-
-## generate_language_pie_chart
-
-Generates a Mermaid pie chart showing the distribution of languages in a repository.
-
-### Parameters
-
-- `languages` (dict[str, int]): A dictionary mapping language names to counts.
-
-### Returns
-
-- `str`: The Mermaid pie chart as a string.
-
-## generate_sequence_diagram
-
-Generates a Mermaid sequence diagram from a call graph.
-
-### Parameters
-
-- `call_graph` (dict[str, list[str]]): A dictionary mapping function names to their called functions.
-- `main_function` (str): The [main](../src/local_deepwiki/export/html.md) function to start the diagram from.
-
-### Returns
-
-- `str`: The Mermaid sequence diagram as a string or `None` if the call graph is empty.
-
-## _extract_class_attributes
-
-Extracts attributes from a class definition.
-
-### Parameters
-
-- `class_def` (str): The class definition string.
-
-### Returns
-
-- `list[str]`: A list of attribute names.
-
-## _extract_method_signature
-
-Extracts a method signature from a method definition.
-
-### Parameters
-
-- `method_def` (str): The method definition string.
-
-### Returns
-
-- `str`: The method signature.
-
-## _find_circular_dependencies
-
-Finds circular dependencies in a list of import statements.
-
-### Parameters
-
-- `imports` (list[str]): A list of import statements.
-
-### Returns
-
-- `list[tuple[str, str]]`: A list of tuples representing circular dependencies.
-
-## _path_to_module
-
-Converts a file path to a module name.
-
-### Parameters
-
-- `path` (str): The file path.
-
-### Returns
-
-- `str | None`: The module name or `None` if the path is not valid.
-
-## _parse_import_line
-
-Parses an import line to extract the module name.
-
-### Parameters
-
-- `line` (str): The import line.
-
-### Returns
-
-- `str | None`: The module name or `None` if parsing fails.
-
-# Usage Examples
-
-## Generating a Class Diagram
+## Usage Examples
 
 ```python
+# Testing class diagram generation
 chunks = [
     CodeChunk(
         id="1",
@@ -217,46 +100,13 @@ chunks = [
         metadata={},
     )
 ]
-diagram = generate_class_diagram(chunks)
-```
+# Function would be called in actual implementation
 
-## Generating a Dependency Graph
+# Testing path conversion
+result = _path_to_module("src/mypackage/core/parser.py")
+assert "parser" in result
 
-```python
-chunks = [
-    CodeChunk(
-        id="1",
-        file_path="src/local_deepwiki/core/parser.py",
-        content="from local_deepwiki.models import ChunkType",
-        chunk_type=ChunkType.IMPORT,
-        language=Language.PYTHON,
-        start_line=1,
-        end_line=1,
-    )
-]
-graph = generate_dependency_graph(chunks)
-```
-
-## Generating a Module Overview
-
-```python
-status = IndexStatus(
-    repo_path="/test",
-    indexed_at=1234567890.0,
-    total_files=3,
-    total_chunks=10,
-    languages={"python": 3},
-    files=[
-        FileInfo(path="src/core/parser.py", language="python", hash="a", chunk_count=5, size_bytes=100, last_modified=1234567890.0),
-        FileInfo(path="src/core/chunker.py", language="python", hash="b", chunk_count=3, size_bytes=150, last_modified=1234567890.0),
-    ]
-)
-overview = generate_module_overview(status)
-```
-
-## Generating a Sequence Diagram
-
-```python
+# Testing sequence diagram generation
 call_graph = {
     "main": ["process", "validate"],
     "process": ["transform"],
@@ -266,12 +116,7 @@ call_graph = {
 diagram = generate_sequence_diagram(call_graph, "main")
 ```
 
-# Related Components
-
-This file works with the following components:
-
-- `local_deepwiki.generators.diagrams` module: Contains the actual diagram generation functions.
-- `local_deepwiki.models`: Provides data models like `ChunkType`, `CodeChunk`, `Language`, `IndexStatus`, and `FileInfo` used in tests.
+The test file uses pytest framework and covers various scenarios including edge cases, error handling, and different configuration options for the diagram generation system.
 
 ## API Reference
 
@@ -679,16 +524,250 @@ def test_auto_selects_entry_point()
 Test auto-selects entry point when not specified.
 
 
+### class `TestWorkflowSequenceDiagrams`
+
+Tests for workflow-specific sequence diagram generators.
+
+**Methods:**
+
+#### `test_indexing_sequence_valid_mermaid`
+
+```python
+def test_indexing_sequence_valid_mermaid()
+```
+
+Test indexing sequence generates valid Mermaid.
+
+#### `test_indexing_sequence_shows_loop`
+
+```python
+def test_indexing_sequence_shows_loop()
+```
+
+Test indexing sequence contains loop for file batches.
+
+#### `test_wiki_generation_sequence_valid_mermaid`
+
+```python
+def test_wiki_generation_sequence_valid_mermaid()
+```
+
+Test wiki generation sequence is valid Mermaid.
+
+#### `test_wiki_generation_sequence_has_parallel`
+
+```python
+def test_wiki_generation_sequence_has_parallel()
+```
+
+Test wiki generation sequence contains parallel operations.
+
+#### `test_wiki_generation_sequence_shows_phases`
+
+```python
+def test_wiki_generation_sequence_shows_phases()
+```
+
+Test wiki generation shows all generation phases.
+
+#### `test_deep_research_sequence_valid_mermaid`
+
+```python
+def test_deep_research_sequence_valid_mermaid()
+```
+
+Test deep research sequence is valid Mermaid.
+
+#### `test_deep_research_sequence_shows_all_steps`
+
+```python
+def test_deep_research_sequence_shows_all_steps()
+```
+
+Test deep research shows all 5 steps.
+
+#### `test_deep_research_sequence_has_parallel`
+
+```python
+def test_deep_research_sequence_has_parallel()
+```
+
+Test deep research contains parallel operations.
+
+#### `test_workflow_sequences_contains_all`
+
+```python
+def test_workflow_sequences_contains_all()
+```
+
+Test combined workflow has all three sequences.
+
+#### `test_workflow_sequences_contains_all_diagrams`
+
+```python
+def test_workflow_sequences_contains_all_diagrams()
+```
+
+Test combined workflow includes all diagram content.
+
+#### `test_all_sequences_close_mermaid_blocks`
+
+```python
+def test_all_sequences_close_mermaid_blocks()
+```
+
+Test all sequences properly close mermaid code blocks.
+
+
+### class `TestEnhancedDependencyGraph`
+
+Tests for enhanced dependency graph features.
+
+**Methods:**
+
+#### `test_subgraph_grouping`
+
+```python
+def test_subgraph_grouping()
+```
+
+Test modules are grouped by directory in subgraphs.
+
+#### `test_clickable_links`
+
+```python
+def test_clickable_links()
+```
+
+Test click handlers are added when wiki_base_path provided.
+
+#### `test_no_clickable_links_without_base_path`
+
+```python
+def test_no_clickable_links_without_base_path()
+```
+
+Test click handlers are not added when wiki_base_path is empty.
+
+#### `test_external_dependencies_shown`
+
+```python
+def test_external_dependencies_shown()
+```
+
+Test external deps shown with different styling when enabled.
+
+#### `test_external_dependencies_hidden`
+
+```python
+def test_external_dependencies_hidden()
+```
+
+Test external deps hidden when show_external=False.
+
+#### `test_max_external_limit`
+
+```python
+def test_max_external_limit()
+```
+
+Test max_external limits number of external deps shown.
+
+
+### class `TestParseExternalImport`
+
+Tests for _parse_external_import function.
+
+**Methods:**
+
+#### `test_parses_from_import`
+
+```python
+def test_parses_from_import()
+```
+
+Test parsing 'from X import Y' style.
+
+#### `test_parses_import_statement`
+
+```python
+def test_parses_import_statement()
+```
+
+Test parsing 'import X' style.
+
+#### `test_parses_nested_import`
+
+```python
+def test_parses_nested_import()
+```
+
+Test parsing nested module imports.
+
+#### `test_returns_none_for_invalid`
+
+```python
+def test_returns_none_for_invalid()
+```
+
+Test returns None for non-import lines.
+
+
+### class `TestModuleToWikiPath`
+
+Tests for _module_to_wiki_path function.
+
+**Methods:**
+
+#### `test_simple_module`
+
+```python
+def test_simple_module()
+```
+
+Test simple module path conversion.
+
+#### `test_nested_module`
+
+```python
+def test_nested_module()
+```
+
+Test nested module path conversion.
+
+#### `test_single_level_module`
+
+```python
+def test_single_level_module()
+```
+
+Test single-level module path conversion.
+
+
 
 ## Class Diagram
 
 ```mermaid
 classDiagram
     class TestClassInfo {
+        <<abstract>>
         +test_basic_class_info()
         +test_abstract_class()
     }
+    class TestEnhancedDependencyGraph {
+        +test_subgraph_grouping()
+        +test_clickable_links()
+        +test_no_clickable_links_without_base_path()
+        +test_external_dependencies_shown()
+        +test_external_dependencies_hidden()
+        +test_max_external_limit()
+    }
     class TestExtractClassAttributes {
+        +name: str
+        +count: int
+        -_hidden: str
+        +value
+        -_private
         +test_extracts_type_annotations()
         +test_extracts_init_assignments()
         -__init__()
@@ -696,7 +775,7 @@ classDiagram
     }
     class TestExtractMethodSignature {
         +test_extracts_return_type()
-        +process()
+        +process() -> bool
         +test_extracts_parameters()
         +test_excludes_self()
         +test_limits_parameters()
@@ -708,6 +787,7 @@ classDiagram
         +test_no_cycle()
     }
     class TestGenerateClassDiagram {
+        <<dataclass>>
         +test_generates_diagram_with_class()
         +method()
         +test_returns_none_for_empty_classes()
@@ -735,6 +815,18 @@ classDiagram
         +test_returns_none_for_empty()
         +test_auto_selects_entry_point()
     }
+    class TestModuleToWikiPath {
+        +test_simple_module()
+        +test_nested_module()
+        +test_single_level_module()
+    }
+    class TestParseExternalImport {
+        +test_parses_from_import()
+        +test_parses_import_statement()
+        +test_parses_nested_import()
+        +test_returns_none_for_invalid()
+        +func()
+    }
     class TestParseImportLine {
         +test_parses_from_import()
         +test_ignores_external()
@@ -754,6 +846,19 @@ classDiagram
         +test_replaces_colons()
         +test_prefixes_digit()
     }
+    class TestWorkflowSequenceDiagrams {
+        +test_indexing_sequence_valid_mermaid()
+        +test_indexing_sequence_shows_loop()
+        +test_wiki_generation_sequence_valid_mermaid()
+        +test_wiki_generation_sequence_has_parallel()
+        +test_wiki_generation_sequence_shows_phases()
+        +test_deep_research_sequence_valid_mermaid()
+        +test_deep_research_sequence_shows_all_steps()
+        +test_deep_research_sequence_has_parallel()
+        +test_workflow_sequences_contains_all()
+        +test_workflow_sequences_contains_all_diagrams()
+        +test_all_sequences_close_mermaid_blocks()
+    }
 ```
 
 ## Call Graph
@@ -763,71 +868,70 @@ flowchart TD
     N0[ClassInfo]
     N1[CodeChunk]
     N2[IndexStatus]
-    N3[TestGenerateClassDiagram.te...]
+    N3[TestEnhancedDependencyGraph...]
     N4[TestGenerateClassDiagram.te...]
     N5[TestGenerateClassDiagram.te...]
     N6[TestGenerateClassDiagram.te...]
     N7[TestGenerateClassDiagram.te...]
-    N8[TestGenerateDependencyGraph...]
+    N8[TestGenerateClassDiagram.te...]
     N9[TestGenerateDependencyGraph...]
-    N10[TestGenerateLanguagePieChar...]
+    N10[TestGenerateDependencyGraph...]
     N11[TestGenerateLanguagePieChar...]
-    N12[TestGenerateModuleOverview....]
+    N12[TestGenerateLanguagePieChar...]
     N13[TestGenerateModuleOverview....]
-    N14[TestSanitizeMermaidName.tes...]
-    N15[TestSanitizeMermaidName.tes...]
-    N16[TestSanitizeMermaidName.tes...]
-    N17[TestSanitizeMermaidName.tes...]
-    N18[TestSanitizeMermaidName.tes...]
-    N19[_extract_class_attributes]
-    N20[_extract_method_signature]
-    N21[_find_circular_dependencies]
-    N22[_parse_import_line]
-    N23[_path_to_module]
-    N24[generate_class_diagram]
-    N25[generate_dependency_graph]
-    N26[generate_language_pie_chart]
-    N27[generate_module_overview]
-    N28[generate_sequence_diagram]
+    N14[TestGenerateModuleOverview....]
+    N15[_extract_class_attributes]
+    N16[_extract_method_signature]
+    N17[_find_circular_dependencies]
+    N18[_module_to_wiki_path]
+    N19[_parse_external_import]
+    N20[_parse_import_line]
+    N21[_path_to_module]
+    N22[generate_class_diagram]
+    N23[generate_deep_research_sequ...]
+    N24[generate_dependency_graph]
+    N25[generate_language_pie_chart]
+    N26[generate_module_overview]
+    N27[generate_sequence_diagram]
+    N28[generate_wiki_generation_se...]
     N29[sanitize_mermaid_name]
-    N14 --> N29
-    N15 --> N29
-    N18 --> N29
-    N16 --> N29
-    N17 --> N29
+    N4 --> N1
+    N4 --> N22
+    N6 --> N1
+    N6 --> N22
+    N7 --> N1
+    N7 --> N22
+    N5 --> N1
+    N5 --> N22
+    N8 --> N1
+    N8 --> N22
+    N9 --> N1
+    N9 --> N24
+    N10 --> N1
+    N10 --> N24
+    N13 --> N2
+    N13 --> N26
+    N14 --> N2
+    N14 --> N26
+    N11 --> N2
+    N11 --> N25
+    N12 --> N2
+    N12 --> N25
     N3 --> N1
     N3 --> N24
-    N5 --> N1
-    N5 --> N24
-    N6 --> N1
-    N6 --> N24
-    N4 --> N1
-    N4 --> N24
-    N7 --> N1
-    N7 --> N24
-    N8 --> N1
-    N8 --> N25
-    N9 --> N1
-    N9 --> N25
-    N12 --> N2
-    N12 --> N27
-    N13 --> N2
-    N13 --> N27
-    N10 --> N2
-    N10 --> N26
-    N11 --> N2
-    N11 --> N26
     classDef func fill:#e1f5fe
-    class N0,N1,N2,N19,N20,N21,N22,N23,N24,N25,N26,N27,N28,N29 func
+    class N0,N1,N2,N15,N16,N17,N18,N19,N20,N21,N22,N23,N24,N25,N26,N27,N28,N29 func
     classDef method fill:#fff3e0
-    class N3,N4,N5,N6,N7,N8,N9,N10,N11,N12,N13,N14,N15,N16,N17,N18 method
+    class N3,N4,N5,N6,N7,N8,N9,N10,N11,N12,N13,N14 method
 ```
 
 ## Relevant Source Files
 
-- `tests/test_diagrams.py:22-51`
+- `tests/test_diagrams.py:28-57`
 
 ## See Also
 
 - [diagrams](../src/local_deepwiki/generators/diagrams.md) - dependency
-- [test_api_docs](test_api_docs.md) - shares 2 dependencies
+- [models](../src/local_deepwiki/models.md) - dependency
+- [wiki](../src/local_deepwiki/generators/wiki.md) - shares 3 dependencies
+- [crosslinks](../src/local_deepwiki/generators/crosslinks.md) - shares 2 dependencies

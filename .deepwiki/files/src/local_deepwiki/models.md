@@ -2,209 +2,120 @@
 
 ## File Overview
 
-This file contains the core data models and type definitions for the local_deepwiki package. It defines various data structures using Pydantic for validation, enums for type safety, and protocols for interface definitions. The models cover wiki generation, code analysis, research functionality, and progress tracking.
+This file contains the core data models and type definitions for the local_deepwiki system. It defines data structures for representing code chunks, wiki pages, search results, research processes, and various status enums using Pydantic models and Python enums.
 
-## Dependencies
+## Imports
 
-- **json**: Standard library for JSON operations
-- **enum**: Standard library for enumeration types
-- **pathlib**: Standard library for path operations
-- **typing**: Standard library for type hints and protocols
-- **pydantic**: External library for data validation and settings management
+The module depends on:
+- `json` - Standard JSON handling
+- `enum.Enum` - For enumeration types
+- `pathlib.Path` - For file path operations
+- `typing` - Type hints including `Any` and `Protocol`
+- `pydantic` - `BaseModel` and `Field` for data validation
 
 ## Classes
 
 ### ProgressCallback
 
-```python
-class ProgressCallback(Protocol)
-```
-
-A protocol defining the interface for progress callback functions. This establishes a contract for functions that handle progress updates throughout the application.
+A Protocol class that defines the interface for progress callback functions.
 
 ### Language
 
-```python
-class Language(Enum)
-```
-
-An enumeration that defines supported programming languages for code analysis and documentation generation.
+An Enum that represents supported programming languages in the system.
 
 ### ChunkType
 
-```python
-class ChunkType(Enum)
-```
-
-An enumeration that categorizes different types of code chunks that can be analyzed and processed.
+An Enum that categorizes different types of code chunks that can be processed.
 
 ### CodeChunk
 
-```python
-class CodeChunk(BaseModel)
-```
-
-A Pydantic model representing a segment of code with associated metadata. This model stores information about code structure and content for analysis purposes.
+A Pydantic model representing a chunk of code with associated metadata. This is a fundamental data structure for representing parsed code segments.
 
 ### FileInfo
 
-```python
-class FileInfo(BaseModel)
-```
-
-A Pydantic model that contains metadata about files in the codebase, including their properties and analysis status.
+A Pydantic model that stores information about files in the system, including metadata and processing status.
 
 ### IndexStatus
 
-```python
-class IndexStatus(Enum)
-```
-
-An enumeration representing the various states of the indexing process for files and code chunks.
+An Enum representing the various states a file or component can be in during the indexing process.
 
 ### WikiPage
 
-```python
-class WikiPage(BaseModel)
-```
-
-A Pydantic model representing a single wiki page with its content, metadata, and relationships to other pages.
+A Pydantic model representing a wiki page with content and metadata. This is the core structure for generated documentation pages.
 
 ### WikiStructure
 
-```python
-class WikiStructure(BaseModel)
-```
-
-A Pydantic model that defines the overall structure and organization of the generated wiki documentation.
+A Pydantic model that defines the overall structure and organization of the wiki system.
 
 ### SearchResult
 
-```python
-class SearchResult(BaseModel)
-```
-
-A Pydantic model representing search results within the wiki system, containing matched content and relevance information.
+A Pydantic model representing search results returned from queries against the wiki content.
 
 ### WikiPageStatus
 
-```python
-class WikiPageStatus(Enum)
-```
-
-An enumeration defining the various states a wiki page can be in during the generation and update process.
+An Enum indicating the current status of wiki page generation or processing.
 
 ### WikiGenerationStatus
 
-```python
-class WikiGenerationStatus(BaseModel)
-```
-
-A Pydantic model that tracks the overall status and progress of wiki generation operations.
+An Enum representing the overall status of the wiki generation process.
 
 ### ResearchStepType
 
-```python
-class ResearchStepType(Enum)
-```
-
-An enumeration categorizing different types of research steps that can be performed during deep research operations.
+An Enum that categorizes different types of research steps in the deep research process.
 
 ### ResearchStep
 
-```python
-class ResearchStep(BaseModel)
-```
-
-A Pydantic model representing an individual step in the research process, with its type, content, and results.
+A Pydantic model representing an individual step in the research process, with type and associated data.
 
 ### SubQuestion
 
-```python
-class SubQuestion(BaseModel)
-```
-
-A Pydantic model for sub-questions generated during the research process to break down complex queries.
+A Pydantic model representing sub-questions generated during the research process.
 
 ### SourceReference
 
-```python
-class SourceReference(BaseModel)
-```
-
-A Pydantic model that represents references to source materials and code locations used in research and documentation.
+A Pydantic model that represents references to source materials or code locations.
 
 ### DeepResearchResult
 
-```python
-class DeepResearchResult(BaseModel)
-```
-
-A Pydantic model containing the comprehensive results of deep research operations, including findings, sources, and analysis.
+A Pydantic model containing the complete results of a deep research operation, including findings and references.
 
 ### ResearchProgressType
 
-```python
-class ResearchProgressType(Enum)
-```
-
-An enumeration defining different types of progress updates that can occur during research operations.
+An Enum representing different types of progress updates during research operations.
 
 ### ResearchProgress
 
-```python
-class ResearchProgress(BaseModel)
-```
-
-A Pydantic model for tracking and reporting progress during research operations, with type-specific information.
+A Pydantic model for tracking and reporting progress during research operations.
 
 ## Usage Examples
 
-### Working with Language Enum
-
 ```python
-from local_deepwiki.models import Language
+from local_deepwiki.models import CodeChunk, Language, ChunkType
 
-# Check supported language
-if language_type == Language.PYTHON:
-    process_python_file(file_path)
-```
-
-### Creating Code Chunks
-
-```python
-from local_deepwiki.models import CodeChunk, ChunkType
-
-# Create a code chunk instance
+# Create a code chunk
 chunk = CodeChunk(
-    content="def example_function():\n    pass",
-    chunk_type=ChunkType.FUNCTION,
-    # Additional fields as defined in the model
+    content="def example(): pass",
+    language=Language.PYTHON,
+    chunk_type=ChunkType.FUNCTION
 )
-```
 
-### Progress Tracking
-
-```python
-from local_deepwiki.models import ResearchProgress, ResearchProgressType
-
-# Create progress update
-progress = ResearchProgress(
-    progress_type=ResearchProgressType.ANALYSIS_COMPLETE,
-    # Additional progress information
+# Create a wiki page
+page = WikiPage(
+    title="Example Documentation",
+    content="# Example\nThis is example content."
 )
 ```
 
 ## Related Components
 
-This models file serves as the foundation for the entire local_deepwiki package, with its types being used throughout:
+This models file serves as the foundation for the entire local_deepwiki system. The data structures defined here are used throughout the codebase for:
+- Code parsing and chunking operations
+- Wiki generation and management
+- Search functionality
+- Research and analysis processes
+- Progress tracking and status reporting
 
-- Code analysis components rely on CodeChunk and FileInfo models
-- Wiki generation uses WikiPage, WikiStructure, and related status enums
-- Research functionality depends on the research-related models
-- Progress tracking utilizes the ProgressCallback protocol and progress models
-
-The models provide type safety and data validation across the entire application through Pydantic's validation framework.
+The Pydantic models provide data validation and serialization capabilities, while the Enum classes ensure type safety for status and categorization fields throughout the system.
 
 ## API Reference
 
@@ -225,7 +136,7 @@ def __call__(msg: str, current: int, total: int) -> None
 Report progress.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `msg` | `str` | - | Description of current operation. |
 | `current` | `int` | - | Current step number. |
@@ -261,7 +172,7 @@ def to_vector_record(vector: list[float] | None = None) -> dict[str, Any]
 Convert chunk to a dict suitable for vector store storage.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `vector` | `list[float] | None` | `None` | Optional embedding vector to include in the record. |
 
@@ -525,14 +436,109 @@ flowchart TD
     class N0,N2 method
 ```
 
+## Usage Examples
+
+*Examples extracted from test files*
+
+### Test basic chunk to vector record conversion
+
+From `test_models.py::test_basic_conversion`:
+
+```python
+language=Language.PYTHON,
+    chunk_type=ChunkType.FUNCTION,
+    name="test_func",
+    content="def test_func(): pass",
+    start_line=1,
+    end_line=1,
+)
+
+record = chunk.to_vector_record()
+
+assert record["id"] == "test_id"
+```
+
+### Test basic chunk to vector record conversion
+
+From `test_models.py::test_basic_conversion`:
+
+```python
+chunk_type=ChunkType.FUNCTION,
+    name="test_func",
+    content="def test_func(): pass",
+    start_line=1,
+    end_line=1,
+)
+
+record = chunk.to_vector_record()
+
+assert record["id"] == "test_id"
+```
+
+### Test basic chunk to vector record conversion
+
+From `test_models.py::test_basic_conversion`:
+
+```python
+chunk = CodeChunk(
+    id="test_id",
+    file_path="src/main.py",
+    language=Language.PYTHON,
+    chunk_type=ChunkType.FUNCTION,
+    name="test_func",
+    content="def test_func(): pass",
+    start_line=1,
+    end_line=1,
+)
+
+record = chunk.to_vector_record()
+
+assert record["id"] == "test_id"
+```
+
+### Test conversion with vector embedding
+
+From `test_models.py::test_with_vector`:
+
+```python
+language=Language.PYTHON,
+    chunk_type=ChunkType.FUNCTION,
+    content="def test(): pass",
+    start_line=1,
+    end_line=1,
+)
+vector = [0.1, 0.2, 0.3]
+
+record = chunk.to_vector_record(vector=vector)
+
+assert record["vector"] == [0.1, 0.2, 0.3]
+```
+
+### Test conversion with vector embedding
+
+From `test_models.py::test_with_vector`:
+
+```python
+chunk_type=ChunkType.FUNCTION,
+    content="def test(): pass",
+    start_line=1,
+    end_line=1,
+)
+vector = [0.1, 0.2, 0.3]
+
+record = chunk.to_vector_record(vector=vector)
+
+assert record["vector"] == [0.1, 0.2, 0.3]
+```
+
 ## Relevant Source Files
 
 - `src/local_deepwiki/models.py:11-26`
 
 ## See Also
 
-- [test_parser](../../tests/test_parser.md) - uses this
-- [test_vectorstore](../../tests/test_vectorstore.md) - uses this
+- [source_refs](generators/source_refs.md) - uses this
 - [crosslinks](generators/crosslinks.md) - uses this
 - [test_models](../../tests/test_models.md) - uses this
 - [test_crosslinks](../../tests/test_crosslinks.md) - uses this
+- [api_docs](generators/api_docs.md) - uses this

@@ -1,118 +1,100 @@
-# File Overview
+# test_html_export.py
 
-This file contains tests for the HTML export functionality of the deepwiki tool. It verifies that wiki content is correctly converted to HTML, including proper directory structure, content rendering, navigation elements, and theme support.
+## File Overview
 
-# Classes
+This test module contains comprehensive unit tests for the HTML export functionality of the local_deepwiki system. It tests the [HtmlExporter](../src/local_deepwiki/export/html.md) class and related functions to ensure proper conversion of markdown wiki content to HTML format with navigation, theming, and search capabilities.
 
-## TestRenderMarkdown
+## Classes
 
-Tests for markdown rendering functionality.
+### TestRenderMarkdown
 
-### Methods
+Tests the markdown rendering functionality to ensure proper conversion of markdown syntax to HTML.
 
-- `test_basic_markdown()`: Tests basic markdown conversion to HTML
-- `test_code_blocks()`: Tests fenced code block rendering
-- `test_tables()`: Tests table rendering
+**Key Methods:**
+- `test_basic_markdown` - Verifies conversion of basic markdown elements like headers and paragraphs
+- `test_code_blocks` - Tests rendering of fenced code blocks with syntax highlighting
+- `test_tables` - Tests table rendering (method signature visible but implementation not shown)
 
-## TestExtractTitle
+### TestExtractTitle
 
-Tests for title extraction functionality.
+Tests the title extraction functionality from markdown content (class mentioned in imports but implementation not shown in provided code).
 
-### Methods
+### TestHtmlExporter
 
-- `test_h1_title(tmp_path: Path)`: Tests extracting title from H1 markdown header
-- `test_bold_title(tmp_path: Path)`: Tests extracting title from bold markdown text
-- `test_fallback_to_filename(tmp_path: Path)`: Tests fallback to filename when no title found
+The [main](../src/local_deepwiki/export/html.md) test class for the [HtmlExporter](../src/local_deepwiki/export/html.md) functionality, containing comprehensive tests for HTML export operations.
 
-## TestHtmlExporter
+**Key Methods:**
+- `sample_wiki` - Creates a sample wiki structure for testing with index, architecture, and modules directories
+- `test_export_creates_output_directory` - Verifies that the export process creates the specified output directory
+- `test_export_creates_html_files` - Tests that HTML files are generated for each markdown file (expects 4 files total)
+- `test_export_copies_search_json` - Ensures the search.json file is copied to the output directory
+- `test_html_contains_content` - Verifies HTML files contain properly converted markdown content
+- `test_html_contains_toc` - Tests that table of contents is included in HTML output
+- `test_html_has_relative_links` - Ensures proper relative linking between pages
+- `test_html_has_breadcrumb_for_nested_pages` - Tests breadcrumb navigation for nested pages
+- `test_html_has_theme_toggle` - Verifies theme toggle functionality is included
 
-Tests for the [HtmlExporter](../src/local_deepwiki/export/html.md) class functionality.
-
-### Methods
-
-- `sample_wiki(tmp_path: Path) -> Path`: Creates a sample wiki structure for testing
-- `test_export_creates_output_directory(sample_wiki: Path, tmp_path: Path)`: Tests that export creates the output directory
-- `test_export_creates_html_files(sample_wiki: Path, tmp_path: Path)`: Tests that export creates HTML files for each markdown file
-- `test_export_copies_search_json(sample_wiki: Path, tmp_path: Path)`: Tests that export copies search.json
-- `test_html_contains_content(sample_wiki: Path, tmp_path: Path)`: Tests that HTML files contain the converted content
-- `test_html_contains_toc(sample_wiki: Path, tmp_path: Path)`: Tests that HTML files contain the table of contents
-- `test_html_has_relative_links(sample_wiki: Path, tmp_path: Path)`: Tests that HTML files use relative links
-- `test_html_has_breadcrumb_for_nested_pages(sample_wiki: Path, tmp_path: Path)`: Tests that nested pages have breadcrumb navigation
-- `test_html_has_theme_toggle(sample_wiki: Path, tmp_path: Path)`: Tests that HTML files have theme toggle functionality
-
-## TestExportToHtml
+### TestExportToHtml
 
 Tests for the [export_to_html](../src/local_deepwiki/export/html.md) convenience function.
 
-### Methods
+**Key Methods:**
+- `simple_wiki` - Creates a minimal wiki structure for testing
+- `test_default_output_path` - Tests that the default output path follows the pattern `{wiki_path}_html`
 
-- `test_default_output_path(simple_wiki: Path)`: Tests that default output path is {wiki_path}_html
+## Functions
 
-# Functions
+The module tests several functions imported from `local_deepwiki.export.html`:
 
-## export_to_html
+- [`export_to_html`](../src/local_deepwiki/export/html.md) - Convenience function for exporting wiki content to HTML
+- [`extract_title`](../src/local_deepwiki/export/html.md) - Extracts titles from markdown content
+- [`render_markdown`](../src/local_deepwiki/export/html.md) - Converts markdown text to HTML
 
-Convenience function for exporting wiki to HTML.
+## Usage Examples
 
-### Parameters
-
-- `wiki_path: Path`: Path to the wiki directory
-- `output_path: Path | None`: Optional output directory path
-
-### Returns
-
-- `int`: Number of files exported
-
-# Usage Examples
-
-## Testing HTML Export
+### Testing HTML Export
 
 ```python
-# Test that export creates the output directory
-def test_export_creates_output_directory(self, sample_wiki: Path, tmp_path: Path):
-    output_path = tmp_path / "html_output"
-    exporter = HtmlExporter(sample_wiki, output_path)
-    exporter.export()
+# Create an HtmlExporter instance
+exporter = HtmlExporter(wiki_path, output_path)
 
-    assert output_path.exists()
-    assert output_path.is_dir()
+# Export the wiki
+count = exporter.export()
+
+# Verify output
+assert output_path.exists()
+assert count == 4  # Expected number of files
 ```
 
-## Testing HTML Content
-
-```python
-# Test that HTML files contain the converted content
-def test_html_contains_content(self, sample_wiki: Path, tmp_path: Path):
-    output_path = tmp_path / "html_output"
-    exporter = HtmlExporter(sample_wiki, output_path)
-    exporter.export()
-
-    html = (output_path / "index.html").read_text()
-    assert "Overview" in html
-    assert "Welcome to the wiki" in html
-    assert "<!DOCTYPE html>" in html
-```
-
-## Testing Markdown Rendering
+### Testing Markdown Rendering
 
 ```python
 # Test basic markdown conversion
-def test_basic_markdown(self):
-    md = "# Hello\n\nThis is a paragraph."
-    html = render_markdown(md)
-    assert "<h1" in html
-    assert "Hello" in html
-    assert "<p>" in html
+md = "# Hello\n\nThis is a paragraph."
+html = render_markdown(md)
+assert "<h1" in html
+assert "<p>" in html
 ```
 
-# Related Components
+## Test Structure
 
-This file works with the following components from `local_deepwiki.export.html`:
+The tests use pytest fixtures to create temporary wiki structures:
 
-- [`HtmlExporter`](../src/local_deepwiki/export/html.md): Main class for exporting wiki to HTML
-- [`export_to_html`](../src/local_deepwiki/export/html.md): Convenience function for exporting wiki to HTML
-- [`render_markdown`](../src/local_deepwiki/export/html.md): Function for converting markdown to HTML
-- [`extract_title`](../src/local_deepwiki/export/html.md): Function for extracting titles from markdown files
+- `sample_wiki` - Creates a complete wiki with nested directories and multiple markdown files
+- `simple_wiki` - Creates a minimal wiki for basic testing scenarios
+
+All tests use temporary directories (`tmp_path`) to ensure isolation and cleanup.
+
+## Related Components
+
+This test module works with the following components from `local_deepwiki.export.html`:
+
+- [HtmlExporter](../src/local_deepwiki/export/html.md) class - Main export functionality
+- [export_to_html](../src/local_deepwiki/export/html.md) function - Convenience [wrapper](../src/local_deepwiki/providers/base.md)
+- [extract_title](../src/local_deepwiki/export/html.md) function - Title extraction utility  
+- [render_markdown](../src/local_deepwiki/export/html.md) function - Markdown to HTML conversion
+
+The tests verify integration with the wiki structure including `toc.json` files and proper handling of nested directory structures.
 
 ## API Reference
 
@@ -400,7 +382,7 @@ Test that export returns a success message.
 ```mermaid
 classDiagram
     class TestExportToHtml {
-        +simple_wiki()
+        +simple_wiki() -> Path
         +test_default_output_path()
         +test_custom_output_path()
         +test_returns_success_message()
@@ -411,15 +393,15 @@ classDiagram
         +test_fallback_to_filename()
     }
     class TestHtmlExporter {
-        +sample_wiki()
-        +test_export_creates_output_directory()
-        +test_export_creates_html_files()
-        +test_export_copies_search_json()
-        +test_html_contains_content()
-        +test_html_contains_toc()
-        +test_html_has_relative_links()
-        +test_html_has_breadcrumb_for_nested_pages()
-        +test_html_has_theme_toggle()
+        +sample_wiki(tmp_path: Path) Path
+        +test_export_creates_output_directory(sample_wiki: Path, tmp_path: Path)
+        +test_export_creates_html_files(sample_wiki: Path, tmp_path: Path)
+        +test_export_copies_search_json(sample_wiki: Path, tmp_path: Path)
+        +test_html_contains_content(sample_wiki: Path, tmp_path: Path)
+        +test_html_contains_toc(sample_wiki: Path, tmp_path: Path)
+        +test_html_has_relative_links(sample_wiki: Path, tmp_path: Path)
+        +test_html_has_breadcrumb_for_nested_pages(sample_wiki: Path, tmp_path: Path)
+        +test_html_has_theme_toggle(sample_wiki: Path, tmp_path: Path)
     }
     class TestRenderMarkdown {
         +test_basic_markdown()
@@ -516,9 +498,10 @@ flowchart TD
 
 ## Relevant Source Files
 
-- `tests/test_html_export.py:16-47`
+- `tests/test_html_export.py:11-42`
 
 ## See Also
 
-- [html](../src/local_deepwiki/export/html.md) - dependency
-- [test_incremental_wiki](test_incremental_wiki.md) - shares 3 dependencies
+- [test_indexer](test_indexer.md) - shares 3 dependencies
+- [test_toc](test_toc.md) - shares 3 dependencies
+- [test_pdf_export](test_pdf_export.md) - shares 3 dependencies

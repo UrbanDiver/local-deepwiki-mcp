@@ -5,15 +5,15 @@ Local DeepWiki-style MCP server for private repository documentation
 
 ## Description
 
-Local DeepWiki MCP is a Model Context Protocol (MCP) server that generates and serves documentation for private code repositories. The system provides both a web interface for browsing documentation and command-line tools for exporting documentation in various formats including HTML and PDF.
+Local DeepWiki MCP is a Model Context Protocol (MCP) server that generates documentation for private code repositories. It provides both a server interface for MCP clients and a web application for browsing generated documentation, with support for multiple LLM providers including Ollama, OpenAI, and Anthropic.
 
 ## Key Features
 
-- **MCP Server Integration** - Implements a Model Context Protocol server with stdio communication for integration with MCP-compatible tools
-- **Multiple LLM Provider Support** - Configurable support for different language model providers including Ollama, OpenAI, and Anthropic through a plugin-based architecture
-- **Web Server Interface** - Built-in Flask web server for serving and browsing generated documentation with configurable host and port settings
-- **Repository Indexing** - Core indexing functionality that processes repository contents with configurable embedding providers for document search and retrieval
-- **Multiple Export Formats** - Command-line tools for exporting documentation to HTML and PDF formats, plus a file watcher for automated regeneration
+- **MCP Server Integration** - Runs as an MCP server with stdio communication for integration with MCP-compatible clients, as shown in the [main](files/src/local_deepwiki/export/html.md) server entry point
+- **Multiple [LLM Provider](files/src/local_deepwiki/providers/base.md) Support** - Configurable support for Ollama (with local hosting at localhost:11434), OpenAI, and Anthropic providers through the [LLMConfig](files/src/local_deepwiki/config.md) system
+- **Web Interface** - Built-in Flask web server (`deepwiki-serve`) that serves generated documentation at a configurable host and port
+- **Repository Indexing** - Core indexer that processes repository contents with configurable embedding providers (local or OpenAI) for document search and retrieval
+- **Multiple Export Formats** - Supports both HTML export (`deepwiki-export`) and PDF export (`deepwiki-export-pdf`) with a file watcher mode (`deepwiki-watch`) for continuous updates
 
 ## Technology Stack
 

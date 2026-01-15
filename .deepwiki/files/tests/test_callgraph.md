@@ -1,171 +1,118 @@
-# File Overview
+# test_callgraph.py
 
-This file contains test cases for the call graph extraction functionality in the `local_deepwiki` library. It tests various aspects of extracting function calls from code and generating call graphs, including support for Python, JavaScript, and Go languages.
+## File Overview
 
-# Classes
+This test file provides comprehensive test coverage for the call graph extraction functionality in the local_deepwiki system. It tests the ability to extract function call relationships from source code in multiple programming languages (Python, JavaScript, and Go) and generate Mermaid flowchart diagrams from the extracted call graphs.
 
-## TestCallGraphExtractor
+## Classes
 
-Test the CallGraphExtractor class.
+### TestIsBuiltinOrNoise
 
-### Methods
+Tests the filtering functionality for built-in functions and noise in call graphs.
 
-- `extractor` (fixture): Returns a new instance of CallGraphExtractor
-- `test_extract_from_simple_file`: Test extracting call graph from a simple Python file
+### TestExtractCallsPython
 
-## TestGetFileCallGraph
+Tests call extraction functionality specifically for Python code.
 
-Test the convenience function for getting file call graph.
+**Key Methods:**
+- `parser()` - Pytest fixture that returns a [CodeParser](../src/local_deepwiki/core/parser.md) instance
+- `test_simple_function_call()` - Verifies extraction of a single function call
+- `test_multiple_function_calls()` - Tests extraction of multiple function calls from one function
+- `test_method_call()` - Tests extraction of method calls on objects
+- `test_nested_calls()` - Tests extraction of nested function calls
+- `test_filters_builtins()` - Verifies that built-in functions are filtered out
+- `test_deduplicates_calls()` - Ensures duplicate calls are removed
 
-### Methods
+### TestCallGraphExtractor
 
-- `test_returns_diagram_for_file_with_calls`: Test that diagram is returned for file with function calls
+Tests the [main](../src/local_deepwiki/export/html.md) [CallGraphExtractor](../src/local_deepwiki/generators/callgraph.md) class functionality.
 
-## TestGenerateCallGraphDiagram
+**Key Methods:**
+- `extractor()` - Pytest fixture that returns a [CallGraphExtractor](../src/local_deepwiki/generators/callgraph.md) instance
+- `test_extract_from_simple_file()` - Tests extracting call graph from a simple Python file
 
-Test Mermaid diagram generation.
+### TestGenerateCallGraphDiagram
 
-### Methods
+Tests the Mermaid diagram generation functionality.
 
-- `test_empty_graph_returns_none`: Test that empty call graph returns None
-- `test_simple_diagram`: Test generating a simple diagram
+**Key Methods:**
+- `test_empty_graph_returns_none()` - Verifies that empty call graphs return None
+- `test_simple_diagram()` - Tests generation of a basic Mermaid flowchart
 
-## TestExtractCallsPython
+### TestGetFileCallGraph
 
-Test extraction of function calls from Python code.
+Tests the convenience function for getting file call graphs.
 
-### Methods
+**Key Methods:**
+- `test_returns_diagram_for_file_with_calls()` - Verifies that a diagram is returned for files containing function calls
 
-- `parser` (fixture): Returns a new instance of [CodeParser](../src/local_deepwiki/core/parser.md)
-- `test_simple_function_call`: Test extracting a simple function call
-- `test_multiple_function_calls`: Test extracting multiple function calls
-- `test_method_call`: Test extracting method calls
-- `test_nested_calls`: Test extracting nested function calls
-- `test_filters_builtins`: Test that built-ins are filtered out
-- `test_deduplicates_calls`: Test that duplicate calls are removed
+### TestJavaScriptCallExtraction
 
-## TestGoCallExtraction
+Tests call extraction functionality for JavaScript code.
 
-Test call extraction for Go code.
+**Key Methods:**
+- `parser()` - Pytest fixture that returns a [CodeParser](../src/local_deepwiki/core/parser.md) instance
+- `test_simple_js_call()` - Tests extracting calls from JavaScript functions
 
-### Methods
+### TestGoCallExtraction
 
-- `parser` (fixture): Returns a new instance of [CodeParser](../src/local_deepwiki/core/parser.md)
-- `test_simple_go_call`: Test extracting calls from Go function
+Tests call extraction functionality for Go code.
 
-## TestJavaScriptCallExtraction
+**Key Methods:**
+- `parser()` - Pytest fixture that returns a [CodeParser](../src/local_deepwiki/core/parser.md) instance
+- `test_simple_go_call()` - Tests extracting calls from Go functions
 
-Test call extraction for JavaScript code.
+## Usage Examples
 
-### Methods
-
-- `parser` (fixture): Returns a new instance of [CodeParser](../src/local_deepwiki/core/parser.md)
-- `test_simple_js_call`: Test extracting calls from JavaScript function
-
-# Functions
-
-## _is_builtin_or_noise
-
-Filters out built-in functions and noise from call graphs.
-
-## extract_call_name
-
-Extracts the name of a function call from an AST node.
-
-## extract_calls_from_function
-
-Extracts all function calls from a function definition.
-
-### Parameters
-
-- `func_node`: The AST node representing the function definition
-- `source_bytes`: The source code as bytes
-- `language`: The programming language (e.g., Language.PYTHON)
-
-### Returns
-
-A list of function call names
-
-## generate_call_graph_diagram
-
-Generates a Mermaid flowchart diagram from a call graph.
-
-### Parameters
-
-- `call_graph`: A dictionary mapping function names to lists of called functions
-
-### Returns
-
-A string containing the Mermaid diagram or None if the graph is empty
-
-## get_file_call_graph
-
-Gets the call graph diagram for a given file.
-
-### Parameters
-
-- `file_path`: Path to the source file
-- `output_dir`: Directory to store the output
-
-### Returns
-
-The generated call graph diagram as a string
-
-# Usage Examples
-
-## Extracting Calls from Python Code
+### Testing Call Extraction
 
 ```python
-from local_deepwiki.generators.callgraph import extract_calls_from_function
-from local_deepwiki.core.parser import CodeParser
-from local_deepwiki.models import Language
-
+# Create a parser and extract calls from Python code
 parser = CodeParser()
 source = """
 def main():
     process_data()
 """
-
 root = parser.parse_source(source, Language.PYTHON)
 func_node = root.children[0]
-
 calls = extract_calls_from_function(func_node, source.encode(), Language.PYTHON)
-# Returns ['process_data']
 ```
 
-## Generating a Call Graph Diagram
+### Testing Diagram Generation
 
 ```python
-from local_deepwiki.generators.callgraph import generate_call_graph_diagram
-
+# Generate a Mermaid diagram from call graph
 call_graph = {
     "main": ["helper", "process"],
 }
-
-diagram = generate_call_graph_diagram(call_graph)
-# Returns a Mermaid diagram string
+result = generate_call_graph_diagram(call_graph)
 ```
 
-## Getting File Call Graph
+### Testing File Call Graph
 
 ```python
-from local_deepwiki.generators.callgraph import get_file_call_graph
-
-diagram = get_file_call_graph("path/to/file.py", "output_dir")
-# Returns the generated diagram as a string
+# Get call graph for a file
+test_file = tmp_path / "test.py"
+test_file.write_text(source)
+result = get_file_call_graph(test_file, tmp_path)
 ```
 
-# Related Components
+## Related Components
 
-This file works with the following components:
+This test file works with several core components:
 
-- [`CodeParser`](../src/local_deepwiki/core/parser.md) from `local_deepwiki.core.parser`: Used for parsing source code into ASTs
-- `Language` from `local_deepwiki.models`: Enum representing supported programming languages
-- [`find_nodes_by_type`](../src/local_deepwiki/core/parser.md) from `local_deepwiki.core.parser`: Helper function for finding AST nodes by type
-- `CallGraphExtractor` from `local_deepwiki.generators.callgraph`: Main class for extracting call graphs
-- `extract_call_name` from `local_deepwiki.generators.callgraph`: Helper for extracting function call names
-- `generate_call_graph_diagram` from `local_deepwiki.generators.callgraph`: Function for creating Mermaid diagrams
-- `get_file_call_graph` from `local_deepwiki.generators.callgraph`: Convenience function for getting file call graphs
+- **[CodeParser](../src/local_deepwiki/core/parser.md)** - Used for parsing source code across different languages
+- **[CallGraphExtractor](../src/local_deepwiki/generators/callgraph.md)** - The [main](../src/local_deepwiki/export/html.md) class being tested for call graph extraction
+- **[Language](../src/local_deepwiki/models.md)** - Enum for specifying programming languages
+- Various utility functions from the callgraph module:
+  - `_is_builtin_or_noise()`
+  - `extract_call_name()`
+  - `extract_calls_from_function()`
+  - `generate_call_graph_diagram()`
+  - `get_file_call_graph()`
+- **[find_nodes_by_type](../src/local_deepwiki/core/parser.md)()** - Helper function for finding specific AST nodes
+
+The tests validate multi-language support (Python, JavaScript, Go) and ensure proper filtering of built-in functions while maintaining accurate call relationship extraction.
 
 ## API Reference
 
@@ -293,7 +240,7 @@ Test that duplicate calls are removed.
 
 ### class `TestCallGraphExtractor`
 
-Test the CallGraphExtractor class.
+Test the [CallGraphExtractor](../src/local_deepwiki/generators/callgraph.md) class.
 
 **Methods:**
 
@@ -524,12 +471,12 @@ classDiagram
     }
     class TestExtractCallsPython {
         +parser()
-        +test_simple_function_call()
-        +test_multiple_function_calls()
-        +test_method_call()
-        +test_nested_calls()
-        +test_filters_builtins()
-        +test_deduplicates_calls()
+        +test_simple_function_call(parser)
+        +test_multiple_function_calls(parser)
+        +test_method_call(parser)
+        +test_nested_calls(parser)
+        +test_filters_builtins(parser)
+        +test_deduplicates_calls(parser)
     }
     class TestGenerateCallGraphDiagram {
         +test_empty_graph_returns_none()
@@ -664,5 +611,8 @@ flowchart TD
 
 ## See Also
 
+- [models](../src/local_deepwiki/models.md) - dependency
+- [callgraph](../src/local_deepwiki/generators/callgraph.md) - dependency
 - [test_api_docs](test_api_docs.md) - shares 5 dependencies
 - [test_parser](test_parser.md) - shares 4 dependencies
+- [test_examples](../src/local_deepwiki/generators/test_examples.md) - shares 4 dependencies

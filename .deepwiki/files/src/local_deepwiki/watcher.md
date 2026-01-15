@@ -1,8 +1,8 @@
-# watcher.py
+# Watcher Module
 
 ## File Overview
 
-This module provides file system watching capabilities for automatically regenerating wiki documentation when repository files change. It uses the watchdog library to monitor file system events and triggers wiki regeneration with configurable debouncing to prevent excessive rebuilds.
+The `watcher.py` module provides file system monitoring capabilities for automatically regenerating wiki documentation when repository files change. It uses the watchdog library to monitor file system events and triggers wiki regeneration with configurable debouncing to avoid excessive rebuilds.
 
 ## Functions
 
@@ -12,7 +12,7 @@ This module provides file system watching capabilities for automatically regener
 def main() -> None
 ```
 
-Main entry point for the watch command. Sets up command-line argument parsing for the file watcher functionality.
+Main entry point for the watch command that sets up command-line argument parsing for the file watcher functionality.
 
 **Parameters:**
 - None
@@ -21,34 +21,36 @@ Main entry point for the watch command. Sets up command-line argument parsing fo
 - None
 
 **Command-line Arguments:**
-- `repo_path` (optional): Path to the repository to watch (defaults to current directory)
-- `--debounce`: Seconds to wait after changes before reindexing (default: 2.0)
-
-## Related Components
-
-This module integrates with several other components in the local_deepwiki system:
-
-- **[Config](config.md)**: Uses the [Config](config.md) class and [get_config](config.md) function for configuration management
-- **RepositoryIndexer**: Works with the RepositoryIndexer class from the core.indexer module for processing repository content
-- **Parser**: Utilizes EXTENSION_MAP from the core.parser module for file type handling
-- **[Wiki Generator](generators/wiki.md)**: Integrates with the [generate_wiki](generators/wiki.md) function from the generators.wiki module for documentation generation
-- **Logging**: Uses the logging system via get_logger for operation tracking
-
-The module also leverages external libraries including:
-- `watchdog` for file system monitoring (Observer and FileSystemEventHandler)
-- `rich.console` for enhanced console output
-- Standard library modules for argument parsing, async operations, and file system utilities
+- `repo_path` (optional): Path to the repository to watch, defaults to current directory
+- `--debounce`: Seconds to wait after changes before reindexing, defaults to 2.0 seconds
 
 ## Usage Examples
 
-Based on the main function signature, this module is designed to be used as a command-line tool:
+The main function can be called directly to start the file watcher:
 
 ```python
-# The main function can be called directly
+from local_deepwiki.watcher import main
+
+# Start the watcher with default settings
 main()
 ```
 
-The function sets up argument parsing for command-line usage with the repository path and debounce timing configuration options.
+The module is designed to be used as a command-line tool, parsing arguments for repository path and debounce timing.
+
+## Related Components
+
+This module integrates with several other components of the local_deepwiki system:
+
+- **[Config](config.md)**: Uses the [Config](config.md) class and [get_config](config.md) function for configuration management
+- **[RepositoryIndexer](core/indexer.md)**: Works with the [RepositoryIndexer](core/indexer.md) class from the core.indexer module for repository analysis
+- **EXTENSION_MAP**: References the parser module's EXTENSION_MAP for file type handling  
+- **[generate_wiki](generators/wiki.md)**: Uses the wiki generator function for creating documentation
+- **Logger**: Integrates with the logging system via [get_logger](logging.md)
+
+The module also depends on external libraries:
+- `watchdog` for file system monitoring (Observer and FileSystemEventHandler)
+- `rich.console` for enhanced console output
+- Standard library modules for argument parsing, async operations, file matching, and timing
 
 ## API Reference
 
@@ -349,6 +351,58 @@ flowchart TD
     class N0,N9,N10,N13,N14,N15,N16,N17,N18,N19,N20,N21,N22,N23,N24,N25,N26,N27,N28,N29 func
     classDef method fill:#fff3e0
     class N1,N2,N3,N4,N5,N6,N7,N8,N11,N12 method
+```
+
+## Usage Examples
+
+*Examples extracted from test files*
+
+### Test that Python files are watched
+
+From `test_watcher.py::test_should_watch_python_file`:
+
+```python
+assert handler._should_watch_file(str(test_file)) is True
+```
+
+### Test that TypeScript files are watched
+
+From `test_watcher.py::test_should_watch_typescript_file`:
+
+```python
+assert handler._should_watch_file(str(test_file)) is True
+```
+
+### Test creating a watcher
+
+From `test_watcher.py::test_create_watcher`:
+
+```python
+watcher = RepositoryWatcher(repo_path=tmp_path)
+assert watcher.repo_path == tmp_path
+```
+
+### Test creating a watcher
+
+From `test_watcher.py::test_create_watcher`:
+
+```python
+watcher = RepositoryWatcher(repo_path=tmp_path)
+assert watcher.repo_path == tmp_path
+```
+
+### Test creating a watcher with options
+
+From `test_watcher.py::test_create_watcher_with_options`:
+
+```python
+watcher = RepositoryWatcher(
+    repo_path=tmp_path,
+    config=config,
+    debounce_seconds=5.0,
+    llm_provider="anthropic",
+)
+assert watcher.debounce_seconds == 5.0
 ```
 
 ## Relevant Source Files

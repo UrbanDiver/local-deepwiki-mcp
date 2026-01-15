@@ -1,170 +1,90 @@
-# File Overview
+# test_source_refs.py
 
-This file contains test cases for the source references functionality in the `local_deepwiki` project. It tests various aspects of how source file references are added to wiki pages, including handling of file-to-wiki mappings, line information, and section insertion logic.
+## File Overview
 
-# Classes
+This file contains comprehensive test suites for the source references functionality in the local_deepwiki system. It tests the generation and management of source reference sections that link wiki pages to their corresponding source code files.
 
-## TestBuildFileToWikiMap
+## Imports
 
-Tests for the [`build_file_to_wiki_map`](../src/local_deepwiki/generators/see_also.md) function.
+The test file imports several components from the source_refs module:
+- `_format_file_entry` - Formats individual file entries
+- `_relative_path` - Calculates relative paths between files
+- [`add_source_refs_sections`](../src/local_deepwiki/generators/source_refs.md) - Adds source reference sections to wiki pages
+- [`build_file_to_wiki_map`](../src/local_deepwiki/generators/see_also.md) - Creates mapping between source files and wiki pages
+- [`generate_source_refs_section`](../src/local_deepwiki/generators/source_refs.md) - Generates the actual source reference content
 
-## TestRelativePath
+It also imports the [WikiPage](../src/local_deepwiki/models.md) and [WikiPageStatus](../src/local_deepwiki/models.md) models for testing data structures.
 
-Tests for the `_relative_path` function.
+## Test Classes
 
-### Methods
+### TestBuildFileToWikiMap
 
-- `test_same_directory`: Test relative path in same directory.
-- `test_parent_directory`: Test relative path to parent directory.
-- `test_child_directory`: Test relative path to child directory.
+Tests the [build_file_to_wiki_map](../src/local_deepwiki/generators/see_also.md) function that creates mappings between source files and their corresponding wiki documentation pages.
 
-## TestGenerateSourceRefsSection
+### TestRelativePath
 
-Tests for `generate_source_refs_section` function.
+Tests the _relative_path function for calculating relative paths between files in the documentation structure.
 
-### Methods
+### TestGenerateSourceRefsSection
 
-- `test_single_file_with_wiki_link`: Test generating section for single file with wiki page.
-- `test_single_file_without_wiki_link`: Test generating section for single file without wiki page.
-- `test_multiple_files_with_wiki_links`: Test generating section for multiple files with wiki pages.
-- `test_multiple_files_mixed_wiki_links`: Test generating section for multiple files with mixed wiki page availability.
+Tests the core [generate_source_refs_section](../src/local_deepwiki/generators/source_refs.md) function that creates source reference sections for wiki pages.
 
-## TestAddSourceRefsSections
+**Key test methods:**
+- `test_single_file_with_wiki_link` - Verifies generation of sections for single files that have corresponding wiki pages
 
-Tests for `add_source_refs_sections` function.
+### TestAddSourceRefsSections
 
-### Methods
+Tests the [add_source_refs_sections](../src/local_deepwiki/generators/source_refs.md) function that adds source reference sections to existing wiki pages.
 
-- `test_adds_sections_to_file_pages`: Test that sections are added to file documentation pages.
-- `test_skips_index_pages`: Test that sections are not added to index pages.
-- `test_inserts_before_see_also`: Test that sections are inserted before "See Also" section.
-- `test_handles_missing_status`: Test handling of missing page status.
-- `test_adds_section_to_module_pages`: Test that sections are added to module pages.
-- `test_adds_section_to_architecture_page`: Test that sections are added to architecture page.
+**Key test methods:**
+- `test_adds_sections_to_file_pages` - Verifies that source reference sections are properly added to file documentation pages
+- `test_skips_index_pages` - Tests that index pages are skipped during section addition
+- `test_inserts_before_see_also` - Ensures sections are inserted in the correct location relative to existing content
+- `test_handles_missing_status` - Tests behavior when page status information is missing
+- `test_adds_section_to_module_pages` - Verifies sections are added to module-level documentation pages
+- `test_adds_section_to_architecture_page` - Tests addition of sections to architecture documentation
 
-## TestFormatFileEntry
+### TestFormatFileEntry
 
-Tests for `_format_file_entry` function.
+Tests the _format_file_entry function that formats individual file entries in source reference sections.
 
-### Methods
+### TestGenerateSourceRefsSectionWithLineInfo
 
-- `test_without_line_info`: Test formatting without line info.
-- `test_with_line_info`: Test formatting with line info shows start-end range.
+Tests the [generate_source_refs_section](../src/local_deepwiki/generators/source_refs.md) function when line number information is available for source files.
 
-## TestGenerateSourceRefsSectionWithLineInfo
+**Key test methods:**
+- `test_single_file_with_line_info` - Verifies that line numbers are properly displayed in source references when available
 
-Tests for `generate_source_refs_section` with line info.
+## Usage Examples
 
-### Methods
-
-- `test_single_file_with_line_info`: Test single file displays line numbers.
-- `test_multiple_files_with_line_info`: Test multiple files display line numbers.
-
-## TestAddSourceRefsSectionsWithLineInfo
-
-Tests for `add_source_refs_sections` with line info in status.
-
-### Methods
-
-- `test_passes_line_info_to_section_generator`: Test that line info from status is used in generated section.
-
-# Functions
-
-## build_file_to_wiki_map
-
-Maps source file paths to corresponding wiki page paths.
-
-## generate_source_refs_section
-
-Generates a section listing source files with optional wiki links and line information.
-
-### Parameters
-
-- `source_files` (list of str): List of source file paths.
-- `current_wiki_path` (str): Path of the current wiki page.
-- `file_to_wiki` (dict): Mapping from source file paths to wiki page paths.
-- `file_line_info` (dict, optional): Mapping from source file paths to line information.
-
-### Returns
-
-- str: Formatted section content.
-
-## _format_file_entry
-
-Formats a single file entry with optional wiki link and line information.
-
-### Parameters
-
-- `file_path` (str): Path to the source file.
-- `wiki_path` (str or None): Wiki page path for the file, or None if not available.
-- `current_wiki_path` (str): Path of the current wiki page.
-- `line_info` (dict or None): Line information for the file.
-
-### Returns
-
-- str: Formatted file entry.
-
-## _relative_path
-
-Calculates the relative path from one wiki page to another.
-
-### Parameters
-
-- `from_path` (str): Source wiki page path.
-- `to_path` (str): Target wiki page path.
-
-### Returns
-
-- str: Relative path from `from_path` to `to_path`.
-
-# Usage Examples
-
-## Using `generate_source_refs_section`
+Based on the test structure, the components are used as follows:
 
 ```python
+# Generate source reference section
+result = generate_source_refs_section(
+    source_files=["src/local_deepwiki/core/parser.py"],
+    current_wiki_path="files/src/local_deepwiki/core/chunker.md",
+    file_to_wiki=file_to_wiki_mapping
+)
+
+# Generate with line information
 result = generate_source_refs_section(
     source_files=["src/parser.py"],
     current_wiki_path="files/src/chunker.md",
-    file_to_wiki={"src/parser.py": "files/src/parser.md"},
+    file_to_wiki={},
+    file_line_info={"src/parser.py": {"start_line": 42, "end_line": 150}}
 )
 ```
 
-## Using `add_source_refs_sections`
+## Related Components
 
-```python
-pages = [
-    WikiPage(
-        path="files/src/parser.md",
-        title="parser",
-        content="# Parser\n\nContent here.",
-        generated_at=0,
-    ),
-]
+This test file works with several key components:
 
-page_statuses = {
-    "files/src/parser.md": WikiPageStatus(
-        path="files/src/parser.md",
-        source_files=["src/parser.py"],
-        source_hashes={},
-        content_hash="xyz",
-        generated_at=0,
-    ),
-}
+- **[WikiPage](../src/local_deepwiki/models.md)** - Represents individual wiki documentation pages
+- **[WikiPageStatus](../src/local_deepwiki/models.md)** - Tracks the status and metadata of wiki pages including source file associations
+- **Source reference functions** - The core functionality being tested for linking documentation to source code
 
-result = add_source_refs_sections(pages, page_statuses)
-```
-
-# Related Components
-
-This file works with the following components:
-
-- `WikiPage` from `local_deepwiki.models`
-- `WikiPageStatus` from `local_deepwiki.models`
-- `add_source_refs_sections` from `local_deepwiki.generators.source_refs`
-- [`build_file_to_wiki_map`](../src/local_deepwiki/generators/see_also.md) from `local_deepwiki.generators.source_refs`
-- `generate_source_refs_section` from `local_deepwiki.generators.source_refs`
-- `_format_file_entry` from `local_deepwiki.generators.source_refs`
-- `_relative_path` from `local_deepwiki.generators.source_refs`
+The tests verify the integration between these components to ensure proper cross-referencing between documentation and source code files.
 
 ## API Reference
 
@@ -232,7 +152,7 @@ Test relative path from root to nested.
 
 ### class `TestGenerateSourceRefsSection`
 
-Tests for generate_source_refs_section function.
+Tests for [generate_source_refs_section](../src/local_deepwiki/generators/source_refs.md) function.
 
 **Methods:**
 
@@ -287,7 +207,7 @@ Test that current page is not linked to itself.
 
 ### class `TestAddSourceRefsSections`
 
-Tests for add_source_refs_sections function.
+Tests for [add_source_refs_sections](../src/local_deepwiki/generators/source_refs.md) function.
 
 **Methods:**
 
@@ -381,7 +301,7 @@ Test that self-reference doesn't include link even with line info.
 
 ### class `TestGenerateSourceRefsSectionWithLineInfo`
 
-Tests for generate_source_refs_section with line info.
+Tests for [generate_source_refs_section](../src/local_deepwiki/generators/source_refs.md) with line info.
 
 **Methods:**
 
@@ -412,7 +332,7 @@ Test that files without line info fallback gracefully.
 
 ### class `TestAddSourceRefsSectionsWithLineInfo`
 
-Tests for add_source_refs_sections with line info in status.
+Tests for [add_source_refs_sections](../src/local_deepwiki/generators/source_refs.md) with line info in status.
 
 **Methods:**
 
@@ -566,4 +486,8 @@ flowchart TD
 
 ## See Also
 
-- [test_diagrams](test_diagrams.md) - shares 2 dependencies
+- [source_refs](../src/local_deepwiki/generators/source_refs.md) - dependency
+- [models](../src/local_deepwiki/models.md) - dependency
+- [test_chunker](test_chunker.md) - shares 2 dependencies
+- [test_see_also](test_see_also.md) - shares 2 dependencies
+- [test_api_docs](test_api_docs.md) - shares 2 dependencies

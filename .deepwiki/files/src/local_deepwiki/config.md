@@ -2,28 +2,28 @@
 
 ## File Overview
 
-The config.py module provides configuration management for the local_deepwiki application. It implements a thread-safe singleton pattern with context-local override support, allowing for global configuration with temporary per-context overrides. The module uses Pydantic models for configuration validation and YAML loading capabilities.
+The config.py module provides a comprehensive configuration system for the local_deepwiki application. It defines configuration models using Pydantic for various components including LLM providers, embedding services, parsing, chunking, and wiki generation. The module implements both global and context-local configuration management with thread-safe access patterns.
 
 ## Classes
 
 ### Config
 
-The [main](web/app.md) configuration class that aggregates all application settings.
+The [main](export/html.md) configuration class that aggregates all component configurations.
 
 **Fields:**
-- `embedding`: EmbeddingConfig instance for embedding provider settings
-- `llm`: LLMConfig instance for language model provider settings  
-- `llm_cache`: LLMCacheConfig instance for LLM caching configuration
-- `parsing`: ParsingConfig instance for document parsing settings
-- `chunking`: ChunkingConfig instance for text chunking configuration
-- `wiki`: WikiConfig instance for wiki generation settings
+- `embedding`: EmbeddingConfig instance for embedding service configuration
+- `llm`: LLMConfig instance for LLM provider configuration  
+- `llm_cache`: LLMCacheConfig instance for LLM caching settings
+- `parsing`: ParsingConfig instance for document parsing configuration
+- `chunking`: ChunkingConfig instance for text chunking settings
+- `wiki`: WikiConfig instance for wiki generation configuration
 - `deep_research`: DeepResearchConfig instance for research functionality
 - `output`: OutputConfig instance for output formatting settings
-- `prompts`: PromptsConfig instance for prompt templates
+- `prompts`: Configuration for provider-specific prompts
 
 ### LLMConfig
 
-Configuration for language model providers.
+Configuration for LLM (Large [Language](models.md) Model) providers.
 
 **Fields:**
 - `provider`: Literal type accepting "ollama", "anthropic", or "openai" (default: "ollama")
@@ -36,7 +36,7 @@ Configuration for language model providers.
 Configuration specific to the Ollama LLM provider.
 
 **Fields:**
-- `model`: Model name string (default: "qwen3-coder:30b")
+- `model`: Model name to use (default: "qwen3-coder:30b")
 - `base_url`: API endpoint URL (default: "http://localhost:11434")
 
 ### AnthropicConfig
@@ -44,18 +44,18 @@ Configuration specific to the Ollama LLM provider.
 Configuration specific to the Anthropic LLM provider.
 
 **Fields:**
-- `model`: Model name string (default: "claude-sonnet-4-20250514")
+- `model`: Model name to use (default: "claude-sonnet-4-20250514")
 
 ### OpenAILLMConfig
 
 Configuration specific to the OpenAI LLM provider.
 
 **Fields:**
-- `model`: Model name string (default: "gpt-4o")
+- `model`: Model name to use (default: "gpt-4o")
 
 ### ProviderPromptsConfig
 
-Prompt templates configuration for a specific provider.
+Defines prompts configuration for specific providers.
 
 **Fields:**
 - `wiki_system`: System prompt for wiki documentation generation
@@ -65,39 +65,28 @@ Prompt templates configuration for a specific provider.
 
 ## Functions
 
-### get_config
+### get_config()
 
-```python
-def get_config() -> Config
-```
+Retrieves the active configuration instance with support for context-local overrides.
 
-Retrieves the active configuration instance in a thread-safe manner.
-
-**Returns:** The active Config instance (context-local if set, otherwise global)
+**Returns:** The active Config instance
 
 **Behavior:**
-- Checks for context-local configuration override first
+- Returns context-local config if set via context manager
 - Falls back to global singleton configuration
+- Thread-safe for concurrent access
 - Automatically loads configuration if not yet initialized
 
-### set_config
-
-```python
-def set_config(config: Config) -> None
-```
+### set_config(config)
 
 Sets the global configuration instance in a thread-safe manner.
 
 **Parameters:**
-- `config`: The Config instance to set globally
+- `config`: Config instance to set as the global configuration
 
-**Note:** This sets the global config, not a context-local override. Use config_context for temporary overrides.
+**Note:** This affects the global config only, not context-local overrides.
 
-### reset_config
-
-```python
-def reset_config() -> None
-```
+### reset_config()
 
 Resets the global configuration to an uninitialized state and clears any context-local overrides.
 
@@ -105,85 +94,79 @@ Resets the global configuration to an uninitialized state and clears any context
 - Testing scenarios requiring fresh configuration
 - Clearing cached configuration state
 
-### config_context
-
-```python
-def config_context(config: Config) -> Generator[Config, None, None]
-```
+### config_context(config)
 
 Context manager for temporary configuration overrides.
 
 **Parameters:**
-- `config`: The Config instance to use within the context
+- `config`: Config instance to use within the context
 
-**Yields:** The provided configuration
+**Yields:** The provided configuration instance
 
-**Usage:**
-```python
-with config_context(custom_config):
-    # get_config() returns custom_config here
-    result = some_operation()
-# get_config() returns global config again
-```
+**Behavior:**
+- Sets context-local configuration that takes precedence over global config
+- Automatically restores previous configuration when exiting context
+- Useful for testing or per-request configuration scenarios
 
 ## Usage Examples
 
 ### Basic Configuration Access
 
 ```python
-from local_deepwiki.config import get_config
-
-# Get current configuration
+# Get the current configuration
 config = get_config()
-print(f"LLM provider: {config.llm.provider}")
-print(f"Ollama model: {config.llm.ollama.model}")
+
+# Access LLM provider settings
+provider = config.llm.provider
+model_name = config.llm.ollama.model
 ```
 
 ### Setting Global Configuration
 
 ```python
-from local_deepwiki.config import Config, set_config
-
-# Create and set new configuration
+# Create and set a new configuration
 new_config = Config()
-new_config.llm.provider = "openai"
-new_config.llm.openai.model = "gpt-4"
 set_config(new_config)
 ```
 
 ### Temporary Configuration Override
 
 ```python
-from local_deepwiki.config import config_context, Config
-
+# Use a custom configuration temporarily
 custom_config = Config()
-custom_config.llm.provider = "anthropic"
+custom_config.llm.provider = "openai"
 
 with config_context(custom_config):
-    # Operations here use custom_config
-    process_documents()
-# Back to global config
+    # get_config() returns custom_config here
+    current_config = get_config()
+    print(current_config.llm.provider)  # "openai"
+
+# get_config() returns global config again
 ```
 
-### Testing Configuration Reset
+### Configuration Reset
 
 ```python
-from local_deepwiki.config import reset_config
-
-# Reset for clean test state
+# Reset configuration (useful for testing)
 reset_config()
-# Next get_config() call will load fresh configuration
+
+# Next call to get_config() will reload from default sources
+config = get_config()
 ```
 
 ## Related Components
 
-The configuration system integrates with several other components referenced in the imports and field types:
+The configuration system integrates with several other components through its field definitions:
 
-- **Pydantic BaseModel**: Provides validation and serialization capabilities
-- **YAML loading**: Supports configuration file parsing
-- **Threading utilities**: Ensures thread-safe configuration access
-- **Context variables**: Enables context-local configuration overrides
-- **Pathlib**: Used for file system path handling in configuration loading
+- **EmbeddingConfig**: Manages embedding service configuration
+- **ParsingConfig**: Controls document parsing behavior  
+- **ChunkingConfig**: Defines text chunking strategies
+- **WikiConfig**: Configures wiki generation parameters
+- **DeepResearchConfig**: Settings for research functionality
+- **OutputConfig**: Output formatting and destination settings
+- **LLMCacheConfig**: LLM response caching configuration
+
+The module uses Pydantic BaseModel for configuration validation and YAML for configuration file parsing, providing robust configuration management with type safety and validation.
 
 ## API Reference
 
@@ -270,7 +253,7 @@ def with_preset(preset: ResearchPreset | str | None) -> "DeepResearchConfig"
 Return a new config with preset values applied.  The preset values override the current config values. If preset is None or "default", returns a copy of the current config unchanged.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `preset` | `ResearchPreset | str | None` | - | The research preset to apply ("quick", "default", "thorough"). |
 
@@ -310,7 +293,7 @@ def get_for_provider(provider: str) -> ProviderPromptsConfig
 Get prompts for a specific provider.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `provider` | `str` | - | Provider name ("ollama", "anthropic", "openai"). |
 
@@ -340,7 +323,7 @@ def load(config_path: Path | None = None) -> "Config"
 Load configuration from file or defaults.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `config_path` | `Path | None` | `None` | - |
 
@@ -353,7 +336,7 @@ def get_wiki_path(repo_path: Path) -> Path
 Get the wiki output path for a repository.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `repo_path` | `Path` | - | - |
 
@@ -366,7 +349,7 @@ def get_vector_db_path(repo_path: Path) -> Path
 Get the vector database path for a repository.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `repo_path` | `Path` | - | - |
 
@@ -395,7 +378,7 @@ def set_config(config: Config) -> None
 Set the global configuration instance.  Thread-safe. Note: This sets the global config, not a context-local one. Use config_context() for temporary context-local overrides.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `config` | `Config` | - | The configuration to set globally. |
 
@@ -424,7 +407,7 @@ def config_context(config: Config) -> Generator[Config, None, None]
 Context manager for temporary config override.  Sets a context-local configuration that takes precedence over the global config within the context. Useful for testing or per-request config.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `config` | `Config` | - | The configuration to use within the context. |
 
@@ -602,14 +585,70 @@ flowchart TD
     class N0,N1,N2,N3 method
 ```
 
+## Usage Examples
+
+*Examples extracted from test files*
+
+### Test default configuration values
+
+From `test_config.py::test_default_config`:
+
+```python
+config = Config()
+
+assert config.embedding.provider == "local"
+```
+
+### Test default configuration values
+
+From `test_config.py::test_default_config`:
+
+```python
+config = Config()
+
+assert config.embedding.provider == "local"
+```
+
+### Test embedding configuration
+
+From `test_config.py::test_embedding_config`:
+
+```python
+config = Config()
+
+assert config.embedding.local.model == "all-MiniLM-L6-v2"
+```
+
+### Test embedding configuration
+
+From `test_config.py::test_embedding_config`:
+
+```python
+config = Config()
+
+assert config.embedding.local.model == "all-MiniLM-L6-v2"
+```
+
+### Test global config singleton
+
+From `test_config.py::test_global_config`:
+
+```python
+config1 = get_config()
+config2 = get_config()
+
+# Should return the same instance
+assert config1 is config2
+```
+
 ## Relevant Source Files
 
 - `src/local_deepwiki/config.py:14-19`
 
 ## See Also
 
+- [llm_cache](core/llm_cache.md) - uses this
+- [test_indexer](../../tests/test_indexer.md) - uses this
+- [chunker](core/chunker.md) - uses this
 - [test_config](../../tests/test_config.md) - uses this
 - [wiki](generators/wiki.md) - uses this
-- [test_indexer](../../tests/test_indexer.md) - uses this
-- [models](models.md) - shares 4 dependencies
-- [diagrams](generators/diagrams.md) - shares 2 dependencies

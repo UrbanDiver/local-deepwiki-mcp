@@ -6,6 +6,36 @@ Recent changes to this repository.
 
 ### January 14, 2026
 
+- [`5f52f84`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/5f52f84) Fix source refs to link all existing wiki pages
+  - Files: `src/local_deepwiki/generators/source_refs.py`, `src/local_deepwiki/generators/wiki.py`
+
+- [`42a9a7b`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/42a9a7b) Fix dependencies page: local links, source file priority, clean graph
+  - Files: `src/local_deepwiki/generators/diagrams.py`, `src/local_deepwiki/generators/source_refs.py`, `src/local_deepwiki/generators/wiki.py`
+
+- [`e25671f`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/e25671f) Mark Enhanced Import/Dependency Graphs as complete
+  - Files: `WIKI_IMPROVEMENTS.md`
+
+- [`c652a2a`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/c652a2a) Add enhanced dependency graph with subgraphs, clickable links, and external deps
+  - Files: `src/local_deepwiki/generators/diagrams.py`, `src/local_deepwiki/generators/wiki.py`, `tests/test_diagrams.py`
+
+- [`4ce879f`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/4ce879f) Fix Component Diagram Mermaid syntax error
+  - Files: `.deepwiki/architecture.md`
+
+- [`4cdd653`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/4cdd653) Add workflow sequence diagrams to architecture documentation
+  - Files: `.deepwiki/architecture.md`
+
+- [`36faa4d`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/36faa4d) Document cloud provider option for GitHub repos in CLAUDE.md
+  - Files: `CLAUDE.md`
+
+- [`1b6c406`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/1b6c406) Regenerate wiki documentation using Claude Sonnet
+  - Files: `.deepwiki/architecture.md`, `.deepwiki/changelog.md`, `.deepwiki/dependencies.md`, `.deepwiki/files/index.md`, `.deepwiki/files/src/local_deepwiki/config.md` (+31 more)
+
+- [`52202b9`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/52202b9) Add automatic cloud provider switching for GitHub repos
+  - Files: `src/local_deepwiki/config.py`, `src/local_deepwiki/core/git_utils.py`, `src/local_deepwiki/generators/wiki.py`, `src/local_deepwiki/server.py`, `tests/test_config.py` (+1 more)
+
+- [`2d4aa85`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/2d4aa85) Parallelize file docs generation for faster wiki builds
+  - Files: `src/local_deepwiki/config.py`, `src/local_deepwiki/generators/wiki.py`, `src/local_deepwiki/providers/llm/ollama.py`, `tests/test_ollama_health.py`, `tests/test_provider_errors.py`
+
 - [`d387d4f`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/d387d4f) Add provider-specific prompt templates for LLM optimization
   - Files: `WIKI_IMPROVEMENTS.md`, `src/local_deepwiki/config.py`, `src/local_deepwiki/core/deep_research.py`, `src/local_deepwiki/generators/wiki.py`, `src/local_deepwiki/server.py` (+1 more)
 
@@ -68,36 +98,6 @@ Recent changes to this repository.
 - [`9e05ee2`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/9e05ee2) Regenerate wiki with PDF export documentation
   - Files: `.deepwiki/architecture.md`, `.deepwiki/dependencies.md`, `.deepwiki/files/index.md`, `.deepwiki/files/src/local_deepwiki/config.md`, `.deepwiki/files/src/local_deepwiki/core/parser.md` (+26 more)
 
-- [`782034d`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/782034d) Update README with PDF export and other features
-  - Files: `README.md`
-
-- [`d18057e`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/d18057e) Switch mermaid rendering from SVG to PNG for better PDF text display
-  - Files: `src/local_deepwiki/export/__init__.py`, `src/local_deepwiki/export/pdf.py`, `tests/test_pdf_export.py`
-
-- [`5b653ae`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/5b653ae) Add mermaid CLI support for PDF diagram rendering
-  - Files: `CLAUDE.md`, `src/local_deepwiki/export/__init__.py`, `src/local_deepwiki/export/pdf.py`, `tests/test_pdf_export.py`
-
-- [`3b0bcf2`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/3b0bcf2) Add PDF export feature with WeasyPrint
-  - Files: `CLAUDE.md`, `pyproject.toml`, `src/local_deepwiki/export/__init__.py`, `src/local_deepwiki/export/pdf.py`, `src/local_deepwiki/server.py` (+2 more)
-
-- [`df3a83d`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/df3a83d) Update CLAUDE.md with new test count and stats
-  - Files: `CLAUDE.md`
-
-- [`119be4a`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/119be4a) Regenerate wiki with new features
-  - Files: `.deepwiki/architecture.md`, `.deepwiki/dependencies.md`, `.deepwiki/files/index.md`, `.deepwiki/files/src/local_deepwiki/config.md`, `.deepwiki/files/src/local_deepwiki/core/parser.md` (+26 more)
-
-- [`3714760`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/3714760) Add code review documentation
-  - Files: `.gitignore`, `CODE_REVIEW.md`
-
-- [`1f3b53a`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/1f3b53a) Add comprehensive test coverage
-  - Files: `tests/test_api_docs.py`, `tests/test_callgraph.py`, `tests/test_chunker.py`, `tests/test_config.py`, `tests/test_diagrams.py` (+18 more)
-
-- [`264555b`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/264555b) Add Jinja2 template system for web UI
-  - Files: `src/local_deepwiki/web/app.py`, `src/local_deepwiki/web/templates/page.html`
-
-- [`c568951`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/c568951) Add input validation, type safety, and core improvements
-  - Files: `src/local_deepwiki/config.py`, `src/local_deepwiki/core/chunker.py`, `src/local_deepwiki/core/indexer.py`, `src/local_deepwiki/core/parser.py`, `src/local_deepwiki/core/vectorstore.py` (+19 more)
-
 ## Statistics
 
 - **Commits shown**: 30
@@ -108,16 +108,16 @@ Recent changes to this repository.
 
 The following source files were used to generate this documentation:
 
-- [`profile_wiki.py:16-59`](https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/profile_wiki.py#L16-L59)
-- [`tests/test_parser.py:24-123`](https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/tests/test_parser.py#L24-L123) ([wiki](files/tests/test_parser.md))
-- [`tests/test_retry.py:8-144`](https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/tests/test_retry.py#L8-L144) ([wiki](files/tests/test_retry.md))
-- [`tests/test_ollama_health.py:13-32`](https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/tests/test_ollama_health.py#L13-L32)
-- [`tests/test_server_handlers.py:15-69`](https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/tests/test_server_handlers.py#L15-L69)
-- [`tests/test_chunker.py:11-182`](https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/tests/test_chunker.py#L11-L182)
-- [`tests/test_changelog.py:18-96`](https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/tests/test_changelog.py#L18-L96)
-- [`tests/test_vectorstore.py:9-28`](https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/tests/test_vectorstore.py#L9-L28) ([wiki](files/tests/test_vectorstore.md))
-- [`tests/test_pdf_export.py:21-80`](https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/tests/test_pdf_export.py#L21-L80) ([wiki](files/tests/test_pdf_export.md))
-- [`tests/test_search.py:20-53`](https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/tests/test_search.py#L20-L53)
+- [`src/local_deepwiki/config.py:14-19`](files/src/local_deepwiki/config.md)
+- [`tests/test_parser.py:24-123`](files/tests/test_parser.md)
+- [`tests/test_retry.py:8-144`](files/tests/test_retry.md)
+- [`tests/test_ollama_health.py:16-19`](files/tests/test_ollama_health.md)
+- [`tests/test_server_handlers.py:15-69`](files/tests/test_server_handlers.md)
+- [`tests/test_chunker.py:11-182`](files/tests/test_chunker.md)
+- [`tests/test_changelog.py:18-96`](files/tests/test_changelog.md)
+- [`tests/test_vectorstore.py:9-28`](files/tests/test_vectorstore.md)
+- [`tests/test_pdf_export.py:21-80`](files/tests/test_pdf_export.md)
+- [`tests/test_search.py:20-53`](files/tests/test_search.md)
 
 
-*Showing 10 of 75 source files.*
+*Showing 10 of 74 source files.*

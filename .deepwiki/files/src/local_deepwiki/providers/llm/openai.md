@@ -2,114 +2,144 @@
 
 ## File Overview
 
-This file implements an OpenAI LLM provider that extends the base LLM provider interface. It provides asynchronous access to OpenAI's language models through the `AsyncOpenAI` client, enabling text generation with configurable models and API keys.
+This module provides an OpenAI-based implementation of the LLM provider interface for the local_deepwiki system. It integrates with OpenAI's API to provide language model capabilities for generating documentation content.
 
 ## Classes
 
-### `OpenAILLMProvider`
+### OpenAILLMProvider
 
-**Purpose**: An asynchronous LLM provider that interfaces with OpenAI's API to generate text responses.
+The OpenAILLMProvider class implements the [LLMProvider](../base.md) interface to provide OpenAI-based language model functionality. This class handles communication with OpenAI's API services and manages the asynchronous generation of text content.
 
-**Key Methods**:
-
-- `__init__(model: str = "gpt-4o", api_key: str | None = None)`: Initializes the provider with a model name and optional API key
-- `generate(prompt: str, system_prompt: str | None = None, max_tokens: int = 4096, temperature: float = 0.7) -> AsyncIterator[str]`: Asynchronously generates text from a prompt
-
-**Usage**:
-```python
-provider = OpenAILLMProvider(model="gpt-4-turbo", api_key="your-api-key")
-async for chunk in provider.generate("Hello, world!"):
-    print(chunk)
-```
-
-## Functions
-
-### `__init__(self, model: str = "gpt-4o", api_key: str | None = None)`
-
-Initializes the OpenAI LLM provider.
-
-**Parameters**:
-- `model` (str): The OpenAI model to use (default: "gpt-4o")
-- `api_key` (str | None): Optional API key. If not provided, uses the `OPENAI_API_KEY` environment variable
-
-**Returns**: None
-
-### `generate(self, prompt: str, system_prompt: str | None = None, max_tokens: int = 4096, temperature: float = 0.7) -> AsyncIterator[str]`
-
-Asynchronously generates text from a given prompt.
-
-**Parameters**:
-- `prompt` (str): The user prompt to generate text from
-- `system_prompt` (str | None): Optional system prompt to guide the model's behavior
-- `max_tokens` (int): Maximum number of tokens to generate (default: 4096)
-- `temperature` (float): Sampling temperature (default: 0.7)
-
-**Returns**: AsyncIterator[str] - An asynchronous iterator yielding text chunks as they are generated
-
-## Usage Examples
-
-### Basic Usage
-```python
-from local_deepwiki.providers.llm.openai import OpenAILLMProvider
-
-# Initialize provider (uses OPENAI_API_KEY from environment)
-provider = OpenAILLMProvider()
-
-# Generate text
-async for chunk in provider.generate("Explain quantum computing in simple terms"):
-    print(chunk)
-```
-
-### With Custom Model and API Key
-```python
-provider = OpenAILLMProvider(
-    model="gpt-4-turbo",
-    api_key="sk-your-api-key-here"
-)
-
-async for chunk in provider.generate(
-    prompt="Write a poem about technology",
-    max_tokens=500,
-    temperature=0.8
-):
-    print(chunk)
-```
-
-### With System Prompt
-```python
-async for chunk in provider.generate(
-    prompt="What is the capital of France?",
-    system_prompt="You are a helpful assistant that provides concise answers."
-):
-    print(chunk)
-```
+**Key Features:**
+- Inherits from the [LLMProvider](../base.md) base class
+- Utilizes the [`with_retry`](../base.md) [decorator](../base.md) for robust API interactions
+- Supports asynchronous operations through AsyncOpenAI client
+- Integrates with the logging system for monitoring and debugging
 
 ## Dependencies
 
-This file imports:
-- `os` - For accessing environment variables
-- `AsyncIterator` - From `typing` - Type hint for asynchronous iterators
-- `AsyncOpenAI` - From `openai` - OpenAI async client
-- `LLMProvider` - From `local_deepwiki.providers.base` - Base provider interface
+The module relies on several key components:
 
-The provider requires the `openai` Python package to be installed and the `OPENAI_API_KEY` environment variable to be set for basic functionality.
+- **AsyncOpenAI**: The official OpenAI Python client for asynchronous API interactions
+- **[LLMProvider](../base.md)**: Base class that defines the interface for language model providers
+- **[with_retry](../base.md)**: Decorator from the base providers module that adds retry logic for API calls
+- **[get_logger](../../logging.md)**: Logging utility from the local_deepwiki logging system
+
+## Related Components
+
+This provider works within the broader local_deepwiki ecosystem:
+
+- Implements the [LLMProvider](../base.md) interface defined in `local_deepwiki.providers.base`
+- Uses the logging infrastructure from `local_deepwiki.logging`
+- Integrates with the retry mechanism provided by the base provider system
+
+## Environment Requirements
+
+The module imports the `os` module, suggesting it likely uses environment variables for configuration, though the specific variables are not visible in the provided code.
+
+## Usage Context
+
+As an LLM provider implementation, this class would typically be instantiated and used by higher-level components in the local_deepwiki system that need to generate text content using OpenAI's language models. The asynchronous nature (indicated by AsyncIterator typing and AsyncOpenAI usage) suggests it's designed for efficient handling of multiple concurrent requests.
+
+## API Reference
+
+### class `OpenAILLMProvider`
+
+**Inherits from:** [`LLMProvider`](../base.md)
+
+LLM provider using OpenAI API.
+
+**Methods:**
+
+#### `__init__`
+
+```python
+def __init__(model: str = "gpt-4o", api_key: str | None = None)
+```
+
+Initialize the OpenAI provider.
+
+
+| [Parameter](../../generators/api_docs.md) | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `model` | `str` | `"gpt-4o"` | OpenAI model name. |
+| `api_key` | `str | None` | `None` | Optional API key. Uses OPENAI_API_KEY env var if not provided. |
+
+#### `generate`
+
+```python
+async def generate(prompt: str, system_prompt: str | None = None, max_tokens: int = 4096, temperature: float = 0.7) -> str
+```
+
+Generate text from a prompt.
+
+
+| [Parameter](../../generators/api_docs.md) | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `prompt` | `str` | - | The user prompt. |
+| `system_prompt` | `str | None` | `None` | Optional system prompt. |
+| `max_tokens` | `int` | `4096` | Maximum tokens to generate. |
+| `temperature` | `float` | `0.7` | Sampling temperature. |
+
+#### `generate_stream`
+
+```python
+async def generate_stream(prompt: str, system_prompt: str | None = None, max_tokens: int = 4096, temperature: float = 0.7) -> AsyncIterator[str]
+```
+
+Generate text from a prompt with streaming.
+
+
+| [Parameter](../../generators/api_docs.md) | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `prompt` | `str` | - | The user prompt. |
+| `system_prompt` | `str | None` | `None` | Optional system prompt. |
+| `max_tokens` | `int` | `4096` | Maximum tokens to generate. |
+| `temperature` | `float` | `0.7` | Sampling temperature. |
+
+#### `name`
+
+```python
+def name() -> str
+```
+
+Get the provider name.
+
+
 
 ## Class Diagram
 
 ```mermaid
 classDiagram
     class OpenAILLMProvider {
+        -_model
+        -_client
         -__init__()
-        +generate()
-        +generate_stream()
-        +name()
+        +generate() -> str
+        +generate_stream() -> AsyncIterator[str]
+        +name() -> str
     }
     OpenAILLMProvider --|> LLMProvider
 ```
 
-## See Also
+## Call Graph
 
-- [openai](../embeddings/openai.md) - dependency
-- [base](../base.md) - dependency
-- [anthropic](anthropic.md) - shares 3 dependencies
-- [config](../../config.md) - shares 2 dependencies
+```mermaid
+flowchart TD
+    N0[AsyncOpenAI]
+    N1[OpenAILLMProvider.__init__]
+    N2[OpenAILLMProvider.generate]
+    N3[OpenAILLMProvider.generate_...]
+    N4[create]
+    N1 --> N0
+    N2 --> N4
+    N3 --> N4
+    classDef func fill:#e1f5fe
+    class N0,N4 func
+    classDef method fill:#fff3e0
+    class N1,N2,N3 method
+```
+
+## Relevant Source Files
+
+- `src/local_deepwiki/providers/llm/openai.py:14-101`

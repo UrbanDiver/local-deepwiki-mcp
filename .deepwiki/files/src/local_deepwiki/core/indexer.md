@@ -1,117 +1,72 @@
-# Indexer Module Documentation
+# indexer.py
 
 ## File Overview
 
-The indexer.py file is responsible for indexing code repositories by parsing source files, chunking code into manageable segments, and storing embeddings in a vector database. It serves as the core component that transforms raw code into searchable semantic representations. This module works closely with the chunker to break down code into chunks, the parser to understand code structure, and the vectorstore to persist embeddings for similarity search.
-
-The indexer integrates with the configuration system to determine indexing behavior and works with embedding providers to generate semantic representations of code chunks. It coordinates progress tracking through the rich library for user feedback during long-running indexing operations.
+The `indexer.py` module provides repository indexing functionality for the local_deepwiki system. It handles the process of scanning code repositories, parsing files, creating embeddings, and maintaining an index of code chunks with their associated metadata. The module includes migration capabilities for status data structures and integrates with vector storage for efficient code search and retrieval.
 
 ## Classes
 
 ### RepositoryIndexer
 
-The RepositoryIndexer class orchestrates the complete indexing process for a code repository. It handles parsing source files, chunking code into semantic units, generating embeddings, and storing these embeddings in a vector database.
+The RepositoryIndexer class manages the indexing process for code repositories. It coordinates file scanning, parsing, chunking, embedding generation, and storage in a vector database.
 
-Key methods:
-- `index_repository`: Main method that performs the complete indexing workflow
-- `process_file`: Handles individual file processing including parsing and chunking
-- `update_index_status`: Updates the indexing status for tracking progress
-
-**Usage Example:**
-```python
-from local_deepwiki.core.indexer import RepositoryIndexer
-from local_deepwiki.config import get_config
-
-config = get_config()
-indexer = RepositoryIndexer(config)
-indexer.index_repository()
-```
+**Key Features:**
+- File pattern matching and filtering
+- Progress tracking during indexing operations
+- Integration with embedding providers
+- Vector storage management
+- Status tracking and migration support
 
 ## Functions
 
-### index_repository
+### _needs_migration
 
-The index_repository function is the [main](../web/app.md) entry point for the indexing process. It iterates through all files matching the configured patterns, processes each file through the parsing and chunking pipeline, and stores the resulting embeddings in the vector database.
-
-**Parameters:**
-- config ([Config](../config.md)): Configuration object containing indexing settings
-- progress (Progress): Progress tracking object for user feedback
-- task_id (TaskID): Current task identifier for progress updates
-
-**Return Value:**
-- None
-
-**Usage Example:**
-```python
-from local_deepwiki.core.indexer import index_repository
-from local_deepwiki.config import get_config
-
-config = get_config()
-index_repository(config)
-```
-
-### process_file
-
-The process_file function handles the processing of individual files within the repository. It parses the file content, chunks it into semantic units, and generates embeddings for each chunk.
+Determines whether the status data structure requires migration to a newer format.
 
 **Parameters:**
-- file_path (Path): Path to the file being processed
-- config ([Config](../config.md)): Configuration object for indexing behavior
-- progress (Progress): Progress tracking object
-- task_id (TaskID): Current task identifier
+- Status data to check for migration requirements
 
-**Return Value:**
-- List[[CodeChunk](../models.md)]: List of code chunks generated from the file
+**Returns:**
+- Boolean indicating whether migration is needed
 
-### update_index_status
+### _migrate_status
 
-The update_index_status function updates the indexing status for tracking progress and monitoring the indexing workflow.
+Performs migration of status data structures to ensure compatibility with current format requirements.
 
 **Parameters:**
-- file_path (Path): Path to the file being processed
-- status ([IndexStatus](../models.md)): Current indexing status
-- progress (Progress): Progress tracking object
-- task_id (TaskID): Current task identifier
+- Status data to migrate
 
-**Return Value:**
-- None
+**Returns:**
+- Migrated status data in the current format
 
 ## Usage Examples
 
-### Basic Indexing Workflow
-
 ```python
 from local_deepwiki.core.indexer import RepositoryIndexer
 from local_deepwiki.config import get_config
 
-# Get configuration
-config = get_config()
-
-# Initialize indexer
-indexer = RepositoryIndexer(config)
-
-# Start indexing
-indexer.index_repository()
-```
-
-### Custom Indexing with Progress Tracking
-
-```python
-from local_deepwiki.core.indexer import RepositoryIndexer
-from local_deepwiki.config import get_config
-from rich.progress import Progress
-
+# Initialize the indexer with configuration
 config = get_config()
 indexer = RepositoryIndexer(config)
 
-with Progress() as progress:
-    task = progress.add_task("Indexing repository...", total=100)
-    indexer.index_repository(progress, task)
+# Index a repository
+repository_path = Path("/path/to/repository")
+indexer.index_repository(repository_path)
 ```
 
 ## Related Components
 
-This class works with [VectorStore](vectorstore.md) to store embeddings and retrieve similar code chunks. It integrates with [CodeChunker](chunker.md) to break down source code into semantic units and with [CodeParser](parser.md) to understand code structure. The indexer relies on get_embedding_provider to generate semantic representations of code chunks. It also uses the [Config](../config.md) system to determine indexing patterns and behavior, and the [FileInfo](../models.md) model to track file information during indexing.
+The indexer module integrates with several other components of the local_deepwiki system:
+
+- **[CodeChunker](chunker.md)**: Breaks down parsed code into manageable chunks for embedding
+- **[CodeParser](parser.md)**: Handles parsing of different file types and languages
+- **[VectorStore](vectorstore.md)**: Manages storage and retrieval of embedded code chunks
+- **[Config](../config.md)**: Provides configuration settings for indexing behavior
+- **[CodeChunk](../models.md), [FileInfo](../models.md), [IndexStatus](../models.md)**: Data models for representing indexed content
+- **[ProgressCallback](../models.md)**: Interface for progress reporting during indexing operations
+- **Embedding providers**: Generate vector embeddings for code chunks
+
+The module uses `fnmatch` for file pattern matching, `json` for data serialization, and `rich.progress` for displaying progress information during indexing operations.
 
 ## API Reference
 
@@ -139,7 +94,7 @@ Initialize the indexer.
 #### `index`
 
 ```python
-async def index(full_rebuild: bool = False, progress_callback: Callable[[str, int, int], None] | None = None) -> IndexStatus
+async def index(full_rebuild: bool = False, progress_callback: ProgressCallback | None = None) -> IndexStatus
 ```
 
 Index the repository.
@@ -148,7 +103,7 @@ Index the repository.
 | [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `full_rebuild` | `bool` | `False` | If True, rebuild entire index. Otherwise, incremental update. |
-| [`progress_callback`](../server.md) | `Callable[[str, int, int], None] | None` | `None` | Optional callback for progress updates (message, current, total). |
+| [`progress_callback`](../watcher.md) | `ProgressCallback | None` | `None` | Optional callback for progress updates (message, current, total). |
 
 #### `get_status`
 
@@ -180,13 +135,13 @@ Search the indexed repository.
 ```mermaid
 classDiagram
     class RepositoryIndexer {
-        -__init__()
-        +index()
-        -_find_source_files()
-        -_load_status()
-        -_save_status()
-        +get_status()
-        +search()
+        -__init__(repo_path: Path, config: Config | None, embedding_provider_name: str | None)
+        +index(full_rebuild: bool, progress_callback: ProgressCallback | None) IndexStatus
+        -_find_source_files() list[Path]
+        -_load_status() tuple[IndexStatus | None, bool]
+        -_save_status(status: IndexStatus) None
+        +get_status() IndexStatus | None
+        +search(query: str, limit: int, language: str | None) list[dict]
     }
 ```
 
@@ -237,8 +192,8 @@ flowchart TD
     N7 --> N9
     N7 --> N24
     N7 --> N19
-    N7 --> N13
     N7 --> N15
+    N7 --> N13
     N7 --> N14
     N7 --> N12
     N7 --> N2
@@ -249,16 +204,74 @@ flowchart TD
     N4 --> N25
     N4 --> N16
     N4 --> N28
+    N5 --> N11
     classDef func fill:#e1f5fe
     class N0,N1,N2,N8,N9,N10,N11,N12,N13,N14,N15,N16,N17,N18,N19,N20,N21,N22,N23,N24,N25,N26,N27,N28,N29 func
     classDef method fill:#fff3e0
     class N3,N4,N5,N6,N7 method
 ```
 
+## Usage Examples
+
+*Examples extracted from test files*
+
+### Test that old schema versions need migration
+
+From `test_indexer.py::test_needs_migration_old_version`:
+
+```python
+indexed_at=1.0,
+    total_files=10,
+    total_chunks=100,
+    schema_version=1,
+)
+# If current version is > 1, migration is needed
+if CURRENT_SCHEMA_VERSION > 1:
+    assert _needs_migration(status) is True
+```
+
+### Test that old schema versions need migration
+
+From `test_indexer.py::test_needs_migration_old_version`:
+
+```python
+assert _needs_migration(status) is True
+```
+
+### Test that current schema version doesn't need migration
+
+From `test_indexer.py::test_needs_migration_current_version`:
+
+```python
+indexed_at=1.0,
+    total_files=10,
+    total_chunks=100,
+    schema_version=CURRENT_SCHEMA_VERSION,
+)
+assert _needs_migration(status) is False
+```
+
+### Test that current schema version doesn't need migration
+
+From `test_indexer.py::test_needs_migration_current_version`:
+
+```python
+assert _needs_migration(status) is False
+```
+
+### Test that migration updates the schema version
+
+From `test_indexer.py::test_migrate_status_updates_version`:
+
+```python
+migrated, requires_rebuild = _migrate_status(status)
+assert migrated.schema_version == CURRENT_SCHEMA_VERSION
+```
+
+## Relevant Source Files
+
+- `src/local_deepwiki/core/indexer.py:70-391`
+
 ## See Also
 
-- [server](../server.md) - uses this
-- [watcher](../watcher.md) - uses this
-- [chunker](chunker.md) - dependency
-- [models](../models.md) - dependency
-- [config](../config.md) - dependency
+- [test_indexer](../../../tests/test_indexer.md) - uses this

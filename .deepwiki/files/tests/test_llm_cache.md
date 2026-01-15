@@ -2,101 +2,123 @@
 
 ## File Overview
 
-This file contains comprehensive test suites for the LLM caching functionality in the local_deepwiki project. It tests both the core LLMCache class and the CachingLLMProvider wrapper, ensuring proper cache behavior including cache hits/misses, temperature-based caching rules, and cache management operations.
+This file contains comprehensive test suites for the LLM caching functionality, testing both the core [LLMCache](../src/local_deepwiki/core/llm_cache.md) class and the [CachingLLMProvider](../src/local_deepwiki/providers/llm/cached.md) [wrapper](../src/local_deepwiki/providers/base.md). It verifies cache behavior including storage, retrieval, temperature-based caching rules, and cache statistics.
 
 ## Classes
 
+### MockEmbeddingProvider
+
+A mock implementation of an embedding provider used for testing purposes.
+
+### MockLLMProvider
+
+A mock implementation of an LLM provider used for testing the [CachingLLMProvider](../src/local_deepwiki/providers/llm/cached.md) functionality.
+
 ### TestLLMCache
 
-Test suite for the core LLMCache functionality. This class provides comprehensive testing of cache operations including storage, retrieval, cache misses, and cache management.
+Main test class for testing the [LLMCache](../src/local_deepwiki/core/llm_cache.md) functionality directly.
 
 **Key Test Methods:**
 - `test_cache_miss_on_empty_cache` - Verifies that empty cache returns None and increments miss counter
 - `test_cache_set_and_get_exact_match` - Tests storing and retrieving exact prompt matches
-- `test_high_temperature_not_cached` - Ensures high temperature requests bypass caching
+- `test_high_temperature_not_cached` - Ensures high temperature requests are not cached
 - `test_high_temperature_get_skipped` - Verifies high temperature requests skip cache lookup
 - `test_different_system_prompts_different_cache_entries` - Tests that different system prompts create separate cache entries
 - `test_clear_cache` - Tests cache clearing functionality
 - `test_cache_stats` - Verifies cache statistics tracking
 
+**Fixtures:**
+- `cache_path` - Creates temporary cache path for testing
+- `config` - Provides default [LLMCacheConfig](../src/local_deepwiki/config.md) for tests
+- `cache` - Creates [LLMCache](../src/local_deepwiki/core/llm_cache.md) instance with test configuration
+
 ### TestCachingLLMProvider
 
-Test suite for the CachingLLMProvider wrapper class that adds caching capabilities to any LLM provider.
+Test class for the [CachingLLMProvider](../src/local_deepwiki/providers/llm/cached.md) [wrapper](../src/local_deepwiki/providers/base.md) that adds caching capabilities to any LLM provider.
 
 **Key Test Methods:**
-- `test_name_includes_cache_prefix` - Verifies the provider name includes "cached:" prefix
-- `test_first_call_goes_to_provider` - Tests that initial calls go to the underlying provider
-- `test_second_call_uses_cache` - Verifies subsequent identical calls use cached responses
+- `test_name_includes_cache_prefix` - Verifies provider name includes "cached:" prefix
+- `test_first_call_goes_to_provider` - Tests that initial calls go to underlying provider
+- `test_second_call_uses_cache` - Verifies subsequent identical calls use cache
 - `test_high_temperature_bypasses_cache` - Ensures high temperature requests bypass cache
-- `test_stats_accessible` - Tests that cache statistics are accessible through the provider
-- `test_stream_first_call_caches` - Tests that streaming calls are properly cached
-- `test_different_prompts_different_cache_entries` - Verifies different prompts create separate cache entries
+- `test_stats_accessible` - Tests cache statistics accessibility
+- `test_stream_first_call_caches` - Tests streaming response caching
+- `test_different_prompts_different_cache_entries` - Verifies different prompts create separate entries
 
-### MockEmbeddingProvider
+**Fixtures:**
+- `cache_path` - Creates temporary cache path
+- `mock_llm` - Provides MockLLMProvider instance
+- `cache` - Creates [LLMCache](../src/local_deepwiki/core/llm_cache.md) with predefined configuration
+- `cached_provider` - Creates [CachingLLMProvider](../src/local_deepwiki/providers/llm/cached.md) wrapping mock LLM
 
-Mock implementation for testing embedding functionality (referenced in imports but implementation not shown in provided code).
+### TestLLMCacheConfig
 
-### MockLLMProvider
+Test class for LLM cache configuration validation and behavior.
 
-Mock implementation for testing LLM provider functionality (referenced in imports but implementation not shown in provided code).
+## Key Functions
 
-## Fixtures and Helper Methods
+### cache_path (TestLLMCache)
 
-### cache_path
 ```python
 def cache_path(self, tmp_path: Path) -> Path:
-    """Create a temporary cache path."""
-    return tmp_path / "test_cache.lance"
 ```
-Creates a temporary cache file path for testing.
+
+Creates a temporary cache path for testing.
+
+**Parameters:**
+- `tmp_path` - Pytest temporary path fixture
+
+**Returns:**
+- `Path` - Path to test cache file
 
 ### config
+
 ```python
 def config(self) -> LLMCacheConfig:
-    """Create a cache config with default settings."""
-    return LLMCacheConfig(
-        enabled=True,
-        ttl_seconds=3600,
-        max_entries=1000,
-        similarity_threshold=0.95,
-        max_cacheable_temperature=0.3,
-    )
 ```
-Creates a default cache configuration for testing.
 
-### cache
+Creates a cache configuration with default test settings.
+
+**Returns:**
+- [`LLMCacheConfig`](../src/local_deepwiki/config.md) - Configuration with enabled=True, ttl_seconds=3600, max_entries=1000, similarity_threshold=0.95, max_cacheable_temperature=0.3
+
+### cache (TestLLMCache)
+
 ```python
-def cache(
-    self, cache_path: Path, embedding_provider: MockEmbeddingProvider, config: LLMCacheConfig
-) -> LLMCache:
-    """Create an LLMCache instance."""
-    return LLMCache(cache_path, embedding_provider, config)
+def cache(self, cache_path: Path, embedding_provider: MockEmbeddingProvider, config: LLMCacheConfig) -> LLMCache:
 ```
-Creates an LLMCache instance for testing.
+
+Creates an [LLMCache](../src/local_deepwiki/core/llm_cache.md) instance for testing.
+
+**Parameters:**
+- `cache_path` - Path for cache storage
+- `embedding_provider` - Mock embedding provider
+- `config` - Cache configuration
+
+**Returns:**
+- [`LLMCache`](../src/local_deepwiki/core/llm_cache.md) - Configured cache instance
 
 ### cached_provider
-```python
-def cached_provider(
-    self, mock_llm: MockLLLProvider, cache: LLMCache
-) -> CachingLLMProvider:
-    """Create a CachingLLMProvider instance."""
-    return CachingLLMProvider(mock_llm, cache)
-```
-Creates a CachingLLMProvider instance for testing.
 
-### mock_llm
 ```python
-def mock_llm(self) -> MockLLMProvider:
-    """Create a mock LLM provider."""
-    return MockLLMProvider()
+def cached_provider(self, mock_llm: MockLLMProvider, cache: LLMCache) -> CachingLLMProvider:
 ```
-Creates a mock LLM provider for testing.
+
+Creates a [CachingLLMProvider](../src/local_deepwiki/providers/llm/cached.md) instance for testing.
+
+**Parameters:**
+- `mock_llm` - Mock LLM provider to wrap
+- `cache` - Cache instance to use
+
+**Returns:**
+- [`CachingLLMProvider`](../src/local_deepwiki/providers/llm/cached.md) - Caching [wrapper](../src/local_deepwiki/providers/base.md) around the mock provider
 
 ## Usage Examples
 
-### Testing Cache Operations
+### Testing Cache Behavior
+
 ```python
-# Test cache miss on empty cache
+# Test cache miss
 result = await cache.get(
     prompt="test prompt",
     system_prompt="test system",
@@ -104,12 +126,8 @@ result = await cache.get(
     model_name="test-model",
 )
 assert result is None
-assert cache.stats["misses"] == 1
-```
 
-### Testing Cache Storage and Retrieval
-```python
-# Store a response in cache
+# Test cache set and get
 await cache.set(
     prompt=prompt,
     response=response,
@@ -117,35 +135,28 @@ await cache.set(
     temperature=0.1,
     model_name="test-model",
 )
-
-# Retrieve from cache
-result = await cache.get(
-    prompt=prompt,
-    system_prompt=system_prompt,
-    temperature=0.1,
-    model_name="test-model",
-)
 ```
 
-### Testing Cache Clearing
+### Testing Cached Provider
+
 ```python
-# Clear cache and verify count
-cleared = await cache.clear()
-assert cleared == 2
-assert cache.get_entry_count() == 0
+# Create cached provider
+cached_provider = CachingLLMProvider(mock_llm, cache)
+
+# Verify name includes cache prefix
+assert cached_provider.name == "cached:mock-llm"
 ```
 
 ## Related Components
 
 This test file works with several core components:
 
-- **LLMCache** - The [main](../src/local_deepwiki/web/app.md) cache implementation being tested
-- **CachingLLMProvider** - Wrapper that adds caching to any LLM provider
+- **[LLMCache](../src/local_deepwiki/core/llm_cache.md)** - The [main](../src/local_deepwiki/export/html.md) caching implementation being tested
+- **[CachingLLMProvider](../src/local_deepwiki/providers/llm/cached.md)** - Wrapper that adds caching to any LLM provider
 - **[LLMCacheConfig](../src/local_deepwiki/config.md)** - Configuration class for cache settings
-- **LLMProvider** - Base class for LLM providers
-- **MockEmbeddingProvider** and **MockLLMProvider** - Mock implementations for testing
+- **[LLMProvider](../src/local_deepwiki/providers/base.md)** - Base provider interface that cached providers implement
 
-The tests verify integration between these components and ensure proper caching behavior across different scenarios including temperature thresholds, prompt variations, and cache management operations.
+The tests use mocking extensively through `unittest.mock` to isolate the caching functionality from actual LLM and embedding provider implementations.
 
 ## API Reference
 
@@ -162,7 +173,7 @@ def __init__(dimension: int = 384)
 ```
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `dimension` | `int` | `384` | - |
 
@@ -175,7 +186,7 @@ async def embed(texts: list[str]) -> list[list[float]]
 Return deterministic embeddings based on text hash.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `texts` | `list[str]` | - | - |
 
@@ -194,7 +205,7 @@ def name() -> str
 
 ### class `MockLLMProvider`
 
-**Inherits from:** `LLMProvider`
+**Inherits from:** [`LLMProvider`](../src/local_deepwiki/providers/base.md)
 
 Mock LLM provider for testing.
 
@@ -213,7 +224,7 @@ async def generate(prompt: str, system_prompt: str | None = None, max_tokens: in
 ```
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `prompt` | `str` | - | - |
 | `system_prompt` | `str | None` | `None` | - |
@@ -227,7 +238,7 @@ async def generate_stream(prompt: str, system_prompt: str | None = None, max_tok
 ```
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `prompt` | `str` | - | - |
 | `system_prompt` | `str | None` | `None` | - |
@@ -243,7 +254,7 @@ def name() -> str
 
 ### class `TestLLMCache`
 
-Tests for the LLMCache class.
+Tests for the [LLMCache](../src/local_deepwiki/core/llm_cache.md) class.
 
 **Methods:**
 
@@ -256,7 +267,7 @@ def cache_path(tmp_path: Path) -> Path
 Create a temporary cache path.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `tmp_path` | `Path` | - | - |
 
@@ -282,10 +293,10 @@ Create a cache config with default settings.
 def cache(cache_path: Path, embedding_provider: MockEmbeddingProvider, config: LLMCacheConfig) -> LLMCache
 ```
 
-Create an LLMCache instance.
+Create an [LLMCache](../src/local_deepwiki/core/llm_cache.md) instance.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `cache_path` | `Path` | - | - |
 | `embedding_provider` | `MockEmbeddingProvider` | - | - |
@@ -300,9 +311,9 @@ async def test_cache_miss_on_empty_cache(cache: LLMCache)
 Test that empty cache returns None.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `cache` | `LLMCache` | - | - |
+| `cache` | [`LLMCache`](../src/local_deepwiki/core/llm_cache.md) | - | - |
 
 #### `test_cache_set_and_get_exact_match`
 
@@ -313,9 +324,9 @@ async def test_cache_set_and_get_exact_match(cache: LLMCache)
 Test that exact same prompt returns cached response.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `cache` | `LLMCache` | - | - |
+| `cache` | [`LLMCache`](../src/local_deepwiki/core/llm_cache.md) | - | - |
 
 #### `test_high_temperature_not_cached`
 
@@ -326,9 +337,9 @@ async def test_high_temperature_not_cached(cache: LLMCache)
 Test that high temperature responses are not cached.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `cache` | `LLMCache` | - | - |
+| `cache` | [`LLMCache`](../src/local_deepwiki/core/llm_cache.md) | - | - |
 
 #### `test_high_temperature_get_skipped`
 
@@ -339,9 +350,9 @@ async def test_high_temperature_get_skipped(cache: LLMCache)
 Test that cache lookup is skipped for high temperature requests.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `cache` | `LLMCache` | - | - |
+| `cache` | [`LLMCache`](../src/local_deepwiki/core/llm_cache.md) | - | - |
 
 #### `test_different_system_prompts_different_cache_entries`
 
@@ -352,9 +363,9 @@ async def test_different_system_prompts_different_cache_entries(cache: LLMCache)
 Test that different system prompts result in different cache entries.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `cache` | `LLMCache` | - | - |
+| `cache` | [`LLMCache`](../src/local_deepwiki/core/llm_cache.md) | - | - |
 
 #### `test_clear_cache`
 
@@ -365,9 +376,9 @@ async def test_clear_cache(cache: LLMCache)
 Test clearing the cache.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `cache` | `LLMCache` | - | - |
+| `cache` | [`LLMCache`](../src/local_deepwiki/core/llm_cache.md) | - | - |
 
 #### `test_cache_stats`
 
@@ -378,14 +389,14 @@ async def test_cache_stats(cache: LLMCache)
 Test that cache statistics are tracked correctly.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `cache` | `LLMCache` | - | - |
+| `cache` | [`LLMCache`](../src/local_deepwiki/core/llm_cache.md) | - | - |
 
 
 ### class `TestCachingLLMProvider`
 
-Tests for the CachingLLMProvider class.
+Tests for the [CachingLLMProvider](../src/local_deepwiki/providers/llm/cached.md) class.
 
 **Methods:**
 
@@ -398,7 +409,7 @@ def cache_path(tmp_path: Path) -> Path
 Create a temporary cache path.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `tmp_path` | `Path` | - | - |
 
@@ -416,10 +427,10 @@ Create a mock LLM provider.
 def cache(cache_path: Path) -> LLMCache
 ```
 
-Create an LLMCache instance.
+Create an [LLMCache](../src/local_deepwiki/core/llm_cache.md) instance.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `cache_path` | `Path` | - | - |
 
@@ -429,13 +440,13 @@ Create an LLMCache instance.
 def cached_provider(mock_llm: MockLLMProvider, cache: LLMCache) -> CachingLLMProvider
 ```
 
-Create a CachingLLMProvider instance.
+Create a [CachingLLMProvider](../src/local_deepwiki/providers/llm/cached.md) instance.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `mock_llm` | `MockLLMProvider` | - | - |
-| `cache` | `LLMCache` | - | - |
+| `cache` | [`LLMCache`](../src/local_deepwiki/core/llm_cache.md) | - | - |
 
 #### `test_name_includes_cache_prefix`
 
@@ -446,9 +457,9 @@ def test_name_includes_cache_prefix(cached_provider: CachingLLMProvider)
 Test that provider name includes cache prefix.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `cached_provider` | `CachingLLMProvider` | - | - |
+| `cached_provider` | [`CachingLLMProvider`](../src/local_deepwiki/providers/llm/cached.md) | - | - |
 
 #### `test_first_call_goes_to_provider`
 
@@ -459,9 +470,9 @@ async def test_first_call_goes_to_provider(cached_provider: CachingLLMProvider, 
 Test that first call goes to underlying provider.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `cached_provider` | `CachingLLMProvider` | - | - |
+| `cached_provider` | [`CachingLLMProvider`](../src/local_deepwiki/providers/llm/cached.md) | - | - |
 | `mock_llm` | `MockLLMProvider` | - | - |
 
 #### `test_second_call_uses_cache`
@@ -473,9 +484,9 @@ async def test_second_call_uses_cache(cached_provider: CachingLLMProvider, mock_
 Test that second identical call uses cache.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `cached_provider` | `CachingLLMProvider` | - | - |
+| `cached_provider` | [`CachingLLMProvider`](../src/local_deepwiki/providers/llm/cached.md) | - | - |
 | `mock_llm` | `MockLLMProvider` | - | - |
 
 #### `test_high_temperature_bypasses_cache`
@@ -487,9 +498,9 @@ async def test_high_temperature_bypasses_cache(cached_provider: CachingLLMProvid
 Test that high temperature calls don't use cache.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `cached_provider` | `CachingLLMProvider` | - | - |
+| `cached_provider` | [`CachingLLMProvider`](../src/local_deepwiki/providers/llm/cached.md) | - | - |
 | `mock_llm` | `MockLLMProvider` | - | - |
 
 #### `test_stats_accessible`
@@ -501,9 +512,9 @@ async def test_stats_accessible(cached_provider: CachingLLMProvider, mock_llm: M
 Test that cache stats are accessible through provider.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `cached_provider` | `CachingLLMProvider` | - | - |
+| `cached_provider` | [`CachingLLMProvider`](../src/local_deepwiki/providers/llm/cached.md) | - | - |
 | `mock_llm` | `MockLLMProvider` | - | - |
 
 #### `test_stream_first_call_caches`
@@ -515,9 +526,9 @@ async def test_stream_first_call_caches(cached_provider: CachingLLMProvider, moc
 Test that streaming call caches the complete response.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `cached_provider` | `CachingLLMProvider` | - | - |
+| `cached_provider` | [`CachingLLMProvider`](../src/local_deepwiki/providers/llm/cached.md) | - | - |
 | `mock_llm` | `MockLLMProvider` | - | - |
 
 #### `test_different_prompts_different_cache_entries`
@@ -529,9 +540,9 @@ async def test_different_prompts_different_cache_entries(cached_provider: Cachin
 Test that different prompts get different cache entries.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../src/local_deepwiki/generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `cached_provider` | `CachingLLMProvider` | - | - |
+| `cached_provider` | [`CachingLLMProvider`](../src/local_deepwiki/providers/llm/cached.md) | - | - |
 | `mock_llm` | `MockLLMProvider` | - | - |
 
 

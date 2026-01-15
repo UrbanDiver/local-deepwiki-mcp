@@ -2,115 +2,131 @@
 
 ## File Overview
 
-This file implements a local embedding provider using the sentence-transformers library. It provides an implementation of the `EmbeddingProvider` base class that generates dense vector embeddings for text using pre-trained sentence transformers models.
+This file implements a local embedding provider that uses the SentenceTransformer library to generate embeddings locally without requiring external API calls. It extends the base [EmbeddingProvider](../base.md) interface to provide local embedding capabilities.
 
 ## Classes
 
 ### LocalEmbeddingProvider
 
-The `LocalEmbeddingProvider` class implements the `EmbeddingProvider` interface to generate text embeddings using local sentence transformer models.
+The LocalEmbeddingProvider class provides local text embedding functionality using sentence transformers. This class inherits from the base [EmbeddingProvider](../base.md) class and implements embedding generation that runs entirely on the local machine.
 
-**Key Methods:**
-
-- `__init__(self, model_name: str = "all-MiniLM-L6-v2")`: Initializes the provider with a specified model name
-- `get_embedding(self, text: str) -> list[float]`: Generates a vector embedding for the given text
-- `get_embeddings(self, texts: list[str]) -> list[list[float]]`: Generates vector embeddings for multiple texts
-
-**Usage:**
-```python
-from local_deepwiki.providers.embeddings.local import LocalEmbeddingProvider
-
-# Initialize provider
-provider = LocalEmbeddingProvider(model_name="all-MiniLM-L6-v2")
-
-# Generate single embedding
-embedding = provider.get_embedding("Hello world")
-
-# Generate multiple embeddings
-embeddings = provider.get_embeddings(["Hello world", "How are you?"])
-```
-
-## Functions
-
-### `__init__(self, model_name: str = "all-MiniLM-L6-v2")`
-
-Initializes the LocalEmbeddingProvider with a specified sentence transformer model.
-
-**Parameters:**
-- `model_name` (str): Name of the sentence transformer model to use. Defaults to "all-MiniLM-L6-v2"
-
-**Returns:**
-- None
-
-### `get_embedding(self, text: str) -> list[float]`
-
-Generates a vector embedding for a single text string.
-
-**Parameters:**
-- `text` (str): The text to embed
-
-**Returns:**
-- `list[float]`: The embedding vector as a list of floating point numbers
-
-### `get_embeddings(self, texts: list[str]) -> list[list[float]]`
-
-Generates vector embeddings for multiple text strings.
-
-**Parameters:**
-- `texts` (list[str]): List of texts to embed
-
-**Returns:**
-- `list[list[float]]`: List of embedding vectors, one for each input text
-
-## Usage Examples
-
-```python
-# Basic usage
-from local_deepwiki.providers.embeddings.local import LocalEmbeddingProvider
-
-# Create provider with default model
-provider = LocalEmbeddingProvider()
-
-# Generate single embedding
-text = "The quick brown fox jumps over the lazy dog"
-embedding = provider.get_embedding(text)
-print(f"Embedding shape: {len(embedding)}")
-
-# Generate multiple embeddings
-texts = [
-    "Hello world",
-    "How are you?",
-    "I am fine, thank you"
-]
-embeddings = provider.get_embeddings(texts)
-print(f"Generated {len(embeddings)} embeddings")
-```
+**Key Features:**
+- Local embedding generation using SentenceTransformer models
+- No external API dependencies
+- Extends the base [EmbeddingProvider](../base.md) interface
 
 ## Dependencies
 
-This file depends on:
-- `sentence_transformers.SentenceTransformer`: For generating sentence embeddings
-- `local_deepwiki.providers.base.EmbeddingProvider`: Base class interface for embedding providers
+The file imports the following components:
 
-The package requires the `sentence-transformers` library to be installed:
-```bash
-pip install sentence-transformers
+- `SentenceTransformer` from the sentence-transformers library for local embedding model functionality
+- [`EmbeddingProvider`](../base.md) from the local_deepwiki.providers.base module as the base class
+
+## Related Components
+
+This file works with:
+- **[EmbeddingProvider](../base.md)**: The base class that defines the embedding provider interface
+- **SentenceTransformer**: The underlying model library used for generating embeddings locally
+
+## Usage Context
+
+The LocalEmbeddingProvider serves as a local alternative to cloud-based embedding services, allowing users to generate embeddings without network dependencies or API costs. It integrates with the broader local_deepwiki system as one of the available embedding provider options.
+
+## API Reference
+
+### class `LocalEmbeddingProvider`
+
+**Inherits from:** [`EmbeddingProvider`](../base.md)
+
+Embedding provider using local sentence-transformers models.
+
+**Methods:**
+
+#### `__init__`
+
+```python
+def __init__(model_name: str = "all-MiniLM-L6-v2")
 ```
+
+Initialize the local embedding provider.
+
+
+| [Parameter](../../generators/api_docs.md) | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `model_name` | `str` | `"all-MiniLM-L6-v2"` | Name of the sentence-transformers model to use. |
+
+#### `embed`
+
+```python
+async def embed(texts: list[str]) -> list[list[float]]
+```
+
+Generate embeddings for a list of texts.
+
+
+| [Parameter](../../generators/api_docs.md) | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `texts` | `list[str]` | - | List of text strings to embed. |
+
+#### `get_dimension`
+
+```python
+def get_dimension() -> int
+```
+
+Get the embedding dimension.
+
+#### `name`
+
+```python
+def name() -> str
+```
+
+Get the provider name.
+
+
 
 ## Class Diagram
 
 ```mermaid
 classDiagram
     class LocalEmbeddingProvider {
+        -_model_name
+        -_model
+        -_dimension
         -__init__()
-        -_load_model()
-        +embed()
-        +get_dimension()
-        +name()
+        -_load_model() -> SentenceTransformer
+        +embed() -> list[list[float]]
+        +get_dimension() -> int
+        +name() -> str
     }
     LocalEmbeddingProvider --|> EmbeddingProvider
 ```
 
-## See Also
+## Call Graph
 
-- [base](../base.md) - dependency
+```mermaid
+flowchart TD
+    N0[LocalEmbeddingProvider._loa...]
+    N1[LocalEmbeddingProvider.embed]
+    N2[LocalEmbeddingProvider.get_...]
+    N3[SentenceTransformer]
+    N4[_load_model]
+    N5[encode]
+    N6[get_sentence_embedding_dime...]
+    N7[tolist]
+    N0 --> N3
+    N0 --> N6
+    N1 --> N4
+    N1 --> N5
+    N1 --> N7
+    N2 --> N4
+    classDef func fill:#e1f5fe
+    class N3,N4,N5,N6,N7 func
+    classDef method fill:#fff3e0
+    class N0,N1,N2 method
+```
+
+## Relevant Source Files
+
+- `src/local_deepwiki/providers/embeddings/local.py:8-55`

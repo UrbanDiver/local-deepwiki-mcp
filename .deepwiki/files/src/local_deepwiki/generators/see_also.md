@@ -1,138 +1,62 @@
-# File Overview
+# See Also Generator
 
-This file, `see_also.py`, is part of the `local_deepwiki` package and provides functionality for generating "See Also" sections in wiki pages. It helps establish relationships between source files and their corresponding wiki documentation by mapping file paths and analyzing dependencies to suggest related content.
+## File Overview
 
-The module includes utilities for building mappings from source files to wiki pages, generating see-also content, and adding these sections to wiki pages.
+The `see_also.py` module provides functionality for analyzing relationships between source files and generating "See Also" sections for wiki pages. It builds mappings between source files and their corresponding wiki pages, then adds cross-references to related files based on code relationships.
 
-# Classes
+## Classes
 
-## FileRelationships
+### FileRelationships
 
-A dataclass used to store information about file relationships.
+A data class that stores relationship information for a source file.
 
-### Fields
+### RelationshipAnalyzer  
 
-- `source_file` (str): The path of the source file.
-- `wiki_page` (str): The corresponding wiki page path.
-- `related_files` (list[str]): A list of related file paths.
+Analyzes code relationships between files to determine which files should be cross-referenced in "See Also" sections.
 
-## RelationshipAnalyzer
+## Functions
 
-A class responsible for analyzing relationships between source files and wiki pages.
-
-### Methods
-
-- `analyze()` → `dict[str, list[str]]`: Analyzes the relationships and returns a dictionary mapping source files to lists of related files.
-
-# Functions
-
-## build_file_to_wiki_map
+### build_file_to_wiki_map
 
 ```python
-def build_file_to_wiki_map(pages: list[WikiPage]) -> dict[str, str]:
+def build_file_to_wiki_map(pages: list[WikiPage]) -> dict[str, str]
 ```
 
 Builds a mapping from source file paths to wiki page paths.
 
-### Parameters
+**Parameters:**
+- `pages`: List of [WikiPage](../models.md) objects to process
 
-- `pages` (list[WikiPage]): A list of wiki pages to process.
+**Returns:**
+- Dictionary mapping source file path to wiki page path
 
-### Returns
+The function processes wiki pages with paths starting with "files/" and maps them to their corresponding source files by removing the "files/" prefix and changing the .md extension to .py.
 
-- `dict[str, str]`: A dictionary mapping source file paths to wiki page paths.
+### generate_see_also_section
 
-## generate_see_also_section
+Generates a "See Also" section for a wiki page based on file relationships.
 
-```python
-def generate_see_also_section(related_files: list[str]) -> str:
-```
+### _relative_path
 
-Generates a formatted "See Also" section for a wiki page based on a list of related files.
+A helper function for calculating relative paths between files.
 
-### Parameters
+### add_see_also_sections
 
-- `related_files` (list[str]): A list of file paths related to the current page.
+Adds "See Also" sections to multiple wiki pages based on analyzed relationships.
 
-### Returns
+## Related Components
 
-- `str`: A formatted markdown string representing the "See Also" section.
+This module works with the following components from the codebase:
 
-## _relative_path
+- **[WikiPage](../models.md)**: The [main](../export/html.md) page model used for storing wiki content and metadata
+- **[CodeChunk](../models.md)**: Represents chunks of code with type information
+- **[ChunkType](../models.md)**: Enumeration defining different types of code chunks
 
-```python
-def _relative_path(file_path: str, base_path: str) -> str:
-```
+The module uses these models to analyze code structure and generate appropriate cross-references between related files in the wiki documentation.
 
-Computes the relative path of a file with respect to a base path.
+## Usage Context
 
-### Parameters
-
-- `file_path` (str): The absolute or full file path.
-- `base_path` (str): The base path to compute the relative path from.
-
-### Returns
-
-- `str`: The relative path of `file_path` with respect to `base_path`.
-
-## add_see_also_sections
-
-```python
-def add_see_also_sections(wiki_pages: list[WikiPage], file_to_wiki_map: dict[str, str]) -> None:
-```
-
-Adds "See Also" sections to the content of wiki pages based on the file-to-wiki mapping.
-
-### Parameters
-
-- `wiki_pages` (list[WikiPage]): A list of wiki pages to update.
-- `file_to_wiki_map` (dict[str, str]): A mapping from source file paths to wiki page paths.
-
-### Returns
-
-- `None`: This function modifies the wiki pages in place.
-
-# Usage Examples
-
-## Building a File-to-Wiki Map
-
-```python
-from local_deepwiki.generators.see_also import build_file_to_wiki_map
-from local_deepwiki.models import WikiPage
-
-pages = [WikiPage(path="files/src/local_deepwiki/core/chunker.md", content="...")]
-file_to_wiki_map = build_file_to_wiki_map(pages)
-```
-
-## Generating a See Also Section
-
-```python
-from local_deepwiki.generators.see_also import generate_see_also_section
-
-related_files = ["src/local_deepwiki/core/chunker.py", "src/local_deepwiki/core/parser.py"]
-section = generate_see_also_section(related_files)
-```
-
-## Adding See Also Sections to Wiki Pages
-
-```python
-from local_deepwiki.generators.see_also import add_see_also_sections
-from local_deepwiki.models import WikiPage
-
-wiki_pages = [WikiPage(path="files/src/local_deepwiki/core/chunker.md", content="...")]
-file_to_wiki_map = {"src/local_deepwiki/core/chunker.py": "files/src/local_deepwiki/core/chunker.md"}
-
-add_see_also_sections(wiki_pages, file_to_wiki_map)
-```
-
-# Related Components
-
-This module interacts with the following components:
-
-- `WikiPage` from `local_deepwiki.models`: Represents a wiki page with a path and content.
-- `ChunkType` and `CodeChunk` from `local_deepwiki.models`: Used for handling code chunks and their types, although not directly used in this file.
-- `Path` from `pathlib`: Used for handling file paths.
-- `re`: Used for regular expressions, although not directly used in this file.
+This module is part of the wiki generation pipeline, specifically handling the cross-referencing aspect by analyzing how files relate to each other through imports, class usage, and other code relationships, then adding appropriate "See Also" sections to help users navigate between related documentation pages.
 
 ## API Reference
 
@@ -250,14 +174,20 @@ Add See Also sections to wiki pages.
 
 ```mermaid
 classDiagram
+    class FileRelationships {
+        +file_path: str
+        +imports: set[str]
+        +imported_by: set[str]
+        +shared_deps_with: dict[str, int]
+    }
     class RelationshipAnalyzer {
-        -__init__()
-        +analyze_chunks()
-        -_parse_import_line()
-        -_module_to_file_path()
-        +get_relationships()
-        -_module_matches_file()
-        +get_all_known_files()
+        -__init__() None
+        +analyze_chunks(chunks: list[CodeChunk]) None
+        -_parse_import_line(line: str) str | None
+        -_module_to_file_path(module: str) str | None
+        +get_relationships(file_path: str) FileRelationships
+        -_module_matches_file(module: str, file_path: str) bool
+        +get_all_known_files() set[str]
     }
 ```
 
@@ -314,13 +244,128 @@ flowchart TD
     class N2,N3,N4,N5,N6 method
 ```
 
+## Usage Examples
+
+*Examples extracted from test files*
+
+### Test analyzing Python import statements
+
+From `test_see_also.py::test_analyze_python_imports`:
+
+```python
+name="imports",
+        content="from local_deepwiki.core.chunker import CodeChunker\nfrom local_deepwiki.models import CodeChunk",
+        start_line=1,
+        end_line=2,
+    ),
+    CodeChunk(
+        id="2",
+        file_path="src/local_deepwiki/core/chunker.py",
+        language=Language.PYTHON,
+        chunk_type=ChunkType.IMPORT,
+        name="imports",
+        content="from local_deepwiki.models import CodeChunk",
+        start_line=1,
+        end_line=1,
+    ),
+]
+
+analyzer.analyze_chunks(chunks)
+
+# Check that files are tracked
+known_files = analyzer.get_all_known_files()
+assert "src/local_deepwiki/core/indexer.py" in known_files
+```
+
+### Test analyzing Python import statements
+
+From `test_see_also.py::test_analyze_python_imports`:
+
+```python
+analyzer = RelationshipAnalyzer()
+chunks = [
+    CodeChunk(
+        id="1",
+        file_path="src/local_deepwiki/core/indexer.py",
+        language=Language.PYTHON,
+        chunk_type=ChunkType.IMPORT,
+        name="imports",
+        content="from local_deepwiki.core.chunker import CodeChunker\nfrom local_deepwiki.models import CodeChunk",
+        start_line=1,
+        end_line=2,
+    ),
+    CodeChunk(
+        id="2",
+        file_path="src/local_deepwiki/core/chunker.py",
+        language=Language.PYTHON,
+        chunk_type=ChunkType.IMPORT,
+        name="imports",
+        content="from local_deepwiki.models import CodeChunk",
+        start_line=1,
+        end_line=1,
+    ),
+]
+
+analyzer.analyze_chunks(chunks)
+```
+
+### Test analyzing Python import statements
+
+From `test_see_also.py::test_analyze_python_imports`:
+
+```python
+analyzer.analyze_chunks(chunks)
+
+# Check that files are tracked
+known_files = analyzer.get_all_known_files()
+assert "src/local_deepwiki/core/indexer.py" in known_files
+```
+
+### Test analyzing Python import statements
+
+From `test_see_also.py::test_analyze_python_imports`:
+
+```python
+known_files = analyzer.get_all_known_files()
+assert "src/local_deepwiki/core/indexer.py" in known_files
+```
+
+### Test getting import relationships for a file
+
+From `test_see_also.py::test_get_relationships_imports`:
+
+```python
+name="imports",
+        content="from local_deepwiki.core.chunker import CodeChunker",
+        start_line=1,
+        end_line=1,
+    ),
+    CodeChunk(
+        id="2",
+        file_path="src/local_deepwiki/core/chunker.py",
+        language=Language.PYTHON,
+        chunk_type=ChunkType.IMPORT,
+        name="imports",
+        content="from local_deepwiki.models import CodeChunk",
+        start_line=1,
+        end_line=1,
+    ),
+]
+
+analyzer.analyze_chunks(chunks)
+relationships = analyzer.get_relationships("src/local_deepwiki/core/indexer.py")
+
+assert isinstance(relationships, FileRelationships)
+```
+
 ## Relevant Source Files
 
 - `src/local_deepwiki/generators/see_also.py:16-22`
 
 ## See Also
 
+- [test_see_also](../../../tests/test_see_also.md) - uses this
 - [wiki](wiki.md) - uses this
+- [models](../models.md) - dependency
 - [crosslinks](crosslinks.md) - shares 4 dependencies
 - [diagrams](diagrams.md) - shares 4 dependencies
-- [api_docs](api_docs.md) - shares 4 dependencies

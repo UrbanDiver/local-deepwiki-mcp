@@ -1,120 +1,117 @@
-# Parser Module
+# parser.py
 
 ## File Overview
 
-The parser module provides source code parsing capabilities using tree-sitter parsers for multiple programming languages. It handles file parsing, AST generation, and extraction of code elements like docstrings and comments.
+The `parser.py` module provides source code parsing capabilities using tree-sitter parsers for multiple programming languages. It handles AST (Abstract Syntax Tree) generation, language detection, and extraction of code documentation like docstrings and comments.
 
 ## Classes
 
 ### CodeParser
 
-The [main](../watcher.md) parsing class that manages tree-sitter parsers for different programming languages.
-
-**Constructor:**
-- `__init__()` - Initializes the parser with empty dictionaries for parsers and languages
+The CodeParser class serves as the [main](../export/html.md) interface for parsing source code across different programming languages. It manages tree-sitter parsers and provides methods for parsing files and source code strings.
 
 **Key Methods:**
-- `_get_parser(language: LangEnum) -> Parser` - Gets or creates a parser for the specified language
-- `detect_language()` - Detects the programming language (implementation not shown in provided code)
-- `parse_file()` - Parses a source file (implementation not shown in provided code)
-- `parse_source(source: str | bytes, language: LangEnum) -> Node` - Parses source code string and returns the AST root node
-- `get_file_info()` - Retrieves file information (implementation not shown in provided code)
+
+- `__init__()` - Initializes the parser with empty parser and language dictionaries
+- `_get_parser(language)` - Gets or creates a parser for the specified language
+- `detect_language()` - Detects the programming language of a file (method signature not fully shown)
+- `parse_file()` - Parses a source file and returns AST information (method signature not fully shown)
+- `parse_source(source, language)` - Parses source code string and returns the AST root node
+- `get_file_info()` - Retrieves file information (method signature not fully shown)
 
 ## Functions
 
-### get_node_text
+### parse_source
 
 ```python
-def get_node_text(node: Node, source: bytes) -> str
+def parse_source(self, source: str | bytes, language: LangEnum) -> Node:
 ```
 
-Extracts text content from a tree-sitter node.
+Parses source code string and returns the AST root node.
 
 **Parameters:**
-- `node` - The tree-sitter node
-- `source` - The original source bytes
+- `source` (str | bytes) - The source code to parse
+- `language` (LangEnum) - The programming language
 
 **Returns:**
-- The text content of the node as a UTF-8 decoded string
+- `Node` - The AST root node
 
 ### get_docstring
 
 ```python
-def get_docstring(node: Node, source: bytes, language: LangEnum) -> str | None
+def get_docstring(node: Node, source: bytes, language: LangEnum) -> str | None:
 ```
 
 Extracts docstring from a function or class node.
 
 **Parameters:**
-- `node` - The tree-sitter node
-- `source` - The original source bytes  
-- `language` - The programming language
+- `node` (Node) - The tree-sitter node
+- `source` (bytes) - The original source bytes
+- `language` (LangEnum) - The programming language
 
 **Returns:**
-- The docstring text or None if not found
+- `str | None` - The docstring or None if not found
 
-**Note:** The implementation shows Python-specific docstring extraction logic for the first expression statement in a function/class body.
+### Utility Functions
 
-### Additional Utility Functions
+The module also includes several utility functions for working with AST nodes:
 
-The module also includes several other utility functions (implementations not shown in provided code):
-- `_read_file_content` - Reads file content
-- `_compute_file_hash` - Computes file hash
-- `find_nodes_by_type` - Finds nodes by type
-- `walk` - Tree walking functionality
-- `get_node_name` - Gets node names
-- `_collect_preceding_comments` - Collects comments before nodes
-- `_strip_line_comment_prefix` - Strips comment prefixes
+- `_read_file_content()` - Reads file content
+- `_compute_file_hash()` - Computes file hash
+- `get_node_text()` - Extracts text from a node
+- `find_nodes_by_type()` - Finds nodes by their type
+- `walk()` - Walks through AST nodes
+- `get_node_name()` - Gets the name of a node
+- `_collect_preceding_comments()` - Collects comments preceding a node
+- `_strip_line_comment_prefix()` - Strips comment prefixes from lines
 
 ## Usage Examples
 
-### Basic Source Parsing
+### Basic Source Code Parsing
 
 ```python
 from local_deepwiki.core.parser import CodeParser
+from local_deepwiki.core.language import LangEnum
 
 # Initialize parser
 parser = CodeParser()
 
 # Parse Python source code
-source_code = """
+source = """
 def hello_world():
-    '''This is a docstring'''
-    print("Hello, World!")
+    '''This is a docstring.'''
+    print("Hello, world!")
 """
 
-# Parse and get AST root
-root_node = parser.parse_source(source_code, LangEnum.PYTHON)
-```
-
-### Extracting Node Text
-
-```python
-# Get text content from a node
-node_text = get_node_text(some_node, source_bytes)
+root_node = parser.parse_source(source, LangEnum.PYTHON)
 ```
 
 ### Extracting Docstrings
 
 ```python
 # Extract docstring from a function node
-docstring = get_docstring(function_node, source_bytes, LangEnum.PYTHON)
+docstring = get_docstring(function_node, source.encode('utf-8'), LangEnum.PYTHON)
 if docstring:
     print(f"Found docstring: {docstring}")
 ```
 
 ## Related Components
 
-The parser module works with several language-specific tree-sitter modules imported at the module level:
-- `tree_sitter_c`
-- `tree_sitter_c_sharp` 
-- `tree_sitter_cpp`
-- `tree_sitter_go`
-- `tree_sitter_java`
-- `tree_sitter_javascript`
-- And 11 additional language modules
+This module works with several other components:
 
-The module also uses a `LangEnum` enumeration for language specification and integrates with the tree-sitter `Parser`, [`Language`](../models.md), and `Node` classes.
+- **[Language](../models.md) enumeration** - Uses `LangEnum` for language specification
+- **Tree-sitter libraries** - Integrates with multiple tree-sitter language modules including:
+  - `tree_sitter_c`
+  - `tree_sitter_c_sharp` 
+  - `tree_sitter_cpp`
+  - `tree_sitter_go`
+  - `tree_sitter_java`
+  - `tree_sitter_javascript`
+  - And 11 additional language modules
+- **File system operations** - Uses `pathlib.Path` for file handling
+- **Memory-mapped files** - Uses `mmap` for efficient file reading
+
+The parser supports multiple programming languages and provides a unified interface for AST generation and code analysis across different language ecosystems.
 
 ## API Reference
 
@@ -361,12 +358,59 @@ flowchart TD
     class N0,N1,N2,N3 method
 ```
 
+## Usage Examples
+
+*Examples extracted from test files*
+
+### Test Python language detection
+
+From `test_parser.py::test_detect_language_python`:
+
+```python
+assert self.parser.detect_language(Path("test.py")) == Language.PYTHON
+```
+
+### Test Python language detection
+
+From `test_parser.py::test_detect_language_python`:
+
+```python
+assert self.parser.detect_language(Path("test.py")) == Language.PYTHON
+```
+
+### Test JavaScript language detection
+
+From `test_parser.py::test_detect_language_javascript`:
+
+```python
+assert self.parser.detect_language(Path("test.js")) == Language.JAVASCRIPT
+```
+
+### Test JavaScript language detection
+
+From `test_parser.py::test_detect_language_javascript`:
+
+```python
+assert self.parser.detect_language(Path("test.js")) == Language.JAVASCRIPT
+```
+
+### Test parsing a Python file
+
+From `test_parser.py::test_parse_python_file`:
+
+```python
+result = self.parser.parse_file(test_file)
+assert result is not None
+```
+
 ## Relevant Source Files
 
 - `src/local_deepwiki/core/parser.py:138-247`
 
 ## See Also
 
+- [test_examples](../generators/test_examples.md) - uses this
+- [chunker](chunker.md) - uses this
 - [test_parser](../../../tests/test_parser.md) - uses this
-- [test_api_docs](../../../tests/test_api_docs.md) - uses this
-- [api_docs](../generators/api_docs.md) - uses this
+- [callgraph](../generators/callgraph.md) - uses this
+- [test_callgraph](../../../tests/test_callgraph.md) - uses this

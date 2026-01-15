@@ -1,204 +1,105 @@
-# File: test_search.py
+# test_search.py
 
 ## File Overview
 
-This file contains unit tests for the search-related functionality in the local_deepwiki project. It tests functions that extract information from wiki pages for search indexing, generate search entries, and write search indexes to disk. The tests ensure that search functionality works correctly and that the search index is properly structured.
-
-The file is part of the test suite and works with the core [WikiPage](../src/local_deepwiki/models.md) model and search generation components. It also tests the Flask web application's search endpoint.
+This file contains unit tests for the search functionality of the local_deepwiki system. It tests various components involved in generating and serving search indexes, including text extraction, search entry generation, and the web API endpoint.
 
 ## Classes
 
-### TestWriteSearchIndex
-
-Tests for the write_search_index function.
-
-**Methods:**
-- `test_writes_json_file`: Tests that the search index is written to disk as a JSON file.
-
-### TestGenerateSearchEntry
-
-Tests for the generate_search_entry function.
-
-**Methods:**
-- `test_generates_complete_entry`: Tests that all fields (path, title, headings, terms, snippet) are properly populated in the search entry.
-
-### TestSearchJsonEndpoint
-
-Tests for the Flask /search.json endpoint.
-
-**Methods:**
-- `test_returns_search_index`: Tests that the /search.json endpoint returns the correct search index data.
-
-### TestGenerateSearchIndex
-
-Tests for the generate_search_index function.
-
-**Methods:**
-- `test_generates_index_for_multiple_pages`: Tests index generation with multiple wiki pages.
-
 ### TestExtractHeadings
 
-Tests for the extract_headings function.
-
-**Methods:**
-- (Not fully shown in provided code, but would test heading extraction from wiki content)
+Tests for the [`extract_headings`](../src/local_deepwiki/generators/search.md) function that extracts heading text from markdown content.
 
 ### TestExtractCodeTerms
 
-Tests for the extract_code_terms function.
-
-**Methods:**
-- (Not fully shown in provided code, but would test code term extraction from wiki content)
+Tests for the [`extract_code_terms`](../src/local_deepwiki/generators/search.md) function that identifies code-related terms from markdown content.
 
 ### TestExtractSnippet
 
-Tests for the extract_snippet function.
+Tests for the [`extract_snippet`](../src/local_deepwiki/generators/search.md) function that generates text snippets from page content.
 
-**Methods:**
-- (Not fully shown in provided code, but would test snippet extraction from wiki content)
+### TestGenerateSearchEntry
 
-## Functions
+Tests for the [`generate_search_entry`](../src/local_deepwiki/generators/search.md) function.
 
-### extract_code_terms
+**Key Methods:**
+- `test_generates_complete_entry()` - Verifies that all required fields are populated in a search entry, including path, title, headings, and terms
 
-Extracts code terms (identifiers, class names, etc.) from wiki page content.
+### TestGenerateSearchIndex
 
-**Parameters:**
-- `content` (str): The content of the wiki page
+Tests for the [`generate_search_index`](../src/local_deepwiki/generators/search.md) function that creates search indexes from wiki pages.
 
-**Returns:**
-- `list[str]`: A list of code terms found in the content
+### TestWriteSearchIndex
 
-### extract_headings
+Tests for the [`write_search_index`](../src/local_deepwiki/generators/search.md) function that persists search indexes to disk.
 
-Extracts headings from wiki page content.
+**Key Methods:**
+- `test_writes_json_file()` - Verifies that the search index is correctly written to a JSON file on disk
 
-**Parameters:**
-- `content` (str): The content of the wiki page
+### TestSearchJsonEndpoint
 
-**Returns:**
-- `list[str]`: A list of heading strings found in the content
+Tests for the Flask web application's `/search.json` endpoint.
 
-### extract_snippet
+**Key Methods:**
+- `test_returns_search_index()` - Tests that the endpoint returns the search index data
 
-Extracts a snippet from wiki page content.
+## Functions Tested
 
-**Parameters:**
-- `content` (str): The content of the wiki page
+Based on the imports, this test file covers the following functions from the search module:
 
-**Returns:**
-- `str`: A snippet of the content, typically the first paragraph or line
-
-### generate_search_entry
-
-Generates a search entry for a single wiki page.
-
-**Parameters:**
-- `page` ([WikiPage](../src/local_deepwiki/models.md)): The wiki page to generate a search entry for
-
-**Returns:**
-- `dict`: A dictionary containing search entry fields (path, title, headings, terms, snippet)
-
-### generate_search_index
-
-Generates a complete search index for multiple wiki pages.
-
-**Parameters:**
-- `pages` (list[[WikiPage](../src/local_deepwiki/models.md)]): A list of wiki pages to index
-
-**Returns:**
-- `list[dict]`: A list of search entries, one for each page
-
-### write_search_index
-
-Writes the search index to a JSON file on disk.
-
-**Parameters:**
-- `wiki_path` (Path): The path to the wiki directory
-- `pages` (list[[WikiPage](../src/local_deepwiki/models.md)]): The list of wiki pages to index
-
-**Returns:**
-- `Path`: The path to the written search index file
+- [`extract_code_terms`](../src/local_deepwiki/generators/search.md) - Extracts code-related terms from content
+- [`extract_headings`](../src/local_deepwiki/generators/search.md) - Extracts heading text from markdown
+- [`extract_snippet`](../src/local_deepwiki/generators/search.md) - Generates content snippets
+- [`generate_search_entry`](../src/local_deepwiki/generators/search.md) - Creates search index entries for pages
+- [`generate_search_index`](../src/local_deepwiki/generators/search.md) - Builds complete search indexes
+- [`write_search_index`](../src/local_deepwiki/generators/search.md) - Persists search data to disk
 
 ## Usage Examples
 
-### Generate a search entry for a wiki page
+### Testing Search Entry Generation
 
 ```python
-from local_deepwiki.models import WikiPage
-from local_deepwiki.generators.search import generate_search_entry
-
 page = WikiPage(
-    path="index.md",
-    title="Home",
-    content="# Home Page\n\nThis is the home page content.",
+    path="files/wiki.md",
+    title="Wiki Generator", 
+    content="# Wiki Generator\n\nUse `WikiGenerator` class.",
     generated_at=0,
 )
 entry = generate_search_entry(page)
-print(entry)
-# Output: {
-#   "path": "index.md",
-#   "title": "Home",
-#   "headings": ["Home Page"],
-#   "terms": [],
-#   "snippet": "This is the home page content."
-# }
 ```
 
-### Generate a search index for multiple pages
+### Testing Search Index Writing
 
 ```python
-from local_deepwiki.models import WikiPage
-from local_deepwiki.generators.search import generate_search_index
-
-pages = [
-    WikiPage(
-        path="index.md",
-        title="Home",
-        content="# Home Page\n\nWelcome to the home page.",
-        generated_at=0,
-    ),
-    WikiPage(
-        path="about.md",
-        title="About",
-        content="# About Us\n\nLearn about our company.",
-        generated_at=0,
-    ),
-]
-index = generate_search_index(pages)
-print(index)
-```
-
-### Write search index to disk
-
-```python
-from pathlib import Path
-from local_deepwiki.models import WikiPage
-from local_deepwiki.generators.search import write_search_index
-
 with tempfile.TemporaryDirectory() as tmpdir:
     wiki_path = Path(tmpdir)
     pages = [
         WikiPage(
             path="index.md",
-            title="Home",
-            content="# Home Page\n\nWelcome to the home page.",
+            title="Test",
+            content="# Test\n\n`TestClass` content.",
             generated_at=0,
         ),
     ]
     result_path = write_search_index(wiki_path, pages)
-    print(f"Search index written to: {result_path}")
 ```
 
 ## Related Components
 
-This file works with the [WikiPage](../src/local_deepwiki/models.md) model to process wiki content for search indexing. It integrates with the search generation components in the generators.search module. The TestSearchJsonEndpoint class specifically tests the Flask web application's search endpoint, which depends on the search index generation functionality. The tests use the [create_app](../src/local_deepwiki/web/app.md) function to set up a Flask test client for endpoint testing.
+This test file works with several key components:
+
+- **[WikiPage](../src/local_deepwiki/models.md)** - The core page model used throughout the tests
+- **Search generators** - Functions from `local_deepwiki.generators.search` for building search functionality
+- **Flask web app** - Tests the web interface through the [`create_app`](../src/local_deepwiki/web/app.md) function
+- **File system operations** - Uses `tempfile` and `pathlib.Path` for testing file operations
+
+The tests use `pytest` as the testing framework and rely on temporary directories for isolated file system testing.
 
 ## API Reference
 
 ### class `TestExtractHeadings`
 
-Tests for extract_headings function.
+Tests for [extract_headings](../src/local_deepwiki/generators/search.md) function.
 
 **Methods:**
 
@@ -237,7 +138,7 @@ Test with empty content.
 
 ### class `TestExtractCodeTerms`
 
-Tests for extract_code_terms function.
+Tests for [extract_code_terms](../src/local_deepwiki/generators/search.md) function.
 
 **Methods:**
 
@@ -276,7 +177,7 @@ Test with empty content.
 
 ### class `TestExtractSnippet`
 
-Tests for extract_snippet function.
+Tests for [extract_snippet](../src/local_deepwiki/generators/search.md) function.
 
 **Methods:**
 
@@ -331,7 +232,7 @@ Test with empty content.
 
 ### class `TestGenerateSearchEntry`
 
-Tests for generate_search_entry function.
+Tests for [generate_search_entry](../src/local_deepwiki/generators/search.md) function.
 
 **Methods:**
 
@@ -346,7 +247,7 @@ Test that all fields are populated.
 
 ### class `TestGenerateSearchIndex`
 
-Tests for generate_search_index function.
+Tests for [generate_search_index](../src/local_deepwiki/generators/search.md) function.
 
 **Methods:**
 
@@ -361,7 +262,7 @@ Test index generation with multiple pages.
 
 ### class `TestWriteSearchIndex`
 
-Tests for write_search_index function.
+Tests for [write_search_index](../src/local_deepwiki/generators/search.md) function.
 
 **Methods:**
 
@@ -511,8 +412,14 @@ flowchart TD
     class N2,N3,N4,N5,N6,N7,N8,N9,N10,N11,N12,N13,N14,N15,N16,N17,N18,N19,N20 method
 ```
 
+## Relevant Source Files
+
+- `tests/test_search.py:20-53`
+
 ## See Also
 
 - [models](../src/local_deepwiki/models.md) - dependency
-- [app](../src/local_deepwiki/web/app.md) - dependency
-- [test_incremental_wiki](test_incremental_wiki.md) - shares 4 dependencies
+- [search](../src/local_deepwiki/generators/search.md) - dependency
+- [test_indexer](test_indexer.md) - shares 5 dependencies
+- [test_parser](test_parser.md) - shares 4 dependencies
+- [test_web](test_web.md) - shares 4 dependencies

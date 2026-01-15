@@ -2,57 +2,52 @@
 
 ## File Overview
 
-The vectorstore module provides vector database functionality for storing and retrieving code chunks with semantic search capabilities. It uses LanceDB as the underlying vector database and integrates with embedding providers to enable similarity-based code search.
-
-## Functions
-
-### _sanitize_string_value
-
-```python
-def _sanitize_string_value(value: Any) -> str
-```
-
-A utility function that sanitizes string values for database storage by converting various data types to clean string representations.
-
-**Parameters:**
-- `value: Any` - The value to sanitize
-
-**Returns:**
-- `str` - The sanitized string value
+This module provides vector storage capabilities using LanceDB for storing and searching code chunk embeddings. It handles the persistence and retrieval of code chunks with their associated vector embeddings for similarity search operations.
 
 ## Classes
 
 ### VectorStore
 
-The VectorStore class manages vector database operations for code chunks, providing functionality to store, search, and retrieve semantically similar code segments.
+The VectorStore class manages vector storage operations using LanceDB as the backend. It provides functionality for storing code chunks with their embeddings and performing similarity searches.
 
 **Dependencies:**
-- Uses `lancedb` for vector database operations
-- Integrates with EmbeddingProvider for generating embeddings
+- Uses LanceDB for vector database operations
+- Integrates with [EmbeddingProvider](../providers/base.md) for generating embeddings
 - Works with [CodeChunk](../models.md) and [SearchResult](../models.md) models
-- Supports [ChunkType](../models.md) and [Language](../models.md) enums
 
-**Key Features:**
-- Vector-based semantic search for code chunks
-- Integration with embedding providers
-- Support for different programming languages and chunk types
-- Persistent storage using LanceDB
+## Functions
+
+### _sanitize_string_value
+
+A utility function for sanitizing string values, likely used for data preprocessing before storage in the vector database.
 
 ## Related Components
 
-This module integrates with several other components:
+This module integrates with several other components from the codebase:
 
-- **EmbeddingProvider**: Base class for generating embeddings from text
-- **[CodeChunk](../models.md)**: Model representing a code chunk with metadata
-- **[SearchResult](../models.md)**: Model for search results from vector queries
-- **[ChunkType](../models.md)**: Enumeration of different types of code chunks
-- **[Language](../models.md)**: Enumeration of supported programming languages
+- **[ChunkType](../models.md)**: Enumeration for different types of code chunks
+- **[CodeChunk](../models.md)**: Data model representing code chunks to be stored
+- **[Language](../models.md)**: Enumeration for programming languages
+- **[SearchResult](../models.md)**: Model for search operation results
+- **[EmbeddingProvider](../providers/base.md)**: Base class for embedding generation providers
 
-The module uses the logging system from `local_deepwiki.logging` for operational logging.
+The module uses the logging system through [`get_logger`](../logging.md) for operational logging.
+
+## Technology Stack
+
+- **LanceDB**: Vector database backend for storing embeddings
+- **JSON**: For data serialization
+- **pathlib.Path**: For file system operations
 
 ## Usage Context
 
-The VectorStore serves as the core component for semantic code search functionality, enabling the system to [find](../generators/manifest.md) relevant code chunks based on similarity rather than exact text matching. It bridges the gap between raw code content and intelligent search capabilities through vector embeddings.
+This module serves as the core storage layer for the vector search functionality, enabling the system to:
+
+1. Store code chunks with their vector embeddings
+2. Perform similarity searches across stored code
+3. Manage the persistence of vector data using LanceDB
+
+The VectorStore class acts as an abstraction layer over LanceDB, providing a clean interface for vector operations while handling the underlying database management.
 
 ## API Reference
 
@@ -74,7 +69,7 @@ Initialize the vector store.
 | [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `db_path` | `Path` | - | Path to the LanceDB database directory. |
-| `embedding_provider` | `EmbeddingProvider` | - | Provider for generating embeddings. |
+| `embedding_provider` | [`EmbeddingProvider`](../providers/base.md) | - | Provider for generating embeddings. |
 
 #### `create_or_update_table`
 
@@ -275,6 +270,55 @@ flowchart TD
     class N1,N2,N3,N4,N5,N6,N7,N8,N9,N10,N11 method
 ```
 
+## Usage Examples
+
+*Examples extracted from test files*
+
+### Test that creating a table creates scalar indexes
+
+From `test_vectorstore.py::test_create_table_creates_indexes`:
+
+```python
+table = populated_store._get_table()
+assert table is not None
+```
+
+### Test that get_chunk_by_id can find chunks efficiently
+
+From `test_vectorstore.py::test_get_chunk_by_id_uses_index`:
+
+```python
+chunk = await populated_store.get_chunk_by_id("chunk_1")
+assert chunk is not None
+```
+
+### Test that get_chunks_by_file can find chunks efficiently
+
+From `test_vectorstore.py::test_get_chunks_by_file_uses_index`:
+
+```python
+chunks = await populated_store.get_chunks_by_file("src/main.py")
+assert len(chunks) == 2
+```
+
+### Test that delete_chunks_by_file works efficiently
+
+From `test_vectorstore.py::test_delete_chunks_by_file_uses_index`:
+
+```python
+chunks = await populated_store.get_chunks_by_file("src/main.py")
+assert len(chunks) == 0
+```
+
+### Test that delete_chunks_by_file works efficiently
+
+From `test_vectorstore.py::test_delete_chunks_by_file_uses_index`:
+
+```python
+deleted = await populated_store.delete_chunks_by_file("src/main.py")
+assert deleted == 2
+```
+
 ## Relevant Source Files
 
 - `src/local_deepwiki/core/vectorstore.py:37-395`
@@ -282,5 +326,7 @@ flowchart TD
 ## See Also
 
 - [test_vectorstore](../../../tests/test_vectorstore.md) - uses this
-- [server](../server.md) - uses this
+- [wiki](../generators/wiki.md) - uses this
 - [models](../models.md) - dependency
+- [logging](../logging.md) - dependency
+- [llm_cache](llm_cache.md) - shares 6 dependencies
