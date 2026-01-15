@@ -365,11 +365,20 @@ def api_chat():
         embedding_provider = get_embedding_provider(config.embedding)
         vector_store = VectorStore(vector_db_path, embedding_provider)
         cache_path = config.get_wiki_path(repo_path) / "llm_cache.lance"
+
+        # Determine LLM config for chat - use chat_llm_provider if set
+        llm_config = config.llm
+        chat_provider = config.wiki.chat_llm_provider
+        if chat_provider != "default":
+            # Override provider for chat
+            llm_config = llm_config.model_copy(update={"provider": chat_provider})
+            logger.info(f"Using {chat_provider} provider for chat")
+
         llm = get_cached_llm_provider(
             cache_path=cache_path,
             embedding_provider=embedding_provider,
             cache_config=config.llm_cache,
-            llm_config=config.llm,
+            llm_config=llm_config,
         )
 
         # Search for relevant context
@@ -471,11 +480,20 @@ def api_research():
         embedding_provider = get_embedding_provider(config.embedding)
         vector_store = VectorStore(vector_db_path, embedding_provider)
         cache_path = config.get_wiki_path(repo_path) / "llm_cache.lance"
+
+        # Determine LLM config for research - use chat_llm_provider if set
+        llm_config = config.llm
+        chat_provider = config.wiki.chat_llm_provider
+        if chat_provider != "default":
+            # Override provider for research
+            llm_config = llm_config.model_copy(update={"provider": chat_provider})
+            logger.info(f"Using {chat_provider} provider for deep research")
+
         llm = get_cached_llm_provider(
             cache_path=cache_path,
             embedding_provider=embedding_provider,
             cache_config=config.llm_cache,
-            llm_config=config.llm,
+            llm_config=llm_config,
         )
 
         # Progress callback

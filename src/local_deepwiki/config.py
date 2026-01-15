@@ -177,6 +177,11 @@ class WikiConfig(BaseModel):
         default="anthropic",
         description="Cloud LLM provider to use for GitHub repos when use_cloud_for_github is enabled.",
     )
+    chat_llm_provider: Literal["default", "anthropic", "openai", "ollama"] = Field(
+        default="default",
+        description="LLM provider for chat Q&A. 'default' uses the main llm.provider setting. "
+        "Set to 'anthropic' or 'openai' for higher-quality chat responses.",
+    )
     import_search_limit: int = Field(
         default=200, description="Maximum chunks to search for import/relationship analysis"
     )
