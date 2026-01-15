@@ -29,6 +29,7 @@ Detailed documentation for individual source files.
 - [ollama.py](src/local_deepwiki/providers/llm/ollama.md)
 - [openai.py](src/local_deepwiki/providers/llm/openai.md)
 - [openai.py](src/local_deepwiki/providers/embeddings/openai.md)
+- [parser.py](src/local_deepwiki/core/parser.md)
 - [pdf.py](src/local_deepwiki/export/pdf.md)
 - [search.py](src/local_deepwiki/generators/search.md)
 - [see_also.py](src/local_deepwiki/generators/see_also.md)

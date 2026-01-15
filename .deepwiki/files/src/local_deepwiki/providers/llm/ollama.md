@@ -2,7 +2,7 @@
 
 ## File Overview
 
-The `ollama.py` module provides an LLM provider implementation for integrating with Ollama, a local language model server. This module implements the [LLMProvider](../base.md) interface to enable communication with Ollama models through its API, including connection management, health checking, and text generation capabilities.
+The `ollama.py` module provides an Ollama-based implementation of the LLM provider interface for the local_deepwiki system. It enables integration with Ollama's local language model server, handling connection management, health checks, and text generation operations.
 
 ## Classes
 
@@ -10,60 +10,55 @@ The `ollama.py` module provides an LLM provider implementation for integrating w
 
 A custom exception class that handles connection failures to the Ollama server.
 
-**Purpose**: Provides detailed error messages and troubleshooting guidance when the Ollama server cannot be reached.
+**Purpose**: Provides detailed error information when the Ollama server cannot be reached, including helpful troubleshooting guidance.
+
+**Attributes**:
+- `base_url`: The URL that failed to connect
+- `original_error`: The underlying exception that caused the connection failure
 
 **Constructor Parameters**:
-- `base_url` (str): The URL of the Ollama server that failed to connect
-- `original_error` (Exception | None): The underlying exception that caused the connection failure (optional)
-
-**Features**:
-- Stores the base URL and original error for debugging
-- Provides helpful error messages with setup instructions including installation and verification steps
+- `base_url` (str): The Ollama server URL that couldn't be reached
+- `original_error` (Exception | None): Optional underlying exception
 
 ### OllamaModelNotFoundError
 
-A custom exception class for handling cases where a requested Ollama model is not available on the server.
+A custom exception class for handling cases when a requested model is not available on the Ollama server.
 
 ### OllamaProvider
 
 The [main](../../export/pdf.md) provider class that implements the [LLMProvider](../base.md) interface for Ollama integration.
 
-**Purpose**: Manages communication with an Ollama server, including model operations, health checking, and text generation.
+**Purpose**: Manages communication with an Ollama server to perform language model operations including text generation and streaming.
 
 #### Methods
 
-##### `__init__(model: str = "llama3.2", base_url: str = "http://localhost:11434")`
+##### `__init__`
 
-Initializes the Ollama provider with connection and model configuration.
+Initializes the Ollama provider with connection settings.
 
 **Parameters**:
-- `model` (str): The Ollama model name to use (defaults to "llama3.2")
-- `base_url` (str): The Ollama API base URL (defaults to "http://localhost:11434")
+- `model` (str): Ollama model name (default: "llama3.2")
+- `base_url` (str): Ollama API base URL (default: "http://localhost:11434")
 
-**Behavior**:
-- Creates an AsyncClient instance for API communication
-- Stores model and URL configuration
-- Initializes health check tracking
+**Behavior**: Sets up the AsyncClient connection and initializes health check tracking.
 
-##### `check_health()`
+##### `check_health`
 
 Performs a health check to verify the Ollama server is accessible and the specified model is available.
 
-##### `_ensure_healthy()`
+##### `generate`
 
-Internal method that ensures the provider has passed health checks before performing operations.
+Generates text responses using the specified Ollama model.
 
-##### `generate()`
+##### `generate_stream`
 
-Generates text responses using the configured Ollama model.
+Provides streaming text generation, yielding results as they become available.
 
-##### `generate_stream()`
-
-Provides streaming text generation capabilities, returning an AsyncIterator for real-time response processing.
+**Returns**: `AsyncIterator` for streaming responses
 
 ##### `name`
 
-Property that returns the provider's name identifier.
+Returns the provider name identifier.
 
 ## Usage Examples
 
@@ -78,14 +73,18 @@ provider = OllamaProvider()
 # Initialize with custom model and URL
 provider = OllamaProvider(
     model="codellama",
-    base_url="http://192.168.1.100:11434"
+    base_url="http://localhost:11434"
 )
 ```
 
 ### Error Handling
 
 ```python
-from local_deepwiki.providers.llm.ollama import OllamaConnectionError, OllamaModelNotFoundError
+from local_deepwiki.providers.llm.ollama import (
+    OllamaProvider, 
+    OllamaConnectionError,
+    OllamaModelNotFoundError
+)
 
 try:
     provider = OllamaProvider(base_url="http://localhost:11434")
@@ -93,22 +92,20 @@ try:
 except OllamaConnectionError as e:
     print(f"Connection failed to {e.base_url}")
     if e.original_error:
-        print(f"Underlying error: {e.original_error}")
-except OllamaModelNotFoundError as e:
-    print("Requested model not available")
+        print(f"Original error: {e.original_error}")
 ```
 
 ## Related Components
 
 This module integrates with several other components:
 
-- **[LLMProvider](../base.md)**: Base class that defines the provider interface (imported from `local_deepwiki.providers.base`)
-- **[with_retry](../base.md)**: Decorator for retry functionality (imported from `local_deepwiki.providers.base`)
-- **AsyncClient**: Ollama's async client for API communication (imported from `ollama`)
-- **ResponseError**: Ollama's error handling (imported from `ollama`)
-- **Logging**: Uses the application's logging system (imported from `local_deepwiki.logging`)
+- **[LLMProvider](../base.md)**: Base class that defines the provider interface
+- **AsyncClient**: Ollama's async client for server communication
+- **ResponseError**: Ollama's error handling for API responses
+- **[with_retry](../base.md)**: Decorator for implementing retry logic on operations
+- **[get_logger](../../logging.md)**: Logging utility from the local_deepwiki logging system
 
-The module follows the provider pattern established by the base [LLMProvider](../base.md) class and integrates with the broader local_deepwiki system for logging and error handling.
+The provider follows the established pattern of extending [LLMProvider](../base.md) to provide a consistent interface while handling Ollama-specific implementation details like connection management and model availability checking.
 
 ## API Reference
 

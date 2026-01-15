@@ -2,7 +2,7 @@
 
 ## File Overview
 
-The search module provides functionality for generating search indexes from wiki pages. It creates JSON-based search indexes that can be used to implement search functionality in the generated wiki.
+The search module provides functionality for generating search indices from wiki pages. It creates JSON-based search data that can be used to enable search functionality in wikis.
 
 ## Functions
 
@@ -15,10 +15,10 @@ def generate_search_index(pages: list[WikiPage]) -> list[dict]:
 Generates a search index from a list of wiki pages.
 
 **Parameters:**
-- `pages` (list[[WikiPage](../models.md)]): List of wiki pages to index
+- `pages`: List of [WikiPage](../models.md) objects to index
 
 **Returns:**
-- `list[dict]`: List of search entries, where each entry is a dictionary containing search metadata for a page
+- List of search entries as dictionaries
 
 ### write_search_index
 
@@ -26,54 +26,46 @@ Generates a search index from a list of wiki pages.
 def write_search_index(wiki_path: Path, pages: list[WikiPage]) -> Path:
 ```
 
-Generates a search index and writes it to disk as a JSON file.
+Generates and writes a search index to disk as a JSON file.
 
 **Parameters:**
-- `wiki_path` (Path): Path to the wiki directory where the search index will be written
-- `pages` (list[[WikiPage](../models.md)]): List of wiki pages to include in the search index
+- `wiki_path`: Path to the wiki directory where the search index will be saved
+- `pages`: List of [WikiPage](../models.md) objects to index
 
 **Returns:**
-- `Path`: Path to the generated `search.json` file
-
-The function creates the search index using `generate_search_index()` and saves it as `search.json` in the specified wiki directory with pretty-printed JSON formatting (2-space indentation).
+- Path to the generated `search.json` file
 
 ## Usage Examples
 
-### Generating a Search Index
+### Basic Search Index Generation
 
 ```python
 from pathlib import Path
-from local_deepwiki.generators.search import generate_search_index
+from local_deepwiki.generators.search import generate_search_index, write_search_index
 
-# Assuming you have a list of WikiPage objects
+# Generate search index in memory
+pages = [...]  # List of WikiPage objects
 search_entries = generate_search_index(pages)
-```
 
-### Writing Search Index to File
-
-```python
-from pathlib import Path
-from local_deepwiki.generators.search import write_search_index
-
-wiki_directory = Path("output/wiki")
-index_file_path = write_search_index(wiki_directory, pages)
-print(f"Search index written to: {index_file_path}")
+# Write search index to file
+wiki_directory = Path("./wiki")
+index_path = write_search_index(wiki_directory, pages)
+print(f"Search index written to: {index_path}")
 ```
 
 ## Related Components
 
-This module works with:
-- **[WikiPage](../models.md)**: The model class representing individual wiki pages (imported from `local_deepwiki.models`)
+This module works with the following components:
 
-## Additional Functions
+- **[WikiPage](../models.md)**: The core page model used to represent wiki pages (imported from `local_deepwiki.models`)
 
-The module contains several other functions that are referenced but not shown in the provided code:
+The module also references additional functions that are part of the search functionality:
 - `extract_headings`
 - `extract_code_terms` 
 - `extract_snippet`
 - `generate_search_entry`
 
-These functions are likely used internally by `generate_search_index` to process page content and create search entries.
+These functions work together to create comprehensive search entries from wiki page content.
 
 ## API Reference
 

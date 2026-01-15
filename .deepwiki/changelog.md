@@ -6,13 +6,25 @@ Recent changes to this repository.
 
 ### January 14, 2026
 
+- [`55d665c`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/55d665c) Fix TypeScript/TSX parsing by handling module-specific language functions
+  - Files: `src/local_deepwiki/core/parser.py`, `src/local_deepwiki/models.py`, `tests/test_parser.py`
+
+- [`63a29fc`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/63a29fc) Remove remaining test file documentation from wiki
+  - Files: `.deepwiki/files/tests/test_api_docs.md`, `.deepwiki/files/tests/test_config.md`, `.deepwiki/files/tests/test_crosslinks.md`, `.deepwiki/files/tests/test_deep_research.md`, `.deepwiki/files/tests/test_diagrams.md` (+6 more)
+
+- [`a6c6582`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/a6c6582) Regenerate wiki with all source files, exclude test files
+  - Files: `.deepwiki/architecture.md`, `.deepwiki/changelog.md`, `.deepwiki/dependencies.md`, `.deepwiki/files/index.md`, `.deepwiki/files/src/local_deepwiki/config.md` (+73 more)
+
+- [`c87800e`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/c87800e) Fix wiki file docs to exclude test files, include all source files
+  - Files: `src/local_deepwiki/generators/wiki.py`
+
 - [`b8f8b68`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/b8f8b68) Refactor: Extract page generators from wiki.py to wiki_pages.py
   - Files: `src/local_deepwiki/generators/wiki.py`, `src/local_deepwiki/generators/wiki_pages.py`
 
 - [`8457af3`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/8457af3) Refactor: Split server.py into server.py and handlers.py
   - Files: `src/local_deepwiki/handlers.py`, `src/local_deepwiki/server.py`, `tests/test_deep_research.py`, `tests/test_server_handlers.py`, `tests/test_server_validation.py`
 
-- [`1ef3ff4`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/1ef3ff4) Refactor: Replace nested conditionals in get_docstring with dispatch dictionary
+- [`1ef3ff4`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/1ef3ff4) Refactor: Replace nested conditionals in [get_docstring](files/src/local_deepwiki/core/parser.md) with dispatch dictionary
   - Files: `src/local_deepwiki/core/parser.py`
 
 - [`43b1ef2`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/43b1ef2) Refactor: Extract step methods from [DeepResearchPipeline](files/src/local_deepwiki/core/deep_research.md).research()
@@ -84,20 +96,6 @@ Recent changes to this repository.
 - [`ac906d4`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/ac906d4) Add LLM response caching with embedding similarity
   - Files: `WIKI_IMPROVEMENTS.md`, `src/local_deepwiki/config.py`, `src/local_deepwiki/core/llm_cache.py`, `src/local_deepwiki/providers/llm/__init__.py`, `src/local_deepwiki/providers/llm/cached.py` (+2 more)
 
-### January 13, 2026
-
-- [`7c7e68d`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/7c7e68d) Update docs for streaming deep research
-  - Files: `CLAUDE.md`, `WIKI_IMPROVEMENTS.md`
-
-- [`28ab9b8`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/28ab9b8) Add streaming progress updates to deep research
-  - Files: `src/local_deepwiki/core/deep_research.py`, `src/local_deepwiki/models.py`, `src/local_deepwiki/server.py`, `tests/test_deep_research.py`
-
-- [`f10b833`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/f10b833) Update docs for configurable deep research
-  - Files: `CLAUDE.md`, `WIKI_IMPROVEMENTS.md`
-
-- [`cd866df`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/cd866df) Add configurable deep research parameters
-  - Files: `src/local_deepwiki/config.py`, `src/local_deepwiki/core/deep_research.py`, `src/local_deepwiki/server.py`, `tests/test_config.py`
-
 ## Statistics
 
 - **Commits shown**: 30
@@ -108,13 +106,13 @@ Recent changes to this repository.
 
 The following source files were used to generate this documentation:
 
-- [`tests/test_parser.py:24-123`](files/tests/test_parser.md)
-- [`tests/test_retry.py:8-144`](files/tests/test_retry.md)
+- `tests/test_parser.py:24-123`
+- `tests/test_retry.py:8-144`
 - `tests/test_ollama_health.py:16-19`
 - `tests/test_server_handlers.py:15-69`
 - `tests/test_chunker.py:11-182`
 - `tests/test_changelog.py:18-96`
-- [`tests/test_vectorstore.py:9-28`](files/tests/test_vectorstore.md)
+- `tests/test_vectorstore.py:9-28`
 - `tests/test_pdf_export.py:21-80`
 - `tests/test_search.py:20-53`
 - `tests/test_toc.py:17-43`

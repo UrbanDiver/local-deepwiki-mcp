@@ -2,33 +2,45 @@
 
 ## File Overview
 
-This module provides an OpenAI-based implementation of the LLM provider interface for the local_deepwiki system. It integrates with OpenAI's API to provide language model capabilities through the AsyncOpenAI client.
+This file implements an OpenAI-specific LLM provider for the local_deepwiki system. It provides integration with OpenAI's API through the AsyncOpenAI client, implementing the base [LLMProvider](../base.md) interface with retry functionality.
 
 ## Classes
 
 ### OpenAILLMProvider
 
-The OpenAILLMProvider class implements the [LLMProvider](../base.md) interface to provide OpenAI-based language model functionality. This class serves as the concrete implementation for interacting with OpenAI's API services within the local_deepwiki framework.
+The OpenAILLMProvider class extends the base [LLMProvider](../base.md) to provide OpenAI-specific language model functionality. This class handles asynchronous communication with OpenAI's API services.
+
+**Inheritance:**
+- Inherits from: [LLMProvider](../base.md)
+
+**Key Features:**
+- Asynchronous OpenAI API integration
+- Built-in retry mechanism via the [`with_retry`](../base.md) [decorator](../base.md)
+- Environment-based configuration support
 
 ## Dependencies
 
 The module relies on several key dependencies:
 
-- **openai**: Provides the `AsyncOpenAI` client for asynchronous communication with OpenAI's API
-- **local_deepwiki.logging**: Supplies logging functionality through the [`get_logger`](../../logging.md) function
-- **local_deepwiki.providers.base**: Provides the base [`LLMProvider`](../base.md) interface and [`with_retry`](../base.md) [decorator](../base.md) for error handling
+- **openai**: Provides the AsyncOpenAI client for API communication
+- **local_deepwiki.logging**: Supplies logging functionality through [get_logger](../../logging.md)
+- **local_deepwiki.providers.base**: Provides the base [LLMProvider](../base.md) class and [with_retry](../base.md) [decorator](../base.md)
 
 ## Related Components
 
-This module works with:
+This provider works within the local_deepwiki ecosystem by:
 
-- **[LLMProvider](../base.md)**: The base interface that OpenAILLMProvider implements
-- **[with_retry](../base.md)**: A [decorator](../base.md) from the base module for handling retry logic
-- **AsyncOpenAI**: The OpenAI client used for API communication
+- Implementing the [LLMProvider](../base.md) interface from the base providers module
+- Utilizing the centralized logging system
+- Supporting the retry mechanism for robust API interactions
 
-## Usage Context
+## Environment Configuration
 
-The OpenAILLMProvider class is designed to be used as part of the local_deepwiki system's provider architecture, offering OpenAI-specific language model capabilities while conforming to the standard [LLMProvider](../base.md) interface.
+The module imports the `os` module, indicating it likely uses environment variables for configuration, though the specific variables are not visible in the provided code.
+
+## Type Support
+
+The module includes proper type annotations, importing `AsyncIterator` from the typing module to support asynchronous iteration patterns typical in streaming LLM responses.
 
 ## API Reference
 

@@ -2,7 +2,7 @@
 
 ## File Overview
 
-The `wiki_pages.py` module provides functionality for generating various types of wiki pages for project documentation. Based on the imports and function signatures shown, it appears to coordinate the generation of overview, architecture, and changelog pages by integrating with other components like the [WikiGenerator](wiki.md), [VectorStore](../core/vectorstore.md), and various specialized generators.
+The `wiki_pages.py` module provides functionality for generating specialized wiki pages from project repositories. Based on the imports and function signatures shown, this module handles the creation of different types of wiki pages including changelog pages, and integrates with various components like vector stores, diagram generators, and LLM providers.
 
 ## Functions
 
@@ -18,59 +18,41 @@ Generates a changelog page from git history.
 - `repo_path` (Path | None): Path to the repository root
 
 **Returns:**
-- [`WikiPage`](../models.md): Wiki page containing changelog content
-- `None`: If the path is None or no changelog could be generated
+- [WikiPage](../models.md) with changelog content, or None if not a git repository
 
-**Behavior:**
-- Returns `None` immediately if `repo_path` is None
-- Imports and uses [`generate_changelog_content`](changelog.md) from the changelog generator module
-- Logs debug messages when no changelog is generated (not a git repo or no commits)
-- Creates and returns a [WikiPage](../models.md) instance with the generated content
-
-## Usage Examples
-
-### Generating a Changelog Page
-
+**[Usage Example](test_examples.md):**
 ```python
 from pathlib import Path
-from local_deepwiki.generators.wiki_pages import generate_changelog_page
 
 # Generate changelog for a repository
-repo_path = Path("/path/to/repository")
+repo_path = Path("/path/to/repo")
 changelog_page = await generate_changelog_page(repo_path)
 
 if changelog_page:
-    print("Changelog generated successfully")
+    print(f"Generated changelog: {changelog_page.title}")
 else:
-    print("No changelog generated")
-
-# Handle case where repo_path is None
-changelog_page = await generate_changelog_page(None)
-# Returns None immediately
+    print("No changelog generated - not a git repo or no commits")
 ```
+
+**Behavior:**
+- Returns `None` if `repo_path` is `None`
+- Uses the changelog generator to create content from git history
+- Logs debug messages when no changelog can be generated
+- Returns a [WikiPage](../models.md) object when successful
 
 ## Related Components
 
 This module integrates with several other components based on the imports:
 
-- **[WikiGenerator](wiki.md)**: Core wiki generation functionality
-- **[VectorStore](../core/vectorstore.md)**: Vector storage and retrieval system
-- **[ProjectManifest](manifest.md)**: Project structure and metadata handling
-- **[LLMProvider](../providers/base.md)**: [Language](../models.md) model provider interface
-- **[WikiPage](../models.md)**: Data model for wiki pages
-- **[IndexStatus](../models.md)**: Status tracking for indexing operations
+- **[VectorStore](../core/vectorstore.md)**: Core vector storage functionality
+- **[WikiGenerator](wiki.md)**: Base wiki generation capabilities  
+- **[ProjectManifest](manifest.md)**: Project structure analysis
+- **[LLMProvider](../providers/base.md)**: [Language](../models.md) model integration
+- **[IndexStatus](../models.md) and [WikiPage](../models.md)**: Core data models
+- **Diagram generators**: For workflow sequences and dependency graphs
+- **Changelog generator**: Specialized git history processing
 
-The module also works with specialized generators:
-- **Changelog Generator**: For git history-based changelog generation
-- **Diagrams Generator**: For workflow sequences and dependency graphs
-- **Manifest Generator**: For directory tree generation
-
-## Notes
-
-- The module uses async/await patterns for asynchronous operations
-- Logging is integrated through the [`get_logger`](../logging.md) function
-- Git repository detection and handling is built into the changelog generation functionality
-- The code includes proper error handling for cases where git repositories are not available
+The module appears to be part of a larger wiki generation system that can analyze code repositories and create comprehensive documentation pages using various specialized generators and AI-powered content creation.
 
 ## API Reference
 

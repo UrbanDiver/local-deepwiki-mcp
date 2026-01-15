@@ -1,14 +1,14 @@
-# WikiGenerator Module
+# Wiki Generator Module
 
 ## File Overview
 
-The `wiki.py` module contains the core WikiGenerator class responsible for generating comprehensive documentation wikis from codebases. It orchestrates the creation of various documentation pages including module documentation, architecture overviews, dependency analysis, and cross-referenced API documentation.
+The `wiki.py` module provides the core functionality for generating documentation wikis from indexed code. It contains the WikiGenerator class which orchestrates the creation of various documentation pages including overviews, architecture diagrams, module documentation, and file-specific pages.
 
 ## Classes
 
 ### WikiGenerator
 
-The WikiGenerator class is the [main](../export/pdf.md) component for generating wiki documentation from indexed code. It manages the entire documentation generation process, including status tracking, content caching, and coordinated generation of multiple documentation types.
+The WikiGenerator class is responsible for generating comprehensive wiki documentation from a vector store of indexed code.
 
 #### Constructor
 
@@ -30,57 +30,22 @@ def __init__(
 
 #### Key Methods
 
-**Content Management:**
-- `_compute_content_hash`: Computes hash for content change detection
-- `_needs_regeneration`: Determines if a page needs to be regenerated
-- `_load_existing_page`: Loads existing wiki page content
-- `_record_page_status`: Records generation status for a page
+The WikiGenerator class includes several methods for different aspects of wiki generation:
 
-**Status Tracking:**
-- `_load_wiki_status`: Loads wiki generation status from disk
-- `_save_wiki_status`: Saves wiki generation status to disk
-- `_read_status`: Reads status from file
-- `_write_status`: Writes status to file
-
-**Generation Methods:**
-- `generate`: Main entry point for wiki generation
-- `_generate_overview`: Generates project overview documentation
-- `_generate_architecture`: Generates architecture documentation
-- `_generate_module_docs`: Generates module-specific documentation
-- `_generate_single_file_doc`: Generates documentation for a single file
-- `_generate_file_docs`: Generates documentation for multiple files
-- `_generate_modules_index`: Generates index of all modules
-- `_generate_files_index`: Generates index of all files
-- `_generate_dependencies`: Generates dependency analysis
-- `_generate_changelog`: Generates changelog documentation
-
-**Utility Methods:**
-- `is_test_file`: Determines if a file is a test file
-- `generate_with_semaphore`: Manages concurrent generation with semaphore
-- `_write_page`: Writes generated content to wiki page
-- `_sync_write`: Synchronous write operation
-- `_get_main_definition_lines`: Extracts [main](../export/pdf.md) definition lines from code
+- **Status Management**: Methods for tracking generation status and determining when regeneration is needed
+- **Content Generation**: Methods for generating different types of documentation pages
+- **File Operations**: Methods for reading and writing wiki pages
+- **Utility Methods**: Helper methods for content processing and organization
 
 ## Functions
 
 ### generate_wiki
 
 ```python
-def generate_wiki(
-    source_dir: Path,
-    wiki_path: Path,
-    config: Config | None = None,
-    llm_provider_name: str | None = None,
-) -> None:
+generate_wiki(...)
 ```
 
-Main function for generating a complete wiki from a source directory.
-
-**Parameters:**
-- `source_dir`: Source code directory to document
-- `wiki_path`: Output directory for wiki files
-- `config`: Optional configuration object
-- `llm_provider_name`: Override for LLM provider selection
+A standalone function that provides a simplified interface for wiki generation.
 
 ## Usage Examples
 
@@ -88,55 +53,53 @@ Main function for generating a complete wiki from a source directory.
 
 ```python
 from pathlib import Path
-from local_deepwiki.generators.wiki import generate_wiki
-
-# Generate wiki for a project
-source_dir = Path("./my_project")
-wiki_output = Path("./docs/wiki")
-generate_wiki(source_dir, wiki_output)
-```
-
-### Using WikiGenerator Directly
-
-```python
-from pathlib import Path
-from local_deepwiki.generators.wiki import WikiGenerator
 from local_deepwiki.core.vectorstore import VectorStore
+from local_deepwiki.generators.wiki import WikiGenerator
 
 # Initialize components
-wiki_path = Path("./docs")
-vector_store = VectorStore()  # Assume properly initialized
-generator = WikiGenerator(wiki_path, vector_store)
+wiki_path = Path("./wiki")
+vector_store = VectorStore(...)  # Your vector store instance
+
+# Create generator
+generator = WikiGenerator(
+    wiki_path=wiki_path,
+    vector_store=vector_store
+)
 
 # Generate wiki
-asyncio.run(generator.generate())
+generator.generate()
 ```
 
-### Custom LLM Provider
+### With Custom Configuration
 
 ```python
-# Use specific LLM provider
-generate_wiki(
-    source_dir=Path("./src"),
-    wiki_path=Path("./wiki"),
+from local_deepwiki.config import Config
+
+# Custom configuration
+config = Config(...)
+
+# Generator with custom config and LLM provider
+generator = WikiGenerator(
+    wiki_path=wiki_path,
+    vector_store=vector_store,
+    config=config,
     llm_provider_name="anthropic"
 )
 ```
 
 ## Related Components
 
-The WikiGenerator class integrates with several other components from the codebase:
+The WikiGenerator integrates with several other components from the local_deepwiki system:
 
 - **[VectorStore](../core/vectorstore.md)**: Provides indexed code content for documentation generation
-- **[Config](../config.md)**: Supplies configuration settings for generation behavior
-- **[EntityRegistry](crosslinks.md)**: Manages cross-linking between documentation entities
-- **API Documentation Generator**: Generates API documentation via [`get_file_api_docs`](api_docs.md)
-- **Call Graph Generator**: Creates call graphs via [`get_file_call_graph`](callgraph.md)
-- **Test Examples Generator**: Extracts test examples via [`get_file_examples`](test_examples.md)
-- **Diagram Generator**: Creates class diagrams via [`generate_class_diagram`](diagrams.md)
-- **Cross-linking System**: Adds cross-references via [`add_cross_links`](crosslinks.md)
+- **[Config](../config.md)**: Supplies configuration settings for the generation process
+- **[EntityRegistry](crosslinks.md)**: Handles cross-linking between documentation entities
+- **API Documentation Generator**: Generates API-specific documentation
+- **Call Graph Generator**: Creates call graph visualizations
+- **Test Examples Generator**: Extracts test examples for documentation
+- **Diagram Generator**: Creates class diagrams and other visualizations
 
-The module uses asynchronous operations for efficient concurrent generation and includes comprehensive status tracking to avoid unnecessary regeneration of unchanged content.
+The module also integrates with various LLM providers through the specified provider name, allowing for flexible AI-powered content generation.
 
 ## API Reference
 
@@ -174,7 +137,7 @@ Generate wiki documentation for the indexed repository.
 | [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `index_status` | [`IndexStatus`](../models.md) | - | The index status with file information. |
-| [`progress_callback`](../watcher.md) | `ProgressCallback | None` | `None` | Optional progress callback. |
+| [`progress_callback`](../handlers.md) | `ProgressCallback | None` | `None` | Optional progress callback. |
 | `full_rebuild` | `bool` | `False` | If True, regenerate all pages. Otherwise, only regenerate changed pages. |
 
 #### `is_test_file`
@@ -223,7 +186,7 @@ Convenience function to generate wiki documentation.
 | `index_status` | [`IndexStatus`](../models.md) | - | Index status. |
 | `config` | `Config | None` | `None` | Optional configuration. |
 | `llm_provider` | `str | None` | `None` | Optional LLM provider override. |
-| [`progress_callback`](../watcher.md) | `ProgressCallback | None` | `None` | Optional progress callback. |
+| [`progress_callback`](../handlers.md) | `ProgressCallback | None` | `None` | Optional progress callback. |
 | `full_rebuild` | `bool` | `False` | If True, regenerate all pages. Otherwise, only regenerate changed pages. |
 
 **Returns:** [`WikiStructure`](../models.md)

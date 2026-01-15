@@ -1,101 +1,91 @@
-# Models Module
+# Models Module Documentation
 
 ## File Overview
 
-The `models.py` file defines the core data models and type definitions for the local_deepwiki system. It uses Pydantic for data validation and includes models for representing wiki pages, research results, file processing status, and various enumeration types used throughout the application.
+The `models.py` file defines the core data models and types used throughout the local_deepwiki system. It contains Pydantic models and enums that represent various entities such as code chunks, wiki pages, research results, and progress tracking structures. These models serve as the data contracts between different components of the system.
 
-## Dependencies
+## Imports and Dependencies
 
-- `json`: Standard library for JSON operations
-- `enum.Enum`: For creating enumeration types
-- `pathlib.Path`: For file path handling
-- `typing.Any`, `typing.Protocol`: Type hints and protocols
-- `pydantic.BaseModel`, `pydantic.Field`: Data validation and modeling
+The module relies on several key libraries:
+- `json` for JSON serialization
+- `enum.Enum` for enumeration types
+- `pathlib.Path` for file path handling
+- `typing` for type annotations including `Any` and `Protocol`
+- `pydantic` for data validation with `BaseModel` and `Field`
 
 ## Classes
 
 ### ProgressCallback
 
-A Protocol class that defines the interface for progress callback functions used throughout the system.
+A protocol class that defines the interface for progress callback functions used throughout the system to report operation status.
 
 ### Language
 
-An enumeration class that defines supported programming languages for code analysis.
+An enumeration class that defines supported programming languages for code analysis and documentation generation.
 
 ### ChunkType
 
-An enumeration that categorizes different types of code chunks that can be processed.
+An enumeration that categorizes different types of code chunks that can be extracted and processed from source files.
 
 ### CodeChunk
 
-A Pydantic model representing a segment of code with associated metadata including:
-- Chunk type classification
-- Content and location information
-- Language specification
+A Pydantic model representing a discrete piece of code extracted from a source file. This model captures code content along with metadata about its location and type.
 
 ### FileInfo
 
-A model that stores metadata about processed files, including file paths, types, and processing status.
+A data model that stores metadata about source files in the project, including file paths and relevant attributes for processing.
 
 ### IndexStatus
 
-An enumeration representing the various states a file can be in during the indexing process.
+An enumeration that tracks the current state of the indexing process for files and code chunks.
 
 ### WikiPage
 
-A comprehensive model for wiki page content that includes:
-- Page metadata (title, file path)
-- Generated content sections
-- Cross-references and links
-- Processing status information
+A comprehensive model representing a generated wiki page, containing the documentation content and associated metadata.
 
 ### WikiStructure
 
-A model that represents the overall structure of the generated wiki, containing collections of WikiPage objects and organizational metadata.
+A model that defines the overall structure and organization of the generated wiki, managing the relationships between different wiki pages.
 
 ### SearchResult
 
-A model for representing search results within the wiki system, including relevance scoring and result metadata.
+A data model for search functionality results, containing matched content and relevance information.
 
 ### WikiPageStatus
 
-An enumeration defining the possible states of wiki page generation and processing.
+An enumeration tracking the generation status of individual wiki pages throughout the documentation creation process.
 
 ### WikiGenerationStatus
 
-A model tracking the overall status of wiki generation processes.
+A model that tracks the overall progress and status of the wiki generation process across all files and pages.
 
 ### ResearchStepType
 
-An enumeration categorizing different types of research steps in the deep research process.
+An enumeration defining different types of research steps that can be performed during the deep research process.
 
 ### ResearchStep
 
-A model representing individual steps in the research process, including step type, content, and execution status.
+A model representing an individual step in the research process, containing the step details and results.
 
 ### SubQuestion
 
-A model for representing sub-questions generated during deep research, with associated research steps and results.
+A data model for sub-questions generated during research, used to break down complex topics into manageable parts.
 
 ### SourceReference
 
-A model for tracking source references used in research, including file paths, line numbers, and relevance information.
+A model that captures references to source materials used during research, maintaining traceability of information sources.
 
 ### DeepResearchResult
 
-A comprehensive model containing the results of deep research operations, including:
-- Main research findings
-- Sub-questions and their results
-- Source references
-- Confidence metrics
+A comprehensive model containing the complete results of a deep research operation, including all findings and references.
 
 ### ResearchProgressType
 
-An enumeration defining different types of research progress updates.
+An enumeration that categorizes different types of progress updates during research operations.
 
 ### ResearchProgress
 
-A model for tracking and reporting research progress, including progress type, completion status, and descriptive messages.
+A model for tracking and reporting progress during research operations, providing status updates and completion metrics.
 
 ## Usage Examples
 
@@ -105,11 +95,10 @@ A model for tracking and reporting research progress, including progress type, c
 from local_deepwiki.models import CodeChunk, ChunkType, Language
 
 chunk = CodeChunk(
-    type=ChunkType.FUNCTION,
     content="def example_function():\n    pass",
+    chunk_type=ChunkType.FUNCTION,
     language=Language.PYTHON,
-    start_line=10,
-    end_line=12
+    # Additional fields as defined in the model
 )
 ```
 
@@ -120,34 +109,33 @@ from local_deepwiki.models import WikiPage, WikiPageStatus
 
 page = WikiPage(
     title="Example Documentation",
-    file_path="src/example.py",
-    content="# Example\n\nThis is example documentation.",
-    status=WikiPageStatus.COMPLETED
+    content="# Example\n\nThis is documentation content.",
+    status=WikiPageStatus.GENERATED
+    # Additional fields as defined in the model
 )
 ```
 
-### Creating Research Progress
+### Progress Tracking
 
 ```python
 from local_deepwiki.models import ResearchProgress, ResearchProgressType
 
 progress = ResearchProgress(
-    type=ResearchProgressType.ANALYSIS,
-    message="Analyzing code structure",
-    completion_percentage=75
+    progress_type=ResearchProgressType.ANALYZING,
+    # Additional fields for tracking progress
 )
 ```
 
 ## Related Components
 
-This models file serves as the foundation for data structures used throughout the local_deepwiki system. The models defined here are likely used by:
+This models file serves as the foundation for the entire local_deepwiki system. The models defined here are used by:
 
-- Code analysis and processing components
-- Wiki generation systems
-- Research and documentation engines
-- File indexing and status tracking systems
+- Code analysis components that create CodeChunk instances
+- Wiki generation systems that work with WikiPage and WikiStructure models
+- Research functionality that utilizes the various research-related models
+- Progress reporting systems that use the callback protocols and progress models
 
-The Protocol-based ProgressCallback interface suggests integration with asynchronous processing systems that provide progress updates during long-running operations.
+The models provide type safety and data validation through Pydantic, ensuring consistent data structures across all system components.
 
 ## API Reference
 
@@ -569,8 +557,8 @@ assert record["vector"] == [0.1, 0.2, 0.3]
 
 ## See Also
 
-- [crosslinks](generators/crosslinks.md) - uses this
-- [test_examples](generators/test_examples.md) - uses this
-- [source_refs](generators/source_refs.md) - uses this
-- [search](generators/search.md) - uses this
 - [diagrams](generators/diagrams.md) - uses this
+- [callgraph](generators/callgraph.md) - uses this
+- [test_examples](generators/test_examples.md) - uses this
+- [api_docs](generators/api_docs.md) - uses this
+- [vectorstore](core/vectorstore.md) - uses this

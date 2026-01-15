@@ -2,85 +2,74 @@
 
 ## External Dependencies
 
-The project relies on several third-party libraries for different functionality areas:
+The project relies on several third-party libraries for different aspects of functionality:
 
-### AI and Machine Learning
-- **anthropic** (>=0.40) - Anthropic's Claude AI API client
-- **openai** (>=1.0) - OpenAI API client for GPT models and embeddings
-- **ollama** (>=0.4) - Local LLM inference server client
-- **sentence-transformers** (>=3.0) - Local text embedding models
-- **mcp** (>=1.2.0) - Model Context Protocol implementation
+### AI and Language Models
+- **anthropic** (>=0.40) - Anthropic's Claude API client
+- **openai** (>=1.0) - OpenAI API client for GPT models
+- **ollama** (>=0.4) - Local LLM runtime interface
+- **sentence-transformers** (>=3.0) - Pre-trained models for generating embeddings
 
-### Code Analysis
-- **tree-sitter** (>=0.23) - Syntax tree parsing library
-- **tree-sitter-c** (>=0.23) - C language parser
-- **tree-sitter-c-sharp** (>=0.23) - C# language parser
-- **tree-sitter-cpp** (>=0.23) - C++ language parser
-- **tree-sitter-go** (>=0.23) - Go language parser
-- **tree-sitter-java** (>=0.23) - Java language parser
-- **tree-sitter-javascript** (>=0.23) - JavaScript language parser
-- **tree-sitter-kotlin** (>=0.23) - Kotlin language parser
-- **tree-sitter-php** (>=0.23) - PHP language parser
-- **tree-sitter-python** (>=0.23) - Python language parser
-- **tree-sitter-ruby** (>=0.23) - Ruby language parser
-- **tree-sitter-rust** (>=0.23) - Rust language parser
-- **tree-sitter-swift** (>=0.0.1) - Swift language parser
-- **tree-sitter-typescript** (>=0.23) - TypeScript language parser
+### Code Analysis and Parsing
+- **tree-sitter** (>=0.23) - Parser generator tool and incremental parsing library
+- **tree-sitter-c**, **tree-sitter-c-sharp**, **tree-sitter-cpp**, **tree-sitter-go**, **tree-sitter-java**, **tree-sitter-javascript**, **tree-sitter-kotlin**, **tree-sitter-php**, **tree-sitter-python**, **tree-sitter-ruby**, **tree-sitter-rust**, **tree-sitter-swift**, **tree-sitter-typescript** (>=0.23) - [Language](files/src/local_deepwiki/models.md)-specific parsers for code analysis
 
 ### Data Processing and Storage
-- **lancedb** (>=0.15) - Vector database for embeddings
+- **lancedb** (>=0.15) - Vector database for embeddings storage
 - **pandas** (>=2.0) - Data manipulation and analysis
-- **pydantic** (>=2.0) - Data validation and serialization
+- **pydantic** (>=2.0) - Data validation using Python type hints
 
-### Web and File Processing
-- **flask** (>=3.0) - Web framework for serving the application
+### Web and Documentation
+- **flask** (>=3.0) - Web framework for server functionality
 - **markdown** (>=3.0) - Markdown processing
-- **weasyprint** (>=62.0) - HTML to PDF conversion
-- **watchdog** (>=4.0) - File system event monitoring
+- **weasyprint** (>=62.0) - HTML/CSS to PDF converter
 
-### Configuration and Utilities
-- **pyyaml** (>=6.0) - YAML configuration file parsing
-- **rich** (>=13.0) - Rich text and terminal formatting
+### Utilities and Configuration
+- **mcp** (>=1.2.0) - Model Context Protocol
+- **pyyaml** (>=6.0) - YAML parser and emitter
+- **rich** (>=13.0) - Rich text and beautiful formatting in terminal
+- **watchdog** (>=4.0) - File system monitoring
 
 ## Dev Dependencies
 
 Development and testing tools:
 
-- **black** (>=24.0) - Code formatting
-- **isort** (>=5.0) - Import sorting
-- **mypy** (>=1.0) - Static type checking
-- **pre-commit** (>=3.0) - Git pre-commit hooks
+- **black** (>=24.0) - Code formatter
+- **isort** (>=5.0) - Import statement sorter
+- **mypy** (>=1.0) - Static type checker
+- **pre-commit** (>=3.0) - Git pre-commit hooks framework
 - **pytest** (>=8.0) - Testing framework
-- **pytest-asyncio** (>=0.24) - Async testing support
+- **pytest-asyncio** (>=0.24) - Async testing support for pytest
 
 ## Internal Module Dependencies
 
-Based on the import statements, the internal modules have the following relationships:
+Based on the import statements, the internal modules have the following dependency relationships:
 
-### Core Modules
-- **[CodeChunker](files/src/local_deepwiki/core/chunker.md)** depends on CodeParser for syntax tree analysis
-- **CodeParser** uses tree-sitter libraries for multi-language parsing
-- **[VectorStore](files/src/local_deepwiki/core/vectorstore.md)** integrates with embedding providers for semantic search
-- **[RepositoryIndexer](files/src/local_deepwiki/core/indexer.md)** coordinates chunking, parsing, and vector storage
+### Core Infrastructure
+- **[CodeChunker](files/src/local_deepwiki/core/chunker.md)** depends on [CodeParser](files/src/local_deepwiki/core/parser.md), [ChunkingConfig](files/src/local_deepwiki/config.md), and logging utilities
+- **[CodeParser](files/src/local_deepwiki/core/parser.md)** provides parsing functionality used by [CodeChunker](files/src/local_deepwiki/core/chunker.md), [APIDocExtractor](files/src/local_deepwiki/generators/api_docs.md), and other generators
+- **[VectorStore](files/src/local_deepwiki/core/vectorstore.md)** is used by various components for embedding storage and retrieval
+- **[RepositoryIndexer](files/src/local_deepwiki/core/indexer.md)** orchestrates the indexing process using chunking and configuration components
 
 ### Provider System
-- **[EmbeddingProvider](files/src/local_deepwiki/providers/base.md)** serves as base class for embedding implementations
-- **[LocalEmbeddingProvider](files/src/local_deepwiki/providers/embeddings/local.md)** uses sentence-transformers for local embeddings
-- **[OpenAIEmbeddingProvider](files/src/local_deepwiki/providers/embeddings/openai.md)** integrates with OpenAI's embedding API
-- **[LLMProvider](files/src/local_deepwiki/providers/base.md)** provides base interface for language model providers
+- **[EmbeddingProvider](files/src/local_deepwiki/providers/base.md)** and **[LLMProvider](files/src/local_deepwiki/providers/base.md)** serve as base classes in the provider system
+- **[LocalEmbeddingProvider](files/src/local_deepwiki/providers/embeddings/local.md)** and **[OpenAIEmbeddingProvider](files/src/local_deepwiki/providers/embeddings/openai.md)** implement the [EmbeddingProvider](files/src/local_deepwiki/providers/base.md) interface
+- Provider selection is handled through configuration management
 
-### Generator Components
-- **[CrossLinker](files/src/local_deepwiki/generators/crosslinks.md)** and **[EntityRegistry](files/src/local_deepwiki/generators/crosslinks.md)** work together for cross-reference generation
-- **[APIDocExtractor](files/src/local_deepwiki/generators/api_docs.md)** uses CodeParser for extracting API documentation
-- **[RelationshipAnalyzer](files/src/local_deepwiki/generators/see_also.md)** and **[FileRelationships](files/src/local_deepwiki/generators/see_also.md)** analyze code relationships
-- Multiple generators depend on core models like [WikiPage](files/src/local_deepwiki/models.md), [CodeChunk](files/src/local_deepwiki/models.md), and [ChunkType](files/src/local_deepwiki/models.md)
+### Content Generators
+- **[CrossLinker](files/src/local_deepwiki/generators/crosslinks.md)** and **[EntityRegistry](files/src/local_deepwiki/generators/crosslinks.md)** work together to add cross-references between wiki pages
+- **[RelationshipAnalyzer](files/src/local_deepwiki/generators/see_also.md)** and **[FileRelationships](files/src/local_deepwiki/generators/see_also.md)** analyze code relationships for "See Also" sections
+- **[APIDocExtractor](files/src/local_deepwiki/generators/api_docs.md)** uses [CodeParser](files/src/local_deepwiki/core/parser.md) to extract API documentation from code
+- Various generator classes (for diagrams, search, TOC, etc.) work with [WikiPage](files/src/local_deepwiki/models.md) and [CodeChunk](files/src/local_deepwiki/models.md) models
 
 ### Models and Configuration
-- Most modules depend on shared models ([WikiPage](files/src/local_deepwiki/models.md), [CodeChunk](files/src/local_deepwiki/models.md), [Language](files/src/local_deepwiki/models.md), [ChunkType](files/src/local_deepwiki/models.md))
-- Configuration management is centralized and used across core components
-- Logging utilities are shared across the application
+- Core models ([WikiPage](files/src/local_deepwiki/models.md), [CodeChunk](files/src/local_deepwiki/models.md), [Language](files/src/local_deepwiki/models.md), [ChunkType](files/src/local_deepwiki/models.md), [IndexStatus](files/src/local_deepwiki/models.md)) are used throughout the system
+- Configuration classes provide settings for different components
+- Handler functions coordinate between different subsystems for server operations
 
-The architecture follows a layered approach with core parsing and indexing components at the base, provider abstractions for external services, and specialized generators for different wiki content types.
+### Testing
+- Test modules import and test their corresponding implementation modules
+- Tests use pytest fixtures and mock objects for isolated testing
 
 ## Module Dependency Graph
 

@@ -2,135 +2,108 @@
 
 ## File Overview
 
-This module provides functionality for generating and managing "Relevant Source Files" sections in wiki pages. It builds mappings between source files and wiki pages, formats file references, and adds source reference sections to wiki pages based on their contributing source files.
+This module provides functionality for managing source file references in wiki pages. It handles the generation and addition of "Relevant Source Files" sections that link wiki pages to their corresponding source code files, creating bidirectional references between documentation and code.
 
 ## Functions
 
-### add_source_refs_sections
-
-```python
-def add_source_refs_sections(
-    pages: list[WikiPage],
-    page_statuses: dict[str, WikiPageStatus],
-    wiki_path: Path | None = None,
-) -> list[WikiPage]:
-```
-
-Add Relevant Source Files sections to wiki pages.
-
-**Parameters:**
-- `pages`: List of wiki pages to process
-- `page_statuses`: Dictionary mapping page paths to their [WikiPageStatus](../models.md) objects (containing source_files information)
-- `wiki_path`: Optional path to wiki directory to [find](manifest.md) existing file pages
-
-**Returns:**
-- List of wiki pages with Relevant Source Files sections added
-
-### generate_source_refs_section
-
-```python
-def generate_source_refs_section(
-    source_files: list[str],
-    current_wiki_path: str,
-    file_to_wiki: dict[str, str],
-    file_line_info: dict[str, dict[str, int]] | None = None,
-    max_items: int = 10,
-) -> str | None:
-```
-
-Generate a Relevant Source Files section for a wiki page.
-
-**Parameters:**
-- `source_files`: List of source file paths that contributed to this page
-- `current_wiki_path`: Path of the current wiki page
-- `file_to_wiki`: Mapping of source files to wiki paths
-- `file_line_info`: Optional mapping of file paths to line info dictionaries
-- `max_items`: Maximum number of items to include in the section
-
-**Returns:**
-- Generated Relevant Source Files section as a string, or None if no content
-
 ### build_file_to_wiki_map
 
-```python
-def build_file_to_wiki_map(...)
-```
+Maps source files to their corresponding wiki page paths.
 
-Builds a mapping between source files and their corresponding wiki pages.
+**Parameters:**
+- Based on the function name and context, this function likely takes parameters related to pages and file mappings, but the specific signature is not shown in the provided code.
+
+**Returns:**
+- Returns a dictionary mapping source file paths to wiki page paths.
 
 ### _relative_path
 
-```python
-def _relative_path(...)
-```
+Internal utility function for calculating relative paths between files.
 
-Helper function for generating relative paths between files.
+**Parameters:**
+- The specific parameters are not shown in the provided code.
+
+**Returns:**
+- Returns a relative path string.
 
 ### _format_file_entry
 
-```python
-def _format_file_entry(...)
-```
+Internal utility function for formatting individual file entries in the source references section.
 
-Helper function for formatting individual file entries in the source references section.
+**Parameters:**
+- The specific parameters are not shown in the provided code.
+
+**Returns:**
+- Returns a formatted string representation of a file entry.
+
+### generate_source_refs_section
+
+Generates a "Relevant Source Files" section for a wiki page.
+
+**Parameters:**
+- `source_files` (list[str]): List of source file paths that contributed to this page
+- `current_wiki_path` (str): Path of the current wiki page
+- `file_to_wiki` (dict[str, str]): Mapping of source files to wiki paths
+- `file_line_info` (dict[str, dict[str, int]] | None): Optional mapping of file paths to line info dictionaries
+- `max_items` (int): Maximum number of items to include (default: 10)
+
+**Returns:**
+- `str | None`: Generated section content as a string, or None if no section should be created
 
 ### _strip_existing_source_refs
 
-```python
-def _strip_existing_source_refs(...)
-```
+Internal utility function for removing existing source reference sections from wiki content.
 
-Helper function for removing existing source reference sections from wiki content.
+**Parameters:**
+- The specific parameters are not shown in the provided code.
+
+**Returns:**
+- Returns modified content with existing source references removed.
+
+### add_source_refs_sections
+
+Adds "Relevant Source Files" sections to multiple wiki pages.
+
+**Parameters:**
+- `pages` (list[[WikiPage](../models.md)]): List of wiki pages to process
+- `page_statuses` (dict[str, [WikiPageStatus](../models.md)]): Dictionary mapping page paths to their status objects, which contain source file information
+- `wiki_path` (Path | None): Optional path to wiki directory for finding existing file pages
+
+**Returns:**
+- `list[WikiPage]`: List of wiki pages with "Relevant Source Files" sections added
 
 ## Usage Examples
 
-### Adding Source References to Wiki Pages
-
 ```python
-from local_deepwiki.generators.source_refs import add_source_refs_sections
-from local_deepwiki.models import WikiPage, WikiPageStatus
 from pathlib import Path
+from local_deepwiki.generators.source_refs import add_source_refs_sections, generate_source_refs_section
 
-# Prepare wiki pages and their statuses
-pages = [wiki_page1, wiki_page2]
-page_statuses = {
-    "page1.md": WikiPageStatus(...),
-    "page2.md": WikiPageStatus(...)
-}
-
-# Add source reference sections
+# Add source reference sections to multiple pages
 updated_pages = add_source_refs_sections(
-    pages=pages,
-    page_statuses=page_statuses,
-    wiki_path=Path("wiki/")
+    pages=wiki_pages,
+    page_statuses=status_dict,
+    wiki_path=Path("docs/wiki")
 )
-```
 
-### Generating a Source References Section
-
-```python
-from local_deepwiki.generators.source_refs import generate_source_refs_section
-
-# Generate source references for a specific page
-source_files = ["src/main.py", "src/utils.py"]
-file_to_wiki = {"src/main.py": "main.md", "src/utils.py": "utils.md"}
-
-section = generate_source_refs_section(
-    source_files=source_files,
-    current_wiki_path="overview.md",
-    file_to_wiki=file_to_wiki,
-    max_items=10
+# Generate a single source reference section
+file_to_wiki_map = {"src/main.py": "wiki/main.md", "src/utils.py": "wiki/utils.md"}
+section_content = generate_source_refs_section(
+    source_files=["src/main.py", "src/utils.py"],
+    current_wiki_path="wiki/overview.md",
+    file_to_wiki=file_to_wiki_map,
+    max_items=5
 )
 ```
 
 ## Related Components
 
-This module works with:
-- [WikiPage](../models.md): Represents individual wiki pages with content and metadata
-- [WikiPageStatus](../models.md): Contains status information including source_files that contributed to a page
-- Path: Used for file system path operations
+This module works with the following components from the codebase:
 
-The module uses regular expressions for content manipulation and integrates with the broader wiki generation system to maintain references between source code and documentation.
+- **[WikiPage](../models.md)**: Model class representing individual wiki pages
+- **[WikiPageStatus](../models.md)**: Model class containing status information and source file references for pages
+- **Path**: Standard library Path class for file system operations
+
+The module uses regular expressions (`re`) for text processing and path manipulation utilities for handling file system paths.
 
 ## API Reference
 

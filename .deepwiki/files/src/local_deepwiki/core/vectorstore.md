@@ -2,39 +2,48 @@
 
 ## File Overview
 
-The vectorstore module provides vector storage and search capabilities using LanceDB as the underlying database. It handles embedding storage, similarity search, and metadata management for code chunks in the local deepwiki system.
+This module provides vector storage functionality for the local_deepwiki system. It implements a VectorStore class that manages code chunk embeddings using LanceDB as the underlying vector database. The module handles storing, retrieving, and searching code chunks with their associated embeddings and metadata.
 
 ## Classes
 
 ### VectorStore
 
-The VectorStore class manages vector embeddings and provides similarity search functionality using LanceDB. It handles the storage of code chunks with their embeddings and metadata, enabling semantic search across the codebase.
+The VectorStore class manages vector storage operations for code chunks and their embeddings. It provides functionality to store code chunks with their vector representations and perform similarity searches.
+
+**Dependencies:**
+- Uses LanceDB for vector database operations
+- Integrates with [EmbeddingProvider](../providers/base.md) for generating embeddings
+- Works with [CodeChunk](../models.md) and [SearchResult](../models.md) models
 
 ## Functions
 
 ### _sanitize_string_value
 
-A utility function for sanitizing string values, likely used for data preprocessing before storage in the vector database.
+A utility function for sanitizing string values, likely used to clean data before storage in the vector database.
 
 ## Related Components
 
-This module integrates with several other components of the local deepwiki system:
+This module integrates with several other components of the local_deepwiki system:
 
-- **[ChunkType](../models.md), [CodeChunk](../models.md), [Language](../models.md), [SearchResult](../models.md)**: Data models from the models module that define the structure of stored and retrieved data
-- **[EmbeddingProvider](../providers/base.md)**: Base class from the providers module that handles embedding generation
-- **Logger**: Logging functionality from the logging module for tracking operations
+- **[EmbeddingProvider](../providers/base.md)**: Used for generating vector embeddings of code chunks
+- **[CodeChunk](../models.md)**: The primary data model for code chunks being stored
+- **[SearchResult](../models.md)**: Model for returning search results from vector queries
+- **[ChunkType](../models.md) and [Language](../models.md)**: Enums for categorizing code chunks
+- **Logging system**: Uses the local_deepwiki logging utilities
 
-The module uses LanceDB as the vector database backend, with the Table class providing direct database table operations.
+The module serves as a bridge between the code analysis components and the vector database, enabling semantic search capabilities across the codebase.
 
 ## Usage Context
 
-The VectorStore class serves as the core component for:
-- Storing code chunks with their vector embeddings
-- Performing similarity searches to [find](../generators/manifest.md) related code
-- Managing metadata associated with code chunks
-- Providing search results in a structured format
+Based on the imports and model references, this VectorStore class is designed to:
 
-This component is essential for the semantic search capabilities of the local deepwiki system, enabling users to [find](../generators/manifest.md) relevant code based on meaning rather than just text matching.
+1. Accept [CodeChunk](../models.md) objects containing code snippets and metadata
+2. Generate embeddings using an [EmbeddingProvider](../providers/base.md)
+3. Store the chunks and embeddings in a LanceDB table
+4. Provide search functionality that returns [SearchResult](../models.md) objects
+5. Handle different programming languages and chunk types through the [Language](../models.md) and [ChunkType](../models.md) enums
+
+The sanitization function suggests the module includes data cleaning capabilities to ensure proper storage of string data in the vector database.
 
 ## API Reference
 

@@ -109,6 +109,11 @@
                     },
                     {
                       "number": "5.1.1.7.6",
+                      "title": "parser.py",
+                      "path": "files/src/local_deepwiki/core/parser.md"
+                    },
+                    {
+                      "number": "5.1.1.7.7",
                       "title": "vectorstore.py",
                       "path": "files/src/local_deepwiki/core/vectorstore.md"
                     }

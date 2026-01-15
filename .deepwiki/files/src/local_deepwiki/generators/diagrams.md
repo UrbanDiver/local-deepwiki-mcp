@@ -1,8 +1,8 @@
-# Diagrams Generator Module
+# diagrams.py
 
 ## File Overview
 
-The `diagrams.py` module provides functionality for generating various types of diagrams and visualizations for code documentation. It specializes in creating Mermaid diagrams including class diagrams, dependency graphs, module overviews, language distribution charts, and sequence diagrams based on code analysis.
+This module provides functionality for generating various types of diagrams for code documentation, including class diagrams, dependency graphs, module overviews, language distribution charts, sequence diagrams, and indexing status visualizations. The module works with code analysis data to create Mermaid diagram representations.
 
 ## Classes
 
@@ -14,89 +14,212 @@ A dataclass that stores information about a class extracted from code analysis.
 
 ### sanitize_mermaid_name
 
-Sanitizes names to be compatible with Mermaid diagram syntax by handling special characters and reserved words.
+Sanitizes names for use in Mermaid diagrams by handling special characters and ensuring valid diagram syntax.
 
 ### generate_class_diagram
 
-Generates a Mermaid class diagram representation from code chunks. Analyzes class structures, attributes, and methods to create a visual representation of the codebase architecture.
+Generates a Mermaid class diagram representation from code chunk data. Creates visual representations of classes, their attributes, methods, and relationships.
+
+**Parameters:**
+- Code chunk data containing class information
+- Configuration options for diagram generation
+
+**Returns:**
+- String containing Mermaid class diagram syntax
 
 ### _extract_class_attributes
 
-Helper function that extracts class attributes from code chunks for use in class diagram generation.
+Internal helper function that extracts class attributes from code analysis data.
+
+**Parameters:**
+- Class data from code analysis
+
+**Returns:**
+- List of class attributes
 
 ### _extract_method_signature
 
-Helper function that extracts method signatures from code to display in class diagrams, showing parameters and return types where available.
+Internal helper function that extracts method signatures from class methods.
+
+**Parameters:**
+- Method data from code analysis
+
+**Returns:**
+- Formatted method signature string
 
 ### _is_test_module
 
-Utility function that determines whether a given module is a test module based on naming conventions or file paths.
+Determines if a given module is a test module based on naming conventions or structure.
+
+**Parameters:**
+- Module information
+
+**Returns:**
+- Boolean indicating if the module is a test module
 
 ### generate_dependency_graph
 
-Creates a Mermaid dependency graph showing relationships between modules and packages in the codebase. Analyzes import statements to map dependencies.
+Creates a dependency graph showing relationships between modules and external libraries.
+
+**Parameters:**
+- Module dependency data
+- Graph configuration options
+
+**Returns:**
+- String containing Mermaid graph syntax for dependencies
 
 ### _parse_external_import
 
-Helper function that parses external import statements to identify dependencies outside the current project.
+Internal helper function that parses external import statements to identify third-party dependencies.
+
+**Parameters:**
+- Import statement data
+
+**Returns:**
+- Parsed external dependency information
 
 ### _module_to_wiki_path
 
-Converts module names to wiki path format for proper linking in generated documentation.
+Converts module paths to wiki-compatible path formats for linking.
+
+**Parameters:**
+- Module path string
+
+**Returns:**
+- Wiki-formatted path string
 
 ### _find_circular_dependencies
 
-Analyzes the dependency graph to identify circular dependencies between modules, which can indicate architectural issues.
+Identifies circular dependencies in the module dependency graph.
+
+**Parameters:**
+- Dependency graph data
+
+**Returns:**
+- List of circular dependency chains
 
 ### dfs
 
-Implements depth-first search algorithm used in dependency analysis and circular dependency detection.
+Performs depth-first search traversal for dependency analysis.
+
+**Parameters:**
+- Graph data structure
+- Starting node
+- Search parameters
+
+**Returns:**
+- Search results or path information
 
 ### _path_to_module
 
-Converts file paths to module names following Python module naming conventions.
+Converts file paths to module name format.
+
+**Parameters:**
+- File path
+
+**Returns:**
+- Module name string
 
 ### _parse_import_line
 
-Parses individual import lines to extract module and symbol information for dependency analysis.
+Parses individual import lines to extract dependency information.
+
+**Parameters:**
+- Import line string
+
+**Returns:**
+- Parsed import data
 
 ### generate_module_overview
 
-Creates a high-level overview diagram showing the structure and organization of modules within the project.
+Creates an overview diagram showing the structure and organization of modules in the codebase.
+
+**Parameters:**
+- Module structure data
+- Overview configuration
+
+**Returns:**
+- String containing Mermaid diagram for module overview
 
 ### generate_language_pie_chart
 
-Generates a pie chart visualization showing the distribution of different programming languages or file types in the codebase.
+Generates a pie chart showing the distribution of programming languages in the codebase.
+
+**Parameters:**
+- [Language](../models.md) usage data
+- Chart configuration
+
+**Returns:**
+- String containing Mermaid pie chart syntax
 
 ### generate_sequence_diagram
 
-Creates Mermaid sequence diagrams showing the flow of method calls and interactions between different components.
+Creates sequence diagrams showing interactions and call flows between components.
+
+**Parameters:**
+- Interaction data
+- Sequence configuration
+
+**Returns:**
+- String containing Mermaid sequence diagram syntax
 
 ### collect_participants
 
-Helper function that identifies all participants (classes, modules) involved in a sequence diagram.
+Collects and identifies participants (classes, functions, modules) for sequence diagrams.
+
+**Parameters:**
+- Code analysis data
+
+**Returns:**
+- List of participants for sequence diagrams
 
 ### add_calls
 
-Helper function that adds method call information to sequence diagrams, showing the flow of execution.
+Adds function/method call information to sequence diagrams.
+
+**Parameters:**
+- Call data
+- Sequence diagram context
+
+**Returns:**
+- Updated sequence diagram with call information
 
 ### generate_indexin
 
-Generates indexing information for diagram components, likely used for cross-referencing and navigation.
+Generates indexing status visualization showing the progress of code analysis and documentation.
+
+**Parameters:**
+- Indexing status data
+- Visualization configuration
+
+**Returns:**
+- String containing indexing status diagram
 
 ## Related Components
 
-This module works with several other components from the local_deepwiki system:
+This module works with several other components from the codebase:
 
 - **[ChunkType](../models.md)**: Enumeration used to identify different types of code chunks
-- **[CodeChunk](../models.md)**: Data structure representing analyzed code segments
-- **[IndexStatus](../models.md)**: Status information for indexing operations
+- **[CodeChunk](../models.md)**: Data structure containing analyzed code information
+- **[IndexStatus](../models.md)**: Status tracking for code analysis and indexing progress
 
-The module integrates with the broader documentation generation system by analyzing code chunks and producing visual diagrams that enhance the generated wiki documentation.
+The module relies on the `re` module for regular expression operations, `dataclasses` for the ClassInfo structure, `pathlib` for file path handling, and `typing` for type annotations.
 
-## Usage Context
+## Usage Examples
 
-The functions in this module are typically called as part of the documentation generation pipeline, taking analyzed code chunks as input and producing Mermaid diagram markup as output. The generated diagrams are then embedded into the final documentation to provide visual representations of code structure and relationships.
+```python
+# Generate a class diagram from code chunks
+class_diagram = generate_class_diagram(code_chunks, config_options)
+
+# Create a dependency graph
+dependency_graph = generate_dependency_graph(module_data, graph_config)
+
+# Generate module overview
+overview = generate_module_overview(module_structure, overview_config)
+
+# Create language distribution chart
+language_chart = generate_language_pie_chart(language_data, chart_config)
+```
 
 ## API Reference
 

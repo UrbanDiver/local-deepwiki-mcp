@@ -2,62 +2,55 @@
 
 ## File Overview
 
-This file implements an OpenAI-based embedding provider for the local_deepwiki system. It provides a concrete implementation of the [EmbeddingProvider](../base.md) base class that uses OpenAI's embedding API to generate vector embeddings for text content.
+This file implements an OpenAI-based embedding provider for the local_deepwiki system. It provides functionality to generate text embeddings using OpenAI's embedding models through their API.
 
 ## Classes
 
 ### OpenAIEmbeddingProvider
 
-The OpenAIEmbeddingProvider class extends the [EmbeddingProvider](../base.md) base class to provide embedding functionality using OpenAI's API.
+The OpenAIEmbeddingProvider class extends the base [EmbeddingProvider](../base.md) to provide OpenAI-specific embedding functionality.
 
-**Purpose**: Generate text embeddings using OpenAI's embedding models through their async API client.
-
-**Constructor Parameters**:
+**Constructor Parameters:**
 - `model` (str, optional): The OpenAI embedding model name. Defaults to `"text-embedding-3-small"`
-- `api_key` (str | None, optional): OpenAI API key. If not provided, uses the `OPENAI_API_KEY` environment variable
+- `api_key` (str | None, optional): Optional API key for OpenAI. If not provided, uses the `OPENAI_API_KEY` environment variable
 
-**Key Features**:
-- Initializes an AsyncOpenAI client for making API requests
-- Supports configurable embedding models
-- Automatically determines embedding dimensions based on the selected model using `OPENAI_EMBEDDING_DIMENSIONS` mapping
-- Falls back to 1536 dimensions if the model is not found in the dimensions mapping
+**Key Features:**
+- Inherits from [EmbeddingProvider](../base.md) base class
+- Uses AsyncOpenAI client for asynchronous operations
+- Automatically determines embedding dimensions based on the selected model
+- Falls back to environment variable for API key configuration
 
-## Usage Examples
+## Implementation Details
 
-### Basic Initialization
+The class initializes with:
+- A configurable OpenAI embedding model
+- An AsyncOpenAI client instance configured with the provided or environment-based API key
+- Automatic dimension detection using a `OPENAI_EMBEDDING_DIMENSIONS` mapping (referenced but not shown in the provided code)
+
+## Usage Example
 
 ```python
-# Using default model with environment variable API key
+from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
+
+# Using default model with environment API key
 provider = OpenAIEmbeddingProvider()
 
-# Using specific model
-provider = OpenAIEmbeddingProvider(model="text-embedding-3-small")
-
-# Using explicit API key
+# Using custom model and explicit API key
 provider = OpenAIEmbeddingProvider(
     model="text-embedding-3-small",
     api_key="your-api-key-here"
 )
 ```
 
-### Environment Setup
-
-The provider expects the OpenAI API key to be available either as a parameter or through the environment:
-
-```bash
-export OPENAI_API_KEY="your-openai-api-key"
-```
-
 ## Related Components
 
-- **[EmbeddingProvider](../base.md)**: The base class that OpenAIEmbeddingProvider extends, imported from `local_deepwiki.providers.base`
-- **AsyncOpenAI**: The OpenAI client library used for making asynchronous API calls
-- **OPENAI_EMBEDDING_DIMENSIONS**: A mapping that provides dimension information for different OpenAI embedding models (referenced but not defined in the visible code)
+- **[EmbeddingProvider](../base.md)**: The base class that OpenAIEmbeddingProvider extends
+- **AsyncOpenAI**: The OpenAI client library used for API interactions
 
 ## Dependencies
 
-- `openai`: Official OpenAI Python library for API access
-- `os`: Standard library for environment variable access
+- `os`: For environment variable access
+- `openai.AsyncOpenAI`: For asynchronous OpenAI API operations
 - [`local_deepwiki.providers.base.EmbeddingProvider`](../base.md): Base embedding provider interface
 
 ## API Reference

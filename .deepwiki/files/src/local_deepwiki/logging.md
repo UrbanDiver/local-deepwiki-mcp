@@ -1,8 +1,8 @@
-# Logging Module
+# logging.py
 
 ## File Overview
 
-The `logging.py` module provides centralized logging configuration for the local-deepwiki package. It offers a simple interface to set up logging with customizable levels, formats, and output destinations.
+This module provides logging configuration utilities for the local-deepwiki package. It offers a centralized way to set up logging with customizable formats, output destinations, and log levels.
 
 ## Functions
 
@@ -14,23 +14,23 @@ def setup_logging(
     format_style: Literal["simple", "detailed"] = "simple",
     stream: bool = True,
     log_file: str | None = None,
-) -> logging.Logger:
+) -> logging.Logger
 ```
 
-Configures logging for the local-deepwiki package with flexible options for different use cases.
+Configure logging for the local-deepwiki package.
 
 **Parameters:**
-- `level` (str | int | None): Log level specification. Accepts standard logging levels (DEBUG, INFO, WARNING, ERROR, CRITICAL). Defaults to INFO, or can be overridden by the `DEEPWIKI_LOG_LEVEL` environment variable
-- `format_style` (Literal["simple", "detailed"]): Output format style. "simple" provides basic log format, while "detailed" includes file and line information
-- `stream` (bool): Whether to output logs to stderr. Defaults to True
-- `log_file` (str | None): Optional file path for writing logs to a file
+- `level`: Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL). Defaults to INFO, or DEEPWIKI_LOG_LEVEL environment variable if set
+- `format_style`: Format style for log messages - "simple" for basic format, "detailed" for file/line info
+- `stream`: Whether to log to stderr (default: True)
+- `log_file`: Optional file path for logging output
 
 **Returns:**
 - `logging.Logger`: The configured logger instance
 
 ### get_logger
 
-The module also includes a `get_logger` function, though its complete signature and implementation details are not visible in the provided code.
+A function for retrieving logger instances (signature not fully visible in the provided code).
 
 ## Usage Examples
 
@@ -39,45 +39,41 @@ The module also includes a `get_logger` function, though its complete signature 
 ```python
 from local_deepwiki.logging import setup_logging
 
-# Simple logging to stderr
+# Simple setup with default INFO level
 logger = setup_logging()
 
-# Set specific log level
+# Setup with custom level
 logger = setup_logging(level="DEBUG")
 
-# Use detailed format with file/line info
+# Setup with detailed formatting
 logger = setup_logging(format_style="detailed")
 ```
 
-### File Logging
+### File and Stream Logging
 
 ```python
-# Log to both stderr and file
+# Log to both stderr and a file
 logger = setup_logging(
     level="INFO",
     format_style="detailed",
     stream=True,
-    log_file="deepwiki.log"
+    log_file="app.log"
 )
 
 # Log only to file
 logger = setup_logging(
     stream=False,
-    log_file="deepwiki.log"
+    log_file="app.log"
 )
 ```
 
 ### Environment Variable Configuration
 
-The logging level can be controlled via environment variable:
-
-```bash
-export DEEPWIKI_LOG_LEVEL=DEBUG
-```
+The setup_logging function respects the `DEEPWIKI_LOG_LEVEL` environment variable for default log level configuration.
 
 ## Related Components
 
-This module uses Python's standard `logging` library and integrates with the `os` and `sys` modules for environment variable access and stream handling. The typing module provides type hints for better code clarity and IDE support.
+This module uses the standard Python `logging` module and integrates with environment variables through the `os` module. It provides logging infrastructure that can be used throughout the local-deepwiki package.
 
 ## API Reference
 
@@ -151,7 +147,7 @@ flowchart TD
 ## See Also
 
 - [git_utils](core/git_utils.md) - uses this
-- [server](server.md) - uses this
 - [test_examples](generators/test_examples.md) - uses this
 - [llm_cache](core/llm_cache.md) - uses this
-- [vectorstore](core/vectorstore.md) - uses this
+- [server](server.md) - uses this
+- [chunker](core/chunker.md) - uses this

@@ -2,46 +2,48 @@
 
 ## File Overview
 
-This module provides code chunking functionality for the local_deepwiki system. It contains the CodeChunker class and utility functions for breaking down source code into meaningful chunks for documentation generation.
+The chunker module provides code analysis and chunking functionality for the local_deepwiki system. It contains the CodeChunker class which processes source code files by parsing them into structured chunks representing different code elements like classes, functions, and methods. The module also includes utility functions for extracting parent class relationships from code structures.
 
 ## Classes
 
 ### CodeChunker
 
-The [main](../export/pdf.md) class responsible for chunking source code into analyzable segments. It uses tree-sitter parsing to identify and extract different types of code constructs.
+The CodeChunker class is responsible for analyzing source code files and breaking them down into meaningful chunks for documentation generation. It uses tree-sitter parsing to identify and extract different types of code elements.
 
-**Purpose**: Processes parsed code into structured chunks that can be used for documentation generation.
-
-**Dependencies**: 
-- Uses CodeParser for syntax tree parsing
-- Integrates with [ChunkingConfig](../config.md) for configuration settings
-- Creates [CodeChunk](../models.md) model instances for output
+Based on the imports and module structure, this class likely provides methods for:
+- Processing code files into structured chunks
+- Identifying different types of code elements (classes, functions, methods)
+- Extracting metadata and relationships between code components
+- Generating chunk identifiers and organizing code structure
 
 ## Functions
 
 ### get_parent_classes
 
-A utility function that appears to be related to extracting parent class information from code structures.
+A utility function that appears to extract parent class information from code structures, likely used to understand inheritance relationships in object-oriented code.
+
+## Usage Examples
+
+```python
+from local_deepwiki.core.chunker import CodeChunker, get_parent_classes
+
+# Create a chunker instance
+chunker = CodeChunker()
+
+# Process parent class relationships
+parent_classes = get_parent_classes(node)
+```
 
 ## Related Components
 
 This module integrates with several other components of the local_deepwiki system:
 
-- **CodeParser**: Used for parsing source code into syntax trees
-- **[ChunkingConfig](../config.md)**: Provides configuration settings for chunking behavior
-- **[CodeChunk](../models.md)**: The model class used to represent individual code chunks
-- **[ChunkType](../models.md)**: Enumeration defining different types of code chunks
-- **[Language](../models.md)**: Enumeration for programming language identification
+- **[CodeParser](parser.md)**: Used for parsing source code files with tree-sitter
+- **[ChunkingConfig](../config.md)**: Provides configuration settings for the chunking process
+- **[CodeChunk](../models.md) and [ChunkType](../models.md)**: Data models for representing processed code chunks
+- **[Language](../models.md)**: Enumeration for supported programming languages
 
-The module also uses utility functions from the parser module including:
-- `find_nodes_by_type`: For locating specific node types in syntax trees
-- `get_docstring`: For extracting documentation strings
-- `get_node_name`: For retrieving node identifiers
-- `get_node_text`: For extracting text content from nodes
-
-## Usage Context
-
-Based on the imports and structure, this chunker module serves as a core component in the code analysis pipeline, taking parsed code and organizing it into meaningful segments for further processing by the documentation generation system.
+The module relies on tree-sitter parsing functionality and works with Node objects to analyze code structure. It uses the logging system for operation tracking and integrates with the broader configuration management system.
 
 ## API Reference
 

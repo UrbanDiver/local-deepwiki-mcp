@@ -1,18 +1,14 @@
-# app.py
+# src/local_deepwiki/web/app.py
 
 ## File Overview
 
-The `app.py` file implements a Flask web application for serving a DeepWiki server. It provides functionality to create and run a web server that serves wiki content from a specified path, with features for viewing pages, searching, and chat functionality.
+This file implements the Flask web application for the DeepWiki server. It provides the main web interface for browsing and interacting with a local wiki, including page viewing, searching, and chat functionality. The application serves markdown content as HTML and integrates with vector stores and language models for enhanced wiki features.
 
 ## Functions
 
 ### create_app
 
-```python
-def create_app(wiki_path: str | Path) -> Flask:
-```
-
-Creates a Flask application instance configured with the specified wiki path.
+Creates and configures a Flask application instance with the specified wiki path.
 
 **Parameters:**
 - `wiki_path` (str | Path): Path to the wiki directory to serve
@@ -20,62 +16,62 @@ Creates a Flask application instance configured with the specified wiki path.
 **Returns:**
 - Flask: Configured Flask application instance
 
-**Behavior:**
-- Sets the global `WIKI_PATH` variable to the provided path
-- Validates that the wiki path exists, raising a `ValueError` if not found
-- Logs the configured wiki path
-- Returns the Flask app instance
+**Description:**
+Sets up the global wiki path and validates that the directory exists. Raises a ValueError if the specified wiki path does not exist.
 
 ### run_server
 
-```python
-def run_server(
-    wiki_path: str | Path, 
-    host: str = "127.0.0.1", 
-    port: int = 8080, 
-    debug: bool = False
-):
-```
-
-Runs the wiki web server with the specified configuration.
+Starts the DeepWiki web server with the specified configuration.
 
 **Parameters:**
 - `wiki_path` (str | Path): Path to the wiki directory to serve
-- `host` (str): Host address to bind to (defaults to "127.0.0.1")
-- `port` (int): Port number to listen on (defaults to 8080)
-- `debug` (bool): Whether to run in debug mode (defaults to False)
+- `host` (str, optional): Host address to bind to. Defaults to "127.0.0.1"
+- `port` (int, optional): Port number to listen on. Defaults to 8080
+- `debug` (bool, optional): Whether to run in debug mode. Defaults to False
 
-**Behavior:**
-- Creates a Flask app using create_app
-- Logs and prints server startup information including host, port, and wiki path
-- Starts the Flask development server
+**Description:**
+Creates a Flask app using create_app, logs startup information, and starts the development server. Outputs startup messages to both the logger and console.
 
 ## Usage Examples
 
-### Basic Server Setup
+### Starting the Wiki Server
 
 ```python
-# Create and configure a Flask app
-app = create_app("/path/to/wiki")
+from local_deepwiki.web.app import run_server
 
-# Run the server with default settings
+# Start server with default settings
 run_server("/path/to/wiki")
 
-# Run with custom host and port
-run_server("/path/to/wiki", host="0.0.0.0", port=9000, debug=True)
+# Start server with custom host and port
+run_server("/path/to/wiki", host="0.0.0.0", port=3000)
+
+# Start server in debug mode
+run_server("/path/to/wiki", debug=True)
+```
+
+### Creating an App Instance
+
+```python
+from local_deepwiki.web.app import create_app
+
+# Create Flask app
+app = create_app("/path/to/wiki")
+
+# Use with a WSGI server
+app.run()
 ```
 
 ## Related Components
 
-This file integrates with several other components based on the visible imports:
+This file integrates with several other components based on the imports shown:
 
-- **[VectorStore](../core/vectorstore.md)**: Used for vector-based search functionality
-- **Embedding providers**: Through `get_embedding_provider` for text embeddings
-- **LLM providers**: Through `get_cached_llm_provider` for language model functionality
-- **Configuration system**: Through [`get_config`](../config.md) for application settings
-- **Logging system**: Through [`get_logger`](../logging.md) for application logging
+- **[VectorStore](../core/vectorstore.md)**: Used for semantic search capabilities
+- **Embedding providers**: Handles text embeddings for search functionality  
+- **LLM providers**: Provides language model integration for chat features
+- **Configuration system**: Manages application settings through [get_config](../config.md)
+- **Logging system**: Handles application logging through [get_logger](../logging.md)
 
-The application uses Flask for the web framework and Markdown for content rendering, supporting both synchronous and asynchronous operations through asyncio integration.
+The application also works with Flask's templating system (render_template) and provides JSON API endpoints (jsonify) for interactive features.
 
 ## API Reference
 

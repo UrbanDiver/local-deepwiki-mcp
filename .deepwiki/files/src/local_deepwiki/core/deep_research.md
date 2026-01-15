@@ -1,65 +1,75 @@
-# Deep Research Module
+# Deep Research Pipeline
 
 ## File Overview
 
-The `deep_research.py` module provides the core deep research pipeline functionality for the Local DeepWiki system. It implements a comprehensive research workflow that can break down complex questions into sub-questions, conduct searches, and synthesize findings into structured research results.
+This file implements the core deep research functionality for the local_deepwiki system. It provides a comprehensive research pipeline that can break down complex queries into sub-questions, conduct searches, and synthesize results using LLM providers and vector stores.
 
 ## Classes
 
 ### ResearchCancelledError
 
-A custom exception class used to signal when a research operation has been cancelled.
+A custom exception class used to handle cancellation of research operations.
 
 ### DeepResearchPipeline
 
-The [main](../export/pdf.md) class that orchestrates the deep research process. It manages the complete research workflow from initial question analysis through final synthesis.
+The [main](../export/pdf.md) class that orchestrates the deep research process. This pipeline manages the complete research workflow from initial query decomposition through final synthesis.
 
-**Key Dependencies:**
-- [VectorStore](vectorstore.md) for search operations
-- [LLMProvider](../providers/base.md) for language model interactions
-- Progress tracking through callback functions
+**Key Responsibilities:**
+- Breaking down complex research questions into manageable sub-questions
+- Conducting searches using vector stores
+- Managing research progress and step tracking
+- Synthesizing findings into comprehensive results
+- Handling cancellation and error scenarios
 
-## Models and Data Structures
+## Functions
 
-The module works with several data models imported from `local_deepwiki.models`:
+The file contains various helper functions and methods that support the research pipeline operations, though the specific function signatures are not fully visible in the provided code chunks.
 
-- **[DeepResearchResult](../models.md)**: Contains the final research output
-- **[ResearchProgress](../models.md)**: Tracks progress through the research pipeline
-- **[ResearchProgressType](../models.md)**: Enumeration of progress event types
-- **[ResearchStep](../models.md)**: Individual steps in the research process
-- **[ResearchStepType](../models.md)**: Types of research steps
-- **[SearchResult](../models.md)**: Results from search operations
-- **[SourceReference](../models.md)**: References to source materials
-- **[SubQuestion](../models.md)**: Sub-questions derived from the [main](../export/pdf.md) research question
+## Usage Examples
 
-## Core Functionality
+Based on the imports and class structure, typical usage would involve:
 
-The module implements an asynchronous research pipeline that:
+```python
+from local_deepwiki.core.deep_research import DeepResearchPipeline
+from local_deepwiki.providers.base import LLMProvider
+from local_deepwiki.core.vectorstore import VectorStore
 
-1. **Question Analysis**: Breaks down complex research questions into manageable sub-questions
-2. **Search Execution**: Conducts searches using the integrated vector store
-3. **Progress Tracking**: Provides real-time updates on research progress
-4. **Result Synthesis**: Combines findings into comprehensive research results
+# Initialize the pipeline with required components
+pipeline = DeepResearchPipeline(
+    llm_provider=your_llm_provider,
+    vector_store=your_vector_store
+)
+
+# Conduct research (exact method signature not visible in provided code)
+result = await pipeline.research(query="Your research question")
+```
 
 ## Related Components
 
-This module integrates with several other components of the Local DeepWiki system:
+This file integrates with several other components of the local_deepwiki system:
 
-- **[VectorStore](vectorstore.md)**: For conducting semantic searches across the knowledge base
-- **[LLMProvider](../providers/base.md)**: For natural language processing and content generation
-- **Logging system**: For operational logging and debugging
-- **Models package**: For structured data representation throughout the research process
+### Core Components
+- **[VectorStore](vectorstore.md)**: Used for semantic search and document retrieval
+- **[LLMProvider](../providers/base.md)**: Provides language model capabilities for query processing and synthesis
 
-## Usage Context
+### Data Models
+- **[DeepResearchResult](../models.md)**: Represents the final research output
+- **[ResearchProgress](../models.md)**: Tracks progress throughout the research process
+- **[ResearchProgressType](../models.md)**: Enumeration of different progress types
+- **[ResearchStep](../models.md)**: Individual steps in the research workflow
+- **[ResearchStepType](../models.md)**: Types of research steps
+- **[SearchResult](../models.md)**: Results from search operations
+- **[SourceReference](../models.md)**: References to source materials
+- **[SubQuestion](../models.md)**: Sub-questions derived from the [main](../export/pdf.md) query
 
-The deep research pipeline is designed to handle complex, multi-faceted research questions that require:
-- Breaking down into smaller, focused sub-questions
-- Multiple search iterations
-- Synthesis of information from various sources
-- Progress tracking for long-running operations
-- Cancellation support for user-initiated stops
+### Utilities
+- **Logging**: Uses the system's logging functionality for operation tracking
 
-The module uses asyncio for concurrent operations and provides callback mechanisms for progress updates, making it suitable for integration into both CLI and web-based interfaces.
+## Technical Notes
+
+The implementation uses asynchronous programming patterns (`asyncio`) for efficient handling of concurrent operations during the research process. It includes proper error handling through the ResearchCancelledError exception and integrates with the broader logging system for operational visibility.
+
+The pipeline appears to support progress callbacks and cancellation mechanisms, making it suitable for long-running research operations that may need to be monitored or interrupted.
 
 ## API Reference
 
@@ -124,7 +134,7 @@ Execute the full research pipeline.
 | [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `question` | `str` | - | The complex question to research. |
-| [`progress_callback`](../watcher.md) | [`ProgressCallback`](../models.md) | `None` | Optional async callback for progress updates. |
+| [`progress_callback`](../handlers.md) | [`ProgressCallback`](../models.md) | `None` | Optional async callback for progress updates. |
 | `cancellation_check` | `CancellationCallback` | `None` | Optional callback that returns True if cancelled. |
 
 

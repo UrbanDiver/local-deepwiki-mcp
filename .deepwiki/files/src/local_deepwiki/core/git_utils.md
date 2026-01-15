@@ -2,7 +2,7 @@
 
 ## File Overview
 
-The `git_utils.py` module provides utilities for working with Git repositories, including extracting repository information, parsing remote URLs, and building source URLs. It focuses on Git repository metadata extraction and URL manipulation for repository hosting services.
+The `git_utils.py` module provides utilities for extracting and parsing Git repository information. It contains functions to retrieve remote URLs, parse repository details, and determine default branches from Git repositories.
 
 ## Classes
 
@@ -11,9 +11,9 @@ The `git_utils.py` module provides utilities for working with Git repositories, 
 A dataclass that stores information about a Git repository.
 
 **Attributes:**
-- `remote_url` (str | None): The remote repository URL (e.g., "https://github.com/owner/repo")
+- `remote_url` (str | None): The remote URL of the repository (e.g., "https://github.com/owner/repo")
 - `host` (str | None): The hosting service domain (e.g., "github.com", "gitlab.com")
-- `owner` (str | None): The repository owner/organization name (e.g., "UrbanDiver")
+- `owner` (str | None): The repository owner or organization (e.g., "UrbanDiver")
 - `repo` (str | None): The repository name (e.g., "local-deepwiki-mcp")
 - `default_branch` (str): The default branch name (e.g., "[main](../export/pdf.md)")
 
@@ -21,9 +21,9 @@ A dataclass that stores information about a Git repository.
 
 Based on the module structure shown, this file contains the following functions:
 
-- `get_git_remote_url`: Retrieves the remote URL of a Git repository
-- `parse_remote_url`: Parses a Git remote URL to extract host, owner, and repository information
-- `get_default_branch`: Determines the default branch of a Git repository
+- `get_git_remote_url`: Retrieves the Git remote URL
+- `parse_remote_url`: Parses a remote URL to extract repository information
+- `get_default_branch`: Determines the default branch of a repository
 - `get_repo_info`: Gathers comprehensive repository information
 - `is_github_repo`: Checks if a repository is hosted on GitHub
 - `build_source_url`: Constructs source URLs for repository files
@@ -32,28 +32,28 @@ Based on the module structure shown, this file contains the following functions:
 
 ```python
 from local_deepwiki.core.git_utils import GitRepoInfo, get_repo_info
-from pathlib import Path
 
-# Get repository information
-repo_path = Path("/path/to/git/repo")
-repo_info = get_repo_info(repo_path)
+# Create repository info object
+repo_info = GitRepoInfo(
+    remote_url="https://github.com/owner/repo",
+    host="github.com",
+    owner="owner",
+    repo="repo",
+    default_branch="main"
+)
 
-# Access repository details
-if repo_info.remote_url:
-    print(f"Repository URL: {repo_info.remote_url}")
-    print(f"Host: {repo_info.host}")
-    print(f"Owner: {repo_info.owner}")
-    print(f"Repository: {repo_info.repo}")
-    print(f"Default branch: {repo_info.default_branch}")
+# Get repository information (function signature not fully visible)
+# repo_data = get_repo_info(path)
 ```
 
-## Dependencies
+## Related Components
 
-This module relies on:
-- Standard library modules: `re`, `subprocess`, `dataclasses`, `pathlib`
-- Internal logging utilities from `local_deepwiki.logging`
+This module integrates with the logging system through the [`get_logger`](../logging.md) function imported from `local_deepwiki.logging`. It uses standard Python libraries including:
 
-The module uses subprocess calls to interact with Git commands and regular expressions for URL parsing.
+- `re` for regular expression operations
+- `subprocess` for executing Git commands
+- `dataclasses` for the GitRepoInfo class definition
+- `pathlib.Path` for file system path handling
 
 ## API Reference
 

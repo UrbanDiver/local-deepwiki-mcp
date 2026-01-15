@@ -2,7 +2,7 @@
 
 ## File Overview
 
-This module generates "See Also" sections for wiki pages by analyzing relationships between source files. It builds mappings between source files and their corresponding wiki pages, then adds cross-references to help users discover related content.
+This module provides functionality for generating "See Also" sections in wiki documentation by analyzing relationships between code files. It identifies connections between files through imports, class usage, and other code relationships to automatically suggest related documentation pages.
 
 ## Classes
 
@@ -10,61 +10,60 @@ This module generates "See Also" sections for wiki pages by analyzing relationsh
 
 A data class that stores relationship information for a single file, tracking its connections to other files in the codebase.
 
-### RelationshipAnalyzer  
+### RelationshipAnalyzer
 
-Analyzes code files to identify relationships and dependencies between different parts of the codebase. This class is responsible for discovering how files are connected to each other.
+Analyzes code files to identify relationships between them, such as imports, class usage, and other code dependencies that can be used to generate cross-references.
 
 ## Functions
 
 ### build_file_to_wiki_map
 
 ```python
-def build_file_to_wiki_map(pages: list[WikiPage]) -> dict[str, str]
+def build_file_to_wiki_map(pages: list[WikiPage]) -> dict[str, str]:
 ```
 
 Builds a mapping from source file paths to their corresponding wiki page paths.
 
 **Parameters:**
-- `pages`: List of [WikiPage](../models.md) objects representing the generated wiki pages
+- `pages`: List of [WikiPage](../models.md) objects representing the generated documentation pages
 
 **Returns:**
 - Dictionary mapping source file paths to wiki page paths
 
-The function processes wiki pages that start with "files/" prefix, removing this prefix and converting `.md` extensions back to `.py` to establish the relationship between source files and their documentation pages.
+This function processes wiki pages that start with "files/" prefix and converts them back to their original source file paths by removing the prefix and changing the file extension from `.md` to `.py`.
 
 ### generate_see_also_section
 
-Generates a "See Also" section for a wiki page based on file relationships and cross-references.
+Generates a "See Also" section for a wiki page based on file relationships analysis.
 
 ### _relative_path
 
-A utility function for calculating relative paths between files, likely used when generating cross-reference links.
+A utility function for calculating relative paths between files.
 
 ### add_see_also_sections
 
-Adds "See Also" sections to multiple wiki pages, coordinating the cross-referencing process across the entire documentation set.
+Processes multiple wiki pages to add "See Also" sections to each one based on the analyzed file relationships.
 
 ## Related Components
 
-This module works with several other components from the local_deepwiki system:
+This module works with the following components from the codebase:
 
-- **[WikiPage](../models.md)**: The primary data structure representing wiki pages, imported from `local_deepwiki.models`
-- **[CodeChunk](../models.md)**: Represents chunks of code that have been processed, also from the models module  
-- **[ChunkType](../models.md)**: An enumeration defining different types of code chunks
+- **[WikiPage](../models.md)**: Used to represent documentation pages and access their metadata
+- **[CodeChunk](../models.md)**: Represents chunks of code that are analyzed for relationships  
+- **[ChunkType](../models.md)**: Enumeration defining different types of code chunks
 
-The module uses standard Python libraries including `re` for regular expressions, `defaultdict` from collections, `dataclass` for data structures, and `pathlib.Path` for file path handling.
+The module imports these from `local_deepwiki.models`, indicating it's part of a larger documentation generation system that processes code files into structured wiki documentation.
 
-## Usage Examples
+## Usage Context
 
-```python
-from local_deepwiki.generators.see_also import build_file_to_wiki_map
+This module appears to be part of an automated documentation generation pipeline that:
 
-# Build mapping from source files to wiki pages
-pages = [...]  # List of WikiPage objects
-file_mapping = build_file_to_wiki_map(pages)
-```
+1. Analyzes source code files for relationships and dependencies
+2. Generates wiki pages from the code
+3. Enhances the wiki pages with cross-references through "See Also" sections
+4. Maps between source file paths and their corresponding documentation pages
 
-The file mapping can then be used to establish cross-references between related documentation pages, helping users navigate between connected parts of the codebase documentation.
+The relationship analysis helps create a more connected and navigable documentation structure by automatically identifying related files that users might want to reference.
 
 ## API Reference
 

@@ -2,90 +2,116 @@
 
 ## File Overview
 
-The handlers module provides error handling utilities and tool handlers for the local_deepwiki application. It contains decorators for error management and handler functions for processing tool calls related to repository indexing and wiki export functionality.
+The handlers module provides tool handlers for the local_deepwiki MCP (Model Context Protocol) server. It contains functions that handle various operations like repository indexing, wiki generation, and HTML export, serving as the interface layer between MCP tool calls and the core functionality.
 
 ## Functions
 
-### handle_tool_errors
+### Error Handling
 
-A [decorator](providers/base.md) function that provides error handling for tool operations. The implementation details are not visible in the provided code, but it appears to wrap other functions to handle exceptions gracefully.
-
-### _validate_positive_int
-
-A validation function that checks if a value is a positive integer. The specific implementation is not shown in the provided code.
-
-### _validate_non_empty_string
-
-A validation function that ensures a string value is not empty. The implementation details are not visible in the provided code.
-
-### _validate_language
-
-A validation function for language parameters, likely working with the [Language](models.md) model from the imports. The specific validation logic is not shown.
-
-### _validate_languages_list
-
-A validation function for lists of languages, presumably validating multiple [Language](models.md) instances. The implementation is not visible in the provided code.
-
-### _validate_provider
-
-A validation function for provider parameters. The specific validation criteria are not shown in the provided code.
-
-### handle_index_repository
-
-A handler function for repository indexing operations. The implementation details are not visible in the provided code, but it likely works with the [RepositoryIndexer](core/indexer.md) class based on the imports.
-
-### handle_export_wiki_html
-
+#### handle_tool_errors
 ```python
-async def handle_export_wiki_html(args: dict[str, Any]) -> list[TextContent]:
+def handle_tool_errors(func: Callable[..., Awaitable[list[TextContent]]]) -> Callable[..., Awaitable[list[TextContent]]]
 ```
+A [decorator](providers/base.md) function that wraps tool handlers to provide consistent error handling. Returns a wrapper function that catches exceptions and formats them as TextContent responses.
 
-An asynchronous handler function that exports wiki content to HTML format.
+**Parameters:**
+- `func`: The async function to wrap that returns a list of TextContent
+
+**Returns:**
+- A wrapped function with error handling
+
+### Validation Functions
+
+#### _validate_positive_int
+Validates that a value is a positive integer.
+
+#### _validate_non_empty_string  
+Validates that a value is a non-empty string.
+
+#### _validate_language
+Validates that a language value is valid.
+
+#### _validate_languages_list
+Validates that a list of languages is valid.
+
+#### _validate_provider
+Validates that a provider value is valid.
+
+### Tool Handlers
+
+#### handle_index_repository
+```python
+async def handle_index_repository(args: dict[str, Any]) -> list[TextContent]
+```
+Handles repository indexing operations. Uses the [RepositoryIndexer](core/indexer.md) class to index code repositories for later wiki generation.
+
+**Parameters:**
+- `args`: Dictionary containing indexing arguments
+
+**Returns:**
+- List of TextContent with indexing results
+
+#### handle_export_wiki_html
+```python
+async def handle_export_wiki_html(args: dict[str, Any]) -> list[TextContent]
+```
+Handles HTML export of generated wikis. Converts wiki content to HTML format for web viewing.
 
 **Parameters:**
 - `args`: Dictionary containing:
-  - `wiki_path`: Path to the wiki directory to export
-  - `output_path` (optional): Destination path for the exported HTML
+  - `wiki_path`: Path to the wiki to export
+  - `output_path`: Optional output path for the HTML files
 
 **Returns:**
-- `list[TextContent]`: List of text content objects
+- List of TextContent with export results
 
-**Functionality:**
-- Resolves the wiki path and validates its existence
-- Optionally resolves an output path, defaulting to the wiki parent directory with appropriate naming
-- Calls the [export_to_html](export/html.md) function from the html export module
-- Raises ValueError if the wiki path doesn't exist
-
-## Related Components
-
-This module integrates with several other components of the local_deepwiki system:
-
-- **[RepositoryIndexer](core/indexer.md)**: Used for repository indexing operations
-- **[VectorStore](core/vectorstore.md)**: Provides vector storage capabilities
-- **[Language](models.md)**: Model for language representation
-- **Configuration**: Uses [get_config](config.md) for application configuration
-- **Logging**: Integrates with the application logging system
-- **Embedding Providers**: Works with embedding provider functionality
-- **LLM Providers**: Utilizes cached LLM provider services
-- **[Wiki Generator](generators/wiki.md)**: Connects to wiki generation functionality
-- **HTML Export**: Integrates with HTML export capabilities
+**Validation:**
+- Checks that the wiki path exists
+- Resolves paths to absolute paths
+- Uses default output path if none provided
 
 ## Usage Examples
 
-### Exporting Wiki to HTML
+### Using Tool Handlers
 
 ```python
-# Example args dictionary for handle_export_wiki_html
+# Repository indexing
+args = {
+    "repository_path": "/path/to/repo",
+    "language": "python"
+}
+result = await handle_index_repository(args)
+
+# HTML export
 args = {
     "wiki_path": "/path/to/wiki",
-    "output_path": "/path/to/output"  # Optional
+    "output_path": "/path/to/output"
 }
-
-# Call the handler
 result = await handle_export_wiki_html(args)
 ```
 
-The function will validate the wiki path exists and export the wiki content to HTML format at the specified or default output location.
+### Error Handling Decorator
+
+```python
+@handle_tool_errors
+async def my_tool_handler(args: dict[str, Any]) -> list[TextContent]:
+    # Tool implementation
+    return [TextContent(type="text", text="Success")]
+```
+
+## Related Components
+
+This module works with several other components from the local_deepwiki package:
+
+- **[RepositoryIndexer](core/indexer.md)**: Used for indexing code repositories
+- **[VectorStore](core/vectorstore.md)**: Handles vector storage operations
+- **[generate_wiki](generators/wiki.md)**: Function for generating wiki content
+- **get_embedding_provider**: Retrieves embedding providers
+- **get_cached_llm_provider**: Retrieves cached LLM providers
+- **[Language](models.md)**: Model for language types
+- **[export_to_html](export/html.md)**: Function for HTML export functionality
+
+The module serves as the bridge between MCP tool calls and the core local_deepwiki functionality, providing validation, error handling, and standardized responses for all supported operations.
 
 ## API Reference
 

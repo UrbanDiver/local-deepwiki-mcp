@@ -2,73 +2,78 @@
 
 ## File Overview
 
-This module implements an MCP (Model Context Protocol) server for the local_deepwiki application. It serves as the main entry point that provides tools for wiki operations, code analysis, and research functionality through a standardized server interface.
+The server.py file implements an MCP (Model Context Protocol) server for the Local DeepWiki system. It serves as the main entry point that exposes various wiki and code analysis tools through the MCP protocol, handling tool registration and request routing.
 
 ## Functions
 
 ### list_tools()
 
-Returns a list of available tools that can be called through the MCP server interface.
+Returns a list of available tools that can be called through the MCP server. Based on the imports, this function registers tools for:
 
-**Returns:**
-- List of Tool objects defining the available operations
+- Repository indexing
+- Code searching
+- Wiki page operations
+- Question answering
+- Deep research
+- Export functionality
 
-### call_tool(name: str, arguments: dict[str, Any] | None)
+### call_tool()
 
-Handles tool execution by routing requests to appropriate handler functions based on the tool name.
+Handles incoming tool calls by routing requests to appropriate handler functions. This function processes tool invocations and delegates to the imported handler functions from the handlers module.
 
-**Parameters:**
-- `name` (str): The name of the tool to execute
-- `arguments` (dict[str, Any] | None): Optional dictionary of arguments to pass to the tool
-
-**Returns:**
-- List of TextContent objects containing the tool's response
+**Handler Functions Called:**
+- [`handle_ask_question`](handlers.md) - Processes question answering requests
+- [`handle_deep_research`](handlers.md) - Handles deep research operations
+- [`handle_export_wiki_html`](handlers.md) - Exports wiki content as HTML
+- [`handle_export_wiki_pdf`](handlers.md) - Exports wiki content as PDF
+- [`handle_index_repository`](handlers.md) - Indexes code repositories
+- [`handle_read_wiki_page`](handlers.md) - Reads specific wiki pages
+- [`handle_read_wiki_structure`](handlers.md) - Retrieves wiki structure information
+- [`handle_search_code`](handlers.md) - Searches through indexed code
 
 ### main()
 
-Sets up and runs the MCP server using stdio transport. This is the main entry point for the server application.
+The main entry point function that sets up and runs the MCP server using stdio transport.
 
 ### run()
 
-Entry point function that executes the main server loop.
+Executes the server startup process using asyncio.
 
 ## Usage Examples
 
-### Starting the Server
+### Running the Server
 
 ```python
-# Run the server
-from local_deepwiki.server import run
-run()
+# Start the MCP server
+if __name__ == "__main__":
+    run()
 ```
 
-### Tool Execution Flow
+### Server Setup
 
-The server handles various tool calls through the call_tool function:
+The server uses stdio transport for communication:
 
 ```python
-# Example of how tools are called (internally)
-result = await call_tool("search_code", {
-    "query": "function definition",
-    "file_pattern": "*.py"
-})
+from mcp.server.stdio import stdio_server
+
+# Server runs with stdio transport
+async def main():
+    async with stdio_server() as streams:
+        await server.run(
+            streams[0], streams[1], server.create_initialization_options()
+        )
 ```
 
 ## Related Components
 
-This module integrates with several handler components from the local_deepwiki.handlers module:
+The server integrates with several components from the Local DeepWiki system:
 
-- **ToolHandler**: Base handler class for tool operations
-- **[handle_ask_question](handlers.md)**: Processes question-answering requests
-- **[handle_deep_research](handlers.md)**: Manages research operations
-- **[handle_export_wiki_html](handlers.md)**: Handles HTML wiki export functionality
-- **[handle_export_wiki_pdf](handlers.md)**: Manages PDF wiki export operations
-- **[handle_index_repository](handlers.md)**: Processes repository indexing requests
-- **[handle_read_wiki_page](handlers.md)**: Retrieves specific wiki page content
-- **[handle_read_wiki_structure](handlers.md)**: Returns wiki structure information
-- **[handle_search_code](handlers.md)**: Performs code search operations
+- **ToolHandler** - Base handler class for tool operations
+- **Handler Functions** - Specific tool implementation functions from the handlers module
+- **Logging System** - Uses the logging module via [`get_logger`](logging.md) for operation tracking
+- **MCP Framework** - Built on the Model Context Protocol server framework with `Server`, `stdio_server`, `TextContent`, and `Tool` types
 
-The module also uses the logging system from local_deepwiki.logging and relies on the MCP server framework for protocol implementation.
+The server acts as the protocol adapter, exposing the wiki and code analysis capabilities through a standardized MCP interface that can be consumed by compatible clients.
 
 ## API Reference
 

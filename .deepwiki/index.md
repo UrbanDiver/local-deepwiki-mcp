@@ -5,15 +5,15 @@ Local DeepWiki-style MCP server for private repository documentation
 
 ## Description
 
-Local DeepWiki MCP is a Model Context Protocol (MCP) server that generates documentation for private code repositories. It provides both a web interface and command-line tools for creating, serving, and exporting wiki-style documentation from your codebase.
+Local DeepWiki MCP is a Model Context Protocol (MCP) server that provides AI-powered documentation generation for private code repositories. It combines multiple LLM providers (Ollama, OpenAI, Anthropic) with embedding-based indexing to create comprehensive wiki-style documentation from your codebase.
 
 ## Key Features
 
-- **MCP Server Integration** - Implements a Model Context Protocol server with stdio communication for integration with MCP-compatible tools
-- **Multiple [LLM Provider](files/src/local_deepwiki/providers/base.md) Support** - Configurable support for Ollama, OpenAI, and Anthropic language models through a unified provider system
-- **Web Server Interface** - Built-in Flask web server for browsing generated documentation locally with configurable host and port settings
-- **Code Indexing and Embedding** - Repository indexing system with support for both local and OpenAI embedding providers for semantic code search
-- **Multiple Export Formats** - Command-line tools for exporting documentation to HTML and PDF formats
+- **Multiple [LLM Provider](files/src/local_deepwiki/providers/base.md) Support** - Integrates with Ollama (local), OpenAI, and Anthropic APIs for flexible AI-powered documentation generation
+- **MCP Server Architecture** - Implements the Model Context Protocol for seamless integration with AI assistants and development tools
+- **Web Interface** - Includes a built-in Flask web server (`deepwiki-serve`) for browsing generated documentation at configurable host and port
+- **Multiple Export Formats** - Supports both HTML (`deepwiki-export`) and PDF (`deepwiki-export-pdf`) export capabilities for documentation
+- **Repository Indexing** - Features a core indexer that processes repository files with configurable embedding providers for semantic search and analysis
 
 ## Technology Stack
 

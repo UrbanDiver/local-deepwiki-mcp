@@ -1,8 +1,8 @@
-# Test Examples Generator
+# test_examples.py
 
 ## File Overview
 
-The `test_examples.py` module provides functionality to extract usage examples from test files to enhance documentation generation. It analyzes test code to [find](manifest.md) practical examples of how functions and classes are used, then formats these examples for inclusion in documentation.
+This module extracts usage examples from test files to generate documentation examples. It analyzes test code to [find](manifest.md) meaningful usage patterns that can be included in generated documentation, helping developers understand how to use various code components through real test examples.
 
 ## Classes
 
@@ -10,88 +10,66 @@ The `test_examples.py` module provides functionality to extract usage examples f
 
 A dataclass that represents a usage example extracted from test code.
 
-```python
-@dataclass
-class UsageExample:
-    # Structure based on dataclass definition in the code
-```
-
 ## Functions
 
 ### find_test_file
 
 Locates the corresponding test file for a given source file.
 
-**Parameters:**
-- Takes a source file path as input
+### _get_node_text
 
-**Returns:**
-- Path to the corresponding test file
+Extracts the text content from a tree-sitter Node.
+
+### _find_test_functions
+
+Identifies test functions within the parsed code tree.
+
+### walk
+
+Traverses nodes in a tree structure, likely for AST navigation.
+
+### _get_function_name
+
+Retrieves the name of a function from its AST node.
+
+### _get_docstring
+
+Extracts the docstring from a function node.
+
+### _get_function_body
+
+Gets the body content of a function from its AST representation.
+
+### _is_mock_heavy
+
+Determines if a test function contains excessive mocking that would make it unsuitable as a usage example.
+
+### _extract_usage_snippet
+
+Extracts a clean, usable code snippet from a test function.
 
 ### extract_examples_for_entities
 
-Extracts usage examples for specific code entities from test files.
-
-**Parameters:**
-- Accepts entities to [find](manifest.md) examples for
-
-**Returns:**
-- Collection of usage examples for the specified entities
+Finds and extracts usage examples for specific code entities from their corresponding test files.
 
 ### format_examples_markdown
 
 Formats extracted usage examples into markdown format for documentation.
 
-**Parameters:**
-- Takes usage examples as input
-
-**Returns:**
-- Markdown-formatted string containing the examples
-
 ### get_file_examples
 
-Retrieves all usage examples from a specific file.
-
-**Parameters:**
-- File path to extract examples from
-
-**Returns:**
-- Collection of usage examples found in the file
-
-## Internal Helper Functions
-
-The module includes several internal helper functions for processing test code:
-
-- **_get_node_text**: Extracts text content from tree-sitter nodes
-- **_find_test_functions**: Identifies test functions in the parsed code
-- **walk**: Traverses the abstract syntax tree
-- **_get_function_name**: Retrieves function names from nodes
-- **_get_docstring**: Extracts docstrings from functions
-- **_get_function_body**: Gets the body content of functions
-- **_is_mock_heavy**: Determines if a test function relies heavily on mocking
-- **_extract_usage_snippet**: Extracts clean usage snippets from test code
-
-## Usage Examples
-
-```python
-from local_deepwiki.generators.test_examples import extract_examples_for_entities, format_examples_markdown
-
-# Extract examples for specific entities
-examples = extract_examples_for_entities(entities)
-
-# Format examples as markdown
-markdown_output = format_examples_markdown(examples)
-```
+Retrieves all usage examples from a specific test file.
 
 ## Related Components
 
-This module integrates with several other components:
+This module works with several other components:
 
-- **CodeParser**: Used for parsing source code files
-- **[Language](../models.md)**: Specifies the programming language being processed  
-- **Logger**: Provides logging functionality through the [`get_logger`](../logging.md) function
+- [CodeParser](../core/parser.md): Used for parsing source code files
+- [Language](../models.md): Enum for specifying programming languages
+- Node: Tree-sitter node type for AST manipulation
+- Logger: For logging operations during example extraction
 
-The module uses tree-sitter for syntax tree parsing and works with Path objects for file system operations.
+The module integrates with the broader documentation generation system by providing real-world usage examples extracted from test files, making the generated documentation more practical and helpful for developers.
 
 ## API Reference
 

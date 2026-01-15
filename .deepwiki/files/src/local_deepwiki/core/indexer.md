@@ -2,42 +2,67 @@
 
 ## File Overview
 
-The indexer module provides functionality for indexing code repositories by parsing files, chunking code, generating embeddings, and storing them in a vector database. It handles the core indexing workflow including file discovery, parsing, chunking, and progress tracking.
+The indexer module provides repository indexing functionality for the local_deepwiki system. It handles the process of scanning, parsing, and vectorizing code files in a repository to enable semantic search and documentation generation.
 
 ## Classes
 
 ### RepositoryIndexer
 
-The RepositoryIndexer class manages the complete indexing process for a code repository. It coordinates file parsing, code chunking, embedding generation, and vector storage while providing progress tracking and status management.
+The RepositoryIndexer class manages the complete indexing workflow for a code repository. It coordinates file scanning, parsing, chunking, and vector storage operations while providing progress tracking and status management.
+
+**Key Responsibilities:**
+- Scanning repository files based on configuration patterns
+- Parsing code files into structured representations
+- Breaking code into semantic chunks for processing
+- Generating and storing vector embeddings
+- Managing indexing status and progress tracking
+- Handling incremental updates and migrations
+
+**Dependencies:**
+- Works with [CodeParser](parser.md) for file parsing
+- Uses [CodeChunker](chunker.md) for breaking code into chunks
+- Integrates with [VectorStore](vectorstore.md) for embedding storage
+- Utilizes embedding providers for vector generation
+- Manages [FileInfo](../models.md) and [IndexStatus](../models.md) models
 
 ## Functions
 
 ### _needs_migration
 
-Determines if the index status requires migration to a newer format.
+Determines whether the indexing system requires migration based on stored metadata.
+
+**Parameters:**
+- Takes parameters related to migration checking (specific signature not fully visible)
+
+**Returns:**
+- Boolean indicating if migration is needed
 
 ### _migrate_status
 
-Handles migration of index status data to newer formats when required.
+Handles the migration of indexing status data to newer formats or schemas.
+
+**Parameters:**
+- Takes parameters for status migration (specific signature not fully visible)
+
+**Returns:**
+- Migration result (specific return type not fully visible)
 
 ## Related Components
 
-This module integrates with several other components:
+The indexer module integrates with several other components:
 
-- **[CodeChunker](chunker.md)**: Breaks down parsed code into manageable chunks for processing
-- **CodeParser**: Parses source code files and extracts structural information
-- **[VectorStore](vectorstore.md)**: Handles storage and retrieval of code embeddings
-- **[Config](../config.md)**: Provides configuration settings for the indexing process
-- **[FileInfo](../models.md)**: Represents metadata about processed files
-- **[CodeChunk](../models.md)**: Represents individual chunks of code with metadata
-- **[IndexStatus](../models.md)**: Tracks the status of indexed files
-- **[ProgressCallback](../models.md)**: Provides progress reporting functionality
-
-The module uses Rich's Progress component for user-friendly progress display during indexing operations and integrates with the embedding provider system for generating vector representations of code chunks.
+- **[Config](../config.md)**: Uses configuration settings to determine indexing behavior
+- **[CodeParser](parser.md)**: Parses individual code files into structured format
+- **[CodeChunker](chunker.md)**: Breaks parsed code into semantic chunks
+- **[VectorStore](vectorstore.md)**: Stores and manages vector embeddings
+- **[CodeChunk](../models.md)**: Represents individual code chunks
+- **[FileInfo](../models.md)**: Stores metadata about indexed files
+- **[IndexStatus](../models.md)**: Tracks indexing progress and status
+- **[ProgressCallback](../models.md)**: Provides progress reporting interface
 
 ## Usage Context
 
-The indexer serves as the central component for building searchable indexes of code repositories. It processes files according to configuration settings, handles various programming languages through the parser system, and maintains an up-to-date vector database for semantic code search capabilities.
+The RepositoryIndexer serves as the central orchestrator for the indexing pipeline, coordinating between parsing, chunking, and vector storage components to build a searchable index of repository code. It provides progress tracking through Rich progress bars and maintains persistent status information for incremental updates.
 
 ## API Reference
 
@@ -74,7 +99,7 @@ Index the repository.
 | [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `full_rebuild` | `bool` | `False` | If True, rebuild entire index. Otherwise, incremental update. |
-| [`progress_callback`](../watcher.md) | `ProgressCallback | None` | `None` | Optional callback for progress updates (message, current, total). |
+| [`progress_callback`](../handlers.md) | `ProgressCallback | None` | `None` | Optional callback for progress updates (message, current, total). |
 
 #### `get_status`
 

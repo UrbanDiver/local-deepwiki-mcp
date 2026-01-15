@@ -2,72 +2,64 @@
 
 ## File Overview
 
-This file defines the abstract base class for embedding providers in the local_deepwiki system. It establishes the interface that all concrete embedding provider implementations must follow.
+This file defines the abstract base class for embedding providers in the local_deepwiki system. It establishes the interface that all embedding provider implementations must follow.
 
 ## Classes
 
 ### EmbeddingProvider
 
-An abstract base class that defines the contract for embedding providers. This class uses Python's ABC (Abstract Base Class) mechanism to ensure that all concrete implementations provide the required methods.
+The EmbeddingProvider class serves as an abstract base class that defines the contract for all embedding provider implementations. It uses Python's ABC (Abstract Base Class) mechanism to enforce implementation of required methods.
 
 #### Abstract Methods
 
-##### embed
-
+**embed**
 ```python
 async def embed(self, texts: list[str]) -> list[list[float]]
 ```
+Generates embeddings for a list of text strings.
 
-Generate embeddings for a list of texts.
+- **Parameters:**
+  - `texts`: List of text strings to embed
+- **Returns:** List of embedding vectors as lists of floats
+- **Note:** This is an asynchronous method that must be implemented by subclasses
 
-**Parameters:**
-- `texts` (list[str]): List of text strings to embed
-
-**Returns:**
-- list[list[float]]: List of embedding vectors
-
-This method is asynchronous and must be implemented by all concrete embedding provider classes.
-
-##### get_dimension
-
+**get_dimension**
 ```python
 def get_dimension(self) -> int
 ```
+Returns the dimension of the embedding vectors produced by this provider.
 
-Get the embedding dimension.
+- **Returns:** The dimension of the embedding vectors as an integer
 
-**Returns:**
-- int: The dimension of the embedding vectors
-
-This method returns the dimensionality of the embedding vectors produced by the provider.
-
-#### Abstract Properties
-
-The class also defines abstract properties (implementation not shown in the provided code), which concrete implementations must provide.
+**Abstract Property**
+The class also defines an abstract property (implementation not shown in the provided code).
 
 ## Usage Examples
 
-To create a concrete embedding provider, inherit from EmbeddingProvider and implement all abstract methods:
+Since this is an abstract base class, it cannot be instantiated directly. Instead, it serves as a template for concrete implementations:
 
 ```python
-from src.local_deepwiki.providers.base import EmbeddingProvider
+from local_deepwiki.providers.base import EmbeddingProvider
 
-class MyEmbeddingProvider(EmbeddingProvider):
+class ConcreteEmbeddingProvider(EmbeddingProvider):
     async def embed(self, texts: list[str]) -> list[list[float]]:
-        # Implementation here
+        # Implementation specific logic
         pass
     
     def get_dimension(self) -> int:
-        # Return the dimension of your embeddings
+        # Return the specific dimension for this provider
         return 768
 ```
 
-## Implementation Notes
+## Implementation Requirements
 
-- All embedding providers must inherit from this base class
-- The `embed` method is asynchronous, allowing for efficient batch processing of texts
-- Concrete implementations must specify the exact dimension of their embedding vectors
-- The class follows Python's ABC pattern to enforce interface compliance at runtime
+Any class inheriting from EmbeddingProvider must implement:
+
+1. The `embed` method for generating embeddings asynchronously
+2. The `get_dimension` method for reporting vector dimensions
+3. An abstract property (details not visible in provided code)
+
+The abstract nature of this class ensures that all embedding providers in the system follow a consistent interface, enabling interchangeable use of different embedding implementations.
 
 ## API Reference
 
@@ -265,6 +257,6 @@ flowchart TD
 ## See Also
 
 - [local](embeddings/local.md) - uses this
-- [openai](embeddings/openai.md) - uses this
-- [vectorstore](../core/vectorstore.md) - uses this
 - [llm_cache](../core/llm_cache.md) - uses this
+- [vectorstore](../core/vectorstore.md) - uses this
+- [openai](embeddings/openai.md) - uses this
