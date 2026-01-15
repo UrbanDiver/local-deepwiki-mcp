@@ -418,19 +418,27 @@ class WikiGenerator:
             progress_callback("Generating dependencies", 4, total_steps)
 
         deps_path = "dependencies.md"
+        deps_page: WikiPage
+        deps_source_files: list[str]
         if full_rebuild or self._needs_regeneration(deps_path, all_source_files):
-            deps_page = await self._generate_dependencies(index_status)
+            deps_page, deps_source_files = await self._generate_dependencies(index_status)
             pages_generated += 1
         else:
-            deps_page = await self._load_existing_page(deps_path)
-            if deps_page is None:
-                deps_page = await self._generate_dependencies(index_status)
+            existing_deps_page = await self._load_existing_page(deps_path)
+            if existing_deps_page is None:
+                deps_page, deps_source_files = await self._generate_dependencies(index_status)
                 pages_generated += 1
             else:
+                deps_page = existing_deps_page
+                # Use source files from previous status if available
+                prev_status = self._page_statuses.get(deps_path) or (
+                    self._previous_status.pages.get(deps_path) if self._previous_status else None
+                )
+                deps_source_files = prev_status.source_files if prev_status else all_source_files
                 pages_skipped += 1
 
         pages.append(deps_page)
-        self._record_page_status(deps_page, all_source_files)
+        self._record_page_status(deps_page, deps_source_files)
         await self._write_page(deps_page)
 
         # Generate changelog page from git history
@@ -450,8 +458,8 @@ class WikiGenerator:
 
         pages = add_cross_links(pages, self.entity_registry)
 
-        # Add Relevant Source Files sections (with GitHub/GitLab links if available)
-        pages = add_source_refs_sections(pages, self._page_statuses, self._repo_path)
+        # Add Relevant Source Files sections with local wiki links
+        pages = add_source_refs_sections(pages, self._page_statuses)
 
         # Add See Also sections
         if progress_callback:
@@ -1167,8 +1175,14 @@ Do NOT include mermaid class diagrams - they will be auto-generated."""
 
         return "\n".join(lines)
 
-    async def _generate_dependencies(self, index_status: IndexStatus) -> WikiPage:
-        """Generate dependencies documentation with grounded facts from manifest."""
+    async def _generate_dependencies(
+        self, index_status: IndexStatus
+    ) -> tuple[WikiPage, list[str]]:
+        """Generate dependencies documentation with grounded facts from manifest.
+
+        Returns:
+            Tuple of (WikiPage, list of source files that contributed).
+        """
         # Build grounded dependency context
         facts_sections = []
 
@@ -1193,12 +1207,30 @@ Do NOT include mermaid class diagrams - they will be auto-generated."""
             )
 
         # 3. Get import chunks for internal dependency analysis
+        # Use higher limit to capture more modules for a complete dependency graph
         search_results = await self.vector_store.search(
             "import require include from",
-            limit=100,
+            limit=500,
         )
 
         import_chunks = [r for r in search_results if r.chunk.chunk_type.value == "import"]
+
+        # Collect source files from import chunks, prioritizing non-test files
+        seen_files: set[str] = set()
+        source_files: list[str] = []
+        test_files: list[str] = []
+
+        for r in import_chunks:
+            file_path = r.chunk.file_path
+            if file_path not in seen_files:
+                seen_files.add(file_path)
+                if "/test" in file_path or file_path.startswith("test"):
+                    test_files.append(file_path)
+                else:
+                    source_files.append(file_path)
+
+        # Combine: source files first, then test files
+        all_relevant_files = source_files + test_files
 
         # Build import context
         import_context = "\n\n".join(
@@ -1246,12 +1278,13 @@ Format as markdown."""
             content += "External dependencies are shown with dashed borders.\n\n"
             content += dep_graph
 
-        return WikiPage(
+        page = WikiPage(
             path="dependencies.md",
             title="Dependencies",
             content=content,
             generated_at=time.time(),
         )
+        return page, all_relevant_files
 
     async def _generate_changelog(self) -> WikiPage | None:
         """Generate changelog page from git history.

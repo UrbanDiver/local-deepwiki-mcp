@@ -276,6 +276,25 @@ def _extract_method_signature(content: str) -> str | None:
     return sig
 
 
+def _is_test_module(module: str, file_path: str) -> bool:
+    """Check if a module is a test module.
+
+    Args:
+        module: Module name like 'test_parser' or 'core.indexer'.
+        file_path: File path like 'tests/test_parser.py'.
+
+    Returns:
+        True if this is a test module.
+    """
+    # Check module name
+    if module.startswith("test_") or ".test_" in module:
+        return True
+    # Check file path
+    if "/tests/" in file_path or file_path.startswith("tests/"):
+        return True
+    return False
+
+
 def generate_dependency_graph(
     chunks: list,
     project_name: str = "project",
@@ -283,6 +302,7 @@ def generate_dependency_graph(
     show_external: bool = False,
     max_external: int = 10,
     wiki_base_path: str = "",
+    exclude_tests: bool = True,
 ) -> str | None:
     """Generate an enhanced Mermaid flowchart showing module dependencies.
 
@@ -299,6 +319,7 @@ def generate_dependency_graph(
         show_external: Whether to show external (third-party) dependencies.
         max_external: Maximum number of external dependencies to display.
         wiki_base_path: Base path for wiki links (e.g., "files/"). Empty disables links.
+        exclude_tests: Whether to exclude test modules from the graph (default: True).
 
     Returns:
         Mermaid flowchart markdown string, or None if no dependencies found.
@@ -309,6 +330,8 @@ def generate_dependency_graph(
     external_deps: dict[str, int] = {}
     # Track which modules import which external deps
     module_external_deps: dict[str, set[str]] = {}
+    # Track ALL internal modules (both importing and imported)
+    all_internal_modules: set[str] = set()
 
     for chunk in chunks:
         if hasattr(chunk, "chunk"):
@@ -321,10 +344,15 @@ def generate_dependency_graph(
         if not module:
             continue
 
+        # Skip test modules if exclude_tests is True
+        if exclude_tests and _is_test_module(module, file_path):
+            continue
+
         if module not in dependencies:
             dependencies[module] = set()
         if module not in module_external_deps:
             module_external_deps[module] = set()
+        all_internal_modules.add(module)
 
         # Parse imports from content
         for line in chunk.content.split("\n"):
@@ -335,7 +363,12 @@ def generate_dependency_graph(
             # Check for internal import
             imported = _parse_import_line(line, project_name)
             if imported:
+                # Skip test module imports if exclude_tests is True
+                if exclude_tests and imported.startswith("test_"):
+                    continue
                 dependencies[module].add(imported)
+                # Also track the imported module even if it has no import chunks itself
+                all_internal_modules.add(imported)
             elif show_external:
                 # Parse external import
                 ext_module = _parse_external_import(line)
@@ -346,11 +379,12 @@ def generate_dependency_graph(
     if not dependencies:
         return None
 
-    # Filter to only internal dependencies
-    internal_modules = set(dependencies.keys())
+    # Use all discovered internal modules (not just those with import chunks)
+    internal_modules = all_internal_modules
     internal_deps: dict[str, set[str]] = {}
 
     for module, imports in dependencies.items():
+        # Include all internal imports, even to modules without their own imports
         internal_imports = {imp for imp in imports if imp in internal_modules}
         if internal_imports:
             internal_deps[module] = internal_imports
