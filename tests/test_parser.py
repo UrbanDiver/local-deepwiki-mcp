@@ -42,7 +42,7 @@ class TestCodeParser:
     def test_detect_language_typescript(self):
         """Test TypeScript language detection."""
         assert self.parser.detect_language(Path("test.ts")) == Language.TYPESCRIPT
-        assert self.parser.detect_language(Path("test.tsx")) == Language.TYPESCRIPT
+        assert self.parser.detect_language(Path("test.tsx")) == Language.TSX
 
     def test_detect_language_go(self):
         """Test Go language detection."""

@@ -32,6 +32,7 @@ class Language(str, Enum):
     PYTHON = "python"
     JAVASCRIPT = "javascript"
     TYPESCRIPT = "typescript"
+    TSX = "tsx"
     GO = "go"
     RUST = "rust"
     JAVA = "java"

@@ -92,6 +92,7 @@ LANGUAGE_MODULES = {
     LangEnum.PYTHON: tree_sitter_python,
     LangEnum.JAVASCRIPT: tree_sitter_javascript,
     LangEnum.TYPESCRIPT: tree_sitter_typescript,
+    LangEnum.TSX: tree_sitter_typescript,
     LangEnum.GO: tree_sitter_go,
     LangEnum.RUST: tree_sitter_rust,
     LangEnum.JAVA: tree_sitter_java,
@@ -112,7 +113,7 @@ EXTENSION_MAP: dict[str, LangEnum] = {
     ".jsx": LangEnum.JAVASCRIPT,
     ".mjs": LangEnum.JAVASCRIPT,
     ".ts": LangEnum.TYPESCRIPT,
-    ".tsx": LangEnum.TYPESCRIPT,
+    ".tsx": LangEnum.TSX,
     ".go": LangEnum.GO,
     ".rs": LangEnum.RUST,
     ".java": LangEnum.JAVA,
@@ -157,9 +158,13 @@ class CodeParser:
             if module is None:
                 raise ValueError(f"Unsupported language: {language}")
 
-            # PHP module uses language_php() instead of language()
+            # Some modules have different function names
             if language == LangEnum.PHP:
                 lang = Language(module.language_php())
+            elif language == LangEnum.TYPESCRIPT:
+                lang = Language(module.language_typescript())
+            elif language == LangEnum.TSX:
+                lang = Language(module.language_tsx())
             else:
                 lang = Language(module.language())
             self._languages[language] = lang
