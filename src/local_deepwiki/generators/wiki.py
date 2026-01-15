@@ -459,7 +459,7 @@ class WikiGenerator:
         pages = add_cross_links(pages, self.entity_registry)
 
         # Add Relevant Source Files sections with local wiki links
-        pages = add_source_refs_sections(pages, self._page_statuses)
+        pages = add_source_refs_sections(pages, self._page_statuses, self.wiki_path)
 
         # Add See Also sections
         if progress_callback:

@@ -11,17 +11,21 @@ from pathlib import Path
 from local_deepwiki.models import WikiPage, WikiPageStatus
 
 
-def build_file_to_wiki_map(pages: list[WikiPage]) -> dict[str, str]:
+def build_file_to_wiki_map(
+    pages: list[WikiPage], wiki_path: Path | None = None
+) -> dict[str, str]:
     """Build a mapping from source file paths to wiki page paths.
 
     Args:
         pages: List of wiki pages.
+        wiki_path: Optional path to wiki directory to scan for existing pages.
 
     Returns:
         Dictionary mapping source file path to wiki page path.
     """
     file_to_wiki: dict[str, str] = {}
 
+    # First, add mappings from the pages list
     for page in pages:
         # Wiki paths like "files/src/local_deepwiki/core/chunker.md"
         # correspond to source files like "src/local_deepwiki/core/chunker.py"
@@ -30,6 +34,23 @@ def build_file_to_wiki_map(pages: list[WikiPage]) -> dict[str, str]:
             source_path = page.path[6:]  # Remove "files/"
             source_path = re.sub(r"\.md$", ".py", source_path)
             file_to_wiki[source_path] = page.path
+
+    # Also scan wiki_path for existing file pages not in the pages list
+    if wiki_path and wiki_path.exists():
+        files_dir = wiki_path / "files"
+        if files_dir.exists():
+            for md_file in files_dir.rglob("*.md"):
+                # Skip index files
+                if md_file.name == "index.md":
+                    continue
+                # Get relative path from wiki_path
+                rel_path = str(md_file.relative_to(wiki_path))
+                # Convert to source path
+                source_path = rel_path[6:]  # Remove "files/"
+                source_path = re.sub(r"\.md$", ".py", source_path)
+                # Only add if not already in map
+                if source_path not in file_to_wiki:
+                    file_to_wiki[source_path] = rel_path
 
     return file_to_wiki
 
@@ -190,18 +211,20 @@ def _strip_existing_source_refs(content: str) -> str:
 def add_source_refs_sections(
     pages: list[WikiPage],
     page_statuses: dict[str, WikiPageStatus],
+    wiki_path: Path | None = None,
 ) -> list[WikiPage]:
     """Add Relevant Source Files sections to wiki pages.
 
     Args:
         pages: List of wiki pages.
         page_statuses: Dictionary mapping page paths to their status (with source_files).
+        wiki_path: Optional path to wiki directory to find existing file pages.
 
     Returns:
         List of wiki pages with Relevant Source Files sections added.
     """
-    # Build file to wiki path mapping
-    file_to_wiki = build_file_to_wiki_map(pages)
+    # Build file to wiki path mapping, including existing pages on disk
+    file_to_wiki = build_file_to_wiki_map(pages, wiki_path)
 
     updated_pages = []
     for page in pages:
