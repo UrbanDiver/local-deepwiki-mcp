@@ -92,3 +92,8 @@ exclude = [
     "^__pycache__/",
     "^\\.deepwiki/",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest-cov>=7.0.0",
+]
