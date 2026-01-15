@@ -366,6 +366,106 @@ def _strip_line_comment_prefix(lines: list[str], prefix: str) -> str:
     return "\n".join(stripped).strip()
 
 
+def _get_python_docstring(node: Node, source: bytes) -> str | None:
+    """Extract Python docstring from function/class body."""
+    body = node.child_by_field_name("body")
+    if not body or not body.children:
+        return None
+
+    first_child = body.children[0]
+    if first_child.type != "expression_statement":
+        return None
+
+    expr = first_child.children[0] if first_child.children else None
+    if not expr or expr.type != "string":
+        return None
+
+    text = get_node_text(expr, source)
+    if text.startswith('"""') or text.startswith("'''"):
+        return text[3:-3].strip()
+    if text.startswith('"') or text.startswith("'"):
+        return text[1:-1].strip()
+    return None
+
+
+def _get_jsdoc_or_line_comments(node: Node, source: bytes) -> str | None:
+    """Extract JSDoc (/** */) or multi-line // comments."""
+    prev = node.prev_sibling
+    if prev and prev.type == "comment":
+        text = get_node_text(prev, source)
+        if text.startswith("/**"):
+            return text[3:-2].strip()
+
+    comments = _collect_preceding_comments(node, source, {"comment"}, "//")
+    if comments:
+        return _strip_line_comment_prefix(comments, "//")
+    return None
+
+
+def _get_line_comments(node: Node, source: bytes, comment_type: str, prefix: str) -> str | None:
+    """Extract multi-line comments with a specific prefix."""
+    comments = _collect_preceding_comments(node, source, {comment_type}, prefix)
+    if comments:
+        return _strip_line_comment_prefix(comments, prefix)
+    return None
+
+
+def _get_javadoc_or_doxygen(node: Node, source: bytes) -> str | None:
+    """Extract Javadoc/Doxygen (/** */) or /// comments."""
+    prev = node.prev_sibling
+    if prev and prev.type in ("comment", "block_comment"):
+        text = get_node_text(prev, source)
+        if text.startswith("/**"):
+            return text[3:-2].strip()
+
+    comments = _collect_preceding_comments(node, source, {"comment"}, "///")
+    if comments:
+        return _strip_line_comment_prefix(comments, "///")
+    return None
+
+
+def _get_swift_docstring(node: Node, source: bytes) -> str | None:
+    """Extract Swift /// comments or /** */ block."""
+    comments = _collect_preceding_comments(node, source, {"comment"}, "///")
+    if comments:
+        return _strip_line_comment_prefix(comments, "///")
+
+    prev = node.prev_sibling
+    if prev and prev.type == "comment":
+        text = get_node_text(prev, source)
+        if text.startswith("/**"):
+            return text[3:-2].strip()
+    return None
+
+
+def _get_block_comment(node: Node, source: bytes, comment_type: str) -> str | None:
+    """Extract /** */ block comment of specified type."""
+    prev = node.prev_sibling
+    if prev and prev.type == comment_type:
+        text = get_node_text(prev, source)
+        if text.startswith("/**"):
+            return text[3:-2].strip()
+    return None
+
+
+# Docstring extraction dispatch - maps languages to their extraction functions
+_DOCSTRING_EXTRACTORS: dict[LangEnum, Any] = {
+    LangEnum.PYTHON: lambda n, s: _get_python_docstring(n, s),
+    LangEnum.JAVASCRIPT: lambda n, s: _get_jsdoc_or_line_comments(n, s),
+    LangEnum.TYPESCRIPT: lambda n, s: _get_jsdoc_or_line_comments(n, s),
+    LangEnum.GO: lambda n, s: _get_line_comments(n, s, "comment", "//"),
+    LangEnum.JAVA: lambda n, s: _get_javadoc_or_doxygen(n, s),
+    LangEnum.C: lambda n, s: _get_javadoc_or_doxygen(n, s),
+    LangEnum.CPP: lambda n, s: _get_javadoc_or_doxygen(n, s),
+    LangEnum.RUST: lambda n, s: _get_line_comments(n, s, "line_comment", "///"),
+    LangEnum.SWIFT: lambda n, s: _get_swift_docstring(n, s),
+    LangEnum.RUBY: lambda n, s: _get_line_comments(n, s, "comment", "#"),
+    LangEnum.PHP: lambda n, s: _get_block_comment(n, s, "comment"),
+    LangEnum.KOTLIN: lambda n, s: _get_block_comment(n, s, "multiline_comment"),
+    LangEnum.CSHARP: lambda n, s: _get_line_comments(n, s, "comment", "///"),
+}
+
+
 def get_docstring(node: Node, source: bytes, language: LangEnum) -> str | None:
     """Extract docstring from a function/class node.
 
@@ -377,97 +477,7 @@ def get_docstring(node: Node, source: bytes, language: LangEnum) -> str | None:
     Returns:
         The docstring or None if not found.
     """
-    if language == LangEnum.PYTHON:
-        # Python docstrings are the first expression statement in the body
-        body = node.child_by_field_name("body")
-        if body and body.children:
-            first_child = body.children[0]
-            if first_child.type == "expression_statement":
-                expr = first_child.children[0] if first_child.children else None
-                if expr and expr.type == "string":
-                    text = get_node_text(expr, source)
-                    # Remove quotes
-                    if text.startswith('"""') or text.startswith("'''"):
-                        return text[3:-3].strip()
-                    elif text.startswith('"') or text.startswith("'"):
-                        return text[1:-1].strip()
-
-    elif language in (LangEnum.JAVASCRIPT, LangEnum.TYPESCRIPT):
-        # JSDoc comments precede the function (/** */ block or multi-line //)
-        prev = node.prev_sibling
-        if prev and prev.type == "comment":
-            text = get_node_text(prev, source)
-            if text.startswith("/**"):
-                return text[3:-2].strip()
-        # Also try multi-line // comments
-        comments = _collect_preceding_comments(node, source, {"comment"}, "//")
-        if comments:
-            return _strip_line_comment_prefix(comments, "//")
-
-    elif language == LangEnum.GO:
-        # Go doc comments precede the function (can be multi-line // comments)
-        comments = _collect_preceding_comments(node, source, {"comment"}, "//")
-        if comments:
-            return _strip_line_comment_prefix(comments, "//")
-
-    elif language in (LangEnum.JAVA, LangEnum.C, LangEnum.CPP):
-        # Javadoc/Doxygen comments precede the function
-        # First check for /** */ block comment (Java uses block_comment, C/C++ uses comment)
-        prev = node.prev_sibling
-        if prev and prev.type in ("comment", "block_comment"):
-            text = get_node_text(prev, source)
-            if text.startswith("/**"):
-                return text[3:-2].strip()
-        # Also try multi-line /// comments (Doxygen style)
-        comments = _collect_preceding_comments(node, source, {"comment"}, "///")
-        if comments:
-            return _strip_line_comment_prefix(comments, "///")
-
-    elif language == LangEnum.RUST:
-        # Rust doc comments (/// can be multi-line)
-        comments = _collect_preceding_comments(node, source, {"line_comment"}, "///")
-        if comments:
-            return _strip_line_comment_prefix(comments, "///")
-
-    elif language == LangEnum.SWIFT:
-        # Swift doc comments (/// can be multi-line, or /** */ block)
-        # First try multi-line /// comments
-        comments = _collect_preceding_comments(node, source, {"comment"}, "///")
-        if comments:
-            return _strip_line_comment_prefix(comments, "///")
-        # Fall back to /** */ block comment
-        prev = node.prev_sibling
-        if prev and prev.type == "comment":
-            text = get_node_text(prev, source)
-            if text.startswith("/**"):
-                return text[3:-2].strip()
-
-    elif language == LangEnum.RUBY:
-        # Ruby doc comments (# can be multi-line)
-        comments = _collect_preceding_comments(node, source, {"comment"}, "#")
-        if comments:
-            return _strip_line_comment_prefix(comments, "#")
-
-    elif language == LangEnum.PHP:
-        # PHP uses PHPDoc comments (/** ... */)
-        prev = node.prev_sibling
-        if prev and prev.type == "comment":
-            text = get_node_text(prev, source)
-            if text.startswith("/**"):
-                return text[3:-2].strip()
-
-    elif language == LangEnum.KOTLIN:
-        # Kotlin uses KDoc comments (/** ... */)
-        prev = node.prev_sibling
-        if prev and prev.type == "multiline_comment":
-            text = get_node_text(prev, source)
-            if text.startswith("/**"):
-                return text[3:-2].strip()
-
-    elif language == LangEnum.CSHARP:
-        # C# uses XML doc comments (/// can be multi-line)
-        comments = _collect_preceding_comments(node, source, {"comment"}, "///")
-        if comments:
-            return _strip_line_comment_prefix(comments, "///")
-
+    extractor = _DOCSTRING_EXTRACTORS.get(language)
+    if extractor:
+        return extractor(node, source)
     return None
