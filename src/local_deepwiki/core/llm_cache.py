@@ -81,14 +81,15 @@ class LLMCache:
                 self._table = db.open_table(self.TABLE_NAME)
         return self._table
 
-    def _ensure_table(self, embedding_dim: int) -> Table:
+    def _ensure_table(self, embedding_dim: int) -> Table | None:
         """Ensure the cache table exists with proper schema.
 
         Args:
-            embedding_dim: Dimension of embedding vectors.
+            embedding_dim: Dimension of embedding vectors (unused, kept for API compat).
 
         Returns:
-            The cache table.
+            The cache table if it exists, None otherwise.
+            Table is created on first insert via get_or_cache().
         """
         if self._table is not None:
             return self._table
@@ -98,10 +99,9 @@ class LLMCache:
             self._table = db.open_table(self.TABLE_NAME)
             return self._table
 
-        # Create table with empty initial data (schema defined by first insert)
-        # LanceDB needs at least one record to create the table
-        logger.debug(f"Creating LLM cache table at {self.cache_path}")
-        return db  # Return db, will create table on first insert
+        # Table doesn't exist yet - will be created on first insert
+        logger.debug(f"LLM cache table does not exist yet at {self.cache_path}")
+        return None
 
     def _is_valid_entry(self, entry: dict[str, Any]) -> bool:
         """Check if a cache entry is still valid (not expired).

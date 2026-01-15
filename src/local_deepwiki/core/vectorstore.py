@@ -79,9 +79,15 @@ class VectorStore:
 
         # Check existing indexes
         try:
-            existing_indexes = {idx["name"] for idx in self._table.list_indices()}
-        except (KeyError, TypeError, RuntimeError) as e:
-            # KeyError/TypeError: Index info structure varies between LanceDB versions
+            indices = self._table.list_indices()
+            # Handle both dict-style and object-style index configs (LanceDB version compat)
+            existing_indexes = set()
+            for idx in indices:
+                name = getattr(idx, "name", None) or (idx.get("name") if isinstance(idx, dict) else None)
+                if name:
+                    existing_indexes.add(name)
+        except (KeyError, TypeError, RuntimeError, AttributeError) as e:
+            # Index info structure varies between LanceDB versions
             # RuntimeError: Table may not support listing indices
             logger.debug(f"Could not list existing indexes: {e}")
             existing_indexes = set()

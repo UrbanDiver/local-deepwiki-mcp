@@ -416,7 +416,7 @@ class CodeChunker:
             chunk_id = self._generate_id(
                 file_path, f"class_{class_name}", class_node.start_point[0]
             )
-            metadata = {"line_count": lines}
+            metadata: dict[str, int | list[str]] = {"line_count": lines}
             if parent_classes:
                 metadata["parent_classes"] = parent_classes
             yield CodeChunk(

@@ -96,8 +96,8 @@ class WikiGenerator:
 
         for file_path, group in df.groupby("file_path"):
             # Sort by start_line to get first definitions
-            classes = group[group["chunk_type"] == "class"].sort_values("start_line")
-            functions = group[group["chunk_type"] == "function"].sort_values("start_line")
+            classes = group[group["chunk_type"] == "class"].sort_values(by="start_line")  # type: ignore[call-overload]
+            functions = group[group["chunk_type"] == "function"].sort_values(by="start_line")  # type: ignore[call-overload]
 
             if not classes.empty:
                 # Use first class definition
