@@ -272,7 +272,10 @@ def _load_manifest_cache(cache_path: Path) -> ManifestCacheEntry | None:
         with open(cache_path) as f:
             data = json.load(f)
         return ManifestCacheEntry.from_dict(data)
-    except Exception as e:
+    except (json.JSONDecodeError, OSError, KeyError, TypeError) as e:
+        # json.JSONDecodeError: Corrupted or invalid JSON
+        # OSError: File read issues
+        # KeyError/TypeError: Invalid cache structure
         logger.debug(f"Could not load manifest cache: {e}")
         return None
 
@@ -289,7 +292,9 @@ def _save_manifest_cache(cache_path: Path, entry: ManifestCacheEntry) -> None:
         with open(cache_path, "w") as f:
             json.dump(entry.to_dict(), f, indent=2)
         logger.debug(f"Saved manifest cache to {cache_path}")
-    except Exception as e:
+    except (OSError, TypeError) as e:
+        # OSError: File write or directory creation issues
+        # TypeError: Unserializable data in cache entry
         logger.warning(f"Could not save manifest cache: {e}")
 
 
@@ -406,7 +411,10 @@ def parse_manifest(repo_path: Path) -> ProjectManifest:
             try:
                 parser(filepath, manifest)
                 manifest.manifest_files.append(filename)
-            except Exception as e:
+            except (OSError, ValueError, KeyError, TypeError) as e:
+                # OSError: File read issues
+                # ValueError: Invalid file content or format
+                # KeyError/TypeError: Missing or invalid fields
                 # Skip files that fail to parse but log the issue
                 logger.warning(f"Failed to parse manifest file {filename}: {e}")
 

@@ -77,7 +77,7 @@ def extract_title(md_file: Path) -> str:
                 return line[2:].strip()
             if line.startswith("**") and line.endswith("**"):
                 return line[2:-2].strip()
-    except Exception as e:
+    except (OSError, UnicodeDecodeError) as e:
         logger.debug(f"Could not extract title from {md_file}: {e}")
     return md_file.stem.replace("_", " ").replace("-", " ").title()
 
@@ -164,7 +164,7 @@ def search_json():
     try:
         data = json.loads(search_path.read_text())
         return jsonify(data)
-    except Exception as e:
+    except (json.JSONDecodeError, OSError) as e:
         abort(500, f"Error reading search index: {e}")
 
 
@@ -185,7 +185,7 @@ def view_page(path: str):
     try:
         content = file_path.read_text()
         html_content = render_markdown(content)
-    except Exception as e:
+    except (OSError, UnicodeDecodeError) as e:
         abort(500, f"Error reading page: {e}")
 
     pages, sections, toc_entries = get_wiki_structure(WIKI_PATH)
@@ -228,7 +228,7 @@ def stream_async_generator(async_gen_factory: Callable[[], AsyncIterator[str]]) 
                 try:
                     async for item in async_gen_factory():
                         result_queue.put(item)
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 - Bridge arbitrary async errors to sync queue
                     result_queue.put(e)
                 finally:
                     result_queue.put(None)  # Sentinel to signal completion
@@ -417,7 +417,7 @@ def api_chat():
                 prompt, system_prompt=system_prompt, temperature=0.3
             ):
                 yield f"data: {json.dumps({'type': 'token', 'content': chunk})}\n\n"
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - Report LLM errors to user via SSE
             logger.exception(f"Error generating response: {e}")
             yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
 
@@ -588,7 +588,7 @@ def api_research():
                 },
             }
             yield f"data: {json.dumps(response)}\n\n"
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - Report research errors to user via SSE
             logger.exception(f"Error in deep research: {e}")
             yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
 

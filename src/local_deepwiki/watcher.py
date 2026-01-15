@@ -174,7 +174,7 @@ class DebouncedHandler(FileSystemEventHandler):
             console.rule()
             console.print("[dim]Watching for changes... (Ctrl+C to stop)[/dim]")
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - Keep watcher alive despite errors
             logger.exception(f"Error during reindex: {e}")
             console.print(f"[red]Error during reindex: {e}[/red]")
 

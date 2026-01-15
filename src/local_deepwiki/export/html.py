@@ -652,7 +652,9 @@ def extract_title(md_file: Path) -> str:
                 return line[2:].strip()
             if line.startswith("**") and line.endswith("**"):
                 return line[2:-2].strip()
-    except Exception as e:
+    except (OSError, UnicodeDecodeError) as e:
+        # OSError: File access issues
+        # UnicodeDecodeError: File encoding issues
         logger.debug(f"Could not extract title from {md_file}: {e}")
     return md_file.stem.replace("_", " ").replace("-", " ").title()
 

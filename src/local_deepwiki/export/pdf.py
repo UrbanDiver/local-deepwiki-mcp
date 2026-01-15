@@ -89,7 +89,10 @@ def render_mermaid_to_png(diagram_code: str, timeout: int = 30) -> bytes | None:
     except subprocess.TimeoutExpired:
         logger.warning(f"Mermaid CLI timed out after {timeout}s")
         return None
-    except Exception as e:
+    except (subprocess.SubprocessError, OSError, ValueError) as e:
+        # SubprocessError: Process execution failures
+        # OSError: File system or process spawning issues
+        # ValueError: Invalid diagram code
         logger.warning(f"Error rendering mermaid diagram: {e}")
         return None
 
@@ -146,7 +149,10 @@ def render_mermaid_to_svg(diagram_code: str, timeout: int = 30) -> str | None:
     except subprocess.TimeoutExpired:
         logger.warning(f"Mermaid CLI timed out after {timeout}s")
         return None
-    except Exception as e:
+    except (subprocess.SubprocessError, OSError, ValueError) as e:
+        # SubprocessError: Process execution failures
+        # OSError: File system or process spawning issues
+        # ValueError: Invalid diagram code
         logger.warning(f"Error rendering mermaid diagram: {e}")
         return None
 
@@ -472,7 +478,9 @@ def extract_title(md_file: Path) -> str:
                 return line[2:].strip()
             if line.startswith("**") and line.endswith("**"):
                 return line[2:-2].strip()
-    except Exception as e:
+    except (OSError, UnicodeDecodeError) as e:
+        # OSError: File access issues
+        # UnicodeDecodeError: File encoding issues
         logger.debug(f"Could not extract title from {md_file}: {e}")
     return md_file.stem.replace("_", " ").replace("-", " ").title()
 
@@ -741,7 +749,8 @@ def main() -> None:
         )
         print(result)
         print("Open the PDF file to view the documentation.")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
+        # Broad catch is intentional: CLI top-level error handler
         print(f"Error exporting to PDF: {e}", file=sys.stderr)
         sys.exit(1)
 

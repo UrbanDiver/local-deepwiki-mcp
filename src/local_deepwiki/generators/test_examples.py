@@ -234,7 +234,7 @@ def _extract_usage_snippet(
     result = "\n".join(relevant_lines)
     try:
         result = dedent(result)
-    except Exception:
+    except TypeError:
         pass
 
     return result.strip()

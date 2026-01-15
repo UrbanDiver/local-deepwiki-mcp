@@ -100,7 +100,7 @@ class OllamaProvider(LLMProvider):
 
         except OllamaModelNotFoundError:
             raise
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - Wrap any connection/library error in OllamaConnectionError
             # Connection errors, timeouts, etc.
             logger.error(f"Failed to connect to Ollama at {self._base_url}: {e}")
             raise OllamaConnectionError(self._base_url, e) from e
@@ -166,7 +166,7 @@ class OllamaProvider(LLMProvider):
                 logger.error(f"Model '{self._model}' not found during generation")
                 raise OllamaModelNotFoundError(self._model) from e
             raise
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - Wrap connection errors, re-raise others
             # Check if it's a connection error
             error_str = str(e).lower()
             if any(x in error_str for x in ["connection", "refused", "timeout", "unreachable"]):
@@ -223,7 +223,7 @@ class OllamaProvider(LLMProvider):
                 logger.error(f"Model '{self._model}' not found during streaming")
                 raise OllamaModelNotFoundError(self._model) from e
             raise
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - Wrap connection errors, re-raise others
             error_str = str(e).lower()
             if any(x in error_str for x in ["connection", "refused", "timeout", "unreachable"]):
                 logger.error(f"Lost connection to Ollama during streaming: {e}")
