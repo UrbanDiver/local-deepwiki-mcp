@@ -819,16 +819,27 @@ Do NOT include mermaid class diagrams - they will be auto-generated."""
         Returns:
             Tuple of (pages list, generated count, skipped count).
         """
-        # Filter to significant files (skip __init__.py, test files for now)
+        # Filter files: skip __init__.py and test files
+        def is_test_file(path: str) -> bool:
+            """Check if a file is a test file."""
+            parts = path.split("/")
+            # Skip files in tests/ directory only
+            # Don't skip test_*.py in src/ (e.g., test_examples.py is a source file)
+            return "tests" in parts
+
         significant_files = [
             f
             for f in index_status.files
-            if not f.path.endswith("__init__.py") and f.chunk_count >= 2  # Has meaningful content
+            if not f.path.endswith("__init__.py")
+            and not is_test_file(f.path)
+            and f.chunk_count >= 2  # Has meaningful content
         ]
 
-        # Limit to avoid too many LLM calls
+        # Limit test files separately if we want them later
+        # For source files, include all of them (no limit)
         max_files = self.config.wiki.max_file_docs
         if len(significant_files) > max_files:
+            # Only limit if we have way too many files
             # Prioritize files with more chunks (more complex)
             significant_files = sorted(
                 significant_files, key=lambda x: x.chunk_count, reverse=True
