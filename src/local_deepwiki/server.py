@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+from functools import wraps
 from pathlib import Path
 from typing import Any, Awaitable, Callable
 
@@ -28,6 +29,40 @@ MAX_SEARCH_LIMIT = 100
 VALID_LANGUAGES = {lang.value for lang in Language}
 VALID_LLM_PROVIDERS = {"ollama", "anthropic", "openai"}
 VALID_EMBEDDING_PROVIDERS = {"local", "openai"}
+
+# Type alias for tool handler functions
+ToolHandler = Callable[[dict[str, Any]], Awaitable[list[TextContent]]]
+
+
+def handle_tool_errors(func: ToolHandler) -> ToolHandler:
+    """Decorator for consistent error handling in tool handlers.
+
+    Catches common exceptions and returns properly formatted error responses:
+    - ValueError: Input validation errors (logged at ERROR level)
+    - Exception: Unexpected errors (logged with full traceback)
+
+    Args:
+        func: The async tool handler function to wrap.
+
+    Returns:
+        Wrapped function with consistent error handling.
+    """
+
+    @wraps(func)
+    async def wrapper(args: dict[str, Any]) -> list[TextContent]:
+        try:
+            return await func(args)
+        except ValueError as e:
+            logger.error(f"Invalid input in {func.__name__}: {e}")
+            return [TextContent(type="text", text=f"Error: {e}")]
+        except asyncio.CancelledError:
+            # Re-raise cancellation to propagate properly
+            raise
+        except Exception as e:
+            logger.exception(f"Error in {func.__name__}: {e}")
+            return [TextContent(type="text", text=f"Error: {e}")]
+
+    return wrapper
 
 
 def _validate_positive_int(value: Any, name: str, min_val: int, max_val: int, default: int) -> int:
@@ -351,33 +386,26 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
     return await handler(arguments)
 
 
+@handle_tool_errors
 async def handle_index_repository(args: dict[str, Any]) -> list[TextContent]:
     """Handle index_repository tool call."""
     repo_path = Path(args["repo_path"]).resolve()
     logger.info(f"Indexing repository: {repo_path}")
 
     if not repo_path.exists():
-        logger.error(f"Repository path does not exist: {repo_path}")
-        return [
-            TextContent(type="text", text=f"Error: Repository path does not exist: {repo_path}")
-        ]
+        raise ValueError(f"Repository path does not exist: {repo_path}")
 
     if not repo_path.is_dir():
-        logger.error(f"Path is not a directory: {repo_path}")
-        return [TextContent(type="text", text=f"Error: Path is not a directory: {repo_path}")]
+        raise ValueError(f"Path is not a directory: {repo_path}")
 
     # Validate optional parameters
-    try:
-        languages = _validate_languages_list(args.get("languages"))
-        llm_provider = _validate_provider(
-            args.get("llm_provider"), VALID_LLM_PROVIDERS, "llm_provider"
-        )
-        embedding_provider = _validate_provider(
-            args.get("embedding_provider"), VALID_EMBEDDING_PROVIDERS, "embedding_provider"
-        )
-    except ValueError as e:
-        logger.error(f"Invalid input: {e}")
-        return [TextContent(type="text", text=f"Error: {e}")]
+    languages = _validate_languages_list(args.get("languages"))
+    llm_provider = _validate_provider(
+        args.get("llm_provider"), VALID_LLM_PROVIDERS, "llm_provider"
+    )
+    embedding_provider = _validate_provider(
+        args.get("embedding_provider"), VALID_EMBEDDING_PROVIDERS, "embedding_provider"
+    )
 
     # Get config
     config = get_config()
@@ -406,64 +434,56 @@ async def handle_index_repository(args: dict[str, Any]) -> list[TextContent]:
     def progress_callback(msg: str, current: int, total: int):
         messages.append(f"[{current}/{total}] {msg}")
 
-    try:
-        status = await indexer.index(
-            full_rebuild=full_rebuild,
-            progress_callback=progress_callback,
-        )
+    status = await indexer.index(
+        full_rebuild=full_rebuild,
+        progress_callback=progress_callback,
+    )
 
-        # Generate wiki documentation
-        messages.append("Generating wiki documentation...")
+    # Generate wiki documentation
+    messages.append("Generating wiki documentation...")
 
-        wiki_structure = await generate_wiki(
-            repo_path=repo_path,
-            wiki_path=indexer.wiki_path,
-            vector_store=indexer.vector_store,
-            index_status=status,
-            config=config,
-            llm_provider=llm_provider,
-            progress_callback=progress_callback,
-            full_rebuild=full_rebuild,
-        )
+    wiki_structure = await generate_wiki(
+        repo_path=repo_path,
+        wiki_path=indexer.wiki_path,
+        vector_store=indexer.vector_store,
+        index_status=status,
+        config=config,
+        llm_provider=llm_provider,
+        progress_callback=progress_callback,
+        full_rebuild=full_rebuild,
+    )
 
-        result = {
-            "status": "success",
-            "repo_path": str(repo_path),
-            "wiki_path": str(indexer.wiki_path),
-            "files_indexed": status.total_files,
-            "chunks_created": status.total_chunks,
-            "languages": status.languages,
-            "wiki_pages": len(wiki_structure.pages),
-            "messages": messages,
-        }
+    result = {
+        "status": "success",
+        "repo_path": str(repo_path),
+        "wiki_path": str(indexer.wiki_path),
+        "files_indexed": status.total_files,
+        "chunks_created": status.total_chunks,
+        "languages": status.languages,
+        "wiki_pages": len(wiki_structure.pages),
+        "messages": messages,
+    }
 
-        logger.info(
-            f"Indexing complete: {status.total_files} files, {status.total_chunks} chunks, {len(wiki_structure.pages)} wiki pages"
-        )
-        return [TextContent(type="text", text=json.dumps(result, indent=2))]
-
-    except Exception as e:
-        logger.exception(f"Error indexing repository: {e}")
-        return [TextContent(type="text", text=f"Error indexing repository: {str(e)}")]
+    logger.info(
+        f"Indexing complete: {status.total_files} files, {status.total_chunks} chunks, {len(wiki_structure.pages)} wiki pages"
+    )
+    return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
 
+@handle_tool_errors
 async def handle_ask_question(args: dict[str, Any]) -> list[TextContent]:
     """Handle ask_question tool call."""
     repo_path = Path(args["repo_path"]).resolve()
 
     # Validate inputs
-    try:
-        question = _validate_non_empty_string(args.get("question", ""), "question")
-        max_context = _validate_positive_int(
-            args.get("max_context"),
-            "max_context",
-            MIN_CONTEXT_CHUNKS,
-            MAX_CONTEXT_CHUNKS,
-            default=5,
-        )
-    except ValueError as e:
-        logger.error(f"Invalid input: {e}")
-        return [TextContent(type="text", text=f"Error: {e}")]
+    question = _validate_non_empty_string(args.get("question", ""), "question")
+    max_context = _validate_positive_int(
+        args.get("max_context"),
+        "max_context",
+        MIN_CONTEXT_CHUNKS,
+        MAX_CONTEXT_CHUNKS,
+        default=5,
+    )
 
     logger.info(f"Question about {repo_path}: {question[:100]}...")
     logger.debug(f"Max context chunks: {max_context}")
@@ -473,12 +493,7 @@ async def handle_ask_question(args: dict[str, Any]) -> list[TextContent]:
     vector_db_path = config.get_vector_db_path(repo_path)
 
     if not vector_db_path.exists():
-        logger.error(f"Repository not indexed: {repo_path}")
-        return [
-            TextContent(
-                type="text", text=f"Error: Repository not indexed. Run index_repository first."
-            )
-        ]
+        raise ValueError("Repository not indexed. Run index_repository first.")
 
     # Create vector store
     embedding_provider = get_embedding_provider(config.embedding)
@@ -524,29 +539,24 @@ Provide a clear, accurate answer based only on the code provided. If the code do
         "You are a helpful code assistant. Answer questions about code clearly and accurately."
     )
 
-    try:
-        answer = await llm.generate(prompt, system_prompt=system_prompt)
+    answer = await llm.generate(prompt, system_prompt=system_prompt)
 
-        result = {
-            "question": question,
-            "answer": answer,
-            "sources": [
-                {
-                    "file": r.chunk.file_path,
-                    "lines": f"{r.chunk.start_line}-{r.chunk.end_line}",
-                    "type": r.chunk.chunk_type.value,
-                    "score": r.score,
-                }
-                for r in search_results
-            ],
-        }
+    result = {
+        "question": question,
+        "answer": answer,
+        "sources": [
+            {
+                "file": r.chunk.file_path,
+                "lines": f"{r.chunk.start_line}-{r.chunk.end_line}",
+                "type": r.chunk.chunk_type.value,
+                "score": r.score,
+            }
+            for r in search_results
+        ],
+    }
 
-        logger.info(f"Generated answer with {len(search_results)} sources")
-        return [TextContent(type="text", text=json.dumps(result, indent=2))]
-
-    except Exception as e:
-        logger.exception(f"Error generating answer: {e}")
-        return [TextContent(type="text", text=f"Error generating answer: {str(e)}")]
+    logger.info(f"Generated answer with {len(search_results)} sources")
+    return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
 
 # Deep research validation constants
@@ -555,23 +565,20 @@ MAX_DEEP_RESEARCH_CHUNKS = 50
 DEFAULT_DEEP_RESEARCH_CHUNKS = 30
 
 
+@handle_tool_errors
 async def handle_deep_research(args: dict[str, Any]) -> list[TextContent]:
     """Handle deep_research tool call for multi-step reasoning."""
     repo_path = Path(args["repo_path"]).resolve()
 
     # Validate inputs
-    try:
-        question = _validate_non_empty_string(args.get("question", ""), "question")
-        max_chunks = _validate_positive_int(
-            args.get("max_chunks"),
-            "max_chunks",
-            MIN_DEEP_RESEARCH_CHUNKS,
-            MAX_DEEP_RESEARCH_CHUNKS,
-            default=DEFAULT_DEEP_RESEARCH_CHUNKS,
-        )
-    except ValueError as e:
-        logger.error(f"Invalid input: {e}")
-        return [TextContent(type="text", text=f"Error: {e}")]
+    question = _validate_non_empty_string(args.get("question", ""), "question")
+    max_chunks = _validate_positive_int(
+        args.get("max_chunks"),
+        "max_chunks",
+        MIN_DEEP_RESEARCH_CHUNKS,
+        MAX_DEEP_RESEARCH_CHUNKS,
+        default=DEFAULT_DEEP_RESEARCH_CHUNKS,
+    )
 
     # Get preset parameter (optional)
     preset = args.get("preset")
@@ -583,13 +590,7 @@ async def handle_deep_research(args: dict[str, Any]) -> list[TextContent]:
     vector_db_path = config.get_vector_db_path(repo_path)
 
     if not vector_db_path.exists():
-        logger.error(f"Repository not indexed: {repo_path}")
-        return [
-            TextContent(
-                type="text",
-                text="Error: Repository not indexed. Run index_repository first.",
-            )
-        ]
+        raise ValueError("Repository not indexed. Run index_repository first.")
 
     # Create vector store and LLM provider
     embedding_provider = get_embedding_provider(config.embedding)
@@ -756,17 +757,14 @@ async def handle_deep_research(args: dict[str, Any]) -> list[TextContent]:
         await send_cancellation_notification("task_cancellation")
         raise  # Re-raise to properly propagate cancellation
 
-    except Exception as e:
-        logger.exception(f"Error in deep research: {e}")
-        return [TextContent(type="text", text=f"Error in deep research: {str(e)}")]
 
-
+@handle_tool_errors
 async def handle_read_wiki_structure(args: dict[str, Any]) -> list[TextContent]:
     """Handle read_wiki_structure tool call."""
     wiki_path = Path(args["wiki_path"]).resolve()
 
     if not wiki_path.exists():
-        return [TextContent(type="text", text=f"Error: Wiki path does not exist: {wiki_path}")]
+        raise ValueError(f"Wiki path does not exist: {wiki_path}")
 
     # Check for toc.json (numbered hierarchical structure)
     toc_path = wiki_path / "toc.json"
@@ -813,6 +811,7 @@ async def handle_read_wiki_structure(args: dict[str, Any]) -> list[TextContent]:
     return [TextContent(type="text", text=json.dumps(structure, indent=2))]
 
 
+@handle_tool_errors
 async def handle_read_wiki_page(args: dict[str, Any]) -> list[TextContent]:
     """Handle read_wiki_page tool call."""
     wiki_path = Path(args["wiki_path"]).resolve()
@@ -822,36 +821,30 @@ async def handle_read_wiki_page(args: dict[str, Any]) -> list[TextContent]:
     # This prevents path traversal attacks (e.g., "../../etc/passwd")
     page_path = (wiki_path / page).resolve()
     if not page_path.is_relative_to(wiki_path):
-        return [TextContent(type="text", text="Error: Invalid page path")]
+        raise ValueError("Invalid page path")
 
     if not page_path.exists():
-        return [TextContent(type="text", text=f"Error: Page not found: {page}")]
+        raise ValueError(f"Page not found: {page}")
 
-    try:
-        content = page_path.read_text()
-        return [TextContent(type="text", text=content)]
-    except Exception as e:
-        return [TextContent(type="text", text=f"Error reading page: {str(e)}")]
+    content = page_path.read_text()
+    return [TextContent(type="text", text=content)]
 
 
+@handle_tool_errors
 async def handle_search_code(args: dict[str, Any]) -> list[TextContent]:
     """Handle search_code tool call."""
     repo_path = Path(args["repo_path"]).resolve()
 
     # Validate inputs
-    try:
-        query = _validate_non_empty_string(args.get("query", ""), "query")
-        limit = _validate_positive_int(
-            args.get("limit"),
-            "limit",
-            MIN_SEARCH_LIMIT,
-            MAX_SEARCH_LIMIT,
-            default=10,
-        )
-        language = _validate_language(args.get("language"))
-    except ValueError as e:
-        logger.error(f"Invalid input: {e}")
-        return [TextContent(type="text", text=f"Error: {e}")]
+    query = _validate_non_empty_string(args.get("query", ""), "query")
+    limit = _validate_positive_int(
+        args.get("limit"),
+        "limit",
+        MIN_SEARCH_LIMIT,
+        MAX_SEARCH_LIMIT,
+        default=10,
+    )
+    language = _validate_language(args.get("language"))
 
     logger.info(f"Code search in {repo_path}: {query[:50]}...")
     logger.debug(f"Search limit: {limit}, language filter: {language}")
@@ -860,12 +853,7 @@ async def handle_search_code(args: dict[str, Any]) -> list[TextContent]:
     vector_db_path = config.get_vector_db_path(repo_path)
 
     if not vector_db_path.exists():
-        logger.error(f"Repository not indexed: {repo_path}")
-        return [
-            TextContent(
-                type="text", text=f"Error: Repository not indexed. Run index_repository first."
-            )
-        ]
+        raise ValueError("Repository not indexed. Run index_repository first.")
 
     # Create vector store
     embedding_provider = get_embedding_provider(config.embedding)
@@ -899,6 +887,7 @@ async def handle_search_code(args: dict[str, Any]) -> list[TextContent]:
     return [TextContent(type="text", text=json.dumps(output, indent=2))]
 
 
+@handle_tool_errors
 async def handle_export_wiki_html(args: dict[str, Any]) -> list[TextContent]:
     """Handle export_wiki_html tool call."""
     from local_deepwiki.export.html import export_to_html
@@ -907,30 +896,27 @@ async def handle_export_wiki_html(args: dict[str, Any]) -> list[TextContent]:
     output_path = args.get("output_path")
 
     if not wiki_path.exists():
-        return [TextContent(type="text", text=f"Error: Wiki path does not exist: {wiki_path}")]
+        raise ValueError(f"Wiki path does not exist: {wiki_path}")
 
-    try:
-        if output_path:
-            output_path = Path(output_path).resolve()
+    if output_path:
+        output_path = Path(output_path).resolve()
 
-        result = export_to_html(wiki_path, output_path)
+    result = export_to_html(wiki_path, output_path)
 
-        # Get actual output path for the response
-        actual_output = output_path or (wiki_path.parent / f"{wiki_path.name}_html")
+    # Get actual output path for the response
+    actual_output = output_path or (wiki_path.parent / f"{wiki_path.name}_html")
 
-        response = {
-            "status": "success",
-            "message": result,
-            "output_path": str(actual_output),
-            "open_with": f"open {actual_output}/index.html",
-        }
+    response = {
+        "status": "success",
+        "message": result,
+        "output_path": str(actual_output),
+        "open_with": f"open {actual_output}/index.html",
+    }
 
-        return [TextContent(type="text", text=json.dumps(response, indent=2))]
-
-    except Exception as e:
-        return [TextContent(type="text", text=f"Error exporting wiki: {str(e)}")]
+    return [TextContent(type="text", text=json.dumps(response, indent=2))]
 
 
+@handle_tool_errors
 async def handle_export_wiki_pdf(args: dict[str, Any]) -> list[TextContent]:
     """Handle export_wiki_pdf tool call."""
     from local_deepwiki.export.pdf import export_to_pdf
@@ -940,35 +926,30 @@ async def handle_export_wiki_pdf(args: dict[str, Any]) -> list[TextContent]:
     single_file = args.get("single_file", True)
 
     if not wiki_path.exists():
-        return [TextContent(type="text", text=f"Error: Wiki path does not exist: {wiki_path}")]
+        raise ValueError(f"Wiki path does not exist: {wiki_path}")
 
-    try:
-        if output_path:
-            output_path = Path(output_path).resolve()
+    if output_path:
+        output_path = Path(output_path).resolve()
 
-        result = export_to_pdf(wiki_path, output_path, single_file=single_file)
+    result = export_to_pdf(wiki_path, output_path, single_file=single_file)
 
-        # Get actual output path for the response
-        if single_file:
-            actual_output = output_path or (wiki_path.parent / f"{wiki_path.name}.pdf")
-        else:
-            actual_output = output_path or (wiki_path.parent / f"{wiki_path.name}_pdfs")
+    # Get actual output path for the response
+    if single_file:
+        actual_output = output_path or (wiki_path.parent / f"{wiki_path.name}.pdf")
+    else:
+        actual_output = output_path or (wiki_path.parent / f"{wiki_path.name}_pdfs")
 
-        response = {
-            "status": "success",
-            "message": result,
-            "output_path": str(actual_output),
-        }
+    response = {
+        "status": "success",
+        "message": result,
+        "output_path": str(actual_output),
+    }
 
-        return [TextContent(type="text", text=json.dumps(response, indent=2))]
-
-    except Exception as e:
-        return [TextContent(type="text", text=f"Error exporting wiki to PDF: {str(e)}")]
+    return [TextContent(type="text", text=json.dumps(response, indent=2))]
 
 
 # Tool handler dispatch dictionary
 # Maps tool names to their async handler functions
-ToolHandler = Callable[[dict[str, Any]], Awaitable[list[TextContent]]]
 TOOL_HANDLERS: dict[str, ToolHandler] = {
     "index_repository": handle_index_repository,
     "ask_question": handle_ask_question,
