@@ -1,71 +1,42 @@
 """Wiki documentation generator using LLM providers."""
 
-import asyncio
 import hashlib
 import json
-import re
 import time
 from pathlib import Path
 
 from local_deepwiki.config import Config, get_config
-from local_deepwiki.logging import get_logger
-
-logger = get_logger(__name__)
 from local_deepwiki.core.vectorstore import VectorStore
-from local_deepwiki.generators.api_docs import get_file_api_docs
-from local_deepwiki.generators.callgraph import get_file_call_graph
-from local_deepwiki.generators.test_examples import get_file_examples
 from local_deepwiki.generators.crosslinks import EntityRegistry, add_cross_links
-from local_deepwiki.generators.diagrams import generate_class_diagram
+from local_deepwiki.generators.manifest import ProjectManifest, get_cached_manifest
+from local_deepwiki.generators.search import write_search_index
+from local_deepwiki.generators.see_also import RelationshipAnalyzer, add_see_also_sections
+from local_deepwiki.generators.source_refs import add_source_refs_sections
+from local_deepwiki.generators.toc import generate_toc, write_toc
+from local_deepwiki.generators.wiki_files import generate_file_docs
+from local_deepwiki.generators.wiki_modules import generate_module_docs
 from local_deepwiki.generators.wiki_pages import (
     generate_architecture_page,
     generate_changelog_page,
     generate_dependencies_page,
     generate_overview_page,
 )
-from local_deepwiki.generators.manifest import ProjectManifest, get_cached_manifest
-from local_deepwiki.generators.search import write_search_index
-from local_deepwiki.generators.see_also import RelationshipAnalyzer, add_see_also_sections
-from local_deepwiki.generators.source_refs import add_source_refs_sections
-from local_deepwiki.generators.toc import generate_toc, write_toc
+from local_deepwiki.generators.wiki_status import WikiStatusManager
+from local_deepwiki.logging import get_logger
 from local_deepwiki.models import (
-    FileInfo,
     IndexStatus,
     ProgressCallback,
     WikiGenerationStatus,
     WikiPage,
-    WikiPageStatus,
     WikiStructure,
 )
 from local_deepwiki.providers.llm import get_llm_provider
 
-SYSTEM_PROMPT = """You are a technical documentation expert. Generate clear, concise documentation for code.
-
-FORMATTING:
-- Use markdown formatting
-- Include code examples where helpful
-- When mentioning class or function names in prose explanations, write them as plain text (e.g., "The WikiGenerator class") rather than inline code, so they can be cross-linked
-- Only use backticks for code snippets, variable names in context, or when showing exact syntax
-
-ACCURACY CONSTRAINTS - CRITICAL:
-- ONLY describe what you can verify from the code/context provided
-- NEVER invent or guess features, libraries, patterns, or capabilities not explicitly shown
-- NEVER fabricate CLI commands, API endpoints, or configuration options
-- If the context doesn't show something, DO NOT mention it
-- When uncertain, omit the information rather than guess
-- Stick to facts from the provided code - do not extrapolate or assume
-
-CONTENT GUIDELINES:
-- Focus on explaining what the code does and how to use it
-- Keep explanations practical and actionable
-- Base technology stack descriptions ONLY on actual dependencies shown
-- Base directory structure descriptions ONLY on actual files listed"""
+logger = get_logger(__name__)
 
 
 class WikiGenerator:
     """Generate wiki documentation from indexed code."""
-
-    WIKI_STATUS_FILE = "wiki_status.json"
 
     def __init__(
         self,
@@ -101,23 +72,14 @@ class WikiGenerator:
         # Relationship analyzer for See Also sections
         self.relationship_analyzer = RelationshipAnalyzer()
 
-        # Track file hashes from index_status for incremental generation
-        self._file_hashes: dict[str, str] = {}
-
-        # Previous wiki generation status for incremental updates
-        self._previous_status: WikiGenerationStatus | None = None
-
-        # New page statuses for current generation
-        self._page_statuses: dict[str, WikiPageStatus] = {}
+        # Status manager for incremental updates
+        self.status_manager = WikiStatusManager(wiki_path)
 
         # Cached project manifest (parsed from package files)
         self._manifest: ProjectManifest | None = None
 
         # Repository path (set during generation)
         self._repo_path: Path | None = None
-
-        # Line info for source files (computed from chunks)
-        self._file_line_info: dict[str, tuple[int, int]] = {}
 
     def _get_main_definition_lines(self) -> dict[str, tuple[int, int]]:
         """Get line range of main definition (first class or function) per file.
@@ -147,152 +109,6 @@ class WikiGenerator:
                 result[str(file_path)] = (int(row["start_line"]), int(row["end_line"]))
 
         return result
-
-    async def _load_wiki_status(self) -> WikiGenerationStatus | None:
-        """Load previous wiki generation status.
-
-        Returns:
-            WikiGenerationStatus or None if not found.
-        """
-        status_path = self.wiki_path / self.WIKI_STATUS_FILE
-        if not status_path.exists():
-            return None
-
-        def _read_status() -> WikiGenerationStatus | None:
-            try:
-                with open(status_path) as f:
-                    data = json.load(f)
-                return WikiGenerationStatus.model_validate(data)
-            except Exception as e:
-                logger.warning(f"Failed to load wiki status from {status_path}: {e}")
-                return None
-
-        return await asyncio.to_thread(_read_status)
-
-    async def _save_wiki_status(self, status: WikiGenerationStatus) -> None:
-        """Save wiki generation status.
-
-        Args:
-            status: The WikiGenerationStatus to save.
-        """
-        status_path = self.wiki_path / self.WIKI_STATUS_FILE
-        data = status.model_dump()
-
-        def _write_status() -> None:
-            with open(status_path, "w") as f:
-                json.dump(data, f, indent=2)
-
-        await asyncio.to_thread(_write_status)
-
-    def _compute_content_hash(self, content: str) -> str:
-        """Compute hash of page content.
-
-        Args:
-            content: Page content.
-
-        Returns:
-            SHA256 hash of content.
-        """
-        return hashlib.sha256(content.encode()).hexdigest()[:16]
-
-    def _needs_regeneration(
-        self,
-        page_path: str,
-        source_files: list[str],
-    ) -> bool:
-        """Check if a page needs regeneration based on source file changes.
-
-        Args:
-            page_path: Wiki page path.
-            source_files: List of source files that contribute to this page.
-
-        Returns:
-            True if page needs regeneration, False if it can be skipped.
-        """
-        if self._previous_status is None:
-            return True
-
-        prev_page = self._previous_status.pages.get(page_path)
-        if prev_page is None:
-            return True
-
-        # Check if any source file has changed
-        for source_file in source_files:
-            current_hash = self._file_hashes.get(source_file)
-            prev_hash = prev_page.source_hashes.get(source_file)
-
-            if current_hash is None or prev_hash is None:
-                return True
-            if current_hash != prev_hash:
-                return True
-
-        # Check if source files list changed
-        if set(source_files) != set(prev_page.source_files):
-            return True
-
-        return False
-
-    async def _load_existing_page(self, page_path: str) -> WikiPage | None:
-        """Load an existing wiki page from disk.
-
-        Args:
-            page_path: Relative path to the page.
-
-        Returns:
-            WikiPage if found, None otherwise.
-        """
-        full_path = self.wiki_path / page_path
-        if not full_path.exists():
-            return None
-
-        # Capture values needed for the sync function
-        prev_page = self._previous_status.pages.get(page_path) if self._previous_status else None
-        title = Path(page_path).stem.replace("_", " ").title()
-        generated_at = prev_page.generated_at if prev_page else time.time()
-
-        def _read_page() -> WikiPage | None:
-            try:
-                content = full_path.read_text()
-                return WikiPage(
-                    path=page_path,
-                    title=title,
-                    content=content,
-                    generated_at=generated_at,
-                )
-            except Exception as e:
-                logger.warning(f"Failed to load existing page {page_path}: {e}")
-                return None
-
-        return await asyncio.to_thread(_read_page)
-
-    def _record_page_status(
-        self,
-        page: WikiPage,
-        source_files: list[str],
-    ) -> None:
-        """Record status for a generated/loaded page.
-
-        Args:
-            page: The wiki page.
-            source_files: Source files that contributed to this page.
-        """
-        source_hashes = {f: self._file_hashes.get(f, "") for f in source_files}
-
-        # Include line info for source files that have it
-        source_line_info = {
-            f: {"start_line": self._file_line_info[f][0], "end_line": self._file_line_info[f][1]}
-            for f in source_files
-            if f in self._file_line_info
-        }
-
-        self._page_statuses[page.path] = WikiPageStatus(
-            path=page.path,
-            source_files=source_files,
-            source_hashes=source_hashes,
-            source_line_info=source_line_info,
-            content_hash=self._compute_content_hash(page.content),
-            generated_at=page.generated_at,
-        )
 
     async def generate(
         self,
@@ -325,26 +141,26 @@ class WikiGenerator:
         self._manifest = get_cached_manifest(self._repo_path, cache_dir=self.wiki_path)
 
         # Build file hash map for incremental generation
-        self._file_hashes = {f.path: f.hash for f in index_status.files}
-        all_source_files = list(self._file_hashes.keys())
+        self.status_manager.file_hashes = {f.path: f.hash for f in index_status.files}
+        all_source_files = list(self.status_manager.file_hashes.keys())
 
         # Load previous wiki status for incremental updates
         if not full_rebuild:
-            self._previous_status = await self._load_wiki_status()
+            await self.status_manager.load_status()
 
         # Pre-compute line info for source files (for source refs with line numbers)
-        self._file_line_info = self._get_main_definition_lines()
+        self.status_manager.file_line_info = self._get_main_definition_lines()
 
         # Generate index page (overview) - depends on all files
         if progress_callback:
             progress_callback("Generating overview", 0, total_steps)
 
         overview_path = "index.md"
-        if full_rebuild or self._needs_regeneration(overview_path, all_source_files):
+        if full_rebuild or self.status_manager.needs_regeneration(overview_path, all_source_files):
             overview_page = await self._generate_overview(index_status)
             pages_generated += 1
         else:
-            overview_page = await self._load_existing_page(overview_path)
+            overview_page = await self.status_manager.load_existing_page(overview_path)
             if overview_page is None:
                 overview_page = await self._generate_overview(index_status)
                 pages_generated += 1
@@ -352,7 +168,7 @@ class WikiGenerator:
                 pages_skipped += 1
 
         pages.append(overview_page)
-        self._record_page_status(overview_page, all_source_files)
+        self.status_manager.record_page_status(overview_page, all_source_files)
         await self._write_page(overview_page)
 
         # Generate architecture page - depends on all files
@@ -360,11 +176,11 @@ class WikiGenerator:
             progress_callback("Generating architecture docs", 1, total_steps)
 
         architecture_path = "architecture.md"
-        if full_rebuild or self._needs_regeneration(architecture_path, all_source_files):
+        if full_rebuild or self.status_manager.needs_regeneration(architecture_path, all_source_files):
             architecture_page = await self._generate_architecture(index_status)
             pages_generated += 1
         else:
-            architecture_page = await self._load_existing_page(architecture_path)
+            architecture_page = await self.status_manager.load_existing_page(architecture_path)
             if architecture_page is None:
                 architecture_page = await self._generate_architecture(index_status)
                 pages_generated += 1
@@ -372,7 +188,7 @@ class WikiGenerator:
                 pages_skipped += 1
 
         pages.append(architecture_page)
-        self._record_page_status(architecture_page, all_source_files)
+        self.status_manager.record_page_status(architecture_page, all_source_files)
         await self._write_page(architecture_page)
 
         # Collect import chunks for relationship analysis (needed for See Also)
@@ -387,8 +203,13 @@ class WikiGenerator:
         if progress_callback:
             progress_callback("Generating module documentation", 2, total_steps)
 
-        module_pages, gen_count, skip_count = await self._generate_module_docs(
-            index_status, full_rebuild
+        module_pages, gen_count, skip_count = await generate_module_docs(
+            index_status=index_status,
+            vector_store=self.vector_store,
+            llm=self.llm,
+            system_prompt=self._system_prompt,
+            status_manager=self.status_manager,
+            full_rebuild=full_rebuild,
         )
         pages_generated += gen_count
         pages_skipped += skip_count
@@ -400,8 +221,16 @@ class WikiGenerator:
         if progress_callback:
             progress_callback("Generating file documentation", 3, total_steps)
 
-        file_pages, gen_count, skip_count = await self._generate_file_docs(
-            index_status, progress_callback, full_rebuild
+        file_pages, gen_count, skip_count = await generate_file_docs(
+            index_status=index_status,
+            vector_store=self.vector_store,
+            llm=self.llm,
+            system_prompt=self._system_prompt,
+            status_manager=self.status_manager,
+            entity_registry=self.entity_registry,
+            config=self.config,
+            progress_callback=progress_callback,
+            full_rebuild=full_rebuild,
         )
         pages_generated += gen_count
         pages_skipped += skip_count
@@ -416,25 +245,25 @@ class WikiGenerator:
         deps_path = "dependencies.md"
         deps_page: WikiPage
         deps_source_files: list[str]
-        if full_rebuild or self._needs_regeneration(deps_path, all_source_files):
+        if full_rebuild or self.status_manager.needs_regeneration(deps_path, all_source_files):
             deps_page, deps_source_files = await self._generate_dependencies(index_status)
             pages_generated += 1
         else:
-            existing_deps_page = await self._load_existing_page(deps_path)
+            existing_deps_page = await self.status_manager.load_existing_page(deps_path)
             if existing_deps_page is None:
                 deps_page, deps_source_files = await self._generate_dependencies(index_status)
                 pages_generated += 1
             else:
                 deps_page = existing_deps_page
                 # Use source files from previous status if available
-                prev_status = self._page_statuses.get(deps_path) or (
-                    self._previous_status.pages.get(deps_path) if self._previous_status else None
+                prev_status = self.status_manager.page_statuses.get(deps_path) or (
+                    self.status_manager.previous_status.pages.get(deps_path) if self.status_manager.previous_status else None
                 )
                 deps_source_files = prev_status.source_files if prev_status else all_source_files
                 pages_skipped += 1
 
         pages.append(deps_page)
-        self._record_page_status(deps_page, deps_source_files)
+        self.status_manager.record_page_status(deps_page, deps_source_files)
         await self._write_page(deps_page)
 
         # Generate changelog page from git history
@@ -444,7 +273,7 @@ class WikiGenerator:
         changelog_page = await self._generate_changelog()
         if changelog_page:
             pages.append(changelog_page)
-            self._record_page_status(changelog_page, all_source_files)
+            self.status_manager.record_page_status(changelog_page, all_source_files)
             await self._write_page(changelog_page)
             pages_generated += 1
 
@@ -455,7 +284,7 @@ class WikiGenerator:
         pages = add_cross_links(pages, self.entity_registry)
 
         # Add Relevant Source Files sections with local wiki links
-        pages = add_source_refs_sections(pages, self._page_statuses, self.wiki_path)
+        pages = add_source_refs_sections(pages, self.status_manager.page_statuses, self.wiki_path)
 
         # Add See Also sections
         if progress_callback:
@@ -486,9 +315,9 @@ class WikiGenerator:
             index_status_hash=hashlib.sha256(
                 json.dumps(index_status.model_dump(), sort_keys=True).encode()
             ).hexdigest()[:16],
-            pages=self._page_statuses,
+            pages=self.status_manager.page_statuses,
         )
-        await self._save_wiki_status(wiki_status)
+        await self.status_manager.save_status(wiki_status)
 
         if progress_callback:
             progress_callback(
@@ -525,415 +354,6 @@ class WikiGenerator:
             repo_path=self._repo_path,
         )
 
-    async def _generate_module_docs(
-        self, index_status: IndexStatus, full_rebuild: bool = False
-    ) -> tuple[list[WikiPage], int, int]:
-        """Generate documentation for each module/directory.
-
-        Args:
-            index_status: Index status with file information.
-            full_rebuild: If True, regenerate all pages.
-
-        Returns:
-            Tuple of (pages list, generated count, skipped count).
-        """
-        pages = []
-        pages_generated = 0
-        pages_skipped = 0
-
-        # Group files by top-level directory
-        directories: dict[str, list[str]] = {}
-        for file_info in index_status.files:
-            parts = Path(file_info.path).parts
-            if len(parts) > 1:
-                dir_name = parts[0]
-            else:
-                dir_name = "root"
-            directories.setdefault(dir_name, []).append(file_info.path)
-
-        # Generate a page for each significant directory
-        for dir_name, files in directories.items():
-            if len(files) < 2:
-                continue
-
-            page_path = f"modules/{dir_name}.md"
-
-            # Check if page needs regeneration (module pages depend on all files in that module)
-            if not full_rebuild and not self._needs_regeneration(page_path, files):
-                existing_page = await self._load_existing_page(page_path)
-                if existing_page is not None:
-                    pages.append(existing_page)
-                    self._record_page_status(existing_page, files)
-                    pages_skipped += 1
-                    continue
-
-            # Get chunks for this directory
-            search_results = await self.vector_store.search(
-                f"module {dir_name}",
-                limit=15,
-            )
-
-            # Filter to chunks from this directory
-            relevant_chunks = [r for r in search_results if r.chunk.file_path.startswith(dir_name)]
-
-            if not relevant_chunks:
-                continue
-
-            context = "\n\n".join(
-                [
-                    f"File: {r.chunk.file_path}\nType: {r.chunk.chunk_type.value}\nName: {r.chunk.name}\n{r.chunk.content[:400]}"
-                    for r in relevant_chunks[:10]
-                ]
-            )
-
-            prompt = f"""Generate documentation for the '{dir_name}' module based ONLY on the code provided.
-
-Files in module: {', '.join(files[:10])}{'...' if len(files) > 10 else ''}
-
-Code context:
-{context}
-
-Generate documentation that includes:
-1. **Module Purpose** - Explain what this module does based on the code shown
-2. **Key Classes and Functions** - Describe each class/function visible in the code above. Write class names as plain text for cross-linking.
-3. **How Components Interact** - Explain how the components shown work together
-4. **Usage Examples** - Show how to use the components (use code blocks)
-5. **Dependencies** - What other modules this depends on (based on imports shown)
-
-CRITICAL CONSTRAINTS:
-- ONLY describe classes and functions that appear in the code context above
-- Do NOT invent additional components not shown
-- Do NOT fabricate usage patterns or APIs not visible in the code
-- Write class names as plain text (e.g., "The CodeParser class") for cross-linking
-
-Format as markdown."""
-
-            content = await self.llm.generate(prompt, system_prompt=self._system_prompt)
-
-            page = WikiPage(
-                path=page_path,
-                title=f"Module: {dir_name}",
-                content=content,
-                generated_at=time.time(),
-            )
-            pages.append(page)
-            self._record_page_status(page, files)
-            pages_generated += 1
-
-        # Create modules index (always regenerate since it depends on module pages)
-        if pages:
-            modules_index = WikiPage(
-                path="modules/index.md",
-                title="Modules",
-                content=self._generate_modules_index(pages),
-                generated_at=time.time(),
-            )
-            pages.insert(0, modules_index)
-            # Index depends on all files in all modules
-            all_module_files = [f for files in directories.values() for f in files]
-            self._record_page_status(modules_index, all_module_files)
-
-        return pages, pages_generated, pages_skipped
-
-    def _generate_modules_index(self, module_pages: list[WikiPage]) -> str:
-        """Generate index page for modules."""
-        lines = ["# Modules\n", "This section contains documentation for each module.\n"]
-
-        for page in module_pages:
-            if page.path != "modules/index.md":
-                name = Path(page.path).stem
-                lines.append(f"- [{page.title}]({name}.md)")
-
-        return "\n".join(lines)
-
-    async def _generate_single_file_doc(
-        self,
-        file_info: FileInfo,
-        index_status: IndexStatus,
-        full_rebuild: bool,
-    ) -> tuple[WikiPage | None, bool]:
-        """Generate documentation for a single source file.
-
-        Args:
-            file_info: File status information.
-            index_status: Index status with repo information.
-            full_rebuild: If True, regenerate even if unchanged.
-
-        Returns:
-            Tuple of (WikiPage or None, was_skipped).
-            Returns (None, False) if file should be skipped entirely.
-            Returns (page, True) if existing page was reused.
-            Returns (page, False) if new page was generated.
-        """
-        file_path = Path(file_info.path)
-
-        # Create nested path structure: files/module/filename.md
-        parts = file_path.parts
-        if len(parts) > 1:
-            wiki_path = f"files/{'/'.join(parts[:-1])}/{file_path.stem}.md"
-        else:
-            wiki_path = f"files/{file_path.stem}.md"
-
-        source_files = [file_info.path]
-
-        # Check if this file page needs regeneration
-        if not full_rebuild and not self._needs_regeneration(wiki_path, source_files):
-            existing_page = await self._load_existing_page(wiki_path)
-            if existing_page is not None:
-                # Still need to register entities for cross-linking
-                all_file_chunks = await self.vector_store.get_chunks_by_file(file_info.path)
-                self.entity_registry.register_from_chunks(all_file_chunks, wiki_path)
-                self._record_page_status(existing_page, source_files)
-                return existing_page, True  # Skipped (reused existing)
-
-        # Get all chunks for this file
-        search_results = await self.vector_store.search(
-            f"file:{file_info.path}",
-            limit=self.config.wiki.context_search_limit,
-        )
-
-        # Filter to chunks from this specific file
-        file_chunks = [r for r in search_results if r.chunk.file_path == file_info.path]
-
-        if not file_chunks:
-            # Fallback: search by filename
-            search_results = await self.vector_store.search(
-                file_path.stem,
-                limit=self.config.wiki.fallback_search_limit,
-            )
-            file_chunks = [r for r in search_results if r.chunk.file_path == file_info.path]
-
-        if not file_chunks:
-            return None, False  # No content to document
-
-        # Build context from chunks
-        context_parts = []
-        for r in file_chunks[:15]:  # Limit context size
-            chunk = r.chunk
-            context_parts.append(
-                f"Type: {chunk.chunk_type.value}\n"
-                f"Name: {chunk.name}\n"
-                f"Lines: {chunk.start_line}-{chunk.end_line}\n"
-                f"```\n{chunk.content[:600]}\n```"
-            )
-
-        context = "\n\n".join(context_parts)
-
-        prompt = f"""Generate documentation for the file '{file_info.path}' based ONLY on the code provided.
-
-Language: {file_info.language}
-Total code chunks: {file_info.chunk_count}
-
-Code contents:
-{context}
-
-Generate documentation that includes:
-1. **File Overview**: Purpose of this file based on the code shown
-2. **Classes**: Document each class visible in the code with its purpose and key methods
-3. **Functions**: Document each function with parameters and return values as shown
-4. **Usage Examples**: Show how to use the components (based on their actual signatures)
-5. **Related Components**: Mention other classes this file works with (based on imports/references shown)
-
-CRITICAL CONSTRAINTS:
-- ONLY document classes, methods, and functions that appear in the code above
-- Do NOT invent additional methods or parameters not shown
-- Do NOT fabricate usage examples with APIs not visible in the code
-- Write class names as plain text (e.g., "The WikiGenerator class") for cross-linking
-- Only use backticks for actual code snippets
-
-Format as markdown with clear sections.
-Do NOT include mermaid class diagrams - they will be auto-generated."""
-
-        content = await self.llm.generate(prompt, system_prompt=self._system_prompt)
-
-        # Strip any LLM-generated class diagram sections (we add our own)
-        content = re.sub(
-            r"\n*##\s*Class\s*Diagram\s*\n+```mermaid\s*\n+classDiagram.*?```",
-            "",
-            content,
-            flags=re.DOTALL | re.IGNORECASE,
-        )
-
-        # Generate API reference section with type signatures
-        abs_file_path = Path(index_status.repo_path) / file_info.path
-        if abs_file_path.exists():
-            api_docs = get_file_api_docs(abs_file_path)
-            if api_docs:
-                content += "\n\n## API Reference\n\n" + api_docs
-
-        # Generate class diagram if file has classes
-        all_file_chunks = await self.vector_store.get_chunks_by_file(file_info.path)
-        class_diagram = generate_class_diagram(all_file_chunks)
-        if class_diagram:
-            content += "\n\n## Class Diagram\n\n" + class_diagram
-
-        # Generate call graph diagram
-        if abs_file_path.exists():
-            call_graph = get_file_call_graph(abs_file_path, Path(index_status.repo_path))
-            if call_graph:
-                content += "\n\n## Call Graph\n\n```mermaid\n" + call_graph + "\n```"
-
-        # Add usage examples from test files
-        entity_names = [
-            chunk.name for chunk in all_file_chunks
-            if chunk.name and len(chunk.name) > 2
-        ]
-        if entity_names:
-            examples_md = get_file_examples(
-                source_file=abs_file_path,
-                repo_root=Path(index_status.repo_path),
-                entity_names=entity_names,
-                max_examples=5,
-            )
-            if examples_md:
-                content += "\n\n" + examples_md
-
-        # Register entities for cross-linking
-        self.entity_registry.register_from_chunks(all_file_chunks, wiki_path)
-
-        page = WikiPage(
-            path=wiki_path,
-            title=f"{file_path.name}",
-            content=content,
-            generated_at=time.time(),
-        )
-        self._record_page_status(page, source_files)
-        return page, False  # Generated new
-
-    async def _generate_file_docs(
-        self,
-        index_status: IndexStatus,
-        progress_callback: ProgressCallback | None = None,
-        full_rebuild: bool = False,
-    ) -> tuple[list[WikiPage], int, int]:
-        """Generate documentation for individual source files.
-
-        Uses parallel LLM calls for faster generation, controlled by
-        config.wiki.max_concurrent_llm_calls.
-
-        Args:
-            index_status: Index status with file information.
-            progress_callback: Optional progress callback.
-            full_rebuild: If True, regenerate all pages.
-
-        Returns:
-            Tuple of (pages list, generated count, skipped count).
-        """
-        # Filter files: skip __init__.py and test files
-        def is_test_file(path: str) -> bool:
-            """Check if a file is a test file."""
-            parts = path.split("/")
-            # Skip files in tests/ directory only
-            # Don't skip test_*.py in src/ (e.g., test_examples.py is a source file)
-            return "tests" in parts
-
-        significant_files = [
-            f
-            for f in index_status.files
-            if not f.path.endswith("__init__.py")
-            and not is_test_file(f.path)
-            and f.chunk_count >= 2  # Has meaningful content
-        ]
-
-        # Limit test files separately if we want them later
-        # For source files, include all of them (no limit)
-        max_files = self.config.wiki.max_file_docs
-        if len(significant_files) > max_files:
-            # Only limit if we have way too many files
-            # Prioritize files with more chunks (more complex)
-            significant_files = sorted(
-                significant_files, key=lambda x: x.chunk_count, reverse=True
-            )[:max_files]
-
-        if not significant_files:
-            return [], 0, 0
-
-        # Use semaphore to limit concurrent LLM calls
-        max_concurrent = self.config.wiki.max_concurrent_llm_calls
-        semaphore = asyncio.Semaphore(max_concurrent)
-        logger.info(
-            f"Generating file docs for {len(significant_files)} files "
-            f"(max {max_concurrent} concurrent)"
-        )
-
-        async def generate_with_semaphore(
-            file_info: FileInfo,
-        ) -> tuple[WikiPage | None, bool]:
-            async with semaphore:
-                logger.debug(f"Generating doc for {file_info.path}")
-                return await self._generate_single_file_doc(
-                    file_info, index_status, full_rebuild
-                )
-
-        # Run all file doc generations concurrently (limited by semaphore)
-        results = await asyncio.gather(
-            *[generate_with_semaphore(f) for f in significant_files],
-            return_exceptions=True,
-        )
-
-        # Process results
-        pages = []
-        pages_generated = 0
-        pages_skipped = 0
-
-        for file_info, result in zip(significant_files, results):
-            if isinstance(result, Exception):
-                logger.error(f"Error generating doc for {file_info.path}: {result}")
-                continue
-
-            page, was_skipped = result
-            if page is not None:
-                pages.append(page)
-                if was_skipped:
-                    pages_skipped += 1
-                else:
-                    pages_generated += 1
-
-        # Create files index (always regenerate since it depends on all file pages)
-        if pages:
-            all_file_paths = [f.path for f in significant_files]
-            files_index = WikiPage(
-                path="files/index.md",
-                title="Source Files",
-                content=self._generate_files_index(pages),
-                generated_at=time.time(),
-            )
-            pages.insert(0, files_index)
-            self._record_page_status(files_index, all_file_paths)
-
-        logger.info(
-            f"File docs complete: {pages_generated} generated, {pages_skipped} skipped"
-        )
-        return pages, pages_generated, pages_skipped
-
-    def _generate_files_index(self, file_pages: list[WikiPage]) -> str:
-        """Generate index page for file documentation."""
-        lines = [
-            "# Source Files\n",
-            "Detailed documentation for individual source files.\n",
-        ]
-
-        # Group by directory
-        by_dir: dict[str, list[WikiPage]] = {}
-        for page in file_pages:
-            if page.path == "files/index.md":
-                continue
-            parts = Path(page.path).parts
-            if len(parts) > 2:
-                dir_name = parts[1]  # files/DIR/file.md -> DIR
-            else:
-                dir_name = "root"
-            by_dir.setdefault(dir_name, []).append(page)
-
-        for dir_name, dir_pages in sorted(by_dir.items()):
-            lines.append(f"\n## {dir_name}\n")
-            for page in sorted(dir_pages, key=lambda p: p.title):
-                # Make relative link from files/index.md
-                rel_path = page.path.replace("files/", "")
-                lines.append(f"- [{page.title}]({rel_path})")
-
-        return "\n".join(lines)
-
     async def _generate_dependencies(
         self, index_status: IndexStatus
     ) -> tuple[WikiPage, list[str]]:
@@ -953,6 +373,8 @@ Do NOT include mermaid class diagrams - they will be auto-generated."""
 
     async def _write_page(self, page: WikiPage) -> None:
         """Write a wiki page to disk asynchronously."""
+        import asyncio
+
         page_path = self.wiki_path / page.path
         content = page.content
 

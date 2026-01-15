@@ -13,25 +13,25 @@ from local_deepwiki.core.indexer import RepositoryIndexer
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.generators.wiki import generate_wiki
 from local_deepwiki.logging import get_logger
-from local_deepwiki.models import Language
 from local_deepwiki.providers.embeddings import get_embedding_provider
+from local_deepwiki.validation import (
+    DEFAULT_DEEP_RESEARCH_CHUNKS,
+    MAX_CONTEXT_CHUNKS,
+    MAX_DEEP_RESEARCH_CHUNKS,
+    MAX_SEARCH_LIMIT,
+    MIN_CONTEXT_CHUNKS,
+    MIN_DEEP_RESEARCH_CHUNKS,
+    MIN_SEARCH_LIMIT,
+    VALID_EMBEDDING_PROVIDERS,
+    VALID_LLM_PROVIDERS,
+    validate_language,
+    validate_languages_list,
+    validate_non_empty_string,
+    validate_positive_int,
+    validate_provider,
+)
 
 logger = get_logger(__name__)
-
-
-# Input validation constants
-MIN_CONTEXT_CHUNKS = 1
-MAX_CONTEXT_CHUNKS = 50
-MIN_SEARCH_LIMIT = 1
-MAX_SEARCH_LIMIT = 100
-VALID_LANGUAGES = {lang.value for lang in Language}
-VALID_LLM_PROVIDERS = {"ollama", "anthropic", "openai"}
-VALID_EMBEDDING_PROVIDERS = {"local", "openai"}
-
-# Deep research validation constants
-MIN_DEEP_RESEARCH_CHUNKS = 10
-MAX_DEEP_RESEARCH_CHUNKS = 50
-DEFAULT_DEEP_RESEARCH_CHUNKS = 30
 
 # Type alias for tool handler functions
 ToolHandler = Callable[[dict[str, Any]], Awaitable[list[TextContent]]]
@@ -68,114 +68,6 @@ def handle_tool_errors(func: ToolHandler) -> ToolHandler:
     return wrapper
 
 
-def _validate_positive_int(value: Any, name: str, min_val: int, max_val: int, default: int) -> int:
-    """Validate and bound an integer parameter.
-
-    Args:
-        value: The value to validate.
-        name: Parameter name for error messages.
-        min_val: Minimum allowed value.
-        max_val: Maximum allowed value.
-        default: Default value if None.
-
-    Returns:
-        Validated and bounded integer.
-
-    Raises:
-        ValueError: If value is not a valid integer.
-    """
-    if value is None:
-        return default
-    if not isinstance(value, int):
-        raise ValueError(f"{name} must be an integer, got {type(value).__name__}")
-    return max(min_val, min(max_val, value))
-
-
-def _validate_non_empty_string(value: Any, name: str) -> str:
-    """Validate that a string is non-empty.
-
-    Args:
-        value: The value to validate.
-        name: Parameter name for error messages.
-
-    Returns:
-        The validated string.
-
-    Raises:
-        ValueError: If value is not a non-empty string.
-    """
-    if not isinstance(value, str):
-        raise ValueError(f"{name} must be a string, got {type(value).__name__}")
-    if not value.strip():
-        raise ValueError(f"{name} cannot be empty")
-    return value
-
-
-def _validate_language(language: str | None) -> str | None:
-    """Validate a language filter value.
-
-    Args:
-        language: The language to validate.
-
-    Returns:
-        The validated language or None.
-
-    Raises:
-        ValueError: If language is invalid.
-    """
-    if language is None:
-        return None
-    if language not in VALID_LANGUAGES:
-        raise ValueError(
-            f"Invalid language: '{language}'. Valid options: {sorted(VALID_LANGUAGES)}"
-        )
-    return language
-
-
-def _validate_languages_list(languages: list[str] | None) -> list[str] | None:
-    """Validate a list of languages.
-
-    Args:
-        languages: List of languages to validate.
-
-    Returns:
-        The validated list or None.
-
-    Raises:
-        ValueError: If any language is invalid.
-    """
-    if languages is None:
-        return None
-    if not isinstance(languages, list):
-        raise ValueError(f"languages must be a list, got {type(languages).__name__}")
-
-    invalid = [lang for lang in languages if lang not in VALID_LANGUAGES]
-    if invalid:
-        raise ValueError(f"Invalid languages: {invalid}. Valid options: {sorted(VALID_LANGUAGES)}")
-    return languages
-
-
-def _validate_provider(provider: str | None, valid_providers: set[str], name: str) -> str | None:
-    """Validate a provider value.
-
-    Args:
-        provider: The provider to validate.
-        valid_providers: Set of valid provider names.
-        name: Parameter name for error messages.
-
-    Returns:
-        The validated provider or None.
-
-    Raises:
-        ValueError: If provider is invalid.
-    """
-    if provider is None:
-        return None
-    if provider not in valid_providers:
-        raise ValueError(f"Invalid {name}: '{provider}'. Valid options: {sorted(valid_providers)}")
-    return provider
-
-
 @handle_tool_errors
 async def handle_index_repository(args: dict[str, Any]) -> list[TextContent]:
     """Handle index_repository tool call."""
@@ -189,11 +81,11 @@ async def handle_index_repository(args: dict[str, Any]) -> list[TextContent]:
         raise ValueError(f"Path is not a directory: {repo_path}")
 
     # Validate optional parameters
-    languages = _validate_languages_list(args.get("languages"))
-    llm_provider = _validate_provider(
+    languages = validate_languages_list(args.get("languages"))
+    llm_provider = validate_provider(
         args.get("llm_provider"), VALID_LLM_PROVIDERS, "llm_provider"
     )
-    embedding_provider = _validate_provider(
+    embedding_provider = validate_provider(
         args.get("embedding_provider"), VALID_EMBEDDING_PROVIDERS, "embedding_provider"
     )
 
@@ -266,8 +158,8 @@ async def handle_ask_question(args: dict[str, Any]) -> list[TextContent]:
     repo_path = Path(args["repo_path"]).resolve()
 
     # Validate inputs
-    question = _validate_non_empty_string(args.get("question", ""), "question")
-    max_context = _validate_positive_int(
+    question = validate_non_empty_string(args.get("question", ""), "question")
+    max_context = validate_positive_int(
         args.get("max_context"),
         "max_context",
         MIN_CONTEXT_CHUNKS,
@@ -382,8 +274,8 @@ async def _handle_deep_research_impl(
     repo_path = Path(args["repo_path"]).resolve()
 
     # Validate inputs
-    question = _validate_non_empty_string(args.get("question", ""), "question")
-    max_chunks = _validate_positive_int(
+    question = validate_non_empty_string(args.get("question", ""), "question")
+    max_chunks = validate_positive_int(
         args.get("max_chunks"),
         "max_chunks",
         MIN_DEEP_RESEARCH_CHUNKS,
@@ -648,15 +540,15 @@ async def handle_search_code(args: dict[str, Any]) -> list[TextContent]:
     repo_path = Path(args["repo_path"]).resolve()
 
     # Validate inputs
-    query = _validate_non_empty_string(args.get("query", ""), "query")
-    limit = _validate_positive_int(
+    query = validate_non_empty_string(args.get("query", ""), "query")
+    limit = validate_positive_int(
         args.get("limit"),
         "limit",
         MIN_SEARCH_LIMIT,
         MAX_SEARCH_LIMIT,
         default=10,
     )
-    language = _validate_language(args.get("language"))
+    language = validate_language(args.get("language"))
 
     logger.info(f"Code search in {repo_path}: {query[:50]}...")
     logger.debug(f"Search limit: {limit}, language filter: {language}")
