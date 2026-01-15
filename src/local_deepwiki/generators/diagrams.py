@@ -3,9 +3,8 @@
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
-from local_deepwiki.models import ChunkType, CodeChunk, IndexStatus
+from local_deepwiki.models import ChunkType, IndexStatus
 
 
 @dataclass
@@ -157,10 +156,10 @@ def generate_class_diagram(
         # Add stereotype annotation
         if class_info.is_dataclass:
             lines.append(f"    class {safe_name} {{")
-            lines.append(f"        <<dataclass>>")
+            lines.append("        <<dataclass>>")
         elif class_info.is_abstract:
             lines.append(f"    class {safe_name} {{")
-            lines.append(f"        <<abstract>>")
+            lines.append("        <<abstract>>")
         else:
             lines.append(f"    class {safe_name} {{")
 
@@ -693,7 +692,6 @@ def generate_module_overview(
     # Build diagram
     lines = ["```mermaid", "graph TB"]
 
-    node_id = 0
     for top_dir, subdirs in sorted(directories.items()):
         safe_dir = sanitize_mermaid_name(top_dir)
         total_files = sum(subdirs.values())

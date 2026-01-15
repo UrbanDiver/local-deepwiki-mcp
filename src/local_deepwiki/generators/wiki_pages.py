@@ -12,7 +12,7 @@ from local_deepwiki.models import IndexStatus, WikiPage
 from local_deepwiki.providers.base import LLMProvider
 
 if TYPE_CHECKING:
-    from local_deepwiki.generators.wiki import WikiGenerator
+    pass
 
 logger = get_logger(__name__)
 

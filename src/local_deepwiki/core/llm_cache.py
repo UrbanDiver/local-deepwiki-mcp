@@ -318,7 +318,6 @@ class LLMCache:
             # Get oldest entries to delete
             # Note: LanceDB doesn't support ORDER BY + DELETE easily
             # For now, we'll just delete expired entries
-            now = time.time()
             all_entries = table.search().limit(count).to_list()
 
             expired_ids = []

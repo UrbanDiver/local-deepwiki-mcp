@@ -5,7 +5,6 @@ import json
 import time
 from pathlib import Path
 
-from rich.progress import Progress, TaskID
 
 from local_deepwiki.config import Config, get_config
 from local_deepwiki.core.chunker import CodeChunker

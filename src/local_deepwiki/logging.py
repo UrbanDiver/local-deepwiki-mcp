@@ -41,9 +41,12 @@ def setup_logging(
     if isinstance(level, str):
         level = getattr(logging, level.upper(), logging.INFO)
 
+    # At this point level is guaranteed to be an int
+    log_level: int = level if isinstance(level, int) else logging.INFO
+
     # Get the package logger
     logger = logging.getLogger(PACKAGE_NAME)
-    logger.setLevel(level)
+    logger.setLevel(log_level)
 
     # Clear existing handlers to avoid duplicates
     logger.handlers.clear()

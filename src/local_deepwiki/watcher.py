@@ -1,5 +1,7 @@
 """File watcher for auto-reindexing on file changes."""
 
+from __future__ import annotations
+
 import argparse
 import asyncio
 import fnmatch
@@ -7,10 +9,14 @@ import sys
 import time
 from pathlib import Path
 from threading import Timer
+from typing import TYPE_CHECKING
 
 from rich.console import Console
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
+
+if TYPE_CHECKING:
+    from watchdog.observers.api import BaseObserver
 
 from local_deepwiki.config import Config, get_config
 from local_deepwiki.core.indexer import RepositoryIndexer
@@ -186,8 +192,9 @@ class DebouncedHandler(FileSystemEventHandler):
         if event.is_directory:
             return
 
-        if self._should_watch_file(event.src_path):
-            self._pending_files.add(event.src_path)
+        src_path = str(event.src_path)
+        if self._should_watch_file(src_path):
+            self._pending_files.add(src_path)
             self._schedule_reindex()
 
     def on_created(self, event: FileSystemEvent) -> None:
@@ -195,8 +202,9 @@ class DebouncedHandler(FileSystemEventHandler):
         if event.is_directory:
             return
 
-        if self._should_watch_file(event.src_path):
-            self._pending_files.add(event.src_path)
+        src_path = str(event.src_path)
+        if self._should_watch_file(src_path):
+            self._pending_files.add(src_path)
             self._schedule_reindex()
 
     def on_deleted(self, event: FileSystemEvent) -> None:
@@ -204,8 +212,9 @@ class DebouncedHandler(FileSystemEventHandler):
         if event.is_directory:
             return
 
-        if self._should_watch_file(event.src_path):
-            self._pending_files.add(event.src_path)
+        src_path = str(event.src_path)
+        if self._should_watch_file(src_path):
+            self._pending_files.add(src_path)
             self._schedule_reindex()
 
     def on_moved(self, event: FileSystemEvent) -> None:
@@ -214,13 +223,16 @@ class DebouncedHandler(FileSystemEventHandler):
             return
 
         # Check both source and destination
-        if hasattr(event, "src_path") and self._should_watch_file(event.src_path):
-            self._pending_files.add(event.src_path)
+        src_path = str(event.src_path)
+        if self._should_watch_file(src_path):
+            self._pending_files.add(src_path)
             self._schedule_reindex()
 
-        if hasattr(event, "dest_path") and self._should_watch_file(event.dest_path):
-            self._pending_files.add(event.dest_path)
-            self._schedule_reindex()
+        if hasattr(event, "dest_path"):
+            dest_path = str(event.dest_path)
+            if self._should_watch_file(dest_path):
+                self._pending_files.add(dest_path)
+                self._schedule_reindex()
 
 
 class RepositoryWatcher:
@@ -245,7 +257,7 @@ class RepositoryWatcher:
         self.config = config or get_config()
         self.debounce_seconds = debounce_seconds
         self.llm_provider = llm_provider
-        self._observer: Observer | None = None
+        self._observer: BaseObserver | None = None
 
     def start(self) -> None:
         """Start watching the repository."""

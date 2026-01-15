@@ -285,7 +285,7 @@ async def generate_file_docs(
     pages_skipped = 0
 
     for file_info, result in zip(significant_files, results):
-        if isinstance(result, Exception):
+        if isinstance(result, BaseException):
             logger.error(f"Error generating doc for {file_info.path}: {result}")
             continue
 

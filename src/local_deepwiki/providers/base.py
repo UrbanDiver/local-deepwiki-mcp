@@ -184,7 +184,10 @@ class LLMProvider(ABC):
         Yields:
             Generated text chunks.
         """
-        pass
+        # Make this an async generator for proper typing
+        if False:  # pragma: no cover
+            yield ""
+        raise NotImplementedError
 
     @property
     @abstractmethod

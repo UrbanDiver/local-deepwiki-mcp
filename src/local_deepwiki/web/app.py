@@ -112,7 +112,7 @@ def build_breadcrumb(wiki_path: Path, current_path: str) -> str:
     breadcrumb_items = []
 
     # Always start with Home
-    breadcrumb_items.append(f'<a href="/">Home</a>')
+    breadcrumb_items.append('<a href="/">Home</a>')
 
     # Build path progressively and check for index.md at each level
     cumulative_path = ""

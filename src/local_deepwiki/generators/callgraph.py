@@ -397,11 +397,11 @@ def generate_call_graph_diagram(
             func_nodes.append(node_id)
 
     if func_nodes:
-        lines.append(f"    classDef func fill:#e1f5fe")
+        lines.append("    classDef func fill:#e1f5fe")
         lines.append(f"    class {','.join(func_nodes)} func")
 
     if method_nodes:
-        lines.append(f"    classDef method fill:#fff3e0")
+        lines.append("    classDef method fill:#fff3e0")
         lines.append(f"    class {','.join(method_nodes)} method")
 
     return "\n".join(lines)
