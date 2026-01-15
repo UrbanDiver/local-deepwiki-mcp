@@ -231,19 +231,7 @@ class VectorStore:
         # Convert to SearchResult objects
         search_results = []
         for row in results:
-            chunk = CodeChunk(
-                id=row["id"],
-                file_path=row["file_path"],
-                language=row["language"],
-                chunk_type=row["chunk_type"],
-                name=row["name"] or None,
-                content=row["content"],
-                start_line=row["start_line"],
-                end_line=row["end_line"],
-                docstring=row["docstring"] or None,
-                parent_name=row["parent_name"] or None,
-                metadata=json.loads(row["metadata"]) if row["metadata"] else {},
-            )
+            chunk = self._row_to_chunk(row)
             search_results.append(
                 SearchResult(
                     chunk=chunk,
@@ -272,20 +260,7 @@ class VectorStore:
         if not results:
             return None
 
-        row = results[0]
-        return CodeChunk(
-            id=row["id"],
-            file_path=row["file_path"],
-            language=row["language"],
-            chunk_type=row["chunk_type"],
-            name=row["name"] or None,
-            content=row["content"],
-            start_line=row["start_line"],
-            end_line=row["end_line"],
-            docstring=row["docstring"] or None,
-            parent_name=row["parent_name"] or None,
-            metadata=json.loads(row["metadata"]) if row["metadata"] else {},
-        )
+        return self._row_to_chunk(results[0])
 
     async def get_chunks_by_file(self, file_path: str) -> list[CodeChunk]:
         """Get all chunks for a specific file.
@@ -302,24 +277,7 @@ class VectorStore:
 
         safe_path = _sanitize_string_value(file_path)
         results = table.search().where(f"file_path = '{safe_path}'").to_list()
-        chunks = []
-        for row in results:
-            chunks.append(
-                CodeChunk(
-                    id=row["id"],
-                    file_path=row["file_path"],
-                    language=row["language"],
-                    chunk_type=row["chunk_type"],
-                    name=row["name"] or None,
-                    content=row["content"],
-                    start_line=row["start_line"],
-                    end_line=row["end_line"],
-                    docstring=row["docstring"] or None,
-                    parent_name=row["parent_name"] or None,
-                    metadata=json.loads(row["metadata"]) if row["metadata"] else {},
-                )
-            )
-        return chunks
+        return [self._row_to_chunk(row) for row in results]
 
     async def delete_chunks_by_file(self, file_path: str) -> int:
         """Delete all chunks for a specific file.
@@ -364,6 +322,29 @@ class VectorStore:
             "chunk_types": all_data["chunk_type"].value_counts().to_dict(),
             "files": all_data["file_path"].nunique(),
         }
+
+    def _row_to_chunk(self, row: dict[str, Any]) -> CodeChunk:
+        """Convert a LanceDB row to a CodeChunk object.
+
+        Args:
+            row: Dictionary from LanceDB query result.
+
+        Returns:
+            CodeChunk object.
+        """
+        return CodeChunk(
+            id=row["id"],
+            file_path=row["file_path"],
+            language=row["language"],
+            chunk_type=row["chunk_type"],
+            name=row["name"] or None,
+            content=row["content"],
+            start_line=row["start_line"],
+            end_line=row["end_line"],
+            docstring=row["docstring"] or None,
+            parent_name=row["parent_name"] or None,
+            metadata=json.loads(row["metadata"]) if row["metadata"] else {},
+        )
 
     def _chunk_to_text(self, chunk: CodeChunk) -> str:
         """Convert a chunk to text for embedding.
