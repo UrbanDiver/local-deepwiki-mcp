@@ -62,8 +62,11 @@ def with_retry(
                         f"Retrying in {delay:.2f}s..."
                     )
                     await asyncio.sleep(delay)
-                except Exception as e:
-                    # Check for rate limit errors in API responses
+                except Exception as e:  # noqa: BLE001
+                    # Broad catch is intentional: different API providers (Anthropic, OpenAI,
+                    # Ollama) raise different exception types for rate limits. We inspect
+                    # the error message to determine retry behavior, and re-raise immediately
+                    # if not a recognized retryable condition.
                     error_str = str(e).lower()
                     if "rate" in error_str and "limit" in error_str:
                         last_exception = e

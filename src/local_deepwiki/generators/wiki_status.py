@@ -82,7 +82,10 @@ class WikiStatusManager:
                 with open(status_path) as f:
                     data = json.load(f)
                 return WikiGenerationStatus.model_validate(data)
-            except Exception as e:
+            except (json.JSONDecodeError, OSError, ValueError) as e:
+                # json.JSONDecodeError: Corrupted or invalid JSON
+                # OSError: File read issues
+                # ValueError: Pydantic validation failure
                 logger.warning(f"Failed to load wiki status from {status_path}: {e}")
                 return None
 
@@ -179,7 +182,9 @@ class WikiStatusManager:
                     content=content,
                     generated_at=generated_at,
                 )
-            except Exception as e:
+            except (OSError, UnicodeDecodeError) as e:
+                # OSError: File read issues
+                # UnicodeDecodeError: File encoding issues
                 logger.warning(f"Failed to load existing page {page_path}: {e}")
                 return None
 

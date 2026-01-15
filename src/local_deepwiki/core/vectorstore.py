@@ -80,7 +80,9 @@ class VectorStore:
         # Check existing indexes
         try:
             existing_indexes = {idx["name"] for idx in self._table.list_indices()}
-        except Exception as e:
+        except (KeyError, TypeError, RuntimeError) as e:
+            # KeyError/TypeError: Index info structure varies between LanceDB versions
+            # RuntimeError: Table may not support listing indices
             logger.debug(f"Could not list existing indexes: {e}")
             existing_indexes = set()
 
@@ -102,8 +104,10 @@ class VectorStore:
         try:
             self._table.create_scalar_index(column)
             logger.debug(f"Created scalar index on '{column}' column")
-        except Exception as e:
-            # Index may already exist or column type not supported
+        except (ValueError, RuntimeError, OSError) as e:
+            # ValueError: Index already exists or invalid column
+            # RuntimeError: Column type not supported for indexing
+            # OSError: Underlying storage issues
             logger.debug(f"Could not create index on '{column}': {e}")
 
     def _create_scalar_indexes(self) -> None:

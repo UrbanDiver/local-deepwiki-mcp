@@ -61,7 +61,9 @@ def handle_tool_errors(func: ToolHandler) -> ToolHandler:
         except asyncio.CancelledError:
             # Re-raise cancellation to propagate properly
             raise
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
+            # Broad catch is intentional: top-level error handler for MCP tools
+            # that converts any unhandled exception to a user-friendly error message
             logger.exception(f"Error in {func.__name__}: {e}")
             return [TextContent(type="text", text=f"Error: {e}")]
 
@@ -261,7 +263,9 @@ async def handle_deep_research(
         return [TextContent(type="text", text=f"Error: {e}")]
     except asyncio.CancelledError:
         raise
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
+        # Broad catch is intentional: top-level error handler for deep_research
+        # that converts any unhandled exception to a user-friendly error message
         logger.exception(f"Error in handle_deep_research: {e}")
         return [TextContent(type="text", text=f"Error: {e}")]
 
@@ -351,7 +355,10 @@ async def _handle_deep_research_impl(
                 total=float(progress.total_steps),
                 message=progress.model_dump_json(),
             )
-        except Exception as e:
+        except (RuntimeError, OSError, AttributeError) as e:
+            # RuntimeError: Session or context issues
+            # OSError: Network communication failures
+            # AttributeError: Missing session/context attributes
             logger.warning(f"Failed to send progress notification: {e}")
 
     async def send_cancellation_notification(step: str) -> None:
@@ -371,7 +378,10 @@ async def _handle_deep_research_impl(
                 total=5.0,
                 message=progress.model_dump_json(),
             )
-        except Exception as e:
+        except (RuntimeError, OSError, AttributeError) as e:
+            # RuntimeError: Session or context issues
+            # OSError: Network communication failures
+            # AttributeError: Missing session/context attributes
             logger.warning(f"Failed to send cancellation notification: {e}")
 
     # Create and run the deep research pipeline with config parameters
@@ -488,7 +498,9 @@ async def handle_read_wiki_structure(args: dict[str, Any]) -> list[TextContent]:
             with open(md_file) as f:
                 first_line = f.readline().strip()
                 title = first_line.lstrip("#").strip() if first_line.startswith("#") else rel_path
-        except Exception as e:
+        except (OSError, UnicodeDecodeError) as e:
+            # OSError: File access issues
+            # UnicodeDecodeError: File encoding issues
             logger.debug(f"Could not read title from {md_file}: {e}")
             title = rel_path
 

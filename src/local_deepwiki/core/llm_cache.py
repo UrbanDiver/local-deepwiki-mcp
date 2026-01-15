@@ -167,7 +167,11 @@ class LLMCache:
                     # Update hit tracking
                     await self._record_hit(entry["id"])
                     return entry["response"]
-        except Exception as e:
+        except (KeyError, ValueError, RuntimeError, OSError) as e:
+            # KeyError: Missing field in result
+            # ValueError: Invalid query or filter expression
+            # RuntimeError: LanceDB query execution error
+            # OSError: Database file access issues
             logger.debug(f"Exact hash lookup failed: {e}")
 
         # Slow path: embedding similarity search
@@ -191,7 +195,11 @@ class LLMCache:
                         )
                         await self._record_hit(result["id"])
                         return result["response"]
-        except Exception as e:
+        except (KeyError, ValueError, RuntimeError, OSError) as e:
+            # KeyError: Missing field in search result
+            # ValueError: Invalid embedding or search parameters
+            # RuntimeError: Vector search execution error
+            # OSError: Database access issues
             logger.debug(f"Similarity search failed: {e}")
 
         self._stats["misses"] += 1
@@ -254,7 +262,10 @@ class LLMCache:
                 try:
                     self._table.create_scalar_index("exact_hash")
                     logger.debug("Created scalar index on exact_hash")
-                except Exception as e:
+                except (ValueError, RuntimeError, OSError) as e:
+                    # ValueError: Index already exists
+                    # RuntimeError: Column type not supported
+                    # OSError: Storage issues
                     logger.debug(f"Could not create index: {e}")
 
             logger.debug(f"Cached response: id={entry_id[:8]}..., hash={exact_hash[:12]}...")
@@ -262,7 +273,10 @@ class LLMCache:
             # Check if we need to evict old entries
             await self._maybe_evict()
 
-        except Exception as e:
+        except (ValueError, RuntimeError, OSError) as e:
+            # ValueError: Invalid data format or embedding failure
+            # RuntimeError: Database operation failure
+            # OSError: File system or storage issues
             logger.warning(f"Failed to cache response: {e}")
 
     async def _record_hit(self, entry_id: str) -> None:
@@ -281,7 +295,10 @@ class LLMCache:
             # delete and re-add. For simplicity, we skip this for now.
             # The hit tracking is mainly for future LRU eviction.
             pass
-        except Exception as e:
+        except (KeyError, RuntimeError, OSError) as e:
+            # KeyError: Entry not found
+            # RuntimeError: Database operation failure
+            # OSError: Storage issues
             logger.debug(f"Failed to record hit: {e}")
 
     async def _maybe_evict(self) -> None:
@@ -314,12 +331,17 @@ class LLMCache:
                 for entry_id in expired_ids[:100]:  # Batch delete
                     try:
                         table.delete(f"id = '{entry_id}'")
-                    except Exception:
+                    except (ValueError, RuntimeError, OSError):
+                        # Delete may fail for individual entries; continue with others
                         pass
 
                 logger.info(f"Evicted {len(expired_ids)} expired cache entries")
 
-        except Exception as e:
+        except (KeyError, ValueError, RuntimeError, OSError) as e:
+            # KeyError: Missing fields in entries
+            # ValueError: Invalid query during eviction
+            # RuntimeError: Database operation failure
+            # OSError: Storage issues
             logger.debug(f"Eviction failed: {e}")
 
     async def clear(self) -> int:
@@ -338,7 +360,9 @@ class LLMCache:
                 logger.info(f"Cleared {count} cache entries")
                 return count
             return 0
-        except Exception as e:
+        except (RuntimeError, OSError) as e:
+            # RuntimeError: Database operation failure
+            # OSError: Storage or file system issues
             logger.warning(f"Failed to clear cache: {e}")
             return 0
 
@@ -353,5 +377,7 @@ class LLMCache:
             if table is None:
                 return 0
             return table.count_rows()
-        except Exception:
+        except (RuntimeError, OSError):
+            # RuntimeError: Database query failure
+            # OSError: Storage access issues
             return 0

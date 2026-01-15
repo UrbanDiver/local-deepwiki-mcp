@@ -208,7 +208,11 @@ class RepositoryIndexer:
                     total_chunks_processed += len(chunk_batch)
                     chunk_batch = []  # Clear batch to free memory
 
-            except Exception as e:
+            except (OSError, ValueError, RuntimeError, UnicodeDecodeError) as e:
+                # OSError: File read/write issues
+                # ValueError: Parsing or chunking errors
+                # RuntimeError: Vector store operation failures
+                # UnicodeDecodeError: File encoding issues
                 # Log error but continue with other files
                 logger.warning(f"Error processing {file_path}: {e}")
                 if progress_callback:
@@ -334,7 +338,10 @@ class RepositoryIndexer:
                 return status, requires_rebuild
 
             return status, False
-        except Exception as e:
+        except (json.JSONDecodeError, OSError, ValueError) as e:
+            # json.JSONDecodeError: Corrupted or invalid JSON
+            # OSError: File read issues
+            # ValueError: Pydantic validation failure
             logger.warning(f"Failed to load index status from {status_path}: {e}")
             return None, False
 
