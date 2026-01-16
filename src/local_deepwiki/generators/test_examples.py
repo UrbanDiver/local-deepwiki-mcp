@@ -29,26 +29,30 @@ class UsageExample:
     description: str | None  # From test docstring
 
 
-def find_test_file(source_file: Path, repo_root: Path) -> Path | None:
-    """Find the corresponding test file for a source file.
+def find_test_files(source_file: Path, repo_root: Path) -> list[Path]:
+    """Find all corresponding test files for a source file.
 
     Tries multiple strategies:
     1. Direct match: src/.../foo.py -> tests/test_foo.py
-    2. Nested match: src/pkg/mod/foo.py -> tests/test_foo.py
+    2. Coverage tests: src/.../foo.py -> tests/test_foo_coverage.py
+    3. Suffix variants: tests/test_foo_*.py
+    4. Alternative naming: tests/foo_test.py
 
     Args:
         source_file: Path to the source file.
         repo_root: Root directory of the repository.
 
     Returns:
-        Path to the test file if found, None otherwise.
+        List of test file paths found (may be empty).
     """
     # Get base filename without extension
     base_name = source_file.stem  # e.g., "api_docs"
 
     # Skip test files themselves
     if base_name.startswith("test_"):
-        return None
+        return []
+
+    test_files: list[Path] = []
 
     # Common test directories to check
     test_dirs = [
@@ -63,10 +67,44 @@ def find_test_file(source_file: Path, repo_root: Path) -> Path | None:
         # Try direct match: test_<basename>.py
         test_file = test_dir / f"test_{base_name}.py"
         if test_file.exists():
-            logger.debug(f"Found test file: {test_file}")
-            return test_file
+            test_files.append(test_file)
 
-    return None
+        # Try coverage variant: test_<basename>_coverage.py
+        coverage_file = test_dir / f"test_{base_name}_coverage.py"
+        if coverage_file.exists():
+            test_files.append(coverage_file)
+
+        # Try glob for other variants: test_<basename>_*.py
+        for variant in test_dir.glob(f"test_{base_name}_*.py"):
+            if variant not in test_files:
+                test_files.append(variant)
+
+        # Try alternative naming: <basename>_test.py
+        alt_file = test_dir / f"{base_name}_test.py"
+        if alt_file.exists() and alt_file not in test_files:
+            test_files.append(alt_file)
+
+    if test_files:
+        logger.debug(f"Found {len(test_files)} test file(s) for {source_file.name}")
+
+    return test_files
+
+
+def find_test_file(source_file: Path, repo_root: Path) -> Path | None:
+    """Find the corresponding test file for a source file.
+
+    Legacy function for backwards compatibility.
+    Returns the first test file found, or None.
+
+    Args:
+        source_file: Path to the source file.
+        repo_root: Root directory of the repository.
+
+    Returns:
+        Path to the test file if found, None otherwise.
+    """
+    test_files = find_test_files(source_file, repo_root)
+    return test_files[0] if test_files else None
 
 
 def _get_node_text(node: Node, source: bytes) -> str:
@@ -74,28 +112,43 @@ def _get_node_text(node: Node, source: bytes) -> str:
     return source[node.start_byte : node.end_byte].decode("utf-8")
 
 
-def _find_test_functions(root: Node) -> list[Node]:
+def _find_test_functions(root: Node) -> list[tuple[Node, str | None]]:
     """Find all test function definitions in the AST.
+
+    Finds both standalone test functions and test methods in test classes.
 
     Args:
         root: Root node of the parsed test file.
 
     Returns:
-        List of function_definition nodes for test functions.
+        List of (function_definition_node, class_name) tuples.
+        class_name is None for standalone functions.
     """
-    test_functions = []
+    test_functions: list[tuple[Node, str | None]] = []
 
-    def walk(node: Node) -> None:
+    def walk(node: Node, current_class: str | None = None) -> None:
+        if node.type == "class_definition":
+            # Get class name
+            name_node = node.child_by_field_name("name")
+            if name_node:
+                class_name = name_node.text.decode("utf-8") if name_node.text else ""
+                # Check if it's a test class
+                if class_name.startswith("Test"):
+                    # Walk children with this class context
+                    for child in node.children:
+                        walk(child, class_name)
+                    return
+
         if node.type == "function_definition":
             # Get the function name
             name_node = node.child_by_field_name("name")
             if name_node:
                 name = name_node.text.decode("utf-8") if name_node.text else ""
                 if name.startswith("test_"):
-                    test_functions.append(node)
+                    test_functions.append((node, current_class))
 
         for child in node.children:
-            walk(child)
+            walk(child, current_class)
 
     walk(root)
     return test_functions
@@ -181,14 +234,25 @@ def _extract_usage_snippet(
 
     # Skip the docstring if present
     start_idx = 0
+    in_docstring = False
     for i, line in enumerate(lines):
         stripped = line.strip()
-        if stripped and not stripped.startswith(('"""', "'''")):
-            # Check if we're inside a docstring
-            if '"""' in stripped or "'''" in stripped:
+        if not stripped:
+            continue
+        # Detect docstring boundaries
+        if stripped.startswith(('"""', "'''")):
+            if in_docstring:
+                in_docstring = False
                 continue
-            start_idx = i
-            break
+            # Check for single-line docstring
+            if stripped.count('"""') >= 2 or stripped.count("'''") >= 2:
+                continue
+            in_docstring = True
+            continue
+        if in_docstring:
+            continue
+        start_idx = i
+        break
 
     lines = lines[start_idx:]
 
@@ -197,6 +261,7 @@ def _extract_usage_snippet(
     capturing = False
     dedent_block = False
     paren_depth = 0
+    assertions_found = 0
 
     for line in lines:
         stripped = line.strip()
@@ -215,10 +280,12 @@ def _extract_usage_snippet(
         if capturing:
             relevant_lines.append(line)
 
-            # Stop after we complete an assertion or have enough context
+            # Track assertions to capture a complete test
             if stripped.startswith("assert") and paren_depth <= 0:
-                # Include one more line if it's a continuation
-                break
+                assertions_found += 1
+                # Allow up to 2 assertions for better context
+                if assertions_found >= 2:
+                    break
 
             if len(relevant_lines) >= max_lines:
                 break
@@ -230,8 +297,13 @@ def _extract_usage_snippet(
     if not relevant_lines:
         return None
 
+    # For short tests, include the full body (more useful)
+    if len(relevant_lines) < 5 and len(lines) <= max_lines:
+        result = "\n".join(lines)
+    else:
+        result = "\n".join(relevant_lines)
+
     # Clean up indentation
-    result = "\n".join(relevant_lines)
     try:
         result = dedent(result)
     except TypeError:
@@ -269,7 +341,7 @@ def extract_examples_for_entities(
     examples: list[UsageExample] = []
     entity_counts: dict[str, int] = {}
 
-    for func_node in test_functions:
+    for func_node, class_name in test_functions:
         body = _get_function_body(func_node, source)
 
         # Skip mock-heavy tests
@@ -293,10 +365,13 @@ def extract_examples_for_entities(
             test_name = _get_function_name(func_node, source)
             docstring = _get_docstring(func_node, source)
 
+            # Format test name with class if from a test class
+            full_test_name = f"{class_name}::{test_name}" if class_name else test_name
+
             examples.append(
                 UsageExample(
                     entity_name=entity_name,
-                    test_name=test_name,
+                    test_name=full_test_name,
                     test_file=str(test_file.name),
                     code=snippet,
                     description=docstring,
@@ -354,6 +429,7 @@ def get_file_examples(
     """Get formatted usage examples for a source file.
 
     This is the main entry point for the wiki generator.
+    Searches all matching test files for usage examples.
 
     Args:
         source_file: Path to the source file being documented.
@@ -368,10 +444,10 @@ def get_file_examples(
     if not source_file.suffix == ".py":
         return None
 
-    # Find the corresponding test file
-    test_file = find_test_file(source_file, repo_root)
-    if test_file is None:
-        logger.debug(f"No test file found for {source_file}")
+    # Find all corresponding test files
+    test_files = find_test_files(source_file, repo_root)
+    if not test_files:
+        logger.debug(f"No test files found for {source_file}")
         return None
 
     # Filter to meaningful entity names (skip short ones)
@@ -379,17 +455,30 @@ def get_file_examples(
     if not entity_names:
         return None
 
-    # Extract examples
-    examples = extract_examples_for_entities(
-        test_file=test_file,
-        entity_names=entity_names,
-        max_examples_per_entity=2,
-    )
+    # Extract examples from all test files
+    all_examples: list[UsageExample] = []
+    for test_file in test_files:
+        examples = extract_examples_for_entities(
+            test_file=test_file,
+            entity_names=entity_names,
+            max_examples_per_entity=2,
+        )
+        all_examples.extend(examples)
 
-    if not examples:
-        logger.debug(f"No examples found in {test_file}")
+    if not all_examples:
+        logger.debug(f"No examples found in {len(test_files)} test file(s)")
         return None
 
-    logger.info(f"Found {len(examples)} usage examples from {test_file.name}")
+    # Deduplicate by entity_name + code (same example from different sources)
+    seen: set[tuple[str, str]] = set()
+    unique_examples: list[UsageExample] = []
+    for ex in all_examples:
+        key = (ex.entity_name, ex.code)
+        if key not in seen:
+            seen.add(key)
+            unique_examples.append(ex)
 
-    return format_examples_markdown(examples, max_examples=max_examples)
+    test_names = [tf.name for tf in test_files]
+    logger.info(f"Found {len(unique_examples)} usage examples from {', '.join(test_names)}")
+
+    return format_examples_markdown(unique_examples, max_examples=max_examples)

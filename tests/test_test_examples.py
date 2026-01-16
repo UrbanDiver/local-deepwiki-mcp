@@ -9,6 +9,7 @@ from local_deepwiki.generators.test_examples import (
     UsageExample,
     extract_examples_for_entities,
     find_test_file,
+    find_test_files,
     format_examples_markdown,
     get_file_examples,
 )
@@ -64,6 +65,126 @@ class TestFindTestFile:
 
         result = find_test_file(test_file, tmp_path)
         assert result is None
+
+
+class TestFindTestFiles:
+    """Tests for find_test_files function (plural)."""
+
+    def test_finds_multiple_test_files(self, tmp_path: Path) -> None:
+        """Test finding multiple test files for one source file."""
+        source_file = tmp_path / "handlers.py"
+        source_file.write_text("# source")
+
+        tests_dir = tmp_path / "tests"
+        tests_dir.mkdir()
+
+        # Create multiple test files
+        (tests_dir / "test_handlers.py").write_text("# main test")
+        (tests_dir / "test_handlers_coverage.py").write_text("# coverage test")
+
+        result = find_test_files(source_file, tmp_path)
+        assert len(result) == 2
+        names = {f.name for f in result}
+        assert "test_handlers.py" in names
+        assert "test_handlers_coverage.py" in names
+
+    def test_finds_variant_test_files(self, tmp_path: Path) -> None:
+        """Test finding test file variants with suffixes."""
+        source_file = tmp_path / "wiki.py"
+        source_file.write_text("# source")
+
+        tests_dir = tmp_path / "tests"
+        tests_dir.mkdir()
+
+        # Create variant test files
+        (tests_dir / "test_wiki_pages.py").write_text("# pages test")
+        (tests_dir / "test_wiki_modules.py").write_text("# modules test")
+
+        result = find_test_files(source_file, tmp_path)
+        assert len(result) >= 2
+
+    def test_returns_empty_for_no_matches(self, tmp_path: Path) -> None:
+        """Test returns empty list when no test files found."""
+        source_file = tmp_path / "unique.py"
+        source_file.write_text("# source")
+
+        tests_dir = tmp_path / "tests"
+        tests_dir.mkdir()
+        (tests_dir / "test_other.py").write_text("# other test")
+
+        result = find_test_files(source_file, tmp_path)
+        assert result == []
+
+
+class TestExtractFromTestClasses:
+    """Tests for extracting examples from test classes."""
+
+    def test_extracts_from_test_class_methods(self, tmp_path: Path) -> None:
+        """Test extracting examples from methods in Test* classes."""
+        test_file = tmp_path / "test_example.py"
+        test_file.write_text(
+            dedent(
+                '''
+            class TestMyClass:
+                """Tests for MyClass."""
+
+                def test_creation(self):
+                    """Test creating an instance."""
+                    obj = MyClass(name="test")
+                    assert obj.name == "test"
+
+                def test_method_call(self):
+                    """Test calling a method."""
+                    obj = MyClass(name="foo")
+                    result = obj.process()
+                    assert result == "processed"
+        '''
+            ).strip()
+        )
+
+        examples = extract_examples_for_entities(
+            test_file,
+            entity_names=["MyClass"],
+            max_examples_per_entity=3,
+        )
+
+        assert len(examples) == 2
+        # Check that class context is included in test names
+        assert "TestMyClass::" in examples[0].test_name
+        assert "TestMyClass::" in examples[1].test_name
+
+    def test_mixes_class_and_standalone_tests(self, tmp_path: Path) -> None:
+        """Test extracting from both class methods and standalone functions."""
+        test_file = tmp_path / "test_example.py"
+        test_file.write_text(
+            dedent(
+                '''
+            def test_standalone():
+                """Standalone test."""
+                result = process_data("input")
+                assert result == "output"
+
+            class TestProcess:
+                """Tests for process_data."""
+
+                def test_in_class(self):
+                    """Class method test."""
+                    result = process_data("other")
+                    assert result is not None
+        '''
+            ).strip()
+        )
+
+        examples = extract_examples_for_entities(
+            test_file,
+            entity_names=["process_data"],
+            max_examples_per_entity=3,
+        )
+
+        assert len(examples) == 2
+        test_names = [e.test_name for e in examples]
+        assert "test_standalone" in test_names
+        assert "TestProcess::test_in_class" in test_names
 
 
 class TestExtractExamplesForEntities:
