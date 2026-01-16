@@ -2,43 +2,61 @@
 
 ## Module Purpose
 
-The `src` module contains the core implementation of a documentation generation system that processes code files and generates wiki-style documentation. Based on the code shown, this system can parse code structures, generate module documentation, create diagrams, and manage project manifests.
+The `src` module contains the core functionality for Local DeepWiki, a documentation generation system. Based on the code shown, this module provides capabilities for parsing code into chunks, generating wiki documentation, managing project manifests, and creating source reference mappings.
 
 ## Key Classes and Functions
 
-### Core Processing
+### Core Components
 
-#### CodeChunk Creation
-The `_create_module_chunk` method in the chunker module creates documentation chunks for module/file overviews by processing AST nodes and source code.
+#### CodeChunk Creation (`core/chunker.py`)
 
-#### Path to Module Conversion
-The `_path_to_module` function converts file paths (like `src/local_deepwiki/core/indexer.py`) into module names (like `core.indexer`). It filters out non-Python files and special files starting with double underscores.
+The chunker module contains methods for creating structured code chunks:
 
-### Documentation Generation
+- **_create_module_chunk** - Creates a chunk representing a module or file overview by processing AST root nodes and source code
 
-#### Module Index Generation
-The `_generate_modules_index` function creates an index page for modules by processing a list of [WikiPage](../files/src/local_deepwiki/models.md) objects and generating markdown content.
+#### Project Manifest Management (`generators/manifest.py`)
 
-#### Source References
-The source_refs module provides functionality to build mappings between files and wiki pages, and can add source reference sections to documentation.
+The manifest module handles project configuration and metadata:
 
-### Project Management
+- **[ManifestCacheEntry](../files/src/local_deepwiki/generators/manifest.md)** - Data class for caching manifest information
+- **[ProjectManifest](../files/src/local_deepwiki/generators/manifest.md)** - Main class representing project configuration and metadata
+- **_get_manifest_mtimes** - Retrieves modification times for manifest files
+- **_is_cache_valid** - Validates whether cached manifest data is still current
+- **_load_manifest_cache** - Loads cached manifest data from storage
+- **_save_** - Saves manifest data (function name truncated in context)
 
-#### ManifestCacheEntry and ProjectManifest Classes
-The manifest module contains classes for managing project metadata and caching information, supporting both TOML parsing libraries (`tomllib` and `tomli`).
+#### Wiki Generation (`generators/wiki_modules.py`)
 
-#### Cache Management Functions
-Several functions handle manifest caching including `_get_manifest_mtimes`, `_is_cache_valid`, `_load_manifest_cache`, and `_save_` (function name appears truncated in the provided context).
+Functions for generating wiki documentation:
+
+- **_generate_modules_index** - Creates an index page listing all module documentation pages
+
+#### Source References (`generators/source_refs.py`)
+
+Tools for managing source code references in wiki pages:
+
+- **[build_file_to_wiki_map](../files/src/local_deepwiki/generators/see_also.md)** - Creates mapping between source files and wiki pages
+- **_relative_path** - Converts file paths to relative format
+- **_format_file_entry** - Formats file entries for display
+- **[generate_source_refs_section](../files/src/local_deepwiki/generators/source_refs.md)** - Generates source reference sections for wiki pages
+- **_strip_existing_source_refs** - Removes existing source reference sections
+- **[add_source_refs_sections](../files/src/local_deepwiki/generators/source_refs.md)** - Adds source reference sections to wiki pages
+
+#### Utility Functions (`generators/diagrams.py`)
+
+Helper functions for processing file paths:
+
+- **_path_to_module** - Converts file paths to module names, filtering out non-Python files and special files starting with `__`
 
 ## How Components Interact
 
-The system follows a pipeline approach:
+The components work together to create a documentation generation pipeline:
 
-1. **Path Processing**: File paths are converted to module names using `_path_to_module`
-2. **Code Parsing**: The chunker processes source code and creates [CodeChunk](../files/src/local_deepwiki/models.md) objects for modules
-3. **Wiki Generation**: Module pages are generated and indexed using `_generate_modules_index`
-4. **Reference Linking**: The source_refs module builds mappings between source files and wiki pages
-5. **Project Metadata**: The manifest system manages project configuration and caching
+1. The **chunker** processes source code files and creates structured code chunks for analysis
+2. The **manifest** system manages project configuration and caches metadata for performance
+3. The **wiki_modules** generator creates organized documentation pages from the processed chunks
+4. The **source_refs** system maintains bidirectional links between source files and generated documentation
+5. Utility functions like **_path_to_module** provide common path processing functionality across generators
 
 ## Usage Examples
 
@@ -60,40 +78,41 @@ result = _path_to_module("README.md")
 
 ```python
 from local_deepwiki.generators.wiki_modules import _generate_modules_index
-from local_deepwiki.models import WikiPage
 
-# Create module pages list
-module_pages = [
-    WikiPage(path="modules/core.md", title="Core Module"),
-    WikiPage(path="modules/generators.md", title="Generators Module")
-]
-
-# Generate index content
+# Generate index from module pages
+module_pages = [...]  # List of WikiPage objects
 index_content = _generate_modules_index(module_pages)
-# Returns markdown content with module links
+# Returns markdown content for the modules index
 ```
 
-### Building Source Reference Maps
+### Building File-to-Wiki Mappings
 
 ```python
 from local_deepwiki.generators.source_refs import build_file_to_wiki_map
-from local_deepwiki.models import WikiPage
 
-wiki_pages = [WikiPage(path="api/core.md", title="Core API")]
-file_map = build_file_to_wiki_map(wiki_pages)
+# Create mapping between source files and wiki pages
+file_map = build_file_to_wiki_map(wiki_pages, source_files)
 ```
 
 ## Dependencies
 
 Based on the imports shown, this module depends on:
 
-- **Standard Library**: `json`, `re`, `pathlib.Path`, `dataclasses`, `typing`
-- **TOML Parsing**: `tomllib` and `tomli` (with fallback handling)
-- **Internal Modules**: 
-  - `local_deepwiki.logging` (for logging functionality)
-  - `local_deepwiki.models` (for [WikiPage](../files/src/local_deepwiki/models.md) and [WikiPageStatus](../files/src/local_deepwiki/models.md) classes)
+### Standard Library
+- `json` - JSON data handling
+- `re` - Regular expressions
+- `pathlib.Path` - Path manipulation
+- `dataclasses` - Data class definitions
+- `typing` - Type annotations
 
-The module structure suggests a modular design with clear separation between core processing, generation, and utility functions.
+### TOML Processing
+- `tomllib` / `tomli` - TOML configuration file parsing (with fallback support)
+
+### Internal Dependencies
+- `local_deepwiki.logging` - Logging functionality via [get_logger](../files/src/local_deepwiki/logging.md)
+- `local_deepwiki.models` - Data models including [WikiPage](../files/src/local_deepwiki/models.md) and [WikiPageStatus](../files/src/local_deepwiki/models.md)
+
+The module uses conditional imports for TOML processing to handle different Python versions and available libraries.
 
 ## Relevant Source Files
 
@@ -108,7 +127,7 @@ The following source files were used to generate this documentation:
 - [`src/local_deepwiki/watcher.py:35-235`](../files/src/local_deepwiki/watcher.md)
 - [`src/local_deepwiki/validation.py:22-42`](../files/src/local_deepwiki/validation.md)
 - `src/local_deepwiki/tools/__init__.py`
-- [`src/local_deepwiki/core/chunker.py:200-600`](../files/src/local_deepwiki/core/chunker.md)
+- [`src/local_deepwiki/core/chunker.py:498-906`](../files/src/local_deepwiki/core/chunker.md)
 
 
 *Showing 10 of 52 source files.*

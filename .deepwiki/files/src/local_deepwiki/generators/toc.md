@@ -1,35 +1,37 @@
 # Table of Contents Generator
 
+This module provides functionality for generating and managing hierarchical, numbered table of contents for wiki documentation.
+
 ## File Overview
 
-The `toc.py` file provides functionality for generating, reading, and writing hierarchical table of contents structures for wiki documentation. It creates numbered sections and entries that can be serialized to and from JSON format.
+The `toc.py` module handles the creation, serialization, and deserialization of structured table of contents data. It generates numbered entries organized hierarchically based on wiki page structure, with support for fixed ordering of root pages and sections.
 
 ## Classes
 
 ### TocEntry
 
-A single entry in the table of contents representing a page or section.
+A single entry in the table of contents representing a wiki page or section.
 
 **Attributes:**
-- `number`: String representing the hierarchical numbering (e.g., "1.2.3")
-- `title`: Display title for the entry
-- `path`: File path to the content
-- `children`: List of child TocEntry objects for nested structure
+- `number` (str): The hierarchical number (e.g., "1.2.3")
+- `title` (str): Display title of the entry
+- `path` (str): File path to the wiki page
+- `children` (list[TocEntry]): Child entries for hierarchical structure
 
 **Methods:**
-- `to_dict()`: Converts the entry to a dictionary for JSON serialization, including recursive conversion of children
+- `to_dict()`: Converts the entry to a dictionary for JSON serialization, including nested children
 
 ### TableOfContents
 
-The [main](../export/pdf.md) container class for a hierarchical table of contents structure.
+Container for the complete hierarchical table of contents structure.
 
 **Attributes:**
-- `entries`: List of top-level TocEntry objects
+- `entries` (list[TocEntry]): Top-level table of contents entries
 
 **Methods:**
 - `to_dict()`: Converts the entire table of contents to a dictionary
-- `to_json(indent=2)`: Serializes to a JSON string with optional indentation
-- `from_dict(data)`: Class method to create a TableOfContents instance from a dictionary
+- `to_json(indent=2)`: Serializes to JSON string with specified indentation
+- `from_dict(data)`: Class method to create a TableOfContents instance from dictionary data
 
 ## Functions
 
@@ -39,15 +41,15 @@ The [main](../export/pdf.md) container class for a hierarchical table of content
 def generate_toc(pages: list[dict[str, str]]) -> TableOfContents
 ```
 
-Generates a hierarchical numbered table of contents from a list of wiki pages.
+Generates a hierarchical numbered table of contents from wiki pages.
 
 **Parameters:**
-- `pages`: List of dictionaries containing 'path' and 'title' keys
+- `pages`: List of dictionaries containing 'path' and 'title' keys for each wiki page
 
 **Returns:**
 - TableOfContents object with numbered entries organized hierarchically
 
-The function implements a fixed ordering system with predefined root pages and section organization.
+The function applies fixed ordering for root pages (index.md, architecture.md, dependencies.md) and sections (modules, files).
 
 ### write_toc
 
@@ -55,11 +57,11 @@ The function implements a fixed ordering system with predefined root pages and s
 def write_toc(toc: TableOfContents, wiki_path: Path) -> None
 ```
 
-Writes a table of contents to a `toc.json` file in the specified wiki directory.
+Writes a table of contents to a `toc.json` file in the wiki directory.
 
 **Parameters:**
-- `toc`: The TableOfContents object to write
-- `wiki_path`: Path to the wiki directory where the file will be saved
+- `toc`: The TableOfContents object to serialize
+- `wiki_path`: Path to the wiki directory where `toc.json` will be created
 
 ### read_toc
 
@@ -67,15 +69,15 @@ Writes a table of contents to a `toc.json` file in the specified wiki directory.
 def read_toc(wiki_path: Path) -> TableOfContents | None
 ```
 
-Reads a table of contents from a `toc.json` file in the wiki directory.
+Reads and deserializes a table of contents from `toc.json` file.
 
 **Parameters:**
-- `wiki_path`: Path to the wiki directory containing the toc.json file
+- `wiki_path`: Path to the wiki directory containing `toc.json`
 
 **Returns:**
-- TableOfContents object if the file exists and is valid, None otherwise
+- TableOfContents object if file exists and is valid, None otherwise
 
-The function handles missing files and JSON parsing errors gracefully by returning None.
+Handles missing files and JSON parsing errors gracefully by returning None.
 
 ## Usage Examples
 
@@ -87,39 +89,44 @@ from pathlib import Path
 # Generate TOC from page data
 pages = [
     {"path": "index.md", "title": "Overview"},
-    {"path": "modules/example.md", "title": "Example Module"}
+    {"path": "modules/parser.md", "title": "Parser Module"}
 ]
 toc = generate_toc(pages)
 
 # Write to file
-wiki_path = Path("my_wiki")
+wiki_path = Path("./wiki")
 write_toc(toc, wiki_path)
 ```
 
 ### Reading an Existing Table of Contents
 
 ```python
-# Read existing TOC
+from pathlib import Path
+
+wiki_path = Path("./wiki")
 toc = read_toc(wiki_path)
 if toc:
-    # Convert to JSON for inspection
     json_output = toc.to_json()
-    print(json_output)
 ```
 
-### Working with TOC Entries
+### Working with TocEntry Objects
 
 ```python
-# Access TOC structure
-for entry in toc.entries:
-    print(f"{entry.number}: {entry.title} ({entry.path})")
-    for child in entry.children:
-        print(f"  {child.number}: {child.title}")
+# Access entry data
+entry = TocEntry(
+    number="1.1",
+    title="Getting Started",
+    path="guide/getting-started.md"
+)
+entry_dict = entry.to_dict()
 ```
 
 ## Related Components
 
-This module works with standard Python libraries including `json` for serialization, `dataclasses` for data structure definitions, and `pathlib` for file system operations. The module is designed to integrate with wiki generation systems that provide page metadata in dictionary format.
+This module works with:
+- `json` module for serialization/deserialization
+- `pathlib.Path` for file system operations
+- `dataclass` and `field` from dataclasses for data structure definition
 
 ## API Reference
 
@@ -131,7 +138,7 @@ A single entry in the table of contents.
 
 
 <details>
-<summary>View Source (lines 10-27) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/toc.py#L10-L27">GitHub</a></summary>
+<summary>View Source (lines 10-27) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/toc.py#L10-L27">GitHub</a></summary>
 
 ```python
 class TocEntry:
@@ -167,7 +174,7 @@ Convert to dictionary for JSON serialization.
 
 
 <details>
-<summary>View Source (lines 10-27) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/toc.py#L10-L27">GitHub</a></summary>
+<summary>View Source (lines 10-27) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/toc.py#L10-L27">GitHub</a></summary>
 
 ```python
 class TocEntry:
@@ -200,7 +207,7 @@ Hierarchical table of contents with numbered sections.
 
 
 <details>
-<summary>View Source (lines 31-63) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/toc.py#L31-L63">GitHub</a></summary>
+<summary>View Source (lines 31-63) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/toc.py#L31-L63">GitHub</a></summary>
 
 ```python
 class TableOfContents:
@@ -250,7 +257,7 @@ Convert to dictionary for JSON serialization.
 
 
 <details>
-<summary>View Source (lines 31-63) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/toc.py#L31-L63">GitHub</a></summary>
+<summary>View Source (lines 31-63) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/toc.py#L31-L63">GitHub</a></summary>
 
 ```python
 class TableOfContents:
@@ -305,7 +312,7 @@ Convert to JSON string.
 
 
 <details>
-<summary>View Source (lines 31-63) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/toc.py#L31-L63">GitHub</a></summary>
+<summary>View Source (lines 31-63) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/toc.py#L31-L63">GitHub</a></summary>
 
 ```python
 class TableOfContents:
@@ -360,7 +367,7 @@ Create from dictionary.
 
 
 <details>
-<summary>View Source (lines 31-63) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/toc.py#L31-L63">GitHub</a></summary>
+<summary>View Source (lines 31-63) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/toc.py#L31-L63">GitHub</a></summary>
 
 ```python
 class TableOfContents:
@@ -413,7 +420,7 @@ def parse_entry(entry_data: dict[str, Any]) -> TocEntry
 
 
 <details>
-<summary>View Source (lines 31-63) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/toc.py#L31-L63">GitHub</a></summary>
+<summary>View Source (lines 31-63) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/toc.py#L31-L63">GitHub</a></summary>
 
 ```python
 class TableOfContents:
@@ -471,7 +478,7 @@ Create from JSON string.
 
 
 <details>
-<summary>View Source (lines 31-63) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/toc.py#L31-L63">GitHub</a></summary>
+<summary>View Source (lines 31-63) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/toc.py#L31-L63">GitHub</a></summary>
 
 ```python
 class TableOfContents:
@@ -531,7 +538,7 @@ Generate hierarchical numbered table of contents from wiki pages.
 
 
 <details>
-<summary>View Source (lines 66-130) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/toc.py#L66-L130">GitHub</a></summary>
+<summary>View Source (lines 66-130) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/toc.py#L66-L130">GitHub</a></summary>
 
 ```python
 def generate_toc(pages: list[dict[str, str]]) -> TableOfContents:
@@ -622,7 +629,7 @@ Write table of contents to toc.json file.
 
 
 <details>
-<summary>View Source (lines 243-251) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/toc.py#L243-L251">GitHub</a></summary>
+<summary>View Source (lines 243-251) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/toc.py#L243-L251">GitHub</a></summary>
 
 ```python
 def write_toc(toc: TableOfContents, wiki_path: Path) -> None:
@@ -657,7 +664,7 @@ Read table of contents from toc.json file.
 
 
 <details>
-<summary>View Source (lines 254-270) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/toc.py#L254-L270">GitHub</a></summary>
+<summary>View Source (lines 254-270) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/toc.py#L254-L270">GitHub</a></summary>
 
 ```python
 def read_toc(wiki_path: Path) -> TableOfContents | None:
@@ -857,7 +864,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_build_section_tree`
 
 <details>
-<summary>View Source (lines 133-186) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/toc.py#L133-L186">GitHub</a></summary>
+<summary>View Source (lines 133-186) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/toc.py#L133-L186">GitHub</a></summary>
 
 ```python
 def _build_section_tree(
@@ -922,7 +929,7 @@ def _build_section_tree(
 #### `_tree_to_entries`
 
 <details>
-<summary>View Source (lines 189-240) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/toc.py#L189-L240">GitHub</a></summary>
+<summary>View Source (lines 189-240) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/toc.py#L189-L240">GitHub</a></summary>
 
 ```python
 def _tree_to_entries(
@@ -987,6 +994,7 @@ def _tree_to_entries(
 
 ## See Also
 
+- [wiki](wiki.md) - uses this
 - [vectorstore](../core/vectorstore.md) - shares 3 dependencies
 - [models](../models.md) - shares 3 dependencies
 - [crosslinks](crosslinks.md) - shares 2 dependencies

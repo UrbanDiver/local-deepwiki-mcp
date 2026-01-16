@@ -1,48 +1,42 @@
-# OpenAI Provider Module
+# OpenAI LLM Provider
 
 ## File Overview
 
-This module provides an OpenAI-based implementation of the LLM provider interface for the local_deepwiki system. It implements the [LLMProvider](../base.md) base class to enable integration with OpenAI's language models through their AsyncOpenAI client.
+This module provides an OpenAI-based implementation of the LLM provider interface. It integrates with the OpenAI API to deliver language model capabilities within the local_deepwiki system.
+
+## Dependencies
+
+The module relies on the following key dependencies:
+
+- `openai.AsyncOpenAI` - Asynchronous OpenAI client
+- `openai.types.chat.ChatCompletionMessageParam` - Type definitions for chat completion messages
+- [`local_deepwiki.providers.base.LLMProvider`](../base.md) - Base provider interface
+- [`local_deepwiki.providers.base.with_retry`](../base.md) - Retry [decorator](../base.md) functionality
+- [`local_deepwiki.logging.get_logger`](../../logging.md) - Logging utilities
 
 ## Classes
 
 ### OpenAILLMProvider
 
-The OpenAILLMProvider class serves as the concrete implementation of the [LLMProvider](../base.md) interface for OpenAI's language models. This class handles authentication and communication with OpenAI's API services.
+The OpenAILLMProvider class implements the LLM provider interface specifically for OpenAI's language models. This class serves as the bridge between the local_deepwiki system and OpenAI's API services.
 
-**Inheritance**: Extends [LLMProvider](../base.md) base class
+**Note**: The complete implementation details of this class are not visible in the provided code snippet, but it inherits from or implements the [LLMProvider](../base.md) base class and utilizes the [with_retry](../base.md) [decorator](../base.md) for robust API interactions.
 
-**Key Features**:
-- Asynchronous OpenAI API integration
-- Built-in retry mechanism through the [with_retry](../base.md) [decorator](../base.md)
-- Environment-based configuration support
+## Type Definitions
 
-## Dependencies
+The module imports `ChatCompletionMessageParam` from OpenAI's type system, indicating it works with structured chat completion message formats as defined by the OpenAI API specification.
 
-The module relies on several key dependencies:
+## Error Handling and Reliability
 
-- **openai**: Official OpenAI Python client library for API communication
-- **AsyncOpenAI**: Asynchronous client for non-blocking API calls
-- **ChatCompletionMessageParam**: Type definitions for chat completion messages
-- **[LLMProvider](../base.md)**: Base provider interface from the local_deepwiki framework
-- **[with_retry](../base.md)**: Retry [decorator](../base.md) for handling transient failures
-- **[get_logger](../../logging.md)**: Logging utility for the application
+The module imports the [`with_retry`](../base.md) [decorator](../base.md) from the base providers module, suggesting it implements retry logic for handling API failures and ensuring reliable communication with OpenAI services.
 
 ## Related Components
 
-This module integrates with the following components from the local_deepwiki system:
+This module integrates with several other components in the local_deepwiki system:
 
-- **[LLMProvider](../base.md)**: The base class that defines the provider interface
-- **Logging system**: Uses the application's logging infrastructure
-- **Retry mechanism**: Leverages the shared retry functionality for robust API calls
-
-## Environment Configuration
-
-The module uses the `os` module, suggesting it likely reads configuration from environment variables for API authentication and settings.
-
-## Usage Context
-
-This provider implementation enables the local_deepwiki system to utilize OpenAI's language models for text generation tasks. It follows the established provider pattern, allowing for easy swapping between different LLM backends while maintaining a consistent interface.
+- **[LLMProvider](../base.md)**: The base provider interface that defines the contract for language model providers
+- **Logging system**: Uses the centralized logging utilities for monitoring and debugging
+- **Retry mechanisms**: Leverages shared retry functionality for robust API interactions
 
 ## API Reference
 
@@ -56,7 +50,7 @@ LLM provider using OpenAI API.
 
 
 <details>
-<summary>View Source (lines 15-102) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/providers/llm/openai.py#L15-L102">GitHub</a></summary>
+<summary>View Source (lines 15-102) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/providers/llm/openai.py#L15-L102">GitHub</a></summary>
 
 ```python
 class OpenAILLMProvider(LLMProvider):
@@ -167,7 +161,7 @@ Initialize the OpenAI provider.
 
 
 <details>
-<summary>View Source (lines 15-102) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/providers/llm/openai.py#L15-L102">GitHub</a></summary>
+<summary>View Source (lines 15-102) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/providers/llm/openai.py#L15-L102">GitHub</a></summary>
 
 ```python
 class OpenAILLMProvider(LLMProvider):
@@ -280,7 +274,7 @@ Generate text from a prompt.
 
 
 <details>
-<summary>View Source (lines 15-102) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/providers/llm/openai.py#L15-L102">GitHub</a></summary>
+<summary>View Source (lines 15-102) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/providers/llm/openai.py#L15-L102">GitHub</a></summary>
 
 ```python
 class OpenAILLMProvider(LLMProvider):
@@ -393,7 +387,7 @@ Generate text from a prompt with streaming.
 
 
 <details>
-<summary>View Source (lines 15-102) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/providers/llm/openai.py#L15-L102">GitHub</a></summary>
+<summary>View Source (lines 15-102) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/providers/llm/openai.py#L15-L102">GitHub</a></summary>
 
 ```python
 class OpenAILLMProvider(LLMProvider):
@@ -500,7 +494,7 @@ Get the provider name.
 
 
 <details>
-<summary>View Source (lines 15-102) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/providers/llm/openai.py#L15-L102">GitHub</a></summary>
+<summary>View Source (lines 15-102) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/providers/llm/openai.py#L15-L102">GitHub</a></summary>
 
 ```python
 class OpenAILLMProvider(LLMProvider):

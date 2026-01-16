@@ -1,49 +1,49 @@
-# VectorStore Module
+# vectorstore.py
 
 ## File Overview
 
-The `vectorstore.py` module provides vector database functionality for storing and retrieving code chunks with semantic embeddings. It uses LanceDB as the underlying vector database and integrates with embedding providers to enable semantic search across code documentation.
+The `vectorstore.py` module provides vector storage functionality for the local_deepwiki system using LanceDB as the underlying database. It handles storage and retrieval of code chunks with their embeddings for semantic search capabilities.
 
 ## Classes
 
 ### VectorStore
 
-The VectorStore class manages the vector database operations for storing and searching code chunks with their embeddings.
+The VectorStore class manages vector storage operations for code chunks, providing functionality to store embeddings and perform similarity searches.
 
-**Purpose**: Handles vector storage, retrieval, and semantic search operations for code chunks using LanceDB as the backend database.
+**Purpose**: Handles vector database operations including storing code chunks with embeddings and performing semantic searches.
 
-**Key Dependencies**:
-- Uses `lancedb` for vector database operations
+**Dependencies**: 
+- Uses LanceDB for vector storage
 - Integrates with [EmbeddingProvider](../providers/base.md) for generating embeddings
-- Works with [CodeChunk](../models.md) and [SearchResult](../models.md) models for data representation
+- Works with [CodeChunk](../models.md) and [SearchResult](../models.md) models
 
 ## Functions
 
 ### _sanitize_string_value
 
-A utility function for sanitizing string values, likely used for data cleaning before database operations.
+A utility function for sanitizing string values, likely used for data cleaning before storage operations.
 
 ## Related Components
 
-This module integrates with several other components in the system:
+This module integrates with several other components of the local_deepwiki system:
 
-- **[EmbeddingProvider](../providers/base.md)**: Used for generating vector embeddings of code content
-- **[CodeChunk](../models.md)**: Data model representing code chunks that are stored in the vector database
-- **[SearchResult](../models.md)**: Data model for returning search results from vector queries
-- **[ChunkType](../models.md)** and **[Language](../models.md)**: Enums used for categorizing and filtering stored content
+- **[EmbeddingProvider](../providers/base.md)**: Base class for embedding generation services
+- **[CodeChunk](../models.md)**: Model representing code segments with metadata
+- **[SearchResult](../models.md)**: Model for search operation results
+- **[ChunkType](../models.md)**: Enumeration for different types of code chunks
+- **[Language](../models.md)**: Enumeration for programming languages
 
-The module also uses the logging system through [`get_logger`](../logging.md) for operational logging.
+The module uses LanceDB as the vector database backend and includes logging functionality through the local_deepwiki logging system.
 
 ## Usage Context
 
-Based on the imports and class structure, this module serves as a core component for:
+Based on the imports and class structure, this module serves as the core vector storage layer for the local_deepwiki system, enabling semantic search capabilities over code chunks by:
 
-1. Storing code chunks with their vector embeddings in LanceDB
-2. Performing semantic search queries across stored code content
-3. Managing vector database operations with proper data sanitization
-4. Integrating with the broader documentation generation system
+1. Storing code chunks with their vector embeddings
+2. Performing similarity searches to [find](../generators/manifest.md) relevant code
+3. Managing the vector database connection and operations
 
-The VectorStore class appears to be a central component that bridges the gap between raw code content and semantic search capabilities in the local deepwiki system.
+The integration with the [EmbeddingProvider](../providers/base.md) suggests this module works in conjunction with embedding generation services to create searchable vector representations of code.
 
 ## API Reference
 
@@ -55,7 +55,7 @@ Vector store using LanceDB for code chunk storage and semantic search.
 
 
 <details>
-<summary>View Source (lines 37-388) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/vectorstore.py#L37-L388">GitHub</a></summary>
+<summary>View Source (lines 37-388) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/vectorstore.py#L37-L388">GitHub</a></summary>
 
 ```python
 class VectorStore:
@@ -80,7 +80,7 @@ Initialize the vector store.
 
 
 <details>
-<summary>View Source (lines 42-52) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/vectorstore.py#L42-L52">GitHub</a></summary>
+<summary>View Source (lines 42-52) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/vectorstore.py#L42-L52">GitHub</a></summary>
 
 ```python
 def __init__(self, db_path: Path, embedding_provider: EmbeddingProvider):
@@ -113,7 +113,7 @@ Create or update the vector table with code chunks.
 
 
 <details>
-<summary>View Source (lines 130-164) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/vectorstore.py#L130-L164">GitHub</a></summary>
+<summary>View Source (lines 130-164) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/vectorstore.py#L130-L164">GitHub</a></summary>
 
 ```python
 async def create_or_update_table(self, chunks: list[CodeChunk]) -> int:
@@ -170,7 +170,7 @@ Add chunks to existing table.
 
 
 <details>
-<summary>View Source (lines 166-193) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/vectorstore.py#L166-L193">GitHub</a></summary>
+<summary>View Source (lines 166-193) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/vectorstore.py#L166-L193">GitHub</a></summary>
 
 ```python
 async def add_chunks(self, chunks: list[CodeChunk]) -> int:
@@ -223,7 +223,7 @@ Search for similar code chunks.
 
 
 <details>
-<summary>View Source (lines 195-255) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/vectorstore.py#L195-L255">GitHub</a></summary>
+<summary>View Source (lines 195-255) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/vectorstore.py#L195-L255">GitHub</a></summary>
 
 ```python
 async def search(
@@ -306,7 +306,7 @@ Get a specific chunk by ID.
 
 
 <details>
-<summary>View Source (lines 257-275) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/vectorstore.py#L257-L275">GitHub</a></summary>
+<summary>View Source (lines 257-275) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/vectorstore.py#L257-L275">GitHub</a></summary>
 
 ```python
 async def get_chunk_by_id(self, chunk_id: str) -> CodeChunk | None:
@@ -347,7 +347,7 @@ Get all chunks for a specific file.
 
 
 <details>
-<summary>View Source (lines 277-292) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/vectorstore.py#L277-L292">GitHub</a></summary>
+<summary>View Source (lines 277-292) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/vectorstore.py#L277-L292">GitHub</a></summary>
 
 ```python
 async def get_chunks_by_file(self, file_path: str) -> list[CodeChunk]:
@@ -385,7 +385,7 @@ Delete all chunks for a specific file.
 
 
 <details>
-<summary>View Source (lines 294-316) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/vectorstore.py#L294-L316">GitHub</a></summary>
+<summary>View Source (lines 294-316) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/vectorstore.py#L294-L316">GitHub</a></summary>
 
 ```python
 async def delete_chunks_by_file(self, file_path: str) -> int:
@@ -427,7 +427,7 @@ Get statistics about the vector store.
 
 
 <details>
-<summary>View Source (lines 318-336) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/vectorstore.py#L318-L336">GitHub</a></summary>
+<summary>View Source (lines 318-336) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/vectorstore.py#L318-L336">GitHub</a></summary>
 
 ```python
 def get_stats(self) -> dict[str, Any]:
@@ -656,7 +656,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_sanitize_string_value`
 
 <details>
-<summary>View Source (lines 22-34) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/vectorstore.py#L22-L34">GitHub</a></summary>
+<summary>View Source (lines 22-34) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/vectorstore.py#L22-L34">GitHub</a></summary>
 
 ```python
 def _sanitize_string_value(value: str) -> str:
@@ -680,7 +680,7 @@ def _sanitize_string_value(value: str) -> str:
 #### `_connect`
 
 <details>
-<summary>View Source (lines 54-59) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/vectorstore.py#L54-L59">GitHub</a></summary>
+<summary>View Source (lines 54-59) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/vectorstore.py#L54-L59">GitHub</a></summary>
 
 ```python
 def _connect(self) -> lancedb.DBConnection:
@@ -697,7 +697,7 @@ def _connect(self) -> lancedb.DBConnection:
 #### `_get_table`
 
 <details>
-<summary>View Source (lines 61-69) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/vectorstore.py#L61-L69">GitHub</a></summary>
+<summary>View Source (lines 61-69) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/vectorstore.py#L61-L69">GitHub</a></summary>
 
 ```python
 def _get_table(self) -> Table | None:
@@ -717,7 +717,7 @@ def _get_table(self) -> Table | None:
 #### `_ensure_scalar_indexes`
 
 <details>
-<summary>View Source (lines 71-101) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/vectorstore.py#L71-L101">GitHub</a></summary>
+<summary>View Source (lines 71-101) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/vectorstore.py#L71-L101">GitHub</a></summary>
 
 ```python
 def _ensure_scalar_indexes(self) -> None:
@@ -759,7 +759,7 @@ def _ensure_scalar_indexes(self) -> None:
 #### `_create_index_safe`
 
 <details>
-<summary>View Source (lines 103-119) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/vectorstore.py#L103-L119">GitHub</a></summary>
+<summary>View Source (lines 103-119) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/vectorstore.py#L103-L119">GitHub</a></summary>
 
 ```python
 def _create_index_safe(self, column: str) -> None:
@@ -787,7 +787,7 @@ def _create_index_safe(self, column: str) -> None:
 #### `_create_scalar_indexes`
 
 <details>
-<summary>View Source (lines 121-128) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/vectorstore.py#L121-L128">GitHub</a></summary>
+<summary>View Source (lines 121-128) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/vectorstore.py#L121-L128">GitHub</a></summary>
 
 ```python
 def _create_scalar_indexes(self) -> None:
@@ -806,7 +806,7 @@ def _create_scalar_indexes(self) -> None:
 #### `_row_to_chunk`
 
 <details>
-<summary>View Source (lines 338-359) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/vectorstore.py#L338-L359">GitHub</a></summary>
+<summary>View Source (lines 338-359) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/vectorstore.py#L338-L359">GitHub</a></summary>
 
 ```python
 def _row_to_chunk(self, row: dict[str, Any]) -> CodeChunk:
@@ -839,7 +839,7 @@ def _row_to_chunk(self, row: dict[str, Any]) -> CodeChunk:
 #### `_chunk_to_text`
 
 <details>
-<summary>View Source (lines 361-388) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/vectorstore.py#L361-L388">GitHub</a></summary>
+<summary>View Source (lines 361-388) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/vectorstore.py#L361-L388">GitHub</a></summary>
 
 ```python
 def _chunk_to_text(self, chunk: CodeChunk) -> str:
@@ -882,6 +882,6 @@ def _chunk_to_text(self, chunk: CodeChunk) -> str:
 
 - [inheritance](../generators/inheritance.md) - uses this
 - [glossary](../generators/glossary.md) - uses this
+- [wiki](../generators/wiki.md) - uses this
 - [coverage](../generators/coverage.md) - uses this
-- [logging](../logging.md) - dependency
-- [models](../models.md) - dependency
+- [search](../generators/search.md) - uses this

@@ -1,8 +1,8 @@
 {
   "repo_path": "/Users/brian/Projects/local-deepwiki-mcp",
-  "generated_at": 1768576428.606766,
+  "generated_at": 1768598176.477862,
   "total_pages": 54,
-  "index_status_hash": "717d6def234b6785",
+  "index_status_hash": "556a461777baf2f7",
   "pages": {
     "index.md": {
       "path": "index.md",
@@ -35,6 +35,7 @@
         "tests/test_handlers_coverage.py",
         "tests/test_indexer.py",
         "tests/test_html_export.py",
+        "tests/test_type_annotations.py",
         "tests/test_config.py",
         "tests/test_openai_embedding_provider.py",
         "tests/test_glossary.py",
@@ -115,9 +116,9 @@
         "tests/test_changelog.py": "afd483df65d305a92dd24c6cf92dcc84cc364c10102b74535066f439c9786446",
         "tests/test_coverage.py": "d8d31b0067fa75f8d0f717ab9ef3b58962bef9a250720b7f802d380d1324b964",
         "tests/test_vectorstore.py": "a530fc769542193acd3ee9c4e38997c28b5b8680aa1618f36f1beb4e30ed80fe",
-        "tests/test_wiki_coverage.py": "e44679c1de84b92ee9f3f95efc1a13338320538ea356ee19cc4364c9efec1aa5",
+        "tests/test_wiki_coverage.py": "68f672afcf4de74b520a457b6e762e8ec1093e72c52589166c37c84a48961027",
         "tests/test_pdf_export.py": "c751f4dd7504b77d2d42863d462342f697a9905cbbe87ec46ecbe35657cb2e6f",
-        "tests/test_search.py": "faa2af69e5c1ba9e36a305f2c9ae8ebb231a868aa4830b60ce7af65e6333107a",
+        "tests/test_search.py": "b33996c43d747373f930f5d34f0b4add82ceae9d18f30c72a66da1be4c24bd2d",
         "tests/test_wiki_pages_coverage.py": "c1956a4d89b1fa0ecdb3e114cb5c269da6632e654ec78dbcfab55313516a369f",
         "tests/test_toc.py": "f0d017efe534bbc2e205767150b7356edd70cc1f08a8c880a2244c10cb34ef24",
         "tests/test_incremental_wiki.py": "49279fab5824e610818fab9a2688613b03ae0d075fc453cc6e30af863a4ee248",
@@ -134,6 +135,7 @@
         "tests/test_handlers_coverage.py": "242faefececb500bac1092c05d9f241eba6e06ab947be9cfdaadd577a700227c",
         "tests/test_indexer.py": "e782e6e2dacbd3ffd02776dfb4e5bd68d52c9c4a8bfe07bd4df6046c03811a44",
         "tests/test_html_export.py": "b7badd894bb2ea069f0139cedee59066304be3f193c867583a948f524ee1c5e0",
+        "tests/test_type_annotations.py": "240505eb3b43439370dd2959ea44550345f2a011356fdea7826ee2cca1f2f14d",
         "tests/test_config.py": "8d6d81a9660764a9f0ba92d0a0adc22b6123783a091a30107a1cf7b7e134694e",
         "tests/test_openai_embedding_provider.py": "3cfcc231cff23864266177dd2aa4907adfabeab014081cb43247df3fa27eba3f",
         "tests/test_glossary.py": "eb09a16cc60155ac23a280a72daa6e1ca5efe6496a6ebdf38245711d8aa8b7ce",
@@ -160,7 +162,7 @@
         "src/local_deepwiki/watcher.py": "6abc24a1e2927a641c38ef6f0ea2ee061b74a562c9e49cdbeb08baa568ecea92",
         "src/local_deepwiki/validation.py": "b1f00e1b37f03edbe92abb597864323aee8f262de2b64d25a0c664a5051fde7d",
         "src/local_deepwiki/tools/__init__.py": "7e0e0edd2c008afc961b8bb19156c3de6bfcf5b9c2f495f399b8aefc2171d7cc",
-        "src/local_deepwiki/core/chunker.py": "17d7fb4471b2b5eb929da27237fd9934af325a9c45aeeeb6ca945ae0028ccbaf",
+        "src/local_deepwiki/core/chunker.py": "6b90a27ebf49ded17742266d40e25629017e0634199ad0fa5d9e71d4a58777c5",
         "src/local_deepwiki/core/llm_cache.py": "7ca2bd123bd33c48ab681b797a916ac4fd0f0e4c0553e41e6525fd1b768f0133",
         "src/local_deepwiki/core/vectorstore.py": "a1f742b29a9c5834a3e31eaefa5312eca28f2c5b8694a59ebf31501524568f43",
         "src/local_deepwiki/core/__init__.py": "44e160a61a8405688f53bc3a4770db0717b96e10cb28fe49eec26a9d90041085",
@@ -191,15 +193,15 @@
         "src/local_deepwiki/generators/wiki_modules.py": "6585aca3dd11aaa6f4b28b27514fc063e0923c3f586fb360e78d4109beea71d0",
         "src/local_deepwiki/generators/source_refs.py": "c5aed8557d26a6699df8fd01398354bd410b8cce844d6771378909afa6f61fc4",
         "src/local_deepwiki/generators/wiki_status.py": "801d343c04e747b508e5390b85e79d3db5009f81e79e39bf2e28972b5b88fa89",
-        "src/local_deepwiki/generators/search.py": "c05b152215ae3fedae08a15946b27a9c5be207f750d49d681857b0f837f9f393",
+        "src/local_deepwiki/generators/search.py": "70a4dd6009977f43219ddcb5cf6cc282033ba89e912001778a457fc8a5c15677",
         "src/local_deepwiki/generators/diagrams.py": "158ecfbf27194a94c7615fbf6b670016f1d324f7b50b0d03e9272ca457b3b7a8",
         "src/local_deepwiki/generators/see_also.py": "3ebccd3892ce1468e7e071dcabbf346b2abb10ebdc2f4a28b4a7da8d992b553c",
         "src/local_deepwiki/generators/wiki_files.py": "aeb74163845378620492337086f9256e38087aa8112754cc7d5a705d8bc118b0",
         "src/local_deepwiki/generators/api_docs.py": "01657dcc28e4139d84e4c1e9885f6666bc11ed07612d6c1bb271ebbef840fba0",
-        "src/local_deepwiki/generators/wiki.py": "4f59b0e35c8e9f7f948314fe8e5be3b4366fd491f9cacbfa71931794c95fe60a",
+        "src/local_deepwiki/generators/wiki.py": "7b279c5403dc031e3dd2d992713d3be329c7165176e293097bbdc5f88a6fa535",
         "src/local_deepwiki/generators/test_examples.py": "90643391bdc203ea93f9e8a32fb7735db28700f18bb4328a14a054a52ffeee5d",
         "src/local_deepwiki/generators/inheritance.py": "12f2ca9afd32b72ae8d6ca682f7b1cf723f640094d4a127eb010e8b76193e68d",
-        "src/local_deepwiki/generators/glossary.py": "e0290c15045a239090003bb4871dbdd53044091f49a8190ca05c16c0e618ac85",
+        "src/local_deepwiki/generators/glossary.py": "46190d9746099155fe39c4ba779ada0381450b3f7c5cff2896dd29021041c31c",
         "src/local_deepwiki/export/html.py": "3419e9222ae35625edc77c28037713893d14eee25a0325df303dbf066652f5e3",
         "src/local_deepwiki/export/__init__.py": "432474cf0f5925089e6e724944e3fd4e93fef0e6cde6367fd01aee29206a1400",
         "src/local_deepwiki/export/pdf.py": "7a6a2e801e2b8f05ab16c53e3bc5bffc87c08c480f77cf4ba1c9fd090d5275d2"
@@ -250,8 +252,8 @@
           "end_line": 82
         },
         "tests/test_search.py": {
-          "start_line": 20,
-          "end_line": 53
+          "start_line": 24,
+          "end_line": 57
         },
         "tests/test_wiki_pages_coverage.py": {
           "start_line": 92,
@@ -312,6 +314,10 @@
         "tests/test_html_export.py": {
           "start_line": 11,
           "end_line": 42
+        },
+        "tests/test_type_annotations.py": {
+          "start_line": 40,
+          "end_line": 132
         },
         "tests/test_config.py": {
           "start_line": 35,
@@ -410,8 +416,8 @@
           "end_line": 42
         },
         "src/local_deepwiki/core/chunker.py": {
-          "start_line": 200,
-          "end_line": 600
+          "start_line": 498,
+          "end_line": 906
         },
         "src/local_deepwiki/core/llm_cache.py": {
           "start_line": 19,
@@ -518,8 +524,8 @@
           "end_line": 220
         },
         "src/local_deepwiki/generators/search.py": {
-          "start_line": 14,
-          "end_line": 33
+          "start_line": 16,
+          "end_line": 35
         },
         "src/local_deepwiki/generators/diagrams.py": {
           "start_line": 11,
@@ -551,7 +557,7 @@
         },
         "src/local_deepwiki/generators/glossary.py": {
           "start_line": 11,
-          "end_line": 18
+          "end_line": 24
         },
         "src/local_deepwiki/export/html.py": {
           "start_line": 663,
@@ -566,8 +572,8 @@
           "end_line": 680
         }
       },
-      "content_hash": "f5fd8905fd7f061a",
-      "generated_at": 1768576063.575964
+      "content_hash": "300a5d58e6cca484",
+      "generated_at": 1768597777.645704
     },
     "architecture.md": {
       "path": "architecture.md",
@@ -600,6 +606,7 @@
         "tests/test_handlers_coverage.py",
         "tests/test_indexer.py",
         "tests/test_html_export.py",
+        "tests/test_type_annotations.py",
         "tests/test_config.py",
         "tests/test_openai_embedding_provider.py",
         "tests/test_glossary.py",
@@ -680,9 +687,9 @@
         "tests/test_changelog.py": "afd483df65d305a92dd24c6cf92dcc84cc364c10102b74535066f439c9786446",
         "tests/test_coverage.py": "d8d31b0067fa75f8d0f717ab9ef3b58962bef9a250720b7f802d380d1324b964",
         "tests/test_vectorstore.py": "a530fc769542193acd3ee9c4e38997c28b5b8680aa1618f36f1beb4e30ed80fe",
-        "tests/test_wiki_coverage.py": "e44679c1de84b92ee9f3f95efc1a13338320538ea356ee19cc4364c9efec1aa5",
+        "tests/test_wiki_coverage.py": "68f672afcf4de74b520a457b6e762e8ec1093e72c52589166c37c84a48961027",
         "tests/test_pdf_export.py": "c751f4dd7504b77d2d42863d462342f697a9905cbbe87ec46ecbe35657cb2e6f",
-        "tests/test_search.py": "faa2af69e5c1ba9e36a305f2c9ae8ebb231a868aa4830b60ce7af65e6333107a",
+        "tests/test_search.py": "b33996c43d747373f930f5d34f0b4add82ceae9d18f30c72a66da1be4c24bd2d",
         "tests/test_wiki_pages_coverage.py": "c1956a4d89b1fa0ecdb3e114cb5c269da6632e654ec78dbcfab55313516a369f",
         "tests/test_toc.py": "f0d017efe534bbc2e205767150b7356edd70cc1f08a8c880a2244c10cb34ef24",
         "tests/test_incremental_wiki.py": "49279fab5824e610818fab9a2688613b03ae0d075fc453cc6e30af863a4ee248",
@@ -699,6 +706,7 @@
         "tests/test_handlers_coverage.py": "242faefececb500bac1092c05d9f241eba6e06ab947be9cfdaadd577a700227c",
         "tests/test_indexer.py": "e782e6e2dacbd3ffd02776dfb4e5bd68d52c9c4a8bfe07bd4df6046c03811a44",
         "tests/test_html_export.py": "b7badd894bb2ea069f0139cedee59066304be3f193c867583a948f524ee1c5e0",
+        "tests/test_type_annotations.py": "240505eb3b43439370dd2959ea44550345f2a011356fdea7826ee2cca1f2f14d",
         "tests/test_config.py": "8d6d81a9660764a9f0ba92d0a0adc22b6123783a091a30107a1cf7b7e134694e",
         "tests/test_openai_embedding_provider.py": "3cfcc231cff23864266177dd2aa4907adfabeab014081cb43247df3fa27eba3f",
         "tests/test_glossary.py": "eb09a16cc60155ac23a280a72daa6e1ca5efe6496a6ebdf38245711d8aa8b7ce",
@@ -725,7 +733,7 @@
         "src/local_deepwiki/watcher.py": "6abc24a1e2927a641c38ef6f0ea2ee061b74a562c9e49cdbeb08baa568ecea92",
         "src/local_deepwiki/validation.py": "b1f00e1b37f03edbe92abb597864323aee8f262de2b64d25a0c664a5051fde7d",
         "src/local_deepwiki/tools/__init__.py": "7e0e0edd2c008afc961b8bb19156c3de6bfcf5b9c2f495f399b8aefc2171d7cc",
-        "src/local_deepwiki/core/chunker.py": "17d7fb4471b2b5eb929da27237fd9934af325a9c45aeeeb6ca945ae0028ccbaf",
+        "src/local_deepwiki/core/chunker.py": "6b90a27ebf49ded17742266d40e25629017e0634199ad0fa5d9e71d4a58777c5",
         "src/local_deepwiki/core/llm_cache.py": "7ca2bd123bd33c48ab681b797a916ac4fd0f0e4c0553e41e6525fd1b768f0133",
         "src/local_deepwiki/core/vectorstore.py": "a1f742b29a9c5834a3e31eaefa5312eca28f2c5b8694a59ebf31501524568f43",
         "src/local_deepwiki/core/__init__.py": "44e160a61a8405688f53bc3a4770db0717b96e10cb28fe49eec26a9d90041085",
@@ -756,15 +764,15 @@
         "src/local_deepwiki/generators/wiki_modules.py": "6585aca3dd11aaa6f4b28b27514fc063e0923c3f586fb360e78d4109beea71d0",
         "src/local_deepwiki/generators/source_refs.py": "c5aed8557d26a6699df8fd01398354bd410b8cce844d6771378909afa6f61fc4",
         "src/local_deepwiki/generators/wiki_status.py": "801d343c04e747b508e5390b85e79d3db5009f81e79e39bf2e28972b5b88fa89",
-        "src/local_deepwiki/generators/search.py": "c05b152215ae3fedae08a15946b27a9c5be207f750d49d681857b0f837f9f393",
+        "src/local_deepwiki/generators/search.py": "70a4dd6009977f43219ddcb5cf6cc282033ba89e912001778a457fc8a5c15677",
         "src/local_deepwiki/generators/diagrams.py": "158ecfbf27194a94c7615fbf6b670016f1d324f7b50b0d03e9272ca457b3b7a8",
         "src/local_deepwiki/generators/see_also.py": "3ebccd3892ce1468e7e071dcabbf346b2abb10ebdc2f4a28b4a7da8d992b553c",
         "src/local_deepwiki/generators/wiki_files.py": "aeb74163845378620492337086f9256e38087aa8112754cc7d5a705d8bc118b0",
         "src/local_deepwiki/generators/api_docs.py": "01657dcc28e4139d84e4c1e9885f6666bc11ed07612d6c1bb271ebbef840fba0",
-        "src/local_deepwiki/generators/wiki.py": "4f59b0e35c8e9f7f948314fe8e5be3b4366fd491f9cacbfa71931794c95fe60a",
+        "src/local_deepwiki/generators/wiki.py": "7b279c5403dc031e3dd2d992713d3be329c7165176e293097bbdc5f88a6fa535",
         "src/local_deepwiki/generators/test_examples.py": "90643391bdc203ea93f9e8a32fb7735db28700f18bb4328a14a054a52ffeee5d",
         "src/local_deepwiki/generators/inheritance.py": "12f2ca9afd32b72ae8d6ca682f7b1cf723f640094d4a127eb010e8b76193e68d",
-        "src/local_deepwiki/generators/glossary.py": "e0290c15045a239090003bb4871dbdd53044091f49a8190ca05c16c0e618ac85",
+        "src/local_deepwiki/generators/glossary.py": "46190d9746099155fe39c4ba779ada0381450b3f7c5cff2896dd29021041c31c",
         "src/local_deepwiki/export/html.py": "3419e9222ae35625edc77c28037713893d14eee25a0325df303dbf066652f5e3",
         "src/local_deepwiki/export/__init__.py": "432474cf0f5925089e6e724944e3fd4e93fef0e6cde6367fd01aee29206a1400",
         "src/local_deepwiki/export/pdf.py": "7a6a2e801e2b8f05ab16c53e3bc5bffc87c08c480f77cf4ba1c9fd090d5275d2"
@@ -815,8 +823,8 @@
           "end_line": 82
         },
         "tests/test_search.py": {
-          "start_line": 20,
-          "end_line": 53
+          "start_line": 24,
+          "end_line": 57
         },
         "tests/test_wiki_pages_coverage.py": {
           "start_line": 92,
@@ -877,6 +885,10 @@
         "tests/test_html_export.py": {
           "start_line": 11,
           "end_line": 42
+        },
+        "tests/test_type_annotations.py": {
+          "start_line": 40,
+          "end_line": 132
         },
         "tests/test_config.py": {
           "start_line": 35,
@@ -975,8 +987,8 @@
           "end_line": 42
         },
         "src/local_deepwiki/core/chunker.py": {
-          "start_line": 200,
-          "end_line": 600
+          "start_line": 498,
+          "end_line": 906
         },
         "src/local_deepwiki/core/llm_cache.py": {
           "start_line": 19,
@@ -1083,8 +1095,8 @@
           "end_line": 220
         },
         "src/local_deepwiki/generators/search.py": {
-          "start_line": 14,
-          "end_line": 33
+          "start_line": 16,
+          "end_line": 35
         },
         "src/local_deepwiki/generators/diagrams.py": {
           "start_line": 11,
@@ -1116,7 +1128,7 @@
         },
         "src/local_deepwiki/generators/glossary.py": {
           "start_line": 11,
-          "end_line": 18
+          "end_line": 24
         },
         "src/local_deepwiki/export/html.py": {
           "start_line": 663,
@@ -1131,8 +1143,8 @@
           "end_line": 680
         }
       },
-      "content_hash": "ba4f83ac7b7f70f7",
-      "generated_at": 1768576084.683197
+      "content_hash": "12edd3f15eb6b1c1",
+      "generated_at": 1768597797.2010398
     },
     "modules/tests.md": {
       "path": "modules/tests.md",
@@ -1165,6 +1177,7 @@
         "tests/test_handlers_coverage.py",
         "tests/test_indexer.py",
         "tests/test_html_export.py",
+        "tests/test_type_annotations.py",
         "tests/test_config.py",
         "tests/test_openai_embedding_provider.py",
         "tests/test_glossary.py",
@@ -1193,9 +1206,9 @@
         "tests/test_changelog.py": "afd483df65d305a92dd24c6cf92dcc84cc364c10102b74535066f439c9786446",
         "tests/test_coverage.py": "d8d31b0067fa75f8d0f717ab9ef3b58962bef9a250720b7f802d380d1324b964",
         "tests/test_vectorstore.py": "a530fc769542193acd3ee9c4e38997c28b5b8680aa1618f36f1beb4e30ed80fe",
-        "tests/test_wiki_coverage.py": "e44679c1de84b92ee9f3f95efc1a13338320538ea356ee19cc4364c9efec1aa5",
+        "tests/test_wiki_coverage.py": "68f672afcf4de74b520a457b6e762e8ec1093e72c52589166c37c84a48961027",
         "tests/test_pdf_export.py": "c751f4dd7504b77d2d42863d462342f697a9905cbbe87ec46ecbe35657cb2e6f",
-        "tests/test_search.py": "faa2af69e5c1ba9e36a305f2c9ae8ebb231a868aa4830b60ce7af65e6333107a",
+        "tests/test_search.py": "b33996c43d747373f930f5d34f0b4add82ceae9d18f30c72a66da1be4c24bd2d",
         "tests/test_wiki_pages_coverage.py": "c1956a4d89b1fa0ecdb3e114cb5c269da6632e654ec78dbcfab55313516a369f",
         "tests/test_toc.py": "f0d017efe534bbc2e205767150b7356edd70cc1f08a8c880a2244c10cb34ef24",
         "tests/test_incremental_wiki.py": "49279fab5824e610818fab9a2688613b03ae0d075fc453cc6e30af863a4ee248",
@@ -1212,6 +1225,7 @@
         "tests/test_handlers_coverage.py": "242faefececb500bac1092c05d9f241eba6e06ab947be9cfdaadd577a700227c",
         "tests/test_indexer.py": "e782e6e2dacbd3ffd02776dfb4e5bd68d52c9c4a8bfe07bd4df6046c03811a44",
         "tests/test_html_export.py": "b7badd894bb2ea069f0139cedee59066304be3f193c867583a948f524ee1c5e0",
+        "tests/test_type_annotations.py": "240505eb3b43439370dd2959ea44550345f2a011356fdea7826ee2cca1f2f14d",
         "tests/test_config.py": "8d6d81a9660764a9f0ba92d0a0adc22b6123783a091a30107a1cf7b7e134694e",
         "tests/test_openai_embedding_provider.py": "3cfcc231cff23864266177dd2aa4907adfabeab014081cb43247df3fa27eba3f",
         "tests/test_glossary.py": "eb09a16cc60155ac23a280a72daa6e1ca5efe6496a6ebdf38245711d8aa8b7ce",
@@ -1276,8 +1290,8 @@
           "end_line": 82
         },
         "tests/test_search.py": {
-          "start_line": 20,
-          "end_line": 53
+          "start_line": 24,
+          "end_line": 57
         },
         "tests/test_wiki_pages_coverage.py": {
           "start_line": 92,
@@ -1338,6 +1352,10 @@
         "tests/test_html_export.py": {
           "start_line": 11,
           "end_line": 42
+        },
+        "tests/test_type_annotations.py": {
+          "start_line": 40,
+          "end_line": 132
         },
         "tests/test_config.py": {
           "start_line": 35,
@@ -1408,8 +1426,8 @@
           "end_line": 39
         }
       },
-      "content_hash": "7c7997a728cf3367",
-      "generated_at": 1768576099.637643
+      "content_hash": "1db94e7211afcbc0",
+      "generated_at": 1768597813.2620668
     },
     "modules/src.md": {
       "path": "modules/src.md",
@@ -1477,7 +1495,7 @@
         "src/local_deepwiki/watcher.py": "6abc24a1e2927a641c38ef6f0ea2ee061b74a562c9e49cdbeb08baa568ecea92",
         "src/local_deepwiki/validation.py": "b1f00e1b37f03edbe92abb597864323aee8f262de2b64d25a0c664a5051fde7d",
         "src/local_deepwiki/tools/__init__.py": "7e0e0edd2c008afc961b8bb19156c3de6bfcf5b9c2f495f399b8aefc2171d7cc",
-        "src/local_deepwiki/core/chunker.py": "17d7fb4471b2b5eb929da27237fd9934af325a9c45aeeeb6ca945ae0028ccbaf",
+        "src/local_deepwiki/core/chunker.py": "6b90a27ebf49ded17742266d40e25629017e0634199ad0fa5d9e71d4a58777c5",
         "src/local_deepwiki/core/llm_cache.py": "7ca2bd123bd33c48ab681b797a916ac4fd0f0e4c0553e41e6525fd1b768f0133",
         "src/local_deepwiki/core/vectorstore.py": "a1f742b29a9c5834a3e31eaefa5312eca28f2c5b8694a59ebf31501524568f43",
         "src/local_deepwiki/core/__init__.py": "44e160a61a8405688f53bc3a4770db0717b96e10cb28fe49eec26a9d90041085",
@@ -1508,15 +1526,15 @@
         "src/local_deepwiki/generators/wiki_modules.py": "6585aca3dd11aaa6f4b28b27514fc063e0923c3f586fb360e78d4109beea71d0",
         "src/local_deepwiki/generators/source_refs.py": "c5aed8557d26a6699df8fd01398354bd410b8cce844d6771378909afa6f61fc4",
         "src/local_deepwiki/generators/wiki_status.py": "801d343c04e747b508e5390b85e79d3db5009f81e79e39bf2e28972b5b88fa89",
-        "src/local_deepwiki/generators/search.py": "c05b152215ae3fedae08a15946b27a9c5be207f750d49d681857b0f837f9f393",
+        "src/local_deepwiki/generators/search.py": "70a4dd6009977f43219ddcb5cf6cc282033ba89e912001778a457fc8a5c15677",
         "src/local_deepwiki/generators/diagrams.py": "158ecfbf27194a94c7615fbf6b670016f1d324f7b50b0d03e9272ca457b3b7a8",
         "src/local_deepwiki/generators/see_also.py": "3ebccd3892ce1468e7e071dcabbf346b2abb10ebdc2f4a28b4a7da8d992b553c",
         "src/local_deepwiki/generators/wiki_files.py": "aeb74163845378620492337086f9256e38087aa8112754cc7d5a705d8bc118b0",
         "src/local_deepwiki/generators/api_docs.py": "01657dcc28e4139d84e4c1e9885f6666bc11ed07612d6c1bb271ebbef840fba0",
-        "src/local_deepwiki/generators/wiki.py": "4f59b0e35c8e9f7f948314fe8e5be3b4366fd491f9cacbfa71931794c95fe60a",
+        "src/local_deepwiki/generators/wiki.py": "7b279c5403dc031e3dd2d992713d3be329c7165176e293097bbdc5f88a6fa535",
         "src/local_deepwiki/generators/test_examples.py": "90643391bdc203ea93f9e8a32fb7735db28700f18bb4328a14a054a52ffeee5d",
         "src/local_deepwiki/generators/inheritance.py": "12f2ca9afd32b72ae8d6ca682f7b1cf723f640094d4a127eb010e8b76193e68d",
-        "src/local_deepwiki/generators/glossary.py": "e0290c15045a239090003bb4871dbdd53044091f49a8190ca05c16c0e618ac85",
+        "src/local_deepwiki/generators/glossary.py": "46190d9746099155fe39c4ba779ada0381450b3f7c5cff2896dd29021041c31c",
         "src/local_deepwiki/export/html.py": "3419e9222ae35625edc77c28037713893d14eee25a0325df303dbf066652f5e3",
         "src/local_deepwiki/export/__init__.py": "432474cf0f5925089e6e724944e3fd4e93fef0e6cde6367fd01aee29206a1400",
         "src/local_deepwiki/export/pdf.py": "7a6a2e801e2b8f05ab16c53e3bc5bffc87c08c480f77cf4ba1c9fd090d5275d2"
@@ -1551,8 +1569,8 @@
           "end_line": 42
         },
         "src/local_deepwiki/core/chunker.py": {
-          "start_line": 200,
-          "end_line": 600
+          "start_line": 498,
+          "end_line": 906
         },
         "src/local_deepwiki/core/llm_cache.py": {
           "start_line": 19,
@@ -1659,8 +1677,8 @@
           "end_line": 220
         },
         "src/local_deepwiki/generators/search.py": {
-          "start_line": 14,
-          "end_line": 33
+          "start_line": 16,
+          "end_line": 35
         },
         "src/local_deepwiki/generators/diagrams.py": {
           "start_line": 11,
@@ -1692,7 +1710,7 @@
         },
         "src/local_deepwiki/generators/glossary.py": {
           "start_line": 11,
-          "end_line": 18
+          "end_line": 24
         },
         "src/local_deepwiki/export/html.py": {
           "start_line": 663,
@@ -1707,8 +1725,8 @@
           "end_line": 680
         }
       },
-      "content_hash": "2781adbb047fbdcc",
-      "generated_at": 1768576117.130657
+      "content_hash": "d1d4bd26309317c4",
+      "generated_at": 1768597831.886132
     },
     "modules/index.md": {
       "path": "modules/index.md",
@@ -1741,6 +1759,7 @@
         "tests/test_handlers_coverage.py",
         "tests/test_indexer.py",
         "tests/test_html_export.py",
+        "tests/test_type_annotations.py",
         "tests/test_config.py",
         "tests/test_openai_embedding_provider.py",
         "tests/test_glossary.py",
@@ -1821,9 +1840,9 @@
         "tests/test_changelog.py": "afd483df65d305a92dd24c6cf92dcc84cc364c10102b74535066f439c9786446",
         "tests/test_coverage.py": "d8d31b0067fa75f8d0f717ab9ef3b58962bef9a250720b7f802d380d1324b964",
         "tests/test_vectorstore.py": "a530fc769542193acd3ee9c4e38997c28b5b8680aa1618f36f1beb4e30ed80fe",
-        "tests/test_wiki_coverage.py": "e44679c1de84b92ee9f3f95efc1a13338320538ea356ee19cc4364c9efec1aa5",
+        "tests/test_wiki_coverage.py": "68f672afcf4de74b520a457b6e762e8ec1093e72c52589166c37c84a48961027",
         "tests/test_pdf_export.py": "c751f4dd7504b77d2d42863d462342f697a9905cbbe87ec46ecbe35657cb2e6f",
-        "tests/test_search.py": "faa2af69e5c1ba9e36a305f2c9ae8ebb231a868aa4830b60ce7af65e6333107a",
+        "tests/test_search.py": "b33996c43d747373f930f5d34f0b4add82ceae9d18f30c72a66da1be4c24bd2d",
         "tests/test_wiki_pages_coverage.py": "c1956a4d89b1fa0ecdb3e114cb5c269da6632e654ec78dbcfab55313516a369f",
         "tests/test_toc.py": "f0d017efe534bbc2e205767150b7356edd70cc1f08a8c880a2244c10cb34ef24",
         "tests/test_incremental_wiki.py": "49279fab5824e610818fab9a2688613b03ae0d075fc453cc6e30af863a4ee248",
@@ -1840,6 +1859,7 @@
         "tests/test_handlers_coverage.py": "242faefececb500bac1092c05d9f241eba6e06ab947be9cfdaadd577a700227c",
         "tests/test_indexer.py": "e782e6e2dacbd3ffd02776dfb4e5bd68d52c9c4a8bfe07bd4df6046c03811a44",
         "tests/test_html_export.py": "b7badd894bb2ea069f0139cedee59066304be3f193c867583a948f524ee1c5e0",
+        "tests/test_type_annotations.py": "240505eb3b43439370dd2959ea44550345f2a011356fdea7826ee2cca1f2f14d",
         "tests/test_config.py": "8d6d81a9660764a9f0ba92d0a0adc22b6123783a091a30107a1cf7b7e134694e",
         "tests/test_openai_embedding_provider.py": "3cfcc231cff23864266177dd2aa4907adfabeab014081cb43247df3fa27eba3f",
         "tests/test_glossary.py": "eb09a16cc60155ac23a280a72daa6e1ca5efe6496a6ebdf38245711d8aa8b7ce",
@@ -1866,7 +1886,7 @@
         "src/local_deepwiki/watcher.py": "6abc24a1e2927a641c38ef6f0ea2ee061b74a562c9e49cdbeb08baa568ecea92",
         "src/local_deepwiki/validation.py": "b1f00e1b37f03edbe92abb597864323aee8f262de2b64d25a0c664a5051fde7d",
         "src/local_deepwiki/tools/__init__.py": "7e0e0edd2c008afc961b8bb19156c3de6bfcf5b9c2f495f399b8aefc2171d7cc",
-        "src/local_deepwiki/core/chunker.py": "17d7fb4471b2b5eb929da27237fd9934af325a9c45aeeeb6ca945ae0028ccbaf",
+        "src/local_deepwiki/core/chunker.py": "6b90a27ebf49ded17742266d40e25629017e0634199ad0fa5d9e71d4a58777c5",
         "src/local_deepwiki/core/llm_cache.py": "7ca2bd123bd33c48ab681b797a916ac4fd0f0e4c0553e41e6525fd1b768f0133",
         "src/local_deepwiki/core/vectorstore.py": "a1f742b29a9c5834a3e31eaefa5312eca28f2c5b8694a59ebf31501524568f43",
         "src/local_deepwiki/core/__init__.py": "44e160a61a8405688f53bc3a4770db0717b96e10cb28fe49eec26a9d90041085",
@@ -1897,15 +1917,15 @@
         "src/local_deepwiki/generators/wiki_modules.py": "6585aca3dd11aaa6f4b28b27514fc063e0923c3f586fb360e78d4109beea71d0",
         "src/local_deepwiki/generators/source_refs.py": "c5aed8557d26a6699df8fd01398354bd410b8cce844d6771378909afa6f61fc4",
         "src/local_deepwiki/generators/wiki_status.py": "801d343c04e747b508e5390b85e79d3db5009f81e79e39bf2e28972b5b88fa89",
-        "src/local_deepwiki/generators/search.py": "c05b152215ae3fedae08a15946b27a9c5be207f750d49d681857b0f837f9f393",
+        "src/local_deepwiki/generators/search.py": "70a4dd6009977f43219ddcb5cf6cc282033ba89e912001778a457fc8a5c15677",
         "src/local_deepwiki/generators/diagrams.py": "158ecfbf27194a94c7615fbf6b670016f1d324f7b50b0d03e9272ca457b3b7a8",
         "src/local_deepwiki/generators/see_also.py": "3ebccd3892ce1468e7e071dcabbf346b2abb10ebdc2f4a28b4a7da8d992b553c",
         "src/local_deepwiki/generators/wiki_files.py": "aeb74163845378620492337086f9256e38087aa8112754cc7d5a705d8bc118b0",
         "src/local_deepwiki/generators/api_docs.py": "01657dcc28e4139d84e4c1e9885f6666bc11ed07612d6c1bb271ebbef840fba0",
-        "src/local_deepwiki/generators/wiki.py": "4f59b0e35c8e9f7f948314fe8e5be3b4366fd491f9cacbfa71931794c95fe60a",
+        "src/local_deepwiki/generators/wiki.py": "7b279c5403dc031e3dd2d992713d3be329c7165176e293097bbdc5f88a6fa535",
         "src/local_deepwiki/generators/test_examples.py": "90643391bdc203ea93f9e8a32fb7735db28700f18bb4328a14a054a52ffeee5d",
         "src/local_deepwiki/generators/inheritance.py": "12f2ca9afd32b72ae8d6ca682f7b1cf723f640094d4a127eb010e8b76193e68d",
-        "src/local_deepwiki/generators/glossary.py": "e0290c15045a239090003bb4871dbdd53044091f49a8190ca05c16c0e618ac85",
+        "src/local_deepwiki/generators/glossary.py": "46190d9746099155fe39c4ba779ada0381450b3f7c5cff2896dd29021041c31c",
         "src/local_deepwiki/export/html.py": "3419e9222ae35625edc77c28037713893d14eee25a0325df303dbf066652f5e3",
         "src/local_deepwiki/export/__init__.py": "432474cf0f5925089e6e724944e3fd4e93fef0e6cde6367fd01aee29206a1400",
         "src/local_deepwiki/export/pdf.py": "7a6a2e801e2b8f05ab16c53e3bc5bffc87c08c480f77cf4ba1c9fd090d5275d2"
@@ -1956,8 +1976,8 @@
           "end_line": 82
         },
         "tests/test_search.py": {
-          "start_line": 20,
-          "end_line": 53
+          "start_line": 24,
+          "end_line": 57
         },
         "tests/test_wiki_pages_coverage.py": {
           "start_line": 92,
@@ -2018,6 +2038,10 @@
         "tests/test_html_export.py": {
           "start_line": 11,
           "end_line": 42
+        },
+        "tests/test_type_annotations.py": {
+          "start_line": 40,
+          "end_line": 132
         },
         "tests/test_config.py": {
           "start_line": 35,
@@ -2116,8 +2140,8 @@
           "end_line": 42
         },
         "src/local_deepwiki/core/chunker.py": {
-          "start_line": 200,
-          "end_line": 600
+          "start_line": 498,
+          "end_line": 906
         },
         "src/local_deepwiki/core/llm_cache.py": {
           "start_line": 19,
@@ -2224,8 +2248,8 @@
           "end_line": 220
         },
         "src/local_deepwiki/generators/search.py": {
-          "start_line": 14,
-          "end_line": 33
+          "start_line": 16,
+          "end_line": 35
         },
         "src/local_deepwiki/generators/diagrams.py": {
           "start_line": 11,
@@ -2257,7 +2281,7 @@
         },
         "src/local_deepwiki/generators/glossary.py": {
           "start_line": 11,
-          "end_line": 18
+          "end_line": 24
         },
         "src/local_deepwiki/export/html.py": {
           "start_line": 663,
@@ -2273,7 +2297,7 @@
         }
       },
       "content_hash": "d5a99ab58fe4b4b5",
-      "generated_at": 1768576117.131179
+      "generated_at": 1768597831.886218
     },
     "files/src/local_deepwiki/logging.md": {
       "path": "files/src/local_deepwiki/logging.md",
@@ -2289,8 +2313,8 @@
           "end_line": 72
         }
       },
-      "content_hash": "a03a6835a98b4e86",
-      "generated_at": 1768576125.723802
+      "content_hash": "7286c7fb0ba477cd",
+      "generated_at": 1768597841.2724092
     },
     "files/src/local_deepwiki/server.md": {
       "path": "files/src/local_deepwiki/server.md",
@@ -2306,8 +2330,8 @@
           "end_line": 222
         }
       },
-      "content_hash": "8c99ca619239a6e9",
-      "generated_at": 1768576130.696437
+      "content_hash": "e076c8e0dc143757",
+      "generated_at": 1768597845.5102232
     },
     "files/src/local_deepwiki/config.md": {
       "path": "files/src/local_deepwiki/config.md",
@@ -2323,42 +2347,8 @@
           "end_line": 19
         }
       },
-      "content_hash": "42d0e29e505daec8",
-      "generated_at": 1768576135.548217
-    },
-    "files/src/local_deepwiki/models.md": {
-      "path": "files/src/local_deepwiki/models.md",
-      "source_files": [
-        "src/local_deepwiki/models.py"
-      ],
-      "source_hashes": {
-        "src/local_deepwiki/models.py": "c3ab16a3cd3e248d0fcb8464ff904d936859b04ac065880718fc4be336d76b9f"
-      },
-      "source_line_info": {
-        "src/local_deepwiki/models.py": {
-          "start_line": 11,
-          "end_line": 26
-        }
-      },
-      "content_hash": "309d544307fba891",
-      "generated_at": 1768576140.949198
-    },
-    "files/src/local_deepwiki/handlers.md": {
-      "path": "files/src/local_deepwiki/handlers.md",
-      "source_files": [
-        "src/local_deepwiki/handlers.py"
-      ],
-      "source_hashes": {
-        "src/local_deepwiki/handlers.py": "e310a79b47bde034dcdd2d20573287ad54e59e4fdb27c093446bee30415cd7e4"
-      },
-      "source_line_info": {
-        "src/local_deepwiki/handlers.py": {
-          "start_line": 40,
-          "end_line": 70
-        }
-      },
-      "content_hash": "0c5f1a52c6dde20a",
-      "generated_at": 1768576143.307127
+      "content_hash": "9bfa8504fd55ba94",
+      "generated_at": 1768597848.6105049
     },
     "files/src/local_deepwiki/watcher.md": {
       "path": "files/src/local_deepwiki/watcher.md",
@@ -2374,8 +2364,42 @@
           "end_line": 235
         }
       },
-      "content_hash": "a04f64d1c7ff6a20",
-      "generated_at": 1768576146.787591
+      "content_hash": "c3f98f4bd6667bb1",
+      "generated_at": 1768597856.928221
+    },
+    "files/src/local_deepwiki/models.md": {
+      "path": "files/src/local_deepwiki/models.md",
+      "source_files": [
+        "src/local_deepwiki/models.py"
+      ],
+      "source_hashes": {
+        "src/local_deepwiki/models.py": "c3ab16a3cd3e248d0fcb8464ff904d936859b04ac065880718fc4be336d76b9f"
+      },
+      "source_line_info": {
+        "src/local_deepwiki/models.py": {
+          "start_line": 11,
+          "end_line": 26
+        }
+      },
+      "content_hash": "2e425cb2151440bc",
+      "generated_at": 1768597857.031817
+    },
+    "files/src/local_deepwiki/handlers.md": {
+      "path": "files/src/local_deepwiki/handlers.md",
+      "source_files": [
+        "src/local_deepwiki/handlers.py"
+      ],
+      "source_hashes": {
+        "src/local_deepwiki/handlers.py": "e310a79b47bde034dcdd2d20573287ad54e59e4fdb27c093446bee30415cd7e4"
+      },
+      "source_line_info": {
+        "src/local_deepwiki/handlers.py": {
+          "start_line": 40,
+          "end_line": 70
+        }
+      },
+      "content_hash": "25a4ba3212e290d9",
+      "generated_at": 1768597858.9955761
     },
     "files/src/local_deepwiki/validation.md": {
       "path": "files/src/local_deepwiki/validation.md",
@@ -2391,8 +2415,8 @@
           "end_line": 42
         }
       },
-      "content_hash": "f41c007a4670df99",
-      "generated_at": 1768576147.7455559
+      "content_hash": "b77b868134b847d7",
+      "generated_at": 1768597863.74578
     },
     "files/src/local_deepwiki/core/chunker.md": {
       "path": "files/src/local_deepwiki/core/chunker.md",
@@ -2400,33 +2424,16 @@
         "src/local_deepwiki/core/chunker.py"
       ],
       "source_hashes": {
-        "src/local_deepwiki/core/chunker.py": "17d7fb4471b2b5eb929da27237fd9934af325a9c45aeeeb6ca945ae0028ccbaf"
+        "src/local_deepwiki/core/chunker.py": "6b90a27ebf49ded17742266d40e25629017e0634199ad0fa5d9e71d4a58777c5"
       },
       "source_line_info": {
         "src/local_deepwiki/core/chunker.py": {
-          "start_line": 200,
-          "end_line": 600
+          "start_line": 498,
+          "end_line": 906
         }
       },
-      "content_hash": "f48ce2227229e4ed",
-      "generated_at": 1768576155.9703748
-    },
-    "files/src/local_deepwiki/core/vectorstore.md": {
-      "path": "files/src/local_deepwiki/core/vectorstore.md",
-      "source_files": [
-        "src/local_deepwiki/core/vectorstore.py"
-      ],
-      "source_hashes": {
-        "src/local_deepwiki/core/vectorstore.py": "a1f742b29a9c5834a3e31eaefa5312eca28f2c5b8694a59ebf31501524568f43"
-      },
-      "source_line_info": {
-        "src/local_deepwiki/core/vectorstore.py": {
-          "start_line": 37,
-          "end_line": 388
-        }
-      },
-      "content_hash": "dc5d817d6500bb9e",
-      "generated_at": 1768576157.6491861
+      "content_hash": "d7c0f8deef40c142",
+      "generated_at": 1768597868.685001
     },
     "files/src/local_deepwiki/core/llm_cache.md": {
       "path": "files/src/local_deepwiki/core/llm_cache.md",
@@ -2442,8 +2449,25 @@
           "end_line": 384
         }
       },
-      "content_hash": "a7d42a9128251049",
-      "generated_at": 1768576163.156615
+      "content_hash": "d57a30e34591f8e6",
+      "generated_at": 1768597869.179989
+    },
+    "files/src/local_deepwiki/core/vectorstore.md": {
+      "path": "files/src/local_deepwiki/core/vectorstore.md",
+      "source_files": [
+        "src/local_deepwiki/core/vectorstore.py"
+      ],
+      "source_hashes": {
+        "src/local_deepwiki/core/vectorstore.py": "a1f742b29a9c5834a3e31eaefa5312eca28f2c5b8694a59ebf31501524568f43"
+      },
+      "source_line_info": {
+        "src/local_deepwiki/core/vectorstore.py": {
+          "start_line": 37,
+          "end_line": 388
+        }
+      },
+      "content_hash": "8642b9c8c6bc9c03",
+      "generated_at": 1768597873.680945
     },
     "files/src/local_deepwiki/core/indexer.md": {
       "path": "files/src/local_deepwiki/core/indexer.md",
@@ -2459,8 +2483,8 @@
           "end_line": 396
         }
       },
-      "content_hash": "9f5af7e738766a34",
-      "generated_at": 1768576169.12892
+      "content_hash": "cd44cf6b4c705d7f",
+      "generated_at": 1768597880.085577
     },
     "files/src/local_deepwiki/core/parser.md": {
       "path": "files/src/local_deepwiki/core/parser.md",
@@ -2476,8 +2500,8 @@
           "end_line": 252
         }
       },
-      "content_hash": "44944f2145a4153f",
-      "generated_at": 1768576172.1642659
+      "content_hash": "da2f44075e1e828b",
+      "generated_at": 1768597881.715067
     },
     "files/src/local_deepwiki/core/git_utils.md": {
       "path": "files/src/local_deepwiki/core/git_utils.md",
@@ -2493,8 +2517,8 @@
           "end_line": 25
         }
       },
-      "content_hash": "32b533d36d3b0b76",
-      "generated_at": 1768576173.165961
+      "content_hash": "a9a92ee651fa9a85",
+      "generated_at": 1768597883.365001
     },
     "files/src/local_deepwiki/core/deep_research.md": {
       "path": "files/src/local_deepwiki/core/deep_research.md",
@@ -2510,8 +2534,8 @@
           "end_line": 38
         }
       },
-      "content_hash": "e1a21483dde5e415",
-      "generated_at": 1768576177.962965
+      "content_hash": "6fb7d579be308c2d",
+      "generated_at": 1768597889.614209
     },
     "files/src/local_deepwiki/providers/base.md": {
       "path": "files/src/local_deepwiki/providers/base.md",
@@ -2527,8 +2551,8 @@
           "end_line": 141
         }
       },
-      "content_hash": "78bef6105cd0c42a",
-      "generated_at": 1768576181.774432
+      "content_hash": "d15a536518ea7ce3",
+      "generated_at": 1768597891.5910442
     },
     "files/src/local_deepwiki/web/app.md": {
       "path": "files/src/local_deepwiki/web/app.md",
@@ -2544,8 +2568,8 @@
           "end_line": 67
         }
       },
-      "content_hash": "076c89ec03ed9e62",
-      "generated_at": 1768576184.407094
+      "content_hash": "9e7c1b1a7039680c",
+      "generated_at": 1768597894.020548
     },
     "files/src/local_deepwiki/providers/llm/cached.md": {
       "path": "files/src/local_deepwiki/providers/llm/cached.md",
@@ -2561,8 +2585,8 @@
           "end_line": 158
         }
       },
-      "content_hash": "fa5b477f055f240c",
-      "generated_at": 1768576187.295686
+      "content_hash": "ad06fa7bfe706117",
+      "generated_at": 1768597896.881269
     },
     "files/src/local_deepwiki/providers/llm/openai.md": {
       "path": "files/src/local_deepwiki/providers/llm/openai.md",
@@ -2578,8 +2602,8 @@
           "end_line": 102
         }
       },
-      "content_hash": "3f6674a4f028c3d3",
-      "generated_at": 1768576191.873696
+      "content_hash": "38d063d476db972b",
+      "generated_at": 1768597901.028165
     },
     "files/src/local_deepwiki/providers/llm/anthropic.md": {
       "path": "files/src/local_deepwiki/providers/llm/anthropic.md",
@@ -2595,25 +2619,8 @@
           "end_line": 144
         }
       },
-      "content_hash": "214283c7dd1bb118",
-      "generated_at": 1768576194.740031
-    },
-    "files/src/local_deepwiki/providers/llm/ollama.md": {
-      "path": "files/src/local_deepwiki/providers/llm/ollama.md",
-      "source_files": [
-        "src/local_deepwiki/providers/llm/ollama.py"
-      ],
-      "source_hashes": {
-        "src/local_deepwiki/providers/llm/ollama.py": "2579c58085d6606dd0cf6403cc7adfff32298c658234dbf001617b0338b694b2"
-      },
-      "source_line_info": {
-        "src/local_deepwiki/providers/llm/ollama.py": {
-          "start_line": 13,
-          "end_line": 26
-        }
-      },
-      "content_hash": "645261f02f0f9d7d",
-      "generated_at": 1768576201.69722
+      "content_hash": "8c30d57c1ec8e904",
+      "generated_at": 1768597904.1817548
     },
     "files/src/local_deepwiki/providers/embeddings/local.md": {
       "path": "files/src/local_deepwiki/providers/embeddings/local.md",
@@ -2629,8 +2636,25 @@
           "end_line": 57
         }
       },
-      "content_hash": "413994e65ce19a71",
-      "generated_at": 1768576202.140543
+      "content_hash": "bf8a838341488ad6",
+      "generated_at": 1768597909.188483
+    },
+    "files/src/local_deepwiki/providers/llm/ollama.md": {
+      "path": "files/src/local_deepwiki/providers/llm/ollama.md",
+      "source_files": [
+        "src/local_deepwiki/providers/llm/ollama.py"
+      ],
+      "source_hashes": {
+        "src/local_deepwiki/providers/llm/ollama.py": "2579c58085d6606dd0cf6403cc7adfff32298c658234dbf001617b0338b694b2"
+      },
+      "source_line_info": {
+        "src/local_deepwiki/providers/llm/ollama.py": {
+          "start_line": 13,
+          "end_line": 26
+        }
+      },
+      "content_hash": "33547691b0304d30",
+      "generated_at": 1768597910.376298
     },
     "files/src/local_deepwiki/providers/embeddings/openai.md": {
       "path": "files/src/local_deepwiki/providers/embeddings/openai.md",
@@ -2646,8 +2670,8 @@
           "end_line": 57
         }
       },
-      "content_hash": "22ff5f8aefd42f82",
-      "generated_at": 1768576204.557866
+      "content_hash": "831271d6cb61e293",
+      "generated_at": 1768597913.6860201
     },
     "files/src/local_deepwiki/generators/crosslinks.md": {
       "path": "files/src/local_deepwiki/generators/crosslinks.md",
@@ -2663,8 +2687,8 @@
           "end_line": 23
         }
       },
-      "content_hash": "8ffe991ebbdaabdb",
-      "generated_at": 1768576214.598837
+      "content_hash": "2f1de54b2019cb16",
+      "generated_at": 1768597921.9639301
     },
     "files/src/local_deepwiki/generators/toc.md": {
       "path": "files/src/local_deepwiki/generators/toc.md",
@@ -2680,42 +2704,8 @@
           "end_line": 27
         }
       },
-      "content_hash": "7c04006d64f2ba50",
-      "generated_at": 1768576216.217165
-    },
-    "files/src/local_deepwiki/generators/manifest.md": {
-      "path": "files/src/local_deepwiki/generators/manifest.md",
-      "source_files": [
-        "src/local_deepwiki/generators/manifest.py"
-      ],
-      "source_hashes": {
-        "src/local_deepwiki/generators/manifest.py": "300d0390dbfe71967804742fdf6ef738ac8979d63b57621416ab1d1ab254fe44"
-      },
-      "source_line_info": {
-        "src/local_deepwiki/generators/manifest.py": {
-          "start_line": 33,
-          "end_line": 52
-        }
-      },
-      "content_hash": "c92d10b86c7a53d9",
-      "generated_at": 1768576224.889262
-    },
-    "files/src/local_deepwiki/generators/callgraph.md": {
-      "path": "files/src/local_deepwiki/generators/callgraph.md",
-      "source_files": [
-        "src/local_deepwiki/generators/callgraph.py"
-      ],
-      "source_hashes": {
-        "src/local_deepwiki/generators/callgraph.py": "a58cba27b97c15c7ec0b7dfdb5b5b786ec84dee6693f851cd56a513ce6bdf9ef"
-      },
-      "source_line_info": {
-        "src/local_deepwiki/generators/callgraph.py": {
-          "start_line": 257,
-          "end_line": 324
-        }
-      },
-      "content_hash": "ffba11ef3bdf2435",
-      "generated_at": 1768576226.41176
+      "content_hash": "5fe96939605df92b",
+      "generated_at": 1768597924.9011252
     },
     "files/src/local_deepwiki/generators/wiki_pages.md": {
       "path": "files/src/local_deepwiki/generators/wiki_pages.md",
@@ -2731,8 +2721,42 @@
           "end_line": 192
         }
       },
-      "content_hash": "e52b3c077d07c0f1",
-      "generated_at": 1768576226.667294
+      "content_hash": "ed1d85b4ff51c017",
+      "generated_at": 1768597933.306441
+    },
+    "files/src/local_deepwiki/generators/manifest.md": {
+      "path": "files/src/local_deepwiki/generators/manifest.md",
+      "source_files": [
+        "src/local_deepwiki/generators/manifest.py"
+      ],
+      "source_hashes": {
+        "src/local_deepwiki/generators/manifest.py": "300d0390dbfe71967804742fdf6ef738ac8979d63b57621416ab1d1ab254fe44"
+      },
+      "source_line_info": {
+        "src/local_deepwiki/generators/manifest.py": {
+          "start_line": 33,
+          "end_line": 52
+        }
+      },
+      "content_hash": "da766a92e27d70f2",
+      "generated_at": 1768597933.4217799
+    },
+    "files/src/local_deepwiki/generators/callgraph.md": {
+      "path": "files/src/local_deepwiki/generators/callgraph.md",
+      "source_files": [
+        "src/local_deepwiki/generators/callgraph.py"
+      ],
+      "source_hashes": {
+        "src/local_deepwiki/generators/callgraph.py": "a58cba27b97c15c7ec0b7dfdb5b5b786ec84dee6693f851cd56a513ce6bdf9ef"
+      },
+      "source_line_info": {
+        "src/local_deepwiki/generators/callgraph.py": {
+          "start_line": 257,
+          "end_line": 324
+        }
+      },
+      "content_hash": "3541da245b13d48a",
+      "generated_at": 1768597935.6441338
     },
     "files/src/local_deepwiki/generators/changelog.md": {
       "path": "files/src/local_deepwiki/generators/changelog.md",
@@ -2748,8 +2772,8 @@
           "end_line": 28
         }
       },
-      "content_hash": "6bcc1d870316efb1",
-      "generated_at": 1768576234.395442
+      "content_hash": "950c878197aedb0c",
+      "generated_at": 1768597943.723117
     },
     "files/src/local_deepwiki/generators/wiki_modules.md": {
       "path": "files/src/local_deepwiki/generators/wiki_modules.md",
@@ -2765,8 +2789,8 @@
           "end_line": 132
         }
       },
-      "content_hash": "2a0ecc5cf091786f",
-      "generated_at": 1768576236.708559
+      "content_hash": "8a659fa550304b53",
+      "generated_at": 1768597944.908951
     },
     "files/src/local_deepwiki/generators/coverage.md": {
       "path": "files/src/local_deepwiki/generators/coverage.md",
@@ -2782,42 +2806,8 @@
           "end_line": 36
         }
       },
-      "content_hash": "23fef749dd45a323",
-      "generated_at": 1768576239.241485
-    },
-    "files/src/local_deepwiki/generators/source_refs.md": {
-      "path": "files/src/local_deepwiki/generators/source_refs.md",
-      "source_files": [
-        "src/local_deepwiki/generators/source_refs.py"
-      ],
-      "source_hashes": {
-        "src/local_deepwiki/generators/source_refs.py": "c5aed8557d26a6699df8fd01398354bd410b8cce844d6771378909afa6f61fc4"
-      },
-      "source_line_info": {
-        "src/local_deepwiki/generators/source_refs.py": {
-          "start_line": 14,
-          "end_line": 53
-        }
-      },
-      "content_hash": "9e976f40023adde4",
-      "generated_at": 1768576242.8961148
-    },
-    "files/src/local_deepwiki/generators/search.md": {
-      "path": "files/src/local_deepwiki/generators/search.md",
-      "source_files": [
-        "src/local_deepwiki/generators/search.py"
-      ],
-      "source_hashes": {
-        "src/local_deepwiki/generators/search.py": "c05b152215ae3fedae08a15946b27a9c5be207f750d49d681857b0f837f9f393"
-      },
-      "source_line_info": {
-        "src/local_deepwiki/generators/search.py": {
-          "start_line": 14,
-          "end_line": 33
-        }
-      },
-      "content_hash": "87ec91d169b4beb7",
-      "generated_at": 1768576248.2346702
+      "content_hash": "7bdc1416ca6cf847",
+      "generated_at": 1768597945.796685
     },
     "files/src/local_deepwiki/generators/wiki_status.md": {
       "path": "files/src/local_deepwiki/generators/wiki_status.md",
@@ -2833,8 +2823,42 @@
           "end_line": 220
         }
       },
-      "content_hash": "e5e32615731fc8bc",
-      "generated_at": 1768576248.544071
+      "content_hash": "92d439137f37fd77",
+      "generated_at": 1768597954.84852
+    },
+    "files/src/local_deepwiki/generators/search.md": {
+      "path": "files/src/local_deepwiki/generators/search.md",
+      "source_files": [
+        "src/local_deepwiki/generators/search.py"
+      ],
+      "source_hashes": {
+        "src/local_deepwiki/generators/search.py": "70a4dd6009977f43219ddcb5cf6cc282033ba89e912001778a457fc8a5c15677"
+      },
+      "source_line_info": {
+        "src/local_deepwiki/generators/search.py": {
+          "start_line": 16,
+          "end_line": 35
+        }
+      },
+      "content_hash": "9b915fb1300795fe",
+      "generated_at": 1768597955.710967
+    },
+    "files/src/local_deepwiki/generators/source_refs.md": {
+      "path": "files/src/local_deepwiki/generators/source_refs.md",
+      "source_files": [
+        "src/local_deepwiki/generators/source_refs.py"
+      ],
+      "source_hashes": {
+        "src/local_deepwiki/generators/source_refs.py": "c5aed8557d26a6699df8fd01398354bd410b8cce844d6771378909afa6f61fc4"
+      },
+      "source_line_info": {
+        "src/local_deepwiki/generators/source_refs.py": {
+          "start_line": 14,
+          "end_line": 53
+        }
+      },
+      "content_hash": "f5780967dfe4dd01",
+      "generated_at": 1768597956.204149
     },
     "files/src/local_deepwiki/generators/see_also.md": {
       "path": "files/src/local_deepwiki/generators/see_also.md",
@@ -2850,8 +2874,8 @@
           "end_line": 22
         }
       },
-      "content_hash": "c5abf98a5abc9aa4",
-      "generated_at": 1768576258.747168
+      "content_hash": "c1b25e55fcb43e20",
+      "generated_at": 1768597966.0794199
     },
     "files/src/local_deepwiki/generators/wiki_files.md": {
       "path": "files/src/local_deepwiki/generators/wiki_files.md",
@@ -2867,8 +2891,8 @@
           "end_line": 52
         }
       },
-      "content_hash": "04c62d9ecbd8ada0",
-      "generated_at": 1768576261.4292638
+      "content_hash": "12aa69444fcef758",
+      "generated_at": 1768597970.580069
     },
     "files/src/local_deepwiki/generators/diagrams.md": {
       "path": "files/src/local_deepwiki/generators/diagrams.md",
@@ -2884,25 +2908,8 @@
           "end_line": 20
         }
       },
-      "content_hash": "45f5c00be839118f",
-      "generated_at": 1768576261.839087
-    },
-    "files/src/local_deepwiki/generators/test_examples.md": {
-      "path": "files/src/local_deepwiki/generators/test_examples.md",
-      "source_files": [
-        "src/local_deepwiki/generators/test_examples.py"
-      ],
-      "source_hashes": {
-        "src/local_deepwiki/generators/test_examples.py": "90643391bdc203ea93f9e8a32fb7735db28700f18bb4328a14a054a52ffeee5d"
-      },
-      "source_line_info": {
-        "src/local_deepwiki/generators/test_examples.py": {
-          "start_line": 22,
-          "end_line": 29
-        }
-      },
-      "content_hash": "ab0e6190bb690100",
-      "generated_at": 1768576269.936304
+      "content_hash": "e81c9cab3a5df0de",
+      "generated_at": 1768597972.9611
     },
     "files/src/local_deepwiki/generators/wiki.md": {
       "path": "files/src/local_deepwiki/generators/wiki.md",
@@ -2910,7 +2917,7 @@
         "src/local_deepwiki/generators/wiki.py"
       ],
       "source_hashes": {
-        "src/local_deepwiki/generators/wiki.py": "4f59b0e35c8e9f7f948314fe8e5be3b4366fd491f9cacbfa71931794c95fe60a"
+        "src/local_deepwiki/generators/wiki.py": "7b279c5403dc031e3dd2d992713d3be329c7165176e293097bbdc5f88a6fa535"
       },
       "source_line_info": {
         "src/local_deepwiki/generators/wiki.py": {
@@ -2918,8 +2925,8 @@
           "end_line": 443
         }
       },
-      "content_hash": "82e64cf52b32e814",
-      "generated_at": 1768576273.353485
+      "content_hash": "24f31b80895e31fc",
+      "generated_at": 1768597982.300417
     },
     "files/src/local_deepwiki/generators/api_docs.md": {
       "path": "files/src/local_deepwiki/generators/api_docs.md",
@@ -2935,8 +2942,42 @@
           "end_line": 21
         }
       },
-      "content_hash": "a16d360d2bb12545",
-      "generated_at": 1768576275.8192608
+      "content_hash": "275507df1a7b400c",
+      "generated_at": 1768597983.389952
+    },
+    "files/src/local_deepwiki/generators/test_examples.md": {
+      "path": "files/src/local_deepwiki/generators/test_examples.md",
+      "source_files": [
+        "src/local_deepwiki/generators/test_examples.py"
+      ],
+      "source_hashes": {
+        "src/local_deepwiki/generators/test_examples.py": "90643391bdc203ea93f9e8a32fb7735db28700f18bb4328a14a054a52ffeee5d"
+      },
+      "source_line_info": {
+        "src/local_deepwiki/generators/test_examples.py": {
+          "start_line": 22,
+          "end_line": 29
+        }
+      },
+      "content_hash": "8402ecf0c6f3c89c",
+      "generated_at": 1768597984.6005208
+    },
+    "files/src/local_deepwiki/generators/glossary.md": {
+      "path": "files/src/local_deepwiki/generators/glossary.md",
+      "source_files": [
+        "src/local_deepwiki/generators/glossary.py"
+      ],
+      "source_hashes": {
+        "src/local_deepwiki/generators/glossary.py": "46190d9746099155fe39c4ba779ada0381450b3f7c5cff2896dd29021041c31c"
+      },
+      "source_line_info": {
+        "src/local_deepwiki/generators/glossary.py": {
+          "start_line": 11,
+          "end_line": 24
+        }
+      },
+      "content_hash": "d887fa73f84ae59d",
+      "generated_at": 1768597994.866234
     },
     "files/src/local_deepwiki/generators/inheritance.md": {
       "path": "files/src/local_deepwiki/generators/inheritance.md",
@@ -2952,25 +2993,8 @@
           "end_line": 20
         }
       },
-      "content_hash": "791b1689ad2735df",
-      "generated_at": 1768576285.129471
-    },
-    "files/src/local_deepwiki/generators/glossary.md": {
-      "path": "files/src/local_deepwiki/generators/glossary.md",
-      "source_files": [
-        "src/local_deepwiki/generators/glossary.py"
-      ],
-      "source_hashes": {
-        "src/local_deepwiki/generators/glossary.py": "e0290c15045a239090003bb4871dbdd53044091f49a8190ca05c16c0e618ac85"
-      },
-      "source_line_info": {
-        "src/local_deepwiki/generators/glossary.py": {
-          "start_line": 11,
-          "end_line": 18
-        }
-      },
-      "content_hash": "f4b31ecb46d15e0d",
-      "generated_at": 1768576286.726026
+      "content_hash": "cea0f2f896e1a6e1",
+      "generated_at": 1768597997.487324
     },
     "files/src/local_deepwiki/export/html.md": {
       "path": "files/src/local_deepwiki/export/html.md",
@@ -2986,8 +3010,8 @@
           "end_line": 859
         }
       },
-      "content_hash": "2022ea67657a0d6e",
-      "generated_at": 1768576290.506203
+      "content_hash": "29b526f2c31a356b",
+      "generated_at": 1768598000.714628
     },
     "files/src/local_deepwiki/export/pdf.md": {
       "path": "files/src/local_deepwiki/export/pdf.md",
@@ -3003,8 +3027,8 @@
           "end_line": 680
         }
       },
-      "content_hash": "40fd046c886527ea",
-      "generated_at": 1768576300.720851
+      "content_hash": "60d27c4858ab71c1",
+      "generated_at": 1768598010.5799942
     },
     "files/index.md": {
       "path": "files/index.md",
@@ -3061,7 +3085,7 @@
         "src/local_deepwiki/handlers.py": "e310a79b47bde034dcdd2d20573287ad54e59e4fdb27c093446bee30415cd7e4",
         "src/local_deepwiki/watcher.py": "6abc24a1e2927a641c38ef6f0ea2ee061b74a562c9e49cdbeb08baa568ecea92",
         "src/local_deepwiki/validation.py": "b1f00e1b37f03edbe92abb597864323aee8f262de2b64d25a0c664a5051fde7d",
-        "src/local_deepwiki/core/chunker.py": "17d7fb4471b2b5eb929da27237fd9934af325a9c45aeeeb6ca945ae0028ccbaf",
+        "src/local_deepwiki/core/chunker.py": "6b90a27ebf49ded17742266d40e25629017e0634199ad0fa5d9e71d4a58777c5",
         "src/local_deepwiki/core/llm_cache.py": "7ca2bd123bd33c48ab681b797a916ac4fd0f0e4c0553e41e6525fd1b768f0133",
         "src/local_deepwiki/core/vectorstore.py": "a1f742b29a9c5834a3e31eaefa5312eca28f2c5b8694a59ebf31501524568f43",
         "src/local_deepwiki/core/parser.py": "31f0d870c365c8b3d2786edf64489bd9d60720aedff9eea75dbc1bcf1168d217",
@@ -3086,15 +3110,15 @@
         "src/local_deepwiki/generators/wiki_modules.py": "6585aca3dd11aaa6f4b28b27514fc063e0923c3f586fb360e78d4109beea71d0",
         "src/local_deepwiki/generators/source_refs.py": "c5aed8557d26a6699df8fd01398354bd410b8cce844d6771378909afa6f61fc4",
         "src/local_deepwiki/generators/wiki_status.py": "801d343c04e747b508e5390b85e79d3db5009f81e79e39bf2e28972b5b88fa89",
-        "src/local_deepwiki/generators/search.py": "c05b152215ae3fedae08a15946b27a9c5be207f750d49d681857b0f837f9f393",
+        "src/local_deepwiki/generators/search.py": "70a4dd6009977f43219ddcb5cf6cc282033ba89e912001778a457fc8a5c15677",
         "src/local_deepwiki/generators/diagrams.py": "158ecfbf27194a94c7615fbf6b670016f1d324f7b50b0d03e9272ca457b3b7a8",
         "src/local_deepwiki/generators/see_also.py": "3ebccd3892ce1468e7e071dcabbf346b2abb10ebdc2f4a28b4a7da8d992b553c",
         "src/local_deepwiki/generators/wiki_files.py": "aeb74163845378620492337086f9256e38087aa8112754cc7d5a705d8bc118b0",
         "src/local_deepwiki/generators/api_docs.py": "01657dcc28e4139d84e4c1e9885f6666bc11ed07612d6c1bb271ebbef840fba0",
-        "src/local_deepwiki/generators/wiki.py": "4f59b0e35c8e9f7f948314fe8e5be3b4366fd491f9cacbfa71931794c95fe60a",
+        "src/local_deepwiki/generators/wiki.py": "7b279c5403dc031e3dd2d992713d3be329c7165176e293097bbdc5f88a6fa535",
         "src/local_deepwiki/generators/test_examples.py": "90643391bdc203ea93f9e8a32fb7735db28700f18bb4328a14a054a52ffeee5d",
         "src/local_deepwiki/generators/inheritance.py": "12f2ca9afd32b72ae8d6ca682f7b1cf723f640094d4a127eb010e8b76193e68d",
-        "src/local_deepwiki/generators/glossary.py": "e0290c15045a239090003bb4871dbdd53044091f49a8190ca05c16c0e618ac85",
+        "src/local_deepwiki/generators/glossary.py": "46190d9746099155fe39c4ba779ada0381450b3f7c5cff2896dd29021041c31c",
         "src/local_deepwiki/export/html.py": "3419e9222ae35625edc77c28037713893d14eee25a0325df303dbf066652f5e3",
         "src/local_deepwiki/export/pdf.py": "7a6a2e801e2b8f05ab16c53e3bc5bffc87c08c480f77cf4ba1c9fd090d5275d2"
       },
@@ -3128,8 +3152,8 @@
           "end_line": 42
         },
         "src/local_deepwiki/core/chunker.py": {
-          "start_line": 200,
-          "end_line": 600
+          "start_line": 498,
+          "end_line": 906
         },
         "src/local_deepwiki/core/llm_cache.py": {
           "start_line": 19,
@@ -3228,8 +3252,8 @@
           "end_line": 220
         },
         "src/local_deepwiki/generators/search.py": {
-          "start_line": 14,
-          "end_line": 33
+          "start_line": 16,
+          "end_line": 35
         },
         "src/local_deepwiki/generators/diagrams.py": {
           "start_line": 11,
@@ -3261,7 +3285,7 @@
         },
         "src/local_deepwiki/generators/glossary.py": {
           "start_line": 11,
-          "end_line": 18
+          "end_line": 24
         },
         "src/local_deepwiki/export/html.py": {
           "start_line": 663,
@@ -3273,7 +3297,7 @@
         }
       },
       "content_hash": "1a670e59c78dbf9a",
-      "generated_at": 1768576300.81089
+      "generated_at": 1768598010.580832
     },
     "dependencies.md": {
       "path": "dependencies.md",
@@ -3288,16 +3312,16 @@
         "src/local_deepwiki/generators/source_refs.py",
         "src/local_deepwiki/providers/embeddings/__init__.py",
         "src/local_deepwiki/export/__init__.py",
-        "src/local_deepwiki/generators/search.py",
         "src/local_deepwiki/generators/callgraph.py",
-        "src/local_deepwiki/core/chunker.py",
         "src/local_deepwiki/generators/glossary.py",
+        "src/local_deepwiki/core/chunker.py",
         "src/local_deepwiki/providers/embeddings/openai.py",
         "src/local_deepwiki/generators/api_docs.py",
         "src/local_deepwiki/generators/coverage.py",
         "src/local_deepwiki/core/vectorstore.py",
         "src/local_deepwiki/core/git_utils.py",
         "src/local_deepwiki/providers/embeddings/local.py",
+        "src/local_deepwiki/generators/search.py",
         "src/local_deepwiki/generators/inheritance.py",
         "src/local_deepwiki/generators/wiki.py",
         "src/local_deepwiki/models.py",
@@ -3316,6 +3340,7 @@
         "tests/test_see_also.py",
         "tests/test_export_init.py",
         "tests/test_api_docs.py",
+        "tests/test_type_annotations.py",
         "tests/test_test_examples.py",
         "tests/test_diagrams.py",
         "tests/test_parser.py",
@@ -3332,7 +3357,6 @@
         "tests/test_provider_factories.py",
         "tests/test_html_export.py",
         "tests/test_wiki_modules_coverage.py",
-        "tests/test_search.py",
         "tests/test_wiki_coverage.py",
         "tests/test_manifest.py",
         "tests/test_web.py",
@@ -3342,6 +3366,7 @@
         "tests/test_callgraph.py",
         "tests/test_wiki_files_coverage.py",
         "tests/test_deep_research.py",
+        "tests/test_search.py",
         "tests/test_incremental_wiki.py",
         "tests/test_wiki_pages_coverage.py",
         "tests/test_local_embedding_provider.py",
@@ -3363,18 +3388,18 @@
         "src/local_deepwiki/generators/source_refs.py": "c5aed8557d26a6699df8fd01398354bd410b8cce844d6771378909afa6f61fc4",
         "src/local_deepwiki/providers/embeddings/__init__.py": "cf829d514e6c4a9fe04d4d9d7809a98e8335910df9816f9d8ab225e602fa3d35",
         "src/local_deepwiki/export/__init__.py": "432474cf0f5925089e6e724944e3fd4e93fef0e6cde6367fd01aee29206a1400",
-        "src/local_deepwiki/generators/search.py": "c05b152215ae3fedae08a15946b27a9c5be207f750d49d681857b0f837f9f393",
         "src/local_deepwiki/generators/callgraph.py": "a58cba27b97c15c7ec0b7dfdb5b5b786ec84dee6693f851cd56a513ce6bdf9ef",
-        "src/local_deepwiki/core/chunker.py": "17d7fb4471b2b5eb929da27237fd9934af325a9c45aeeeb6ca945ae0028ccbaf",
-        "src/local_deepwiki/generators/glossary.py": "e0290c15045a239090003bb4871dbdd53044091f49a8190ca05c16c0e618ac85",
+        "src/local_deepwiki/generators/glossary.py": "46190d9746099155fe39c4ba779ada0381450b3f7c5cff2896dd29021041c31c",
+        "src/local_deepwiki/core/chunker.py": "6b90a27ebf49ded17742266d40e25629017e0634199ad0fa5d9e71d4a58777c5",
         "src/local_deepwiki/providers/embeddings/openai.py": "22428820b41eddba63ab038bec50f1b1d552ce04836bc35d8bf2d1bae9c452f1",
         "src/local_deepwiki/generators/api_docs.py": "01657dcc28e4139d84e4c1e9885f6666bc11ed07612d6c1bb271ebbef840fba0",
         "src/local_deepwiki/generators/coverage.py": "49dca01295a1db01e1ebc826cbe5692c64e57a60ba37bef9382cb0b158038704",
         "src/local_deepwiki/core/vectorstore.py": "a1f742b29a9c5834a3e31eaefa5312eca28f2c5b8694a59ebf31501524568f43",
         "src/local_deepwiki/core/git_utils.py": "397ac37efdba6b6f5441253d1febb20ce79bca45f1601c21644f437c5e7da5bf",
         "src/local_deepwiki/providers/embeddings/local.py": "94cdc7dc1cdd783ef4f03081e7ec0f4003060e2fd4fc252ec9b1c853a4c36aa5",
+        "src/local_deepwiki/generators/search.py": "70a4dd6009977f43219ddcb5cf6cc282033ba89e912001778a457fc8a5c15677",
         "src/local_deepwiki/generators/inheritance.py": "12f2ca9afd32b72ae8d6ca682f7b1cf723f640094d4a127eb010e8b76193e68d",
-        "src/local_deepwiki/generators/wiki.py": "4f59b0e35c8e9f7f948314fe8e5be3b4366fd491f9cacbfa71931794c95fe60a",
+        "src/local_deepwiki/generators/wiki.py": "7b279c5403dc031e3dd2d992713d3be329c7165176e293097bbdc5f88a6fa535",
         "src/local_deepwiki/models.py": "c3ab16a3cd3e248d0fcb8464ff904d936859b04ac065880718fc4be336d76b9f",
         "src/local_deepwiki/server.py": "48a41dae5c938d767af684a87b38f52e4b240e750e2f94e502e791116e3c1790",
         "src/local_deepwiki/export/pdf.py": "7a6a2e801e2b8f05ab16c53e3bc5bffc87c08c480f77cf4ba1c9fd090d5275d2",
@@ -3391,6 +3416,7 @@
         "tests/test_see_also.py": "5432b7cea902495262f3e54b6a0f99774aee42956df23a22229fedbaabec193c",
         "tests/test_export_init.py": "7ca0556642b9c5b33b1a856f18a58ae62e748d923daa3754324d091b5ca69d00",
         "tests/test_api_docs.py": "9fd164e6ab4f146179c2c04698fe48615fe458cdcd4327446fe9128b85df350c",
+        "tests/test_type_annotations.py": "240505eb3b43439370dd2959ea44550345f2a011356fdea7826ee2cca1f2f14d",
         "tests/test_test_examples.py": "63b841bcd764f8009a00fc85ec3de98213ae2016c5dddf87e75600e88edd3ca4",
         "tests/test_diagrams.py": "b0352fde6b1d40e30612262872679c42269a94b88217c0521b5b8fbdc005bbce",
         "tests/test_parser.py": "7d6ec36f37793c053775b4edec262e4f40661b96dfde2760a06927533e4931a3",
@@ -3407,8 +3433,7 @@
         "tests/test_provider_factories.py": "cb89522edad2ab254f5986399ffe53a20d26b69d5fb84f30a0aec051c207c210",
         "tests/test_html_export.py": "b7badd894bb2ea069f0139cedee59066304be3f193c867583a948f524ee1c5e0",
         "tests/test_wiki_modules_coverage.py": "b849ec85a23efdfaf4c73b70dc9b8a1023b2ecec8a23154186fe157471a55b71",
-        "tests/test_search.py": "faa2af69e5c1ba9e36a305f2c9ae8ebb231a868aa4830b60ce7af65e6333107a",
-        "tests/test_wiki_coverage.py": "e44679c1de84b92ee9f3f95efc1a13338320538ea356ee19cc4364c9efec1aa5",
+        "tests/test_wiki_coverage.py": "68f672afcf4de74b520a457b6e762e8ec1093e72c52589166c37c84a48961027",
         "tests/test_manifest.py": "22d163793fbf5cce2e82f2b2cb14d8836439d7c5ea53c0294202b2c377085668",
         "tests/test_web.py": "5a8ea8ae195fb5a0da3451548ffc05fbabc7d4eed573bcf59ddfee3fb218d107",
         "tests/test_retry.py": "dd50af91e3299a6280c907bcf7714b5465aeccc01e78e0d104f7c3eb591e2bea",
@@ -3417,6 +3442,7 @@
         "tests/test_callgraph.py": "1e3969bdbc28a3abb164acd8baf33b5180e2e14bf358e8350de669859d98211e",
         "tests/test_wiki_files_coverage.py": "26f8636567bd1d19c064c41307a02e446a48b0dab8739a615cc0fe1973128bce",
         "tests/test_deep_research.py": "34430c38a5f193755adfff01eae0fe6de5d50e8c4b4abeba7dec75295a9f5222",
+        "tests/test_search.py": "b33996c43d747373f930f5d34f0b4add82ceae9d18f30c72a66da1be4c24bd2d",
         "tests/test_incremental_wiki.py": "49279fab5824e610818fab9a2688613b03ae0d075fc453cc6e30af863a4ee248",
         "tests/test_wiki_pages_coverage.py": "c1956a4d89b1fa0ecdb3e114cb5c269da6632e654ec78dbcfab55313516a369f",
         "tests/test_local_embedding_provider.py": "500cfa028b01c7cd93c9714e7e8ec1bdeca4754e461958d846baaec76dc9f60b",
@@ -3464,21 +3490,17 @@
           "start_line": 9,
           "end_line": 22
         },
-        "src/local_deepwiki/generators/search.py": {
-          "start_line": 14,
-          "end_line": 33
-        },
         "src/local_deepwiki/generators/callgraph.py": {
           "start_line": 257,
           "end_line": 324
         },
-        "src/local_deepwiki/core/chunker.py": {
-          "start_line": 200,
-          "end_line": 600
-        },
         "src/local_deepwiki/generators/glossary.py": {
           "start_line": 11,
-          "end_line": 18
+          "end_line": 24
+        },
+        "src/local_deepwiki/core/chunker.py": {
+          "start_line": 498,
+          "end_line": 906
         },
         "src/local_deepwiki/providers/embeddings/openai.py": {
           "start_line": 17,
@@ -3503,6 +3525,10 @@
         "src/local_deepwiki/providers/embeddings/local.py": {
           "start_line": 10,
           "end_line": 57
+        },
+        "src/local_deepwiki/generators/search.py": {
+          "start_line": 16,
+          "end_line": 35
         },
         "src/local_deepwiki/generators/inheritance.py": {
           "start_line": 12,
@@ -3576,6 +3602,10 @@
           "start_line": 31,
           "end_line": 53
         },
+        "tests/test_type_annotations.py": {
+          "start_line": 40,
+          "end_line": 132
+        },
         "tests/test_test_examples.py": {
           "start_line": 17,
           "end_line": 66
@@ -3640,10 +3670,6 @@
           "start_line": 90,
           "end_line": 474
         },
-        "tests/test_search.py": {
-          "start_line": 20,
-          "end_line": 53
-        },
         "tests/test_wiki_coverage.py": {
           "start_line": 50,
           "end_line": 120
@@ -3679,6 +3705,10 @@
         "tests/test_deep_research.py": {
           "start_line": 27,
           "end_line": 41
+        },
+        "tests/test_search.py": {
+          "start_line": 24,
+          "end_line": 57
         },
         "tests/test_incremental_wiki.py": {
           "start_line": 20,
@@ -3717,8 +3747,8 @@
           "end_line": 37
         }
       },
-      "content_hash": "d94334965f96d14c",
-      "generated_at": 1768576318.950628
+      "content_hash": "eab1d67d17decc00",
+      "generated_at": 1768598028.89805
     },
     "changelog.md": {
       "path": "changelog.md",
@@ -3751,6 +3781,7 @@
         "tests/test_handlers_coverage.py",
         "tests/test_indexer.py",
         "tests/test_html_export.py",
+        "tests/test_type_annotations.py",
         "tests/test_config.py",
         "tests/test_openai_embedding_provider.py",
         "tests/test_glossary.py",
@@ -3831,9 +3862,9 @@
         "tests/test_changelog.py": "afd483df65d305a92dd24c6cf92dcc84cc364c10102b74535066f439c9786446",
         "tests/test_coverage.py": "d8d31b0067fa75f8d0f717ab9ef3b58962bef9a250720b7f802d380d1324b964",
         "tests/test_vectorstore.py": "a530fc769542193acd3ee9c4e38997c28b5b8680aa1618f36f1beb4e30ed80fe",
-        "tests/test_wiki_coverage.py": "e44679c1de84b92ee9f3f95efc1a13338320538ea356ee19cc4364c9efec1aa5",
+        "tests/test_wiki_coverage.py": "68f672afcf4de74b520a457b6e762e8ec1093e72c52589166c37c84a48961027",
         "tests/test_pdf_export.py": "c751f4dd7504b77d2d42863d462342f697a9905cbbe87ec46ecbe35657cb2e6f",
-        "tests/test_search.py": "faa2af69e5c1ba9e36a305f2c9ae8ebb231a868aa4830b60ce7af65e6333107a",
+        "tests/test_search.py": "b33996c43d747373f930f5d34f0b4add82ceae9d18f30c72a66da1be4c24bd2d",
         "tests/test_wiki_pages_coverage.py": "c1956a4d89b1fa0ecdb3e114cb5c269da6632e654ec78dbcfab55313516a369f",
         "tests/test_toc.py": "f0d017efe534bbc2e205767150b7356edd70cc1f08a8c880a2244c10cb34ef24",
         "tests/test_incremental_wiki.py": "49279fab5824e610818fab9a2688613b03ae0d075fc453cc6e30af863a4ee248",
@@ -3850,6 +3881,7 @@
         "tests/test_handlers_coverage.py": "242faefececb500bac1092c05d9f241eba6e06ab947be9cfdaadd577a700227c",
         "tests/test_indexer.py": "e782e6e2dacbd3ffd02776dfb4e5bd68d52c9c4a8bfe07bd4df6046c03811a44",
         "tests/test_html_export.py": "b7badd894bb2ea069f0139cedee59066304be3f193c867583a948f524ee1c5e0",
+        "tests/test_type_annotations.py": "240505eb3b43439370dd2959ea44550345f2a011356fdea7826ee2cca1f2f14d",
         "tests/test_config.py": "8d6d81a9660764a9f0ba92d0a0adc22b6123783a091a30107a1cf7b7e134694e",
         "tests/test_openai_embedding_provider.py": "3cfcc231cff23864266177dd2aa4907adfabeab014081cb43247df3fa27eba3f",
         "tests/test_glossary.py": "eb09a16cc60155ac23a280a72daa6e1ca5efe6496a6ebdf38245711d8aa8b7ce",
@@ -3876,7 +3908,7 @@
         "src/local_deepwiki/watcher.py": "6abc24a1e2927a641c38ef6f0ea2ee061b74a562c9e49cdbeb08baa568ecea92",
         "src/local_deepwiki/validation.py": "b1f00e1b37f03edbe92abb597864323aee8f262de2b64d25a0c664a5051fde7d",
         "src/local_deepwiki/tools/__init__.py": "7e0e0edd2c008afc961b8bb19156c3de6bfcf5b9c2f495f399b8aefc2171d7cc",
-        "src/local_deepwiki/core/chunker.py": "17d7fb4471b2b5eb929da27237fd9934af325a9c45aeeeb6ca945ae0028ccbaf",
+        "src/local_deepwiki/core/chunker.py": "6b90a27ebf49ded17742266d40e25629017e0634199ad0fa5d9e71d4a58777c5",
         "src/local_deepwiki/core/llm_cache.py": "7ca2bd123bd33c48ab681b797a916ac4fd0f0e4c0553e41e6525fd1b768f0133",
         "src/local_deepwiki/core/vectorstore.py": "a1f742b29a9c5834a3e31eaefa5312eca28f2c5b8694a59ebf31501524568f43",
         "src/local_deepwiki/core/__init__.py": "44e160a61a8405688f53bc3a4770db0717b96e10cb28fe49eec26a9d90041085",
@@ -3907,15 +3939,15 @@
         "src/local_deepwiki/generators/wiki_modules.py": "6585aca3dd11aaa6f4b28b27514fc063e0923c3f586fb360e78d4109beea71d0",
         "src/local_deepwiki/generators/source_refs.py": "c5aed8557d26a6699df8fd01398354bd410b8cce844d6771378909afa6f61fc4",
         "src/local_deepwiki/generators/wiki_status.py": "801d343c04e747b508e5390b85e79d3db5009f81e79e39bf2e28972b5b88fa89",
-        "src/local_deepwiki/generators/search.py": "c05b152215ae3fedae08a15946b27a9c5be207f750d49d681857b0f837f9f393",
+        "src/local_deepwiki/generators/search.py": "70a4dd6009977f43219ddcb5cf6cc282033ba89e912001778a457fc8a5c15677",
         "src/local_deepwiki/generators/diagrams.py": "158ecfbf27194a94c7615fbf6b670016f1d324f7b50b0d03e9272ca457b3b7a8",
         "src/local_deepwiki/generators/see_also.py": "3ebccd3892ce1468e7e071dcabbf346b2abb10ebdc2f4a28b4a7da8d992b553c",
         "src/local_deepwiki/generators/wiki_files.py": "aeb74163845378620492337086f9256e38087aa8112754cc7d5a705d8bc118b0",
         "src/local_deepwiki/generators/api_docs.py": "01657dcc28e4139d84e4c1e9885f6666bc11ed07612d6c1bb271ebbef840fba0",
-        "src/local_deepwiki/generators/wiki.py": "4f59b0e35c8e9f7f948314fe8e5be3b4366fd491f9cacbfa71931794c95fe60a",
+        "src/local_deepwiki/generators/wiki.py": "7b279c5403dc031e3dd2d992713d3be329c7165176e293097bbdc5f88a6fa535",
         "src/local_deepwiki/generators/test_examples.py": "90643391bdc203ea93f9e8a32fb7735db28700f18bb4328a14a054a52ffeee5d",
         "src/local_deepwiki/generators/inheritance.py": "12f2ca9afd32b72ae8d6ca682f7b1cf723f640094d4a127eb010e8b76193e68d",
-        "src/local_deepwiki/generators/glossary.py": "e0290c15045a239090003bb4871dbdd53044091f49a8190ca05c16c0e618ac85",
+        "src/local_deepwiki/generators/glossary.py": "46190d9746099155fe39c4ba779ada0381450b3f7c5cff2896dd29021041c31c",
         "src/local_deepwiki/export/html.py": "3419e9222ae35625edc77c28037713893d14eee25a0325df303dbf066652f5e3",
         "src/local_deepwiki/export/__init__.py": "432474cf0f5925089e6e724944e3fd4e93fef0e6cde6367fd01aee29206a1400",
         "src/local_deepwiki/export/pdf.py": "7a6a2e801e2b8f05ab16c53e3bc5bffc87c08c480f77cf4ba1c9fd090d5275d2"
@@ -3966,8 +3998,8 @@
           "end_line": 82
         },
         "tests/test_search.py": {
-          "start_line": 20,
-          "end_line": 53
+          "start_line": 24,
+          "end_line": 57
         },
         "tests/test_wiki_pages_coverage.py": {
           "start_line": 92,
@@ -4028,6 +4060,10 @@
         "tests/test_html_export.py": {
           "start_line": 11,
           "end_line": 42
+        },
+        "tests/test_type_annotations.py": {
+          "start_line": 40,
+          "end_line": 132
         },
         "tests/test_config.py": {
           "start_line": 35,
@@ -4126,8 +4162,8 @@
           "end_line": 42
         },
         "src/local_deepwiki/core/chunker.py": {
-          "start_line": 200,
-          "end_line": 600
+          "start_line": 498,
+          "end_line": 906
         },
         "src/local_deepwiki/core/llm_cache.py": {
           "start_line": 19,
@@ -4234,8 +4270,8 @@
           "end_line": 220
         },
         "src/local_deepwiki/generators/search.py": {
-          "start_line": 14,
-          "end_line": 33
+          "start_line": 16,
+          "end_line": 35
         },
         "src/local_deepwiki/generators/diagrams.py": {
           "start_line": 11,
@@ -4267,7 +4303,7 @@
         },
         "src/local_deepwiki/generators/glossary.py": {
           "start_line": 11,
-          "end_line": 18
+          "end_line": 24
         },
         "src/local_deepwiki/export/html.py": {
           "start_line": 663,
@@ -4282,8 +4318,8 @@
           "end_line": 680
         }
       },
-      "content_hash": "35087c5af0a2fc80",
-      "generated_at": 1768576319.040273
+      "content_hash": "b0633feb9772b448",
+      "generated_at": 1768598029.011717
     },
     "inheritance.md": {
       "path": "inheritance.md",
@@ -4316,6 +4352,7 @@
         "tests/test_handlers_coverage.py",
         "tests/test_indexer.py",
         "tests/test_html_export.py",
+        "tests/test_type_annotations.py",
         "tests/test_config.py",
         "tests/test_openai_embedding_provider.py",
         "tests/test_glossary.py",
@@ -4396,9 +4433,9 @@
         "tests/test_changelog.py": "afd483df65d305a92dd24c6cf92dcc84cc364c10102b74535066f439c9786446",
         "tests/test_coverage.py": "d8d31b0067fa75f8d0f717ab9ef3b58962bef9a250720b7f802d380d1324b964",
         "tests/test_vectorstore.py": "a530fc769542193acd3ee9c4e38997c28b5b8680aa1618f36f1beb4e30ed80fe",
-        "tests/test_wiki_coverage.py": "e44679c1de84b92ee9f3f95efc1a13338320538ea356ee19cc4364c9efec1aa5",
+        "tests/test_wiki_coverage.py": "68f672afcf4de74b520a457b6e762e8ec1093e72c52589166c37c84a48961027",
         "tests/test_pdf_export.py": "c751f4dd7504b77d2d42863d462342f697a9905cbbe87ec46ecbe35657cb2e6f",
-        "tests/test_search.py": "faa2af69e5c1ba9e36a305f2c9ae8ebb231a868aa4830b60ce7af65e6333107a",
+        "tests/test_search.py": "b33996c43d747373f930f5d34f0b4add82ceae9d18f30c72a66da1be4c24bd2d",
         "tests/test_wiki_pages_coverage.py": "c1956a4d89b1fa0ecdb3e114cb5c269da6632e654ec78dbcfab55313516a369f",
         "tests/test_toc.py": "f0d017efe534bbc2e205767150b7356edd70cc1f08a8c880a2244c10cb34ef24",
         "tests/test_incremental_wiki.py": "49279fab5824e610818fab9a2688613b03ae0d075fc453cc6e30af863a4ee248",
@@ -4415,6 +4452,7 @@
         "tests/test_handlers_coverage.py": "242faefececb500bac1092c05d9f241eba6e06ab947be9cfdaadd577a700227c",
         "tests/test_indexer.py": "e782e6e2dacbd3ffd02776dfb4e5bd68d52c9c4a8bfe07bd4df6046c03811a44",
         "tests/test_html_export.py": "b7badd894bb2ea069f0139cedee59066304be3f193c867583a948f524ee1c5e0",
+        "tests/test_type_annotations.py": "240505eb3b43439370dd2959ea44550345f2a011356fdea7826ee2cca1f2f14d",
         "tests/test_config.py": "8d6d81a9660764a9f0ba92d0a0adc22b6123783a091a30107a1cf7b7e134694e",
         "tests/test_openai_embedding_provider.py": "3cfcc231cff23864266177dd2aa4907adfabeab014081cb43247df3fa27eba3f",
         "tests/test_glossary.py": "eb09a16cc60155ac23a280a72daa6e1ca5efe6496a6ebdf38245711d8aa8b7ce",
@@ -4441,7 +4479,7 @@
         "src/local_deepwiki/watcher.py": "6abc24a1e2927a641c38ef6f0ea2ee061b74a562c9e49cdbeb08baa568ecea92",
         "src/local_deepwiki/validation.py": "b1f00e1b37f03edbe92abb597864323aee8f262de2b64d25a0c664a5051fde7d",
         "src/local_deepwiki/tools/__init__.py": "7e0e0edd2c008afc961b8bb19156c3de6bfcf5b9c2f495f399b8aefc2171d7cc",
-        "src/local_deepwiki/core/chunker.py": "17d7fb4471b2b5eb929da27237fd9934af325a9c45aeeeb6ca945ae0028ccbaf",
+        "src/local_deepwiki/core/chunker.py": "6b90a27ebf49ded17742266d40e25629017e0634199ad0fa5d9e71d4a58777c5",
         "src/local_deepwiki/core/llm_cache.py": "7ca2bd123bd33c48ab681b797a916ac4fd0f0e4c0553e41e6525fd1b768f0133",
         "src/local_deepwiki/core/vectorstore.py": "a1f742b29a9c5834a3e31eaefa5312eca28f2c5b8694a59ebf31501524568f43",
         "src/local_deepwiki/core/__init__.py": "44e160a61a8405688f53bc3a4770db0717b96e10cb28fe49eec26a9d90041085",
@@ -4472,15 +4510,15 @@
         "src/local_deepwiki/generators/wiki_modules.py": "6585aca3dd11aaa6f4b28b27514fc063e0923c3f586fb360e78d4109beea71d0",
         "src/local_deepwiki/generators/source_refs.py": "c5aed8557d26a6699df8fd01398354bd410b8cce844d6771378909afa6f61fc4",
         "src/local_deepwiki/generators/wiki_status.py": "801d343c04e747b508e5390b85e79d3db5009f81e79e39bf2e28972b5b88fa89",
-        "src/local_deepwiki/generators/search.py": "c05b152215ae3fedae08a15946b27a9c5be207f750d49d681857b0f837f9f393",
+        "src/local_deepwiki/generators/search.py": "70a4dd6009977f43219ddcb5cf6cc282033ba89e912001778a457fc8a5c15677",
         "src/local_deepwiki/generators/diagrams.py": "158ecfbf27194a94c7615fbf6b670016f1d324f7b50b0d03e9272ca457b3b7a8",
         "src/local_deepwiki/generators/see_also.py": "3ebccd3892ce1468e7e071dcabbf346b2abb10ebdc2f4a28b4a7da8d992b553c",
         "src/local_deepwiki/generators/wiki_files.py": "aeb74163845378620492337086f9256e38087aa8112754cc7d5a705d8bc118b0",
         "src/local_deepwiki/generators/api_docs.py": "01657dcc28e4139d84e4c1e9885f6666bc11ed07612d6c1bb271ebbef840fba0",
-        "src/local_deepwiki/generators/wiki.py": "4f59b0e35c8e9f7f948314fe8e5be3b4366fd491f9cacbfa71931794c95fe60a",
+        "src/local_deepwiki/generators/wiki.py": "7b279c5403dc031e3dd2d992713d3be329c7165176e293097bbdc5f88a6fa535",
         "src/local_deepwiki/generators/test_examples.py": "90643391bdc203ea93f9e8a32fb7735db28700f18bb4328a14a054a52ffeee5d",
         "src/local_deepwiki/generators/inheritance.py": "12f2ca9afd32b72ae8d6ca682f7b1cf723f640094d4a127eb010e8b76193e68d",
-        "src/local_deepwiki/generators/glossary.py": "e0290c15045a239090003bb4871dbdd53044091f49a8190ca05c16c0e618ac85",
+        "src/local_deepwiki/generators/glossary.py": "46190d9746099155fe39c4ba779ada0381450b3f7c5cff2896dd29021041c31c",
         "src/local_deepwiki/export/html.py": "3419e9222ae35625edc77c28037713893d14eee25a0325df303dbf066652f5e3",
         "src/local_deepwiki/export/__init__.py": "432474cf0f5925089e6e724944e3fd4e93fef0e6cde6367fd01aee29206a1400",
         "src/local_deepwiki/export/pdf.py": "7a6a2e801e2b8f05ab16c53e3bc5bffc87c08c480f77cf4ba1c9fd090d5275d2"
@@ -4531,8 +4569,8 @@
           "end_line": 82
         },
         "tests/test_search.py": {
-          "start_line": 20,
-          "end_line": 53
+          "start_line": 24,
+          "end_line": 57
         },
         "tests/test_wiki_pages_coverage.py": {
           "start_line": 92,
@@ -4593,6 +4631,10 @@
         "tests/test_html_export.py": {
           "start_line": 11,
           "end_line": 42
+        },
+        "tests/test_type_annotations.py": {
+          "start_line": 40,
+          "end_line": 132
         },
         "tests/test_config.py": {
           "start_line": 35,
@@ -4691,8 +4733,8 @@
           "end_line": 42
         },
         "src/local_deepwiki/core/chunker.py": {
-          "start_line": 200,
-          "end_line": 600
+          "start_line": 498,
+          "end_line": 906
         },
         "src/local_deepwiki/core/llm_cache.py": {
           "start_line": 19,
@@ -4799,8 +4841,8 @@
           "end_line": 220
         },
         "src/local_deepwiki/generators/search.py": {
-          "start_line": 14,
-          "end_line": 33
+          "start_line": 16,
+          "end_line": 35
         },
         "src/local_deepwiki/generators/diagrams.py": {
           "start_line": 11,
@@ -4832,7 +4874,7 @@
         },
         "src/local_deepwiki/generators/glossary.py": {
           "start_line": 11,
-          "end_line": 18
+          "end_line": 24
         },
         "src/local_deepwiki/export/html.py": {
           "start_line": 663,
@@ -4848,7 +4890,7 @@
         }
       },
       "content_hash": "4cd512e16e914f93",
-      "generated_at": 1768576319.734498
+      "generated_at": 1768598029.6129348
     },
     "glossary.md": {
       "path": "glossary.md",
@@ -4881,6 +4923,7 @@
         "tests/test_handlers_coverage.py",
         "tests/test_indexer.py",
         "tests/test_html_export.py",
+        "tests/test_type_annotations.py",
         "tests/test_config.py",
         "tests/test_openai_embedding_provider.py",
         "tests/test_glossary.py",
@@ -4961,9 +5004,9 @@
         "tests/test_changelog.py": "afd483df65d305a92dd24c6cf92dcc84cc364c10102b74535066f439c9786446",
         "tests/test_coverage.py": "d8d31b0067fa75f8d0f717ab9ef3b58962bef9a250720b7f802d380d1324b964",
         "tests/test_vectorstore.py": "a530fc769542193acd3ee9c4e38997c28b5b8680aa1618f36f1beb4e30ed80fe",
-        "tests/test_wiki_coverage.py": "e44679c1de84b92ee9f3f95efc1a13338320538ea356ee19cc4364c9efec1aa5",
+        "tests/test_wiki_coverage.py": "68f672afcf4de74b520a457b6e762e8ec1093e72c52589166c37c84a48961027",
         "tests/test_pdf_export.py": "c751f4dd7504b77d2d42863d462342f697a9905cbbe87ec46ecbe35657cb2e6f",
-        "tests/test_search.py": "faa2af69e5c1ba9e36a305f2c9ae8ebb231a868aa4830b60ce7af65e6333107a",
+        "tests/test_search.py": "b33996c43d747373f930f5d34f0b4add82ceae9d18f30c72a66da1be4c24bd2d",
         "tests/test_wiki_pages_coverage.py": "c1956a4d89b1fa0ecdb3e114cb5c269da6632e654ec78dbcfab55313516a369f",
         "tests/test_toc.py": "f0d017efe534bbc2e205767150b7356edd70cc1f08a8c880a2244c10cb34ef24",
         "tests/test_incremental_wiki.py": "49279fab5824e610818fab9a2688613b03ae0d075fc453cc6e30af863a4ee248",
@@ -4980,6 +5023,7 @@
         "tests/test_handlers_coverage.py": "242faefececb500bac1092c05d9f241eba6e06ab947be9cfdaadd577a700227c",
         "tests/test_indexer.py": "e782e6e2dacbd3ffd02776dfb4e5bd68d52c9c4a8bfe07bd4df6046c03811a44",
         "tests/test_html_export.py": "b7badd894bb2ea069f0139cedee59066304be3f193c867583a948f524ee1c5e0",
+        "tests/test_type_annotations.py": "240505eb3b43439370dd2959ea44550345f2a011356fdea7826ee2cca1f2f14d",
         "tests/test_config.py": "8d6d81a9660764a9f0ba92d0a0adc22b6123783a091a30107a1cf7b7e134694e",
         "tests/test_openai_embedding_provider.py": "3cfcc231cff23864266177dd2aa4907adfabeab014081cb43247df3fa27eba3f",
         "tests/test_glossary.py": "eb09a16cc60155ac23a280a72daa6e1ca5efe6496a6ebdf38245711d8aa8b7ce",
@@ -5006,7 +5050,7 @@
         "src/local_deepwiki/watcher.py": "6abc24a1e2927a641c38ef6f0ea2ee061b74a562c9e49cdbeb08baa568ecea92",
         "src/local_deepwiki/validation.py": "b1f00e1b37f03edbe92abb597864323aee8f262de2b64d25a0c664a5051fde7d",
         "src/local_deepwiki/tools/__init__.py": "7e0e0edd2c008afc961b8bb19156c3de6bfcf5b9c2f495f399b8aefc2171d7cc",
-        "src/local_deepwiki/core/chunker.py": "17d7fb4471b2b5eb929da27237fd9934af325a9c45aeeeb6ca945ae0028ccbaf",
+        "src/local_deepwiki/core/chunker.py": "6b90a27ebf49ded17742266d40e25629017e0634199ad0fa5d9e71d4a58777c5",
         "src/local_deepwiki/core/llm_cache.py": "7ca2bd123bd33c48ab681b797a916ac4fd0f0e4c0553e41e6525fd1b768f0133",
         "src/local_deepwiki/core/vectorstore.py": "a1f742b29a9c5834a3e31eaefa5312eca28f2c5b8694a59ebf31501524568f43",
         "src/local_deepwiki/core/__init__.py": "44e160a61a8405688f53bc3a4770db0717b96e10cb28fe49eec26a9d90041085",
@@ -5037,15 +5081,15 @@
         "src/local_deepwiki/generators/wiki_modules.py": "6585aca3dd11aaa6f4b28b27514fc063e0923c3f586fb360e78d4109beea71d0",
         "src/local_deepwiki/generators/source_refs.py": "c5aed8557d26a6699df8fd01398354bd410b8cce844d6771378909afa6f61fc4",
         "src/local_deepwiki/generators/wiki_status.py": "801d343c04e747b508e5390b85e79d3db5009f81e79e39bf2e28972b5b88fa89",
-        "src/local_deepwiki/generators/search.py": "c05b152215ae3fedae08a15946b27a9c5be207f750d49d681857b0f837f9f393",
+        "src/local_deepwiki/generators/search.py": "70a4dd6009977f43219ddcb5cf6cc282033ba89e912001778a457fc8a5c15677",
         "src/local_deepwiki/generators/diagrams.py": "158ecfbf27194a94c7615fbf6b670016f1d324f7b50b0d03e9272ca457b3b7a8",
         "src/local_deepwiki/generators/see_also.py": "3ebccd3892ce1468e7e071dcabbf346b2abb10ebdc2f4a28b4a7da8d992b553c",
         "src/local_deepwiki/generators/wiki_files.py": "aeb74163845378620492337086f9256e38087aa8112754cc7d5a705d8bc118b0",
         "src/local_deepwiki/generators/api_docs.py": "01657dcc28e4139d84e4c1e9885f6666bc11ed07612d6c1bb271ebbef840fba0",
-        "src/local_deepwiki/generators/wiki.py": "4f59b0e35c8e9f7f948314fe8e5be3b4366fd491f9cacbfa71931794c95fe60a",
+        "src/local_deepwiki/generators/wiki.py": "7b279c5403dc031e3dd2d992713d3be329c7165176e293097bbdc5f88a6fa535",
         "src/local_deepwiki/generators/test_examples.py": "90643391bdc203ea93f9e8a32fb7735db28700f18bb4328a14a054a52ffeee5d",
         "src/local_deepwiki/generators/inheritance.py": "12f2ca9afd32b72ae8d6ca682f7b1cf723f640094d4a127eb010e8b76193e68d",
-        "src/local_deepwiki/generators/glossary.py": "e0290c15045a239090003bb4871dbdd53044091f49a8190ca05c16c0e618ac85",
+        "src/local_deepwiki/generators/glossary.py": "46190d9746099155fe39c4ba779ada0381450b3f7c5cff2896dd29021041c31c",
         "src/local_deepwiki/export/html.py": "3419e9222ae35625edc77c28037713893d14eee25a0325df303dbf066652f5e3",
         "src/local_deepwiki/export/__init__.py": "432474cf0f5925089e6e724944e3fd4e93fef0e6cde6367fd01aee29206a1400",
         "src/local_deepwiki/export/pdf.py": "7a6a2e801e2b8f05ab16c53e3bc5bffc87c08c480f77cf4ba1c9fd090d5275d2"
@@ -5096,8 +5140,8 @@
           "end_line": 82
         },
         "tests/test_search.py": {
-          "start_line": 20,
-          "end_line": 53
+          "start_line": 24,
+          "end_line": 57
         },
         "tests/test_wiki_pages_coverage.py": {
           "start_line": 92,
@@ -5158,6 +5202,10 @@
         "tests/test_html_export.py": {
           "start_line": 11,
           "end_line": 42
+        },
+        "tests/test_type_annotations.py": {
+          "start_line": 40,
+          "end_line": 132
         },
         "tests/test_config.py": {
           "start_line": 35,
@@ -5256,8 +5304,8 @@
           "end_line": 42
         },
         "src/local_deepwiki/core/chunker.py": {
-          "start_line": 200,
-          "end_line": 600
+          "start_line": 498,
+          "end_line": 906
         },
         "src/local_deepwiki/core/llm_cache.py": {
           "start_line": 19,
@@ -5364,8 +5412,8 @@
           "end_line": 220
         },
         "src/local_deepwiki/generators/search.py": {
-          "start_line": 14,
-          "end_line": 33
+          "start_line": 16,
+          "end_line": 35
         },
         "src/local_deepwiki/generators/diagrams.py": {
           "start_line": 11,
@@ -5397,7 +5445,7 @@
         },
         "src/local_deepwiki/generators/glossary.py": {
           "start_line": 11,
-          "end_line": 18
+          "end_line": 24
         },
         "src/local_deepwiki/export/html.py": {
           "start_line": 663,
@@ -5412,8 +5460,8 @@
           "end_line": 680
         }
       },
-      "content_hash": "363b1c7107acdbac",
-      "generated_at": 1768576320.67744
+      "content_hash": "6b352a3f44b5da54",
+      "generated_at": 1768598030.182307
     },
     "coverage.md": {
       "path": "coverage.md",
@@ -5446,6 +5494,7 @@
         "tests/test_handlers_coverage.py",
         "tests/test_indexer.py",
         "tests/test_html_export.py",
+        "tests/test_type_annotations.py",
         "tests/test_config.py",
         "tests/test_openai_embedding_provider.py",
         "tests/test_glossary.py",
@@ -5526,9 +5575,9 @@
         "tests/test_changelog.py": "afd483df65d305a92dd24c6cf92dcc84cc364c10102b74535066f439c9786446",
         "tests/test_coverage.py": "d8d31b0067fa75f8d0f717ab9ef3b58962bef9a250720b7f802d380d1324b964",
         "tests/test_vectorstore.py": "a530fc769542193acd3ee9c4e38997c28b5b8680aa1618f36f1beb4e30ed80fe",
-        "tests/test_wiki_coverage.py": "e44679c1de84b92ee9f3f95efc1a13338320538ea356ee19cc4364c9efec1aa5",
+        "tests/test_wiki_coverage.py": "68f672afcf4de74b520a457b6e762e8ec1093e72c52589166c37c84a48961027",
         "tests/test_pdf_export.py": "c751f4dd7504b77d2d42863d462342f697a9905cbbe87ec46ecbe35657cb2e6f",
-        "tests/test_search.py": "faa2af69e5c1ba9e36a305f2c9ae8ebb231a868aa4830b60ce7af65e6333107a",
+        "tests/test_search.py": "b33996c43d747373f930f5d34f0b4add82ceae9d18f30c72a66da1be4c24bd2d",
         "tests/test_wiki_pages_coverage.py": "c1956a4d89b1fa0ecdb3e114cb5c269da6632e654ec78dbcfab55313516a369f",
         "tests/test_toc.py": "f0d017efe534bbc2e205767150b7356edd70cc1f08a8c880a2244c10cb34ef24",
         "tests/test_incremental_wiki.py": "49279fab5824e610818fab9a2688613b03ae0d075fc453cc6e30af863a4ee248",
@@ -5545,6 +5594,7 @@
         "tests/test_handlers_coverage.py": "242faefececb500bac1092c05d9f241eba6e06ab947be9cfdaadd577a700227c",
         "tests/test_indexer.py": "e782e6e2dacbd3ffd02776dfb4e5bd68d52c9c4a8bfe07bd4df6046c03811a44",
         "tests/test_html_export.py": "b7badd894bb2ea069f0139cedee59066304be3f193c867583a948f524ee1c5e0",
+        "tests/test_type_annotations.py": "240505eb3b43439370dd2959ea44550345f2a011356fdea7826ee2cca1f2f14d",
         "tests/test_config.py": "8d6d81a9660764a9f0ba92d0a0adc22b6123783a091a30107a1cf7b7e134694e",
         "tests/test_openai_embedding_provider.py": "3cfcc231cff23864266177dd2aa4907adfabeab014081cb43247df3fa27eba3f",
         "tests/test_glossary.py": "eb09a16cc60155ac23a280a72daa6e1ca5efe6496a6ebdf38245711d8aa8b7ce",
@@ -5571,7 +5621,7 @@
         "src/local_deepwiki/watcher.py": "6abc24a1e2927a641c38ef6f0ea2ee061b74a562c9e49cdbeb08baa568ecea92",
         "src/local_deepwiki/validation.py": "b1f00e1b37f03edbe92abb597864323aee8f262de2b64d25a0c664a5051fde7d",
         "src/local_deepwiki/tools/__init__.py": "7e0e0edd2c008afc961b8bb19156c3de6bfcf5b9c2f495f399b8aefc2171d7cc",
-        "src/local_deepwiki/core/chunker.py": "17d7fb4471b2b5eb929da27237fd9934af325a9c45aeeeb6ca945ae0028ccbaf",
+        "src/local_deepwiki/core/chunker.py": "6b90a27ebf49ded17742266d40e25629017e0634199ad0fa5d9e71d4a58777c5",
         "src/local_deepwiki/core/llm_cache.py": "7ca2bd123bd33c48ab681b797a916ac4fd0f0e4c0553e41e6525fd1b768f0133",
         "src/local_deepwiki/core/vectorstore.py": "a1f742b29a9c5834a3e31eaefa5312eca28f2c5b8694a59ebf31501524568f43",
         "src/local_deepwiki/core/__init__.py": "44e160a61a8405688f53bc3a4770db0717b96e10cb28fe49eec26a9d90041085",
@@ -5602,15 +5652,15 @@
         "src/local_deepwiki/generators/wiki_modules.py": "6585aca3dd11aaa6f4b28b27514fc063e0923c3f586fb360e78d4109beea71d0",
         "src/local_deepwiki/generators/source_refs.py": "c5aed8557d26a6699df8fd01398354bd410b8cce844d6771378909afa6f61fc4",
         "src/local_deepwiki/generators/wiki_status.py": "801d343c04e747b508e5390b85e79d3db5009f81e79e39bf2e28972b5b88fa89",
-        "src/local_deepwiki/generators/search.py": "c05b152215ae3fedae08a15946b27a9c5be207f750d49d681857b0f837f9f393",
+        "src/local_deepwiki/generators/search.py": "70a4dd6009977f43219ddcb5cf6cc282033ba89e912001778a457fc8a5c15677",
         "src/local_deepwiki/generators/diagrams.py": "158ecfbf27194a94c7615fbf6b670016f1d324f7b50b0d03e9272ca457b3b7a8",
         "src/local_deepwiki/generators/see_also.py": "3ebccd3892ce1468e7e071dcabbf346b2abb10ebdc2f4a28b4a7da8d992b553c",
         "src/local_deepwiki/generators/wiki_files.py": "aeb74163845378620492337086f9256e38087aa8112754cc7d5a705d8bc118b0",
         "src/local_deepwiki/generators/api_docs.py": "01657dcc28e4139d84e4c1e9885f6666bc11ed07612d6c1bb271ebbef840fba0",
-        "src/local_deepwiki/generators/wiki.py": "4f59b0e35c8e9f7f948314fe8e5be3b4366fd491f9cacbfa71931794c95fe60a",
+        "src/local_deepwiki/generators/wiki.py": "7b279c5403dc031e3dd2d992713d3be329c7165176e293097bbdc5f88a6fa535",
         "src/local_deepwiki/generators/test_examples.py": "90643391bdc203ea93f9e8a32fb7735db28700f18bb4328a14a054a52ffeee5d",
         "src/local_deepwiki/generators/inheritance.py": "12f2ca9afd32b72ae8d6ca682f7b1cf723f640094d4a127eb010e8b76193e68d",
-        "src/local_deepwiki/generators/glossary.py": "e0290c15045a239090003bb4871dbdd53044091f49a8190ca05c16c0e618ac85",
+        "src/local_deepwiki/generators/glossary.py": "46190d9746099155fe39c4ba779ada0381450b3f7c5cff2896dd29021041c31c",
         "src/local_deepwiki/export/html.py": "3419e9222ae35625edc77c28037713893d14eee25a0325df303dbf066652f5e3",
         "src/local_deepwiki/export/__init__.py": "432474cf0f5925089e6e724944e3fd4e93fef0e6cde6367fd01aee29206a1400",
         "src/local_deepwiki/export/pdf.py": "7a6a2e801e2b8f05ab16c53e3bc5bffc87c08c480f77cf4ba1c9fd090d5275d2"
@@ -5661,8 +5711,8 @@
           "end_line": 82
         },
         "tests/test_search.py": {
-          "start_line": 20,
-          "end_line": 53
+          "start_line": 24,
+          "end_line": 57
         },
         "tests/test_wiki_pages_coverage.py": {
           "start_line": 92,
@@ -5723,6 +5773,10 @@
         "tests/test_html_export.py": {
           "start_line": 11,
           "end_line": 42
+        },
+        "tests/test_type_annotations.py": {
+          "start_line": 40,
+          "end_line": 132
         },
         "tests/test_config.py": {
           "start_line": 35,
@@ -5821,8 +5875,8 @@
           "end_line": 42
         },
         "src/local_deepwiki/core/chunker.py": {
-          "start_line": 200,
-          "end_line": 600
+          "start_line": 498,
+          "end_line": 906
         },
         "src/local_deepwiki/core/llm_cache.py": {
           "start_line": 19,
@@ -5929,8 +5983,8 @@
           "end_line": 220
         },
         "src/local_deepwiki/generators/search.py": {
-          "start_line": 14,
-          "end_line": 33
+          "start_line": 16,
+          "end_line": 35
         },
         "src/local_deepwiki/generators/diagrams.py": {
           "start_line": 11,
@@ -5962,7 +6016,7 @@
         },
         "src/local_deepwiki/generators/glossary.py": {
           "start_line": 11,
-          "end_line": 18
+          "end_line": 24
         },
         "src/local_deepwiki/export/html.py": {
           "start_line": 663,
@@ -5977,8 +6031,8 @@
           "end_line": 680
         }
       },
-      "content_hash": "49941d31facc473e",
-      "generated_at": 1768576321.5302432
+      "content_hash": "9f213bf1b94dddd5",
+      "generated_at": 1768598030.7562938
     }
   }
 }

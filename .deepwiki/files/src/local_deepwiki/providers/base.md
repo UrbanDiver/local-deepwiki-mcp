@@ -1,53 +1,67 @@
-# Base Provider Classes
+# base.py
 
 ## File Overview
 
-This file defines the abstract base class for embedding providers in the local_deepwiki system. It establishes the interface that all embedding providers must implement to generate text embeddings.
+This file defines the abstract base class for embedding providers in the local_deepwiki system. It establishes the interface that all embedding provider implementations must follow.
 
 ## Classes
 
 ### EmbeddingProvider
 
-An abstract base class that defines the interface for embedding providers. This class uses Python's ABC (Abstract Base Class) to ensure that all concrete implementations provide the required methods.
+Abstract base class that defines the interface for embedding providers. This class serves as a contract for all concrete embedding provider implementations.
 
-**Abstract Methods:**
+**Key Methods:**
 
-- **embed**: Generates embeddings for a list of text strings
-  - **Parameters**: 
-    - `texts` (list[str]): List of text strings to embed
-  - **Returns**: list[list[float]] - List of embedding vectors
-  - **Type**: Async method
+- **embed**: Asynchronously generates embeddings for a list of text strings
+- **get_dimension**: Returns the dimensionality of the embedding vectors produced by this provider
 
-- **get_dimension**: Returns the embedding dimension
-  - **Returns**: int - The dimension of the embedding vectors
+## Functions
 
-**Abstract Properties:**
+### embed
 
-The class includes an abstract property (implementation details not visible in the provided code chunk).
+```python
+async def embed(self, texts: list[str]) -> list[list[float]]
+```
+
+Abstract method that generates embeddings for a list of texts.
+
+**Parameters:**
+- `texts` (list[str]): List of text strings to embed
+
+**Returns:**
+- `list[list[float]]`: List of embedding vectors, where each vector is represented as a list of floats
+
+### get_dimension
+
+```python
+def get_dimension(self) -> int
+```
+
+Abstract method that returns the embedding dimension.
+
+**Returns:**
+- `int`: The dimension of the embedding vectors produced by this provider
 
 ## Usage Examples
 
-To implement a custom embedding provider, inherit from EmbeddingProvider and implement all abstract methods:
+Since this is an abstract base class, it cannot be instantiated directly. Instead, concrete implementations would inherit from EmbeddingProvider:
 
 ```python
+from local_deepwiki.providers.base import EmbeddingProvider
+
 class CustomEmbeddingProvider(EmbeddingProvider):
     async def embed(self, texts: list[str]) -> list[list[float]]:
-        # Implementation for generating embeddings
-        embeddings = []
-        for text in texts:
-            # Generate embedding vector for each text
-            vector = generate_embedding(text)
-            embeddings.append(vector)
-        return embeddings
+        # Implementation specific logic
+        pass
     
     def get_dimension(self) -> int:
-        # Return the dimension of your embedding vectors
-        return 768
+        # Return the dimension for this provider
+        return 384
 ```
 
 ## Related Components
 
-This base class serves as the foundation for all embedding provider implementations in the local_deepwiki system. Concrete providers would inherit from EmbeddingProvider to provide specific embedding functionality using different models or services.
+This abstract base class is designed to be inherited by concrete embedding provider implementations throughout the local_deepwiki system. Any class that provides embedding functionality should extend EmbeddingProvider to ensure a consistent interface.
 
 ## API Reference
 
@@ -61,7 +75,7 @@ Abstract base class for embedding providers.
 
 
 <details>
-<summary>View Source (lines 113-141) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/providers/base.py#L113-L141">GitHub</a></summary>
+<summary>View Source (lines 113-141) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/providers/base.py#L113-L141">GitHub</a></summary>
 
 ```python
 class EmbeddingProvider(ABC):
@@ -112,7 +126,7 @@ Generate embeddings for a list of texts.
 
 
 <details>
-<summary>View Source (lines 113-141) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/providers/base.py#L113-L141">GitHub</a></summary>
+<summary>View Source (lines 113-141) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/providers/base.py#L113-L141">GitHub</a></summary>
 
 ```python
 class EmbeddingProvider(ABC):
@@ -158,7 +172,7 @@ Get the embedding dimension.
 
 
 <details>
-<summary>View Source (lines 113-141) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/providers/base.py#L113-L141">GitHub</a></summary>
+<summary>View Source (lines 113-141) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/providers/base.py#L113-L141">GitHub</a></summary>
 
 ```python
 class EmbeddingProvider(ABC):
@@ -205,7 +219,7 @@ Get the provider name.
 
 
 <details>
-<summary>View Source (lines 113-141) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/providers/base.py#L113-L141">GitHub</a></summary>
+<summary>View Source (lines 113-141) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/providers/base.py#L113-L141">GitHub</a></summary>
 
 ```python
 class EmbeddingProvider(ABC):
@@ -251,7 +265,7 @@ Abstract base class for LLM providers.
 
 
 <details>
-<summary>View Source (lines 144-196) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/providers/base.py#L144-L196">GitHub</a></summary>
+<summary>View Source (lines 144-196) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/providers/base.py#L144-L196">GitHub</a></summary>
 
 ```python
 class LLMProvider(ABC):
@@ -329,7 +343,7 @@ Generate text from a prompt.
 
 
 <details>
-<summary>View Source (lines 144-196) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/providers/base.py#L144-L196">GitHub</a></summary>
+<summary>View Source (lines 144-196) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/providers/base.py#L144-L196">GitHub</a></summary>
 
 ```python
 class LLMProvider(ABC):
@@ -407,7 +421,7 @@ Generate text from a prompt with streaming.
 
 
 <details>
-<summary>View Source (lines 144-196) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/providers/base.py#L144-L196">GitHub</a></summary>
+<summary>View Source (lines 144-196) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/providers/base.py#L144-L196">GitHub</a></summary>
 
 ```python
 class LLMProvider(ABC):
@@ -480,7 +494,7 @@ Get the provider name.
 
 
 <details>
-<summary>View Source (lines 144-196) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/providers/base.py#L144-L196">GitHub</a></summary>
+<summary>View Source (lines 144-196) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/providers/base.py#L144-L196">GitHub</a></summary>
 
 ```python
 class LLMProvider(ABC):
@@ -564,7 +578,7 @@ Decorator for adding retry logic with exponential backoff to async functions.
 
 
 <details>
-<summary>View Source (lines 21-110) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/providers/base.py#L21-L110">GitHub</a></summary>
+<summary>View Source (lines 21-110) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/providers/base.py#L21-L110">GitHub</a></summary>
 
 ```python
 def with_retry(
@@ -677,7 +691,7 @@ def decorator(func: Callable[..., Any]) -> Callable[..., Any]
 
 
 <details>
-<summary>View Source (lines 41-108) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/providers/base.py#L41-L108">GitHub</a></summary>
+<summary>View Source (lines 41-108) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/providers/base.py#L41-L108">GitHub</a></summary>
 
 ```python
 def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -766,7 +780,7 @@ async def wrapper() -> Any
 
 
 <details>
-<summary>View Source (lines 43-106) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/providers/base.py#L43-L106">GitHub</a></summary>
+<summary>View Source (lines 43-106) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/providers/base.py#L43-L106">GitHub</a></summary>
 
 ```python
 async def wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -903,6 +917,6 @@ Functions and methods in this file and their callers:
 
 ## See Also
 
-- [vectorstore](../core/vectorstore.md) - uses this
-- [local](embeddings/local.md) - uses this
 - [openai](embeddings/openai.md) - uses this
+- [local](embeddings/local.md) - uses this
+- [vectorstore](../core/vectorstore.md) - uses this

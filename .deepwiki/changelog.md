@@ -6,6 +6,15 @@ Recent changes to this repository.
 
 ### January 16, 2026
 
+- [`202b96d`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/202b96d) Add exception documentation to glossary
+  - Files: `src/local_deepwiki/core/chunker.py`, `src/local_deepwiki/generators/glossary.py`, `tests/test_type_annotations.py`
+
+- [`ce066c4`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/ce066c4) Add type annotation extraction and display in glossary
+  - Files: `src/local_deepwiki/core/chunker.py`, `src/local_deepwiki/generators/glossary.py`, `tests/test_type_annotations.py`
+
+- [`6e0cd5d`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/6e0cd5d) Regenerate wiki with inheritance, glossary, and coverage pages
+  - Files: `.deepwiki/architecture.md`, `.deepwiki/changelog.md`, `.deepwiki/coverage.md`, `.deepwiki/dependencies.md`, `.deepwiki/files/index.md` (+52 more)
+
 - [`8d2ab68`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/8d2ab68) Add inheritance trees, glossary, and coverage report to wiki
   - Files: `src/local_deepwiki/generators/coverage.py`, `src/local_deepwiki/generators/glossary.py`, `src/local_deepwiki/generators/inheritance.py`, `src/local_deepwiki/generators/wiki.py`, `tests/test_coverage.py` (+3 more)
 
@@ -91,15 +100,6 @@ Recent changes to this repository.
 - [`63a29fc`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/63a29fc) Remove remaining test file documentation from wiki
   - Files: `.deepwiki/files/tests/test_api_docs.md`, `.deepwiki/files/tests/test_config.md`, `.deepwiki/files/tests/test_crosslinks.md`, `.deepwiki/files/tests/test_deep_research.md`, `.deepwiki/files/tests/test_diagrams.md` (+6 more)
 
-- [`a6c6582`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/a6c6582) Regenerate wiki with all source files, exclude test files
-  - Files: `.deepwiki/architecture.md`, `.deepwiki/changelog.md`, `.deepwiki/dependencies.md`, `.deepwiki/files/index.md`, `.deepwiki/files/src/local_deepwiki/config.md` (+73 more)
-
-- [`c87800e`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/c87800e) Fix wiki file docs to exclude test files, include all source files
-  - Files: `src/local_deepwiki/generators/wiki.py`
-
-- [`b8f8b68`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/b8f8b68) Refactor: Extract page generators from wiki.py to wiki_pages.py
-  - Files: `src/local_deepwiki/generators/wiki.py`, `src/local_deepwiki/generators/wiki_pages.py`
-
 ## Statistics
 
 - **Commits shown**: 30
@@ -122,4 +122,4 @@ The following source files were used to generate this documentation:
 - `tests/test_wiki_coverage.py:50-120`
 
 
-*Showing 10 of 97 source files.*
+*Showing 10 of 98 source files.*

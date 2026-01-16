@@ -2,93 +2,66 @@
 
 ## File Overview
 
-This module handles the generation of wiki documentation files for individual source code files. It processes source code files and generates comprehensive documentation that includes source code details, API documentation, call graphs, and cross-references.
+The `wiki_files.py` module is responsible for generating documentation for individual source code files. It provides functionality to create comprehensive documentation that includes source code details, API documentation, call graphs, and cross-references between different parts of the codebase.
 
 ## Functions
 
 ### _get_syntax_lang
 
-Determines the appropriate syntax highlighting language identifier for a given file extension.
-
-**Parameters:**
-- File extension information (based on the function name pattern)
-
-**Returns:**
-- String representing the syntax highlighting language
+Determines the appropriate syntax highlighting language identifier for a given file path.
 
 ### _create_source_details
 
-Creates detailed source information for a file, including metadata and structure.
-
-**Parameters:**
-- Source file information and configuration
-
-**Returns:**
-- Formatted source details for documentation
+Creates detailed source information for a file, including metadata and formatting details needed for documentation generation.
 
 ### _inject_inline_source_code
 
-Injects source code snippets inline within documentation content.
-
-**Parameters:**
-- Documentation content and source code references
-
-**Returns:**
-- Updated documentation with embedded source code
+Injects inline source code snippets into documentation content, allowing for embedded code examples within the generated documentation.
 
 ### get_chunk_url
 
-Generates URLs for specific code chunks within a file.
+Generates URLs for specific code chunks, enabling navigation to particular sections of source files.
 
 **Parameters:**
-- Chunk information and repository details
-
-**Returns:**
-- URL string pointing to the specific code chunk
+- Takes parameters related to chunk identification and URL construction
 
 ### generate_single_file_doc
 
-Generates complete documentation for a single source code file.
+Generates comprehensive documentation for a single source code file.
 
-**Parameters:**
-- File path and configuration options
-
-**Returns:**
-- Generated documentation content for the file
+**Functionality:**
+- Creates detailed documentation for an individual file
+- Integrates multiple documentation components including API docs, call graphs, and cross-references
+- Returns formatted documentation content
 
 ### generate_
 
-This appears to be the start of another generation function (truncated in the provided code).
+This appears to be an incomplete function name in the provided code chunk, likely part of a larger function for batch documentation generation.
 
-## Dependencies
+## Dependencies and Integration
 
-The module integrates with several other components:
+The module integrates with several other components of the system:
 
-- **[Config](../config.md)**: Handles configuration management
-- **[GitRepoInfo](../core/git_utils.md)**: Provides Git repository information through [`get_repo_info`](../core/git_utils.md) and [`build_source_url`](../core/git_utils.md)
-- **[VectorStore](../core/vectorstore.md)**: Manages vector-based storage and retrieval
-- **[EntityRegistry](crosslinks.md)**: Handles cross-linking between documentation entities
-- **API Documentation**: Integrates with [`get_file_api_docs`](api_docs.md) for API documentation generation
-- **Call Graph Analysis**: Uses [`get_file_call_graph`](callgraph.md) and [`get_file_callers`](callgraph.md) for code relationship mapping
-- **Diagram Generation**: Incorporates [`generate_class_diagram`](diagrams.md) for visual documentation
-- **Test Documentation**: References test-related documentation generation
+- **[Config](../config.md)**: Uses the [Config](../config.md) class for configuration management
+- **[GitRepoInfo](../core/git_utils.md)**: Leverages git repository information through [GitRepoInfo](../core/git_utils.md), [build_source_url](../core/git_utils.md), and [get_repo_info](../core/git_utils.md) functions
+- **[VectorStore](../core/vectorstore.md)**: Integrates with the [VectorStore](../core/vectorstore.md) class for semantic search capabilities
+- **API Documentation**: Uses [get_file_api_docs](api_docs.md) for generating API documentation
+- **Call Graph Analysis**: Integrates [get_file_call_graph](callgraph.md) and [get_file_callers](callgraph.md) for code relationship analysis
+- **Cross-linking**: Works with [EntityRegistry](crosslinks.md) for managing cross-references
+- **Diagram Generation**: Uses [generate_class_diagram](diagrams.md) for visual documentation
+- **Test Integration**: Imports test-related functionality (partially visible)
 
-## Key Features
+## Core Functionality
 
-Based on the imports and function names, this module provides:
+The module appears to be a central component for file-level documentation generation, combining:
 
-- Syntax highlighting support for multiple programming languages
-- Source code embedding within documentation
-- URL generation for code chunk references
-- Integration with Git repository information
-- Cross-referencing capabilities through the [EntityRegistry](crosslinks.md)
-- API documentation generation
-- Call graph analysis and visualization
-- Class diagram generation
+1. **Source Code Analysis**: Processing and formatting source code content
+2. **API Documentation**: Generating structured API documentation
+3. **Relationship Mapping**: Creating call graphs and caller relationships
+4. **Cross-referencing**: Managing links between different code entities
+5. **Visual Documentation**: Integrating diagrams and visual aids
 
-## Usage Context
-
-This module appears to be part of a larger documentation generation system that processes source code repositories and creates comprehensive wiki-style documentation with rich cross-references, diagrams, and code analysis features.
+The module uses asynchronous programming patterns (via `asyncio`) and includes utilities for URL generation, syntax highlighting, and content injection, making it a comprehensive solution for automated documentation generation from source code.
 
 ## API Reference
 
@@ -112,7 +85,7 @@ Build GitHub URL for a chunk.
 
 
 <details>
-<summary>View Source (lines 126-130) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/wiki_files.py#L126-L130">GitHub</a></summary>
+<summary>View Source (lines 126-130) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/wiki_files.py#L126-L130">GitHub</a></summary>
 
 ```python
 def get_chunk_url(chunk: CodeChunk) -> str | None:
@@ -150,7 +123,7 @@ Generate documentation for a single source file.
 
 
 <details>
-<summary>View Source (lines 252-429) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/wiki_files.py#L252-L429">GitHub</a></summary>
+<summary>View Source (lines 252-429) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/wiki_files.py#L252-L429">GitHub</a></summary>
 
 ```python
 async def generate_single_file_doc(
@@ -353,7 +326,7 @@ Generate documentation for individual source files.  Uses parallel LLM calls for
 | `status_manager` | `"WikiStatusManager"` | - | Wiki status manager for incremental updates. |
 | `entity_registry` | [`EntityRegistry`](crosslinks.md) | - | Entity registry for cross-linking. |
 | `config` | [`Config`](../config.md) | - | Configuration. |
-| [`progress_callback`](../watcher.md) | `ProgressCallback | None` | `None` | Optional progress callback. |
+| [`progress_callback`](../handlers.md) | `ProgressCallback | None` | `None` | Optional progress callback. |
 | `full_rebuild` | `bool` | `False` | If True, regenerate all pages. |
 
 **Returns:** `tuple[list[WikiPage], int, int]`
@@ -361,7 +334,7 @@ Generate documentation for individual source files.  Uses parallel LLM calls for
 
 
 <details>
-<summary>View Source (lines 432-554) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/wiki_files.py#L432-L554">GitHub</a></summary>
+<summary>View Source (lines 432-554) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/wiki_files.py#L432-L554">GitHub</a></summary>
 
 ```python
 async def generate_file_docs(
@@ -509,7 +482,7 @@ Check if a file is a test file.
 
 
 <details>
-<summary>View Source (lines 464-469) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/wiki_files.py#L464-L469">GitHub</a></summary>
+<summary>View Source (lines 464-469) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/wiki_files.py#L464-L469">GitHub</a></summary>
 
 ```python
 def is_test_file(path: str) -> bool:
@@ -539,7 +512,7 @@ async def generate_with_semaphore(file_info: FileInfo) -> tuple[WikiPage | None,
 
 
 <details>
-<summary>View Source (lines 500-515) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/wiki_files.py#L500-L515">GitHub</a></summary>
+<summary>View Source (lines 500-515) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/wiki_files.py#L500-L515">GitHub</a></summary>
 
 ```python
 async def generate_with_semaphore(
@@ -678,7 +651,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_get_syntax_lang`
 
 <details>
-<summary>View Source (lines 27-52) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/wiki_files.py#L27-L52">GitHub</a></summary>
+<summary>View Source (lines 27-52) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/wiki_files.py#L27-L52">GitHub</a></summary>
 
 ```python
 def _get_syntax_lang(language: str | None) -> str:
@@ -715,7 +688,7 @@ def _get_syntax_lang(language: str | None) -> str:
 #### `_create_source_details`
 
 <details>
-<summary>View Source (lines 55-81) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/wiki_files.py#L55-L81">GitHub</a></summary>
+<summary>View Source (lines 55-81) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/wiki_files.py#L55-L81">GitHub</a></summary>
 
 ```python
 def _create_source_details(
@@ -753,7 +726,7 @@ def _create_source_details(
 #### `_inject_inline_source_code`
 
 <details>
-<summary>View Source (lines 84-249) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/wiki_files.py#L84-L249">GitHub</a></summary>
+<summary>View Source (lines 84-249) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/wiki_files.py#L84-L249">GitHub</a></summary>
 
 ```python
 def _inject_inline_source_code(
@@ -930,7 +903,7 @@ def _inject_inline_source_code(
 #### `_generate_files_index`
 
 <details>
-<summary>View Source (lines 557-590) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/wiki_files.py#L557-L590">GitHub</a></summary>
+<summary>View Source (lines 557-590) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/wiki_files.py#L557-L590">GitHub</a></summary>
 
 ```python
 def _generate_files_index(file_pages: list[WikiPage]) -> str:
@@ -974,3 +947,7 @@ def _generate_files_index(file_pages: list[WikiPage]) -> str:
 ## Relevant Source Files
 
 - `src/local_deepwiki/generators/wiki_files.py:27-52`
+
+## See Also
+
+- [wiki](wiki.md) - uses this

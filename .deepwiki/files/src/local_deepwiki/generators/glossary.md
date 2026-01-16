@@ -2,110 +2,103 @@
 
 ## File Overview
 
-The `glossary.py` module provides functionality for generating glossary pages from entities stored in a vector database. It collects entities, groups them alphabetically, and creates formatted glossary documentation with wiki-style links and descriptions.
+The `glossary.py` module provides functionality for generating glossary pages from code entities. It collects entities from a vector store, groups them alphabetically, and formats them into a structured glossary page with brief descriptions and wiki links.
 
 ## Classes
 
 ### EntityEntry
 
+A dataclass that represents an entry in the glossary.
+
 ```python
 @dataclass
 class EntityEntry:
+    # Implementation details not visible in provided code
 ```
-
-A data class that represents an entry in the glossary. This class uses the `@dataclass` [decorator](../providers/base.md) to automatically generate initialization and other standard methods for storing entity information.
 
 ## Functions
 
 ### collect_all_entities
 
-```python
-def collect_all_entities(vector_store: VectorStore) -> list[EntityEntry]:
-```
-
-Collects all entities from the provided vector store and returns them as a list of EntityEntry objects.
+Collects all entities from the vector store for glossary generation.
 
 **Parameters:**
-- `vector_store` ([VectorStore](../core/vectorstore.md)): The vector store instance to query for entities
+- Based on the function signature, parameters are not visible in the provided code
 
 **Returns:**
-- `list[EntityEntry]`: A list of all entities found in the vector store
+- Collection of entities for glossary processing
 
 ### group_entities_by_letter
 
-```python
-def group_entities_by_letter(entities: list[EntityEntry]) -> dict:
-```
-
-Groups a list of entities alphabetically by their first letter for organized display in the glossary.
+Groups collected entities alphabetically by their first letter.
 
 **Parameters:**
-- `entities` (list[EntityEntry]): List of entity entries to group
+- Entities collection (specific type not visible in provided code)
 
 **Returns:**
-- `dict`: Dictionary with letters as keys and lists of entities as values
+- Grouped entities organized by letter
 
 ### _get_wiki_link
 
-```python
-def _get_wiki_link(...) -> str:
-```
+Private helper function that generates wiki links for entities.
 
-A private helper function that generates wiki-style links for entities. The exact parameters are not visible in the provided code summary.
+**Parameters:**
+- Entity information (specific parameters not visible in provided code)
 
 **Returns:**
-- `str`: A formatted wiki link string
+- Formatted wiki link string
 
 ### _get_brief_description
 
-```python
-def _get_brief_description(...) -> str:
-```
+Private helper function that extracts or generates brief descriptions for entities.
 
-A private helper function that generates brief descriptions for entities. The exact parameters are not visible in the provided code summary.
+**Parameters:**
+- Entity data (specific parameters not visible in provided code)
 
 **Returns:**
-- `str`: A brief description string for the entity
+- Brief description string for the entity
+
+### _format_signature
+
+Private helper function that formats entity signatures for display.
+
+**Parameters:**
+- Signature information (specific parameters not visible in provided code)
+
+**Returns:**
+- Formatted signature string
 
 ### generate_glossary_page
 
-```python
-def generate_glossary_page(...) -> str:
-```
+Main function that generates the complete glossary page by coordinating the collection, grouping, and formatting of entities.
 
-The [main](../export/pdf.md) function that generates a complete glossary page. This function likely orchestrates the collection, grouping, and formatting of entities into a final glossary document. The exact parameters are not visible in the provided code summary.
+**Parameters:**
+- Configuration or context parameters (not visible in provided code)
 
 **Returns:**
-- `str`: The complete glossary page content as a string
+- Generated glossary page content
 
 ## Usage Examples
 
 ```python
-from local_deepwiki.generators.glossary import collect_all_entities, group_entities_by_letter, generate_glossary_page
-from local_deepwiki.core.vectorstore import VectorStore
+from local_deepwiki.generators.glossary import generate_glossary_page, collect_all_entities
 
-# Initialize vector store
-vector_store = VectorStore()
+# Generate a complete glossary page
+glossary_content = generate_glossary_page()
 
-# Collect all entities
-entities = collect_all_entities(vector_store)
-
-# Group entities alphabetically
-grouped_entities = group_entities_by_letter(entities)
-
-# Generate complete glossary page
-glossary_content = generate_glossary_page(...)
+# Collect entities for custom processing
+entities = collect_all_entities()
 ```
 
 ## Related Components
 
-This module integrates with several other components:
+This module integrates with several core components:
 
-- **[VectorStore](../core/vectorstore.md)**: Used to query and retrieve entity information from the vector database
-- **[ChunkType](../models.md)**: Referenced from the models module, likely used to filter or categorize different types of content chunks
-- **[IndexStatus](../models.md)**: Also from the models module, potentially used to track the indexing status of entities
+- **[VectorStore](../core/vectorstore.md)**: Used for retrieving entity information from the indexed codebase
+- **[ChunkType](../models.md)**: Enumeration that likely defines different types of code chunks/entities
+- **[IndexStatus](../models.md)**: Status tracking for the indexing process
 
-The module follows a clear separation of concerns with data collection, organization, and presentation functions working together to create comprehensive glossary documentation.
+The module uses `pathlib.Path` for file system operations and follows a dataclass pattern with EntityEntry for structured data representation.
 
 ## API Reference
 
@@ -117,7 +110,7 @@ An entry in the glossary.
 
 
 <details>
-<summary>View Source (lines 11-18) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/glossary.py#L11-L18">GitHub</a></summary>
+<summary>View Source (lines 11-24) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/glossary.py#L11-L24">GitHub</a></summary>
 
 ```python
 class EntityEntry:
@@ -128,6 +121,12 @@ class EntityEntry:
     file_path: str
     parent_name: str | None = None
     docstring: str | None = None
+    # Type annotation metadata
+    parameter_types: dict[str, str] | None = None
+    return_type: str | None = None
+    is_async: bool = False
+    # Exception metadata
+    raises: list[str] | None = None
 ```
 
 </details>
@@ -153,7 +152,7 @@ Collect all classes, functions, and methods from the codebase.
 
 
 <details>
-<summary>View Source (lines 21-71) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/glossary.py#L21-L71">GitHub</a></summary>
+<summary>View Source (lines 27-92) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/glossary.py#L27-L92">GitHub</a></summary>
 
 ```python
 async def collect_all_entities(
@@ -175,6 +174,13 @@ async def collect_all_entities(
         chunks = await vector_store.get_chunks_by_file(file_info.path)
 
         for chunk in chunks:
+            # Extract type annotation metadata if available
+            metadata = chunk.metadata or {}
+            param_types = metadata.get("parameter_types")
+            return_type = metadata.get("return_type")
+            is_async = metadata.get("is_async", False)
+            raises = metadata.get("raises")
+
             if chunk.chunk_type == ChunkType.CLASS:
                 entities.append(
                     EntityEntry(
@@ -191,6 +197,10 @@ async def collect_all_entities(
                         entity_type="function",
                         file_path=file_info.path,
                         docstring=chunk.docstring,
+                        parameter_types=param_types,
+                        return_type=return_type,
+                        is_async=is_async,
+                        raises=raises,
                     )
                 )
             elif chunk.chunk_type == ChunkType.METHOD:
@@ -201,6 +211,10 @@ async def collect_all_entities(
                         file_path=file_info.path,
                         parent_name=chunk.parent_name,
                         docstring=chunk.docstring,
+                        parameter_types=param_types,
+                        return_type=return_type,
+                        is_async=is_async,
+                        raises=raises,
                     )
                 )
 
@@ -229,7 +243,7 @@ Group entities by their first letter.
 
 
 <details>
-<summary>View Source (lines 74-94) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/glossary.py#L74-L94">GitHub</a></summary>
+<summary>View Source (lines 95-115) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/glossary.py#L95-L115">GitHub</a></summary>
 
 ```python
 def group_entities_by_letter(entities: list[EntityEntry]) -> dict[str, list[EntityEntry]]:
@@ -277,7 +291,7 @@ Generate the glossary/index page content.
 
 
 <details>
-<summary>View Source (lines 139-226) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/glossary.py#L139-L226">GitHub</a></summary>
+<summary>View Source (lines 202-303) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/glossary.py#L202-L303">GitHub</a></summary>
 
 ```python
 async def generate_glossary_page(
@@ -343,20 +357,34 @@ async def generate_glossary_page(
             wiki_link = _get_wiki_link(entity.file_path)
             file_name = Path(entity.file_path).name
 
-            # Type badge
-            type_badge = {
+            # Type badge (with async indicator)
+            base_badge = {
                 "class": "🔷",
                 "function": "🔹",
                 "method": "▪️",
             }.get(entity.entity_type, "")
+            async_marker = "⚡" if entity.is_async else ""
+            type_badge = f"{base_badge}{async_marker}"
+
+            # Type signature for functions/methods
+            signature = _format_signature(entity)
+            sig_part = f" `{signature}`" if signature else ""
+
+            # Raises indicator
+            raises_part = ""
+            if entity.raises:
+                exc_list = ", ".join(entity.raises[:3])
+                if len(entity.raises) > 3:
+                    exc_list += f", +{len(entity.raises) - 3}"
+                raises_part = f" ⚠️`{exc_list}`"
 
             # Brief description
             desc = _get_brief_description(entity.docstring)
             desc_part = f" - {desc}" if desc else ""
 
             lines.append(
-                f"- {type_badge} **[`{display_name}`]({wiki_link})** "
-                f"({entity.entity_type}, `{file_name}`){desc_part}"
+                f"- {type_badge} **[`{display_name}`]({wiki_link})**{sig_part}{raises_part} "
+                f"(`{file_name}`){desc_part}"
             )
 
         lines.append("")
@@ -364,7 +392,7 @@ async def generate_glossary_page(
     # Add legend
     lines.append("---")
     lines.append("")
-    lines.append("**Legend:** 🔷 Class | 🔹 Function | ▪️ Method")
+    lines.append("**Legend:** 🔷 Class | 🔹 Function | ▪️ Method | ⚡ Async | ⚠️ Raises exceptions")
     lines.append("")
 
     return "\n".join(lines)
@@ -382,6 +410,10 @@ classDiagram
         +file_path: str
         +parent_name: str | None
         +docstring: str | None
+        +parameter_types: dict[str, str] | None
+        +return_type: str | None
+        +is_async: bool
+        +raises: list[str] | None
     }
 ```
 
@@ -391,25 +423,27 @@ classDiagram
 flowchart TD
     N0[EntityEntry]
     N1[Path]
-    N2[_get_brief_description]
-    N3[_get_wiki_link]
-    N4[collect_all_entities]
-    N5[generate_glossary_page]
-    N6[get_chunks_by_file]
-    N7[group_entities_by_letter]
-    N8[isalpha]
-    N9[sort]
-    N4 --> N6
-    N4 --> N0
-    N4 --> N9
-    N7 --> N8
-    N5 --> N4
+    N2[_format_signature]
+    N3[_get_brief_description]
+    N4[_get_wiki_link]
+    N5[collect_all_entities]
+    N6[generate_glossary_page]
+    N7[get_chunks_by_file]
+    N8[group_entities_by_letter]
+    N9[isalpha]
+    N10[sort]
     N5 --> N7
-    N5 --> N3
-    N5 --> N1
-    N5 --> N2
+    N5 --> N0
+    N5 --> N10
+    N8 --> N9
+    N6 --> N5
+    N6 --> N8
+    N6 --> N4
+    N6 --> N1
+    N6 --> N2
+    N6 --> N3
     classDef func fill:#e1f5fe
-    class N0,N1,N2,N3,N4,N5,N6,N7,N8,N9 func
+    class N0,N1,N2,N3,N4,N5,N6,N7,N8,N9,N10 func
 ```
 
 ## Used By
@@ -418,6 +452,7 @@ Functions and methods in this file and their callers:
 
 - **`EntityEntry`**: called by `collect_all_entities`
 - **`Path`**: called by `generate_glossary_page`
+- **`_format_signature`**: called by `generate_glossary_page`
 - **`_get_brief_description`**: called by `generate_glossary_page`
 - **`_get_wiki_link`**: called by `generate_glossary_page`
 - **`collect_all_entities`**: called by `generate_glossary_page`
@@ -493,7 +528,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_get_wiki_link`
 
 <details>
-<summary>View Source (lines 97-108) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/glossary.py#L97-L108">GitHub</a></summary>
+<summary>View Source (lines 118-129) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/glossary.py#L118-L129">GitHub</a></summary>
 
 ```python
 def _get_wiki_link(file_path: str) -> str:
@@ -516,7 +551,7 @@ def _get_wiki_link(file_path: str) -> str:
 #### `_get_brief_description`
 
 <details>
-<summary>View Source (lines 111-136) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/glossary.py#L111-L136">GitHub</a></summary>
+<summary>View Source (lines 132-157) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/glossary.py#L132-L157">GitHub</a></summary>
 
 ```python
 def _get_brief_description(docstring: str | None, max_length: int = 60) -> str:
@@ -549,14 +584,65 @@ def _get_brief_description(docstring: str | None, max_length: int = 60) -> str:
 
 </details>
 
+
+#### `_format_signature`
+
+<details>
+<summary>View Source (lines 160-199) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/glossary.py#L160-L199">GitHub</a></summary>
+
+```python
+def _format_signature(entity: EntityEntry, max_params: int = 3) -> str:
+    """Format a compact function/method signature showing types.
+
+    Args:
+        entity: The entity entry with type information.
+        max_params: Maximum number of parameters to show before truncating.
+
+    Returns:
+        Formatted signature string like "(x: int, y: str) -> bool" or empty string.
+    """
+    if entity.entity_type == "class":
+        return ""
+
+    parts = []
+
+    # Format parameters
+    if entity.parameter_types:
+        param_strs = []
+        param_items = list(entity.parameter_types.items())
+        shown_params = param_items[:max_params]
+        remaining = len(param_items) - max_params
+
+        for name, type_hint in shown_params:
+            if type_hint:
+                param_strs.append(f"{name}: {type_hint}")
+            else:
+                param_strs.append(name)
+
+        if remaining > 0:
+            param_strs.append(f"...+{remaining}")
+
+        parts.append(f"({', '.join(param_strs)})")
+    else:
+        parts.append("(...)")
+
+    # Add return type
+    if entity.return_type:
+        parts.append(f" → {entity.return_type}")
+
+    return "".join(parts)
+```
+
+</details>
+
 ## Relevant Source Files
 
-- `src/local_deepwiki/generators/glossary.py:11-18`
+- `src/local_deepwiki/generators/glossary.py:11-24`
 
 ## See Also
 
-- [vectorstore](../core/vectorstore.md) - dependency
+- [wiki](wiki.md) - uses this
 - [models](../models.md) - dependency
+- [vectorstore](../core/vectorstore.md) - dependency
 - [coverage](coverage.md) - shares 4 dependencies
 - [inheritance](inheritance.md) - shares 4 dependencies
-- [crosslinks](crosslinks.md) - shares 3 dependencies

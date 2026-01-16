@@ -5,19 +5,19 @@ Local DeepWiki-style MCP server for private repository documentation
 
 ## Description
 
-Local DeepWiki MCP is a Python-based Model Context Protocol (MCP) server that generates comprehensive documentation for private code repositories. The system provides multiple export formats including HTML and PDF, along with a web interface and file watching capabilities for automatic documentation updates.
+Local DeepWiki-style MCP server is a Python-based tool for generating private repository documentation. It provides an MCP (Model Context Protocol) server interface along with multiple export formats and a file watcher system for automated documentation updates.
 
 ## Key Features
 
-• **MCP Server Integration** - Runs as an MCP server with stdio communication for integration with AI assistants and development tools
+- **MCP Server Interface** - Implements an MCP server with stdio communication for integration with AI tools and editors (as shown in the [`main`](files/src/local_deepwiki/export/pdf.md) function using `stdio_server`)
 
-• **Multiple Export Formats** - Supports HTML export via `deepwiki-export` and PDF export via `deepwiki-export-pdf` commands
+- **Multiple Export Formats** - Supports both HTML and PDF export functionality through dedicated CLI commands (`deepwiki-export` and `deepwiki-export-pdf`)
 
-• **Web Interface** - Includes a Flask-based web server accessible through `deepwiki-serve` for interactive documentation browsing
+- **File Watching System** - Includes a watcher component (`deepwiki-watch`) that can monitor repository changes and trigger documentation rebuilds automatically
 
-• **File System Monitoring** - Provides `deepwiki-watch` functionality to automatically regenerate documentation when repository files change
+- **Multiple [LLM Provider](files/src/local_deepwiki/providers/base.md) Support** - Integrates with various AI providers including Ollama (with configurable models and base URLs), OpenAI, and Anthropic for content generation
 
-• **Configurable LLM Providers** - Supports multiple LLM backends including Ollama, OpenAI, and Anthropic with customizable model configurations and embedding options
+- **Web Server Interface** - Provides a web-based interface through Flask (`deepwiki-serve`) for accessing and viewing generated documentation
 
 ## Technology Stack
 

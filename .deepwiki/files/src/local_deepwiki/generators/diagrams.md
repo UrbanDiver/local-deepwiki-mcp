@@ -1,8 +1,8 @@
-# Diagrams Module
+# diagrams.py
 
 ## File Overview
 
-The `diagrams.py` module provides functionality for generating various types of diagrams and visualizations for code documentation. It focuses on creating Mermaid-compatible diagrams including class diagrams, dependency graphs, sequence diagrams, and data visualizations like pie charts.
+The `diagrams.py` module provides functionality for generating various types of diagrams and visualizations for code documentation. It creates Mermaid diagrams including class diagrams, dependency graphs, module overviews, language distribution charts, and sequence diagrams for different workflows.
 
 ## Classes
 
@@ -10,7 +10,7 @@ The `diagrams.py` module provides functionality for generating various types of 
 
 A dataclass that stores information about a class extracted from code analysis.
 
-**Purpose**: Represents metadata about a class including its attributes and methods for diagram generation.
+**Purpose**: Holds structured data about classes including their attributes and methods for use in diagram generation.
 
 ## Functions
 
@@ -18,128 +18,124 @@ A dataclass that stores information about a class extracted from code analysis.
 
 Sanitizes names to be compatible with Mermaid diagram syntax.
 
-**Purpose**: Ensures that class names, method names, and other identifiers can be safely used in Mermaid diagrams by removing or replacing problematic characters.
+**Purpose**: Ensures that class names, method names, and other identifiers used in Mermaid diagrams follow the proper naming conventions and don't contain characters that would break diagram rendering.
 
 ### generate_class_diagram
 
-Generates a Mermaid class diagram representation of code structure.
+Generates a Mermaid class diagram for the codebase.
 
-**Purpose**: Creates visual class diagrams showing relationships between classes, their methods, and attributes.
+**Purpose**: Creates a visual representation of classes and their relationships in Mermaid class diagram format, showing class hierarchies, attributes, and methods.
 
 ### _extract_class_attributes
 
-Private helper function that extracts class attributes from code analysis.
+Extracts class attributes from code analysis.
 
-**Purpose**: Parses class definitions to identify and [collect](../web/app.md) attribute information for diagram generation.
+**Purpose**: Helper function that identifies and extracts attribute information from class definitions to include in class diagrams.
 
 ### _extract_method_signature
 
-Private helper function that extracts method signatures from class definitions.
+Extracts method signatures from code.
 
-**Purpose**: Analyzes method definitions to capture their signatures including parameters and return types for documentation.
+**Purpose**: Helper function that parses method definitions to extract their signatures for display in class diagrams.
 
 ### _is_test_module
 
-Determines whether a given module is a test module.
+Determines if a module is a test module.
 
-**Purpose**: Filters out test modules from certain diagram generations to focus on production code structure.
+**Purpose**: Helper function that identifies test modules to potentially filter them out or handle them differently in diagram generation.
 
 ### generate_dependency_graph
 
-Creates a dependency graph showing relationships between modules.
+Generates a dependency graph showing module relationships.
 
-**Purpose**: Visualizes how different modules depend on each other, helping understand the overall architecture.
+**Purpose**: Creates a Mermaid graph showing how modules depend on each other, helping visualize the overall architecture and dependencies.
 
 ### _parse_external_import
 
-Private helper function that parses external import statements.
+Parses external import statements.
 
-**Purpose**: Identifies and processes import statements to understand external dependencies.
+**Purpose**: Helper function that analyzes import statements to identify external dependencies for inclusion in dependency graphs.
 
 ### _module_to_wiki_path
 
-Converts module paths to wiki-compatible paths.
+Converts module paths to wiki page paths.
 
-**Purpose**: Transforms module identifiers into paths suitable for wiki documentation linking.
+**Purpose**: Helper function that transforms module file paths into corresponding wiki page paths for cross-referencing.
 
 ### _find_circular_dependencies
 
-Identifies circular dependencies in the module structure.
+Identifies circular dependencies in the module graph.
 
-**Purpose**: Detects problematic circular import patterns that could cause issues in the codebase.
+**Purpose**: Analyzes the dependency graph to detect circular dependencies that could indicate architectural issues.
 
 ### dfs
 
-Implements depth-first search algorithm.
+Performs depth-first search on the dependency graph.
 
-**Purpose**: Provides graph traversal functionality, likely used for dependency analysis and circular dependency detection.
+**Purpose**: Helper function for graph traversal, likely used in circular dependency detection and other graph analysis operations.
 
 ### _path_to_module
 
 Converts file paths to module names.
 
-**Purpose**: Transforms filesystem paths into Python module notation for import analysis.
+**Purpose**: Helper function that transforms file system paths into Python module naming conventions.
 
 ### _parse_import_line
 
 Parses individual import statements.
 
-**Purpose**: Extracts module and symbol information from import lines in Python code.
+**Purpose**: Helper function that analyzes import lines to extract dependency information for graph generation.
 
 ### generate_module_overview
 
-Creates an overview diagram of the module structure.
+Generates an overview diagram of the module structure.
 
-**Purpose**: Provides a high-level view of how modules are organized and related within the project.
+**Purpose**: Creates a high-level visualization showing the overall organization and structure of modules in the project.
 
 ### generate_language_pie_chart
 
-Generates a pie chart showing language distribution in the codebase.
+Generates a pie chart showing language distribution.
 
-**Purpose**: Creates visual representation of what programming languages are used and their relative proportions.
+**Purpose**: Creates a visual representation of the programming languages used in the project and their relative proportions.
 
 ### generate_sequence_diagram
 
-Creates sequence diagrams showing interaction flows.
+Generates sequence diagrams for workflows.
 
-**Purpose**: Visualizes the sequence of method calls and interactions between different components.
+**Purpose**: Creates Mermaid sequence diagrams that show the flow of operations and interactions between different components.
 
 ### collect_participants
 
 Collects participants for sequence diagrams.
 
-**Purpose**: Identifies the actors and objects that participate in sequence interactions.
+**Purpose**: Helper function that identifies the actors and components that participate in sequence diagrams.
 
 ### add_calls
 
-Adds method calls to sequence diagrams.
+Adds function calls to sequence diagrams.
 
-**Purpose**: Processes and adds individual method calls to the sequence diagram representation.
+**Purpose**: Helper function that adds method calls and interactions to sequence diagram representations.
 
 ### generate_indexing_sequence
 
-Creates a sequence diagram for the indexing process.
+Generates a sequence diagram for the indexing process.
 
-**Purpose**: Specifically visualizes how the code indexing workflow operates.
+**Purpose**: Creates a specific sequence diagram showing how the code indexing workflow operates.
 
-### generate_wiki_generation
+### generate_wiki_generati
 
-Generates diagrams related to wiki generation processes.
+Generates diagrams related to wiki generation process.
 
-**Purpose**: Creates visual representations of how the wiki documentation generation works.
+**Purpose**: Creates visualizations showing the wiki generation workflow and process steps.
 
 ## Related Components
 
-This module works with several other components based on the imports shown:
+This module works with several other components from the local_deepwiki system:
 
-- **[ChunkType](../models.md)**: An enumeration from the models module that defines different types of code chunks
-- **[IndexStatus](../models.md)**: A model representing the status of indexing operations
-- **Path**: Standard library component for filesystem path operations
-- **re**: Regular expression module for text processing and pattern matching
+- **[ChunkType](../models.md)**: Used from the models module to handle different types of code chunks
+- **[IndexStatus](../models.md)**: Used from the models module to track indexing status information
 
-## Usage Context
-
-The diagrams module appears to be a core component of a documentation generation system, providing visual representations of code structure and processes. It integrates with the broader local_deepwiki system to create comprehensive documentation that includes both textual and visual elements.
+The module focuses on diagram generation and visualization, integrating with the broader documentation system to provide visual representations of code structure and workflows.
 
 ## API Reference
 
@@ -151,7 +147,7 @@ Information about a class for diagram generation.
 
 
 <details>
-<summary>View Source (lines 11-20) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/diagrams.py#L11-L20">GitHub</a></summary>
+<summary>View Source (lines 11-20) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/diagrams.py#L11-L20">GitHub</a></summary>
 
 ```python
 class ClassInfo:
@@ -188,7 +184,7 @@ Sanitize a name for use in Mermaid diagrams.
 
 
 <details>
-<summary>View Source (lines 23-39) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/diagrams.py#L23-L39">GitHub</a></summary>
+<summary>View Source (lines 23-39) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/diagrams.py#L23-L39">GitHub</a></summary>
 
 ```python
 def sanitize_mermaid_name(name: str) -> str:
@@ -233,7 +229,7 @@ Generate an enhanced Mermaid class diagram from code chunks.  Features: - Shows 
 
 
 <details>
-<summary>View Source (lines 42-191) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/diagrams.py#L42-L191">GitHub</a></summary>
+<summary>View Source (lines 42-191) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/diagrams.py#L42-L191">GitHub</a></summary>
 
 ```python
 def generate_class_diagram(
@@ -414,7 +410,7 @@ Generate an enhanced Mermaid flowchart showing module dependencies.  Features: -
 
 
 <details>
-<summary>View Source (lines 297-492) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/diagrams.py#L297-L492">GitHub</a></summary>
+<summary>View Source (lines 297-492) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/diagrams.py#L297-L492">GitHub</a></summary>
 
 ```python
 def generate_dependency_graph(
@@ -635,7 +631,7 @@ def dfs(node: str, path: list[str], visited: set[str]) -> None
 
 
 <details>
-<summary>View Source (lines 550-566) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/diagrams.py#L550-L566">GitHub</a></summary>
+<summary>View Source (lines 550-566) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/diagrams.py#L550-L566">GitHub</a></summary>
 
 ```python
 def dfs(node: str, path: list[str], visited: set[str]) -> None:
@@ -678,7 +674,7 @@ Generate a high-level module overview diagram.  Shows package structure with sub
 
 
 <details>
-<summary>View Source (lines 648-719) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/diagrams.py#L648-L719">GitHub</a></summary>
+<summary>View Source (lines 648-719) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/diagrams.py#L648-L719">GitHub</a></summary>
 
 ```python
 def generate_module_overview(
@@ -775,7 +771,7 @@ Generate a pie chart showing language distribution.
 
 
 <details>
-<summary>View Source (lines 722-741) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/diagrams.py#L722-L741">GitHub</a></summary>
+<summary>View Source (lines 722-741) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/diagrams.py#L722-L741">GitHub</a></summary>
 
 ```python
 def generate_language_pie_chart(index_status: IndexStatus) -> str | None:
@@ -822,7 +818,7 @@ Generate a sequence diagram from a call graph.  Shows the sequence of calls star
 
 
 <details>
-<summary>View Source (lines 744-821) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/diagrams.py#L744-L821">GitHub</a></summary>
+<summary>View Source (lines 744-821) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/diagrams.py#L744-L821">GitHub</a></summary>
 
 ```python
 def generate_sequence_diagram(
@@ -924,7 +920,7 @@ def collect_participants(func: str, depth: int) -> None
 
 
 <details>
-<summary>View Source (lines 778-783) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/diagrams.py#L778-L783">GitHub</a></summary>
+<summary>View Source (lines 778-783) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/diagrams.py#L778-L783">GitHub</a></summary>
 
 ```python
 def collect_participants(func: str, depth: int) -> None:
@@ -954,7 +950,7 @@ def add_calls(caller: str, depth: int) -> None
 
 
 <details>
-<summary>View Source (lines 796-812) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/diagrams.py#L796-L812">GitHub</a></summary>
+<summary>View Source (lines 796-812) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/diagrams.py#L796-L812">GitHub</a></summary>
 
 ```python
 def add_calls(caller: str, depth: int) -> None:
@@ -991,7 +987,7 @@ Generate sequence diagram for the indexing pipeline.  Shows how files are discov
 
 
 <details>
-<summary>View Source (lines 824-862) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/diagrams.py#L824-L862">GitHub</a></summary>
+<summary>View Source (lines 824-862) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/diagrams.py#L824-L862">GitHub</a></summary>
 
 ```python
 def generate_indexing_sequence() -> str:
@@ -1050,7 +1046,7 @@ Generate sequence diagram for wiki generation.  Shows how the wiki generator sea
 
 
 <details>
-<summary>View Source (lines 865-921) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/diagrams.py#L865-L921">GitHub</a></summary>
+<summary>View Source (lines 865-921) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/diagrams.py#L865-L921">GitHub</a></summary>
 
 ```python
 def generate_wiki_generation_sequence() -> str:
@@ -1127,7 +1123,7 @@ Generate sequence diagram for deep research pipeline.  Shows the 5-step deep res
 
 
 <details>
-<summary>View Source (lines 924-979) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/diagrams.py#L924-L979">GitHub</a></summary>
+<summary>View Source (lines 924-979) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/diagrams.py#L924-L979">GitHub</a></summary>
 
 ```python
 def generate_deep_research_sequence() -> str:
@@ -1204,7 +1200,7 @@ Generate all workflow sequence diagrams combined.  Returns a markdown string wit
 
 
 <details>
-<summary>View Source (lines 982-1002) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/diagrams.py#L982-L1002">GitHub</a></summary>
+<summary>View Source (lines 982-1002) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/diagrams.py#L982-L1002">GitHub</a></summary>
 
 ```python
 def generate_workflow_sequences() -> str:
@@ -1419,7 +1415,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_extract_class_attributes`
 
 <details>
-<summary>View Source (lines 194-232) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/diagrams.py#L194-L232">GitHub</a></summary>
+<summary>View Source (lines 194-232) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/diagrams.py#L194-L232">GitHub</a></summary>
 
 ```python
 def _extract_class_attributes(content: str, language: str = "python") -> list[str]:
@@ -1469,7 +1465,7 @@ def _extract_class_attributes(content: str, language: str = "python") -> list[st
 #### `_extract_method_signature`
 
 <details>
-<summary>View Source (lines 235-275) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/diagrams.py#L235-L275">GitHub</a></summary>
+<summary>View Source (lines 235-275) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/diagrams.py#L235-L275">GitHub</a></summary>
 
 ```python
 def _extract_method_signature(content: str) -> str | None:
@@ -1521,7 +1517,7 @@ def _extract_method_signature(content: str) -> str | None:
 #### `_is_test_module`
 
 <details>
-<summary>View Source (lines 278-294) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/diagrams.py#L278-L294">GitHub</a></summary>
+<summary>View Source (lines 278-294) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/diagrams.py#L278-L294">GitHub</a></summary>
 
 ```python
 def _is_test_module(module: str, file_path: str) -> bool:
@@ -1549,7 +1545,7 @@ def _is_test_module(module: str, file_path: str) -> bool:
 #### `_parse_external_import`
 
 <details>
-<summary>View Source (lines 495-523) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/diagrams.py#L495-L523">GitHub</a></summary>
+<summary>View Source (lines 495-523) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/diagrams.py#L495-L523">GitHub</a></summary>
 
 ```python
 def _parse_external_import(line: str) -> str | None:
@@ -1589,7 +1585,7 @@ def _parse_external_import(line: str) -> str | None:
 #### `_module_to_wiki_path`
 
 <details>
-<summary>View Source (lines 526-536) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/diagrams.py#L526-L536">GitHub</a></summary>
+<summary>View Source (lines 526-536) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/diagrams.py#L526-L536">GitHub</a></summary>
 
 ```python
 def _module_to_wiki_path(module: str, project_name: str) -> str:
@@ -1611,7 +1607,7 @@ def _module_to_wiki_path(module: str, project_name: str) -> str:
 #### `_find_circular_dependencies`
 
 <details>
-<summary>View Source (lines 539-571) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/diagrams.py#L539-L571">GitHub</a></summary>
+<summary>View Source (lines 539-571) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/diagrams.py#L539-L571">GitHub</a></summary>
 
 ```python
 def _find_circular_dependencies(deps: dict[str, set[str]]) -> set[tuple[str, str]]:
@@ -1655,7 +1651,7 @@ def _find_circular_dependencies(deps: dict[str, set[str]]) -> set[tuple[str, str
 #### `_path_to_module`
 
 <details>
-<summary>View Source (lines 574-606) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/diagrams.py#L574-L606">GitHub</a></summary>
+<summary>View Source (lines 574-606) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/diagrams.py#L574-L606">GitHub</a></summary>
 
 ```python
 def _path_to_module(file_path: str) -> str | None:
@@ -1699,7 +1695,7 @@ def _path_to_module(file_path: str) -> str | None:
 #### `_parse_import_line`
 
 <details>
-<summary>View Source (lines 609-645) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/diagrams.py#L609-L645">GitHub</a></summary>
+<summary>View Source (lines 609-645) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/diagrams.py#L609-L645">GitHub</a></summary>
 
 ```python
 def _parse_import_line(line: str, project_name: str) -> str | None:

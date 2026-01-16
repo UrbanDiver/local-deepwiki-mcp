@@ -1,47 +1,84 @@
-# Changelog Generator
+# changelog.py
 
 ## File Overview
 
-The `changelog.py` module provides functionality for generating changelog content from Git repository history. It processes commit information to create structured changelog documentation based on Git commit data.
+This module provides functionality for generating changelog documentation from Git repository commit history. It extracts commit information, organizes it by date, and formats it into a readable changelog format with proper commit URLs.
 
 ## Classes
 
 ### CommitInfo
 
-A dataclass that stores information about individual Git commits for changelog generation.
+A dataclass that stores information about a Git commit.
+
+**Fields:**
+- `hash`: The commit hash
+- `date`: The commit date
+- `author`: The commit author
+- `message`: The commit message
+- `files_changed`: List of files changed in the commit (defaults to empty list)
 
 ## Functions
 
 ### get_commit_history
 
-Retrieves commit history from a Git repository for changelog generation.
+Retrieves the commit history from a Git repository.
+
+**Parameters:**
+- Repository path and filtering options (exact signature not visible in provided code)
+
+**Returns:**
+- Collection of CommitInfo objects representing the commit history
 
 ### build_commit_url
 
-Constructs URLs for commits, likely for linking to remote repository commit pages.
+Constructs a URL linking to a specific commit based on repository information.
+
+**Parameters:**
+- Commit information and repository details (exact signature not visible in provided code)
+
+**Returns:**
+- String URL pointing to the commit
 
 ### generate_changelog_content
 
-Generates formatted changelog content based on processed commit information.
+Generates formatted changelog content from commit history.
+
+**Parameters:**
+- Commit data and formatting options (exact signature not visible in provided code)
+
+**Returns:**
+- Formatted changelog content as a string
 
 ## Usage Examples
 
 ```python
-from local_deepwiki.generators.changelog import generate_changelog_content
+from local_deepwiki.generators.changelog import CommitInfo, get_commit_history, generate_changelog_content
 
-# Generate changelog content for a repository
-changelog_content = generate_changelog_content()
+# Create commit info
+commit = CommitInfo(
+    hash="abc123",
+    date=datetime.now(),
+    author="John Doe",
+    message="Fix bug in parser",
+    files_changed=["src/parser.py"]
+)
+
+# Get commit history from repository
+commits = get_commit_history(repo_path)
+
+# Generate changelog content
+changelog = generate_changelog_content(commits)
 ```
 
 ## Related Components
 
-This module integrates with several other components:
+This module integrates with:
 
-- **[GitRepoInfo](../core/git_utils.md)**: Used for accessing Git repository information
-- **[get_repo_info](../core/git_utils.md)**: Function from `local_deepwiki.core.git_utils` for retrieving repository details
-- **[get_logger](../logging.md)**: Logging functionality from `local_deepwiki.logging`
+- **[GitRepoInfo](../core/git_utils.md)**: Used for repository information and metadata
+- **[get_repo_info](../core/git_utils.md)**: Function for retrieving Git repository details
+- **Logger**: For logging operations during changelog generation
 
-The module uses standard Python libraries including `subprocess` for Git command execution, `collections.defaultdict` for data organization, `dataclasses` for structured data, `datetime` for timestamp handling, and `pathlib` for file path operations.
+The module uses standard Python libraries including `subprocess` for Git command execution, `collections.defaultdict` for data organization, and `pathlib.Path` for file system operations.
 
 ## API Reference
 
@@ -53,7 +90,7 @@ Information about a git commit.
 
 
 <details>
-<summary>View Source (lines 20-28) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/changelog.py#L20-L28">GitHub</a></summary>
+<summary>View Source (lines 20-28) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/changelog.py#L20-L28">GitHub</a></summary>
 
 ```python
 class CommitInfo:
@@ -90,7 +127,7 @@ Get recent commit history with file changes.
 
 
 <details>
-<summary>View Source (lines 31-106) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/changelog.py#L31-L106">GitHub</a></summary>
+<summary>View Source (lines 31-106) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/changelog.py#L31-L106">GitHub</a></summary>
 
 ```python
 def get_commit_history(repo_path: Path, limit: int = 30) -> list[CommitInfo]:
@@ -192,7 +229,7 @@ Build URL to commit on GitHub/GitLab.
 
 
 <details>
-<summary>View Source (lines 109-128) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/changelog.py#L109-L128">GitHub</a></summary>
+<summary>View Source (lines 109-128) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/changelog.py#L109-L128">GitHub</a></summary>
 
 ```python
 def build_commit_url(repo_info: GitRepoInfo, commit_hash: str) -> str | None:
@@ -239,7 +276,7 @@ Generate changelog markdown content.
 
 
 <details>
-<summary>View Source (lines 131-213) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/changelog.py#L131-L213">GitHub</a></summary>
+<summary>View Source (lines 131-213) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/changelog.py#L131-L213">GitHub</a></summary>
 
 ```python
 def generate_changelog_content(

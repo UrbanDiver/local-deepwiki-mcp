@@ -2,56 +2,63 @@
 
 ## File Overview
 
-The `indexer.py` module provides the core functionality for indexing code repositories. It contains the RepositoryIndexer class which handles parsing, chunking, and vectorizing code files for search and retrieval purposes. The module manages the indexing process including progress tracking, file filtering, and maintaining index status.
+The `indexer.py` module provides core functionality for indexing code repositories. It contains the RepositoryIndexer class which handles parsing, chunking, and vectorizing code files for searchable documentation generation. The module also includes utility functions for status migration and validation.
 
 ## Classes
 
 ### RepositoryIndexer
 
-The RepositoryIndexer class is the [main](../export/pdf.md) component responsible for indexing code repositories. It coordinates the parsing, chunking, and vectorization of code files while managing the overall indexing workflow.
+The RepositoryIndexer class is responsible for processing code repositories and building searchable indexes from their contents. It coordinates between parsing, chunking, and vector storage components to create a comprehensive index of code files.
 
-Based on the imports, this class integrates with:
-- [CodeParser](parser.md) for parsing code files
-- [CodeChunker](chunker.md) for breaking code into manageable chunks  
-- [VectorStore](vectorstore.md) for storing and retrieving vectorized code chunks
-- Embedding providers for generating vector embeddings
-
-The class handles file filtering, progress tracking through callbacks, and maintains indexing status information.
+**Key Dependencies:**
+- Uses [CodeParser](parser.md) for analyzing code structure
+- Uses [CodeChunker](chunker.md) for breaking code into manageable pieces  
+- Uses [VectorStore](vectorstore.md) for storing and retrieving vectorized content
+- Integrates with embedding providers for generating vector representations
 
 ## Functions
 
 ### _needs_migration
 
-A utility function that determines if the index status data structure needs to be migrated to a newer format.
+```python
+def _needs_migration(status_data: dict) -> bool
+```
+
+Determines whether an existing index status requires migration to a newer format.
+
+**Parameters:**
+- `status_data`: Dictionary containing index status information
+
+**Returns:**
+- `bool`: True if migration is needed, False otherwise
 
 ### _migrate_status
 
-A utility function that performs migration of index status data to ensure compatibility with newer versions of the indexing system.
+```python
+def _migrate_status(status_data: dict) -> dict
+```
+
+Migrates index status data to the current format.
+
+**Parameters:**
+- `status_data`: Dictionary containing legacy status data
+
+**Returns:**
+- `dict`: Migrated status data in current format
 
 ## Related Components
 
 This module works closely with several other components:
 
-- **[CodeParser](parser.md)**: Parses source code files to extract meaningful information
-- **[CodeChunker](chunker.md)**: Breaks parsed code into chunks suitable for vectorization
-- **[VectorStore](vectorstore.md)**: Stores and manages vector embeddings of code chunks
-- **[Config](../config.md)**: Provides configuration settings for the indexing process
-- **[FileInfo](../models.md)**: Data model representing file metadata
-- **[CodeChunk](../models.md)**: Data model representing code chunks
-- **[IndexStatus](../models.md)**: Data model tracking indexing progress and status
+- **[CodeParser](parser.md)**: Analyzes code structure and extracts metadata
+- **[CodeChunker](chunker.md)**: Breaks code into semantic chunks for processing
+- **[VectorStore](vectorstore.md)**: Manages storage and retrieval of vectorized code content
+- **[Config](../config.md)**: Provides configuration settings for indexing behavior
+- **[FileInfo](../models.md), [CodeChunk](../models.md), [IndexStatus](../models.md)**: Data models for representing indexed content
 - **[ProgressCallback](../models.md)**: Interface for reporting indexing progress
+- **Embedding providers**: Generate vector representations of code chunks
 
-The module uses the logging system for tracking operations and integrates with embedding providers to generate vector representations of code.
-
-## Key Features
-
-Based on the imports and structure, the indexer supports:
-
-- File pattern matching using `fnmatch` for filtering files to index
-- JSON-based persistence of index status
-- Progress tracking and reporting through callback mechanisms
-- Integration with configurable embedding providers
-- Migration support for index data structures
+The module uses standard Python libraries including `pathlib` for file system operations, `fnmatch` for pattern matching, and `json` for data serialization.
 
 ## API Reference
 
@@ -63,7 +70,7 @@ Orchestrates repository indexing with incremental update support.
 
 
 <details>
-<summary>View Source (lines 68-396) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/indexer.py#L68-L396">GitHub</a></summary>
+<summary>View Source (lines 68-396) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/indexer.py#L68-L396">GitHub</a></summary>
 
 ```python
 class RepositoryIndexer:
@@ -89,7 +96,7 @@ Initialize the indexer.
 
 
 <details>
-<summary>View Source (lines 73-99) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/indexer.py#L73-L99">GitHub</a></summary>
+<summary>View Source (lines 73-99) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/indexer.py#L73-L99">GitHub</a></summary>
 
 ```python
 def __init__(
@@ -135,11 +142,11 @@ Index the repository.
 | [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `full_rebuild` | `bool` | `False` | If True, rebuild entire index. Otherwise, incremental update. |
-| [`progress_callback`](../watcher.md) | `ProgressCallback | None` | `None` | Optional callback for progress updates (message, current, total). |
+| [`progress_callback`](../handlers.md) | `ProgressCallback | None` | `None` | Optional callback for progress updates (message, current, total). |
 
 
 <details>
-<summary>View Source (lines 101-269) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/indexer.py#L101-L269">GitHub</a></summary>
+<summary>View Source (lines 101-269) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/indexer.py#L101-L269">GitHub</a></summary>
 
 ```python
 async def index(
@@ -325,7 +332,7 @@ Get the current indexing status.
 
 
 <details>
-<summary>View Source (lines 356-363) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/indexer.py#L356-L363">GitHub</a></summary>
+<summary>View Source (lines 356-363) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/indexer.py#L356-L363">GitHub</a></summary>
 
 ```python
 def get_status(self) -> IndexStatus | None:
@@ -359,7 +366,7 @@ Search the indexed repository.
 
 
 <details>
-<summary>View Source (lines 365-396) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/indexer.py#L365-L396">GitHub</a></summary>
+<summary>View Source (lines 365-396) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/indexer.py#L365-L396">GitHub</a></summary>
 
 ```python
 async def search(
@@ -510,7 +517,7 @@ Functions and methods in this file and their callers:
 - **`mkdir`**: called by `RepositoryIndexer.index`
 - **`model_dump`**: called by `RepositoryIndexer._save_status`
 - **`model_validate`**: called by `RepositoryIndexer._load_status`
-- **[`progress_callback`](../watcher.md)**: called by `RepositoryIndexer.index`
+- **[`progress_callback`](../handlers.md)**: called by `RepositoryIndexer.index`
 - **`relative_to`**: called by `RepositoryIndexer._find_source_files`
 - **`resolve`**: called by `RepositoryIndexer.__init__`
 - **`rglob`**: called by `RepositoryIndexer._find_source_files`
@@ -583,7 +590,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_needs_migration`
 
 <details>
-<summary>View Source (lines 26-35) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/indexer.py#L26-L35">GitHub</a></summary>
+<summary>View Source (lines 26-35) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/indexer.py#L26-L35">GitHub</a></summary>
 
 ```python
 def _needs_migration(status: IndexStatus) -> bool:
@@ -604,7 +611,7 @@ def _needs_migration(status: IndexStatus) -> bool:
 #### `_migrate_status`
 
 <details>
-<summary>View Source (lines 38-65) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/indexer.py#L38-L65">GitHub</a></summary>
+<summary>View Source (lines 38-65) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/indexer.py#L38-L65">GitHub</a></summary>
 
 ```python
 def _migrate_status(status: IndexStatus) -> tuple[IndexStatus, bool]:
@@ -643,7 +650,7 @@ def _migrate_status(status: IndexStatus) -> tuple[IndexStatus, bool]:
 #### `_find_source_files`
 
 <details>
-<summary>View Source (lines 271-308) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/indexer.py#L271-L308">GitHub</a></summary>
+<summary>View Source (lines 271-308) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/indexer.py#L271-L308">GitHub</a></summary>
 
 ```python
 def _find_source_files(self) -> list[Path]:
@@ -692,7 +699,7 @@ def _find_source_files(self) -> list[Path]:
 #### `_load_status`
 
 <details>
-<summary>View Source (lines 310-344) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/indexer.py#L310-L344">GitHub</a></summary>
+<summary>View Source (lines 310-344) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/indexer.py#L310-L344">GitHub</a></summary>
 
 ```python
 def _load_status(self) -> tuple[IndexStatus | None, bool]:
@@ -738,7 +745,7 @@ def _load_status(self) -> tuple[IndexStatus | None, bool]:
 #### `_save_status`
 
 <details>
-<summary>View Source (lines 346-354) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/indexer.py#L346-L354">GitHub</a></summary>
+<summary>View Source (lines 346-354) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/indexer.py#L346-L354">GitHub</a></summary>
 
 ```python
 def _save_status(self, status: IndexStatus) -> None:

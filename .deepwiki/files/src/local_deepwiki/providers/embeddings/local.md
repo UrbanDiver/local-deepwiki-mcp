@@ -2,79 +2,52 @@
 
 ## File Overview
 
-This file implements a local embedding provider that uses sentence-transformers models to generate text embeddings. The provider supports lazy loading of models and provides a local alternative to cloud-based embedding services.
+This file implements a local embedding provider that uses sentence-transformers models to generate embeddings. It provides an implementation of the [EmbeddingProvider](../base.md) interface for running embedding models locally rather than using external APIs.
 
 ## Classes
 
 ### LocalEmbeddingProvider
 
-The LocalEmbeddingProvider class extends [EmbeddingProvider](../base.md) to provide text embedding functionality using locally-hosted sentence-transformers models.
+The LocalEmbeddingProvider class provides text embedding functionality using local sentence-transformers models. It inherits from [EmbeddingProvider](../base.md) and implements lazy loading of the underlying model.
 
-**Purpose**: Generate text embeddings using pre-trained sentence-transformer models that run locally without requiring external API calls.
+**Attributes:**
+- `_model_name`: The name of the sentence-transformers model to use
+- `_model`: The loaded SentenceTransformer model instance (initially None for lazy loading)
+- `_dimension`: The dimension of the embeddings produced by the model (initially None)
 
-**Key Features**:
-- Lazy loading of models for memory efficiency
-- Configurable model selection
-- Default model: "all-MiniLM-L6-v2"
+**Methods:**
 
-#### Constructor
+#### `__init__(model_name: str = "all-MiniLM-L6-v2")`
 
-```python
-def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
-```
+Initializes the local embedding provider with a specified model.
 
-**Parameters**:
+**Parameters:**
 - `model_name` (str, optional): Name of the sentence-transformers model to use. Defaults to "all-MiniLM-L6-v2"
 
-**Attributes**:
-- `_model_name`: Stores the configured model name
-- `_model`: Holds the loaded SentenceTransformer instance (initially None)
-- `_dimension`: Stores the embedding dimension (initially None)
+#### `_load_model() -> SentenceTransformer`
 
-#### Methods
+Private method that implements lazy loading of the sentence-transformers model. The model is only loaded when first needed rather than during initialization.
 
-##### _load_model
-
-```python
-def _load_model(self) -> SentenceTransformer:
-```
-
-**Purpose**: Implements lazy loading for the sentence-transformer model.
-
-**Returns**: SentenceTransformer instance
-
-**Behavior**: Only loads the model when first accessed, storing it in `_model` for subsequent use.
+**Returns:**
+- `SentenceTransformer`: The loaded sentence-transformers model instance
 
 ## Usage Examples
 
-### Basic Initialization
-
 ```python
-# Use default model
+# Initialize with default model
 provider = LocalEmbeddingProvider()
 
-# Use custom model
-provider = LocalEmbeddingProvider(model_name="paraphrase-MiniLM-L6-v2")
-```
-
-### Model Loading
-
-```python
-# Model is loaded automatically when needed
-provider = LocalEmbeddingProvider()
-model = provider._load_model()  # Loads and caches the model
+# Initialize with custom model
+provider = LocalEmbeddingProvider(model_name="all-mpnet-base-v2")
 ```
 
 ## Related Components
 
-- **[EmbeddingProvider](../base.md)**: Base class that LocalEmbeddingProvider extends
-- **SentenceTransformer**: External library class used for the actual embedding generation
+This class works with:
+- [EmbeddingProvider](../base.md) (parent class)
+- SentenceTransformer (from the sentence-transformers library)
 
-## Dependencies
-
-Based on the code shown, this module requires:
-- `sentence_transformers.SentenceTransformer` for model functionality
-- A base [`EmbeddingProvider`](../base.md) class for inheritance
+The implementation follows a lazy loading pattern where the actual sentence-transformers model is only instantiated when first needed, which can help reduce memory usage and startup time.
 
 ## API Reference
 
@@ -88,7 +61,7 @@ Embedding provider using local sentence-transformers models.
 
 
 <details>
-<summary>View Source (lines 10-57) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/providers/embeddings/local.py#L10-L57">GitHub</a></summary>
+<summary>View Source (lines 10-57) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/providers/embeddings/local.py#L10-L57">GitHub</a></summary>
 
 ```python
 class LocalEmbeddingProvider(EmbeddingProvider):
@@ -158,7 +131,7 @@ Initialize the local embedding provider.
 
 
 <details>
-<summary>View Source (lines 10-57) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/providers/embeddings/local.py#L10-L57">GitHub</a></summary>
+<summary>View Source (lines 10-57) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/providers/embeddings/local.py#L10-L57">GitHub</a></summary>
 
 ```python
 class LocalEmbeddingProvider(EmbeddingProvider):
@@ -228,7 +201,7 @@ Generate embeddings for a list of texts.
 
 
 <details>
-<summary>View Source (lines 10-57) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/providers/embeddings/local.py#L10-L57">GitHub</a></summary>
+<summary>View Source (lines 10-57) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/providers/embeddings/local.py#L10-L57">GitHub</a></summary>
 
 ```python
 class LocalEmbeddingProvider(EmbeddingProvider):
@@ -293,7 +266,7 @@ Get the embedding dimension.
 
 
 <details>
-<summary>View Source (lines 10-57) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/providers/embeddings/local.py#L10-L57">GitHub</a></summary>
+<summary>View Source (lines 10-57) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/providers/embeddings/local.py#L10-L57">GitHub</a></summary>
 
 ```python
 class LocalEmbeddingProvider(EmbeddingProvider):
@@ -360,7 +333,7 @@ Get the provider name.
 
 
 <details>
-<summary>View Source (lines 10-57) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/providers/embeddings/local.py#L10-L57">GitHub</a></summary>
+<summary>View Source (lines 10-57) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/providers/embeddings/local.py#L10-L57">GitHub</a></summary>
 
 ```python
 class LocalEmbeddingProvider(EmbeddingProvider):

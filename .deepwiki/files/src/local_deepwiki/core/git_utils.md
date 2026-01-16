@@ -1,60 +1,72 @@
-# Git Utils Module
+# Git Utilities Module
 
-## Overview
+## File Overview
 
-The `git_utils.py` module provides utilities for extracting and parsing Git repository information. It focuses on retrieving remote repository details, identifying repository hosts, and building source URLs for Git repositories.
+The `git_utils.py` module provides utilities for working with Git repositories, including extracting repository information, parsing remote URLs, and building source URLs. It focuses on gathering metadata about Git repositories to support documentation generation workflows.
 
 ## Classes
 
 ### GitRepoInfo
 
-A dataclass that stores information about a Git repository.
+A data class that stores information about a Git repository.
 
 **Attributes:**
-- `remote_url` (str | None): The full remote URL (e.g., "https://github.com/owner/repo")
-- `host` (str | None): The repository host (e.g., "github.com", "gitlab.com")
-- `owner` (str | None): The repository owner/organization (e.g., "UrbanDiver")
+- `remote_url` (str | None): The remote repository URL (e.g., "https://github.com/owner/repo")
+- `host` (str | None): The Git hosting service domain (e.g., "github.com", "gitlab.com")
+- `owner` (str | None): The repository owner or organization name (e.g., "UrbanDiver")
 - `repo` (str | None): The repository name (e.g., "local-deepwiki-mcp")
 - `default_branch` (str): The default branch name (e.g., "[main](../export/pdf.md)")
 
 ## Functions
 
-Based on the module structure, this file contains the following functions:
+Based on the module structure shown, this file contains the following functions:
 
-- **get_git_remote_url**: Retrieves the Git remote URL for a repository
-- **parse_remote_url**: Parses a Git remote URL to extract components
-- **get_default_branch**: Gets the default branch name for a repository
-- **get_repo_info**: Gathers comprehensive repository information
-- **is_github_repo**: Determines if a repository is hosted on GitHub
-- **build_source_url**: Constructs source URLs for repository files
+### get_git_remote_url
 
-## Usage Example
+Retrieves the remote URL of a Git repository.
+
+### parse_remote_url
+
+Parses a Git remote URL to extract host, owner, and repository information.
+
+### get_default_branch
+
+Determines the default branch of a Git repository.
+
+### get_repo_info
+
+Gathers comprehensive repository information and returns a GitRepoInfo instance.
+
+### is_github_repo
+
+Checks whether a repository is hosted on GitHub.
+
+### build_source_url
+
+Constructs source URLs for files within the repository.
+
+## Usage Examples
 
 ```python
-from local_deepwiki.core.git_utils import GitRepoInfo
+from local_deepwiki.core.git_utils import GitRepoInfo, get_repo_info
 
-# Create repository information object
-repo_info = GitRepoInfo(
-    remote_url="https://github.com/owner/repo",
-    host="github.com",
-    owner="owner",
-    repo="repo",
-    default_branch="main"
-)
+# Get repository information
+repo_info = get_repo_info()
+
+# Access repository details
+if repo_info.remote_url:
+    print(f"Repository: {repo_info.owner}/{repo_info.repo}")
+    print(f"Host: {repo_info.host}")
+    print(f"Default branch: {repo_info.default_branch}")
 ```
 
 ## Dependencies
 
-This module uses:
-- `re`: For regular expression pattern matching
-- `subprocess`: For executing Git commands
-- `dataclasses`: For the GitRepoInfo dataclass [decorator](../providers/base.md)
-- `pathlib.Path`: For file system path handling
-- [`local_deepwiki.logging.get_logger`](../logging.md): For logging functionality
+This module relies on:
+- Standard library modules: `re`, `subprocess`, `dataclasses`, `pathlib`
+- Internal logging utility: [`local_deepwiki.logging.get_logger`](../logging.md)
 
-## Related Components
-
-The module integrates with the local-deepwiki logging system through the [get_logger](../logging.md) function, providing consistent logging across the application.
+The module uses subprocess calls to interact with the Git command-line interface for repository operations.
 
 ## API Reference
 
@@ -66,7 +78,7 @@ Information about a git repository.
 
 
 <details>
-<summary>View Source (lines 18-25) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/git_utils.py#L18-L25">GitHub</a></summary>
+<summary>View Source (lines 18-25) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/git_utils.py#L18-L25">GitHub</a></summary>
 
 ```python
 class GitRepoInfo:
@@ -101,7 +113,7 @@ Get the remote origin URL from git config.
 
 
 <details>
-<summary>View Source (lines 28-49) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/git_utils.py#L28-L49">GitHub</a></summary>
+<summary>View Source (lines 28-49) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/git_utils.py#L28-L49">GitHub</a></summary>
 
 ```python
 def get_git_remote_url(repo_path: Path) -> str | None:
@@ -148,7 +160,7 @@ Parse remote URL to extract host, owner, and repo name.  Handles various URL for
 
 
 <details>
-<summary>View Source (lines 52-89) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/git_utils.py#L52-L89">GitHub</a></summary>
+<summary>View Source (lines 52-89) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/git_utils.py#L52-L89">GitHub</a></summary>
 
 ```python
 def parse_remote_url(url: str) -> tuple[str, str, str] | None:
@@ -211,7 +223,7 @@ Get the default branch name for the repository.  Tries to detect the default bra
 
 
 <details>
-<summary>View Source (lines 92-140) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/git_utils.py#L92-L140">GitHub</a></summary>
+<summary>View Source (lines 92-140) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/git_utils.py#L92-L140">GitHub</a></summary>
 
 ```python
 def get_default_branch(repo_path: Path) -> str:
@@ -285,7 +297,7 @@ Get complete git repository information.
 
 
 <details>
-<summary>View Source (lines 143-170) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/git_utils.py#L143-L170">GitHub</a></summary>
+<summary>View Source (lines 143-170) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/git_utils.py#L143-L170">GitHub</a></summary>
 
 ```python
 def get_repo_info(repo_path: Path) -> GitRepoInfo:
@@ -338,7 +350,7 @@ Check if a repository is hosted on GitHub.
 
 
 <details>
-<summary>View Source (lines 173-185) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/git_utils.py#L173-L185">GitHub</a></summary>
+<summary>View Source (lines 173-185) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/git_utils.py#L173-L185">GitHub</a></summary>
 
 ```python
 def is_github_repo(repo_path: Path) -> bool:
@@ -380,7 +392,7 @@ Build a URL to the source file on GitHub/GitLab.
 
 
 <details>
-<summary>View Source (lines 188-229) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/git_utils.py#L188-L229">GitHub</a></summary>
+<summary>View Source (lines 188-229) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/git_utils.py#L188-L229">GitHub</a></summary>
 
 ```python
 def build_source_url(
@@ -553,6 +565,7 @@ assert result == "https://github.com/owner/repo/blob/main/src/file.py#L42"
 
 ## See Also
 
+- [wiki](../generators/wiki.md) - uses this
 - [logging](../logging.md) - dependency
 - [crosslinks](../generators/crosslinks.md) - shares 3 dependencies
 - [see_also](../generators/see_also.md) - shares 3 dependencies

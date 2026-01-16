@@ -4,17 +4,17 @@ This report shows the documentation coverage for the codebase.
 
 ## Summary
 
-🟢 **Overall Coverage: 93.7%**
+🟢 **Overall Coverage: 93.8%**
 
-- **1335** / **1425** entities documented
+- **1368** / **1458** entities documented
 
 ### By Type
 
 | Type | Documented | Total | Coverage |
 |------|------------|-------|----------|
-| Classes | 377 | 377 | 100.0% |
-| Functions | 233 | 252 | 92.5% |
-| Methods | 725 | 796 | 91.1% |
+| Classes | 388 | 388 | 100.0% |
+| Functions | 248 | 267 | 92.9% |
+| Methods | 732 | 803 | 91.2% |
 
 ## Coverage by File
 
@@ -55,7 +55,7 @@ This report shows the documentation coverage for the codebase.
 | 🟢 [test_coverage.py](files/tests/test_coverage.md) | 4 | 4 | 100.0% |
 | 🟢 [test_vectorstore.py](files/tests/test_vectorstore.md) | 27 | 27 | 100.0% |
 | 🟢 [test_pdf_export.py](files/tests/test_pdf_export.md) | 37 | 37 | 100.0% |
-| 🟢 [test_search.py](files/tests/test_search.md) | 7 | 7 | 100.0% |
+| 🟢 [test_search.py](files/tests/test_search.md) | 18 | 18 | 100.0% |
 | 🟢 [test_toc.py](files/tests/test_toc.md) | 5 | 5 | 100.0% |
 | 🟢 [test_incremental_wiki.py](files/tests/test_incremental_wiki.md) | 13 | 13 | 100.0% |
 | 🟢 [test_local_embedding_provider.py](files/tests/test_local_embedding_provider.md) | 8 | 8 | 100.0% |
@@ -65,6 +65,7 @@ This report shows the documentation coverage for the codebase.
 | 🟢 [test_export_init.py](files/tests/test_export_init.md) | 1 | 1 | 100.0% |
 | 🟢 [test_see_also.py](files/tests/test_see_also.md) | 10 | 10 | 100.0% |
 | 🟢 [test_html_export.py](files/tests/test_html_export.md) | 13 | 13 | 100.0% |
+| 🟢 [test_type_annotations.py](files/tests/test_type_annotations.md) | 9 | 9 | 100.0% |
 | 🟢 [test_config.py](files/tests/test_config.md) | 43 | 43 | 100.0% |
 | 🟢 [test_openai_embedding_provider.py](files/tests/test_openai_embedding_provider.md) | 1 | 1 | 100.0% |
 | 🟢 [test_glossary.py](files/tests/test_glossary.md) | 4 | 4 | 100.0% |
@@ -81,7 +82,7 @@ This report shows the documentation coverage for the codebase.
 | 🟢 [config.py](files/src/local_deepwiki/config.md) | 21 | 21 | 100.0% |
 | 🟢 [models.py](files/src/local_deepwiki/models.md) | 18 | 18 | 100.0% |
 | 🟢 [validation.py](files/src/local_deepwiki/validation.md) | 5 | 5 | 100.0% |
-| 🟢 [chunker.py](files/src/local_deepwiki/core/chunker.md) | 13 | 13 | 100.0% |
+| 🟢 [chunker.py](files/src/local_deepwiki/core/chunker.md) | 21 | 21 | 100.0% |
 | 🟢 [llm_cache.py](files/src/local_deepwiki/core/llm_cache.md) | 14 | 14 | 100.0% |
 | 🟢 [vectorstore.py](files/src/local_deepwiki/core/vectorstore.md) | 17 | 17 | 100.0% |
 | 🟢 [indexer.py](files/src/local_deepwiki/core/indexer.md) | 10 | 10 | 100.0% |
@@ -102,11 +103,11 @@ This report shows the documentation coverage for the codebase.
 | 🟢 [changelog.py](files/src/local_deepwiki/generators/changelog.md) | 4 | 4 | 100.0% |
 | 🟢 [wiki_modules.py](files/src/local_deepwiki/generators/wiki_modules.md) | 2 | 2 | 100.0% |
 | 🟢 [source_refs.py](files/src/local_deepwiki/generators/source_refs.md) | 6 | 6 | 100.0% |
-| 🟢 [search.py](files/src/local_deepwiki/generators/search.md) | 6 | 6 | 100.0% |
+| 🟢 [search.py](files/src/local_deepwiki/generators/search.md) | 10 | 10 | 100.0% |
 | 🟢 [see_also.py](files/src/local_deepwiki/generators/see_also.md) | 13 | 13 | 100.0% |
 | 🟢 [api_docs.py](files/src/local_deepwiki/generators/api_docs.md) | 17 | 17 | 100.0% |
 | 🟢 [inheritance.py](files/src/local_deepwiki/generators/inheritance.md) | 6 | 6 | 100.0% |
-| 🟢 [glossary.py](files/src/local_deepwiki/generators/glossary.md) | 6 | 6 | 100.0% |
+| 🟢 [glossary.py](files/src/local_deepwiki/generators/glossary.md) | 7 | 7 | 100.0% |
 | 🟢 [html.py](files/src/local_deepwiki/export/html.md) | 11 | 11 | 100.0% |
 | 🟢 [__init__.py](files/src/local_deepwiki/export/__init__.md) | 1 | 1 | 100.0% |
 | 🟢 [pdf.py](files/src/local_deepwiki/export/pdf.md) | 17 | 17 | 100.0% |
@@ -131,4 +132,4 @@ The following source files were used to generate this documentation:
 - `tests/test_wiki_coverage.py:50-120`
 
 
-*Showing 10 of 97 source files.*
+*Showing 10 of 98 source files.*

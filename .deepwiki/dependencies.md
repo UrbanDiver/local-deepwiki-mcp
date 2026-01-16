@@ -4,47 +4,47 @@
 
 The project relies on the following third-party libraries:
 
-### AI and Machine Learning
-- **anthropic** (>=0.40) - Anthropic Claude API client for AI interactions
-- **openai** (>=1.0) - OpenAI API client for language models and embeddings
-- **ollama** (>=0.4) - Local LLM inference server client
-- **sentence-transformers** (>=3.0) - Sentence embedding models for semantic similarity
+### AI and Language Models
+- **anthropic** (>=0.40) - Anthropic's Claude API client for AI text generation
+- **openai** (>=1.0) - OpenAI API client for GPT models and embeddings
+- **ollama** (>=0.4) - Local language model inference server client
+- **mcp** (>=1.2.0) - Model Context Protocol implementation
 
-### Data Processing and Storage
-- **lancedb** (>=0.15) - Vector database for storing and querying embeddings
-- **pandas** (>=2.0) - Data manipulation and analysis library
-- **pydantic** (>=2.0) - Data validation and serialization
-
-### Code Analysis
+### Code Analysis and Parsing
 - **tree-sitter** (>=0.23) - Syntax tree parsing library
-- **tree-sitter-c** (>=0.23) - C language parser
-- **tree-sitter-c-sharp** (>=0.23) - C# language parser
-- **tree-sitter-cpp** (>=0.23) - C++ language parser
-- **tree-sitter-go** (>=0.23) - Go language parser
-- **tree-sitter-java** (>=0.23) - Java language parser
-- **tree-sitter-javascript** (>=0.23) - JavaScript language parser
-- **tree-sitter-kotlin** (>=0.23) - Kotlin language parser
-- **tree-sitter-php** (>=0.23) - PHP language parser
-- **tree-sitter-python** (>=0.23) - Python language parser
-- **tree-sitter-ruby** (>=0.23) - Ruby language parser
-- **tree-sitter-rust** (>=0.23) - Rust language parser
-- **tree-sitter-swift** (>=0.0.1) - Swift language parser
-- **tree-sitter-typescript** (>=0.23) - TypeScript language parser
+- **tree-sitter-c** (>=0.23) - C language grammar for tree-sitter
+- **tree-sitter-c-sharp** (>=0.23) - C# language grammar
+- **tree-sitter-cpp** (>=0.23) - C++ language grammar
+- **tree-sitter-go** (>=0.23) - Go language grammar
+- **tree-sitter-java** (>=0.23) - Java language grammar
+- **tree-sitter-javascript** (>=0.23) - JavaScript language grammar
+- **tree-sitter-kotlin** (>=0.23) - Kotlin language grammar
+- **tree-sitter-php** (>=0.23) - PHP language grammar
+- **tree-sitter-python** (>=0.23) - Python language grammar
+- **tree-sitter-ruby** (>=0.23) - Ruby language grammar
+- **tree-sitter-rust** (>=0.23) - Rust language grammar
+- **tree-sitter-swift** (>=0.0.1) - Swift language grammar
+- **tree-sitter-typescript** (>=0.23) - TypeScript language grammar
+
+### Vector Search and Embeddings
+- **lancedb** (>=0.15) - Vector database for similarity search
+- **sentence-transformers** (>=3.0) - Sentence embedding models
 
 ### Web and Export
-- **flask** (>=3.0) - Web framework for HTTP API
+- **flask** (>=3.0) - Web framework for API server
 - **weasyprint** (>=62.0) - HTML to PDF conversion
+- **markdown** (>=3.0) - Markdown processing
 
-### Utilities
-- **markdown** (>=3.0) - Markdown processing and conversion
-- **mcp** (>=1.2.0) - Model Context Protocol implementation
+### Data Processing and Utilities
+- **pandas** (>=2.0) - Data manipulation and analysis
+- **pydantic** (>=2.0) - Data validation and serialization
 - **pyyaml** (>=6.0) - YAML parsing and generation
-- **rich** (>=13.0) - Rich text and beautiful formatting in terminal
+- **rich** (>=13.0) - Rich text and formatting for terminal output
 - **watchdog** (>=4.0) - File system monitoring
 
 ## Dev Dependencies
 
-Development and testing tools:
+Development and testing tools include:
 
 - **black** (>=24.0) - Code formatter
 - **isort** (>=5.0) - Import statement organizer
@@ -57,36 +57,34 @@ Development and testing tools:
 
 ## Internal Module Dependencies
 
-Based on the import statements, the internal module structure shows the following relationships:
+Based on the import statements, the internal module structure shows the following key relationships:
 
 ### Core Components
-- **[CodeParser](files/src/local_deepwiki/core/parser.md)** is used by [CodeChunker](files/src/local_deepwiki/core/chunker.md), [APIDocExtractor](files/src/local_deepwiki/generators/api_docs.md), and various generators
-- **[VectorStore](files/src/local_deepwiki/core/vectorstore.md)** depends on [EmbeddingProvider](files/src/local_deepwiki/providers/base.md) for embedding operations
-- **[CodeChunker](files/src/local_deepwiki/core/chunker.md)** uses [CodeParser](files/src/local_deepwiki/core/parser.md) for syntax analysis and tree-sitter for AST parsing
+- **[CodeParser](files/src/local_deepwiki/core/parser.md)** is used by [CodeChunker](files/src/local_deepwiki/core/chunker.md), [APIDocExtractor](files/src/local_deepwiki/generators/api_docs.md), and various generators for syntax tree parsing
+- **[VectorStore](files/src/local_deepwiki/core/vectorstore.md)** is used by the glossary generator for similarity search
+- **[CodeChunker](files/src/local_deepwiki/core/chunker.md)** depends on [CodeParser](files/src/local_deepwiki/core/parser.md) and configuration modules
+
+### Model Dependencies
+- Most modules import from the models module, using classes like [WikiPage](files/src/local_deepwiki/models.md), [CodeChunk](files/src/local_deepwiki/models.md), [Language](files/src/local_deepwiki/models.md), and [ChunkType](files/src/local_deepwiki/models.md)
+- The [ChunkType](files/src/local_deepwiki/models.md) and [CodeChunk](files/src/local_deepwiki/models.md) models are widely used across generators and core components
+
+### Generator Interdependencies
+- **CrosslinksGenerator** works with [WikiPage](files/src/local_deepwiki/models.md) and [CodeChunk](files/src/local_deepwiki/models.md) models
+- **SeeAlsoGenerator** uses [WikiPage](files/src/local_deepwiki/models.md), [CodeChunk](files/src/local_deepwiki/models.md), and [ChunkType](files/src/local_deepwiki/models.md) for relationship analysis
+- **[APIDocExtractor](files/src/local_deepwiki/generators/api_docs.md)** depends on [CodeParser](files/src/local_deepwiki/core/parser.md) and [Language](files/src/local_deepwiki/models.md) models
+- **DiagramsGenerator** uses [ChunkType](files/src/local_deepwiki/models.md) and [IndexStatus](files/src/local_deepwiki/models.md) models
 
 ### Provider Architecture
-- **[EmbeddingProvider](files/src/local_deepwiki/providers/base.md)** serves as base class for [LocalEmbeddingProvider](files/src/local_deepwiki/providers/embeddings/local.md) and [OpenAIEmbeddingProvider](files/src/local_deepwiki/providers/embeddings/openai.md)
-- **[LLMProvider](files/src/local_deepwiki/providers/base.md)** provides base interface for language model providers
-- Provider initialization depends on configuration management
-
-### Generator Dependencies
-- **[APIDocExtractor](files/src/local_deepwiki/generators/api_docs.md)** uses [CodeParser](files/src/local_deepwiki/core/parser.md) for extracting API documentation from code
-- Cross-link generators depend on [WikiPage](files/src/local_deepwiki/models.md) and [CodeChunk](files/src/local_deepwiki/models.md) models
-- See-also generators use [RelationshipAnalyzer](files/src/local_deepwiki/generators/see_also.md) and [FileRelationships](files/src/local_deepwiki/generators/see_also.md)
-- Diagram generators depend on [CodeChunk](files/src/local_deepwiki/models.md) and [IndexStatus](files/src/local_deepwiki/models.md) models
-- Test example generators work with [UsageExample](files/src/local_deepwiki/generators/test_examples.md) extraction
+- **[EmbeddingProvider](files/src/local_deepwiki/providers/base.md)** and **[LLMProvider](files/src/local_deepwiki/providers/base.md)** serve as base classes in the providers module
+- **[LocalEmbeddingProvider](files/src/local_deepwiki/providers/embeddings/local.md)** and **[OpenAIEmbeddingProvider](files/src/local_deepwiki/providers/embeddings/openai.md)** implement the [EmbeddingProvider](files/src/local_deepwiki/providers/base.md) interface
+- The embedding providers are imported through the providers init module
 
 ### Export System
-- **[HtmlExporter](files/src/local_deepwiki/export/html.md)** handles HTML export functionality
-- Export system includes PDF export capabilities
+- **[HtmlExporter](files/src/local_deepwiki/export/html.md)** is the [main](files/src/local_deepwiki/export/pdf.md) export class accessible through the export module
+- The export module also provides PDF export functionality
 
-### Handler Layer
-- Server handlers coordinate between core components for operations like indexing, searching, and wiki generation
-- Handlers depend on various generators and core services
-
-### Models
-- Core data models ([WikiPage](files/src/local_deepwiki/models.md), [CodeChunk](files/src/local_deepwiki/models.md), [Language](files/src/local_deepwiki/models.md), [ChunkType](files/src/local_deepwiki/models.md)) are used throughout the system
-- Configuration models support the provider and chunking systems
+### Handler Integration
+- Server handlers import and use functions like [handle_ask_question](files/src/local_deepwiki/handlers.md), [handle_export_wiki_html](files/src/local_deepwiki/handlers.md), and [handle_index_repository](files/src/local_deepwiki/handlers.md) for API endpoints
 
 ## Module Dependency Graph
 
@@ -203,6 +201,7 @@ flowchart TD
     M17 --> M15
     M17 --> M31
     M18 --> M30
+    M19 --> M7
     M19 --> M31
     M20 --> M31
     M21 --> M31
@@ -398,4 +397,4 @@ The following source files were used to generate this documentation:
 - `src/local_deepwiki/export/__init__.py:9-22`
 
 
-*Showing 10 of 73 source files.*
+*Showing 10 of 74 source files.*
