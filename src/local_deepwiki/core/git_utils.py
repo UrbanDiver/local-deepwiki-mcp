@@ -584,3 +584,122 @@ def format_blame_date(dt: datetime) -> str:
         return dt.strftime("%b %d, %Y")
     else:
         return dt.strftime("%b %d, %Y")
+
+
+def get_file_last_modified(repo_path: Path, file_path: str) -> datetime | None:
+    """Get the last modification date of a file from git history.
+
+    Args:
+        repo_path: Path to the repository root.
+        file_path: Relative path to the file.
+
+    Returns:
+        datetime of last modification, or None if not in git or error.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "log", "-1", "--format=%ct", "--", file_path],
+            cwd=repo_path,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            timestamp = int(result.stdout.strip())
+            return datetime.fromtimestamp(timestamp)
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError, ValueError) as e:
+        logger.debug(f"Failed to get last modified date for {file_path}: {e}")
+    return None
+
+
+def get_files_last_modified(
+    repo_path: Path,
+    file_paths: list[str],
+) -> dict[str, datetime]:
+    """Get last modification dates for multiple files efficiently.
+
+    Uses a single git log command to get dates for all files.
+
+    Args:
+        repo_path: Path to the repository root.
+        file_paths: List of relative file paths.
+
+    Returns:
+        Dictionary mapping file paths to their last modification datetime.
+    """
+    if not file_paths:
+        return {}
+
+    result: dict[str, datetime] = {}
+
+    # Get dates for each file (git log doesn't support bulk queries well)
+    for file_path in file_paths:
+        mod_date = get_file_last_modified(repo_path, file_path)
+        if mod_date:
+            result[file_path] = mod_date
+
+    return result
+
+
+@dataclass
+class StaleInfo:
+    """Information about a potentially stale wiki page."""
+
+    page_path: str
+    generated_at: datetime
+    source_files: list[str]
+    newest_source_date: datetime
+    days_stale: int
+    modified_entities: list[str] | None = None  # Entities modified after doc generation
+
+
+def check_page_staleness(
+    repo_path: Path,
+    page_path: str,
+    generated_at: float,
+    source_files: list[str],
+    stale_threshold_days: int = 0,
+) -> StaleInfo | None:
+    """Check if a wiki page is potentially stale.
+
+    A page is considered stale if any of its source files have been
+    modified after the page was generated.
+
+    Args:
+        repo_path: Path to the repository root.
+        page_path: Wiki page path.
+        generated_at: Timestamp when the page was generated.
+        source_files: Source files that contributed to the page.
+        stale_threshold_days: Minimum days difference to consider stale.
+
+    Returns:
+        StaleInfo if the page is stale, None otherwise.
+    """
+    if not source_files:
+        return None
+
+    doc_date = datetime.fromtimestamp(generated_at)
+    mod_dates = get_files_last_modified(repo_path, source_files)
+
+    if not mod_dates:
+        return None
+
+    # Find the newest source modification
+    newest_file = max(mod_dates.items(), key=lambda x: x[1])
+    newest_date = newest_file[1]
+
+    # Check if source is newer than doc
+    if newest_date <= doc_date:
+        return None
+
+    days_stale = (newest_date - doc_date).days
+    if days_stale < stale_threshold_days:
+        return None
+
+    return StaleInfo(
+        page_path=page_path,
+        generated_at=doc_date,
+        source_files=source_files,
+        newest_source_date=newest_date,
+        days_stale=days_stale,
+    )

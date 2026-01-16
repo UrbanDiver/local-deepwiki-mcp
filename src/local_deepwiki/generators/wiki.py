@@ -9,6 +9,7 @@ from local_deepwiki.config import Config, get_config
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.generators.coverage import generate_coverage_page
 from local_deepwiki.generators.crosslinks import EntityRegistry, add_cross_links
+from local_deepwiki.generators.stale_detection import generate_stale_report_page
 from local_deepwiki.generators.glossary import generate_glossary_page
 from local_deepwiki.generators.inheritance import generate_inheritance_page
 from local_deepwiki.generators.manifest import ProjectManifest, get_cached_manifest
@@ -133,7 +134,7 @@ class WikiGenerator:
         logger.debug(f"Full rebuild: {full_rebuild}, Total files: {index_status.total_files}")
 
         pages: list[WikiPage] = []
-        total_steps = 12  # overview, architecture, modules, files, dependencies, changelog, inheritance, glossary, coverage, cross-links, see-also, search
+        total_steps = 13  # overview, architecture, modules, files, dependencies, changelog, inheritance, glossary, coverage, cross-links, see-also, search, freshness
         pages_generated = 0
         pages_skipped = 0
 
@@ -367,7 +368,7 @@ class WikiGenerator:
         toc = generate_toc(page_list)
         write_toc(toc, self.wiki_path)
 
-        # Save wiki generation status
+        # Build wiki generation status
         wiki_status = WikiGenerationStatus(
             repo_path=index_status.repo_path,
             generated_at=time.time(),
@@ -377,6 +378,22 @@ class WikiGenerator:
             ).hexdigest()[:16],
             pages=self.status_manager.page_statuses,
         )
+
+        # Generate freshness report (stale documentation detection)
+        freshness_page = generate_stale_report_page(
+            repo_path=self._repo_path,
+            wiki_status=wiki_status,
+            stale_threshold_days=0,
+        )
+        pages.append(freshness_page)
+        self.status_manager.record_page_status(freshness_page, all_source_files)
+        await self._write_page(freshness_page)
+        pages_generated += 1
+
+        # Update wiki status with freshness page
+        wiki_status.pages[freshness_page.path] = self.status_manager.page_statuses[freshness_page.path]
+        wiki_status.total_pages = len(pages)
+
         await self.status_manager.save_status(wiki_status)
 
         if progress_callback:
