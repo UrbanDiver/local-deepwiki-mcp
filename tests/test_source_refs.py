@@ -1,10 +1,15 @@
 """Tests for source_refs module."""
 
+import tempfile
+from pathlib import Path
+from unittest.mock import patch
+
 import pytest
 
 from local_deepwiki.generators.source_refs import (
     _format_file_entry,
     _relative_path,
+    _strip_existing_source_refs,
     add_source_refs_sections,
     build_file_to_wiki_map,
     generate_source_refs_section,
@@ -49,6 +54,66 @@ class TestBuildFileToWikiMap:
         """Test with empty pages list."""
         result = build_file_to_wiki_map([])
         assert result == {}
+
+    def test_with_wiki_path_scans_existing_files(self):
+        """Test that wiki_path is scanned for existing file pages."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            wiki_path = Path(tmpdir)
+            # Create files directory structure
+            files_dir = wiki_path / "files" / "src" / "module"
+            files_dir.mkdir(parents=True)
+
+            # Create existing wiki pages
+            (files_dir / "parser.md").write_text("# Parser")
+            (files_dir / "utils.md").write_text("# Utils")
+            # Create an index file that should be skipped
+            (files_dir / "index.md").write_text("# Index")
+
+            # Pass empty pages list but with wiki_path
+            result = build_file_to_wiki_map([], wiki_path=wiki_path)
+
+            assert "src/module/parser.py" in result
+            assert result["src/module/parser.py"] == "files/src/module/parser.md"
+            assert "src/module/utils.py" in result
+            assert result["src/module/utils.py"] == "files/src/module/utils.md"
+            # Index files should be skipped
+            assert "src/module/index.py" not in result
+
+    def test_with_wiki_path_prioritizes_pages_list(self):
+        """Test that pages list takes priority over scanned files."""
+        pages = [
+            WikiPage(
+                path="files/src/parser.md",
+                title="parser",
+                content="",
+                generated_at=0,
+            ),
+        ]
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            wiki_path = Path(tmpdir)
+            files_dir = wiki_path / "files" / "src"
+            files_dir.mkdir(parents=True)
+            # Create the same file on disk
+            (files_dir / "parser.md").write_text("# Parser from disk")
+
+            result = build_file_to_wiki_map(pages, wiki_path=wiki_path)
+
+            # Should have entry from pages list (which was set first)
+            assert result["src/parser.py"] == "files/src/parser.md"
+
+    def test_with_wiki_path_nonexistent_directory(self):
+        """Test with wiki_path that doesn't exist."""
+        result = build_file_to_wiki_map([], wiki_path=Path("/nonexistent/path"))
+        assert result == {}
+
+    def test_with_wiki_path_no_files_directory(self):
+        """Test with wiki_path that has no files subdirectory."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            wiki_path = Path(tmpdir)
+            # Don't create files directory
+            result = build_file_to_wiki_map([], wiki_path=wiki_path)
+            assert result == {}
 
 
 class TestRelativePath:
@@ -356,6 +421,103 @@ class TestAddSourceRefsSections:
         assert "## Relevant Source Files" in result[0].content
 
 
+class TestStripExistingSourceRefs:
+    """Tests for _strip_existing_source_refs function."""
+
+    def test_no_source_refs_section(self):
+        """Test content without source refs section is unchanged."""
+        content = "# Title\n\nSome content here.\n\n## See Also\n\n- Link"
+        result = _strip_existing_source_refs(content)
+        assert result == content
+
+    def test_strips_single_source_refs_section(self):
+        """Test stripping a single source refs section."""
+        content = """# Title
+
+Some content.
+
+## Relevant Source Files
+
+- `src/parser.py`
+
+## See Also
+
+- Link"""
+        result = _strip_existing_source_refs(content)
+        assert "## Relevant Source Files" not in result
+        assert "## See Also" in result
+        assert "Some content." in result
+
+    def test_strips_section_at_end(self):
+        """Test stripping source refs section at end of content."""
+        content = """# Title
+
+Some content.
+
+## Relevant Source Files
+
+- `src/parser.py`
+- `src/utils.py`"""
+        result = _strip_existing_source_refs(content)
+        assert "## Relevant Source Files" not in result
+        assert "Some content." in result
+        assert "`src/parser.py`" not in result
+
+    def test_strips_multiple_source_refs_sections(self):
+        """Test stripping multiple source refs sections (edge case)."""
+        content = """# Title
+
+First content.
+
+## Relevant Source Files
+
+- `src/first.py`
+
+## Middle Section
+
+Middle content.
+
+## Relevant Source Files
+
+- `src/second.py`
+
+## See Also
+
+- Final link"""
+        result = _strip_existing_source_refs(content)
+        # Both source refs sections should be removed
+        assert result.count("## Relevant Source Files") == 0
+        assert "## Middle Section" in result
+        assert "## See Also" in result
+        assert "First content." in result
+
+    def test_preserves_surrounding_content(self):
+        """Test that content before and after is preserved."""
+        content = """# Title
+
+Intro paragraph.
+
+## Overview
+
+Overview content.
+
+## Relevant Source Files
+
+- `src/parser.py`
+
+## See Also
+
+- [Link](url)"""
+        result = _strip_existing_source_refs(content)
+        assert "# Title" in result
+        assert "Intro paragraph." in result
+        assert "## Overview" in result
+        assert "Overview content." in result
+        assert "## See Also" in result
+        assert "[Link](url)" in result
+        assert "## Relevant Source Files" not in result
+
+
 class TestFormatFileEntry:
     """Tests for _format_file_entry function."""
 
@@ -512,3 +674,70 @@ class TestAddSourceRefsSectionsWithLineInfo:
         assert "`src/parser.py`" in result[0].content
         # Should not have line numbers
         assert "src/parser.py:" not in result[0].content
+
+    def test_page_unchanged_when_source_refs_none(self):
+        """Test that page is unchanged when generate_source_refs_section returns None."""
+        pages = [
+            WikiPage(
+                path="files/src/parser.md",
+                title="parser",
+                content="# Parser\n\nOriginal content.",
+                generated_at=0,
+            ),
+        ]
+
+        page_statuses = {
+            "files/src/parser.md": WikiPageStatus(
+                path="files/src/parser.md",
+                source_files=["src/parser.py"],
+                source_hashes={},
+                content_hash="xyz",
+                generated_at=0,
+            ),
+        }
+
+        # Mock generate_source_refs_section to return None
+        with patch(
+            "local_deepwiki.generators.source_refs.generate_source_refs_section",
+            return_value=None,
+        ):
+            result = add_source_refs_sections(pages, page_statuses)
+
+        assert len(result) == 1
+        assert result[0].content == "# Parser\n\nOriginal content."
+
+    def test_with_wiki_path_parameter(self):
+        """Test add_source_refs_sections with wiki_path to find existing pages."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            wiki_path = Path(tmpdir)
+            files_dir = wiki_path / "files" / "src"
+            files_dir.mkdir(parents=True)
+            # Create an existing wiki page on disk
+            (files_dir / "utils.md").write_text("# Utils")
+
+            pages = [
+                WikiPage(
+                    path="files/src/parser.md",
+                    title="parser",
+                    content="# Parser\n\nContent.",
+                    generated_at=0,
+                ),
+            ]
+
+            page_statuses = {
+                "files/src/parser.md": WikiPageStatus(
+                    path="files/src/parser.md",
+                    source_files=["src/parser.py", "src/utils.py"],
+                    source_hashes={},
+                    content_hash="xyz",
+                    generated_at=0,
+                ),
+            }
+
+            result = add_source_refs_sections(pages, page_statuses, wiki_path=wiki_path)
+
+            assert len(result) == 1
+            content = result[0].content
+            assert "## Relevant Source Files" in content
+            # utils.py should have a link since it exists on disk
+            assert "[`src/utils.py`](utils.md)" in content

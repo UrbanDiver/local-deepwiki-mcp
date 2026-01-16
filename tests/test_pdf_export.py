@@ -6,20 +6,18 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-# Skip all tests in this module if WeasyPrint is not available
-try:
-    from local_deepwiki.export.pdf import (
-        PdfExporter,
-        export_to_pdf,
-        extract_mermaid_blocks,
-        extract_title,
-        is_mmdc_available,
-        render_markdown_for_pdf,
-        render_mermaid_to_png,
-        render_mermaid_to_svg,
-    )
-except (ImportError, OSError) as e:
-    pytest.skip(f"WeasyPrint not available: {e}", allow_module_level=True)
+from local_deepwiki.export.pdf import (
+    PDF_HTML_TEMPLATE,
+    PRINT_CSS,
+    PdfExporter,
+    export_to_pdf,
+    extract_mermaid_blocks,
+    extract_title,
+    is_mmdc_available,
+    render_markdown_for_pdf,
+    render_mermaid_to_png,
+    render_mermaid_to_svg,
+)
 
 
 class TestRenderMarkdownForPdf:
@@ -353,28 +351,20 @@ class TestPrintCss:
 
     def test_print_css_has_page_rules(self):
         """Test that print CSS has @page rules."""
-        from local_deepwiki.export.pdf import PRINT_CSS
-
         assert "@page" in PRINT_CSS
         assert "margin" in PRINT_CSS
 
     def test_print_css_has_page_numbers(self):
         """Test that print CSS includes page numbers."""
-        from local_deepwiki.export.pdf import PRINT_CSS
-
         assert "counter(page)" in PRINT_CSS
         assert "counter(pages)" in PRINT_CSS
 
     def test_print_css_avoids_page_breaks_in_code(self):
         """Test that print CSS avoids page breaks inside code blocks."""
-        from local_deepwiki.export.pdf import PRINT_CSS
-
         assert "page-break-inside: avoid" in PRINT_CSS
 
     def test_print_css_keeps_headings_with_content(self):
         """Test that print CSS keeps headings with following content."""
-        from local_deepwiki.export.pdf import PRINT_CSS
-
         assert "page-break-after: avoid" in PRINT_CSS
 
 
@@ -707,3 +697,409 @@ sequenceDiagram
         assert html.count("mermaid-diagram") == 2
         assert html.count("data:image/png;base64,") == 2
         assert mock_render.call_count == 2
+
+
+class TestMainCli:
+    """Tests for the main() CLI entry point."""
+
+    @patch("local_deepwiki.export.pdf.export_to_pdf")
+    def test_main_default_args(self, mock_export, tmp_path: Path, monkeypatch):
+        """Test main with default arguments."""
+        # Create a .deepwiki directory
+        wiki_path = tmp_path / ".deepwiki"
+        wiki_path.mkdir()
+        (wiki_path / "index.md").write_text("# Test")
+
+        monkeypatch.chdir(tmp_path)
+        mock_export.return_value = "Exported wiki to PDF: output.pdf"
+
+        from local_deepwiki.export.pdf import main
+
+        with patch("sys.argv", ["deepwiki-export-pdf"]):
+            main()
+
+        mock_export.assert_called_once()
+        call_args = mock_export.call_args
+        assert call_args.kwargs["single_file"] is True
+
+    @patch("local_deepwiki.export.pdf.export_to_pdf")
+    def test_main_custom_wiki_path(self, mock_export, tmp_path: Path):
+        """Test main with custom wiki path."""
+        wiki_path = tmp_path / "custom_wiki"
+        wiki_path.mkdir()
+        (wiki_path / "index.md").write_text("# Test")
+
+        mock_export.return_value = "Exported wiki to PDF: output.pdf"
+
+        from local_deepwiki.export.pdf import main
+
+        with patch("sys.argv", ["deepwiki-export-pdf", str(wiki_path)]):
+            main()
+
+        mock_export.assert_called_once()
+        call_args = mock_export.call_args
+        assert call_args.kwargs["wiki_path"] == wiki_path
+
+    @patch("local_deepwiki.export.pdf.export_to_pdf")
+    def test_main_with_output_option(self, mock_export, tmp_path: Path):
+        """Test main with -o/--output option."""
+        wiki_path = tmp_path / ".deepwiki"
+        wiki_path.mkdir()
+        (wiki_path / "index.md").write_text("# Test")
+        output_path = tmp_path / "custom_output.pdf"
+
+        mock_export.return_value = f"Exported wiki to PDF: {output_path}"
+
+        from local_deepwiki.export.pdf import main
+
+        with patch("sys.argv", ["deepwiki-export-pdf", str(wiki_path), "-o", str(output_path)]):
+            main()
+
+        mock_export.assert_called_once()
+        call_args = mock_export.call_args
+        assert call_args.kwargs["output_path"] == output_path
+
+    @patch("local_deepwiki.export.pdf.export_to_pdf")
+    def test_main_with_separate_option(self, mock_export, tmp_path: Path):
+        """Test main with --separate option."""
+        wiki_path = tmp_path / ".deepwiki"
+        wiki_path.mkdir()
+        (wiki_path / "index.md").write_text("# Test")
+
+        mock_export.return_value = "Exported 1 pages to PDFs"
+
+        from local_deepwiki.export.pdf import main
+
+        with patch("sys.argv", ["deepwiki-export-pdf", str(wiki_path), "--separate"]):
+            main()
+
+        mock_export.assert_called_once()
+        call_args = mock_export.call_args
+        assert call_args.kwargs["single_file"] is False
+
+    def test_main_nonexistent_wiki_path(self, tmp_path: Path, capsys):
+        """Test main with nonexistent wiki path."""
+        nonexistent = tmp_path / "nonexistent"
+
+        from local_deepwiki.export.pdf import main
+
+        with patch("sys.argv", ["deepwiki-export-pdf", str(nonexistent)]):
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+            assert exc_info.value.code == 1
+
+        captured = capsys.readouterr()
+        assert "does not exist" in captured.err
+
+    @patch("local_deepwiki.export.pdf.export_to_pdf")
+    def test_main_handles_export_exception(self, mock_export, tmp_path: Path, capsys):
+        """Test main handles exceptions from export_to_pdf."""
+        wiki_path = tmp_path / ".deepwiki"
+        wiki_path.mkdir()
+        (wiki_path / "index.md").write_text("# Test")
+
+        mock_export.side_effect = RuntimeError("PDF generation failed")
+
+        from local_deepwiki.export.pdf import main
+
+        with patch("sys.argv", ["deepwiki-export-pdf", str(wiki_path)]):
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+            assert exc_info.value.code == 1
+
+        captured = capsys.readouterr()
+        assert "Error exporting to PDF" in captured.err
+        assert "PDF generation failed" in captured.err
+
+
+class TestRenderMermaidToPngSuccessPath:
+    """Tests for successful mermaid PNG rendering."""
+
+    @patch("local_deepwiki.export.pdf.subprocess.run")
+    @patch("local_deepwiki.export.pdf.is_mmdc_available")
+    def test_successful_png_rendering(self, mock_available, mock_run, tmp_path: Path):
+        """Test successful PNG rendering with mocked subprocess."""
+        mock_available.return_value = True
+
+        # Create a mock that simulates successful mmdc execution
+        def run_side_effect(*args, **kwargs):
+            # Find the output file path from the command args
+            cmd_args = args[0]
+            output_idx = cmd_args.index("-o") + 1
+            output_file = Path(cmd_args[output_idx])
+            # Create a fake PNG file
+            output_file.write_bytes(b"\x89PNG\r\n\x1a\n" + b"\x00" * 100)
+            return MagicMock(returncode=0)
+
+        mock_run.side_effect = run_side_effect
+
+        result = render_mermaid_to_png("graph TD\nA-->B")
+
+        assert result is not None
+        assert result.startswith(b"\x89PNG")
+
+    @patch("local_deepwiki.export.pdf.subprocess.run")
+    @patch("local_deepwiki.export.pdf.is_mmdc_available")
+    def test_png_output_file_not_created(self, mock_available, mock_run):
+        """Test when mmdc succeeds but doesn't create output file."""
+        mock_available.return_value = True
+        # mmdc returns success but doesn't create the file
+        mock_run.return_value = MagicMock(returncode=0)
+
+        result = render_mermaid_to_png("graph TD\nA-->B")
+        assert result is None
+
+    @patch("local_deepwiki.export.pdf.is_mmdc_available")
+    def test_handles_oserror(self, mock_available):
+        """Test that OSError is handled gracefully."""
+        mock_available.return_value = True
+
+        with patch("local_deepwiki.export.pdf.subprocess.run") as mock_run:
+            mock_run.side_effect = OSError("File system error")
+            result = render_mermaid_to_png("graph TD\nA-->B")
+            assert result is None
+
+    @patch("local_deepwiki.export.pdf.is_mmdc_available")
+    def test_handles_subprocess_error(self, mock_available):
+        """Test that SubprocessError is handled gracefully."""
+        import subprocess
+
+        mock_available.return_value = True
+
+        with patch("local_deepwiki.export.pdf.subprocess.run") as mock_run:
+            mock_run.side_effect = subprocess.SubprocessError("Process failed")
+            result = render_mermaid_to_png("graph TD\nA-->B")
+            assert result is None
+
+
+class TestRenderMermaidToSvgSuccessPath:
+    """Tests for successful mermaid SVG rendering."""
+
+    @patch("local_deepwiki.export.pdf.subprocess.run")
+    @patch("local_deepwiki.export.pdf.is_mmdc_available")
+    def test_successful_svg_rendering(self, mock_available, mock_run):
+        """Test successful SVG rendering with mocked subprocess."""
+        mock_available.return_value = True
+
+        # Create a mock that simulates successful mmdc execution
+        def run_side_effect(*args, **kwargs):
+            cmd_args = args[0]
+            output_idx = cmd_args.index("-o") + 1
+            output_file = Path(cmd_args[output_idx])
+            # Create a fake SVG file
+            output_file.write_text('<svg xmlns="http://www.w3.org/2000/svg">test</svg>')
+            return MagicMock(returncode=0)
+
+        mock_run.side_effect = run_side_effect
+
+        result = render_mermaid_to_svg("graph TD\nA-->B")
+
+        assert result is not None
+        assert "<svg" in result
+
+    @patch("local_deepwiki.export.pdf.subprocess.run")
+    @patch("local_deepwiki.export.pdf.is_mmdc_available")
+    def test_svg_output_file_not_created(self, mock_available, mock_run):
+        """Test when mmdc succeeds but doesn't create output file."""
+        mock_available.return_value = True
+        mock_run.return_value = MagicMock(returncode=0)
+
+        result = render_mermaid_to_svg("graph TD\nA-->B")
+        assert result is None
+
+    @patch("local_deepwiki.export.pdf.is_mmdc_available")
+    def test_handles_oserror(self, mock_available):
+        """Test that OSError is handled gracefully."""
+        mock_available.return_value = True
+
+        with patch("local_deepwiki.export.pdf.subprocess.run") as mock_run:
+            mock_run.side_effect = OSError("File system error")
+            result = render_mermaid_to_svg("graph TD\nA-->B")
+            assert result is None
+
+    @patch("local_deepwiki.export.pdf.is_mmdc_available")
+    def test_handles_subprocess_error(self, mock_available):
+        """Test that SubprocessError is handled gracefully."""
+        import subprocess
+
+        mock_available.return_value = True
+
+        with patch("local_deepwiki.export.pdf.subprocess.run") as mock_run:
+            mock_run.side_effect = subprocess.SubprocessError("Process failed")
+            result = render_mermaid_to_svg("graph TD\nA-->B")
+            assert result is None
+
+
+class TestExtractTitleErrorHandling:
+    """Tests for extract_title error handling."""
+
+    def test_handles_oserror(self, tmp_path: Path):
+        """Test handling of OSError when reading file."""
+        md_file = tmp_path / "test.md"
+        md_file.write_text("# Title")
+
+        with patch.object(Path, "read_text", side_effect=OSError("Permission denied")):
+            # Should fall back to filename-based title
+            result = extract_title(md_file)
+            assert result == "Test"
+
+    def test_handles_unicode_decode_error(self, tmp_path: Path):
+        """Test handling of UnicodeDecodeError."""
+        md_file = tmp_path / "my_doc.md"
+        # Write binary content that will cause decode error
+        md_file.write_bytes(b"\xff\xfe invalid utf-8 \x80\x81")
+
+        # The actual read_text will raise UnicodeDecodeError
+        # so we test the fallback behavior
+        result = extract_title(md_file)
+        # Should fall back to filename-based title
+        assert result == "My Doc"
+
+    def test_nonexistent_file_fallback(self, tmp_path: Path):
+        """Test fallback for nonexistent file."""
+        md_file = tmp_path / "missing_file.md"
+        # File doesn't exist - should use filename fallback
+        result = extract_title(md_file)
+        assert result == "Missing File"
+
+
+class TestPdfExporterEdgeCases:
+    """Tests for PdfExporter edge cases."""
+
+    @pytest.fixture
+    def wiki_with_empty_paths(self, tmp_path: Path) -> Path:
+        """Create a wiki with TOC entries that have empty paths."""
+        wiki_path = tmp_path / ".deepwiki"
+        wiki_path.mkdir()
+
+        (wiki_path / "index.md").write_text("# Index")
+        (wiki_path / "page.md").write_text("# Page")
+
+        # TOC with some entries having empty or missing paths
+        toc = {
+            "entries": [
+                {"number": "1", "title": "Index", "path": "index.md"},
+                {"number": "2", "title": "Section Header", "path": ""},  # Empty path
+                {"number": "3", "title": "Page", "path": "page.md"},
+            ]
+        }
+        (wiki_path / "toc.json").write_text(json.dumps(toc))
+
+        return wiki_path
+
+    def test_handles_empty_toc_paths(self, wiki_with_empty_paths: Path, tmp_path: Path):
+        """Test that empty TOC paths are skipped."""
+        output_path = tmp_path / "output.pdf"
+        exporter = PdfExporter(wiki_with_empty_paths, output_path)
+
+        # Load TOC
+        toc_path = wiki_with_empty_paths / "toc.json"
+        toc_data = json.loads(toc_path.read_text())
+        exporter.toc_entries = toc_data.get("entries", [])
+
+        paths: list[str] = []
+        exporter._extract_paths_from_toc(exporter.toc_entries, paths)
+
+        # Empty path should be skipped
+        assert "" not in paths
+        assert "index.md" in paths
+        assert "page.md" in paths
+
+    @patch("local_deepwiki.export.pdf.HTML")
+    def test_export_separate_with_pdf_suffix_output(self, mock_html_class, tmp_path: Path):
+        """Test export_separate when output path has .pdf suffix."""
+        wiki_path = tmp_path / ".deepwiki"
+        wiki_path.mkdir()
+        (wiki_path / "index.md").write_text("# Test")
+
+        # Output path with .pdf suffix
+        output_path = tmp_path / "output.pdf"
+
+        mock_html_instance = MagicMock()
+        mock_html_class.return_value = mock_html_instance
+
+        exporter = PdfExporter(wiki_path, output_path)
+        results = exporter.export_separate()
+
+        # Should create directory named "output" (without .pdf)
+        assert len(results) == 1
+        # Output should be in tmp_path/output/ directory
+        assert results[0].parent.name == "output"
+        assert results[0].suffix == ".pdf"
+
+    def test_collect_pages_with_no_toc(self, tmp_path: Path):
+        """Test collecting pages when no TOC exists."""
+        wiki_path = tmp_path / ".deepwiki"
+        wiki_path.mkdir()
+        (wiki_path / "a.md").write_text("# A")
+        (wiki_path / "b.md").write_text("# B")
+
+        output_path = tmp_path / "output.pdf"
+        exporter = PdfExporter(wiki_path, output_path)
+        # Don't set toc_entries - they remain empty
+
+        pages = exporter._collect_pages_in_order()
+
+        # Should return all md files in sorted order
+        assert len(pages) == 2
+        page_names = [p.name for p in pages]
+        assert "a.md" in page_names
+        assert "b.md" in page_names
+
+    @patch("local_deepwiki.export.pdf.HTML")
+    def test_build_combined_html_with_mermaid(self, mock_html_class, tmp_path: Path):
+        """Test building combined HTML with mermaid diagrams."""
+        wiki_path = tmp_path / ".deepwiki"
+        wiki_path.mkdir()
+        (wiki_path / "index.md").write_text(
+            "# Index\n\n```mermaid\ngraph TD\nA-->B\n```"
+        )
+
+        output_path = tmp_path / "output.pdf"
+        exporter = PdfExporter(wiki_path, output_path)
+
+        pages = [wiki_path / "index.md"]
+        html = exporter._build_combined_html(pages)
+
+        # Should contain the document structure
+        assert "<!DOCTYPE html>" in html
+        assert "<title>Documentation</title>" in html
+        assert "Table of Contents" in html
+
+    def test_toc_entries_with_missing_children_key(self, tmp_path: Path):
+        """Test TOC entries without children key."""
+        wiki_path = tmp_path / ".deepwiki"
+        wiki_path.mkdir()
+
+        output_path = tmp_path / "output.pdf"
+        exporter = PdfExporter(wiki_path, output_path)
+
+        # Entries without 'children' key
+        toc_entries = [
+            {"title": "A", "path": "a.md"},
+            {"title": "B", "path": "b.md"},
+        ]
+
+        paths: list[str] = []
+        exporter._extract_paths_from_toc(toc_entries, paths)
+
+        assert paths == ["a.md", "b.md"]
+
+
+class TestExportToPdfEdgeCases:
+    """Additional edge case tests for export_to_pdf."""
+
+    @patch("local_deepwiki.export.pdf.HTML")
+    def test_accepts_path_as_string(self, mock_html_class, tmp_path: Path):
+        """Test that wiki_path can be a string."""
+        wiki_path = tmp_path / ".deepwiki"
+        wiki_path.mkdir()
+        (wiki_path / "index.md").write_text("# Test")
+        (wiki_path / "toc.json").write_text('{"entries": []}')
+
+        mock_html_instance = MagicMock()
+        mock_html_class.return_value = mock_html_instance
+
+        # Pass as string
+        result = export_to_pdf(str(wiki_path))
+        assert "Exported wiki to PDF" in result

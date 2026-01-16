@@ -2,6 +2,7 @@
 
 import subprocess
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -135,6 +136,30 @@ class TestBuildSourceUrl:
         result = build_source_url(repo_info, "lib/module.rb")
         assert result == "https://gitlab.com/owner/repo/-/blob/develop/lib/module.rb"
 
+    def test_gitlab_url_with_single_line(self) -> None:
+        """Test building GitLab URL with single line number."""
+        repo_info = GitRepoInfo(
+            remote_url="https://gitlab.com/owner/repo",
+            host="gitlab.com",
+            owner="owner",
+            repo="repo",
+            default_branch="main",
+        )
+        result = build_source_url(repo_info, "src/file.py", start_line=42)
+        assert result == "https://gitlab.com/owner/repo/-/blob/main/src/file.py#L42"
+
+    def test_gitlab_url_with_same_start_end_line(self) -> None:
+        """Test GitLab URL with same start and end line shows single line."""
+        repo_info = GitRepoInfo(
+            remote_url="https://gitlab.com/owner/repo",
+            host="gitlab.com",
+            owner="owner",
+            repo="repo",
+            default_branch="main",
+        )
+        result = build_source_url(repo_info, "src/file.py", start_line=42, end_line=42)
+        assert result == "https://gitlab.com/owner/repo/-/blob/main/src/file.py#L42"
+
     def test_no_remote_returns_none(self) -> None:
         """Test that missing remote info returns None."""
         repo_info = GitRepoInfo(
@@ -187,6 +212,27 @@ class TestGetGitRemoteUrl:
         result = get_git_remote_url(tmp_path)
         assert result is None
 
+    def test_handles_timeout_error(self, tmp_path: Path) -> None:
+        """Test returns None when subprocess times out."""
+        with patch("subprocess.run") as mock_run:
+            mock_run.side_effect = subprocess.TimeoutExpired(cmd="git", timeout=5)
+            result = get_git_remote_url(tmp_path)
+            assert result is None
+
+    def test_handles_file_not_found_error(self, tmp_path: Path) -> None:
+        """Test returns None when git is not found."""
+        with patch("subprocess.run") as mock_run:
+            mock_run.side_effect = FileNotFoundError("git not found")
+            result = get_git_remote_url(tmp_path)
+            assert result is None
+
+    def test_handles_os_error(self, tmp_path: Path) -> None:
+        """Test returns None on OSError."""
+        with patch("subprocess.run") as mock_run:
+            mock_run.side_effect = OSError("Permission denied")
+            result = get_git_remote_url(tmp_path)
+            assert result is None
+
 
 class TestGetDefaultBranch:
     """Tests for get_default_branch function."""
@@ -221,6 +267,69 @@ class TestGetDefaultBranch:
         """Test returns 'main' fallback for non-git directory."""
         result = get_default_branch(tmp_path)
         assert result == "main"
+
+    def test_handles_timeout_in_first_try(self, tmp_path: Path) -> None:
+        """Test handles timeout when getting current branch."""
+        with patch("subprocess.run") as mock_run:
+            mock_run.side_effect = subprocess.TimeoutExpired(cmd="git", timeout=5)
+            result = get_default_branch(tmp_path)
+            # Should fall through all try blocks and return "main"
+            assert result == "main"
+
+    def test_handles_file_not_found_in_first_try(self, tmp_path: Path) -> None:
+        """Test handles FileNotFoundError when git not found."""
+        with patch("subprocess.run") as mock_run:
+            mock_run.side_effect = FileNotFoundError("git not found")
+            result = get_default_branch(tmp_path)
+            assert result == "main"
+
+    def test_gets_branch_from_remote_head(self, tmp_path: Path) -> None:
+        """Test getting branch from remote HEAD when in detached state."""
+        with patch("subprocess.run") as mock_run:
+            # First call returns detached HEAD
+            mock_result1 = subprocess.CompletedProcess(
+                args=[], returncode=0, stdout="HEAD\n", stderr=""
+            )
+            # Second call returns remote HEAD ref
+            mock_result2 = subprocess.CompletedProcess(
+                args=[], returncode=0, stdout="refs/remotes/origin/develop\n", stderr=""
+            )
+            mock_run.side_effect = [mock_result1, mock_result2]
+
+            result = get_default_branch(tmp_path)
+            assert result == "develop"
+
+    def test_gets_branch_from_remote_head_when_first_call_fails(self, tmp_path: Path) -> None:
+        """Test falling back to remote HEAD when rev-parse fails."""
+        with patch("subprocess.run") as mock_run:
+            # First call fails
+            mock_result1 = subprocess.CompletedProcess(
+                args=[], returncode=1, stdout="", stderr="error"
+            )
+            # Second call returns remote HEAD ref
+            mock_result2 = subprocess.CompletedProcess(
+                args=[], returncode=0, stdout="refs/remotes/origin/main\n", stderr=""
+            )
+            mock_run.side_effect = [mock_result1, mock_result2]
+
+            result = get_default_branch(tmp_path)
+            assert result == "main"
+
+    def test_returns_fallback_when_remote_head_empty(self, tmp_path: Path) -> None:
+        """Test fallback when remote HEAD returns empty."""
+        with patch("subprocess.run") as mock_run:
+            # First call returns detached HEAD
+            mock_result1 = subprocess.CompletedProcess(
+                args=[], returncode=0, stdout="HEAD\n", stderr=""
+            )
+            # Second call returns empty
+            mock_result2 = subprocess.CompletedProcess(
+                args=[], returncode=0, stdout="", stderr=""
+            )
+            mock_run.side_effect = [mock_result1, mock_result2]
+
+            result = get_default_branch(tmp_path)
+            assert result == "main"
 
 
 class TestGetRepoInfo:

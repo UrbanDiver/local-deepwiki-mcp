@@ -171,6 +171,187 @@ class TestOllamaProviderName:
         assert provider.name == "ollama:codellama:7b"
 
 
+class TestOllamaProviderGenerateErrors:
+    """Tests for OllamaProvider generate error handling."""
+
+    async def test_generate_response_error_model_not_found(self):
+        """Test generate raises OllamaModelNotFoundError on ResponseError."""
+        from ollama import ResponseError
+
+        provider = OllamaProvider(model="llama3.2")
+        provider._health_checked = True
+
+        with patch.object(provider._client, "chat") as mock_chat:
+            mock_chat.side_effect = ResponseError("model 'llama3.2' not found")
+
+            with pytest.raises(OllamaModelNotFoundError) as exc_info:
+                await provider.generate("Test prompt")
+
+            assert "llama3.2" in str(exc_info.value)
+
+    async def test_generate_response_error_other(self):
+        """Test generate re-raises ResponseError for non-model errors."""
+        from ollama import ResponseError
+
+        provider = OllamaProvider(model="llama3.2")
+        provider._health_checked = True
+
+        with patch.object(provider._client, "chat") as mock_chat:
+            mock_chat.side_effect = ResponseError("some other error")
+
+            with pytest.raises(ResponseError):
+                await provider.generate("Test prompt")
+
+    async def test_generate_connection_error(self):
+        """Test generate raises OllamaConnectionError on connection issues."""
+        provider = OllamaProvider(model="llama3.2")
+        provider._health_checked = True
+
+        with patch.object(provider._client, "chat") as mock_chat:
+            mock_chat.side_effect = Exception("connection refused")
+
+            with pytest.raises(OllamaConnectionError):
+                await provider.generate("Test prompt")
+
+            # Health check should be reset
+            assert provider._health_checked is False
+
+    async def test_generate_timeout_error(self):
+        """Test generate raises OllamaConnectionError on timeout."""
+        provider = OllamaProvider(model="llama3.2")
+        provider._health_checked = True
+
+        with patch.object(provider._client, "chat") as mock_chat:
+            mock_chat.side_effect = Exception("timeout waiting for response")
+
+            with pytest.raises(OllamaConnectionError):
+                await provider.generate("Test prompt")
+
+    async def test_generate_other_exception_reraises(self):
+        """Test generate re-raises non-connection exceptions."""
+        provider = OllamaProvider(model="llama3.2")
+        provider._health_checked = True
+
+        with patch.object(provider._client, "chat") as mock_chat:
+            mock_chat.side_effect = ValueError("some value error")
+
+            with pytest.raises(ValueError):
+                await provider.generate("Test prompt")
+
+
+class TestOllamaProviderGenerateStream:
+    """Tests for OllamaProvider generate_stream method."""
+
+    async def test_generate_stream_basic(self):
+        """Test basic streaming generation."""
+        provider = OllamaProvider(model="llama3.2")
+        provider._health_checked = True
+
+        async def mock_stream():
+            for content in ["Hello", " ", "world"]:
+                yield {"message": {"content": content}}
+
+        with patch.object(provider._client, "chat") as mock_chat:
+            mock_chat.return_value = mock_stream()
+
+            chunks = []
+            async for chunk in provider.generate_stream("Test prompt"):
+                chunks.append(chunk)
+
+            assert chunks == ["Hello", " ", "world"]
+
+    async def test_generate_stream_with_system_prompt(self):
+        """Test streaming with system prompt."""
+        provider = OllamaProvider(model="llama3.2")
+        provider._health_checked = True
+
+        async def mock_stream():
+            yield {"message": {"content": "Response"}}
+
+        with patch.object(provider._client, "chat") as mock_chat:
+            mock_chat.return_value = mock_stream()
+
+            chunks = []
+            async for chunk in provider.generate_stream("User prompt", system_prompt="System"):
+                chunks.append(chunk)
+
+            call_kwargs = mock_chat.call_args.kwargs
+            assert call_kwargs["messages"][0] == {"role": "system", "content": "System"}
+            assert call_kwargs["stream"] is True
+
+    async def test_generate_stream_skips_empty_content(self):
+        """Test that empty content chunks are skipped."""
+        provider = OllamaProvider(model="llama3.2")
+        provider._health_checked = True
+
+        async def mock_stream():
+            yield {"message": {"content": "Hello"}}
+            yield {"message": {"content": ""}}  # Empty
+            yield {"message": {"content": None}}  # None
+            yield {"message": {"content": "world"}}
+
+        with patch.object(provider._client, "chat") as mock_chat:
+            mock_chat.return_value = mock_stream()
+
+            chunks = []
+            async for chunk in provider.generate_stream("Test"):
+                chunks.append(chunk)
+
+            assert chunks == ["Hello", "world"]
+
+    async def test_generate_stream_response_error_model_not_found(self):
+        """Test stream raises OllamaModelNotFoundError on ResponseError."""
+        from ollama import ResponseError
+
+        provider = OllamaProvider(model="llama3.2")
+        provider._health_checked = True
+
+        async def mock_stream():
+            raise ResponseError("model 'llama3.2' not found")
+            yield  # Make it a generator
+
+        with patch.object(provider._client, "chat") as mock_chat:
+            mock_chat.return_value = mock_stream()
+
+            with pytest.raises(OllamaModelNotFoundError):
+                async for _ in provider.generate_stream("Test"):
+                    pass
+
+    async def test_generate_stream_connection_error(self):
+        """Test stream raises OllamaConnectionError on connection issues."""
+        provider = OllamaProvider(model="llama3.2")
+        provider._health_checked = True
+
+        async def mock_stream():
+            raise Exception("connection refused")
+            yield
+
+        with patch.object(provider._client, "chat") as mock_chat:
+            mock_chat.return_value = mock_stream()
+
+            with pytest.raises(OllamaConnectionError):
+                async for _ in provider.generate_stream("Test"):
+                    pass
+
+            assert provider._health_checked is False
+
+    async def test_generate_stream_other_exception_reraises(self):
+        """Test stream re-raises non-connection exceptions."""
+        provider = OllamaProvider(model="llama3.2")
+        provider._health_checked = True
+
+        async def mock_stream():
+            raise ValueError("some error")
+            yield
+
+        with patch.object(provider._client, "chat") as mock_chat:
+            mock_chat.return_value = mock_stream()
+
+            with pytest.raises(ValueError):
+                async for _ in provider.generate_stream("Test"):
+                    pass
+
+
 class TestRetryDecorator:
     """Tests for retry decorator behavior."""
 
@@ -225,3 +406,163 @@ class TestRetryDecorator:
             await raises_value_error()
 
         assert call_count == 1  # Should not retry
+
+    async def test_retry_on_rate_limit_error(self):
+        """Test that rate limit errors trigger retry."""
+        from local_deepwiki.providers.base import with_retry
+
+        call_count = 0
+
+        @with_retry(max_attempts=3, base_delay=0.01)
+        async def rate_limited_function():
+            nonlocal call_count
+            call_count += 1
+            if call_count < 3:
+                raise Exception("Rate limit exceeded")
+            return "success"
+
+        result = await rate_limited_function()
+        assert result == "success"
+        assert call_count == 3
+
+    async def test_retry_on_rate_limit_gives_up(self):
+        """Test that rate limit retry gives up after max attempts."""
+        from local_deepwiki.providers.base import with_retry
+
+        call_count = 0
+
+        @with_retry(max_attempts=3, base_delay=0.01)
+        async def always_rate_limited():
+            nonlocal call_count
+            call_count += 1
+            raise Exception("Rate limit exceeded")
+
+        with pytest.raises(Exception, match="Rate limit"):
+            await always_rate_limited()
+
+        assert call_count == 3
+
+    async def test_retry_on_server_overloaded(self):
+        """Test that server overloaded errors trigger retry."""
+        from local_deepwiki.providers.base import with_retry
+
+        call_count = 0
+
+        @with_retry(max_attempts=3, base_delay=0.01)
+        async def overloaded_server():
+            nonlocal call_count
+            call_count += 1
+            if call_count < 3:
+                raise Exception("Server overloaded, please retry")
+            return "success"
+
+        result = await overloaded_server()
+        assert result == "success"
+        assert call_count == 3
+
+    async def test_retry_on_503_error(self):
+        """Test that 503 errors trigger retry."""
+        from local_deepwiki.providers.base import with_retry
+
+        call_count = 0
+
+        @with_retry(max_attempts=3, base_delay=0.01)
+        async def service_unavailable():
+            nonlocal call_count
+            call_count += 1
+            if call_count < 3:
+                raise Exception("503 Service Unavailable")
+            return "success"
+
+        result = await service_unavailable()
+        assert result == "success"
+        assert call_count == 3
+
+    async def test_retry_on_502_error(self):
+        """Test that 502 errors trigger retry."""
+        from local_deepwiki.providers.base import with_retry
+
+        call_count = 0
+
+        @with_retry(max_attempts=3, base_delay=0.01)
+        async def bad_gateway():
+            nonlocal call_count
+            call_count += 1
+            if call_count < 3:
+                raise Exception("502 Bad Gateway")
+            return "success"
+
+        result = await bad_gateway()
+        assert result == "success"
+        assert call_count == 3
+
+    async def test_retry_overloaded_gives_up(self):
+        """Test that overloaded retry gives up after max attempts."""
+        from local_deepwiki.providers.base import with_retry
+
+        call_count = 0
+
+        @with_retry(max_attempts=3, base_delay=0.01)
+        async def always_overloaded():
+            nonlocal call_count
+            call_count += 1
+            raise Exception("Server overloaded")
+
+        with pytest.raises(Exception, match="overloaded"):
+            await always_overloaded()
+
+        assert call_count == 3
+
+    async def test_retry_with_timeout_error(self):
+        """Test that TimeoutError triggers retry."""
+        from local_deepwiki.providers.base import with_retry
+
+        call_count = 0
+
+        @with_retry(max_attempts=3, base_delay=0.01)
+        async def timeout_function():
+            nonlocal call_count
+            call_count += 1
+            if call_count < 3:
+                raise TimeoutError("Request timed out")
+            return "success"
+
+        result = await timeout_function()
+        assert result == "success"
+        assert call_count == 3
+
+    async def test_retry_with_oserror(self):
+        """Test that OSError triggers retry."""
+        from local_deepwiki.providers.base import with_retry
+
+        call_count = 0
+
+        @with_retry(max_attempts=3, base_delay=0.01)
+        async def os_error_function():
+            nonlocal call_count
+            call_count += 1
+            if call_count < 3:
+                raise OSError("Network unreachable")
+            return "success"
+
+        result = await os_error_function()
+        assert result == "success"
+        assert call_count == 3
+
+    async def test_retry_without_jitter(self):
+        """Test retry without jitter."""
+        from local_deepwiki.providers.base import with_retry
+
+        call_count = 0
+
+        @with_retry(max_attempts=2, base_delay=0.01, jitter=False)
+        async def no_jitter_function():
+            nonlocal call_count
+            call_count += 1
+            if call_count < 2:
+                raise ConnectionError("Error")
+            return "success"
+
+        result = await no_jitter_function()
+        assert result == "success"
+        assert call_count == 2

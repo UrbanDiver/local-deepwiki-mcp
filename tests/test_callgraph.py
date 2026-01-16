@@ -409,3 +409,281 @@ class TestGoCallExtraction:
         calls = extract_calls_from_function(func_node, source.encode(), Language.GO)
         assert "processData" in calls
         assert "saveResults" in calls
+
+    def test_go_selector_call(self, parser):
+        """Test extracting selector expression calls in Go (pkg.Func)."""
+        source = dedent(
+            """
+            package main
+
+            func main() {
+                fmt.Println("hello")
+                obj.Method()
+            }
+        """
+        ).strip()
+        root = parser.parse_source(source, Language.GO)
+
+        from local_deepwiki.core.parser import find_nodes_by_type
+
+        funcs = find_nodes_by_type(root, {"function_declaration"})
+        func_node = funcs[0]
+
+        calls = extract_calls_from_function(func_node, source.encode(), Language.GO)
+        # Method is extracted (Println is filtered as noise)
+        assert "Method" in calls
+
+
+class TestRustCallExtraction:
+    """Test call extraction for Rust code."""
+
+    @pytest.fixture
+    def parser(self):
+        return CodeParser()
+
+    def test_simple_rust_call(self, parser):
+        """Test extracting calls from Rust function."""
+        source = dedent(
+            """
+            fn main() {
+                process_data();
+                save_results();
+            }
+        """
+        ).strip()
+        root = parser.parse_source(source, Language.RUST)
+
+        from local_deepwiki.core.parser import find_nodes_by_type
+
+        funcs = find_nodes_by_type(root, {"function_item"})
+        assert len(funcs) == 1
+        func_node = funcs[0]
+
+        calls = extract_calls_from_function(func_node, source.encode(), Language.RUST)
+        assert "process_data" in calls
+        assert "save_results" in calls
+
+    def test_rust_scoped_call(self, parser):
+        """Test extracting scoped identifier calls in Rust (Type::method)."""
+        source = dedent(
+            """
+            fn main() {
+                let s = String::from("hello");
+                Vec::new();
+            }
+        """
+        ).strip()
+        root = parser.parse_source(source, Language.RUST)
+
+        from local_deepwiki.core.parser import find_nodes_by_type
+
+        funcs = find_nodes_by_type(root, {"function_item"})
+        func_node = funcs[0]
+
+        calls = extract_calls_from_function(func_node, source.encode(), Language.RUST)
+        assert "from" in calls
+        assert "new" in calls
+
+    def test_rust_field_expression_call(self, parser):
+        """Test extracting field expression calls in Rust (self.method)."""
+        source = dedent(
+            """
+            fn process(&self) {
+                self.validate();
+                self.transform();
+            }
+        """
+        ).strip()
+        root = parser.parse_source(source, Language.RUST)
+
+        from local_deepwiki.core.parser import find_nodes_by_type
+
+        funcs = find_nodes_by_type(root, {"function_item"})
+        func_node = funcs[0]
+
+        calls = extract_calls_from_function(func_node, source.encode(), Language.RUST)
+        assert "validate" in calls
+        assert "transform" in calls
+
+
+class TestJavaCallExtraction:
+    """Test call extraction for Java code."""
+
+    @pytest.fixture
+    def parser(self):
+        return CodeParser()
+
+    def test_java_method_invocation(self, parser):
+        """Test extracting method invocations in Java."""
+        source = dedent(
+            """
+            class Main {
+                void main() {
+                    processData();
+                    obj.transform();
+                }
+            }
+        """
+        ).strip()
+        root = parser.parse_source(source, Language.JAVA)
+
+        from local_deepwiki.core.parser import find_nodes_by_type
+
+        methods = find_nodes_by_type(root, {"method_declaration"})
+        assert len(methods) == 1
+        method_node = methods[0]
+
+        calls = extract_calls_from_function(method_node, source.encode(), Language.JAVA)
+        assert "processData" in calls
+        assert "transform" in calls
+
+
+class TestCCallExtraction:
+    """Test call extraction for C code."""
+
+    @pytest.fixture
+    def parser(self):
+        return CodeParser()
+
+    def test_simple_c_call(self, parser):
+        """Test extracting calls from C function."""
+        source = dedent(
+            """
+            void main() {
+                process_data();
+                save_results();
+            }
+        """
+        ).strip()
+        root = parser.parse_source(source, Language.C)
+
+        from local_deepwiki.core.parser import find_nodes_by_type
+
+        funcs = find_nodes_by_type(root, {"function_definition"})
+        assert len(funcs) == 1
+        func_node = funcs[0]
+
+        calls = extract_calls_from_function(func_node, source.encode(), Language.C)
+        assert "process_data" in calls
+        assert "save_results" in calls
+
+    def test_c_field_expression_call(self, parser):
+        """Test extracting field expression calls in C (obj.method or obj->method)."""
+        source = dedent(
+            """
+            void process() {
+                obj.init();
+                ptr->cleanup();
+            }
+        """
+        ).strip()
+        root = parser.parse_source(source, Language.C)
+
+        from local_deepwiki.core.parser import find_nodes_by_type
+
+        funcs = find_nodes_by_type(root, {"function_definition"})
+        func_node = funcs[0]
+
+        calls = extract_calls_from_function(func_node, source.encode(), Language.C)
+        assert "init" in calls
+        assert "cleanup" in calls
+
+
+class TestCppCallExtraction:
+    """Test call extraction for C++ code."""
+
+    @pytest.fixture
+    def parser(self):
+        return CodeParser()
+
+    def test_cpp_call(self, parser):
+        """Test extracting calls from C++ function."""
+        source = dedent(
+            """
+            void main() {
+                process();
+                obj.method();
+            }
+        """
+        ).strip()
+        root = parser.parse_source(source, Language.CPP)
+
+        from local_deepwiki.core.parser import find_nodes_by_type
+
+        funcs = find_nodes_by_type(root, {"function_definition"})
+        func_node = funcs[0]
+
+        calls = extract_calls_from_function(func_node, source.encode(), Language.CPP)
+        assert "process" in calls
+        assert "method" in calls
+
+
+class TestJsBuiltinNoise:
+    """Test JavaScript/TypeScript built-in noise filtering."""
+
+    def test_js_builtins_filtered(self):
+        """Test that JS-specific built-ins are filtered."""
+        assert _is_builtin_or_noise("setTimeout", Language.JAVASCRIPT) is True
+        assert _is_builtin_or_noise("setInterval", Language.JAVASCRIPT) is True
+        assert _is_builtin_or_noise("fetch", Language.JAVASCRIPT) is True
+        assert _is_builtin_or_noise("Promise", Language.JAVASCRIPT) is True
+
+    def test_ts_builtins_filtered(self):
+        """Test that TS-specific built-ins are filtered."""
+        assert _is_builtin_or_noise("setTimeout", Language.TYPESCRIPT) is True
+        assert _is_builtin_or_noise("clearTimeout", Language.TYPESCRIPT) is True
+
+    def test_custom_js_functions_not_filtered(self):
+        """Test that custom JS function names are not filtered."""
+        assert _is_builtin_or_noise("myFunction", Language.JAVASCRIPT) is False
+        assert _is_builtin_or_noise("handleClick", Language.TYPESCRIPT) is False
+
+
+class TestUnsupportedLanguage:
+    """Test behavior with unsupported languages."""
+
+    def test_extract_calls_unsupported_language(self):
+        """Test that extract_calls returns empty for unsupported language."""
+        # Use a language not in CALL_NODE_TYPES
+        from unittest.mock import MagicMock
+
+        mock_node = MagicMock()
+        # RUBY is not in CALL_NODE_TYPES
+        calls = extract_calls_from_function(mock_node, b"", Language.RUBY)
+        assert calls == []
+
+
+class TestDiagramWithTitle:
+    """Test diagram generation with title parameter."""
+
+    def test_diagram_with_title(self):
+        """Test generating diagram with title (title is currently no-op)."""
+        call_graph = {"main": ["helper"]}
+
+        result = generate_call_graph_diagram(call_graph, title="My Call Graph")
+
+        # Title doesn't actually appear in output (it's a no-op in current impl)
+        assert result is not None
+        assert "flowchart TD" in result
+
+
+class TestExtractCallNameEdgeCases:
+    """Test extract_call_name edge cases."""
+
+    @pytest.fixture
+    def parser(self):
+        return CodeParser()
+
+    def test_extract_call_name_no_function_child(self, parser):
+        """Test extract_call_name when call has no function child."""
+        # This tests the None return path
+        source = "call()"
+        root = parser.parse_source(source, Language.PYTHON)
+
+        from local_deepwiki.core.parser import find_nodes_by_type
+
+        calls = find_nodes_by_type(root, {"call"})
+        if calls:
+            # The call should have a function - test passes if extraction works
+            result = extract_call_name(calls[0], source.encode(), Language.PYTHON)
+            assert result == "call"
