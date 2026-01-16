@@ -388,6 +388,61 @@ def is_async_function(func_node: Node) -> bool:
     )
 
 
+def extract_python_raised_exceptions(func_node: Node, source: bytes) -> list[str]:
+    """Extract exception types raised by a Python function.
+
+    Finds all `raise` statements within the function and extracts the exception
+    type being raised.
+
+    Args:
+        func_node: The function_definition AST node.
+        source: Source code bytes.
+
+    Returns:
+        List of unique exception type names raised by the function.
+    """
+    exceptions: set[str] = set()
+
+    def find_raise_statements(node: Node) -> None:
+        """Recursively find raise statements in the AST."""
+        if node.type == "raise_statement":
+            # Extract the exception type
+            for child in node.children:
+                if child.type == "identifier":
+                    # Direct raise like: raise ValueError
+                    exc_name = get_node_text(child, source)
+                    if exc_name and exc_name != "raise":
+                        exceptions.add(exc_name)
+                    break
+                elif child.type == "call":
+                    # Raise with call like: raise ValueError("msg")
+                    for call_child in child.children:
+                        if call_child.type == "identifier":
+                            exc_name = get_node_text(call_child, source)
+                            if exc_name:
+                                exceptions.add(exc_name)
+                            break
+                        elif call_child.type == "attribute":
+                            # Handle module.Exception like: raise errors.CustomError
+                            exc_name = get_node_text(call_child, source)
+                            if exc_name:
+                                exceptions.add(exc_name)
+                            break
+                    break
+
+        # Recurse into child nodes (but not into nested functions)
+        for child in node.children:
+            if child.type not in ("function_definition", "async_function_definition"):
+                find_raise_statements(child)
+
+    # Start searching from the function body
+    for child in func_node.children:
+        if child.type == "block":
+            find_raise_statements(child)
+
+    return sorted(exceptions)
+
+
 def extract_function_type_metadata(
     func_node: Node, source: bytes, language: Language
 ) -> dict[str, Any]:
@@ -429,6 +484,11 @@ def extract_function_type_metadata(
         # Check if async
         if is_async_function(func_node):
             metadata["is_async"] = True
+
+        # Extract raised exceptions
+        raised_exceptions = extract_python_raised_exceptions(func_node, source)
+        if raised_exceptions:
+            metadata["raises"] = raised_exceptions
 
     # TODO: Add support for other languages (TypeScript, Java, etc.)
 

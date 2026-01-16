@@ -20,6 +20,8 @@ class EntityEntry:
     parameter_types: dict[str, str] | None = None
     return_type: str | None = None
     is_async: bool = False
+    # Exception metadata
+    raises: list[str] | None = None
 
 
 async def collect_all_entities(
@@ -46,6 +48,7 @@ async def collect_all_entities(
             param_types = metadata.get("parameter_types")
             return_type = metadata.get("return_type")
             is_async = metadata.get("is_async", False)
+            raises = metadata.get("raises")
 
             if chunk.chunk_type == ChunkType.CLASS:
                 entities.append(
@@ -66,6 +69,7 @@ async def collect_all_entities(
                         parameter_types=param_types,
                         return_type=return_type,
                         is_async=is_async,
+                        raises=raises,
                     )
                 )
             elif chunk.chunk_type == ChunkType.METHOD:
@@ -79,6 +83,7 @@ async def collect_all_entities(
                         parameter_types=param_types,
                         return_type=return_type,
                         is_async=is_async,
+                        raises=raises,
                     )
                 )
 
@@ -270,12 +275,20 @@ async def generate_glossary_page(
             signature = _format_signature(entity)
             sig_part = f" `{signature}`" if signature else ""
 
+            # Raises indicator
+            raises_part = ""
+            if entity.raises:
+                exc_list = ", ".join(entity.raises[:3])
+                if len(entity.raises) > 3:
+                    exc_list += f", +{len(entity.raises) - 3}"
+                raises_part = f" ⚠️`{exc_list}`"
+
             # Brief description
             desc = _get_brief_description(entity.docstring)
             desc_part = f" - {desc}" if desc else ""
 
             lines.append(
-                f"- {type_badge} **[`{display_name}`]({wiki_link})**{sig_part} "
+                f"- {type_badge} **[`{display_name}`]({wiki_link})**{sig_part}{raises_part} "
                 f"(`{file_name}`){desc_part}"
             )
 
@@ -284,7 +297,7 @@ async def generate_glossary_page(
     # Add legend
     lines.append("---")
     lines.append("")
-    lines.append("**Legend:** 🔷 Class | 🔹 Function | ▪️ Method | ⚡ Async")
+    lines.append("**Legend:** 🔷 Class | 🔹 Function | ▪️ Method | ⚡ Async | ⚠️ Raises exceptions")
     lines.append("")
 
     return "\n".join(lines)

@@ -7,6 +7,7 @@ from local_deepwiki.core.chunker import (
     extract_python_decorators,
     extract_python_parameter_defaults,
     extract_python_parameter_types,
+    extract_python_raised_exceptions,
     extract_python_return_type,
     is_async_function,
 )
@@ -295,3 +296,116 @@ async def process(items: list[str], callback: Callable = None) -> dict[str, int]
 
         # Should be empty for non-Python languages
         assert result == {}
+
+    def test_extracts_raised_exceptions(self, parser):
+        """Test that raised exceptions are extracted."""
+        code = '''
+def foo(x):
+    if x < 0:
+        raise ValueError("x must be positive")
+    if x > 100:
+        raise RuntimeError
+'''
+        func_node, source = parse_python_function(parser, code)
+        result = extract_function_type_metadata(func_node, source, Language.PYTHON)
+
+        assert "raises" in result
+        assert sorted(result["raises"]) == ["RuntimeError", "ValueError"]
+
+
+class TestExtractPythonRaisedExceptions:
+    """Tests for extract_python_raised_exceptions function."""
+
+    def test_simple_raise(self, parser):
+        """Test extracting simple raise statement."""
+        code = "def foo(): raise ValueError"
+        func_node, source = parse_python_function(parser, code)
+        result = extract_python_raised_exceptions(func_node, source)
+        assert result == ["ValueError"]
+
+    def test_raise_with_message(self, parser):
+        """Test extracting raise with message."""
+        code = 'def foo(): raise ValueError("error message")'
+        func_node, source = parse_python_function(parser, code)
+        result = extract_python_raised_exceptions(func_node, source)
+        assert result == ["ValueError"]
+
+    def test_multiple_raises(self, parser):
+        """Test extracting multiple different exceptions."""
+        code = '''
+def foo(x):
+    if x < 0:
+        raise ValueError
+    if x > 100:
+        raise TypeError
+    raise RuntimeError
+'''
+        func_node, source = parse_python_function(parser, code)
+        result = extract_python_raised_exceptions(func_node, source)
+        assert sorted(result) == ["RuntimeError", "TypeError", "ValueError"]
+
+    def test_no_raises(self, parser):
+        """Test function with no raise statements."""
+        code = "def foo(): return 42"
+        func_node, source = parse_python_function(parser, code)
+        result = extract_python_raised_exceptions(func_node, source)
+        assert result == []
+
+    def test_raise_from_exception(self, parser):
+        """Test extracting raise with 'from' clause."""
+        code = '''
+def foo():
+    try:
+        pass
+    except Exception as e:
+        raise CustomError("failed") from e
+'''
+        func_node, source = parse_python_function(parser, code)
+        result = extract_python_raised_exceptions(func_node, source)
+        assert result == ["CustomError"]
+
+    def test_raise_attribute_exception(self, parser):
+        """Test extracting raise with module.Exception pattern."""
+        code = 'def foo(): raise errors.CustomError("msg")'
+        func_node, source = parse_python_function(parser, code)
+        result = extract_python_raised_exceptions(func_node, source)
+        assert result == ["errors.CustomError"]
+
+    def test_deduplicates_same_exception(self, parser):
+        """Test that same exception raised multiple times is only listed once."""
+        code = '''
+def foo(x):
+    if x < 0:
+        raise ValueError("negative")
+    if x > 100:
+        raise ValueError("too large")
+'''
+        func_node, source = parse_python_function(parser, code)
+        result = extract_python_raised_exceptions(func_node, source)
+        assert result == ["ValueError"]
+
+    def test_ignores_nested_functions(self, parser):
+        """Test that exceptions in nested functions are not included."""
+        code = '''
+def outer():
+    def inner():
+        raise InnerError
+    raise OuterError
+'''
+        func_node, source = parse_python_function(parser, code)
+        result = extract_python_raised_exceptions(func_node, source)
+        # Should only include OuterError, not InnerError
+        assert result == ["OuterError"]
+
+    def test_bare_raise(self, parser):
+        """Test that bare 'raise' (re-raise) doesn't extract anything."""
+        code = '''
+def foo():
+    try:
+        pass
+    except:
+        raise
+'''
+        func_node, source = parse_python_function(parser, code)
+        result = extract_python_raised_exceptions(func_node, source)
+        assert result == []
