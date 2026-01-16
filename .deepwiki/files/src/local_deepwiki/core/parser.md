@@ -1,150 +1,61 @@
-# parser.py
+# Parser Module Documentation
 
 ## File Overview
 
-The `parser.py` module provides source code parsing capabilities using tree-sitter parsers. It supports multiple programming languages and extracts Abstract Syntax Trees (ASTs) from source files, with specialized functionality for extracting docstrings and comments from different language constructs.
+The `parser.py` module provides source code parsing capabilities using tree-sitter parsers for multiple programming languages. It handles AST (Abstract Syntax Tree) generation, docstring extraction, and language detection for various programming languages including Python, JavaScript, Java, C/C++, Go, and others.
 
 ## Classes
 
 ### CodeParser
 
-A parser class that manages tree-sitter parsers for multiple programming languages. The CodeParser class handles language detection, file parsing, and AST generation.
+The CodeParser class is the [main](../export/pdf.md) interface for parsing source code files and strings across multiple programming languages.
 
-#### Methods
+**Purpose**: Provides a unified interface for parsing source code using tree-sitter parsers, with automatic language detection and parser caching.
 
-- **`__init__()`**: Initializes the parser with empty dictionaries for storing parsers and languages
-- **`_get_parser(language: LangEnum) -> Parser`**: Gets or creates a tree-sitter parser for the specified language, with special handling for PHP module function naming
-- **`parse_source(source: str | bytes, language: LangEnum) -> Node`**: Parses source code and returns the AST root node, automatically encoding strings to UTF-8 bytes
-- **`detect_language(file_path: Path) -> LangEnum | None`**: Detects programming language from file extension (implementation not shown in provided code)
-- **`parse_file(file_path: Path) -> tuple[Node, LangEnum]`**: Parses a complete source file (implementation not shown in provided code)
-- **`get_file_info(file_path: Path) -> dict[str, Any]`**: Extracts file metadata and parsing information (implementation not shown in provided code)
+**Key Methods**:
+- `__init__()` - Initializes the parser with empty parser and language caches
+- `_get_parser(language)` - Retrieves or creates a tree-sitter parser for the specified language
+- `parse_source(source, language)` - Parses source code string/bytes and returns the AST root node
+- `detect_language()` - Detects programming language (method signature not fully shown)
+- `parse_file()` - Parses source code from file (method signature not fully shown)
+- `get_file_info()` - Retrieves file information (method signature not fully shown)
 
 ## Functions
 
-### Core Documentation Functions
+### get_docstring
 
-#### `get_docstring(node: Node, source: bytes, language: LangEnum) -> str | None`
+Extracts docstrings from function or class nodes in the AST.
 
-Extracts docstrings from function or class nodes using language-specific extractors.
+**Parameters**:
+- `node: Node` - The tree-sitter node to extract docstring from
+- `source: bytes` - The original source code as bytes
+- `language: LangEnum` - The programming language enum
 
-**Parameters:**
-- `node`: The tree-sitter AST node
-- `source`: The original source code as bytes
-- `language`: The programming language enum
+**Returns**: `str | None` - The extracted docstring or None if not found
 
-**Returns:**
+### _get_jsdoc_or_line_comments
 
-<details>
-<summary>View Source (lines 474-488) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/parser.py#L474-L488">GitHub</a></summary>
+Extracts JSDoc-style comments (`/** */`) or multi-line `//` comments from JavaScript/TypeScript code.
 
-```python
-def get_docstring(node: Node, source: bytes, language: LangEnum) -> str | None:
-    """Extract docstring from a function/class node.
+**Parameters**:
+- `node: Node` - The tree-sitter node
+- `source: bytes` - The original source code as bytes
 
-    Args:
-        node: The tree-sitter node.
-        source: The original source bytes.
-        language: The programming language.
+**Returns**: `str | None` - The extracted comment text or None
 
-    Returns:
-        The docstring or None if not found.
-    """
-    extractor = _DOCSTRING_EXTRACTORS.get(language)
-    if extractor:
-        return cast(str | None, extractor(node, source))
-    return None
-```
+### _get_javadoc_or_doxygen
 
-</details>
+Extracts Javadoc/Doxygen-style comments (`/** */`) or `///` comments from Java/C++ code.
 
-- The extracted docstring text or None if not found
+**Parameters**:
+- `node: Node` - The tree-sitter node
+- `source: bytes` - The original source code as bytes
 
-### Language-Specific Comment Extractors
-
-#### `_get_jsdoc_or_line_comments(node: Node, source: bytes) -> str | None`
-
-Extracts JSDoc-style comments (`/** */`) or multi-line `//` comments from JavaScript/TypeScript nodes.
-
-**Parameters:**
-- `node`: The tree-sitter node
-- `source`: The source code bytes
-
-**Returns:**
-
-<details>
-<summary>View Source (lines 396-407) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/parser.py#L396-L407">GitHub</a></summary>
-
-```python
-def _get_jsdoc_or_line_comments(node: Node, source: bytes) -> str | None:
-    """Extract JSDoc (/** */) or multi-line // comments."""
-    prev = node.prev_sibling
-    if prev and prev.type == "comment":
-        text = get_node_text(prev, source)
-        if text.startswith("/**"):
-            return text[3:-2].strip()
-
-    comments = _collect_preceding_comments(node, source, {"comment"}, "//")
-    if comments:
-        return _strip_line_comment_prefix(comments, "//")
-    return None
-```
-
-</details>
-
-- Extracted comment text or None
-
-#### `_get_javadoc_or_doxygen(node: Node, source: bytes) -> str | None`
-
-Extracts Javadoc or Doxygen-style documentation comments (`/** */` or `///` comments).
-
-**Parameters:**
-- `node`: The tree-sitter node
-- `source`: The source code bytes
-
-**Returns:**
-
-<details>
-<summary>View Source (lines 418-429) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/parser.py#L418-L429">GitHub</a></summary>
-
-```python
-def _get_javadoc_or_doxygen(node: Node, source: bytes) -> str | None:
-    """Extract Javadoc/Doxygen (/** */) or /// comments."""
-    prev = node.prev_sibling
-    if prev and prev.type in ("comment", "block_comment"):
-        text = get_node_text(prev, source)
-        if text.startswith("/**"):
-            return text[3:-2].strip()
-
-    comments = _collect_preceding_comments(node, source, {"comment"}, "///")
-    if comments:
-        return _strip_line_comment_prefix(comments, "///")
-    return None
-```
-
-</details>
-
-- Extracted documentation text or None
-
-### Utility Functions
-
-The module also includes several utility functions for AST manipulation (implementations not shown in provided code):
-
-- `_read_file_content`: Reads file content
-- `_compute_file_hash`: Computes file hash
-- `get_node_text`: Extracts text from AST nodes
-- `find_nodes_by_type`: Finds nodes by type
-- `walk`: Walks AST trees
-- `get_node_name`: Gets node names
-- `_collect_preceding_comments`: Collects comments before nodes
-- `_strip_line_comment_prefix`: Strips comment prefixes
-- `_get_python_docstring`: Extracts Python docstrings
-- `_get_line_comments`: Extracts line comments
-- `_get_swift_docstring`: Extracts Swift docstrings
-- `_get_block_comment`: Extracts block comments
+**Returns**: `str | None` - The extracted comment text or None
 
 ## Usage Examples
 
-### Basic Source Parsing
+### Basic Source Code Parsing
 
 ```python
 from local_deepwiki.core.parser import CodeParser
@@ -153,9 +64,15 @@ from local_deepwiki.core.types import LangEnum
 # Initialize parser
 parser = CodeParser()
 
-# Parse source code
-source_code = "def hello(): pass"
-ast_root = parser.parse_source(source_code, LangEnum.PYTHON)
+# Parse Python source code
+source_code = """
+def hello_world():
+    '''This is a docstring.'''
+    print("Hello, World!")
+"""
+
+# Parse and get AST root
+root_node = parser.parse_source(source_code, LangEnum.PYTHON)
 ```
 
 ### Docstring Extraction
@@ -171,15 +88,23 @@ if docstring:
 
 ## Related Components
 
-This module integrates with:
+The parser module integrates with several other components:
 
-- **tree_sitter libraries**: Uses multiple tree-sitter language parsers (C, C#, C++, Go, Java, JavaScript, and others)
-- **LangEnum**: [Language](../models.md) enumeration type for identifying programming languages
-- **pathlib.Path**: For file path handling
-- **mmap**: For memory-mapped file operations
-- **hashlib**: For file hash computation
+- **LangEnum**: Enumeration defining supported programming languages
+- **tree_sitter libraries**: Multiple tree-sitter language modules (c, c_sharp, cpp, go, java, javascript, etc.)
+- **Node**: Tree-sitter node objects representing AST elements
+- **Parser**: Tree-sitter parser objects for specific languages
+- **[Language](../models.md)**: Tree-sitter language configuration objects
 
-The module serves as a core component for source code analysis and documentation extraction in the larger system.
+The module also references several utility functions for text processing and node traversal:
+- `_read_file_content` - File reading utility
+- `_compute_file_hash` - File hashing utility  
+- `get_node_text` - Node text extraction
+- `find_nodes_by_type` - AST node searching
+- `walk` - AST traversal
+- `get_node_name` - Node name extraction
+- `_collect_preceding_comments` - Comment collection utility
+- `_strip_line_comment_prefix` - Comment text processing
 
 ## API Reference
 
@@ -191,7 +116,7 @@ Multi-language code parser using tree-sitter.
 
 
 <details>
-<summary>View Source (lines 139-252) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/parser.py#L139-L252">GitHub</a></summary>
+<summary>View Source (lines 139-252) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/parser.py#L139-L252">GitHub</a></summary>
 
 ```python
 class CodeParser:
@@ -210,7 +135,7 @@ Initialize the parser with language support.
 
 
 <details>
-<summary>View Source (lines 142-145) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/parser.py#L142-L145">GitHub</a></summary>
+<summary>View Source (lines 142-145) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/parser.py#L142-L145">GitHub</a></summary>
 
 ```python
 def __init__(self):
@@ -236,7 +161,7 @@ Detect the programming language from file extension.
 
 
 <details>
-<summary>View Source (lines 177-187) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/parser.py#L177-L187">GitHub</a></summary>
+<summary>View Source (lines 177-187) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/parser.py#L177-L187">GitHub</a></summary>
 
 ```python
 def detect_language(self, file_path: Path) -> LangEnum | None:
@@ -269,7 +194,7 @@ Parse a source file and return the AST root.
 
 
 <details>
-<summary>View Source (lines 189-212) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/parser.py#L189-L212">GitHub</a></summary>
+<summary>View Source (lines 189-212) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/parser.py#L189-L212">GitHub</a></summary>
 
 ```python
 def parse_file(self, file_path: Path) -> tuple[Node, LangEnum, bytes] | None:
@@ -316,7 +241,7 @@ Parse source code string and return the AST root.
 
 
 <details>
-<summary>View Source (lines 214-229) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/parser.py#L214-L229">GitHub</a></summary>
+<summary>View Source (lines 214-229) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/parser.py#L214-L229">GitHub</a></summary>
 
 ```python
 def parse_source(self, source: str | bytes, language: LangEnum) -> Node:
@@ -358,7 +283,7 @@ Get information about a source file.  Uses chunked reading for large files to av
 
 
 <details>
-<summary>View Source (lines 231-252) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/parser.py#L231-L252">GitHub</a></summary>
+<summary>View Source (lines 231-252) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/parser.py#L231-L252">GitHub</a></summary>
 
 ```python
 def get_file_info(self, file_path: Path, repo_root: Path) -> FileInfo:
@@ -408,7 +333,7 @@ Extract text content from a tree-sitter node.
 
 
 <details>
-<summary>View Source (lines 255-265) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/parser.py#L255-L265">GitHub</a></summary>
+<summary>View Source (lines 255-265) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/parser.py#L255-L265">GitHub</a></summary>
 
 ```python
 def get_node_text(node: Node, source: bytes) -> str:
@@ -445,7 +370,7 @@ Find all nodes of specified types in the AST.
 
 
 <details>
-<summary>View Source (lines 268-287) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/parser.py#L268-L287">GitHub</a></summary>
+<summary>View Source (lines 268-287) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/parser.py#L268-L287">GitHub</a></summary>
 
 ```python
 def find_nodes_by_type(root: Node, node_types: set[str]) -> list[Node]:
@@ -486,7 +411,7 @@ def walk(node: Node)
 
 
 <details>
-<summary>View Source (lines 280-284) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/parser.py#L280-L284">GitHub</a></summary>
+<summary>View Source (lines 280-284) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/parser.py#L280-L284">GitHub</a></summary>
 
 ```python
 def walk(node: Node):
@@ -518,7 +443,7 @@ Extract the name from a function/class/method node.
 
 
 <details>
-<summary>View Source (lines 290-319) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/parser.py#L290-L319">GitHub</a></summary>
+<summary>View Source (lines 290-319) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/parser.py#L290-L319">GitHub</a></summary>
 
 ```python
 def get_node_name(node: Node, source: bytes, language: LangEnum) -> str | None:
@@ -576,7 +501,7 @@ Extract docstring from a function/class node.
 
 
 <details>
-<summary>View Source (lines 474-488) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/parser.py#L474-L488">GitHub</a></summary>
+<summary>View Source (lines 474-488) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/parser.py#L474-L488">GitHub</a></summary>
 
 ```python
 def get_docstring(node: Node, source: bytes, language: LangEnum) -> str | None:
@@ -778,7 +703,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_read_file_content`
 
 <details>
-<summary>View Source (lines 36-60) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/parser.py#L36-L60">GitHub</a></summary>
+<summary>View Source (lines 36-60) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/parser.py#L36-L60">GitHub</a></summary>
 
 ```python
 def _read_file_content(file_path: Path) -> bytes:
@@ -814,7 +739,7 @@ def _read_file_content(file_path: Path) -> bytes:
 #### `_compute_file_hash`
 
 <details>
-<summary>View Source (lines 63-87) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/parser.py#L63-L87">GitHub</a></summary>
+<summary>View Source (lines 63-87) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/parser.py#L63-L87">GitHub</a></summary>
 
 ```python
 def _compute_file_hash(file_path: Path) -> str:
@@ -850,7 +775,7 @@ def _compute_file_hash(file_path: Path) -> str:
 #### `_get_parser`
 
 <details>
-<summary>View Source (lines 147-175) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/parser.py#L147-L175">GitHub</a></summary>
+<summary>View Source (lines 147-175) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/parser.py#L147-L175">GitHub</a></summary>
 
 ```python
 def _get_parser(self, language: LangEnum) -> Parser:
@@ -890,7 +815,7 @@ def _get_parser(self, language: LangEnum) -> Parser:
 #### `_collect_preceding_comments`
 
 <details>
-<summary>View Source (lines 322-351) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/parser.py#L322-L351">GitHub</a></summary>
+<summary>View Source (lines 322-351) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/parser.py#L322-L351">GitHub</a></summary>
 
 ```python
 def _collect_preceding_comments(
@@ -931,7 +856,7 @@ def _collect_preceding_comments(
 #### `_strip_line_comment_prefix`
 
 <details>
-<summary>View Source (lines 354-371) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/parser.py#L354-L371">GitHub</a></summary>
+<summary>View Source (lines 354-371) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/parser.py#L354-L371">GitHub</a></summary>
 
 ```python
 def _strip_line_comment_prefix(lines: list[str], prefix: str) -> str:
@@ -960,7 +885,7 @@ def _strip_line_comment_prefix(lines: list[str], prefix: str) -> str:
 #### `_get_python_docstring`
 
 <details>
-<summary>View Source (lines 374-393) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/parser.py#L374-L393">GitHub</a></summary>
+<summary>View Source (lines 374-393) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/parser.py#L374-L393">GitHub</a></summary>
 
 ```python
 def _get_python_docstring(node: Node, source: bytes) -> str | None:
@@ -988,10 +913,33 @@ def _get_python_docstring(node: Node, source: bytes) -> str | None:
 </details>
 
 
+#### `_get_jsdoc_or_line_comments`
+
+<details>
+<summary>View Source (lines 396-407) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/parser.py#L396-L407">GitHub</a></summary>
+
+```python
+def _get_jsdoc_or_line_comments(node: Node, source: bytes) -> str | None:
+    """Extract JSDoc (/** */) or multi-line // comments."""
+    prev = node.prev_sibling
+    if prev and prev.type == "comment":
+        text = get_node_text(prev, source)
+        if text.startswith("/**"):
+            return text[3:-2].strip()
+
+    comments = _collect_preceding_comments(node, source, {"comment"}, "//")
+    if comments:
+        return _strip_line_comment_prefix(comments, "//")
+    return None
+```
+
+</details>
+
+
 #### `_get_line_comments`
 
 <details>
-<summary>View Source (lines 410-415) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/parser.py#L410-L415">GitHub</a></summary>
+<summary>View Source (lines 410-415) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/parser.py#L410-L415">GitHub</a></summary>
 
 ```python
 def _get_line_comments(node: Node, source: bytes, comment_type: str, prefix: str) -> str | None:
@@ -1005,10 +953,33 @@ def _get_line_comments(node: Node, source: bytes, comment_type: str, prefix: str
 </details>
 
 
+#### `_get_javadoc_or_doxygen`
+
+<details>
+<summary>View Source (lines 418-429) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/parser.py#L418-L429">GitHub</a></summary>
+
+```python
+def _get_javadoc_or_doxygen(node: Node, source: bytes) -> str | None:
+    """Extract Javadoc/Doxygen (/** */) or /// comments."""
+    prev = node.prev_sibling
+    if prev and prev.type in ("comment", "block_comment"):
+        text = get_node_text(prev, source)
+        if text.startswith("/**"):
+            return text[3:-2].strip()
+
+    comments = _collect_preceding_comments(node, source, {"comment"}, "///")
+    if comments:
+        return _strip_line_comment_prefix(comments, "///")
+    return None
+```
+
+</details>
+
+
 #### `_get_swift_docstring`
 
 <details>
-<summary>View Source (lines 432-443) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/parser.py#L432-L443">GitHub</a></summary>
+<summary>View Source (lines 432-443) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/parser.py#L432-L443">GitHub</a></summary>
 
 ```python
 def _get_swift_docstring(node: Node, source: bytes) -> str | None:
@@ -1031,7 +1002,7 @@ def _get_swift_docstring(node: Node, source: bytes) -> str | None:
 #### `_get_block_comment`
 
 <details>
-<summary>View Source (lines 446-453) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/parser.py#L446-L453">GitHub</a></summary>
+<summary>View Source (lines 446-453) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/parser.py#L446-L453">GitHub</a></summary>
 
 ```python
 def _get_block_comment(node: Node, source: bytes, comment_type: str) -> str | None:
@@ -1054,5 +1025,5 @@ def _get_block_comment(node: Node, source: bytes, comment_type: str) -> str | No
 
 - [test_examples](../generators/test_examples.md) - uses this
 - [callgraph](../generators/callgraph.md) - uses this
-- [chunker](chunker.md) - uses this
 - [api_docs](../generators/api_docs.md) - uses this
+- [chunker](chunker.md) - uses this

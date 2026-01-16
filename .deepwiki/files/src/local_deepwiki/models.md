@@ -1,162 +1,103 @@
-# Models Module Documentation
+# models.py
 
 ## File Overview
 
-The `models.py` file defines the core data models and types used throughout the local deepwiki system. It contains Pydantic models, enums, and protocols that represent various entities including code chunks, wiki pages, search results, and research workflows.
+This module defines the core data models and types used throughout the local_deepwiki application. It provides Pydantic-based models for representing wiki pages, file information, search results, and research data structures, along with enums for various status types and configurations.
 
 ## Dependencies
 
-- **pydantic**: Used for data validation and serialization with `BaseModel` and `Field`
-- **enum**: Provides enumeration support
-- **pathlib**: For file path handling
-- **typing**: For type hints and protocols
-- **json**: For JSON serialization support
+- `json` - Standard library for JSON operations
+- `enum.Enum` - For creating enumeration types
+- `pathlib.Path` - For file path handling
+- `typing` - For type annotations including `Any` and `Protocol`
+- `pydantic` - For data validation with `BaseModel` and `Field`
 
-## Classes and Types
+## Classes
 
 ### ProgressCallback
-
-A protocol that defines the interface for progress callback functions used throughout the system.
+A Protocol class that defines the interface for progress callback functions used throughout the application.
 
 ### Language
-
-An enumeration that defines supported programming languages for code analysis and documentation generation.
+An Enum class that defines supported programming languages for code analysis and documentation generation.
 
 ### ChunkType
-
-An enumeration that categorizes different types of code chunks (e.g., classes, functions, modules).
+An Enum class that categorizes different types of code chunks that can be processed by the system.
 
 ### CodeChunk
-
-A Pydantic model representing a parsed piece of code with metadata including:
-- Chunk type and content
-- Location information (file path, line numbers)
-- Language identification
-- Associated metadata
+A Pydantic model representing a piece of code with associated metadata such as type, name, and line numbers.
 
 ### FileInfo
-
-A model that stores information about analyzed files, including file paths, modification times, and processing status.
+A Pydantic model that stores information about files in the codebase, including path, language, and processing status.
 
 ### IndexStatus
-
-An enumeration representing the various states of file indexing (e.g., pending, completed, failed).
+An Enum class that tracks the various states of file indexing operations.
 
 ### WikiPage
-
-A comprehensive model representing a generated wiki page with:
-- Content and metadata
-- Generation status and timestamps
-- Associated file references
-- Navigation and linking information
+A Pydantic model representing a documentation page with content, metadata, and relationships to other pages.
 
 ### WikiStructure
-
-A model that defines the overall structure and organization of the generated wiki, including page hierarchies and navigation elements.
+A Pydantic model that defines the overall structure and organization of the generated wiki documentation.
 
 ### SearchResult
-
-A model representing search query results with relevance scoring and content snippets.
+A Pydantic model for representing search results with relevance scoring and content snippets.
 
 ### WikiPageStatus
-
-An enumeration defining the lifecycle states of wiki pages (e.g., draft, published, archived).
+An Enum class that tracks the status of individual wiki page generation.
 
 ### WikiGenerationStatus
-
-An enumeration tracking the status of wiki generation processes.
+An Enum class that represents the overall status of the wiki generation process.
 
 ### ResearchStepType
-
-An enumeration categorizing different types of research steps in the deep research workflow.
+An Enum class that categorizes different types of research steps in the deep research process.
 
 ### ResearchStep
-
-A model representing individual steps in the research process, including step type, content, and execution status.
+A Pydantic model representing an individual step in the research process with type, description, and results.
 
 ### SubQuestion
-
-A model for representing sub-questions generated during deep research analysis.
+A Pydantic model for representing sub-questions generated during deep research analysis.
 
 ### SourceReference
-
-A model that captures references to source materials, including file paths, line numbers, and relevance information.
+A Pydantic model that stores references to source code locations with file paths and line numbers.
 
 ### DeepResearchResult
-
-A comprehensive model containing the results of deep research analysis, including:
-- Generated questions and answers
-- Source references and citations
-- Research steps and methodology
-- Confidence scores and metadata
+A Pydantic model containing the complete results of a deep research analysis, including findings and source references.
 
 ### ResearchProgressType
-
-An enumeration defining different types of progress updates during research operations.
+An Enum class that defines different types of progress updates during research operations.
 
 ### ResearchProgress
-
-A model for tracking and reporting progress during research operations, including progress type, completion percentage, and status messages.
+A Pydantic model for tracking and reporting progress during research operations.
 
 ## Usage Examples
 
-### Creating a CodeChunk
-
 ```python
-from local_deepwiki.models import CodeChunk, ChunkType, Language
+from local_deepwiki.models import Language, CodeChunk, FileInfo
 
+# Create a code chunk
 chunk = CodeChunk(
-    chunk_type=ChunkType.CLASS,
-    content="class Example:\n    pass",
-    file_path="src/example.py",
-    start_line=1,
-    end_line=2,
-    language=Language.PYTHON
+    type=ChunkType.CLASS,
+    name="MyClass",
+    start_line=10,
+    end_line=25,
+    content="class MyClass:\n    pass"
 )
-```
 
-### Working with WikiPage
-
-```python
-from local_deepwiki.models import WikiPage, WikiPageStatus
-
-page = WikiPage(
-    title="API Documentation",
-    content="# API Overview\n\nThis page documents...",
-    status=WikiPageStatus.PUBLISHED,
-    file_path="docs/api.md"
-)
-```
-
-### Creating Research Results
-
-```python
-from local_deepwiki.models import DeepResearchResult, SourceReference
-
-result = DeepResearchResult(
-    query="How does authentication work?",
-    sources=[
-        SourceReference(
-            file_path="src/auth.py",
-            line_start=10,
-            line_end=25,
-            relevance_score=0.95
-        )
-    ]
+# Create file information
+file_info = FileInfo(
+    path=Path("src/example.py"),
+    language=Language.PYTHON,
+    status=IndexStatus.INDEXED
 )
 ```
 
 ## Related Components
 
-This models file serves as the foundation for the entire local deepwiki system, with these models being used by:
+This models module serves as the foundation for data structures used throughout the application. The classes defined here are likely used by:
 
-- Code analysis and parsing components
-- Wiki generation engines
-- Search and indexing systems
-- Research and analysis workflows
-- Progress tracking and status reporting systems
-
-The models provide a consistent data structure interface that enables seamless integration between different system components while maintaining type safety and data validation through Pydantic.
+- Wiki generation components that process the WikiPage and WikiStructure models
+- Search functionality that works with SearchResult models
+- Research components that utilize the DeepResearchResult and related research models
+- File processing systems that work with FileInfo and CodeChunk models
 
 ## API Reference
 
@@ -170,7 +111,7 @@ Protocol for progress callback functions.  Progress callbacks are used to report
 
 
 <details>
-<summary>View Source (lines 11-26) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/models.py#L11-L26">GitHub</a></summary>
+<summary>View Source (lines 11-26) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/models.py#L11-L26">GitHub</a></summary>
 
 ```python
 class ProgressCallback(Protocol):
@@ -211,7 +152,7 @@ Report progress.
 
 
 <details>
-<summary>View Source (lines 11-26) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/models.py#L11-L26">GitHub</a></summary>
+<summary>View Source (lines 11-26) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/models.py#L11-L26">GitHub</a></summary>
 
 ```python
 class ProgressCallback(Protocol):
@@ -242,7 +183,7 @@ Supported programming languages.
 
 
 <details>
-<summary>View Source (lines 29-45) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/models.py#L29-L45">GitHub</a></summary>
+<summary>View Source (lines 29-45) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/models.py#L29-L45">GitHub</a></summary>
 
 ```python
 class Language(str, Enum):
@@ -274,7 +215,7 @@ Types of code chunks.
 
 
 <details>
-<summary>View Source (lines 48-57) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/models.py#L48-L57">GitHub</a></summary>
+<summary>View Source (lines 48-57) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/models.py#L48-L57">GitHub</a></summary>
 
 ```python
 class ChunkType(str, Enum):
@@ -301,7 +242,7 @@ A chunk of code extracted from the repository.
 
 
 <details>
-<summary>View Source (lines 60-107) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/models.py#L60-L107">GitHub</a></summary>
+<summary>View Source (lines 60-107) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/models.py#L60-L107">GitHub</a></summary>
 
 ```python
 class CodeChunk(BaseModel):
@@ -372,7 +313,7 @@ Convert chunk to a dict suitable for vector store storage.
 
 
 <details>
-<summary>View Source (lines 60-107) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/models.py#L60-L107">GitHub</a></summary>
+<summary>View Source (lines 60-107) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/models.py#L60-L107">GitHub</a></summary>
 
 ```python
 class CodeChunk(BaseModel):
@@ -435,7 +376,7 @@ Information about a source file.
 
 
 <details>
-<summary>View Source (lines 110-123) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/models.py#L110-L123">GitHub</a></summary>
+<summary>View Source (lines 110-123) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/models.py#L110-L123">GitHub</a></summary>
 
 ```python
 class FileInfo(BaseModel):
@@ -464,7 +405,7 @@ Status of repository indexing.
 
 
 <details>
-<summary>View Source (lines 126-142) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/models.py#L126-L142">GitHub</a></summary>
+<summary>View Source (lines 126-142) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/models.py#L126-L142">GitHub</a></summary>
 
 ```python
 class IndexStatus(BaseModel):
@@ -496,7 +437,7 @@ A generated wiki page.
 
 
 <details>
-<summary>View Source (lines 145-155) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/models.py#L145-L155">GitHub</a></summary>
+<summary>View Source (lines 145-155) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/models.py#L145-L155">GitHub</a></summary>
 
 ```python
 class WikiPage(BaseModel):
@@ -524,7 +465,7 @@ Structure of the generated wiki.
 
 
 <details>
-<summary>View Source (lines 158-181) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/models.py#L158-L181">GitHub</a></summary>
+<summary>View Source (lines 158-181) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/models.py#L158-L181">GitHub</a></summary>
 
 ```python
 class WikiStructure(BaseModel):
@@ -566,7 +507,7 @@ Generate table of contents.
 
 
 <details>
-<summary>View Source (lines 158-181) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/models.py#L158-L181">GitHub</a></summary>
+<summary>View Source (lines 158-181) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/models.py#L158-L181">GitHub</a></summary>
 
 ```python
 class WikiStructure(BaseModel):
@@ -605,7 +546,7 @@ A search result from semantic search.
 
 
 <details>
-<summary>View Source (lines 184-194) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/models.py#L184-L194">GitHub</a></summary>
+<summary>View Source (lines 184-194) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/models.py#L184-L194">GitHub</a></summary>
 
 ```python
 class SearchResult(BaseModel):
@@ -631,7 +572,7 @@ Status of a generated wiki page for incremental generation.
 
 
 <details>
-<summary>View Source (lines 197-216) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/models.py#L197-L216">GitHub</a></summary>
+<summary>View Source (lines 197-216) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/models.py#L197-L216">GitHub</a></summary>
 
 ```python
 class WikiPageStatus(BaseModel):
@@ -666,7 +607,7 @@ Status of wiki generation for tracking incremental updates.
 
 
 <details>
-<summary>View Source (lines 219-234) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/models.py#L219-L234">GitHub</a></summary>
+<summary>View Source (lines 219-234) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/models.py#L219-L234">GitHub</a></summary>
 
 ```python
 class WikiGenerationStatus(BaseModel):
@@ -697,7 +638,7 @@ Types of steps in the deep research process.
 
 
 <details>
-<summary>View Source (lines 240-246) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/models.py#L240-L246">GitHub</a></summary>
+<summary>View Source (lines 240-246) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/models.py#L240-L246">GitHub</a></summary>
 
 ```python
 class ResearchStepType(str, Enum):
@@ -719,7 +660,7 @@ A single step in the deep research process.
 
 
 <details>
-<summary>View Source (lines 249-258) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/models.py#L249-L258">GitHub</a></summary>
+<summary>View Source (lines 249-258) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/models.py#L249-L258">GitHub</a></summary>
 
 ```python
 class ResearchStep(BaseModel):
@@ -744,7 +685,7 @@ A decomposed sub-question for deep research.
 
 
 <details>
-<summary>View Source (lines 261-271) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/models.py#L261-L271">GitHub</a></summary>
+<summary>View Source (lines 261-271) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/models.py#L261-L271">GitHub</a></summary>
 
 ```python
 class SubQuestion(BaseModel):
@@ -770,7 +711,7 @@ A reference to a source code location.
 
 
 <details>
-<summary>View Source (lines 274-287) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/models.py#L274-L287">GitHub</a></summary>
+<summary>View Source (lines 274-287) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/models.py#L274-L287">GitHub</a></summary>
 
 ```python
 class SourceReference(BaseModel):
@@ -799,7 +740,7 @@ Result from deep research analysis.
 
 
 <details>
-<summary>View Source (lines 290-312) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/models.py#L290-L312">GitHub</a></summary>
+<summary>View Source (lines 290-312) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/models.py#L290-L312">GitHub</a></summary>
 
 ```python
 class DeepResearchResult(BaseModel):
@@ -837,7 +778,7 @@ Types of deep research progress events.
 
 
 <details>
-<summary>View Source (lines 315-325) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/models.py#L315-L325">GitHub</a></summary>
+<summary>View Source (lines 315-325) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/models.py#L315-L325">GitHub</a></summary>
 
 ```python
 class ResearchProgressType(str, Enum):
@@ -864,7 +805,7 @@ Progress update from deep research pipeline.  Sent via MCP progress notification
 
 
 <details>
-<summary>View Source (lines 328-350) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/models.py#L328-L350">GitHub</a></summary>
+<summary>View Source (lines 328-350) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/models.py#L328-L350">GitHub</a></summary>
 
 ```python
 class ResearchProgress(BaseModel):
@@ -1166,8 +1107,8 @@ assert record["vector"] == [0.1, 0.2, 0.3]
 
 ## See Also
 
-- [test_examples](generators/test_examples.md) - uses this
-- [see_also](generators/see_also.md) - uses this
+- [callgraph](generators/callgraph.md) - uses this
+- [validation](validation.md) - uses this
+- [coverage](generators/coverage.md) - uses this
 - [search](generators/search.md) - uses this
 - [api_docs](generators/api_docs.md) - uses this
-- [validation](validation.md) - uses this

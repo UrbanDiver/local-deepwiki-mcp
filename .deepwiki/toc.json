@@ -163,66 +163,81 @@
                     },
                     {
                       "number": "5.1.1.10.4",
+                      "title": "coverage.py",
+                      "path": "files/src/local_deepwiki/generators/coverage.md"
+                    },
+                    {
+                      "number": "5.1.1.10.5",
                       "title": "crosslinks.py",
                       "path": "files/src/local_deepwiki/generators/crosslinks.md"
                     },
                     {
-                      "number": "5.1.1.10.5",
+                      "number": "5.1.1.10.6",
                       "title": "diagrams.py",
                       "path": "files/src/local_deepwiki/generators/diagrams.md"
                     },
                     {
-                      "number": "5.1.1.10.6",
+                      "number": "5.1.1.10.7",
+                      "title": "glossary.py",
+                      "path": "files/src/local_deepwiki/generators/glossary.md"
+                    },
+                    {
+                      "number": "5.1.1.10.8",
+                      "title": "inheritance.py",
+                      "path": "files/src/local_deepwiki/generators/inheritance.md"
+                    },
+                    {
+                      "number": "5.1.1.10.9",
                       "title": "manifest.py",
                       "path": "files/src/local_deepwiki/generators/manifest.md"
                     },
                     {
-                      "number": "5.1.1.10.7",
+                      "number": "5.1.1.10.10",
                       "title": "search.py",
                       "path": "files/src/local_deepwiki/generators/search.md"
                     },
                     {
-                      "number": "5.1.1.10.8",
+                      "number": "5.1.1.10.11",
                       "title": "see_also.py",
                       "path": "files/src/local_deepwiki/generators/see_also.md"
                     },
                     {
-                      "number": "5.1.1.10.9",
+                      "number": "5.1.1.10.12",
                       "title": "source_refs.py",
                       "path": "files/src/local_deepwiki/generators/source_refs.md"
                     },
                     {
-                      "number": "5.1.1.10.10",
+                      "number": "5.1.1.10.13",
                       "title": "test_examples.py",
                       "path": "files/src/local_deepwiki/generators/test_examples.md"
                     },
                     {
-                      "number": "5.1.1.10.11",
+                      "number": "5.1.1.10.14",
                       "title": "toc.py",
                       "path": "files/src/local_deepwiki/generators/toc.md"
                     },
                     {
-                      "number": "5.1.1.10.12",
+                      "number": "5.1.1.10.15",
                       "title": "wiki.py",
                       "path": "files/src/local_deepwiki/generators/wiki.md"
                     },
                     {
-                      "number": "5.1.1.10.13",
+                      "number": "5.1.1.10.16",
                       "title": "wiki_files.py",
                       "path": "files/src/local_deepwiki/generators/wiki_files.md"
                     },
                     {
-                      "number": "5.1.1.10.14",
+                      "number": "5.1.1.10.17",
                       "title": "wiki_modules.py",
                       "path": "files/src/local_deepwiki/generators/wiki_modules.md"
                     },
                     {
-                      "number": "5.1.1.10.15",
+                      "number": "5.1.1.10.18",
                       "title": "wiki_pages.py",
                       "path": "files/src/local_deepwiki/generators/wiki_pages.md"
                     },
                     {
-                      "number": "5.1.1.10.16",
+                      "number": "5.1.1.10.19",
                       "title": "wiki_status.py",
                       "path": "files/src/local_deepwiki/generators/wiki_status.md"
                     }

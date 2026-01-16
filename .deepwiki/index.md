@@ -5,15 +5,19 @@ Local DeepWiki-style MCP server for private repository documentation
 
 ## Description
 
-Local DeepWiki MCP is a Python-based documentation system that provides an MCP (Model Context Protocol) server for generating and serving private repository documentation. The system includes multiple export formats, a web interface, and file watching capabilities for automatic documentation updates.
+Local DeepWiki MCP is a Python-based Model Context Protocol (MCP) server that generates comprehensive documentation for private code repositories. The system provides multiple export formats including HTML and PDF, along with a web interface and file watching capabilities for automatic documentation updates.
 
 ## Key Features
 
-- **MCP Server Integration** - Runs as an MCP server with stdio communication for integration with AI tools and editors
-- **Multiple Export Formats** - Supports HTML export via `deepwiki-export` and PDF export via `deepwiki-export-pdf` commands
-- **Web Interface** - Includes a Flask-based web server accessible through the `deepwiki-serve` command
-- **File Watching** - Automatic documentation regeneration with `deepwiki-watch` when repository files change
-- **Multi-Provider LLM Support** - Configurable integration with Ollama, OpenAI, and Anthropic language models for documentation generation
+• **MCP Server Integration** - Runs as an MCP server with stdio communication for integration with AI assistants and development tools
+
+• **Multiple Export Formats** - Supports HTML export via `deepwiki-export` and PDF export via `deepwiki-export-pdf` commands
+
+• **Web Interface** - Includes a Flask-based web server accessible through `deepwiki-serve` for interactive documentation browsing
+
+• **File System Monitoring** - Provides `deepwiki-watch` functionality to automatically regenerate documentation when repository files change
+
+• **Configurable LLM Providers** - Supports multiple LLM backends including Ollama, OpenAI, and Anthropic with customizable model configurations and embedding options
 
 ## Technology Stack
 
@@ -43,12 +47,12 @@ local-deepwiki-mcp/
 │   ├── test_changelog.py
 │   ├── test_chunker.py
 │   ├── test_config.py
+│   ├── test_coverage.py
 │   ├── test_crosslinks.py
 │   ├── test_deep_research.py
 │   ├── test_diagrams.py
 │   ├── test_export_init.py
 │   ├── test_git_utils.py
-│   ├── test_handlers_coverage.py
 │   ...
 ...
 ```

@@ -2,7 +2,7 @@
 
 ## File Overview
 
-The search module provides functionality for generating search indexes from wiki pages. It processes [WikiPage](../models.md) objects to create searchable JSON indexes that can be used for client-side search functionality.
+The search module provides functionality for generating search indices from wiki pages. It creates a JSON-based search index that can be used to enable search functionality within the wiki system.
 
 ## Functions
 
@@ -21,40 +21,36 @@ Generate and write search index to disk.
 **Returns:**
 - Path: Path to the generated search.json file
 
-This function creates a search index from the provided pages and writes it as a JSON file to the wiki directory. The index is formatted with 2-space indentation for readability.
-
-### Additional Functions
-
-The module contains several other functions that are referenced but not shown in the provided code:
-- `extract_headings`
-- `extract_code_terms`
-- `extract_snippet`
-- `generate_search_entry`
-- `generate_search_index`
+This function generates a search index from the provided wiki pages and writes it as a JSON file to the wiki directory. The search index is saved as `search.json` in the specified wiki path.
 
 ## Usage Examples
+
+### Creating a Search Index
 
 ```python
 from pathlib import Path
 from local_deepwiki.generators.search import write_search_index
 from local_deepwiki.models import WikiPage
 
-# Generate search index for a list of wiki pages
-wiki_directory = Path("/path/to/wiki")
+# Assuming you have a list of WikiPage objects
+wiki_directory = Path("./my_wiki")
 pages = [...]  # List of WikiPage objects
+
+# Generate and write the search index
 index_path = write_search_index(wiki_directory, pages)
 print(f"Search index written to: {index_path}")
 ```
 
 ## Related Components
 
-This module works with:
-- **[WikiPage](../models.md)**: The [main](../export/pdf.md) data model representing wiki pages, imported from `local_deepwiki.models`
+This module works with the following components:
 
-The module uses standard library components:
-- `json` for JSON serialization
-- `re` for regular expression operations
-- `pathlib.Path` for file system path handling
+- **[WikiPage](../models.md)**: The core model representing wiki pages, imported from `local_deepwiki.models`
+- Uses Python's built-in `json` module for serializing the search index
+- Uses `pathlib.Path` for file system operations
+- Uses `re` module for text processing operations
+
+The module appears to have additional functions (extract_headings, extract_code_terms, extract_snippet, generate_search_entry, generate_search_index) that support the [main](../export/pdf.md) write_search_index function, though their implementations are not shown in the provided code.
 
 ## API Reference
 
@@ -78,7 +74,7 @@ Extract all headings from markdown content.
 
 
 <details>
-<summary>View Source (lines 14-33) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/search.py#L14-L33">GitHub</a></summary>
+<summary>View Source (lines 14-33) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/search.py#L14-L33">GitHub</a></summary>
 
 ```python
 def extract_headings(content: str) -> list[str]:
@@ -123,7 +119,7 @@ Extract code terms (class names, function names) from content.
 
 
 <details>
-<summary>View Source (lines 36-57) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/search.py#L36-L57">GitHub</a></summary>
+<summary>View Source (lines 36-57) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/search.py#L36-L57">GitHub</a></summary>
 
 ```python
 def extract_code_terms(content: str) -> list[str]:
@@ -171,7 +167,7 @@ Extract a text snippet from markdown content.
 
 
 <details>
-<summary>View Source (lines 60-84) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/search.py#L60-L84">GitHub</a></summary>
+<summary>View Source (lines 60-84) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/search.py#L60-L84">GitHub</a></summary>
 
 ```python
 def extract_snippet(content: str, max_length: int = 200) -> str:
@@ -221,7 +217,7 @@ Generate a search index entry for a wiki page.
 
 
 <details>
-<summary>View Source (lines 87-106) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/search.py#L87-L106">GitHub</a></summary>
+<summary>View Source (lines 87-106) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/search.py#L87-L106">GitHub</a></summary>
 
 ```python
 def generate_search_entry(page: WikiPage) -> dict:
@@ -266,7 +262,7 @@ Generate a search index from wiki pages.
 
 
 <details>
-<summary>View Source (lines 109-118) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/search.py#L109-L118">GitHub</a></summary>
+<summary>View Source (lines 109-118) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/search.py#L109-L118">GitHub</a></summary>
 
 ```python
 def generate_search_index(pages: list[WikiPage]) -> list[dict]:
@@ -303,7 +299,7 @@ Generate and write search index to disk.
 
 
 <details>
-<summary>View Source (lines 121-134) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/search.py#L121-L134">GitHub</a></summary>
+<summary>View Source (lines 121-134) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/search.py#L121-L134">GitHub</a></summary>
 
 ```python
 def write_search_index(wiki_path: Path, pages: list[WikiPage]) -> Path:

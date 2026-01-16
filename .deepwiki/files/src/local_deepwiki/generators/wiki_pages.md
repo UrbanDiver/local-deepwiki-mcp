@@ -2,7 +2,7 @@
 
 ## File Overview
 
-This module contains functions for generating various types of wiki pages for documentation. It handles the creation of overview pages, architecture documentation, and changelog pages by integrating with vector stores, LLM providers, and other generator modules.
+This module provides functionality for generating various wiki pages from project content. It handles the creation of different types of documentation pages including overview, architecture, and changelog pages by integrating with vector stores, diagram generators, and project manifests.
 
 ## Functions
 
@@ -15,33 +15,36 @@ async def generate_changelog_page(repo_path: Path | None) -> WikiPage | None
 Generates a changelog page from git history.
 
 **Parameters:**
-- `repo_path`: Path to the repository root, or None if not available
+- `repo_path` (Path | None): Path to the repository root
 
 **Returns:**
-- [WikiPage](../models.md) with changelog content, or None if not a git repository
+- [`WikiPage`](../models.md): Wiki page containing changelog content
+- `None`: If the path is None or not a git repository
 
-This function uses the changelog generator to extract git history and create a formatted changelog page. It returns None if the provided path is not a git repository or if no commits are found.
+**Behavior:**
+- Returns `None` immediately if `repo_path` is None
+- Imports and uses [`generate_changelog_content`](changelog.md) from the changelog generator
+- Logs debug message if no changelog is generated
+- Creates and returns a [WikiPage](../models.md) instance with the generated content
 
 ### generate_overview_page
 
-Based on the imports and module structure, this function appears to generate overview documentation pages, though the full implementation is not shown in the provided code.
+This function is referenced in the imports but its implementation is not shown in the provided code.
 
 ### generate_arch
 
-Based on the imports and module structure, this function appears to generate architecture documentation, though the full implementation is not shown in the provided code.
+This function is referenced in the imports but its implementation is not shown in the provided code.
 
-## Related Components
+## Dependencies
 
-This module integrates with several other components:
+The module integrates with several other components:
 
-- **[VectorStore](../core/vectorstore.md)**: Used for storing and retrieving documentation vectors
-- **[LLMProvider](../providers/base.md)**: Provides language model capabilities for content generation
-- **[ProjectManifest](manifest.md)**: Handles project structure and metadata
-- **[WikiPage](../models.md)**: Data model for wiki page content
-- **[IndexStatus](../models.md)**: Tracks indexing status of documentation
-- The [`generate_workflow_sequences`](diagrams.md) and [`generate_dependency_graph`](diagrams.md) functions from the diagrams module
-- The [`generate_changelog_content`](changelog.md) function from the changelog module
-- The [`get_directory_tree`](manifest.md) function from the manifest module
+- **[VectorStore](../core/vectorstore.md)**: Core vector storage functionality
+- **[ProjectManifest](manifest.md)**: Project structure and metadata handling  
+- **[WikiPage](../models.md)**: Model for representing wiki page content
+- **[LLMProvider](../providers/base.md)**: Base provider for language model interactions
+- **Diagram generators**: For creating workflow sequences and dependency graphs
+- **Changelog generator**: For extracting git history into changelog format
 
 ## Usage Example
 
@@ -54,10 +57,20 @@ repo_path = Path("/path/to/repository")
 changelog_page = await generate_changelog_page(repo_path)
 
 if changelog_page:
-    print(f"Generated changelog: {changelog_page.title}")
+    print("Changelog generated successfully")
 else:
-    print("No changelog generated - not a git repository")
+    print("No changelog generated - not a git repo or no commits")
 ```
+
+## Related Components
+
+This module works closely with:
+
+- **[IndexStatus](../models.md)**: For tracking page generation status
+- **Diagram generators**: For creating visual documentation elements
+- **Project manifest system**: For understanding project structure
+- **Vector store**: For content indexing and retrieval
+- **Changelog generator**: For git history processing
 
 ## API Reference
 
@@ -86,7 +99,7 @@ Generate the [main](../export/pdf.md) overview/index page with grounded facts.  
 
 
 <details>
-<summary>View Source (lines 20-192) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/wiki_pages.py#L20-L192">GitHub</a></summary>
+<summary>View Source (lines 20-192) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/wiki_pages.py#L20-L192">GitHub</a></summary>
 
 ```python
 async def generate_overview_page(
@@ -289,7 +302,7 @@ Generate architecture documentation with diagrams and grounded facts.
 
 
 <details>
-<summary>View Source (lines 195-324) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/wiki_pages.py#L195-L324">GitHub</a></summary>
+<summary>View Source (lines 195-324) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/wiki_pages.py#L195-L324">GitHub</a></summary>
 
 ```python
 async def generate_architecture_page(
@@ -449,7 +462,7 @@ Generate dependencies documentation with grounded facts from manifest.
 
 
 <details>
-<summary>View Source (lines 327-451) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/wiki_pages.py#L327-L451">GitHub</a></summary>
+<summary>View Source (lines 327-451) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/wiki_pages.py#L327-L451">GitHub</a></summary>
 
 ```python
 async def generate_dependencies_page(
@@ -600,7 +613,7 @@ Generate changelog page from git history.
 
 
 <details>
-<summary>View Source (lines 454-478) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/wiki_pages.py#L454-L478">GitHub</a></summary>
+<summary>View Source (lines 454-478) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/wiki_pages.py#L454-L478">GitHub</a></summary>
 
 ```python
 async def generate_changelog_page(repo_path: Path | None) -> [WikiPage](../models.md) | None:

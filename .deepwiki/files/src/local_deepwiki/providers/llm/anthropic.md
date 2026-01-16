@@ -2,42 +2,59 @@
 
 ## File Overview
 
-The `anthropic.py` module provides an Anthropic-specific implementation of the LLM provider interface. This module enables integration with Anthropic's Claude models through their async client library, implementing both standard and streaming text generation capabilities.
+This module provides an Anthropic-based implementation of the LLM provider interface. It integrates with Anthropic's API through the AsyncAnthropic client to enable AI-powered text generation capabilities within the local deepwiki system.
 
 ## Classes
 
 ### AnthropicProvider
 
-The AnthropicProvider class extends the base [LLMProvider](../base.md) interface to provide Anthropic Claude model integration. It handles authentication, request formatting, and response processing for Anthropic's API.
+The AnthropicProvider class serves as the concrete implementation of the [LLMProvider](../base.md) interface for Anthropic's language models. This class handles authentication, text generation, and streaming responses from Anthropic's API.
 
 **Key Methods:**
-- `__init__` - Initializes the provider with configuration
-- `generate` - Generates text responses using Anthropic models
-- `generate_stream` - Provides streaming text generation
+- `__init__` - Initializes the provider with necessary configuration
+- `generate` - Performs synchronous text generation
+- `generate_stream` - Provides streaming text generation with real-time response chunks
 - `name` - Returns the provider identifier
 
 ## Dependencies
 
-The module relies on several key dependencies:
+The module relies on several key components:
 
-- `anthropic.AsyncAnthropic` - Official Anthropic async client for API communication
-- [`local_deepwiki.providers.base.LLMProvider`](../base.md) - Base provider interface
-- [`local_deepwiki.providers.base.with_retry`](../base.md) - Retry [decorator](../base.md) for handling transient failures
-- [`local_deepwiki.logging.get_logger`](../../logging.md) - Logging utilities
+- **AsyncAnthropic**: The official Anthropic Python client for API communication
+- **[LLMProvider](../base.md)**: Base class that defines the provider interface contract
+- **[with_retry](../base.md)**: Decorator for implementing retry logic on API calls
+- **[get_logger](../../logging.md)**: Logging utility for the local deepwiki system
 
-## Usage Context
+## Environment Requirements
 
-This provider integrates into the local-deepwiki system's LLM abstraction layer, allowing the application to use Anthropic's Claude models alongside other supported providers. The implementation follows the standard provider pattern established by the [LLMProvider](../base.md) base class.
+The module uses the `os` module, indicating it likely reads configuration from environment variables, though the specific variables are not visible in the provided code structure.
 
-## Environment Configuration
+## Usage Pattern
 
-The module imports `os`, indicating it likely uses environment variables for configuration such as API keys or endpoint settings, following standard practices for cloud service authentication.
+Based on the class structure, the AnthropicProvider follows the standard provider pattern:
 
-## Related Components
+```python
+# Basic provider instantiation and usage would follow this pattern:
+provider = AnthropicProvider()
 
-- **[LLMProvider](../base.md)** - Base class that defines the provider interface
-- **[with_retry](../base.md)** - Decorator for implementing retry logic on API calls
-- **Logger** - Logging system integration for monitoring and debugging
+# Synchronous generation
+response = await provider.generate(prompt)
+
+# Streaming generation  
+async for chunk in provider.generate_stream(prompt):
+    # Process each chunk as it arrives
+    pass
+```
+
+## Integration
+
+This provider integrates with the broader local deepwiki system through:
+
+- The [LLMProvider](../base.md) base class interface for consistent provider behavior
+- The logging system for operational monitoring
+- Retry mechanisms for robust API interaction
+
+The AnthropicProvider enables the local deepwiki system to leverage Anthropic's language models for content generation and processing tasks.
 
 ## API Reference
 
@@ -51,7 +68,7 @@ LLM provider using Anthropic API.
 
 
 <details>
-<summary>View Source (lines 14-144) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/providers/llm/anthropic.py#L14-L144">GitHub</a></summary>
+<summary>View Source (lines 14-144) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/providers/llm/anthropic.py#L14-L144">GitHub</a></summary>
 
 ```python
 class AnthropicProvider(LLMProvider):
@@ -76,7 +93,7 @@ Initialize the Anthropic provider.
 
 
 <details>
-<summary>View Source (lines 17-25) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/providers/llm/anthropic.py#L17-L25">GitHub</a></summary>
+<summary>View Source (lines 17-25) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/providers/llm/anthropic.py#L17-L25">GitHub</a></summary>
 
 ```python
 def __init__(self, model: str = "claude-sonnet-4-20250514", api_key: str | None = None):
@@ -110,7 +127,7 @@ Generate text from a prompt.
 
 
 <details>
-<summary>View Source (lines 28-83) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/providers/llm/anthropic.py#L28-L83">GitHub</a></summary>
+<summary>View Source (lines 28-83) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/providers/llm/anthropic.py#L28-L83">GitHub</a></summary>
 
 ```python
 async def generate(
@@ -191,7 +208,7 @@ Generate text from a prompt with streaming.
 
 
 <details>
-<summary>View Source (lines 85-139) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/providers/llm/anthropic.py#L85-L139">GitHub</a></summary>
+<summary>View Source (lines 85-139) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/providers/llm/anthropic.py#L85-L139">GitHub</a></summary>
 
 ```python
 async def generate_stream(
@@ -265,7 +282,7 @@ Get the provider name.
 
 
 <details>
-<summary>View Source (lines 142-144) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/providers/llm/anthropic.py#L142-L144">GitHub</a></summary>
+<summary>View Source (lines 142-144) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/providers/llm/anthropic.py#L142-L144">GitHub</a></summary>
 
 ```python
 def name(self) -> str:

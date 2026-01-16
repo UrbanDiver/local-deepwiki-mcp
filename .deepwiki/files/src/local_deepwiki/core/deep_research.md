@@ -2,43 +2,40 @@
 
 ## File Overview
 
-The `deep_research.py` module provides core research functionality for the local deepwiki system. Based on the imports, this module handles deep research operations using vector stores for information retrieval and LLM providers for content generation. It works with various research-related data models including research results, progress tracking, and source references.
+The `deep_research.py` module provides the core research functionality for the local deepwiki system. Based on the imports, this module handles deep research operations that involve vector storage, language model interactions, and progress tracking through various research steps and sub-questions.
 
-## Dependencies
+## Imports and Dependencies
 
-This module integrates with several components of the local deepwiki system:
+This module depends on several core components:
 
-- **[VectorStore](vectorstore.md)**: For vector-based information storage and retrieval
-- **[LLMProvider](../providers/base.md)**: Base interface for language model providers
-- **Logging**: Uses the system's logging infrastructure
-- **Data Models**: Works with comprehensive research-related models including:
+- **[VectorStore](vectorstore.md)**: For vector-based storage and retrieval operations
+- **[LLMProvider](../providers/base.md)**: Base provider for language model interactions
+- **Logging**: Uses the local deepwiki logging system
+- **Data Models**: Works with research-related data structures including:
   - [DeepResearchResult](../models.md)
   - [ResearchProgress](../models.md) and [ResearchProgressType](../models.md)
   - [ResearchStep](../models.md) and [ResearchStepType](../models.md)
-  - [SearchResult](../models.md)
-  - [SourceReference](../models.md)
+  - [SearchResult](../models.md) and [SourceReference](../models.md)
   - [SubQuestion](../models.md)
-
-## Core Functionality
-
-The module leverages Python's `asyncio` for asynchronous operations, suggesting it handles concurrent research tasks. It includes JSON processing capabilities and regular expression support for text processing and parsing operations.
 
 ## Related Components
 
-This module serves as a bridge between:
-- Vector storage systems for information retrieval
-- [Language](../models.md) model providers for content generation
-- Research data models for structured information handling
-- Progress tracking systems for monitoring research operations
+Based on the imports, this module integrates with:
 
-The presence of time-related imports suggests the module includes timing and scheduling capabilities for research operations.
+- **[VectorStore](vectorstore.md) class**: For vector storage operations
+- **[LLMProvider](../providers/base.md) class**: For language model functionality
+- **Research data models**: For structured research data handling
+- **Logging system**: For operation tracking and debugging
 
-## Technical Notes
+## Technology Stack
 
-- Uses asynchronous programming patterns with `asyncio`
-- Implements callable and awaitable interfaces for flexible operation handling
-- Integrates with the broader local deepwiki ecosystem through shared models and providers
-- Supports structured research workflows through dedicated data models
+The module uses:
+- `asyncio` for asynchronous operations
+- `json` for data serialization
+- `re` for regular expression operations
+- Standard Python collections for type hints
+
+*Note: The actual implementation details of classes and functions in this module are not visible in the provided code chunk, which only shows the import statements. Additional code chunks would be needed to document the specific classes, methods, and functions implemented in this file.*
 
 ## API Reference
 
@@ -52,7 +49,7 @@ Raised when a deep research operation is cancelled.
 
 
 <details>
-<summary>View Source (lines 33-38) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/deep_research.py#L33-L38">GitHub</a></summary>
+<summary>View Source (lines 33-38) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/deep_research.py#L33-L38">GitHub</a></summary>
 
 ```python
 class ResearchCancelledError(Exception):
@@ -79,7 +76,7 @@ def __init__(step: str = "unknown")
 
 
 <details>
-<summary>View Source (lines 33-38) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/deep_research.py#L33-L38">GitHub</a></summary>
+<summary>View Source (lines 33-38) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/deep_research.py#L33-L38">GitHub</a></summary>
 
 ```python
 class ResearchCancelledError(Exception):
@@ -100,7 +97,7 @@ Multi-step research pipeline for complex codebase questions.  This pipeline perf
 
 
 <details>
-<summary>View Source (lines 113-806) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/deep_research.py#L113-L806">GitHub</a></summary>
+<summary>View Source (lines 113-806) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/deep_research.py#L113-L806">GitHub</a></summary>
 
 ```python
 class DeepResearchPipeline:
@@ -134,7 +131,7 @@ Initialize the deep research pipeline.
 
 
 <details>
-<summary>View Source (lines 124-169) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/deep_research.py#L124-L169">GitHub</a></summary>
+<summary>View Source (lines 124-169) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/deep_research.py#L124-L169">GitHub</a></summary>
 
 ```python
 def __init__(
@@ -206,7 +203,7 @@ Execute the full research pipeline.
 
 
 <details>
-<summary>View Source (lines 209-237) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/deep_research.py#L209-L237">GitHub</a></summary>
+<summary>View Source (lines 209-237) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/deep_research.py#L209-L237">GitHub</a></summary>
 
 ```python
 async def research(
@@ -469,7 +466,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_check_cancelled`
 
 <details>
-<summary>View Source (lines 171-182) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/deep_research.py#L171-L182">GitHub</a></summary>
+<summary>View Source (lines 171-182) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/deep_research.py#L171-L182">GitHub</a></summary>
 
 ```python
 def _check_cancelled(self, step_name: str) -> None:
@@ -492,7 +489,7 @@ def _check_cancelled(self, step_name: str) -> None:
 #### `_report_progress`
 
 <details>
-<summary>View Source (lines 184-207) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/deep_research.py#L184-L207">GitHub</a></summary>
+<summary>View Source (lines 184-207) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/deep_research.py#L184-L207">GitHub</a></summary>
 
 ```python
 async def _report_progress(
@@ -527,7 +524,7 @@ async def _report_progress(
 #### `_execute_pipeline`
 
 <details>
-<summary>View Source (lines 239-302) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/deep_research.py#L239-L302">GitHub</a></summary>
+<summary>View Source (lines 239-302) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/deep_research.py#L239-L302">GitHub</a></summary>
 
 ```python
 async def _execute_pipeline(self, question: str) -> DeepResearchResult:
@@ -602,7 +599,7 @@ async def _execute_pipeline(self, question: str) -> DeepResearchResult:
 #### `_step_decompose`
 
 <details>
-<summary>View Source (lines 304-331) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/deep_research.py#L304-L331">GitHub</a></summary>
+<summary>View Source (lines 304-331) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/deep_research.py#L304-L331">GitHub</a></summary>
 
 ```python
 async def _step_decompose(self, question: str) -> tuple[list[SubQuestion], ResearchStep, int]:
@@ -641,7 +638,7 @@ async def _step_decompose(self, question: str) -> tuple[list[SubQuestion], Resea
 #### `_step_retrieve`
 
 <details>
-<summary>View Source (lines 333-362) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/deep_research.py#L333-L362">GitHub</a></summary>
+<summary>View Source (lines 333-362) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/deep_research.py#L333-L362">GitHub</a></summary>
 
 ```python
 async def _step_retrieve(
@@ -682,7 +679,7 @@ async def _step_retrieve(
 #### `_step_gap_analysis`
 
 <details>
-<summary>View Source (lines 364-396) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/deep_research.py#L364-L396">GitHub</a></summary>
+<summary>View Source (lines 364-396) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/deep_research.py#L364-L396">GitHub</a></summary>
 
 ```python
 async def _step_gap_analysis(
@@ -726,7 +723,7 @@ async def _step_gap_analysis(
 #### `_step_follow_up_retrieve`
 
 <details>
-<summary>View Source (lines 398-427) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/deep_research.py#L398-L427">GitHub</a></summary>
+<summary>View Source (lines 398-427) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/deep_research.py#L398-L427">GitHub</a></summary>
 
 ```python
 async def _step_follow_up_retrieve(
@@ -767,7 +764,7 @@ async def _step_follow_up_retrieve(
 #### `_prepare_results_for_synthesis`
 
 <details>
-<summary>View Source (lines 429-445) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/deep_research.py#L429-L445">GitHub</a></summary>
+<summary>View Source (lines 429-445) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/deep_research.py#L429-L445">GitHub</a></summary>
 
 ```python
 def _prepare_results_for_synthesis(
@@ -795,7 +792,7 @@ def _prepare_results_for_synthesis(
 #### `_step_synthesize`
 
 <details>
-<summary>View Source (lines 447-480) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/deep_research.py#L447-L480">GitHub</a></summary>
+<summary>View Source (lines 447-480) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/deep_research.py#L447-L480">GitHub</a></summary>
 
 ```python
 async def _step_synthesize(
@@ -840,7 +837,7 @@ async def _step_synthesize(
 #### `_decompose_question`
 
 <details>
-<summary>View Source (lines 482-506) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/deep_research.py#L482-L506">GitHub</a></summary>
+<summary>View Source (lines 482-506) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/deep_research.py#L482-L506">GitHub</a></summary>
 
 ```python
 async def _decompose_question(self, question: str) -> list[SubQuestion]:
@@ -876,7 +873,7 @@ async def _decompose_question(self, question: str) -> list[SubQuestion]:
 #### `_parse_decomposition_response`
 
 <details>
-<summary>View Source (lines 508-540) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/deep_research.py#L508-L540">GitHub</a></summary>
+<summary>View Source (lines 508-540) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/deep_research.py#L508-L540">GitHub</a></summary>
 
 ```python
 def _parse_decomposition_response(self, response: str) -> list[SubQuestion]:
@@ -920,7 +917,7 @@ def _parse_decomposition_response(self, response: str) -> list[SubQuestion]:
 #### `_parallel_retrieve`
 
 <details>
-<summary>View Source (lines 542-571) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/deep_research.py#L542-L571">GitHub</a></summary>
+<summary>View Source (lines 542-571) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/deep_research.py#L542-L571">GitHub</a></summary>
 
 ```python
 async def _parallel_retrieve(self, sub_questions: list[SubQuestion]) -> list[SearchResult]:
@@ -961,7 +958,7 @@ async def _parallel_retrieve(self, sub_questions: list[SubQuestion]) -> list[Sea
 #### `_analyze_gaps`
 
 <details>
-<summary>View Source (lines 573-616) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/deep_research.py#L573-L616">GitHub</a></summary>
+<summary>View Source (lines 573-616) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/deep_research.py#L573-L616">GitHub</a></summary>
 
 ```python
 async def _analyze_gaps(
@@ -1016,7 +1013,7 @@ async def _analyze_gaps(
 #### `_build_context_summary`
 
 <details>
-<summary>View Source (lines 618-646) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/deep_research.py#L618-L646">GitHub</a></summary>
+<summary>View Source (lines 618-646) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/deep_research.py#L618-L646">GitHub</a></summary>
 
 ```python
 def _build_context_summary(self, results: list[SearchResult]) -> str:
@@ -1056,7 +1053,7 @@ def _build_context_summary(self, results: list[SearchResult]) -> str:
 #### `_parse_gap_analysis_response`
 
 <details>
-<summary>View Source (lines 648-670) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/deep_research.py#L648-L670">GitHub</a></summary>
+<summary>View Source (lines 648-670) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/deep_research.py#L648-L670">GitHub</a></summary>
 
 ```python
 def _parse_gap_analysis_response(self, response: str) -> list[str]:
@@ -1090,7 +1087,7 @@ def _parse_gap_analysis_response(self, response: str) -> list[str]:
 #### `_targeted_retrieve`
 
 <details>
-<summary>View Source (lines 672-698) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/deep_research.py#L672-L698">GitHub</a></summary>
+<summary>View Source (lines 672-698) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/deep_research.py#L672-L698">GitHub</a></summary>
 
 ```python
 async def _targeted_retrieve(self, queries: list[str]) -> list[SearchResult]:
@@ -1128,7 +1125,7 @@ async def _targeted_retrieve(self, queries: list[str]) -> list[SearchResult]:
 #### `_deduplicate_results`
 
 <details>
-<summary>View Source (lines 700-717) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/deep_research.py#L700-L717">GitHub</a></summary>
+<summary>View Source (lines 700-717) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/deep_research.py#L700-L717">GitHub</a></summary>
 
 ```python
 def _deduplicate_results(self, results: list[SearchResult]) -> list[SearchResult]:
@@ -1157,7 +1154,7 @@ def _deduplicate_results(self, results: list[SearchResult]) -> list[SearchResult
 #### `_synthesize`
 
 <details>
-<summary>View Source (lines 719-763) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/deep_research.py#L719-L763">GitHub</a></summary>
+<summary>View Source (lines 719-763) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/deep_research.py#L719-L763">GitHub</a></summary>
 
 ```python
 async def _synthesize(
@@ -1213,7 +1210,7 @@ async def _synthesize(
 #### `_build_full_context`
 
 <details>
-<summary>View Source (lines 765-785) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/deep_research.py#L765-L785">GitHub</a></summary>
+<summary>View Source (lines 765-785) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/deep_research.py#L765-L785">GitHub</a></summary>
 
 ```python
 def _build_full_context(self, results: list[SearchResult]) -> str:
@@ -1245,7 +1242,7 @@ def _build_full_context(self, results: list[SearchResult]) -> str:
 #### `_build_sources`
 
 <details>
-<summary>View Source (lines 787-806) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/deep_research.py#L787-L806">GitHub</a></summary>
+<summary>View Source (lines 787-806) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/core/deep_research.py#L787-L806">GitHub</a></summary>
 
 ```python
 def _build_sources(self, results: list[SearchResult]) -> list[SourceReference]:

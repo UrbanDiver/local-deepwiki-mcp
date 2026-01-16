@@ -2,72 +2,61 @@
 
 ## File Overview
 
-The `see_also.py` module is responsible for generating "See Also" sections for wiki pages by analyzing relationships between source files. It creates cross-references between related files based on imports, function calls, and other code dependencies to help users navigate between related documentation pages.
+This module generates "See Also" sections for wiki pages by analyzing relationships between code files. It builds cross-references based on import dependencies, shared functionality, and file relationships to help users discover related documentation.
 
 ## Classes
 
 ### FileRelationships
 
-A data class that stores relationship information between files (specific implementation details not visible in the provided code).
+A data class that tracks relationships between files for generating cross-references.
 
 ### RelationshipAnalyzer
 
-A class responsible for analyzing code relationships between files to determine which files should be cross-referenced in "See Also" sections (specific implementation details not visible in the provided code).
+Analyzes code files to identify relationships and dependencies for building "See Also" sections.
 
 ## Functions
 
 ### build_file_to_wiki_map
 
 ```python
-def build_file_to_wiki_map(pages: list[WikiPage]) -> dict[str, str]:
+def build_file_to_wiki_map(pages: list[WikiPage]) -> dict[str, str]
 ```
 
-Builds a mapping from source file paths to their corresponding wiki page paths.
+Builds a mapping from source file paths to wiki page paths.
 
 **Parameters:**
-- `pages`: List of [WikiPage](../models.md) objects representing the generated wiki pages
+- `pages`: List of [WikiPage](../models.md) objects to process
 
 **Returns:**
-- Dictionary mapping source file paths (strings) to wiki page paths (strings)
+- Dictionary mapping source file path strings to wiki page path strings
 
-**Description:**
-This function processes wiki pages that follow the pattern `files/` prefix and converts between wiki page paths (like `files/src/local_deepwiki/core/chunker.md`) and their corresponding source file paths (like `src/local_deepwiki/core/chunker.py`).
+This function processes wiki pages that start with "files/" and converts their paths to corresponding source file paths by removing the "files/" prefix and changing the extension from .md to .py.
 
 ### generate_see_also_section
 
-Generates a "See Also" section for a wiki page based on file relationships (specific signature and implementation not visible in the provided code).
+Generates a "See Also" section for a wiki page based on file relationships.
 
 ### _relative_path
 
-A utility function for handling relative path calculations (specific signature and implementation not visible in the provided code).
+A utility function for calculating relative paths between files.
 
 ### add_see_also_sections
 
-Adds "See Also" sections to multiple wiki pages (specific signature and implementation not visible in the provided code).
-
-## Usage Examples
-
-```python
-from local_deepwiki.generators.see_also import build_file_to_wiki_map
-from local_deepwiki.models import WikiPage
-
-# Build file-to-wiki mapping
-pages = [...]  # List of WikiPage objects
-file_mapping = build_file_to_wiki_map(pages)
-
-# The mapping will contain entries like:
-# "src/local_deepwiki/core/chunker.py" -> "files/src/local_deepwiki/core/chunker.md"
-```
+Adds "See Also" sections to multiple wiki pages based on their relationships.
 
 ## Related Components
 
-This module works with the following components from the codebase:
+This module works with:
 
-- **[WikiPage](../models.md)**: Core model representing a wiki page, imported from `local_deepwiki.models`
-- **[CodeChunk](../models.md)**: Model representing code chunks, imported from `local_deepwiki.models`  
-- **[ChunkType](../models.md)**: Enumeration for different types of code chunks, imported from `local_deepwiki.models`
+- **[WikiPage](../models.md)**: The core wiki page model from `local_deepwiki.models`
+- **[CodeChunk](../models.md)**: Represents chunks of code with type information
+- **[ChunkType](../models.md)**: Enumeration for different types of code chunks
 
-The module uses standard Python libraries including `re` for regular expressions, `collections.defaultdict` for data structures, `dataclasses` for data classes, and `pathlib.Path` for file path handling.
+The module uses standard Python libraries including `re` for regular expressions, `collections.defaultdict` for efficient data structures, `dataclasses` for data modeling, and `pathlib.Path` for file path operations.
+
+## Usage Context
+
+This module is part of the wiki generation pipeline, specifically handling the cross-referencing phase where related pages are linked together through automatically generated "See Also" sections based on code analysis and file relationships.
 
 ## API Reference
 
@@ -77,7 +66,7 @@ Relationships for a single file.
 
 
 <details>
-<summary>View Source (lines 16-22) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/see_also.py#L16-L22">GitHub</a></summary>
+<summary>View Source (lines 16-22) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/see_also.py#L16-L22">GitHub</a></summary>
 
 ```python
 class FileRelationships:
@@ -99,7 +88,7 @@ Analyzes import relationships between source files.  This class builds a graph o
 
 
 <details>
-<summary>View Source (lines 25-182) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/see_also.py#L25-L182">GitHub</a></summary>
+<summary>View Source (lines 25-182) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/see_also.py#L25-L182">GitHub</a></summary>
 
 ```python
 class RelationshipAnalyzer:
@@ -118,7 +107,7 @@ Initialize an empty relationship analyzer.
 
 
 <details>
-<summary>View Source (lines 32-39) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/see_also.py#L32-L39">GitHub</a></summary>
+<summary>View Source (lines 32-39) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/see_also.py#L32-L39">GitHub</a></summary>
 
 ```python
 def __init__(self) -> None:
@@ -148,7 +137,7 @@ Analyze import chunks to build relationship graph.
 
 
 <details>
-<summary>View Source (lines 41-63) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/see_also.py#L41-L63">GitHub</a></summary>
+<summary>View Source (lines 41-63) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/see_also.py#L41-L63">GitHub</a></summary>
 
 ```python
 def analyze_chunks(self, chunks: list[CodeChunk]) -> None:
@@ -193,7 +182,7 @@ Get all relationships for a file.
 
 
 <details>
-<summary>View Source (lines 121-155) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/see_also.py#L121-L155">GitHub</a></summary>
+<summary>View Source (lines 121-155) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/see_also.py#L121-L155">GitHub</a></summary>
 
 ```python
 def get_relationships(self, file_path: str) -> FileRelationships:
@@ -248,7 +237,7 @@ Get all known file paths.
 
 
 <details>
-<summary>View Source (lines 176-182) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/see_also.py#L176-L182">GitHub</a></summary>
+<summary>View Source (lines 176-182) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/see_also.py#L176-L182">GitHub</a></summary>
 
 ```python
 def get_all_known_files(self) -> set[str]:
@@ -282,7 +271,7 @@ Build a mapping from source file paths to wiki page paths.
 
 
 <details>
-<summary>View Source (lines 185-205) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/see_also.py#L185-L205">GitHub</a></summary>
+<summary>View Source (lines 185-205) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/see_also.py#L185-L205">GitHub</a></summary>
 
 ```python
 def build_file_to_wiki_map(pages: list[WikiPage]) -> dict[str, str]:
@@ -331,7 +320,7 @@ Generate a See Also section for a wiki page.
 
 
 <details>
-<summary>View Source (lines 208-271) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/see_also.py#L208-L271">GitHub</a></summary>
+<summary>View Source (lines 208-271) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/see_also.py#L208-L271">GitHub</a></summary>
 
 ```python
 def generate_see_also_section(
@@ -422,7 +411,7 @@ Add See Also sections to wiki pages.
 
 
 <details>
-<summary>View Source (lines 302-353) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/see_also.py#L302-L353">GitHub</a></summary>
+<summary>View Source (lines 302-353) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/see_also.py#L302-L353">GitHub</a></summary>
 
 ```python
 def add_see_also_sections(
@@ -698,7 +687,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_parse_import_line`
 
 <details>
-<summary>View Source (lines 65-93) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/see_also.py#L65-L93">GitHub</a></summary>
+<summary>View Source (lines 65-93) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/see_also.py#L65-L93">GitHub</a></summary>
 
 ```python
 def _parse_import_line(self, line: str) -> str | None:
@@ -738,7 +727,7 @@ def _parse_import_line(self, line: str) -> str | None:
 #### `_module_to_file_path`
 
 <details>
-<summary>View Source (lines 95-119) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/see_also.py#L95-L119">GitHub</a></summary>
+<summary>View Source (lines 95-119) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/see_also.py#L95-L119">GitHub</a></summary>
 
 ```python
 def _module_to_file_path(self, module: str) -> str | None:
@@ -774,7 +763,7 @@ def _module_to_file_path(self, module: str) -> str | None:
 #### `_module_matches_file`
 
 <details>
-<summary>View Source (lines 157-174) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/see_also.py#L157-L174">GitHub</a></summary>
+<summary>View Source (lines 157-174) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/see_also.py#L157-L174">GitHub</a></summary>
 
 ```python
 def _module_matches_file(self, module: str, file_path: str) -> bool:
@@ -803,7 +792,7 @@ def _module_matches_file(self, module: str, file_path: str) -> bool:
 #### `_relative_path`
 
 <details>
-<summary>View Source (lines 274-299) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/see_also.py#L274-L299">GitHub</a></summary>
+<summary>View Source (lines 274-299) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/see_also.py#L274-L299">GitHub</a></summary>
 
 ```python
 def _relative_path(from_path: str, to_path: str) -> str:

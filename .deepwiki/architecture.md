@@ -2,110 +2,82 @@
 
 ## System Overview
 
-Local DeepWiki is a documentation generation system that processes codebases to create intelligent wiki documentation. The system is built around a provider-based architecture that supports multiple LLM providers (Ollama, Anthropic, OpenAI) and embedding providers (local, OpenAI) for generating and enhancing documentation content.
-
-The system uses tree-sitter for code parsing, supports multiple programming languages including Python, TypeScript, Java, Swift, C++, Ruby, PHP, Kotlin, and C#, and provides various output formats including HTML export and PDF generation.
+The local-deepwiki system is a code documentation and wiki generation tool that analyzes codebases to create comprehensive documentation. Based on the code structure, it provides multiple LLM provider integrations (Ollama, Anthropic, OpenAI), embedding capabilities, and various documentation generators including inheritance diagrams and API documentation.
 
 ## Key Components
 
 ### Configuration Management
+The **[LLMConfig](files/src/local_deepwiki/config.md)** class manages LLM provider configuration with support for three providers: ollama, anthropic, and openai. It uses Pydantic for validation and includes nested configuration objects for each provider.
 
-The **[Config](files/src/local_deepwiki/config.md)** class serves as the central configuration container, with specialized configuration classes for different system components:
+The **[EmbeddingConfig](files/src/local_deepwiki/config.md)** class handles embedding provider configuration, supporting both local and OpenAI embedding providers with their respective configuration objects.
 
-- **[LLMConfig](files/src/local_deepwiki/config.md)** manages LLM provider selection and configuration, supporting three providers through dedicated config classes
-- **[AnthropicConfig](files/src/local_deepwiki/config.md)** configures the Anthropic provider with model selection (defaulting to "claude-sonnet-4-20250514")
-- **[OllamaConfig](files/src/local_deepwiki/config.md)** handles Ollama-specific settings
-- **[OpenAILLMConfig](files/src/local_deepwiki/config.md)** manages OpenAI LLM configuration
-- **[EmbeddingConfig](files/src/local_deepwiki/config.md)** controls embedding provider selection between local and OpenAI options
-- **[LocalEmbeddingConfig](files/src/local_deepwiki/config.md)** and **[OpenAIEmbeddingConfig](files/src/local_deepwiki/config.md)** provide provider-specific embedding settings
+### Provider System
+The **[OllamaProvider](files/src/local_deepwiki/providers/llm/ollama.md)** class implements LLM functionality for Ollama integration, extending a base [LLMProvider](files/src/local_deepwiki/providers/base.md) interface with methods for health checking, text generation, and streaming capabilities.
 
-### LLM Provider System
+The provider factory function `get_llm_provider` creates appropriate provider instances based on configuration, supporting dynamic provider selection between Ollama, Anthropic, and OpenAI providers.
 
-The system implements a factory pattern for LLM provider creation:
+### Code Analysis and Documentation
+The **[ClassNode](files/src/local_deepwiki/generators/inheritance.md)** class represents classes in inheritance analysis, storing class metadata including name, file path, parent/child relationships, abstract status, and docstring information.
 
-- **[OllamaProvider](files/src/local_deepwiki/providers/llm/ollama.md)** implements the LLM interface for Ollama models, providing health checking and generation capabilities
-- **[AnthropicProvider](files/src/local_deepwiki/providers/llm/anthropic.md)** handles Anthropic's Claude models with a name method returning "anthropic:{model}"
-- The **get_llm_provider** function serves as a factory, creating appropriate provider instances based on configuration
+Various test classes indicate the system includes:
+- API documentation extraction (TestAPIDocExtractor)
+- Class signature analysis (TestExtractClassSignature, TestClassInfo)
+- Inheritance diagram generation (TestGenerateClassDiagram)
+- Module documentation generation (TestGenerateModuleDocs)
 
-### Code Analysis and Parsing
+### Data Models
+The **[ChunkType](files/src/local_deepwiki/models.md)** enum and related classes ([ClassInfo](files/src/local_deepwiki/generators/diagrams.md), [ClassSignature](files/src/local_deepwiki/generators/api_docs.md), [FunctionSignature](files/src/local_deepwiki/generators/api_docs.md), [Parameter](files/src/local_deepwiki/generators/api_docs.md)) provide structured representations of code elements for analysis and documentation generation.
 
-Several components handle code structure analysis:
-
-- **[ChunkType](files/src/local_deepwiki/models.md)** enumerates different types of code chunks for processing
-- **[ClassInfo](files/src/local_deepwiki/generators/diagrams.md)**, **[ClassSignature](files/src/local_deepwiki/generators/api_docs.md)**, **[FunctionSignature](files/src/local_deepwiki/generators/api_docs.md)**, and **[Parameter](files/src/local_deepwiki/generators/api_docs.md)** classes model code structure elements
-- **[UsageExample](files/src/local_deepwiki/generators/test_examples.md)** represents code usage patterns
-- The **TestGetParentClasses** test class verifies parent class extraction across multiple languages (Python, TypeScript, Java, Swift, C++, Ruby, PHP, Kotlin, C#)
-
-### Documentation Generation
-
-- **[ProjectManifest](files/src/local_deepwiki/generators/manifest.md)** manages project metadata, providing technology stack summaries, dependency categorization, and entry point analysis
-- **[ResearchCancelledError](files/src/local_deepwiki/core/deep_research.md)** handles interruption of long-running documentation generation processes
-
-### Testing Infrastructure
-
-The system includes comprehensive test coverage with specialized test classes:
-
-- **TestMain** validates the [main](files/src/local_deepwiki/export/pdf.md) application entry point and watcher functionality
-- **TestMainCli** tests CLI interface for PDF export functionality
-- **TestGenerateModuleDocs** verifies module documentation generation with caching and filtering
-- **TestModuleToWikiPath** ensures correct module-to-wiki-path conversion
-- Various provider-specific test classes validate the factory pattern implementation
+The **[UsageExample](files/src/local_deepwiki/generators/test_examples.md)** class stores code usage examples, likely for documentation enhancement.
 
 ## Data Flow
 
-1. **Configuration Loading**: The system loads configuration through the [Config](files/src/local_deepwiki/config.md) class, determining which LLM and embedding providers to use
-2. **Provider Initialization**: Factory functions create appropriate provider instances based on configuration
-3. **Code Parsing**: Tree-sitter parsers analyze source code, extracting class hierarchies and structure information
-4. **Content Generation**: LLM providers generate documentation content based on parsed code structure
-5. **Manifest Creation**: [ProjectManifest](files/src/local_deepwiki/generators/manifest.md) aggregates project metadata and dependency information
-6. **Output Generation**: The system produces various output formats including HTML and PDF exports
+1. **Configuration Loading**: The system loads configuration through the config module, supporting context-aware configuration management with functions like [`get_config`](files/src/local_deepwiki/config.md), [`set_config`](files/src/local_deepwiki/config.md), and [`config_context`](files/src/local_deepwiki/config.md).
+
+2. **Provider Initialization**: Based on configuration, the factory functions create appropriate LLM and embedding providers with their specific configurations.
+
+3. **Code Analysis**: The system parses source code to extract class information, inheritance relationships, and other structural elements, storing them in structured data models.
+
+4. **Documentation Generation**: Various generators process the analyzed code to create different types of documentation, including inheritance diagrams and API documentation.
 
 ## Component Diagram
 
 ```mermaid
 graph TB
-    Config --> LLMConfig
-    Config --> EmbeddingConfig
+    Config[LLMConfig/EmbeddingConfig] --> Factory[get_llm_provider]
+    Factory --> Ollama[OllamaProvider]
+    Factory --> Anthropic[AnthropicProvider]
+    Factory --> OpenAI[OpenAIProvider]
     
-    LLMConfig --> AnthropicConfig
-    LLMConfig --> OllamaConfig  
-    LLMConfig --> OpenAILLMConfig
+    CodeAnalysis[Code Analysis] --> ClassNode
+    CodeAnalysis --> ClassInfo
+    CodeAnalysis --> FunctionSignature
     
-    EmbeddingConfig --> LocalEmbeddingConfig
-    EmbeddingConfig --> OpenAIEmbeddingConfig
+    ClassNode --> InheritanceDiagram[Inheritance Generator]
+    ClassInfo --> APIDoc[API Documentation]
+    FunctionSignature --> APIDoc
     
-    get_llm_provider --> OllamaProvider
-    get_llm_provider --> AnthropicProvider
-    
-    LLMConfig --> get_llm_provider
-    
-    ClassInfo --> ClassSignature
-    ClassSignature --> FunctionSignature
-    FunctionSignature --> Parameter
-    
-    ProjectManifest --> ChunkType
-    
-    TestMain --> TestMainCli
-    TestGenerateModuleDocs --> TestModuleToWikiPath
-    TestGetParentClasses --> UsageExample
+    UsageExample --> Documentation[Generated Documentation]
+    InheritanceDiagram --> Documentation
+    APIDoc --> Documentation
 ```
 
 ## Key Design Decisions
 
-### Provider Factory Pattern
-The system uses factory functions like get_llm_provider to abstract provider creation, allowing runtime selection between Ollama, Anthropic, and OpenAI providers based on configuration.
+### Provider Pattern
+The system implements a provider pattern for LLM and embedding services, allowing runtime selection between different AI service providers. This is evident from the factory functions and configuration-driven provider instantiation.
 
 ### Configuration-Driven Architecture
-All major system components are configured through Pydantic models, providing type safety and validation. The configuration system supports context managers for temporary configuration changes.
+The use of Pydantic models for configuration ([LLMConfig](files/src/local_deepwiki/config.md), [EmbeddingConfig](files/src/local_deepwiki/config.md)) with nested provider-specific configurations enables type-safe, validated configuration management with clear separation of concerns.
 
-### Multi-Language Code Parsing
-The system is designed to handle multiple programming languages through tree-sitter, with dedicated test coverage for inheritance patterns across languages including Python, Java, TypeScript, Swift, C++, Ruby, PHP, Kotlin, and C#.
+### Structured Code Representation
+The system uses well-defined data models ([ClassNode](files/src/local_deepwiki/generators/inheritance.md), [ClassInfo](files/src/local_deepwiki/generators/diagrams.md), [FunctionSignature](files/src/local_deepwiki/generators/api_docs.md)) to represent code elements, enabling consistent processing across different documentation generators.
 
-### Comprehensive Testing Strategy
-The architecture emphasizes testability with dedicated test classes for each major component, including provider factories, configuration management, and code parsing functionality.
+### Test-Driven Design
+The extensive test coverage visible in the test classes suggests a test-driven approach to development, with comprehensive testing of core functionality including provider factories, code analysis, and documentation generation.
 
-### Modular Output Generation
-The system supports multiple output formats (HTML, PDF) through separate CLI interfaces and export modules, allowing flexible documentation delivery.
+### Modular Generator System
+The separation of different documentation generators (inheritance diagrams, API docs, module docs) indicates a modular architecture where different types of documentation can be generated independently based on the same underlying code analysis.
 
 ## Workflow Sequences
 
@@ -256,9 +228,9 @@ The following source files were used to generate this documentation:
 - `tests/test_server_handlers.py:15-75`
 - `tests/test_chunker.py:13-428`
 - `tests/test_changelog.py:18-96`
+- `tests/test_coverage.py:13-50`
 - `tests/test_vectorstore.py:9-28`
 - `tests/test_wiki_coverage.py:50-120`
-- `tests/test_pdf_export.py:23-82`
 
 
-*Showing 10 of 91 source files.*
+*Showing 10 of 97 source files.*

@@ -1,38 +1,51 @@
-# wiki_modules.py
+# Wiki Modules Generator
 
 ## File Overview
 
-This module provides functionality for generating module documentation in a wiki format. It works with vector stores, wiki pages, and LLM providers to create documentation for code modules, and includes status management capabilities for tracking the documentation generation process.
+The `wiki_modules.py` file provides functionality for generating wiki documentation for code modules. Based on the imports and structure, this module integrates with the vector store system, LLM providers, and wiki status management to create module-specific documentation pages.
 
 ## Functions
 
 ### generate_module_docs
 
-Generates documentation for code modules. Based on the imports and module structure, this function likely coordinates the documentation generation process using the [VectorStore](../core/vectorstore.md), [LLMProvider](../providers/base.md), and [WikiStatusManager](wiki_status.md) components.
+Generates documentation for code modules. This function appears to be the [main](../export/pdf.md) entry point for creating module-specific wiki pages.
 
-**Parameters and return values**: Not visible in the provided code snippets.
+**Note**: Specific parameters and return values are not visible in the provided code excerpt.
 
 ### _generate_modules_index
 
-A private function that appears to generate an index of modules. The underscore prefix indicates this is an internal helper function used by the module documentation generation process.
+A private function that likely generates an index or overview page for all modules. The underscore prefix indicates this is an internal helper function.
 
-**Parameters and return values**: Not visible in the provided code snippets.
+**Note**: Specific parameters and return values are not visible in the provided code excerpt.
 
-## Related Components
+## Dependencies
 
-This module integrates with several other components based on its imports:
+This module integrates with several core components of the local_deepwiki system:
 
-- **[VectorStore](../core/vectorstore.md)**: Used for storing and retrieving vectorized representations of code content
-- **[WikiPage](../models.md)**: Model representing individual wiki pages in the documentation system
-- **[IndexStatus](../models.md)**: Model for tracking the status of indexing operations
-- **[LLMProvider](../providers/base.md)**: Base provider class for interacting with language models
-- **[WikiStatusManager](wiki_status.md)**: Manages the status of wiki generation operations
-
-The module appears to be part of a larger documentation generation system that processes code modules and creates wiki-style documentation using AI language models.
+- **[VectorStore](../core/vectorstore.md)**: Used for storing and retrieving vectorized documentation content
+- **[LLMProvider](../providers/base.md)**: Provides language model capabilities for generating documentation content
+- **[WikiStatusManager](wiki_status.md)**: Manages the status and tracking of wiki generation processes
+- **[IndexStatus](../models.md)**: Model for tracking indexing status
+- **[WikiPage](../models.md)**: Model representing wiki page data
 
 ## Usage Context
 
-This module is designed to work within the `local_deepwiki` system for automated documentation generation. It combines vector storage capabilities with language model providers to create comprehensive module documentation while tracking the generation status through the [WikiStatusManager](wiki_status.md).
+Based on the imports and function names, this module is designed to:
+
+1. Generate documentation for code modules using LLM providers
+2. Store generated content in the vector store system
+3. Track generation status through the [WikiStatusManager](wiki_status.md)
+4. Create both individual module documentation and module index pages
+
+The module appears to be part of a larger wiki generation system that automatically creates documentation from codebases.
+
+## Related Components
+
+This module works closely with:
+- Vector storage system for content persistence
+- LLM providers for content generation
+- Wiki status management for process tracking
+- Data models for structured wiki content
 
 ## API Reference
 
@@ -62,7 +75,7 @@ Generate documentation for each module/directory.
 
 
 <details>
-<summary>View Source (lines 15-132) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/wiki_modules.py#L15-L132">GitHub</a></summary>
+<summary>View Source (lines 15-132) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/wiki_modules.py#L15-L132">GitHub</a></summary>
 
 ```python
 async def generate_module_docs(
@@ -239,7 +252,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_generate_modules_index`
 
 <details>
-<summary>View Source (lines 135-151) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/wiki_modules.py#L135-L151">GitHub</a></summary>
+<summary>View Source (lines 135-151) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/wiki_modules.py#L135-L151">GitHub</a></summary>
 
 ```python
 def _generate_modules_index(module_pages: list[WikiPage]) -> str:

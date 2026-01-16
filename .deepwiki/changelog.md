@@ -6,6 +6,12 @@ Recent changes to this repository.
 
 ### January 16, 2026
 
+- [`8d2ab68`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/8d2ab68) Add inheritance trees, glossary, and coverage report to wiki
+  - Files: `src/local_deepwiki/generators/coverage.py`, `src/local_deepwiki/generators/glossary.py`, `src/local_deepwiki/generators/inheritance.py`, `src/local_deepwiki/generators/wiki.py`, `tests/test_coverage.py` (+3 more)
+
+- [`ea0726d`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/ea0726d) Regenerate wiki with GitHub links and Used By sections
+  - Files: `.deepwiki/architecture.md`, `.deepwiki/changelog.md`, `.deepwiki/dependencies.md`, `.deepwiki/files/src/local_deepwiki/config.md`, `.deepwiki/files/src/local_deepwiki/core/chunker.md` (+44 more)
+
 - [`62e3290`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/62e3290) Add GitHub source links and Used By sections to wiki pages
   - Files: `docs/WIKI_ENHANCEMENTS.md`, `src/local_deepwiki/generators/callgraph.py`, `src/local_deepwiki/generators/wiki_files.py`, `tests/test_wiki_files_coverage.py`
 
@@ -94,12 +100,6 @@ Recent changes to this repository.
 - [`b8f8b68`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/b8f8b68) Refactor: Extract page generators from wiki.py to wiki_pages.py
   - Files: `src/local_deepwiki/generators/wiki.py`, `src/local_deepwiki/generators/wiki_pages.py`
 
-- [`8457af3`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/8457af3) Refactor: Split server.py into server.py and handlers.py
-  - Files: `src/local_deepwiki/handlers.py`, `src/local_deepwiki/server.py`, `tests/test_deep_research.py`, `tests/test_server_handlers.py`, `tests/test_server_validation.py`
-
-- [`1ef3ff4`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/1ef3ff4) Refactor: Replace nested conditionals in [get_docstring](files/src/local_deepwiki/core/parser.md) with dispatch dictionary
-  - Files: `src/local_deepwiki/core/parser.py`
-
 ## Statistics
 
 - **Commits shown**: 30
@@ -117,9 +117,9 @@ The following source files were used to generate this documentation:
 - `tests/test_server_handlers.py:15-75`
 - `tests/test_chunker.py:13-428`
 - `tests/test_changelog.py:18-96`
+- `tests/test_coverage.py:13-50`
 - `tests/test_vectorstore.py:9-28`
 - `tests/test_wiki_coverage.py:50-120`
-- `tests/test_pdf_export.py:23-82`
 
 
-*Showing 10 of 91 source files.*
+*Showing 10 of 97 source files.*

@@ -1,8 +1,8 @@
-# Test Examples Generator
+# test_examples.py
 
 ## File Overview
 
-This file provides functionality for extracting usage examples from test files. It defines a data structure for representing usage examples and functions for parsing test files to [find](manifest.md) relevant examples for specific entities (functions or classes).
+This module provides functionality for extracting usage examples from test files. It defines a data structure to represent usage examples and a function to extract examples for specific entities (functions or classes) from test files.
 
 ## Classes
 
@@ -17,68 +17,50 @@ A data class that represents a usage example extracted from a test file.
 - `code` (str): Extracted code snippet
 - `description` (str | None): Description from test docstring
 
-This class serves as a container for all the relevant information about a usage example, including the code snippet and metadata about where it was found.
-
 ## Functions
 
 ### extract_examples_for_entities
 
-```python
-def extract_examples_for_entities(
-    test_file: Path,
-    entity_names: list[str],
-    max_examples_per_entity: int = 2,
-) -> list[UsageExample]:
-```
-
 Extracts usage examples from a test file for given entities.
 
 **Parameters:**
-- `test_file` (Path): Path to the test file to parse
+- `test_file` (Path): Path to the test file
 - `entity_names` (list[str]): Names of functions/classes to [find](manifest.md) examples for
-- `max_examples_per_entity` (int, optional): Maximum number of examples to extract per entity. Defaults to 2.
+- `max_examples_per_entity` (int): Maximum examples per entity (default: 2)
 
 **Returns:**
-- `list[UsageExample]`: List of UsageExample objects containing the extracted examples
+- `list[UsageExample]`: List of UsageExample objects
 
 **Error Handling:**
-The function includes error handling for file I/O operations, logging warnings when test files cannot be read due to OSError or IOError exceptions.
+The function includes error handling for file I/O operations, logging warnings when test files cannot be read.
 
 ## Usage Examples
-
-### Creating a UsageExample
-
-```python
-example = UsageExample(
-    entity_name="my_function",
-    test_name="test_my_function_basic",
-    test_file="/path/to/test_file.py",
-    code="result = my_function(arg1, arg2)",
-    description="Test basic functionality"
-)
-```
-
-### Extracting Examples from Test Files
 
 ```python
 from pathlib import Path
 
+# Extract examples for specific entities from a test file
 test_file = Path("tests/test_module.py")
-entities = ["function_name", "ClassName"]
-examples = extract_examples_for_entities(test_file, entities, max_examples_per_entity=3)
+entity_names = ["my_function", "MyClass"]
+examples = extract_examples_for_entities(
+    test_file=test_file,
+    entity_names=entity_names,
+    max_examples_per_entity=3
+)
 
+# Access example data
 for example in examples:
-    print(f"Example for {example.entity_name}: {example.code}")
+    print(f"Entity: {example.entity_name}")
+    print(f"Test: {example.test_name}")
+    print(f"Code: {example.code}")
 ```
 
 ## Related Components
 
 This module works with:
-- **[CodeParser](../core/parser.md)**: Used internally by extract_examples_for_entities to parse test file source code
-- **Path**: From the pathlib module for file system operations
-- **logger**: For logging warnings when file operations fail
-
-The module is designed to integrate with documentation generation systems that need to extract real usage examples from test suites to include in generated documentation.
+- [CodeParser](../core/parser.md) class for parsing test file source code
+- Path objects from the pathlib module for file handling
+- Logger for warning messages about file access issues
 
 ## API Reference
 
@@ -90,7 +72,7 @@ A usage example extracted from a test file.
 
 
 <details>
-<summary>View Source (lines 22-29) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/test_examples.py#L22-L29">GitHub</a></summary>
+<summary>View Source (lines 22-29) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/test_examples.py#L22-L29">GitHub</a></summary>
 
 ```python
 class UsageExample:
@@ -126,7 +108,7 @@ Find the corresponding test file for a source file.  Tries multiple strategies: 
 
 
 <details>
-<summary>View Source (lines 32-69) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/test_examples.py#L32-L69">GitHub</a></summary>
+<summary>View Source (lines 32-69) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/test_examples.py#L32-L69">GitHub</a></summary>
 
 ```python
 def find_test_file(source_file: Path, repo_root: Path) -> Path | None:
@@ -187,7 +169,7 @@ def walk(node: Node) -> None
 
 
 <details>
-<summary>View Source (lines 88-98) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/test_examples.py#L88-L98">GitHub</a></summary>
+<summary>View Source (lines 88-98) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/test_examples.py#L88-L98">GitHub</a></summary>
 
 ```python
 def walk(node: Node) -> None:
@@ -225,7 +207,7 @@ Extract usage examples from a test file for given entities.
 
 
 <details>
-<summary>View Source (lines 243-308) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/test_examples.py#L243-L308">GitHub</a></summary>
+<summary>View Source (lines 243-308) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/test_examples.py#L243-L308">GitHub</a></summary>
 
 ```python
 def extract_examples_for_entities(
@@ -317,7 +299,7 @@ Format usage examples as markdown.
 
 
 <details>
-<summary>View Source (lines 311-345) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/test_examples.py#L311-L345">GitHub</a></summary>
+<summary>View Source (lines 311-345) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/test_examples.py#L311-L345">GitHub</a></summary>
 
 ```python
 def format_examples_markdown(
@@ -381,7 +363,7 @@ Get formatted usage examples for a source file.  This is the [main](../export/pd
 
 
 <details>
-<summary>View Source (lines 348-395) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/test_examples.py#L348-L395">GitHub</a></summary>
+<summary>View Source (lines 348-395) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/test_examples.py#L348-L395">GitHub</a></summary>
 
 ```python
 def get_file_examples(
@@ -537,7 +519,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_get_node_text`
 
 <details>
-<summary>View Source (lines 72-74) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/test_examples.py#L72-L74">GitHub</a></summary>
+<summary>View Source (lines 72-74) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/test_examples.py#L72-L74">GitHub</a></summary>
 
 ```python
 def _get_node_text(node: Node, source: bytes) -> str:
@@ -551,7 +533,7 @@ def _get_node_text(node: Node, source: bytes) -> str:
 #### `_find_test_functions`
 
 <details>
-<summary>View Source (lines 77-101) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/test_examples.py#L77-L101">GitHub</a></summary>
+<summary>View Source (lines 77-101) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/test_examples.py#L77-L101">GitHub</a></summary>
 
 ```python
 def _find_test_functions(root: Node) -> list[Node]:
@@ -587,7 +569,7 @@ def _find_test_functions(root: Node) -> list[Node]:
 #### `_get_function_name`
 
 <details>
-<summary>View Source (lines 104-109) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/test_examples.py#L104-L109">GitHub</a></summary>
+<summary>View Source (lines 104-109) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/test_examples.py#L104-L109">GitHub</a></summary>
 
 ```python
 def _get_function_name(func_node: Node, source: bytes) -> str:
@@ -604,7 +586,7 @@ def _get_function_name(func_node: Node, source: bytes) -> str:
 #### `_get_docstring`
 
 <details>
-<summary>View Source (lines 112-130) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/test_examples.py#L112-L130">GitHub</a></summary>
+<summary>View Source (lines 112-130) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/test_examples.py#L112-L130">GitHub</a></summary>
 
 ```python
 def _get_docstring(func_node: Node, source: bytes) -> str | None:
@@ -634,7 +616,7 @@ def _get_docstring(func_node: Node, source: bytes) -> str | None:
 #### `_get_function_body`
 
 <details>
-<summary>View Source (lines 133-138) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/test_examples.py#L133-L138">GitHub</a></summary>
+<summary>View Source (lines 133-138) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/test_examples.py#L133-L138">GitHub</a></summary>
 
 ```python
 def _get_function_body(func_node: Node, source: bytes) -> str:
@@ -651,7 +633,7 @@ def _get_function_body(func_node: Node, source: bytes) -> str:
 #### `_is_mock_heavy`
 
 <details>
-<summary>View Source (lines 141-156) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/test_examples.py#L141-L156">GitHub</a></summary>
+<summary>View Source (lines 141-156) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/test_examples.py#L141-L156">GitHub</a></summary>
 
 ```python
 def _is_mock_heavy(body: str) -> bool:
@@ -678,7 +660,7 @@ def _is_mock_heavy(body: str) -> bool:
 #### `_extract_usage_snippet`
 
 <details>
-<summary>View Source (lines 159-240) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/test_examples.py#L159-L240">GitHub</a></summary>
+<summary>View Source (lines 159-240) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/generators/test_examples.py#L159-L240">GitHub</a></summary>
 
 ```python
 def _extract_usage_snippet(
@@ -773,7 +755,7 @@ def _extract_usage_snippet(
 
 ## See Also
 
-- [models](../models.md) - dependency
 - [logging](../logging.md) - dependency
+- [models](../models.md) - dependency
 - [chunker](../core/chunker.md) - shares 5 dependencies
 - [api_docs](api_docs.md) - shares 5 dependencies

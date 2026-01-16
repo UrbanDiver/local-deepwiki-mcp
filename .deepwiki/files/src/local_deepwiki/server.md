@@ -2,68 +2,65 @@
 
 ## File Overview
 
-The `server.py` module implements an MCP (Model Context Protocol) server for the Local DeepWiki system. This server provides a standardized interface for AI assistants to interact with wiki functionality, including code indexing, research, question answering, and wiki page management.
+This module implements an MCP (Model Context Protocol) server for the Local DeepWiki system. It serves as the main entry point that exposes wiki functionality through a standardized server interface, handling tool registration and request routing.
 
 ## Functions
 
 ### list_tools()
 
-Defines and returns the available tools that can be called through the MCP server interface.
+Returns a list of available tools that the MCP server can execute. Based on the imports, this function registers tools for wiki operations including repository indexing, code searching, question answering, deep research, and wiki page management.
 
-**Returns**: A list of Tool objects representing the available operations
+### call_tool()
 
-### call_tool(name: str, arguments: dict[str, Any] | None) -> list[TextContent]
+Handles incoming tool execution requests from MCP clients. This function routes requests to the appropriate handler functions based on the tool name and passes along the necessary arguments.
 
-Handles incoming tool calls by routing them to appropriate handler functions based on the tool name.
+**Parameters:**
+- Tool execution parameters as defined by the MCP protocol
 
-**Parameters**:
-- `name`: The name of the tool to execute
-- `arguments`: Dictionary containing the arguments for the tool call
-
-**Returns**: List of TextContent objects containing the response
+**Returns:**
+- Tool execution results in MCP-compatible format
 
 ### main()
 
-The main entry point that sets up and runs the MCP server with stdio transport.
+The main entry point for the MCP server application. Sets up and runs the server using stdio transport for communication with MCP clients.
 
 ### run()
 
-Alternative entry point function for running the server.
+Executes the server startup sequence, likely handling the asyncio event loop and server initialization.
 
 ## Related Components
 
-This module integrates with several handler functions from the `local_deepwiki.handlers` module:
+This module integrates with several other components of the Local DeepWiki system:
 
 - **ToolHandler**: Base handler class for tool operations
-- **[handle_ask_question](handlers.md)**: Processes question-answering requests
-- **[handle_deep_research](handlers.md)**: Performs comprehensive research operations
-- **[handle_export_wiki_html](handlers.md)**: Exports wiki content to HTML format
-- **[handle_export_wiki_pdf](handlers.md)**: Exports wiki content to PDF format
-- **[handle_index_repository](handlers.md)**: Indexes code repositories for search
-- **[handle_read_wiki_page](handlers.md)**: Retrieves individual wiki pages
-- **[handle_read_wiki_structure](handlers.md)**: Returns the overall wiki structure
-- **[handle_search_code](handlers.md)**: Searches through indexed code
-
-The module also uses:
-- **Server**: MCP server implementation
-- **stdio_server**: Standard input/output transport for the MCP server
-- **[get_logger](logging.md)**: Logging utility from the local_deepwiki.logging module
+- **Handler functions**: Specific handlers for different wiki operations:
+  - [`handle_ask_question`](handlers.md): Processes question-answering requests
+  - [`handle_deep_research`](handlers.md): Performs comprehensive research operations
+  - [`handle_export_wiki_html`](handlers.md): Exports wiki content to HTML format
+  - [`handle_export_wiki_pdf`](handlers.md): Exports wiki content to PDF format
+  - [`handle_index_repository`](handlers.md): Indexes code repositories for wiki generation
+  - [`handle_read_wiki_page`](handlers.md): Retrieves individual wiki pages
+  - [`handle_read_wiki_structure`](handlers.md): Returns wiki structure information
+  - [`handle_search_code`](handlers.md): Searches through indexed code
 
 ## Usage Examples
 
-```python
-# Run the MCP server
-from local_deepwiki.server import main
-main()
-```
+The server is designed to be run as an MCP server:
 
 ```python
-# Alternative way to run the server
-from local_deepwiki.server import run
-run()
+# Run the server
+if __name__ == "__main__":
+    main()
 ```
 
-The server is designed to be used as a standalone MCP server that AI assistants can connect to for wiki operations. The actual tool calls would be made through the MCP protocol rather than direct function calls.
+The server communicates through stdio and handles MCP protocol messages, making wiki functionality available to MCP-compatible clients through the registered tools.
+
+## Dependencies
+
+- `asyncio`: For asynchronous server operations
+- `mcp.server`: MCP server framework components
+- `mcp.types`: MCP protocol type definitions
+- Local modules for logging and request handling
 
 ## API Reference
 
@@ -84,7 +81,7 @@ List available tools.
 
 
 <details>
-<summary>View Source (lines 31-222) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/server.py#L31-L222">GitHub</a></summary>
+<summary>View Source (lines 31-222) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/server.py#L31-L222">GitHub</a></summary>
 
 ```python
 async def list_tools() -> list[Tool]:
@@ -304,7 +301,7 @@ Handle tool calls.
 
 
 <details>
-<summary>View Source (lines 240-254) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/server.py#L240-L254">GitHub</a></summary>
+<summary>View Source (lines 240-254) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/server.py#L240-L254">GitHub</a></summary>
 
 ```python
 async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
@@ -337,7 +334,7 @@ Main entry point for the MCP server.
 
 
 <details>
-<summary>View Source (lines 257-269) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/server.py#L257-L269">GitHub</a></summary>
+<summary>View Source (lines 257-269) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/server.py#L257-L269">GitHub</a></summary>
 
 ```python
 def main():
@@ -367,7 +364,7 @@ async def run()
 
 
 <details>
-<summary>View Source (lines 261-267) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/server.py#L261-L267">GitHub</a></summary>
+<summary>View Source (lines 261-267) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements-round2/src/local_deepwiki/server.py#L261-L267">GitHub</a></summary>
 
 ```python
 async def run():
