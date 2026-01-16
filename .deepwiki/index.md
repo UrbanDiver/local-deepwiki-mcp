@@ -5,15 +5,15 @@ Local DeepWiki-style MCP server for private repository documentation
 
 ## Description
 
-Local DeepWiki MCP is a Model Context Protocol (MCP) server that generates comprehensive documentation for private code repositories. The system provides multiple interfaces including a web server, file watcher for automatic updates, and export capabilities to HTML and PDF formats, all designed to create DeepWiki-style documentation locally.
+Local DeepWiki MCP is a Python-based documentation system that provides an MCP (Model Context Protocol) server for generating and serving private repository documentation. The system includes multiple export formats, a web interface, and file watching capabilities for automatic documentation updates.
 
 ## Key Features
 
-- **MCP Server Integration** - Implements a Model Context Protocol server with stdio communication for AI assistant integration, as shown in the [main](files/src/local_deepwiki/export/html.md) server entry point
-- **Multiple [LLM Provider](files/src/local_deepwiki/providers/base.md) Support** - Integrates with various AI providers including Ollama (with configurable models and base URLs), Anthropic, and OpenAI through dedicated provider classes
-- **Flexible Export Options** - Offers multiple export formats through dedicated CLI commands (`deepwiki-export` for HTML and `deepwiki-export-pdf` for PDF generation)
-- **Real-time File Watching** - Includes a watcher service (`deepwiki-watch`) that can monitor repository changes and trigger documentation updates, with options for full rebuilds and skipping initial indexing
-- **Configurable Documentation Generation** - Uses YAML-based configuration with research presets, embedding configurations, and parsing controls to customize documentation output
+- **MCP Server Integration** - Runs as an MCP server with stdio communication for integration with AI tools and editors
+- **Multiple Export Formats** - Supports HTML export via `deepwiki-export` and PDF export via `deepwiki-export-pdf` commands
+- **Web Interface** - Includes a Flask-based web server accessible through the `deepwiki-serve` command
+- **File Watching** - Automatic documentation regeneration with `deepwiki-watch` when repository files change
+- **Multi-Provider LLM Support** - Configurable integration with Ollama, OpenAI, and Anthropic language models for documentation generation
 
 ## Technology Stack
 
@@ -25,6 +25,8 @@ Local DeepWiki MCP is a Model Context Protocol (MCP) server that generates compr
 
 ```
 local-deepwiki-mcp/
+├── docs/
+│   └── WIKI_ENHANCEMENTS.md
 ├── html-export/
 │   ├── files/
 │   ├── modules/
@@ -47,8 +49,6 @@ local-deepwiki-mcp/
 │   ├── test_export_init.py
 │   ├── test_git_utils.py
 │   ├── test_handlers_coverage.py
-│   ├── test_html_export.py
-│   ├── test_incremental_wiki.py
 │   ...
 ...
 ```

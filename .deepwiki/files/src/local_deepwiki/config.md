@@ -2,164 +2,163 @@
 
 ## File Overview
 
-The config.py file provides configuration management for the local_deepwiki application. It implements a thread-safe configuration system with support for global configuration, context-local overrides, and automatic configuration loading from YAML files.
+The config.py file provides a centralized configuration system for the local_deepwiki application. It defines configuration models using Pydantic for various components including LLM providers, embedding services, parsing settings, and output configurations. The module supports both global configuration management and context-local overrides for testing or per-request scenarios.
 
 ## Classes
 
 ### Config
 
-The [main](export/html.md) configuration class that aggregates all configuration sections for the application.
+The [main](export/pdf.md) configuration class that aggregates all component configurations.
 
 **Fields:**
-- `embedding`: EmbeddingConfig instance for embedding provider settings
-- `llm`: LLMConfig instance for language model provider settings  
-- `llm_cache`: LLMCacheConfig instance for LLM caching configuration
-- `parsing`: ParsingConfig instance for document parsing settings
-- `chunking`: ChunkingConfig instance for text chunking configuration
-- `wiki`: WikiConfig instance for wiki generation settings
-- `deep_research`: DeepResearchConfig instance for research functionality
-- `output`: OutputConfig instance for output formatting settings
-- `prompts`: PromptsConfig instance for system prompts
+- `embedding`: EmbeddingConfig instance with default factory
+- `llm`: LLMConfig instance with default factory  
+- `llm_cache`: LLMCacheConfig instance with default factory
+- `parsing`: ParsingConfig instance with default factory
+- `chunking`: ChunkingConfig instance with default factory
+- `wiki`: WikiConfig instance with default factory
+- `deep_research`: DeepResearchConfig instance with default factory
+- `output`: OutputConfig instance with default factory
+- `prompts`: ProviderPromptsConfig instance
 
 ### LLMConfig
 
-Configuration for language model providers.
+Configuration for Large [Language](models.md) Model providers.
 
 **Fields:**
 - `provider`: Literal type accepting "ollama", "anthropic", or "openai" (default: "ollama")
-- `ollama`: OllamaConfig instance for Ollama-specific settings
-- `anthropic`: AnthropicConfig instance for Anthropic-specific settings  
-- `openai`: OpenAILLMConfig instance for OpenAI-specific settings
+- `ollama`: OllamaConfig instance with default factory
+- `anthropic`: AnthropicConfig instance with default factory  
+- `openai`: OpenAILLMConfig instance with default factory
 
 ### OllamaConfig
 
-Configuration specific to the Ollama LLM provider.
+Configuration for Ollama LLM provider.
 
 **Fields:**
 - `model`: Model name string (default: "qwen3-coder:30b")
-- `base_url`: API endpoint URL (default: "http://localhost:11434")
+- `base_url`: API URL string (default: "http://localhost:11434")
 
 ### AnthropicConfig
 
-Configuration specific to the Anthropic LLM provider.
+Configuration for Anthropic LLM provider.
 
 **Fields:**
 - `model`: Model name string (default: "claude-sonnet-4-20250514")
 
 ### OpenAILLMConfig
 
-Configuration specific to the OpenAI LLM provider.
+Configuration for OpenAI LLM provider.
 
 **Fields:**
 - `model`: Model name string (default: "gpt-4o")
 
 ### ProviderPromptsConfig
 
-System prompts configuration for a specific LLM provider.
+Prompts configuration for LLM providers.
 
 **Fields:**
-- `wiki_system`: System prompt for wiki documentation generation
-- `research_decomposition`: System prompt for question decomposition
-- `research_gap_analysis`: System prompt for gap analysis
-- `research_synthesis`: System prompt for answer synthesis
+- `wiki_system`: System prompt string for wiki documentation generation
+- `research_decomposition`: System prompt string for question decomposition
+- `research_gap_analysis`: System prompt string for gap analysis  
+- `research_synthesis`: System prompt string for answer synthesis
 
 ## Functions
 
-### get_config()
+### get_config
 
-Retrieves the active configuration instance in a thread-safe manner.
+```python
+def get_config() -> Config
+```
 
-**Returns:** Config - The active configuration instance
+Retrieves the active configuration instance. Returns context-local config if set, otherwise returns the global config. Thread-safe for concurrent access.
 
-**Behavior:**
-- Returns context-local config if set (via config_context)
-- Falls back to global singleton configuration
-- Automatically loads configuration if not yet initialized
-- Thread-safe for concurrent access
+**Returns:** The active Config instance
 
-### set_config(config)
+### set_config
 
-Sets the global configuration instance.
+```python
+def set_config(config: Config) -> None
+```
 
-**Parameters:**
-- `config`: Config - The configuration to set globally
-
-**Notes:**
-- Thread-safe operation
-- Sets global config, not context-local
-- Use config_context() for temporary overrides
-
-### reset_config()
-
-Resets the global configuration to uninitialized state.
-
-**Behavior:**
-- Clears global configuration singleton
-- Clears any context-local override
-- Thread-safe operation
-- Useful for testing scenarios
-
-### config_context(config)
-
-Context manager for temporary configuration overrides.
+Sets the global configuration instance in a thread-safe manner.
 
 **Parameters:**
-- `config`: Config - The configuration to use within the context
+- `config`: The Config instance to set globally
 
-**Yields:** Config - The provided configuration
+### reset_config
 
-**Usage:**
-Sets a context-local configuration that takes precedence over the global config within the context scope.
+```python
+def reset_config() -> None
+```
+
+Resets the global configuration to uninitialized state and clears any context-local override. Useful for testing to ensure a fresh config is loaded.
+
+### config_context
+
+```python
+def config_context(config: Config) -> Generator[Config, None, None]
+```
+
+Context manager for temporary config override. Sets a context-local configuration that takes precedence over the global config within the context.
+
+**Parameters:**
+- `config`: The Config instance to use within the context
+
+**Yields:** The provided Config instance
 
 ## Usage Examples
 
 ### Basic Configuration Access
 
 ```python
-# Get current configuration
+# Get the current configuration
 config = get_config()
 
 # Access LLM settings
 llm_provider = config.llm.provider
-model_name = config.llm.ollama.model
+ollama_model = config.llm.ollama.model
 ```
 
 ### Setting Global Configuration
 
 ```python
-# Create and set custom configuration
+# Create and set a custom configuration
 custom_config = Config()
-custom_config.llm.provider = "anthropic"
 set_config(custom_config)
 ```
 
-### Temporary Configuration Override
+### Using Context-Local Configuration
 
 ```python
-# Use temporary configuration in context
+# Temporary configuration override
+custom_config = Config()
 with config_context(custom_config):
     # get_config() returns custom_config here
     current_config = get_config()
-    # Use custom configuration...
 # get_config() returns global config again
 ```
 
-### Testing Configuration Reset
+### Resetting Configuration
 
 ```python
-# Reset for clean test state
+# Reset for testing
 reset_config()
-# Configuration will be reloaded on next get_config() call
+# Next get_config() call will load fresh configuration
 ```
 
 ## Related Components
 
-This configuration system works with:
-- **Pydantic BaseModel**: All configuration classes inherit from BaseModel for validation
-- **YAML**: Configuration loading from YAML files (via yaml import)
-- **Threading**: Thread-safe access using threading.Lock
-- **Context Variables**: Context-local overrides using contextvars.ContextVar
-- **Pathlib**: File system operations using Path objects
+The module works with several other configuration classes referenced but not fully defined in this file:
+- EmbeddingConfig for embedding service settings
+- ParsingConfig for document parsing options
+- ChunkingConfig for text chunking parameters
+- WikiConfig for wiki generation settings
+- DeepResearchConfig for research functionality
+- OutputConfig for output formatting
+- LLMCacheConfig for LLM response caching
+
+The module uses Pydantic BaseModel for configuration validation and YAML for configuration file loading, with thread-safe access patterns using threading locks and context variables for async-safe overrides.
 
 ## API Reference
 
@@ -171,7 +170,7 @@ Research mode presets for deep research pipeline.
 
 
 <details>
-<summary>View Source (lines 14-19)</summary>
+<summary>View Source (lines 14-19) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/config.py#L14-L19">GitHub</a></summary>
 
 ```python
 class ResearchPreset(str, Enum):
@@ -192,7 +191,7 @@ Configuration for local embedding model.
 
 
 <details>
-<summary>View Source (lines 51-56)</summary>
+<summary>View Source (lines 51-56) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/config.py#L51-L56">GitHub</a></summary>
 
 ```python
 class LocalEmbeddingConfig(BaseModel):
@@ -213,7 +212,7 @@ Configuration for OpenAI embedding model.
 
 
 <details>
-<summary>View Source (lines 59-62)</summary>
+<summary>View Source (lines 59-62) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/config.py#L59-L62">GitHub</a></summary>
 
 ```python
 class OpenAIEmbeddingConfig(BaseModel):
@@ -232,7 +231,7 @@ Embedding provider configuration.
 
 
 <details>
-<summary>View Source (lines 65-70)</summary>
+<summary>View Source (lines 65-70) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/config.py#L65-L70">GitHub</a></summary>
 
 ```python
 class EmbeddingConfig(BaseModel):
@@ -253,7 +252,7 @@ Configuration for Ollama LLM.
 
 
 <details>
-<summary>View Source (lines 73-77)</summary>
+<summary>View Source (lines 73-77) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/config.py#L73-L77">GitHub</a></summary>
 
 ```python
 class OllamaConfig(BaseModel):
@@ -273,7 +272,7 @@ Configuration for Anthropic LLM.
 
 
 <details>
-<summary>View Source (lines 80-83)</summary>
+<summary>View Source (lines 80-83) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/config.py#L80-L83">GitHub</a></summary>
 
 ```python
 class AnthropicConfig(BaseModel):
@@ -292,7 +291,7 @@ Configuration for OpenAI LLM.
 
 
 <details>
-<summary>View Source (lines 86-89)</summary>
+<summary>View Source (lines 86-89) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/config.py#L86-L89">GitHub</a></summary>
 
 ```python
 class OpenAILLMConfig(BaseModel):
@@ -311,7 +310,7 @@ LLM provider configuration.
 
 
 <details>
-<summary>View Source (lines 92-100)</summary>
+<summary>View Source (lines 92-100) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/config.py#L92-L100">GitHub</a></summary>
 
 ```python
 class LLMConfig(BaseModel):
@@ -335,7 +334,7 @@ Code parsing configuration.
 
 
 <details>
-<summary>View Source (lines 103-141)</summary>
+<summary>View Source (lines 103-141) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/config.py#L103-L141">GitHub</a></summary>
 
 ```python
 class ParsingConfig(BaseModel):
@@ -389,7 +388,7 @@ Chunking configuration.
 
 
 <details>
-<summary>View Source (lines 144-155)</summary>
+<summary>View Source (lines 144-155) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/config.py#L144-L155">GitHub</a></summary>
 
 ```python
 class ChunkingConfig(BaseModel):
@@ -416,7 +415,7 @@ Wiki generation configuration.
 
 
 <details>
-<summary>View Source (lines 158-193)</summary>
+<summary>View Source (lines 158-193) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/config.py#L158-L193">GitHub</a></summary>
 
 ```python
 class WikiConfig(BaseModel):
@@ -469,7 +468,7 @@ Deep research pipeline configuration.
 
 
 <details>
-<summary>View Source (lines 196-264)</summary>
+<summary>View Source (lines 196-264) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/config.py#L196-L264">GitHub</a></summary>
 
 ```python
 class DeepResearchConfig(BaseModel):
@@ -561,7 +560,7 @@ Return a new config with preset values applied.  The preset values override the 
 
 
 <details>
-<summary>View Source (lines 196-264)</summary>
+<summary>View Source (lines 196-264) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/config.py#L196-L264">GitHub</a></summary>
 
 ```python
 class DeepResearchConfig(BaseModel):
@@ -645,7 +644,7 @@ Output configuration.
 
 
 <details>
-<summary>View Source (lines 267-271)</summary>
+<summary>View Source (lines 267-271) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/config.py#L267-L271">GitHub</a></summary>
 
 ```python
 class OutputConfig(BaseModel):
@@ -665,7 +664,7 @@ LLM response caching configuration.
 
 
 <details>
-<summary>View Source (lines 274-301)</summary>
+<summary>View Source (lines 274-301) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/config.py#L274-L301">GitHub</a></summary>
 
 ```python
 class LLMCacheConfig(BaseModel):
@@ -708,7 +707,7 @@ Prompts configuration for a specific provider.
 
 
 <details>
-<summary>View Source (lines 391-397)</summary>
+<summary>View Source (lines 391-397) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/config.py#L391-L397">GitHub</a></summary>
 
 ```python
 class ProviderPromptsConfig(BaseModel):
@@ -732,7 +731,7 @@ Provider-specific prompts configuration.
 
 
 <details>
-<summary>View Source (lines 400-444)</summary>
+<summary>View Source (lines 400-444) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/config.py#L400-L444">GitHub</a></summary>
 
 ```python
 class PromptsConfig(BaseModel):
@@ -800,7 +799,7 @@ Get prompts for a specific provider.
 
 
 <details>
-<summary>View Source (lines 400-444)</summary>
+<summary>View Source (lines 400-444) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/config.py#L400-L444">GitHub</a></summary>
 
 ```python
 class PromptsConfig(BaseModel):
@@ -862,7 +861,7 @@ Main configuration.
 
 
 <details>
-<summary>View Source (lines 447-495)</summary>
+<summary>View Source (lines 447-495) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/config.py#L447-L495">GitHub</a></summary>
 
 ```python
 class Config(BaseModel):
@@ -928,7 +927,7 @@ Get prompts for the currently configured LLM provider.
 
 
 <details>
-<summary>View Source (lines 447-495)</summary>
+<summary>View Source (lines 447-495) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/config.py#L447-L495">GitHub</a></summary>
 
 ```python
 class Config(BaseModel):
@@ -999,7 +998,7 @@ Load configuration from file or defaults.
 
 
 <details>
-<summary>View Source (lines 447-495)</summary>
+<summary>View Source (lines 447-495) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/config.py#L447-L495">GitHub</a></summary>
 
 ```python
 class Config(BaseModel):
@@ -1070,7 +1069,7 @@ Get the wiki output path for a repository.
 
 
 <details>
-<summary>View Source (lines 447-495)</summary>
+<summary>View Source (lines 447-495) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/config.py#L447-L495">GitHub</a></summary>
 
 ```python
 class Config(BaseModel):
@@ -1144,7 +1143,7 @@ Get the vector database path for a repository.
 
 
 <details>
-<summary>View Source (lines 447-495)</summary>
+<summary>View Source (lines 447-495) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/config.py#L447-L495">GitHub</a></summary>
 
 ```python
 class Config(BaseModel):
@@ -1215,7 +1214,7 @@ Get the configuration instance.  Returns the context-local config if set, otherw
 
 
 <details>
-<summary>View Source (lines 506-525)</summary>
+<summary>View Source (lines 506-525) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/config.py#L506-L525">GitHub</a></summary>
 
 ```python
 def get_config() -> Config:
@@ -1260,7 +1259,7 @@ Set the global configuration instance.  Thread-safe. Note: This sets the global 
 
 
 <details>
-<summary>View Source (lines 528-539)</summary>
+<summary>View Source (lines 528-539) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/config.py#L528-L539">GitHub</a></summary>
 
 ```python
 def set_config(config: Config) -> None:
@@ -1292,7 +1291,7 @@ Reset the global configuration to uninitialized state.  Useful for testing to en
 
 
 <details>
-<summary>View Source (lines 542-551)</summary>
+<summary>View Source (lines 542-551) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/config.py#L542-L551">GitHub</a></summary>
 
 ```python
 def reset_config() -> None:
@@ -1330,7 +1329,7 @@ Context manager for temporary config override.  Sets a context-local configurati
 
 
 <details>
-<summary>View Source (lines 555-577)</summary>
+<summary>View Source (lines 555-577) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/config.py#L555-L577">GitHub</a></summary>
 
 ```python
 def config_context(config: Config) -> Generator[Config, None, None]:
@@ -1530,6 +1529,22 @@ flowchart TD
     classDef method fill:#fff3e0
     class N0,N1,N2,N3 method
 ```
+
+## Used By
+
+Functions and methods in this file and their callers:
+
+- **`ResearchPreset`**: called by `DeepResearchConfig.with_preset`
+- **`cls`**: called by `Config.load`
+- **`exists`**: called by `Config.load`
+- **`get_for_provider`**: called by `Config.get_prompts`
+- **`get_wiki_path`**: called by `Config.get_vector_db_path`
+- **`home`**: called by `Config.load`
+- **`load`**: called by `get_config`
+- **`model_copy`**: called by `DeepResearchConfig.with_preset`
+- **`model_validate`**: called by `Config.load`
+- **`reset`**: called by `config_context`
+- **`safe_load`**: called by `Config.load`
 
 ## Usage Examples
 

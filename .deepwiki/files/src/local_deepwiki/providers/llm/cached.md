@@ -2,29 +2,34 @@
 
 ## File Overview
 
-This module provides a caching [wrapper](../base.md) for LLM providers. It implements the CachingLLMProvider class that adds caching capabilities to any underlying LLM provider, allowing for efficient reuse of previously generated responses.
+This module provides a caching [wrapper](../base.md) for LLM providers, implementing a [decorator](../base.md) pattern to add caching capabilities to any LLM provider implementation.
 
 ## Classes
 
 ### CachingLLMProvider
 
-A [wrapper](../base.md) class that adds caching functionality to any LLM provider. This class implements the [decorator](../base.md) pattern, wrapping an existing [LLMProvider](../base.md) instance with caching capabilities through the [LLMCache](../../core/llm_cache.md) system.
+A [wrapper](../base.md) class that adds caching functionality to LLM providers. This class implements the [LLMProvider](../base.md) interface while delegating actual LLM operations to an underlying provider and caching the results.
 
-The CachingLLMProvider inherits from [LLMProvider](../base.md) and delegates all LLM operations to the wrapped provider while transparently handling cache storage and retrieval.
+**Purpose**: Reduces redundant API calls by caching LLM responses, improving performance and reducing costs for repeated queries.
+
+**Key Features**:
+- Wraps any existing [LLMProvider](../base.md) implementation
+- Provides transparent caching without changing the provider interface
+- Uses the [LLMCache](../../core/llm_cache.md) system for persistent storage of responses
 
 ## Related Components
 
-This module integrates with several core components:
+This module integrates with several other components:
 
-- **[LLMProvider](../base.md)**: The base class that CachingLLMProvider extends, providing the standard LLM provider interface
-- **[LLMCache](../../core/llm_cache.md)**: The caching system used to store and retrieve LLM responses
-- **Logging system**: Used through `get_logger()` for tracking cache operations and debugging
+- **[LLMProvider](../base.md)**: Base interface that this class implements
+- **[LLMCache](../../core/llm_cache.md)**: Core caching system used for storing and retrieving cached responses
+- **[get_logger](../../logging.md)**: Logging utility for debugging and monitoring cache operations
 
 The module uses `AsyncIterator` from the collections.abc module, indicating it supports asynchronous streaming operations typical of LLM providers.
 
 ## Usage Context
 
-The CachingLLMProvider serves as a transparent caching layer that can wrap any existing LLM provider implementation. This allows applications to benefit from response caching without modifying their existing LLM provider usage patterns.
+The CachingLLMProvider serves as a middleware layer that can wrap any LLM provider to add caching capabilities. This allows the application to benefit from caching without modifying existing provider implementations.
 
 ## API Reference
 
@@ -38,7 +43,7 @@ LLM provider [wrapper](../base.md) that caches responses.  Wraps any [LLMProvide
 
 
 <details>
-<summary>View Source (lines 12-158)</summary>
+<summary>View Source (lines 12-158) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/providers/llm/cached.py#L12-L158">GitHub</a></summary>
 
 ```python
 class CachingLLMProvider(LLMProvider):
@@ -63,7 +68,7 @@ Initialize the caching provider.
 
 
 <details>
-<summary>View Source (lines 23-35)</summary>
+<summary>View Source (lines 23-35) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/providers/llm/cached.py#L23-L35">GitHub</a></summary>
 
 ```python
 def __init__(
@@ -93,7 +98,7 @@ Get the provider name with cache prefix.
 
 
 <details>
-<summary>View Source (lines 38-40)</summary>
+<summary>View Source (lines 38-40) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/providers/llm/cached.py#L38-L40">GitHub</a></summary>
 
 ```python
 def name(self) -> str:
@@ -113,7 +118,7 @@ Get cache statistics.
 
 
 <details>
-<summary>View Source (lines 43-45)</summary>
+<summary>View Source (lines 43-45) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/providers/llm/cached.py#L43-L45">GitHub</a></summary>
 
 ```python
 def stats(self) -> dict[str, int]:
@@ -141,7 +146,7 @@ Generate text with caching.  Checks cache first, generates from provider on miss
 
 
 <details>
-<summary>View Source (lines 47-98)</summary>
+<summary>View Source (lines 47-98) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/providers/llm/cached.py#L47-L98">GitHub</a></summary>
 
 ```python
 async def generate(
@@ -220,7 +225,7 @@ Stream generation with caching.  For cache hits, simulates streaming by yielding
 
 
 <details>
-<summary>View Source (lines 100-158)</summary>
+<summary>View Source (lines 100-158) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/providers/llm/cached.py#L100-L158">GitHub</a></summary>
 
 ```python
 async def generate_stream(
@@ -315,6 +320,13 @@ flowchart TD
     classDef method fill:#fff3e0
     class N0,N1 method
 ```
+
+## Used By
+
+Functions and methods in this file and their callers:
+
+- **`generate`**: called by `CachingLLMProvider.generate`
+- **`generate_stream`**: called by `CachingLLMProvider.generate_stream`
 
 ## Relevant Source Files
 

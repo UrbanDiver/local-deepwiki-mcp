@@ -4,7 +4,15 @@ Recent changes to this repository.
 
 ## Recent Commits
 
+### January 16, 2026
+
+- [`62e3290`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/62e3290) Add GitHub source links and Used By sections to wiki pages
+  - Files: `docs/WIKI_ENHANCEMENTS.md`, `src/local_deepwiki/generators/callgraph.py`, `src/local_deepwiki/generators/wiki_files.py`, `tests/test_wiki_files_coverage.py`
+
 ### January 15, 2026
+
+- [`d275583`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/d275583) Add inline expandable source code to wiki documentation
+  - Files: `.deepwiki/architecture.md`, `.deepwiki/changelog.md`, `.deepwiki/dependencies.md`, `.deepwiki/files/index.md`, `.deepwiki/files/src/local_deepwiki/config.md` (+49 more)
 
 - [`0d91a70`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/0d91a70) Apply Python best practices: black, isort, mypy type fixes
   - Files: `pyproject.toml`, `src/local_deepwiki/core/chunker.py`, `src/local_deepwiki/core/deep_research.py`, `src/local_deepwiki/core/indexer.py`, `src/local_deepwiki/core/llm_cache.py` (+45 more)
@@ -92,17 +100,11 @@ Recent changes to this repository.
 - [`1ef3ff4`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/1ef3ff4) Refactor: Replace nested conditionals in [get_docstring](files/src/local_deepwiki/core/parser.md) with dispatch dictionary
   - Files: `src/local_deepwiki/core/parser.py`
 
-- [`43b1ef2`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/43b1ef2) Refactor: Extract step methods from [DeepResearchPipeline](files/src/local_deepwiki/core/deep_research.md).research()
-  - Files: `src/local_deepwiki/core/deep_research.py`
-
-- [`e90b8f7`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/e90b8f7) Refactor: Add [handle_tool_errors](files/src/local_deepwiki/handlers.md) [decorator](files/src/local_deepwiki/providers/base.md) for consistent error handling
-  - Files: `src/local_deepwiki/server.py`
-
 ## Statistics
 
 - **Commits shown**: 30
 - **Contributors**: 1
-- **Latest commit**: 2026-01-15
+- **Latest commit**: 2026-01-16
 
 ## Relevant Source Files
 

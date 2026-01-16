@@ -2,40 +2,46 @@
 
 ## File Overview
 
-The chunker module provides functionality for breaking down source code files into meaningful chunks for documentation generation. It contains the CodeChunker class that parses code using tree-sitter and extracts different types of code elements like classes, functions, and modules into structured chunks.
+The `chunker.py` file provides code chunking functionality for the local deepwiki system. It contains the CodeChunker class which breaks down source code files into logical chunks based on code structure, and utility functions for extracting parent class information.
 
 ## Classes
 
 ### CodeChunker
 
-The [main](../export/html.md) class responsible for chunking source code files into structured [CodeChunk](../models.md) objects. It uses tree-sitter parsing to identify and extract different code elements based on the programming language.
+The CodeChunker class handles the process of parsing source code files and breaking them down into meaningful chunks for documentation generation. It works with the [CodeParser](parser.md) to analyze code structure and creates [CodeChunk](../models.md) objects representing different parts of the codebase.
 
 ## Functions
 
 ### get_parent_classes
 
-A utility function that appears to work with code parsing operations, likely for extracting inheritance relationships from parsed code.
+A utility function that extracts parent class information from code structures, supporting the chunking process by providing inheritance context.
 
-## Dependencies
+## Usage Examples
 
-This module relies on several components:
+```python
+from local_deepwiki.core.chunker import CodeChunker, get_parent_classes
+from local_deepwiki.models import Language
+from pathlib import Path
 
-- **tree_sitter**: For parsing source code into abstract syntax trees
-- **[CodeParser](parser.md)**: From the parser module, provides language-specific parsing capabilities
-- **[ChunkingConfig](../config.md)**: Configuration settings for chunking behavior
-- **[CodeChunk](../models.md) and [ChunkType](../models.md)**: Data models for representing code chunks
-- **[Language](../models.md)**: Enumeration for supported programming languages
+# Create a chunker instance
+chunker = CodeChunker()
 
-## Usage Context
-
-The chunker module is designed to work as part of a larger documentation generation system. It takes parsed source code and converts it into structured chunks that can be processed further for documentation purposes. The chunking process respects language-specific syntax and can identify different types of code elements like classes, functions, and modules.
+# Process a Python file
+file_path = Path("src/example.py")
+chunks = chunker.chunk_file(file_path, Language.PYTHON)
+```
 
 ## Related Components
 
-- Works with the **parser module** for code parsing operations
-- Uses **config module** for chunking configuration settings
-- Produces **[CodeChunk](../models.md)** objects defined in the models module
-- Integrates with the logging system for operational feedback
+This file integrates with several other components of the local deepwiki system:
+
+- **[CodeParser](parser.md)**: Used for parsing source code files and extracting AST nodes
+- **[ChunkingConfig](../config.md)**: Provides configuration settings for the chunking process via `get_config()`
+- **[CodeChunk](../models.md)**: The model class representing individual code chunks
+- **[ChunkType](../models.md)**: Enumeration defining different types of code chunks
+- **[Language](../models.md)**: Enumeration for supported programming languages
+
+The chunker relies on tree-sitter for syntax tree parsing and uses various parser utilities like [`find_nodes_by_type`](parser.md), [`get_docstring`](parser.md), [`get_node_name`](parser.md), and [`get_node_text`](parser.md) for extracting information from AST nodes.
 
 ## API Reference
 
@@ -47,7 +53,7 @@ Extract semantic code chunks from source files using AST analysis.
 
 
 <details>
-<summary>View Source (lines 200-600)</summary>
+<summary>View Source (lines 200-600) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/chunker.py#L200-L600">GitHub</a></summary>
 
 ```python
 class CodeChunker:
@@ -71,7 +77,7 @@ Initialize the chunker.
 
 
 <details>
-<summary>View Source (lines 203-210)</summary>
+<summary>View Source (lines 203-210) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/chunker.py#L203-L210">GitHub</a></summary>
 
 ```python
 def __init__(self, config: ChunkingConfig | None = None):
@@ -105,7 +111,7 @@ Extract code chunks from a source file.
 
 
 <details>
-<summary>View Source (lines 212-250)</summary>
+<summary>View Source (lines 212-250) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/chunker.py#L212-L250">GitHub</a></summary>
 
 ```python
 def chunk_file(self, file_path: Path, repo_root: Path) -> Iterator[CodeChunk]:
@@ -174,7 +180,7 @@ Extract parent class names from a class definition.
 
 
 <details>
-<summary>View Source (lines 94-197)</summary>
+<summary>View Source (lines 94-197) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/chunker.py#L94-L197">GitHub</a></summary>
 
 ```python
 def get_parent_classes(class_node: Node, source: bytes, language: Language) -> list[str]:
@@ -391,6 +397,35 @@ flowchart TD
     class N1,N2,N3,N4,N5,N6,N7,N8,N9,N10 method
 ```
 
+## Used By
+
+Functions and methods in this file and their callers:
+
+- **[`CodeChunk`](../models.md)**: called by `CodeChunker._create_class_summary_chunk`, `CodeChunker._create_function_chunk`, `CodeChunker._create_imports_chunk`, `CodeChunker._create_method_chunk`, `CodeChunker._create_module_chunk`, `CodeChunker._extract_class_chunks`
+- **[`CodeParser`](parser.md)**: called by `CodeChunker.__init__`
+- **`Path`**: called by `CodeChunker._create_module_chunk`
+- **`_create_class_summary_chunk`**: called by `CodeChunker._extract_class_chunks`
+- **`_create_file_summary`**: called by `CodeChunker._create_module_chunk`
+- **`_create_function_chunk`**: called by `CodeChunker.chunk_file`
+- **`_create_imports_chunk`**: called by `CodeChunker.chunk_file`
+- **`_create_method_chunk`**: called by `CodeChunker._extract_class_chunks`
+- **`_create_module_chunk`**: called by `CodeChunker.chunk_file`
+- **`_extract_class_chunks`**: called by `CodeChunker.chunk_file`
+- **`_generate_id`**: called by `CodeChunker._create_class_summary_chunk`, `CodeChunker._create_function_chunk`, `CodeChunker._create_imports_chunk`, `CodeChunker._create_method_chunk`, `CodeChunker._create_module_chunk`, `CodeChunker._extract_class_chunks`
+- **`_is_inside_class`**: called by `CodeChunker._create_file_summary`, `CodeChunker.chunk_file`
+- **`decode`**: called by `CodeChunker._create_class_summary_chunk`
+- **`encode`**: called by `CodeChunker._generate_id`
+- **[`find_nodes_by_type`](parser.md)**: called by `CodeChunker._create_class_summary_chunk`, `CodeChunker._create_file_summary`, `CodeChunker._extract_class_chunks`, `CodeChunker.chunk_file`, `get_parent_classes`
+- **[`get_config`](../config.md)**: called by `CodeChunker.__init__`
+- **[`get_docstring`](parser.md)**: called by `CodeChunker._create_function_chunk`, `CodeChunker._create_method_chunk`, `CodeChunker._extract_class_chunks`
+- **[`get_node_name`](parser.md)**: called by `CodeChunker._create_class_summary_chunk`, `CodeChunker._create_file_summary`, `CodeChunker._create_function_chunk`, `CodeChunker._create_method_chunk`, `CodeChunker._extract_class_chunks`
+- **[`get_node_text`](parser.md)**: called by `CodeChunker._create_file_summary`, `CodeChunker._create_function_chunk`, `CodeChunker._create_imports_chunk`, `CodeChunker._create_method_chunk`, `CodeChunker._create_module_chunk`, `CodeChunker._extract_class_chunks`, `get_parent_classes`
+- **`get_parent_classes`**: called by `CodeChunker._extract_class_chunks`
+- **`hexdigest`**: called by `CodeChunker._generate_id`
+- **`parse_file`**: called by `CodeChunker.chunk_file`
+- **`relative_to`**: called by `CodeChunker.chunk_file`
+- **`sha256`**: called by `CodeChunker._generate_id`
+
 ## Usage Examples
 
 *Examples extracted from test files*
@@ -467,7 +502,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_create_module_chunk`
 
 <details>
-<summary>View Source (lines 252-296)</summary>
+<summary>View Source (lines 252-296) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/chunker.py#L252-L296">GitHub</a></summary>
 
 ```python
 def _create_module_chunk(
@@ -523,7 +558,7 @@ def _create_module_chunk(
 #### `_create_file_summary`
 
 <details>
-<summary>View Source (lines 298-338)</summary>
+<summary>View Source (lines 298-338) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/chunker.py#L298-L338">GitHub</a></summary>
 
 ```python
 def _create_file_summary(self, root: Node, source: bytes, language: Language) -> str:
@@ -575,7 +610,7 @@ def _create_file_summary(self, root: Node, source: bytes, language: Language) ->
 #### `_create_imports_chunk`
 
 <details>
-<summary>View Source (lines 340-373)</summary>
+<summary>View Source (lines 340-373) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/chunker.py#L340-L373">GitHub</a></summary>
 
 ```python
 def _create_imports_chunk(
@@ -620,7 +655,7 @@ def _create_imports_chunk(
 #### `_extract_class_chunks`
 
 <details>
-<summary>View Source (lines 375-433)</summary>
+<summary>View Source (lines 375-433) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/chunker.py#L375-L433">GitHub</a></summary>
 
 ```python
 def _extract_class_chunks(
@@ -690,7 +725,7 @@ def _extract_class_chunks(
 #### `_create_class_summary_chunk`
 
 <details>
-<summary>View Source (lines 435-494)</summary>
+<summary>View Source (lines 435-494) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/chunker.py#L435-L494">GitHub</a></summary>
 
 ```python
 def _create_class_summary_chunk(
@@ -761,7 +796,7 @@ def _create_class_summary_chunk(
 #### `_create_method_chunk`
 
 <details>
-<summary>View Source (lines 496-534)</summary>
+<summary>View Source (lines 496-534) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/chunker.py#L496-L534">GitHub</a></summary>
 
 ```python
 def _create_method_chunk(
@@ -811,7 +846,7 @@ def _create_method_chunk(
 #### `_create_function_chunk`
 
 <details>
-<summary>View Source (lines 536-569)</summary>
+<summary>View Source (lines 536-569) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/chunker.py#L536-L569">GitHub</a></summary>
 
 ```python
 def _create_function_chunk(
@@ -856,7 +891,7 @@ def _create_function_chunk(
 #### `_is_inside_class`
 
 <details>
-<summary>View Source (lines 571-586)</summary>
+<summary>View Source (lines 571-586) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/chunker.py#L571-L586">GitHub</a></summary>
 
 ```python
 def _is_inside_class(self, node: Node, class_types: set[str]) -> bool:
@@ -883,7 +918,7 @@ def _is_inside_class(self, node: Node, class_types: set[str]) -> bool:
 #### `_generate_id`
 
 <details>
-<summary>View Source (lines 588-600)</summary>
+<summary>View Source (lines 588-600) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/chunker.py#L588-L600">GitHub</a></summary>
 
 ```python
 def _generate_id(self, file_path: str, name: str, line: int) -> str:

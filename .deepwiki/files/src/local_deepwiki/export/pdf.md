@@ -1,112 +1,130 @@
 # PDF Export Module
 
-This module provides functionality for exporting DeepWiki documentation to PDF format. It can generate either a single combined PDF or separate PDF files for each wiki page.
+## File Overview
+
+The `pdf.py` module provides functionality to export DeepWiki documentation to PDF format. It supports both single-file exports (combining all pages) and separate file exports (one PDF per page). The module includes utilities for handling Mermaid diagrams and rendering markdown content suitable for PDF generation.
 
 ## Classes
 
 ### PdfExporter
 
-The PdfExporter class handles the conversion of wiki markdown files to PDF format.
+The PdfExporter class handles the conversion of wiki pages to PDF format with support for different export modes.
 
-**Constructor:**
-- `__init__(wiki_path: Path, output_path: Path)`: Initialize the exporter with paths to the wiki directory and output location
+**Initialization:**
+- `wiki_path`: Path to the .deepwiki directory containing the source files
+- `output_path`: Destination path for the generated PDF file(s)
+- Maintains a `toc_entries` list for table of contents generation
 
 **Key Methods:**
-- `export_single()`: Export all wiki pages as a single combined PDF
-- `export_separate()`: Export each wiki page as a separate PDF file, returning a list of generated PDF file paths
+- `export_single()`: Combines all wiki pages into a single PDF file
+- `export_separate()`: Creates individual PDF files for each wiki page
+- `_collect_pages_in_order()`: Orders pages based on table of contents structure
+- `_extract_paths_from_toc()`: Extracts file paths from TOC configuration
+- `_build_combined_html()`: Generates HTML content for single-file export
+- `_build_toc_html()`: Creates HTML table of contents
+- `_export_page()`: Handles individual page PDF generation
 
 ## Functions
 
 ### export_to_pdf
 
-```python
-def export_to_pdf(
-    wiki_path: Path | str,
-    output_path: Path | str | None = None,
-    single_file: bool = True,
-) -> str
-```
-
-Main export function that converts wiki documentation to PDF format.
+Main export function that provides a high-level interface for PDF generation.
 
 **Parameters:**
-- `wiki_path`: Path to the .deepwiki directory
-- `output_path`: Output path (defaults to wiki.pdf for single file or wiki_pdfs/ for separate files)
-- `single_file`: If True, combines all pages into one PDF; if False, creates separate PDFs
+- `wiki_path`: Path to the .deepwiki directory (Path or string)
+- `output_path`: Output destination (optional, defaults to "wiki.pdf" or "wiki_pdfs/")
+- `single_file`: Boolean flag to control export mode (default: True)
 
 **Returns:**
-- Success message with the output path
-
-**Raises:**
-- `ValueError`: If the wiki path does not exist
+- Success message string containing the output path
 
 ### main
 
-```python
-def main() -> None
-```
+CLI entry point for the PDF export functionality.
 
-CLI entry point for PDF export functionality. Provides command-line interface for the PDF export features.
+**Command-line Arguments:**
+- `wiki_path`: Path to .deepwiki directory (optional, defaults to ".deepwiki")
+- `-o, --output`: Output path specification
+- `--separate`: Flag to enable separate file export mode
 
-## Utility Functions
+### Utility Functions
 
-The module includes several utility functions for processing content:
+**Mermaid Diagram Support:**
+- `is_mmdc_available()`: Checks if Mermaid CLI is installed
+- `render_mermaid_to_png()`: Converts Mermaid diagrams to PNG format
+- `render_mermaid_to_svg()`: Converts Mermaid diagrams to SVG format
+- `extract_mermaid_blocks()`: Identifies Mermaid code blocks in markdown
 
-- `is_mmdc_available()`: Check if Mermaid CLI is available for diagram rendering
-- `render_mermaid_to_png()`: Convert Mermaid diagrams to PNG format
-- `render_mermaid_to_svg()`: Convert Mermaid diagrams to SVG format
-- `extract_mermaid_blocks()`: Extract Mermaid diagram blocks from markdown
-- `render_markdown_for_pdf()`: Process markdown content for PDF rendering
-- `extract_title()`: Extract title from markdown content
+**Content Processing:**
+- `render_markdown_for_pdf()`: Prepares markdown content for PDF conversion
+- `extract_title()`: Extracts page titles from markdown content
 
 ## Usage Examples
 
-### Programmatic Usage
+### Basic PDF Export
 
 ```python
 from pathlib import Path
-from local_deepwiki.export.pdf import export_to_pdf, PdfExporter
+from local_deepwiki.export.pdf import export_to_pdf
 
-# Export to single PDF
+# Export all pages to a single PDF
 result = export_to_pdf(
     wiki_path=Path(".deepwiki"),
     output_path=Path("documentation.pdf"),
     single_file=True
 )
+print(result)
+```
 
-# Export to separate PDFs
+### Separate File Export
+
+```python
+# Export each page as a separate PDF
 result = export_to_pdf(
     wiki_path=Path(".deepwiki"),
+    output_path=Path("docs_output/"),
     single_file=False
 )
+```
 
-# Using the class directly
+### Using the PdfExporter Class
+
+```python
+from pathlib import Path
+from local_deepwiki.export.pdf import PdfExporter
+
+# Initialize exporter
 exporter = PdfExporter(
     wiki_path=Path(".deepwiki"),
     output_path=Path("output.pdf")
 )
+
+# Export as single file
+exporter.export_single()
+
+# Or export as separate files
 pdf_files = exporter.export_separate()
 ```
 
 ### Command Line Usage
 
 ```bash
-# Export with default settings (single PDF)
+# Export with default settings
 python -m local_deepwiki.export.pdf
 
-# Export to specific output file
-python -m local_deepwiki.export.pdf -o my_wiki.pdf
+# Specify custom paths
+python -m local_deepwiki.export.pdf /path/to/.deepwiki -o custom_output.pdf
 
 # Export as separate files
-python -m local_deepwiki.export.pdf --separate
+python -m local_deepwiki.export.pdf --separate -o output_directory/
 ```
 
-## Dependencies
+## Related Components
 
-Based on the imports shown, this module uses:
-- Standard library modules: `argparse`, `base64`, `json`, `re`, `shutil`, `subprocess`, `sys`, `tempfile`
-- `pathlib.Path` for file system operations
-- `typing.cast` for type casting
+The module integrates with:
+- Standard library modules: `argparse`, `json`, `pathlib`, `subprocess`, `tempfile`
+- External dependencies for PDF generation and markdown processing
+- Mermaid CLI tool for diagram rendering (when available)
 
 ## API Reference
 
@@ -118,7 +136,7 @@ Export wiki markdown to PDF format.
 
 
 <details>
-<summary>View Source (lines 496-680)</summary>
+<summary>View Source (lines 496-680) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/export/pdf.py#L496-L680">GitHub</a></summary>
 
 ```python
 class PdfExporter:
@@ -143,7 +161,7 @@ Initialize the exporter.
 
 
 <details>
-<summary>View Source (lines 499-508)</summary>
+<summary>View Source (lines 499-508) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/export/pdf.py#L499-L508">GitHub</a></summary>
 
 ```python
 def __init__(self, wiki_path: Path, output_path: Path):
@@ -170,7 +188,7 @@ Export all wiki pages to a single PDF.
 
 
 <details>
-<summary>View Source (lines 510-544)</summary>
+<summary>View Source (lines 510-544) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/export/pdf.py#L510-L544">GitHub</a></summary>
 
 ```python
 def export_single(self) -> Path:
@@ -225,7 +243,7 @@ Export each wiki page as a separate PDF.
 
 
 <details>
-<summary>View Source (lines 546-570)</summary>
+<summary>View Source (lines 546-570) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/export/pdf.py#L546-L570">GitHub</a></summary>
 
 ```python
 def export_separate(self) -> list[Path]:
@@ -272,7 +290,7 @@ Check if mermaid-cli (mmdc) is available on the system.
 
 
 <details>
-<summary>View Source (lines 25-40)</summary>
+<summary>View Source (lines 25-40) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/export/pdf.py#L25-L40">GitHub</a></summary>
 
 ```python
 def is_mmdc_available() -> bool:
@@ -314,7 +332,7 @@ Render a mermaid diagram to PNG using mermaid-cli.
 
 
 <details>
-<summary>View Source (lines 43-102)</summary>
+<summary>View Source (lines 43-102) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/export/pdf.py#L43-L102">GitHub</a></summary>
 
 ```python
 def render_mermaid_to_png(diagram_code: str, timeout: int = 30) -> bytes | None:
@@ -400,7 +418,7 @@ Render a mermaid diagram to SVG using mermaid-cli.  Note: SVG may have font issu
 
 
 <details>
-<summary>View Source (lines 105-165)</summary>
+<summary>View Source (lines 105-165) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/export/pdf.py#L105-L165">GitHub</a></summary>
 
 ```python
 def render_mermaid_to_svg(diagram_code: str, timeout: int = 30) -> str | None:
@@ -486,7 +504,7 @@ Extract mermaid code blocks from markdown content.
 
 
 <details>
-<summary>View Source (lines 168-187)</summary>
+<summary>View Source (lines 168-187) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/export/pdf.py#L168-L187">GitHub</a></summary>
 
 ```python
 def extract_mermaid_blocks(content: str) -> list[tuple[str, str]]:
@@ -532,7 +550,7 @@ Render markdown to HTML suitable for PDF.
 
 
 <details>
-<summary>View Source (lines 408-469)</summary>
+<summary>View Source (lines 408-469) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/export/pdf.py#L408-L469">GitHub</a></summary>
 
 ```python
 def render_markdown_for_pdf(content: str, render_mermaid: bool = True) -> str:
@@ -619,7 +637,7 @@ Extract title from markdown file.
 
 
 <details>
-<summary>View Source (lines 472-493)</summary>
+<summary>View Source (lines 472-493) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/export/pdf.py#L472-L493">GitHub</a></summary>
 
 ```python
 def extract_title(md_file: Path) -> str:
@@ -668,7 +686,7 @@ Export wiki to PDF format.
 
 
 <details>
-<summary>View Source (lines 683-718)</summary>
+<summary>View Source (lines 683-718) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/export/pdf.py#L683-L718">GitHub</a></summary>
 
 ```python
 def export_to_pdf(
@@ -725,7 +743,7 @@ CLI entry point for PDF export.
 
 
 <details>
-<summary>View Source (lines 721-761)</summary>
+<summary>View Source (lines 721-761) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/export/pdf.py#L721-L761">GitHub</a></summary>
 
 ```python
 def main() -> None:
@@ -876,6 +894,54 @@ flowchart TD
     class N3,N4,N5,N6,N7,N8 method
 ```
 
+## Used By
+
+Functions and methods in this file and their callers:
+
+- **`ArgumentParser`**: called by `main`
+- **`CSS`**: called by `PdfExporter._export_page`, `PdfExporter.export_single`
+- **`HTML`**: called by `PdfExporter._export_page`, `PdfExporter.export_single`
+- **`Markdown`**: called by `render_markdown_for_pdf`
+- **`Path`**: called by `PdfExporter.__init__`, `export_to_pdf`, `main`, `render_mermaid_to_png`, `render_mermaid_to_svg`
+- **`PdfExporter`**: called by `export_to_pdf`
+- **`TemporaryDirectory`**: called by `render_mermaid_to_png`, `render_mermaid_to_svg`
+- **`ValueError`**: called by `export_to_pdf`
+- **`_build_combined_html`**: called by `PdfExporter.export_single`
+- **`_build_toc_html`**: called by `PdfExporter._build_combined_html`
+- **`_collect_pages_in_order`**: called by `PdfExporter.export_single`
+- **`_export_page`**: called by `PdfExporter.export_separate`
+- **`_extract_paths_from_toc`**: called by `PdfExporter._collect_pages_in_order`, `PdfExporter._extract_paths_from_toc`
+- **`add_argument`**: called by `main`
+- **`b64encode`**: called by `render_markdown_for_pdf`
+- **`cast`**: called by `render_markdown_for_pdf`
+- **`convert`**: called by `render_markdown_for_pdf`
+- **`decode`**: called by `render_markdown_for_pdf`
+- **`exists`**: called by `PdfExporter._collect_pages_in_order`, `PdfExporter.export_single`, `export_to_pdf`, `main`, `render_mermaid_to_png`, `render_mermaid_to_svg`
+- **`exit`**: called by `main`
+- **`export_separate`**: called by `export_to_pdf`
+- **`export_single`**: called by `export_to_pdf`
+- **`export_to_pdf`**: called by `main`
+- **`extract_mermaid_blocks`**: called by `render_markdown_for_pdf`
+- **`extract_title`**: called by `PdfExporter._build_toc_html`, `PdfExporter._export_page`
+- **`findall`**: called by `extract_mermaid_blocks`
+- **`is_dir`**: called by `PdfExporter.export_single`
+- **`is_mmdc_available`**: called by `render_markdown_for_pdf`, `render_mermaid_to_png`, `render_mermaid_to_svg`
+- **`loads`**: called by `PdfExporter.export_single`
+- **`mkdir`**: called by `PdfExporter.export_separate`, `PdfExporter.export_single`
+- **`parse_args`**: called by `main`
+- **`read_bytes`**: called by `render_mermaid_to_png`
+- **`read_text`**: called by `PdfExporter._build_combined_html`, `PdfExporter._export_page`, `PdfExporter.export_single`, `extract_title`, `render_mermaid_to_svg`
+- **`relative_to`**: called by `PdfExporter._build_toc_html`, `PdfExporter.export_separate`
+- **`render_markdown_for_pdf`**: called by `PdfExporter._build_combined_html`, `PdfExporter._export_page`
+- **`render_mermaid_to_png`**: called by `render_markdown_for_pdf`
+- **`rglob`**: called by `PdfExporter._collect_pages_in_order`, `PdfExporter.export_separate`
+- **`run`**: called by `render_mermaid_to_png`, `render_mermaid_to_svg`
+- **`title`**: called by `extract_title`
+- **`which`**: called by `is_mmdc_available`
+- **`with_suffix`**: called by `PdfExporter.export_separate`
+- **`write_pdf`**: called by `PdfExporter._export_page`, `PdfExporter.export_single`
+- **`write_text`**: called by `render_mermaid_to_png`, `render_mermaid_to_svg`
+
 ## Additional Source Code
 
 Source code for functions and methods not listed in the API Reference above.
@@ -883,7 +949,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_collect_pages_in_order`
 
 <details>
-<summary>View Source (lines 572-594)</summary>
+<summary>View Source (lines 572-594) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/export/pdf.py#L572-L594">GitHub</a></summary>
 
 ```python
 def _collect_pages_in_order(self) -> list[Path]:
@@ -917,7 +983,7 @@ def _collect_pages_in_order(self) -> list[Path]:
 #### `_extract_paths_from_toc`
 
 <details>
-<summary>View Source (lines 596-607)</summary>
+<summary>View Source (lines 596-607) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/export/pdf.py#L596-L607">GitHub</a></summary>
 
 ```python
 def _extract_paths_from_toc(self, entries: list[dict], paths: list[str]) -> None:
@@ -940,7 +1006,7 @@ def _extract_paths_from_toc(self, entries: list[dict], paths: list[str]) -> None
 #### `_build_combined_html`
 
 <details>
-<summary>View Source (lines 609-640)</summary>
+<summary>View Source (lines 609-640) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/export/pdf.py#L609-L640">GitHub</a></summary>
 
 ```python
 def _build_combined_html(self, pages: list[Path]) -> str:
@@ -983,7 +1049,7 @@ def _build_combined_html(self, pages: list[Path]) -> str:
 #### `_build_toc_html`
 
 <details>
-<summary>View Source (lines 642-658)</summary>
+<summary>View Source (lines 642-658) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/export/pdf.py#L642-L658">GitHub</a></summary>
 
 ```python
 def _build_toc_html(self, pages: list[Path]) -> str:
@@ -1011,7 +1077,7 @@ def _build_toc_html(self, pages: list[Path]) -> str:
 #### `_export_page`
 
 <details>
-<summary>View Source (lines 660-680)</summary>
+<summary>View Source (lines 660-680) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/export/pdf.py#L660-L680">GitHub</a></summary>
 
 ```python
 def _export_page(self, md_file: Path, output_file: Path) -> None:

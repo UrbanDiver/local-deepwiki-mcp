@@ -1,8 +1,8 @@
-# search.py
+# Search Module
 
 ## File Overview
 
-This module provides search functionality for wiki pages by generating search indexes. It processes [WikiPage](../models.md) objects to create searchable JSON indexes that can be used for client-side search functionality.
+The search module provides functionality for generating search indexes from wiki pages. It processes [WikiPage](../models.md) objects to create searchable JSON indexes that can be used for client-side search functionality.
 
 ## Functions
 
@@ -21,33 +21,40 @@ Generate and write search index to disk.
 **Returns:**
 - Path: Path to the generated search.json file
 
-This function creates a search index from the provided pages and writes it as a JSON file to the wiki directory. The search index is generated using the `generate_search_index` function and saved as `search.json` in the specified wiki path.
+This function creates a search index from the provided pages and writes it as a JSON file to the wiki directory. The index is formatted with 2-space indentation for readability.
 
-## Related Components
+### Additional Functions
 
-This module works with the following components:
+The module contains several other functions that are referenced but not shown in the provided code:
+- `extract_headings`
+- `extract_code_terms`
+- `extract_snippet`
+- `generate_search_entry`
+- `generate_search_index`
 
-- **[WikiPage](../models.md)**: The core data model for wiki pages (imported from `local_deepwiki.models`)
-
-## Dependencies
-
-- `json`: For JSON serialization of the search index
-- `re`: For regular expression operations (likely used in other functions not shown)
-- `pathlib.Path`: For file system path operations
-
-## Usage Example
+## Usage Examples
 
 ```python
 from pathlib import Path
 from local_deepwiki.generators.search import write_search_index
+from local_deepwiki.models import WikiPage
 
-# Assuming you have a list of WikiPage objects
-wiki_directory = Path("./my-wiki")
-search_file = write_search_index(wiki_directory, pages)
-print(f"Search index written to: {search_file}")
+# Generate search index for a list of wiki pages
+wiki_directory = Path("/path/to/wiki")
+pages = [...]  # List of WikiPage objects
+index_path = write_search_index(wiki_directory, pages)
+print(f"Search index written to: {index_path}")
 ```
 
-The module appears to contain additional functions for search functionality (`extract_headings`, `extract_code_terms`, `extract_snippet`, `generate_search_entry`, `generate_search_index`) that are referenced in the module summary but not shown in the provided code chunks.
+## Related Components
+
+This module works with:
+- **[WikiPage](../models.md)**: The [main](../export/pdf.md) data model representing wiki pages, imported from `local_deepwiki.models`
+
+The module uses standard library components:
+- `json` for JSON serialization
+- `re` for regular expression operations
+- `pathlib.Path` for file system path handling
 
 ## API Reference
 
@@ -71,7 +78,7 @@ Extract all headings from markdown content.
 
 
 <details>
-<summary>View Source (lines 14-33)</summary>
+<summary>View Source (lines 14-33) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/search.py#L14-L33">GitHub</a></summary>
 
 ```python
 def extract_headings(content: str) -> list[str]:
@@ -116,7 +123,7 @@ Extract code terms (class names, function names) from content.
 
 
 <details>
-<summary>View Source (lines 36-57)</summary>
+<summary>View Source (lines 36-57) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/search.py#L36-L57">GitHub</a></summary>
 
 ```python
 def extract_code_terms(content: str) -> list[str]:
@@ -164,7 +171,7 @@ Extract a text snippet from markdown content.
 
 
 <details>
-<summary>View Source (lines 60-84)</summary>
+<summary>View Source (lines 60-84) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/search.py#L60-L84">GitHub</a></summary>
 
 ```python
 def extract_snippet(content: str, max_length: int = 200) -> str:
@@ -214,7 +221,7 @@ Generate a search index entry for a wiki page.
 
 
 <details>
-<summary>View Source (lines 87-106)</summary>
+<summary>View Source (lines 87-106) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/search.py#L87-L106">GitHub</a></summary>
 
 ```python
 def generate_search_entry(page: WikiPage) -> dict:
@@ -259,7 +266,7 @@ Generate a search index from wiki pages.
 
 
 <details>
-<summary>View Source (lines 109-118)</summary>
+<summary>View Source (lines 109-118) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/search.py#L109-L118">GitHub</a></summary>
 
 ```python
 def generate_search_index(pages: list[WikiPage]) -> list[dict]:
@@ -296,7 +303,7 @@ Generate and write search index to disk.
 
 
 <details>
-<summary>View Source (lines 121-134)</summary>
+<summary>View Source (lines 121-134) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/search.py#L121-L134">GitHub</a></summary>
 
 ```python
 def write_search_index(wiki_path: Path, pages: list[WikiPage]) -> Path:
@@ -350,6 +357,23 @@ flowchart TD
     classDef func fill:#e1f5fe
     class N0,N1,N2,N3,N4,N5,N6,N7,N8,N9,N10,N11,N12 func
 ```
+
+## Used By
+
+Functions and methods in this file and their callers:
+
+- **`add`**: called by `extract_code_terms`
+- **`dumps`**: called by `write_search_index`
+- **`extract_code_terms`**: called by `generate_search_entry`
+- **`extract_headings`**: called by `generate_search_entry`
+- **`extract_snippet`**: called by `generate_search_entry`
+- **`finditer`**: called by `extract_code_terms`
+- **`generate_search_entry`**: called by `generate_search_index`
+- **`generate_search_index`**: called by `write_search_index`
+- **`group`**: called by `extract_code_terms`
+- **`rsplit`**: called by `extract_snippet`
+- **`sub`**: called by `extract_headings`, `extract_snippet`
+- **`write_text`**: called by `write_search_index`
 
 ## Usage Examples
 

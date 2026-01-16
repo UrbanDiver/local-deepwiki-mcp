@@ -2,128 +2,84 @@
 
 ## File Overview
 
-The handlers module provides error handling and tool implementations for the local_deepwiki MCP (Model Context Protocol) server. It contains decorated handler functions that manage repository indexing, question answering, and deep research operations with proper error handling and progress tracking.
+The handlers.py module provides error handling utilities and tool handlers for the local-deepwiki system. It contains decorators for error management and functions for handling repository indexing, question answering, and deep research operations.
 
 ## Functions
 
 ### handle_tool_errors
 
-A [decorator](providers/base.md) function that wraps tool handlers to provide consistent error handling and logging.
+A [decorator](providers/base.md) function that wraps other functions to provide consistent error handling for tool operations.
 
 **Parameters:**
-- `func`: The function to be wrapped with error handling
+- `func`: The function to wrap with error handling
 
 **Returns:**
-- `wrapper`: The decorated function that catches and handles exceptions
+- `wrapper`: The wrapped function with error handling capabilities
 
 ### handle_index_repository
 
-Handles repository indexing operations with progress tracking and cancellation support.
+Handles the indexing of a repository by creating and configuring the necessary components.
 
 **Parameters:**
-- `path`: Repository path to index
-- `force_reindex`: Boolean flag to force reindexing
-- `progress_callback`: Optional callback function for progress updates
+- Based on the imports and context, this function likely works with repository paths and indexing configurations
 
-**Returns:**
-- `TextContent`: Result message indicating indexing completion
+**Functionality:**
+- Uses [RepositoryIndexer](core/indexer.md) for processing repositories
+- Integrates with [VectorStore](core/vectorstore.md) for storing indexed data
+- Utilizes embedding providers through get_embedding_provider
+- Includes progress tracking via progress_callback
 
 ### handle_ask_question
 
-Processes question answering requests using the vector store and embedding providers.
+Processes question-answering requests against indexed repositories.
 
-**Parameters:**
-- `question`: The question to answer
-- `path`: Repository path context
-- `max_chunks`: Maximum number of context chunks to use
-
-**Returns:**
-- `TextContent`: The generated answer
+**Functionality:**
+- Leverages the vector store for retrieving relevant context
+- Uses configuration settings from [get_config](config.md)
+- Implements validation constraints from the validation module
 
 ### handle_deep_research
 
-Performs comprehensive research operations on a repository with progress tracking.
+Performs comprehensive research operations on indexed content.
 
-**Parameters:**
-- `path`: Repository path to research
-- `query`: Research query or topic
-- `max_chunks`: Maximum context chunks for research
-- `progress_callback`: Optional progress tracking callback
-
-**Returns:**
-- `TextContent`: Research results and findings
+**Implementation:**
+- Delegates to _handle_deep_research_impl for the actual processing
+- Includes cancellation support through is_cancelled
+- Uses progress tracking mechanisms
+- Respects research chunk limits (DEFAULT_DEEP_RESEARCH_CHUNKS, MAX_CONTEXT_CHUNKS)
 
 ### _handle_deep_research_impl
 
-Internal implementation function for deep research operations that can be cancelled.
+The internal implementation for deep research operations.
 
-**Parameters:**
-- `path`: Repository path
-- `query`: Research query
-- `max_chunks`: Maximum context chunks
-- `progress_callback`: Progress tracking callback
-
-**Returns:**
-- `str`: Research results
+**Features:**
+- Processes research requests with configurable chunk limits
+- Integrates with the wiki generation system through [generate_wiki](generators/wiki.md)
+- Supports asynchronous operation patterns
 
 ### is_cancelled
 
-Utility function to check if an operation has been cancelled.
-
-**Returns:**
-- `bool`: True if the operation should be cancelled
+Utility function for checking cancellation status during long-running operations.
 
 ### progress_callback
 
-Progress tracking callback function that reports operation status.
-
-**Parameters:**
-- Progress-related parameters (exact signature not fully visible in provided code)
+Callback function for reporting progress during indexing and research operations.
 
 ## Related Components
 
-This module integrates with several other components:
+This module integrates with several other components of the local-deepwiki system:
 
 - **[RepositoryIndexer](core/indexer.md)**: Used for indexing repository content
 - **[VectorStore](core/vectorstore.md)**: Manages vector storage and retrieval operations  
-- **[WikiGenerator](generators/wiki.md)**: Referenced through the [generate_wiki](generators/wiki.md) import for wiki generation
-- **[EmbeddingProvider](providers/base.md)**: Provides embedding functionality through get_embedding_provider
-- **[Config](config.md)**: Uses [get_config](config.md) for configuration management
-- **Validation**: Imports validation constants like DEFAULT_DEEP_RESEARCH_CHUNKS and MAX_CONTEXT_CHUNKS
+- **Configuration system**: Accessed through [get_config](config.md) for runtime settings
+- **Embedding providers**: Integrated via get_embedding_provider
+- **Wiki generation**: Connected through [generate_wiki](generators/wiki.md) function
+- **Validation system**: Uses constants like DEFAULT_DEEP_RESEARCH_CHUNKS and MAX_CONTEXT_CHUNKS
+- **Logging system**: Utilizes [get_logger](logging.md) for operation logging
 
-## Usage Examples
+## Usage Context
 
-```python
-# Using the error handling decorator
-@handle_tool_errors
-async def my_tool_handler():
-    # Tool implementation
-    pass
-
-# Repository indexing with progress callback
-result = await handle_index_repository(
-    path="/path/to/repo",
-    force_reindex=False,
-    progress_callback=progress_callback
-)
-
-# Asking questions about a repository
-answer = await handle_ask_question(
-    question="What is the main purpose of this code?",
-    path="/path/to/repo", 
-    max_chunks=10
-)
-
-# Performing deep research
-research = await handle_deep_research(
-    path="/path/to/repo",
-    query="architecture patterns",
-    max_chunks=20,
-    progress_callback=progress_callback
-)
-```
-
-The handlers module serves as the [main](export/html.md) interface layer between the MCP server and the core functionality, providing robust error handling and progress tracking for all major operations.
+The handlers in this module are designed to work with MCP (Model Context Protocol) types, specifically TextContent, indicating they're part of a larger system that handles structured content operations. The async/await patterns suggest these handlers are designed for concurrent operation in an event-driven architecture.
 
 ## API Reference
 
@@ -147,7 +103,7 @@ Decorator for consistent error handling in tool handlers.  Catches common except
 
 
 <details>
-<summary>View Source (lines 40-70)</summary>
+<summary>View Source (lines 40-70) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/handlers.py#L40-L70">GitHub</a></summary>
 
 ```python
 def handle_tool_errors(func: ToolHandler) -> ToolHandler:
@@ -203,7 +159,7 @@ async def wrapper(args: dict[str, Any]) -> list[TextContent]
 
 
 <details>
-<summary>View Source (lines 55-68)</summary>
+<summary>View Source (lines 55-68) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/handlers.py#L55-L68">GitHub</a></summary>
 
 ```python
 async def wrapper(args: dict[str, Any]) -> list[TextContent]:
@@ -244,7 +200,7 @@ Handle index_repository tool call.
 
 
 <details>
-<summary>View Source (lines 74-152)</summary>
+<summary>View Source (lines 74-152) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/handlers.py#L74-L152">GitHub</a></summary>
 
 ```python
 async def handle_index_repository(args: dict[str, Any]) -> list[TextContent]:
@@ -346,7 +302,7 @@ def progress_callback(msg: str, current: int, total: int)
 
 
 <details>
-<summary>View Source (lines 345-360)</summary>
+<summary>View Source (lines 345-360) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/handlers.py#L345-L360">GitHub</a></summary>
 
 ```python
 async def progress_callback(progress: ResearchProgress) -> None:
@@ -389,7 +345,7 @@ Handle ask_question tool call.
 
 
 <details>
-<summary>View Source (lines 156-241)</summary>
+<summary>View Source (lines 156-241) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/handlers.py#L156-L241">GitHub</a></summary>
 
 ```python
 async def handle_ask_question(args: dict[str, Any]) -> list[TextContent]:
@@ -501,7 +457,7 @@ Handle deep_research tool call for multi-step reasoning.
 
 
 <details>
-<summary>View Source (lines 244-268)</summary>
+<summary>View Source (lines 244-268) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/handlers.py#L244-L268">GitHub</a></summary>
 
 ```python
 async def handle_deep_research(
@@ -546,7 +502,7 @@ Check if the research should be cancelled.
 
 
 <details>
-<summary>View Source (lines 330-342)</summary>
+<summary>View Source (lines 330-342) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/handlers.py#L330-L342">GitHub</a></summary>
 
 ```python
 def is_cancelled() -> bool:
@@ -582,7 +538,7 @@ async def progress_callback(progress: ResearchProgress) -> None
 
 
 <details>
-<summary>View Source (lines 345-360)</summary>
+<summary>View Source (lines 345-360) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/handlers.py#L345-L360">GitHub</a></summary>
 
 ```python
 async def progress_callback(progress: ResearchProgress) -> None:
@@ -623,7 +579,7 @@ Send a cancellation progress notification.
 
 
 <details>
-<summary>View Source (lines 362-383)</summary>
+<summary>View Source (lines 362-383) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/handlers.py#L362-L383">GitHub</a></summary>
 
 ```python
 async def send_cancellation_notification(step: str) -> None:
@@ -672,7 +628,7 @@ Handle read_wiki_structure tool call.
 
 
 <details>
-<summary>View Source (lines 477-528)</summary>
+<summary>View Source (lines 477-528) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/handlers.py#L477-L528">GitHub</a></summary>
 
 ```python
 async def handle_read_wiki_structure(args: dict[str, Any]) -> list[TextContent]:
@@ -751,7 +707,7 @@ Handle read_wiki_page tool call.
 
 
 <details>
-<summary>View Source (lines 532-547)</summary>
+<summary>View Source (lines 532-547) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/handlers.py#L532-L547">GitHub</a></summary>
 
 ```python
 async def handle_read_wiki_page(args: dict[str, Any]) -> list[TextContent]:
@@ -794,7 +750,7 @@ Handle search_code tool call.
 
 
 <details>
-<summary>View Source (lines 551-604)</summary>
+<summary>View Source (lines 551-604) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/handlers.py#L551-L604">GitHub</a></summary>
 
 ```python
 async def handle_search_code(args: dict[str, Any]) -> list[TextContent]:
@@ -875,7 +831,7 @@ Handle export_wiki_html tool call.
 
 
 <details>
-<summary>View Source (lines 608-633)</summary>
+<summary>View Source (lines 608-633) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/handlers.py#L608-L633">GitHub</a></summary>
 
 ```python
 async def handle_export_wiki_html(args: dict[str, Any]) -> list[TextContent]:
@@ -929,7 +885,7 @@ Handle export_wiki_pdf tool call.
 
 
 <details>
-<summary>View Source (lines 637-665)</summary>
+<summary>View Source (lines 637-665) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/handlers.py#L637-L665">GitHub</a></summary>
 
 ```python
 async def handle_export_wiki_pdf(args: dict[str, Any]) -> list[TextContent]:
@@ -1085,6 +1041,58 @@ flowchart TD
     class N0,N1,N2,N3,N4,N5,N6,N7,N8,N9,N10,N11,N12,N13,N14,N15,N16,N17,N18,N19,N20,N21,N22,N23,N24,N25,N26,N27,N28,N29 func
 ```
 
+## Used By
+
+Functions and methods in this file and their callers:
+
+- **[`DeepResearchPipeline`](core/deep_research.md)**: called by `_handle_deep_research_impl`
+- **`Event`**: called by `_handle_deep_research_impl`
+- **`Path`**: called by `_handle_deep_research_impl`, `handle_ask_question`, `handle_export_wiki_html`, `handle_export_wiki_pdf`, `handle_index_repository`, `handle_read_wiki_page`, `handle_read_wiki_structure`, `handle_search_code`
+- **[`RepositoryIndexer`](core/indexer.md)**: called by `handle_index_repository`
+- **[`ResearchProgress`](models.md)**: called by `_handle_deep_research_impl`, `send_cancellation_notification`
+- **`TextContent`**: called by `_handle_deep_research_impl`, `handle_ask_question`, `handle_deep_research`, `handle_export_wiki_html`, `handle_export_wiki_pdf`, `handle_index_repository`, `handle_read_wiki_page`, `handle_read_wiki_structure`, `handle_search_code`, `handle_tool_errors`, `wrapper`
+- **`ValueError`**: called by `_handle_deep_research_impl`, `handle_ask_question`, `handle_export_wiki_html`, `handle_export_wiki_pdf`, `handle_index_repository`, `handle_read_wiki_page`, `handle_read_wiki_structure`, `handle_search_code`
+- **[`VectorStore`](core/vectorstore.md)**: called by `_handle_deep_research_impl`, `handle_ask_question`, `handle_search_code`
+- **`_handle_deep_research_impl`**: called by `handle_deep_research`
+- **`cancelled`**: called by `_handle_deep_research_impl`, `is_cancelled`
+- **`current_task`**: called by `_handle_deep_research_impl`, `is_cancelled`
+- **`dumps`**: called by `_handle_deep_research_impl`, `handle_ask_question`, `handle_export_wiki_html`, `handle_export_wiki_pdf`, `handle_index_repository`, `handle_read_wiki_structure`, `handle_search_code`
+- **`exception`**: called by `handle_deep_research`, `handle_tool_errors`, `wrapper`
+- **`exists`**: called by `_handle_deep_research_impl`, `handle_ask_question`, `handle_export_wiki_html`, `handle_export_wiki_pdf`, `handle_index_repository`, `handle_read_wiki_page`, `handle_read_wiki_structure`, `handle_search_code`
+- **[`export_to_html`](export/html.md)**: called by `handle_export_wiki_html`
+- **[`export_to_pdf`](export/pdf.md)**: called by `handle_export_wiki_pdf`
+- **`func`**: called by `handle_tool_errors`, `wrapper`
+- **`generate`**: called by `handle_ask_question`
+- **[`generate_wiki`](generators/wiki.md)**: called by `handle_index_repository`
+- **`get_cached_llm_provider`**: called by `_handle_deep_research_impl`, `handle_ask_question`
+- **[`get_config`](config.md)**: called by `_handle_deep_research_impl`, `handle_ask_question`, `handle_index_repository`, `handle_search_code`
+- **`get_embedding_provider`**: called by `_handle_deep_research_impl`, `handle_ask_question`, `handle_search_code`
+- **`get_prompts`**: called by `_handle_deep_research_impl`
+- **`get_vector_db_path`**: called by `_handle_deep_research_impl`, `handle_ask_question`, `handle_search_code`
+- **`get_wiki_path`**: called by `_handle_deep_research_impl`, `handle_ask_question`
+- **`is_dir`**: called by `handle_index_repository`
+- **`is_relative_to`**: called by `handle_read_wiki_page`
+- **`is_set`**: called by `_handle_deep_research_impl`, `is_cancelled`
+- **`loads`**: called by `handle_read_wiki_structure`
+- **`lstrip`**: called by `handle_read_wiki_structure`
+- **`model_dump_json`**: called by `_handle_deep_research_impl`, `progress_callback`, `send_cancellation_notification`
+- **`read_text`**: called by `handle_read_wiki_page`, `handle_read_wiki_structure`
+- **`readline`**: called by `handle_read_wiki_structure`
+- **`relative_to`**: called by `handle_read_wiki_structure`
+- **`research`**: called by `_handle_deep_research_impl`
+- **`resolve`**: called by `_handle_deep_research_impl`, `handle_ask_question`, `handle_export_wiki_html`, `handle_export_wiki_pdf`, `handle_index_repository`, `handle_read_wiki_page`, `handle_read_wiki_structure`, `handle_search_code`
+- **`rglob`**: called by `handle_read_wiki_structure`
+- **`search`**: called by `handle_ask_question`, `handle_search_code`
+- **`send_cancellation_notification`**: called by `_handle_deep_research_impl`
+- **`send_progress_notification`**: called by `_handle_deep_research_impl`, `progress_callback`, `send_cancellation_notification`
+- **[`validate_language`](validation.md)**: called by `handle_search_code`
+- **[`validate_languages_list`](validation.md)**: called by `handle_index_repository`
+- **[`validate_non_empty_string`](validation.md)**: called by `_handle_deep_research_impl`, `handle_ask_question`, `handle_search_code`
+- **[`validate_positive_int`](validation.md)**: called by `_handle_deep_research_impl`, `handle_ask_question`, `handle_search_code`
+- **[`validate_provider`](validation.md)**: called by `handle_index_repository`
+- **`with_preset`**: called by `_handle_deep_research_impl`
+- **`wraps`**: called by `handle_tool_errors`
+
 ## Additional Source Code
 
 Source code for functions and methods not listed in the API Reference above.
@@ -1092,7 +1100,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `progress_callback`
 
 <details>
-<summary>View Source (lines 116-117)</summary>
+<summary>View Source (lines 116-117) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/handlers.py#L116-L117">GitHub</a></summary>
 
 ```python
 def progress_callback(msg: str, current: int, total: int):
@@ -1105,7 +1113,7 @@ def progress_callback(msg: str, current: int, total: int):
 #### `_handle_deep_research_impl`
 
 <details>
-<summary>View Source (lines 271-473)</summary>
+<summary>View Source (lines 271-473) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/handlers.py#L271-L473">GitHub</a></summary>
 
 ```python
 async def _handle_deep_research_impl(

@@ -2,58 +2,63 @@
 
 ## File Overview
 
-This module provides functionality for exporting DeepWiki documentation to static HTML files. It handles the conversion of markdown content to HTML format and creates a complete static website structure with table of contents and navigation.
+The `html.py` module provides functionality for exporting DeepWiki documentation to static HTML files. It includes an HtmlExporter class for processing wiki pages and utility functions for markdown rendering and CLI interaction.
 
 ## Classes
 
 ### HtmlExporter
 
-The HtmlExporter class is responsible for converting a DeepWiki directory structure into static HTML files.
+The HtmlExporter class handles the conversion of wiki markdown files to static HTML format.
 
-**Initialization:**
-- `wiki_path`: Path to the .deepwiki directory
-- `output_path`: Output directory for HTML files
-- `toc_entries`: List to store table of contents entries
+**Purpose**: Exports all pages from a `.deepwiki` directory to a structured HTML website with table of contents and navigation.
 
-**Key Methods:**
+**Initialization**:
+- `wiki_path`: Path to the `.deepwiki` directory containing source files
+- `output_path`: Destination directory for generated HTML files
+- `toc_entries`: Internal list storing table of contents entries loaded from `toc.json`
+
+**Key Methods**:
 
 #### export
 Exports all wiki pages to HTML format.
 
-**Returns:** Number of pages exported (integer)
+**Returns**: `int` - Number of pages exported
 
-The method loads the table of contents from `toc.json`, creates the output directory structure, and processes all markdown files in the wiki.
+**Process**:
+- Loads table of contents from `toc.json` if available
+- Creates output directory structure
+- Processes each markdown file in the wiki
 
 #### _export_page
 Exports a single markdown page to HTML.
 
-**Parameters:**
-- `md_file`: Path to the markdown file
-- `rel_path`: Relative path from wiki root
+**Parameters**:
+- `md_file`: Path to the source markdown file
+- `rel_path`: Relative path from wiki root for maintaining directory structure
 
-This method handles the conversion of individual markdown files, including title extraction and path calculations for proper linking.
+**Process**:
+- Reads markdown content and converts to HTML
+- Extracts page title
+- Calculates relative paths for proper navigation links
 
 ## Functions
 
 ### export_to_html
+Convenience function for exporting wiki to static HTML files.
 
-Main function for exporting wiki content to HTML.
+**Parameters**:
+- `wiki_path`: `str | Path` - Path to the `.deepwiki` directory
+- `output_path`: `str | Path | None` - Output directory (defaults to `{wiki_path}_html`)
 
-**Parameters:**
-- `wiki_path`: Path to the .deepwiki directory (string or Path)
-- `output_path`: Output directory (optional, defaults to `{wiki_path}_html`)
-
-**Returns:** Path to the output directory (string)
-
-Creates an HtmlExporter instance and performs the export operation.
+**Returns**: `str` - Path to the output directory
 
 ### main
-
 CLI entry point for HTML export functionality.
 
-Provides a command-line interface with the following options:
-- `wiki_path`: Path to the .deepwiki directory (defaults to ".deepwiki")
-- `--output`, `-o`: Output directory specification
+**Features**:
+- Accepts wiki path as positional argument (defaults to `.deepwiki`)
+- Supports `--output` or `-o` flag for specifying output directory
+- Validates wiki path existence before processing
 
 ## Usage Examples
 
@@ -64,35 +69,34 @@ from pathlib import Path
 from local_deepwiki.export.html import HtmlExporter, export_to_html
 
 # Using the convenience function
-output_dir = export_to_html(".deepwiki", "output/html")
+output_dir = export_to_html(".deepwiki", "docs/html")
 
 # Using the class directly
-exporter = HtmlExporter(Path(".deepwiki"), Path("output/html"))
+exporter = HtmlExporter(Path(".deepwiki"), Path("output"))
 pages_exported = exporter.export()
 ```
 
 ### Command Line Usage
 
 ```bash
-# Export with default settings
+# Export using default paths
 python -m local_deepwiki.export.html
 
-# Specify wiki path
-python -m local_deepwiki.export.html /path/to/.deepwiki
+# Specify custom wiki path
+python -m local_deepwiki.export.html /path/to/wiki
 
-# Specify output directory
-python -m local_deepwiki.export.html --output /path/to/output
+# Specify custom output directory
+python -m local_deepwiki.export.html .deepwiki --output /path/to/output
 ```
 
 ## Related Components
 
-This module integrates with:
-- `local_deepwiki.logging` for logging functionality
-- `markdown` library for converting markdown content to HTML
-- JSON files (`toc.json`) for table of contents structure
-- The broader DeepWiki system for accessing wiki content and structure
+The module integrates with several other components:
 
-The module also references additional functions like `render_markdown` and `extract_title` that handle the actual markdown processing and title extraction from files.
+- **markdown library**: Used for converting markdown content to HTML
+- **local_deepwiki.logging**: Provides logging functionality via `get_logger()`
+- **Table of Contents system**: Reads from `toc.json` files for navigation structure
+- **Utility functions**: Uses `render_markdown()` and `extract_title()` functions for content processing
 
 ## API Reference
 
@@ -104,7 +108,7 @@ Export wiki markdown to static HTML files.
 
 
 <details>
-<summary>View Source (lines 663-859)</summary>
+<summary>View Source (lines 663-859) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/export/html.py#L663-L859">GitHub</a></summary>
 
 ```python
 class HtmlExporter:
@@ -129,7 +133,7 @@ Initialize the exporter.
 
 
 <details>
-<summary>View Source (lines 666-675)</summary>
+<summary>View Source (lines 666-675) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/export/html.py#L666-L675">GitHub</a></summary>
 
 ```python
 def __init__(self, wiki_path: Path, output_path: Path):
@@ -159,7 +163,7 @@ Export all wiki pages to HTML.
 
 
 <details>
-<summary>View Source (lines 677-709)</summary>
+<summary>View Source (lines 677-709) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/export/html.py#L677-L709">GitHub</a></summary>
 
 ```python
 def export(self) -> int:
@@ -219,7 +223,7 @@ Render markdown to HTML.
 
 
 <details>
-<summary>View Source (lines 633-643)</summary>
+<summary>View Source (lines 633-643) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/export/html.py#L633-L643">GitHub</a></summary>
 
 ```python
 def render_markdown(content: str) -> str:
@@ -255,7 +259,7 @@ Extract title from markdown file.
 
 
 <details>
-<summary>View Source (lines 646-660)</summary>
+<summary>View Source (lines 646-660) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/export/html.py#L646-L660">GitHub</a></summary>
 
 ```python
 def extract_title(md_file: Path) -> str:
@@ -296,7 +300,7 @@ Export wiki to static HTML files.
 
 
 <details>
-<summary>View Source (lines 862-883)</summary>
+<summary>View Source (lines 862-883) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/export/html.py#L862-L883">GitHub</a></summary>
 
 ```python
 def export_to_html(wiki_path: str | Path, output_path: str | Path | None = None) -> str:
@@ -337,7 +341,7 @@ CLI entry point for HTML export.
 
 
 <details>
-<summary>View Source (lines 886-913)</summary>
+<summary>View Source (lines 886-913) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/export/html.py#L886-L913">GitHub</a></summary>
 
 ```python
 def main():
@@ -458,6 +462,38 @@ flowchart TD
     class N2,N3,N4,N5 method
 ```
 
+## Used By
+
+Functions and methods in this file and their callers:
+
+- **`ArgumentParser`**: called by `main`
+- **`HtmlExporter`**: called by `export_to_html`
+- **`Markdown`**: called by `render_markdown`
+- **`Path`**: called by `HtmlExporter.__init__`, `export_to_html`, `main`
+- **`_build_breadcrumb`**: called by `HtmlExporter._export_page`
+- **`_export_page`**: called by `HtmlExporter.export`
+- **`_render_toc`**: called by `HtmlExporter._export_page`
+- **`_render_toc_entry`**: called by `HtmlExporter._render_toc`, `HtmlExporter._render_toc_entry`
+- **`add_argument`**: called by `main`
+- **`cast`**: called by `render_markdown`
+- **`convert`**: called by `render_markdown`
+- **`copy`**: called by `HtmlExporter.export`
+- **`exists`**: called by `HtmlExporter._build_breadcrumb`, `HtmlExporter.export`, `main`
+- **`export`**: called by `export_to_html`
+- **`export_to_html`**: called by `main`
+- **`extract_title`**: called by `HtmlExporter._export_page`
+- **`loads`**: called by `HtmlExporter.export`
+- **`mkdir`**: called by `HtmlExporter._export_page`, `HtmlExporter.export`
+- **`parse_args`**: called by `main`
+- **`read_text`**: called by `HtmlExporter._export_page`, `HtmlExporter.export`, `extract_title`
+- **`relative_to`**: called by `HtmlExporter.export`
+- **`render_markdown`**: called by `HtmlExporter._export_page`
+- **`resolve`**: called by `main`
+- **`rglob`**: called by `HtmlExporter.export`
+- **`title`**: called by `HtmlExporter._build_breadcrumb`, `extract_title`
+- **`with_suffix`**: called by `HtmlExporter._export_page`
+- **`write_text`**: called by `HtmlExporter._export_page`
+
 ## Additional Source Code
 
 Source code for functions and methods not listed in the API Reference above.
@@ -465,7 +501,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_export_page`
 
 <details>
-<summary>View Source (lines 711-751)</summary>
+<summary>View Source (lines 711-751) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/export/html.py#L711-L751">GitHub</a></summary>
 
 ```python
 def _export_page(self, md_file: Path, rel_path: Path) -> None:
@@ -517,7 +553,7 @@ def _export_page(self, md_file: Path, rel_path: Path) -> None:
 #### `_render_toc`
 
 <details>
-<summary>View Source (lines 753-767)</summary>
+<summary>View Source (lines 753-767) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/export/html.py#L753-L767">GitHub</a></summary>
 
 ```python
 def _render_toc(self, entries: list[dict], current_path: str, root_path: str) -> str:
@@ -543,7 +579,7 @@ def _render_toc(self, entries: list[dict], current_path: str, root_path: str) ->
 #### `_render_toc_entry`
 
 <details>
-<summary>View Source (lines 769-807)</summary>
+<summary>View Source (lines 769-807) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/export/html.py#L769-L807">GitHub</a></summary>
 
 ```python
 def _render_toc_entry(self, entry: dict, current_path: str, root_path: str) -> str:
@@ -593,7 +629,7 @@ def _render_toc_entry(self, entry: dict, current_path: str, root_path: str) -> s
 #### `_build_breadcrumb`
 
 <details>
-<summary>View Source (lines 809-859)</summary>
+<summary>View Source (lines 809-859) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/export/html.py#L809-L859">GitHub</a></summary>
 
 ```python
 def _build_breadcrumb(self, rel_path: Path, root_path: str) -> str:

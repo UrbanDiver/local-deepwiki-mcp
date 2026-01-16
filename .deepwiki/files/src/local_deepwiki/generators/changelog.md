@@ -2,53 +2,66 @@
 
 ## File Overview
 
-This module provides functionality for generating changelog documentation from Git commit history. It analyzes Git repository commits and formats them into structured changelog content, supporting various Git hosting platforms for commit URL generation.
+This module provides functionality for generating changelog documentation from Git commit history. It analyzes Git repositories to extract commit information and formats it into structured changelog content.
 
 ## Classes
 
 ### CommitInfo
 
-A dataclass that represents information about a Git commit. This class stores the essential metadata needed to generate changelog entries from commit history.
+A dataclass that represents information about a Git commit.
+
+**Fields:**
+- Based on the dataclass pattern shown in the imports, this class stores commit-related data using the `@dataclass` [decorator](../providers/base.md) with `field` for complex field definitions
 
 ## Functions
 
 ### get_commit_history
 
-Retrieves the commit history from a Git repository. This function processes Git log data to extract commit information for changelog generation.
+Retrieves commit history from a Git repository.
+
+**Parameters:**
+- Based on the function signature visible in the module contents
+
+**Returns:**
+- Commit history data for changelog generation
 
 ### build_commit_url
 
-Constructs URLs for individual commits based on the Git hosting platform. This function takes commit information and repository details to generate appropriate links to commits on platforms like GitHub, GitLab, or other Git hosting services.
+Constructs URLs for Git commits, likely for linking to remote repository commit pages.
+
+**Parameters:**
+- Commit information needed to build the URL
+
+**Returns:**
+- Formatted URL string for the commit
 
 ### generate_changelog_content
 
-Generates formatted changelog content from commit history data. This function processes the collected commit information and formats it into a readable changelog structure.
+Generates formatted changelog content from commit history.
 
-## Usage Examples
+**Parameters:**
+- Commit data to process into changelog format
 
-```python
-from local_deepwiki.generators.changelog import get_commit_history, generate_changelog_content
-from local_deepwiki.core.git_utils import get_repo_info
+**Returns:**
+- Formatted changelog content as a string
 
-# Get repository information
-repo_info = get_repo_info()
+## Dependencies
 
-# Retrieve commit history
-commits = get_commit_history()
+The module relies on several key components:
 
-# Generate changelog content
-changelog = generate_changelog_content(commits, repo_info)
-```
+- **subprocess**: For executing Git commands
+- **collections.defaultdict**: For organizing commit data by categories
+- **dataclasses**: For structured commit information storage
+- **datetime**: For handling commit timestamps
+- **pathlib.Path**: For file system path operations
+- **[GitRepoInfo](../core/git_utils.md) and [get_repo_info](../core/git_utils.md)**: From `local_deepwiki.core.git_utils` for Git repository information
+- **[get_logger](../logging.md)**: From `local_deepwiki.logging` for logging functionality
 
-## Related Components
+## Usage Context
 
-This module integrates with several other components:
+This module is designed to work with Git repositories to automatically generate changelog documentation. It integrates with the broader local_deepwiki system to provide version history and commit tracking capabilities for documentation generation workflows.
 
-- **[GitRepoInfo](../core/git_utils.md)**: Used from `local_deepwiki.core.git_utils` to obtain repository metadata
-- **[get_repo_info](../core/git_utils.md)**: Function from `local_deepwiki.core.git_utils` for retrieving Git repository information
-- **Logging system**: Uses [`local_deepwiki.logging.get_logger`](../logging.md) for logging operations
-
-The module relies on the `subprocess` module for executing Git commands and uses `collections.defaultdict` for organizing commit data by categories or time periods.
+The module processes Git commit data and formats it into human-readable changelog content, supporting documentation automation by extracting meaningful change information from version control history.
 
 ## API Reference
 
@@ -60,7 +73,7 @@ Information about a git commit.
 
 
 <details>
-<summary>View Source (lines 20-28)</summary>
+<summary>View Source (lines 20-28) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/changelog.py#L20-L28">GitHub</a></summary>
 
 ```python
 class CommitInfo:
@@ -97,7 +110,7 @@ Get recent commit history with file changes.
 
 
 <details>
-<summary>View Source (lines 31-106)</summary>
+<summary>View Source (lines 31-106) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/changelog.py#L31-L106">GitHub</a></summary>
 
 ```python
 def get_commit_history(repo_path: Path, limit: int = 30) -> list[CommitInfo]:
@@ -199,7 +212,7 @@ Build URL to commit on GitHub/GitLab.
 
 
 <details>
-<summary>View Source (lines 109-128)</summary>
+<summary>View Source (lines 109-128) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/changelog.py#L109-L128">GitHub</a></summary>
 
 ```python
 def build_commit_url(repo_info: GitRepoInfo, commit_hash: str) -> str | None:
@@ -246,7 +259,7 @@ Generate changelog markdown content.
 
 
 <details>
-<summary>View Source (lines 131-213)</summary>
+<summary>View Source (lines 131-213) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/changelog.py#L131-L213">GitHub</a></summary>
 
 ```python
 def generate_changelog_content(
@@ -379,6 +392,21 @@ flowchart TD
     classDef func fill:#e1f5fe
     class N0,N1,N2,N3,N4,N5,N6,N7,N8,N9,N10 func
 ```
+
+## Used By
+
+Functions and methods in this file and their callers:
+
+- **`CommitInfo`**: called by `get_commit_history`
+- **`build_commit_url`**: called by `generate_changelog_content`
+- **`defaultdict`**: called by `generate_changelog_content`
+- **`get_commit_history`**: called by `generate_changelog_content`
+- **[`get_repo_info`](../core/git_utils.md)**: called by `generate_changelog_content`
+- **`now`**: called by `get_commit_history`
+- **`rsplit`**: called by `get_commit_history`
+- **`run`**: called by `get_commit_history`
+- **`strftime`**: called by `generate_changelog_content`
+- **`strptime`**: called by `generate_changelog_content`, `get_commit_history`
 
 ## Usage Examples
 

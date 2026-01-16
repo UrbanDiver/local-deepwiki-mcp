@@ -2,7 +2,7 @@
 
 ## File Overview
 
-This module provides logging configuration utilities for the local-deepwiki package. It offers a centralized way to set up logging with customizable levels, formats, and output destinations.
+The logging module provides centralized logging configuration for the local-deepwiki package. It offers a flexible logging setup with support for different output formats, multiple destinations (console and file), and environment-based configuration.
 
 ## Functions
 
@@ -17,20 +17,20 @@ def setup_logging(
 ) -> logging.Logger
 ```
 
-Configures logging for the local-deepwiki package with flexible options for output format and destinations.
+Configure logging for the local-deepwiki package with customizable options for level, format, and output destinations.
 
 **Parameters:**
 - `level` (str | int | None): Log level such as DEBUG, INFO, WARNING, ERROR, or CRITICAL. Defaults to INFO, or uses the `DEEPWIKI_LOG_LEVEL` environment variable if set
-- `format_style` (Literal["simple", "detailed"]): Format style - "simple" for basic format or "detailed" for format including file and line information
+- `format_style` (Literal["simple", "detailed"]): Formatting style - "simple" for basic format or "detailed" for format including file and line information
 - `stream` (bool): Whether to enable logging to stderr. Defaults to True
-- `log_file` (str | None): Optional file path for logging output to a file
+- `log_file` (str | None): Optional file path for file-based logging
 
 **Returns:**
 - `logging.Logger`: The configured logger instance
 
 ### get_logger
 
-A function for retrieving logger instances (signature not fully visible in provided code).
+A function for retrieving logger instances (signature not fully visible in the provided code).
 
 ## Usage Examples
 
@@ -42,48 +42,38 @@ from local_deepwiki.logging import setup_logging
 # Simple setup with default INFO level
 logger = setup_logging()
 
-# Custom log level
+# Setup with specific log level
 logger = setup_logging(level="DEBUG")
 
-# Detailed format with file/line info
+# Setup with detailed formatting
 logger = setup_logging(format_style="detailed")
 ```
 
-### File Logging
+### File and Console Logging
 
 ```python
-# Log to both stderr and file
+# Log to both console and file
 logger = setup_logging(
     level="INFO",
     format_style="detailed",
     stream=True,
-    log_file="deepwiki.log"
+    log_file="app.log"
 )
 
 # Log only to file
 logger = setup_logging(
-    level="DEBUG",
     stream=False,
-    log_file="debug.log"
+    log_file="app.log"
 )
 ```
 
-### Environment Variable Configuration
+### Environment-Based Configuration
 
-The setup_logging function respects the `DEEPWIKI_LOG_LEVEL` environment variable:
-
-```bash
-export DEEPWIKI_LOG_LEVEL=DEBUG
-```
-
-```python
-# Will use DEBUG level from environment
-logger = setup_logging()
-```
+The setup_logging function respects the `DEEPWIKI_LOG_LEVEL` environment variable for default log level configuration, allowing external control of logging verbosity without code changes.
 
 ## Related Components
 
-This module uses the standard Python `logging` module and integrates with the broader local-deepwiki package logging infrastructure. It provides the foundation for logging across other components in the package.
+This module uses Python's standard `logging` library and integrates with the `os` and `sys` modules for environment variable access and stream handling. The typing module provides type hints for the format style parameter.
 
 ## API Reference
 
@@ -110,7 +100,7 @@ Configure logging for the local-deepwiki package.
 
 
 <details>
-<summary>View Source (lines 18-72)</summary>
+<summary>View Source (lines 18-72) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/logging.py#L18-L72">GitHub</a></summary>
 
 ```python
 def setup_logging(
@@ -191,7 +181,7 @@ Get a logger for a specific module.
 
 
 <details>
-<summary>View Source (lines 75-89)</summary>
+<summary>View Source (lines 75-89) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/logging.py#L75-L89">GitHub</a></summary>
 
 ```python
 def get_logger(name: str) -> logging.Logger:
@@ -238,13 +228,25 @@ flowchart TD
     class N0,N1,N2,N3,N4,N5,N6,N7,N8 func
 ```
 
+## Used By
+
+Functions and methods in this file and their callers:
+
+- **`FileHandler`**: called by `setup_logging`
+- **`Formatter`**: called by `setup_logging`
+- **`StreamHandler`**: called by `setup_logging`
+- **`addHandler`**: called by `setup_logging`
+- **`getLogger`**: called by `get_logger`, `setup_logging`
+- **`setFormatter`**: called by `setup_logging`
+- **`setLevel`**: called by `setup_logging`
+
 ## Relevant Source Files
 
 - `src/local_deepwiki/logging.py:18-72`
 
 ## See Also
 
-- [git_utils](core/git_utils.md) - uses this
-- [test_examples](generators/test_examples.md) - uses this
 - [vectorstore](core/vectorstore.md) - uses this
 - [chunker](core/chunker.md) - uses this
+- [test_examples](generators/test_examples.md) - uses this
+- [git_utils](core/git_utils.md) - uses this

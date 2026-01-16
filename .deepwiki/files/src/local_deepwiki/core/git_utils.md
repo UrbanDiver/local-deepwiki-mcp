@@ -1,57 +1,70 @@
-# Git Utils Module
+# git_utils.py
 
-## File Overview
+This module provides utilities for extracting information from Git repositories, including remote URL parsing, branch detection, and source URL construction.
 
-The `git_utils.py` module provides utilities for working with Git repositories, including extracting repository information, parsing remote URLs, and building source URLs. This module enables the application to gather metadata about Git repositories and construct links to source files.
+## Overview
+
+The git_utils module contains functions and data structures for working with Git repository metadata. It focuses on extracting repository information such as remote URLs, owner/repository names, default branches, and constructing source URLs for files within the repository.
 
 ## Classes
 
 ### GitRepoInfo
 
-A dataclass that stores information about a Git repository.
+A data class that holds structured information about a Git repository.
 
 **Attributes:**
-- `remote_url` (str | None): The remote URL of the repository (e.g., "https://github.com/owner/repo")
-- `host` (str | None): The hosting service domain (e.g., "github.com", "gitlab.com")
-- `owner` (str | None): The repository owner or organization name (e.g., "UrbanDiver")
-- `repo` (str | None): The repository name (e.g., "local-deepwiki-mcp")
-- `default_branch` (str): The default branch name (e.g., "[main](../export/html.md)")
+- `remote_url`: The remote URL of the repository (e.g., "https://github.com/owner/repo")
+- `host`: The hosting service domain (e.g., "github.com", "gitlab.com")  
+- `owner`: The repository owner or organization name (e.g., "UrbanDiver")
+- `repo`: The repository name (e.g., "local-deepwiki-mcp")
+- `default_branch`: The default branch name (e.g., "[main](../export/pdf.md)")
+
+All fields except `default_branch` are optional and may be `None` if the information cannot be determined.
 
 ## Functions
 
-The module includes the following functions based on the code structure:
+Based on the module structure, this file contains the following functions:
 
-- `get_git_remote_url`: Retrieves the remote URL of a Git repository
-- `parse_remote_url`: Parses a Git remote URL to extract host, owner, and repository information
-- `get_default_branch`: Determines the default branch of a Git repository
-- `get_repo_info`: Gathers comprehensive repository information
-- `is_github_repo`: Checks if a repository is hosted on GitHub
-- `build_source_url`: Constructs URLs to source files in the repository
+### get_git_remote_url
+Retrieves the remote URL from a Git repository.
 
-## Usage Examples
+### parse_remote_url  
+Parses a Git remote URL to extract host, owner, and repository information.
+
+### get_default_branch
+Determines the default branch of a Git repository.
+
+### get_repo_info
+Collects comprehensive repository information and returns a GitRepoInfo instance.
+
+### is_github_repo
+Checks if a repository is hosted on GitHub.
+
+### build_source_url
+Constructs source URLs for files within the repository.
+
+## Usage Example
 
 ```python
-from local_deepwiki.core.git_utils import GitRepoInfo
+from local_deepwiki.core.git_utils import get_repo_info, GitRepoInfo
 
-# Create repository information object
-repo_info = GitRepoInfo(
-    remote_url="https://github.com/owner/repo",
-    host="github.com",
-    owner="owner",
-    repo="repo",
-    default_branch="main"
-)
+# Get repository information
+repo_info = get_repo_info()
+if repo_info.remote_url:
+    print(f"Repository: {repo_info.owner}/{repo_info.repo}")
+    print(f"Host: {repo_info.host}")
+    print(f"Default branch: {repo_info.default_branch}")
 ```
 
-## Related Components
+## Dependencies
 
-This module integrates with:
+This module uses:
+- `subprocess` for executing Git commands
+- `pathlib.Path` for file system operations  
+- `re` for regular expression pattern matching
+- `local_deepwiki.logging` for logging functionality
 
-- **Logging System**: Uses the logging module from `local_deepwiki.logging` for error reporting and debugging
-- **Path Handling**: Utilizes `pathlib.Path` for file system operations
-- **Subprocess Operations**: Leverages the `subprocess` module for executing Git commands
-
-The module supports Git repository analysis by providing structured access to repository metadata and URL construction capabilities.
+The module is designed to work with local Git repositories and extract metadata that can be used for documentation generation and source linking.
 
 ## API Reference
 
@@ -63,7 +76,7 @@ Information about a git repository.
 
 
 <details>
-<summary>View Source (lines 18-25)</summary>
+<summary>View Source (lines 18-25) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/git_utils.py#L18-L25">GitHub</a></summary>
 
 ```python
 class GitRepoInfo:
@@ -98,7 +111,7 @@ Get the remote origin URL from git config.
 
 
 <details>
-<summary>View Source (lines 28-49)</summary>
+<summary>View Source (lines 28-49) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/git_utils.py#L28-L49">GitHub</a></summary>
 
 ```python
 def get_git_remote_url(repo_path: Path) -> str | None:
@@ -145,7 +158,7 @@ Parse remote URL to extract host, owner, and repo name.  Handles various URL for
 
 
 <details>
-<summary>View Source (lines 52-89)</summary>
+<summary>View Source (lines 52-89) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/git_utils.py#L52-L89">GitHub</a></summary>
 
 ```python
 def parse_remote_url(url: str) -> tuple[str, str, str] | None:
@@ -196,7 +209,7 @@ def parse_remote_url(url: str) -> tuple[str, str, str] | None:
 def get_default_branch(repo_path: Path) -> str
 ```
 
-Get the default branch name for the repository.  Tries to detect the default branch from: 1. Current HEAD if on a branch 2. Remote HEAD reference 3. Falls back to '[main](../export/html.md)'
+Get the default branch name for the repository.  Tries to detect the default branch from: 1. Current HEAD if on a branch 2. Remote HEAD reference 3. Falls back to '[main](../export/pdf.md)'
 
 
 | [Parameter](../generators/api_docs.md) | Type | Default | Description |
@@ -208,7 +221,7 @@ Get the default branch name for the repository.  Tries to detect the default bra
 
 
 <details>
-<summary>View Source (lines 92-140)</summary>
+<summary>View Source (lines 92-140) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/git_utils.py#L92-L140">GitHub</a></summary>
 
 ```python
 def get_default_branch(repo_path: Path) -> str:
@@ -282,7 +295,7 @@ Get complete git repository information.
 
 
 <details>
-<summary>View Source (lines 143-170)</summary>
+<summary>View Source (lines 143-170) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/git_utils.py#L143-L170">GitHub</a></summary>
 
 ```python
 def get_repo_info(repo_path: Path) -> GitRepoInfo:
@@ -335,7 +348,7 @@ Check if a repository is hosted on GitHub.
 
 
 <details>
-<summary>View Source (lines 173-185)</summary>
+<summary>View Source (lines 173-185) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/git_utils.py#L173-L185">GitHub</a></summary>
 
 ```python
 def is_github_repo(repo_path: Path) -> bool:
@@ -377,7 +390,7 @@ Build a URL to the source file on GitHub/GitLab.
 
 
 <details>
-<summary>View Source (lines 188-229)</summary>
+<summary>View Source (lines 188-229) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/git_utils.py#L188-L229">GitHub</a></summary>
 
 ```python
 def build_source_url(
@@ -466,6 +479,20 @@ flowchart TD
     classDef func fill:#e1f5fe
     class N0,N1,N2,N3,N4,N5,N6,N7,N8,N9 func
 ```
+
+## Used By
+
+Functions and methods in this file and their callers:
+
+- **`GitRepoInfo`**: called by `get_repo_info`
+- **`get_default_branch`**: called by `get_repo_info`
+- **`get_git_remote_url`**: called by `get_repo_info`
+- **`get_repo_info`**: called by `is_github_repo`
+- **`groups`**: called by `parse_remote_url`
+- **`match`**: called by `parse_remote_url`
+- **`parse_remote_url`**: called by `get_repo_info`
+- **`run`**: called by `get_default_branch`, `get_git_remote_url`
+- **`sub`**: called by `parse_remote_url`
 
 ## Usage Examples
 

@@ -1,87 +1,106 @@
-# Source References Generator
+# source_refs.py
 
 ## File Overview
 
-The `source_refs.py` module provides functionality for managing source reference sections in wiki pages. It handles the creation and maintenance of sections that map source files to their corresponding wiki pages, enabling cross-referencing between documentation and source code.
+This module handles the generation and management of source reference sections for wiki pages. It provides functionality to build mappings between source files and wiki pages, generate formatted source reference sections, and add these sections to wiki content.
 
 ## Functions
 
 ### build_file_to_wiki_map
 
-Maps source files to their corresponding wiki pages.
+```python
+build_file_to_wiki_map(pages: list[WikiPage]) -> dict
+```
+
+Builds a mapping from source files to their corresponding wiki pages.
 
 **Parameters:**
-- Based on the function name and context, this likely processes wiki pages to create a mapping structure
+- `pages`: List of [WikiPage](../models.md) objects to process
 
 **Returns:**
-- A mapping structure connecting files to wiki pages
+- Dictionary mapping file paths to wiki pages
 
 ### _relative_path
 
-Utility function for handling relative path operations.
+```python
+_relative_path(file_path: Path, base_path: Path) -> str
+```
+
+Internal helper function to calculate relative paths between files.
 
 **Parameters:**
-- Path-related parameters for computing relative paths
+- `file_path`: The target file path
+- `base_path`: The base path to calculate relative to
 
 **Returns:**
-- A relative path representation
+- String representation of the relative path
 
 ### _format_file_entry
 
-Formats individual file entries for display in source reference sections.
+```python
+_format_file_entry(file_path: str, wiki_page: WikiPage) -> str
+```
+
+Internal helper function to format individual file entries for source reference sections.
 
 **Parameters:**
-- File information to be formatted
+- `file_path`: Path to the source file
+- `wiki_page`: Associated [WikiPage](../models.md) object
 
 **Returns:**
-- Formatted string representation of the file entry
+- Formatted string entry for the source reference
 
 ### generate_source_refs_section
 
-Generates a complete source references section for inclusion in wiki pages.
+```python
+generate_source_refs_section(referenced_files: list, file_to_wiki_map: dict) -> str
+```
+
+Generates a complete source references section from a list of referenced files.
 
 **Parameters:**
-- Information needed to build the source references section
+- `referenced_files`: List of files to include in the references
+- `file_to_wiki_map`: Dictionary mapping file paths to [WikiPage](../models.md) objects
 
 **Returns:**
-- Formatted source references section content
+- Formatted markdown string containing the source references section
 
 ### _strip_existing_source_refs
 
-Removes existing source reference sections from wiki page content.
+```python
+_strip_existing_source_refs(content: str) -> str
+```
+
+Internal helper function to remove existing source reference sections from content.
 
 **Parameters:**
-- Wiki page content containing existing source references
+- `content`: The content string to process
 
 **Returns:**
-- Content with source reference sections removed
+- Content string with existing source reference sections removed
 
 ### add_source_refs_sections
 
-Adds source reference sections to wiki pages.
+```python
+add_source_refs_sections(pages: list[WikiPage]) -> None
+```
+
+Adds source reference sections to a list of wiki pages, modifying them in place.
 
 **Parameters:**
-- Wiki pages and related information needed to add source references
+- `pages`: List of [WikiPage](../models.md) objects to process
 
 **Returns:**
-- Updated content with source reference sections added
-
-## Dependencies
-
-The module relies on:
-
-- `re`: Regular expression operations for text processing
-- `pathlib.Path`: Path manipulation utilities
-- [`local_deepwiki.models.WikiPage`](../models.md): Wiki page data model
-- [`local_deepwiki.models.WikiPageStatus`](../models.md): Wiki page status enumeration
+- None (modifies pages in place)
 
 ## Related Components
 
-This module works with the [WikiPage](../models.md) and [WikiPageStatus](../models.md) classes from the models module to manage wiki page content and track page states during source reference processing.
+This module works with the following components from the codebase:
 
-## Usage Context
+- **[WikiPage](../models.md)**: Core model representing wiki pages with their content and metadata
+- **[WikiPageStatus](../models.md)**: Enumeration for tracking wiki page status states
 
-This module is designed to be used as part of a larger wiki generation system, specifically handling the cross-referencing between source code files and their corresponding documentation pages. The functions work together to create, update, and maintain source reference sections that help users navigate between code and documentation.
+The module uses regular expressions for content processing and Path objects for file system operations.
 
 ## API Reference
 
@@ -106,7 +125,7 @@ Build a mapping from source file paths to wiki page paths.
 
 
 <details>
-<summary>View Source (lines 14-53)</summary>
+<summary>View Source (lines 14-53) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/source_refs.py#L14-L53">GitHub</a></summary>
 
 ```python
 def build_file_to_wiki_map(pages: list[WikiPage], wiki_path: Path | None = None) -> dict[str, str]:
@@ -175,7 +194,7 @@ Generate a Relevant Source Files section for a wiki page.
 
 
 <details>
-<summary>View Source (lines 115-169)</summary>
+<summary>View Source (lines 115-169) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/source_refs.py#L115-L169">GitHub</a></summary>
 
 ```python
 def generate_source_refs_section(
@@ -258,7 +277,7 @@ Add Relevant Source Files sections to wiki pages.
 
 
 <details>
-<summary>View Source (lines 205-272)</summary>
+<summary>View Source (lines 205-272) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/source_refs.py#L205-L272">GitHub</a></summary>
 
 ```python
 def add_source_refs_sections(
@@ -371,6 +390,25 @@ flowchart TD
     class N0,N1,N2,N3,N4,N5,N6,N7,N8,N9,N10,N11,N12,N13,N14 func
 ```
 
+## Used By
+
+Functions and methods in this file and their callers:
+
+- **`Path`**: called by `_relative_path`
+- **[`WikiPage`](../models.md)**: called by `add_source_refs_sections`
+- **`_format_file_entry`**: called by `generate_source_refs_section`
+- **`_relative_path`**: called by `_format_file_entry`
+- **`_strip_existing_source_refs`**: called by `add_source_refs_sections`
+- **`build_file_to_wiki_map`**: called by `add_source_refs_sections`
+- **`exists`**: called by `build_file_to_wiki_map`
+- **`generate_source_refs_section`**: called by `add_source_refs_sections`
+- **`relative_to`**: called by `build_file_to_wiki_map`
+- **`rglob`**: called by `build_file_to_wiki_map`
+- **`rstrip`**: called by `_strip_existing_source_refs`, `add_source_refs_sections`
+- **`search`**: called by `_strip_existing_source_refs`
+- **`start`**: called by `_strip_existing_source_refs`
+- **`sub`**: called by `build_file_to_wiki_map`
+
 ## Usage Examples
 
 *Examples extracted from test files*
@@ -440,7 +478,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_relative_path`
 
 <details>
-<summary>View Source (lines 56-81)</summary>
+<summary>View Source (lines 56-81) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/source_refs.py#L56-L81">GitHub</a></summary>
 
 ```python
 def _relative_path(from_path: str, to_path: str) -> str:
@@ -477,7 +515,7 @@ def _relative_path(from_path: str, to_path: str) -> str:
 #### `_format_file_entry`
 
 <details>
-<summary>View Source (lines 84-112)</summary>
+<summary>View Source (lines 84-112) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/source_refs.py#L84-L112">GitHub</a></summary>
 
 ```python
 def _format_file_entry(
@@ -517,7 +555,7 @@ def _format_file_entry(
 #### `_strip_existing_source_refs`
 
 <details>
-<summary>View Source (lines 172-202)</summary>
+<summary>View Source (lines 172-202) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/generators/source_refs.py#L172-L202">GitHub</a></summary>
 
 ```python
 def _strip_existing_source_refs(content: str) -> str:

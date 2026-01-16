@@ -2,95 +2,89 @@
 
 ## External Dependencies
 
-The project relies on the following third-party libraries:
-
-### AI and Machine Learning
-- **anthropic** (>=0.40) - Anthropic's Claude API client
-- **openai** (>=1.0) - OpenAI API client for GPT models
+### Core AI and ML Libraries
+- **anthropic** (>=0.40) - Anthropic's Claude API client for AI language model integration
+- **openai** (>=1.0) - OpenAI API client for GPT models and embeddings
 - **ollama** (>=0.4) - Local LLM inference server client
-- **sentence-transformers** (>=3.0) - Pre-trained models for generating embeddings
-- **mcp** (>=1.2.0) - Model Context Protocol implementation
-
-### Web Framework
-- **flask** (>=3.0) - Web framework for HTTP server functionality
+- **sentence-transformers** (>=3.0) - Transformer-based sentence and text embeddings
 
 ### Data Processing and Storage
-- **lancedb** (>=0.15) - Vector database for embeddings storage
-- **pandas** (>=2.0) - Data manipulation and analysis
-- **pydantic** (>=2.0) - Data validation and serialization
+- **lancedb** (>=0.15) - Vector database for storing and querying embeddings
+- **pandas** (>=2.0) - Data manipulation and analysis library
+- **pydantic** (>=2.0) - Data validation and settings management using Python type annotations
 
-### Code Analysis
-- **tree-sitter** (>=0.23) - Incremental parsing library
-- **tree-sitter-c** (>=0.23) - C language parser
-- **tree-sitter-c-sharp** (>=0.23) - C# language parser
-- **tree-sitter-cpp** (>=0.23) - C++ language parser
-- **tree-sitter-go** (>=0.23) - Go language parser
-- **tree-sitter-java** (>=0.23) - Java language parser
-- **tree-sitter-javascript** (>=0.23) - JavaScript language parser
-- **tree-sitter-kotlin** (>=0.23) - Kotlin language parser
-- **tree-sitter-php** (>=0.23) - PHP language parser
-- **tree-sitter-python** (>=0.23) - Python language parser
-- **tree-sitter-ruby** (>=0.23) - Ruby language parser
-- **tree-sitter-rust** (>=0.23) - Rust language parser
-- **tree-sitter-swift** (>=0.0.1) - Swift language parser
-- **tree-sitter-typescript** (>=0.23) - TypeScript language parser
+### Code Analysis and Parsing
+- **tree-sitter** (>=0.23) - Incremental parsing library for syntax tree generation
+- **tree-sitter-c** (>=0.23) - C language grammar for tree-sitter
+- **tree-sitter-c-sharp** (>=0.23) - C# language grammar for tree-sitter
+- **tree-sitter-cpp** (>=0.23) - C++ language grammar for tree-sitter
+- **tree-sitter-go** (>=0.23) - Go language grammar for tree-sitter
+- **tree-sitter-java** (>=0.23) - Java language grammar for tree-sitter
+- **tree-sitter-javascript** (>=0.23) - JavaScript language grammar for tree-sitter
+- **tree-sitter-kotlin** (>=0.23) - Kotlin language grammar for tree-sitter
+- **tree-sitter-php** (>=0.23) - PHP language grammar for tree-sitter
+- **tree-sitter-python** (>=0.23) - Python language grammar for tree-sitter
+- **tree-sitter-ruby** (>=0.23) - Ruby language grammar for tree-sitter
+- **tree-sitter-rust** (>=0.23) - Rust language grammar for tree-sitter
+- **tree-sitter-swift** (>=0.0.1) - Swift language grammar for tree-sitter
+- **tree-sitter-typescript** (>=0.23) - TypeScript language grammar for tree-sitter
 
-### File and Content Processing
+### Web and File Processing
+- **flask** (>=3.0) - Web framework for HTTP API endpoints
 - **markdown** (>=3.0) - Markdown processing and conversion
-- **pyyaml** (>=6.0) - YAML parsing and generation
-- **watchdog** (>=4.0) - File system monitoring
-- **weasyprint** (>=62.0) - HTML to PDF conversion
+- **weasyprint** (>=62.0) - HTML/CSS to PDF conversion
+- **watchdog** (>=4.0) - File system event monitoring
 
-### User Interface
-- **rich** (>=13.0) - Rich text and formatting for terminal output
+### Utilities
+- **pyyaml** (>=6.0) - YAML parsing and serialization
+- **rich** (>=13.0) - Rich text and beautiful formatting in the terminal
+- **mcp** (>=1.2.0) - Model Context Protocol implementation
 
-## Dev Dependencies
+## Development Dependencies
 
-Development and testing tools include:
-
-- **black** (>=24.0) - Code formatting
-- **isort** (>=5.0) - Import sorting
-- **mypy** (>=1.0) - Static type checking
-- **pre-commit** (>=3.0) - Git pre-commit hooks
+- **black** (>=24.0) - Python code formatter
+- **isort** (>=5.0) - Import statement sorter
+- **mypy** (>=1.0) - Static type checker
+- **pre-commit** (>=3.0) - Git pre-commit hook framework
 - **pytest** (>=8.0) - Testing framework
-- **pytest-asyncio** (>=0.24) - Async testing support
-- **types-Markdown** (>=3.0) - Type stubs for Markdown
-- **types-PyYAML** (>=6.0) - Type stubs for PyYAML
+- **pytest-asyncio** (>=0.24) - Async support for pytest
+- **types-Markdown** (>=3.0) - Type stubs for Markdown library
+- **types-PyYAML** (>=6.0) - Type stubs for PyYAML library
 
 ## Internal Module Dependencies
 
-Based on the import statements, the internal modules have the following dependencies:
+### Core Architecture
+- **Models** - The `local_deepwiki.models` module provides core data structures including [ChunkType](files/src/local_deepwiki/models.md), [CodeChunk](files/src/local_deepwiki/models.md), [WikiPage](files/src/local_deepwiki/models.md), [Language](files/src/local_deepwiki/models.md), [FileInfo](files/src/local_deepwiki/models.md), [IndexStatus](files/src/local_deepwiki/models.md), and [WikiPageStatus](files/src/local_deepwiki/models.md) that are used throughout the system
+- **Configuration** - The `local_deepwiki.config` module provides [ChunkingConfig](files/src/local_deepwiki/config.md), [EmbeddingConfig](files/src/local_deepwiki/config.md), and configuration management functions used by core components
 
-### Core Infrastructure
-- **models** module provides foundational data structures ([ChunkType](files/src/local_deepwiki/models.md), [CodeChunk](files/src/local_deepwiki/models.md), [WikiPage](files/src/local_deepwiki/models.md), [Language](files/src/local_deepwiki/models.md), etc.) used throughout the system
-- **config** module provides configuration management used by core components
-- **logging** module provides logging utilities
-- **validation** module depends on models for [Language](files/src/local_deepwiki/models.md) definitions
-
-### Code Analysis Pipeline
-- **[CodeParser](files/src/local_deepwiki/core/parser.md)** (in core.parser) handles low-level parsing using tree-sitter
-- **[CodeChunker](files/src/local_deepwiki/core/chunker.md)** (in core.chunker) depends on [CodeParser](files/src/local_deepwiki/core/parser.md) and models for breaking code into chunks
-- **[VectorStore](files/src/local_deepwiki/core/vectorstore.md)** (in core.vectorstore) manages embeddings storage and retrieval
+### Core Processing Components
+- **Parser** - The [CodeParser](files/src/local_deepwiki/core/parser.md) class in `local_deepwiki.core.parser` handles syntax tree parsing and provides utilities like [find_nodes_by_type](files/src/local_deepwiki/core/parser.md), [get_node_name](files/src/local_deepwiki/core/parser.md), and [get_node_text](files/src/local_deepwiki/core/parser.md)
+- **Chunker** - The [CodeChunker](files/src/local_deepwiki/core/chunker.md) class in `local_deepwiki.core.chunker` depends on [CodeParser](files/src/local_deepwiki/core/parser.md) for breaking code into manageable chunks
+- **[Vector Store](files/src/local_deepwiki/core/vectorstore.md)** - The [VectorStore](files/src/local_deepwiki/core/vectorstore.md) class in `local_deepwiki.core.vectorstore` handles embedding storage and retrieval
 
 ### Provider System
-- **[EmbeddingProvider](files/src/local_deepwiki/providers/base.md)** and **[LLMProvider](files/src/local_deepwiki/providers/base.md)** base classes (in providers.base) define provider interfaces
-- **[LocalEmbeddingProvider](files/src/local_deepwiki/providers/embeddings/local.md)** and **[OpenAIEmbeddingProvider](files/src/local_deepwiki/providers/embeddings/openai.md)** (in providers.embeddings) implement embedding providers
-- Provider modules depend on config for configuration management
+- **Base Providers** - The `local_deepwiki.providers.base` module defines [EmbeddingProvider](files/src/local_deepwiki/providers/base.md) and [LLMProvider](files/src/local_deepwiki/providers/base.md) interfaces
+- **Embedding Providers** - [LocalEmbeddingProvider](files/src/local_deepwiki/providers/embeddings/local.md) and [OpenAIEmbeddingProvider](files/src/local_deepwiki/providers/embeddings/openai.md) implement the [EmbeddingProvider](files/src/local_deepwiki/providers/base.md) interface
+- **Provider Initialization** - The embeddings module uses configuration management to initialize appropriate providers
 
-### Content Generators
-- **[CrossLinker](files/src/local_deepwiki/generators/crosslinks.md)** and **[EntityRegistry](files/src/local_deepwiki/generators/crosslinks.md)** (in generators.crosslinks) handle cross-reference generation
-- **[APIDocExtractor](files/src/local_deepwiki/generators/api_docs.md)** (in generators.api_docs) extracts API documentation from code
-- **[RelationshipAnalyzer](files/src/local_deepwiki/generators/see_also.md)** and **[FileRelationships](files/src/local_deepwiki/generators/see_also.md)** (in generators.see_also) analyze code relationships
-- **[UsageExample](files/src/local_deepwiki/generators/test_examples.md)** extractor (in generators.test_examples) finds usage examples in tests
-- All generators depend on models for data structures and core.parser for code analysis
+### Generator Components
+- **Cross-links Generator** - The [CrossLinker](files/src/local_deepwiki/generators/crosslinks.md) and [EntityRegistry](files/src/local_deepwiki/generators/crosslinks.md) classes process [WikiPage](files/src/local_deepwiki/models.md) and [CodeChunk](files/src/local_deepwiki/models.md) objects to add cross-references
+- **See Also Generator** - The [RelationshipAnalyzer](files/src/local_deepwiki/generators/see_also.md) and [FileRelationships](files/src/local_deepwiki/generators/see_also.md) classes analyze code relationships using [WikiPage](files/src/local_deepwiki/models.md) and [CodeChunk](files/src/local_deepwiki/models.md) data
+- **API Documentation** - The [APIDocExtractor](files/src/local_deepwiki/generators/api_docs.md) class works with [CodeParser](files/src/local_deepwiki/core/parser.md) to extract API documentation from code
+- **Diagrams Generator** - Uses [CodeChunk](files/src/local_deepwiki/models.md), [FileInfo](files/src/local_deepwiki/models.md), and [IndexStatus](files/src/local_deepwiki/models.md) models to generate various diagram types
+- **Test Examples** - The [UsageExample](files/src/local_deepwiki/generators/test_examples.md) extractor analyzes test files to [find](files/src/local_deepwiki/generators/manifest.md) usage patterns
+- **Table of Contents** - Processes [WikiPage](files/src/local_deepwiki/models.md) structures to generate navigation
+- **Search Generator** - Processes [WikiPage](files/src/local_deepwiki/models.md) content for search functionality
+- **Call Graph Generator** - Uses [CodeParser](files/src/local_deepwiki/core/parser.md) and tree-sitter Node objects to analyze function calls
+- **Source References** - Processes [WikiPage](files/src/local_deepwiki/models.md) and [WikiPageStatus](files/src/local_deepwiki/models.md) objects to add source file references
 
 ### Export System
-- **[HtmlExporter](files/src/local_deepwiki/export/html.md)** (in export.html) handles HTML generation
-- Export modules depend on models for [WikiPage](files/src/local_deepwiki/models.md) structures
+- **HTML Export** - The [HtmlExporter](files/src/local_deepwiki/export/html.md) class handles wiki export to HTML format
+- **PDF Export** - Provides PDF generation capabilities
 
 ### Server Components
-- Handler functions depend on core components like indexing, search, and export functionality
-- Server handlers integrate multiple subsystems to provide API endpoints
+- **Handlers** - Server request handlers depend on various generators and core components for processing wiki operations
+- **Logging** - Centralized logging configuration used across all modules
 
 ## Module Dependency Graph
 
@@ -155,17 +149,14 @@ flowchart TD
     subgraph validation[Validation]
         M36[validation]
     end
-    subgraph web[Web]
-        M37[app]
-    end
     subgraph external[External Dependencies]
         E0([pathlib]):::external
         E1([typing]):::external
-        E2([json]):::external
-        E3([re]):::external
+        E2([re]):::external
+        E3([json]):::external
         E4([dataclasses]):::external
-        E5([asyncio]):::external
-        E6([lancedb]):::external
+        E5([lancedb]):::external
+        E6([asyncio]):::external
         E7([mcp]):::external
         E8([time]):::external
         E9([collections]):::external
@@ -221,6 +212,7 @@ flowchart TD
     M21 --> M28
     M21 --> M33
     M22 --> M0
+    M22 --> M3
     M22 --> M7
     M22 --> M10
     M22 --> M11
@@ -250,41 +242,34 @@ flowchart TD
     M35 --> M26
     M35 --> M27
     M36 --> M28
-    M37 --> M0
-    M37 --> M2
-    M37 --> M7
-    M37 --> M27
-    M37 --> M28
-    M37 --> M30
-    M37 --> M33
     M0 -.-> E0
     M0 -.-> E1
     M1 -.-> E0
     M1 -.-> E1
     M3 -.-> E4
     M3 -.-> E0
-    M3 -.-> E3
-    M4 -.-> E2
+    M3 -.-> E2
+    M4 -.-> E3
     M4 -.-> E0
     M4 -.-> E8
-    M5 -.-> E6
+    M5 -.-> E5
     M5 -.-> E0
     M5 -.-> E8
     M5 -.-> E1
-    M7 -.-> E2
-    M7 -.-> E6
+    M7 -.-> E3
+    M7 -.-> E5
     M7 -.-> E0
     M7 -.-> E1
-    M8 -.-> E2
+    M8 -.-> E3
     M8 -.-> E0
     M8 -.-> E1
-    M9 -.-> E2
-    M9 -.-> E0
     M9 -.-> E3
+    M9 -.-> E0
+    M9 -.-> E2
     M9 -.-> E1
     M10 -.-> E4
     M10 -.-> E0
-    M10 -.-> E3
+    M10 -.-> E2
     M11 -.-> E0
     M12 -.-> E9
     M12 -.-> E4
@@ -292,56 +277,52 @@ flowchart TD
     M13 -.-> E9
     M13 -.-> E4
     M13 -.-> E0
-    M13 -.-> E3
+    M13 -.-> E2
     M14 -.-> E4
     M14 -.-> E0
-    M14 -.-> E3
+    M14 -.-> E2
     M15 -.-> E4
-    M15 -.-> E2
-    M15 -.-> E0
     M15 -.-> E3
+    M15 -.-> E0
+    M15 -.-> E2
     M15 -.-> E1
-    M16 -.-> E2
-    M16 -.-> E0
     M16 -.-> E3
+    M16 -.-> E0
+    M16 -.-> E2
     M17 -.-> E9
     M17 -.-> E4
     M17 -.-> E0
-    M17 -.-> E3
+    M17 -.-> E2
     M18 -.-> E0
-    M18 -.-> E3
+    M18 -.-> E2
     M20 -.-> E4
-    M20 -.-> E2
+    M20 -.-> E3
     M20 -.-> E0
     M20 -.-> E1
-    M21 -.-> E5
-    M21 -.-> E2
+    M21 -.-> E6
+    M21 -.-> E3
     M21 -.-> E0
     M21 -.-> E8
-    M22 -.-> E5
+    M22 -.-> E6
     M22 -.-> E0
-    M22 -.-> E3
+    M22 -.-> E2
     M22 -.-> E8
     M22 -.-> E1
-    M26 -.-> E5
-    M26 -.-> E2
+    M26 -.-> E6
+    M26 -.-> E3
     M26 -.-> E7
     M26 -.-> E0
     M26 -.-> E1
     M27 -.-> E1
-    M28 -.-> E2
+    M28 -.-> E3
     M28 -.-> E0
     M28 -.-> E1
     M31 -.-> E1
     M34 -.-> E1
-    M35 -.-> E5
+    M35 -.-> E6
     M35 -.-> E7
     M35 -.-> E1
     M36 -.-> E1
-    M37 -.-> E5
-    M37 -.-> E2
-    M37 -.-> E0
-    M37 -.-> E1
     click M0 "files/src/local_deepwiki/config.md"
     click M1 "files/src/local_deepwiki/core/chunker.md"
     click M2 "files/src/local_deepwiki/core/deep_research.md"
@@ -379,7 +360,6 @@ flowchart TD
     click M34 "files/src/local_deepwiki/providers/llm/ollama.md"
     click M35 "files/src/local_deepwiki/server.md"
     click M36 "files/src/local_deepwiki/validation.md"
-    click M37 "files/src/local_deepwiki/web/app.md"
     classDef external fill:#2d2d3d,stroke:#666,stroke-dasharray: 5 5
 ```
 
@@ -399,4 +379,4 @@ The following source files were used to generate this documentation:
 - `src/local_deepwiki/export/__init__.py:9-22`
 
 
-*Showing 10 of 70 source files.*
+*Showing 10 of 69 source files.*

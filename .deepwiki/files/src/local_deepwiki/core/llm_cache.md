@@ -2,52 +2,144 @@
 
 ## File Overview
 
-The `llm_cache.py` module provides caching functionality for Large [Language](../models.md) Model (LLM) operations using LanceDB as the storage backend. This module helps optimize performance by storing and retrieving previously computed results, reducing redundant API calls and computations.
-
-## Dependencies
-
-This module relies on several key components:
-
-- **LanceDB**: Vector database for storing cached results
-- **[LLMCacheConfig](../config.md)**: Configuration settings for cache behavior
-- **[EmbeddingProvider](../providers/base.md)**: Base provider for embedding operations
-- Standard Python libraries for hashing, timing, and path operations
+This module provides caching functionality for LLM (Large [Language](../models.md) Model) responses using LanceDB as the storage backend. The cache supports both exact hash matching for fast retrieval and embedding-based similarity search for semantic matching of prompts.
 
 ## Classes
 
 ### LLMCache
 
-The LLMCache class manages caching operations for LLM-related computations using LanceDB as the storage backend.
+The [main](../export/pdf.md) caching class that handles storing and retrieving LLM responses with configurable TTL and similarity matching.
 
 **Key Features:**
-- Vector-based storage using LanceDB
-- Content hashing for cache key generation
-- Integration with embedding providers
-- Configurable cache behavior through [LLMCacheConfig](../config.md)
+- Hash-based exact matching for deterministic responses
+- Embedding-based similarity search for semantic matching
+- Configurable TTL (time-to-live) for cache entries
+- Temperature-based caching (skips high temperature requests)
+- Statistics tracking for cache performance
 
-**Dependencies:**
-- Requires a LanceDB Table instance for storage operations
-- Uses [EmbeddingProvider](../providers/base.md) for embedding-related caching
-- Configured through [LLMCacheConfig](../config.md) settings
+## Methods
 
-## Usage Context
+### `__init__(cache_path, embedding_provider, config)`
 
-Based on the imports and class structure, this module is designed to:
+Initialize the LLM cache.
 
-1. **Cache LLM Results**: Store computed results to avoid redundant processing
-2. **Vector Storage**: Leverage LanceDB's vector capabilities for efficient retrieval
-3. **Content-Based Keys**: Use hash-based keys for reliable cache lookups
-4. **Provider Integration**: Work with various embedding providers through the base interface
+**Parameters:**
+- `cache_path` (Path): Path to the LanceDB cache database
+- `embedding_provider` ([EmbeddingProvider](../providers/base.md)): Provider for generating prompt embeddings
+- `config` ([LLMCacheConfig](../config.md)): Cache configuration
+
+### `get(prompt, system_prompt=None, temperature=0.7, model_name="")`
+
+Try to get a cached response using a two-tier strategy:
+1. Skip if temperature is too high (non-deterministic)
+2. Try exact hash match (fast path)
+3. If no exact match, try embedding similarity search (slow path)
+
+**Parameters:**
+- `prompt` (str): User prompt
+- `system_prompt` (str | None): System prompt (optional)
+- `temperature` (float): LLM temperature used (default: 0.7)
+- `model_name` (str): Name of the LLM model (default: "")
+
+**Returns:**
+- `str | None`: Cached response if found, None otherwise
+
+### `set(prompt, response, system_prompt=None, temperature=0.7, model_name="", ttl_seconds=None)`
+
+Cache an LLM response.
+
+**Parameters:**
+- `prompt` (str): User prompt
+- `response` (str): LLM response to cache
+- `system_prompt` (str | None): System prompt used (optional)
+- `temperature` (float): LLM temperature used (default: 0.7)
+- `model_name` (str): Name of the LLM model (default: "")
+- `ttl_seconds` (int | None): Optional TTL override for this entry
+
+### `stats()`
+
+Get cache statistics.
+
+**Returns:**
+- `dict[str, int]`: Dictionary containing cache statistics
+
+### `clear()`
+
+Clear all cache entries.
+
+**Returns:**
+- `int`: Number of entries cleared
+
+### `get_entry_count()`
+
+Get the number of entries in the cache.
+
+**Returns:**
+- `int`: Number of cache entries
+
+## Private Methods
+
+### `_get_table()`
+
+Get the cache table if it exists.
+
+**Returns:**
+- `Table | None`: LanceDB table instance or None if not found
+
+### `_is_valid_entry(entry)`
+
+Check if a cache entry is still valid (not expired).
+
+**Parameters:**
+- `entry` (dict[str, Any]): Cache entry record
+
+**Returns:**
+- `bool`: True if entry is valid, False if expired
+
+## Usage Example
+
+```python
+from pathlib import Path
+
+# Initialize cache
+cache = LLMCache(
+    cache_path=Path("cache.db"),
+    embedding_provider=embedding_provider,
+    config=cache_config
+)
+
+# Try to get cached response
+cached_response = await cache.get(
+    prompt="What is Python?",
+    system_prompt="You are a helpful assistant",
+    temperature=0.7,
+    model_name="gpt-3.5-turbo"
+)
+
+if cached_response is None:
+    # Generate new response and cache it
+    response = "Python is a programming language..."
+    await cache.set(
+        prompt="What is Python?",
+        response=response,
+        system_prompt="You are a helpful assistant",
+        temperature=0.7,
+        model_name="gpt-3.5-turbo"
+    )
+
+# Get cache statistics
+stats = cache.stats()
+print(f"Cache entries: {cache.get_entry_count()}")
+
+# Clear cache
+cleared_count = await cache.clear()
+```
 
 ## Related Components
 
-This module integrates with several other components in the system:
-
-- **[LLMCacheConfig](../config.md)**: Provides configuration settings for cache behavior
-- **[EmbeddingProvider](../providers/base.md)**: Base interface for embedding operations that may be cached
-- **Logging System**: Uses the application's logging infrastructure for monitoring
-
-The module serves as a crucial performance optimization component, particularly for applications that perform repeated LLM operations or embedding computations.
+- **[EmbeddingProvider](../providers/base.md)**: Used for generating prompt embeddings for similarity search
+- **[LLMCacheConfig](../config.md)**: Configuration object containing cache settings like TTL
+- **LanceDB**: Vector database used as the storage backend
 
 ## API Reference
 
@@ -59,7 +151,7 @@ Vector-based cache for LLM responses with exact and similarity matching.  Uses a
 
 
 <details>
-<summary>View Source (lines 19-384)</summary>
+<summary>View Source (lines 19-384) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/llm_cache.py#L19-L384">GitHub</a></summary>
 
 ```python
 class LLMCache:
@@ -85,7 +177,7 @@ Initialize the LLM cache.
 
 
 <details>
-<summary>View Source (lines 31-49)</summary>
+<summary>View Source (lines 31-49) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/llm_cache.py#L31-L49">GitHub</a></summary>
 
 ```python
 def __init__(
@@ -121,7 +213,7 @@ Get cache statistics.
 
 
 <details>
-<summary>View Source (lines 52-54)</summary>
+<summary>View Source (lines 52-54) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/llm_cache.py#L52-L54">GitHub</a></summary>
 
 ```python
 def stats(self) -> dict[str, int]:
@@ -149,7 +241,7 @@ Try to get a cached response.  Strategy: 1. Skip if temperature too high (non-de
 
 
 <details>
-<summary>View Source (lines 120-208)</summary>
+<summary>View Source (lines 120-208) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/llm_cache.py#L120-L208">GitHub</a></summary>
 
 ```python
 async def get(
@@ -265,7 +357,7 @@ Cache an LLM response.
 
 
 <details>
-<summary>View Source (lines 210-282)</summary>
+<summary>View Source (lines 210-282) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/llm_cache.py#L210-L282">GitHub</a></summary>
 
 ```python
 async def set(
@@ -355,7 +447,7 @@ Clear all cache entries.
 
 
 <details>
-<summary>View Source (lines 348-368)</summary>
+<summary>View Source (lines 348-368) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/llm_cache.py#L348-L368">GitHub</a></summary>
 
 ```python
 async def clear(self) -> int:
@@ -395,7 +487,7 @@ Get the number of entries in the cache.
 
 
 <details>
-<summary>View Source (lines 370-384)</summary>
+<summary>View Source (lines 370-384) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/llm_cache.py#L370-L384">GitHub</a></summary>
 
 ```python
 def get_entry_count(self) -> int:
@@ -520,6 +612,39 @@ flowchart TD
     class N0,N1,N2,N3,N4,N5,N6,N7,N8,N9,N10 method
 ```
 
+## Used By
+
+Functions and methods in this file and their callers:
+
+- **`_compute_hash`**: called by `LLMCache.get`, `LLMCache.set`
+- **`_connect`**: called by `LLMCache._ensure_table`, `LLMCache._get_table`, `LLMCache.clear`, `LLMCache.set`
+- **`_get_table`**: called by `LLMCache._maybe_evict`, `LLMCache._record_hit`, `LLMCache.get`, `LLMCache.get_entry_count`
+- **`_is_valid_entry`**: called by `LLMCache._maybe_evict`, `LLMCache.get`
+- **`_maybe_evict`**: called by `LLMCache.set`
+- **`_record_hit`**: called by `LLMCache.get`
+- **`add`**: called by `LLMCache.set`
+- **`cast`**: called by `LLMCache._is_valid_entry`, `LLMCache.clear`, `LLMCache.get`, `LLMCache.get_entry_count`
+- **`connect`**: called by `LLMCache._connect`
+- **`copy`**: called by `LLMCache.stats`
+- **`count_rows`**: called by `LLMCache._maybe_evict`, `LLMCache.clear`, `LLMCache.get_entry_count`
+- **`create_scalar_index`**: called by `LLMCache.set`
+- **`create_table`**: called by `LLMCache.set`
+- **`delete`**: called by `LLMCache._maybe_evict`
+- **`drop_table`**: called by `LLMCache.clear`
+- **`embed`**: called by `LLMCache.get`, `LLMCache.set`
+- **`encode`**: called by `LLMCache._compute_hash`
+- **`hexdigest`**: called by `LLMCache._compute_hash`
+- **`limit`**: called by `LLMCache._maybe_evict`, `LLMCache.get`
+- **`list_tables`**: called by `LLMCache._ensure_table`, `LLMCache._get_table`, `LLMCache.clear`, `LLMCache.set`
+- **`mkdir`**: called by `LLMCache._connect`
+- **`open_table`**: called by `LLMCache._ensure_table`, `LLMCache._get_table`, `LLMCache.clear`, `LLMCache.set`
+- **`search`**: called by `LLMCache._maybe_evict`, `LLMCache.get`
+- **`sha256`**: called by `LLMCache._compute_hash`
+- **`time`**: called by `LLMCache._is_valid_entry`, `LLMCache.set`
+- **`to_list`**: called by `LLMCache._maybe_evict`, `LLMCache.get`
+- **`uuid4`**: called by `LLMCache.set`
+- **`where`**: called by `LLMCache.get`
+
 ## Usage Examples
 
 *Examples extracted from test files*
@@ -601,7 +726,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_compute_hash`
 
 <details>
-<summary>View Source (lines 56-67)</summary>
+<summary>View Source (lines 56-67) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/llm_cache.py#L56-L67">GitHub</a></summary>
 
 ```python
 def _compute_hash(self, system_prompt: str | None, prompt: str) -> str:
@@ -624,7 +749,7 @@ def _compute_hash(self, system_prompt: str | None, prompt: str) -> str:
 #### `_connect`
 
 <details>
-<summary>View Source (lines 69-74)</summary>
+<summary>View Source (lines 69-74) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/llm_cache.py#L69-L74">GitHub</a></summary>
 
 ```python
 def _connect(self) -> lancedb.DBConnection:
@@ -641,7 +766,7 @@ def _connect(self) -> lancedb.DBConnection:
 #### `_get_table`
 
 <details>
-<summary>View Source (lines 76-82)</summary>
+<summary>View Source (lines 76-82) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/llm_cache.py#L76-L82">GitHub</a></summary>
 
 ```python
 def _get_table(self) -> Table | None:
@@ -659,7 +784,7 @@ def _get_table(self) -> Table | None:
 #### `_ensure_table`
 
 <details>
-<summary>View Source (lines 84-104)</summary>
+<summary>View Source (lines 84-104) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/llm_cache.py#L84-L104">GitHub</a></summary>
 
 ```python
 def _ensure_table(self, embedding_dim: int) -> Table | None:
@@ -691,7 +816,7 @@ def _ensure_table(self, embedding_dim: int) -> Table | None:
 #### `_is_valid_entry`
 
 <details>
-<summary>View Source (lines 106-118)</summary>
+<summary>View Source (lines 106-118) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/llm_cache.py#L106-L118">GitHub</a></summary>
 
 ```python
 def _is_valid_entry(self, entry: dict[str, Any]) -> bool:
@@ -715,7 +840,7 @@ def _is_valid_entry(self, entry: dict[str, Any]) -> bool:
 #### `_record_hit`
 
 <details>
-<summary>View Source (lines 284-304)</summary>
+<summary>View Source (lines 284-304) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/llm_cache.py#L284-L304">GitHub</a></summary>
 
 ```python
 async def _record_hit(self, entry_id: str) -> None:
@@ -747,7 +872,7 @@ async def _record_hit(self, entry_id: str) -> None:
 #### `_maybe_evict`
 
 <details>
-<summary>View Source (lines 306-346)</summary>
+<summary>View Source (lines 306-346) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/core/llm_cache.py#L306-L346">GitHub</a></summary>
 
 ```python
 async def _maybe_evict(self) -> None:

@@ -2,22 +2,25 @@
 
 ## File Overview
 
-This module provides an OpenAI-based implementation of the embedding provider interface. It handles text embeddings using OpenAI's embedding models through their async API client.
+This module provides an OpenAI-based implementation of the embedding provider interface. It uses the OpenAI API to generate text embeddings through their embedding models.
 
 ## Classes
 
 ### OpenAIEmbeddingProvider
 
-The OpenAIEmbeddingProvider class extends [EmbeddingProvider](../base.md) to provide text embeddings using OpenAI's API.
+The OpenAIEmbeddingProvider class implements the [EmbeddingProvider](../base.md) interface to provide text embeddings using OpenAI's embedding API.
 
-**Constructor Parameters:**
-- `model` (str, optional): The OpenAI embedding model name. Defaults to "text-embedding-3-small"
-- `api_key` (str | None, optional): The OpenAI API key. If not provided, uses the `OPENAI_API_KEY` environment variable
+**Inheritance**: Extends [EmbeddingProvider](../base.md)
 
-**Key Features:**
-- Initializes an async OpenAI client for API communication
-- Automatically determines embedding dimensions based on the model
-- Falls back to environment variable for API key configuration
+**Constructor Parameters**:
+- `model` (str, optional): The OpenAI embedding model name. Defaults to `"text-embedding-3-small"`
+- `api_key` (str | None, optional): OpenAI API key. If not provided, uses the `OPENAI_API_KEY` environment variable
+
+**Key Features**:
+- Configurable embedding model selection
+- Automatic API key handling from environment variables
+- Dimension mapping based on the selected model
+- Asynchronous client integration
 
 ## Usage Examples
 
@@ -29,7 +32,7 @@ from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
 # Using default model with environment variable API key
 provider = OpenAIEmbeddingProvider()
 
-# Using custom model
+# Specifying a custom model
 provider = OpenAIEmbeddingProvider(model="text-embedding-3-large")
 
 # Providing API key explicitly
@@ -41,7 +44,10 @@ provider = OpenAIEmbeddingProvider(
 
 ### Environment Setup
 
-The provider expects the OpenAI API key to be available as an environment variable:
+The provider expects the OpenAI API key to be available either through:
+
+1. The `api_key` parameter during initialization
+2. The `OPENAI_API_KEY` environment variable
 
 ```bash
 export OPENAI_API_KEY="your-openai-api-key"
@@ -49,13 +55,10 @@ export OPENAI_API_KEY="your-openai-api-key"
 
 ## Related Components
 
-- **[EmbeddingProvider](../base.md)**: The base class that OpenAIEmbeddingProvider extends
-- **AsyncOpenAI**: The OpenAI client used for API communication
+- **[EmbeddingProvider](../base.md)**: Base class that defines the embedding provider interface
+- **AsyncOpenAI**: OpenAI's asynchronous client used for API communication
 
-## Dependencies
-
-- `openai`: OpenAI Python client library for API access
-- `os`: Standard library for environment variable access
+The module relies on the `OPENAI_EMBEDDING_DIMENSIONS` constant to map model names to their respective embedding dimensions, though the complete definition of this constant is not visible in the provided code.
 
 ## API Reference
 
@@ -69,7 +72,7 @@ Embedding provider using OpenAI API.
 
 
 <details>
-<summary>View Source (lines 17-57)</summary>
+<summary>View Source (lines 17-57) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/providers/embeddings/openai.py#L17-L57">GitHub</a></summary>
 
 ```python
 class OpenAIEmbeddingProvider(EmbeddingProvider):
@@ -133,7 +136,7 @@ Initialize the OpenAI embedding provider.
 
 
 <details>
-<summary>View Source (lines 17-57)</summary>
+<summary>View Source (lines 17-57) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/providers/embeddings/openai.py#L17-L57">GitHub</a></summary>
 
 ```python
 class OpenAIEmbeddingProvider(EmbeddingProvider):
@@ -196,7 +199,7 @@ Generate embeddings for a list of texts.
 
 
 <details>
-<summary>View Source (lines 17-57)</summary>
+<summary>View Source (lines 17-57) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/providers/embeddings/openai.py#L17-L57">GitHub</a></summary>
 
 ```python
 class OpenAIEmbeddingProvider(EmbeddingProvider):
@@ -254,7 +257,7 @@ Get the embedding dimension.
 
 
 <details>
-<summary>View Source (lines 17-57)</summary>
+<summary>View Source (lines 17-57) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/providers/embeddings/openai.py#L17-L57">GitHub</a></summary>
 
 ```python
 class OpenAIEmbeddingProvider(EmbeddingProvider):
@@ -314,7 +317,7 @@ Get the provider name.
 
 
 <details>
-<summary>View Source (lines 17-57)</summary>
+<summary>View Source (lines 17-57) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/providers/embeddings/openai.py#L17-L57">GitHub</a></summary>
 
 ```python
 class OpenAIEmbeddingProvider(EmbeddingProvider):
@@ -393,6 +396,13 @@ flowchart TD
     classDef method fill:#fff3e0
     class N1,N2 method
 ```
+
+## Used By
+
+Functions and methods in this file and their callers:
+
+- **`AsyncOpenAI`**: called by `OpenAIEmbeddingProvider.__init__`
+- **`create`**: called by `OpenAIEmbeddingProvider.embed`
 
 ## Relevant Source Files
 

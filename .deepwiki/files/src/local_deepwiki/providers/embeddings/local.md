@@ -2,67 +2,68 @@
 
 ## File Overview
 
-This file implements a local embedding provider that uses sentence-transformers models for generating embeddings. It provides an implementation of the [EmbeddingProvider](../base.md) interface for running embedding models locally rather than using remote APIs.
+This file contains the LocalEmbeddingProvider class, which provides text embedding functionality using local sentence-transformers models. It implements the [EmbeddingProvider](../base.md) interface to generate vector embeddings from text using locally-hosted transformer models.
 
 ## Classes
 
 ### LocalEmbeddingProvider
 
-The LocalEmbeddingProvider class provides local text embedding capabilities using sentence-transformers models. It implements lazy loading of the underlying model to optimize memory usage.
+A concrete implementation of [EmbeddingProvider](../base.md) that uses sentence-transformers models for generating text embeddings locally.
 
-**Inheritance**: Extends [EmbeddingProvider](../base.md)
+**Inheritance**: Extends [`EmbeddingProvider`](../base.md)
 
 **Key Features**:
-- Lazy loading of sentence-transformers models
-- Configurable model selection
-- Local processing without external API dependencies
+- Uses sentence-transformers library for local embedding generation
+- Supports configurable model selection
+- Implements lazy loading for the underlying model
+- Defaults to the "all-MiniLM-L6-v2" model
 
-## Methods
+#### Constructor
 
-### `__init__(model_name: str = "all-MiniLM-L6-v2")`
+```python
+def __init__(self, model_name: str = "all-MiniLM-L6-v2")
+```
 
 Initializes the local embedding provider with a specified model.
 
 **Parameters**:
 - `model_name` (str, optional): Name of the sentence-transformers model to use. Defaults to "all-MiniLM-L6-v2"
 
-**Behavior**:
-- Sets the model name for later loading
-- Initializes internal state variables for the model and dimension
-- Uses lazy loading pattern - model is not loaded until first use
+**Instance Variables**:
+- `_model_name`: Stores the specified model name
+- `_model`: Holds the SentenceTransformer instance (initially None)
+- `_dimension`: Stores the embedding dimension (initially None)
 
-### `_load_model() -> SentenceTransformer`
+#### Methods
 
-Private method that implements lazy loading of the sentence-transformers model.
+##### _load_model
 
-**Returns**: 
-- `SentenceTransformer`: The loaded model instance
+```python
+def _load_model(self) -> SentenceTransformer
+```
 
-**Behavior**:
-- Loads the model only when first accessed
-- Caches the loaded model for subsequent use
+Private method that implements lazy loading for the sentence-transformers model.
+
+**Returns**: `SentenceTransformer` instance
+
+**Behavior**: Only loads the model when first accessed, storing it in the `_model` instance variable for subsequent use.
 
 ## Usage Examples
 
 ### Basic Initialization
 
 ```python
-# Initialize with default model
+# Using default model
 provider = LocalEmbeddingProvider()
 
-# Initialize with custom model
+# Using custom model
 provider = LocalEmbeddingProvider(model_name="paraphrase-MiniLM-L6-v2")
 ```
 
 ## Related Components
 
-This class works with:
-- [EmbeddingProvider](../base.md): The base interface that this class implements
-- SentenceTransformer: The underlying model class from the sentence-transformers library used for generating embeddings
-
-## Implementation Notes
-
-The class uses a lazy loading pattern where the actual sentence-transformers model is only loaded when first needed, which helps optimize memory usage and startup time. The model and its dimension are cached after first load for efficient reuse.
+- **[EmbeddingProvider](../base.md)**: Base class that LocalEmbeddingProvider extends
+- **SentenceTransformer**: The underlying model class from the sentence-transformers library used for generating embeddings
 
 ## API Reference
 
@@ -76,7 +77,7 @@ Embedding provider using local sentence-transformers models.
 
 
 <details>
-<summary>View Source (lines 10-57)</summary>
+<summary>View Source (lines 10-57) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/providers/embeddings/local.py#L10-L57">GitHub</a></summary>
 
 ```python
 class LocalEmbeddingProvider(EmbeddingProvider):
@@ -146,7 +147,7 @@ Initialize the local embedding provider.
 
 
 <details>
-<summary>View Source (lines 10-57)</summary>
+<summary>View Source (lines 10-57) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/providers/embeddings/local.py#L10-L57">GitHub</a></summary>
 
 ```python
 class LocalEmbeddingProvider(EmbeddingProvider):
@@ -216,7 +217,7 @@ Generate embeddings for a list of texts.
 
 
 <details>
-<summary>View Source (lines 10-57)</summary>
+<summary>View Source (lines 10-57) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/providers/embeddings/local.py#L10-L57">GitHub</a></summary>
 
 ```python
 class LocalEmbeddingProvider(EmbeddingProvider):
@@ -281,7 +282,7 @@ Get the embedding dimension.
 
 
 <details>
-<summary>View Source (lines 10-57)</summary>
+<summary>View Source (lines 10-57) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/providers/embeddings/local.py#L10-L57">GitHub</a></summary>
 
 ```python
 class LocalEmbeddingProvider(EmbeddingProvider):
@@ -348,7 +349,7 @@ Get the provider name.
 
 
 <details>
-<summary>View Source (lines 10-57)</summary>
+<summary>View Source (lines 10-57) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/providers/embeddings/local.py#L10-L57">GitHub</a></summary>
 
 ```python
 class LocalEmbeddingProvider(EmbeddingProvider):
@@ -445,6 +446,17 @@ flowchart TD
     classDef method fill:#fff3e0
     class N0,N1,N2 method
 ```
+
+## Used By
+
+Functions and methods in this file and their callers:
+
+- **`SentenceTransformer`**: called by `LocalEmbeddingProvider._load_model`
+- **`_load_model`**: called by `LocalEmbeddingProvider.embed`, `LocalEmbeddingProvider.get_dimension`
+- **`cast`**: called by `LocalEmbeddingProvider.embed`
+- **`encode`**: called by `LocalEmbeddingProvider.embed`
+- **`get_sentence_embedding_dimension`**: called by `LocalEmbeddingProvider._load_model`
+- **`tolist`**: called by `LocalEmbeddingProvider.embed`
 
 ## Relevant Source Files
 

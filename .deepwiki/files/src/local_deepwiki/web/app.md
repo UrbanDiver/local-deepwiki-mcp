@@ -2,7 +2,7 @@
 
 ## File Overview
 
-The `app.py` file serves as the main web application module for DeepWiki, implementing a Flask-based web server that provides wiki functionality including page viewing, search, and chat capabilities. This module handles HTTP routing, template rendering, and integrates with various DeepWiki components to serve wiki content through a web interface.
+This file implements the main Flask web application for DeepWiki, providing a web interface for browsing and interacting with wiki content. It serves as the entry point for the web server functionality, handling page rendering, search capabilities, and chat interactions.
 
 ## Functions
 
@@ -10,80 +10,79 @@ The `app.py` file serves as the main web application module for DeepWiki, implem
 
 ```python
 def run_server(
-    wiki_path: str | Path, host: str = "127.0.0.1", port: int = 8080, debug: bool = False
-):
+    wiki_path: str | Path, 
+    host: str = "127.0.0.1", 
+    port: int = 8080, 
+    debug: bool = False
+)
 ```
 
-Runs the DeepWiki web server with the specified configuration.
+Starts the DeepWiki web server with the specified configuration.
 
 **Parameters:**
-- `wiki_path`: Path to the wiki directory (string or Path object)
-- `host`: Server host address (defaults to "127.0.0.1")
-- `port`: Server port number (defaults to 8080)
+- `wiki_path`: Path to the wiki directory to serve
+- `host`: Host address to bind the server to (defaults to "127.0.0.1")
+- `port`: Port number to listen on (defaults to 8080)
 - `debug`: Enable Flask debug mode (defaults to False)
 
 **Behavior:**
-- Creates a Flask application instance using `create_app()`
+- Creates a Flask application instance using `create_app`
 - Logs server startup information
-- Prints server details to console
+- Prints startup messages to console
 - Starts the Flask development server
 
 ### Additional Functions
 
-The module contains several other functions based on the imports and structure shown:
+The module contains several other functions that handle various aspects of the web application:
 
-- `get_wiki_structure`: Handles wiki structure retrieval
-- `extract_title`: Extracts titles from content
-- `render_markdown`: Processes markdown content
+- `get_wiki_structure`: Manages wiki content structure
+- `extract_title`: Processes page titles
+- `render_markdown`: Converts markdown content to HTML
 - `build_breadcrumb`: Creates navigation breadcrumbs
 - `index`: Handles the main index page
-- `search_json`: Provides JSON search functionality
+- `search_json`: Provides search functionality via JSON API
 - `view_page`: Renders individual wiki pages
 - `stream_async_generator`: Handles asynchronous content streaming
-- `run_async`: Executes asynchronous operations
-- `collect`: Collects data or results
+- `run_async`: Manages asynchronous operations
+- `collect`: Processes data collection
 - `format_sources`: Formats source references
-- `build_prompt_with_history`: Constructs prompts with conversation history
-- `chat_page`: Handles chat interface
+- `build_prompt_with_history`: Constructs chat prompts with conversation history
+- `chat_page`: Handles chat interface rendering
 - `api_chat`: Provides chat API endpoints
 
-## Usage Examples
+## Dependencies
 
-### Starting the Web Server
+The application relies on several key dependencies:
+
+- **Flask**: Web framework for handling HTTP requests and responses
+- **markdown**: Markdown processing for wiki content
+- **asyncio**: Asynchronous programming support
+- **threading**: Multi-threading capabilities
+- **queue**: Thread-safe data structures
+
+## Related Components
+
+This file integrates with other components of the DeepWiki system:
+
+- Uses logging utilities from `local_deepwiki.logging`
+- Leverages configuration management from `local_deepwiki.config`
+- Works with additional modules imported from the local_deepwiki package
+
+## Usage Example
 
 ```python
 from local_deepwiki.web.app import run_server
 
-# Start server with default settings
-run_server("/path/to/wiki")
-
-# Start server with custom configuration
+# Start the wiki server
 run_server(
     wiki_path="/path/to/wiki",
     host="0.0.0.0",
-    port=5000,
+    port=8080,
     debug=True
 )
 ```
 
-## Related Components
-
-Based on the imports shown, this module integrates with several other DeepWiki components:
-
-- **Flask**: Web framework for HTTP handling and routing
-- **markdown**: Markdown processing library
-- **local_deepwiki.logging**: Logging utilities via [`get_logger`](../logging.md)
-- **local_deepwiki.config**: Configuration management via [`get_config`](../config.md)
-
-The module uses standard Python libraries including `asyncio`, `json`, `queue`, `threading`, and `pathlib` for various functionality including asynchronous operations, JSON handling, concurrent processing, and file system operations.
-
-## Key Features
-
-- Web server initialization and configuration
-- Flask application factory pattern (via `create_app()`)
-- Comprehensive logging of server startup
-- Flexible host and port configuration
-- Debug mode support for development
+This will start the DeepWiki web server, making it accessible at the specified host and port, serving content from the provided wiki directory.
 
 ## API Reference
 
@@ -107,7 +106,7 @@ Get wiki pages and sections, with optional hierarchical TOC.
 
 
 <details>
-<summary>View Source (lines 32-67)</summary>
+<summary>View Source (lines 32-67) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/web/app.py#L32-L67">GitHub</a></summary>
 
 ```python
 def get_wiki_structure(wiki_path: Path) -> tuple[list, dict, list | None]:
@@ -168,7 +167,7 @@ Extract title from markdown file.
 
 
 <details>
-<summary>View Source (lines 70-82)</summary>
+<summary>View Source (lines 70-82) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/web/app.py#L70-L82">GitHub</a></summary>
 
 ```python
 def extract_title(md_file: Path) -> str:
@@ -206,7 +205,7 @@ Render markdown to HTML.
 
 
 <details>
-<summary>View Source (lines 85-95)</summary>
+<summary>View Source (lines 85-95) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/web/app.py#L85-L95">GitHub</a></summary>
 
 ```python
 def render_markdown(content: str) -> str:
@@ -243,7 +242,7 @@ Build breadcrumb navigation HTML with clickable links.  For a path like 'files/s
 
 
 <details>
-<summary>View Source (lines 98-143)</summary>
+<summary>View Source (lines 98-143) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/web/app.py#L98-L143">GitHub</a></summary>
 
 ```python
 def build_breadcrumb(wiki_path: Path, current_path: str) -> str:
@@ -309,7 +308,7 @@ Redirect to index.md.
 
 
 <details>
-<summary>View Source (lines 147-150)</summary>
+<summary>View Source (lines 147-150) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/web/app.py#L147-L150">GitHub</a></summary>
 
 ```python
 def index():
@@ -333,7 +332,7 @@ Serve the search index JSON file.
 
 
 <details>
-<summary>View Source (lines 154-168)</summary>
+<summary>View Source (lines 154-168) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/web/app.py#L154-L168">GitHub</a></summary>
 
 ```python
 def search_json():
@@ -373,7 +372,7 @@ View a wiki page.
 
 
 <details>
-<summary>View Source (lines 172-206)</summary>
+<summary>View Source (lines 172-206) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/web/app.py#L172-L206">GitHub</a></summary>
 
 ```python
 def view_page(path: str):
@@ -433,7 +432,7 @@ Bridge an async generator to a sync generator using a queue.  This allows stream
 
 
 <details>
-<summary>View Source (lines 209-253)</summary>
+<summary>View Source (lines 209-253) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/web/app.py#L209-L253">GitHub</a></summary>
 
 ```python
 def stream_async_generator(async_gen_factory: Callable[[], AsyncIterator[str]]) -> Iterator[str]:
@@ -496,7 +495,7 @@ def run_async() -> None
 
 
 <details>
-<summary>View Source (lines 222-238)</summary>
+<summary>View Source (lines 222-238) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/web/app.py#L222-L238">GitHub</a></summary>
 
 ```python
 def run_async() -> None:
@@ -531,7 +530,7 @@ async def collect() -> None
 
 
 <details>
-<summary>View Source (lines 227-234)</summary>
+<summary>View Source (lines 227-234) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/web/app.py#L227-L234">GitHub</a></summary>
 
 ```python
 async def collect() -> None:
@@ -564,7 +563,7 @@ Format search results as source citations.
 
 
 <details>
-<summary>View Source (lines 256-277)</summary>
+<summary>View Source (lines 256-277) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/web/app.py#L256-L277">GitHub</a></summary>
 
 ```python
 def format_sources(search_results: list[Any]) -> list[dict[str, Any]]:
@@ -613,7 +612,7 @@ Build a prompt that includes conversation history for follow-up questions.
 
 
 <details>
-<summary>View Source (lines 280-313)</summary>
+<summary>View Source (lines 280-313) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/web/app.py#L280-L313">GitHub</a></summary>
 
 ```python
 def build_prompt_with_history(question: str, history: list[dict[str, str]], context: str) -> str:
@@ -667,7 +666,7 @@ Render the chat interface.
 
 
 <details>
-<summary>View Source (lines 317-321)</summary>
+<summary>View Source (lines 317-321) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/web/app.py#L317-L321">GitHub</a></summary>
 
 ```python
 def chat_page():
@@ -692,7 +691,7 @@ Handle chat Q&A with streaming response.  Expects JSON body with: - question: Th
 
 
 <details>
-<summary>View Source (lines 325-433)</summary>
+<summary>View Source (lines 325-433) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/web/app.py#L325-L433">GitHub</a></summary>
 
 ```python
 def api_chat():
@@ -821,7 +820,7 @@ Async generator that streams the chat response.
 
 
 <details>
-<summary>View Source (lines 350-424)</summary>
+<summary>View Source (lines 350-424) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/web/app.py#L350-L424">GitHub</a></summary>
 
 ```python
 async def generate_response() -> AsyncIterator[str]:
@@ -916,7 +915,7 @@ Handle deep research with streaming progress updates.  Expects JSON body with: -
 
 
 <details>
-<summary>View Source (lines 437-604)</summary>
+<summary>View Source (lines 437-604) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/web/app.py#L437-L604">GitHub</a></summary>
 
 ```python
 def api_research():
@@ -1104,7 +1103,7 @@ Async generator that runs deep research with progress updates.
 
 
 <details>
-<summary>View Source (lines 463-595)</summary>
+<summary>View Source (lines 463-595) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/web/app.py#L463-L595">GitHub</a></summary>
 
 ```python
 async def run_research() -> AsyncIterator[str]:
@@ -1260,7 +1259,7 @@ async def on_progress(progress: ResearchProgress) -> None
 
 
 <details>
-<summary>View Source (lines 500-521)</summary>
+<summary>View Source (lines 500-521) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/web/app.py#L500-L521">GitHub</a></summary>
 
 ```python
 async def on_progress(progress: ResearchProgress) -> None:
@@ -1307,7 +1306,7 @@ Create Flask app with wiki path configured.
 
 
 <details>
-<summary>View Source (lines 607-615)</summary>
+<summary>View Source (lines 607-615) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/web/app.py#L607-L615">GitHub</a></summary>
 
 ```python
 def create_app(wiki_path: str | Path) -> Flask:
@@ -1342,7 +1341,7 @@ Run the wiki web server.
 
 
 <details>
-<summary>View Source (lines 618-627)</summary>
+<summary>View Source (lines 618-627) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/web/app.py#L618-L627">GitHub</a></summary>
 
 ```python
 def run_server(
@@ -1371,7 +1370,7 @@ CLI entry point.
 
 
 <details>
-<summary>View Source (lines 630-644)</summary>
+<summary>View Source (lines 630-644) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/web/app.py#L630-L644">GitHub</a></summary>
 
 ```python
 def main():
@@ -1502,6 +1501,71 @@ flowchart TD
     classDef func fill:#e1f5fe
     class N0,N1,N2,N3,N4,N5,N6,N7,N8,N9,N10,N11,N12,N13,N14,N15,N16,N17,N18,N19,N20,N21,N22,N23,N24,N25,N26,N27,N28,N29 func
 ```
+
+## Used By
+
+Functions and methods in this file and their callers:
+
+- **`ArgumentParser`**: called by `main`
+- **[`DeepResearchPipeline`](../core/deep_research.md)**: called by `api_research`, `run_research`
+- **`Markdown`**: called by `render_markdown`
+- **`Path`**: called by `create_app`, `main`
+- **`Queue`**: called by `api_research`, `stream_async_generator`
+- **`Response`**: called by `api_chat`, `api_research`
+- **`Thread`**: called by `stream_async_generator`
+- **`ValueError`**: called by `create_app`
+- **[`VectorStore`](../core/vectorstore.md)**: called by `api_chat`, `api_research`, `generate_response`, `run_research`
+- **`abort`**: called by `chat_page`, `search_json`, `view_page`
+- **`add_argument`**: called by `main`
+- **`async_gen_factory`**: called by `collect`, `run_async`, `stream_async_generator`
+- **`build_breadcrumb`**: called by `view_page`
+- **`build_prompt_with_history`**: called by `api_chat`, `generate_response`
+- **`collect`**: called by `run_async`, `stream_async_generator`
+- **`convert`**: called by `render_markdown`
+- **`create_app`**: called by `run_server`
+- **`create_task`**: called by `api_research`, `run_research`
+- **`done`**: called by `api_research`, `run_research`
+- **`dumps`**: called by `api_chat`, `api_research`, `generate_response`, `run_research`, `stream_async_generator`
+- **`empty`**: called by `api_research`, `run_research`
+- **`exception`**: called by `api_chat`, `api_research`, `generate_response`, `run_research`
+- **`exists`**: called by `api_chat`, `api_research`, `build_breadcrumb`, `create_app`, `generate_response`, `get_wiki_structure`, `run_research`, `search_json`, `view_page`
+- **`extract_title`**: called by `get_wiki_structure`, `view_page`
+- **`format_sources`**: called by `api_chat`, `generate_response`
+- **`generate_stream`**: called by `api_chat`, `generate_response`
+- **`get_cached_llm_provider`**: called by `api_chat`, `api_research`, `generate_response`, `run_research`
+- **[`get_config`](../config.md)**: called by `api_chat`, `api_research`, `generate_response`, `run_research`
+- **`get_embedding_provider`**: called by `api_chat`, `api_research`, `generate_response`, `run_research`
+- **`get_json`**: called by `api_chat`, `api_research`
+- **`get_nowait`**: called by `api_research`, `run_research`
+- **`get_vector_db_path`**: called by `api_chat`, `api_research`, `generate_response`, `run_research`
+- **`get_wiki_path`**: called by `api_chat`, `api_research`, `generate_response`, `run_research`
+- **`get_wiki_structure`**: called by `view_page`
+- **`glob`**: called by `get_wiki_structure`
+- **`is_dir`**: called by `get_wiki_structure`
+- **`is_file`**: called by `view_page`
+- **`iterdir`**: called by `get_wiki_structure`
+- **`jsonify`**: called by `api_chat`, `api_research`, `search_json`
+- **`loads`**: called by `get_wiki_structure`, `search_json`
+- **`model_copy`**: called by `api_chat`, `api_research`, `generate_response`, `run_research`
+- **`new_event_loop`**: called by `run_async`, `stream_async_generator`
+- **`parse_args`**: called by `main`
+- **`put`**: called by `api_research`, `collect`, `on_progress`, `run_async`, `run_research`, `stream_async_generator`
+- **`read_text`**: called by `extract_title`, `get_wiki_structure`, `search_json`, `view_page`
+- **`redirect`**: called by `index`
+- **`render_markdown`**: called by `view_page`
+- **`render_template`**: called by `chat_page`, `view_page`
+- **`research`**: called by `api_research`, `run_research`
+- **`resolve`**: called by `main`
+- **`run`**: called by `run_server`
+- **`run_server`**: called by `main`
+- **`run_until_complete`**: called by `run_async`, `stream_async_generator`
+- **`search`**: called by `api_chat`, `generate_response`
+- **`set_event_loop`**: called by `run_async`, `stream_async_generator`
+- **`sleep`**: called by `api_research`, `run_research`
+- **`start`**: called by `stream_async_generator`
+- **`stream_async_generator`**: called by `api_chat`, `api_research`
+- **`title`**: called by `build_breadcrumb`, `extract_title`, `get_wiki_structure`
+- **`url_for`**: called by `index`
 
 ## Relevant Source Files
 

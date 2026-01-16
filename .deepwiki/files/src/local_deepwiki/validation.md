@@ -2,42 +2,41 @@
 
 ## File Overview
 
-This file provides validation utilities for the local_deepwiki package. It contains functions to validate various data types and parameters used throughout the application, with a focus on validating language-related inputs and basic data types.
+The validation module provides utility functions for validating various types of input data used throughout the local_deepwiki application. This module focuses on common validation patterns including positive integers, non-empty strings, language validation, and provider validation.
 
 ## Functions
 
-Based on the module structure, this file contains the following validation functions:
+The module contains the following validation functions:
 
 ### validate_positive_int
 
 Validates that a value is a positive integer.
 
-### validate_non_empty_string  
+### validate_non_empty_string
 
 Validates that a value is a non-empty string.
 
 ### validate_language
 
-Validates language input, working with the [Language](models.md) model from the models module.
+Validates that a value is a valid [Language](models.md) enum value.
 
 ### validate_languages_list
 
-Validates a list of languages, ensuring each item is a valid language.
+Validates that a value is a list of valid [Language](models.md) enum values.
 
 ### validate_provider
 
-Validates provider-related input parameters.
+Validates provider-related input.
 
 ## Related Components
 
-This validation module works with:
+This module works with the following components:
 
-- **[Language](models.md)**: Imports the [Language](models.md) model from `local_deepwiki.models` to perform language validation
-- **typing.Any**: Uses type hints for flexible parameter validation
+- **[Language](models.md)**: Imported from `local_deepwiki.models`, this enum is used for language validation functions
 
 ## Usage Context
 
-The validation functions in this module are designed to ensure data integrity across the local_deepwiki application by validating user inputs and configuration parameters before they are processed by other components.
+The validation functions in this module are designed to be used throughout the application to ensure data integrity and provide consistent validation behavior. The functions work with the [Language](models.md) enum to validate language-related inputs and provide general-purpose validation for common data types like positive integers and non-empty strings.
 
 ## API Reference
 
@@ -65,7 +64,7 @@ Validate and bound an integer parameter.
 
 
 <details>
-<summary>View Source (lines 22-42)</summary>
+<summary>View Source (lines 22-42) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/validation.py#L22-L42">GitHub</a></summary>
 
 ```python
 def validate_positive_int(value: Any, name: str, min_val: int, max_val: int, default: int) -> int:
@@ -112,7 +111,7 @@ Validate that a string is non-empty.
 
 
 <details>
-<summary>View Source (lines 45-62)</summary>
+<summary>View Source (lines 45-62) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/validation.py#L45-L62">GitHub</a></summary>
 
 ```python
 def validate_non_empty_string(value: Any, name: str) -> str:
@@ -155,7 +154,7 @@ Validate a language filter value.
 
 
 <details>
-<summary>View Source (lines 65-83)</summary>
+<summary>View Source (lines 65-83) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/validation.py#L65-L83">GitHub</a></summary>
 
 ```python
 def validate_language(language: str | None) -> str | None:
@@ -199,7 +198,7 @@ Validate a list of languages.
 
 
 <details>
-<summary>View Source (lines 86-106)</summary>
+<summary>View Source (lines 86-106) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/validation.py#L86-L106">GitHub</a></summary>
 
 ```python
 def validate_languages_list(languages: list[str] | None) -> list[str] | None:
@@ -248,7 +247,7 @@ Validate a provider value.
 
 
 <details>
-<summary>View Source (lines 109-127)</summary>
+<summary>View Source (lines 109-127) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/validation.py#L109-L127">GitHub</a></summary>
 
 ```python
 def validate_provider(provider: str | None, valid_providers: set[str], name: str) -> str | None:
@@ -292,6 +291,12 @@ flowchart TD
     classDef func fill:#e1f5fe
     class N0,N1,N2,N3,N4,N5 func
 ```
+
+## Used By
+
+Functions and methods in this file and their callers:
+
+- **`ValueError`**: called by `validate_language`, `validate_languages_list`, `validate_non_empty_string`, `validate_positive_int`, `validate_provider`
 
 ## Relevant Source Files
 

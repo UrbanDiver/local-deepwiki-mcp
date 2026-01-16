@@ -2,57 +2,68 @@
 
 ## File Overview
 
-The `server.py` file implements an MCP (Model Context Protocol) server for the local_deepwiki application. It serves as the main entry point that exposes various wiki and code analysis tools through the MCP protocol, handling tool registration and request routing.
+The `server.py` module implements an MCP (Model Context Protocol) server for the Local DeepWiki system. This server provides a standardized interface for AI assistants to interact with wiki functionality, including code indexing, research, question answering, and wiki page management.
 
 ## Functions
 
 ### list_tools()
 
-Returns a list of available tools that can be called through the MCP server. Based on the imports, this function registers tools for:
+Defines and returns the available tools that can be called through the MCP server interface.
 
-- Repository indexing
-- Code searching
-- Wiki page operations
-- Question answering
-- Deep research
-- Export functionality
+**Returns**: A list of Tool objects representing the available operations
 
-### call_tool(name: str, arguments: dict)
+### call_tool(name: str, arguments: dict[str, Any] | None) -> list[TextContent]
 
-Handles incoming tool calls by routing them to appropriate handler functions. Takes a tool name and arguments dictionary, then delegates to the corresponding handler from the `local_deepwiki.handlers` module.
+Handles incoming tool calls by routing them to appropriate handler functions based on the tool name.
 
-**Parameters:**
+**Parameters**:
 - `name`: The name of the tool to execute
-- `arguments`: Dictionary containing the arguments for the tool
+- `arguments`: Dictionary containing the arguments for the tool call
+
+**Returns**: List of TextContent objects containing the response
 
 ### main()
 
-The main entry point function that sets up and runs the MCP server using stdio transport.
+The main entry point that sets up and runs the MCP server with stdio transport.
 
 ### run()
 
-Executes the server application by calling the main function.
+Alternative entry point function for running the server.
 
 ## Related Components
 
-This file integrates with several other components:
+This module integrates with several handler functions from the `local_deepwiki.handlers` module:
 
-- **ToolHandler**: Main handler class from the handlers module
-- **Handler Functions**: Various specific handlers including:
-  - [`handle_ask_question`](handlers.md)
-  - [`handle_deep_research`](handlers.md)
-  - [`handle_export_wiki_html`](handlers.md)
-  - [`handle_export_wiki_pdf`](handlers.md)
-  - [`handle_index_repository`](handlers.md)
-  - [`handle_read_wiki_page`](handlers.md)
-  - [`handle_read_wiki_structure`](handlers.md)
-  - [`handle_search_code`](handlers.md)
-- **Logging**: Uses the logging module for application logging
-- **MCP Framework**: Built on the Model Context Protocol server framework with stdio transport
+- **ToolHandler**: Base handler class for tool operations
+- **[handle_ask_question](handlers.md)**: Processes question-answering requests
+- **[handle_deep_research](handlers.md)**: Performs comprehensive research operations
+- **[handle_export_wiki_html](handlers.md)**: Exports wiki content to HTML format
+- **[handle_export_wiki_pdf](handlers.md)**: Exports wiki content to PDF format
+- **[handle_index_repository](handlers.md)**: Indexes code repositories for search
+- **[handle_read_wiki_page](handlers.md)**: Retrieves individual wiki pages
+- **[handle_read_wiki_structure](handlers.md)**: Returns the overall wiki structure
+- **[handle_search_code](handlers.md)**: Searches through indexed code
 
-## Usage
+The module also uses:
+- **Server**: MCP server implementation
+- **stdio_server**: Standard input/output transport for the MCP server
+- **[get_logger](logging.md)**: Logging utility from the local_deepwiki.logging module
 
-The server is designed to be run as a standalone application that communicates through standard input/output, making it compatible with MCP clients that can spawn and communicate with subprocess-based servers.
+## Usage Examples
+
+```python
+# Run the MCP server
+from local_deepwiki.server import main
+main()
+```
+
+```python
+# Alternative way to run the server
+from local_deepwiki.server import run
+run()
+```
+
+The server is designed to be used as a standalone MCP server that AI assistants can connect to for wiki operations. The actual tool calls would be made through the MCP protocol rather than direct function calls.
 
 ## API Reference
 
@@ -73,7 +84,7 @@ List available tools.
 
 
 <details>
-<summary>View Source (lines 31-222)</summary>
+<summary>View Source (lines 31-222) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/server.py#L31-L222">GitHub</a></summary>
 
 ```python
 async def list_tools() -> list[Tool]:
@@ -293,7 +304,7 @@ Handle tool calls.
 
 
 <details>
-<summary>View Source (lines 240-254)</summary>
+<summary>View Source (lines 240-254) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/server.py#L240-L254">GitHub</a></summary>
 
 ```python
 async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
@@ -326,7 +337,7 @@ Main entry point for the MCP server.
 
 
 <details>
-<summary>View Source (lines 257-269)</summary>
+<summary>View Source (lines 257-269) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/server.py#L257-L269">GitHub</a></summary>
 
 ```python
 def main():
@@ -356,7 +367,7 @@ async def run()
 
 
 <details>
-<summary>View Source (lines 261-267)</summary>
+<summary>View Source (lines 261-267) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/wiki-enhancements/src/local_deepwiki/server.py#L261-L267">GitHub</a></summary>
 
 ```python
 async def run():
@@ -397,6 +408,18 @@ flowchart TD
     classDef func fill:#e1f5fe
     class N0,N1,N2,N3,N4,N5,N6,N7,N8,N9 func
 ```
+
+## Used By
+
+Functions and methods in this file and their callers:
+
+- **`TextContent`**: called by `call_tool`
+- **`Tool`**: called by `list_tools`
+- **`create_initialization_options`**: called by `main`, `run`
+- **[`handle_deep_research`](handlers.md)**: called by `call_tool`
+- **`handler`**: called by `call_tool`
+- **`run`**: called by `main`, `run`
+- **`stdio_server`**: called by `main`, `run`
 
 ## Relevant Source Files
 
