@@ -347,8 +347,9 @@ class TestGenerateSingleFileDoc:
         )
 
         assert page is not None
-        # Should have called search twice (direct + fallback)
-        assert mock_vector_store.search.call_count == 2
+        # Should have called search at least twice (direct + fallback)
+        # Context builder may add additional searches for callers/related files
+        assert mock_vector_store.search.call_count >= 2
 
     async def test_registers_entities_for_crosslinking(
         self,

@@ -17,6 +17,7 @@ from local_deepwiki.core.git_utils import (
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.generators.api_docs import get_file_api_docs
 from local_deepwiki.generators.callgraph import get_file_call_graph, get_file_callers
+from local_deepwiki.generators.context_builder import build_file_context, format_context_for_llm
 from local_deepwiki.generators.crosslinks import EntityRegistry
 from local_deepwiki.generators.diagrams import generate_class_diagram
 from local_deepwiki.generators.test_examples import get_file_examples
@@ -339,26 +340,38 @@ async def generate_single_file_doc(
 
     context = "\n\n".join(context_parts)
 
-    prompt = f"""Generate documentation for the file '{file_info.path}' based ONLY on the code provided.
+    # Build rich context with imports, callers, and related files
+    chunks_list = [r.chunk for r in file_chunks]
+    rich_context = await build_file_context(
+        file_path=file_info.path,
+        chunks=chunks_list,
+        repo_path=Path(index_status.repo_path),
+        vector_store=vector_store,
+    )
+    rich_context_text = format_context_for_llm(rich_context)
+
+    prompt = f"""Generate documentation for the file '{file_info.path}' based on the code and context provided.
 
 Language: {file_info.language}
 Total code chunks: {file_info.chunk_count}
 
-Code contents:
+{rich_context_text}
+## Code Contents
 {context}
 
 Generate documentation that includes:
-1. **File Overview**: Purpose of this file based on the code shown
+1. **File Overview**: Purpose of this file based on the code shown and its dependencies
 2. **Classes**: Document each class visible in the code with its purpose and key methods
 3. **Functions**: Document each function with parameters and return values as shown
-4. **Usage Examples**: Show how to use the components (based on their actual signatures)
-5. **Related Components**: Mention other classes this file works with (based on imports/references shown)
+4. **Integration**: How this file fits into the larger codebase (based on imports and callers)
+5. **Usage Examples**: Show how to use the components (based on their actual signatures)
 
 CRITICAL CONSTRAINTS:
 - ONLY document classes, methods, and functions that appear in the code above
 - Do NOT invent additional methods or parameters not shown
 - Do NOT fabricate usage examples with APIs not visible in the code
 - Write class names as plain text (e.g., "The WikiGenerator class") for cross-linking
+- Use the dependency and caller information to explain integration, but don't fabricate details
 - Only use backticks for actual code snippets
 
 Format as markdown with clear sections.
