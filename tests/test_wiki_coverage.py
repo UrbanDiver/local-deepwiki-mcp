@@ -548,7 +548,7 @@ class TestWikiGeneratorGenerate:
                                                         mock_see_also.side_effect = lambda pages, _: pages
 
                                                         with patch(
-                                                            "local_deepwiki.generators.wiki.write_search_index"
+                                                            "local_deepwiki.generators.wiki.write_full_search_index"
                                                         ):
                                                             with patch(
                                                                 "local_deepwiki.generators.wiki.generate_toc"
@@ -646,7 +646,7 @@ class TestWikiGeneratorGenerate:
                                                         side_effect=lambda p, _: p,
                                                     ):
                                                         with patch(
-                                                            "local_deepwiki.generators.wiki.write_search_index"
+                                                            "local_deepwiki.generators.wiki.write_full_search_index"
                                                         ):
                                                             with patch(
                                                                 "local_deepwiki.generators.wiki.generate_toc",

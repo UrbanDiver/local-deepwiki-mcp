@@ -12,7 +12,7 @@ from local_deepwiki.generators.crosslinks import EntityRegistry, add_cross_links
 from local_deepwiki.generators.glossary import generate_glossary_page
 from local_deepwiki.generators.inheritance import generate_inheritance_page
 from local_deepwiki.generators.manifest import ProjectManifest, get_cached_manifest
-from local_deepwiki.generators.search import write_search_index
+from local_deepwiki.generators.search import write_full_search_index
 from local_deepwiki.generators.see_also import RelationshipAnalyzer, add_see_also_sections
 from local_deepwiki.generators.source_refs import add_source_refs_sections
 from local_deepwiki.generators.toc import generate_toc, write_toc
@@ -356,11 +356,11 @@ class WikiGenerator:
         for page in pages:
             await self._write_page(page)
 
-        # Generate search index
+        # Generate search index with entity-level entries
         if progress_callback:
             progress_callback("Generating search index", 11, total_steps)
 
-        write_search_index(self.wiki_path, pages)
+        await write_full_search_index(self.wiki_path, pages, index_status, self.vector_store)
 
         # Generate table of contents with hierarchical numbering
         page_list = [{"path": p.path, "title": p.title} for p in pages]

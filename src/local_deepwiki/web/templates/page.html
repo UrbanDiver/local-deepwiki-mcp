@@ -301,11 +301,59 @@
         .search-results.active {
             display: block;
         }
+        .search-filters {
+            display: flex;
+            gap: 6px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+        }
+        .search-filter {
+            padding: 4px 10px;
+            font-size: 12px;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: all 0.15s;
+        }
+        .search-filter:hover {
+            border-color: var(--link-color);
+        }
+        .search-filter.active {
+            background: var(--link-color);
+            border-color: var(--link-color);
+            color: white;
+        }
         .search-result {
             padding: 10px 12px;
             border-bottom: 1px solid var(--border-color);
             cursor: pointer;
             transition: background 0.15s;
+        }
+        .entity-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            font-size: 10px;
+            border-radius: 4px;
+            margin-right: 6px;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+        .entity-badge.class { background: #3b82f6; color: white; }
+        .entity-badge.function { background: #10b981; color: white; }
+        .entity-badge.method { background: #8b5cf6; color: white; }
+        .entity-badge.async { background: #f59e0b; color: white; }
+        .search-result-signature {
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+        .search-result-raises {
+            font-size: 11px;
+            color: #ef4444;
+            margin-top: 2px;
         }
         .search-result:last-child {
             border-bottom: none;
@@ -391,6 +439,13 @@
         </div>
         <div class="search-container">
             <input type="text" class="search-input" id="search-input" placeholder="Search docs..." autocomplete="off">
+            <div class="search-filters">
+                <span class="search-filter active" data-filter="all">All</span>
+                <span class="search-filter" data-filter="page">Pages</span>
+                <span class="search-filter" data-filter="class">Classes</span>
+                <span class="search-filter" data-filter="function">Functions</span>
+                <span class="search-filter" data-filter="method">Methods</span>
+            </div>
             <div class="search-results" id="search-results"></div>
         </div>
         {% if toc_entries %}
@@ -496,14 +551,36 @@
         // Search functionality
         (function() {
             let searchIndex = null;
+            let currentFilter = 'all';
             const searchInput = document.getElementById('search-input');
             const searchResults = document.getElementById('search-results');
+            const filterButtons = document.querySelectorAll('.search-filter');
 
             // Load search index
             fetch('/search.json')
                 .then(response => response.json())
-                .then(data => { searchIndex = data; })
+                .then(data => {
+                    // Handle both old (array) and new (object) formats
+                    if (Array.isArray(data)) {
+                        searchIndex = { pages: data, entities: [] };
+                    } else {
+                        searchIndex = data;
+                    }
+                })
                 .catch(err => console.log('Search index not available'));
+
+            // Filter button click handlers
+            filterButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    filterButtons.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentFilter = btn.dataset.filter;
+                    // Re-run search if there's a query
+                    if (searchInput.value.trim().length >= 2) {
+                        search(searchInput.value.trim());
+                    }
+                });
+            });
 
             // Simple fuzzy match - checks if all query chars appear in order
             function fuzzyMatch(query, text) {
@@ -516,8 +593,8 @@
                 return qi === query.length;
             }
 
-            // Score a result based on match quality
-            function scoreResult(query, entry) {
+            // Score a page result based on match quality
+            function scorePageResult(query, entry) {
                 query = query.toLowerCase();
                 let score = 0;
 
@@ -556,6 +633,41 @@
                 return score;
             }
 
+            // Score an entity result based on match quality
+            function scoreEntityResult(query, entry) {
+                query = query.toLowerCase();
+                let score = 0;
+
+                // Name match (highest priority for entities)
+                const name = entry.name.toLowerCase();
+                const displayName = entry.display_name.toLowerCase();
+
+                if (name === query || displayName === query) {
+                    score += 200;  // Exact match
+                } else if (name.startsWith(query) || displayName.startsWith(query)) {
+                    score += 150;
+                } else if (name.includes(query) || displayName.includes(query)) {
+                    score += 100;
+                } else if (fuzzyMatch(query, name) || fuzzyMatch(query, displayName)) {
+                    score += 50;
+                }
+
+                // Keywords match
+                for (const keyword of entry.keywords || []) {
+                    if (keyword.toLowerCase().includes(query)) {
+                        score += 30;
+                        break;
+                    }
+                }
+
+                // Description match
+                if (entry.description && entry.description.toLowerCase().includes(query)) {
+                    score += 15;
+                }
+
+                return score;
+            }
+
             // Perform search
             function search(query) {
                 if (!searchIndex || query.length < 2) {
@@ -563,11 +675,39 @@
                     return;
                 }
 
-                const results = searchIndex
-                    .map(entry => ({ entry, score: scoreResult(query, entry) }))
-                    .filter(r => r.score > 0)
+                let results = [];
+
+                // Search pages if filter allows
+                if (currentFilter === 'all' || currentFilter === 'page') {
+                    const pageResults = (searchIndex.pages || [])
+                        .map(entry => ({
+                            entry: { ...entry, type: 'page' },
+                            score: scorePageResult(query, entry)
+                        }))
+                        .filter(r => r.score > 0);
+                    results = results.concat(pageResults);
+                }
+
+                // Search entities if filter allows
+                if (currentFilter === 'all' || ['class', 'function', 'method'].includes(currentFilter)) {
+                    const entities = searchIndex.entities || [];
+                    const filteredEntities = currentFilter === 'all'
+                        ? entities
+                        : entities.filter(e => e.entity_type === currentFilter);
+
+                    const entityResults = filteredEntities
+                        .map(entry => ({
+                            entry,
+                            score: scoreEntityResult(query, entry)
+                        }))
+                        .filter(r => r.score > 0);
+                    results = results.concat(entityResults);
+                }
+
+                // Sort by score and limit results
+                results = results
                     .sort((a, b) => b.score - a.score)
-                    .slice(0, 8);
+                    .slice(0, 10);
 
                 if (results.length === 0) {
                     searchResults.innerHTML = '<div class="search-no-results">No results found</div>';
@@ -575,17 +715,7 @@
                     return;
                 }
 
-                const html = results.map(r => {
-                    const entry = r.entry;
-                    return `
-                        <div class="search-result" data-path="${entry.path}">
-                            <div class="search-result-title">${escapeHtml(entry.title)}</div>
-                            <div class="search-result-path">${escapeHtml(entry.path)}</div>
-                            <div class="search-result-snippet">${escapeHtml(entry.snippet || '')}</div>
-                        </div>
-                    `;
-                }).join('');
-
+                const html = results.map(r => renderResult(r.entry)).join('');
                 searchResults.innerHTML = html;
                 searchResults.classList.add('active');
 
@@ -595,6 +725,46 @@
                         window.location.href = '/wiki/' + el.dataset.path;
                     });
                 });
+            }
+
+            // Render a search result
+            function renderResult(entry) {
+                if (entry.type === 'page') {
+                    return `
+                        <div class="search-result" data-path="${entry.path}">
+                            <div class="search-result-title">${escapeHtml(entry.title)}</div>
+                            <div class="search-result-path">${escapeHtml(entry.path)}</div>
+                            <div class="search-result-snippet">${escapeHtml(entry.snippet || '')}</div>
+                        </div>
+                    `;
+                } else {
+                    // Entity result
+                    const badges = [];
+                    badges.push(`<span class="entity-badge ${entry.entity_type}">${entry.entity_type}</span>`);
+                    if (entry.is_async) {
+                        badges.push('<span class="entity-badge async">async</span>');
+                    }
+
+                    const raisesHtml = entry.raises && entry.raises.length > 0
+                        ? `<div class="search-result-raises">Raises: ${escapeHtml(entry.raises.join(', '))}</div>`
+                        : '';
+
+                    const sigHtml = entry.signature
+                        ? `<div class="search-result-signature">${escapeHtml(entry.signature)}</div>`
+                        : '';
+
+                    return `
+                        <div class="search-result" data-path="${entry.path}">
+                            <div class="search-result-title">
+                                ${badges.join('')}${escapeHtml(entry.display_name)}
+                            </div>
+                            <div class="search-result-path">${escapeHtml(entry.file)}</div>
+                            ${sigHtml}
+                            ${entry.description ? `<div class="search-result-snippet">${escapeHtml(entry.description)}</div>` : ''}
+                            ${raisesHtml}
+                        </div>
+                    `;
+                }
             }
 
             function escapeHtml(text) {
