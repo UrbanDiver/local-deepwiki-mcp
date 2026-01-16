@@ -7,7 +7,10 @@ from pathlib import Path
 
 from local_deepwiki.config import Config, get_config
 from local_deepwiki.core.vectorstore import VectorStore
+from local_deepwiki.generators.coverage import generate_coverage_page
 from local_deepwiki.generators.crosslinks import EntityRegistry, add_cross_links
+from local_deepwiki.generators.glossary import generate_glossary_page
+from local_deepwiki.generators.inheritance import generate_inheritance_page
 from local_deepwiki.generators.manifest import ProjectManifest, get_cached_manifest
 from local_deepwiki.generators.search import write_search_index
 from local_deepwiki.generators.see_also import RelationshipAnalyzer, add_see_also_sections
@@ -130,7 +133,7 @@ class WikiGenerator:
         logger.debug(f"Full rebuild: {full_rebuild}, Total files: {index_status.total_files}")
 
         pages: list[WikiPage] = []
-        total_steps = 9  # overview, architecture, modules, files, dependencies, changelog, cross-links, see-also, search
+        total_steps = 12  # overview, architecture, modules, files, dependencies, changelog, inheritance, glossary, coverage, cross-links, see-also, search
         pages_generated = 0
         pages_skipped = 0
 
@@ -283,9 +286,60 @@ class WikiGenerator:
             await self._write_page(changelog_page)
             pages_generated += 1
 
+        # Generate inheritance page
+        if progress_callback:
+            progress_callback("Generating inheritance tree", 6, total_steps)
+
+        inheritance_content = await generate_inheritance_page(index_status, self.vector_store)
+        if inheritance_content:
+            inheritance_page = WikiPage(
+                path="inheritance.md",
+                title="Class Inheritance",
+                content=inheritance_content,
+                generated_at=time.time(),
+            )
+            pages.append(inheritance_page)
+            self.status_manager.record_page_status(inheritance_page, all_source_files)
+            await self._write_page(inheritance_page)
+            pages_generated += 1
+
+        # Generate glossary page
+        if progress_callback:
+            progress_callback("Generating glossary", 7, total_steps)
+
+        glossary_content = await generate_glossary_page(index_status, self.vector_store)
+        if glossary_content:
+            glossary_page = WikiPage(
+                path="glossary.md",
+                title="Glossary",
+                content=glossary_content,
+                generated_at=time.time(),
+            )
+            pages.append(glossary_page)
+            self.status_manager.record_page_status(glossary_page, all_source_files)
+            await self._write_page(glossary_page)
+            pages_generated += 1
+
+        # Generate coverage report page
+        if progress_callback:
+            progress_callback("Generating coverage report", 8, total_steps)
+
+        coverage_content = await generate_coverage_page(index_status, self.vector_store)
+        if coverage_content:
+            coverage_page = WikiPage(
+                path="coverage.md",
+                title="Documentation Coverage",
+                content=coverage_content,
+                generated_at=time.time(),
+            )
+            pages.append(coverage_page)
+            self.status_manager.record_page_status(coverage_page, all_source_files)
+            await self._write_page(coverage_page)
+            pages_generated += 1
+
         # Apply cross-links to all pages
         if progress_callback:
-            progress_callback("Adding cross-links", 6, total_steps)
+            progress_callback("Adding cross-links", 9, total_steps)
 
         pages = add_cross_links(pages, self.entity_registry)
 
@@ -294,7 +348,7 @@ class WikiGenerator:
 
         # Add See Also sections
         if progress_callback:
-            progress_callback("Adding See Also sections", 7, total_steps)
+            progress_callback("Adding See Also sections", 10, total_steps)
 
         pages = add_see_also_sections(pages, self.relationship_analyzer)
 
@@ -304,7 +358,7 @@ class WikiGenerator:
 
         # Generate search index
         if progress_callback:
-            progress_callback("Generating search index", 8, total_steps)
+            progress_callback("Generating search index", 11, total_steps)
 
         write_search_index(self.wiki_path, pages)
 
