@@ -408,12 +408,12 @@ class CrossLinker:
             if canonical_name in current_page_entities:
                 continue
 
-            entity = entities.get(canonical_name)
-            if not entity:
+            alias_entity = entities.get(canonical_name)
+            if not alias_entity:
                 continue
 
             # Calculate relative path
-            rel_path = self._relative_path(current_page, entity.wiki_path)
+            rel_path = self._relative_path(current_page, alias_entity.wiki_path)
 
             # Create link - use alias as display text
             link = f"[{alias}]({rel_path})"

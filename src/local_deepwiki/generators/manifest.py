@@ -451,7 +451,9 @@ def _parse_pyproject_toml(filepath: Path, manifest: ProjectManifest) -> None:
 
     # Authors
     authors = project.get("authors", [])
-    manifest.authors = [a.get("name", a.get("email", "")) for a in authors if isinstance(a, dict)]
+    manifest.authors = [
+        str(a.get("name") or a.get("email") or "") for a in authors if isinstance(a, dict)
+    ]
 
     # Dependencies
     deps = project.get("dependencies", [])

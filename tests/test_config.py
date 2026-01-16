@@ -7,16 +7,16 @@ from pathlib import Path
 import pytest
 
 from local_deepwiki.config import (
-    Config,
-    DeepResearchConfig,
-    ProviderPromptsConfig,
-    PromptsConfig,
-    RESEARCH_PRESETS,
-    ResearchPreset,
-    WIKI_SYSTEM_PROMPTS,
     RESEARCH_DECOMPOSITION_PROMPTS,
     RESEARCH_GAP_ANALYSIS_PROMPTS,
+    RESEARCH_PRESETS,
     RESEARCH_SYNTHESIS_PROMPTS,
+    WIKI_SYSTEM_PROMPTS,
+    Config,
+    DeepResearchConfig,
+    PromptsConfig,
+    ProviderPromptsConfig,
+    ResearchPreset,
     config_context,
     get_config,
     reset_config,
@@ -513,8 +513,10 @@ class TestProviderPrompts:
         assert "json" in config.anthropic.research_gap_analysis.lower()
 
         # Synthesis prompts should mention code/architecture
-        assert "code" in config.anthropic.research_synthesis.lower() or \
-               "architecture" in config.anthropic.research_synthesis.lower()
+        assert (
+            "code" in config.anthropic.research_synthesis.lower()
+            or "architecture" in config.anthropic.research_synthesis.lower()
+        )
 
     def test_custom_prompts_can_override_defaults(self):
         """Test that custom prompts can be provided via config."""
@@ -525,8 +527,6 @@ class TestProviderPrompts:
             research_gap_analysis="custom gap",
             research_synthesis="custom synth",
         )
-        config = Config(
-            prompts=PromptsConfig(ollama=custom_ollama)
-        )
+        config = Config(prompts=PromptsConfig(ollama=custom_ollama))
 
         assert config.prompts.ollama.wiki_system == custom_prompt

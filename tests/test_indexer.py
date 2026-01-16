@@ -14,7 +14,7 @@ from local_deepwiki.core.indexer import (
     _migrate_status,
     _needs_migration,
 )
-from local_deepwiki.models import CodeChunk, IndexStatus, Language, ChunkType
+from local_deepwiki.models import ChunkType, CodeChunk, IndexStatus, Language
 
 
 class TestChunkingConfigBatchSize:
@@ -42,7 +42,8 @@ class TestBatchedProcessing:
 
         # Create multiple Python files to generate enough chunks
         for i in range(5):
-            (repo_path / f"module{i}.py").write_text(f'''
+            (repo_path / f"module{i}.py").write_text(
+                f'''
 def function_{i}_a():
     """Function A in module {i}."""
     pass
@@ -54,7 +55,8 @@ def function_{i}_b():
 def function_{i}_c():
     """Function C in module {i}."""
     pass
-''')
+'''
+            )
 
         # Create config with small batch size
         config = Config()
@@ -111,13 +113,15 @@ def function_{i}_c():
         repo_path.mkdir()
 
         # Create initial files
-        (repo_path / "module1.py").write_text('''
+        (repo_path / "module1.py").write_text(
+            """
 def function_a():
     pass
 
 def function_b():
     pass
-''')
+"""
+        )
 
         config = Config()
         config.chunking.batch_size = 2
@@ -155,10 +159,12 @@ def function_b():
             add_calls.clear()
 
             # Add another file
-            (repo_path / "module2.py").write_text('''
+            (repo_path / "module2.py").write_text(
+                """
 def function_c():
     pass
-''')
+"""
+            )
 
             # Run incremental update
             await indexer.index(full_rebuild=False)

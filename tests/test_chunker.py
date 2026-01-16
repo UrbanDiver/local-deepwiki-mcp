@@ -215,9 +215,7 @@ def func3(): pass
         chunker = CodeChunker(config=config)
 
         # Create a class with many methods (will exceed threshold)
-        methods = "\n".join([
-            f"    def method{i}(self):\n        pass\n" for i in range(20)
-        ])
+        methods = "\n".join([f"    def method{i}(self):\n        pass\n" for i in range(20)])
         code = f'''class LargeClass:
     """A large class."""
 {methods}
@@ -639,6 +637,7 @@ class Child extends Parent implements Interface1 {
         # Find the class node in PHP AST
         class_node = None
         from local_deepwiki.core.parser import find_nodes_by_type
+
         class_nodes = find_nodes_by_type(root, {"class_declaration"})
         if class_nodes:
             class_node = class_nodes[0]
@@ -662,6 +661,7 @@ class Child : Parent(), Interface1 {
 
         # Find the class node
         from local_deepwiki.core.parser import find_nodes_by_type
+
         class_nodes = find_nodes_by_type(root, {"class_declaration"})
 
         assert len(class_nodes) > 0
@@ -684,6 +684,7 @@ public class Child : Parent, IInterface1 {
 
         # Find the class node
         from local_deepwiki.core.parser import find_nodes_by_type
+
         class_nodes = find_nodes_by_type(root, {"class_declaration"})
 
         assert len(class_nodes) > 0
@@ -701,9 +702,7 @@ class TestChunkerWithConfig:
         config = ChunkingConfig(class_split_threshold=1000)
         chunker = CodeChunker(config=config)
 
-        methods = "\n".join([
-            f"    def method{i}(self):\n        pass\n" for i in range(5)
-        ])
+        methods = "\n".join([f"    def method{i}(self):\n        pass\n" for i in range(5)])
         code = f'''class SmallClass:
     """A class."""
 {methods}

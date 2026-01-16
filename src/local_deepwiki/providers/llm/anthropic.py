@@ -43,20 +43,41 @@ class AnthropicProvider(LLMProvider):
         Returns:
             Generated text.
         """
-        kwargs = {
-            "model": self._model,
-            "max_tokens": max_tokens,
-            "messages": [{"role": "user", "content": prompt}],
-        }
-        if system_prompt:
-            kwargs["system"] = system_prompt
-        if temperature > 0:
-            kwargs["temperature"] = temperature
-
         logger.debug(f"Generating with Anthropic model {self._model}, prompt length: {len(prompt)}")
 
-        response = await self._client.messages.create(**kwargs)
-        content = response.content[0].text
+        # Use explicit arguments to satisfy type checker
+        if system_prompt and temperature > 0:
+            response = await self._client.messages.create(
+                model=self._model,
+                max_tokens=max_tokens,
+                messages=[{"role": "user", "content": prompt}],
+                system=system_prompt,
+                temperature=temperature,
+            )
+        elif system_prompt:
+            response = await self._client.messages.create(
+                model=self._model,
+                max_tokens=max_tokens,
+                messages=[{"role": "user", "content": prompt}],
+                system=system_prompt,
+            )
+        elif temperature > 0:
+            response = await self._client.messages.create(
+                model=self._model,
+                max_tokens=max_tokens,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=temperature,
+            )
+        else:
+            response = await self._client.messages.create(
+                model=self._model,
+                max_tokens=max_tokens,
+                messages=[{"role": "user", "content": prompt}],
+            )
+
+        # Get text from the first content block (should be TextBlock)
+        first_block = response.content[0]
+        content = first_block.text if hasattr(first_block, "text") else ""
 
         logger.debug(f"Anthropic response length: {len(content)}")
         return content
@@ -79,19 +100,43 @@ class AnthropicProvider(LLMProvider):
         Yields:
             Generated text chunks.
         """
-        kwargs = {
-            "model": self._model,
-            "max_tokens": max_tokens,
-            "messages": [{"role": "user", "content": prompt}],
-        }
-        if system_prompt:
-            kwargs["system"] = system_prompt
-        if temperature > 0:
-            kwargs["temperature"] = temperature
-
-        async with self._client.messages.stream(**kwargs) as stream:
-            async for text in stream.text_stream:
-                yield text
+        # Use explicit arguments to satisfy type checker
+        if system_prompt and temperature > 0:
+            async with self._client.messages.stream(
+                model=self._model,
+                max_tokens=max_tokens,
+                messages=[{"role": "user", "content": prompt}],
+                system=system_prompt,
+                temperature=temperature,
+            ) as stream:
+                async for text in stream.text_stream:
+                    yield text
+        elif system_prompt:
+            async with self._client.messages.stream(
+                model=self._model,
+                max_tokens=max_tokens,
+                messages=[{"role": "user", "content": prompt}],
+                system=system_prompt,
+            ) as stream:
+                async for text in stream.text_stream:
+                    yield text
+        elif temperature > 0:
+            async with self._client.messages.stream(
+                model=self._model,
+                max_tokens=max_tokens,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=temperature,
+            ) as stream:
+                async for text in stream.text_stream:
+                    yield text
+        else:
+            async with self._client.messages.stream(
+                model=self._model,
+                max_tokens=max_tokens,
+                messages=[{"role": "user", "content": prompt}],
+            ) as stream:
+                async for text in stream.text_stream:
+                    yield text
 
     @property
     def name(self) -> str:

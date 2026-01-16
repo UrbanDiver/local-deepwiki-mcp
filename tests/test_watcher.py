@@ -441,7 +441,9 @@ class TestDoReindex:
 
         with (
             patch("local_deepwiki.watcher.RepositoryIndexer") as mock_indexer_class,
-            patch("local_deepwiki.watcher.generate_wiki", new_callable=AsyncMock) as mock_generate_wiki,
+            patch(
+                "local_deepwiki.watcher.generate_wiki", new_callable=AsyncMock
+            ) as mock_generate_wiki,
             patch("local_deepwiki.watcher.console") as mock_console,
         ):
             mock_indexer = MagicMock()
@@ -492,7 +494,9 @@ class TestDoReindex:
 
         with (
             patch("local_deepwiki.watcher.RepositoryIndexer") as mock_indexer_class,
-            patch("local_deepwiki.watcher.generate_wiki", new_callable=AsyncMock) as mock_generate_wiki,
+            patch(
+                "local_deepwiki.watcher.generate_wiki", new_callable=AsyncMock
+            ) as mock_generate_wiki,
             patch("local_deepwiki.watcher.console") as mock_console,
         ):
             mock_indexer = MagicMock()
@@ -524,7 +528,9 @@ class TestDoReindex:
 
         with (
             patch("local_deepwiki.watcher.RepositoryIndexer") as mock_indexer_class,
-            patch("local_deepwiki.watcher.generate_wiki", new_callable=AsyncMock) as mock_generate_wiki,
+            patch(
+                "local_deepwiki.watcher.generate_wiki", new_callable=AsyncMock
+            ) as mock_generate_wiki,
             patch("local_deepwiki.watcher.console"),
         ):
             mock_indexer = MagicMock()
@@ -556,7 +562,9 @@ class TestDoReindex:
 
         with (
             patch("local_deepwiki.watcher.RepositoryIndexer") as mock_indexer_class,
-            patch("local_deepwiki.watcher.generate_wiki", new_callable=AsyncMock) as mock_generate_wiki,
+            patch(
+                "local_deepwiki.watcher.generate_wiki", new_callable=AsyncMock
+            ) as mock_generate_wiki,
             patch("local_deepwiki.watcher.console") as mock_console,
         ):
             mock_indexer = MagicMock()
@@ -601,7 +609,9 @@ class TestInitialIndex:
 
         with (
             patch("local_deepwiki.watcher.RepositoryIndexer") as mock_indexer_class,
-            patch("local_deepwiki.watcher.generate_wiki", new_callable=AsyncMock) as mock_generate_wiki,
+            patch(
+                "local_deepwiki.watcher.generate_wiki", new_callable=AsyncMock
+            ) as mock_generate_wiki,
             patch("local_deepwiki.watcher.console") as mock_console,
         ):
             mock_indexer = MagicMock()
@@ -634,7 +644,9 @@ class TestInitialIndex:
 
         with (
             patch("local_deepwiki.watcher.RepositoryIndexer") as mock_indexer_class,
-            patch("local_deepwiki.watcher.generate_wiki", new_callable=AsyncMock) as mock_generate_wiki,
+            patch(
+                "local_deepwiki.watcher.generate_wiki", new_callable=AsyncMock
+            ) as mock_generate_wiki,
             patch("local_deepwiki.watcher.console"),
         ):
             mock_indexer = MagicMock()
@@ -668,7 +680,9 @@ class TestInitialIndex:
 
         with (
             patch("local_deepwiki.watcher.RepositoryIndexer") as mock_indexer_class,
-            patch("local_deepwiki.watcher.generate_wiki", new_callable=AsyncMock) as mock_generate_wiki,
+            patch(
+                "local_deepwiki.watcher.generate_wiki", new_callable=AsyncMock
+            ) as mock_generate_wiki,
             patch("local_deepwiki.watcher.console"),
         ):
             mock_indexer = MagicMock()
@@ -707,7 +721,9 @@ class TestInitialIndex:
 
         with (
             patch("local_deepwiki.watcher.RepositoryIndexer") as mock_indexer_class,
-            patch("local_deepwiki.watcher.generate_wiki", new_callable=AsyncMock) as mock_generate_wiki,
+            patch(
+                "local_deepwiki.watcher.generate_wiki", new_callable=AsyncMock
+            ) as mock_generate_wiki,
             patch("local_deepwiki.watcher.console") as mock_console,
         ):
             mock_indexer = MagicMock()

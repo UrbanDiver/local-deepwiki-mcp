@@ -474,7 +474,10 @@ class CodeChunker:
         content = f"{signature}\n    # Methods: {', '.join(method_names)}"
 
         chunk_id = self._generate_id(file_path, f"class_{class_name}", class_node.start_point[0])
-        metadata = {"is_summary": True, "method_count": len(methods)}
+        metadata: dict[str, bool | int | list[str]] = {
+            "is_summary": True,
+            "method_count": len(methods),
+        }
         if parent_classes:
             metadata["parent_classes"] = parent_classes
         return CodeChunk(

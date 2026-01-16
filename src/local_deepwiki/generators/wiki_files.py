@@ -162,10 +162,7 @@ Do NOT include mermaid class diagrams - they will be auto-generated."""
             content += "\n\n## Call Graph\n\n```mermaid\n" + call_graph + "\n```"
 
     # Add usage examples from test files
-    entity_names = [
-        chunk.name for chunk in all_file_chunks
-        if chunk.name and len(chunk.name) > 2
-    ]
+    entity_names = [chunk.name for chunk in all_file_chunks if chunk.name and len(chunk.name) > 2]
     if entity_names:
         examples_md = get_file_examples(
             source_file=abs_file_path,
@@ -219,6 +216,7 @@ async def generate_file_docs(
     Returns:
         Tuple of (pages list, generated count, skipped count).
     """
+
     # Filter files: skip __init__.py and test files
     def is_test_file(path: str) -> bool:
         """Check if a file is a test file."""
@@ -241,9 +239,9 @@ async def generate_file_docs(
     if len(significant_files) > max_files:
         # Only limit if we have way too many files
         # Prioritize files with more chunks (more complex)
-        significant_files = sorted(
-            significant_files, key=lambda x: x.chunk_count, reverse=True
-        )[:max_files]
+        significant_files = sorted(significant_files, key=lambda x: x.chunk_count, reverse=True)[
+            :max_files
+        ]
 
     if not significant_files:
         return [], 0, 0
@@ -309,9 +307,7 @@ async def generate_file_docs(
         pages.insert(0, files_index)
         status_manager.record_page_status(files_index, all_file_paths)
 
-    logger.info(
-        f"File docs complete: {pages_generated} generated, {pages_skipped} skipped"
-    )
+    logger.info(f"File docs complete: {pages_generated} generated, {pages_skipped} skipped")
     return pages, pages_generated, pages_skipped
 
 

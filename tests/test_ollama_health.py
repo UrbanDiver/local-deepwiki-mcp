@@ -1,14 +1,14 @@
 """Tests for Ollama provider health check functionality."""
 
 from dataclasses import dataclass
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
 
 from local_deepwiki.providers.llm.ollama import (
-    OllamaProvider,
     OllamaConnectionError,
     OllamaModelNotFoundError,
+    OllamaProvider,
 )
 
 

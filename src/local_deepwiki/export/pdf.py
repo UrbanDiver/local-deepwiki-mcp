@@ -9,6 +9,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from typing import cast
 
 import markdown
 from weasyprint import CSS, HTML
@@ -65,10 +66,14 @@ def render_mermaid_to_png(diagram_code: str, timeout: int = 30) -> bytes | None:
             result = subprocess.run(
                 [
                     "mmdc",
-                    "-i", str(input_file),
-                    "-o", str(output_file),
-                    "-b", "white",  # White background for PDF
-                    "-s", "2",  # Scale 2x for better quality
+                    "-i",
+                    str(input_file),
+                    "-o",
+                    str(output_file),
+                    "-b",
+                    "white",  # White background for PDF
+                    "-s",
+                    "2",  # Scale 2x for better quality
                     "--quiet",
                 ],
                 capture_output=True,
@@ -125,9 +130,12 @@ def render_mermaid_to_svg(diagram_code: str, timeout: int = 30) -> str | None:
             result = subprocess.run(
                 [
                     "mmdc",
-                    "-i", str(input_file),
-                    "-o", str(output_file),
-                    "-b", "transparent",  # Transparent background
+                    "-i",
+                    str(input_file),
+                    "-o",
+                    str(output_file),
+                    "-b",
+                    "transparent",  # Transparent background
                     "--quiet",
                 ],
                 capture_output=True,
@@ -458,7 +466,7 @@ def render_markdown_for_pdf(content: str, render_mermaid: bool = True) -> str:
             "toc",
         ]
     )
-    return md.convert(processed_content)
+    return cast(str, md.convert(processed_content))
 
 
 def extract_title(md_file: Path) -> str:
@@ -712,9 +720,7 @@ def export_to_pdf(
 
 def main() -> None:
     """CLI entry point for PDF export."""
-    parser = argparse.ArgumentParser(
-        description="Export DeepWiki documentation to PDF format"
-    )
+    parser = argparse.ArgumentParser(description="Export DeepWiki documentation to PDF format")
     parser.add_argument(
         "wiki_path",
         type=Path,

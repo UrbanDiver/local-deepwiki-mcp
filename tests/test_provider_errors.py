@@ -129,9 +129,7 @@ class TestOllamaProviderGenerate:
         provider._health_checked = True  # Skip health check
 
         with patch.object(provider._client, "chat") as mock_chat:
-            mock_chat.return_value = {
-                "message": {"content": "Generated response"}
-            }
+            mock_chat.return_value = {"message": {"content": "Generated response"}}
 
             result = await provider.generate("Test prompt")
             assert result == "Generated response"
@@ -142,9 +140,7 @@ class TestOllamaProviderGenerate:
         provider._health_checked = True
 
         with patch.object(provider._client, "chat") as mock_chat:
-            mock_chat.return_value = {
-                "message": {"content": "Response"}
-            }
+            mock_chat.return_value = {"message": {"content": "Response"}}
 
             await provider.generate("User prompt", system_prompt="System prompt")
 

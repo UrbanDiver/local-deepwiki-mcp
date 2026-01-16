@@ -3,7 +3,7 @@
 import hashlib
 import mmap
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import tree_sitter_c
 import tree_sitter_c_sharp
@@ -336,7 +336,7 @@ def _collect_preceding_comments(
     Returns:
         List of comment text lines in order (first comment first).
     """
-    comments = []
+    comments: list[str] = []
     prev = node.prev_sibling
 
     while prev and prev.type in comment_types:
@@ -484,5 +484,5 @@ def get_docstring(node: Node, source: bytes, language: LangEnum) -> str | None:
     """
     extractor = _DOCSTRING_EXTRACTORS.get(language)
     if extractor:
-        return extractor(node, source)
+        return cast(str | None, extractor(node, source))
     return None

@@ -178,9 +178,7 @@ class TestWikiStatusManagerHelpers:
             },
         )
         # Now depends on two files
-        result = status_manager.needs_regeneration(
-            "index.md", ["src/test.py", "src/other.py"]
-        )
+        result = status_manager.needs_regeneration("index.md", ["src/test.py", "src/other.py"])
         assert result is True  # Source files list changed
 
     def test_record_page_status(self, status_manager):

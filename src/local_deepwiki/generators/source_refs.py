@@ -11,9 +11,7 @@ from pathlib import Path
 from local_deepwiki.models import WikiPage, WikiPageStatus
 
 
-def build_file_to_wiki_map(
-    pages: list[WikiPage], wiki_path: Path | None = None
-) -> dict[str, str]:
+def build_file_to_wiki_map(pages: list[WikiPage], wiki_path: Path | None = None) -> dict[str, str]:
     """Build a mapping from source file paths to wiki page paths.
 
     Args:
@@ -154,9 +152,7 @@ def generate_source_refs_section(
         file_path = files_to_show[0]
         wiki_path = file_to_wiki.get(file_path)
         line_info = file_line_info.get(file_path) if file_line_info else None
-        lines.append(
-            _format_file_entry(file_path, wiki_path, current_wiki_path, line_info)
-        )
+        lines.append(_format_file_entry(file_path, wiki_path, current_wiki_path, line_info))
     else:
         # Multiple files - list format for overview/module pages
         lines.append("The following source files were used to generate this documentation:")
@@ -165,9 +161,7 @@ def generate_source_refs_section(
         for file_path in files_to_show:
             wiki_path = file_to_wiki.get(file_path)
             line_info = file_line_info.get(file_path) if file_line_info else None
-            lines.append(
-                _format_file_entry(file_path, wiki_path, current_wiki_path, line_info)
-            )
+            lines.append(_format_file_entry(file_path, wiki_path, current_wiki_path, line_info))
 
     if summary_note:
         lines.append(summary_note)
@@ -202,7 +196,7 @@ def _strip_existing_source_refs(content: str) -> str:
         next_section = re.search(r"\n## ", part)
         if next_section:
             # Keep everything from the next section onwards
-            result += part[next_section.start():]
+            result += part[next_section.start() :]
         # else: section goes to end, discard it
 
     return result

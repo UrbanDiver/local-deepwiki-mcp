@@ -80,6 +80,7 @@ class MockLLMProvider(LLMProvider):
         async def _stream() -> AsyncIterator[str]:
             response = await self.generate(prompt, system_prompt, max_tokens, temperature)
             yield response
+
         return _stream()
 
 
@@ -154,16 +155,20 @@ class TestDeepResearchPipelineDecomposition:
 
     async def test_decompose_simple_question(self, mock_vector_store):
         """Test decomposition of a simple question."""
-        llm = MockLLMProvider(responses=[
-            json.dumps({
-                "sub_questions": [
-                    {"question": "What is the structure?", "category": "structure"},
-                    {"question": "How does it flow?", "category": "flow"},
-                ]
-            }),
-            json.dumps({"gaps": [], "follow_up_queries": []}),
-            "Final answer",
-        ])
+        llm = MockLLMProvider(
+            responses=[
+                json.dumps(
+                    {
+                        "sub_questions": [
+                            {"question": "What is the structure?", "category": "structure"},
+                            {"question": "How does it flow?", "category": "flow"},
+                        ]
+                    }
+                ),
+                json.dumps({"gaps": [], "follow_up_queries": []}),
+                "Final answer",
+            ]
+        )
 
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
@@ -178,16 +183,19 @@ class TestDeepResearchPipelineDecomposition:
 
     async def test_decompose_limits_sub_questions(self, mock_vector_store):
         """Test that decomposition limits sub-questions to max."""
-        llm = MockLLMProvider(responses=[
-            json.dumps({
-                "sub_questions": [
-                    {"question": f"Q{i}?", "category": "structure"}
-                    for i in range(10)
-                ]
-            }),
-            json.dumps({"gaps": [], "follow_up_queries": []}),
-            "Final answer",
-        ])
+        llm = MockLLMProvider(
+            responses=[
+                json.dumps(
+                    {
+                        "sub_questions": [
+                            {"question": f"Q{i}?", "category": "structure"} for i in range(10)
+                        ]
+                    }
+                ),
+                json.dumps({"gaps": [], "follow_up_queries": []}),
+                "Final answer",
+            ]
+        )
 
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
@@ -201,11 +209,13 @@ class TestDeepResearchPipelineDecomposition:
 
     async def test_decompose_handles_invalid_json(self, mock_vector_store):
         """Test graceful handling of invalid JSON response."""
-        llm = MockLLMProvider(responses=[
-            "This is not valid JSON",
-            json.dumps({"gaps": [], "follow_up_queries": []}),
-            "Final answer",
-        ])
+        llm = MockLLMProvider(
+            responses=[
+                "This is not valid JSON",
+                json.dumps({"gaps": [], "follow_up_queries": []}),
+                "Final answer",
+            ]
+        )
 
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
@@ -219,15 +229,19 @@ class TestDeepResearchPipelineDecomposition:
 
     async def test_decompose_validates_categories(self, mock_vector_store):
         """Test that invalid categories are replaced with default."""
-        llm = MockLLMProvider(responses=[
-            json.dumps({
-                "sub_questions": [
-                    {"question": "Q1?", "category": "invalid_category"},
-                ]
-            }),
-            json.dumps({"gaps": [], "follow_up_queries": []}),
-            "Final answer",
-        ])
+        llm = MockLLMProvider(
+            responses=[
+                json.dumps(
+                    {
+                        "sub_questions": [
+                            {"question": "Q1?", "category": "invalid_category"},
+                        ]
+                    }
+                ),
+                json.dumps({"gaps": [], "follow_up_queries": []}),
+                "Final answer",
+            ]
+        )
 
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
@@ -246,23 +260,29 @@ class TestDeepResearchPipelineRetrieval:
     @pytest.fixture
     def mock_llm(self):
         """Create mock LLM that returns valid responses."""
-        return MockLLMProvider(responses=[
-            json.dumps({
-                "sub_questions": [
-                    {"question": "What modules exist?", "category": "structure"},
-                    {"question": "How do they connect?", "category": "dependencies"},
-                ]
-            }),
-            json.dumps({"gaps": [], "follow_up_queries": []}),
-            "Synthesized answer",
-        ])
+        return MockLLMProvider(
+            responses=[
+                json.dumps(
+                    {
+                        "sub_questions": [
+                            {"question": "What modules exist?", "category": "structure"},
+                            {"question": "How do they connect?", "category": "dependencies"},
+                        ]
+                    }
+                ),
+                json.dumps({"gaps": [], "follow_up_queries": []}),
+                "Synthesized answer",
+            ]
+        )
 
     async def test_parallel_retrieval_calls_search(self, mock_llm):
         """Test that parallel retrieval calls search for each sub-question."""
         mock_store = MagicMock()
-        mock_store.search = AsyncMock(return_value=[
-            make_search_result(make_chunk("c1")),
-        ])
+        mock_store.search = AsyncMock(
+            return_value=[
+                make_search_result(make_chunk("c1")),
+            ]
+        )
 
         pipeline = DeepResearchPipeline(
             vector_store=mock_store,
@@ -279,10 +299,12 @@ class TestDeepResearchPipelineRetrieval:
         """Test that duplicate chunks are deduplicated."""
         chunk = make_chunk("same_id")
         mock_store = MagicMock()
-        mock_store.search = AsyncMock(return_value=[
-            make_search_result(chunk, score=0.8),
-            make_search_result(chunk, score=0.7),  # Same chunk, lower score
-        ])
+        mock_store.search = AsyncMock(
+            return_value=[
+                make_search_result(chunk, score=0.8),
+                make_search_result(chunk, score=0.7),  # Same chunk, lower score
+            ]
+        )
 
         pipeline = DeepResearchPipeline(
             vector_store=mock_store,
@@ -304,23 +326,27 @@ class TestDeepResearchPipelineGapAnalysis:
     def mock_vector_store(self):
         """Create mock vector store with results."""
         store = MagicMock()
-        store.search = AsyncMock(return_value=[
-            make_search_result(make_chunk("c1", "auth.py")),
-        ])
+        store.search = AsyncMock(
+            return_value=[
+                make_search_result(make_chunk("c1", "auth.py")),
+            ]
+        )
         return store
 
     async def test_gap_analysis_generates_follow_ups(self, mock_vector_store):
         """Test that gap analysis can generate follow-up queries."""
-        llm = MockLLMProvider(responses=[
-            json.dumps({
-                "sub_questions": [{"question": "Q1?", "category": "structure"}]
-            }),
-            json.dumps({
-                "gaps": ["Missing database layer info"],
-                "follow_up_queries": ["database connection", "SQL queries"],
-            }),
-            "Final answer",
-        ])
+        llm = MockLLMProvider(
+            responses=[
+                json.dumps({"sub_questions": [{"question": "Q1?", "category": "structure"}]}),
+                json.dumps(
+                    {
+                        "gaps": ["Missing database layer info"],
+                        "follow_up_queries": ["database connection", "SQL queries"],
+                    }
+                ),
+                "Final answer",
+            ]
+        )
 
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
@@ -334,16 +360,18 @@ class TestDeepResearchPipelineGapAnalysis:
 
     async def test_gap_analysis_limits_follow_ups(self, mock_vector_store):
         """Test that follow-up queries are limited."""
-        llm = MockLLMProvider(responses=[
-            json.dumps({
-                "sub_questions": [{"question": "Q1?", "category": "structure"}]
-            }),
-            json.dumps({
-                "gaps": ["Many gaps"],
-                "follow_up_queries": [f"query{i}" for i in range(10)],
-            }),
-            "Final answer",
-        ])
+        llm = MockLLMProvider(
+            responses=[
+                json.dumps({"sub_questions": [{"question": "Q1?", "category": "structure"}]}),
+                json.dumps(
+                    {
+                        "gaps": ["Many gaps"],
+                        "follow_up_queries": [f"query{i}" for i in range(10)],
+                    }
+                ),
+                "Final answer",
+            ]
+        )
 
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
@@ -365,20 +393,22 @@ class TestDeepResearchPipelineSynthesis:
     def mock_vector_store(self):
         """Create mock vector store."""
         store = MagicMock()
-        store.search = AsyncMock(return_value=[
-            make_search_result(make_chunk("c1", content="def auth(): pass")),
-        ])
+        store.search = AsyncMock(
+            return_value=[
+                make_search_result(make_chunk("c1", content="def auth(): pass")),
+            ]
+        )
         return store
 
     async def test_synthesis_includes_context(self, mock_vector_store):
         """Test that synthesis prompt includes code context."""
-        llm = MockLLMProvider(responses=[
-            json.dumps({
-                "sub_questions": [{"question": "Q?", "category": "structure"}]
-            }),
-            json.dumps({"gaps": [], "follow_up_queries": []}),
-            "Synthesized answer with auth.py:1-10",
-        ])
+        llm = MockLLMProvider(
+            responses=[
+                json.dumps({"sub_questions": [{"question": "Q?", "category": "structure"}]}),
+                json.dumps({"gaps": [], "follow_up_queries": []}),
+                "Synthesized answer with auth.py:1-10",
+            ]
+        )
 
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
@@ -395,12 +425,12 @@ class TestDeepResearchPipelineSynthesis:
         mock_store = MagicMock()
         mock_store.search = AsyncMock(return_value=[])
 
-        llm = MockLLMProvider(responses=[
-            json.dumps({
-                "sub_questions": [{"question": "Q?", "category": "structure"}]
-            }),
-            json.dumps({"gaps": [], "follow_up_queries": []}),
-        ])
+        llm = MockLLMProvider(
+            responses=[
+                json.dumps({"sub_questions": [{"question": "Q?", "category": "structure"}]}),
+                json.dumps({"gaps": [], "follow_up_queries": []}),
+            ]
+        )
 
         pipeline = DeepResearchPipeline(
             vector_store=mock_store,
@@ -419,23 +449,27 @@ class TestDeepResearchPipelineTracing:
     @pytest.fixture
     def mock_vector_store(self):
         store = MagicMock()
-        store.search = AsyncMock(return_value=[
-            make_search_result(make_chunk("c1")),
-        ])
+        store.search = AsyncMock(
+            return_value=[
+                make_search_result(make_chunk("c1")),
+            ]
+        )
         return store
 
     async def test_trace_includes_all_steps(self, mock_vector_store):
         """Test that reasoning trace includes all steps."""
-        llm = MockLLMProvider(responses=[
-            json.dumps({
-                "sub_questions": [{"question": "Q?", "category": "structure"}]
-            }),
-            json.dumps({
-                "gaps": ["gap"],
-                "follow_up_queries": ["follow up"],
-            }),
-            "Answer",
-        ])
+        llm = MockLLMProvider(
+            responses=[
+                json.dumps({"sub_questions": [{"question": "Q?", "category": "structure"}]}),
+                json.dumps(
+                    {
+                        "gaps": ["gap"],
+                        "follow_up_queries": ["follow up"],
+                    }
+                ),
+                "Answer",
+            ]
+        )
 
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
@@ -453,11 +487,13 @@ class TestDeepResearchPipelineTracing:
 
     async def test_trace_records_duration(self, mock_vector_store):
         """Test that each step has duration recorded."""
-        llm = MockLLMProvider(responses=[
-            json.dumps({"sub_questions": []}),
-            json.dumps({"gaps": [], "follow_up_queries": []}),
-            "Answer",
-        ])
+        llm = MockLLMProvider(
+            responses=[
+                json.dumps({"sub_questions": []}),
+                json.dumps({"gaps": [], "follow_up_queries": []}),
+                "Answer",
+            ]
+        )
 
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
@@ -477,33 +513,46 @@ class TestDeepResearchPipelineIntegration:
         """Test complete pipeline with mocked dependencies."""
         # Mock vector store
         mock_store = MagicMock()
-        mock_store.search = AsyncMock(return_value=[
-            make_search_result(
-                make_chunk("c1", "src/auth.py", "def login(user, password): pass", "login"),
-                score=0.9,
-            ),
-            make_search_result(
-                make_chunk("c2", "src/db.py", "def connect(): return db", "connect"),
-                score=0.85,
-            ),
-        ])
+        mock_store.search = AsyncMock(
+            return_value=[
+                make_search_result(
+                    make_chunk("c1", "src/auth.py", "def login(user, password): pass", "login"),
+                    score=0.9,
+                ),
+                make_search_result(
+                    make_chunk("c2", "src/db.py", "def connect(): return db", "connect"),
+                    score=0.85,
+                ),
+            ]
+        )
 
         # Mock LLM with realistic responses
-        llm = MockLLMProvider(responses=[
-            # Decomposition
-            json.dumps({
-                "sub_questions": [
-                    {"question": "What authentication methods are available?", "category": "structure"},
-                    {"question": "How does auth connect to database?", "category": "dependencies"},
-                ]
-            }),
-            # Gap analysis
-            json.dumps({
-                "gaps": ["Session management details"],
-                "follow_up_queries": ["session handling"],
-            }),
-            # Synthesis
-            """The authentication system consists of:
+        llm = MockLLMProvider(
+            responses=[
+                # Decomposition
+                json.dumps(
+                    {
+                        "sub_questions": [
+                            {
+                                "question": "What authentication methods are available?",
+                                "category": "structure",
+                            },
+                            {
+                                "question": "How does auth connect to database?",
+                                "category": "dependencies",
+                            },
+                        ]
+                    }
+                ),
+                # Gap analysis
+                json.dumps(
+                    {
+                        "gaps": ["Session management details"],
+                        "follow_up_queries": ["session handling"],
+                    }
+                ),
+                # Synthesis
+                """The authentication system consists of:
 
 1. **Login Function** (`src/auth.py:1-10`)
    - Handles user/password authentication
@@ -512,7 +561,8 @@ class TestDeepResearchPipelineIntegration:
    - Provides database connectivity
 
 The login function likely uses the database connection for user verification.""",
-        ])
+            ]
+        )
 
         pipeline = DeepResearchPipeline(
             vector_store=mock_store,
@@ -535,15 +585,19 @@ The login function likely uses the database connection for user verification."""
     async def test_pipeline_counts_llm_calls(self):
         """Test that LLM calls are counted correctly."""
         mock_store = MagicMock()
-        mock_store.search = AsyncMock(return_value=[
-            make_search_result(make_chunk("c1")),
-        ])
+        mock_store.search = AsyncMock(
+            return_value=[
+                make_search_result(make_chunk("c1")),
+            ]
+        )
 
-        llm = MockLLMProvider(responses=[
-            json.dumps({"sub_questions": [{"question": "Q?", "category": "structure"}]}),
-            json.dumps({"gaps": [], "follow_up_queries": []}),
-            "Answer",
-        ])
+        llm = MockLLMProvider(
+            responses=[
+                json.dumps({"sub_questions": [{"question": "Q?", "category": "structure"}]}),
+                json.dumps({"gaps": [], "follow_up_queries": []}),
+                "Answer",
+            ]
+        )
 
         pipeline = DeepResearchPipeline(
             vector_store=mock_store,
@@ -564,10 +618,12 @@ class TestHandleDeepResearch:
         """Test error returned for empty question."""
         from local_deepwiki.handlers import handle_deep_research
 
-        result = await handle_deep_research({
-            "repo_path": "/some/path",
-            "question": "",
-        })
+        result = await handle_deep_research(
+            {
+                "repo_path": "/some/path",
+                "question": "",
+            }
+        )
 
         assert len(result) == 1
         assert "Error" in result[0].text
@@ -577,10 +633,12 @@ class TestHandleDeepResearch:
         """Test error returned when repository is not indexed."""
         from local_deepwiki.handlers import handle_deep_research
 
-        result = await handle_deep_research({
-            "repo_path": str(tmp_path),
-            "question": "How does auth work?",
-        })
+        result = await handle_deep_research(
+            {
+                "repo_path": str(tmp_path),
+                "question": "How does auth work?",
+            }
+        )
 
         assert len(result) == 1
         assert "Error" in result[0].text
@@ -591,11 +649,13 @@ class TestHandleDeepResearch:
         from local_deepwiki.handlers import handle_deep_research
 
         # Should not error, but clamp to valid range
-        result = await handle_deep_research({
-            "repo_path": "/some/path",
-            "question": "Question",
-            "max_chunks": 1000,  # Too high
-        })
+        result = await handle_deep_research(
+            {
+                "repo_path": "/some/path",
+                "question": "Question",
+                "max_chunks": 1000,  # Too high
+            }
+        )
 
         # Will fail on "not indexed" but that's after validation
         assert "Error" in result[0].text
@@ -608,9 +668,11 @@ class TestDeepResearchProgress:
     def mock_vector_store(self):
         """Create a mock vector store."""
         store = MagicMock()
-        store.search = AsyncMock(return_value=[
-            make_search_result(make_chunk("c1")),
-        ])
+        store.search = AsyncMock(
+            return_value=[
+                make_search_result(make_chunk("c1")),
+            ]
+        )
         return store
 
     async def test_progress_callback_receives_all_steps(self, mock_vector_store):
@@ -620,13 +682,13 @@ class TestDeepResearchProgress:
         async def capture(p: ResearchProgress) -> None:
             events.append(p)
 
-        llm = MockLLMProvider(responses=[
-            json.dumps({
-                "sub_questions": [{"question": "Q?", "category": "structure"}]
-            }),
-            json.dumps({"gaps": [], "follow_up_queries": []}),
-            "Final answer",
-        ])
+        llm = MockLLMProvider(
+            responses=[
+                json.dumps({"sub_questions": [{"question": "Q?", "category": "structure"}]}),
+                json.dumps({"gaps": [], "follow_up_queries": []}),
+                "Final answer",
+            ]
+        )
 
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
@@ -653,15 +715,19 @@ class TestDeepResearchProgress:
             if p.step_type == ResearchProgressType.DECOMPOSITION_COMPLETE:
                 captured = p
 
-        llm = MockLLMProvider(responses=[
-            json.dumps({
-                "sub_questions": [
-                    {"question": "What is the architecture?", "category": "structure"},
-                ]
-            }),
-            json.dumps({"gaps": [], "follow_up_queries": []}),
-            "Answer",
-        ])
+        llm = MockLLMProvider(
+            responses=[
+                json.dumps(
+                    {
+                        "sub_questions": [
+                            {"question": "What is the architecture?", "category": "structure"},
+                        ]
+                    }
+                ),
+                json.dumps({"gaps": [], "follow_up_queries": []}),
+                "Answer",
+            ]
+        )
 
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
@@ -684,11 +750,13 @@ class TestDeepResearchProgress:
             if p.step_type == ResearchProgressType.RETRIEVAL_COMPLETE:
                 captured = p
 
-        llm = MockLLMProvider(responses=[
-            json.dumps({"sub_questions": [{"question": "Q?", "category": "structure"}]}),
-            json.dumps({"gaps": [], "follow_up_queries": []}),
-            "Answer",
-        ])
+        llm = MockLLMProvider(
+            responses=[
+                json.dumps({"sub_questions": [{"question": "Q?", "category": "structure"}]}),
+                json.dumps({"gaps": [], "follow_up_queries": []}),
+                "Answer",
+            ]
+        )
 
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
@@ -710,14 +778,18 @@ class TestDeepResearchProgress:
             if p.step_type == ResearchProgressType.GAP_ANALYSIS_COMPLETE:
                 captured = p
 
-        llm = MockLLMProvider(responses=[
-            json.dumps({"sub_questions": [{"question": "Q?", "category": "structure"}]}),
-            json.dumps({
-                "gaps": ["Missing info"],
-                "follow_up_queries": ["search query 1", "search query 2"],
-            }),
-            "Answer",
-        ])
+        llm = MockLLMProvider(
+            responses=[
+                json.dumps({"sub_questions": [{"question": "Q?", "category": "structure"}]}),
+                json.dumps(
+                    {
+                        "gaps": ["Missing info"],
+                        "follow_up_queries": ["search query 1", "search query 2"],
+                    }
+                ),
+                "Answer",
+            ]
+        )
 
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
@@ -732,11 +804,13 @@ class TestDeepResearchProgress:
 
     async def test_progress_callback_none_works(self, mock_vector_store):
         """Test that pipeline works without progress callback."""
-        llm = MockLLMProvider(responses=[
-            json.dumps({"sub_questions": []}),
-            json.dumps({"gaps": [], "follow_up_queries": []}),
-            "Answer",
-        ])
+        llm = MockLLMProvider(
+            responses=[
+                json.dumps({"sub_questions": []}),
+                json.dumps({"gaps": [], "follow_up_queries": []}),
+                "Answer",
+            ]
+        )
 
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
@@ -754,11 +828,13 @@ class TestDeepResearchProgress:
         async def capture(p: ResearchProgress) -> None:
             events.append(p)
 
-        llm = MockLLMProvider(responses=[
-            json.dumps({"sub_questions": [{"question": "Q?", "category": "structure"}]}),
-            json.dumps({"gaps": [], "follow_up_queries": []}),
-            "Answer",
-        ])
+        llm = MockLLMProvider(
+            responses=[
+                json.dumps({"sub_questions": [{"question": "Q?", "category": "structure"}]}),
+                json.dumps({"gaps": [], "follow_up_queries": []}),
+                "Answer",
+            ]
+        )
 
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
@@ -785,11 +861,13 @@ class TestDeepResearchProgress:
         async def capture(p: ResearchProgress) -> None:
             events.append(p)
 
-        llm = MockLLMProvider(responses=[
-            json.dumps({"sub_questions": [{"question": "Q?", "category": "structure"}]}),
-            json.dumps({"gaps": [], "follow_up_queries": []}),
-            "Answer",
-        ])
+        llm = MockLLMProvider(
+            responses=[
+                json.dumps({"sub_questions": [{"question": "Q?", "category": "structure"}]}),
+                json.dumps({"gaps": [], "follow_up_queries": []}),
+                "Answer",
+            ]
+        )
 
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
@@ -816,9 +894,11 @@ class TestResearchCancellation:
     def mock_vector_store(self):
         """Create a mock vector store."""
         store = MagicMock()
-        store.search = AsyncMock(return_value=[
-            make_search_result(make_chunk("c1")),
-        ])
+        store.search = AsyncMock(
+            return_value=[
+                make_search_result(make_chunk("c1")),
+            ]
+        )
         return store
 
     def test_research_cancelled_error_creation(self):
@@ -834,11 +914,13 @@ class TestResearchCancellation:
 
     async def test_cancellation_before_decomposition(self, mock_vector_store):
         """Test cancellation before decomposition starts."""
-        llm = MockLLMProvider(responses=[
-            json.dumps({"sub_questions": []}),
-            json.dumps({"gaps": [], "follow_up_queries": []}),
-            "Answer",
-        ])
+        llm = MockLLMProvider(
+            responses=[
+                json.dumps({"sub_questions": []}),
+                json.dumps({"gaps": [], "follow_up_queries": []}),
+                "Answer",
+            ]
+        )
 
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
@@ -867,13 +949,13 @@ class TestResearchCancellation:
             # Cancel after first check (decomposition)
             return call_count > 1
 
-        llm = MockLLMProvider(responses=[
-            json.dumps({
-                "sub_questions": [{"question": "Q?", "category": "structure"}]
-            }),
-            json.dumps({"gaps": [], "follow_up_queries": []}),
-            "Answer",
-        ])
+        llm = MockLLMProvider(
+            responses=[
+                json.dumps({"sub_questions": [{"question": "Q?", "category": "structure"}]}),
+                json.dumps({"gaps": [], "follow_up_queries": []}),
+                "Answer",
+            ]
+        )
 
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
@@ -898,13 +980,13 @@ class TestResearchCancellation:
             # Cancel on third check (gap analysis)
             return call_count >= 3
 
-        llm = MockLLMProvider(responses=[
-            json.dumps({
-                "sub_questions": [{"question": "Q?", "category": "structure"}]
-            }),
-            json.dumps({"gaps": [], "follow_up_queries": []}),
-            "Answer",
-        ])
+        llm = MockLLMProvider(
+            responses=[
+                json.dumps({"sub_questions": [{"question": "Q?", "category": "structure"}]}),
+                json.dumps({"gaps": [], "follow_up_queries": []}),
+                "Answer",
+            ]
+        )
 
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
@@ -929,16 +1011,18 @@ class TestResearchCancellation:
             # Cancel on fifth check (synthesis)
             return call_count >= 5
 
-        llm = MockLLMProvider(responses=[
-            json.dumps({
-                "sub_questions": [{"question": "Q?", "category": "structure"}]
-            }),
-            json.dumps({
-                "gaps": ["missing"],
-                "follow_up_queries": ["follow up"],
-            }),
-            "Answer",
-        ])
+        llm = MockLLMProvider(
+            responses=[
+                json.dumps({"sub_questions": [{"question": "Q?", "category": "structure"}]}),
+                json.dumps(
+                    {
+                        "gaps": ["missing"],
+                        "follow_up_queries": ["follow up"],
+                    }
+                ),
+                "Answer",
+            ]
+        )
 
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
@@ -955,11 +1039,13 @@ class TestResearchCancellation:
 
     async def test_no_cancellation_when_check_is_none(self, mock_vector_store):
         """Test that pipeline completes when cancellation_check is None."""
-        llm = MockLLMProvider(responses=[
-            json.dumps({"sub_questions": []}),
-            json.dumps({"gaps": [], "follow_up_queries": []}),
-            "Answer",
-        ])
+        llm = MockLLMProvider(
+            responses=[
+                json.dumps({"sub_questions": []}),
+                json.dumps({"gaps": [], "follow_up_queries": []}),
+                "Answer",
+            ]
+        )
 
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
@@ -975,11 +1061,13 @@ class TestResearchCancellation:
 
     async def test_no_cancellation_when_check_returns_false(self, mock_vector_store):
         """Test that pipeline completes when cancellation check returns False."""
-        llm = MockLLMProvider(responses=[
-            json.dumps({"sub_questions": []}),
-            json.dumps({"gaps": [], "follow_up_queries": []}),
-            "Answer",
-        ])
+        llm = MockLLMProvider(
+            responses=[
+                json.dumps({"sub_questions": []}),
+                json.dumps({"gaps": [], "follow_up_queries": []}),
+                "Answer",
+            ]
+        )
 
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
@@ -998,13 +1086,13 @@ class TestResearchCancellation:
 
     async def test_cancellation_stops_llm_calls(self, mock_vector_store):
         """Test that cancellation prevents further LLM calls."""
-        llm = MockLLMProvider(responses=[
-            json.dumps({
-                "sub_questions": [{"question": "Q?", "category": "structure"}]
-            }),
-            json.dumps({"gaps": [], "follow_up_queries": []}),
-            "Answer",
-        ])
+        llm = MockLLMProvider(
+            responses=[
+                json.dumps({"sub_questions": [{"question": "Q?", "category": "structure"}]}),
+                json.dumps({"gaps": [], "follow_up_queries": []}),
+                "Answer",
+            ]
+        )
 
         pipeline = DeepResearchPipeline(
             vector_store=mock_vector_store,
@@ -1013,6 +1101,7 @@ class TestResearchCancellation:
 
         # Cancel after decomposition
         call_count = 0
+
         def cancel_after_decomposition() -> bool:
             nonlocal call_count
             call_count += 1

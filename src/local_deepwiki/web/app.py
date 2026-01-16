@@ -265,19 +265,19 @@ def format_sources(search_results: list[Any]) -> list[dict[str, Any]]:
     sources = []
     for r in search_results:
         chunk = r.chunk
-        sources.append({
-            "file": chunk.file_path,
-            "lines": f"{chunk.start_line}-{chunk.end_line}",
-            "type": chunk.chunk_type.value,
-            "name": chunk.name,
-            "score": round(r.score, 3),
-        })
+        sources.append(
+            {
+                "file": chunk.file_path,
+                "lines": f"{chunk.start_line}-{chunk.end_line}",
+                "type": chunk.chunk_type.value,
+                "name": chunk.name,
+                "score": round(r.score, 3),
+            }
+        )
     return sources
 
 
-def build_prompt_with_history(
-    question: str, history: list[dict[str, str]], context: str
-) -> str:
+def build_prompt_with_history(question: str, history: list[dict[str, str]], context: str) -> str:
     """Build a prompt that includes conversation history for follow-up questions.
 
     Args:
@@ -413,10 +413,10 @@ def api_chat():
 
         # Stream the response
         try:
-            async for chunk in llm.generate_stream(
+            async for text_chunk in llm.generate_stream(
                 prompt, system_prompt=system_prompt, temperature=0.3
             ):
-                yield f"data: {json.dumps({'type': 'token', 'content': chunk})}\n\n"
+                yield f"data: {json.dumps({'type': 'token', 'content': text_chunk})}\n\n"
         except Exception as e:  # noqa: BLE001 - Report LLM errors to user via SSE
             logger.exception(f"Error generating response: {e}")
             yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"

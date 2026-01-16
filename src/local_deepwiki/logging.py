@@ -11,8 +11,7 @@ PACKAGE_NAME = "local_deepwiki"
 # Log format with structured information
 LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 LOG_FORMAT_DETAILED = (
-    "%(asctime)s - %(name)s - %(levelname)s - "
-    "[%(filename)s:%(lineno)d] %(message)s"
+    "%(asctime)s - %(name)s - %(levelname)s - " "[%(filename)s:%(lineno)d] %(message)s"
 )
 
 

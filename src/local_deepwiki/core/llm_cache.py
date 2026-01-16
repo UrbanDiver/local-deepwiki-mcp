@@ -4,7 +4,7 @@ import hashlib
 import time
 import uuid
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import lancedb
 from lancedb.table import Table
@@ -112,8 +112,8 @@ class LLMCache:
         Returns:
             True if entry is valid, False if expired.
         """
-        created_at = entry.get("created_at", 0)
-        ttl = entry.get("ttl_seconds", self.config.ttl_seconds)
+        created_at = cast(float, entry.get("created_at", 0))
+        ttl = cast(float, entry.get("ttl_seconds", self.config.ttl_seconds))
         age = time.time() - created_at
         return age < ttl
 
@@ -144,7 +144,9 @@ class LLMCache:
         # Skip if temperature too high (non-deterministic responses)
         if temperature > self.config.max_cacheable_temperature:
             self._stats["skipped"] += 1
-            logger.debug(f"Cache skip: temperature {temperature} > max {self.config.max_cacheable_temperature}")
+            logger.debug(
+                f"Cache skip: temperature {temperature} > max {self.config.max_cacheable_temperature}"
+            )
             return None
 
         table = self._get_table()
@@ -166,7 +168,7 @@ class LLMCache:
                     logger.debug(f"Cache exact hit: hash={exact_hash[:12]}...")
                     # Update hit tracking
                     await self._record_hit(entry["id"])
-                    return entry["response"]
+                    return cast(str, entry["response"])
         except (KeyError, ValueError, RuntimeError, OSError) as e:
             # KeyError: Missing field in result
             # ValueError: Invalid query or filter expression
@@ -194,7 +196,7 @@ class LLMCache:
                             f"entry={result['id'][:8]}..."
                         )
                         await self._record_hit(result["id"])
-                        return result["response"]
+                        return cast(str, result["response"])
         except (KeyError, ValueError, RuntimeError, OSError) as e:
             # KeyError: Missing field in search result
             # ValueError: Invalid embedding or search parameters
@@ -353,7 +355,7 @@ class LLMCache:
             db = self._connect()
             if self.TABLE_NAME in db.list_tables().tables:
                 table = db.open_table(self.TABLE_NAME)
-                count = table.count_rows()
+                count = cast(int, table.count_rows())
                 db.drop_table(self.TABLE_NAME)
                 self._table = None
                 logger.info(f"Cleared {count} cache entries")
@@ -375,7 +377,7 @@ class LLMCache:
             table = self._get_table()
             if table is None:
                 return 0
-            return table.count_rows()
+            return cast(int, table.count_rows())
         except (RuntimeError, OSError):
             # RuntimeError: Database query failure
             # OSError: Storage access issues

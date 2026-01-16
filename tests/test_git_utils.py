@@ -323,9 +323,7 @@ class TestGetDefaultBranch:
                 args=[], returncode=0, stdout="HEAD\n", stderr=""
             )
             # Second call returns empty
-            mock_result2 = subprocess.CompletedProcess(
-                args=[], returncode=0, stdout="", stderr=""
-            )
+            mock_result2 = subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr="")
             mock_run.side_effect = [mock_result1, mock_result2]
 
             result = get_default_branch(tmp_path)

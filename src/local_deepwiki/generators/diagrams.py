@@ -458,9 +458,9 @@ def generate_dependency_graph(
             if not from_id:
                 continue
             for ext in sorted(ext_imports):
-                ext_id = ext_node_ids.get(ext)
-                if ext_id:
-                    lines.append(f"    {from_id} -.-> {ext_id}")
+                target_ext_id = ext_node_ids.get(ext)
+                if target_ext_id:
+                    lines.append(f"    {from_id} -.-> {target_ext_id}")
 
     # Add click handlers for wiki links
     if wiki_base_path:
@@ -830,7 +830,7 @@ def generate_indexing_sequence() -> str:
     Returns:
         Mermaid sequence diagram as markdown string.
     """
-    return '''```mermaid
+    return """```mermaid
 sequenceDiagram
     participant U as User
     participant I as RepositoryIndexer
@@ -859,7 +859,7 @@ sequenceDiagram
 
     I->>F: save_index_status()
     I-->>U: IndexStatus
-```'''
+```"""
 
 
 def generate_wiki_generation_sequence() -> str:
@@ -871,7 +871,7 @@ def generate_wiki_generation_sequence() -> str:
     Returns:
         Mermaid sequence diagram as markdown string.
     """
-    return '''```mermaid
+    return """```mermaid
 sequenceDiagram
     participant U as User
     participant W as WikiGenerator
@@ -918,7 +918,7 @@ sequenceDiagram
     W->>W: add_see_also_sections()
     W->>F: write(search.json, toc.json)
     W-->>U: WikiStructure
-```'''
+```"""
 
 
 def generate_deep_research_sequence() -> str:
@@ -930,7 +930,7 @@ def generate_deep_research_sequence() -> str:
     Returns:
         Mermaid sequence diagram as markdown string.
     """
-    return '''```mermaid
+    return """```mermaid
 sequenceDiagram
     participant U as User
     participant D as DeepResearchPipeline
@@ -976,7 +976,7 @@ sequenceDiagram
     end
 
     D-->>U: DeepResearchResult
-```'''
+```"""
 
 
 def generate_workflow_sequences() -> str:

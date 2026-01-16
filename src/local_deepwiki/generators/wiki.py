@@ -130,9 +130,7 @@ class WikiGenerator:
         logger.debug(f"Full rebuild: {full_rebuild}, Total files: {index_status.total_files}")
 
         pages: list[WikiPage] = []
-        total_steps = (
-            9  # overview, architecture, modules, files, dependencies, changelog, cross-links, see-also, search
-        )
+        total_steps = 9  # overview, architecture, modules, files, dependencies, changelog, cross-links, see-also, search
         pages_generated = 0
         pages_skipped = 0
 
@@ -156,15 +154,17 @@ class WikiGenerator:
             progress_callback("Generating overview", 0, total_steps)
 
         overview_path = "index.md"
+        overview_page: WikiPage
         if full_rebuild or self.status_manager.needs_regeneration(overview_path, all_source_files):
             overview_page = await self._generate_overview(index_status)
             pages_generated += 1
         else:
-            overview_page = await self.status_manager.load_existing_page(overview_path)
-            if overview_page is None:
+            existing_page = await self.status_manager.load_existing_page(overview_path)
+            if existing_page is None:
                 overview_page = await self._generate_overview(index_status)
                 pages_generated += 1
             else:
+                overview_page = existing_page
                 pages_skipped += 1
 
         pages.append(overview_page)
@@ -176,15 +176,19 @@ class WikiGenerator:
             progress_callback("Generating architecture docs", 1, total_steps)
 
         architecture_path = "architecture.md"
-        if full_rebuild or self.status_manager.needs_regeneration(architecture_path, all_source_files):
+        architecture_page: WikiPage
+        if full_rebuild or self.status_manager.needs_regeneration(
+            architecture_path, all_source_files
+        ):
             architecture_page = await self._generate_architecture(index_status)
             pages_generated += 1
         else:
-            architecture_page = await self.status_manager.load_existing_page(architecture_path)
-            if architecture_page is None:
+            existing_arch_page = await self.status_manager.load_existing_page(architecture_path)
+            if existing_arch_page is None:
                 architecture_page = await self._generate_architecture(index_status)
                 pages_generated += 1
             else:
+                architecture_page = existing_arch_page
                 pages_skipped += 1
 
         pages.append(architecture_page)
@@ -257,7 +261,9 @@ class WikiGenerator:
                 deps_page = existing_deps_page
                 # Use source files from previous status if available
                 prev_status = self.status_manager.page_statuses.get(deps_path) or (
-                    self.status_manager.previous_status.pages.get(deps_path) if self.status_manager.previous_status else None
+                    self.status_manager.previous_status.pages.get(deps_path)
+                    if self.status_manager.previous_status
+                    else None
                 )
                 deps_source_files = prev_status.source_files if prev_status else all_source_files
                 pages_skipped += 1
@@ -354,9 +360,7 @@ class WikiGenerator:
             repo_path=self._repo_path,
         )
 
-    async def _generate_dependencies(
-        self, index_status: IndexStatus
-    ) -> tuple[WikiPage, list[str]]:
+    async def _generate_dependencies(self, index_status: IndexStatus) -> tuple[WikiPage, list[str]]:
         """Generate dependencies documentation with grounded facts from manifest."""
         return await generate_dependencies_page(
             index_status=index_status,
@@ -419,9 +423,7 @@ async def generate_wiki(
     if effective_provider is None and config.wiki.use_cloud_for_github:
         if is_github_repo(repo_path):
             effective_provider = config.wiki.github_llm_provider
-            logger.info(
-                f"GitHub repo detected, using cloud provider: {effective_provider}"
-            )
+            logger.info(f"GitHub repo detected, using cloud provider: {effective_provider}")
 
     generator = WikiGenerator(
         wiki_path=wiki_path,

@@ -72,12 +72,16 @@ class TestExtractExamplesForEntities:
     def test_extract_simple_function_call(self, tmp_path: Path) -> None:
         """Test extracting example that calls a simple function."""
         test_file = tmp_path / "test_example.py"
-        test_file.write_text(dedent('''
+        test_file.write_text(
+            dedent(
+                '''
             def test_process_data():
                 """Test the process_data function."""
                 result = process_data("input")
                 assert result == "expected"
-        ''').strip())
+        '''
+            ).strip()
+        )
 
         examples = extract_examples_for_entities(
             test_file,
@@ -95,11 +99,15 @@ class TestExtractExamplesForEntities:
     def test_extract_class_instantiation(self, tmp_path: Path) -> None:
         """Test extracting example that instantiates a class."""
         test_file = tmp_path / "test_example.py"
-        test_file.write_text(dedent('''
+        test_file.write_text(
+            dedent(
+                """
             def test_my_class():
                 obj = MyClass(name="test")
                 assert obj.name == "test"
-        ''').strip())
+        """
+            ).strip()
+        )
 
         examples = extract_examples_for_entities(
             test_file,
@@ -114,7 +122,9 @@ class TestExtractExamplesForEntities:
         """Test extracting example with dedent pattern captures from dedent."""
         test_file = tmp_path / "test_example.py"
         # When the entity appears in a line with dedent, both are captured
-        test_file.write_text(dedent('''
+        test_file.write_text(
+            dedent(
+                '''
             def test_parse_code():
                 code = dedent("""
                     def foo():
@@ -122,7 +132,9 @@ class TestExtractExamplesForEntities:
                 """)
                 result = parse_code(code)
                 assert result is not None
-        ''').strip())
+        '''
+            ).strip()
+        )
 
         examples = extract_examples_for_entities(
             test_file,
@@ -137,14 +149,18 @@ class TestExtractExamplesForEntities:
     def test_filters_mock_heavy_tests(self, tmp_path: Path) -> None:
         """Test that tests using extensive mocking are filtered out."""
         test_file = tmp_path / "test_example.py"
-        test_file.write_text(dedent('''
+        test_file.write_text(
+            dedent(
+                """
             def test_with_mocks():
                 mock_obj = MagicMock()
                 mock_obj.method = MagicMock(return_value="test")
                 with patch("module.something"):
                     result = my_function(mock_obj)
                 assert result == "expected"
-        ''').strip())
+        """
+            ).strip()
+        )
 
         examples = extract_examples_for_entities(
             test_file,
@@ -157,7 +173,9 @@ class TestExtractExamplesForEntities:
     def test_respects_max_examples_per_entity(self, tmp_path: Path) -> None:
         """Test that max_examples_per_entity is respected."""
         test_file = tmp_path / "test_example.py"
-        test_file.write_text(dedent('''
+        test_file.write_text(
+            dedent(
+                """
             def test_func_1():
                 result = my_func(1)
                 assert result == 1
@@ -169,7 +187,9 @@ class TestExtractExamplesForEntities:
             def test_func_3():
                 result = my_func(3)
                 assert result == 3
-        ''').strip())
+        """
+            ).strip()
+        )
 
         examples = extract_examples_for_entities(
             test_file,
@@ -182,7 +202,9 @@ class TestExtractExamplesForEntities:
     def test_multiple_entities(self, tmp_path: Path) -> None:
         """Test extracting examples for multiple entities."""
         test_file = tmp_path / "test_example.py"
-        test_file.write_text(dedent('''
+        test_file.write_text(
+            dedent(
+                """
             def test_foo():
                 result = foo()
                 assert result == "foo"
@@ -190,7 +212,9 @@ class TestExtractExamplesForEntities:
             def test_bar():
                 result = bar()
                 assert result == "bar"
-        ''').strip())
+        """
+            ).strip()
+        )
 
         examples = extract_examples_for_entities(
             test_file,
@@ -296,21 +320,29 @@ class TestGetFileExamples:
         src_dir = tmp_path / "src"
         src_dir.mkdir()
         source_file = src_dir / "mymodule.py"
-        source_file.write_text(dedent('''
+        source_file.write_text(
+            dedent(
+                """
             def calculate(x, y):
                 return x + y
-        '''))
+        """
+            )
+        )
 
         # Create test file
         tests_dir = tmp_path / "tests"
         tests_dir.mkdir()
         test_file = tests_dir / "test_mymodule.py"
-        test_file.write_text(dedent('''
+        test_file.write_text(
+            dedent(
+                '''
             def test_calculate():
                 """Test basic calculation."""
                 result = calculate(1, 2)
                 assert result == 3
-        '''))
+        '''
+            )
+        )
 
         result = get_file_examples(
             source_file=source_file,
@@ -358,10 +390,14 @@ class TestGetFileExamples:
         tests_dir = tmp_path / "tests"
         tests_dir.mkdir()
         test_file = tests_dir / "test_mod.py"
-        test_file.write_text(dedent('''
+        test_file.write_text(
+            dedent(
+                """
             def test_fn():
                 fn()
-        '''))
+        """
+            )
+        )
 
         result = get_file_examples(
             source_file=source_file,
@@ -382,10 +418,14 @@ class TestGetFileExamples:
         tests_dir = tmp_path / "tests"
         tests_dir.mkdir()
         test_file = tests_dir / "test_api.py"
-        test_file.write_text(dedent('''
+        test_file.write_text(
+            dedent(
+                """
             def test_other_function():
                 other_function()
-        '''))
+        """
+            )
+        )
 
         result = get_file_examples(
             source_file=source_file,

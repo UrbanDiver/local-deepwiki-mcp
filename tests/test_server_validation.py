@@ -176,9 +176,7 @@ class TestValidateProvider:
     def test_accepts_all_valid_embedding_providers(self):
         """Test all valid embedding providers are accepted."""
         for provider in VALID_EMBEDDING_PROVIDERS:
-            result = validate_provider(
-                provider, VALID_EMBEDDING_PROVIDERS, "embedding_provider"
-            )
+            result = validate_provider(provider, VALID_EMBEDDING_PROVIDERS, "embedding_provider")
             assert result == provider
 
     def test_raises_for_invalid_provider(self):

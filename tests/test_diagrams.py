@@ -736,9 +736,7 @@ class TestEnhancedDependencyGraph:
                 end_line=5,
             ),
         ]
-        diagram = generate_dependency_graph(
-            chunks, "myproject", show_external=True, max_external=2
-        )
+        diagram = generate_dependency_graph(chunks, "myproject", show_external=True, max_external=2)
         if diagram and "External" in diagram:
             # Count external nodes (E0, E1, etc.)
             import re as regex

@@ -9,8 +9,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from local_deepwiki.web.app import (
-    WIKI_PATH,
     _MODULE_DIR,
+    WIKI_PATH,
     app,
     build_breadcrumb,
     build_prompt_with_history,
@@ -581,10 +581,7 @@ class TestBuildPromptWithHistory:
 
     def test_limits_history_to_last_3(self):
         """Test that only last 3 history items are included."""
-        history = [
-            {"question": f"Q{i}", "answer": f"A{i}"}
-            for i in range(10)
-        ]
+        history = [{"question": f"Q{i}", "answer": f"A{i}"} for i in range(10)]
 
         prompt = build_prompt_with_history(
             question="New question?",
@@ -647,9 +644,7 @@ class TestMainAndRunServer:
             with patch("local_deepwiki.web.app.create_app", return_value=mock_app):
                 run_server(wiki_dir, host="127.0.0.1", port=8080, debug=False)
 
-            mock_app.run.assert_called_once_with(
-                host="127.0.0.1", port=8080, debug=False
-            )
+            mock_app.run.assert_called_once_with(host="127.0.0.1", port=8080, debug=False)
 
     def test_main_parses_arguments(self):
         """Test that main() parses command line arguments."""

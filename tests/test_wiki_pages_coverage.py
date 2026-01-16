@@ -96,7 +96,9 @@ class TestGenerateOverviewPage:
     def mock_llm(self):
         """Create a mock LLM provider."""
         mock = MagicMock()
-        mock.generate = AsyncMock(return_value="## Description\n\nTest project.\n\n## Key Features\n\n- Feature 1")
+        mock.generate = AsyncMock(
+            return_value="## Description\n\nTest project.\n\n## Key Features\n\n- Feature 1"
+        )
         return mock
 
     @pytest.fixture
@@ -432,9 +434,7 @@ class TestGenerateDependenciesPage:
     def mock_llm(self):
         """Create a mock LLM provider."""
         mock = MagicMock()
-        mock.generate = AsyncMock(
-            return_value="## External Dependencies\n\n- flask: Web framework"
-        )
+        mock.generate = AsyncMock(return_value="## External Dependencies\n\n- flask: Web framework")
         return mock
 
     @pytest.fixture
@@ -448,9 +448,7 @@ class TestGenerateDependenciesPage:
         """Test generates basic dependencies page."""
         index_status = make_index_status(repo_path=str(tmp_path / "project"))
 
-        with patch(
-            "local_deepwiki.generators.diagrams.generate_dependency_graph"
-        ) as mock_graph:
+        with patch("local_deepwiki.generators.diagrams.generate_dependency_graph") as mock_graph:
             mock_graph.return_value = ""
 
             page, source_files = await generate_dependencies_page(
@@ -474,9 +472,7 @@ class TestGenerateDependenciesPage:
         )
         index_status = make_index_status(repo_path=str(tmp_path / "project"))
 
-        with patch(
-            "local_deepwiki.generators.diagrams.generate_dependency_graph"
-        ) as mock_graph:
+        with patch("local_deepwiki.generators.diagrams.generate_dependency_graph") as mock_graph:
             mock_graph.return_value = ""
 
             await generate_dependencies_page(
@@ -501,9 +497,7 @@ class TestGenerateDependenciesPage:
         )
         index_status = make_index_status(repo_path=str(tmp_path / "project"))
 
-        with patch(
-            "local_deepwiki.generators.diagrams.generate_dependency_graph"
-        ) as mock_graph:
+        with patch("local_deepwiki.generators.diagrams.generate_dependency_graph") as mock_graph:
             mock_graph.return_value = ""
 
             await generate_dependencies_page(
@@ -532,9 +526,7 @@ class TestGenerateDependenciesPage:
 
         index_status = make_index_status(repo_path=str(tmp_path / "project"))
 
-        with patch(
-            "local_deepwiki.generators.diagrams.generate_dependency_graph"
-        ) as mock_graph:
+        with patch("local_deepwiki.generators.diagrams.generate_dependency_graph") as mock_graph:
             mock_graph.return_value = ""
 
             page, source_files = await generate_dependencies_page(
@@ -562,9 +554,7 @@ class TestGenerateDependenciesPage:
 
         index_status = make_index_status(repo_path=str(tmp_path / "project"))
 
-        with patch(
-            "local_deepwiki.generators.diagrams.generate_dependency_graph"
-        ) as mock_graph:
+        with patch("local_deepwiki.generators.diagrams.generate_dependency_graph") as mock_graph:
             mock_graph.return_value = ""
 
             page, source_files = await generate_dependencies_page(
@@ -590,9 +580,7 @@ class TestGenerateDependenciesPage:
 
         index_status = make_index_status(repo_path=str(tmp_path / "project"))
 
-        with patch(
-            "local_deepwiki.generators.diagrams.generate_dependency_graph"
-        ) as mock_graph:
+        with patch("local_deepwiki.generators.diagrams.generate_dependency_graph") as mock_graph:
             mock_graph.return_value = "```mermaid\ngraph TD\n  A --> B\n```"
 
             page, _ = await generate_dependencies_page(
@@ -611,9 +599,7 @@ class TestGenerateDependenciesPage:
         """Test handles empty dependency graph gracefully."""
         index_status = make_index_status(repo_path=str(tmp_path / "project"))
 
-        with patch(
-            "local_deepwiki.generators.diagrams.generate_dependency_graph"
-        ) as mock_graph:
+        with patch("local_deepwiki.generators.diagrams.generate_dependency_graph") as mock_graph:
             mock_graph.return_value = ""  # Empty graph
 
             page, _ = await generate_dependencies_page(
@@ -682,7 +668,9 @@ class TestOverviewPageEdgeCases:
     def mock_llm(self):
         """Create a mock LLM provider."""
         mock = MagicMock()
-        mock.generate = AsyncMock(return_value="## Description\n\nTest.\n\n## Key Features\n\n- Feature")
+        mock.generate = AsyncMock(
+            return_value="## Description\n\nTest.\n\n## Key Features\n\n- Feature"
+        )
         return mock
 
     @pytest.fixture
@@ -710,7 +698,9 @@ class TestOverviewPageEdgeCases:
         # Should not include directory structure without repo_path
         assert "Directory Structure" not in result.content
 
-    async def test_handles_manifest_without_language_version(self, mock_llm, mock_vector_store, tmp_path):
+    async def test_handles_manifest_without_language_version(
+        self, mock_llm, mock_vector_store, tmp_path
+    ):
         """Test handles manifest without language version."""
         manifest = ProjectManifest(
             name="project",
@@ -837,9 +827,7 @@ class TestDependenciesPageEdgeCases:
         manifest = ProjectManifest(name="minimal-project")  # No dependencies
         index_status = make_index_status(repo_path=str(tmp_path / "project"))
 
-        with patch(
-            "local_deepwiki.generators.diagrams.generate_dependency_graph"
-        ) as mock_graph:
+        with patch("local_deepwiki.generators.diagrams.generate_dependency_graph") as mock_graph:
             mock_graph.return_value = ""
 
             page, _ = await generate_dependencies_page(
@@ -862,9 +850,7 @@ class TestDependenciesPageEdgeCases:
         )
         index_status = make_index_status(repo_path=str(tmp_path / "project"))
 
-        with patch(
-            "local_deepwiki.generators.diagrams.generate_dependency_graph"
-        ) as mock_graph:
+        with patch("local_deepwiki.generators.diagrams.generate_dependency_graph") as mock_graph:
             mock_graph.return_value = ""
 
             await generate_dependencies_page(
@@ -894,9 +880,7 @@ class TestDependenciesPageEdgeCases:
 
         index_status = make_index_status(repo_path=str(tmp_path / "project"))
 
-        with patch(
-            "local_deepwiki.generators.diagrams.generate_dependency_graph"
-        ) as mock_graph:
+        with patch("local_deepwiki.generators.diagrams.generate_dependency_graph") as mock_graph:
             mock_graph.return_value = ""
 
             page, source_files = await generate_dependencies_page(

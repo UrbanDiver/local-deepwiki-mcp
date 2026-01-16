@@ -2,7 +2,7 @@
 
 import pytest
 
-from local_deepwiki.providers.base import with_retry, RETRYABLE_EXCEPTIONS
+from local_deepwiki.providers.base import RETRYABLE_EXCEPTIONS, with_retry
 
 
 class TestWithRetry:

@@ -84,9 +84,7 @@ async def handle_index_repository(args: dict[str, Any]) -> list[TextContent]:
 
     # Validate optional parameters
     languages = validate_languages_list(args.get("languages"))
-    llm_provider = validate_provider(
-        args.get("llm_provider"), VALID_LLM_PROVIDERS, "llm_provider"
-    )
+    llm_provider = validate_provider(args.get("llm_provider"), VALID_LLM_PROVIDERS, "llm_provider")
     embedding_provider = validate_provider(
         args.get("embedding_provider"), VALID_EMBEDDING_PROVIDERS, "embedding_provider"
     )
@@ -191,8 +189,8 @@ async def handle_ask_question(args: dict[str, Any]) -> list[TextContent]:
 
     # Build context from search results
     context_parts = []
-    for result in search_results:
-        chunk = result.chunk
+    for search_result in search_results:
+        chunk = search_result.chunk
         context_parts.append(
             f"File: {chunk.file_path} (lines {chunk.start_line}-{chunk.end_line})\n"
             f"Type: {chunk.chunk_type.value}\n"
@@ -389,7 +387,9 @@ async def _handle_deep_research_impl(
     dr_config = config.deep_research.with_preset(preset)
 
     # Use max_chunks from args if provided, otherwise use preset/config value
-    effective_max_chunks = max_chunks if args.get("max_chunks") is not None else dr_config.max_total_chunks
+    effective_max_chunks = (
+        max_chunks if args.get("max_chunks") is not None else dr_config.max_total_chunks
+    )
 
     # Get provider-specific prompts
     prompts = config.get_prompts()
@@ -420,8 +420,7 @@ async def _handle_deep_research_impl(
             "question": result.question,
             "answer": result.answer,
             "sub_questions": [
-                {"question": sq.question, "category": sq.category}
-                for sq in result.sub_questions
+                {"question": sq.question, "category": sq.category} for sq in result.sub_questions
             ],
             "sources": [
                 {
@@ -459,10 +458,12 @@ async def _handle_deep_research_impl(
         return [
             TextContent(
                 type="text",
-                text=json.dumps({
-                    "status": "cancelled",
-                    "message": f"Research cancelled during {e.step}",
-                }),
+                text=json.dumps(
+                    {
+                        "status": "cancelled",
+                        "message": f"Research cancelled during {e.step}",
+                    }
+                ),
             )
         ]
 

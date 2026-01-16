@@ -480,8 +480,12 @@ class TestGenerateModulesIndex:
     def test_generates_basic_index(self):
         """Test generates basic index content."""
         pages = [
-            WikiPage(path="modules/src.md", title="Module: src", content="", generated_at=time.time()),
-            WikiPage(path="modules/tests.md", title="Module: tests", content="", generated_at=time.time()),
+            WikiPage(
+                path="modules/src.md", title="Module: src", content="", generated_at=time.time()
+            ),
+            WikiPage(
+                path="modules/tests.md", title="Module: tests", content="", generated_at=time.time()
+            ),
         ]
 
         result = _generate_modules_index(pages)
@@ -493,8 +497,12 @@ class TestGenerateModulesIndex:
     def test_excludes_index_page_from_listing(self):
         """Test excludes the index page itself from listings."""
         pages = [
-            WikiPage(path="modules/index.md", title="Modules", content="", generated_at=time.time()),
-            WikiPage(path="modules/src.md", title="Module: src", content="", generated_at=time.time()),
+            WikiPage(
+                path="modules/index.md", title="Modules", content="", generated_at=time.time()
+            ),
+            WikiPage(
+                path="modules/src.md", title="Module: src", content="", generated_at=time.time()
+            ),
         ]
 
         result = _generate_modules_index(pages)
@@ -514,7 +522,10 @@ class TestGenerateModulesIndex:
         """Test generates correct relative links."""
         pages = [
             WikiPage(
-                path="modules/my_module.md", title="Module: my_module", content="", generated_at=time.time()
+                path="modules/my_module.md",
+                title="Module: my_module",
+                content="",
+                generated_at=time.time(),
             ),
         ]
 

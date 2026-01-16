@@ -83,7 +83,9 @@ class VectorStore:
             # Handle both dict-style and object-style index configs (LanceDB version compat)
             existing_indexes = set()
             for idx in indices:
-                name = getattr(idx, "name", None) or (idx.get("name") if isinstance(idx, dict) else None)
+                name = getattr(idx, "name", None) or (
+                    idx.get("name") if isinstance(idx, dict) else None
+                )
                 if name:
                     existing_indexes.add(name)
         except (KeyError, TypeError, RuntimeError, AttributeError) as e:

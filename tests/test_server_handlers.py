@@ -37,10 +37,12 @@ class TestHandleIndexRepository:
 
     async def test_returns_error_for_invalid_language(self, tmp_path):
         """Test error returned for invalid language filter."""
-        result = await handle_index_repository({
-            "repo_path": str(tmp_path),
-            "languages": ["python", "invalid_lang"],
-        })
+        result = await handle_index_repository(
+            {
+                "repo_path": str(tmp_path),
+                "languages": ["python", "invalid_lang"],
+            }
+        )
 
         assert len(result) == 1
         assert "Error" in result[0].text
@@ -48,10 +50,12 @@ class TestHandleIndexRepository:
 
     async def test_returns_error_for_invalid_llm_provider(self, tmp_path):
         """Test error returned for invalid LLM provider."""
-        result = await handle_index_repository({
-            "repo_path": str(tmp_path),
-            "llm_provider": "invalid_provider",
-        })
+        result = await handle_index_repository(
+            {
+                "repo_path": str(tmp_path),
+                "llm_provider": "invalid_provider",
+            }
+        )
 
         assert len(result) == 1
         assert "Error" in result[0].text
@@ -59,10 +63,12 @@ class TestHandleIndexRepository:
 
     async def test_returns_error_for_invalid_embedding_provider(self, tmp_path):
         """Test error returned for invalid embedding provider."""
-        result = await handle_index_repository({
-            "repo_path": str(tmp_path),
-            "embedding_provider": "invalid_provider",
-        })
+        result = await handle_index_repository(
+            {
+                "repo_path": str(tmp_path),
+                "embedding_provider": "invalid_provider",
+            }
+        )
 
         assert len(result) == 1
         assert "Error" in result[0].text
@@ -74,10 +80,12 @@ class TestHandleAskQuestion:
 
     async def test_returns_error_for_empty_question(self):
         """Test error returned for empty question."""
-        result = await handle_ask_question({
-            "repo_path": "/some/path",
-            "question": "",
-        })
+        result = await handle_ask_question(
+            {
+                "repo_path": "/some/path",
+                "question": "",
+            }
+        )
 
         assert len(result) == 1
         assert "Error" in result[0].text
@@ -85,10 +93,12 @@ class TestHandleAskQuestion:
 
     async def test_returns_error_for_whitespace_question(self):
         """Test error returned for whitespace-only question."""
-        result = await handle_ask_question({
-            "repo_path": "/some/path",
-            "question": "   ",
-        })
+        result = await handle_ask_question(
+            {
+                "repo_path": "/some/path",
+                "question": "   ",
+            }
+        )
 
         assert len(result) == 1
         assert "Error" in result[0].text
@@ -96,10 +106,12 @@ class TestHandleAskQuestion:
 
     async def test_returns_error_for_unindexed_repo(self, tmp_path):
         """Test error returned when repository is not indexed."""
-        result = await handle_ask_question({
-            "repo_path": str(tmp_path),
-            "question": "What does this code do?",
-        })
+        result = await handle_ask_question(
+            {
+                "repo_path": str(tmp_path),
+                "question": "What does this code do?",
+            }
+        )
 
         assert len(result) == 1
         assert "Error" in result[0].text
@@ -109,11 +121,13 @@ class TestHandleAskQuestion:
         """Test that max_context is clamped to valid range."""
         # This should not raise even with out-of-range value
         # The value gets clamped internally
-        result = await handle_ask_question({
-            "repo_path": str(tmp_path),
-            "question": "Test question",
-            "max_context": 1000,  # Above max, should be clamped
-        })
+        result = await handle_ask_question(
+            {
+                "repo_path": str(tmp_path),
+                "question": "Test question",
+                "max_context": 1000,  # Above max, should be clamped
+            }
+        )
 
         # Will fail due to no index, but shouldn't fail due to max_context
         assert "Error" in result[0].text
@@ -125,10 +139,12 @@ class TestHandleSearchCode:
 
     async def test_returns_error_for_empty_query(self):
         """Test error returned for empty query."""
-        result = await handle_search_code({
-            "repo_path": "/some/path",
-            "query": "",
-        })
+        result = await handle_search_code(
+            {
+                "repo_path": "/some/path",
+                "query": "",
+            }
+        )
 
         assert len(result) == 1
         assert "Error" in result[0].text
@@ -136,11 +152,13 @@ class TestHandleSearchCode:
 
     async def test_returns_error_for_invalid_language_filter(self, tmp_path):
         """Test error returned for invalid language filter."""
-        result = await handle_search_code({
-            "repo_path": str(tmp_path),
-            "query": "test query",
-            "language": "invalid_lang",
-        })
+        result = await handle_search_code(
+            {
+                "repo_path": str(tmp_path),
+                "query": "test query",
+                "language": "invalid_lang",
+            }
+        )
 
         assert len(result) == 1
         assert "Error" in result[0].text
@@ -148,10 +166,12 @@ class TestHandleSearchCode:
 
     async def test_returns_error_for_unindexed_repo(self, tmp_path):
         """Test error returned when repository is not indexed."""
-        result = await handle_search_code({
-            "repo_path": str(tmp_path),
-            "query": "find something",
-        })
+        result = await handle_search_code(
+            {
+                "repo_path": str(tmp_path),
+                "query": "find something",
+            }
+        )
 
         assert len(result) == 1
         assert "Error" in result[0].text
@@ -159,11 +179,13 @@ class TestHandleSearchCode:
 
     async def test_clamps_limit_to_valid_range(self, tmp_path):
         """Test that limit is clamped to valid range."""
-        result = await handle_search_code({
-            "repo_path": str(tmp_path),
-            "query": "test query",
-            "limit": 1000,  # Above max, should be clamped
-        })
+        result = await handle_search_code(
+            {
+                "repo_path": str(tmp_path),
+                "query": "test query",
+                "limit": 1000,  # Above max, should be clamped
+            }
+        )
 
         # Will fail due to no index, but shouldn't fail due to limit
         assert "Error" in result[0].text
@@ -226,10 +248,12 @@ class TestHandleReadWikiPage:
     async def test_returns_error_for_nonexistent_wiki(self, tmp_path):
         """Test error when wiki path doesn't exist."""
         nonexistent = tmp_path / "does_not_exist"
-        result = await handle_read_wiki_page({
-            "wiki_path": str(nonexistent),
-            "page": "index.md",
-        })
+        result = await handle_read_wiki_page(
+            {
+                "wiki_path": str(nonexistent),
+                "page": "index.md",
+            }
+        )
 
         # The implementation checks page existence, not wiki
         # Let's just verify it handles missing page
@@ -237,10 +261,12 @@ class TestHandleReadWikiPage:
 
     async def test_returns_error_for_nonexistent_page(self, tmp_path):
         """Test error returned for non-existent page."""
-        result = await handle_read_wiki_page({
-            "wiki_path": str(tmp_path),
-            "page": "nonexistent.md",
-        })
+        result = await handle_read_wiki_page(
+            {
+                "wiki_path": str(tmp_path),
+                "page": "nonexistent.md",
+            }
+        )
 
         assert len(result) == 1
         assert "Error" in result[0].text
@@ -251,10 +277,12 @@ class TestHandleReadWikiPage:
         page_content = "# Test Page\n\nThis is test content."
         (tmp_path / "test.md").write_text(page_content)
 
-        result = await handle_read_wiki_page({
-            "wiki_path": str(tmp_path),
-            "page": "test.md",
-        })
+        result = await handle_read_wiki_page(
+            {
+                "wiki_path": str(tmp_path),
+                "page": "test.md",
+            }
+        )
 
         assert len(result) == 1
         assert result[0].text == page_content
@@ -265,10 +293,12 @@ class TestHandleReadWikiPage:
         parent_file = tmp_path.parent / "secret.txt"
         parent_file.write_text("secret content")
 
-        result = await handle_read_wiki_page({
-            "wiki_path": str(tmp_path),
-            "page": "../secret.txt",
-        })
+        result = await handle_read_wiki_page(
+            {
+                "wiki_path": str(tmp_path),
+                "page": "../secret.txt",
+            }
+        )
 
         assert len(result) == 1
         assert "Error" in result[0].text
@@ -281,10 +311,12 @@ class TestHandleReadWikiPage:
         page_content = "# Module Doc"
         (modules_dir / "core.md").write_text(page_content)
 
-        result = await handle_read_wiki_page({
-            "wiki_path": str(tmp_path),
-            "page": "modules/core.md",
-        })
+        result = await handle_read_wiki_page(
+            {
+                "wiki_path": str(tmp_path),
+                "page": "modules/core.md",
+            }
+        )
 
         assert len(result) == 1
         assert result[0].text == page_content
@@ -309,10 +341,12 @@ class TestHandleExportWikiHtml:
 
         output_path = tmp_path / "html_output"
 
-        result = await handle_export_wiki_html({
-            "wiki_path": str(tmp_path),
-            "output_path": str(output_path),
-        })
+        result = await handle_export_wiki_html(
+            {
+                "wiki_path": str(tmp_path),
+                "output_path": str(output_path),
+            }
+        )
 
         assert len(result) == 1
         data = json.loads(result[0].text)

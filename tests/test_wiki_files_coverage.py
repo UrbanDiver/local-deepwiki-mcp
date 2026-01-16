@@ -137,7 +137,13 @@ class TestGenerateSingleFileDoc:
         return mock
 
     async def test_returns_none_for_no_chunks(
-        self, mock_llm, mock_vector_store, mock_status_manager, mock_entity_registry, mock_config, tmp_path
+        self,
+        mock_llm,
+        mock_vector_store,
+        mock_status_manager,
+        mock_entity_registry,
+        mock_config,
+        tmp_path,
     ):
         """Test returns None when no chunks found for file."""
         mock_vector_store.search = AsyncMock(return_value=[])
@@ -161,10 +167,18 @@ class TestGenerateSingleFileDoc:
         assert was_skipped is False
 
     async def test_generates_doc_for_file_with_chunks(
-        self, mock_llm, mock_vector_store, mock_status_manager, mock_entity_registry, mock_config, tmp_path
+        self,
+        mock_llm,
+        mock_vector_store,
+        mock_status_manager,
+        mock_entity_registry,
+        mock_config,
+        tmp_path,
     ):
         """Test generates documentation for file with chunks."""
-        chunk = make_code_chunk(file_path="src/main.py", name="main_func", chunk_type=ChunkType.FUNCTION)
+        chunk = make_code_chunk(
+            file_path="src/main.py", name="main_func", chunk_type=ChunkType.FUNCTION
+        )
         mock_vector_store.search = AsyncMock(return_value=[make_search_result(chunk)])
         mock_vector_store.get_chunks_by_file = AsyncMock(return_value=[chunk])
 
@@ -189,7 +203,13 @@ class TestGenerateSingleFileDoc:
         assert was_skipped is False
 
     async def test_creates_nested_wiki_path(
-        self, mock_llm, mock_vector_store, mock_status_manager, mock_entity_registry, mock_config, tmp_path
+        self,
+        mock_llm,
+        mock_vector_store,
+        mock_status_manager,
+        mock_entity_registry,
+        mock_config,
+        tmp_path,
     ):
         """Test creates nested wiki path for nested source files."""
         chunk = make_code_chunk(file_path="src/core/parser.py", name="Parser")
@@ -214,7 +234,13 @@ class TestGenerateSingleFileDoc:
         assert page.path == "files/src/core/parser.md"
 
     async def test_skips_unchanged_files(
-        self, mock_llm, mock_vector_store, mock_status_manager, mock_entity_registry, mock_config, tmp_path
+        self,
+        mock_llm,
+        mock_vector_store,
+        mock_status_manager,
+        mock_entity_registry,
+        mock_config,
+        tmp_path,
     ):
         """Test skips regeneration for unchanged files."""
         existing_page = WikiPage(
@@ -247,7 +273,13 @@ class TestGenerateSingleFileDoc:
         mock_llm.generate.assert_not_called()
 
     async def test_full_rebuild_ignores_cache(
-        self, mock_llm, mock_vector_store, mock_status_manager, mock_entity_registry, mock_config, tmp_path
+        self,
+        mock_llm,
+        mock_vector_store,
+        mock_status_manager,
+        mock_entity_registry,
+        mock_config,
+        tmp_path,
     ):
         """Test full rebuild regenerates even for unchanged files."""
         chunk = make_code_chunk(file_path="src/main.py", name="main")
@@ -275,7 +307,13 @@ class TestGenerateSingleFileDoc:
         mock_llm.generate.assert_called()
 
     async def test_fallback_search_by_filename(
-        self, mock_llm, mock_vector_store, mock_status_manager, mock_entity_registry, mock_config, tmp_path
+        self,
+        mock_llm,
+        mock_vector_store,
+        mock_status_manager,
+        mock_entity_registry,
+        mock_config,
+        tmp_path,
     ):
         """Test falls back to searching by filename when no direct matches."""
         chunk = make_code_chunk(file_path="src/main.py", name="main")
@@ -309,7 +347,13 @@ class TestGenerateSingleFileDoc:
         assert mock_vector_store.search.call_count == 2
 
     async def test_registers_entities_for_crosslinking(
-        self, mock_llm, mock_vector_store, mock_status_manager, mock_entity_registry, mock_config, tmp_path
+        self,
+        mock_llm,
+        mock_vector_store,
+        mock_status_manager,
+        mock_entity_registry,
+        mock_config,
+        tmp_path,
     ):
         """Test registers entities for cross-linking."""
         chunk = make_code_chunk(file_path="src/main.py", name="MainClass")
@@ -334,7 +378,13 @@ class TestGenerateSingleFileDoc:
         mock_entity_registry.register_from_chunks.assert_called()
 
     async def test_adds_class_diagram(
-        self, mock_llm, mock_vector_store, mock_status_manager, mock_entity_registry, mock_config, tmp_path
+        self,
+        mock_llm,
+        mock_vector_store,
+        mock_status_manager,
+        mock_entity_registry,
+        mock_config,
+        tmp_path,
     ):
         """Test adds class diagram for files with classes."""
         chunk = make_code_chunk(file_path="src/models.py", name="User", chunk_type=ChunkType.CLASS)
@@ -362,7 +412,13 @@ class TestGenerateSingleFileDoc:
             assert "Class Diagram" in page.content
 
     async def test_adds_api_reference(
-        self, mock_llm, mock_vector_store, mock_status_manager, mock_entity_registry, mock_config, tmp_path
+        self,
+        mock_llm,
+        mock_vector_store,
+        mock_status_manager,
+        mock_entity_registry,
+        mock_config,
+        tmp_path,
     ):
         """Test adds API reference section."""
         chunk = make_code_chunk(file_path="main.py", name="run")
@@ -393,7 +449,13 @@ class TestGenerateSingleFileDoc:
             assert "API Reference" in page.content
 
     async def test_strips_llm_generated_diagrams(
-        self, mock_llm, mock_vector_store, mock_status_manager, mock_entity_registry, mock_config, tmp_path
+        self,
+        mock_llm,
+        mock_vector_store,
+        mock_status_manager,
+        mock_entity_registry,
+        mock_config,
+        tmp_path,
     ):
         """Test strips LLM-generated class diagrams (we add our own)."""
         mock_llm.generate = AsyncMock(
@@ -426,7 +488,13 @@ class TestGenerateSingleFileDoc:
             assert page.content.count("classDiagram") <= 1
 
     async def test_handles_root_level_files(
-        self, mock_llm, mock_vector_store, mock_status_manager, mock_entity_registry, mock_config, tmp_path
+        self,
+        mock_llm,
+        mock_vector_store,
+        mock_status_manager,
+        mock_entity_registry,
+        mock_config,
+        tmp_path,
     ):
         """Test handles root-level files (no directory)."""
         chunk = make_code_chunk(file_path="setup.py", name="setup")
@@ -451,7 +519,13 @@ class TestGenerateSingleFileDoc:
         assert page.path == "files/setup.md"
 
     async def test_adds_call_graph(
-        self, mock_llm, mock_vector_store, mock_status_manager, mock_entity_registry, mock_config, tmp_path
+        self,
+        mock_llm,
+        mock_vector_store,
+        mock_status_manager,
+        mock_entity_registry,
+        mock_config,
+        tmp_path,
     ):
         """Test adds call graph section."""
         chunk = make_code_chunk(file_path="main.py", name="run")
@@ -483,7 +557,13 @@ class TestGenerateSingleFileDoc:
             assert "graph TD" in page.content
 
     async def test_adds_test_examples(
-        self, mock_llm, mock_vector_store, mock_status_manager, mock_entity_registry, mock_config, tmp_path
+        self,
+        mock_llm,
+        mock_vector_store,
+        mock_status_manager,
+        mock_entity_registry,
+        mock_config,
+        tmp_path,
     ):
         """Test adds test examples section."""
         chunk = make_code_chunk(file_path="main.py", name="MyClass")
@@ -560,7 +640,13 @@ class TestGenerateFileDocs:
         return mock
 
     async def test_returns_empty_for_no_files(
-        self, mock_llm, mock_vector_store, mock_status_manager, mock_entity_registry, mock_config, tmp_path
+        self,
+        mock_llm,
+        mock_vector_store,
+        mock_status_manager,
+        mock_entity_registry,
+        mock_config,
+        tmp_path,
     ):
         """Test returns empty when no files in index."""
         index_status = make_index_status(repo_path=str(tmp_path), files=[])
@@ -581,7 +667,13 @@ class TestGenerateFileDocs:
         assert skipped == 0
 
     async def test_filters_init_files(
-        self, mock_llm, mock_vector_store, mock_status_manager, mock_entity_registry, mock_config, tmp_path
+        self,
+        mock_llm,
+        mock_vector_store,
+        mock_status_manager,
+        mock_entity_registry,
+        mock_config,
+        tmp_path,
     ):
         """Test filters out __init__.py files."""
         index_status = make_index_status(
@@ -603,7 +695,13 @@ class TestGenerateFileDocs:
         assert pages == []
 
     async def test_filters_test_files(
-        self, mock_llm, mock_vector_store, mock_status_manager, mock_entity_registry, mock_config, tmp_path
+        self,
+        mock_llm,
+        mock_vector_store,
+        mock_status_manager,
+        mock_entity_registry,
+        mock_config,
+        tmp_path,
     ):
         """Test filters out test files in tests/ directory."""
         index_status = make_index_status(
@@ -625,7 +723,13 @@ class TestGenerateFileDocs:
         assert pages == []
 
     async def test_includes_test_files_in_src(
-        self, mock_llm, mock_vector_store, mock_status_manager, mock_entity_registry, mock_config, tmp_path
+        self,
+        mock_llm,
+        mock_vector_store,
+        mock_status_manager,
+        mock_entity_registry,
+        mock_config,
+        tmp_path,
     ):
         """Test includes test_*.py files in src/ (e.g., test_examples.py)."""
         chunk = make_code_chunk(file_path="src/test_examples.py", name="TestHelper")
@@ -652,7 +756,13 @@ class TestGenerateFileDocs:
         assert len(pages) > 0
 
     async def test_filters_low_chunk_count_files(
-        self, mock_llm, mock_vector_store, mock_status_manager, mock_entity_registry, mock_config, tmp_path
+        self,
+        mock_llm,
+        mock_vector_store,
+        mock_status_manager,
+        mock_entity_registry,
+        mock_config,
+        tmp_path,
     ):
         """Test filters out files with low chunk count."""
         index_status = make_index_status(
@@ -674,7 +784,13 @@ class TestGenerateFileDocs:
         assert pages == []
 
     async def test_limits_files_by_max_file_docs(
-        self, mock_llm, mock_vector_store, mock_status_manager, mock_entity_registry, mock_config, tmp_path
+        self,
+        mock_llm,
+        mock_vector_store,
+        mock_status_manager,
+        mock_entity_registry,
+        mock_config,
+        tmp_path,
     ):
         """Test limits number of files processed."""
         mock_config.wiki.max_file_docs = 2
@@ -702,7 +818,13 @@ class TestGenerateFileDocs:
         assert len(pages) <= 3  # index + 2 files
 
     async def test_generates_files_index(
-        self, mock_llm, mock_vector_store, mock_status_manager, mock_entity_registry, mock_config, tmp_path
+        self,
+        mock_llm,
+        mock_vector_store,
+        mock_status_manager,
+        mock_entity_registry,
+        mock_config,
+        tmp_path,
     ):
         """Test generates files index page."""
         chunk = make_code_chunk(file_path="src/main.py", name="main")
@@ -730,7 +852,13 @@ class TestGenerateFileDocs:
         assert pages[0].title == "Source Files"
 
     async def test_handles_generation_errors(
-        self, mock_llm, mock_vector_store, mock_status_manager, mock_entity_registry, mock_config, tmp_path
+        self,
+        mock_llm,
+        mock_vector_store,
+        mock_status_manager,
+        mock_entity_registry,
+        mock_config,
+        tmp_path,
     ):
         """Test handles errors during file generation."""
         # Create chunks for each file
@@ -791,7 +919,13 @@ class TestGenerateFileDocs:
         assert len(pages) >= 1
 
     async def test_prioritizes_files_by_chunk_count(
-        self, mock_llm, mock_vector_store, mock_status_manager, mock_entity_registry, mock_config, tmp_path
+        self,
+        mock_llm,
+        mock_vector_store,
+        mock_status_manager,
+        mock_entity_registry,
+        mock_config,
+        tmp_path,
     ):
         """Test prioritizes files with more chunks when limiting."""
         mock_config.wiki.max_file_docs = 1
@@ -826,7 +960,13 @@ class TestGenerateFileDocs:
         assert any("complex" in p for p in file_paths) or len(pages) <= 1
 
     async def test_counts_skipped_files(
-        self, mock_llm, mock_vector_store, mock_status_manager, mock_entity_registry, mock_config, tmp_path
+        self,
+        mock_llm,
+        mock_vector_store,
+        mock_status_manager,
+        mock_entity_registry,
+        mock_config,
+        tmp_path,
     ):
         """Test correctly counts skipped files (incremental update)."""
         # Set up to return existing page (skipped)
@@ -869,8 +1009,12 @@ class TestGenerateFilesIndex:
     def test_generates_basic_index(self):
         """Test generates basic index content."""
         pages = [
-            WikiPage(path="files/src/main.md", title="main.py", content="", generated_at=time.time()),
-            WikiPage(path="files/src/utils.md", title="utils.py", content="", generated_at=time.time()),
+            WikiPage(
+                path="files/src/main.md", title="main.py", content="", generated_at=time.time()
+            ),
+            WikiPage(
+                path="files/src/utils.md", title="utils.py", content="", generated_at=time.time()
+            ),
         ]
 
         result = _generate_files_index(pages)
@@ -882,8 +1026,15 @@ class TestGenerateFilesIndex:
     def test_groups_by_directory(self):
         """Test groups files by directory."""
         pages = [
-            WikiPage(path="files/src/main.md", title="main.py", content="", generated_at=time.time()),
-            WikiPage(path="files/tests/test_main.md", title="test_main.py", content="", generated_at=time.time()),
+            WikiPage(
+                path="files/src/main.md", title="main.py", content="", generated_at=time.time()
+            ),
+            WikiPage(
+                path="files/tests/test_main.md",
+                title="test_main.py",
+                content="",
+                generated_at=time.time(),
+            ),
         ]
 
         result = _generate_files_index(pages)
@@ -894,8 +1045,12 @@ class TestGenerateFilesIndex:
     def test_excludes_index_page(self):
         """Test excludes index page from listing."""
         pages = [
-            WikiPage(path="files/index.md", title="Source Files", content="", generated_at=time.time()),
-            WikiPage(path="files/src/main.md", title="main.py", content="", generated_at=time.time()),
+            WikiPage(
+                path="files/index.md", title="Source Files", content="", generated_at=time.time()
+            ),
+            WikiPage(
+                path="files/src/main.md", title="main.py", content="", generated_at=time.time()
+            ),
         ]
 
         result = _generate_files_index(pages)
@@ -917,7 +1072,12 @@ class TestGenerateFilesIndex:
     def test_generates_relative_links(self):
         """Test generates correct relative links."""
         pages = [
-            WikiPage(path="files/src/core/parser.md", title="parser.py", content="", generated_at=time.time()),
+            WikiPage(
+                path="files/src/core/parser.md",
+                title="parser.py",
+                content="",
+                generated_at=time.time(),
+            ),
         ]
 
         result = _generate_files_index(pages)
@@ -928,8 +1088,12 @@ class TestGenerateFilesIndex:
     def test_sorts_files_alphabetically(self):
         """Test sorts files alphabetically within directories."""
         pages = [
-            WikiPage(path="files/src/zebra.md", title="zebra.py", content="", generated_at=time.time()),
-            WikiPage(path="files/src/alpha.md", title="alpha.py", content="", generated_at=time.time()),
+            WikiPage(
+                path="files/src/zebra.md", title="zebra.py", content="", generated_at=time.time()
+            ),
+            WikiPage(
+                path="files/src/alpha.md", title="alpha.py", content="", generated_at=time.time()
+            ),
         ]
 
         result = _generate_files_index(pages)

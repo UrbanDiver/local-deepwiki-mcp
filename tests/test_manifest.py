@@ -607,9 +607,7 @@ class TestEntryPointsSummary:
 
     def test_entry_points_summary_with_scripts(self):
         """Entry points summary shows scripts."""
-        manifest = ProjectManifest(
-            scripts={"build": "npm run build", "test": "pytest tests/"}
-        )
+        manifest = ProjectManifest(scripts={"build": "npm run build", "test": "pytest tests/"})
         result = manifest.get_entry_points_summary()
         assert "### Scripts" in result
         assert "`build`" in result
@@ -752,7 +750,7 @@ class TestSetupPyParsing:
         with tempfile.TemporaryDirectory() as tmpdir:
             setup_py = Path(tmpdir) / "setup.py"
             setup_py.write_text(
-                '''
+                """
 from setuptools import setup
 
 setup(
@@ -763,7 +761,7 @@ setup(
         "flask",
     ],
 )
-'''
+"""
             )
 
             manifest = parse_manifest(Path(tmpdir))

@@ -66,8 +66,9 @@ class TestLocalEmbeddingProvider:
     @patch("local_deepwiki.providers.embeddings.local.SentenceTransformer")
     async def test_embed(self, mock_transformer_class):
         """Test embedding generation."""
-        from local_deepwiki.providers.embeddings.local import LocalEmbeddingProvider
         import numpy as np
+
+        from local_deepwiki.providers.embeddings.local import LocalEmbeddingProvider
 
         mock_model = MagicMock()
         mock_model.get_sentence_embedding_dimension.return_value = 384

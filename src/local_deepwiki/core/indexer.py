@@ -5,7 +5,6 @@ import json
 import time
 from pathlib import Path
 
-
 from local_deepwiki.config import Config, get_config
 from local_deepwiki.core.chunker import CodeChunker
 from local_deepwiki.core.parser import CodeParser

@@ -1,5 +1,7 @@
 """Local embedding provider using sentence-transformers."""
 
+from typing import cast
+
 from sentence_transformers import SentenceTransformer
 
 from local_deepwiki.providers.base import EmbeddingProvider
@@ -37,7 +39,7 @@ class LocalEmbeddingProvider(EmbeddingProvider):
         model = self._load_model()
         # sentence-transformers is synchronous, but we keep async interface for consistency
         embeddings = model.encode(texts, convert_to_numpy=True)
-        return embeddings.tolist()
+        return cast(list[list[float]], embeddings.tolist())
 
     def get_dimension(self) -> int:
         """Get the embedding dimension.

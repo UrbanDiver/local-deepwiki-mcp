@@ -73,10 +73,12 @@ class TestHandleDeepResearch:
 
     async def test_returns_error_for_empty_question(self):
         """Test error returned for empty question."""
-        result = await handle_deep_research({
-            "repo_path": "/some/path",
-            "question": "",
-        })
+        result = await handle_deep_research(
+            {
+                "repo_path": "/some/path",
+                "question": "",
+            }
+        )
 
         assert len(result) == 1
         assert "Error" in result[0].text
@@ -84,10 +86,12 @@ class TestHandleDeepResearch:
 
     async def test_returns_error_for_unindexed_repo(self, tmp_path):
         """Test error returned when repository is not indexed."""
-        result = await handle_deep_research({
-            "repo_path": str(tmp_path),
-            "question": "What is the architecture?",
-        })
+        result = await handle_deep_research(
+            {
+                "repo_path": str(tmp_path),
+                "question": "What is the architecture?",
+            }
+        )
 
         assert len(result) == 1
         assert "Error" in result[0].text
@@ -95,11 +99,13 @@ class TestHandleDeepResearch:
 
     async def test_clamps_max_chunks_to_valid_range(self, tmp_path):
         """Test that max_chunks is clamped to valid range."""
-        result = await handle_deep_research({
-            "repo_path": str(tmp_path),
-            "question": "Test question",
-            "max_chunks": 10000,  # Above max, should be clamped
-        })
+        result = await handle_deep_research(
+            {
+                "repo_path": str(tmp_path),
+                "question": "Test question",
+                "max_chunks": 10000,  # Above max, should be clamped
+            }
+        )
 
         # Will fail due to no index, but shouldn't fail due to max_chunks
         assert "Error" in result[0].text
@@ -116,10 +122,12 @@ class TestHandleDeepResearch:
             side_effect=asyncio.CancelledError(),
         ):
             with pytest.raises(asyncio.CancelledError):
-                await handle_deep_research({
-                    "repo_path": str(tmp_path),
-                    "question": "Test question",
-                })
+                await handle_deep_research(
+                    {
+                        "repo_path": str(tmp_path),
+                        "question": "Test question",
+                    }
+                )
 
 
 class TestHandleReadWikiStructureExtended:
@@ -193,10 +201,12 @@ class TestHandleReadWikiPageExtended:
         page_content = "# Deep Page"
         (deep_dir / "deep.md").write_text(page_content)
 
-        result = await handle_read_wiki_page({
-            "wiki_path": str(tmp_path),
-            "page": "a/b/c/deep.md",
-        })
+        result = await handle_read_wiki_page(
+            {
+                "wiki_path": str(tmp_path),
+                "page": "a/b/c/deep.md",
+            }
+        )
 
         assert len(result) == 1
         assert result[0].text == page_content
@@ -207,10 +217,12 @@ class TestHandleSearchCodeExtended:
 
     async def test_returns_error_for_whitespace_query(self):
         """Test error returned for whitespace-only query."""
-        result = await handle_search_code({
-            "repo_path": "/some/path",
-            "query": "   \t\n  ",
-        })
+        result = await handle_search_code(
+            {
+                "repo_path": "/some/path",
+                "query": "   \t\n  ",
+            }
+        )
 
         assert len(result) == 1
         assert "Error" in result[0].text
@@ -229,11 +241,13 @@ class TestHandleIndexRepositoryExtended:
         # but it tests the validation path
         with patch("local_deepwiki.handlers.RepositoryIndexer") as mock_indexer:
             mock_instance = MagicMock()
-            mock_instance.index = AsyncMock(return_value=MagicMock(
-                total_files=1,
-                total_chunks=1,
-                languages=["python"],
-            ))
+            mock_instance.index = AsyncMock(
+                return_value=MagicMock(
+                    total_files=1,
+                    total_chunks=1,
+                    languages=["python"],
+                )
+            )
             mock_instance.wiki_path = tmp_path / ".deepwiki"
             mock_instance.vector_store = MagicMock()
             mock_indexer.return_value = mock_instance
@@ -241,10 +255,12 @@ class TestHandleIndexRepositoryExtended:
             with patch("local_deepwiki.handlers.generate_wiki") as mock_wiki:
                 mock_wiki.return_value = MagicMock(pages=[])
 
-                result = await handle_index_repository({
-                    "repo_path": str(tmp_path),
-                    "languages": ["python", "typescript"],
-                })
+                result = await handle_index_repository(
+                    {
+                        "repo_path": str(tmp_path),
+                        "languages": ["python", "typescript"],
+                    }
+                )
 
                 # Should succeed
                 assert len(result) == 1
@@ -257,11 +273,13 @@ class TestHandleIndexRepositoryExtended:
 
         with patch("local_deepwiki.handlers.RepositoryIndexer") as mock_indexer:
             mock_instance = MagicMock()
-            mock_instance.index = AsyncMock(return_value=MagicMock(
-                total_files=1,
-                total_chunks=1,
-                languages=["python"],
-            ))
+            mock_instance.index = AsyncMock(
+                return_value=MagicMock(
+                    total_files=1,
+                    total_chunks=1,
+                    languages=["python"],
+                )
+            )
             mock_instance.wiki_path = tmp_path / ".deepwiki"
             mock_instance.vector_store = MagicMock()
             mock_indexer.return_value = mock_instance
@@ -269,10 +287,12 @@ class TestHandleIndexRepositoryExtended:
             with patch("local_deepwiki.handlers.generate_wiki") as mock_wiki:
                 mock_wiki.return_value = MagicMock(pages=[])
 
-                result = await handle_index_repository({
-                    "repo_path": str(tmp_path),
-                    "use_cloud_for_github": True,
-                })
+                result = await handle_index_repository(
+                    {
+                        "repo_path": str(tmp_path),
+                        "use_cloud_for_github": True,
+                    }
+                )
 
                 assert len(result) == 1
                 data = json.loads(result[0].text)
@@ -302,10 +322,12 @@ class TestHandleAskQuestionExtended:
                     mock_store.search = AsyncMock(return_value=[])
                     mock_vs.return_value = mock_store
 
-                    result = await handle_ask_question({
-                        "repo_path": str(tmp_path),
-                        "question": "What is this code?",
-                    })
+                    result = await handle_ask_question(
+                        {
+                            "repo_path": str(tmp_path),
+                            "question": "What is this code?",
+                        }
+                    )
 
                     assert len(result) == 1
                     assert "No relevant code found" in result[0].text
@@ -347,10 +369,12 @@ class TestHandleAskQuestionExtended:
                         mock_provider.generate = AsyncMock(return_value="This is a test function.")
                         mock_llm.return_value = mock_provider
 
-                        result = await handle_ask_question({
-                            "repo_path": str(tmp_path),
-                            "question": "What does hello do?",
-                        })
+                        result = await handle_ask_question(
+                            {
+                                "repo_path": str(tmp_path),
+                                "question": "What does hello do?",
+                            }
+                        )
 
                         assert len(result) == 1
                         data = json.loads(result[0].text)
@@ -371,7 +395,7 @@ class TestHandleReadWikiStructureToc:
             "entries": [
                 {"number": "1", "title": "Overview", "path": "index.md"},
                 {"number": "2", "title": "Architecture", "path": "architecture.md"},
-            ]
+            ],
         }
         (tmp_path / "toc.json").write_text(json.dumps(toc_data))
 
@@ -411,10 +435,12 @@ class TestHandleReadWikiPageContent:
         content = "# 你好世界\n\nこんにちは 🎉"
         (tmp_path / "unicode.md").write_text(content, encoding="utf-8")
 
-        result = await handle_read_wiki_page({
-            "wiki_path": str(tmp_path),
-            "page": "unicode.md",
-        })
+        result = await handle_read_wiki_page(
+            {
+                "wiki_path": str(tmp_path),
+                "page": "unicode.md",
+            }
+        )
 
         assert len(result) == 1
         assert result[0].text == content
@@ -456,10 +482,12 @@ class TestHandleSearchCodeWithResults:
                     mock_store.search = AsyncMock(return_value=[mock_result])
                     mock_vs.return_value = mock_store
 
-                    result = await handle_search_code({
-                        "repo_path": str(tmp_path),
-                        "query": "test function",
-                    })
+                    result = await handle_search_code(
+                        {
+                            "repo_path": str(tmp_path),
+                            "query": "test function",
+                        }
+                    )
 
                     assert len(result) == 1
                     data = json.loads(result[0].text)
@@ -485,10 +513,12 @@ class TestHandleSearchCodeWithResults:
                     mock_store.search = AsyncMock(return_value=[])
                     mock_vs.return_value = mock_store
 
-                    result = await handle_search_code({
-                        "repo_path": str(tmp_path),
-                        "query": "nonexistent",
-                    })
+                    result = await handle_search_code(
+                        {
+                            "repo_path": str(tmp_path),
+                            "query": "nonexistent",
+                        }
+                    )
 
                     assert len(result) == 1
                     assert "No results found" in result[0].text
@@ -525,10 +555,12 @@ class TestHandleSearchCodeWithResults:
                     mock_store.search = AsyncMock(return_value=[mock_result])
                     mock_vs.return_value = mock_store
 
-                    result = await handle_search_code({
-                        "repo_path": str(tmp_path),
-                        "query": "long function",
-                    })
+                    result = await handle_search_code(
+                        {
+                            "repo_path": str(tmp_path),
+                            "query": "long function",
+                        }
+                    )
 
                     assert len(result) == 1
                     data = json.loads(result[0].text)
@@ -568,9 +600,11 @@ class TestHandleIndexRepositoryProgressCallback:
             with patch("local_deepwiki.handlers.generate_wiki") as mock_wiki:
                 mock_wiki.return_value = MagicMock(pages=[])
 
-                result = await handle_index_repository({
-                    "repo_path": str(tmp_path),
-                })
+                result = await handle_index_repository(
+                    {
+                        "repo_path": str(tmp_path),
+                    }
+                )
 
                 assert len(result) == 1
                 data = json.loads(result[0].text)
@@ -589,10 +623,12 @@ class TestHandleDeepResearchErrorHandling:
             "local_deepwiki.handlers._handle_deep_research_impl",
             side_effect=RuntimeError("Unexpected error"),
         ):
-            result = await handle_deep_research({
-                "repo_path": str(tmp_path),
-                "question": "Test question",
-            })
+            result = await handle_deep_research(
+                {
+                    "repo_path": str(tmp_path),
+                    "question": "Test question",
+                }
+            )
 
             assert len(result) == 1
             assert "Error" in result[0].text
@@ -647,7 +683,9 @@ class TestHandleDeepResearchImpl:
             with patch("local_deepwiki.handlers.get_embedding_provider"):
                 with patch("local_deepwiki.handlers.VectorStore"):
                     with patch("local_deepwiki.providers.llm.get_cached_llm_provider"):
-                        with patch("local_deepwiki.core.deep_research.DeepResearchPipeline") as mock_pipeline_class:
+                        with patch(
+                            "local_deepwiki.core.deep_research.DeepResearchPipeline"
+                        ) as mock_pipeline_class:
                             from types import SimpleNamespace
 
                             # Create mock research result with proper types
@@ -682,10 +720,12 @@ class TestHandleDeepResearchImpl:
                             mock_pipeline.research = AsyncMock(return_value=mock_result)
                             mock_pipeline_class.return_value = mock_pipeline
 
-                            result = await _handle_deep_research_impl({
-                                "repo_path": str(tmp_path),
-                                "question": "What is the architecture?",
-                            })
+                            result = await _handle_deep_research_impl(
+                                {
+                                    "repo_path": str(tmp_path),
+                                    "question": "What is the architecture?",
+                                }
+                            )
 
                             assert len(result) == 1
                             data = json.loads(result[0].text)
@@ -725,7 +765,9 @@ class TestHandleDeepResearchImpl:
             with patch("local_deepwiki.handlers.get_embedding_provider"):
                 with patch("local_deepwiki.handlers.VectorStore"):
                     with patch("local_deepwiki.providers.llm.get_cached_llm_provider"):
-                        with patch("local_deepwiki.core.deep_research.DeepResearchPipeline") as mock_pipeline_class:
+                        with patch(
+                            "local_deepwiki.core.deep_research.DeepResearchPipeline"
+                        ) as mock_pipeline_class:
                             mock_result = MagicMock()
                             mock_result.question = "Test"
                             mock_result.answer = "Answer"
@@ -739,11 +781,13 @@ class TestHandleDeepResearchImpl:
                             mock_pipeline.research = AsyncMock(return_value=mock_result)
                             mock_pipeline_class.return_value = mock_pipeline
 
-                            result = await _handle_deep_research_impl({
-                                "repo_path": str(tmp_path),
-                                "question": "Test question",
-                                "preset": "thorough",
-                            })
+                            result = await _handle_deep_research_impl(
+                                {
+                                    "repo_path": str(tmp_path),
+                                    "question": "Test question",
+                                    "preset": "thorough",
+                                }
+                            )
 
                             # Verify preset was passed to config
                             config.deep_research.with_preset.assert_called_with("thorough")
@@ -779,7 +823,9 @@ class TestHandleDeepResearchImpl:
             with patch("local_deepwiki.handlers.get_embedding_provider"):
                 with patch("local_deepwiki.handlers.VectorStore"):
                     with patch("local_deepwiki.providers.llm.get_cached_llm_provider"):
-                        with patch("local_deepwiki.core.deep_research.DeepResearchPipeline") as mock_pipeline_class:
+                        with patch(
+                            "local_deepwiki.core.deep_research.DeepResearchPipeline"
+                        ) as mock_pipeline_class:
                             from local_deepwiki.core.deep_research import ResearchCancelledError
 
                             mock_pipeline = MagicMock()
@@ -788,10 +834,12 @@ class TestHandleDeepResearchImpl:
                             )
                             mock_pipeline_class.return_value = mock_pipeline
 
-                            result = await _handle_deep_research_impl({
-                                "repo_path": str(tmp_path),
-                                "question": "Test question",
-                            })
+                            result = await _handle_deep_research_impl(
+                                {
+                                    "repo_path": str(tmp_path),
+                                    "question": "Test question",
+                                }
+                            )
 
                             assert len(result) == 1
                             data = json.loads(result[0].text)
@@ -828,18 +876,20 @@ class TestHandleDeepResearchImpl:
             with patch("local_deepwiki.handlers.get_embedding_provider"):
                 with patch("local_deepwiki.handlers.VectorStore"):
                     with patch("local_deepwiki.providers.llm.get_cached_llm_provider"):
-                        with patch("local_deepwiki.core.deep_research.DeepResearchPipeline") as mock_pipeline_class:
+                        with patch(
+                            "local_deepwiki.core.deep_research.DeepResearchPipeline"
+                        ) as mock_pipeline_class:
                             mock_pipeline = MagicMock()
-                            mock_pipeline.research = AsyncMock(
-                                side_effect=asyncio.CancelledError()
-                            )
+                            mock_pipeline.research = AsyncMock(side_effect=asyncio.CancelledError())
                             mock_pipeline_class.return_value = mock_pipeline
 
                             with pytest.raises(asyncio.CancelledError):
-                                await _handle_deep_research_impl({
-                                    "repo_path": str(tmp_path),
-                                    "question": "Test question",
-                                })
+                                await _handle_deep_research_impl(
+                                    {
+                                        "repo_path": str(tmp_path),
+                                        "question": "Test question",
+                                    }
+                                )
 
     async def test_progress_callback_with_server(self, tmp_path):
         """Test progress callback sends notifications with server."""
@@ -878,7 +928,9 @@ class TestHandleDeepResearchImpl:
             with patch("local_deepwiki.handlers.get_embedding_provider"):
                 with patch("local_deepwiki.handlers.VectorStore"):
                     with patch("local_deepwiki.providers.llm.get_cached_llm_provider"):
-                        with patch("local_deepwiki.core.deep_research.DeepResearchPipeline") as mock_pipeline_class:
+                        with patch(
+                            "local_deepwiki.core.deep_research.DeepResearchPipeline"
+                        ) as mock_pipeline_class:
                             mock_result = MagicMock()
                             mock_result.question = "Test"
                             mock_result.answer = "Answer"
@@ -888,15 +940,23 @@ class TestHandleDeepResearchImpl:
                             mock_result.total_chunks_analyzed = 5
                             mock_result.total_llm_calls = 2
 
-                            async def mock_research(question, progress_callback=None, cancellation_check=None):
+                            async def mock_research(
+                                question, progress_callback=None, cancellation_check=None
+                            ):
                                 # Call progress callback to test notification sending
                                 if progress_callback:
-                                    from local_deepwiki.models import ResearchProgress, ResearchProgressType
-                                    await progress_callback(ResearchProgress(
-                                        step=1,
-                                        step_type=ResearchProgressType.DECOMPOSITION_COMPLETE,
-                                        message="Decomposing question",
-                                    ))
+                                    from local_deepwiki.models import (
+                                        ResearchProgress,
+                                        ResearchProgressType,
+                                    )
+
+                                    await progress_callback(
+                                        ResearchProgress(
+                                            step=1,
+                                            step_type=ResearchProgressType.DECOMPOSITION_COMPLETE,
+                                            message="Decomposing question",
+                                        )
+                                    )
                                 return mock_result
 
                             mock_pipeline = MagicMock()
@@ -943,7 +1003,9 @@ class TestHandleDeepResearchImpl:
             with patch("local_deepwiki.handlers.get_embedding_provider"):
                 with patch("local_deepwiki.handlers.VectorStore"):
                     with patch("local_deepwiki.providers.llm.get_cached_llm_provider"):
-                        with patch("local_deepwiki.core.deep_research.DeepResearchPipeline") as mock_pipeline_class:
+                        with patch(
+                            "local_deepwiki.core.deep_research.DeepResearchPipeline"
+                        ) as mock_pipeline_class:
                             mock_result = MagicMock()
                             mock_result.question = "Test"
                             mock_result.answer = "Answer"
@@ -953,15 +1015,23 @@ class TestHandleDeepResearchImpl:
                             mock_result.total_chunks_analyzed = 5
                             mock_result.total_llm_calls = 2
 
-                            async def mock_research(question, progress_callback=None, cancellation_check=None):
+                            async def mock_research(
+                                question, progress_callback=None, cancellation_check=None
+                            ):
                                 if progress_callback:
-                                    from local_deepwiki.models import ResearchProgress, ResearchProgressType
+                                    from local_deepwiki.models import (
+                                        ResearchProgress,
+                                        ResearchProgressType,
+                                    )
+
                                     # This should not raise even without server
-                                    await progress_callback(ResearchProgress(
-                                        step=1,
-                                        step_type=ResearchProgressType.DECOMPOSITION_COMPLETE,
-                                        message="Decomposing",
-                                    ))
+                                    await progress_callback(
+                                        ResearchProgress(
+                                            step=1,
+                                            step_type=ResearchProgressType.DECOMPOSITION_COMPLETE,
+                                            message="Decomposing",
+                                        )
+                                    )
                                 return mock_result
 
                             mock_pipeline = MagicMock()
@@ -969,10 +1039,12 @@ class TestHandleDeepResearchImpl:
                             mock_pipeline_class.return_value = mock_pipeline
 
                             # Call without server - should not raise
-                            result = await _handle_deep_research_impl({
-                                "repo_path": str(tmp_path),
-                                "question": "Test question",
-                            })
+                            result = await _handle_deep_research_impl(
+                                {
+                                    "repo_path": str(tmp_path),
+                                    "question": "Test question",
+                                }
+                            )
 
                             assert len(result) == 1
 
@@ -1012,7 +1084,9 @@ class TestHandleDeepResearchImpl:
             with patch("local_deepwiki.handlers.get_embedding_provider"):
                 with patch("local_deepwiki.handlers.VectorStore"):
                     with patch("local_deepwiki.providers.llm.get_cached_llm_provider"):
-                        with patch("local_deepwiki.core.deep_research.DeepResearchPipeline") as mock_pipeline_class:
+                        with patch(
+                            "local_deepwiki.core.deep_research.DeepResearchPipeline"
+                        ) as mock_pipeline_class:
                             mock_result = MagicMock()
                             mock_result.question = "Test"
                             mock_result.answer = "Answer"
@@ -1072,7 +1146,9 @@ class TestHandleDeepResearchImpl:
             with patch("local_deepwiki.handlers.get_embedding_provider"):
                 with patch("local_deepwiki.handlers.VectorStore"):
                     with patch("local_deepwiki.providers.llm.get_cached_llm_provider"):
-                        with patch("local_deepwiki.core.deep_research.DeepResearchPipeline") as mock_pipeline_class:
+                        with patch(
+                            "local_deepwiki.core.deep_research.DeepResearchPipeline"
+                        ) as mock_pipeline_class:
                             mock_result = MagicMock()
                             mock_result.question = "Test"
                             mock_result.answer = "Answer"
@@ -1129,10 +1205,12 @@ class TestHandleExportWikiPdf:
         mock_pdf_module.export_to_pdf = MagicMock(return_value="Exported successfully")
 
         with patch.dict(sys.modules, {"local_deepwiki.export.pdf": mock_pdf_module}):
-            result = await handle_export_wiki_pdf({
-                "wiki_path": str(tmp_path),
-                "single_file": True,
-            })
+            result = await handle_export_wiki_pdf(
+                {
+                    "wiki_path": str(tmp_path),
+                    "single_file": True,
+                }
+            )
 
             assert len(result) == 1
             data = json.loads(result[0].text)
@@ -1151,10 +1229,12 @@ class TestHandleExportWikiPdf:
         mock_pdf_module.export_to_pdf = MagicMock(return_value="Exported 5 pages")
 
         with patch.dict(sys.modules, {"local_deepwiki.export.pdf": mock_pdf_module}):
-            result = await handle_export_wiki_pdf({
-                "wiki_path": str(tmp_path),
-                "single_file": False,
-            })
+            result = await handle_export_wiki_pdf(
+                {
+                    "wiki_path": str(tmp_path),
+                    "single_file": False,
+                }
+            )
 
             assert len(result) == 1
             data = json.loads(result[0].text)
@@ -1173,10 +1253,12 @@ class TestHandleExportWikiPdf:
         mock_pdf_module.export_to_pdf = MagicMock(return_value="Exported to custom path")
 
         with patch.dict(sys.modules, {"local_deepwiki.export.pdf": mock_pdf_module}):
-            result = await handle_export_wiki_pdf({
-                "wiki_path": str(tmp_path),
-                "output_path": str(output_path),
-            })
+            result = await handle_export_wiki_pdf(
+                {
+                    "wiki_path": str(tmp_path),
+                    "output_path": str(output_path),
+                }
+            )
 
             assert len(result) == 1
             data = json.loads(result[0].text)
@@ -1194,9 +1276,11 @@ class TestHandleExportWikiPdf:
         mock_pdf_module.export_to_pdf = mock_export
 
         with patch.dict(sys.modules, {"local_deepwiki.export.pdf": mock_pdf_module}):
-            await handle_export_wiki_pdf({
-                "wiki_path": str(tmp_path),
-            })
+            await handle_export_wiki_pdf(
+                {
+                    "wiki_path": str(tmp_path),
+                }
+            )
 
             # Verify export_to_pdf was called with single_file=True
             mock_export.assert_called_once()

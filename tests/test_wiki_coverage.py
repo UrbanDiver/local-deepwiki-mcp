@@ -163,12 +163,14 @@ class TestGetMainDefinitionLines:
                 from local_deepwiki.generators.wiki import WikiGenerator
 
                 # Create mock table with pandas DataFrame
-                mock_df = pd.DataFrame({
-                    "file_path": ["src/test.py", "src/test.py"],
-                    "chunk_type": ["class", "function"],
-                    "start_line": [10, 50],
-                    "end_line": [40, 60],
-                })
+                mock_df = pd.DataFrame(
+                    {
+                        "file_path": ["src/test.py", "src/test.py"],
+                        "chunk_type": ["class", "function"],
+                        "start_line": [10, 50],
+                        "end_line": [40, 60],
+                    }
+                )
 
                 mock_table = MagicMock()
                 mock_table.to_pandas.return_value = mock_df
@@ -202,12 +204,14 @@ class TestGetMainDefinitionLines:
                 from local_deepwiki.generators.wiki import WikiGenerator
 
                 # Create mock table with only functions
-                mock_df = pd.DataFrame({
-                    "file_path": ["src/utils.py", "src/utils.py"],
-                    "chunk_type": ["function", "function"],
-                    "start_line": [5, 20],
-                    "end_line": [15, 30],
-                })
+                mock_df = pd.DataFrame(
+                    {
+                        "file_path": ["src/utils.py", "src/utils.py"],
+                        "chunk_type": ["function", "function"],
+                        "start_line": [5, 20],
+                        "end_line": [15, 30],
+                    }
+                )
 
                 mock_table = MagicMock()
                 mock_table.to_pandas.return_value = mock_df
@@ -495,7 +499,9 @@ class TestWikiGeneratorGenerate:
                     with patch("local_deepwiki.generators.wiki.generate_file_docs") as mock_files:
                         mock_files.return_value = ([], 0, 0)
 
-                        with patch("local_deepwiki.generators.wiki.generate_dependencies_page") as mock_deps:
+                        with patch(
+                            "local_deepwiki.generators.wiki.generate_dependencies_page"
+                        ) as mock_deps:
                             mock_deps.return_value = (
                                 WikiPage(
                                     path="dependencies.md",
@@ -506,24 +512,40 @@ class TestWikiGeneratorGenerate:
                                 ["src/test.py"],
                             )
 
-                            with patch("local_deepwiki.generators.wiki.generate_changelog_page") as mock_changelog:
+                            with patch(
+                                "local_deepwiki.generators.wiki.generate_changelog_page"
+                            ) as mock_changelog:
                                 mock_changelog.return_value = None
 
-                                with patch("local_deepwiki.generators.wiki.add_cross_links") as mock_crosslinks:
+                                with patch(
+                                    "local_deepwiki.generators.wiki.add_cross_links"
+                                ) as mock_crosslinks:
                                     mock_crosslinks.side_effect = lambda pages, _: pages
 
-                                    with patch("local_deepwiki.generators.wiki.add_source_refs_sections") as mock_refs:
+                                    with patch(
+                                        "local_deepwiki.generators.wiki.add_source_refs_sections"
+                                    ) as mock_refs:
                                         mock_refs.side_effect = lambda pages, _, __: pages
 
-                                        with patch("local_deepwiki.generators.wiki.add_see_also_sections") as mock_see_also:
+                                        with patch(
+                                            "local_deepwiki.generators.wiki.add_see_also_sections"
+                                        ) as mock_see_also:
                                             mock_see_also.side_effect = lambda pages, _: pages
 
-                                            with patch("local_deepwiki.generators.wiki.write_search_index"):
-                                                with patch("local_deepwiki.generators.wiki.generate_toc") as mock_toc:
+                                            with patch(
+                                                "local_deepwiki.generators.wiki.write_search_index"
+                                            ):
+                                                with patch(
+                                                    "local_deepwiki.generators.wiki.generate_toc"
+                                                ) as mock_toc:
                                                     mock_toc.return_value = []
 
-                                                    with patch("local_deepwiki.generators.wiki.write_toc"):
-                                                        with patch("local_deepwiki.generators.wiki.get_cached_manifest"):
+                                                    with patch(
+                                                        "local_deepwiki.generators.wiki.write_toc"
+                                                    ):
+                                                        with patch(
+                                                            "local_deepwiki.generators.wiki.get_cached_manifest"
+                                                        ):
                                                             result = await mock_generator.generate(
                                                                 index_status=index_status,
                                                                 full_rebuild=True,
@@ -531,7 +553,9 @@ class TestWikiGeneratorGenerate:
 
                                                             # Should have created pages
                                                             assert result is not None
-                                                            assert len(result.pages) >= 3  # overview, architecture, dependencies
+                                                            assert (
+                                                                len(result.pages) >= 3
+                                                            )  # overview, architecture, dependencies
 
                                                             # Check overview was generated
                                                             mock_overview.assert_called_once()
@@ -553,25 +577,60 @@ class TestWikiGeneratorGenerate:
 
             with patch("local_deepwiki.generators.wiki.generate_architecture_page") as mock_arch:
                 mock_arch.return_value = WikiPage(
-                    path="architecture.md", title="Architecture", content="# Arch", generated_at=time.time()
+                    path="architecture.md",
+                    title="Architecture",
+                    content="# Arch",
+                    generated_at=time.time(),
                 )
 
-                with patch("local_deepwiki.generators.wiki.generate_module_docs", return_value=([], 0, 0)):
-                    with patch("local_deepwiki.generators.wiki.generate_file_docs", return_value=([], 0, 0)):
-                        with patch("local_deepwiki.generators.wiki.generate_dependencies_page") as mock_deps:
+                with patch(
+                    "local_deepwiki.generators.wiki.generate_module_docs", return_value=([], 0, 0)
+                ):
+                    with patch(
+                        "local_deepwiki.generators.wiki.generate_file_docs", return_value=([], 0, 0)
+                    ):
+                        with patch(
+                            "local_deepwiki.generators.wiki.generate_dependencies_page"
+                        ) as mock_deps:
                             mock_deps.return_value = (
-                                WikiPage(path="dependencies.md", title="Deps", content="# Deps", generated_at=time.time()),
+                                WikiPage(
+                                    path="dependencies.md",
+                                    title="Deps",
+                                    content="# Deps",
+                                    generated_at=time.time(),
+                                ),
                                 [],
                             )
 
-                            with patch("local_deepwiki.generators.wiki.generate_changelog_page", return_value=None):
-                                with patch("local_deepwiki.generators.wiki.add_cross_links", side_effect=lambda p, _: p):
-                                    with patch("local_deepwiki.generators.wiki.add_source_refs_sections", side_effect=lambda p, _, __: p):
-                                        with patch("local_deepwiki.generators.wiki.add_see_also_sections", side_effect=lambda p, _: p):
-                                            with patch("local_deepwiki.generators.wiki.write_search_index"):
-                                                with patch("local_deepwiki.generators.wiki.generate_toc", return_value=[]):
-                                                    with patch("local_deepwiki.generators.wiki.write_toc"):
-                                                        with patch("local_deepwiki.generators.wiki.get_cached_manifest"):
+                            with patch(
+                                "local_deepwiki.generators.wiki.generate_changelog_page",
+                                return_value=None,
+                            ):
+                                with patch(
+                                    "local_deepwiki.generators.wiki.add_cross_links",
+                                    side_effect=lambda p, _: p,
+                                ):
+                                    with patch(
+                                        "local_deepwiki.generators.wiki.add_source_refs_sections",
+                                        side_effect=lambda p, _, __: p,
+                                    ):
+                                        with patch(
+                                            "local_deepwiki.generators.wiki.add_see_also_sections",
+                                            side_effect=lambda p, _: p,
+                                        ):
+                                            with patch(
+                                                "local_deepwiki.generators.wiki.write_search_index"
+                                            ):
+                                                with patch(
+                                                    "local_deepwiki.generators.wiki.generate_toc",
+                                                    return_value=[],
+                                                ):
+                                                    with patch(
+                                                        "local_deepwiki.generators.wiki.write_toc"
+                                                    ):
+                                                        with patch(
+                                                            "local_deepwiki.generators.wiki.get_cached_manifest"
+                                                        ):
                                                             await mock_generator.generate(
                                                                 index_status=index_status,
                                                                 progress_callback=progress_callback,
@@ -581,4 +640,7 @@ class TestWikiGeneratorGenerate:
                                                             # Should have multiple progress calls
                                                             assert len(progress_calls) > 0
                                                             # Check first call
-                                                            assert "overview" in progress_calls[0][0].lower()
+                                                            assert (
+                                                                "overview"
+                                                                in progress_calls[0][0].lower()
+                                                            )

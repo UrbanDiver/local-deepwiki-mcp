@@ -54,12 +54,14 @@ class MockLLMProvider(LLMProvider):
         max_tokens: int = 4096,
         temperature: float = 0.7,
     ) -> str:
-        self.calls.append({
-            "prompt": prompt,
-            "system_prompt": system_prompt,
-            "max_tokens": max_tokens,
-            "temperature": temperature,
-        })
+        self.calls.append(
+            {
+                "prompt": prompt,
+                "system_prompt": system_prompt,
+                "max_tokens": max_tokens,
+                "temperature": temperature,
+            }
+        )
         return f"Response to: {prompt[:50]}"
 
     async def generate_stream(
@@ -69,13 +71,15 @@ class MockLLMProvider(LLMProvider):
         max_tokens: int = 4096,
         temperature: float = 0.7,
     ):
-        self.calls.append({
-            "prompt": prompt,
-            "system_prompt": system_prompt,
-            "max_tokens": max_tokens,
-            "temperature": temperature,
-            "stream": True,
-        })
+        self.calls.append(
+            {
+                "prompt": prompt,
+                "system_prompt": system_prompt,
+                "max_tokens": max_tokens,
+                "temperature": temperature,
+                "stream": True,
+            }
+        )
         response = f"Streamed response to: {prompt[:50]}"
         for chunk in response.split():
             yield chunk + " "
@@ -298,9 +302,7 @@ class TestCachingLLMProvider:
         return LLMCache(cache_path, embedding_provider, config)
 
     @pytest.fixture
-    def cached_provider(
-        self, mock_llm: MockLLMProvider, cache: LLMCache
-    ) -> CachingLLMProvider:
+    def cached_provider(self, mock_llm: MockLLMProvider, cache: LLMCache) -> CachingLLMProvider:
         """Create a CachingLLMProvider instance."""
         return CachingLLMProvider(mock_llm, cache)
 

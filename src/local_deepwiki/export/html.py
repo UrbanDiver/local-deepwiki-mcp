@@ -4,6 +4,7 @@ import argparse
 import json
 import shutil
 from pathlib import Path
+from typing import cast
 
 import markdown
 
@@ -639,7 +640,7 @@ def render_markdown(content: str) -> str:
             "nl2br",
         ]
     )
-    return md.convert(content)
+    return cast(str, md.convert(content))
 
 
 def extract_title(md_file: Path) -> str:

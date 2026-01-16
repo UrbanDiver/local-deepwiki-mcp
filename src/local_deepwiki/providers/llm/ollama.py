@@ -1,6 +1,6 @@
 """Ollama LLM provider."""
 
-from typing import AsyncIterator
+from typing import AsyncIterator, cast
 
 from ollama import AsyncClient, ResponseError
 
@@ -102,7 +102,9 @@ class OllamaProvider(LLMProvider):
 
         except OllamaModelNotFoundError:
             raise
-        except Exception as e:  # noqa: BLE001 - Wrap any connection/library error in OllamaConnectionError
+        except (
+            Exception
+        ) as e:  # noqa: BLE001 - Wrap any connection/library error in OllamaConnectionError
             # Connection errors, timeouts, etc.
             logger.error(f"Failed to connect to Ollama at {self._base_url}: {e}")
             raise OllamaConnectionError(self._base_url, e) from e
@@ -158,7 +160,7 @@ class OllamaProvider(LLMProvider):
                 },
             )
 
-            content = response["message"]["content"]
+            content = cast(str, response["message"]["content"])
             logger.debug(f"Ollama response length: {len(content)}")
             return content
 

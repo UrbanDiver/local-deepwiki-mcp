@@ -634,7 +634,7 @@ class TestMermaidCliRendering:
         """Test that mermaid diagrams are rendered as PNG when CLI is available."""
         mock_available.return_value = True
         # Return fake PNG bytes
-        mock_render.return_value = b'\x89PNG\r\n\x1a\n' + b'\x00' * 100
+        mock_render.return_value = b"\x89PNG\r\n\x1a\n" + b"\x00" * 100
 
         md = """# Test
 
@@ -676,8 +676,8 @@ graph TD
         mock_available.return_value = True
         # Return different fake PNG bytes for each diagram
         mock_render.side_effect = [
-            b'\x89PNG\r\n\x1a\ndiagram1',
-            b'\x89PNG\r\n\x1a\ndiagram2',
+            b"\x89PNG\r\n\x1a\ndiagram1",
+            b"\x89PNG\r\n\x1a\ndiagram2",
         ]
 
         md = """# Test
@@ -1051,9 +1051,7 @@ class TestPdfExporterEdgeCases:
         """Test building combined HTML with mermaid diagrams."""
         wiki_path = tmp_path / ".deepwiki"
         wiki_path.mkdir()
-        (wiki_path / "index.md").write_text(
-            "# Index\n\n```mermaid\ngraph TD\nA-->B\n```"
-        )
+        (wiki_path / "index.md").write_text("# Index\n\n```mermaid\ngraph TD\nA-->B\n```")
 
         output_path = tmp_path / "output.pdf"
         exporter = PdfExporter(wiki_path, output_path)

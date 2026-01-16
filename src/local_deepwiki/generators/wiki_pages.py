@@ -55,8 +55,8 @@ async def generate_overview_page(
     )
 
     # Combine and deduplicate
-    seen_paths = set()
-    code_context_parts = []
+    seen_paths: set[str] = set()
+    code_context_parts: list[str] = []
     for r in entry_search + key_class_search:
         if r.chunk.file_path not in seen_paths and len(code_context_parts) < 8:
             seen_paths.add(r.chunk.file_path)
@@ -276,9 +276,7 @@ async def generate_architecture_page(
     # Include dependencies for technology context
     dep_context = ""
     if manifest and manifest.dependencies:
-        dep_context = "Key dependencies: " + ", ".join(
-            sorted(manifest.dependencies.keys())[:15]
-        )
+        dep_context = "Key dependencies: " + ", ".join(sorted(manifest.dependencies.keys())[:15])
 
     prompt = f"""Generate architecture documentation based ONLY on the code provided below.
 

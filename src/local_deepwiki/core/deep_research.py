@@ -301,9 +301,7 @@ class DeepResearchPipeline:
             total_llm_calls=llm_calls,
         )
 
-    async def _step_decompose(
-        self, question: str
-    ) -> tuple[list[SubQuestion], ResearchStep, int]:
+    async def _step_decompose(self, question: str) -> tuple[list[SubQuestion], ResearchStep, int]:
         """Execute the decomposition step.
 
         Returns:
@@ -533,9 +531,7 @@ class DeepResearchPipeline:
                     valid_categories = {"structure", "flow", "dependencies", "impact", "comparison"}
                     if category not in valid_categories:
                         category = "structure"
-                    sub_questions.append(
-                        SubQuestion(question=item["question"], category=category)
-                    )
+                    sub_questions.append(SubQuestion(question=item["question"], category=category))
 
             return sub_questions
 
@@ -543,9 +539,7 @@ class DeepResearchPipeline:
             logger.warning(f"Failed to parse decomposition JSON: {e}")
             return []
 
-    async def _parallel_retrieve(
-        self, sub_questions: list[SubQuestion]
-    ) -> list[SearchResult]:
+    async def _parallel_retrieve(self, sub_questions: list[SubQuestion]) -> list[SearchResult]:
         """Retrieve code chunks for each sub-question in parallel.
 
         Args:
@@ -598,9 +592,7 @@ class DeepResearchPipeline:
 
         # Build context summary
         context_summary = self._build_context_summary(results)
-        sub_q_text = "\n".join(
-            f"- [{sq.category}] {sq.question}" for sq in sub_questions
-        )
+        sub_q_text = "\n".join(f"- [{sq.category}] {sq.question}" for sq in sub_questions)
 
         prompt = GAP_ANALYSIS_USER_PROMPT.format(
             question=question,
@@ -692,10 +684,7 @@ class DeepResearchPipeline:
         # Use slightly fewer chunks per query for follow-ups
         chunks_per_query = max(3, self.chunks_per_subquestion - 2)
 
-        tasks = [
-            self.vector_store.search(query, limit=chunks_per_query)
-            for query in queries
-        ]
+        tasks = [self.vector_store.search(query, limit=chunks_per_query) for query in queries]
 
         results_lists = await asyncio.gather(*tasks, return_exceptions=True)
 
@@ -708,9 +697,7 @@ class DeepResearchPipeline:
 
         return all_results
 
-    def _deduplicate_results(
-        self, results: list[SearchResult]
-    ) -> list[SearchResult]:
+    def _deduplicate_results(self, results: list[SearchResult]) -> list[SearchResult]:
         """Remove duplicate chunks, keeping highest-scoring ones.
 
         Args:
@@ -753,9 +740,7 @@ class DeepResearchPipeline:
 
         # Build full context
         full_context = self._build_full_context(results)
-        sub_q_text = "\n".join(
-            f"- [{sq.category}] {sq.question}" for sq in sub_questions
-        )
+        sub_q_text = "\n".join(f"- [{sq.category}] {sq.question}" for sq in sub_questions)
 
         # Count unique files
         unique_files = len(set(r.chunk.file_path for r in results))

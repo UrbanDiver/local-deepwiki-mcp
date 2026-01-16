@@ -389,10 +389,7 @@ class TestVectorStoreEdgeCases:
 
     async def test_unicode_content(self, vector_store):
         """Test handling of Unicode content in chunks."""
-        chunk = make_chunk(
-            "unicode_test",
-            content="def hello(): return '你好世界 🌍 Привет мир'"
-        )
+        chunk = make_chunk("unicode_test", content="def hello(): return '你好世界 🌍 Привет мир'")
         await vector_store.create_or_update_table([chunk])
 
         result = await vector_store.get_chunk_by_id("unicode_test")

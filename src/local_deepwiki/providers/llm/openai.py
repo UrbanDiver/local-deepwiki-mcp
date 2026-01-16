@@ -4,6 +4,7 @@ import os
 from typing import AsyncIterator
 
 from openai import AsyncOpenAI
+from openai.types.chat import ChatCompletionMessageParam
 
 from local_deepwiki.logging import get_logger
 from local_deepwiki.providers.base import LLMProvider, with_retry
@@ -43,7 +44,7 @@ class OpenAILLMProvider(LLMProvider):
         Returns:
             Generated text.
         """
-        messages = []
+        messages: list[ChatCompletionMessageParam] = []
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
         messages.append({"role": "user", "content": prompt})
@@ -79,7 +80,7 @@ class OpenAILLMProvider(LLMProvider):
         Yields:
             Generated text chunks.
         """
-        messages = []
+        messages: list[ChatCompletionMessageParam] = []
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
         messages.append({"role": "user", "content": prompt})
