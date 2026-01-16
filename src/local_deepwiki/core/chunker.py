@@ -2,7 +2,7 @@
 
 import hashlib
 from pathlib import Path
-from typing import Iterator
+from typing import Any, Iterator
 
 from tree_sitter import Node
 
@@ -195,6 +195,244 @@ def get_parent_classes(class_node: Node, source: bytes, language: Language) -> l
                         parents.append(text)
 
     return parents
+
+
+def extract_python_parameter_types(func_node: Node, source: bytes) -> dict[str, str | None]:
+    """Extract parameter types from a Python function.
+
+    Args:
+        func_node: The function_definition AST node.
+        source: Source code bytes.
+
+    Returns:
+        Dictionary mapping parameter names to their type hints.
+    """
+    param_types: dict[str, str | None] = {}
+    params_node = func_node.child_by_field_name("parameters")
+    if not params_node:
+        return param_types
+
+    for child in params_node.children:
+        if child.type == "identifier":
+            # Simple parameter without type hint
+            name = get_node_text(child, source)
+            if name not in ("self", "cls"):
+                param_types[name] = None
+
+        elif child.type == "typed_parameter":
+            # Parameter with type hint: name: type
+            # Or typed *args: *args: type, typed **kwargs: **kwargs: type
+            name_node = None
+            type_node = None
+            splat_pattern = None
+
+            for c in child.children:
+                if c.type == "identifier":
+                    name_node = c
+                elif c.type == "type":
+                    type_node = c
+                elif c.type == "list_splat_pattern":
+                    splat_pattern = c
+                    for sc in c.children:
+                        if sc.type == "identifier":
+                            name_node = sc
+                            break
+                elif c.type == "dictionary_splat_pattern":
+                    splat_pattern = c
+                    for sc in c.children:
+                        if sc.type == "identifier":
+                            name_node = sc
+                            break
+
+            if name_node:
+                name = get_node_text(name_node, source)
+                if name not in ("self", "cls"):
+                    type_hint = get_node_text(type_node, source) if type_node else None
+                    # Add prefix for splat patterns
+                    if splat_pattern:
+                        prefix = "*" if splat_pattern.type == "list_splat_pattern" else "**"
+                        name = f"{prefix}{name}"
+                    param_types[name] = type_hint
+
+        elif child.type == "default_parameter":
+            # Parameter with default: name = value
+            name_node = child.child_by_field_name("name")
+            if name_node:
+                name = get_node_text(name_node, source)
+                if name not in ("self", "cls"):
+                    param_types[name] = None
+
+        elif child.type == "typed_default_parameter":
+            # Parameter with type and default: name: type = value
+            name_node = child.child_by_field_name("name")
+            type_node = child.child_by_field_name("type")
+
+            if name_node:
+                name = get_node_text(name_node, source)
+                if name not in ("self", "cls"):
+                    type_hint = get_node_text(type_node, source) if type_node else None
+                    param_types[name] = type_hint
+
+        elif child.type in ("list_splat_pattern", "dictionary_splat_pattern"):
+            # *args or **kwargs
+            for c in child.children:
+                if c.type == "identifier":
+                    name = get_node_text(c, source)
+                    prefix = "*" if child.type == "list_splat_pattern" else "**"
+                    param_types[f"{prefix}{name}"] = None
+                    break
+                elif c.type == "typed_parameter":
+                    # *args: type or **kwargs: type
+                    inner_name = None
+                    inner_type = None
+                    for tc in c.children:
+                        if tc.type == "identifier":
+                            inner_name = tc
+                        elif tc.type == "type":
+                            inner_type = tc
+                    if inner_name:
+                        name = get_node_text(inner_name, source)
+                        prefix = "*" if child.type == "list_splat_pattern" else "**"
+                        type_hint = get_node_text(inner_type, source) if inner_type else None
+                        param_types[f"{prefix}{name}"] = type_hint
+                    break
+
+    return param_types
+
+
+def extract_python_parameter_defaults(func_node: Node, source: bytes) -> dict[str, str]:
+    """Extract parameter default values from a Python function.
+
+    Args:
+        func_node: The function_definition AST node.
+        source: Source code bytes.
+
+    Returns:
+        Dictionary mapping parameter names to their default values.
+    """
+    defaults: dict[str, str] = {}
+    params_node = func_node.child_by_field_name("parameters")
+    if not params_node:
+        return defaults
+
+    for child in params_node.children:
+        if child.type == "default_parameter":
+            name_node = child.child_by_field_name("name")
+            value_node = child.child_by_field_name("value")
+            if name_node and value_node:
+                name = get_node_text(name_node, source)
+                if name not in ("self", "cls"):
+                    defaults[name] = get_node_text(value_node, source)
+
+        elif child.type == "typed_default_parameter":
+            name_node = child.child_by_field_name("name")
+            value_node = child.child_by_field_name("value")
+            if name_node and value_node:
+                name = get_node_text(name_node, source)
+                if name not in ("self", "cls"):
+                    defaults[name] = get_node_text(value_node, source)
+
+    return defaults
+
+
+def extract_python_return_type(func_node: Node, source: bytes) -> str | None:
+    """Extract return type annotation from a Python function.
+
+    Args:
+        func_node: The function_definition AST node.
+        source: Source code bytes.
+
+    Returns:
+        Return type string or None.
+    """
+    return_type_node = func_node.child_by_field_name("return_type")
+    if return_type_node:
+        return get_node_text(return_type_node, source)
+    return None
+
+
+def extract_python_decorators(func_node: Node, source: bytes) -> list[str]:
+    """Extract decorators from a Python function.
+
+    Args:
+        func_node: The function_definition AST node.
+        source: Source code bytes.
+
+    Returns:
+        List of decorator strings.
+    """
+    decorators = []
+    if func_node.parent:
+        prev_sibling = func_node.prev_sibling
+        while prev_sibling:
+            if prev_sibling.type == "decorator":
+                dec_text = get_node_text(prev_sibling, source)
+                decorators.insert(0, dec_text)
+            elif prev_sibling.type not in ("comment", "decorator"):
+                break
+            prev_sibling = prev_sibling.prev_sibling
+    return decorators
+
+
+def is_async_function(func_node: Node) -> bool:
+    """Check if a function is async.
+
+    Args:
+        func_node: The function AST node.
+
+    Returns:
+        True if the function is async.
+    """
+    return func_node.type == "async_function_definition" or any(
+        c.type == "async" for c in func_node.children
+    )
+
+
+def extract_function_type_metadata(
+    func_node: Node, source: bytes, language: Language
+) -> dict[str, Any]:
+    """Extract type annotation metadata from a function node.
+
+    Args:
+        func_node: The function AST node.
+        source: Source code bytes.
+        language: Programming language.
+
+    Returns:
+        Metadata dictionary with type information.
+    """
+    metadata: dict[str, Any] = {}
+
+    if language == Language.PYTHON:
+        # Extract parameter types
+        param_types = extract_python_parameter_types(func_node, source)
+        # Only include parameters that have type hints
+        typed_params = {k: v for k, v in param_types.items() if v is not None}
+        if typed_params:
+            metadata["parameter_types"] = typed_params
+
+        # Extract parameter defaults
+        param_defaults = extract_python_parameter_defaults(func_node, source)
+        if param_defaults:
+            metadata["parameter_defaults"] = param_defaults
+
+        # Extract return type
+        return_type = extract_python_return_type(func_node, source)
+        if return_type:
+            metadata["return_type"] = return_type
+
+        # Extract decorators
+        decorators = extract_python_decorators(func_node, source)
+        if decorators:
+            metadata["decorators"] = decorators
+
+        # Check if async
+        if is_async_function(func_node):
+            metadata["is_async"] = True
+
+    # TODO: Add support for other languages (TypeScript, Java, etc.)
+
+    return metadata
 
 
 class CodeChunker:
@@ -517,6 +755,9 @@ class CodeChunker:
         content = get_node_text(method_node, source)
         docstring = get_docstring(method_node, source, language)
 
+        # Extract type annotation metadata
+        metadata = extract_function_type_metadata(method_node, source, language)
+
         chunk_id = self._generate_id(
             file_path, f"{class_name}.{method_name}", method_node.start_point[0]
         )
@@ -531,6 +772,7 @@ class CodeChunker:
             end_line=method_node.end_point[0] + 1,
             docstring=docstring,
             parent_name=class_name,
+            metadata=metadata,
         )
 
     def _create_function_chunk(
@@ -555,6 +797,9 @@ class CodeChunker:
         content = get_node_text(func_node, source)
         docstring = get_docstring(func_node, source, language)
 
+        # Extract type annotation metadata
+        metadata = extract_function_type_metadata(func_node, source, language)
+
         chunk_id = self._generate_id(file_path, f"func_{func_name}", func_node.start_point[0])
         return CodeChunk(
             id=chunk_id,
@@ -566,6 +811,7 @@ class CodeChunker:
             start_line=func_node.start_point[0] + 1,
             end_line=func_node.end_point[0] + 1,
             docstring=docstring,
+            metadata=metadata,
         )
 
     def _is_inside_class(self, node: Node, class_types: set[str]) -> bool:

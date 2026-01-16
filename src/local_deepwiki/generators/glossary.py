@@ -16,6 +16,10 @@ class EntityEntry:
     file_path: str
     parent_name: str | None = None
     docstring: str | None = None
+    # Type annotation metadata
+    parameter_types: dict[str, str] | None = None
+    return_type: str | None = None
+    is_async: bool = False
 
 
 async def collect_all_entities(
@@ -37,6 +41,12 @@ async def collect_all_entities(
         chunks = await vector_store.get_chunks_by_file(file_info.path)
 
         for chunk in chunks:
+            # Extract type annotation metadata if available
+            metadata = chunk.metadata or {}
+            param_types = metadata.get("parameter_types")
+            return_type = metadata.get("return_type")
+            is_async = metadata.get("is_async", False)
+
             if chunk.chunk_type == ChunkType.CLASS:
                 entities.append(
                     EntityEntry(
@@ -53,6 +63,9 @@ async def collect_all_entities(
                         entity_type="function",
                         file_path=file_info.path,
                         docstring=chunk.docstring,
+                        parameter_types=param_types,
+                        return_type=return_type,
+                        is_async=is_async,
                     )
                 )
             elif chunk.chunk_type == ChunkType.METHOD:
@@ -63,6 +76,9 @@ async def collect_all_entities(
                         file_path=file_info.path,
                         parent_name=chunk.parent_name,
                         docstring=chunk.docstring,
+                        parameter_types=param_types,
+                        return_type=return_type,
+                        is_async=is_async,
                     )
                 )
 
@@ -136,6 +152,48 @@ def _get_brief_description(docstring: str | None, max_length: int = 60) -> str:
     return first_line
 
 
+def _format_signature(entity: EntityEntry, max_params: int = 3) -> str:
+    """Format a compact function/method signature showing types.
+
+    Args:
+        entity: The entity entry with type information.
+        max_params: Maximum number of parameters to show before truncating.
+
+    Returns:
+        Formatted signature string like "(x: int, y: str) -> bool" or empty string.
+    """
+    if entity.entity_type == "class":
+        return ""
+
+    parts = []
+
+    # Format parameters
+    if entity.parameter_types:
+        param_strs = []
+        param_items = list(entity.parameter_types.items())
+        shown_params = param_items[:max_params]
+        remaining = len(param_items) - max_params
+
+        for name, type_hint in shown_params:
+            if type_hint:
+                param_strs.append(f"{name}: {type_hint}")
+            else:
+                param_strs.append(name)
+
+        if remaining > 0:
+            param_strs.append(f"...+{remaining}")
+
+        parts.append(f"({', '.join(param_strs)})")
+    else:
+        parts.append("(...)")
+
+    # Add return type
+    if entity.return_type:
+        parts.append(f" → {entity.return_type}")
+
+    return "".join(parts)
+
+
 async def generate_glossary_page(
     index_status: IndexStatus,
     vector_store: VectorStore,
@@ -199,20 +257,26 @@ async def generate_glossary_page(
             wiki_link = _get_wiki_link(entity.file_path)
             file_name = Path(entity.file_path).name
 
-            # Type badge
-            type_badge = {
+            # Type badge (with async indicator)
+            base_badge = {
                 "class": "🔷",
                 "function": "🔹",
                 "method": "▪️",
             }.get(entity.entity_type, "")
+            async_marker = "⚡" if entity.is_async else ""
+            type_badge = f"{base_badge}{async_marker}"
+
+            # Type signature for functions/methods
+            signature = _format_signature(entity)
+            sig_part = f" `{signature}`" if signature else ""
 
             # Brief description
             desc = _get_brief_description(entity.docstring)
             desc_part = f" - {desc}" if desc else ""
 
             lines.append(
-                f"- {type_badge} **[`{display_name}`]({wiki_link})** "
-                f"({entity.entity_type}, `{file_name}`){desc_part}"
+                f"- {type_badge} **[`{display_name}`]({wiki_link})**{sig_part} "
+                f"(`{file_name}`){desc_part}"
             )
 
         lines.append("")
@@ -220,7 +284,7 @@ async def generate_glossary_page(
     # Add legend
     lines.append("---")
     lines.append("")
-    lines.append("**Legend:** 🔷 Class | 🔹 Function | ▪️ Method")
+    lines.append("**Legend:** 🔷 Class | 🔹 Function | ▪️ Method | ⚡ Async")
     lines.append("")
 
     return "\n".join(lines)
