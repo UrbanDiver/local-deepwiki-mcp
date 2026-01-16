@@ -4,7 +4,72 @@ Recent changes to this repository.
 
 ## Recent Commits
 
+### January 15, 2026
+
+- [`0d91a70`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/0d91a70) Apply Python best practices: black, isort, mypy type fixes
+  - Files: `pyproject.toml`, `src/local_deepwiki/core/chunker.py`, `src/local_deepwiki/core/deep_research.py`, `src/local_deepwiki/core/indexer.py`, `src/local_deepwiki/core/llm_cache.py` (+45 more)
+
+- [`c43354c`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/c43354c) Improve test coverage for multiple modules to 92% overall
+  - Files: `tests/test_callgraph.py`, `tests/test_export_init.py`, `tests/test_git_utils.py`, `tests/test_llm_providers.py`, `tests/test_local_embedding_provider.py` (+5 more)
+
+- [`05e5e3e`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/05e5e3e) Improve web/app.py test coverage from 57% to 76%
+  - Files: `tests/test_web.py`
+
+- [`83ff230`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/83ff230) Improve manifest.py test coverage from 67% to 96%
+  - Files: `tests/test_manifest.py`
+
+- [`8eb23f8`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/8eb23f8) Improve llm_cache.py test coverage from 72% to 99%
+  - Files: `tests/test_llm_cache.py`, `tests/test_pdf_export.py`
+
+- [`c2c3ab7`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/c2c3ab7) Improve chunker.py test coverage from 56% to 97%
+  - Files: `tests/test_chunker.py`
+
+- [`887852b`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/887852b) Improve handlers.py test coverage from 71% to 94%
+  - Files: `tests/test_handlers_coverage.py`
+
+- [`c047afd`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/c047afd) Improve logging.py test coverage from 46% to 100%
+  - Files: `tests/test_logging_coverage.py`
+
+- [`bf37297`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/bf37297) Improve watcher.py test coverage from 48% to 99%
+  - Files: `tests/test_watcher.py`
+
+- [`b89dc25`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/b89dc25) Fix: Use lazy imports for PDF exports to avoid WeasyPrint dependency errors
+  - Files: `src/local_deepwiki/export/__init__.py`
+
+- [`593e921`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/593e921) Add comprehensive tests for wiki_modules.py and wiki_files.py
+  - Files: `tests/test_wiki_files_coverage.py`, `tests/test_wiki_modules_coverage.py`
+
+- [`fa3c469`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/fa3c469) Add comprehensive tests for wiki_pages.py (9% -> 100% coverage)
+  - Files: `tests/test_wiki_pages_coverage.py`
+
 ### January 14, 2026
+
+- [`bb4b13f`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/bb4b13f) Add comprehensive tests for wiki.py (16% -> 85% coverage)
+  - Files: `tests/test_wiki_coverage.py`
+
+- [`e9d6602`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/e9d6602) Add comprehensive tests for handlers.py (19% -> 64% coverage)
+  - Files: `tests/test_handlers_coverage.py`
+
+- [`4dcfc94`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/4dcfc94) Add pytest-cov dev dependency for test coverage reporting
+  - Files: `pyproject.toml`, `uv.lock`
+
+- [`65d50b1`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/65d50b1) Fix remaining pyright type errors
+  - Files: `src/local_deepwiki/core/chunker.py`, `src/local_deepwiki/core/llm_cache.py`, `src/local_deepwiki/core/vectorstore.py`, `src/local_deepwiki/generators/wiki.py`
+
+- [`8078321`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/8078321) Fix ruff and pyright code quality issues
+  - Files: `src/local_deepwiki/core/indexer.py`, `src/local_deepwiki/core/llm_cache.py`, `src/local_deepwiki/generators/callgraph.py`, `src/local_deepwiki/generators/diagrams.py`, `src/local_deepwiki/generators/wiki_files.py` (+6 more)
+
+- [`815ed5f`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/815ed5f) Fix remaining generic exceptions with specific types and noqa comments
+  - Files: `src/local_deepwiki/export/html.py`, `src/local_deepwiki/export/pdf.py`, `src/local_deepwiki/generators/manifest.py`, `src/local_deepwiki/generators/test_examples.py`, `src/local_deepwiki/providers/llm/ollama.py` (+2 more)
+
+- [`39e8c73`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/39e8c73) Replace generic except Exception with specific exception types
+  - Files: `src/local_deepwiki/core/indexer.py`, `src/local_deepwiki/core/llm_cache.py`, `src/local_deepwiki/core/vectorstore.py`, `src/local_deepwiki/generators/wiki_status.py`, `src/local_deepwiki/handlers.py` (+1 more)
+
+- [`3defaaa`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/3defaaa) Refactor: Extract validation and wiki submodules for cleaner architecture
+  - Files: `CLAUDE.md`, `src/local_deepwiki/generators/wiki.py`, `src/local_deepwiki/generators/wiki_files.py`, `src/local_deepwiki/generators/wiki_modules.py`, `src/local_deepwiki/generators/wiki_status.py` (+4 more)
+
+- [`10625ea`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/10625ea) Regenerate wiki with TypeScript/TSX parsing support
+  - Files: `.deepwiki/architecture.md`, `.deepwiki/changelog.md`, `.deepwiki/dependencies.md`, `.deepwiki/files/index.md`, `.deepwiki/files/src/local_deepwiki/config.md` (+42 more)
 
 - [`55d665c`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/55d665c) Fix TypeScript/TSX parsing by handling module-specific language functions
   - Files: `src/local_deepwiki/core/parser.py`, `src/local_deepwiki/models.py`, `tests/test_parser.py`
@@ -33,89 +98,26 @@ Recent changes to this repository.
 - [`e90b8f7`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/e90b8f7) Refactor: Add [handle_tool_errors](files/src/local_deepwiki/handlers.md) [decorator](files/src/local_deepwiki/providers/base.md) for consistent error handling
   - Files: `src/local_deepwiki/server.py`
 
-- [`7172b23`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/7172b23) Refactor: Use dispatch dictionary for tool handlers
-  - Files: `src/local_deepwiki/server.py`
-
-- [`51c0806`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/51c0806) Refactor: Extract _row_to_chunk() helper in [VectorStore](files/src/local_deepwiki/core/vectorstore.md)
-  - Files: `src/local_deepwiki/core/vectorstore.py`
-
-- [`5fee5a2`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/5fee5a2) Regenerate wiki documentation with all file pages
-  - Files: `.deepwiki/architecture.md`, `.deepwiki/changelog.md`, `.deepwiki/dependencies.md`, `.deepwiki/files/index.md`, `.deepwiki/files/src/local_deepwiki/config.md` (+71 more)
-
-- [`8945a3d`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/8945a3d) Add chat_llm_provider config for web chat/research endpoints
-  - Files: `src/local_deepwiki/config.py`, `src/local_deepwiki/web/app.py`, `src/local_deepwiki/web/templates/chat.html`, `tests/test_config.py`
-
-- [`1d64f39`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/1d64f39) Increase max_file_docs from 20 to 75
-  - Files: `src/local_deepwiki/config.py`
-
-- [`5f52f84`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/5f52f84) Fix source refs to link all existing wiki pages
-  - Files: `src/local_deepwiki/generators/source_refs.py`, `src/local_deepwiki/generators/wiki.py`
-
-- [`42a9a7b`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/42a9a7b) Fix dependencies page: local links, source file priority, clean graph
-  - Files: `src/local_deepwiki/generators/diagrams.py`, `src/local_deepwiki/generators/source_refs.py`, `src/local_deepwiki/generators/wiki.py`
-
-- [`e25671f`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/e25671f) Mark Enhanced Import/Dependency Graphs as complete
-  - Files: `WIKI_IMPROVEMENTS.md`
-
-- [`c652a2a`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/c652a2a) Add enhanced dependency graph with subgraphs, clickable links, and external deps
-  - Files: `src/local_deepwiki/generators/diagrams.py`, `src/local_deepwiki/generators/wiki.py`, `tests/test_diagrams.py`
-
-- [`4ce879f`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/4ce879f) Fix Component Diagram Mermaid syntax error
-  - Files: `.deepwiki/architecture.md`
-
-- [`4cdd653`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/4cdd653) Add workflow sequence diagrams to architecture documentation
-  - Files: `.deepwiki/architecture.md`
-
-- [`36faa4d`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/36faa4d) Document cloud provider option for GitHub repos in CLAUDE.md
-  - Files: `CLAUDE.md`
-
-- [`1b6c406`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/1b6c406) Regenerate wiki documentation using Claude Sonnet
-  - Files: `.deepwiki/architecture.md`, `.deepwiki/changelog.md`, `.deepwiki/dependencies.md`, `.deepwiki/files/index.md`, `.deepwiki/files/src/local_deepwiki/config.md` (+31 more)
-
-- [`52202b9`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/52202b9) Add automatic cloud provider switching for GitHub repos
-  - Files: `src/local_deepwiki/config.py`, `src/local_deepwiki/core/git_utils.py`, `src/local_deepwiki/generators/wiki.py`, `src/local_deepwiki/server.py`, `tests/test_config.py` (+1 more)
-
-- [`2d4aa85`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/2d4aa85) Parallelize file docs generation for faster wiki builds
-  - Files: `src/local_deepwiki/config.py`, `src/local_deepwiki/generators/wiki.py`, `src/local_deepwiki/providers/llm/ollama.py`, `tests/test_ollama_health.py`, `tests/test_provider_errors.py`
-
-- [`d387d4f`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/d387d4f) Add provider-specific prompt templates for LLM optimization
-  - Files: `WIKI_IMPROVEMENTS.md`, `src/local_deepwiki/config.py`, `src/local_deepwiki/core/deep_research.py`, `src/local_deepwiki/generators/wiki.py`, `src/local_deepwiki/server.py` (+1 more)
-
-- [`7096531`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/7096531) Add cancellation support for deep research operations
-  - Files: `WIKI_IMPROVEMENTS.md`, `src/local_deepwiki/core/deep_research.py`, `src/local_deepwiki/models.py`, `src/local_deepwiki/server.py`, `tests/test_deep_research.py`
-
-- [`400c6b8`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/400c6b8) Add quick/thorough research presets for deep research
-  - Files: `WIKI_IMPROVEMENTS.md`, `src/local_deepwiki/config.py`, `src/local_deepwiki/server.py`, `tests/test_config.py`
-
-- [`4048ed9`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/4048ed9) Add workflow sequence diagrams to architecture documentation
-  - Files: `WIKI_IMPROVEMENTS.md`, `src/local_deepwiki/generators/diagrams.py`, `src/local_deepwiki/generators/wiki.py`, `tests/test_diagrams.py`
-
-- [`4f4c411`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/4f4c411) Add conversational chat interface to web UI
-  - Files: `WIKI_IMPROVEMENTS.md`, `src/local_deepwiki/web/app.py`, `src/local_deepwiki/web/templates/chat.html`, `src/local_deepwiki/web/templates/page.html`, `tests/test_web.py`
-
-- [`ac906d4`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/ac906d4) Add LLM response caching with embedding similarity
-  - Files: `WIKI_IMPROVEMENTS.md`, `src/local_deepwiki/config.py`, `src/local_deepwiki/core/llm_cache.py`, `src/local_deepwiki/providers/llm/__init__.py`, `src/local_deepwiki/providers/llm/cached.py` (+2 more)
-
 ## Statistics
 
 - **Commits shown**: 30
 - **Contributors**: 1
-- **Latest commit**: 2026-01-14
+- **Latest commit**: 2026-01-15
 
 ## Relevant Source Files
 
 The following source files were used to generate this documentation:
 
+- `tests/test_provider_factories.py:21-99`
 - `tests/test_parser.py:24-123`
 - `tests/test_retry.py:8-144`
 - `tests/test_ollama_health.py:16-19`
-- `tests/test_server_handlers.py:15-69`
-- `tests/test_chunker.py:11-182`
+- `tests/test_server_handlers.py:15-75`
+- `tests/test_chunker.py:13-428`
 - `tests/test_changelog.py:18-96`
 - `tests/test_vectorstore.py:9-28`
-- `tests/test_pdf_export.py:21-80`
-- `tests/test_search.py:20-53`
-- `tests/test_toc.py:17-43`
+- `tests/test_wiki_coverage.py:50-120`
+- `tests/test_pdf_export.py:23-82`
 
 
-*Showing 10 of 76 source files.*
+*Showing 10 of 91 source files.*

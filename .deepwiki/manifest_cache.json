@@ -41,7 +41,9 @@
       "pre-commit": ">=3.0",
       "black": ">=24.0",
       "isort": ">=5.0",
-      "mypy": ">=1.0"
+      "mypy": ">=1.0",
+      "types-PyYAML": ">=6.0",
+      "types-Markdown": ">=3.0"
     },
     "entry_points": {
       "local-deepwiki": "local_deepwiki.server:main",
@@ -59,6 +61,6 @@
     ]
   },
   "file_mtimes": {
-    "pyproject.toml": 1768317231.1681826
+    "pyproject.toml": 1768523948.1441264
   }
 }

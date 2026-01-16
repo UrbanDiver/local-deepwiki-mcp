@@ -1,65 +1,64 @@
-# Base Provider Module
+# EmbeddingProvider Base Class
 
 ## File Overview
 
-This file defines the abstract base class for embedding providers in the local_deepwiki system. It establishes the interface that all embedding provider implementations must follow.
+This file defines the abstract base class for embedding providers in the local_deepwiki system. It establishes the contract that all embedding provider implementations must follow.
 
 ## Classes
 
 ### EmbeddingProvider
 
-The EmbeddingProvider class serves as an abstract base class that defines the contract for all embedding provider implementations. It uses Python's ABC (Abstract Base Class) mechanism to enforce implementation of required methods.
+The EmbeddingProvider class serves as an abstract base class that defines the interface for all embedding providers. It ensures that concrete implementations provide methods for generating embeddings and retrieving embedding dimensions.
 
-#### Abstract Methods
+**Key Methods:**
 
-**embed**
+#### embed
 ```python
 async def embed(self, texts: list[str]) -> list[list[float]]
 ```
+
 Generates embeddings for a list of text strings.
 
-- **Parameters:**
-  - `texts`: List of text strings to embed
-- **Returns:** List of embedding vectors as lists of floats
-- **Note:** This is an asynchronous method that must be implemented by subclasses
+**Parameters:**
+- `texts`: List of text strings to embed
 
-**get_dimension**
+**Returns:**
+- List of embedding vectors as float lists
+
+This is an abstract method that must be implemented by concrete provider classes.
+
+#### get_dimension
 ```python
 def get_dimension(self) -> int
 ```
+
 Returns the dimension of the embedding vectors produced by this provider.
 
-- **Returns:** The dimension of the embedding vectors as an integer
+**Returns:**
+- The dimension of the embedding vectors as an integer
 
-**Abstract Property**
-The class also defines an abstract property (implementation not shown in the provided code).
+This is an abstract method that must be implemented by concrete provider classes.
 
 ## Usage Examples
 
-Since this is an abstract base class, it cannot be instantiated directly. Instead, it serves as a template for concrete implementations:
+Since this is an abstract base class, it cannot be instantiated directly. Concrete implementations would inherit from EmbeddingProvider:
 
 ```python
 from local_deepwiki.providers.base import EmbeddingProvider
 
-class ConcreteEmbeddingProvider(EmbeddingProvider):
+class MyEmbeddingProvider(EmbeddingProvider):
     async def embed(self, texts: list[str]) -> list[list[float]]:
         # Implementation specific logic
         pass
     
     def get_dimension(self) -> int:
-        # Return the specific dimension for this provider
+        # Return the embedding dimension
         return 768
 ```
 
-## Implementation Requirements
+## Related Components
 
-Any class inheriting from EmbeddingProvider must implement:
-
-1. The `embed` method for generating embeddings asynchronously
-2. The `get_dimension` method for reporting vector dimensions
-3. An abstract property (details not visible in provided code)
-
-The abstract nature of this class ensures that all embedding providers in the system follow a consistent interface, enabling interchangeable use of different embedding implementations.
+This base class is designed to be extended by concrete embedding provider implementations. Any class that inherits from EmbeddingProvider must implement both the `embed` and `get_dimension` methods to fulfill the abstract contract.
 
 ## API Reference
 
@@ -70,6 +69,44 @@ The abstract nature of this class ensures that all embedding providers in the sy
 Abstract base class for embedding providers.
 
 **Methods:**
+
+
+<details>
+<summary>View Source (lines 113-141)</summary>
+
+```python
+class EmbeddingProvider(ABC):
+    """Abstract base class for embedding providers."""
+
+    @abstractmethod
+    async def embed(self, texts: list[str]) -> list[list[float]]:
+        """Generate embeddings for a list of texts.
+
+        Args:
+            texts: List of text strings to embed.
+
+        Returns:
+            List of embedding vectors.
+        """
+        pass
+
+    @abstractmethod
+    def get_dimension(self) -> int:
+        """Get the embedding dimension.
+
+        Returns:
+            The dimension of the embedding vectors.
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """Get the provider name."""
+        pass
+```
+
+</details>
 
 #### `embed`
 
@@ -84,6 +121,44 @@ Generate embeddings for a list of texts.
 |-----------|------|---------|-------------|
 | `texts` | `list[str]` | - | List of text strings to embed. |
 
+
+<details>
+<summary>View Source (lines 113-141)</summary>
+
+```python
+class EmbeddingProvider(ABC):
+    """Abstract base class for embedding providers."""
+
+    @abstractmethod
+    async def embed(self, texts: list[str]) -> list[list[float]]:
+        """Generate embeddings for a list of texts.
+
+        Args:
+            texts: List of text strings to embed.
+
+        Returns:
+            List of embedding vectors.
+        """
+        pass
+
+    @abstractmethod
+    def get_dimension(self) -> int:
+        """Get the embedding dimension.
+
+        Returns:
+            The dimension of the embedding vectors.
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """Get the provider name."""
+        pass
+```
+
+</details>
+
 #### `get_dimension`
 
 ```python
@@ -91,6 +166,44 @@ def get_dimension() -> int
 ```
 
 Get the embedding dimension.
+
+
+<details>
+<summary>View Source (lines 113-141)</summary>
+
+```python
+class EmbeddingProvider(ABC):
+    """Abstract base class for embedding providers."""
+
+    @abstractmethod
+    async def embed(self, texts: list[str]) -> list[list[float]]:
+        """Generate embeddings for a list of texts.
+
+        Args:
+            texts: List of text strings to embed.
+
+        Returns:
+            List of embedding vectors.
+        """
+        pass
+
+    @abstractmethod
+    def get_dimension(self) -> int:
+        """Get the embedding dimension.
+
+        Returns:
+            The dimension of the embedding vectors.
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """Get the provider name."""
+        pass
+```
+
+</details>
 
 #### `name`
 
@@ -101,6 +214,44 @@ def name() -> str
 Get the provider name.
 
 
+
+<details>
+<summary>View Source (lines 113-141)</summary>
+
+```python
+class EmbeddingProvider(ABC):
+    """Abstract base class for embedding providers."""
+
+    @abstractmethod
+    async def embed(self, texts: list[str]) -> list[list[float]]:
+        """Generate embeddings for a list of texts.
+
+        Args:
+            texts: List of text strings to embed.
+
+        Returns:
+            List of embedding vectors.
+        """
+        pass
+
+    @abstractmethod
+    def get_dimension(self) -> int:
+        """Get the embedding dimension.
+
+        Returns:
+            The dimension of the embedding vectors.
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """Get the provider name."""
+        pass
+```
+
+</details>
+
 ### class `LLMProvider`
 
 **Inherits from:** `ABC`
@@ -108,6 +259,68 @@ Get the provider name.
 Abstract base class for LLM providers.
 
 **Methods:**
+
+
+<details>
+<summary>View Source (lines 144-196)</summary>
+
+```python
+class LLMProvider(ABC):
+    """Abstract base class for LLM providers."""
+
+    @abstractmethod
+    async def generate(
+        self,
+        prompt: str,
+        system_prompt: str | None = None,
+        max_tokens: int = 4096,
+        temperature: float = 0.7,
+    ) -> str:
+        """Generate text from a prompt.
+
+        Args:
+            prompt: The user prompt.
+            system_prompt: Optional system prompt.
+            max_tokens: Maximum tokens to generate.
+            temperature: Sampling temperature.
+
+        Returns:
+            Generated text.
+        """
+        pass
+
+    @abstractmethod
+    async def generate_stream(
+        self,
+        prompt: str,
+        system_prompt: str | None = None,
+        max_tokens: int = 4096,
+        temperature: float = 0.7,
+    ) -> AsyncIterator[str]:
+        """Generate text from a prompt with streaming.
+
+        Args:
+            prompt: The user prompt.
+            system_prompt: Optional system prompt.
+            max_tokens: Maximum tokens to generate.
+            temperature: Sampling temperature.
+
+        Yields:
+            Generated text chunks.
+        """
+        # Make this an async generator for proper typing
+        if False:  # pragma: no cover
+            yield ""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """Get the provider name."""
+        pass
+```
+
+</details>
 
 #### `generate`
 
@@ -125,6 +338,68 @@ Generate text from a prompt.
 | `max_tokens` | `int` | `4096` | Maximum tokens to generate. |
 | `temperature` | `float` | `0.7` | Sampling temperature. |
 
+
+<details>
+<summary>View Source (lines 144-196)</summary>
+
+```python
+class LLMProvider(ABC):
+    """Abstract base class for LLM providers."""
+
+    @abstractmethod
+    async def generate(
+        self,
+        prompt: str,
+        system_prompt: str | None = None,
+        max_tokens: int = 4096,
+        temperature: float = 0.7,
+    ) -> str:
+        """Generate text from a prompt.
+
+        Args:
+            prompt: The user prompt.
+            system_prompt: Optional system prompt.
+            max_tokens: Maximum tokens to generate.
+            temperature: Sampling temperature.
+
+        Returns:
+            Generated text.
+        """
+        pass
+
+    @abstractmethod
+    async def generate_stream(
+        self,
+        prompt: str,
+        system_prompt: str | None = None,
+        max_tokens: int = 4096,
+        temperature: float = 0.7,
+    ) -> AsyncIterator[str]:
+        """Generate text from a prompt with streaming.
+
+        Args:
+            prompt: The user prompt.
+            system_prompt: Optional system prompt.
+            max_tokens: Maximum tokens to generate.
+            temperature: Sampling temperature.
+
+        Yields:
+            Generated text chunks.
+        """
+        # Make this an async generator for proper typing
+        if False:  # pragma: no cover
+            yield ""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """Get the provider name."""
+        pass
+```
+
+</details>
+
 #### `generate_stream`
 
 ```python
@@ -141,6 +416,68 @@ Generate text from a prompt with streaming.
 | `max_tokens` | `int` | `4096` | Maximum tokens to generate. |
 | `temperature` | `float` | `0.7` | Sampling temperature. |
 
+
+<details>
+<summary>View Source (lines 144-196)</summary>
+
+```python
+class LLMProvider(ABC):
+    """Abstract base class for LLM providers."""
+
+    @abstractmethod
+    async def generate(
+        self,
+        prompt: str,
+        system_prompt: str | None = None,
+        max_tokens: int = 4096,
+        temperature: float = 0.7,
+    ) -> str:
+        """Generate text from a prompt.
+
+        Args:
+            prompt: The user prompt.
+            system_prompt: Optional system prompt.
+            max_tokens: Maximum tokens to generate.
+            temperature: Sampling temperature.
+
+        Returns:
+            Generated text.
+        """
+        pass
+
+    @abstractmethod
+    async def generate_stream(
+        self,
+        prompt: str,
+        system_prompt: str | None = None,
+        max_tokens: int = 4096,
+        temperature: float = 0.7,
+    ) -> AsyncIterator[str]:
+        """Generate text from a prompt with streaming.
+
+        Args:
+            prompt: The user prompt.
+            system_prompt: Optional system prompt.
+            max_tokens: Maximum tokens to generate.
+            temperature: Sampling temperature.
+
+        Yields:
+            Generated text chunks.
+        """
+        # Make this an async generator for proper typing
+        if False:  # pragma: no cover
+            yield ""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """Get the provider name."""
+        pass
+```
+
+</details>
+
 #### `name`
 
 ```python
@@ -151,6 +488,68 @@ Get the provider name.
 
 
 ---
+
+
+<details>
+<summary>View Source (lines 144-196)</summary>
+
+```python
+class LLMProvider(ABC):
+    """Abstract base class for LLM providers."""
+
+    @abstractmethod
+    async def generate(
+        self,
+        prompt: str,
+        system_prompt: str | None = None,
+        max_tokens: int = 4096,
+        temperature: float = 0.7,
+    ) -> str:
+        """Generate text from a prompt.
+
+        Args:
+            prompt: The user prompt.
+            system_prompt: Optional system prompt.
+            max_tokens: Maximum tokens to generate.
+            temperature: Sampling temperature.
+
+        Returns:
+            Generated text.
+        """
+        pass
+
+    @abstractmethod
+    async def generate_stream(
+        self,
+        prompt: str,
+        system_prompt: str | None = None,
+        max_tokens: int = 4096,
+        temperature: float = 0.7,
+    ) -> AsyncIterator[str]:
+        """Generate text from a prompt with streaming.
+
+        Args:
+            prompt: The user prompt.
+            system_prompt: Optional system prompt.
+            max_tokens: Maximum tokens to generate.
+            temperature: Sampling temperature.
+
+        Yields:
+            Generated text chunks.
+        """
+        # Make this an async generator for proper typing
+        if False:  # pragma: no cover
+            yield ""
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        """Get the provider name."""
+        pass
+```
+
+</details>
 
 ### Functions
 
@@ -174,6 +573,105 @@ Decorator for adding retry logic with exponential backoff to async functions.
 **Returns:** `Callable[[Callable[..., Any]], Callable[..., Any]]`
 
 
+
+<details>
+<summary>View Source (lines 21-110)</summary>
+
+```python
+def with_retry(
+    max_attempts: int = 3,
+    base_delay: float = 1.0,
+    max_delay: float = 30.0,
+    exponential_base: float = 2.0,
+    jitter: bool = True,
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+    """Decorator for adding retry logic with exponential backoff to async functions.
+
+    Args:
+        max_attempts: Maximum number of attempts before giving up.
+        base_delay: Initial delay between retries in seconds.
+        max_delay: Maximum delay between retries in seconds.
+        exponential_base: Base for exponential backoff calculation.
+        jitter: Whether to add random jitter to delays.
+
+    Returns:
+        Decorated function with retry logic.
+    """
+
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+        @wraps(func)
+        async def wrapper(*args: Any, **kwargs: Any) -> Any:
+            last_exception: Exception | None = None
+
+            for attempt in range(1, max_attempts + 1):
+                try:
+                    return await func(*args, **kwargs)
+                except RETRYABLE_EXCEPTIONS as e:
+                    last_exception = e
+                    if attempt == max_attempts:
+                        logger.warning(f"{func.__name__} failed after {max_attempts} attempts: {e}")
+                        raise
+
+                    # Calculate delay with exponential backoff
+                    delay = min(base_delay * (exponential_base ** (attempt - 1)), max_delay)
+                    if jitter:
+                        delay = delay * (0.5 + random.random())
+
+                    logger.warning(
+                        f"{func.__name__} attempt {attempt} failed: {e}. "
+                        f"Retrying in {delay:.2f}s..."
+                    )
+                    await asyncio.sleep(delay)
+                except Exception as e:  # noqa: BLE001
+                    # Broad catch is intentional: different API providers (Anthropic, OpenAI,
+                    # Ollama) raise different exception types for rate limits. We inspect
+                    # the error message to determine retry behavior, and re-raise immediately
+                    # if not a recognized retryable condition.
+                    error_str = str(e).lower()
+                    if "rate" in error_str and "limit" in error_str:
+                        last_exception = e
+                        if attempt == max_attempts:
+                            logger.warning(
+                                f"{func.__name__} rate limited after {max_attempts} attempts"
+                            )
+                            raise
+
+                        delay = min(base_delay * (exponential_base**attempt), max_delay)
+                        if jitter:
+                            delay = delay * (0.5 + random.random())
+
+                        logger.warning(f"{func.__name__} rate limited. Retrying in {delay:.2f}s...")
+                        await asyncio.sleep(delay)
+                    elif "overloaded" in error_str or "503" in error_str or "502" in error_str:
+                        # Server overloaded - retry with backoff
+                        last_exception = e
+                        if attempt == max_attempts:
+                            raise
+
+                        delay = min(base_delay * (exponential_base**attempt), max_delay)
+                        if jitter:
+                            delay = delay * (0.5 + random.random())
+
+                        logger.warning(
+                            f"{func.__name__} server overloaded. Retrying in {delay:.2f}s..."
+                        )
+                        await asyncio.sleep(delay)
+                    else:
+                        # Non-retryable error
+                        raise
+
+            # Should not reach here, but just in case
+            if last_exception:
+                raise last_exception
+            raise RuntimeError(f"{func.__name__} failed unexpectedly")
+
+        return wrapper
+
+    return decorator
+```
+
+</details>
+
 #### `decorator`
 
 ```python
@@ -188,6 +686,83 @@ def decorator(func: Callable[..., Any]) -> Callable[..., Any]
 **Returns:** `Callable[..., Any]`
 
 
+
+<details>
+<summary>View Source (lines 41-108)</summary>
+
+```python
+def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+        @wraps(func)
+        async def wrapper(*args: Any, **kwargs: Any) -> Any:
+            last_exception: Exception | None = None
+
+            for attempt in range(1, max_attempts + 1):
+                try:
+                    return await func(*args, **kwargs)
+                except RETRYABLE_EXCEPTIONS as e:
+                    last_exception = e
+                    if attempt == max_attempts:
+                        logger.warning(f"{func.__name__} failed after {max_attempts} attempts: {e}")
+                        raise
+
+                    # Calculate delay with exponential backoff
+                    delay = min(base_delay * (exponential_base ** (attempt - 1)), max_delay)
+                    if jitter:
+                        delay = delay * (0.5 + random.random())
+
+                    logger.warning(
+                        f"{func.__name__} attempt {attempt} failed: {e}. "
+                        f"Retrying in {delay:.2f}s..."
+                    )
+                    await asyncio.sleep(delay)
+                except Exception as e:  # noqa: BLE001
+                    # Broad catch is intentional: different API providers (Anthropic, OpenAI,
+                    # Ollama) raise different exception types for rate limits. We inspect
+                    # the error message to determine retry behavior, and re-raise immediately
+                    # if not a recognized retryable condition.
+                    error_str = str(e).lower()
+                    if "rate" in error_str and "limit" in error_str:
+                        last_exception = e
+                        if attempt == max_attempts:
+                            logger.warning(
+                                f"{func.__name__} rate limited after {max_attempts} attempts"
+                            )
+                            raise
+
+                        delay = min(base_delay * (exponential_base**attempt), max_delay)
+                        if jitter:
+                            delay = delay * (0.5 + random.random())
+
+                        logger.warning(f"{func.__name__} rate limited. Retrying in {delay:.2f}s...")
+                        await asyncio.sleep(delay)
+                    elif "overloaded" in error_str or "503" in error_str or "502" in error_str:
+                        # Server overloaded - retry with backoff
+                        last_exception = e
+                        if attempt == max_attempts:
+                            raise
+
+                        delay = min(base_delay * (exponential_base**attempt), max_delay)
+                        if jitter:
+                            delay = delay * (0.5 + random.random())
+
+                        logger.warning(
+                            f"{func.__name__} server overloaded. Retrying in {delay:.2f}s..."
+                        )
+                        await asyncio.sleep(delay)
+                    else:
+                        # Non-retryable error
+                        raise
+
+            # Should not reach here, but just in case
+            if last_exception:
+                raise last_exception
+            raise RuntimeError(f"{func.__name__} failed unexpectedly")
+
+        return wrapper
+```
+
+</details>
+
 #### `wrapper`
 
 `@wraps(func)`
@@ -199,6 +774,79 @@ async def wrapper() -> Any
 **Returns:** `Any`
 
 
+
+
+<details>
+<summary>View Source (lines 43-106)</summary>
+
+```python
+async def wrapper(*args: Any, **kwargs: Any) -> Any:
+            last_exception: Exception | None = None
+
+            for attempt in range(1, max_attempts + 1):
+                try:
+                    return await func(*args, **kwargs)
+                except RETRYABLE_EXCEPTIONS as e:
+                    last_exception = e
+                    if attempt == max_attempts:
+                        logger.warning(f"{func.__name__} failed after {max_attempts} attempts: {e}")
+                        raise
+
+                    # Calculate delay with exponential backoff
+                    delay = min(base_delay * (exponential_base ** (attempt - 1)), max_delay)
+                    if jitter:
+                        delay = delay * (0.5 + random.random())
+
+                    logger.warning(
+                        f"{func.__name__} attempt {attempt} failed: {e}. "
+                        f"Retrying in {delay:.2f}s..."
+                    )
+                    await asyncio.sleep(delay)
+                except Exception as e:  # noqa: BLE001
+                    # Broad catch is intentional: different API providers (Anthropic, OpenAI,
+                    # Ollama) raise different exception types for rate limits. We inspect
+                    # the error message to determine retry behavior, and re-raise immediately
+                    # if not a recognized retryable condition.
+                    error_str = str(e).lower()
+                    if "rate" in error_str and "limit" in error_str:
+                        last_exception = e
+                        if attempt == max_attempts:
+                            logger.warning(
+                                f"{func.__name__} rate limited after {max_attempts} attempts"
+                            )
+                            raise
+
+                        delay = min(base_delay * (exponential_base**attempt), max_delay)
+                        if jitter:
+                            delay = delay * (0.5 + random.random())
+
+                        logger.warning(f"{func.__name__} rate limited. Retrying in {delay:.2f}s...")
+                        await asyncio.sleep(delay)
+                    elif "overloaded" in error_str or "503" in error_str or "502" in error_str:
+                        # Server overloaded - retry with backoff
+                        last_exception = e
+                        if attempt == max_attempts:
+                            raise
+
+                        delay = min(base_delay * (exponential_base**attempt), max_delay)
+                        if jitter:
+                            delay = delay * (0.5 + random.random())
+
+                        logger.warning(
+                            f"{func.__name__} server overloaded. Retrying in {delay:.2f}s..."
+                        )
+                        await asyncio.sleep(delay)
+                    else:
+                        # Non-retryable error
+                        raise
+
+            # Should not reach here, but just in case
+            if last_exception:
+                raise last_exception
+            raise RuntimeError(f"{func.__name__} failed unexpectedly")
+```
+
+</details>
 
 ## Class Diagram
 
@@ -252,11 +900,10 @@ flowchart TD
 
 ## Relevant Source Files
 
-- `src/local_deepwiki/providers/base.py:110-138`
+- `src/local_deepwiki/providers/base.py:113-141`
 
 ## See Also
 
 - [local](embeddings/local.md) - uses this
-- [llm_cache](../core/llm_cache.md) - uses this
 - [vectorstore](../core/vectorstore.md) - uses this
 - [openai](embeddings/openai.md) - uses this

@@ -7,7 +7,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from local_deepwiki.generators.wiki_files import (
+    _create_source_details,
     _generate_files_index,
+    _inject_inline_source_code,
     generate_file_docs,
     generate_single_file_doc,
 )
@@ -65,6 +67,7 @@ def make_code_chunk(
     language: Language = Language.PYTHON,
     start_line: int = 1,
     end_line: int = 10,
+    parent_name: str | None = None,
 ) -> CodeChunk:
     """Helper to create CodeChunk with sensible defaults."""
     return CodeChunk(
@@ -76,6 +79,7 @@ def make_code_chunk(
         content=content,
         start_line=start_line,
         end_line=end_line,
+        parent_name=parent_name,
     )
 
 
@@ -1108,3 +1112,365 @@ class TestGenerateFilesIndex:
         result = _generate_files_index([])
 
         assert "# Source Files" in result
+
+
+class TestCreateSourceDetails:
+    """Tests for _create_source_details function."""
+
+    def test_creates_details_block(self):
+        """Test creates a properly formatted details block."""
+        chunk = make_code_chunk(
+            name="my_func",
+            chunk_type=ChunkType.FUNCTION,
+            content="def my_func():\n    pass",
+            start_line=10,
+            end_line=12,
+        )
+
+        result = _create_source_details(chunk, "python")
+
+        assert "<details>" in result
+        assert "</details>" in result
+        assert "View Source (lines 10-12)" in result
+        assert "```python" in result
+        assert "def my_func():" in result
+
+    def test_uses_correct_syntax_highlighting(self):
+        """Test uses the provided syntax language."""
+        chunk = make_code_chunk(
+            name="main",
+            chunk_type=ChunkType.FUNCTION,
+            content="func main() {}",
+            language=Language.GO,
+        )
+
+        result = _create_source_details(chunk, "go")
+
+        assert "```go" in result
+
+
+class TestInjectInlineSourceCode:
+    """Tests for _inject_inline_source_code function."""
+
+    def test_injects_source_after_api_reference_function(self):
+        """Test injects source code after function in API Reference."""
+        content = """## API Reference
+
+### Functions
+
+#### `my_func`
+
+```python
+def my_func() -> None
+```
+
+Does something.
+
+**Returns:** `None`
+
+## Other Section
+"""
+        chunk = make_code_chunk(
+            name="my_func",
+            chunk_type=ChunkType.FUNCTION,
+            content="def my_func():\n    pass",
+            start_line=10,
+            end_line=12,
+        )
+
+        result = _inject_inline_source_code(content, [chunk], "python")
+
+        # Source should appear after Returns
+        assert "View Source (lines 10-12)" in result
+        assert "<details>" in result
+        # Source should be before "Other Section"
+        source_pos = result.find("View Source")
+        other_pos = result.find("## Other Section")
+        assert source_pos < other_pos
+
+    def test_handles_multiple_functions(self):
+        """Test handles multiple functions in API Reference."""
+        content = """## API Reference
+
+### Functions
+
+#### `func_a`
+
+```python
+def func_a() -> None
+```
+
+First function.
+
+**Returns:** `None`
+
+#### `func_b`
+
+```python
+def func_b() -> str
+```
+
+Second function.
+
+**Returns:** `str`
+"""
+        chunks = [
+            make_code_chunk(
+                name="func_a",
+                chunk_type=ChunkType.FUNCTION,
+                content="def func_a():\n    pass",
+                start_line=1,
+                end_line=3,
+            ),
+            make_code_chunk(
+                name="func_b",
+                chunk_type=ChunkType.FUNCTION,
+                content="def func_b():\n    return 'hello'",
+                start_line=5,
+                end_line=7,
+            ),
+        ]
+
+        result = _inject_inline_source_code(content, chunks, "python")
+
+        # Both functions should have source
+        assert "View Source (lines 1-3)" in result
+        assert "View Source (lines 5-7)" in result
+
+    def test_adds_unmatched_chunks_to_additional_section(self):
+        """Test adds unmatched chunks to Additional Source Code section."""
+        content = """## API Reference
+
+#### `unknown_func`
+
+Some description.
+"""
+        chunk = make_code_chunk(
+            name="other_func",
+            chunk_type=ChunkType.FUNCTION,
+            content="def other_func():\n    pass",
+        )
+
+        result = _inject_inline_source_code(content, [chunk], "python")
+
+        # Original content should be there
+        assert "#### `unknown_func`" in result
+        # Unmatched chunk should appear in Additional Source Code section
+        assert "## Additional Source Code" in result
+        assert "#### `other_func`" in result
+        assert "View Source" in result
+
+    def test_returns_unchanged_for_empty_chunks(self):
+        """Test returns unchanged content for empty chunk list."""
+        content = "## Some content\n\nMore content."
+
+        result = _inject_inline_source_code(content, [], "python")
+
+        assert result == content
+
+    def test_skips_non_code_chunks(self):
+        """Test skips import and module chunks."""
+        content = """#### `imports`
+
+Import statement.
+"""
+        chunk = make_code_chunk(
+            name="imports",
+            chunk_type=ChunkType.IMPORT,
+            content="import os",
+        )
+
+        result = _inject_inline_source_code(content, [chunk], "python")
+
+        assert "View Source" not in result
+
+    def test_handles_class_headings(self):
+        """Test handles class headings in API Reference."""
+        content = """## API Reference
+
+### Classes
+
+#### `MyClass`
+
+```python
+class MyClass
+```
+
+A test class.
+
+**Returns:** `MyClass`
+"""
+        chunk = make_code_chunk(
+            name="MyClass",
+            chunk_type=ChunkType.CLASS,
+            content="class MyClass:\n    pass",
+            start_line=1,
+            end_line=3,
+        )
+
+        result = _inject_inline_source_code(content, [chunk], "python")
+
+        assert "View Source (lines 1-3)" in result
+
+    def test_handles_heading_with_signature(self):
+        """Test handles headings with full function signature."""
+        content = """## API Reference
+
+#### `__init__(self, model: str = "llama3.2", base_url: str = "http://localhost:11434")`
+
+Initialize the provider.
+
+**Returns:** `None`
+"""
+        chunk = make_code_chunk(
+            name="__init__",
+            chunk_type=ChunkType.FUNCTION,
+            content="def __init__(self, model, base_url):\n    self.model = model",
+            start_line=10,
+            end_line=12,
+        )
+
+        result = _inject_inline_source_code(content, [chunk], "python")
+
+        assert "View Source (lines 10-12)" in result
+
+    def test_handles_class_prefix_in_heading(self):
+        """Test handles headings with 'class ' prefix."""
+        content = """## API Reference
+
+### `class OllamaProvider`
+
+A provider for Ollama.
+
+**Returns:** `OllamaProvider`
+"""
+        chunk = make_code_chunk(
+            name="OllamaProvider",
+            chunk_type=ChunkType.CLASS,
+            content="class OllamaProvider:\n    pass",
+            start_line=1,
+            end_line=5,
+        )
+
+        result = _inject_inline_source_code(content, [chunk], "python")
+
+        assert "View Source (lines 1-5)" in result
+
+    def test_injects_source_before_next_heading_no_returns(self):
+        """Test injects source when hitting next heading without Returns line."""
+        content = """## API Reference
+
+#### `__init__`
+
+```python
+def __init__(base_url: str)
+```
+
+| Parameter | Type |
+|-----------|------|
+| base_url | str |
+
+### class `NextClass`
+
+Another class.
+"""
+        chunk = make_code_chunk(
+            name="__init__",
+            chunk_type=ChunkType.FUNCTION,
+            content="def __init__(self, base_url):\n    self.url = base_url",
+            start_line=5,
+            end_line=7,
+        )
+
+        result = _inject_inline_source_code(content, [chunk], "python")
+
+        # Source should be injected before NextClass heading
+        assert "View Source (lines 5-7)" in result
+        # The next heading should still be present
+        assert "### class `NextClass`" in result
+        # Source should come before NextClass
+        source_pos = result.find("View Source")
+        next_class_pos = result.find("### class `NextClass`")
+        assert source_pos < next_class_pos
+
+    def test_handles_duplicate_method_names_with_qualified_lookup(self):
+        """Test uses qualified names to match methods in different classes."""
+        content = """## API Reference
+
+### class `ClassA`
+
+First class.
+
+#### `__init__`
+
+Initialize ClassA.
+
+### class `ClassB`
+
+Second class.
+
+#### `__init__`
+
+Initialize ClassB.
+"""
+        chunk_a = make_code_chunk(
+            name="__init__",
+            chunk_type=ChunkType.METHOD,
+            content="def __init__(self):\n    self.a = 1",
+            start_line=10,
+            end_line=12,
+            parent_name="ClassA",
+        )
+        chunk_b = make_code_chunk(
+            name="__init__",
+            chunk_type=ChunkType.METHOD,
+            content="def __init__(self):\n    self.b = 2",
+            start_line=20,
+            end_line=22,
+            parent_name="ClassB",
+        )
+
+        result = _inject_inline_source_code(content, [chunk_a, chunk_b], "python")
+
+        # Both should have different source blocks
+        assert "View Source (lines 10-12)" in result
+        assert "View Source (lines 20-22)" in result
+        # ClassA's __init__ should get ClassA's source
+        class_a_pos = result.find("### class `ClassA`")
+        class_b_pos = result.find("### class `ClassB`")
+        source_a_pos = result.find("View Source (lines 10-12)")
+        source_b_pos = result.find("View Source (lines 20-22)")
+        assert class_a_pos < source_a_pos < class_b_pos < source_b_pos
+
+    def test_falls_back_to_class_source_for_unmatched_method(self):
+        """Test uses class source when method chunk doesn't exist."""
+        content = """## API Reference
+
+### class `SimpleClass`
+
+A simple class.
+
+#### `__init__`
+
+Initialize the class.
+
+#### `do_something`
+
+Do something.
+"""
+        # Only class chunk exists, no separate method chunks
+        class_chunk = make_code_chunk(
+            name="SimpleClass",
+            chunk_type=ChunkType.CLASS,
+            content="class SimpleClass:\n    def __init__(self):\n        pass\n    def do_something(self):\n        pass",
+            start_line=1,
+            end_line=5,
+        )
+
+        result = _inject_inline_source_code(content, [class_chunk], "python")
+
+        # Class heading should get class source
+        assert "View Source (lines 1-5)" in result
+        # Method headings should also get class source as fallback
+        # Count occurrences - should be 3 (class + 2 methods)
+        assert result.count("View Source (lines 1-5)") == 3

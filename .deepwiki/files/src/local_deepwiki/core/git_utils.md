@@ -1,8 +1,8 @@
-# Git Utilities Module
+# Git Utils Module
 
 ## File Overview
 
-The `git_utils.py` module provides utilities for extracting and parsing Git repository information. It contains functions to retrieve remote URLs, parse repository details, and determine default branches from Git repositories.
+The `git_utils.py` module provides utilities for working with Git repositories, including extracting repository information, parsing remote URLs, and building source URLs. This module enables the application to gather metadata about Git repositories and construct links to source files.
 
 ## Classes
 
@@ -13,27 +13,27 @@ A dataclass that stores information about a Git repository.
 **Attributes:**
 - `remote_url` (str | None): The remote URL of the repository (e.g., "https://github.com/owner/repo")
 - `host` (str | None): The hosting service domain (e.g., "github.com", "gitlab.com")
-- `owner` (str | None): The repository owner or organization (e.g., "UrbanDiver")
+- `owner` (str | None): The repository owner or organization name (e.g., "UrbanDiver")
 - `repo` (str | None): The repository name (e.g., "local-deepwiki-mcp")
-- `default_branch` (str): The default branch name (e.g., "[main](../export/pdf.md)")
+- `default_branch` (str): The default branch name (e.g., "[main](../export/html.md)")
 
 ## Functions
 
-Based on the module structure shown, this file contains the following functions:
+The module includes the following functions based on the code structure:
 
-- `get_git_remote_url`: Retrieves the Git remote URL
-- `parse_remote_url`: Parses a remote URL to extract repository information
-- `get_default_branch`: Determines the default branch of a repository
+- `get_git_remote_url`: Retrieves the remote URL of a Git repository
+- `parse_remote_url`: Parses a Git remote URL to extract host, owner, and repository information
+- `get_default_branch`: Determines the default branch of a Git repository
 - `get_repo_info`: Gathers comprehensive repository information
 - `is_github_repo`: Checks if a repository is hosted on GitHub
-- `build_source_url`: Constructs source URLs for repository files
+- `build_source_url`: Constructs URLs to source files in the repository
 
 ## Usage Examples
 
 ```python
-from local_deepwiki.core.git_utils import GitRepoInfo, get_repo_info
+from local_deepwiki.core.git_utils import GitRepoInfo
 
-# Create repository info object
+# Create repository information object
 repo_info = GitRepoInfo(
     remote_url="https://github.com/owner/repo",
     host="github.com",
@@ -41,19 +41,17 @@ repo_info = GitRepoInfo(
     repo="repo",
     default_branch="main"
 )
-
-# Get repository information (function signature not fully visible)
-# repo_data = get_repo_info(path)
 ```
 
 ## Related Components
 
-This module integrates with the logging system through the [`get_logger`](../logging.md) function imported from `local_deepwiki.logging`. It uses standard Python libraries including:
+This module integrates with:
 
-- `re` for regular expression operations
-- `subprocess` for executing Git commands
-- `dataclasses` for the GitRepoInfo class definition
-- `pathlib.Path` for file system path handling
+- **Logging System**: Uses the logging module from `local_deepwiki.logging` for error reporting and debugging
+- **Path Handling**: Utilizes `pathlib.Path` for file system operations
+- **Subprocess Operations**: Leverages the `subprocess` module for executing Git commands
+
+The module supports Git repository analysis by providing structured access to repository metadata and URL construction capabilities.
 
 ## API Reference
 
@@ -62,6 +60,23 @@ This module integrates with the logging system through the [`get_logger`](../log
 Information about a git repository.
 
 ---
+
+
+<details>
+<summary>View Source (lines 18-25)</summary>
+
+```python
+class GitRepoInfo:
+    """Information about a git repository."""
+
+    remote_url: str | None  # e.g., "https://github.com/owner/repo"
+    host: str | None  # e.g., "github.com", "gitlab.com"
+    owner: str | None  # e.g., "UrbanDiver"
+    repo: str | None  # e.g., "local-deepwiki-mcp"
+    default_branch: str  # e.g., "main"
+```
+
+</details>
 
 ### Functions
 
@@ -81,6 +96,37 @@ Get the remote origin URL from git config.
 **Returns:** `str | None`
 
 
+
+<details>
+<summary>View Source (lines 28-49)</summary>
+
+```python
+def get_git_remote_url(repo_path: Path) -> str | None:
+    """Get the remote origin URL from git config.
+
+    Args:
+        repo_path: Path to the repository.
+
+    Returns:
+        Remote URL string or None if not a git repo or no remote.
+    """
+    try:
+        result = subprocess.run(
+            ["git", "config", "--get", "remote.origin.url"],
+            cwd=repo_path,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError) as e:
+        logger.debug(f"Failed to get git remote URL: {e}")
+    return None
+```
+
+</details>
+
 #### `parse_remote_url`
 
 ```python
@@ -97,13 +143,60 @@ Parse remote URL to extract host, owner, and repo name.  Handles various URL for
 **Returns:** `tuple[str, str, str] | None`
 
 
+
+<details>
+<summary>View Source (lines 52-89)</summary>
+
+```python
+def parse_remote_url(url: str) -> tuple[str, str, str] | None:
+    """Parse remote URL to extract host, owner, and repo name.
+
+    Handles various URL formats:
+    - https://github.com/owner/repo.git
+    - https://github.com/owner/repo
+    - git@github.com:owner/repo.git
+    - git@github.com:owner/repo
+    - ssh://git@github.com/owner/repo.git
+
+    Args:
+        url: Git remote URL.
+
+    Returns:
+        Tuple of (host, owner, repo) or None if parsing fails.
+    """
+    # Remove trailing .git
+    url = re.sub(r"\.git$", "", url)
+
+    # SSH format: git@host:owner/repo
+    ssh_match = re.match(r"^git@([^:]+):(.+)/([^/]+)$", url)
+    if ssh_match:
+        host, owner, repo = ssh_match.groups()
+        return host, owner, repo
+
+    # SSH URL format: ssh://git@host/owner/repo
+    ssh_url_match = re.match(r"^ssh://git@([^/]+)/(.+)/([^/]+)$", url)
+    if ssh_url_match:
+        host, owner, repo = ssh_url_match.groups()
+        return host, owner, repo
+
+    # HTTPS format: https://host/owner/repo
+    https_match = re.match(r"^https?://([^/]+)/(.+)/([^/]+)$", url)
+    if https_match:
+        host, owner, repo = https_match.groups()
+        return host, owner, repo
+
+    return None
+```
+
+</details>
+
 #### `get_default_branch`
 
 ```python
 def get_default_branch(repo_path: Path) -> str
 ```
 
-Get the default branch name for the repository.  Tries to detect the default branch from: 1. Current HEAD if on a branch 2. Remote HEAD reference 3. Falls back to '[main](../export/pdf.md)'
+Get the default branch name for the repository.  Tries to detect the default branch from: 1. Current HEAD if on a branch 2. Remote HEAD reference 3. Falls back to '[main](../export/html.md)'
 
 
 | [Parameter](../generators/api_docs.md) | Type | Default | Description |
@@ -112,6 +205,64 @@ Get the default branch name for the repository.  Tries to detect the default bra
 
 **Returns:** `str`
 
+
+
+<details>
+<summary>View Source (lines 92-140)</summary>
+
+```python
+def get_default_branch(repo_path: Path) -> str:
+    """Get the default branch name for the repository.
+
+    Tries to detect the default branch from:
+    1. Current HEAD if on a branch
+    2. Remote HEAD reference
+    3. Falls back to 'main'
+
+    Args:
+        repo_path: Path to the repository.
+
+    Returns:
+        Branch name string.
+    """
+    # Try to get current branch
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=repo_path,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode == 0:
+            branch = result.stdout.strip()
+            if branch and branch != "HEAD":  # Not in detached HEAD
+                return branch
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        pass
+
+    # Try to get default branch from remote
+    try:
+        result = subprocess.run(
+            ["git", "symbolic-ref", "refs/remotes/origin/HEAD"],
+            cwd=repo_path,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode == 0:
+            # Output like: refs/remotes/origin/main
+            ref = result.stdout.strip()
+            if ref:
+                return ref.split("/")[-1]
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        pass
+
+    # Default fallback
+    return "main"
+```
+
+</details>
 
 #### `get_repo_info`
 
@@ -129,6 +280,43 @@ Get complete git repository information.
 **Returns:** `GitRepoInfo`
 
 
+
+<details>
+<summary>View Source (lines 143-170)</summary>
+
+```python
+def get_repo_info(repo_path: Path) -> GitRepoInfo:
+    """Get complete git repository information.
+
+    Args:
+        repo_path: Path to the repository.
+
+    Returns:
+        GitRepoInfo with available information.
+    """
+    remote_url = get_git_remote_url(repo_path)
+    host = None
+    owner = None
+    repo = None
+
+    if remote_url:
+        parsed = parse_remote_url(remote_url)
+        if parsed:
+            host, owner, repo = parsed
+
+    default_branch = get_default_branch(repo_path)
+
+    return GitRepoInfo(
+        remote_url=remote_url,
+        host=host,
+        owner=owner,
+        repo=repo,
+        default_branch=default_branch,
+    )
+```
+
+</details>
+
 #### `is_github_repo`
 
 ```python
@@ -144,6 +332,28 @@ Check if a repository is hosted on GitHub.
 
 **Returns:** `bool`
 
+
+
+<details>
+<summary>View Source (lines 173-185)</summary>
+
+```python
+def is_github_repo(repo_path: Path) -> bool:
+    """Check if a repository is hosted on GitHub.
+
+    Args:
+        repo_path: Path to the repository.
+
+    Returns:
+        True if the repo has a GitHub remote, False otherwise.
+    """
+    repo_info = get_repo_info(repo_path)
+    if repo_info.host:
+        return "github.com" in repo_info.host.lower()
+    return False
+```
+
+</details>
 
 #### `build_source_url`
 
@@ -164,6 +374,57 @@ Build a URL to the source file on GitHub/GitLab.
 **Returns:** `str | None`
 
 
+
+
+<details>
+<summary>View Source (lines 188-229)</summary>
+
+```python
+def build_source_url(
+    repo_info: GitRepoInfo,
+    file_path: str,
+    start_line: int | None = None,
+    end_line: int | None = None,
+) -> str | None:
+    """Build a URL to the source file on GitHub/GitLab.
+
+    Args:
+        repo_info: Repository information from get_repo_info().
+        file_path: Relative path to the source file.
+        start_line: Optional starting line number.
+        end_line: Optional ending line number.
+
+    Returns:
+        URL string like https://github.com/owner/repo/blob/main/path/file.py#L10-L20
+        Or None if repo_info doesn't have remote information.
+    """
+    if not repo_info.host or not repo_info.owner or not repo_info.repo:
+        return None
+
+    # Determine URL format based on host
+    host = repo_info.host.lower()
+
+    if "gitlab" in host:
+        # GitLab uses /-/blob/ format
+        base_url = f"https://{repo_info.host}/{repo_info.owner}/{repo_info.repo}/-/blob/{repo_info.default_branch}/{file_path}"
+        if start_line is not None:
+            if end_line is not None and end_line != start_line:
+                return f"{base_url}#L{start_line}-{end_line}"
+            else:
+                return f"{base_url}#L{start_line}"
+        return base_url
+    else:
+        # GitHub and others use /blob/ format
+        base_url = f"https://{repo_info.host}/{repo_info.owner}/{repo_info.repo}/blob/{repo_info.default_branch}/{file_path}"
+        if start_line is not None:
+            if end_line is not None and end_line != start_line:
+                return f"{base_url}#L{start_line}-L{end_line}"
+            else:
+                return f"{base_url}#L{start_line}"
+        return base_url
+```
+
+</details>
 
 ## Class Diagram
 
@@ -277,5 +538,5 @@ assert result == "https://github.com/owner/repo/blob/main/src/file.py#L42"
 
 - [logging](../logging.md) - dependency
 - [crosslinks](../generators/crosslinks.md) - shares 3 dependencies
-- [diagrams](../generators/diagrams.md) - shares 3 dependencies
 - [see_also](../generators/see_also.md) - shares 3 dependencies
+- [diagrams](../generators/diagrams.md) - shares 3 dependencies

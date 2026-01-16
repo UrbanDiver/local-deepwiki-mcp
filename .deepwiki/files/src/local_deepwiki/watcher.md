@@ -1,51 +1,50 @@
-# watcher.py
+# Watcher Module
 
 ## File Overview
 
-The watcher module provides file system monitoring capabilities for automatically regenerating wiki documentation when repository files change. It implements a debounced file watching system that responds to file system events and triggers wiki regeneration after a configurable delay.
+The watcher module provides file system monitoring capabilities for automatically regenerating wiki documentation when repository files change. It uses the watchdog library to monitor file system events and implements debouncing to prevent excessive regeneration during rapid file changes.
 
 ## Functions
 
-### main()
+### main
 
-Main entry point for the watch command that sets up command-line argument parsing for the file watcher.
+```python
+def main() -> None
+```
+
+Main entry point for the watch command. Sets up command-line argument parsing for the watch functionality.
 
 **Parameters:**
 - None
 
 **Returns:**
-- `None`
+- None
 
 **Command-line Arguments:**
 - `repo_path` (optional): Path to the repository to watch, defaults to current directory
 - `--debounce`: Seconds to wait after changes before reindexing, defaults to 2.0
 
-The function creates an argument parser to handle command-line options for configuring the file watching behavior, including the repository path and debounce timing.
+## Dependencies
 
-## Usage Examples
+The module integrates with several components of the local_deepwiki system:
 
-### Running the File Watcher
+- **[Config](config.md)**: Uses the config module to load configuration settings
+- **[RepositoryIndexer](core/indexer.md)**: Works with the core indexer for processing repository changes  
+- **Parser**: References the EXTENSION_MAP for supported file types
+- **[Wiki Generator](generators/wiki.md)**: Uses the [generate_wiki](generators/wiki.md) function for documentation generation
+- **Logging**: Integrates with the logging system for output
 
-```python
-# The main function is typically called from command line
-# Example command-line usage would be:
-# python -m local_deepwiki.watcher /path/to/repo --debounce 3.0
-```
+## External Libraries
 
-## Related Components
+- **watchdog**: Provides file system monitoring through Observer, FileSystemEvent, FileSystemEventHandler, and BaseObserver classes
+- **rich**: Uses Console for enhanced terminal output
+- **argparse**: Handles command-line argument parsing
+- **asyncio**: Supports asynchronous operations
+- **pathlib**: Provides Path utilities for file system operations
 
-This module integrates with several other components based on its imports:
+## Usage Context
 
-- **[Config](config.md)**: Uses the configuration system through `get_config()` function
-- **[RepositoryIndexer](core/indexer.md)**: Works with the core indexer for processing repository content
-- **EXTENSION_MAP**: References the parser's extension mapping for file type handling
-- **[generate_wiki](generators/wiki.md)**: Integrates with the wiki generation functionality
-- **Logger**: Uses the logging system for output and debugging
-
-The module also utilizes external libraries:
-- `watchdog` for file system monitoring capabilities
-- `rich.console` for enhanced console output
-- Standard library components for argument parsing, async operations, and file path handling
+This module appears to be designed as a command-line tool that can be invoked to watch a repository for changes and automatically regenerate documentation. The debouncing mechanism helps optimize performance by preventing immediate regeneration on every file change.
 
 ## API Reference
 
@@ -56,6 +55,17 @@ The module also utilizes external libraries:
 File system event handler with debouncing.
 
 **Methods:**
+
+
+<details>
+<summary>View Source (lines 35-235)</summary>
+
+```python
+class DebouncedHandler(FileSystemEventHandler):
+    # Methods: __init__, _should_watch_file, _schedule_reindex, _trigger_reindex, _do_reindex, progress_callback, on_modified, on_created, on_deleted, on_moved
+```
+
+</details>
 
 #### `__init__`
 
@@ -73,6 +83,37 @@ Initialize the handler.
 | `debounce_seconds` | `float` | `2.0` | Seconds to wait after last change before triggering. |
 | `llm_provider` | `str | None` | `None` | Optional LLM provider override. |
 
+
+<details>
+<summary>View Source (lines 38-59)</summary>
+
+```python
+def __init__(
+        self,
+        repo_path: Path,
+        config: Config,
+        debounce_seconds: float = 2.0,
+        llm_provider: str | None = None,
+    ):
+        """Initialize the handler.
+
+        Args:
+            repo_path: Path to the repository root.
+            config: Configuration instance.
+            debounce_seconds: Seconds to wait after last change before triggering.
+            llm_provider: Optional LLM provider override.
+        """
+        self.repo_path = repo_path
+        self.config = config
+        self.debounce_seconds = debounce_seconds
+        self.llm_provider = llm_provider
+        self._timer: Timer | None = None
+        self._pending_files: set[str] = set()
+        self._is_processing = False
+```
+
+</details>
+
 #### `progress_callback`
 
 ```python
@@ -85,6 +126,20 @@ def progress_callback(msg: str, current: int, total: int) -> None
 | `msg` | `str` | - | - |
 | `current` | `int` | - | - |
 | `total` | `int` | - | - |
+
+
+<details>
+<summary>View Source (lines 141-145)</summary>
+
+```python
+def progress_callback(msg: str, current: int, total: int) -> None:
+                if total > 0:
+                    console.print(f"  [{current}/{total}] {msg}")
+                else:
+                    console.print(f"  {msg}")
+```
+
+</details>
 
 #### `on_modified`
 
@@ -99,6 +154,24 @@ Handle file modification events.
 |-----------|------|---------|-------------|
 | `event` | `FileSystemEvent` | - | - |
 
+
+<details>
+<summary>View Source (lines 190-198)</summary>
+
+```python
+def on_modified(self, event: FileSystemEvent) -> None:
+        """Handle file modification events."""
+        if event.is_directory:
+            return
+
+        src_path = str(event.src_path)
+        if self._should_watch_file(src_path):
+            self._pending_files.add(src_path)
+            self._schedule_reindex()
+```
+
+</details>
+
 #### `on_created`
 
 ```python
@@ -112,6 +185,24 @@ Handle file creation events.
 |-----------|------|---------|-------------|
 | `event` | `FileSystemEvent` | - | - |
 
+
+<details>
+<summary>View Source (lines 200-208)</summary>
+
+```python
+def on_created(self, event: FileSystemEvent) -> None:
+        """Handle file creation events."""
+        if event.is_directory:
+            return
+
+        src_path = str(event.src_path)
+        if self._should_watch_file(src_path):
+            self._pending_files.add(src_path)
+            self._schedule_reindex()
+```
+
+</details>
+
 #### `on_deleted`
 
 ```python
@@ -124,6 +215,24 @@ Handle file deletion events.
 | [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `event` | `FileSystemEvent` | - | - |
+
+
+<details>
+<summary>View Source (lines 210-218)</summary>
+
+```python
+def on_deleted(self, event: FileSystemEvent) -> None:
+        """Handle file deletion events."""
+        if event.is_directory:
+            return
+
+        src_path = str(event.src_path)
+        if self._should_watch_file(src_path):
+            self._pending_files.add(src_path)
+            self._schedule_reindex()
+```
+
+</details>
 
 #### `on_moved`
 
@@ -139,11 +248,98 @@ Handle file move events.
 | `event` | `FileSystemEvent` | - | - |
 
 
+
+<details>
+<summary>View Source (lines 220-235)</summary>
+
+```python
+def on_moved(self, event: FileSystemEvent) -> None:
+        """Handle file move events."""
+        if event.is_directory:
+            return
+
+        # Check both source and destination
+        src_path = str(event.src_path)
+        if self._should_watch_file(src_path):
+            self._pending_files.add(src_path)
+            self._schedule_reindex()
+
+        if hasattr(event, "dest_path"):
+            dest_path = str(event.dest_path)
+            if self._should_watch_file(dest_path):
+                self._pending_files.add(dest_path)
+                self._schedule_reindex()
+```
+
+</details>
+
 ### class `RepositoryWatcher`
 
 Watches a repository for file changes and triggers reindexing.
 
 **Methods:**
+
+
+<details>
+<summary>View Source (lines 238-290)</summary>
+
+```python
+class RepositoryWatcher:
+    """Watches a repository for file changes and triggers reindexing."""
+
+    def __init__(
+        self,
+        repo_path: Path,
+        config: Config | None = None,
+        debounce_seconds: float = 2.0,
+        llm_provider: str | None = None,
+    ):
+        """Initialize the watcher.
+
+        Args:
+            repo_path: Path to the repository to watch.
+            config: Optional configuration.
+            debounce_seconds: Seconds to wait after changes before reindexing.
+            llm_provider: Optional LLM provider override.
+        """
+        self.repo_path = repo_path.resolve()
+        self.config = config or get_config()
+        self.debounce_seconds = debounce_seconds
+        self.llm_provider = llm_provider
+        self._observer: BaseObserver | None = None
+
+    def start(self) -> None:
+        """Start watching the repository."""
+        logger.info(f"Starting file watcher for {self.repo_path}")
+
+        handler = DebouncedHandler(
+            repo_path=self.repo_path,
+            config=self.config,
+            debounce_seconds=self.debounce_seconds,
+            llm_provider=self.llm_provider,
+        )
+
+        observer = Observer()
+        observer.schedule(handler, str(self.repo_path), recursive=True)
+        observer.start()
+        self._observer = observer
+        logger.debug("File watcher started successfully")
+
+    def stop(self) -> None:
+        """Stop watching the repository."""
+        logger.info("Stopping file watcher")
+        if self._observer:
+            self._observer.stop()
+            self._observer.join()
+            self._observer = None
+            logger.debug("File watcher stopped")
+
+    def is_running(self) -> bool:
+        """Check if the watcher is running."""
+        return self._observer is not None and self._observer.is_alive()
+```
+
+</details>
 
 #### `__init__`
 
@@ -161,6 +357,68 @@ Initialize the watcher.
 | `debounce_seconds` | `float` | `2.0` | Seconds to wait after changes before reindexing. |
 | `llm_provider` | `str | None` | `None` | Optional LLM provider override. |
 
+
+<details>
+<summary>View Source (lines 238-290)</summary>
+
+```python
+class RepositoryWatcher:
+    """Watches a repository for file changes and triggers reindexing."""
+
+    def __init__(
+        self,
+        repo_path: Path,
+        config: Config | None = None,
+        debounce_seconds: float = 2.0,
+        llm_provider: str | None = None,
+    ):
+        """Initialize the watcher.
+
+        Args:
+            repo_path: Path to the repository to watch.
+            config: Optional configuration.
+            debounce_seconds: Seconds to wait after changes before reindexing.
+            llm_provider: Optional LLM provider override.
+        """
+        self.repo_path = repo_path.resolve()
+        self.config = config or get_config()
+        self.debounce_seconds = debounce_seconds
+        self.llm_provider = llm_provider
+        self._observer: BaseObserver | None = None
+
+    def start(self) -> None:
+        """Start watching the repository."""
+        logger.info(f"Starting file watcher for {self.repo_path}")
+
+        handler = DebouncedHandler(
+            repo_path=self.repo_path,
+            config=self.config,
+            debounce_seconds=self.debounce_seconds,
+            llm_provider=self.llm_provider,
+        )
+
+        observer = Observer()
+        observer.schedule(handler, str(self.repo_path), recursive=True)
+        observer.start()
+        self._observer = observer
+        logger.debug("File watcher started successfully")
+
+    def stop(self) -> None:
+        """Stop watching the repository."""
+        logger.info("Stopping file watcher")
+        if self._observer:
+            self._observer.stop()
+            self._observer.join()
+            self._observer = None
+            logger.debug("File watcher stopped")
+
+    def is_running(self) -> bool:
+        """Check if the watcher is running."""
+        return self._observer is not None and self._observer.is_alive()
+```
+
+</details>
+
 #### `start`
 
 ```python
@@ -169,6 +427,68 @@ def start() -> None
 
 Start watching the repository.
 
+
+<details>
+<summary>View Source (lines 238-290)</summary>
+
+```python
+class RepositoryWatcher:
+    """Watches a repository for file changes and triggers reindexing."""
+
+    def __init__(
+        self,
+        repo_path: Path,
+        config: Config | None = None,
+        debounce_seconds: float = 2.0,
+        llm_provider: str | None = None,
+    ):
+        """Initialize the watcher.
+
+        Args:
+            repo_path: Path to the repository to watch.
+            config: Optional configuration.
+            debounce_seconds: Seconds to wait after changes before reindexing.
+            llm_provider: Optional LLM provider override.
+        """
+        self.repo_path = repo_path.resolve()
+        self.config = config or get_config()
+        self.debounce_seconds = debounce_seconds
+        self.llm_provider = llm_provider
+        self._observer: BaseObserver | None = None
+
+    def start(self) -> None:
+        """Start watching the repository."""
+        logger.info(f"Starting file watcher for {self.repo_path}")
+
+        handler = DebouncedHandler(
+            repo_path=self.repo_path,
+            config=self.config,
+            debounce_seconds=self.debounce_seconds,
+            llm_provider=self.llm_provider,
+        )
+
+        observer = Observer()
+        observer.schedule(handler, str(self.repo_path), recursive=True)
+        observer.start()
+        self._observer = observer
+        logger.debug("File watcher started successfully")
+
+    def stop(self) -> None:
+        """Stop watching the repository."""
+        logger.info("Stopping file watcher")
+        if self._observer:
+            self._observer.stop()
+            self._observer.join()
+            self._observer = None
+            logger.debug("File watcher stopped")
+
+    def is_running(self) -> bool:
+        """Check if the watcher is running."""
+        return self._observer is not None and self._observer.is_alive()
+```
+
+</details>
+
 #### `stop`
 
 ```python
@@ -176,6 +496,68 @@ def stop() -> None
 ```
 
 Stop watching the repository.
+
+
+<details>
+<summary>View Source (lines 238-290)</summary>
+
+```python
+class RepositoryWatcher:
+    """Watches a repository for file changes and triggers reindexing."""
+
+    def __init__(
+        self,
+        repo_path: Path,
+        config: Config | None = None,
+        debounce_seconds: float = 2.0,
+        llm_provider: str | None = None,
+    ):
+        """Initialize the watcher.
+
+        Args:
+            repo_path: Path to the repository to watch.
+            config: Optional configuration.
+            debounce_seconds: Seconds to wait after changes before reindexing.
+            llm_provider: Optional LLM provider override.
+        """
+        self.repo_path = repo_path.resolve()
+        self.config = config or get_config()
+        self.debounce_seconds = debounce_seconds
+        self.llm_provider = llm_provider
+        self._observer: BaseObserver | None = None
+
+    def start(self) -> None:
+        """Start watching the repository."""
+        logger.info(f"Starting file watcher for {self.repo_path}")
+
+        handler = DebouncedHandler(
+            repo_path=self.repo_path,
+            config=self.config,
+            debounce_seconds=self.debounce_seconds,
+            llm_provider=self.llm_provider,
+        )
+
+        observer = Observer()
+        observer.schedule(handler, str(self.repo_path), recursive=True)
+        observer.start()
+        self._observer = observer
+        logger.debug("File watcher started successfully")
+
+    def stop(self) -> None:
+        """Stop watching the repository."""
+        logger.info("Stopping file watcher")
+        if self._observer:
+            self._observer.stop()
+            self._observer.join()
+            self._observer = None
+            logger.debug("File watcher stopped")
+
+    def is_running(self) -> bool:
+        """Check if the watcher is running."""
+        return self._observer is not None and self._observer.is_alive()
+```
+
+</details>
 
 #### `is_running`
 
@@ -187,6 +569,68 @@ Check if the watcher is running.
 
 
 ---
+
+
+<details>
+<summary>View Source (lines 238-290)</summary>
+
+```python
+class RepositoryWatcher:
+    """Watches a repository for file changes and triggers reindexing."""
+
+    def __init__(
+        self,
+        repo_path: Path,
+        config: Config | None = None,
+        debounce_seconds: float = 2.0,
+        llm_provider: str | None = None,
+    ):
+        """Initialize the watcher.
+
+        Args:
+            repo_path: Path to the repository to watch.
+            config: Optional configuration.
+            debounce_seconds: Seconds to wait after changes before reindexing.
+            llm_provider: Optional LLM provider override.
+        """
+        self.repo_path = repo_path.resolve()
+        self.config = config or get_config()
+        self.debounce_seconds = debounce_seconds
+        self.llm_provider = llm_provider
+        self._observer: BaseObserver | None = None
+
+    def start(self) -> None:
+        """Start watching the repository."""
+        logger.info(f"Starting file watcher for {self.repo_path}")
+
+        handler = DebouncedHandler(
+            repo_path=self.repo_path,
+            config=self.config,
+            debounce_seconds=self.debounce_seconds,
+            llm_provider=self.llm_provider,
+        )
+
+        observer = Observer()
+        observer.schedule(handler, str(self.repo_path), recursive=True)
+        observer.start()
+        self._observer = observer
+        logger.debug("File watcher started successfully")
+
+    def stop(self) -> None:
+        """Stop watching the repository."""
+        logger.info("Stopping file watcher")
+        if self._observer:
+            self._observer.stop()
+            self._observer.join()
+            self._observer = None
+            logger.debug("File watcher stopped")
+
+    def is_running(self) -> bool:
+        """Check if the watcher is running."""
+        return self._observer is not None and self._observer.is_alive()
+```
+
+</details>
 
 ### Functions
 
@@ -209,6 +653,66 @@ Perform initial indexing before starting watch mode.
 **Returns:** `None`
 
 
+
+<details>
+<summary>View Source (lines 293-343)</summary>
+
+```python
+async def initial_index(
+    repo_path: Path,
+    config: Config,
+    llm_provider: str | None = None,
+    full_rebuild: bool = False,
+) -> None:
+    """Perform initial indexing before starting watch mode.
+
+    Args:
+        repo_path: Path to the repository.
+        config: Configuration instance.
+        llm_provider: Optional LLM provider override.
+        full_rebuild: Whether to do a full rebuild.
+    """
+    console.print("[yellow]Running initial index...[/yellow]")
+
+    indexer = RepositoryIndexer(repo_path=repo_path, config=config)
+
+    def progress_callback(msg: str, current: int, total: int) -> None:
+        if total > 0:
+            console.print(f"  [{current}/{total}] {msg}")
+        else:
+            console.print(f"  {msg}")
+
+    start_time = time.time()
+    status = await indexer.index(
+        full_rebuild=full_rebuild,
+        progress_callback=progress_callback,
+    )
+
+    console.print(
+        f"[green]Indexed {status.total_files} files, {status.total_chunks} chunks[/green]"
+    )
+
+    # Generate wiki
+    console.print("[yellow]Generating wiki...[/yellow]")
+
+    wiki_structure = await generate_wiki(
+        repo_path=repo_path,
+        wiki_path=indexer.wiki_path,
+        vector_store=indexer.vector_store,
+        index_status=status,
+        config=config,
+        llm_provider=llm_provider,
+        progress_callback=progress_callback,
+        full_rebuild=full_rebuild,
+    )
+
+    total_time = time.time() - start_time
+    console.print(f"[green]Generated {len(wiki_structure.pages)} wiki pages[/green]")
+    console.print(f"[bold green]Initial index complete in {total_time:.1f}s[/bold green]")
+```
+
+</details>
+
 #### `progress_callback`
 
 ```python
@@ -225,6 +729,20 @@ def progress_callback(msg: str, current: int, total: int) -> None
 **Returns:** `None`
 
 
+
+<details>
+<summary>View Source (lines 311-315)</summary>
+
+```python
+def progress_callback(msg: str, current: int, total: int) -> None:
+        if total > 0:
+            console.print(f"  [{current}/{total}] {msg}")
+        else:
+            console.print(f"  {msg}")
+```
+
+</details>
+
 #### `main`
 
 ```python
@@ -236,6 +754,103 @@ Main entry point for the watch command.
 **Returns:** `None`
 
 
+
+
+<details>
+<summary>View Source (lines 346-433)</summary>
+
+```python
+def main() -> None:
+    """Main entry point for the watch command."""
+    parser = argparse.ArgumentParser(
+        description="Watch a repository for changes and auto-regenerate wiki documentation."
+    )
+    parser.add_argument(
+        "repo_path",
+        type=str,
+        nargs="?",
+        default=".",
+        help="Path to the repository to watch (default: current directory)",
+    )
+    parser.add_argument(
+        "--debounce",
+        type=float,
+        default=2.0,
+        help="Seconds to wait after changes before reindexing (default: 2.0)",
+    )
+    parser.add_argument(
+        "--llm",
+        type=str,
+        choices=["ollama", "anthropic", "openai"],
+        help="LLM provider for wiki generation",
+    )
+    parser.add_argument(
+        "--full-rebuild",
+        action="store_true",
+        help="Perform a full rebuild on startup instead of incremental",
+    )
+    parser.add_argument(
+        "--skip-initial",
+        action="store_true",
+        help="Skip initial indexing, just start watching",
+    )
+
+    args = parser.parse_args()
+
+    repo_path = Path(args.repo_path).resolve()
+    if not repo_path.exists():
+        console.print(f"[red]Error: Path does not exist: {repo_path}[/red]")
+        sys.exit(1)
+
+    if not repo_path.is_dir():
+        console.print(f"[red]Error: Path is not a directory: {repo_path}[/red]")
+        sys.exit(1)
+
+    config = get_config()
+
+    console.print()
+    console.print("[bold]DeepWiki Watch Mode[/bold]")
+    console.print(f"Repository: [cyan]{repo_path}[/cyan]")
+    console.print(f"Debounce: [cyan]{args.debounce}s[/cyan]")
+    console.print(f"LLM Provider: [cyan]{args.llm or config.llm.provider}[/cyan]")
+    console.print()
+
+    # Run initial index unless skipped
+    if not args.skip_initial:
+        asyncio.run(
+            initial_index(
+                repo_path=repo_path,
+                config=config,
+                llm_provider=args.llm,
+                full_rebuild=args.full_rebuild,
+            )
+        )
+
+    # Start watching
+    console.print()
+    console.rule("[bold blue]Starting Watch Mode[/bold blue]")
+    console.print("[dim]Watching for changes... (Ctrl+C to stop)[/dim]")
+    console.print()
+
+    watcher = RepositoryWatcher(
+        repo_path=repo_path,
+        config=config,
+        debounce_seconds=args.debounce,
+        llm_provider=args.llm,
+    )
+
+    try:
+        watcher.start()
+        while watcher.is_running():
+            time.sleep(1)
+    except KeyboardInterrupt:
+        console.print()
+        console.print("[yellow]Stopping watcher...[/yellow]")
+        watcher.stop()
+        console.print("[green]Done.[/green]")
+```
+
+</details>
 
 ## Class Diagram
 
@@ -400,6 +1015,179 @@ watcher = RepositoryWatcher(
 assert watcher.debounce_seconds == 5.0
 ```
 
+
+## Additional Source Code
+
+Source code for functions and methods not listed in the API Reference above.
+
+#### `_should_watch_file`
+
+<details>
+<summary>View Source (lines 61-89)</summary>
+
+```python
+def _should_watch_file(self, path: str) -> bool:
+        """Check if a file should trigger reindexing.
+
+        Args:
+            path: Absolute path to the file.
+
+        Returns:
+            True if the file should be watched.
+        """
+        file_path = Path(path)
+
+        # Check extension
+        if file_path.suffix.lower() not in WATCHED_EXTENSIONS:
+            logger.debug(f"Ignoring file with unsupported extension: {path}")
+            return False
+
+        # Check exclude patterns
+        try:
+            rel_path = str(file_path.relative_to(self.repo_path))
+        except ValueError:
+            logger.debug(f"File outside repo path: {path}")
+            return False
+
+        for pattern in self.config.parsing.exclude_patterns:
+            if fnmatch.fnmatch(rel_path, pattern):
+                logger.debug(f"File matches exclude pattern '{pattern}': {rel_path}")
+                return False
+
+        return True
+```
+
+</details>
+
+
+#### `_schedule_reindex`
+
+<details>
+<summary>View Source (lines 91-97)</summary>
+
+```python
+def _schedule_reindex(self) -> None:
+        """Schedule a reindex after debounce period."""
+        if self._timer:
+            self._timer.cancel()
+
+        self._timer = Timer(self.debounce_seconds, self._trigger_reindex)
+        self._timer.start()
+```
+
+</details>
+
+
+#### `_trigger_reindex`
+
+<details>
+<summary>View Source (lines 99-111)</summary>
+
+```python
+def _trigger_reindex(self) -> None:
+        """Trigger the actual reindex operation."""
+        if self._is_processing:
+            # Re-schedule if already processing
+            self._schedule_reindex()
+            return
+
+        files = list(self._pending_files)
+        self._pending_files.clear()
+
+        if files:
+            # Run in asyncio event loop
+            asyncio.run(self._do_reindex(files))
+```
+
+</details>
+
+
+#### `_do_reindex`
+
+<details>
+<summary>View Source (lines 113-188)</summary>
+
+```python
+async def _do_reindex(self, changed_files: list[str]) -> None:
+        """Perform the reindex operation.
+
+        Args:
+            changed_files: List of changed file paths.
+        """
+        self._is_processing = True
+        logger.info(f"Starting reindex for {len(changed_files)} changed files")
+
+        try:
+            console.print()
+            console.rule("[bold blue]Changes Detected[/bold blue]")
+            for f in changed_files[:10]:  # Show first 10
+                rel_path = Path(f).relative_to(self.repo_path)
+                console.print(f"  [dim]- {rel_path}[/dim]")
+            if len(changed_files) > 10:
+                console.print(f"  [dim]... and {len(changed_files) - 10} more[/dim]")
+
+            console.print()
+            console.print("[yellow]Starting incremental reindex...[/yellow]")
+
+            # Create indexer
+            indexer = RepositoryIndexer(
+                repo_path=self.repo_path,
+                config=self.config,
+            )
+
+            # Progress callback
+            def progress_callback(msg: str, current: int, total: int) -> None:
+                if total > 0:
+                    console.print(f"  [{current}/{total}] {msg}")
+                else:
+                    console.print(f"  {msg}")
+
+            # Run incremental index
+            start_time = time.time()
+            status = await indexer.index(
+                full_rebuild=False,
+                progress_callback=progress_callback,
+            )
+
+            index_time = time.time() - start_time
+            console.print(f"[green]Indexed {status.total_files} files in {index_time:.1f}s[/green]")
+
+            # Generate wiki
+            console.print("[yellow]Regenerating wiki...[/yellow]")
+
+            wiki_start = time.time()
+            wiki_structure = await generate_wiki(
+                repo_path=self.repo_path,
+                wiki_path=indexer.wiki_path,
+                vector_store=indexer.vector_store,
+                index_status=status,
+                config=self.config,
+                llm_provider=self.llm_provider,
+                progress_callback=progress_callback,
+                full_rebuild=False,
+            )
+
+            wiki_time = time.time() - wiki_start
+            console.print(
+                f"[green]Generated {len(wiki_structure.pages)} pages in {wiki_time:.1f}s[/green]"
+            )
+
+            total_time = time.time() - start_time
+            console.print()
+            console.print(f"[bold green]Done in {total_time:.1f}s[/bold green]")
+            console.rule()
+            console.print("[dim]Watching for changes... (Ctrl+C to stop)[/dim]")
+
+        except Exception as e:  # noqa: BLE001 - Keep watcher alive despite errors
+            logger.exception(f"Error during reindex: {e}")
+            console.print(f"[red]Error during reindex: {e}[/red]")
+
+        finally:
+            self._is_processing = False
+```
+
+</details>
+
 ## Relevant Source Files
 
-- `src/local_deepwiki/watcher.py:29-223`
+- `src/local_deepwiki/watcher.py:35-235`

@@ -2,56 +2,60 @@
 
 ## File Overview
 
-This file implements an OpenAI-based embedding provider for the local_deepwiki system. It provides functionality to generate text embeddings using OpenAI's embedding models through their API.
+This module provides an OpenAI-based implementation of the embedding provider interface. It handles text embeddings using OpenAI's embedding models through their async API client.
 
 ## Classes
 
 ### OpenAIEmbeddingProvider
 
-The OpenAIEmbeddingProvider class extends the base [EmbeddingProvider](../base.md) to provide OpenAI-specific embedding functionality.
+The OpenAIEmbeddingProvider class extends [EmbeddingProvider](../base.md) to provide text embeddings using OpenAI's API.
 
 **Constructor Parameters:**
-- `model` (str, optional): The OpenAI embedding model name. Defaults to `"text-embedding-3-small"`
-- `api_key` (str | None, optional): Optional API key for OpenAI. If not provided, uses the `OPENAI_API_KEY` environment variable
+- `model` (str, optional): The OpenAI embedding model name. Defaults to "text-embedding-3-small"
+- `api_key` (str | None, optional): The OpenAI API key. If not provided, uses the `OPENAI_API_KEY` environment variable
 
 **Key Features:**
-- Inherits from [EmbeddingProvider](../base.md) base class
-- Uses AsyncOpenAI client for asynchronous operations
-- Automatically determines embedding dimensions based on the selected model
+- Initializes an async OpenAI client for API communication
+- Automatically determines embedding dimensions based on the model
 - Falls back to environment variable for API key configuration
 
-## Implementation Details
+## Usage Examples
 
-The class initializes with:
-- A configurable OpenAI embedding model
-- An AsyncOpenAI client instance configured with the provided or environment-based API key
-- Automatic dimension detection using a `OPENAI_EMBEDDING_DIMENSIONS` mapping (referenced but not shown in the provided code)
-
-## Usage Example
+### Basic Initialization
 
 ```python
 from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
 
-# Using default model with environment API key
+# Using default model with environment variable API key
 provider = OpenAIEmbeddingProvider()
 
-# Using custom model and explicit API key
+# Using custom model
+provider = OpenAIEmbeddingProvider(model="text-embedding-3-large")
+
+# Providing API key explicitly
 provider = OpenAIEmbeddingProvider(
     model="text-embedding-3-small",
     api_key="your-api-key-here"
 )
 ```
 
+### Environment Setup
+
+The provider expects the OpenAI API key to be available as an environment variable:
+
+```bash
+export OPENAI_API_KEY="your-openai-api-key"
+```
+
 ## Related Components
 
 - **[EmbeddingProvider](../base.md)**: The base class that OpenAIEmbeddingProvider extends
-- **AsyncOpenAI**: The OpenAI client library used for API interactions
+- **AsyncOpenAI**: The OpenAI client used for API communication
 
 ## Dependencies
 
-- `os`: For environment variable access
-- `openai.AsyncOpenAI`: For asynchronous OpenAI API operations
-- [`local_deepwiki.providers.base.EmbeddingProvider`](../base.md): Base embedding provider interface
+- `openai`: OpenAI Python client library for API access
+- `os`: Standard library for environment variable access
 
 ## API Reference
 
@@ -62,6 +66,56 @@ provider = OpenAIEmbeddingProvider(
 Embedding provider using OpenAI API.
 
 **Methods:**
+
+
+<details>
+<summary>View Source (lines 17-57)</summary>
+
+```python
+class OpenAIEmbeddingProvider(EmbeddingProvider):
+    """Embedding provider using OpenAI API."""
+
+    def __init__(self, model: str = "text-embedding-3-small", api_key: str | None = None):
+        """Initialize the OpenAI embedding provider.
+
+        Args:
+            model: OpenAI embedding model name.
+            api_key: Optional API key. Uses OPENAI_API_KEY env var if not provided.
+        """
+        self._model = model
+        self._client = AsyncOpenAI(api_key=api_key or os.environ.get("OPENAI_API_KEY"))
+        self._dimension = OPENAI_EMBEDDING_DIMENSIONS.get(model, 1536)
+
+    async def embed(self, texts: list[str]) -> list[list[float]]:
+        """Generate embeddings for a list of texts.
+
+        Args:
+            texts: List of text strings to embed.
+
+        Returns:
+            List of embedding vectors.
+        """
+        response = await self._client.embeddings.create(
+            model=self._model,
+            input=texts,
+        )
+        return [item.embedding for item in response.data]
+
+    def get_dimension(self) -> int:
+        """Get the embedding dimension.
+
+        Returns:
+            The dimension of the embedding vectors.
+        """
+        return self._dimension
+
+    @property
+    def name(self) -> str:
+        """Get the provider name."""
+        return f"openai:{self._model}"
+```
+
+</details>
 
 #### `__init__`
 
@@ -77,6 +131,56 @@ Initialize the OpenAI embedding provider.
 | `model` | `str` | `"text-embedding-3-small"` | OpenAI embedding model name. |
 | `api_key` | `str | None` | `None` | Optional API key. Uses OPENAI_API_KEY env var if not provided. |
 
+
+<details>
+<summary>View Source (lines 17-57)</summary>
+
+```python
+class OpenAIEmbeddingProvider(EmbeddingProvider):
+    """Embedding provider using OpenAI API."""
+
+    def __init__(self, model: str = "text-embedding-3-small", api_key: str | None = None):
+        """Initialize the OpenAI embedding provider.
+
+        Args:
+            model: OpenAI embedding model name.
+            api_key: Optional API key. Uses OPENAI_API_KEY env var if not provided.
+        """
+        self._model = model
+        self._client = AsyncOpenAI(api_key=api_key or os.environ.get("OPENAI_API_KEY"))
+        self._dimension = OPENAI_EMBEDDING_DIMENSIONS.get(model, 1536)
+
+    async def embed(self, texts: list[str]) -> list[list[float]]:
+        """Generate embeddings for a list of texts.
+
+        Args:
+            texts: List of text strings to embed.
+
+        Returns:
+            List of embedding vectors.
+        """
+        response = await self._client.embeddings.create(
+            model=self._model,
+            input=texts,
+        )
+        return [item.embedding for item in response.data]
+
+    def get_dimension(self) -> int:
+        """Get the embedding dimension.
+
+        Returns:
+            The dimension of the embedding vectors.
+        """
+        return self._dimension
+
+    @property
+    def name(self) -> str:
+        """Get the provider name."""
+        return f"openai:{self._model}"
+```
+
+</details>
+
 #### `embed`
 
 ```python
@@ -90,6 +194,56 @@ Generate embeddings for a list of texts.
 |-----------|------|---------|-------------|
 | `texts` | `list[str]` | - | List of text strings to embed. |
 
+
+<details>
+<summary>View Source (lines 17-57)</summary>
+
+```python
+class OpenAIEmbeddingProvider(EmbeddingProvider):
+    """Embedding provider using OpenAI API."""
+
+    def __init__(self, model: str = "text-embedding-3-small", api_key: str | None = None):
+        """Initialize the OpenAI embedding provider.
+
+        Args:
+            model: OpenAI embedding model name.
+            api_key: Optional API key. Uses OPENAI_API_KEY env var if not provided.
+        """
+        self._model = model
+        self._client = AsyncOpenAI(api_key=api_key or os.environ.get("OPENAI_API_KEY"))
+        self._dimension = OPENAI_EMBEDDING_DIMENSIONS.get(model, 1536)
+
+    async def embed(self, texts: list[str]) -> list[list[float]]:
+        """Generate embeddings for a list of texts.
+
+        Args:
+            texts: List of text strings to embed.
+
+        Returns:
+            List of embedding vectors.
+        """
+        response = await self._client.embeddings.create(
+            model=self._model,
+            input=texts,
+        )
+        return [item.embedding for item in response.data]
+
+    def get_dimension(self) -> int:
+        """Get the embedding dimension.
+
+        Returns:
+            The dimension of the embedding vectors.
+        """
+        return self._dimension
+
+    @property
+    def name(self) -> str:
+        """Get the provider name."""
+        return f"openai:{self._model}"
+```
+
+</details>
+
 #### `get_dimension`
 
 ```python
@@ -97,6 +251,56 @@ def get_dimension() -> int
 ```
 
 Get the embedding dimension.
+
+
+<details>
+<summary>View Source (lines 17-57)</summary>
+
+```python
+class OpenAIEmbeddingProvider(EmbeddingProvider):
+    """Embedding provider using OpenAI API."""
+
+    def __init__(self, model: str = "text-embedding-3-small", api_key: str | None = None):
+        """Initialize the OpenAI embedding provider.
+
+        Args:
+            model: OpenAI embedding model name.
+            api_key: Optional API key. Uses OPENAI_API_KEY env var if not provided.
+        """
+        self._model = model
+        self._client = AsyncOpenAI(api_key=api_key or os.environ.get("OPENAI_API_KEY"))
+        self._dimension = OPENAI_EMBEDDING_DIMENSIONS.get(model, 1536)
+
+    async def embed(self, texts: list[str]) -> list[list[float]]:
+        """Generate embeddings for a list of texts.
+
+        Args:
+            texts: List of text strings to embed.
+
+        Returns:
+            List of embedding vectors.
+        """
+        response = await self._client.embeddings.create(
+            model=self._model,
+            input=texts,
+        )
+        return [item.embedding for item in response.data]
+
+    def get_dimension(self) -> int:
+        """Get the embedding dimension.
+
+        Returns:
+            The dimension of the embedding vectors.
+        """
+        return self._dimension
+
+    @property
+    def name(self) -> str:
+        """Get the provider name."""
+        return f"openai:{self._model}"
+```
+
+</details>
 
 #### `name`
 
@@ -107,6 +311,56 @@ def name() -> str
 Get the provider name.
 
 
+
+
+<details>
+<summary>View Source (lines 17-57)</summary>
+
+```python
+class OpenAIEmbeddingProvider(EmbeddingProvider):
+    """Embedding provider using OpenAI API."""
+
+    def __init__(self, model: str = "text-embedding-3-small", api_key: str | None = None):
+        """Initialize the OpenAI embedding provider.
+
+        Args:
+            model: OpenAI embedding model name.
+            api_key: Optional API key. Uses OPENAI_API_KEY env var if not provided.
+        """
+        self._model = model
+        self._client = AsyncOpenAI(api_key=api_key or os.environ.get("OPENAI_API_KEY"))
+        self._dimension = OPENAI_EMBEDDING_DIMENSIONS.get(model, 1536)
+
+    async def embed(self, texts: list[str]) -> list[list[float]]:
+        """Generate embeddings for a list of texts.
+
+        Args:
+            texts: List of text strings to embed.
+
+        Returns:
+            List of embedding vectors.
+        """
+        response = await self._client.embeddings.create(
+            model=self._model,
+            input=texts,
+        )
+        return [item.embedding for item in response.data]
+
+    def get_dimension(self) -> int:
+        """Get the embedding dimension.
+
+        Returns:
+            The dimension of the embedding vectors.
+        """
+        return self._dimension
+
+    @property
+    def name(self) -> str:
+        """Get the provider name."""
+        return f"openai:{self._model}"
+```
+
+</details>
 
 ## Class Diagram
 

@@ -5,15 +5,15 @@ Local DeepWiki-style MCP server for private repository documentation
 
 ## Description
 
-Local DeepWiki MCP is a Model Context Protocol (MCP) server that provides AI-powered documentation generation for private code repositories. It combines multiple LLM providers (Ollama, OpenAI, Anthropic) with embedding-based indexing to create comprehensive wiki-style documentation from your codebase.
+Local DeepWiki MCP is a Model Context Protocol (MCP) server that generates comprehensive documentation for private code repositories. The system provides multiple interfaces including a web server, file watcher for automatic updates, and export capabilities to HTML and PDF formats, all designed to create DeepWiki-style documentation locally.
 
 ## Key Features
 
-- **Multiple [LLM Provider](files/src/local_deepwiki/providers/base.md) Support** - Integrates with Ollama (local), OpenAI, and Anthropic APIs for flexible AI-powered documentation generation
-- **MCP Server Architecture** - Implements the Model Context Protocol for seamless integration with AI assistants and development tools
-- **Web Interface** - Includes a built-in Flask web server (`deepwiki-serve`) for browsing generated documentation at configurable host and port
-- **Multiple Export Formats** - Supports both HTML (`deepwiki-export`) and PDF (`deepwiki-export-pdf`) export capabilities for documentation
-- **Repository Indexing** - Features a core indexer that processes repository files with configurable embedding providers for semantic search and analysis
+- **MCP Server Integration** - Implements a Model Context Protocol server with stdio communication for AI assistant integration, as shown in the [main](files/src/local_deepwiki/export/html.md) server entry point
+- **Multiple [LLM Provider](files/src/local_deepwiki/providers/base.md) Support** - Integrates with various AI providers including Ollama (with configurable models and base URLs), Anthropic, and OpenAI through dedicated provider classes
+- **Flexible Export Options** - Offers multiple export formats through dedicated CLI commands (`deepwiki-export` for HTML and `deepwiki-export-pdf` for PDF generation)
+- **Real-time File Watching** - Includes a watcher service (`deepwiki-watch`) that can monitor repository changes and trigger documentation updates, with options for full rebuilds and skipping initial indexing
+- **Configurable Documentation Generation** - Uses YAML-based configuration with research presets, embedding configurations, and parsing controls to customize documentation output
 
 ## Technology Stack
 
@@ -44,11 +44,11 @@ local-deepwiki-mcp/
 │   ├── test_crosslinks.py
 │   ├── test_deep_research.py
 │   ├── test_diagrams.py
+│   ├── test_export_init.py
 │   ├── test_git_utils.py
+│   ├── test_handlers_coverage.py
 │   ├── test_html_export.py
 │   ├── test_incremental_wiki.py
-│   ├── test_indexer.py
-│   ├── test_llm_cache.py
 │   ...
 ...
 ```

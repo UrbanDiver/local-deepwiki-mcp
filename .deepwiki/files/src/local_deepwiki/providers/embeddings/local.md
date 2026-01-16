@@ -1,32 +1,68 @@
-# LocalEmbeddingProvider Module
+# LocalEmbeddingProvider
 
 ## File Overview
 
-This module provides a local embedding implementation using the SentenceTransformer library. It contains the LocalEmbeddingProvider class that extends the base [EmbeddingProvider](../base.md) interface to generate text embeddings locally without requiring external API calls.
+This file implements a local embedding provider that uses sentence-transformers models for generating embeddings. It provides an implementation of the [EmbeddingProvider](../base.md) interface for running embedding models locally rather than using remote APIs.
 
 ## Classes
 
 ### LocalEmbeddingProvider
 
-The LocalEmbeddingProvider class implements local text embedding functionality using SentenceTransformer models. This class extends the base [EmbeddingProvider](../base.md) interface to provide a local alternative to cloud-based embedding services.
+The LocalEmbeddingProvider class provides local text embedding capabilities using sentence-transformers models. It implements lazy loading of the underlying model to optimize memory usage.
 
-**Note**: The specific methods and implementation details of this class are not visible in the provided code chunks, but it inherits from the [EmbeddingProvider](../base.md) base class.
+**Inheritance**: Extends [EmbeddingProvider](../base.md)
 
-## Dependencies
+**Key Features**:
+- Lazy loading of sentence-transformers models
+- Configurable model selection
+- Local processing without external API dependencies
 
-This module relies on the following dependencies:
+## Methods
 
-- `sentence_transformers`: Used for loading and running transformer models locally to generate embeddings
-- `local_deepwiki.providers.base`: Provides the [EmbeddingProvider](../base.md) base class that this implementation extends
+### `__init__(model_name: str = "all-MiniLM-L6-v2")`
+
+Initializes the local embedding provider with a specified model.
+
+**Parameters**:
+- `model_name` (str, optional): Name of the sentence-transformers model to use. Defaults to "all-MiniLM-L6-v2"
+
+**Behavior**:
+- Sets the model name for later loading
+- Initializes internal state variables for the model and dimension
+- Uses lazy loading pattern - model is not loaded until first use
+
+### `_load_model() -> SentenceTransformer`
+
+Private method that implements lazy loading of the sentence-transformers model.
+
+**Returns**: 
+- `SentenceTransformer`: The loaded model instance
+
+**Behavior**:
+- Loads the model only when first accessed
+- Caches the loaded model for subsequent use
+
+## Usage Examples
+
+### Basic Initialization
+
+```python
+# Initialize with default model
+provider = LocalEmbeddingProvider()
+
+# Initialize with custom model
+provider = LocalEmbeddingProvider(model_name="paraphrase-MiniLM-L6-v2")
+```
 
 ## Related Components
 
-- **[EmbeddingProvider](../base.md)**: The base class that LocalEmbeddingProvider extends, defining the interface for embedding providers
-- **SentenceTransformer**: The underlying library used to generate embeddings from text inputs
+This class works with:
+- [EmbeddingProvider](../base.md): The base interface that this class implements
+- SentenceTransformer: The underlying model class from the sentence-transformers library used for generating embeddings
 
-## Usage Context
+## Implementation Notes
 
-This module is part of the local_deepwiki embedding providers system, offering a local alternative to remote embedding services. It allows users to generate text embeddings without depending on external APIs, using pre-trained transformer models that run locally.
+The class uses a lazy loading pattern where the actual sentence-transformers model is only loaded when first needed, which helps optimize memory usage and startup time. The model and its dimension are cached after first load for efficient reuse.
 
 ## API Reference
 
@@ -37,6 +73,63 @@ This module is part of the local_deepwiki embedding providers system, offering a
 Embedding provider using local sentence-transformers models.
 
 **Methods:**
+
+
+<details>
+<summary>View Source (lines 10-57)</summary>
+
+```python
+class LocalEmbeddingProvider(EmbeddingProvider):
+    """Embedding provider using local sentence-transformers models."""
+
+    def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
+        """Initialize the local embedding provider.
+
+        Args:
+            model_name: Name of the sentence-transformers model to use.
+        """
+        self._model_name = model_name
+        self._model: SentenceTransformer | None = None
+        self._dimension: int | None = None
+
+    def _load_model(self) -> SentenceTransformer:
+        """Lazy load the model."""
+        if self._model is None:
+            self._model = SentenceTransformer(self._model_name)
+            self._dimension = self._model.get_sentence_embedding_dimension()
+        return self._model
+
+    async def embed(self, texts: list[str]) -> list[list[float]]:
+        """Generate embeddings for a list of texts.
+
+        Args:
+            texts: List of text strings to embed.
+
+        Returns:
+            List of embedding vectors.
+        """
+        model = self._load_model()
+        # sentence-transformers is synchronous, but we keep async interface for consistency
+        embeddings = model.encode(texts, convert_to_numpy=True)
+        return cast(list[list[float]], embeddings.tolist())
+
+    def get_dimension(self) -> int:
+        """Get the embedding dimension.
+
+        Returns:
+            The dimension of the embedding vectors.
+        """
+        if self._dimension is None:
+            self._load_model()
+        return self._dimension  # type: ignore
+
+    @property
+    def name(self) -> str:
+        """Get the provider name."""
+        return f"local:{self._model_name}"
+```
+
+</details>
 
 #### `__init__`
 
@@ -51,6 +144,63 @@ Initialize the local embedding provider.
 |-----------|------|---------|-------------|
 | `model_name` | `str` | `"all-MiniLM-L6-v2"` | Name of the sentence-transformers model to use. |
 
+
+<details>
+<summary>View Source (lines 10-57)</summary>
+
+```python
+class LocalEmbeddingProvider(EmbeddingProvider):
+    """Embedding provider using local sentence-transformers models."""
+
+    def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
+        """Initialize the local embedding provider.
+
+        Args:
+            model_name: Name of the sentence-transformers model to use.
+        """
+        self._model_name = model_name
+        self._model: SentenceTransformer | None = None
+        self._dimension: int | None = None
+
+    def _load_model(self) -> SentenceTransformer:
+        """Lazy load the model."""
+        if self._model is None:
+            self._model = SentenceTransformer(self._model_name)
+            self._dimension = self._model.get_sentence_embedding_dimension()
+        return self._model
+
+    async def embed(self, texts: list[str]) -> list[list[float]]:
+        """Generate embeddings for a list of texts.
+
+        Args:
+            texts: List of text strings to embed.
+
+        Returns:
+            List of embedding vectors.
+        """
+        model = self._load_model()
+        # sentence-transformers is synchronous, but we keep async interface for consistency
+        embeddings = model.encode(texts, convert_to_numpy=True)
+        return cast(list[list[float]], embeddings.tolist())
+
+    def get_dimension(self) -> int:
+        """Get the embedding dimension.
+
+        Returns:
+            The dimension of the embedding vectors.
+        """
+        if self._dimension is None:
+            self._load_model()
+        return self._dimension  # type: ignore
+
+    @property
+    def name(self) -> str:
+        """Get the provider name."""
+        return f"local:{self._model_name}"
+```
+
+</details>
+
 #### `embed`
 
 ```python
@@ -64,6 +214,63 @@ Generate embeddings for a list of texts.
 |-----------|------|---------|-------------|
 | `texts` | `list[str]` | - | List of text strings to embed. |
 
+
+<details>
+<summary>View Source (lines 10-57)</summary>
+
+```python
+class LocalEmbeddingProvider(EmbeddingProvider):
+    """Embedding provider using local sentence-transformers models."""
+
+    def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
+        """Initialize the local embedding provider.
+
+        Args:
+            model_name: Name of the sentence-transformers model to use.
+        """
+        self._model_name = model_name
+        self._model: SentenceTransformer | None = None
+        self._dimension: int | None = None
+
+    def _load_model(self) -> SentenceTransformer:
+        """Lazy load the model."""
+        if self._model is None:
+            self._model = SentenceTransformer(self._model_name)
+            self._dimension = self._model.get_sentence_embedding_dimension()
+        return self._model
+
+    async def embed(self, texts: list[str]) -> list[list[float]]:
+        """Generate embeddings for a list of texts.
+
+        Args:
+            texts: List of text strings to embed.
+
+        Returns:
+            List of embedding vectors.
+        """
+        model = self._load_model()
+        # sentence-transformers is synchronous, but we keep async interface for consistency
+        embeddings = model.encode(texts, convert_to_numpy=True)
+        return cast(list[list[float]], embeddings.tolist())
+
+    def get_dimension(self) -> int:
+        """Get the embedding dimension.
+
+        Returns:
+            The dimension of the embedding vectors.
+        """
+        if self._dimension is None:
+            self._load_model()
+        return self._dimension  # type: ignore
+
+    @property
+    def name(self) -> str:
+        """Get the provider name."""
+        return f"local:{self._model_name}"
+```
+
+</details>
+
 #### `get_dimension`
 
 ```python
@@ -71,6 +278,63 @@ def get_dimension() -> int
 ```
 
 Get the embedding dimension.
+
+
+<details>
+<summary>View Source (lines 10-57)</summary>
+
+```python
+class LocalEmbeddingProvider(EmbeddingProvider):
+    """Embedding provider using local sentence-transformers models."""
+
+    def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
+        """Initialize the local embedding provider.
+
+        Args:
+            model_name: Name of the sentence-transformers model to use.
+        """
+        self._model_name = model_name
+        self._model: SentenceTransformer | None = None
+        self._dimension: int | None = None
+
+    def _load_model(self) -> SentenceTransformer:
+        """Lazy load the model."""
+        if self._model is None:
+            self._model = SentenceTransformer(self._model_name)
+            self._dimension = self._model.get_sentence_embedding_dimension()
+        return self._model
+
+    async def embed(self, texts: list[str]) -> list[list[float]]:
+        """Generate embeddings for a list of texts.
+
+        Args:
+            texts: List of text strings to embed.
+
+        Returns:
+            List of embedding vectors.
+        """
+        model = self._load_model()
+        # sentence-transformers is synchronous, but we keep async interface for consistency
+        embeddings = model.encode(texts, convert_to_numpy=True)
+        return cast(list[list[float]], embeddings.tolist())
+
+    def get_dimension(self) -> int:
+        """Get the embedding dimension.
+
+        Returns:
+            The dimension of the embedding vectors.
+        """
+        if self._dimension is None:
+            self._load_model()
+        return self._dimension  # type: ignore
+
+    @property
+    def name(self) -> str:
+        """Get the provider name."""
+        return f"local:{self._model_name}"
+```
+
+</details>
 
 #### `name`
 
@@ -81,6 +345,63 @@ def name() -> str
 Get the provider name.
 
 
+
+
+<details>
+<summary>View Source (lines 10-57)</summary>
+
+```python
+class LocalEmbeddingProvider(EmbeddingProvider):
+    """Embedding provider using local sentence-transformers models."""
+
+    def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
+        """Initialize the local embedding provider.
+
+        Args:
+            model_name: Name of the sentence-transformers model to use.
+        """
+        self._model_name = model_name
+        self._model: SentenceTransformer | None = None
+        self._dimension: int | None = None
+
+    def _load_model(self) -> SentenceTransformer:
+        """Lazy load the model."""
+        if self._model is None:
+            self._model = SentenceTransformer(self._model_name)
+            self._dimension = self._model.get_sentence_embedding_dimension()
+        return self._model
+
+    async def embed(self, texts: list[str]) -> list[list[float]]:
+        """Generate embeddings for a list of texts.
+
+        Args:
+            texts: List of text strings to embed.
+
+        Returns:
+            List of embedding vectors.
+        """
+        model = self._load_model()
+        # sentence-transformers is synchronous, but we keep async interface for consistency
+        embeddings = model.encode(texts, convert_to_numpy=True)
+        return cast(list[list[float]], embeddings.tolist())
+
+    def get_dimension(self) -> int:
+        """Get the embedding dimension.
+
+        Returns:
+            The dimension of the embedding vectors.
+        """
+        if self._dimension is None:
+            self._load_model()
+        return self._dimension  # type: ignore
+
+    @property
+    def name(self) -> str:
+        """Get the provider name."""
+        return f"local:{self._model_name}"
+```
+
+</details>
 
 ## Class Diagram
 
@@ -108,21 +429,27 @@ flowchart TD
     N2[LocalEmbeddingProvider.get_...]
     N3[SentenceTransformer]
     N4[_load_model]
-    N5[encode]
-    N6[get_sentence_embedding_dime...]
-    N7[tolist]
+    N5[cast]
+    N6[encode]
+    N7[get_sentence_embedding_dime...]
+    N8[tolist]
     N0 --> N3
-    N0 --> N6
+    N0 --> N7
     N1 --> N4
+    N1 --> N6
     N1 --> N5
-    N1 --> N7
+    N1 --> N8
     N2 --> N4
     classDef func fill:#e1f5fe
-    class N3,N4,N5,N6,N7 func
+    class N3,N4,N5,N6,N7,N8 func
     classDef method fill:#fff3e0
     class N0,N1,N2 method
 ```
 
 ## Relevant Source Files
 
-- `src/local_deepwiki/providers/embeddings/local.py:8-55`
+- `src/local_deepwiki/providers/embeddings/local.py:10-57`
+
+## See Also
+
+- [vectorstore](../../core/vectorstore.md) - shares 2 dependencies

@@ -14,13 +14,218 @@ from local_deepwiki.generators.crosslinks import EntityRegistry
 from local_deepwiki.generators.diagrams import generate_class_diagram
 from local_deepwiki.generators.test_examples import get_file_examples
 from local_deepwiki.logging import get_logger
-from local_deepwiki.models import FileInfo, IndexStatus, ProgressCallback, WikiPage
+from local_deepwiki.models import ChunkType, CodeChunk, FileInfo, IndexStatus, ProgressCallback, WikiPage
 from local_deepwiki.providers.base import LLMProvider
 
 if TYPE_CHECKING:
     from local_deepwiki.generators.wiki_status import WikiStatusManager
 
 logger = get_logger(__name__)
+
+
+def _get_syntax_lang(language: str | None) -> str:
+    """Get syntax highlighting language string.
+
+    Args:
+        language: Programming language name.
+
+    Returns:
+        Language string for markdown code blocks.
+    """
+    lang_map = {
+        "python": "python",
+        "javascript": "javascript",
+        "typescript": "typescript",
+        "tsx": "tsx",
+        "go": "go",
+        "rust": "rust",
+        "java": "java",
+        "c": "c",
+        "cpp": "cpp",
+        "swift": "swift",
+        "ruby": "ruby",
+        "php": "php",
+        "kotlin": "kotlin",
+        "csharp": "csharp",
+    }
+    return lang_map.get(language or "", "")
+
+
+def _create_source_details(chunk: CodeChunk, syntax_lang: str) -> str:
+    """Create a collapsible source code block for a chunk.
+
+    Args:
+        chunk: The code chunk.
+        syntax_lang: Syntax highlighting language.
+
+    Returns:
+        Markdown details block with source code.
+    """
+    return f"""<details>
+<summary>View Source (lines {chunk.start_line}-{chunk.end_line})</summary>
+
+```{syntax_lang}
+{chunk.content}
+```
+
+</details>
+"""
+
+
+def _inject_inline_source_code(content: str, chunks: list[CodeChunk], language: str | None) -> str:
+    """Inject collapsible source code after each function/class in the API Reference.
+
+    Args:
+        content: The markdown content to process.
+        chunks: List of code chunks from the file.
+        language: Programming language for syntax highlighting.
+
+    Returns:
+        Content with inline source code blocks injected.
+    """
+    # Build maps of entity names to their chunks
+    # Use both simple names and qualified names (Parent.method) for methods
+    chunk_map: dict[str, CodeChunk] = {}
+    class_map: dict[str, CodeChunk] = {}  # For fallback to class source
+    all_chunks: set[str] = set()  # Track all chunk IDs
+    used_chunks: set[str] = set()  # Track which chunks we've injected
+
+    for chunk in chunks:
+        if chunk.name and chunk.chunk_type in (ChunkType.CLASS, ChunkType.FUNCTION, ChunkType.METHOD):
+            all_chunks.add(chunk.id)
+            # Store by simple name (may be overwritten by duplicates)
+            chunk_map[chunk.name] = chunk
+            # Also store by qualified name for methods with parents
+            if chunk.parent_name:
+                qualified_name = f"{chunk.parent_name}.{chunk.name}"
+                chunk_map[qualified_name] = chunk
+            # Build class map for fallback
+            if chunk.chunk_type == ChunkType.CLASS:
+                class_map[chunk.name] = chunk
+
+    if not chunk_map:
+        return content
+
+    syntax_lang = _get_syntax_lang(language)
+
+    # Split into lines for processing
+    lines = content.split("\n")
+    result_lines: list[str] = []
+    current_class: str | None = None  # Track current class context
+    i = 0
+
+    while i < len(lines):
+        line = lines[i]
+        result_lines.append(line)
+
+        # Track class context from headings like "### class `ClassName`"
+        if line.startswith("### class `"):
+            start = line.find("`") + 1
+            end = line.find("`", start)
+            if start > 0 and end > start:
+                current_class = line[start:end]
+
+        # Look for API Reference function/class headings
+        # Matches: #### `name`, ### `name`, ### class `name`
+        if line.startswith("#### `") or line.startswith("### `") or line.startswith("### class `"):
+            # Extract entity name from heading like "#### `setup_logging`"
+            start = line.find("`") + 1
+            end = line.find("`", start)
+            if start > 0 and end > start:
+                entity_name = line[start:end]
+
+                # Normalize: strip signature and class prefix
+                # e.g., "__init__(self, ...)" -> "__init__"
+                # e.g., "class MyClass" -> "MyClass"
+                if "(" in entity_name:
+                    entity_name = entity_name.split("(")[0]
+                if entity_name.startswith("class "):
+                    entity_name = entity_name[6:].strip()
+                    # This is a class heading, update context
+                    current_class = entity_name
+
+                # Try to find the chunk - first try qualified name, then simple name
+                chunk = None
+                if current_class and entity_name != current_class:
+                    # This is likely a method under the current class
+                    qualified_name = f"{current_class}.{entity_name}"
+                    chunk = chunk_map.get(qualified_name)
+                if chunk is None:
+                    candidate = chunk_map.get(entity_name)
+                    # Only use simple name match if:
+                    # - It's a class/function (no parent), OR
+                    # - Its parent matches our current context
+                    if candidate is not None:
+                        if candidate.parent_name is None or candidate.parent_name == current_class:
+                            chunk = candidate
+
+                # Part A: Fallback to class source for unmatched methods
+                if chunk is None and current_class and entity_name != current_class:
+                    # Method not found, use parent class source as fallback
+                    chunk = class_map.get(current_class)
+
+                if chunk is not None:
+                    used_chunks.add(chunk.id)
+                    # Find the end of this function's documentation
+                    # Look for: next heading at same or higher level, or **Returns:** line
+                    j = i + 1
+                    found_returns = False
+                    while j < len(lines):
+                        next_line = lines[j]
+                        # Stop at next heading of same or higher level
+                        if next_line.startswith("#### ") or next_line.startswith("### ") or next_line.startswith("## "):
+                            # Inject source before next heading if no Returns found
+                            if not found_returns:
+                                result_lines.append("")
+                                result_lines.append(_create_source_details(chunk, syntax_lang))
+                            i = j - 1  # Back up so we process next heading
+                            break
+                        # Track if we found Returns
+                        if next_line.startswith("**Returns:**"):
+                            found_returns = True
+                            # Include the Returns line and blank line after it
+                            result_lines.append(lines[j])
+                            j += 1
+                            # Skip blank lines after Returns
+                            while j < len(lines) and lines[j].strip() == "":
+                                result_lines.append(lines[j])
+                                j += 1
+                            # Insert source code here
+                            result_lines.append("")
+                            result_lines.append(_create_source_details(chunk, syntax_lang))
+                            i = j - 1  # Continue from here
+                            break
+                        result_lines.append(lines[j])
+                        j += 1
+                    else:
+                        # Reached end of file without finding next heading
+                        # Add source code at the end
+                        if not found_returns:
+                            result_lines.append("")
+                            result_lines.append(_create_source_details(chunk, syntax_lang))
+                        i = j - 1
+
+        i += 1
+
+    # Part B: Add remaining unused chunks at the end
+    unused_chunks = [c for c in chunks if c.id in all_chunks and c.id not in used_chunks]
+    if unused_chunks:
+        result_lines.append("")
+        result_lines.append("## Additional Source Code")
+        result_lines.append("")
+        result_lines.append("Source code for functions and methods not listed in the API Reference above.")
+        result_lines.append("")
+
+        for chunk in sorted(unused_chunks, key=lambda c: c.start_line):
+            if chunk.chunk_type == ChunkType.CLASS:
+                result_lines.append(f"### `{chunk.name}`")
+            else:
+                result_lines.append(f"#### `{chunk.name}`")
+            result_lines.append("")
+            result_lines.append(_create_source_details(chunk, syntax_lang))
+            result_lines.append("")
+
+    return "\n".join(result_lines)
 
 
 async def generate_single_file_doc(
@@ -172,6 +377,10 @@ Do NOT include mermaid class diagrams - they will be auto-generated."""
         )
         if examples_md:
             content += "\n\n" + examples_md
+
+    # Inject inline source code after each function/class in API Reference
+    lang_str = file_info.language.value if file_info.language else None
+    content = _inject_inline_source_code(content, all_file_chunks, lang_str)
 
     # Register entities for cross-linking
     entity_registry.register_from_chunks(all_file_chunks, wiki_path)

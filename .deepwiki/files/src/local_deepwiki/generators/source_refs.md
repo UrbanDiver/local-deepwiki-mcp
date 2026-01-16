@@ -1,109 +1,87 @@
-# source_refs.py
+# Source References Generator
 
 ## File Overview
 
-This module provides functionality for managing source file references in wiki pages. It handles the generation and addition of "Relevant Source Files" sections that link wiki pages to their corresponding source code files, creating bidirectional references between documentation and code.
+The `source_refs.py` module provides functionality for managing source reference sections in wiki pages. It handles the creation and maintenance of sections that map source files to their corresponding wiki pages, enabling cross-referencing between documentation and source code.
 
 ## Functions
 
 ### build_file_to_wiki_map
 
-Maps source files to their corresponding wiki page paths.
+Maps source files to their corresponding wiki pages.
 
 **Parameters:**
-- Based on the function name and context, this function likely takes parameters related to pages and file mappings, but the specific signature is not shown in the provided code.
+- Based on the function name and context, this likely processes wiki pages to create a mapping structure
 
 **Returns:**
-- Returns a dictionary mapping source file paths to wiki page paths.
+- A mapping structure connecting files to wiki pages
 
 ### _relative_path
 
-Internal utility function for calculating relative paths between files.
+Utility function for handling relative path operations.
 
 **Parameters:**
-- The specific parameters are not shown in the provided code.
+- Path-related parameters for computing relative paths
 
 **Returns:**
-- Returns a relative path string.
+- A relative path representation
 
 ### _format_file_entry
 
-Internal utility function for formatting individual file entries in the source references section.
+Formats individual file entries for display in source reference sections.
 
 **Parameters:**
-- The specific parameters are not shown in the provided code.
+- File information to be formatted
 
 **Returns:**
-- Returns a formatted string representation of a file entry.
+- Formatted string representation of the file entry
 
 ### generate_source_refs_section
 
-Generates a "Relevant Source Files" section for a wiki page.
+Generates a complete source references section for inclusion in wiki pages.
 
 **Parameters:**
-- `source_files` (list[str]): List of source file paths that contributed to this page
-- `current_wiki_path` (str): Path of the current wiki page
-- `file_to_wiki` (dict[str, str]): Mapping of source files to wiki paths
-- `file_line_info` (dict[str, dict[str, int]] | None): Optional mapping of file paths to line info dictionaries
-- `max_items` (int): Maximum number of items to include (default: 10)
+- Information needed to build the source references section
 
 **Returns:**
-- `str | None`: Generated section content as a string, or None if no section should be created
+- Formatted source references section content
 
 ### _strip_existing_source_refs
 
-Internal utility function for removing existing source reference sections from wiki content.
+Removes existing source reference sections from wiki page content.
 
 **Parameters:**
-- The specific parameters are not shown in the provided code.
+- Wiki page content containing existing source references
 
 **Returns:**
-- Returns modified content with existing source references removed.
+- Content with source reference sections removed
 
 ### add_source_refs_sections
 
-Adds "Relevant Source Files" sections to multiple wiki pages.
+Adds source reference sections to wiki pages.
 
 **Parameters:**
-- `pages` (list[[WikiPage](../models.md)]): List of wiki pages to process
-- `page_statuses` (dict[str, [WikiPageStatus](../models.md)]): Dictionary mapping page paths to their status objects, which contain source file information
-- `wiki_path` (Path | None): Optional path to wiki directory for finding existing file pages
+- Wiki pages and related information needed to add source references
 
 **Returns:**
-- `list[WikiPage]`: List of wiki pages with "Relevant Source Files" sections added
+- Updated content with source reference sections added
 
-## Usage Examples
+## Dependencies
 
-```python
-from pathlib import Path
-from local_deepwiki.generators.source_refs import add_source_refs_sections, generate_source_refs_section
+The module relies on:
 
-# Add source reference sections to multiple pages
-updated_pages = add_source_refs_sections(
-    pages=wiki_pages,
-    page_statuses=status_dict,
-    wiki_path=Path("docs/wiki")
-)
-
-# Generate a single source reference section
-file_to_wiki_map = {"src/main.py": "wiki/main.md", "src/utils.py": "wiki/utils.md"}
-section_content = generate_source_refs_section(
-    source_files=["src/main.py", "src/utils.py"],
-    current_wiki_path="wiki/overview.md",
-    file_to_wiki=file_to_wiki_map,
-    max_items=5
-)
-```
+- `re`: Regular expression operations for text processing
+- `pathlib.Path`: Path manipulation utilities
+- [`local_deepwiki.models.WikiPage`](../models.md): Wiki page data model
+- [`local_deepwiki.models.WikiPageStatus`](../models.md): Wiki page status enumeration
 
 ## Related Components
 
-This module works with the following components from the codebase:
+This module works with the [WikiPage](../models.md) and [WikiPageStatus](../models.md) classes from the models module to manage wiki page content and track page states during source reference processing.
 
-- **[WikiPage](../models.md)**: Model class representing individual wiki pages
-- **[WikiPageStatus](../models.md)**: Model class containing status information and source file references for pages
-- **Path**: Standard library Path class for file system operations
+## Usage Context
 
-The module uses regular expressions (`re`) for text processing and path manipulation utilities for handling file system paths.
+This module is designed to be used as part of a larger wiki generation system, specifically handling the cross-referencing between source code files and their corresponding documentation pages. The functions work together to create, update, and maintain source reference sections that help users navigate between code and documentation.
 
 ## API Reference
 
@@ -126,6 +104,55 @@ Build a mapping from source file paths to wiki page paths.
 **Returns:** `dict[str, str]`
 
 
+
+<details>
+<summary>View Source (lines 14-53)</summary>
+
+```python
+def build_file_to_wiki_map(pages: list[WikiPage], wiki_path: Path | None = None) -> dict[str, str]:
+    """Build a mapping from source file paths to wiki page paths.
+
+    Args:
+        pages: List of wiki pages.
+        wiki_path: Optional path to wiki directory to scan for existing pages.
+
+    Returns:
+        Dictionary mapping source file path to wiki page path.
+    """
+    file_to_wiki: dict[str, str] = {}
+
+    # First, add mappings from the pages list
+    for page in pages:
+        # Wiki paths like "files/src/local_deepwiki/core/chunker.md"
+        # correspond to source files like "src/local_deepwiki/core/chunker.py"
+        if page.path.startswith("files/"):
+            # Remove "files/" prefix and change .md to .py
+            source_path = page.path[6:]  # Remove "files/"
+            source_path = re.sub(r"\.md$", ".py", source_path)
+            file_to_wiki[source_path] = page.path
+
+    # Also scan wiki_path for existing file pages not in the pages list
+    if wiki_path and wiki_path.exists():
+        files_dir = wiki_path / "files"
+        if files_dir.exists():
+            for md_file in files_dir.rglob("*.md"):
+                # Skip index files
+                if md_file.name == "index.md":
+                    continue
+                # Get relative path from wiki_path
+                rel_path = str(md_file.relative_to(wiki_path))
+                # Convert to source path
+                source_path = rel_path[6:]  # Remove "files/"
+                source_path = re.sub(r"\.md$", ".py", source_path)
+                # Only add if not already in map
+                if source_path not in file_to_wiki:
+                    file_to_wiki[source_path] = rel_path
+
+    return file_to_wiki
+```
+
+</details>
+
 #### `generate_source_refs_section`
 
 ```python
@@ -146,6 +173,70 @@ Generate a Relevant Source Files section for a wiki page.
 **Returns:** `str | None`
 
 
+
+<details>
+<summary>View Source (lines 115-169)</summary>
+
+```python
+def generate_source_refs_section(
+    source_files: list[str],
+    current_wiki_path: str,
+    file_to_wiki: dict[str, str],
+    file_line_info: dict[str, dict[str, int]] | None = None,
+    max_items: int = 10,
+) -> str | None:
+    """Generate a Relevant Source Files section for a wiki page.
+
+    Args:
+        source_files: List of source file paths that contributed to this page.
+        current_wiki_path: Path of the current wiki page.
+        file_to_wiki: Mapping of source files to wiki paths.
+        file_line_info: Optional mapping of file paths to line info dicts.
+        max_items: Maximum number of files to list.
+
+    Returns:
+        Markdown string for Relevant Source Files section, or None if no files.
+    """
+    if not source_files:
+        return None
+
+    # Filter and limit source files
+    files_to_show = source_files[:max_items]
+
+    # For pages with many source files (like overview/architecture),
+    # we could show a summary instead
+    if len(source_files) > max_items:
+        summary_note = f"\n\n*Showing {max_items} of {len(source_files)} source files.*"
+    else:
+        summary_note = ""
+
+    # Generate markdown
+    lines = ["## Relevant Source Files", ""]
+
+    if len(files_to_show) == 1:
+        # Single file - simple format
+        file_path = files_to_show[0]
+        wiki_path = file_to_wiki.get(file_path)
+        line_info = file_line_info.get(file_path) if file_line_info else None
+        lines.append(_format_file_entry(file_path, wiki_path, current_wiki_path, line_info))
+    else:
+        # Multiple files - list format for overview/module pages
+        lines.append("The following source files were used to generate this documentation:")
+        lines.append("")
+
+        for file_path in files_to_show:
+            wiki_path = file_to_wiki.get(file_path)
+            line_info = file_line_info.get(file_path) if file_line_info else None
+            lines.append(_format_file_entry(file_path, wiki_path, current_wiki_path, line_info))
+
+    if summary_note:
+        lines.append(summary_note)
+
+    return "\n".join(lines)
+```
+
+</details>
+
 #### `add_source_refs_sections`
 
 ```python
@@ -164,6 +255,83 @@ Add Relevant Source Files sections to wiki pages.
 **Returns:** `list[WikiPage]`
 
 
+
+
+<details>
+<summary>View Source (lines 205-272)</summary>
+
+```python
+def add_source_refs_sections(
+    pages: list[WikiPage],
+    page_statuses: dict[str, WikiPageStatus],
+    wiki_path: Path | None = None,
+) -> list[WikiPage]:
+    """Add Relevant Source Files sections to wiki pages.
+
+    Args:
+        pages: List of wiki pages.
+        page_statuses: Dictionary mapping page paths to their status (with source_files).
+        wiki_path: Optional path to wiki directory to find existing file pages.
+
+    Returns:
+        List of wiki pages with Relevant Source Files sections added.
+    """
+    # Build file to wiki path mapping, including existing pages on disk
+    file_to_wiki = build_file_to_wiki_map(pages, wiki_path)
+
+    updated_pages = []
+    for page in pages:
+        # Get source files for this page
+        status = page_statuses.get(page.path)
+        if not status or not status.source_files:
+            updated_pages.append(page)
+            continue
+
+        # Skip index pages (like files/index.md, modules/index.md)
+        if page.path.endswith("/index.md") or page.path == "index.md":
+            # For top-level index, don't add source refs (too many files)
+            updated_pages.append(page)
+            continue
+
+        # Generate Relevant Source Files section with line info
+        source_refs = generate_source_refs_section(
+            status.source_files,
+            page.path,
+            file_to_wiki,
+            file_line_info=status.source_line_info,
+        )
+
+        if source_refs:
+            # First, strip any existing Relevant Source Files section
+            content = _strip_existing_source_refs(page.content.rstrip())
+
+            # Check if there's a See Also section to insert before
+            see_also_marker = "\n## See Also"
+            if see_also_marker in content:
+                # Insert before See Also
+                parts = content.split(see_also_marker, 1)
+                new_content = (
+                    parts[0].rstrip() + "\n\n" + source_refs + "\n" + see_also_marker + parts[1]
+                )
+            else:
+                # Add at end
+                new_content = content + "\n\n" + source_refs + "\n"
+
+            updated_pages.append(
+                WikiPage(
+                    path=page.path,
+                    title=page.title,
+                    content=new_content,
+                    generated_at=page.generated_at,
+                )
+            )
+        else:
+            updated_pages.append(page)
+
+    return updated_pages
+```
+
+</details>
 
 ## Call Graph
 
@@ -264,13 +432,136 @@ result = generate_source_refs_section(
 assert result is not None
 ```
 
+
+## Additional Source Code
+
+Source code for functions and methods not listed in the API Reference above.
+
+#### `_relative_path`
+
+<details>
+<summary>View Source (lines 56-81)</summary>
+
+```python
+def _relative_path(from_path: str, to_path: str) -> str:
+    """Calculate relative path between two wiki pages.
+
+    Args:
+        from_path: Path of the source page.
+        to_path: Path of the target page.
+
+    Returns:
+        Relative path from source to target.
+    """
+    from_parts = Path(from_path).parts[:-1]  # Directory parts only
+    to_parts = Path(to_path).parts
+
+    # Find common prefix
+    common_length = 0
+    for i in range(min(len(from_parts), len(to_parts) - 1)):
+        if from_parts[i] == to_parts[i]:
+            common_length = i + 1
+        else:
+            break
+
+    # Build relative path
+    ups = len(from_parts) - common_length
+    rel_parts = [".."] * ups + list(to_parts[common_length:])
+
+    return "/".join(rel_parts)
+```
+
+</details>
+
+
+#### `_format_file_entry`
+
+<details>
+<summary>View Source (lines 84-112)</summary>
+
+```python
+def _format_file_entry(
+    file_path: str,
+    wiki_path: str | None,
+    current_wiki_path: str,
+    line_info: dict[str, int] | None = None,
+) -> str:
+    """Format a single source file entry with optional line numbers.
+
+    Args:
+        file_path: Source file path.
+        wiki_path: Wiki page path for this file (if exists).
+        current_wiki_path: Path of the current wiki page.
+        line_info: Optional dict with 'start_line' and 'end_line' keys.
+
+    Returns:
+        Formatted markdown list item.
+    """
+    # Build display text with line numbers if available
+    if line_info:
+        display = f"`{file_path}:{line_info['start_line']}-{line_info['end_line']}`"
+    else:
+        display = f"`{file_path}`"
+
+    # Format the entry - prefer local wiki links to keep users on-site
+    if wiki_path and wiki_path != current_wiki_path:
+        rel_path = _relative_path(current_wiki_path, wiki_path)
+        return f"- [{display}]({rel_path})"
+    else:
+        return f"- {display}"
+```
+
+</details>
+
+
+#### `_strip_existing_source_refs`
+
+<details>
+<summary>View Source (lines 172-202)</summary>
+
+```python
+def _strip_existing_source_refs(content: str) -> str:
+    """Remove any existing Relevant Source Files section from content.
+
+    Args:
+        content: Wiki page content.
+
+    Returns:
+        Content with Relevant Source Files section removed.
+    """
+    # Pattern to match the section header and everything until the next ## header or end
+    source_refs_marker = "\n## Relevant Source Files"
+    if source_refs_marker not in content:
+        return content
+
+    # Split on the marker and find where the section ends
+    parts = content.split(source_refs_marker)
+    if len(parts) < 2:
+        return content
+
+    result = parts[0].rstrip()
+
+    # For each subsequent part, find where the next section starts
+    for part in parts[1:]:
+        # Find the next ## header (if any)
+        next_section = re.search(r"\n## ", part)
+        if next_section:
+            # Keep everything from the next section onwards
+            result += part[next_section.start() :]
+        # else: section goes to end, discard it
+
+    return result
+```
+
+</details>
+
 ## Relevant Source Files
 
-- `src/local_deepwiki/generators/source_refs.py:14-55`
+- `src/local_deepwiki/generators/source_refs.py:14-53`
 
 ## See Also
 
 - [models](../models.md) - dependency
 - [crosslinks](crosslinks.md) - shares 3 dependencies
-- [diagrams](diagrams.md) - shares 3 dependencies
 - [see_also](see_also.md) - shares 3 dependencies
+- [diagrams](diagrams.md) - shares 3 dependencies

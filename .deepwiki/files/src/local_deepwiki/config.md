@@ -1,14 +1,14 @@
-# Configuration Module
+# config.py
 
 ## File Overview
 
-The `config.py` module provides a centralized configuration system for the local_deepwiki application. It defines configuration models using Pydantic for validation and type safety, and implements a thread-safe global configuration singleton with support for context-local overrides.
+The config.py file provides configuration management for the local_deepwiki application. It implements a thread-safe configuration system with support for global configuration, context-local overrides, and automatic configuration loading from YAML files.
 
 ## Classes
 
 ### Config
 
-The [main](export/pdf.md) configuration class that aggregates all configuration sections.
+The [main](export/html.md) configuration class that aggregates all configuration sections for the application.
 
 **Fields:**
 - `embedding`: EmbeddingConfig instance for embedding provider settings
@@ -19,10 +19,7 @@ The [main](export/pdf.md) configuration class that aggregates all configuration 
 - `wiki`: WikiConfig instance for wiki generation settings
 - `deep_research`: DeepResearchConfig instance for research functionality
 - `output`: OutputConfig instance for output formatting settings
-- `prompts`: PromptsConfig instance for system prompts configuration
-
-**Methods:**
-- `load()`: Class method to load configuration (implementation not shown in provided code)
+- `prompts`: PromptsConfig instance for system prompts
 
 ### LLMConfig
 
@@ -40,7 +37,7 @@ Configuration specific to the Ollama LLM provider.
 
 **Fields:**
 - `model`: Model name string (default: "qwen3-coder:30b")
-- `base_url`: API URL string (default: "http://localhost:11434")
+- `base_url`: API endpoint URL (default: "http://localhost:11434")
 
 ### AnthropicConfig
 
@@ -58,7 +55,7 @@ Configuration specific to the OpenAI LLM provider.
 
 ### ProviderPromptsConfig
 
-Configuration for system prompts used by a specific provider.
+System prompts configuration for a specific LLM provider.
 
 **Fields:**
 - `wiki_system`: System prompt for wiki documentation generation
@@ -68,55 +65,58 @@ Configuration for system prompts used by a specific provider.
 
 ## Functions
 
-### get_config
+### get_config()
 
-Retrieves the active configuration instance with thread-safe access.
+Retrieves the active configuration instance in a thread-safe manner.
 
-**Returns:**
-- `Config`: The active configuration instance
+**Returns:** Config - The active configuration instance
 
 **Behavior:**
-- Returns context-local config if set via config_context
+- Returns context-local config if set (via config_context)
 - Falls back to global singleton configuration
-- Loads configuration automatically if not already initialized
+- Automatically loads configuration if not yet initialized
+- Thread-safe for concurrent access
 
-### set_config
+### set_config(config)
 
-Sets the global configuration instance in a thread-safe manner.
+Sets the global configuration instance.
 
 **Parameters:**
-- `config` (Config): The configuration to set globally
+- `config`: Config - The configuration to set globally
 
-**Note:** This sets the global config, not a context-local override. Use config_context for temporary overrides.
-
-### reset_config
-
-Resets the global configuration to an uninitialized state.
-
-**Purpose:**
-- Useful for testing to ensure fresh config loading
-- Clears any context-local overrides
+**Notes:**
 - Thread-safe operation
+- Sets global config, not context-local
+- Use config_context() for temporary overrides
 
-### config_context
+### reset_config()
+
+Resets the global configuration to uninitialized state.
+
+**Behavior:**
+- Clears global configuration singleton
+- Clears any context-local override
+- Thread-safe operation
+- Useful for testing scenarios
+
+### config_context(config)
 
 Context manager for temporary configuration overrides.
 
 **Parameters:**
-- `config` (Config): The configuration to use within the context
+- `config`: Config - The configuration to use within the context
 
-**Yields:**
-- `Config`: The provided configuration
+**Yields:** Config - The provided configuration
 
 **Usage:**
-Sets a context-local configuration that takes precedence over the global config within the context scope. Useful for testing or per-request configuration.
+Sets a context-local configuration that takes precedence over the global config within the context scope.
 
 ## Usage Examples
 
 ### Basic Configuration Access
 
 ```python
-# Get the current configuration
+# Get current configuration
 config = get_config()
 
 # Access LLM settings
@@ -127,48 +127,39 @@ model_name = config.llm.ollama.model
 ### Setting Global Configuration
 
 ```python
-# Create and set a new configuration
-new_config = Config()
-set_config(new_config)
+# Create and set custom configuration
+custom_config = Config()
+custom_config.llm.provider = "anthropic"
+set_config(custom_config)
 ```
 
 ### Temporary Configuration Override
 
 ```python
-# Use a custom configuration temporarily
-custom_config = Config()
+# Use temporary configuration in context
 with config_context(custom_config):
     # get_config() returns custom_config here
     current_config = get_config()
-    # Use the custom configuration
+    # Use custom configuration...
 # get_config() returns global config again
 ```
 
 ### Testing Configuration Reset
 
 ```python
-# Reset configuration for testing
+# Reset for clean test state
 reset_config()
-# Next call to get_config() will load fresh configuration
+# Configuration will be reloaded on next get_config() call
 ```
 
 ## Related Components
 
-This module works with several other configuration classes referenced but not fully shown in the provided code:
-
-- **ResearchPreset**: Enum for research configuration presets
-- **LocalEmbeddingConfig**: Configuration for local embedding providers
-- **OpenAIEmbeddingConfig**: Configuration for OpenAI embeddings
-- **EmbeddingConfig**: Main embedding configuration
-- **ParsingConfig**: Document parsing settings
-- **ChunkingConfig**: Text chunking configuration
-- **WikiConfig**: Wiki generation settings
-- **DeepResearchConfig**: Research functionality configuration
-- **OutputConfig**: Output formatting settings
-- **LLMCacheConfig**: LLM caching configuration
-- **PromptsConfig**: System prompts configuration
-
-The module uses standard Python libraries including `threading`, `contextlib`, `contextvars`, `enum`, `pathlib`, and `typing`, along with `yaml` for configuration file handling and `pydantic` for data validation.
+This configuration system works with:
+- **Pydantic BaseModel**: All configuration classes inherit from BaseModel for validation
+- **YAML**: Configuration loading from YAML files (via yaml import)
+- **Threading**: Thread-safe access using threading.Lock
+- **Context Variables**: Context-local overrides using contextvars.ContextVar
+- **Pathlib**: File system operations using Path objects
 
 ## API Reference
 
@@ -178,11 +169,41 @@ The module uses standard Python libraries including `threading`, `contextlib`, `
 
 Research mode presets for deep research pipeline.
 
+
+<details>
+<summary>View Source (lines 14-19)</summary>
+
+```python
+class ResearchPreset(str, Enum):
+    """Research mode presets for deep research pipeline."""
+
+    QUICK = "quick"
+    DEFAULT = "default"
+    THOROUGH = "thorough"
+```
+
+</details>
+
 ### class `LocalEmbeddingConfig`
 
 **Inherits from:** `BaseModel`
 
 Configuration for local embedding model.
+
+
+<details>
+<summary>View Source (lines 51-56)</summary>
+
+```python
+class LocalEmbeddingConfig(BaseModel):
+    """Configuration for local embedding model."""
+
+    model: str = Field(
+        default="all-MiniLM-L6-v2", description="Model name for sentence-transformers"
+    )
+```
+
+</details>
 
 ### class `OpenAIEmbeddingConfig`
 
@@ -190,11 +211,39 @@ Configuration for local embedding model.
 
 Configuration for OpenAI embedding model.
 
+
+<details>
+<summary>View Source (lines 59-62)</summary>
+
+```python
+class OpenAIEmbeddingConfig(BaseModel):
+    """Configuration for OpenAI embedding model."""
+
+    model: str = Field(default="text-embedding-3-small", description="OpenAI embedding model")
+```
+
+</details>
+
 ### class `EmbeddingConfig`
 
 **Inherits from:** `BaseModel`
 
 Embedding provider configuration.
+
+
+<details>
+<summary>View Source (lines 65-70)</summary>
+
+```python
+class EmbeddingConfig(BaseModel):
+    """Embedding provider configuration."""
+
+    provider: Literal["local", "openai"] = Field(default="local", description="Embedding provider")
+    local: LocalEmbeddingConfig = Field(default_factory=LocalEmbeddingConfig)
+    openai: OpenAIEmbeddingConfig = Field(default_factory=OpenAIEmbeddingConfig)
+```
+
+</details>
 
 ### class `OllamaConfig`
 
@@ -202,11 +251,38 @@ Embedding provider configuration.
 
 Configuration for Ollama LLM.
 
+
+<details>
+<summary>View Source (lines 73-77)</summary>
+
+```python
+class OllamaConfig(BaseModel):
+    """Configuration for Ollama LLM."""
+
+    model: str = Field(default="qwen3-coder:30b", description="Ollama model name")
+    base_url: str = Field(default="http://localhost:11434", description="Ollama API URL")
+```
+
+</details>
+
 ### class `AnthropicConfig`
 
 **Inherits from:** `BaseModel`
 
 Configuration for Anthropic LLM.
+
+
+<details>
+<summary>View Source (lines 80-83)</summary>
+
+```python
+class AnthropicConfig(BaseModel):
+    """Configuration for Anthropic LLM."""
+
+    model: str = Field(default="claude-sonnet-4-20250514", description="Anthropic model name")
+```
+
+</details>
 
 ### class `OpenAILLMConfig`
 
@@ -214,11 +290,42 @@ Configuration for Anthropic LLM.
 
 Configuration for OpenAI LLM.
 
+
+<details>
+<summary>View Source (lines 86-89)</summary>
+
+```python
+class OpenAILLMConfig(BaseModel):
+    """Configuration for OpenAI LLM."""
+
+    model: str = Field(default="gpt-4o", description="OpenAI model name")
+```
+
+</details>
+
 ### class `LLMConfig`
 
 **Inherits from:** `BaseModel`
 
 LLM provider configuration.
+
+
+<details>
+<summary>View Source (lines 92-100)</summary>
+
+```python
+class LLMConfig(BaseModel):
+    """LLM provider configuration."""
+
+    provider: Literal["ollama", "anthropic", "openai"] = Field(
+        default="ollama", description="LLM provider"
+    )
+    ollama: OllamaConfig = Field(default_factory=OllamaConfig)
+    anthropic: AnthropicConfig = Field(default_factory=AnthropicConfig)
+    openai: OpenAILLMConfig = Field(default_factory=OpenAILLMConfig)
+```
+
+</details>
 
 ### class `ParsingConfig`
 
@@ -226,17 +333,131 @@ LLM provider configuration.
 
 Code parsing configuration.
 
+
+<details>
+<summary>View Source (lines 103-141)</summary>
+
+```python
+class ParsingConfig(BaseModel):
+    """Code parsing configuration."""
+
+    languages: list[str] = Field(
+        default=[
+            "python",
+            "typescript",
+            "javascript",
+            "go",
+            "rust",
+            "java",
+            "c",
+            "cpp",
+            "swift",
+            "ruby",
+            "php",
+            "kotlin",
+            "csharp",
+        ],
+        description="Languages to parse",
+    )
+    max_file_size: int = Field(default=1048576, description="Max file size in bytes (1MB)")
+    exclude_patterns: list[str] = Field(
+        default=[
+            "node_modules/**",
+            "venv/**",
+            ".venv/**",
+            "__pycache__/**",
+            ".git/**",
+            "*.min.js",
+            "*.min.css",
+            "dist/**",
+            "build/**",
+            ".next/**",
+            "target/**",
+            "vendor/**",
+        ],
+        description="Glob patterns to exclude",
+    )
+```
+
+</details>
+
 ### class `ChunkingConfig`
 
 **Inherits from:** `BaseModel`
 
 Chunking configuration.
 
+
+<details>
+<summary>View Source (lines 144-155)</summary>
+
+```python
+class ChunkingConfig(BaseModel):
+    """Chunking configuration."""
+
+    max_chunk_tokens: int = Field(default=512, description="Max tokens per chunk")
+    overlap_tokens: int = Field(default=50, description="Overlap between chunks")
+    batch_size: int = Field(
+        default=500, description="Number of chunks to process in each batch for memory efficiency"
+    )
+    class_split_threshold: int = Field(
+        default=100,
+        description="Line count threshold above which classes are split into summary + method chunks",
+    )
+```
+
+</details>
+
 ### class `WikiConfig`
 
 **Inherits from:** `BaseModel`
 
 Wiki generation configuration.
+
+
+<details>
+<summary>View Source (lines 158-193)</summary>
+
+```python
+class WikiConfig(BaseModel):
+    """Wiki generation configuration."""
+
+    max_file_docs: int = Field(
+        default=75, description="Maximum number of file-level documentation pages to generate"
+    )
+    max_concurrent_llm_calls: int = Field(
+        default=3,
+        ge=1,
+        le=10,
+        description="Maximum concurrent LLM calls for file documentation generation. "
+        "Higher values speed up generation but increase memory/API usage.",
+    )
+    use_cloud_for_github: bool = Field(
+        default=False,
+        description="Use cloud LLM provider (Anthropic Claude) for GitHub repos. "
+        "Provides faster, higher-quality documentation but requires API key.",
+    )
+    github_llm_provider: Literal["anthropic", "openai"] = Field(
+        default="anthropic",
+        description="Cloud LLM provider to use for GitHub repos when use_cloud_for_github is enabled.",
+    )
+    chat_llm_provider: Literal["default", "anthropic", "openai", "ollama"] = Field(
+        default="default",
+        description="LLM provider for chat Q&A. 'default' uses the main llm.provider setting. "
+        "Set to 'anthropic' or 'openai' for higher-quality chat responses.",
+    )
+    import_search_limit: int = Field(
+        default=200, description="Maximum chunks to search for import/relationship analysis"
+    )
+    context_search_limit: int = Field(
+        default=50, description="Maximum chunks to search for context when generating documentation"
+    )
+    fallback_search_limit: int = Field(
+        default=30, description="Maximum chunks to search in fallback queries"
+    )
+```
+
+</details>
 
 ### class `DeepResearchConfig`
 
@@ -245,6 +466,84 @@ Wiki generation configuration.
 Deep research pipeline configuration.
 
 **Methods:**
+
+
+<details>
+<summary>View Source (lines 196-264)</summary>
+
+```python
+class DeepResearchConfig(BaseModel):
+    """Deep research pipeline configuration."""
+
+    max_sub_questions: int = Field(
+        default=4,
+        ge=1,
+        le=10,
+        description="Maximum sub-questions generated from query decomposition",
+    )
+    chunks_per_subquestion: int = Field(
+        default=5,
+        ge=1,
+        le=20,
+        description="Code chunks retrieved per sub-question",
+    )
+    max_total_chunks: int = Field(
+        default=30,
+        ge=10,
+        le=100,
+        description="Maximum total chunks used in synthesis",
+    )
+    max_follow_up_queries: int = Field(
+        default=3,
+        ge=0,
+        le=10,
+        description="Maximum follow-up queries from gap analysis",
+    )
+    synthesis_temperature: float = Field(
+        default=0.5,
+        ge=0.0,
+        le=2.0,
+        description="LLM temperature for synthesis (higher = more creative)",
+    )
+    synthesis_max_tokens: int = Field(
+        default=4096,
+        ge=512,
+        le=16000,
+        description="Maximum tokens in synthesis response",
+    )
+
+    def with_preset(self, preset: ResearchPreset | str | None) -> "DeepResearchConfig":
+        """Return a new config with preset values applied.
+
+        The preset values override the current config values. If preset is None
+        or "default", returns a copy of the current config unchanged.
+
+        Args:
+            preset: The research preset to apply ("quick", "default", "thorough").
+
+        Returns:
+            A new DeepResearchConfig with preset values applied.
+        """
+        if preset is None:
+            return self.model_copy()
+
+        # Convert string to enum if needed
+        if isinstance(preset, str):
+            try:
+                preset = ResearchPreset(preset.lower())
+            except ValueError:
+                # Invalid preset name, return unchanged
+                return self.model_copy()
+
+        if preset == ResearchPreset.DEFAULT:
+            return self.model_copy()
+
+        # Get preset values and merge with current config
+        preset_values = RESEARCH_PRESETS.get(preset, {})
+        return self.model_copy(update=preset_values)
+```
+
+</details>
 
 #### `with_preset`
 
@@ -260,11 +559,103 @@ Return a new config with preset values applied.  The preset values override the 
 | `preset` | `ResearchPreset | str | None` | - | The research preset to apply ("quick", "default", "thorough"). |
 
 
+
+<details>
+<summary>View Source (lines 196-264)</summary>
+
+```python
+class DeepResearchConfig(BaseModel):
+    """Deep research pipeline configuration."""
+
+    max_sub_questions: int = Field(
+        default=4,
+        ge=1,
+        le=10,
+        description="Maximum sub-questions generated from query decomposition",
+    )
+    chunks_per_subquestion: int = Field(
+        default=5,
+        ge=1,
+        le=20,
+        description="Code chunks retrieved per sub-question",
+    )
+    max_total_chunks: int = Field(
+        default=30,
+        ge=10,
+        le=100,
+        description="Maximum total chunks used in synthesis",
+    )
+    max_follow_up_queries: int = Field(
+        default=3,
+        ge=0,
+        le=10,
+        description="Maximum follow-up queries from gap analysis",
+    )
+    synthesis_temperature: float = Field(
+        default=0.5,
+        ge=0.0,
+        le=2.0,
+        description="LLM temperature for synthesis (higher = more creative)",
+    )
+    synthesis_max_tokens: int = Field(
+        default=4096,
+        ge=512,
+        le=16000,
+        description="Maximum tokens in synthesis response",
+    )
+
+    def with_preset(self, preset: ResearchPreset | str | None) -> "DeepResearchConfig":
+        """Return a new config with preset values applied.
+
+        The preset values override the current config values. If preset is None
+        or "default", returns a copy of the current config unchanged.
+
+        Args:
+            preset: The research preset to apply ("quick", "default", "thorough").
+
+        Returns:
+            A new DeepResearchConfig with preset values applied.
+        """
+        if preset is None:
+            return self.model_copy()
+
+        # Convert string to enum if needed
+        if isinstance(preset, str):
+            try:
+                preset = ResearchPreset(preset.lower())
+            except ValueError:
+                # Invalid preset name, return unchanged
+                return self.model_copy()
+
+        if preset == ResearchPreset.DEFAULT:
+            return self.model_copy()
+
+        # Get preset values and merge with current config
+        preset_values = RESEARCH_PRESETS.get(preset, {})
+        return self.model_copy(update=preset_values)
+```
+
+</details>
+
 ### class `OutputConfig`
 
 **Inherits from:** `BaseModel`
 
 Output configuration.
+
+
+<details>
+<summary>View Source (lines 267-271)</summary>
+
+```python
+class OutputConfig(BaseModel):
+    """Output configuration."""
+
+    wiki_dir: str = Field(default=".deepwiki", description="Wiki output directory name")
+    vector_db_name: str = Field(default="vectors.lance", description="Vector DB filename")
+```
+
+</details>
 
 ### class `LLMCacheConfig`
 
@@ -272,11 +663,64 @@ Output configuration.
 
 LLM response caching configuration.
 
+
+<details>
+<summary>View Source (lines 274-301)</summary>
+
+```python
+class LLMCacheConfig(BaseModel):
+    """LLM response caching configuration."""
+
+    enabled: bool = Field(default=True, description="Enable LLM response caching")
+    ttl_seconds: int = Field(
+        default=604800,  # 7 days
+        ge=60,
+        le=2592000,  # 30 days max
+        description="Cache TTL in seconds (default: 7 days)",
+    )
+    max_entries: int = Field(
+        default=10000,
+        ge=100,
+        le=100000,
+        description="Maximum cache entries before eviction",
+    )
+    similarity_threshold: float = Field(
+        default=0.95,
+        ge=0.0,
+        le=1.0,
+        description="Minimum similarity score for cache hit (0.0-1.0)",
+    )
+    max_cacheable_temperature: float = Field(
+        default=0.3,
+        ge=0.0,
+        le=2.0,
+        description="Maximum temperature to cache (higher = non-deterministic)",
+    )
+```
+
+</details>
+
 ### class `ProviderPromptsConfig`
 
 **Inherits from:** `BaseModel`
 
 Prompts configuration for a specific provider.
+
+
+<details>
+<summary>View Source (lines 391-397)</summary>
+
+```python
+class ProviderPromptsConfig(BaseModel):
+    """Prompts configuration for a specific provider."""
+
+    wiki_system: str = Field(description="System prompt for wiki documentation generation")
+    research_decomposition: str = Field(description="System prompt for question decomposition")
+    research_gap_analysis: str = Field(description="System prompt for gap analysis")
+    research_synthesis: str = Field(description="System prompt for answer synthesis")
+```
+
+</details>
 
 ### class `PromptsConfig`
 
@@ -285,6 +729,60 @@ Prompts configuration for a specific provider.
 Provider-specific prompts configuration.
 
 **Methods:**
+
+
+<details>
+<summary>View Source (lines 400-444)</summary>
+
+```python
+class PromptsConfig(BaseModel):
+    """Provider-specific prompts configuration."""
+
+    ollama: ProviderPromptsConfig = Field(
+        default_factory=lambda: ProviderPromptsConfig(
+            wiki_system=WIKI_SYSTEM_PROMPTS["ollama"],
+            research_decomposition=RESEARCH_DECOMPOSITION_PROMPTS["ollama"],
+            research_gap_analysis=RESEARCH_GAP_ANALYSIS_PROMPTS["ollama"],
+            research_synthesis=RESEARCH_SYNTHESIS_PROMPTS["ollama"],
+        )
+    )
+    anthropic: ProviderPromptsConfig = Field(
+        default_factory=lambda: ProviderPromptsConfig(
+            wiki_system=WIKI_SYSTEM_PROMPTS["anthropic"],
+            research_decomposition=RESEARCH_DECOMPOSITION_PROMPTS["anthropic"],
+            research_gap_analysis=RESEARCH_GAP_ANALYSIS_PROMPTS["anthropic"],
+            research_synthesis=RESEARCH_SYNTHESIS_PROMPTS["anthropic"],
+        )
+    )
+    openai: ProviderPromptsConfig = Field(
+        default_factory=lambda: ProviderPromptsConfig(
+            wiki_system=WIKI_SYSTEM_PROMPTS["openai"],
+            research_decomposition=RESEARCH_DECOMPOSITION_PROMPTS["openai"],
+            research_gap_analysis=RESEARCH_GAP_ANALYSIS_PROMPTS["openai"],
+            research_synthesis=RESEARCH_SYNTHESIS_PROMPTS["openai"],
+        )
+    )
+
+    def get_for_provider(self, provider: str) -> ProviderPromptsConfig:
+        """Get prompts for a specific provider.
+
+        Args:
+            provider: Provider name ("ollama", "anthropic", "openai").
+
+        Returns:
+            ProviderPromptsConfig for the specified provider.
+            Falls back to anthropic prompts for unknown providers.
+        """
+        if provider == "ollama":
+            return self.ollama
+        elif provider == "openai":
+            return self.openai
+        else:
+            # Default to anthropic (most detailed prompts)
+            return self.anthropic
+```
+
+</details>
 
 #### `get_for_provider`
 
@@ -300,6 +798,60 @@ Get prompts for a specific provider.
 | `provider` | `str` | - | Provider name ("ollama", "anthropic", "openai"). |
 
 
+
+<details>
+<summary>View Source (lines 400-444)</summary>
+
+```python
+class PromptsConfig(BaseModel):
+    """Provider-specific prompts configuration."""
+
+    ollama: ProviderPromptsConfig = Field(
+        default_factory=lambda: ProviderPromptsConfig(
+            wiki_system=WIKI_SYSTEM_PROMPTS["ollama"],
+            research_decomposition=RESEARCH_DECOMPOSITION_PROMPTS["ollama"],
+            research_gap_analysis=RESEARCH_GAP_ANALYSIS_PROMPTS["ollama"],
+            research_synthesis=RESEARCH_SYNTHESIS_PROMPTS["ollama"],
+        )
+    )
+    anthropic: ProviderPromptsConfig = Field(
+        default_factory=lambda: ProviderPromptsConfig(
+            wiki_system=WIKI_SYSTEM_PROMPTS["anthropic"],
+            research_decomposition=RESEARCH_DECOMPOSITION_PROMPTS["anthropic"],
+            research_gap_analysis=RESEARCH_GAP_ANALYSIS_PROMPTS["anthropic"],
+            research_synthesis=RESEARCH_SYNTHESIS_PROMPTS["anthropic"],
+        )
+    )
+    openai: ProviderPromptsConfig = Field(
+        default_factory=lambda: ProviderPromptsConfig(
+            wiki_system=WIKI_SYSTEM_PROMPTS["openai"],
+            research_decomposition=RESEARCH_DECOMPOSITION_PROMPTS["openai"],
+            research_gap_analysis=RESEARCH_GAP_ANALYSIS_PROMPTS["openai"],
+            research_synthesis=RESEARCH_SYNTHESIS_PROMPTS["openai"],
+        )
+    )
+
+    def get_for_provider(self, provider: str) -> ProviderPromptsConfig:
+        """Get prompts for a specific provider.
+
+        Args:
+            provider: Provider name ("ollama", "anthropic", "openai").
+
+        Returns:
+            ProviderPromptsConfig for the specified provider.
+            Falls back to anthropic prompts for unknown providers.
+        """
+        if provider == "ollama":
+            return self.ollama
+        elif provider == "openai":
+            return self.openai
+        else:
+            # Default to anthropic (most detailed prompts)
+            return self.anthropic
+```
+
+</details>
+
 ### class `Config`
 
 **Inherits from:** `BaseModel`
@@ -308,6 +860,64 @@ Main configuration.
 
 **Methods:**
 
+
+<details>
+<summary>View Source (lines 447-495)</summary>
+
+```python
+class Config(BaseModel):
+    """Main configuration."""
+
+    embedding: EmbeddingConfig = Field(default_factory=EmbeddingConfig)
+    llm: LLMConfig = Field(default_factory=LLMConfig)
+    llm_cache: LLMCacheConfig = Field(default_factory=LLMCacheConfig)
+    parsing: ParsingConfig = Field(default_factory=ParsingConfig)
+    chunking: ChunkingConfig = Field(default_factory=ChunkingConfig)
+    wiki: WikiConfig = Field(default_factory=WikiConfig)
+    deep_research: DeepResearchConfig = Field(default_factory=DeepResearchConfig)
+    output: OutputConfig = Field(default_factory=OutputConfig)
+    prompts: PromptsConfig = Field(default_factory=PromptsConfig)
+
+    def get_prompts(self) -> ProviderPromptsConfig:
+        """Get prompts for the currently configured LLM provider.
+
+        Returns:
+            ProviderPromptsConfig for the current LLM provider.
+        """
+        return self.prompts.get_for_provider(self.llm.provider)
+
+    @classmethod
+    def load(cls, config_path: Path | None = None) -> "Config":
+        """Load configuration from file or defaults."""
+        if config_path and config_path.exists():
+            with open(config_path) as f:
+                data = yaml.safe_load(f)
+            return cls.model_validate(data)
+
+        # Check default locations
+        default_paths = [
+            Path.home() / ".config" / "local-deepwiki" / "config.yaml",
+            Path.home() / ".local-deepwiki.yaml",
+        ]
+        for path in default_paths:
+            if path.exists():
+                with open(path) as f:
+                    data = yaml.safe_load(f)
+                return cls.model_validate(data)
+
+        return cls()
+
+    def get_wiki_path(self, repo_path: Path) -> Path:
+        """Get the wiki output path for a repository."""
+        return repo_path / self.output.wiki_dir
+
+    def get_vector_db_path(self, repo_path: Path) -> Path:
+        """Get the vector database path for a repository."""
+        return self.get_wiki_path(repo_path) / self.output.vector_db_name
+```
+
+</details>
+
 #### `get_prompts`
 
 ```python
@@ -315,6 +925,64 @@ def get_prompts() -> ProviderPromptsConfig
 ```
 
 Get prompts for the currently configured LLM provider.
+
+
+<details>
+<summary>View Source (lines 447-495)</summary>
+
+```python
+class Config(BaseModel):
+    """Main configuration."""
+
+    embedding: EmbeddingConfig = Field(default_factory=EmbeddingConfig)
+    llm: LLMConfig = Field(default_factory=LLMConfig)
+    llm_cache: LLMCacheConfig = Field(default_factory=LLMCacheConfig)
+    parsing: ParsingConfig = Field(default_factory=ParsingConfig)
+    chunking: ChunkingConfig = Field(default_factory=ChunkingConfig)
+    wiki: WikiConfig = Field(default_factory=WikiConfig)
+    deep_research: DeepResearchConfig = Field(default_factory=DeepResearchConfig)
+    output: OutputConfig = Field(default_factory=OutputConfig)
+    prompts: PromptsConfig = Field(default_factory=PromptsConfig)
+
+    def get_prompts(self) -> ProviderPromptsConfig:
+        """Get prompts for the currently configured LLM provider.
+
+        Returns:
+            ProviderPromptsConfig for the current LLM provider.
+        """
+        return self.prompts.get_for_provider(self.llm.provider)
+
+    @classmethod
+    def load(cls, config_path: Path | None = None) -> "Config":
+        """Load configuration from file or defaults."""
+        if config_path and config_path.exists():
+            with open(config_path) as f:
+                data = yaml.safe_load(f)
+            return cls.model_validate(data)
+
+        # Check default locations
+        default_paths = [
+            Path.home() / ".config" / "local-deepwiki" / "config.yaml",
+            Path.home() / ".local-deepwiki.yaml",
+        ]
+        for path in default_paths:
+            if path.exists():
+                with open(path) as f:
+                    data = yaml.safe_load(f)
+                return cls.model_validate(data)
+
+        return cls()
+
+    def get_wiki_path(self, repo_path: Path) -> Path:
+        """Get the wiki output path for a repository."""
+        return repo_path / self.output.wiki_dir
+
+    def get_vector_db_path(self, repo_path: Path) -> Path:
+        """Get the vector database path for a repository."""
+        return self.get_wiki_path(repo_path) / self.output.vector_db_name
+```
+
+</details>
 
 #### `load`
 
@@ -329,6 +997,64 @@ Load configuration from file or defaults.
 |-----------|------|---------|-------------|
 | `config_path` | `Path | None` | `None` | - |
 
+
+<details>
+<summary>View Source (lines 447-495)</summary>
+
+```python
+class Config(BaseModel):
+    """Main configuration."""
+
+    embedding: EmbeddingConfig = Field(default_factory=EmbeddingConfig)
+    llm: LLMConfig = Field(default_factory=LLMConfig)
+    llm_cache: LLMCacheConfig = Field(default_factory=LLMCacheConfig)
+    parsing: ParsingConfig = Field(default_factory=ParsingConfig)
+    chunking: ChunkingConfig = Field(default_factory=ChunkingConfig)
+    wiki: WikiConfig = Field(default_factory=WikiConfig)
+    deep_research: DeepResearchConfig = Field(default_factory=DeepResearchConfig)
+    output: OutputConfig = Field(default_factory=OutputConfig)
+    prompts: PromptsConfig = Field(default_factory=PromptsConfig)
+
+    def get_prompts(self) -> ProviderPromptsConfig:
+        """Get prompts for the currently configured LLM provider.
+
+        Returns:
+            ProviderPromptsConfig for the current LLM provider.
+        """
+        return self.prompts.get_for_provider(self.llm.provider)
+
+    @classmethod
+    def load(cls, config_path: Path | None = None) -> "Config":
+        """Load configuration from file or defaults."""
+        if config_path and config_path.exists():
+            with open(config_path) as f:
+                data = yaml.safe_load(f)
+            return cls.model_validate(data)
+
+        # Check default locations
+        default_paths = [
+            Path.home() / ".config" / "local-deepwiki" / "config.yaml",
+            Path.home() / ".local-deepwiki.yaml",
+        ]
+        for path in default_paths:
+            if path.exists():
+                with open(path) as f:
+                    data = yaml.safe_load(f)
+                return cls.model_validate(data)
+
+        return cls()
+
+    def get_wiki_path(self, repo_path: Path) -> Path:
+        """Get the wiki output path for a repository."""
+        return repo_path / self.output.wiki_dir
+
+    def get_vector_db_path(self, repo_path: Path) -> Path:
+        """Get the vector database path for a repository."""
+        return self.get_wiki_path(repo_path) / self.output.vector_db_name
+```
+
+</details>
+
 #### `get_wiki_path`
 
 ```python
@@ -341,6 +1067,64 @@ Get the wiki output path for a repository.
 | [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `repo_path` | `Path` | - | - |
+
+
+<details>
+<summary>View Source (lines 447-495)</summary>
+
+```python
+class Config(BaseModel):
+    """Main configuration."""
+
+    embedding: EmbeddingConfig = Field(default_factory=EmbeddingConfig)
+    llm: LLMConfig = Field(default_factory=LLMConfig)
+    llm_cache: LLMCacheConfig = Field(default_factory=LLMCacheConfig)
+    parsing: ParsingConfig = Field(default_factory=ParsingConfig)
+    chunking: ChunkingConfig = Field(default_factory=ChunkingConfig)
+    wiki: WikiConfig = Field(default_factory=WikiConfig)
+    deep_research: DeepResearchConfig = Field(default_factory=DeepResearchConfig)
+    output: OutputConfig = Field(default_factory=OutputConfig)
+    prompts: PromptsConfig = Field(default_factory=PromptsConfig)
+
+    def get_prompts(self) -> ProviderPromptsConfig:
+        """Get prompts for the currently configured LLM provider.
+
+        Returns:
+            ProviderPromptsConfig for the current LLM provider.
+        """
+        return self.prompts.get_for_provider(self.llm.provider)
+
+    @classmethod
+    def load(cls, config_path: Path | None = None) -> "Config":
+        """Load configuration from file or defaults."""
+        if config_path and config_path.exists():
+            with open(config_path) as f:
+                data = yaml.safe_load(f)
+            return cls.model_validate(data)
+
+        # Check default locations
+        default_paths = [
+            Path.home() / ".config" / "local-deepwiki" / "config.yaml",
+            Path.home() / ".local-deepwiki.yaml",
+        ]
+        for path in default_paths:
+            if path.exists():
+                with open(path) as f:
+                    data = yaml.safe_load(f)
+                return cls.model_validate(data)
+
+        return cls()
+
+    def get_wiki_path(self, repo_path: Path) -> Path:
+        """Get the wiki output path for a repository."""
+        return repo_path / self.output.wiki_dir
+
+    def get_vector_db_path(self, repo_path: Path) -> Path:
+        """Get the vector database path for a repository."""
+        return self.get_wiki_path(repo_path) / self.output.vector_db_name
+```
+
+</details>
 
 #### `get_vector_db_path`
 
@@ -358,6 +1142,64 @@ Get the vector database path for a repository.
 
 ---
 
+
+<details>
+<summary>View Source (lines 447-495)</summary>
+
+```python
+class Config(BaseModel):
+    """Main configuration."""
+
+    embedding: EmbeddingConfig = Field(default_factory=EmbeddingConfig)
+    llm: LLMConfig = Field(default_factory=LLMConfig)
+    llm_cache: LLMCacheConfig = Field(default_factory=LLMCacheConfig)
+    parsing: ParsingConfig = Field(default_factory=ParsingConfig)
+    chunking: ChunkingConfig = Field(default_factory=ChunkingConfig)
+    wiki: WikiConfig = Field(default_factory=WikiConfig)
+    deep_research: DeepResearchConfig = Field(default_factory=DeepResearchConfig)
+    output: OutputConfig = Field(default_factory=OutputConfig)
+    prompts: PromptsConfig = Field(default_factory=PromptsConfig)
+
+    def get_prompts(self) -> ProviderPromptsConfig:
+        """Get prompts for the currently configured LLM provider.
+
+        Returns:
+            ProviderPromptsConfig for the current LLM provider.
+        """
+        return self.prompts.get_for_provider(self.llm.provider)
+
+    @classmethod
+    def load(cls, config_path: Path | None = None) -> "Config":
+        """Load configuration from file or defaults."""
+        if config_path and config_path.exists():
+            with open(config_path) as f:
+                data = yaml.safe_load(f)
+            return cls.model_validate(data)
+
+        # Check default locations
+        default_paths = [
+            Path.home() / ".config" / "local-deepwiki" / "config.yaml",
+            Path.home() / ".local-deepwiki.yaml",
+        ]
+        for path in default_paths:
+            if path.exists():
+                with open(path) as f:
+                    data = yaml.safe_load(f)
+                return cls.model_validate(data)
+
+        return cls()
+
+    def get_wiki_path(self, repo_path: Path) -> Path:
+        """Get the wiki output path for a repository."""
+        return repo_path / self.output.wiki_dir
+
+    def get_vector_db_path(self, repo_path: Path) -> Path:
+        """Get the vector database path for a repository."""
+        return self.get_wiki_path(repo_path) / self.output.vector_db_name
+```
+
+</details>
+
 ### Functions
 
 #### `get_config`
@@ -370,6 +1212,35 @@ Get the configuration instance.  Returns the context-local config if set, otherw
 
 **Returns:** `Config`
 
+
+
+<details>
+<summary>View Source (lines 506-525)</summary>
+
+```python
+def get_config() -> Config:
+    """Get the configuration instance.
+
+    Returns the context-local config if set, otherwise the global config.
+    Thread-safe for concurrent access.
+
+    Returns:
+        The active configuration instance.
+    """
+    # Check for context-local override first (async-safe)
+    context_cfg = _context_config.get()
+    if context_cfg is not None:
+        return context_cfg
+
+    # Fall back to global singleton (thread-safe)
+    global _config
+    with _config_lock:
+        if _config is None:
+            _config = Config.load()
+        return _config
+```
+
+</details>
 
 #### `set_config`
 
@@ -387,6 +1258,27 @@ Set the global configuration instance.  Thread-safe. Note: This sets the global 
 **Returns:** `None`
 
 
+
+<details>
+<summary>View Source (lines 528-539)</summary>
+
+```python
+def set_config(config: Config) -> None:
+    """Set the global configuration instance.
+
+    Thread-safe. Note: This sets the global config, not a context-local one.
+    Use config_context() for temporary context-local overrides.
+
+    Args:
+        config: The configuration to set globally.
+    """
+    global _config
+    with _config_lock:
+        _config = config
+```
+
+</details>
+
 #### `reset_config`
 
 ```python
@@ -397,6 +1289,25 @@ Reset the global configuration to uninitialized state.  Useful for testing to en
 
 **Returns:** `None`
 
+
+
+<details>
+<summary>View Source (lines 542-551)</summary>
+
+```python
+def reset_config() -> None:
+    """Reset the global configuration to uninitialized state.
+
+    Useful for testing to ensure a fresh config is loaded.
+    Also clears any context-local override.
+    """
+    global _config
+    with _config_lock:
+        _config = None
+    _context_config.set(None)
+```
+
+</details>
 
 #### `config_context`
 
@@ -416,6 +1327,38 @@ Context manager for temporary config override.  Sets a context-local configurati
 **Returns:** `Generator[Config, None, None]`
 
 
+
+
+<details>
+<summary>View Source (lines 555-577)</summary>
+
+```python
+def config_context(config: Config) -> Generator[Config, None, None]:
+    """Context manager for temporary config override.
+
+    Sets a context-local configuration that takes precedence over the global
+    config within the context. Useful for testing or per-request config.
+
+    Args:
+        config: The configuration to use within the context.
+
+    Yields:
+        The provided configuration.
+
+    Example:
+        with config_context(custom_config):
+            # get_config() returns custom_config here
+            do_something()
+        # get_config() returns global config again
+    """
+    token = _context_config.set(config)
+    try:
+        yield config
+    finally:
+        _context_config.reset(token)
+```
+
+</details>
 
 ## Class Diagram
 
@@ -650,5 +1593,4 @@ assert config1 is config2
 
 ## See Also
 
-- [llm_cache](core/llm_cache.md) - uses this
 - [chunker](core/chunker.md) - uses this

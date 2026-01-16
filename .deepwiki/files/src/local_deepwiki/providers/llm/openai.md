@@ -2,45 +2,43 @@
 
 ## File Overview
 
-This file implements an OpenAI-specific LLM provider for the local_deepwiki system. It provides integration with OpenAI's API through the AsyncOpenAI client, implementing the base [LLMProvider](../base.md) interface with retry functionality.
+This module provides an OpenAI-based implementation of the LLM provider interface for the local_deepwiki system. It implements the [LLMProvider](../base.md) base class to enable communication with OpenAI's language models through their API.
 
 ## Classes
 
 ### OpenAILLMProvider
 
-The OpenAILLMProvider class extends the base [LLMProvider](../base.md) to provide OpenAI-specific language model functionality. This class handles asynchronous communication with OpenAI's API services.
+An LLM provider implementation that integrates with OpenAI's API services. This class extends the [LLMProvider](../base.md) base class and provides OpenAI-specific functionality for generating text responses.
 
-**Inheritance:**
-- Inherits from: [LLMProvider](../base.md)
+**Inheritance**: Extends [`LLMProvider`](../base.md)
 
-**Key Features:**
-- Asynchronous OpenAI API integration
-- Built-in retry mechanism via the [`with_retry`](../base.md) [decorator](../base.md)
-- Environment-based configuration support
+**Key Features**:
+- Integrates with OpenAI's AsyncOpenAI client
+- Implements retry logic through the [with_retry](../base.md) [decorator](../base.md)
+- Supports asynchronous streaming responses
+- Uses OpenAI's chat completion message format
 
 ## Dependencies
 
-The module relies on several key dependencies:
+This module relies on several key components:
 
-- **openai**: Provides the AsyncOpenAI client for API communication
-- **local_deepwiki.logging**: Supplies logging functionality through [get_logger](../../logging.md)
-- **local_deepwiki.providers.base**: Provides the base [LLMProvider](../base.md) class and [with_retry](../base.md) [decorator](../base.md)
+- **openai**: The official OpenAI Python client library, specifically using `AsyncOpenAI` for asynchronous operations
+- **ChatCompletionMessageParam**: OpenAI's type definition for chat completion messages
+- **[LLMProvider](../base.md)**: The base provider class from `local_deepwiki.providers.base`
+- **[with_retry](../base.md)**: A retry [decorator](../base.md) from the base providers module
+- **[get_logger](../../logging.md)**: Logging utility from the local_deepwiki logging system
 
 ## Related Components
 
-This provider works within the local_deepwiki ecosystem by:
+This provider works within the broader local_deepwiki provider ecosystem:
 
-- Implementing the [LLMProvider](../base.md) interface from the base providers module
-- Utilizing the centralized logging system
-- Supporting the retry mechanism for robust API interactions
+- Implements the [LLMProvider](../base.md) interface for consistent API usage across different LLM providers
+- Uses the shared retry mechanism provided by the base provider module
+- Integrates with the application's logging system for monitoring and debugging
 
 ## Environment Configuration
 
-The module imports the `os` module, indicating it likely uses environment variables for configuration, though the specific variables are not visible in the provided code.
-
-## Type Support
-
-The module includes proper type annotations, importing `AsyncIterator` from the typing module to support asynchronous iteration patterns typical in streaming LLM responses.
+The module imports the `os` module, suggesting it likely uses environment variables for configuration, though the specific variables are not visible in the provided code.
 
 ## API Reference
 
@@ -51,6 +49,103 @@ The module includes proper type annotations, importing `AsyncIterator` from the 
 LLM provider using OpenAI API.
 
 **Methods:**
+
+
+<details>
+<summary>View Source (lines 15-102)</summary>
+
+```python
+class OpenAILLMProvider(LLMProvider):
+    """LLM provider using OpenAI API."""
+
+    def __init__(self, model: str = "gpt-4o", api_key: str | None = None):
+        """Initialize the OpenAI provider.
+
+        Args:
+            model: OpenAI model name.
+            api_key: Optional API key. Uses OPENAI_API_KEY env var if not provided.
+        """
+        self._model = model
+        self._client = AsyncOpenAI(api_key=api_key or os.environ.get("OPENAI_API_KEY"))
+
+    @with_retry(max_attempts=3, base_delay=1.0, max_delay=30.0)
+    async def generate(
+        self,
+        prompt: str,
+        system_prompt: str | None = None,
+        max_tokens: int = 4096,
+        temperature: float = 0.7,
+    ) -> str:
+        """Generate text from a prompt.
+
+        Args:
+            prompt: The user prompt.
+            system_prompt: Optional system prompt.
+            max_tokens: Maximum tokens to generate.
+            temperature: Sampling temperature.
+
+        Returns:
+            Generated text.
+        """
+        messages: list[ChatCompletionMessageParam] = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+
+        logger.debug(f"Generating with OpenAI model {self._model}, prompt length: {len(prompt)}")
+
+        response = await self._client.chat.completions.create(
+            model=self._model,
+            messages=messages,
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+        content = response.choices[0].message.content or ""
+
+        logger.debug(f"OpenAI response length: {len(content)}")
+        return content
+
+    async def generate_stream(
+        self,
+        prompt: str,
+        system_prompt: str | None = None,
+        max_tokens: int = 4096,
+        temperature: float = 0.7,
+    ) -> AsyncIterator[str]:
+        """Generate text from a prompt with streaming.
+
+        Args:
+            prompt: The user prompt.
+            system_prompt: Optional system prompt.
+            max_tokens: Maximum tokens to generate.
+            temperature: Sampling temperature.
+
+        Yields:
+            Generated text chunks.
+        """
+        messages: list[ChatCompletionMessageParam] = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+
+        stream = await self._client.chat.completions.create(
+            model=self._model,
+            messages=messages,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            stream=True,
+        )
+        async for chunk in stream:
+            if chunk.choices[0].delta.content:
+                yield chunk.choices[0].delta.content
+
+    @property
+    def name(self) -> str:
+        """Get the provider name."""
+        return f"openai:{self._model}"
+```
+
+</details>
 
 #### `__init__`
 
@@ -65,6 +160,103 @@ Initialize the OpenAI provider.
 |-----------|------|---------|-------------|
 | `model` | `str` | `"gpt-4o"` | OpenAI model name. |
 | `api_key` | `str | None` | `None` | Optional API key. Uses OPENAI_API_KEY env var if not provided. |
+
+
+<details>
+<summary>View Source (lines 15-102)</summary>
+
+```python
+class OpenAILLMProvider(LLMProvider):
+    """LLM provider using OpenAI API."""
+
+    def __init__(self, model: str = "gpt-4o", api_key: str | None = None):
+        """Initialize the OpenAI provider.
+
+        Args:
+            model: OpenAI model name.
+            api_key: Optional API key. Uses OPENAI_API_KEY env var if not provided.
+        """
+        self._model = model
+        self._client = AsyncOpenAI(api_key=api_key or os.environ.get("OPENAI_API_KEY"))
+
+    @with_retry(max_attempts=3, base_delay=1.0, max_delay=30.0)
+    async def generate(
+        self,
+        prompt: str,
+        system_prompt: str | None = None,
+        max_tokens: int = 4096,
+        temperature: float = 0.7,
+    ) -> str:
+        """Generate text from a prompt.
+
+        Args:
+            prompt: The user prompt.
+            system_prompt: Optional system prompt.
+            max_tokens: Maximum tokens to generate.
+            temperature: Sampling temperature.
+
+        Returns:
+            Generated text.
+        """
+        messages: list[ChatCompletionMessageParam] = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+
+        logger.debug(f"Generating with OpenAI model {self._model}, prompt length: {len(prompt)}")
+
+        response = await self._client.chat.completions.create(
+            model=self._model,
+            messages=messages,
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+        content = response.choices[0].message.content or ""
+
+        logger.debug(f"OpenAI response length: {len(content)}")
+        return content
+
+    async def generate_stream(
+        self,
+        prompt: str,
+        system_prompt: str | None = None,
+        max_tokens: int = 4096,
+        temperature: float = 0.7,
+    ) -> AsyncIterator[str]:
+        """Generate text from a prompt with streaming.
+
+        Args:
+            prompt: The user prompt.
+            system_prompt: Optional system prompt.
+            max_tokens: Maximum tokens to generate.
+            temperature: Sampling temperature.
+
+        Yields:
+            Generated text chunks.
+        """
+        messages: list[ChatCompletionMessageParam] = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+
+        stream = await self._client.chat.completions.create(
+            model=self._model,
+            messages=messages,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            stream=True,
+        )
+        async for chunk in stream:
+            if chunk.choices[0].delta.content:
+                yield chunk.choices[0].delta.content
+
+    @property
+    def name(self) -> str:
+        """Get the provider name."""
+        return f"openai:{self._model}"
+```
+
+</details>
 
 #### `generate`
 
@@ -82,6 +274,103 @@ Generate text from a prompt.
 | `max_tokens` | `int` | `4096` | Maximum tokens to generate. |
 | `temperature` | `float` | `0.7` | Sampling temperature. |
 
+
+<details>
+<summary>View Source (lines 15-102)</summary>
+
+```python
+class OpenAILLMProvider(LLMProvider):
+    """LLM provider using OpenAI API."""
+
+    def __init__(self, model: str = "gpt-4o", api_key: str | None = None):
+        """Initialize the OpenAI provider.
+
+        Args:
+            model: OpenAI model name.
+            api_key: Optional API key. Uses OPENAI_API_KEY env var if not provided.
+        """
+        self._model = model
+        self._client = AsyncOpenAI(api_key=api_key or os.environ.get("OPENAI_API_KEY"))
+
+    @with_retry(max_attempts=3, base_delay=1.0, max_delay=30.0)
+    async def generate(
+        self,
+        prompt: str,
+        system_prompt: str | None = None,
+        max_tokens: int = 4096,
+        temperature: float = 0.7,
+    ) -> str:
+        """Generate text from a prompt.
+
+        Args:
+            prompt: The user prompt.
+            system_prompt: Optional system prompt.
+            max_tokens: Maximum tokens to generate.
+            temperature: Sampling temperature.
+
+        Returns:
+            Generated text.
+        """
+        messages: list[ChatCompletionMessageParam] = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+
+        logger.debug(f"Generating with OpenAI model {self._model}, prompt length: {len(prompt)}")
+
+        response = await self._client.chat.completions.create(
+            model=self._model,
+            messages=messages,
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+        content = response.choices[0].message.content or ""
+
+        logger.debug(f"OpenAI response length: {len(content)}")
+        return content
+
+    async def generate_stream(
+        self,
+        prompt: str,
+        system_prompt: str | None = None,
+        max_tokens: int = 4096,
+        temperature: float = 0.7,
+    ) -> AsyncIterator[str]:
+        """Generate text from a prompt with streaming.
+
+        Args:
+            prompt: The user prompt.
+            system_prompt: Optional system prompt.
+            max_tokens: Maximum tokens to generate.
+            temperature: Sampling temperature.
+
+        Yields:
+            Generated text chunks.
+        """
+        messages: list[ChatCompletionMessageParam] = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+
+        stream = await self._client.chat.completions.create(
+            model=self._model,
+            messages=messages,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            stream=True,
+        )
+        async for chunk in stream:
+            if chunk.choices[0].delta.content:
+                yield chunk.choices[0].delta.content
+
+    @property
+    def name(self) -> str:
+        """Get the provider name."""
+        return f"openai:{self._model}"
+```
+
+</details>
+
 #### `generate_stream`
 
 ```python
@@ -98,6 +387,103 @@ Generate text from a prompt with streaming.
 | `max_tokens` | `int` | `4096` | Maximum tokens to generate. |
 | `temperature` | `float` | `0.7` | Sampling temperature. |
 
+
+<details>
+<summary>View Source (lines 15-102)</summary>
+
+```python
+class OpenAILLMProvider(LLMProvider):
+    """LLM provider using OpenAI API."""
+
+    def __init__(self, model: str = "gpt-4o", api_key: str | None = None):
+        """Initialize the OpenAI provider.
+
+        Args:
+            model: OpenAI model name.
+            api_key: Optional API key. Uses OPENAI_API_KEY env var if not provided.
+        """
+        self._model = model
+        self._client = AsyncOpenAI(api_key=api_key or os.environ.get("OPENAI_API_KEY"))
+
+    @with_retry(max_attempts=3, base_delay=1.0, max_delay=30.0)
+    async def generate(
+        self,
+        prompt: str,
+        system_prompt: str | None = None,
+        max_tokens: int = 4096,
+        temperature: float = 0.7,
+    ) -> str:
+        """Generate text from a prompt.
+
+        Args:
+            prompt: The user prompt.
+            system_prompt: Optional system prompt.
+            max_tokens: Maximum tokens to generate.
+            temperature: Sampling temperature.
+
+        Returns:
+            Generated text.
+        """
+        messages: list[ChatCompletionMessageParam] = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+
+        logger.debug(f"Generating with OpenAI model {self._model}, prompt length: {len(prompt)}")
+
+        response = await self._client.chat.completions.create(
+            model=self._model,
+            messages=messages,
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+        content = response.choices[0].message.content or ""
+
+        logger.debug(f"OpenAI response length: {len(content)}")
+        return content
+
+    async def generate_stream(
+        self,
+        prompt: str,
+        system_prompt: str | None = None,
+        max_tokens: int = 4096,
+        temperature: float = 0.7,
+    ) -> AsyncIterator[str]:
+        """Generate text from a prompt with streaming.
+
+        Args:
+            prompt: The user prompt.
+            system_prompt: Optional system prompt.
+            max_tokens: Maximum tokens to generate.
+            temperature: Sampling temperature.
+
+        Yields:
+            Generated text chunks.
+        """
+        messages: list[ChatCompletionMessageParam] = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+
+        stream = await self._client.chat.completions.create(
+            model=self._model,
+            messages=messages,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            stream=True,
+        )
+        async for chunk in stream:
+            if chunk.choices[0].delta.content:
+                yield chunk.choices[0].delta.content
+
+    @property
+    def name(self) -> str:
+        """Get the provider name."""
+        return f"openai:{self._model}"
+```
+
+</details>
+
 #### `name`
 
 ```python
@@ -107,6 +493,103 @@ def name() -> str
 Get the provider name.
 
 
+
+
+<details>
+<summary>View Source (lines 15-102)</summary>
+
+```python
+class OpenAILLMProvider(LLMProvider):
+    """LLM provider using OpenAI API."""
+
+    def __init__(self, model: str = "gpt-4o", api_key: str | None = None):
+        """Initialize the OpenAI provider.
+
+        Args:
+            model: OpenAI model name.
+            api_key: Optional API key. Uses OPENAI_API_KEY env var if not provided.
+        """
+        self._model = model
+        self._client = AsyncOpenAI(api_key=api_key or os.environ.get("OPENAI_API_KEY"))
+
+    @with_retry(max_attempts=3, base_delay=1.0, max_delay=30.0)
+    async def generate(
+        self,
+        prompt: str,
+        system_prompt: str | None = None,
+        max_tokens: int = 4096,
+        temperature: float = 0.7,
+    ) -> str:
+        """Generate text from a prompt.
+
+        Args:
+            prompt: The user prompt.
+            system_prompt: Optional system prompt.
+            max_tokens: Maximum tokens to generate.
+            temperature: Sampling temperature.
+
+        Returns:
+            Generated text.
+        """
+        messages: list[ChatCompletionMessageParam] = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+
+        logger.debug(f"Generating with OpenAI model {self._model}, prompt length: {len(prompt)}")
+
+        response = await self._client.chat.completions.create(
+            model=self._model,
+            messages=messages,
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+        content = response.choices[0].message.content or ""
+
+        logger.debug(f"OpenAI response length: {len(content)}")
+        return content
+
+    async def generate_stream(
+        self,
+        prompt: str,
+        system_prompt: str | None = None,
+        max_tokens: int = 4096,
+        temperature: float = 0.7,
+    ) -> AsyncIterator[str]:
+        """Generate text from a prompt with streaming.
+
+        Args:
+            prompt: The user prompt.
+            system_prompt: Optional system prompt.
+            max_tokens: Maximum tokens to generate.
+            temperature: Sampling temperature.
+
+        Yields:
+            Generated text chunks.
+        """
+        messages: list[ChatCompletionMessageParam] = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+
+        stream = await self._client.chat.completions.create(
+            model=self._model,
+            messages=messages,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            stream=True,
+        )
+        async for chunk in stream:
+            if chunk.choices[0].delta.content:
+                yield chunk.choices[0].delta.content
+
+    @property
+    def name(self) -> str:
+        """Get the provider name."""
+        return f"openai:{self._model}"
+```
+
+</details>
 
 ## Class Diagram
 
@@ -143,4 +626,4 @@ flowchart TD
 
 ## Relevant Source Files
 
-- `src/local_deepwiki/providers/llm/openai.py:14-101`
+- `src/local_deepwiki/providers/llm/openai.py:15-102`

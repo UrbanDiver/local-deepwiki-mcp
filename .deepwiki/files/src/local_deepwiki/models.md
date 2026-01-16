@@ -1,91 +1,98 @@
-# Models Module Documentation
+# models.py
 
 ## File Overview
 
-The `models.py` file defines the core data models and types used throughout the local_deepwiki system. It contains Pydantic models and enums that represent various entities such as code chunks, wiki pages, research results, and progress tracking structures. These models serve as the data contracts between different components of the system.
+The models.py file defines the core data structures and models used throughout the local_deepwiki system. It contains Pydantic models for representing various entities like wiki pages, code chunks, research results, and progress tracking, along with enums for categorizing different types of data and operations.
 
-## Imports and Dependencies
-
-The module relies on several key libraries:
-- `json` for JSON serialization
-- `enum.Enum` for enumeration types
-- `pathlib.Path` for file path handling
-- `typing` for type annotations including `Any` and `Protocol`
-- `pydantic` for data validation with `BaseModel` and `Field`
-
-## Classes
-
-### ProgressCallback
-
-A protocol class that defines the interface for progress callback functions used throughout the system to report operation status.
+## Enums
 
 ### Language
-
-An enumeration class that defines supported programming languages for code analysis and documentation generation.
+Enumeration for supported programming languages in the system.
 
 ### ChunkType
-
-An enumeration that categorizes different types of code chunks that can be extracted and processed from source files.
-
-### CodeChunk
-
-A Pydantic model representing a discrete piece of code extracted from a source file. This model captures code content along with metadata about its location and type.
-
-### FileInfo
-
-A data model that stores metadata about source files in the project, including file paths and relevant attributes for processing.
+Enumeration for categorizing different types of code chunks (e.g., classes, functions, modules).
 
 ### IndexStatus
-
-An enumeration that tracks the current state of the indexing process for files and code chunks.
-
-### WikiPage
-
-A comprehensive model representing a generated wiki page, containing the documentation content and associated metadata.
-
-### WikiStructure
-
-A model that defines the overall structure and organization of the generated wiki, managing the relationships between different wiki pages.
-
-### SearchResult
-
-A data model for search functionality results, containing matched content and relevance information.
+Enumeration for tracking the indexing status of files or content.
 
 ### WikiPageStatus
-
-An enumeration tracking the generation status of individual wiki pages throughout the documentation creation process.
+Enumeration for tracking the status of wiki page generation.
 
 ### WikiGenerationStatus
-
-A model that tracks the overall progress and status of the wiki generation process across all files and pages.
+Enumeration for tracking the overall status of wiki generation processes.
 
 ### ResearchStepType
-
-An enumeration defining different types of research steps that can be performed during the deep research process.
-
-### ResearchStep
-
-A model representing an individual step in the research process, containing the step details and results.
-
-### SubQuestion
-
-A data model for sub-questions generated during research, used to break down complex topics into manageable parts.
-
-### SourceReference
-
-A model that captures references to source materials used during research, maintaining traceability of information sources.
-
-### DeepResearchResult
-
-A comprehensive model containing the complete results of a deep research operation, including all findings and references.
+Enumeration for categorizing different types of research steps in the deep research process.
 
 ### ResearchProgressType
+Enumeration for categorizing different types of progress updates during research operations.
 
-An enumeration that categorizes different types of progress updates during research operations.
+## Core Models
+
+### ProgressCallback
+A Protocol class that defines the interface for progress callback functions used throughout the system for tracking operation progress.
+
+### CodeChunk
+A Pydantic model representing a chunk of code with metadata including:
+- Code content and type classification
+- Location information (file path, line numbers)
+- Associated metadata for processing and analysis
+
+### FileInfo
+A Pydantic model containing information about files in the codebase:
+- File path and basic metadata
+- Processing status and timestamps
+- File type and size information
+
+### WikiPage
+A Pydantic model representing a generated wiki page with:
+- Page content and metadata
+- Generation status and timestamps
+- Associated source files and references
+
+### WikiStructure
+A Pydantic model defining the overall structure of the generated wiki:
+- Hierarchical organization of pages
+- Navigation structure
+- Cross-references between pages
+
+### SearchResult
+A Pydantic model for representing search results within the wiki system:
+- Matched content and relevance scoring
+- Source location and context information
+- Snippet extraction and highlighting data
+
+## Research Models
+
+### ResearchStep
+A Pydantic model representing individual steps in the deep research process:
+- Step type and description
+- Input parameters and expected outputs
+- Execution status and results
+
+### SubQuestion
+A Pydantic model for breaking down complex research queries:
+- Question text and categorization
+- Priority and dependency information
+- Associated research steps
+
+### SourceReference
+A Pydantic model for tracking source materials used in research:
+- Source identification and metadata
+- Relevance scoring and citation information
+- Content excerpts and summaries
+
+### DeepResearchResult
+A Pydantic model containing the complete results of a deep research operation:
+- Aggregated findings and analysis
+- Source references and evidence
+- Generated insights and conclusions
 
 ### ResearchProgress
-
-A model for tracking and reporting progress during research operations, providing status updates and completion metrics.
+A Pydantic model for tracking progress during research operations:
+- Current step and overall completion status
+- Performance metrics and timing information
+- Error handling and status messages
 
 ## Usage Examples
 
@@ -95,10 +102,12 @@ A model for tracking and reporting progress during research operations, providin
 from local_deepwiki.models import CodeChunk, ChunkType, Language
 
 chunk = CodeChunk(
-    content="def example_function():\n    pass",
+    content="def hello_world():\n    print('Hello, World!')",
     chunk_type=ChunkType.FUNCTION,
     language=Language.PYTHON,
-    # Additional fields as defined in the model
+    file_path="example.py",
+    start_line=1,
+    end_line=2
 )
 ```
 
@@ -108,34 +117,37 @@ chunk = CodeChunk(
 from local_deepwiki.models import WikiPage, WikiPageStatus
 
 page = WikiPage(
-    title="Example Documentation",
-    content="# Example\n\nThis is documentation content.",
-    status=WikiPageStatus.GENERATED
-    # Additional fields as defined in the model
+    title="API Documentation",
+    content="# API Reference\n\nThis page documents the API...",
+    status=WikiPageStatus.GENERATED,
+    source_files=["src/api.py", "src/handlers.py"]
 )
 ```
 
-### Progress Tracking
+### Tracking Research Progress
 
 ```python
 from local_deepwiki.models import ResearchProgress, ResearchProgressType
 
 progress = ResearchProgress(
-    progress_type=ResearchProgressType.ANALYZING,
-    # Additional fields for tracking progress
+    progress_type=ResearchProgressType.STEP_COMPLETED,
+    current_step="analyzing_codebase",
+    completion_percentage=75.0,
+    message="Code analysis completed successfully"
 )
 ```
 
 ## Related Components
 
-This models file serves as the foundation for the entire local_deepwiki system. The models defined here are used by:
+This models file serves as the foundation for data structures used throughout the local_deepwiki system. The models defined here are likely used by:
 
-- Code analysis components that create CodeChunk instances
-- Wiki generation systems that work with WikiPage and WikiStructure models
-- Research functionality that utilizes the various research-related models
-- Progress reporting systems that use the callback protocols and progress models
+- Wiki generation components for structuring output
+- Code analysis tools for representing parsed code
+- Search and indexing systems for storing metadata
+- Research engines for tracking complex analysis workflows
+- Progress tracking systems for user interface updates
 
-The models provide type safety and data validation through Pydantic, ensuring consistent data structures across all system components.
+The use of Pydantic models ensures data validation and serialization capabilities across the system, while the enum definitions provide consistent categorization throughout the codebase.
 
 ## API Reference
 
@@ -146,6 +158,31 @@ The models provide type safety and data validation through Pydantic, ensuring co
 Protocol for progress callback functions.  Progress callbacks are used to report progress during long-running operations like indexing and wiki generation.
 
 **Methods:**
+
+
+<details>
+<summary>View Source (lines 11-26)</summary>
+
+```python
+class ProgressCallback(Protocol):
+    """Protocol for progress callback functions.
+
+    Progress callbacks are used to report progress during long-running
+    operations like indexing and wiki generation.
+    """
+
+    def __call__(self, msg: str, current: int, total: int) -> None:
+        """Report progress.
+
+        Args:
+            msg: Description of current operation.
+            current: Current step number.
+            total: Total number of steps.
+        """
+        ...
+```
+
+</details>
 
 #### `__call__`
 
@@ -163,17 +200,87 @@ Report progress.
 | `total` | `int` | - | Total number of steps. |
 
 
+
+<details>
+<summary>View Source (lines 11-26)</summary>
+
+```python
+class ProgressCallback(Protocol):
+    """Protocol for progress callback functions.
+
+    Progress callbacks are used to report progress during long-running
+    operations like indexing and wiki generation.
+    """
+
+    def __call__(self, msg: str, current: int, total: int) -> None:
+        """Report progress.
+
+        Args:
+            msg: Description of current operation.
+            current: Current step number.
+            total: Total number of steps.
+        """
+        ...
+```
+
+</details>
+
 ### class `Language`
 
 **Inherits from:** `str`, `Enum`
 
 Supported programming languages.
 
+
+<details>
+<summary>View Source (lines 29-45)</summary>
+
+```python
+class Language(str, Enum):
+    """Supported programming languages."""
+
+    PYTHON = "python"
+    JAVASCRIPT = "javascript"
+    TYPESCRIPT = "typescript"
+    TSX = "tsx"
+    GO = "go"
+    RUST = "rust"
+    JAVA = "java"
+    C = "c"
+    CPP = "cpp"
+    SWIFT = "swift"
+    RUBY = "ruby"
+    PHP = "php"
+    KOTLIN = "kotlin"
+    CSHARP = "csharp"
+```
+
+</details>
+
 ### class `ChunkType`
 
 **Inherits from:** `str`, `Enum`
 
 Types of code chunks.
+
+
+<details>
+<summary>View Source (lines 48-57)</summary>
+
+```python
+class ChunkType(str, Enum):
+    """Types of code chunks."""
+
+    FUNCTION = "function"
+    CLASS = "class"
+    METHOD = "method"
+    MODULE = "module"
+    IMPORT = "import"
+    COMMENT = "comment"
+    OTHER = "other"
+```
+
+</details>
 
 ### class `CodeChunk`
 
@@ -182,6 +289,63 @@ Types of code chunks.
 A chunk of code extracted from the repository.
 
 **Methods:**
+
+
+<details>
+<summary>View Source (lines 60-107)</summary>
+
+```python
+class CodeChunk(BaseModel):
+    """A chunk of code extracted from the repository."""
+
+    id: str = Field(description="Unique identifier for this chunk")
+    file_path: str = Field(description="Path to the source file")
+    language: Language = Field(description="Programming language")
+    chunk_type: ChunkType = Field(description="Type of code chunk")
+    name: str | None = Field(default=None, description="Name of function/class/etc")
+    content: str = Field(description="The actual code content")
+    start_line: int = Field(description="Starting line number")
+    end_line: int = Field(description="Ending line number")
+    docstring: str | None = Field(default=None, description="Associated docstring")
+    parent_name: str | None = Field(default=None, description="Parent class/module name")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+
+    def to_vector_record(self, vector: list[float] | None = None) -> dict[str, Any]:
+        """Convert chunk to a dict suitable for vector store storage.
+
+        Args:
+            vector: Optional embedding vector to include in the record.
+
+        Returns:
+            Dict with all fields formatted for LanceDB storage.
+        """
+        record: dict[str, Any] = {
+            "id": self.id,
+            "file_path": self.file_path,
+            "language": self.language.value,
+            "chunk_type": self.chunk_type.value,
+            "name": self.name or "",
+            "content": self.content,
+            "start_line": self.start_line,
+            "end_line": self.end_line,
+            "docstring": self.docstring or "",
+            "parent_name": self.parent_name or "",
+            "metadata": json.dumps(self.metadata),
+        }
+        if vector is not None:
+            record["vector"] = vector
+        return record
+
+    def __repr__(self) -> str:
+        """Return a concise representation for debugging."""
+        name_part = f" {self.name}" if self.name else ""
+        return (
+            f"<CodeChunk {self.chunk_type.value}{name_part} "
+            f"at {self.file_path}:{self.start_line}-{self.end_line}>"
+        )
+```
+
+</details>
 
 #### `to_vector_record`
 
@@ -197,11 +361,91 @@ Convert chunk to a dict suitable for vector store storage.
 | `vector` | `list[float] | None` | `None` | Optional embedding vector to include in the record. |
 
 
+
+<details>
+<summary>View Source (lines 60-107)</summary>
+
+```python
+class CodeChunk(BaseModel):
+    """A chunk of code extracted from the repository."""
+
+    id: str = Field(description="Unique identifier for this chunk")
+    file_path: str = Field(description="Path to the source file")
+    language: Language = Field(description="Programming language")
+    chunk_type: ChunkType = Field(description="Type of code chunk")
+    name: str | None = Field(default=None, description="Name of function/class/etc")
+    content: str = Field(description="The actual code content")
+    start_line: int = Field(description="Starting line number")
+    end_line: int = Field(description="Ending line number")
+    docstring: str | None = Field(default=None, description="Associated docstring")
+    parent_name: str | None = Field(default=None, description="Parent class/module name")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+
+    def to_vector_record(self, vector: list[float] | None = None) -> dict[str, Any]:
+        """Convert chunk to a dict suitable for vector store storage.
+
+        Args:
+            vector: Optional embedding vector to include in the record.
+
+        Returns:
+            Dict with all fields formatted for LanceDB storage.
+        """
+        record: dict[str, Any] = {
+            "id": self.id,
+            "file_path": self.file_path,
+            "language": self.language.value,
+            "chunk_type": self.chunk_type.value,
+            "name": self.name or "",
+            "content": self.content,
+            "start_line": self.start_line,
+            "end_line": self.end_line,
+            "docstring": self.docstring or "",
+            "parent_name": self.parent_name or "",
+            "metadata": json.dumps(self.metadata),
+        }
+        if vector is not None:
+            record["vector"] = vector
+        return record
+
+    def __repr__(self) -> str:
+        """Return a concise representation for debugging."""
+        name_part = f" {self.name}" if self.name else ""
+        return (
+            f"<CodeChunk {self.chunk_type.value}{name_part} "
+            f"at {self.file_path}:{self.start_line}-{self.end_line}>"
+        )
+```
+
+</details>
+
 ### class `FileInfo`
 
 **Inherits from:** `BaseModel`
 
 Information about a source file.
+
+
+<details>
+<summary>View Source (lines 110-123)</summary>
+
+```python
+class FileInfo(BaseModel):
+    """Information about a source file."""
+
+    path: str = Field(description="Relative path from repo root")
+    language: Language | None = Field(default=None, description="Detected language")
+    size_bytes: int = Field(description="File size in bytes")
+    last_modified: float = Field(description="Last modification timestamp")
+    hash: str = Field(description="Content hash for change detection")
+    chunk_count: int = Field(default=0, description="Number of chunks extracted")
+
+    def __repr__(self) -> str:
+        """Return a concise representation for debugging."""
+        lang = self.language.value if self.language else "unknown"
+        return f"<FileInfo {self.path} ({lang}, {self.chunk_count} chunks)>"
+```
+
+</details>
 
 ### class `IndexStatus`
 
@@ -209,11 +453,57 @@ Information about a source file.
 
 Status of repository indexing.
 
+
+<details>
+<summary>View Source (lines 126-142)</summary>
+
+```python
+class IndexStatus(BaseModel):
+    """Status of repository indexing."""
+
+    repo_path: str = Field(description="Path to the repository")
+    indexed_at: float = Field(description="Timestamp of last indexing")
+    total_files: int = Field(description="Total files processed")
+    total_chunks: int = Field(description="Total chunks extracted")
+    languages: dict[str, int] = Field(default_factory=dict, description="Files per language")
+    files: list[FileInfo] = Field(default_factory=list, description="Indexed file info")
+    schema_version: int = Field(default=1, description="Schema version for migration support")
+
+    def __repr__(self) -> str:
+        """Return a concise representation for debugging."""
+        return (
+            f"<IndexStatus {self.repo_path} "
+            f"({self.total_files} files, {self.total_chunks} chunks)>"
+        )
+```
+
+</details>
+
 ### class `WikiPage`
 
 **Inherits from:** `BaseModel`
 
 A generated wiki page.
+
+
+<details>
+<summary>View Source (lines 145-155)</summary>
+
+```python
+class WikiPage(BaseModel):
+    """A generated wiki page."""
+
+    path: str = Field(description="Relative path in wiki directory")
+    title: str = Field(description="Page title")
+    content: str = Field(description="Markdown content")
+    generated_at: float = Field(description="Generation timestamp")
+
+    def __repr__(self) -> str:
+        """Return a concise representation for debugging."""
+        return f"<WikiPage {self.path} ({self.title!r})>"
+```
+
+</details>
 
 ### class `WikiStructure`
 
@@ -222,6 +512,39 @@ A generated wiki page.
 Structure of the generated wiki.
 
 **Methods:**
+
+
+<details>
+<summary>View Source (lines 158-181)</summary>
+
+```python
+class WikiStructure(BaseModel):
+    """Structure of the generated wiki."""
+
+    root: str = Field(description="Wiki root directory")
+    pages: list[WikiPage] = Field(default_factory=list, description="All wiki pages")
+
+    def __repr__(self) -> str:
+        """Return a concise representation for debugging."""
+        return f"<WikiStructure {self.root} ({len(self.pages)} pages)>"
+
+    def to_toc(self) -> dict[str, Any]:
+        """Generate table of contents."""
+        toc: dict[str, Any] = {"sections": []}
+        for page in sorted(self.pages, key=lambda p: p.path):
+            parts = Path(page.path).parts
+            current = toc
+            for part in parts[:-1]:
+                section = next((s for s in current.get("sections", []) if s["name"] == part), None)
+                if not section:
+                    section = {"name": part, "sections": [], "pages": []}
+                    current.setdefault("sections", []).append(section)
+                current = section
+            current.setdefault("pages", []).append({"path": page.path, "title": page.title})
+        return toc
+```
+
+</details>
 
 #### `to_toc`
 
@@ -232,11 +555,64 @@ def to_toc() -> dict[str, Any]
 Generate table of contents.
 
 
+
+<details>
+<summary>View Source (lines 158-181)</summary>
+
+```python
+class WikiStructure(BaseModel):
+    """Structure of the generated wiki."""
+
+    root: str = Field(description="Wiki root directory")
+    pages: list[WikiPage] = Field(default_factory=list, description="All wiki pages")
+
+    def __repr__(self) -> str:
+        """Return a concise representation for debugging."""
+        return f"<WikiStructure {self.root} ({len(self.pages)} pages)>"
+
+    def to_toc(self) -> dict[str, Any]:
+        """Generate table of contents."""
+        toc: dict[str, Any] = {"sections": []}
+        for page in sorted(self.pages, key=lambda p: p.path):
+            parts = Path(page.path).parts
+            current = toc
+            for part in parts[:-1]:
+                section = next((s for s in current.get("sections", []) if s["name"] == part), None)
+                if not section:
+                    section = {"name": part, "sections": [], "pages": []}
+                    current.setdefault("sections", []).append(section)
+                current = section
+            current.setdefault("pages", []).append({"path": page.path, "title": page.title})
+        return toc
+```
+
+</details>
+
 ### class `SearchResult`
 
 **Inherits from:** `BaseModel`
 
 A search result from semantic search.
+
+
+<details>
+<summary>View Source (lines 184-194)</summary>
+
+```python
+class SearchResult(BaseModel):
+    """A search result from semantic search."""
+
+    chunk: CodeChunk = Field(description="The matched code chunk")
+    score: float = Field(description="Similarity score")
+    highlights: list[str] = Field(default_factory=list, description="Relevant snippets")
+
+    def __repr__(self) -> str:
+        """Return a concise representation for debugging."""
+        name = self.chunk.name or self.chunk.chunk_type.value
+        return f"<SearchResult {name} score={self.score:.3f}>"
+```
+
+</details>
 
 ### class `WikiPageStatus`
 
@@ -244,11 +620,65 @@ A search result from semantic search.
 
 Status of a generated wiki page for incremental generation.
 
+
+<details>
+<summary>View Source (lines 197-216)</summary>
+
+```python
+class WikiPageStatus(BaseModel):
+    """Status of a generated wiki page for incremental generation."""
+
+    path: str = Field(description="Wiki page path (e.g., 'files/src/module/file.md')")
+    source_files: list[str] = Field(
+        default_factory=list, description="Source files that contributed to this page"
+    )
+    source_hashes: dict[str, str] = Field(
+        default_factory=dict, description="Mapping of source file path to content hash"
+    )
+    source_line_info: dict[str, dict[str, int]] = Field(
+        default_factory=dict,
+        description="Mapping of source file path to {start_line, end_line}",
+    )
+    content_hash: str = Field(description="Hash of the generated page content")
+    generated_at: float = Field(description="Timestamp when page was generated")
+
+    def __repr__(self) -> str:
+        """Return a concise representation for debugging."""
+        return f"<WikiPageStatus {self.path} ({len(self.source_files)} sources)>"
+```
+
+</details>
+
 ### class `WikiGenerationStatus`
 
 **Inherits from:** `BaseModel`
 
 Status of wiki generation for tracking incremental updates.
+
+
+<details>
+<summary>View Source (lines 219-234)</summary>
+
+```python
+class WikiGenerationStatus(BaseModel):
+    """Status of wiki generation for tracking incremental updates."""
+
+    repo_path: str = Field(description="Path to the repository")
+    generated_at: float = Field(description="Timestamp of last generation")
+    total_pages: int = Field(description="Total pages generated")
+    index_status_hash: str = Field(
+        default="", description="Hash of index status for detecting changes"
+    )
+    pages: dict[str, WikiPageStatus] = Field(
+        default_factory=dict, description="Mapping of page path to status"
+    )
+
+    def __repr__(self) -> str:
+        """Return a concise representation for debugging."""
+        return f"<WikiGenerationStatus {self.repo_path} ({self.total_pages} pages)>"
+```
+
+</details>
 
 ### class `ResearchStepType`
 
@@ -256,11 +686,46 @@ Status of wiki generation for tracking incremental updates.
 
 Types of steps in the deep research process.
 
+
+<details>
+<summary>View Source (lines 240-246)</summary>
+
+```python
+class ResearchStepType(str, Enum):
+    """Types of steps in the deep research process."""
+
+    DECOMPOSITION = "decomposition"
+    RETRIEVAL = "retrieval"
+    GAP_ANALYSIS = "gap_analysis"
+    SYNTHESIS = "synthesis"
+```
+
+</details>
+
 ### class `ResearchStep`
 
 **Inherits from:** `BaseModel`
 
 A single step in the deep research process.
+
+
+<details>
+<summary>View Source (lines 249-258)</summary>
+
+```python
+class ResearchStep(BaseModel):
+    """A single step in the deep research process."""
+
+    step_type: ResearchStepType = Field(description="Type of research step")
+    description: str = Field(description="Description of what was done")
+    duration_ms: int = Field(description="Duration of this step in milliseconds")
+
+    def __repr__(self) -> str:
+        """Return a concise representation for debugging."""
+        return f"<ResearchStep {self.step_type.value} ({self.duration_ms}ms)>"
+```
+
+</details>
 
 ### class `SubQuestion`
 
@@ -268,11 +733,54 @@ A single step in the deep research process.
 
 A decomposed sub-question for deep research.
 
+
+<details>
+<summary>View Source (lines 261-271)</summary>
+
+```python
+class SubQuestion(BaseModel):
+    """A decomposed sub-question for deep research."""
+
+    question: str = Field(description="The sub-question to investigate")
+    category: str = Field(
+        description="Category: structure, flow, dependencies, impact, or comparison"
+    )
+
+    def __repr__(self) -> str:
+        """Return a concise representation for debugging."""
+        return f"<SubQuestion [{self.category}] {self.question[:50]}...>"
+```
+
+</details>
+
 ### class `SourceReference`
 
 **Inherits from:** `BaseModel`
 
 A reference to a source code location.
+
+
+<details>
+<summary>View Source (lines 274-287)</summary>
+
+```python
+class SourceReference(BaseModel):
+    """A reference to a source code location."""
+
+    file_path: str = Field(description="Path to the source file")
+    start_line: int = Field(description="Starting line number")
+    end_line: int = Field(description="Ending line number")
+    chunk_type: str = Field(description="Type of code chunk")
+    name: str | None = Field(default=None, description="Name of the code element")
+    relevance_score: float = Field(description="Relevance score from search")
+
+    def __repr__(self) -> str:
+        """Return a concise representation for debugging."""
+        name = self.name or self.chunk_type
+        return f"<Source {self.file_path}:{self.start_line}-{self.end_line} ({name})>"
+```
+
+</details>
 
 ### class `DeepResearchResult`
 
@@ -280,11 +788,63 @@ A reference to a source code location.
 
 Result from deep research analysis.
 
+
+<details>
+<summary>View Source (lines 290-312)</summary>
+
+```python
+class DeepResearchResult(BaseModel):
+    """Result from deep research analysis."""
+
+    question: str = Field(description="Original question asked")
+    answer: str = Field(description="Comprehensive answer with citations")
+    sub_questions: list[SubQuestion] = Field(
+        default_factory=list, description="Decomposed sub-questions investigated"
+    )
+    sources: list[SourceReference] = Field(
+        default_factory=list, description="Source code references used"
+    )
+    reasoning_trace: list[ResearchStep] = Field(
+        default_factory=list, description="Steps taken during research"
+    )
+    total_chunks_analyzed: int = Field(description="Total code chunks analyzed")
+    total_llm_calls: int = Field(description="Total LLM calls made")
+
+    def __repr__(self) -> str:
+        """Return a concise representation for debugging."""
+        return (
+            f"<DeepResearchResult {len(self.sub_questions)} sub-questions, "
+            f"{len(self.sources)} sources, {self.total_llm_calls} LLM calls>"
+        )
+```
+
+</details>
+
 ### class `ResearchProgressType`
 
 **Inherits from:** `str`, `Enum`
 
 Types of deep research progress events.
+
+
+<details>
+<summary>View Source (lines 315-325)</summary>
+
+```python
+class ResearchProgressType(str, Enum):
+    """Types of deep research progress events."""
+
+    STARTED = "started"
+    DECOMPOSITION_COMPLETE = "decomposition_complete"
+    RETRIEVAL_COMPLETE = "retrieval_complete"
+    GAP_ANALYSIS_COMPLETE = "gap_analysis_complete"
+    FOLLOWUP_COMPLETE = "followup_complete"
+    SYNTHESIS_STARTED = "synthesis_started"
+    COMPLETE = "complete"
+    CANCELLED = "cancelled"
+```
+
+</details>
 
 ### class `ResearchProgress`
 
@@ -292,6 +852,38 @@ Types of deep research progress events.
 
 Progress update from deep research pipeline.  Sent via MCP progress notifications to provide real-time feedback during long-running deep research operations.
 
+
+
+<details>
+<summary>View Source (lines 328-350)</summary>
+
+```python
+class ResearchProgress(BaseModel):
+    """Progress update from deep research pipeline.
+
+    Sent via MCP progress notifications to provide real-time feedback
+    during long-running deep research operations.
+    """
+
+    step: int = Field(description="Current step number (0-5)")
+    total_steps: int = Field(default=5, description="Total number of steps")
+    step_type: ResearchProgressType = Field(description="Type of progress event")
+    message: str = Field(description="Human-readable progress message")
+    sub_questions: list[SubQuestion] | None = Field(
+        default=None, description="Sub-questions after decomposition"
+    )
+    chunks_retrieved: int | None = Field(
+        default=None, description="Number of chunks retrieved so far"
+    )
+    follow_up_queries: list[str] | None = Field(
+        default=None, description="Follow-up queries from gap analysis"
+    )
+    duration_ms: int | None = Field(
+        default=None, description="Duration of completed step in milliseconds"
+    )
+```
+
+</details>
 
 ## Class Diagram
 
@@ -557,8 +1149,8 @@ assert record["vector"] == [0.1, 0.2, 0.3]
 
 ## See Also
 
-- [diagrams](generators/diagrams.md) - uses this
 - [callgraph](generators/callgraph.md) - uses this
+- [diagrams](generators/diagrams.md) - uses this
+- [validation](validation.md) - uses this
 - [test_examples](generators/test_examples.md) - uses this
-- [api_docs](generators/api_docs.md) - uses this
 - [vectorstore](core/vectorstore.md) - uses this

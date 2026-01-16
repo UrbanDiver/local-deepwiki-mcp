@@ -2,98 +2,125 @@
 
 ## System Overview
 
-This is a documentation generation system that creates wikis from codebases using Large [Language](files/src/local_deepwiki/models.md) Models (LLMs). The system analyzes code, extracts information about classes and functions, and generates comprehensive documentation with cross-references and diagrams.
+This system is a documentation generation and research platform that processes codebases to create comprehensive wiki-style documentation. The system supports multiple LLM providers (Ollama, Anthropic, OpenAI) and embedding providers (local, OpenAI) for content generation and semantic search capabilities.
 
-The architecture is built around configurable LLM providers (Ollama, Anthropic, OpenAI) that power the documentation generation process. The system includes components for parsing code, managing configurations, generating manifests, and exporting documentation to HTML format.
+The architecture follows a provider pattern for extensible AI service integration, with configurable components for parsing, chunking, and generating documentation from source code.
 
 ## Key Components
 
 ### Configuration Management
+- **[Config](files/src/local_deepwiki/config.md)** - Central configuration class that manages system-wide settings
+- **[LLMConfig](files/src/local_deepwiki/config.md)** - Handles configuration for language model providers with support for Ollama, Anthropic, and OpenAI
+- **[EmbeddingConfig](files/src/local_deepwiki/config.md)** - Manages embedding provider configuration for local and OpenAI services
+- **[AnthropicConfig](files/src/local_deepwiki/config.md)** - Specific configuration for Anthropic Claude models
+- **[OllamaConfig](files/src/local_deepwiki/config.md)** - Configuration for local Ollama installations
+- **[OpenAILLMConfig](files/src/local_deepwiki/config.md)** - OpenAI language model configuration
+- **[LocalEmbeddingConfig](files/src/local_deepwiki/config.md)** - Configuration for local embedding models
+- **[OpenAIEmbeddingConfig](files/src/local_deepwiki/config.md)** - Configuration for OpenAI embedding services
 
-The **[Config](files/src/local_deepwiki/config.md)** class serves as the central configuration system, managing settings for different providers and components. The **[LLMConfig](files/src/local_deepwiki/config.md)** class specifically handles LLM provider configuration, supporting three providers: Ollama, Anthropic, and OpenAI through dedicated configuration classes:
+### Provider System
+- **[OllamaProvider](files/src/local_deepwiki/providers/llm/ollama.md)** - Implements LLM functionality using local Ollama installations
+- **[AnthropicProvider](files/src/local_deepwiki/providers/llm/anthropic.md)** - Provides integration with Anthropic's Claude models
 
-- **[OllamaConfig](files/src/local_deepwiki/config.md)** - Configures local Ollama instances with model selection and API URL
-- **[AnthropicConfig](files/src/local_deepwiki/config.md)** - Manages Anthropic Claude model configuration  
-- **[OpenAILLMConfig](files/src/local_deepwiki/config.md)** - Handles OpenAI GPT model settings
-
-The **[EmbeddingConfig](files/src/local_deepwiki/config.md)** class manages embedding providers for semantic search capabilities, supporting both local and OpenAI embedding options through **[LocalEmbeddingConfig](files/src/local_deepwiki/config.md)** and **[OpenAIEmbeddingConfig](files/src/local_deepwiki/config.md)**.
-
-### LLM Provider Architecture
-
-The system implements a provider pattern for LLM integration. The **[LLMProvider](files/src/local_deepwiki/providers/base.md)** base class defines the interface, with **[OllamaProvider](files/src/local_deepwiki/providers/llm/ollama.md)** as a concrete implementation. The `get_llm_provider` function acts as a factory, instantiating the appropriate provider based on configuration.
-
-### Code Analysis and Documentation
-
-The **[WikiGenerator](files/src/local_deepwiki/generators/wiki.md)** class appears to be the [main](files/src/local_deepwiki/export/pdf.md) orchestrator for documentation generation. The **[ChunkType](files/src/local_deepwiki/models.md)** enum defines different types of code elements that can be analyzed (functions, classes, methods, modules, imports, comments).
-
-Code analysis components include:
-- **[ClassInfo](files/src/local_deepwiki/generators/diagrams.md)** and **[ClassSignature](files/src/local_deepwiki/generators/api_docs.md)** - Extract and represent class metadata
-- **[FunctionSignature](files/src/local_deepwiki/generators/api_docs.md)** and **[Parameter](files/src/local_deepwiki/generators/api_docs.md)** - Handle function analysis
-- **[EntityRegistry](files/src/local_deepwiki/generators/crosslinks.md)** - Manages discovered code entities
-- **[UsageExample](files/src/local_deepwiki/generators/test_examples.md)** - Represents code usage patterns
+### Code Analysis
+- **[ChunkType](files/src/local_deepwiki/models.md)** - Enumeration defining different types of code chunks for processing
+- **[ClassInfo](files/src/local_deepwiki/generators/diagrams.md)** - Data structure containing metadata about discovered classes
+- **[ClassSignature](files/src/local_deepwiki/generators/api_docs.md)** - Represents the signature information of a class
+- **[FunctionSignature](files/src/local_deepwiki/generators/api_docs.md)** - Captures function signature details
+- **[Parameter](files/src/local_deepwiki/generators/api_docs.md)** - Represents function or method parameters
 
 ### Project Analysis
-
-The **[ProjectManifest](files/src/local_deepwiki/generators/manifest.md)** class analyzes project structure and dependencies, providing methods to categorize dependencies and generate technology stack summaries.
+- **[ProjectManifest](files/src/local_deepwiki/generators/manifest.md)** - Analyzes and summarizes project structure, dependencies, and entry points
 
 ### Error Handling
-
-The **[ResearchCancelledError](files/src/local_deepwiki/core/deep_research.md)** class provides specific error handling for cancelled research operations.
+- **[ResearchCancelledError](files/src/local_deepwiki/core/deep_research.md)** - Custom exception for handling cancelled research operations
 
 ## Data Flow
 
-1. **Configuration Loading**: The system loads configuration through the [Config](files/src/local_deepwiki/config.md) class, determining which LLM provider to use
-2. **Code Analysis**: Code is parsed and analyzed, with entities registered in the [EntityRegistry](files/src/local_deepwiki/generators/crosslinks.md)
-3. **LLM Processing**: The configured LLM provider generates documentation content based on analyzed code
-4. **Manifest Generation**: [ProjectManifest](files/src/local_deepwiki/generators/manifest.md) analyzes the project structure and dependencies
-5. **Output Generation**: Documentation is generated and exported to HTML format in the `html-export/` directory
+1. **Configuration Loading**: The [Config](files/src/local_deepwiki/config.md) class loads system settings, which are used by provider factories to instantiate appropriate AI services
+2. **Code Parsing**: Source code files are processed to extract [ClassInfo](files/src/local_deepwiki/generators/diagrams.md), [ClassSignature](files/src/local_deepwiki/generators/api_docs.md), and [FunctionSignature](files/src/local_deepwiki/generators/api_docs.md) objects
+3. **Provider Selection**: The get_llm_provider function uses [LLMConfig](files/src/local_deepwiki/config.md) to instantiate the appropriate provider ([OllamaProvider](files/src/local_deepwiki/providers/llm/ollama.md) or [AnthropicProvider](files/src/local_deepwiki/providers/llm/anthropic.md))
+4. **Content Generation**: Providers process extracted code information to generate documentation
+5. **Project Analysis**: [ProjectManifest](files/src/local_deepwiki/generators/manifest.md) analyzes the codebase structure and dependencies to provide high-level summaries
 
 ## Component Diagram
 
 ```mermaid
-graph TB
+classDiagram
+    class Config {
+        +LLMConfig llm
+        +EmbeddingConfig embedding
+    }
+    
+    class LLMConfig {
+        +provider: string
+        +OllamaConfig ollama
+        +AnthropicConfig anthropic
+        +OpenAILLMConfig openai
+    }
+    
+    class EmbeddingConfig {
+        +provider: string
+        +LocalEmbeddingConfig local
+        +OpenAIEmbeddingConfig openai
+    }
+    
+    class OllamaProvider {
+        +generate()
+        +generate_stream()
+        +name()
+    }
+    
+    class AnthropicProvider {
+        +name()
+    }
+    
+    class ClassInfo {
+        +ClassSignature signature
+    }
+    
+    class ClassSignature {
+        +Parameter[] parameters
+    }
+    
+    class FunctionSignature {
+        +Parameter[] parameters
+    }
+    
+    class ProjectManifest {
+        +get_tech_stack_summary()
+        +get_dependency_list()
+        +get_entry_points_summary()
+    }
+    
     Config --> LLMConfig
     Config --> EmbeddingConfig
-    
     LLMConfig --> OllamaConfig
-    LLMConfig --> AnthropicConfig  
+    LLMConfig --> AnthropicConfig
     LLMConfig --> OpenAILLMConfig
-    
     EmbeddingConfig --> LocalEmbeddingConfig
     EmbeddingConfig --> OpenAIEmbeddingConfig
-    
-    LLMProvider --> OllamaProvider
-    
-    WikiGenerator --> EntityRegistry
-    WikiGenerator --> ProjectManifest
-    
-    EntityRegistry --> ClassInfo
-    EntityRegistry --> FunctionSignature
-    EntityRegistry --> UsageExample
-    
     ClassInfo --> ClassSignature
+    ClassSignature --> Parameter
     FunctionSignature --> Parameter
-    
-    ChunkType -.-> WikiGenerator
-    ResearchCancelledError -.-> WikiGenerator
 ```
 
 ## Key Design Decisions
 
 ### Provider Pattern Implementation
-The system uses a provider pattern for LLM integration, allowing easy switching between different AI providers (Ollama, Anthropic, OpenAI) through configuration. This design enables flexibility in choosing different models based on requirements or availability.
+The system implements a provider pattern for AI services, allowing runtime selection between different LLM and embedding providers. The get_llm_provider factory function uses configuration to instantiate the appropriate provider class, enabling easy switching between Ollama, Anthropic, and OpenAI services.
 
 ### Configuration-Driven Architecture
-The extensive use of Pydantic models for configuration ([LLMConfig](files/src/local_deepwiki/config.md), [EmbeddingConfig](files/src/local_deepwiki/config.md), etc.) provides type safety and validation. The configuration system supports multiple providers and can be contextually managed through the [`config_context`](files/src/local_deepwiki/config.md) function.
+All major components are configured through Pydantic models ([Config](files/src/local_deepwiki/config.md), [LLMConfig](files/src/local_deepwiki/config.md), [EmbeddingConfig](files/src/local_deepwiki/config.md)), providing type safety and validation. This approach centralizes configuration management and makes the system easily configurable for different deployment scenarios.
 
-### Modular Code Analysis
-The separation of concerns is evident in the code analysis components - [ClassInfo](files/src/local_deepwiki/generators/diagrams.md) handles class metadata, [FunctionSignature](files/src/local_deepwiki/generators/api_docs.md) manages function details, and [ChunkType](files/src/local_deepwiki/models.md) categorizes different code elements. This modular approach allows for extensible code analysis capabilities.
+### Structured Code Analysis
+The system uses dedicated data classes ([ClassInfo](files/src/local_deepwiki/generators/diagrams.md), [ClassSignature](files/src/local_deepwiki/generators/api_docs.md), [FunctionSignature](files/src/local_deepwiki/generators/api_docs.md), [Parameter](files/src/local_deepwiki/generators/api_docs.md)) to represent code structure, enabling systematic analysis and documentation generation. This structured approach allows for consistent processing across different programming languages.
 
-### Factory Pattern for Provider Instantiation
-The `get_llm_provider` function implements a factory pattern, abstracting provider instantiation details and allowing the system to create the appropriate provider instance based on configuration.
+### Modular Testing Strategy
+The extensive test coverage shown in the test classes indicates a modular design where each component can be tested independently. Test classes like TestGetLLMProvider and TestGetEmbeddingProvider validate the provider factory pattern implementation.
 
-### Comprehensive Testing Strategy
-The extensive test suite (visible in the `tests/` directory) indicates a focus on reliability, with dedicated test classes for different components like TestAPIDocExtractor, TestCachingLLMProvider, and configuration testing through TestProviderPrompts.
+### Error Handling Strategy
+Custom exceptions like [ResearchCancelledError](files/src/local_deepwiki/core/deep_research.md) provide specific error handling for domain-specific operations, allowing for graceful handling of interrupted or cancelled processes.
 
 ## Workflow Sequences
 
@@ -237,16 +264,16 @@ sequenceDiagram
 
 The following source files were used to generate this documentation:
 
+- `tests/test_provider_factories.py:21-99`
 - `tests/test_parser.py:24-123`
 - `tests/test_retry.py:8-144`
 - `tests/test_ollama_health.py:16-19`
-- `tests/test_server_handlers.py:15-69`
-- `tests/test_chunker.py:11-182`
+- `tests/test_server_handlers.py:15-75`
+- `tests/test_chunker.py:13-428`
 - `tests/test_changelog.py:18-96`
 - `tests/test_vectorstore.py:9-28`
-- `tests/test_pdf_export.py:21-80`
-- `tests/test_search.py:20-53`
-- `tests/test_toc.py:17-43`
+- `tests/test_wiki_coverage.py:50-120`
+- `tests/test_pdf_export.py:23-82`
 
 
-*Showing 10 of 76 source files.*
+*Showing 10 of 91 source files.*

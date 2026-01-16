@@ -1,71 +1,53 @@
-# Search Module
+# search.py
 
 ## File Overview
 
-The search module provides functionality for generating search indices from wiki pages. It creates JSON-based search data that can be used to enable search functionality in wikis.
+This module provides search functionality for wiki pages by generating search indexes. It processes [WikiPage](../models.md) objects to create searchable JSON indexes that can be used for client-side search functionality.
 
 ## Functions
-
-### generate_search_index
-
-```python
-def generate_search_index(pages: list[WikiPage]) -> list[dict]:
-```
-
-Generates a search index from a list of wiki pages.
-
-**Parameters:**
-- `pages`: List of [WikiPage](../models.md) objects to index
-
-**Returns:**
-- List of search entries as dictionaries
 
 ### write_search_index
 
 ```python
-def write_search_index(wiki_path: Path, pages: list[WikiPage]) -> Path:
+def write_search_index(wiki_path: Path, pages: list[WikiPage]) -> Path
 ```
 
-Generates and writes a search index to disk as a JSON file.
+Generate and write search index to disk.
 
 **Parameters:**
-- `wiki_path`: Path to the wiki directory where the search index will be saved
-- `pages`: List of [WikiPage](../models.md) objects to index
+- `wiki_path` (Path): Path to wiki directory
+- `pages` (list[[WikiPage](../models.md)]): List of wiki pages to index
 
 **Returns:**
-- Path to the generated `search.json` file
+- Path: Path to the generated search.json file
 
-## Usage Examples
-
-### Basic Search Index Generation
-
-```python
-from pathlib import Path
-from local_deepwiki.generators.search import generate_search_index, write_search_index
-
-# Generate search index in memory
-pages = [...]  # List of WikiPage objects
-search_entries = generate_search_index(pages)
-
-# Write search index to file
-wiki_directory = Path("./wiki")
-index_path = write_search_index(wiki_directory, pages)
-print(f"Search index written to: {index_path}")
-```
+This function creates a search index from the provided pages and writes it as a JSON file to the wiki directory. The search index is generated using the `generate_search_index` function and saved as `search.json` in the specified wiki path.
 
 ## Related Components
 
 This module works with the following components:
 
-- **[WikiPage](../models.md)**: The core page model used to represent wiki pages (imported from `local_deepwiki.models`)
+- **[WikiPage](../models.md)**: The core data model for wiki pages (imported from `local_deepwiki.models`)
 
-The module also references additional functions that are part of the search functionality:
-- `extract_headings`
-- `extract_code_terms` 
-- `extract_snippet`
-- `generate_search_entry`
+## Dependencies
 
-These functions work together to create comprehensive search entries from wiki page content.
+- `json`: For JSON serialization of the search index
+- `re`: For regular expression operations (likely used in other functions not shown)
+- `pathlib.Path`: For file system path operations
+
+## Usage Example
+
+```python
+from pathlib import Path
+from local_deepwiki.generators.search import write_search_index
+
+# Assuming you have a list of WikiPage objects
+wiki_directory = Path("./my-wiki")
+search_file = write_search_index(wiki_directory, pages)
+print(f"Search index written to: {search_file}")
+```
+
+The module appears to contain additional functions for search functionality (`extract_headings`, `extract_code_terms`, `extract_snippet`, `generate_search_entry`, `generate_search_index`) that are referenced in the module summary but not shown in the provided code chunks.
 
 ## API Reference
 
@@ -87,6 +69,35 @@ Extract all headings from markdown content.
 **Returns:** `list[str]`
 
 
+
+<details>
+<summary>View Source (lines 14-33)</summary>
+
+```python
+def extract_headings(content: str) -> list[str]:
+    """Extract all headings from markdown content.
+
+    Args:
+        content: Markdown content.
+
+    Returns:
+        List of heading texts (without # prefixes).
+    """
+    headings = []
+    for line in content.split("\n"):
+        line = line.strip()
+        if line.startswith("#"):
+            # Remove # prefix and clean up
+            heading = re.sub(r"^#+\s*", "", line)
+            # Remove markdown formatting like ** or `
+            heading = re.sub(r"[*`]", "", heading)
+            if heading:
+                headings.append(heading)
+    return headings
+```
+
+</details>
+
 #### `extract_code_terms`
 
 ```python
@@ -102,6 +113,37 @@ Extract code terms (class names, function names) from content.
 
 **Returns:** `list[str]`
 
+
+
+<details>
+<summary>View Source (lines 36-57)</summary>
+
+```python
+def extract_code_terms(content: str) -> list[str]:
+    """Extract code terms (class names, function names) from content.
+
+    Args:
+        content: Markdown content.
+
+    Returns:
+        List of code terms found in backticks.
+    """
+    terms = set()
+    # Match inline code: `term`
+    for match in re.finditer(r"`([^`]+)`", content):
+        term = match.group(1)
+        # Skip code that looks like a full statement or has spaces
+        if len(term) < 50 and "\n" not in term:
+            # Extract the main identifier if it's a qualified name
+            parts = term.split(".")
+            if parts:
+                terms.add(parts[-1])  # Last part of qualified name
+            if len(parts) > 1:
+                terms.add(term)  # Also add full qualified name
+    return list(terms)
+```
+
+</details>
 
 #### `extract_snippet`
 
@@ -120,6 +162,40 @@ Extract a text snippet from markdown content.
 **Returns:** `str`
 
 
+
+<details>
+<summary>View Source (lines 60-84)</summary>
+
+```python
+def extract_snippet(content: str, max_length: int = 200) -> str:
+    """Extract a text snippet from markdown content.
+
+    Args:
+        content: Markdown content.
+        max_length: Maximum snippet length.
+
+    Returns:
+        Plain text snippet.
+    """
+    # Remove code blocks
+    text = re.sub(r"```[\s\S]*?```", "", content)
+    # Remove headings
+    text = re.sub(r"^#+\s+.*$", "", text, flags=re.MULTILINE)
+    # Remove links but keep text: [text](url) -> text
+    text = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", text)
+    # Remove markdown formatting
+    text = re.sub(r"[*_`]", "", text)
+    # Collapse whitespace
+    text = " ".join(text.split())
+
+    if len(text) > max_length:
+        text = text[:max_length].rsplit(" ", 1)[0] + "..."
+
+    return text.strip()
+```
+
+</details>
+
 #### `generate_search_entry`
 
 ```python
@@ -136,6 +212,35 @@ Generate a search index entry for a wiki page.
 **Returns:** `dict`
 
 
+
+<details>
+<summary>View Source (lines 87-106)</summary>
+
+```python
+def generate_search_entry(page: WikiPage) -> dict:
+    """Generate a search index entry for a wiki page.
+
+    Args:
+        page: The wiki page.
+
+    Returns:
+        Dictionary with searchable fields.
+    """
+    headings = extract_headings(page.content)
+    terms = extract_code_terms(page.content)
+    snippet = extract_snippet(page.content)
+
+    return {
+        "path": page.path,
+        "title": page.title,
+        "headings": headings,
+        "terms": terms,
+        "snippet": snippet,
+    }
+```
+
+</details>
+
 #### `generate_search_index`
 
 ```python
@@ -151,6 +256,25 @@ Generate a search index from wiki pages.
 
 **Returns:** `list[dict]`
 
+
+
+<details>
+<summary>View Source (lines 109-118)</summary>
+
+```python
+def generate_search_index(pages: list[WikiPage]) -> list[dict]:
+    """Generate a search index from wiki pages.
+
+    Args:
+        pages: List of wiki pages.
+
+    Returns:
+        List of search entries.
+    """
+    return [generate_search_entry(page) for page in pages]
+```
+
+</details>
 
 #### `write_search_index`
 
@@ -169,6 +293,29 @@ Generate and write search index to disk.
 **Returns:** `Path`
 
 
+
+
+<details>
+<summary>View Source (lines 121-134)</summary>
+
+```python
+def write_search_index(wiki_path: Path, pages: list[WikiPage]) -> Path:
+    """Generate and write search index to disk.
+
+    Args:
+        wiki_path: Path to wiki directory.
+        pages: List of wiki pages.
+
+    Returns:
+        Path to the generated search.json file.
+    """
+    index = generate_search_index(pages)
+    index_path = wiki_path / "search.json"
+    index_path.write_text(json.dumps(index, indent=2))
+    return index_path
+```
+
+</details>
 
 ## Call Graph
 
@@ -262,5 +409,5 @@ assert "simple paragraph" in snippet
 
 - [models](../models.md) - dependency
 - [crosslinks](crosslinks.md) - shares 3 dependencies
-- [diagrams](diagrams.md) - shares 3 dependencies
 - [see_also](see_also.md) - shares 3 dependencies
+- [diagrams](diagrams.md) - shares 3 dependencies

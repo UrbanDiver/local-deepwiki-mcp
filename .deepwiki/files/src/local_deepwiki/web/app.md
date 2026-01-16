@@ -1,40 +1,55 @@
-# src/local_deepwiki/web/app.py
+# app.py
 
 ## File Overview
 
-This file implements the Flask web application for the DeepWiki server. It provides the main web interface for browsing and interacting with a local wiki, including page viewing, searching, and chat functionality. The application serves markdown content as HTML and integrates with vector stores and language models for enhanced wiki features.
+The `app.py` file serves as the main web application module for DeepWiki, implementing a Flask-based web server that provides wiki functionality including page viewing, search, and chat capabilities. This module handles HTTP routing, template rendering, and integrates with various DeepWiki components to serve wiki content through a web interface.
 
 ## Functions
 
-### create_app
-
-Creates and configures a Flask application instance with the specified wiki path.
-
-**Parameters:**
-- `wiki_path` (str | Path): Path to the wiki directory to serve
-
-**Returns:**
-- Flask: Configured Flask application instance
-
-**Description:**
-Sets up the global wiki path and validates that the directory exists. Raises a ValueError if the specified wiki path does not exist.
-
 ### run_server
 
-Starts the DeepWiki web server with the specified configuration.
+```python
+def run_server(
+    wiki_path: str | Path, host: str = "127.0.0.1", port: int = 8080, debug: bool = False
+):
+```
+
+Runs the DeepWiki web server with the specified configuration.
 
 **Parameters:**
-- `wiki_path` (str | Path): Path to the wiki directory to serve
-- `host` (str, optional): Host address to bind to. Defaults to "127.0.0.1"
-- `port` (int, optional): Port number to listen on. Defaults to 8080
-- `debug` (bool, optional): Whether to run in debug mode. Defaults to False
+- `wiki_path`: Path to the wiki directory (string or Path object)
+- `host`: Server host address (defaults to "127.0.0.1")
+- `port`: Server port number (defaults to 8080)
+- `debug`: Enable Flask debug mode (defaults to False)
 
-**Description:**
-Creates a Flask app using create_app, logs startup information, and starts the development server. Outputs startup messages to both the logger and console.
+**Behavior:**
+- Creates a Flask application instance using `create_app()`
+- Logs server startup information
+- Prints server details to console
+- Starts the Flask development server
+
+### Additional Functions
+
+The module contains several other functions based on the imports and structure shown:
+
+- `get_wiki_structure`: Handles wiki structure retrieval
+- `extract_title`: Extracts titles from content
+- `render_markdown`: Processes markdown content
+- `build_breadcrumb`: Creates navigation breadcrumbs
+- `index`: Handles the main index page
+- `search_json`: Provides JSON search functionality
+- `view_page`: Renders individual wiki pages
+- `stream_async_generator`: Handles asynchronous content streaming
+- `run_async`: Executes asynchronous operations
+- `collect`: Collects data or results
+- `format_sources`: Formats source references
+- `build_prompt_with_history`: Constructs prompts with conversation history
+- `chat_page`: Handles chat interface
+- `api_chat`: Provides chat API endpoints
 
 ## Usage Examples
 
-### Starting the Wiki Server
+### Starting the Web Server
 
 ```python
 from local_deepwiki.web.app import run_server
@@ -42,36 +57,33 @@ from local_deepwiki.web.app import run_server
 # Start server with default settings
 run_server("/path/to/wiki")
 
-# Start server with custom host and port
-run_server("/path/to/wiki", host="0.0.0.0", port=3000)
-
-# Start server in debug mode
-run_server("/path/to/wiki", debug=True)
-```
-
-### Creating an App Instance
-
-```python
-from local_deepwiki.web.app import create_app
-
-# Create Flask app
-app = create_app("/path/to/wiki")
-
-# Use with a WSGI server
-app.run()
+# Start server with custom configuration
+run_server(
+    wiki_path="/path/to/wiki",
+    host="0.0.0.0",
+    port=5000,
+    debug=True
+)
 ```
 
 ## Related Components
 
-This file integrates with several other components based on the imports shown:
+Based on the imports shown, this module integrates with several other DeepWiki components:
 
-- **[VectorStore](../core/vectorstore.md)**: Used for semantic search capabilities
-- **Embedding providers**: Handles text embeddings for search functionality  
-- **LLM providers**: Provides language model integration for chat features
-- **Configuration system**: Manages application settings through [get_config](../config.md)
-- **Logging system**: Handles application logging through [get_logger](../logging.md)
+- **Flask**: Web framework for HTTP handling and routing
+- **markdown**: Markdown processing library
+- **local_deepwiki.logging**: Logging utilities via [`get_logger`](../logging.md)
+- **local_deepwiki.config**: Configuration management via [`get_config`](../config.md)
 
-The application also works with Flask's templating system (render_template) and provides JSON API endpoints (jsonify) for interactive features.
+The module uses standard Python libraries including `asyncio`, `json`, `queue`, `threading`, and `pathlib` for various functionality including asynchronous operations, JSON handling, concurrent processing, and file system operations.
+
+## Key Features
+
+- Web server initialization and configuration
+- Flask application factory pattern (via `create_app()`)
+- Comprehensive logging of server startup
+- Flexible host and port configuration
+- Debug mode support for development
 
 ## API Reference
 
@@ -93,6 +105,51 @@ Get wiki pages and sections, with optional hierarchical TOC.
 **Returns:** `tuple[list, dict, list | None]`
 
 
+
+<details>
+<summary>View Source (lines 32-67)</summary>
+
+```python
+def get_wiki_structure(wiki_path: Path) -> tuple[list, dict, list | None]:
+    """Get wiki pages and sections, with optional hierarchical TOC.
+
+    Returns:
+        Tuple of (pages, sections, toc_entries) where toc_entries is the
+        hierarchical numbered TOC if toc.json exists, None otherwise.
+    """
+    pages = []
+    sections = {}
+    toc_entries = None
+
+    # Try to load toc.json for hierarchical numbered structure
+    toc_path = wiki_path / "toc.json"
+    if toc_path.exists():
+        try:
+            toc_data = json.loads(toc_path.read_text())
+            toc_entries = toc_data.get("entries", [])
+        except (json.JSONDecodeError, OSError):
+            pass  # Fall back to flat structure
+
+    # Get root pages
+    for md_file in sorted(wiki_path.glob("*.md")):
+        title = extract_title(md_file)
+        pages.append({"path": md_file.name, "title": title})
+
+    # Get section pages (used as fallback if no toc.json)
+    for section_dir in sorted(wiki_path.iterdir()):
+        if section_dir.is_dir() and not section_dir.name.startswith("."):
+            section_pages = []
+            for md_file in sorted(section_dir.glob("*.md")):
+                title = extract_title(md_file)
+                section_pages.append({"path": f"{section_dir.name}/{md_file.name}", "title": title})
+            if section_pages:
+                sections[section_dir.name.replace("_", " ").title()] = section_pages
+
+    return pages, sections, toc_entries
+```
+
+</details>
+
 #### `extract_title`
 
 ```python
@@ -109,6 +166,28 @@ Extract title from markdown file.
 **Returns:** `str`
 
 
+
+<details>
+<summary>View Source (lines 70-82)</summary>
+
+```python
+def extract_title(md_file: Path) -> str:
+    """Extract title from markdown file."""
+    try:
+        content = md_file.read_text()
+        for line in content.split("\n"):
+            line = line.strip()
+            if line.startswith("# "):
+                return line[2:].strip()
+            if line.startswith("**") and line.endswith("**"):
+                return line[2:-2].strip()
+    except (OSError, UnicodeDecodeError) as e:
+        logger.debug(f"Could not extract title from {md_file}: {e}")
+    return md_file.stem.replace("_", " ").replace("-", " ").title()
+```
+
+</details>
+
 #### `render_markdown`
 
 ```python
@@ -124,6 +203,26 @@ Render markdown to HTML.
 
 **Returns:** `str`
 
+
+
+<details>
+<summary>View Source (lines 85-95)</summary>
+
+```python
+def render_markdown(content: str) -> str:
+    """Render markdown to HTML."""
+    md = markdown.Markdown(
+        extensions=[
+            "fenced_code",
+            "tables",
+            "toc",
+            "nl2br",
+        ]
+    )
+    return md.convert(content)
+```
+
+</details>
 
 #### `build_breadcrumb`
 
@@ -142,6 +241,61 @@ Build breadcrumb navigation HTML with clickable links.  For a path like 'files/s
 **Returns:** `str`
 
 
+
+<details>
+<summary>View Source (lines 98-143)</summary>
+
+```python
+def build_breadcrumb(wiki_path: Path, current_path: str) -> str:
+    """Build breadcrumb navigation HTML with clickable links.
+
+    For a path like 'files/src/local_deepwiki/core/chunker.md', generates:
+    Home > Files > src > local_deepwiki > core > chunker
+
+    Each segment links to its index.md if one exists in that folder.
+    """
+    parts = current_path.split("/")
+
+    # Root pages don't need breadcrumbs (or just show Home)
+    if len(parts) == 1:
+        return ""
+
+    breadcrumb_items = []
+
+    # Always start with Home
+    breadcrumb_items.append('<a href="/">Home</a>')
+
+    # Build path progressively and check for index.md at each level
+    cumulative_path = ""
+    for part in parts[:-1]:  # Exclude the current page
+        if cumulative_path:
+            cumulative_path = f"{cumulative_path}/{part}"
+        else:
+            cumulative_path = part
+
+        # Check if there's an index.md in this folder
+        index_path = wiki_path / cumulative_path / "index.md"
+        display_name = part.replace("_", " ").replace("-", " ").title()
+
+        if index_path.exists():
+            link_path = f"{cumulative_path}/index.md"
+            breadcrumb_items.append(f'<a href="/wiki/{link_path}">{display_name}</a>')
+        else:
+            # No index.md, just show as text
+            breadcrumb_items.append(f"<span>{display_name}</span>")
+
+    # Add current page name (no link, it's the current page)
+    current_page = parts[-1]
+    if current_page.endswith(".md"):
+        current_page = current_page[:-3]
+    current_page = current_page.replace("_", " ").replace("-", " ").title()
+    breadcrumb_items.append(f'<span class="current">{current_page}</span>')
+
+    return ' <span class="separator">›</span> '.join(breadcrumb_items)
+```
+
+</details>
+
 #### `index`
 
 `@app.route("/")`
@@ -153,6 +307,19 @@ def index()
 Redirect to index.md.
 
 
+
+<details>
+<summary>View Source (lines 147-150)</summary>
+
+```python
+def index():
+    """Redirect to index.md."""
+    logger.debug("Redirecting / to index.md")
+    return redirect(url_for("view_page", path="index.md"))
+```
+
+</details>
+
 #### `search_json`
 
 `@app.route("/search.json")`
@@ -163,6 +330,30 @@ def search_json()
 
 Serve the search index JSON file.
 
+
+
+<details>
+<summary>View Source (lines 154-168)</summary>
+
+```python
+def search_json():
+    """Serve the search index JSON file."""
+    if WIKI_PATH is None:
+        abort(500, "Wiki path not configured")
+
+    search_path = WIKI_PATH / "search.json"
+    if not search_path.exists():
+        # Return empty index if not generated yet
+        return jsonify([])
+
+    try:
+        data = json.loads(search_path.read_text())
+        return jsonify(data)
+    except (json.JSONDecodeError, OSError) as e:
+        abort(500, f"Error reading search index: {e}")
+```
+
+</details>
 
 #### `view_page`
 
@@ -180,6 +371,50 @@ View a wiki page.
 | `path` | `str` | - | - |
 
 
+
+<details>
+<summary>View Source (lines 172-206)</summary>
+
+```python
+def view_page(path: str):
+    """View a wiki page."""
+    logger.debug(f"Viewing page: {path}")
+
+    if WIKI_PATH is None:
+        logger.error("Wiki path not configured")
+        abort(500, "Wiki path not configured")
+
+    file_path = WIKI_PATH / path
+    if not file_path.exists() or not file_path.is_file():
+        logger.warning(f"Page not found: {path}")
+        abort(404, f"Page not found: {path}")
+
+    try:
+        content = file_path.read_text()
+        html_content = render_markdown(content)
+    except (OSError, UnicodeDecodeError) as e:
+        abort(500, f"Error reading page: {e}")
+
+    pages, sections, toc_entries = get_wiki_structure(WIKI_PATH)
+    title = extract_title(file_path)
+
+    # Build breadcrumb navigation
+    breadcrumb = build_breadcrumb(WIKI_PATH, path)
+
+    return render_template(
+        "page.html",
+        content=html_content,
+        title=title,
+        pages=pages,
+        sections=sections,
+        toc_entries=toc_entries,
+        current_path=path,
+        breadcrumb=breadcrumb,
+    )
+```
+
+</details>
+
 #### `stream_async_generator`
 
 ```python
@@ -196,6 +431,60 @@ Bridge an async generator to a sync generator using a queue.  This allows stream
 **Returns:** `Iterator[str]`
 
 
+
+<details>
+<summary>View Source (lines 209-253)</summary>
+
+```python
+def stream_async_generator(async_gen_factory: Callable[[], AsyncIterator[str]]) -> Iterator[str]:
+    """Bridge an async generator to a sync generator using a queue.
+
+    This allows streaming async results through Flask's synchronous response handling.
+
+    Args:
+        async_gen_factory: A callable that returns an async iterator.
+
+    Yields:
+        Items from the async generator.
+    """
+    result_queue: queue.Queue[str | None | Exception] = queue.Queue()
+
+    def run_async() -> None:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+
+            async def collect() -> None:
+                try:
+                    async for item in async_gen_factory():
+                        result_queue.put(item)
+                except Exception as e:  # noqa: BLE001 - Bridge arbitrary async errors to sync queue
+                    result_queue.put(e)
+                finally:
+                    result_queue.put(None)  # Sentinel to signal completion
+
+            loop.run_until_complete(collect())
+        finally:
+            loop.close()
+
+    thread = threading.Thread(target=run_async)
+    thread.start()
+
+    while True:
+        item = result_queue.get()
+        if item is None:
+            break
+        if isinstance(item, Exception):
+            logger.error(f"Error in async generator: {item}")
+            yield f"data: {json.dumps({'type': 'error', 'message': str(item)})}\n\n"
+            break
+        yield item
+
+    thread.join()
+```
+
+</details>
+
 #### `run_async`
 
 ```python
@@ -205,6 +494,32 @@ def run_async() -> None
 **Returns:** `None`
 
 
+
+<details>
+<summary>View Source (lines 222-238)</summary>
+
+```python
+def run_async() -> None:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+
+            async def collect() -> None:
+                try:
+                    async for item in async_gen_factory():
+                        result_queue.put(item)
+                except Exception as e:  # noqa: BLE001 - Bridge arbitrary async errors to sync queue
+                    result_queue.put(e)
+                finally:
+                    result_queue.put(None)  # Sentinel to signal completion
+
+            loop.run_until_complete(collect())
+        finally:
+            loop.close()
+```
+
+</details>
+
 #### `collect`
 
 ```python
@@ -213,6 +528,23 @@ async def collect() -> None
 
 **Returns:** `None`
 
+
+
+<details>
+<summary>View Source (lines 227-234)</summary>
+
+```python
+async def collect() -> None:
+                try:
+                    async for item in async_gen_factory():
+                        result_queue.put(item)
+                except Exception as e:  # noqa: BLE001 - Bridge arbitrary async errors to sync queue
+                    result_queue.put(e)
+                finally:
+                    result_queue.put(None)  # Sentinel to signal completion
+```
+
+</details>
 
 #### `format_sources`
 
@@ -229,6 +561,37 @@ Format search results as source citations.
 
 **Returns:** `list[dict[str, Any]]`
 
+
+
+<details>
+<summary>View Source (lines 256-277)</summary>
+
+```python
+def format_sources(search_results: list[Any]) -> list[dict[str, Any]]:
+    """Format search results as source citations.
+
+    Args:
+        search_results: List of SearchResult objects.
+
+    Returns:
+        List of source dictionaries with file, lines, type, and score.
+    """
+    sources = []
+    for r in search_results:
+        chunk = r.chunk
+        sources.append(
+            {
+                "file": chunk.file_path,
+                "lines": f"{chunk.start_line}-{chunk.end_line}",
+                "type": chunk.chunk_type.value,
+                "name": chunk.name,
+                "score": round(r.score, 3),
+            }
+        )
+    return sources
+```
+
+</details>
 
 #### `build_prompt_with_history`
 
@@ -248,6 +611,49 @@ Build a prompt that includes conversation history for follow-up questions.
 **Returns:** `str`
 
 
+
+<details>
+<summary>View Source (lines 280-313)</summary>
+
+```python
+def build_prompt_with_history(question: str, history: list[dict[str, str]], context: str) -> str:
+    """Build a prompt that includes conversation history for follow-up questions.
+
+    Args:
+        question: The current question.
+        history: Previous Q&A exchanges.
+        context: Code context from search results.
+
+    Returns:
+        A prompt string with history and context.
+    """
+    history_text = ""
+    # Include last 3 exchanges for context
+    for exchange in history[-3:]:
+        history_text += f"User: {exchange.get('question', '')}\n"
+        history_text += f"Assistant: {exchange.get('answer', '')}\n\n"
+
+    if history_text:
+        return f"""Previous conversation:
+{history_text}
+Current question: {question}
+
+Code context:
+{context}
+
+Answer the current question, taking into account the conversation history if relevant.
+Provide a clear, accurate answer based on the code provided."""
+    else:
+        return f"""Question: {question}
+
+Code context:
+{context}
+
+Provide a clear, accurate answer based on the code provided."""
+```
+
+</details>
+
 #### `chat_page`
 
 `@app.route("/chat")`
@@ -258,6 +664,20 @@ def chat_page()
 
 Render the chat interface.
 
+
+
+<details>
+<summary>View Source (lines 317-321)</summary>
+
+```python
+def chat_page():
+    """Render the chat interface."""
+    if WIKI_PATH is None:
+        abort(500, "Wiki path not configured")
+    return render_template("chat.html", wiki_path=str(WIKI_PATH))
+```
+
+</details>
 
 #### `api_chat`
 
@@ -270,6 +690,124 @@ def api_chat()
 Handle chat Q&A with streaming response.  Expects JSON body with: - question: The user's question - history: Optional list of previous Q&A exchanges
 
 
+
+<details>
+<summary>View Source (lines 325-433)</summary>
+
+```python
+def api_chat():
+    """Handle chat Q&A with streaming response.
+
+    Expects JSON body with:
+        - question: The user's question
+        - history: Optional list of previous Q&A exchanges
+
+    Returns:
+        Server-Sent Events stream with tokens and sources.
+    """
+    if WIKI_PATH is None:
+        return jsonify({"error": "Wiki path not configured"}), 500
+
+    data = request.get_json() or {}
+    question = data.get("question", "").strip()
+    history = data.get("history", [])
+
+    if not question:
+        return jsonify({"error": "Question is required"}), 400
+
+    # Determine the repository path from wiki path
+    repo_path = WIKI_PATH.parent
+    if WIKI_PATH.name == ".deepwiki":
+        repo_path = WIKI_PATH.parent
+
+    async def generate_response() -> AsyncIterator[str]:
+        """Async generator that streams the chat response."""
+        from local_deepwiki.config import get_config
+        from local_deepwiki.core.vectorstore import VectorStore
+        from local_deepwiki.providers.embeddings import get_embedding_provider
+        from local_deepwiki.providers.llm import get_cached_llm_provider
+
+        config = get_config()
+        vector_db_path = config.get_vector_db_path(repo_path)
+
+        if not vector_db_path.exists():
+            yield f"data: {json.dumps({'type': 'error', 'message': 'Repository not indexed. Please run index_repository first.'})}\n\n"
+            return
+
+        # Setup providers
+        embedding_provider = get_embedding_provider(config.embedding)
+        vector_store = VectorStore(vector_db_path, embedding_provider)
+        cache_path = config.get_wiki_path(repo_path) / "llm_cache.lance"
+
+        # Determine LLM config for chat - use chat_llm_provider if set
+        llm_config = config.llm
+        chat_provider = config.wiki.chat_llm_provider
+        if chat_provider != "default":
+            # Override provider for chat
+            llm_config = llm_config.model_copy(update={"provider": chat_provider})
+            logger.info(f"Using {chat_provider} provider for chat")
+
+        llm = get_cached_llm_provider(
+            cache_path=cache_path,
+            embedding_provider=embedding_provider,
+            cache_config=config.llm_cache,
+            llm_config=llm_config,
+        )
+
+        # Search for relevant context
+        search_results = await vector_store.search(question, limit=5)
+
+        # Send sources first
+        sources = format_sources(search_results)
+        yield f"data: {json.dumps({'type': 'sources', 'sources': sources})}\n\n"
+
+        if not search_results:
+            yield f"data: {json.dumps({'type': 'token', 'content': 'No relevant code found for your question.'})}\n\n"
+            yield f"data: {json.dumps({'type': 'done'})}\n\n"
+            return
+
+        # Build context from search results
+        context_parts = []
+        for result in search_results:
+            chunk = result.chunk
+            context_parts.append(
+                f"File: {chunk.file_path} (lines {chunk.start_line}-{chunk.end_line})\n"
+                f"Type: {chunk.chunk_type.value}\n"
+                f"```\n{chunk.content}\n```"
+            )
+        context = "\n\n---\n\n".join(context_parts)
+
+        # Build prompt with history
+        prompt = build_prompt_with_history(question, history, context)
+        system_prompt = (
+            "You are a helpful code assistant. Answer questions about code clearly and accurately. "
+            "Reference specific files and line numbers when relevant."
+        )
+
+        # Stream the response
+        try:
+            async for text_chunk in llm.generate_stream(
+                prompt, system_prompt=system_prompt, temperature=0.3
+            ):
+                yield f"data: {json.dumps({'type': 'token', 'content': text_chunk})}\n\n"
+        except Exception as e:  # noqa: BLE001 - Report LLM errors to user via SSE
+            logger.exception(f"Error generating response: {e}")
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+        yield f"data: {json.dumps({'type': 'done'})}\n\n"
+
+    return Response(
+        stream_async_generator(generate_response),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
+```
+
+</details>
+
 #### `generate_response`
 
 ```python
@@ -280,6 +818,90 @@ Async generator that streams the chat response.
 
 **Returns:** `AsyncIterator[str]`
 
+
+
+<details>
+<summary>View Source (lines 350-424)</summary>
+
+```python
+async def generate_response() -> AsyncIterator[str]:
+        """Async generator that streams the chat response."""
+        from local_deepwiki.config import get_config
+        from local_deepwiki.core.vectorstore import VectorStore
+        from local_deepwiki.providers.embeddings import get_embedding_provider
+        from local_deepwiki.providers.llm import get_cached_llm_provider
+
+        config = get_config()
+        vector_db_path = config.get_vector_db_path(repo_path)
+
+        if not vector_db_path.exists():
+            yield f"data: {json.dumps({'type': 'error', 'message': 'Repository not indexed. Please run index_repository first.'})}\n\n"
+            return
+
+        # Setup providers
+        embedding_provider = get_embedding_provider(config.embedding)
+        vector_store = VectorStore(vector_db_path, embedding_provider)
+        cache_path = config.get_wiki_path(repo_path) / "llm_cache.lance"
+
+        # Determine LLM config for chat - use chat_llm_provider if set
+        llm_config = config.llm
+        chat_provider = config.wiki.chat_llm_provider
+        if chat_provider != "default":
+            # Override provider for chat
+            llm_config = llm_config.model_copy(update={"provider": chat_provider})
+            logger.info(f"Using {chat_provider} provider for chat")
+
+        llm = get_cached_llm_provider(
+            cache_path=cache_path,
+            embedding_provider=embedding_provider,
+            cache_config=config.llm_cache,
+            llm_config=llm_config,
+        )
+
+        # Search for relevant context
+        search_results = await vector_store.search(question, limit=5)
+
+        # Send sources first
+        sources = format_sources(search_results)
+        yield f"data: {json.dumps({'type': 'sources', 'sources': sources})}\n\n"
+
+        if not search_results:
+            yield f"data: {json.dumps({'type': 'token', 'content': 'No relevant code found for your question.'})}\n\n"
+            yield f"data: {json.dumps({'type': 'done'})}\n\n"
+            return
+
+        # Build context from search results
+        context_parts = []
+        for result in search_results:
+            chunk = result.chunk
+            context_parts.append(
+                f"File: {chunk.file_path} (lines {chunk.start_line}-{chunk.end_line})\n"
+                f"Type: {chunk.chunk_type.value}\n"
+                f"```\n{chunk.content}\n```"
+            )
+        context = "\n\n---\n\n".join(context_parts)
+
+        # Build prompt with history
+        prompt = build_prompt_with_history(question, history, context)
+        system_prompt = (
+            "You are a helpful code assistant. Answer questions about code clearly and accurately. "
+            "Reference specific files and line numbers when relevant."
+        )
+
+        # Stream the response
+        try:
+            async for text_chunk in llm.generate_stream(
+                prompt, system_prompt=system_prompt, temperature=0.3
+            ):
+                yield f"data: {json.dumps({'type': 'token', 'content': text_chunk})}\n\n"
+        except Exception as e:  # noqa: BLE001 - Report LLM errors to user via SSE
+            logger.exception(f"Error generating response: {e}")
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+        yield f"data: {json.dumps({'type': 'done'})}\n\n"
+```
+
+</details>
 
 #### `api_research`
 
@@ -292,6 +914,183 @@ def api_research()
 Handle deep research with streaming progress updates.  Expects JSON body with: - question: The user's question
 
 
+
+<details>
+<summary>View Source (lines 437-604)</summary>
+
+```python
+def api_research():
+    """Handle deep research with streaming progress updates.
+
+    Expects JSON body with:
+        - question: The user's question
+
+    Returns:
+        Server-Sent Events stream with progress updates and final result.
+    """
+    if WIKI_PATH is None:
+        return jsonify({"error": "Wiki path not configured"}), 500
+
+    data = request.get_json() or {}
+    question = data.get("question", "").strip()
+
+    if not question:
+        return jsonify({"error": "Question is required"}), 400
+
+    # Determine the repository path from wiki path
+    repo_path = WIKI_PATH.parent
+    if WIKI_PATH.name == ".deepwiki":
+        repo_path = WIKI_PATH.parent
+
+    # Queue for progress updates from async callback
+    progress_queue: queue.Queue[dict[str, Any] | None] = queue.Queue()
+
+    async def run_research() -> AsyncIterator[str]:
+        """Async generator that runs deep research with progress updates."""
+        from local_deepwiki.config import get_config
+        from local_deepwiki.core.deep_research import DeepResearchPipeline
+        from local_deepwiki.core.vectorstore import VectorStore
+        from local_deepwiki.models import ResearchProgress
+        from local_deepwiki.providers.embeddings import get_embedding_provider
+        from local_deepwiki.providers.llm import get_cached_llm_provider
+
+        config = get_config()
+        vector_db_path = config.get_vector_db_path(repo_path)
+
+        if not vector_db_path.exists():
+            yield f"data: {json.dumps({'type': 'error', 'message': 'Repository not indexed. Please run index_repository first.'})}\n\n"
+            return
+
+        # Setup providers
+        embedding_provider = get_embedding_provider(config.embedding)
+        vector_store = VectorStore(vector_db_path, embedding_provider)
+        cache_path = config.get_wiki_path(repo_path) / "llm_cache.lance"
+
+        # Determine LLM config for research - use chat_llm_provider if set
+        llm_config = config.llm
+        chat_provider = config.wiki.chat_llm_provider
+        if chat_provider != "default":
+            # Override provider for research
+            llm_config = llm_config.model_copy(update={"provider": chat_provider})
+            logger.info(f"Using {chat_provider} provider for deep research")
+
+        llm = get_cached_llm_provider(
+            cache_path=cache_path,
+            embedding_provider=embedding_provider,
+            cache_config=config.llm_cache,
+            llm_config=llm_config,
+        )
+
+        # Progress callback
+        async def on_progress(progress: ResearchProgress) -> None:
+            progress_data = {
+                "type": "progress",
+                "step": progress.step,
+                "total_steps": progress.total_steps,
+                "step_type": progress.step_type.value,
+                "message": progress.message,
+            }
+            if progress.sub_questions:
+                progress_data["sub_questions"] = [
+                    {"question": sq.question, "category": sq.category}
+                    for sq in progress.sub_questions
+                ]
+            if progress.chunks_retrieved is not None:
+                progress_data["chunks_retrieved"] = progress.chunks_retrieved
+            if progress.follow_up_queries:
+                progress_data["follow_up_queries"] = progress.follow_up_queries
+            if progress.duration_ms is not None:
+                progress_data["duration_ms"] = progress.duration_ms
+
+            # Put in queue for the main generator to pick up
+            progress_queue.put(progress_data)
+
+        # Create pipeline with config parameters
+        dr_config = config.deep_research
+        pipeline = DeepResearchPipeline(
+            vector_store=vector_store,
+            llm_provider=llm,
+            max_sub_questions=dr_config.max_sub_questions,
+            chunks_per_subquestion=dr_config.chunks_per_subquestion,
+            max_total_chunks=dr_config.max_total_chunks,
+            max_follow_up_queries=dr_config.max_follow_up_queries,
+            synthesis_temperature=dr_config.synthesis_temperature,
+            synthesis_max_tokens=dr_config.synthesis_max_tokens,
+        )
+
+        # Run research in background, yielding progress as it comes
+        research_task = asyncio.create_task(
+            pipeline.research(question, progress_callback=on_progress)
+        )
+
+        # Yield progress updates as they come in
+        while not research_task.done():
+            try:
+                progress_data = progress_queue.get(timeout=0.1)
+                if progress_data is not None:
+                    yield f"data: {json.dumps(progress_data)}\n\n"
+            except queue.Empty:
+                await asyncio.sleep(0.05)
+
+        # Drain any remaining progress updates
+        while not progress_queue.empty():
+            progress_data = progress_queue.get_nowait()
+            if progress_data is not None:
+                yield f"data: {json.dumps(progress_data)}\n\n"
+
+        try:
+            result = await research_task
+
+            # Format the result
+            response = {
+                "type": "result",
+                "answer": result.answer,
+                "sub_questions": [
+                    {"question": sq.question, "category": sq.category}
+                    for sq in result.sub_questions
+                ],
+                "sources": [
+                    {
+                        "file": src.file_path,
+                        "lines": f"{src.start_line}-{src.end_line}",
+                        "type": src.chunk_type,
+                        "name": src.name,
+                        "relevance": round(src.relevance_score, 3),
+                    }
+                    for src in result.sources
+                ],
+                "reasoning_trace": [
+                    {
+                        "step": step.step_type.value,
+                        "description": step.description,
+                        "duration_ms": step.duration_ms,
+                    }
+                    for step in result.reasoning_trace
+                ],
+                "stats": {
+                    "chunks_analyzed": result.total_chunks_analyzed,
+                    "llm_calls": result.total_llm_calls,
+                },
+            }
+            yield f"data: {json.dumps(response)}\n\n"
+        except Exception as e:  # noqa: BLE001 - Report research errors to user via SSE
+            logger.exception(f"Error in deep research: {e}")
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+        yield f"data: {json.dumps({'type': 'done'})}\n\n"
+
+    return Response(
+        stream_async_generator(run_research),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
+```
+
+</details>
+
 #### `run_research`
 
 ```python
@@ -302,6 +1101,148 @@ Async generator that runs deep research with progress updates.
 
 **Returns:** `AsyncIterator[str]`
 
+
+
+<details>
+<summary>View Source (lines 463-595)</summary>
+
+```python
+async def run_research() -> AsyncIterator[str]:
+        """Async generator that runs deep research with progress updates."""
+        from local_deepwiki.config import get_config
+        from local_deepwiki.core.deep_research import DeepResearchPipeline
+        from local_deepwiki.core.vectorstore import VectorStore
+        from local_deepwiki.models import ResearchProgress
+        from local_deepwiki.providers.embeddings import get_embedding_provider
+        from local_deepwiki.providers.llm import get_cached_llm_provider
+
+        config = get_config()
+        vector_db_path = config.get_vector_db_path(repo_path)
+
+        if not vector_db_path.exists():
+            yield f"data: {json.dumps({'type': 'error', 'message': 'Repository not indexed. Please run index_repository first.'})}\n\n"
+            return
+
+        # Setup providers
+        embedding_provider = get_embedding_provider(config.embedding)
+        vector_store = VectorStore(vector_db_path, embedding_provider)
+        cache_path = config.get_wiki_path(repo_path) / "llm_cache.lance"
+
+        # Determine LLM config for research - use chat_llm_provider if set
+        llm_config = config.llm
+        chat_provider = config.wiki.chat_llm_provider
+        if chat_provider != "default":
+            # Override provider for research
+            llm_config = llm_config.model_copy(update={"provider": chat_provider})
+            logger.info(f"Using {chat_provider} provider for deep research")
+
+        llm = get_cached_llm_provider(
+            cache_path=cache_path,
+            embedding_provider=embedding_provider,
+            cache_config=config.llm_cache,
+            llm_config=llm_config,
+        )
+
+        # Progress callback
+        async def on_progress(progress: ResearchProgress) -> None:
+            progress_data = {
+                "type": "progress",
+                "step": progress.step,
+                "total_steps": progress.total_steps,
+                "step_type": progress.step_type.value,
+                "message": progress.message,
+            }
+            if progress.sub_questions:
+                progress_data["sub_questions"] = [
+                    {"question": sq.question, "category": sq.category}
+                    for sq in progress.sub_questions
+                ]
+            if progress.chunks_retrieved is not None:
+                progress_data["chunks_retrieved"] = progress.chunks_retrieved
+            if progress.follow_up_queries:
+                progress_data["follow_up_queries"] = progress.follow_up_queries
+            if progress.duration_ms is not None:
+                progress_data["duration_ms"] = progress.duration_ms
+
+            # Put in queue for the main generator to pick up
+            progress_queue.put(progress_data)
+
+        # Create pipeline with config parameters
+        dr_config = config.deep_research
+        pipeline = DeepResearchPipeline(
+            vector_store=vector_store,
+            llm_provider=llm,
+            max_sub_questions=dr_config.max_sub_questions,
+            chunks_per_subquestion=dr_config.chunks_per_subquestion,
+            max_total_chunks=dr_config.max_total_chunks,
+            max_follow_up_queries=dr_config.max_follow_up_queries,
+            synthesis_temperature=dr_config.synthesis_temperature,
+            synthesis_max_tokens=dr_config.synthesis_max_tokens,
+        )
+
+        # Run research in background, yielding progress as it comes
+        research_task = asyncio.create_task(
+            pipeline.research(question, progress_callback=on_progress)
+        )
+
+        # Yield progress updates as they come in
+        while not research_task.done():
+            try:
+                progress_data = progress_queue.get(timeout=0.1)
+                if progress_data is not None:
+                    yield f"data: {json.dumps(progress_data)}\n\n"
+            except queue.Empty:
+                await asyncio.sleep(0.05)
+
+        # Drain any remaining progress updates
+        while not progress_queue.empty():
+            progress_data = progress_queue.get_nowait()
+            if progress_data is not None:
+                yield f"data: {json.dumps(progress_data)}\n\n"
+
+        try:
+            result = await research_task
+
+            # Format the result
+            response = {
+                "type": "result",
+                "answer": result.answer,
+                "sub_questions": [
+                    {"question": sq.question, "category": sq.category}
+                    for sq in result.sub_questions
+                ],
+                "sources": [
+                    {
+                        "file": src.file_path,
+                        "lines": f"{src.start_line}-{src.end_line}",
+                        "type": src.chunk_type,
+                        "name": src.name,
+                        "relevance": round(src.relevance_score, 3),
+                    }
+                    for src in result.sources
+                ],
+                "reasoning_trace": [
+                    {
+                        "step": step.step_type.value,
+                        "description": step.description,
+                        "duration_ms": step.duration_ms,
+                    }
+                    for step in result.reasoning_trace
+                ],
+                "stats": {
+                    "chunks_analyzed": result.total_chunks_analyzed,
+                    "llm_calls": result.total_llm_calls,
+                },
+            }
+            yield f"data: {json.dumps(response)}\n\n"
+        except Exception as e:  # noqa: BLE001 - Report research errors to user via SSE
+            logger.exception(f"Error in deep research: {e}")
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+        yield f"data: {json.dumps({'type': 'done'})}\n\n"
+```
+
+</details>
 
 #### `on_progress`
 
@@ -316,6 +1257,37 @@ async def on_progress(progress: ResearchProgress) -> None
 
 **Returns:** `None`
 
+
+
+<details>
+<summary>View Source (lines 500-521)</summary>
+
+```python
+async def on_progress(progress: ResearchProgress) -> None:
+            progress_data = {
+                "type": "progress",
+                "step": progress.step,
+                "total_steps": progress.total_steps,
+                "step_type": progress.step_type.value,
+                "message": progress.message,
+            }
+            if progress.sub_questions:
+                progress_data["sub_questions"] = [
+                    {"question": sq.question, "category": sq.category}
+                    for sq in progress.sub_questions
+                ]
+            if progress.chunks_retrieved is not None:
+                progress_data["chunks_retrieved"] = progress.chunks_retrieved
+            if progress.follow_up_queries:
+                progress_data["follow_up_queries"] = progress.follow_up_queries
+            if progress.duration_ms is not None:
+                progress_data["duration_ms"] = progress.duration_ms
+
+            # Put in queue for the main generator to pick up
+            progress_queue.put(progress_data)
+```
+
+</details>
 
 #### `create_app`
 
@@ -332,6 +1304,24 @@ Create Flask app with wiki path configured.
 
 **Returns:** `Flask`
 
+
+
+<details>
+<summary>View Source (lines 607-615)</summary>
+
+```python
+def create_app(wiki_path: str | Path) -> Flask:
+    """Create Flask app with wiki path configured."""
+    global WIKI_PATH
+    WIKI_PATH = Path(wiki_path)
+    if not WIKI_PATH.exists():
+        logger.error(f"Wiki path does not exist: {wiki_path}")
+        raise ValueError(f"Wiki path does not exist: {wiki_path}")
+    logger.info(f"Configured wiki path: {WIKI_PATH}")
+    return app
+```
+
+</details>
 
 #### `run_server`
 
@@ -350,6 +1340,25 @@ Run the wiki web server.
 | `debug` | `bool` | `False` | - |
 
 
+
+<details>
+<summary>View Source (lines 618-627)</summary>
+
+```python
+def run_server(
+    wiki_path: str | Path, host: str = "127.0.0.1", port: int = 8080, debug: bool = False
+):
+    """Run the wiki web server."""
+    app = create_app(wiki_path)
+    logger.info(f"Starting DeepWiki server at http://{host}:{port}")
+    logger.info(f"Serving wiki from: {wiki_path}")
+    print(f"Starting DeepWiki server at http://{host}:{port}")
+    print(f"Serving wiki from: {wiki_path}")
+    app.run(host=host, port=port, debug=debug)
+```
+
+</details>
+
 #### `main`
 
 ```python
@@ -359,6 +1368,30 @@ def main()
 CLI entry point.
 
 
+
+
+<details>
+<summary>View Source (lines 630-644)</summary>
+
+```python
+def main():
+    """CLI entry point."""
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Serve DeepWiki documentation")
+    parser.add_argument(
+        "wiki_path", nargs="?", default=".deepwiki", help="Path to the .deepwiki directory"
+    )
+    parser.add_argument("--host", default="127.0.0.1", help="Host to bind to")
+    parser.add_argument("--port", "-p", type=int, default=8080, help="Port to bind to")
+    parser.add_argument("--debug", action="store_true", help="Enable debug mode")
+    args = parser.parse_args()
+
+    wiki_path = Path(args.wiki_path).resolve()
+    run_server(wiki_path, args.host, args.port, args.debug)
+```
+
+</details>
 
 ## Call Graph
 

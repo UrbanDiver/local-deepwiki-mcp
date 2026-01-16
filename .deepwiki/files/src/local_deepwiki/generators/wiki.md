@@ -1,14 +1,14 @@
-# Wiki Generator Module
+# wiki.py
 
 ## File Overview
 
-The `wiki.py` module provides the core functionality for generating documentation wikis from indexed code. It contains the WikiGenerator class which orchestrates the creation of various documentation pages including overviews, architecture diagrams, module documentation, and file-specific pages.
+This module provides the core wiki generation functionality for the local_deepwiki project. It contains the WikiGenerator class which orchestrates the creation of documentation wikis from codebases, integrating vector stores, cross-linking, search indexing, and various content enhancement features.
 
 ## Classes
 
 ### WikiGenerator
 
-The WikiGenerator class is responsible for generating comprehensive wiki documentation from a vector store of indexed code.
+The WikiGenerator class is the [main](../export/html.md) component responsible for generating wiki documentation from indexed code. It coordinates multiple subsystems including vector stores, cross-linking, search indexing, and relationship analysis to create comprehensive documentation.
 
 #### Constructor
 
@@ -24,82 +24,48 @@ def __init__(
 
 **Parameters:**
 - `wiki_path`: Path to wiki output directory
-- `vector_store`: Vector store with indexed code
+- `vector_store`: Vector store with indexed code  
 - `config`: Optional configuration object
 - `llm_provider_name`: Override LLM provider ("ollama", "anthropic", "openai")
 
-#### Key Methods
-
-The WikiGenerator class includes several methods for different aspects of wiki generation:
-
-- **Status Management**: Methods for tracking generation status and determining when regeneration is needed
-- **Content Generation**: Methods for generating different types of documentation pages
-- **File Operations**: Methods for reading and writing wiki pages
-- **Utility Methods**: Helper methods for content processing and organization
+Initializes the wiki generator with the necessary components for documentation generation.
 
 ## Functions
 
 ### generate_wiki
 
-```python
-generate_wiki(...)
-```
+A module-level function that provides the [main](../export/html.md) entry point for wiki generation functionality.
 
-A standalone function that provides a simplified interface for wiki generation.
+## Related Components
 
-## Usage Examples
+The WikiGenerator class integrates with several other components from the local_deepwiki ecosystem:
 
-### Basic Wiki Generation
+- **[VectorStore](../core/vectorstore.md)**: Provides indexed code content for documentation generation
+- **[Config](../config.md)**: Handles configuration management through the [get_config](../config.md) function
+- **[EntityRegistry](crosslinks.md)**: Manages entity tracking for cross-linking via [add_cross_links](crosslinks.md)
+- **[ProjectManifest](manifest.md)**: Handles project metadata through [get_cached_manifest](manifest.md)
+- **[RelationshipAnalyzer](see_also.md)**: Analyzes code relationships via [add_see_also_sections](see_also.md)
+- **Search functionality**: Integrates search indexing through [write_search_index](search.md)
+- **Source references**: Adds source reference sections through [add_source_refs_sections](source_refs.md)
+
+## Usage Example
 
 ```python
 from pathlib import Path
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.generators.wiki import WikiGenerator
 
-# Initialize components
-wiki_path = Path("./wiki")
-vector_store = VectorStore(...)  # Your vector store instance
-
-# Create generator
-generator = WikiGenerator(
-    wiki_path=wiki_path,
-    vector_store=vector_store
-)
-
-# Generate wiki
-generator.generate()
-```
-
-### With Custom Configuration
-
-```python
-from local_deepwiki.config import Config
-
-# Custom configuration
-config = Config(...)
-
-# Generator with custom config and LLM provider
+# Initialize with required components
+wiki_path = Path("output/wiki")
+vector_store = VectorStore(...)  # Initialized vector store
 generator = WikiGenerator(
     wiki_path=wiki_path,
     vector_store=vector_store,
-    config=config,
-    llm_provider_name="anthropic"
+    llm_provider_name="ollama"
 )
 ```
 
-## Related Components
-
-The WikiGenerator integrates with several other components from the local_deepwiki system:
-
-- **[VectorStore](../core/vectorstore.md)**: Provides indexed code content for documentation generation
-- **[Config](../config.md)**: Supplies configuration settings for the generation process
-- **[EntityRegistry](crosslinks.md)**: Handles cross-linking between documentation entities
-- **API Documentation Generator**: Generates API-specific documentation
-- **Call Graph Generator**: Creates call graph visualizations
-- **Test Examples Generator**: Extracts test examples for documentation
-- **Diagram Generator**: Creates class diagrams and other visualizations
-
-The module also integrates with various LLM providers through the specified provider name, allowing for flexible AI-powered content generation.
+The WikiGenerator serves as the central orchestrator for the documentation generation process, bringing together indexing, analysis, and output generation capabilities into a cohesive wiki creation system.
 
 ## API Reference
 
@@ -108,6 +74,17 @@ The module also integrates with various LLM providers through the specified prov
 Generate wiki documentation from indexed code.
 
 **Methods:**
+
+
+<details>
+<summary>View Source (lines 38-389)</summary>
+
+```python
+class WikiGenerator:
+    # Methods: __init__, _get_main_definition_lines, generate, _generate_overview, _generate_architecture, _generate_dependencies, _generate_changelog, _write_page, _sync_write
+```
+
+</details>
 
 #### `__init__`
 
@@ -125,6 +102,57 @@ Initialize the wiki generator.
 | `config` | `Config | None` | `None` | Optional configuration. |
 | `llm_provider_name` | `str | None` | `None` | Override LLM provider ("ollama", "anthropic", "openai"). |
 
+
+<details>
+<summary>View Source (lines 41-82)</summary>
+
+```python
+def __init__(
+        self,
+        wiki_path: Path,
+        vector_store: VectorStore,
+        config: Config | None = None,
+        llm_provider_name: str | None = None,
+    ):
+        """Initialize the wiki generator.
+
+        Args:
+            wiki_path: Path to wiki output directory.
+            vector_store: Vector store with indexed code.
+            config: Optional configuration.
+            llm_provider_name: Override LLM provider ("ollama", "anthropic", "openai").
+        """
+        self.wiki_path = wiki_path
+        self.vector_store = vector_store
+        self.config = config or get_config()
+
+        # Override LLM provider if specified
+        if llm_provider_name:
+            self.config.llm.provider = llm_provider_name  # type: ignore
+
+        self.llm = get_llm_provider(self.config.llm)
+
+        # Get provider-specific system prompt
+        self._system_prompt = self.config.get_prompts().wiki_system
+
+        # Entity registry for cross-linking
+        self.entity_registry = EntityRegistry()
+
+        # Relationship analyzer for See Also sections
+        self.relationship_analyzer = RelationshipAnalyzer()
+
+        # Status manager for incremental updates
+        self.status_manager = WikiStatusManager(wiki_path)
+
+        # Cached project manifest (parsed from package files)
+        self._manifest: ProjectManifest | None = None
+
+        # Repository path (set during generation)
+        self._repo_path: Path | None = None
+```
+
+</details>
+
 #### `generate`
 
 ```python
@@ -137,35 +165,247 @@ Generate wiki documentation for the indexed repository.
 | [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `index_status` | [`IndexStatus`](../models.md) | - | The index status with file information. |
-| [`progress_callback`](../handlers.md) | `ProgressCallback | None` | `None` | Optional progress callback. |
+| [`progress_callback`](../watcher.md) | `ProgressCallback | None` | `None` | Optional progress callback. |
 | `full_rebuild` | `bool` | `False` | If True, regenerate all pages. Otherwise, only regenerate changed pages. |
-
-#### `is_test_file`
-
-```python
-def is_test_file(path: str) -> bool
-```
-
-Check if a file is a test file.
-
-
-| [Parameter](api_docs.md) | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `path` | `str` | - | - |
-
-#### `generate_with_semaphore`
-
-```python
-async def generate_with_semaphore(file_info: FileInfo) -> tuple[WikiPage | None, bool]
-```
-
-
-| [Parameter](api_docs.md) | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `file_info` | [`FileInfo`](../models.md) | - | - |
 
 
 ---
+
+
+<details>
+<summary>View Source (lines 113-339)</summary>
+
+```python
+async def generate(
+        self,
+        index_status: IndexStatus,
+        progress_callback: ProgressCallback | None = None,
+        full_rebuild: bool = False,
+    ) -> WikiStructure:
+        """Generate wiki documentation for the indexed repository.
+
+        Args:
+            index_status: The index status with file information.
+            progress_callback: Optional progress callback.
+            full_rebuild: If True, regenerate all pages. Otherwise, only regenerate changed pages.
+
+        Returns:
+            WikiStructure with generated pages.
+        """
+        logger.info(f"Starting wiki generation for {index_status.repo_path}")
+        logger.debug(f"Full rebuild: {full_rebuild}, Total files: {index_status.total_files}")
+
+        pages: list[WikiPage] = []
+        total_steps = 9  # overview, architecture, modules, files, dependencies, changelog, cross-links, see-also, search
+        pages_generated = 0
+        pages_skipped = 0
+
+        # Store repo path and parse manifest for grounded generation (with caching)
+        self._repo_path = Path(index_status.repo_path)
+        self._manifest = get_cached_manifest(self._repo_path, cache_dir=self.wiki_path)
+
+        # Build file hash map for incremental generation
+        self.status_manager.file_hashes = {f.path: f.hash for f in index_status.files}
+        all_source_files = list(self.status_manager.file_hashes.keys())
+
+        # Load previous wiki status for incremental updates
+        if not full_rebuild:
+            await self.status_manager.load_status()
+
+        # Pre-compute line info for source files (for source refs with line numbers)
+        self.status_manager.file_line_info = self._get_main_definition_lines()
+
+        # Generate index page (overview) - depends on all files
+        if progress_callback:
+            progress_callback("Generating overview", 0, total_steps)
+
+        overview_path = "index.md"
+        overview_page: WikiPage
+        if full_rebuild or self.status_manager.needs_regeneration(overview_path, all_source_files):
+            overview_page = await self._generate_overview(index_status)
+            pages_generated += 1
+        else:
+            existing_page = await self.status_manager.load_existing_page(overview_path)
+            if existing_page is None:
+                overview_page = await self._generate_overview(index_status)
+                pages_generated += 1
+            else:
+                overview_page = existing_page
+                pages_skipped += 1
+
+        pages.append(overview_page)
+        self.status_manager.record_page_status(overview_page, all_source_files)
+        await self._write_page(overview_page)
+
+        # Generate architecture page - depends on all files
+        if progress_callback:
+            progress_callback("Generating architecture docs", 1, total_steps)
+
+        architecture_path = "architecture.md"
+        architecture_page: WikiPage
+        if full_rebuild or self.status_manager.needs_regeneration(
+            architecture_path, all_source_files
+        ):
+            architecture_page = await self._generate_architecture(index_status)
+            pages_generated += 1
+        else:
+            existing_arch_page = await self.status_manager.load_existing_page(architecture_path)
+            if existing_arch_page is None:
+                architecture_page = await self._generate_architecture(index_status)
+                pages_generated += 1
+            else:
+                architecture_page = existing_arch_page
+                pages_skipped += 1
+
+        pages.append(architecture_page)
+        self.status_manager.record_page_status(architecture_page, all_source_files)
+        await self._write_page(architecture_page)
+
+        # Collect import chunks for relationship analysis (needed for See Also)
+        import_results = await self.vector_store.search(
+            "import require include",
+            limit=self.config.wiki.import_search_limit,
+        )
+        import_chunks = [r.chunk for r in import_results if r.chunk.chunk_type.value == "import"]
+        self.relationship_analyzer.analyze_chunks(import_chunks)
+
+        # Generate module pages
+        if progress_callback:
+            progress_callback("Generating module documentation", 2, total_steps)
+
+        module_pages, gen_count, skip_count = await generate_module_docs(
+            index_status=index_status,
+            vector_store=self.vector_store,
+            llm=self.llm,
+            system_prompt=self._system_prompt,
+            status_manager=self.status_manager,
+            full_rebuild=full_rebuild,
+        )
+        pages_generated += gen_count
+        pages_skipped += skip_count
+        for page in module_pages:
+            pages.append(page)
+            await self._write_page(page)
+
+        # Generate file-level documentation
+        if progress_callback:
+            progress_callback("Generating file documentation", 3, total_steps)
+
+        file_pages, gen_count, skip_count = await generate_file_docs(
+            index_status=index_status,
+            vector_store=self.vector_store,
+            llm=self.llm,
+            system_prompt=self._system_prompt,
+            status_manager=self.status_manager,
+            entity_registry=self.entity_registry,
+            config=self.config,
+            progress_callback=progress_callback,
+            full_rebuild=full_rebuild,
+        )
+        pages_generated += gen_count
+        pages_skipped += skip_count
+        for page in file_pages:
+            pages.append(page)
+            await self._write_page(page)
+
+        # Generate dependencies page - depends on all files
+        if progress_callback:
+            progress_callback("Generating dependencies", 4, total_steps)
+
+        deps_path = "dependencies.md"
+        deps_page: WikiPage
+        deps_source_files: list[str]
+        if full_rebuild or self.status_manager.needs_regeneration(deps_path, all_source_files):
+            deps_page, deps_source_files = await self._generate_dependencies(index_status)
+            pages_generated += 1
+        else:
+            existing_deps_page = await self.status_manager.load_existing_page(deps_path)
+            if existing_deps_page is None:
+                deps_page, deps_source_files = await self._generate_dependencies(index_status)
+                pages_generated += 1
+            else:
+                deps_page = existing_deps_page
+                # Use source files from previous status if available
+                prev_status = self.status_manager.page_statuses.get(deps_path) or (
+                    self.status_manager.previous_status.pages.get(deps_path)
+                    if self.status_manager.previous_status
+                    else None
+                )
+                deps_source_files = prev_status.source_files if prev_status else all_source_files
+                pages_skipped += 1
+
+        pages.append(deps_page)
+        self.status_manager.record_page_status(deps_page, deps_source_files)
+        await self._write_page(deps_page)
+
+        # Generate changelog page from git history
+        if progress_callback:
+            progress_callback("Generating changelog", 5, total_steps)
+
+        changelog_page = await self._generate_changelog()
+        if changelog_page:
+            pages.append(changelog_page)
+            self.status_manager.record_page_status(changelog_page, all_source_files)
+            await self._write_page(changelog_page)
+            pages_generated += 1
+
+        # Apply cross-links to all pages
+        if progress_callback:
+            progress_callback("Adding cross-links", 6, total_steps)
+
+        pages = add_cross_links(pages, self.entity_registry)
+
+        # Add Relevant Source Files sections with local wiki links
+        pages = add_source_refs_sections(pages, self.status_manager.page_statuses, self.wiki_path)
+
+        # Add See Also sections
+        if progress_callback:
+            progress_callback("Adding See Also sections", 7, total_steps)
+
+        pages = add_see_also_sections(pages, self.relationship_analyzer)
+
+        # Re-write pages with cross-links and See Also sections
+        for page in pages:
+            await self._write_page(page)
+
+        # Generate search index
+        if progress_callback:
+            progress_callback("Generating search index", 8, total_steps)
+
+        write_search_index(self.wiki_path, pages)
+
+        # Generate table of contents with hierarchical numbering
+        page_list = [{"path": p.path, "title": p.title} for p in pages]
+        toc = generate_toc(page_list)
+        write_toc(toc, self.wiki_path)
+
+        # Save wiki generation status
+        wiki_status = WikiGenerationStatus(
+            repo_path=index_status.repo_path,
+            generated_at=time.time(),
+            total_pages=len(pages),
+            index_status_hash=hashlib.sha256(
+                json.dumps(index_status.model_dump(), sort_keys=True).encode()
+            ).hexdigest()[:16],
+            pages=self.status_manager.page_statuses,
+        )
+        await self.status_manager.save_status(wiki_status)
+
+        if progress_callback:
+            progress_callback(
+                f"Wiki generation complete ({pages_generated} generated, {pages_skipped} unchanged)",
+                total_steps,
+                total_steps,
+            )
+
+        logger.info(
+            f"Wiki generation complete: {pages_generated} pages generated, "
+            f"{pages_skipped} pages unchanged, {len(pages)} total pages"
+        )
+        return WikiStructure(root=str(self.wiki_path), pages=pages)
+```
+
+</details>
 
 ### Functions
 
@@ -186,12 +426,64 @@ Convenience function to generate wiki documentation.
 | `index_status` | [`IndexStatus`](../models.md) | - | Index status. |
 | `config` | `Config | None` | `None` | Optional configuration. |
 | `llm_provider` | `str | None` | `None` | Optional LLM provider override. |
-| [`progress_callback`](../handlers.md) | `ProgressCallback | None` | `None` | Optional progress callback. |
+| [`progress_callback`](../watcher.md) | `ProgressCallback | None` | `None` | Optional progress callback. |
 | `full_rebuild` | `bool` | `False` | If True, regenerate all pages. Otherwise, only regenerate changed pages. |
 
 **Returns:** [`WikiStructure`](../models.md)
 
 
+
+
+<details>
+<summary>View Source (lines 392-434)</summary>
+
+```python
+async def generate_wiki(
+    repo_path: Path,
+    wiki_path: Path,
+    vector_store: VectorStore,
+    index_status: IndexStatus,
+    config: Config | None = None,
+    llm_provider: str | None = None,
+    progress_callback: ProgressCallback | None = None,
+    full_rebuild: bool = False,
+) -> WikiStructure:
+    """Convenience function to generate wiki documentation.
+
+    Args:
+        repo_path: Path to the repository.
+        wiki_path: Path for wiki output.
+        vector_store: Indexed vector store.
+        index_status: Index status.
+        config: Optional configuration.
+        llm_provider: Optional LLM provider override.
+        progress_callback: Optional progress callback.
+        full_rebuild: If True, regenerate all pages. Otherwise, only regenerate changed pages.
+
+    Returns:
+        WikiStructure with generated pages.
+    """
+    from local_deepwiki.core.git_utils import is_github_repo
+
+    config = config or get_config()
+
+    # Auto-switch to cloud provider for GitHub repos if configured
+    effective_provider = llm_provider
+    if effective_provider is None and config.wiki.use_cloud_for_github:
+        if is_github_repo(repo_path):
+            effective_provider = config.wiki.github_llm_provider
+            logger.info(f"GitHub repo detected, using cloud provider: {effective_provider}")
+
+    generator = WikiGenerator(
+        wiki_path=wiki_path,
+        vector_store=vector_store,
+        config=config,
+        llm_provider_name=effective_provider,
+    )
+    return await generator.generate(index_status, progress_callback, full_rebuild)
+```
+
+</details>
 
 ## Class Diagram
 
@@ -200,19 +492,13 @@ classDiagram
     class WikiGenerator {
         -__init__(wiki_path: Path, vector_store: VectorStore, config: Config | None, llm_provider_name: str | None)
         -_get_main_definition_lines() dict[str, tuple[int, int]]
-        -_load_wiki_status() WikiGenerationStatus | None
-        -_read_status() WikiGenerationStatus | None
-        -_save_wiki_status(status: WikiGenerationStatus) None
-        -_write_status() None
-        -_compute_content_hash(content: str) str
-        -_needs_regeneration(page_path: str, source_files: list[str]) bool
-        -_load_existing_page(page_path: str) WikiPage | None
-        -_read_page() WikiPage | None
-        -_record_page_status(page: WikiPage, source_files: list[str]) None
         +generate(index_status: IndexStatus, progress_callback: ProgressCallback | None, full_rebuild: bool) WikiStructure
         -_generate_overview(index_status: IndexStatus) WikiPage
         -_generate_architecture(index_status: IndexStatus) WikiPage
-        -_generate_module_docs(index_status: IndexStatus, full_rebuild: bool) tuple[list[WikiPage], int, int]
+        -_generate_dependencies(index_status: IndexStatus) tuple[WikiPage, list[str]]
+        -_generate_changelog() WikiPage | None
+        -_write_page(page: WikiPage) None
+        -_sync_write() None
     }
 ```
 
@@ -220,91 +506,225 @@ classDiagram
 
 ```mermaid
 flowchart TD
-    N0[Path]
-    N1[WikiGenerator.__init__]
-    N2[WikiGenerator._compute_cont...]
-    N3[WikiGenerator._generate_fil...]
-    N4[WikiGenerator._generate_mod...]
-    N5[WikiGenerator._generate_sin...]
-    N6[WikiGenerator._get_main_def...]
-    N7[WikiGenerator._load_existin...]
-    N8[WikiGenerator._load_wiki_st...]
-    N9[WikiGenerator._read_status]
-    N10[WikiGenerator._save_wiki_st...]
-    N11[WikiGenerator._write_page]
-    N12[WikiGenerator.generate]
-    N13[WikiPage]
-    N14[_load_existing_page]
-    N15[_needs_regeneration]
-    N16[_record_page_status]
-    N17[dump]
-    N18[exists]
-    N19[generate]
-    N20[generate_wiki]
-    N21[get_config]
-    N22[hexdigest]
-    N23[load]
-    N24[model_dump]
-    N25[model_validate]
-    N26[search]
-    N27[sha256]
-    N28[time]
-    N29[to_thread]
-    N20 --> N21
-    N20 --> N19
-    N1 --> N21
-    N8 --> N18
-    N8 --> N23
-    N8 --> N25
-    N8 --> N29
-    N9 --> N23
-    N9 --> N25
-    N10 --> N24
-    N10 --> N17
-    N10 --> N29
-    N2 --> N22
-    N2 --> N27
-    N7 --> N18
-    N7 --> N0
-    N7 --> N28
-    N7 --> N13
-    N7 --> N29
-    N12 --> N0
-    N12 --> N15
-    N12 --> N14
-    N12 --> N16
-    N12 --> N26
-    N12 --> N28
-    N12 --> N22
-    N12 --> N27
-    N12 --> N24
-    N4 --> N0
-    N4 --> N15
-    N4 --> N14
+    N0[EntityRegistry]
+    N1[Path]
+    N2[RelationshipAnalyzer]
+    N3[WikiGenerator]
+    N4[WikiGenerator.__init__]
+    N5[WikiGenerator._get_main_def...]
+    N6[WikiGenerator._sync_write]
+    N7[WikiGenerator._write_page]
+    N8[WikiGenerator.generate]
+    N9[WikiStatusManager]
+    N10[_generate_overview]
+    N11[_get_main_definition_lines]
+    N12[_get_table]
+    N13[generate]
+    N14[generate_wiki]
+    N15[get_cached_manifest]
+    N16[get_config]
+    N17[get_llm_provider]
+    N18[get_prompts]
+    N19[groupby]
+    N20[is_github_repo]
+    N21[load_existing_page]
+    N22[load_status]
+    N23[mkdir]
+    N24[needs_regeneration]
+    N25[progress_callback]
+    N26[record_page_status]
+    N27[sort_values]
+    N28[to_pandas]
+    N29[write_text]
+    N14 --> N16
+    N14 --> N20
+    N14 --> N3
+    N14 --> N13
     N4 --> N16
-    N4 --> N26
-    N4 --> N19
-    N4 --> N13
-    N4 --> N28
-    N5 --> N0
-    N5 --> N15
-    N5 --> N14
-    N5 --> N16
-    N5 --> N26
-    N5 --> N19
-    N5 --> N18
-    N5 --> N13
+    N4 --> N17
+    N4 --> N18
+    N4 --> N0
+    N4 --> N2
+    N4 --> N9
+    N5 --> N12
     N5 --> N28
-    N3 --> N13
-    N3 --> N28
-    N3 --> N16
-    N11 --> N29
+    N5 --> N19
+    N5 --> N27
+    N8 --> N1
+    N8 --> N15
+    N8 --> N22
+    N8 --> N11
+    N8 --> N25
+    N8 --> N24
+    N8 --> N10
+    N8 --> N21
+    N8 --> N26
+    N7 --> N23
+    N7 --> N29
+    N6 --> N23
+    N6 --> N29
     classDef func fill:#e1f5fe
-    class N0,N13,N14,N15,N16,N17,N18,N19,N20,N21,N22,N23,N24,N25,N26,N27,N28,N29 func
+    class N0,N1,N2,N3,N9,N10,N11,N12,N13,N14,N15,N16,N17,N18,N19,N20,N21,N22,N23,N24,N25,N26,N27,N28,N29 func
     classDef method fill:#fff3e0
-    class N1,N2,N3,N4,N5,N6,N7,N8,N9,N10,N11,N12 method
+    class N4,N5,N6,N7,N8 method
 ```
+
+## Additional Source Code
+
+Source code for functions and methods not listed in the API Reference above.
+
+#### `_get_main_definition_lines`
+
+<details>
+<summary>View Source (lines 84-111)</summary>
+
+```python
+def _get_main_definition_lines(self) -> dict[str, tuple[int, int]]:
+        """Get line range of main definition (first class or function) per file.
+
+        Returns:
+            Dict mapping file_path to (start_line, end_line) tuple.
+        """
+        table = self.vector_store._get_table()
+        if table is None:
+            return {}
+
+        df = table.to_pandas()
+        result: dict[str, tuple[int, int]] = {}
+
+        for file_path, group in df.groupby("file_path"):
+            # Sort by start_line to get first definitions
+            classes = group[group["chunk_type"] == "class"].sort_values(by="start_line")  # type: ignore[call-overload]
+            functions = group[group["chunk_type"] == "function"].sort_values(by="start_line")  # type: ignore[call-overload]
+
+            if not classes.empty:
+                # Use first class definition
+                row = classes.iloc[0]
+                result[str(file_path)] = (int(row["start_line"]), int(row["end_line"]))
+            elif not functions.empty:
+                # Use first function definition
+                row = functions.iloc[0]
+                result[str(file_path)] = (int(row["start_line"]), int(row["end_line"]))
+
+        return result
+```
+
+</details>
+
+
+#### `_generate_overview`
+
+<details>
+<summary>View Source (lines 341-350)</summary>
+
+```python
+async def _generate_overview(self, index_status: IndexStatus) -> WikiPage:
+        """Generate the main overview/index page with grounded facts."""
+        return await generate_overview_page(
+            index_status=index_status,
+            vector_store=self.vector_store,
+            llm=self.llm,
+            system_prompt=self._system_prompt,
+            manifest=self._manifest,
+            repo_path=self._repo_path,
+        )
+```
+
+</details>
+
+
+#### `_generate_architecture`
+
+<details>
+<summary>View Source (lines 352-361)</summary>
+
+```python
+async def _generate_architecture(self, index_status: IndexStatus) -> WikiPage:
+        """Generate architecture documentation with diagrams and grounded facts."""
+        return await generate_architecture_page(
+            index_status=index_status,
+            vector_store=self.vector_store,
+            llm=self.llm,
+            system_prompt=self._system_prompt,
+            manifest=self._manifest,
+            repo_path=self._repo_path,
+        )
+```
+
+</details>
+
+
+#### `_generate_dependencies`
+
+<details>
+<summary>View Source (lines 363-372)</summary>
+
+```python
+async def _generate_dependencies(self, index_status: IndexStatus) -> tuple[WikiPage, list[str]]:
+        """Generate dependencies documentation with grounded facts from manifest."""
+        return await generate_dependencies_page(
+            index_status=index_status,
+            vector_store=self.vector_store,
+            llm=self.llm,
+            system_prompt=self._system_prompt,
+            manifest=self._manifest,
+            import_search_limit=self.config.wiki.import_search_limit,
+        )
+```
+
+</details>
+
+
+#### `_generate_changelog`
+
+<details>
+<summary>View Source (lines 374-376)</summary>
+
+```python
+async def _generate_changelog(self) -> WikiPage | None:
+        """Generate changelog page from git history."""
+        return await generate_changelog_page(self._repo_path)
+```
+
+</details>
+
+
+#### `_write_page`
+
+<details>
+<summary>View Source (lines 378-389)</summary>
+
+```python
+async def _write_page(self, page: WikiPage) -> None:
+        """Write a wiki page to disk asynchronously."""
+        import asyncio
+
+        page_path = self.wiki_path / page.path
+        content = page.content
+
+        def _sync_write() -> None:
+            page_path.parent.mkdir(parents=True, exist_ok=True)
+            page_path.write_text(content)
+
+        await asyncio.to_thread(_sync_write)
+```
+
+</details>
+
+
+#### `_sync_write`
+
+<details>
+<summary>View Source (lines 385-387)</summary>
+
+```python
+def _sync_write() -> None:
+            page_path.parent.mkdir(parents=True, exist_ok=True)
+            page_path.write_text(content)
+```
+
+</details>
 
 ## Relevant Source Files
 
-- `src/local_deepwiki/generators/wiki.py:65-963`
+- `src/local_deepwiki/generators/wiki.py:38-389`
