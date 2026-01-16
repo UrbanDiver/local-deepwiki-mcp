@@ -1,16 +1,25 @@
 """Tests for the git_utils module."""
 
 import subprocess
+from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
 from local_deepwiki.core.git_utils import (
+    BlameInfo,
+    EntityBlameInfo,
     GitRepoInfo,
+    _parse_all_porcelain_blame,
+    _parse_line_blame_map,
     build_source_url,
+    format_blame_date,
     get_default_branch,
+    get_file_entity_blame,
     get_git_remote_url,
+    get_line_blame,
+    get_range_blame,
     get_repo_info,
     is_github_repo,
     parse_remote_url,
@@ -437,3 +446,285 @@ class TestIsGithubRepo:
     def test_non_git_dir_returns_false(self, tmp_path: Path) -> None:
         """Test returns False for non-git directory."""
         assert is_github_repo(tmp_path) is False
+
+
+class TestParsePorcelainBlame:
+    """Tests for _parse_all_porcelain_blame function."""
+
+    def test_parses_single_entry(self) -> None:
+        """Test parsing a single blame entry."""
+        output = """abc123def456abc123def456abc123def456abc1 1 1 1
+author John Doe
+author-mail <john@example.com>
+author-time 1700000000
+author-tz +0000
+committer John Doe
+committer-mail <john@example.com>
+committer-time 1700000000
+committer-tz +0000
+summary Initial commit
+filename test.py
+\tdef hello(): pass
+"""
+        entries = _parse_all_porcelain_blame(output)
+
+        assert len(entries) == 1
+        assert entries[0].author == "John Doe"
+        assert entries[0].author_email == "john@example.com"
+        assert entries[0].commit_hash == "abc123def456abc123def456abc123def456abc1"
+        assert entries[0].summary == "Initial commit"
+
+    def test_parses_multiple_entries(self) -> None:
+        """Test parsing multiple blame entries."""
+        output = """abc123def456abc123def456abc123def456abc12345 1 1 1
+author Alice
+author-mail <alice@example.com>
+author-time 1700000000
+summary First commit
+filename test.py
+\tline 1
+def456abc123def456abc123def456abc123def45678 2 2 1
+author Bob
+author-mail <bob@example.com>
+author-time 1700100000
+summary Second commit
+filename test.py
+\tline 2
+"""
+        entries = _parse_all_porcelain_blame(output)
+
+        assert len(entries) == 2
+        assert entries[0].author == "Alice"
+        assert entries[1].author == "Bob"
+        # Second entry is more recent
+        assert entries[1].date > entries[0].date
+
+    def test_handles_empty_output(self) -> None:
+        """Test handling empty output."""
+        entries = _parse_all_porcelain_blame("")
+        assert entries == []
+
+    def test_handles_missing_fields(self) -> None:
+        """Test handling entries with missing optional fields."""
+        output = """abc123def456abc123def456abc123def456abc12345 1 1 1
+author Jane
+author-time 1700000000
+filename test.py
+\tsome code
+"""
+        entries = _parse_all_porcelain_blame(output)
+
+        assert len(entries) == 1
+        assert entries[0].author == "Jane"
+        assert entries[0].author_email is None
+        assert entries[0].summary is None
+
+
+class TestParseLineBlameMap:
+    """Tests for _parse_line_blame_map function."""
+
+    def test_builds_line_number_mapping(self) -> None:
+        """Test building line number to blame info mapping."""
+        output = """abc123def456abc123def456abc123def456abc12345 1 1 1
+author Alice
+author-time 1700000000
+filename test.py
+\tdef foo():
+def456abc123def456abc123def456abc123def45678 2 2 1
+author Bob
+author-time 1700100000
+filename test.py
+\t    pass
+"""
+        line_map = _parse_line_blame_map(output)
+
+        assert 1 in line_map
+        assert 2 in line_map
+        assert line_map[1].author == "Alice"
+        assert line_map[2].author == "Bob"
+
+
+class TestFormatBlameDate:
+    """Tests for format_blame_date function."""
+
+    def test_today(self) -> None:
+        """Test formatting today's date."""
+        now = datetime.now()
+        result = format_blame_date(now)
+        assert result == "today"
+
+    def test_yesterday(self) -> None:
+        """Test formatting yesterday's date."""
+        yesterday = datetime.now() - timedelta(days=1)
+        result = format_blame_date(yesterday)
+        assert result == "yesterday"
+
+    def test_few_days_ago(self) -> None:
+        """Test formatting a few days ago."""
+        three_days_ago = datetime.now() - timedelta(days=3)
+        result = format_blame_date(three_days_ago)
+        assert result == "3 days ago"
+
+    def test_weeks_ago(self) -> None:
+        """Test formatting weeks ago."""
+        two_weeks_ago = datetime.now() - timedelta(days=14)
+        result = format_blame_date(two_weeks_ago)
+        assert result == "2 weeks ago"
+
+    def test_month_format(self) -> None:
+        """Test formatting dates older than a month."""
+        old_date = datetime.now() - timedelta(days=60)
+        result = format_blame_date(old_date)
+        # Should contain month abbreviation and year
+        assert len(result) > 5  # e.g., "Nov 15, 2024"
+
+
+class TestGetLineBlame:
+    """Tests for get_line_blame function."""
+
+    def test_returns_blame_for_line(self, tmp_path: Path) -> None:
+        """Test getting blame for a specific line in a git repo."""
+        # Set up git repo with a committed file
+        subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True)
+        subprocess.run(
+            ["git", "config", "user.email", "test@example.com"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "Test User"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+
+        # Create and commit a file
+        test_file = tmp_path / "test.py"
+        test_file.write_text("def hello():\n    pass\n")
+        subprocess.run(["git", "add", "test.py"], cwd=tmp_path, capture_output=True)
+        subprocess.run(
+            ["git", "commit", "-m", "Add test file"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+
+        result = get_line_blame(tmp_path, "test.py", 1)
+
+        assert result is not None
+        assert result.author == "Test User"
+        assert "test@example.com" in (result.author_email or "")
+
+    def test_returns_none_for_non_git_dir(self, tmp_path: Path) -> None:
+        """Test returns None for non-git directory."""
+        test_file = tmp_path / "test.py"
+        test_file.write_text("def hello(): pass\n")
+
+        result = get_line_blame(tmp_path, "test.py", 1)
+        assert result is None
+
+    def test_returns_none_for_nonexistent_file(self, tmp_path: Path) -> None:
+        """Test returns None for nonexistent file."""
+        subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True)
+
+        result = get_line_blame(tmp_path, "nonexistent.py", 1)
+        assert result is None
+
+
+class TestGetRangeBlame:
+    """Tests for get_range_blame function."""
+
+    def test_returns_blame_for_range(self, tmp_path: Path) -> None:
+        """Test returns blame for a range of lines."""
+        # Set up git repo
+        subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True)
+        subprocess.run(
+            ["git", "config", "user.email", "test@example.com"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "Test Author"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+
+        # Create and commit a file
+        test_file = tmp_path / "test.py"
+        test_file.write_text("def hello():\n    print('hello')\n    pass\n")
+        subprocess.run(["git", "add", "test.py"], cwd=tmp_path, capture_output=True)
+        subprocess.run(
+            ["git", "commit", "-m", "Initial"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+
+        result = get_range_blame(tmp_path, "test.py", 1, 3)
+
+        assert result is not None
+        assert result.author == "Test Author"
+
+
+class TestGetFileEntityBlame:
+    """Tests for get_file_entity_blame function."""
+
+    def test_returns_blame_for_entities(self, tmp_path: Path) -> None:
+        """Test getting blame info for multiple entities."""
+        # Set up git repo
+        subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True)
+        subprocess.run(
+            ["git", "config", "user.email", "dev@example.com"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "Developer"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+
+        # Create file with multiple functions
+        test_file = tmp_path / "module.py"
+        test_file.write_text("""def foo():
+    return 1
+
+def bar():
+    return 2
+
+class MyClass:
+    def method(self):
+        pass
+""")
+        subprocess.run(["git", "add", "module.py"], cwd=tmp_path, capture_output=True)
+        subprocess.run(
+            ["git", "commit", "-m", "Add module"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+
+        entities = [
+            ("foo", "function", 1, 2),
+            ("bar", "function", 4, 5),
+            ("MyClass", "class", 7, 9),
+        ]
+
+        result = get_file_entity_blame(tmp_path, "module.py", entities)
+
+        assert len(result) == 3
+        assert all(e.last_modified_by == "Developer" for e in result)
+        assert result[0].entity_name == "foo"
+        assert result[1].entity_name == "bar"
+        assert result[2].entity_name == "MyClass"
+
+    def test_returns_empty_for_non_git_dir(self, tmp_path: Path) -> None:
+        """Test returns empty list for non-git directory."""
+        test_file = tmp_path / "test.py"
+        test_file.write_text("def foo(): pass\n")
+
+        entities = [("foo", "function", 1, 1)]
+        result = get_file_entity_blame(tmp_path, "test.py", entities)
+
+        assert result == []
+
+    def test_returns_empty_for_empty_entities(self, tmp_path: Path) -> None:
+        """Test returns empty list for empty entities input."""
+        result = get_file_entity_blame(tmp_path, "test.py", [])
+        assert result == []

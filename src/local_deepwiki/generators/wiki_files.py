@@ -7,7 +7,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from local_deepwiki.config import Config
-from local_deepwiki.core.git_utils import GitRepoInfo, build_source_url, get_repo_info
+from local_deepwiki.core.git_utils import (
+    GitRepoInfo,
+    build_source_url,
+    format_blame_date,
+    get_file_entity_blame,
+    get_repo_info,
+)
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.generators.api_docs import get_file_api_docs
 from local_deepwiki.generators.callgraph import get_file_call_graph, get_file_callers
@@ -411,6 +417,15 @@ Do NOT include mermaid class diagrams - they will be auto-generated."""
         if examples_md:
             content += "\n\n" + examples_md
 
+    # Add git blame "Last Modified" section
+    blame_section = _generate_blame_section(
+        repo_path=Path(index_status.repo_path),
+        file_path=file_info.path,
+        chunks=all_file_chunks,
+    )
+    if blame_section:
+        content += "\n\n" + blame_section
+
     # Inject inline source code after each function/class in API Reference
     lang_str = file_info.language.value if file_info.language else None
     repo_info = get_repo_info(Path(index_status.repo_path))
@@ -552,6 +567,77 @@ async def generate_file_docs(
 
     logger.info(f"File docs complete: {pages_generated} generated, {pages_skipped} skipped")
     return pages, pages_generated, pages_skipped
+
+
+def _generate_blame_section(
+    repo_path: Path,
+    file_path: str,
+    chunks: list[CodeChunk],
+) -> str | None:
+    """Generate a "Last Modified" section with git blame info.
+
+    Args:
+        repo_path: Path to the repository root.
+        file_path: Relative path to the source file.
+        chunks: Code chunks from the file.
+
+    Returns:
+        Markdown section or None if no blame info available.
+    """
+    # Build entity list for blame lookup
+    entities: list[tuple[str, str, int, int]] = []
+
+    for chunk in chunks:
+        if chunk.name and chunk.chunk_type in (ChunkType.CLASS, ChunkType.FUNCTION, ChunkType.METHOD):
+            entities.append((
+                chunk.name,
+                chunk.chunk_type.value,
+                chunk.start_line,
+                chunk.end_line,
+            ))
+
+    if not entities:
+        return None
+
+    # Get blame info for all entities
+    blame_infos = get_file_entity_blame(repo_path, file_path, entities)
+
+    if not blame_infos:
+        return None
+
+    # Sort by most recently modified first
+    blame_infos.sort(key=lambda b: b.last_modified_date, reverse=True)
+
+    # Build the section
+    lines = [
+        "## Last Modified",
+        "",
+        "| Entity | Type | Author | Date | Commit |",
+        "|--------|------|--------|------|--------|",
+    ]
+
+    for blame in blame_infos:
+        entity_name = blame.entity_name
+        entity_type = blame.entity_type
+        author = blame.last_modified_by
+        date_str = format_blame_date(blame.last_modified_date)
+        commit_short = blame.commit_hash[:7]
+
+        # Truncate long author names
+        if len(author) > 20:
+            author = author[:17] + "..."
+
+        # Add commit summary if available (truncated)
+        commit_info = f"`{commit_short}`"
+        if blame.commit_summary:
+            summary = blame.commit_summary
+            if len(summary) > 30:
+                summary = summary[:27] + "..."
+            commit_info = f"`{commit_short}` {summary}"
+
+        lines.append(f"| `{entity_name}` | {entity_type} | {author} | {date_str} | {commit_info} |")
+
+    return "\n".join(lines)
 
 
 def _generate_files_index(file_pages: list[WikiPage]) -> str:
