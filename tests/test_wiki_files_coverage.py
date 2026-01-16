@@ -1474,3 +1474,38 @@ Do something.
         # Method headings should also get class source as fallback
         # Count occurrences - should be 3 (class + 2 methods)
         assert result.count("View Source (lines 1-5)") == 3
+
+    def test_includes_github_link_when_repo_info_provided(self):
+        """Test includes GitHub link when repo_info is provided."""
+        from local_deepwiki.core.git_utils import GitRepoInfo
+
+        content = """## API Reference
+
+#### `my_func`
+
+A function.
+
+**Returns:** `None`
+"""
+        chunk = make_code_chunk(
+            name="my_func",
+            chunk_type=ChunkType.FUNCTION,
+            content="def my_func():\n    pass",
+            start_line=10,
+            end_line=12,
+            file_path="src/example.py",
+        )
+
+        repo_info = GitRepoInfo(
+            remote_url="https://github.com/owner/repo",
+            host="github.com",
+            owner="owner",
+            repo="repo",
+            default_branch="main",
+        )
+
+        result = _inject_inline_source_code(content, [chunk], "python", repo_info)
+
+        # Should include GitHub link
+        assert "GitHub" in result
+        assert "https://github.com/owner/repo/blob/main/src/example.py#L10-L12" in result

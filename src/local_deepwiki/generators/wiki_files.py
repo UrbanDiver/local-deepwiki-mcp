@@ -7,9 +7,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from local_deepwiki.config import Config
+from local_deepwiki.core.git_utils import GitRepoInfo, build_source_url, get_repo_info
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.generators.api_docs import get_file_api_docs
-from local_deepwiki.generators.callgraph import get_file_call_graph
+from local_deepwiki.generators.callgraph import get_file_call_graph, get_file_callers
 from local_deepwiki.generators.crosslinks import EntityRegistry
 from local_deepwiki.generators.diagrams import generate_class_diagram
 from local_deepwiki.generators.test_examples import get_file_examples
@@ -51,18 +52,26 @@ def _get_syntax_lang(language: str | None) -> str:
     return lang_map.get(language or "", "")
 
 
-def _create_source_details(chunk: CodeChunk, syntax_lang: str) -> str:
+def _create_source_details(
+    chunk: CodeChunk, syntax_lang: str, github_url: str | None = None
+) -> str:
     """Create a collapsible source code block for a chunk.
 
     Args:
         chunk: The code chunk.
         syntax_lang: Syntax highlighting language.
+        github_url: Optional GitHub URL to link to source.
 
     Returns:
         Markdown details block with source code.
     """
+    if github_url:
+        summary = f'View Source (lines {chunk.start_line}-{chunk.end_line}) | <a href="{github_url}">GitHub</a>'
+    else:
+        summary = f"View Source (lines {chunk.start_line}-{chunk.end_line})"
+
     return f"""<details>
-<summary>View Source (lines {chunk.start_line}-{chunk.end_line})</summary>
+<summary>{summary}</summary>
 
 ```{syntax_lang}
 {chunk.content}
@@ -72,13 +81,19 @@ def _create_source_details(chunk: CodeChunk, syntax_lang: str) -> str:
 """
 
 
-def _inject_inline_source_code(content: str, chunks: list[CodeChunk], language: str | None) -> str:
+def _inject_inline_source_code(
+    content: str,
+    chunks: list[CodeChunk],
+    language: str | None,
+    repo_info: GitRepoInfo | None = None,
+) -> str:
     """Inject collapsible source code after each function/class in the API Reference.
 
     Args:
         content: The markdown content to process.
         chunks: List of code chunks from the file.
         language: Programming language for syntax highlighting.
+        repo_info: Optional git repo info for GitHub links.
 
     Returns:
         Content with inline source code blocks injected.
@@ -107,6 +122,12 @@ def _inject_inline_source_code(content: str, chunks: list[CodeChunk], language: 
         return content
 
     syntax_lang = _get_syntax_lang(language)
+
+    def get_chunk_url(chunk: CodeChunk) -> str | None:
+        """Build GitHub URL for a chunk."""
+        if repo_info is None:
+            return None
+        return build_source_url(repo_info, chunk.file_path, chunk.start_line, chunk.end_line)
 
     # Split into lines for processing
     lines = content.split("\n")
@@ -177,7 +198,7 @@ def _inject_inline_source_code(content: str, chunks: list[CodeChunk], language: 
                             # Inject source before next heading if no Returns found
                             if not found_returns:
                                 result_lines.append("")
-                                result_lines.append(_create_source_details(chunk, syntax_lang))
+                                result_lines.append(_create_source_details(chunk, syntax_lang, get_chunk_url(chunk)))
                             i = j - 1  # Back up so we process next heading
                             break
                         # Track if we found Returns
@@ -192,7 +213,7 @@ def _inject_inline_source_code(content: str, chunks: list[CodeChunk], language: 
                                 j += 1
                             # Insert source code here
                             result_lines.append("")
-                            result_lines.append(_create_source_details(chunk, syntax_lang))
+                            result_lines.append(_create_source_details(chunk, syntax_lang, get_chunk_url(chunk)))
                             i = j - 1  # Continue from here
                             break
                         result_lines.append(lines[j])
@@ -202,7 +223,7 @@ def _inject_inline_source_code(content: str, chunks: list[CodeChunk], language: 
                         # Add source code at the end
                         if not found_returns:
                             result_lines.append("")
-                            result_lines.append(_create_source_details(chunk, syntax_lang))
+                            result_lines.append(_create_source_details(chunk, syntax_lang, get_chunk_url(chunk)))
                         i = j - 1
 
         i += 1
@@ -222,7 +243,7 @@ def _inject_inline_source_code(content: str, chunks: list[CodeChunk], language: 
             else:
                 result_lines.append(f"#### `{chunk.name}`")
             result_lines.append("")
-            result_lines.append(_create_source_details(chunk, syntax_lang))
+            result_lines.append(_create_source_details(chunk, syntax_lang, get_chunk_url(chunk)))
             result_lines.append("")
 
     return "\n".join(result_lines)
@@ -360,11 +381,23 @@ Do NOT include mermaid class diagrams - they will be auto-generated."""
     if class_diagram:
         content += "\n\n## Class Diagram\n\n" + class_diagram
 
-    # Generate call graph diagram
+    # Generate call graph diagram and used-by information
     if abs_file_path.exists():
         call_graph = get_file_call_graph(abs_file_path, Path(index_status.repo_path))
         if call_graph:
             content += "\n\n## Call Graph\n\n```mermaid\n" + call_graph + "\n```"
+
+        # Add "Used by" section showing callers for each function
+        callers_map = get_file_callers(abs_file_path, Path(index_status.repo_path))
+        if callers_map:
+            used_by_lines = ["## Used By", "", "Functions and methods in this file and their callers:", ""]
+            for callee in sorted(callers_map.keys()):
+                callers = callers_map[callee]
+                if callers:
+                    caller_list = ", ".join(f"`{c}`" for c in sorted(callers))
+                    used_by_lines.append(f"- **`{callee}`**: called by {caller_list}")
+            if len(used_by_lines) > 4:  # More than just the header
+                content += "\n\n" + "\n".join(used_by_lines)
 
     # Add usage examples from test files
     entity_names = [chunk.name for chunk in all_file_chunks if chunk.name and len(chunk.name) > 2]
@@ -380,7 +413,8 @@ Do NOT include mermaid class diagrams - they will be auto-generated."""
 
     # Inject inline source code after each function/class in API Reference
     lang_str = file_info.language.value if file_info.language else None
-    content = _inject_inline_source_code(content, all_file_chunks, lang_str)
+    repo_info = get_repo_info(Path(index_status.repo_path))
+    content = _inject_inline_source_code(content, all_file_chunks, lang_str, repo_info)
 
     # Register entities for cross-linking
     entity_registry.register_from_chunks(all_file_chunks, wiki_path)

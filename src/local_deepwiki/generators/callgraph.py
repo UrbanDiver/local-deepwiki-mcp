@@ -420,3 +420,37 @@ def get_file_call_graph(file_path: Path, repo_root: Path) -> str | None:
     extractor = CallGraphExtractor()
     call_graph = extractor.extract_from_file(file_path, repo_root)
     return generate_call_graph_diagram(call_graph)
+
+
+def build_reverse_call_graph(call_graph: dict[str, list[str]]) -> dict[str, list[str]]:
+    """Build a reverse call graph mapping callee to callers.
+
+    Args:
+        call_graph: Mapping of caller -> list of callees.
+
+    Returns:
+        Mapping of callee -> list of callers.
+    """
+    reverse: dict[str, list[str]] = {}
+    for caller, callees in call_graph.items():
+        for callee in callees:
+            if callee not in reverse:
+                reverse[callee] = []
+            if caller not in reverse[callee]:
+                reverse[callee].append(caller)
+    return reverse
+
+
+def get_file_callers(file_path: Path, repo_root: Path) -> dict[str, list[str]]:
+    """Get a mapping of function/method names to their callers within a file.
+
+    Args:
+        file_path: Path to the source file.
+        repo_root: Repository root path.
+
+    Returns:
+        Mapping of function name -> list of caller names.
+    """
+    extractor = CallGraphExtractor()
+    call_graph = extractor.extract_from_file(file_path, repo_root)
+    return build_reverse_call_graph(call_graph)
