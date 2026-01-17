@@ -85,83 +85,89 @@ Based on the import statements, the internal modules have the following dependen
 - The **logging** module provides logging utilities used across the system
 - The **validation** module provides validation functionality
 
-## Module Dependency Graph
+## Module Dependency Diagrams
 
-The following diagram shows high-level module group dependencies:
+### High-Level Architecture
+
+```mermaid
+flowchart LR
+    Server --> Handlers
+    Handlers --> Core
+    Handlers --> Generators
+    Handlers --> Export
+    Core --> Providers
+    Generators --> Core
+    Generators --> Providers
+```
+
+### Entry Points
+
+The MCP server receives tool calls and dispatches to handlers.
+
+```mermaid
+flowchart LR
+    server[server.py] --> handlers[handlers.py]
+    handlers --> indexer[Indexer]
+    handlers --> wiki[Wiki Generator]
+    handlers --> deep_research[Deep Research]
+    handlers --> html[HTML Export]
+    handlers --> pdf[PDF Export]
+```
+
+### Core Processing
+
+Code analysis pipeline: parse → chunk → embed → store.
+
+```mermaid
+flowchart LR
+    indexer[Indexer] --> parser[Parser]
+    indexer --> chunker[Chunker]
+    indexer --> vectorstore[VectorStore]
+    chunker --> parser
+    vectorstore --> embeddings[Embeddings]
+    deep_research[Deep Research] --> vectorstore
+    deep_research --> llm[LLM]
+```
+
+### Wiki Generation
+
+Generators produce markdown documentation from indexed code.
 
 ```mermaid
 flowchart TB
-    subgraph entry[Entry Points]
-        server[Server]
-        handlers[Handlers]
+    wiki[wiki.py] --> wiki_files[wiki_files.py]
+    wiki --> wiki_modules[wiki_modules.py]
+    wiki --> wiki_pages[wiki_pages.py]
+    wiki --> diagrams[diagrams.py]
+    wiki --> glossary[glossary.py]
+    wiki --> inheritance[inheritance.py]
+    wiki --> coverage[coverage.py]
+    wiki --> crosslinks[crosslinks.py]
+    wiki --> see_also[see_also.py]
+    wiki --> toc[toc.py]
+    wiki --> search[search.py]
+```
+
+### Providers
+
+Pluggable backends for LLM and embeddings.
+
+```mermaid
+flowchart TB
+    subgraph LLM Providers
+        ollama[Ollama]
+        anthropic[Anthropic]
+        openai_llm[OpenAI]
     end
-
-    subgraph core[Core Processing]
-        parser[Parser]
-        chunker[Chunker]
-        indexer[Indexer]
-        vectorstore[VectorStore]
-        deep_research[Deep Research]
+    subgraph Embedding Providers
+        local[Local/Sentence-Transformers]
+        openai_embed[OpenAI]
     end
-
-    subgraph generators[Wiki Generation]
-        wiki[Wiki Generator]
-        wiki_files[File Docs]
-        diagrams[Diagrams]
-        glossary[Glossary]
-        inheritance[Inheritance]
-        other_gen[Other Generators]
-    end
-
-    subgraph providers[Providers]
-        llm[LLM Providers]
-        embeddings[Embedding Providers]
-    end
-
-    subgraph export[Export]
-        html[HTML Export]
-        pdf[PDF Export]
-    end
-
-    subgraph shared[Shared]
-        models[Models]
-        config[Config]
-    end
-
-    server --> handlers
-    handlers --> indexer
-    handlers --> vectorstore
-    handlers --> wiki
-    handlers --> deep_research
-    handlers --> export
-
-    indexer --> parser
-    indexer --> chunker
-    indexer --> vectorstore
-    indexer --> embeddings
-
-    wiki --> vectorstore
-    wiki --> wiki_files
-    wiki --> diagrams
-    wiki --> glossary
-    wiki --> inheritance
-    wiki --> other_gen
-    wiki --> llm
-
-    wiki_files --> parser
-    wiki_files --> chunker
-    wiki_files --> llm
-
-    deep_research --> vectorstore
-    deep_research --> llm
-
-    vectorstore --> embeddings
-    chunker --> parser
-
-    core --> models
-    core --> config
-    generators --> models
-    providers --> config
+    base[base.py] --> ollama
+    base --> anthropic
+    base --> openai_llm
+    base --> local
+    base --> openai_embed
 ```
 
 ### Module Groups
