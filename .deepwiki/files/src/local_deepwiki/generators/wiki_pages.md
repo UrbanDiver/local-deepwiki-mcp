@@ -789,6 +789,10 @@ assert result is None
 | `generate_dependencies_page` | function | Brian Breidenbach | yesterday | `b8f8b68` Refactor: Extract page gene... |
 | `generate_changelog_page` | function | Brian Breidenbach | yesterday | `b8f8b68` Refactor: Extract page gene... |
 
+ PROTECTED0 
+
+- `src/local_deepwiki/generators/wiki_pages.py:20-192`
+
 ## Relevant Source Files
 
 - `src/local_deepwiki/generators/wiki_pages.py:20-192`

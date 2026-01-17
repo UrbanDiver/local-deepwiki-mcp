@@ -529,3 +529,7 @@ assert provider.name == "local:all-MiniLM-L6-v2"
 ## See Also
 
 - [vectorstore](../../core/vectorstore.md) - shares 2 dependencies
+
+## See Also
+
+- [vectorstore](../../core/vectorstore.md) - shares 2 dependencies

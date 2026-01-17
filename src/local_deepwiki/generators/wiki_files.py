@@ -504,11 +504,9 @@ async def generate_file_docs(
         and f.chunk_count >= 2  # Has meaningful content
     ]
 
-    # Limit test files separately if we want them later
-    # For source files, include all of them (no limit)
+    # Limit file docs if max_file_docs is set (0 = unlimited)
     max_files = config.wiki.max_file_docs
-    if len(significant_files) > max_files:
-        # Only limit if we have way too many files
+    if max_files > 0 and len(significant_files) > max_files:
         # Prioritize files with more chunks (more complex)
         significant_files = sorted(significant_files, key=lambda x: x.chunk_count, reverse=True)[
             :max_files

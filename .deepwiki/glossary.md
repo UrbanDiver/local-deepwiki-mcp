@@ -4,7 +4,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 
 **Quick Navigation:** [#](##) | [A](#a) | [B](#b) | [C](#c) | [D](#d) | [E](#e) | [F](#f) | [G](#g) | [H](#h) | [I](#i) | [L](#l) | [M](#m) | [N](#n) | [O](#o) | [P](#p) | [Q](#q) | [R](#r) | [S](#s) | [T](#t) | [U](#u) | [V](#v) | [W](#w)
 
-**Total:** 1493 entities (407 classes, 283 functions, 803 methods)
+**Total:** 1506 entities (412 classes, 291 functions, 803 methods)
 
 ---
 
@@ -134,6 +134,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`_parse_go_mod`](files/src/local_deepwiki/generators/manifest.md)** `(filepath: Path, manifest: ProjectManifest) → None` (`manifest.py`) - Parse go.mod (Go).
 - 🔹 **[`_parse_import_line`](files/src/local_deepwiki/generators/diagrams.md)** `(line: str, project_name: str) → str | None` (`diagrams.py`) - Parse an import line to extract module name.
 - ▪️ **[`RelationshipAnalyzer._parse_import_line`](files/src/local_deepwiki/generators/see_also.md)** `(line: str) → str | None` (`see_also.py`) - Parse a Python import line to extract the imported module.
+- 🔹 **[`_parse_import_module`](files/src/local_deepwiki/generators/context_builder.md)** `(import_line: str) → str | None` (`context_builder.py`) - Parse an import line to extract the module name.
 - 🔹 **[`_parse_line_blame_map`](files/src/local_deepwiki/core/git_utils.md)** `(output: str) → dict[int, BlameInfo]` (`git_utils.py`) - Parse git blame porcelain output into a line number -> Bl...
 - 🔹 **[`_parse_package_json`](files/src/local_deepwiki/generators/manifest.md)** `(filepath: Path, manifest: ProjectManifest) → None` (`manifest.py`) - Parse package.json (Node.js).
 - 🔹 **[`_parse_pom_xml`](files/src/local_deepwiki/generators/manifest.md)** `(filepath: Path, manifest: ProjectManifest) → None` (`manifest.py`) - Parse pom.xml (Java/Maven).
@@ -208,6 +209,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔷 **[`BlameInfo`](files/src/local_deepwiki/core/git_utils.md)** (`git_utils.py`) - Git blame information for a line or range.
 - 🔹 **[`build_breadcrumb`](files/src/local_deepwiki/web/app.md)** `(wiki_path: Path, current_path: str) → str` (`app.py`) - Build breadcrumb navigation HTML with clickable links.
 - 🔹 **[`build_commit_url`](files/src/local_deepwiki/generators/changelog.md)** `(repo_info: GitRepoInfo, commit_hash: str) → str | None` (`changelog.py`) - Build URL to commit on GitHub/GitLab.
+- 🔹⚡ **[`build_file_context`](files/src/local_deepwiki/generators/context_builder.md)** `(file_path: str, chunks: list[CodeChunk], repo_path: Path, ...+1) → FileContext` (`context_builder.py`) - Build comprehensive context for a source file.
 - 🔹 **[`build_file_to_wiki_map`](files/src/local_deepwiki/generators/source_refs.md)** `(pages: list[WikiPage], wiki_path: Path | None) → dict[str, str]` (`source_refs.py`) - Build a mapping from source file paths to wiki page paths.
 - 🔹 **[`build_file_to_wiki_map`](files/src/local_deepwiki/generators/see_also.md)** `(pages: list[WikiPage]) → dict[str, str]` (`see_also.py`) - Build a mapping from source file paths to wiki page paths.
 - 🔹 **[`build_prompt_with_history`](files/src/local_deepwiki/web/app.md)** `(question: str, history: list[dict[str, str]], context: str) → str` (`app.py`) - Build a prompt that includes conversation history for fol...
@@ -300,6 +302,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`extract_function_signature`](files/src/local_deepwiki/generators/api_docs.md)** `(func_node: Node, source: bytes, language: Language, ...+1) → FunctionSignature | None` (`api_docs.py`) - Extract signature from a function node.
 - 🔹 **[`extract_function_type_metadata`](files/src/local_deepwiki/core/chunker.md)** `(func_node: Node, source: bytes, language: Language) → dict[str, Any]` (`chunker.py`) - Extract type annotation metadata from a function node.
 - 🔹 **[`extract_headings`](files/src/local_deepwiki/generators/search.md)** `(content: str) → list[str]` (`search.py`) - Extract all headings from markdown content.
+- 🔹 **[`extract_imports_from_chunks`](files/src/local_deepwiki/generators/context_builder.md)** `(chunks: list[CodeChunk]) → tuple[list[str], list[str]]` (`context_builder.py`) - Extract import statements and module names from code chunks.
 - 🔹 **[`extract_mermaid_blocks`](files/src/local_deepwiki/export/pdf.md)** `(content: str) → list[tuple[str, str]]` (`pdf.py`) - Extract mermaid code blocks from markdown content.
 - 🔹 **[`extract_python_decorators`](files/src/local_deepwiki/core/chunker.md)** `(func_node: Node, source: bytes) → list[str]` (`chunker.py`) - Extract decorators from a Python function.
 - 🔹 **[`extract_python_decorators`](files/src/local_deepwiki/generators/api_docs.md)** `(func_node: Node, source: bytes) → list[str]` (`api_docs.py`) - Extract decorators from a Python function.
@@ -321,18 +324,21 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️ **[`WikiStatusManager.file_hashes`](files/src/local_deepwiki/generators/wiki_status.md)** `(value: dict[str, str]) → None` (`wiki_status.py`) - Set file hashes map.
 - ▪️ **[`WikiStatusManager.file_line_info`](files/src/local_deepwiki/generators/wiki_status.md)** `(...) → dict[str, tuple[int, int]]` (`wiki_status.py`) - Get file line info map.
 - ▪️ **[`WikiStatusManager.file_line_info`](files/src/local_deepwiki/generators/wiki_status.md)** `(value: dict[str, tuple[int, int]]) → None` (`wiki_status.py`) - Set file line info map.
+- 🔷 **[`FileContext`](files/src/local_deepwiki/generators/context_builder.md)** (`context_builder.py`) - Rich context for a source file.
 - 🔷 **[`FileCoverage`](files/src/local_deepwiki/generators/coverage.md)** (`coverage.py`) - Coverage statistics for a single file.
 - 🔷 **[`FileInfo`](files/src/local_deepwiki/models.md)** (`models.py`) - Information about a source file.
 - 🔷 **[`FileRelationships`](files/src/local_deepwiki/generators/see_also.md)** (`see_also.py`) - Relationships for a single file.
 - 🔹 **[`find`](files/src/local_deepwiki/generators/manifest.md)** `(path: str) → Any` (`manifest.py`)
 - 🔹 **[`find_nodes_by_type`](files/src/local_deepwiki/core/parser.md)** `(root: Node, node_types: set[str]) → list[Node]` (`parser.py`) - Find all nodes of specified types in the AST.
 - 🔹 **[`find_raise_statements`](files/src/local_deepwiki/core/chunker.md)** `(node: Node) → None` (`chunker.py`) - Recursively [find](files/src/local_deepwiki/generators/manifest.md) raise statements in the AST.
+- 🔹⚡ **[`find_related_files`](files/src/local_deepwiki/generators/context_builder.md)** `(file_path: str, imported_modules: list[str], vector_store: VectorStore, ...+1) → list[str]` (`context_builder.py`) - Find files that are closely related to this one.
 - 🔹 **[`find_root_classes`](files/src/local_deepwiki/generators/inheritance.md)** `(classes: dict[str, ClassNode]) → list[str]` (`inheritance.py`) - Find classes that have no parents (root of inheritance tr...
 - 🔹 **[`find_test_file`](files/src/local_deepwiki/generators/test_examples.md)** `(source_file: Path, repo_root: Path) → Path | None` (`test_examples.py`) - Find the corresponding test file for a source file.
 - 🔹 **[`find_test_files`](files/src/local_deepwiki/generators/test_examples.md)** `(source_file: Path, repo_root: Path) → list[Path]` (`test_examples.py`) - Find all corresponding test files for a source file.
 - ▪️⚡ **[`TestWithRetry.flaky_func`](files/tests/test_retry.md)** `(...)` ⚠️`ConnectionError` (`test_retry.py`)
 - ▪️⚡ **[`TestRetryDecorator.flaky_function`](files/tests/test_provider_errors.md)** `(...)` ⚠️`ConnectionError` (`test_provider_errors.py`)
 - 🔹 **[`format_blame_date`](files/src/local_deepwiki/core/git_utils.md)** `(dt: datetime) → str` (`git_utils.py`) - Format a blame date for display.
+- 🔹 **[`format_context_for_llm`](files/src/local_deepwiki/generators/context_builder.md)** `(context: FileContext, max_imports: int) → str` (`context_builder.py`) - Format file context as text for the LLM prompt.
 - 🔹 **[`format_examples_markdown`](files/src/local_deepwiki/generators/test_examples.md)** `(examples: list[UsageExample], max_examples: int) → str` (`test_examples.py`) - Format usage examples as markdown.
 - 🔹 **[`format_function_signature_line`](files/src/local_deepwiki/generators/api_docs.md)** `(sig: FunctionSignature) → str` (`api_docs.py`) - Format a function signature as a single line.
 - 🔹 **[`format_parameter`](files/src/local_deepwiki/generators/api_docs.md)** `(param: Parameter) → str` (`api_docs.py`) - Format a parameter for display.
@@ -392,6 +398,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️ **[`RelationshipAnalyzer.get_all_known_files`](files/src/local_deepwiki/generators/see_also.md)** `(...) → set[str]` (`see_also.py`) - Get all known file paths.
 - 🔹 **[`get_cached_llm_provider`](files/src/local_deepwiki/providers/llm/__init__.md)** `(cache_path: Path, embedding_provider: EmbeddingProvider, cache_config: LLMCacheConfig | None, ...+1) → LLMProvider` (`__init__.py`) - Get an LLM provider wrapped with caching.
 - 🔹 **[`get_cached_manifest`](files/src/local_deepwiki/generators/manifest.md)** `(repo_path: Path, cache_dir: Path | None) → ProjectManifest` (`manifest.py`) - Get project manifest, using cache if available and valid.
+- 🔹⚡ **[`get_callers_from_other_files`](files/src/local_deepwiki/generators/context_builder.md)** `(file_path: str, entity_names: list[str], repo_path: Path, ...+2) → dict[str, list[str]]` (`context_builder.py`) - Find which other files call entities defined in this file.
 - ▪️⚡ **[`VectorStore.get_chunk_by_id`](files/src/local_deepwiki/core/vectorstore.md)** `(chunk_id: str) → CodeChunk | None` (`vectorstore.py`) - Get a specific chunk by ID.
 - 🔹 **[`get_chunk_url`](files/src/local_deepwiki/generators/wiki_files.md)** `(chunk: CodeChunk) → str | None` (`wiki_files.py`) - Build GitHub URL for a chunk.
 - ▪️⚡ **[`VectorStore.get_chunks_by_file`](files/src/local_deepwiki/core/vectorstore.md)** `(file_path: str) → list[CodeChunk]` (`vectorstore.py`) - Get all chunks for a specific file.
@@ -429,6 +436,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️ **[`VectorStore.get_stats`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → dict[str, Any]` (`vectorstore.py`) - Get statistics about the vector store.
 - ▪️ **[`RepositoryIndexer.get_status`](files/src/local_deepwiki/core/indexer.md)** `(...) → IndexStatus | None` (`indexer.py`) - Get the current indexing status.
 - ▪️ **[`ProjectManifest.get_tech_stack_summary`](files/src/local_deepwiki/generators/manifest.md)** `(...) → str` (`manifest.py`) - Generate a factual tech stack summary.
+- 🔹⚡ **[`get_type_definitions_used`](files/src/local_deepwiki/generators/context_builder.md)** `(chunks: list[CodeChunk], vector_store: VectorStore, max_types: int) → list[str]` (`context_builder.py`) - Extract type definitions used in the file that are define...
 - 🔹 **[`get_wiki_structure`](files/src/local_deepwiki/web/app.md)** `(wiki_path: Path) → tuple[list, dict, list | None]` (`app.py`) - Get wiki pages and sections, with optional hierarchical TOC.
 - 🔷 **[`GitRepoInfo`](files/src/local_deepwiki/core/git_utils.md)** (`git_utils.py`) - Information about a git repository.
 - 🔹 **[`group_entities_by_letter`](files/src/local_deepwiki/generators/glossary.md)** `(entities: list[EntityEntry]) → dict[str, list[EntityEntry]]` (`glossary.py`) - Group entities by their first letter.
@@ -487,6 +495,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️ **[`TestOpenAILLMProvider.make_chunk`](files/tests/test_llm_providers.md)** `(...)` (`test_llm_providers.py`)
 - ▪️ **[`TestOpenAILLMProvider.make_chunk`](files/tests/test_llm_providers.md)** `(...)` (`test_llm_providers.py`)
 - 🔹 **[`make_chunk`](files/tests/test_deep_research.md)** `(id: str, file_path: str, content: str, ...+1) → CodeChunk` (`test_deep_research.py`) - Create a test code chunk.
+- 🔹 **[`make_chunk`](files/tests/test_context_builder.md)** `(chunk_type: ChunkType, name: str, content: str, ...+1) → CodeChunk` (`test_context_builder.py`) - Create a test code chunk.
 - 🔹 **[`make_code_chunk`](files/tests/test_wiki_pages_coverage.md)** `(file_path: str, name: str, chunk_type: ChunkType, ...+2) → CodeChunk` (`test_wiki_pages_coverage.py`) - Helper to create [CodeChunk](files/src/local_deepwiki/models.md) with sensible defaults.
 - 🔹 **[`make_code_chunk`](files/tests/test_wiki_files_coverage.md)** `(file_path: str, name: str, chunk_type: ChunkType, ...+5) → CodeChunk` (`test_wiki_files_coverage.py`) - Helper to create [CodeChunk](files/src/local_deepwiki/models.md) with sensible defaults.
 - 🔹 **[`make_code_chunk`](files/tests/test_wiki_modules_coverage.md)** `(file_path: str, name: str, chunk_type: ChunkType, ...+2) → CodeChunk` (`test_wiki_modules_coverage.py`) - Helper to create [CodeChunk](files/src/local_deepwiki/models.md) with sensible defaults.
@@ -1227,6 +1236,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔷 **[`TestBatchSizeConfiguration`](files/tests/test_indexer.md)** (`test_indexer.py`) - Tests for batch size in config.
 - 🔷 **[`TestBuildBreadcrumb`](files/tests/test_web.md)** (`test_web.py`) - Tests for [build_breadcrumb](files/src/local_deepwiki/web/app.md) function.
 - 🔷 **[`TestBuildCommitUrl`](files/tests/test_changelog.md)** (`test_changelog.py`) - Tests for [build_commit_url](files/src/local_deepwiki/generators/changelog.md) function.
+- 🔷 **[`TestBuildFileContext`](files/tests/test_context_builder.md)** (`test_context_builder.py`) - Tests for [build_file_context](files/src/local_deepwiki/generators/context_builder.md) function.
 - 🔷 **[`TestBuildFileToWikiMap`](files/tests/test_see_also.md)** (`test_see_also.py`) - Tests for [build_file_to_wiki_map](files/src/local_deepwiki/generators/see_also.md) function.
 - 🔷 **[`TestBuildFileToWikiMap`](files/tests/test_source_refs.md)** (`test_source_refs.py`) - Tests for [build_file_to_wiki_map](files/src/local_deepwiki/generators/see_also.md) function.
 - 🔷 **[`TestBuildGradleParsing`](files/tests/test_manifest.md)** (`test_manifest.py`) - Tests for build.gradle parsing.
@@ -1291,6 +1301,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔷 **[`TestExtractFunctionSignature`](files/tests/test_api_docs.md)** (`test_api_docs.py`) - Test function signature extraction.
 - 🔷 **[`TestExtractFunctionTypeMetadata`](files/tests/test_type_annotations.md)** (`test_type_annotations.py`) - Tests for [extract_function_type_metadata](files/src/local_deepwiki/core/chunker.md) function.
 - 🔷 **[`TestExtractHeadings`](files/tests/test_search.md)** (`test_search.py`) - Tests for [extract_headings](files/src/local_deepwiki/generators/search.md) function.
+- 🔷 **[`TestExtractImportsFromChunks`](files/tests/test_context_builder.md)** (`test_context_builder.py`) - Tests for [extract_imports_from_chunks](files/src/local_deepwiki/generators/context_builder.md) function.
 - 🔷 **[`TestExtractMermaidBlocks`](files/tests/test_pdf_export.md)** (`test_pdf_export.py`) - Tests for mermaid block extraction.
 - 🔷 **[`TestExtractMethodSignature`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for _extract_method_signature function.
 - 🔷 **[`TestExtractPythonDecorators`](files/tests/test_type_annotations.md)** (`test_type_annotations.py`) - Tests for [extract_python_decorators](files/src/local_deepwiki/generators/api_docs.md) function.
@@ -1306,6 +1317,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔷 **[`TestExtractTitle`](files/tests/test_web.md)** (`test_web.py`) - Tests for [extract_title](files/src/local_deepwiki/export/pdf.md) function.
 - 🔷 **[`TestExtractTitle`](files/tests/test_html_export.md)** (`test_html_export.py`) - Tests for title extraction.
 - 🔷 **[`TestExtractTitleErrorHandling`](files/tests/test_pdf_export.md)** (`test_pdf_export.py`) - Tests for [extract_title](files/src/local_deepwiki/export/pdf.md) error handling.
+- 🔷 **[`TestFileContextDataclass`](files/tests/test_context_builder.md)** (`test_context_builder.py`) - Tests for the [FileContext](files/src/local_deepwiki/generators/context_builder.md) dataclass.
 - 🔷 **[`TestFileCoverage`](files/tests/test_coverage.md)** (`test_coverage.py`) - Tests for [FileCoverage](files/src/local_deepwiki/generators/coverage.md) dataclass.
 - 🔷 **[`TestFindCircularDependencies`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for _find_circular_dependencies function.
 - 🔷 **[`TestFindRootClasses`](files/tests/test_inheritance.md)** (`test_inheritance.py`) - Tests for [find_root_classes](files/src/local_deepwiki/generators/inheritance.md) function.
@@ -1313,6 +1325,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔷 **[`TestFindTestFiles`](files/tests/test_test_examples.md)** (`test_test_examples.py`) - Tests for [find_test_files](files/src/local_deepwiki/generators/test_examples.md) function (plural).
 - 🔷 **[`TestFlaskApp`](files/tests/test_web.md)** (`test_web.py`) - Tests for Flask app functionality.
 - 🔷 **[`TestFormatBlameDate`](files/tests/test_git_utils.md)** (`test_git_utils.py`) - Tests for [format_blame_date](files/src/local_deepwiki/core/git_utils.md) function.
+- 🔷 **[`TestFormatContextForLlm`](files/tests/test_context_builder.md)** (`test_context_builder.py`) - Tests for [format_context_for_llm](files/src/local_deepwiki/generators/context_builder.md) function.
 - 🔷 **[`TestFormatExamplesMarkdown`](files/tests/test_test_examples.md)** (`test_test_examples.py`) - Tests for [format_examples_markdown](files/src/local_deepwiki/generators/test_examples.md) function.
 - 🔷 **[`TestFormatFileEntry`](files/tests/test_source_refs.md)** (`test_source_refs.py`) - Tests for _format_file_entry function.
 - 🔷 **[`TestFormatFunctionSignatureLine`](files/tests/test_api_docs.md)** (`test_api_docs.py`) - Test function signature line formatting.
@@ -1587,4 +1600,4 @@ The following source files were used to generate this documentation:
 - `tests/test_wiki_coverage.py:50-120`
 
 
-*Showing 10 of 100 source files.*
+*Showing 10 of 102 source files.*

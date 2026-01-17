@@ -5,15 +5,15 @@ Local DeepWiki-style MCP server for private repository documentation
 
 ## Description
 
-Local DeepWiki-style MCP server is a documentation generation tool that creates comprehensive wikis for private code repositories. It provides both command-line utilities and a web interface for generating, serving, and monitoring documentation, with support for PDF export and real-time file watching capabilities.
+A local MCP server that enables private repository documentation with deepwiki-style features. It provides tools for exporting documentation as HTML or PDF, watching repository changes, and serving documentation via an API. The system supports multiple LLM providers including Ollama, OpenAI, and Anthropic for embedding and language model operations.
 
 ## Key Features
 
-• **MCP Server Integration** - Runs as an MCP (Model Context Protocol) server with stdio communication, as shown in the [main](files/src/local_deepwiki/export/pdf.md) server entry point
-• **Multiple Export Formats** - Supports both HTML and PDF export through dedicated command-line tools (`deepwiki-export` and `deepwiki-export-pdf`)
-• **Web Interface** - Includes a web application server (`deepwiki-serve`) for interactive documentation browsing
-• **File System Monitoring** - Features a watcher service (`deepwiki-watch`) that can monitor repository changes and trigger documentation updates
-• **Multiple [LLM Provider](files/src/local_deepwiki/providers/base.md) Support** - Integrates with various LLM providers including Ollama, OpenAI, and Anthropic for documentation generation, with configurable embedding and research presets
+- **MCP Server Implementation**: Implements a standard input/output MCP server using `stdio_server` and `server.run` as shown in `src/local_deepwiki/server.py`
+- **Ollama LLM Integration**: Supports Ollama as an LLM provider with configurable model and base URL as seen in `src/local_deepwiki/providers/llm/ollama.py`
+- **Documentation Export Capabilities**: Includes HTML and PDF export functionality with command-line interfaces in `src/local_deepwiki/export/` and `src/local_deepwiki/export/pdf.py`
+- **Repository Change Watching**: Features a file watcher that monitors repository changes and triggers reindexing as demonstrated in `tests/test_watcher.py`
+- **Configuration Management**: Supports multiple embedding and LLM configurations through `src/local_deepwiki/config.py` with classes like [`OllamaConfig`](files/src/local_deepwiki/config.md) and [`OpenAILLMConfig`](files/src/local_deepwiki/config.md)
 
 ## Technology Stack
 
@@ -25,46 +25,32 @@ Local DeepWiki-style MCP server is a documentation generation tool that creates 
 
 ```
 local-deepwiki-mcp/
-├── src/local_deepwiki/
-│   ├── core/                    # Core processing modules
-│   │   ├── chunker.py           # AST-based code chunking
-│   │   ├── deep_research.py     # Multi-step reasoning pipeline
-│   │   ├── git_utils.py         # Git integration utilities
-│   │   ├── indexer.py           # Repository indexing orchestration
-│   │   ├── llm_cache.py         # LLM response caching
-│   │   ├── parser.py            # Tree-sitter code parsing
-│   │   └── vectorstore.py       # LanceDB vector storage
-│   ├── generators/              # Wiki content generators
-│   │   ├── api_docs.py          # API documentation extraction
-│   │   ├── callgraph.py         # Function call graph analysis
-│   │   ├── context_builder.py   # Rich LLM context building
-│   │   ├── crosslinks.py        # Cross-reference linking
-│   │   ├── diagrams.py          # Mermaid diagram generation
-│   │   ├── glossary.py          # Term glossary generation
-│   │   ├── inheritance.py       # Class hierarchy analysis
-│   │   ├── wiki.py              # Main wiki generator
-│   │   └── ...                  # Additional generators
-│   ├── providers/               # Pluggable backends
-│   │   ├── llm/                 # LLM providers
-│   │   │   ├── anthropic.py     # Anthropic Claude
-│   │   │   ├── ollama.py        # Local Ollama
-│   │   │   └── openai.py        # OpenAI GPT
-│   │   └── embeddings/          # Embedding providers
-│   │       ├── local.py         # Sentence-transformers
-│   │       └── openai.py        # OpenAI embeddings
-│   ├── export/                  # Export functionality
-│   │   ├── html.py              # Static HTML export
-│   │   └── pdf.py               # PDF export
-│   ├── web/                     # Web UI
-│   │   └── app.py               # Flask web server
-│   ├── config.py                # Configuration management
-│   ├── handlers.py              # MCP tool handlers
-│   ├── models.py                # Pydantic data models
-│   ├── server.py                # MCP server entry point
-│   └── watcher.py               # File change watcher
-├── tests/                       # Test suite (50+ test files)
-├── docs/                        # Documentation
-└── pyproject.toml               # Project configuration
+├── docs/
+│   └── WIKI_ENHANCEMENTS.md
+├── html-export/
+│   ├── files/
+│   ├── modules/
+│   ├── architecture.html
+│   ├── dependencies.html
+│   ├── index.html
+│   └── search.json
+├── src/
+│   └── local_deepwiki/
+├── tests/
+│   ├── __init__.py
+│   ├── test_api_docs.py
+│   ├── test_callgraph.py
+│   ├── test_changelog.py
+│   ├── test_chunker.py
+│   ├── test_config.py
+│   ├── test_context_builder.py
+│   ├── test_coverage.py
+│   ├── test_crosslinks.py
+│   ├── test_deep_research.py
+│   ├── test_diagrams.py
+│   ├── test_export_init.py
+│   ...
+...
 ```
 
 ## Quick Start

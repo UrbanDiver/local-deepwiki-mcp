@@ -80,8 +80,8 @@ class TestConfig:
         """Test wiki generation configuration."""
         config = Config()
 
-        assert config.wiki.max_file_docs == 75
-        assert config.wiki.max_concurrent_llm_calls == 3
+        assert config.wiki.max_file_docs == 500  # Increased for larger repos
+        assert config.wiki.max_concurrent_llm_calls == 8  # Increased for faster generation
         assert config.wiki.use_cloud_for_github is False
         assert config.wiki.github_llm_provider == "anthropic"
         assert config.wiki.chat_llm_provider == "default"

@@ -6,14 +6,14 @@ This report shows the documentation coverage for the codebase.
 
 🟢 **Overall Coverage: 94.0%**
 
-- **1403** / **1493** entities documented
+- **1416** / **1506** entities documented
 
 ### By Type
 
 | Type | Documented | Total | Coverage |
 |------|------------|-------|----------|
-| Classes | 407 | 407 | 100.0% |
-| Functions | 264 | 283 | 93.3% |
+| Classes | 412 | 412 | 100.0% |
+| Functions | 272 | 291 | 93.5% |
 | Methods | 732 | 803 | 91.2% |
 
 ## Coverage by File
@@ -77,6 +77,7 @@ This report shows the documentation coverage for the codebase.
 | 🟢 [test_crosslinks.py](files/tests/test_crosslinks.md) | 24 | 24 | 100.0% |
 | 🟢 [test_test_examples.py](files/tests/test_test_examples.md) | 17 | 17 | 100.0% |
 | 🟢 [test_source_refs.py](files/tests/test_source_refs.md) | 18 | 18 | 100.0% |
+| 🟢 [test_context_builder.py](files/tests/test_context_builder.md) | 5 | 5 | 100.0% |
 | 🟢 [test_diagrams.py](files/tests/test_diagrams.md) | 22 | 22 | 100.0% |
 | 🟢 [test_server_validation.py](files/tests/test_server_validation.md) | 6 | 6 | 100.0% |
 | 🟢 [logging.py](files/src/local_deepwiki/logging.md) | 2 | 2 | 100.0% |
@@ -100,6 +101,7 @@ This report shows the documentation coverage for the codebase.
 | 🟢 [toc.py](files/src/local_deepwiki/generators/toc.md) | 7 | 7 | 100.0% |
 | 🟢 [stale_detection.py](files/src/local_deepwiki/generators/stale_detection.md) | 5 | 5 | 100.0% |
 | 🟢 [wiki_pages.py](files/src/local_deepwiki/generators/wiki_pages.md) | 4 | 4 | 100.0% |
+| 🟢 [context_builder.py](files/src/local_deepwiki/generators/context_builder.md) | 8 | 8 | 100.0% |
 | 🟢 [callgraph.py](files/src/local_deepwiki/generators/callgraph.md) | 8 | 8 | 100.0% |
 | 🟢 [coverage.py](files/src/local_deepwiki/generators/coverage.md) | 8 | 8 | 100.0% |
 | 🟢 [changelog.py](files/src/local_deepwiki/generators/changelog.md) | 4 | 4 | 100.0% |
@@ -134,4 +136,4 @@ The following source files were used to generate this documentation:
 - `tests/test_wiki_coverage.py:50-120`
 
 
-*Showing 10 of 100 source files.*
+*Showing 10 of 102 source files.*

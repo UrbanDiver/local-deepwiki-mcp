@@ -1,61 +1,32 @@
-# Tests Module
+# Module: test_wiki_modules_coverage
 
 ## Module Purpose
 
-The tests module contains comprehensive test suites for the local_deepwiki application. Based on the code shown, it focuses heavily on testing wiki generation functionality, provider factories, and various utility components. The tests use pytest and unittest.mock for creating isolated test environments.
+This module contains tests for the wiki module documentation generation functionality. It verifies that modules are correctly identified, grouped by directory, and that documentation pages are generated for them. The tests cover scenarios like handling unchanged pages, rebuilding caches, and filtering chunks by directory.
 
 ## Key Classes and Functions
 
-### TestGenerateModuleDocs
+### Class: TestGenerateModuleDocs
 
-A test class that validates the module documentation generation functionality. This class contains multiple test methods that verify different aspects of the wiki module generation process:
+This class contains tests for the module documentation generation logic.
 
-- **mock_llm**: Creates a mock LLM provider that returns standardized test responses
-- **test_generates_multiple_modules**: Tests the generation of documentation for multiple code modules
-- **test_generates_modules_index**: Validates the creation of a modules index page
-- Various other test methods for handling edge cases like empty directories and cache management
+**Methods:**
 
-### TestProviderExports  
+- `mock_llm`: Creates a mock LLM provider.
+- `test_returns_empty_for_no_files`: Tests that an empty result is returned when no files are provided.
+- `test_skips_single_file_directories`: Tests that directories with only one file are skipped.
+- `test_groups_files_by_directory`: Tests that files are grouped by directory.
+- `test_handles_root_level_files`: Tests handling of root-level files.
+- `test_generates_modules_index`: Tests that a modules index page is generated.
+- `test_skips_unchanged_pages`: Tests that unchanged pages are skipped.
+- `test_full_rebuild_ignores_cache`: Tests that a full rebuild ignores the cache.
+- `test_filters_chunks_by_directory`: Tests filtering of chunks by directory.
+- `test_skips_directories_without_relevant_chunks`: Tests that directories without relevant chunks are skipped.
+- `test_generates_multiple_modules`: Tests generation of documentation for multiple modules.
 
-Tests module exports for provider functionality, specifically validating that the LLM module exports expected components like `get_llm_provider`, `get_cached_llm_provider`, [`LLMProvider`](../files/src/local_deepwiki/providers/base.md), and `OllamaConnect`.
-
-### TestPathToModule
-
-Tests path-to-module conversion functionality:
-
-- **test_converts_simple_path**: Validates basic file path to module name conversion
-- **test_skips_init_files**: Ensures `__init__.py` files are handled appropriately
-
-### TestAddSourceRefsSections
-
-Tests the addition of source reference sections to wiki pages:
-
-- Handles different page types (file pages, index pages, module pages, architecture pages)
-- Manages section insertion and formatting
-- Deals with missing status information
-
-### TestGetFileExamples
-
-Tests example extraction from test files:
-
-- **test_get_file_examples_returns_markdown**: Validates markdown output generation
-- **test_get_file_examples_no_test_file**: Handles cases where no test file exists
-- **test_get_file_examples_filters_short_names**: Tests filtering logic for test names
-
-## How Components Interact
-
-The test classes work together to validate the complete wiki generation pipeline:
-
-1. **Mock Creation**: Test classes like TestGenerateModuleDocs create mock objects for LLM providers, vector stores, and status managers
-2. **Data Flow Testing**: Tests validate how code chunks flow through the system, from file parsing to wiki page generation
-3. **Integration Validation**: Components test the interaction between different parts of the system, such as how the module generator uses vector store search results
-
-## Usage Examples
-
-### Creating Mock LLM Provider
+### Function: mock_llm
 
 ```python
-@pytest.fixture
 def mock_llm(self):
     """Create a mock LLM provider."""
     mock = MagicMock()
@@ -63,46 +34,52 @@ def mock_llm(self):
     return mock
 ```
 
-### Testing Module Generation
+Creates a mock LLM provider with a predefined response for testing purposes.
+
+## How Components Interact
+
+The test suite uses mock objects for the LLM provider, vector store, and status manager to simulate real-world interactions without external dependencies. The tests verify that:
+
+1. Files are correctly grouped by directory
+2. Modules are generated with proper documentation
+3. Caching behavior is handled correctly (skipping unchanged pages, full rebuilds)
+4. Filtering logic works for chunks and directories
+5. Index pages are generated for modules
+
+The `TestGenerateModuleDocs` class methods test various aspects of module documentation generation using these mocks.
+
+## Usage Examples
 
 ```python
+# Example of using the mock LLM in a test
+def test_example(self):
+    mock_llm = self.mock_llm()
+    result = mock_llm.generate()
+    assert result == "## Module Purpose\n\nTest module."
+```
+
+```python
+# Example of testing module generation
 async def test_generates_multiple_modules(
     self, mock_llm, mock_vector_store, mock_status_manager, tmp_path
 ):
-    """Test generates pages for multiple modules."""
     src_chunk = make_code_chunk(file_path="src/main.py", name="main")
     tests_chunk = make_code_chunk(file_path="tests/test_main.py", name="test_main")
-    
-    async def search_side_effect(query, **_kwargs):
-        # Test implementation
-```
-
-### Testing Path Conversion
-
-```python
-def test_converts_simple_path(self):
-    """Test basic path conversion."""
-    result = _path_to_module("src/mypackage/core/parser.py")
-    assert result is not None
-    assert "parser" in result
+    # ... test logic ...
 ```
 
 ## Dependencies
 
-Based on the imports shown in the code context:
+This module depends on:
 
-- **pytest**: Testing framework
-- **unittest.mock**: For creating AsyncMock and MagicMock objects
-- **pathlib.Path**: File system path handling
-- **textwrap.dedent**: Text formatting utilities
-- **time**: Time-related functionality
+- `local_deepwiki.generators.wiki_modules` - Contains the actual implementation being tested
+- `local_deepwiki.models` - Provides data models like [`ChunkType`](../files/src/local_deepwiki/models.md), [`CodeChunk`](../files/src/local_deepwiki/models.md), [`FileInfo`](../files/src/local_deepwiki/models.md), [`IndexStatus`](../files/src/local_deepwiki/models.md), [`Language`](../files/src/local_deepwiki/models.md), [`SearchResult`](../files/src/local_deepwiki/models.md), [`WikiPage`](../files/src/local_deepwiki/models.md)
+- `unittest.mock` - For creating mock objects
+- `pytest` - Testing framework
+- `asyncio` - For async testing
+- `time` - For time-related operations
 
-### Internal Dependencies
-
-- **local_deepwiki.generators.wiki_modules**: Module documentation generation
-- **local_deepwiki.generators.test_examples**: Test example extraction
-- **local_deepwiki.models**: Core data models ([ChunkType](../files/src/local_deepwiki/models.md), [CodeChunk](../files/src/local_deepwiki/models.md), [FileInfo](../files/src/local_deepwiki/models.md), [IndexStatus](../files/src/local_deepwiki/models.md), [Language](../files/src/local_deepwiki/models.md), [SearchResult](../files/src/local_deepwiki/models.md), [WikiPage](../files/src/local_deepwiki/models.md))
-- **local_deepwiki.providers**: Provider factory functionality
+The module also imports `make_code_chunk`, `make_search_result`, and `make_index_status` helper functions, which are likely defined elsewhere in the test suite.
 
 ## Relevant Source Files
 
@@ -120,4 +97,4 @@ The following source files were used to generate this documentation:
 - `tests/test_wiki_coverage.py:50-120`
 
 
-*Showing 10 of 47 source files.*
+*Showing 10 of 48 source files.*

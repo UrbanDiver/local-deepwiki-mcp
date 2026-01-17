@@ -22,7 +22,7 @@
     },
     {
       "number": "5",
-      "title": "Inheritance",
+      "title": "Class Inheritance",
       "path": "inheritance.md"
     },
     {
@@ -32,292 +32,292 @@
     },
     {
       "number": "7",
-      "title": "Freshness Report",
-      "path": "freshness.md"
-    },
-    {
-      "number": "8",
       "title": "Modules",
       "path": "modules/index.md",
       "children": [
         {
-          "number": "8.1",
+          "number": "7.1",
           "title": "Module: src",
           "path": "modules/src.md"
         },
         {
-          "number": "8.2",
+          "number": "7.2",
           "title": "Module: tests",
           "path": "modules/tests.md"
         }
       ]
     },
     {
-      "number": "9",
+      "number": "8",
       "title": "Files",
       "path": "files/index.md",
       "children": [
         {
-          "number": "9.1",
+          "number": "8.1",
           "title": "Src",
           "path": "",
           "children": [
             {
-              "number": "9.1.1",
+              "number": "8.1.1",
               "title": "Local Deepwiki",
               "path": "",
               "children": [
                 {
-                  "number": "9.1.1.1",
-                  "title": "config.py",
+                  "number": "8.1.1.1",
+                  "title": "Config",
                   "path": "files/src/local_deepwiki/config.md"
                 },
                 {
-                  "number": "9.1.1.2",
-                  "title": "handlers.py",
+                  "number": "8.1.1.2",
+                  "title": "Handlers",
                   "path": "files/src/local_deepwiki/handlers.md"
                 },
                 {
-                  "number": "9.1.1.3",
-                  "title": "logging.py",
+                  "number": "8.1.1.3",
+                  "title": "Logging",
                   "path": "files/src/local_deepwiki/logging.md"
                 },
                 {
-                  "number": "9.1.1.4",
-                  "title": "models.py",
+                  "number": "8.1.1.4",
+                  "title": "Models",
                   "path": "files/src/local_deepwiki/models.md"
                 },
                 {
-                  "number": "9.1.1.5",
-                  "title": "server.py",
+                  "number": "8.1.1.5",
+                  "title": "Server",
                   "path": "files/src/local_deepwiki/server.md"
                 },
                 {
-                  "number": "9.1.1.6",
-                  "title": "validation.py",
+                  "number": "8.1.1.6",
+                  "title": "Validation",
                   "path": "files/src/local_deepwiki/validation.md"
                 },
                 {
-                  "number": "9.1.1.7",
-                  "title": "watcher.py",
+                  "number": "8.1.1.7",
+                  "title": "Watcher",
                   "path": "files/src/local_deepwiki/watcher.md"
                 },
                 {
-                  "number": "9.1.1.8",
+                  "number": "8.1.1.8",
                   "title": "Core",
                   "path": "",
                   "children": [
                     {
-                      "number": "9.1.1.8.1",
-                      "title": "chunker.py",
+                      "number": "8.1.1.8.1",
+                      "title": "Chunker",
                       "path": "files/src/local_deepwiki/core/chunker.md"
                     },
                     {
-                      "number": "9.1.1.8.2",
-                      "title": "deep_research.py",
+                      "number": "8.1.1.8.2",
+                      "title": "Deep Research",
                       "path": "files/src/local_deepwiki/core/deep_research.md"
                     },
                     {
-                      "number": "9.1.1.8.3",
-                      "title": "git_utils.py",
+                      "number": "8.1.1.8.3",
+                      "title": "Git Utils",
                       "path": "files/src/local_deepwiki/core/git_utils.md"
                     },
                     {
-                      "number": "9.1.1.8.4",
-                      "title": "indexer.py",
+                      "number": "8.1.1.8.4",
+                      "title": "Indexer",
                       "path": "files/src/local_deepwiki/core/indexer.md"
                     },
                     {
-                      "number": "9.1.1.8.5",
-                      "title": "llm_cache.py",
+                      "number": "8.1.1.8.5",
+                      "title": "Llm Cache",
                       "path": "files/src/local_deepwiki/core/llm_cache.md"
                     },
                     {
-                      "number": "9.1.1.8.6",
-                      "title": "parser.py",
+                      "number": "8.1.1.8.6",
+                      "title": "Parser",
                       "path": "files/src/local_deepwiki/core/parser.md"
                     },
                     {
-                      "number": "9.1.1.8.7",
-                      "title": "vectorstore.py",
+                      "number": "8.1.1.8.7",
+                      "title": "Vectorstore",
                       "path": "files/src/local_deepwiki/core/vectorstore.md"
                     }
                   ]
                 },
                 {
-                  "number": "9.1.1.9",
+                  "number": "8.1.1.9",
                   "title": "Export",
                   "path": "",
                   "children": [
                     {
-                      "number": "9.1.1.9.1",
-                      "title": "html.py",
+                      "number": "8.1.1.9.1",
+                      "title": "Html",
                       "path": "files/src/local_deepwiki/export/html.md"
                     },
                     {
-                      "number": "9.1.1.9.2",
-                      "title": "pdf.py",
+                      "number": "8.1.1.9.2",
+                      "title": "Pdf",
                       "path": "files/src/local_deepwiki/export/pdf.md"
                     }
                   ]
                 },
                 {
-                  "number": "9.1.1.10",
+                  "number": "8.1.1.10",
                   "title": "Generators",
                   "path": "",
                   "children": [
                     {
-                      "number": "9.1.1.10.1",
-                      "title": "api_docs.py",
+                      "number": "8.1.1.10.1",
+                      "title": "Api Docs",
                       "path": "files/src/local_deepwiki/generators/api_docs.md"
                     },
                     {
-                      "number": "9.1.1.10.2",
-                      "title": "callgraph.py",
+                      "number": "8.1.1.10.2",
+                      "title": "Callgraph",
                       "path": "files/src/local_deepwiki/generators/callgraph.md"
                     },
                     {
-                      "number": "9.1.1.10.3",
-                      "title": "changelog.py",
+                      "number": "8.1.1.10.3",
+                      "title": "Changelog",
                       "path": "files/src/local_deepwiki/generators/changelog.md"
                     },
                     {
-                      "number": "9.1.1.10.4",
-                      "title": "coverage.py",
+                      "number": "8.1.1.10.4",
+                      "title": "context_builder.py",
+                      "path": "files/src/local_deepwiki/generators/context_builder.md"
+                    },
+                    {
+                      "number": "8.1.1.10.5",
+                      "title": "Coverage",
                       "path": "files/src/local_deepwiki/generators/coverage.md"
                     },
                     {
-                      "number": "9.1.1.10.5",
-                      "title": "crosslinks.py",
+                      "number": "8.1.1.10.6",
+                      "title": "Crosslinks",
                       "path": "files/src/local_deepwiki/generators/crosslinks.md"
                     },
                     {
-                      "number": "9.1.1.10.6",
-                      "title": "diagrams.py",
+                      "number": "8.1.1.10.7",
+                      "title": "Diagrams",
                       "path": "files/src/local_deepwiki/generators/diagrams.md"
                     },
                     {
-                      "number": "9.1.1.10.7",
-                      "title": "glossary.py",
+                      "number": "8.1.1.10.8",
+                      "title": "Glossary",
                       "path": "files/src/local_deepwiki/generators/glossary.md"
                     },
                     {
-                      "number": "9.1.1.10.8",
+                      "number": "8.1.1.10.9",
                       "title": "inheritance.py",
                       "path": "files/src/local_deepwiki/generators/inheritance.md"
                     },
                     {
-                      "number": "9.1.1.10.9",
-                      "title": "manifest.py",
+                      "number": "8.1.1.10.10",
+                      "title": "Manifest",
                       "path": "files/src/local_deepwiki/generators/manifest.md"
                     },
                     {
-                      "number": "9.1.1.10.10",
-                      "title": "search.py",
+                      "number": "8.1.1.10.11",
+                      "title": "Search",
                       "path": "files/src/local_deepwiki/generators/search.md"
                     },
                     {
-                      "number": "9.1.1.10.11",
-                      "title": "see_also.py",
+                      "number": "8.1.1.10.12",
+                      "title": "See Also",
                       "path": "files/src/local_deepwiki/generators/see_also.md"
                     },
                     {
-                      "number": "9.1.1.10.12",
-                      "title": "source_refs.py",
+                      "number": "8.1.1.10.13",
+                      "title": "Source Refs",
                       "path": "files/src/local_deepwiki/generators/source_refs.md"
                     },
                     {
-                      "number": "9.1.1.10.13",
-                      "title": "stale_detection.py",
+                      "number": "8.1.1.10.14",
+                      "title": "Stale Detection",
                       "path": "files/src/local_deepwiki/generators/stale_detection.md"
                     },
                     {
-                      "number": "9.1.1.10.14",
-                      "title": "test_examples.py",
+                      "number": "8.1.1.10.15",
+                      "title": "Test Examples",
                       "path": "files/src/local_deepwiki/generators/test_examples.md"
                     },
                     {
-                      "number": "9.1.1.10.15",
+                      "number": "8.1.1.10.16",
                       "title": "toc.py",
                       "path": "files/src/local_deepwiki/generators/toc.md"
                     },
                     {
-                      "number": "9.1.1.10.16",
-                      "title": "wiki.py",
+                      "number": "8.1.1.10.17",
+                      "title": "Wiki",
                       "path": "files/src/local_deepwiki/generators/wiki.md"
                     },
                     {
-                      "number": "9.1.1.10.17",
+                      "number": "8.1.1.10.18",
                       "title": "wiki_files.py",
                       "path": "files/src/local_deepwiki/generators/wiki_files.md"
                     },
                     {
-                      "number": "9.1.1.10.18",
-                      "title": "wiki_modules.py",
+                      "number": "8.1.1.10.19",
+                      "title": "Wiki Modules",
                       "path": "files/src/local_deepwiki/generators/wiki_modules.md"
                     },
                     {
-                      "number": "9.1.1.10.19",
-                      "title": "wiki_pages.py",
+                      "number": "8.1.1.10.20",
+                      "title": "Wiki Pages",
                       "path": "files/src/local_deepwiki/generators/wiki_pages.md"
                     },
                     {
-                      "number": "9.1.1.10.20",
-                      "title": "wiki_status.py",
+                      "number": "8.1.1.10.21",
+                      "title": "Wiki Status",
                       "path": "files/src/local_deepwiki/generators/wiki_status.md"
                     }
                   ]
                 },
                 {
-                  "number": "9.1.1.11",
+                  "number": "8.1.1.11",
                   "title": "Providers",
                   "path": "",
                   "children": [
                     {
-                      "number": "9.1.1.11.1",
-                      "title": "base.py",
+                      "number": "8.1.1.11.1",
+                      "title": "Base",
                       "path": "files/src/local_deepwiki/providers/base.md"
                     },
                     {
-                      "number": "9.1.1.11.2",
+                      "number": "8.1.1.11.2",
                       "title": "Embeddings",
                       "path": "",
                       "children": [
                         {
-                          "number": "9.1.1.11.2.1",
-                          "title": "local.py",
+                          "number": "8.1.1.11.2.1",
+                          "title": "Local",
                           "path": "files/src/local_deepwiki/providers/embeddings/local.md"
                         },
                         {
-                          "number": "9.1.1.11.2.2",
-                          "title": "openai.py",
+                          "number": "8.1.1.11.2.2",
+                          "title": "Openai",
                           "path": "files/src/local_deepwiki/providers/embeddings/openai.md"
                         }
                       ]
                     },
                     {
-                      "number": "9.1.1.11.3",
+                      "number": "8.1.1.11.3",
                       "title": "Llm",
                       "path": "",
                       "children": [
                         {
-                          "number": "9.1.1.11.3.1",
-                          "title": "anthropic.py",
+                          "number": "8.1.1.11.3.1",
+                          "title": "Anthropic",
                           "path": "files/src/local_deepwiki/providers/llm/anthropic.md"
                         },
                         {
-                          "number": "9.1.1.11.3.2",
-                          "title": "cached.py",
+                          "number": "8.1.1.11.3.2",
+                          "title": "Cached",
                           "path": "files/src/local_deepwiki/providers/llm/cached.md"
                         },
                         {
-                          "number": "9.1.1.11.3.3",
-                          "title": "ollama.py",
+                          "number": "8.1.1.11.3.3",
+                          "title": "Ollama",
                           "path": "files/src/local_deepwiki/providers/llm/ollama.md"
                         },
                         {
-                          "number": "9.1.1.11.3.4",
-                          "title": "openai.py",
+                          "number": "8.1.1.11.3.4",
+                          "title": "Openai",
                           "path": "files/src/local_deepwiki/providers/llm/openai.md"
                         }
                       ]
@@ -325,13 +325,13 @@
                   ]
                 },
                 {
-                  "number": "9.1.1.12",
+                  "number": "8.1.1.12",
                   "title": "Web",
                   "path": "",
                   "children": [
                     {
-                      "number": "9.1.1.12.1",
-                      "title": "app.py",
+                      "number": "8.1.1.12.1",
+                      "title": "App",
                       "path": "files/src/local_deepwiki/web/app.md"
                     }
                   ]

@@ -1,70 +1,125 @@
-# wiki_files.py
+# File Overview
 
-## File Overview
+The file `src/local_deepwiki/generators/wiki_files.py` is a module responsible for generating wiki content for individual files within a codebase. It integrates with Git repositories, vector stores, and various code analysis tools to produce detailed documentation including API docs, call graphs, and source blame information. The module is designed to work within a larger documentation generation system, pulling together information from multiple sources to build rich file-level documentation.
 
-The `wiki_files.py` module is responsible for generating wiki documentation files from source code. It handles the creation of documentation that includes source code details, API documentation, call graphs, and cross-references. The module integrates with Git for source information, vector stores for semantic search, and various generators for different types of documentation content.
+## Classes
+
+No classes are defined in this file.
 
 ## Functions
 
-### _get_syntax_lang
+### `_get_syntax_lang`
+
+- **Parameters**: 
+  - `file_path` (Path): The path to the file for which syntax language is to be determined.
+- **Return Value**: 
+  - `str`: The syntax language identifier for the file, derived from its extension.
+
+
+<details>
+<summary>View Source (lines 34-59) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_files.py#L34-L59">GitHub</a></summary>
 
 ```python
-def _get_syntax_lang(file_path: Path) -> str
+def _get_syntax_lang(language: str | None) -> str:
+    """Get syntax highlighting language string.
+
+    Args:
+        language: Programming language name.
+
+    Returns:
+        Language string for markdown code blocks.
+    """
+    lang_map = {
+        "python": "python",
+        "javascript": "javascript",
+        "typescript": "typescript",
+        "tsx": "tsx",
+        "go": "go",
+        "rust": "rust",
+        "java": "java",
+        "c": "c",
+        "cpp": "cpp",
+        "swift": "swift",
+        "ruby": "ruby",
+        "php": "php",
+        "kotlin": "kotlin",
+        "csharp": "csharp",
+    }
+    return lang_map.get(language or "", "")
 ```
 
-Determines the appropriate syntax highlighting language identifier based on the file extension.
+</details>
 
-**Parameters:**
-- `file_path`: Path object representing the file to analyze
+### `_create_source_details`
 
-**Returns:**
-- String representing the syntax highlighting language identifier
+- **Parameters**: 
+  - `file_path` (Path): The path to the file.
+  - `repo_info` ([GitRepoInfo](../core/git_utils.md)): Information about the Git repository.
+  - `file_blame` (dict): Blame information for the file.
+- **Return Value**: 
+  - `dict`: A dictionary containing source details such as URL, author, date, and commit information.
 
-### _create_source_details
+
+<details>
+<summary>View Source (lines 62-88) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_files.py#L62-L88">GitHub</a></summary>
 
 ```python
-def _create_source_details(file_path: Path, repo_info: GitRepoInfo) -> str
+def _create_source_details(
+    chunk: CodeChunk, syntax_lang: str, github_url: str | None = None
+) -> str:
+    """Create a collapsible source code block for a chunk.
+
+    Args:
+        chunk: The code chunk.
+        syntax_lang: Syntax highlighting language.
+        github_url: Optional GitHub URL to link to source.
+
+    Returns:
+        Markdown details block with source code.
+    """
+    if github_url:
+        summary = f'View Source (lines {chunk.start_line}-{chunk.end_line}) | <a href="{github_url}">GitHub</a>'
+    else:
+        summary = f"View Source (lines {chunk.start_line}-{chunk.end_line})"
+
+    return f"""<details>
+<summary>{summary}</summary>
+
+```{syntax_lang}
+{chunk.content}
 ```
 
-Creates source details section for documentation, including Git blame information and source URLs.
-
-**Parameters:**
-- `file_path`: Path to the source file
-- `repo_info`: [GitRepoInfo](../core/git_utils.md) object containing repository information
-
-**Returns:**
-- Formatted string containing source details
-
-### _inject_inl
-
-```python
-def _inject_inl(content: str, entity_registry: EntityRegistry) -> str
+</details>
+"""
 ```
 
-Injects inline links into content by replacing entity references with appropriate cross-links.
+</details>
 
-**Parameters:**
-- `content`: The content string to process
-- `entity_registry`: [EntityRegistry](crosslinks.md) instance for resolving entity references
+### `_inject_inl`
 
-**Returns:**
-- Content string with injected inline links
+- **Parameters**: 
+  - `content` (str): The content to be processed.
+  - `file_path` (Path): The path to the file.
+  - `repo_info` ([GitRepoInfo](../core/git_utils.md)): Information about the Git repository.
+- **Return Value**: 
+  - `str`: The content with inline links injected.
 
-## Related Components
+## Integration
 
-This module works closely with several other components:
+This module integrates with several other components in the `local_deepwiki` project:
 
-- **[Config](../config.md)**: Provides configuration settings for the documentation generation process
-- **[GitRepoInfo](../core/git_utils.md)**: Supplies Git repository information for source details
-- **[VectorStore](../core/vectorstore.md)**: Enables semantic search capabilities for documentation
-- **[EntityRegistry](crosslinks.md)**: Manages cross-references between different entities in the documentation
-- **API documentation generators**: Integrates with [`get_file_api_docs`](api_docs.md) for generating API documentation
-- **Call graph generators**: Uses [`get_file_call_graph`](callgraph.md) and [`get_file_callers`](callgraph.md) for analyzing code relationships
-- **Git utilities**: Leverages various Git-related functions for blame information, source URLs, and repository details
+- **Configuration**: Uses [`Config`](../config.md) for project settings.
+- **Git Utilities**: Relies on `local_deepwiki.core.git_utils` for repository and blame information.
+- **[Vector Store](../core/vectorstore.md)**: Integrates with [`VectorStore`](../core/vectorstore.md) for vector-based document retrieval.
+- **API Docs Generator**: Uses [`get_file_api_docs`](api_docs.md) from `local_deepwiki.generators.api_docs` to extract API documentation.
+- **Call Graph Generator**: Uses [`get_file_call_graph`](callgraph.md) and [`get_file_callers`](callgraph.md) from `local_deepwiki.generators.callgraph` for call graph information.
+- **Context Builder**: Uses [`build_file_context`](context_builder.md) and [`format_context_for_llm`](context_builder.md) from `local_deepwiki.generators.context_builder` to build and format context for LLMs.
 
-## Usage Context
+The module acts as a central generator for file-level documentation, pulling in information from various specialized generators and utilities to produce a comprehensive view of a file's content, structure, and context.
 
-The module appears to be part of a larger documentation generation system that creates comprehensive wiki-style documentation from source code repositories. It combines static analysis, Git history, and semantic relationships to produce rich, interconnected documentation files.
+## Usage Examples
+
+The functions in this module are used internally within the larger documentation generation system. They are not directly exposed for external use but are called by higher-level functions that orchestrate the documentation generation process. For example, `_create_source_details` might be used to enrich documentation with Git blame information, while `_get_syntax_lang` helps in syntax highlighting for code blocks.
 
 ## API Reference
 
@@ -88,7 +143,7 @@ Build GitHub URL for a chunk.
 
 
 <details>
-<summary>View Source (lines 132-136) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_files.py#L132-L136">GitHub</a></summary>
+<summary>View Source (lines 133-137) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_files.py#L133-L137">GitHub</a></summary>
 
 ```python
 def get_chunk_url(chunk: CodeChunk) -> str | None:
@@ -126,7 +181,7 @@ Generate documentation for a single source file.
 
 
 <details>
-<summary>View Source (lines 258-444) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_files.py#L258-L444">GitHub</a></summary>
+<summary>View Source (lines 259-457) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_files.py#L259-L457">GitHub</a></summary>
 
 ```python
 async def generate_single_file_doc(
@@ -213,26 +268,38 @@ async def generate_single_file_doc(
 
     context = "\n\n".join(context_parts)
 
-    prompt = f"""Generate documentation for the file '{file_info.path}' based ONLY on the code provided.
+    # Build rich context with imports, callers, and related files
+    chunks_list = [r.chunk for r in file_chunks]
+    rich_context = await build_file_context(
+        file_path=file_info.path,
+        chunks=chunks_list,
+        repo_path=Path(index_status.repo_path),
+        vector_store=vector_store,
+    )
+    rich_context_text = format_context_for_llm(rich_context)
+
+    prompt = f"""Generate documentation for the file '{file_info.path}' based on the code and context provided.
 
 Language: {file_info.language}
 Total code chunks: {file_info.chunk_count}
 
-Code contents:
+{rich_context_text}
+## Code Contents
 {context}
 
 Generate documentation that includes:
-1. **File Overview**: Purpose of this file based on the code shown
+1. **File Overview**: Purpose of this file based on the code shown and its dependencies
 2. **Classes**: Document each class visible in the code with its purpose and key methods
 3. **Functions**: Document each function with parameters and return values as shown
-4. **Usage Examples**: Show how to use the components (based on their actual signatures)
-5. **Related Components**: Mention other classes this file works with (based on imports/references shown)
+4. **Integration**: How this file fits into the larger codebase (based on imports and callers)
+5. **Usage Examples**: Show how to use the components (based on their actual signatures)
 
 CRITICAL CONSTRAINTS:
 - ONLY document classes, methods, and functions that appear in the code above
 - Do NOT invent additional methods or parameters not shown
 - Do NOT fabricate usage examples with APIs not visible in the code
 - Write class names as plain text (e.g., "The WikiGenerator class") for cross-linking
+- Use the dependency and caller information to explain integration, but don't fabricate details
 - Only use backticks for actual code snippets
 
 Format as markdown with clear sections.
@@ -338,7 +405,7 @@ Generate documentation for individual source files.  Uses parallel LLM calls for
 | `status_manager` | `"WikiStatusManager"` | - | Wiki status manager for incremental updates. |
 | `entity_registry` | [`EntityRegistry`](crosslinks.md) | - | Entity registry for cross-linking. |
 | `config` | [`Config`](../config.md) | - | Configuration. |
-| [`progress_callback`](../handlers.md) | `ProgressCallback | None` | `None` | Optional progress callback. |
+| [`progress_callback`](../watcher.md) | `ProgressCallback | None` | `None` | Optional progress callback. |
 | `full_rebuild` | `bool` | `False` | If True, regenerate all pages. |
 
 **Returns:** `tuple[list[WikiPage], int, int]`
@@ -346,7 +413,7 @@ Generate documentation for individual source files.  Uses parallel LLM calls for
 
 
 <details>
-<summary>View Source (lines 447-569) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_files.py#L447-L569">GitHub</a></summary>
+<summary>View Source (lines 460-582) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_files.py#L460-L582">GitHub</a></summary>
 
 ```python
 async def generate_file_docs(
@@ -494,7 +561,7 @@ Check if a file is a test file.
 
 
 <details>
-<summary>View Source (lines 479-484) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_files.py#L479-L484">GitHub</a></summary>
+<summary>View Source (lines 492-497) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_files.py#L492-L497">GitHub</a></summary>
 
 ```python
 def is_test_file(path: str) -> bool:
@@ -524,7 +591,7 @@ async def generate_with_semaphore(file_info: FileInfo) -> tuple[WikiPage | None,
 
 
 <details>
-<summary>View Source (lines 515-530) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_files.py#L515-L530">GitHub</a></summary>
+<summary>View Source (lines 528-543) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_files.py#L528-L543">GitHub</a></summary>
 
 ```python
 async def generate_with_semaphore(
@@ -559,21 +626,21 @@ flowchart TD
     N5[_get_syntax_lang]
     N6[_inject_inline_source_code]
     N7[add]
-    N8[build_source_url]
-    N9[exists]
-    N10[generate]
-    N11[generate_class_diagram]
-    N12[generate_file_docs]
-    N13[generate_single_file_doc]
-    N14[generate_with_semaphore]
-    N15[get_chunk_url]
-    N16[get_chunks_by_file]
-    N17[get_file_api_docs]
-    N18[get_file_call_graph]
-    N19[get_file_callers]
-    N20[get_file_examples]
-    N21[get_repo_info]
-    N22[is_test_file]
+    N8[build_file_context]
+    N9[build_source_url]
+    N10[exists]
+    N11[format_context_for_llm]
+    N12[generate]
+    N13[generate_class_diagram]
+    N14[generate_file_docs]
+    N15[generate_single_file_doc]
+    N16[generate_with_semaphore]
+    N17[get_chunk_url]
+    N18[get_chunks_by_file]
+    N19[get_file_api_docs]
+    N20[get_file_call_graph]
+    N21[get_file_callers]
+    N22[get_file_examples]
     N23[load_existing_page]
     N24[needs_regeneration]
     N25[record_page_status]
@@ -583,38 +650,38 @@ flowchart TD
     N29[time]
     N6 --> N7
     N6 --> N5
-    N6 --> N8
+    N6 --> N9
     N6 --> N2
-    N6 --> N15
+    N6 --> N17
+    N17 --> N9
+    N15 --> N0
+    N15 --> N24
+    N15 --> N23
+    N15 --> N18
+    N15 --> N26
+    N15 --> N25
+    N15 --> N27
     N15 --> N8
-    N13 --> N0
-    N13 --> N24
-    N13 --> N23
-    N13 --> N16
-    N13 --> N26
-    N13 --> N25
-    N13 --> N27
-    N13 --> N10
-    N13 --> N28
-    N13 --> N9
-    N13 --> N17
-    N13 --> N11
-    N13 --> N18
-    N13 --> N19
-    N13 --> N20
-    N13 --> N3
-    N13 --> N21
-    N13 --> N6
-    N13 --> N1
-    N13 --> N29
-    N12 --> N22
-    N12 --> N13
-    N12 --> N14
-    N12 --> N1
-    N12 --> N4
-    N12 --> N29
-    N12 --> N25
-    N14 --> N13
+    N15 --> N11
+    N15 --> N12
+    N15 --> N28
+    N15 --> N10
+    N15 --> N19
+    N15 --> N13
+    N15 --> N20
+    N15 --> N21
+    N15 --> N22
+    N15 --> N3
+    N15 --> N6
+    N15 --> N1
+    N15 --> N29
+    N14 --> N15
+    N14 --> N16
+    N14 --> N1
+    N14 --> N4
+    N14 --> N29
+    N14 --> N25
+    N16 --> N15
     N4 --> N0
     classDef func fill:#e1f5fe
     class N0,N1,N2,N3,N4,N5,N6,N7,N8,N9,N10,N11,N12,N13,N14,N15,N16,N17,N18,N19,N20,N21,N22,N23,N24,N25,N26,N27,N28,N29 func
@@ -633,9 +700,11 @@ Functions and methods in this file and their callers:
 - **`_get_syntax_lang`**: called by `_inject_inline_source_code`
 - **`_inject_inline_source_code`**: called by `generate_single_file_doc`
 - **`add`**: called by `_inject_inline_source_code`
+- **[`build_file_context`](context_builder.md)**: called by `generate_single_file_doc`
 - **[`build_source_url`](../core/git_utils.md)**: called by `_inject_inline_source_code`, `get_chunk_url`
 - **`exists`**: called by `generate_single_file_doc`
 - **[`format_blame_date`](../core/git_utils.md)**: called by `_generate_blame_section`
+- **[`format_context_for_llm`](context_builder.md)**: called by `generate_single_file_doc`
 - **`gather`**: called by `generate_file_docs`
 - **`generate`**: called by `generate_single_file_doc`
 - **[`generate_class_diagram`](diagrams.md)**: called by `generate_single_file_doc`
@@ -774,13 +843,13 @@ assert "def my_func():" in result
 
 | Entity | Type | Author | Date | Commit |
 |--------|------|--------|------|--------|
-| `generate_single_file_doc` | function | Brian Breidenbach | today | `37aec0f` Add git blame integration t... |
+| `generate_single_file_doc` | function | Brian Breidenbach | today | `8ac0de1` Add richer LLM context for ... |
 | `_generate_blame_section` | function | Brian Breidenbach | today | `37aec0f` Add git blame integration t... |
 | `_create_source_details` | function | Brian Breidenbach | today | `62e3290` Add GitHub source links and... |
 | `_inject_inline_source_code` | function | Brian Breidenbach | today | `62e3290` Add GitHub source links and... |
 | `get_chunk_url` | function | Brian Breidenbach | today | `62e3290` Add GitHub source links and... |
 | `_get_syntax_lang` | function | Brian Breidenbach | today | `d275583` Add inline expandable sourc... |
-| `generate_file_docs` | function | Brian Breidenbach | today | `0d91a70` Apply Python best practices... |
+| `generate_file_docs` | function | Brian Breidenbach | yesterday | `0d91a70` Apply Python best practices... |
 | `is_test_file` | function | Brian Breidenbach | yesterday | `3defaaa` Refactor: Extract validatio... |
 | `generate_with_semaphore` | function | Brian Breidenbach | yesterday | `3defaaa` Refactor: Extract validatio... |
 | `_generate_files_index` | function | Brian Breidenbach | yesterday | `3defaaa` Refactor: Extract validatio... |
@@ -789,85 +858,10 @@ assert "def my_func():" in result
 
 Source code for functions and methods not listed in the API Reference above.
 
-#### `_get_syntax_lang`
-
-<details>
-<summary>View Source (lines 33-58) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_files.py#L33-L58">GitHub</a></summary>
-
-```python
-def _get_syntax_lang(language: str | None) -> str:
-    """Get syntax highlighting language string.
-
-    Args:
-        language: Programming language name.
-
-    Returns:
-        [Language](../models.md) string for markdown code blocks.
-    """
-    lang_map = {
-        "python": "python",
-        "javascript": "javascript",
-        "typescript": "typescript",
-        "tsx": "tsx",
-        "go": "go",
-        "rust": "rust",
-        "java": "java",
-        "c": "c",
-        "cpp": "cpp",
-        "swift": "swift",
-        "ruby": "ruby",
-        "php": "php",
-        "kotlin": "kotlin",
-        "csharp": "csharp",
-    }
-    return lang_map.get(language or "", "")
-```
-
-</details>
-
-
-#### `_create_source_details`
-
-<details>
-<summary>View Source (lines 61-87) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_files.py#L61-L87">GitHub</a></summary>
-
-```python
-def _create_source_details(
-    chunk: [CodeChunk](../models.md), syntax_lang: str, github_url: str | None = None
-) -> str:
-    """Create a collapsible source code block for a chunk.
-
-    Args:
-        chunk: The code chunk.
-        syntax_lang: Syntax highlighting language.
-        github_url: Optional GitHub URL to link to source.
-
-    Returns:
-        Markdown details block with source code.
-    """
-    if github_url:
-        summary = f'View Source (lines {chunk.start_line}-{chunk.end_line}) | <a href="{github_url}">GitHub</a>'
-    else:
-        summary = f"View Source (lines {chunk.start_line}-{chunk.end_line})"
-
-    return f"""<details>
-<summary>{summary}</summary>
-
-```{syntax_lang}
-{chunk.content}
-```
-
-</details>
-"""
-```
-
-</details>
-
-
 #### `_inject_inline_source_code`
 
 <details>
-<summary>View Source (lines 90-255) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_files.py#L90-L255">GitHub</a></summary>
+<summary>View Source (lines 91-256) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_files.py#L91-L256">GitHub</a></summary>
 
 ```python
 def _inject_inline_source_code(
@@ -1044,7 +1038,7 @@ def _inject_inline_source_code(
 #### `_generate_blame_section`
 
 <details>
-<summary>View Source (lines 572-640) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_files.py#L572-L640">GitHub</a></summary>
+<summary>View Source (lines 585-653) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_files.py#L585-L653">GitHub</a></summary>
 
 ```python
 def _generate_blame_section(
@@ -1124,7 +1118,7 @@ def _generate_blame_section(
 #### `_generate_files_index`
 
 <details>
-<summary>View Source (lines 643-676) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_files.py#L643-L676">GitHub</a></summary>
+<summary>View Source (lines 656-689) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_files.py#L656-L689">GitHub</a></summary>
 
 ```python
 def _generate_files_index(file_pages: list[[WikiPage](../models.md)]) -> str:
@@ -1167,4 +1161,4 @@ def _generate_files_index(file_pages: list[[WikiPage](../models.md)]) -> str:
 
 ## Relevant Source Files
 
-- `src/local_deepwiki/generators/wiki_files.py:33-58`
+- `src/local_deepwiki/generators/wiki_files.py:34-59`

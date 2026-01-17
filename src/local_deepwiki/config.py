@@ -159,12 +159,14 @@ class WikiConfig(BaseModel):
     """Wiki generation configuration."""
 
     max_file_docs: int = Field(
-        default=75, description="Maximum number of file-level documentation pages to generate"
+        default=500,
+        description="Maximum number of file-level documentation pages to generate. "
+        "Set to 0 for unlimited.",
     )
     max_concurrent_llm_calls: int = Field(
-        default=3,
+        default=8,
         ge=1,
-        le=10,
+        le=20,
         description="Maximum concurrent LLM calls for file documentation generation. "
         "Higher values speed up generation but increase memory/API usage.",
     )

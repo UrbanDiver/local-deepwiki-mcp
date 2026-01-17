@@ -1,91 +1,120 @@
-# Inheritance Module
+# File Overview
 
-## File Overview
+This file, `src/local_deepwiki/generators/inheritance.py`, provides functionality for generating inheritance-related information and visualizations from class hierarchies. It supports generating inheritance diagrams, tree representations, and pages documenting class inheritance relationships. The module integrates with vector stores for indexing and uses utilities for sanitizing names for diagram generation.
 
-The inheritance module provides functionality for analyzing and generating documentation about class inheritance hierarchies in Python codebases. It extracts class relationships from a vector store, builds inheritance trees, and generates both visual diagrams and textual representations of class hierarchies.
+# Classes
 
-## Classes
+## ClassNode
 
-### ClassNode
+Represents a node in a class inheritance hierarchy. It contains information about a class, its parent classes, and its children in the inheritance tree.
 
-A data class that represents a node in a class inheritance hierarchy.
+### Attributes
 
-**Fields:**
-- Contains dataclass fields for representing class information and relationships
-- Uses the `field` [decorator](../providers/base.md) for complex field initialization
+- `name` (str): The name of the class.
+- `parents` (list): A list of parent class names.
+- `children` (list): A list of child class names.
+- `docstring` (str): The docstring of the class.
+- `file_path` (str): The file path where the class is defined.
+- `methods` (list): A list of methods defined in the class.
+- `properties` (list): A list of properties defined in the class.
 
-## Functions
+# Functions
 
-### collect_class_hierarchy
+## collect_class_hierarchy
 
-Collects and analyzes class hierarchy information from the codebase.
+Collects class hierarchy information from a list of chunks.
 
-**Purpose:** Extracts class inheritance relationships and builds a comprehensive view of the class structure.
+### Parameters
 
-### find_root_classes
+- `chunks` (list): A list of chunks containing class information.
 
-Identifies root classes in the inheritance hierarchy.
+### Returns
 
-**Purpose:** Finds classes that serve as base classes or have no parent classes, which are used as starting points for hierarchy traversal.
+- `dict`: A dictionary mapping class names to `ClassNode` objects.
 
-### generate_inheritance_diagram
+## find_root_classes
 
-Creates a visual representation of class inheritance relationships.
+Finds root classes in a class hierarchy.
 
-**Purpose:** Generates diagram markup (likely Mermaid format based on the [sanitize_mermaid_name](diagrams.md) import) showing class hierarchies.
+### Parameters
 
-### generate_inheritance_tree_text
+- `class_nodes` (dict): A dictionary mapping class names to `ClassNode` objects.
 
-Produces a textual representation of the inheritance tree.
+### Returns
 
-**Purpose:** Creates a text-based tree structure showing class relationships in a readable format.
+- `list`: A list of root class names.
 
-### generate_inheritance_page
+## generate_inheritance_diagram
 
-Generates a complete documentation page for class inheritance.
+Generates a Mermaid diagram representing the class inheritance hierarchy.
 
-**Purpose:** Combines visual diagrams and textual representations into a comprehensive inheritance documentation page.
+### Parameters
 
-## Usage Examples
+- `class_nodes` (dict): A dictionary mapping class names to `ClassNode` objects.
+- `root_classes` (list): A list of root class names.
+
+### Returns
+
+- `str`: A Mermaid diagram string.
+
+## generate_inheritance_tree_text
+
+Generates a text representation of the inheritance tree.
+
+### Parameters
+
+- `class_nodes` (dict): A dictionary mapping class names to `ClassNode` objects.
+- `root_classes` (list): A list of root class names.
+
+### Returns
+
+- `str`: A text representation of the inheritance tree.
+
+## generate_inheritance_page
+
+Generates an inheritance page content for a given class.
+
+### Parameters
+
+- `class_node` (ClassNode): The class node for which to generate the page.
+- `class_nodes` (dict): A dictionary mapping class names to `ClassNode` objects.
+
+### Returns
+
+- `str`: The content of the inheritance page.
+
+# Integration
+
+This module integrates with the following components:
+
+- [`VectorStore`](../core/vectorstore.md): Used for indexing class information.
+- [`sanitize_mermaid_name`](diagrams.md): Utility function for sanitizing names in Mermaid diagrams.
+- [`ChunkType`](../models.md) and [`IndexStatus`](../models.md): Enums used for categorizing and tracking chunk indexing status.
+
+The file is part of the `local_deepwiki.generators` package and provides core functionality for generating inheritance-related content, which is likely used by other generators in the system to build comprehensive documentation.
+
+# Usage Examples
+
+The following examples show how to use the functions in this module:
 
 ```python
-from local_deepwiki.generators.inheritance import (
-    ClassNode,
-    collect_class_hierarchy,
-    find_root_classes,
-    generate_inheritance_diagram,
-    generate_inheritance_tree_text,
-    generate_inheritance_page
-)
+# Collect class hierarchy from chunks
+chunks = [...]  # List of chunks
+class_nodes = collect_class_hierarchy(chunks)
 
-# Create a class node
-node = ClassNode()
+# Find root classes
+root_classes = find_root_classes(class_nodes)
 
-# Collect class hierarchy from vector store
-hierarchy = collect_class_hierarchy()
+# Generate inheritance diagram
+diagram = generate_inheritance_diagram(class_nodes, root_classes)
 
-# Find root classes in the hierarchy
-roots = find_root_classes()
+# Generate inheritance tree text
+tree_text = generate_inheritance_tree_text(class_nodes, root_classes)
 
-# Generate visual diagram
-diagram = generate_inheritance_diagram()
-
-# Generate text representation
-tree_text = generate_inheritance_tree_text()
-
-# Generate complete inheritance page
-page = generate_inheritance_page()
+# Generate inheritance page for a specific class
+class_node = class_nodes['SomeClassName']
+page_content = generate_inheritance_page(class_node, class_nodes)
 ```
-
-## Related Components
-
-This module integrates with several other components:
-
-- **[VectorStore](../core/vectorstore.md)**: Used to retrieve class information and relationships from the indexed codebase
-- **Diagrams module**: Utilizes the [sanitize_mermaid_name](diagrams.md) function for generating clean diagram node names
-- **Models**: Works with [ChunkType](../models.md) and [IndexStatus](../models.md) enums for handling different types of code chunks and their indexing states
-
-The module is part of the local_deepwiki generators package, which appears to be responsible for creating different types of documentation from analyzed codebases.
 
 ## API Reference
 
@@ -247,7 +276,7 @@ def find_root_classes(classes: dict[str, ClassNode]) -> list[str]:
 def generate_inheritance_diagram(classes: dict[str, ClassNode], max_classes: int = 50) -> str | None
 ```
 
-Generate a Mermaid class diagram showing inheritance relationships.
+Generate a Mermaid class diagram showing inheritance relationships.  Only shows classes with internal inheritance relationships (excludes classes that only inherit from external bases like BaseModel, Enum, ABC).
 
 
 | [Parameter](api_docs.md) | Type | Default | Description |
@@ -260,7 +289,7 @@ Generate a Mermaid class diagram showing inheritance relationships.
 
 
 <details>
-<summary>View Source (lines 102-171) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/inheritance.py#L102-L171">GitHub</a></summary>
+<summary>View Source (lines 102-176) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/inheritance.py#L102-L176">GitHub</a></summary>
 
 ```python
 def generate_inheritance_diagram(
@@ -269,6 +298,9 @@ def generate_inheritance_diagram(
 ) -> str | None:
     """Generate a Mermaid class diagram showing inheritance relationships.
 
+    Only shows classes with internal inheritance relationships (excludes
+    classes that only inherit from external bases like BaseModel, Enum, ABC).
+
     Args:
         classes: Dictionary of class nodes.
         max_classes: Maximum number of classes to include.
@@ -276,35 +308,37 @@ def generate_inheritance_diagram(
     Returns:
         Mermaid diagram string or None if no inheritance found.
     """
-    # Filter to classes that have inheritance relationships
-    classes_with_inheritance = {
-        name: node
-        for name, node in classes.items()
-        if node.parents or node.children
-    }
+    # Filter to classes that have INTERNAL inheritance relationships
+    # (parent or child is also in our codebase)
+    classes_with_internal_inheritance = {}
+    for name, node in classes.items():
+        has_internal_parent = any(p in classes for p in node.parents)
+        has_children = bool(node.children)
+        if has_internal_parent or has_children:
+            classes_with_internal_inheritance[name] = node
 
-    if not classes_with_inheritance:
+    if not classes_with_internal_inheritance:
         return None
 
-    # If too many, prioritize classes with most relationships
-    if len(classes_with_inheritance) > max_classes:
+    # If too many, prioritize classes with most internal relationships
+    if len(classes_with_internal_inheritance) > max_classes:
         scored = [
-            (name, len(node.parents) + len(node.children))
-            for name, node in classes_with_inheritance.items()
+            (name, len([p for p in node.parents if p in classes]) + len(node.children))
+            for name, node in classes_with_internal_inheritance.items()
         ]
         scored.sort(key=lambda x: x[1], reverse=True)
         keep_names = {name for name, _ in scored[:max_classes]}
-        classes_with_inheritance = {
+        classes_with_internal_inheritance = {
             name: node
-            for name, node in classes_with_inheritance.items()
+            for name, node in classes_with_internal_inheritance.items()
             if name in keep_names
         }
 
     lines = ["```mermaid", "classDiagram"]
 
     # Add class definitions
-    for class_name in sorted(classes_with_inheritance.keys()):
-        node = classes_with_inheritance[class_name]
+    for class_name in sorted(classes_with_internal_inheritance.keys()):
+        node = classes_with_internal_inheritance[class_name]
         safe_name = [sanitize_mermaid_name](diagrams.md)(class_name)
 
         if node.is_abstract:
@@ -314,12 +348,12 @@ def generate_inheritance_diagram(
         else:
             lines.append(f"    class {safe_name}")
 
-    # Add inheritance relationships
-    for class_name, node in sorted(classes_with_inheritance.items()):
+    # Add inheritance relationships (only internal)
+    for class_name, node in sorted(classes_with_internal_inheritance.items()):
         safe_child = [sanitize_mermaid_name](diagrams.md)(class_name)
         for parent in node.parents:
-            # Only add if parent is in our diagram
-            if parent in classes_with_inheritance:
+            # Only add if parent is in our codebase
+            if parent in classes_with_internal_inheritance:
                 safe_parent = [sanitize_mermaid_name](diagrams.md)(parent)
                 lines.append(f"    {safe_child} --|> {safe_parent}")
 
@@ -358,7 +392,7 @@ Generate a text-based inheritance tree starting from a root class.
 
 
 <details>
-<summary>View Source (lines 174-226) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/inheritance.py#L174-L226">GitHub</a></summary>
+<summary>View Source (lines 179-231) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/inheritance.py#L179-L231">GitHub</a></summary>
 
 ```python
 def generate_inheritance_tree_text(
@@ -438,7 +472,7 @@ Generate the inheritance documentation page content.
 
 
 <details>
-<summary>View Source (lines 229-299) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/inheritance.py#L229-L299">GitHub</a></summary>
+<summary>View Source (lines 234-305) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/inheritance.py#L234-L305">GitHub</a></summary>
 
 ```python
 async def generate_inheritance_page(
@@ -459,12 +493,13 @@ async def generate_inheritance_page(
     if not classes:
         return None
 
-    # Filter to classes with inheritance
-    classes_with_inheritance = {
-        name: node
-        for name, node in classes.items()
-        if node.parents or node.children
-    }
+    # Filter to classes with INTERNAL inheritance relationships
+    classes_with_inheritance = {}
+    for name, node in classes.items():
+        has_internal_parent = any(p in classes for p in node.parents)
+        has_children = bool(node.children)
+        if has_internal_parent or has_children:
+            classes_with_inheritance[name] = node
 
     if not classes_with_inheritance:
         return None
@@ -651,12 +686,12 @@ assert generate_inheritance_diagram({}) is None
 
 | Entity | Type | Author | Date | Commit |
 |--------|------|--------|------|--------|
+| `generate_inheritance_diagram` | function | Brian Breidenbach | today | `c4da750` Improve diagram rendering a... |
+| `generate_inheritance_page` | function | Brian Breidenbach | today | `c4da750` Improve diagram rendering a... |
 | `ClassNode` | class | Brian Breidenbach | today | `8d2ab68` Add inheritance trees, glos... |
 | `collect_class_hierarchy` | function | Brian Breidenbach | today | `8d2ab68` Add inheritance trees, glos... |
 | `find_root_classes` | function | Brian Breidenbach | today | `8d2ab68` Add inheritance trees, glos... |
-| `generate_inheritance_diagram` | function | Brian Breidenbach | today | `8d2ab68` Add inheritance trees, glos... |
 | `generate_inheritance_tree_text` | function | Brian Breidenbach | today | `8d2ab68` Add inheritance trees, glos... |
-| `generate_inheritance_page` | function | Brian Breidenbach | today | `8d2ab68` Add inheritance trees, glos... |
 
 ## Relevant Source Files
 
@@ -664,8 +699,8 @@ assert generate_inheritance_diagram({}) is None
 
 ## See Also
 
-- [models](../models.md) - dependency
-- [diagrams](diagrams.md) - dependency
 - [vectorstore](../core/vectorstore.md) - dependency
+- [diagrams](diagrams.md) - dependency
 - [glossary](glossary.md) - shares 4 dependencies
 - [coverage](coverage.md) - shares 4 dependencies
+- [crosslinks](crosslinks.md) - shares 3 dependencies
