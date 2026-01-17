@@ -135,17 +135,31 @@ Generators produce markdown documentation from indexed code.
 
 ```mermaid
 flowchart TB
-    wiki[wiki.py] --> wiki_files[wiki_files.py]
-    wiki --> wiki_modules[wiki_modules.py]
-    wiki --> wiki_pages[wiki_pages.py]
-    wiki --> diagrams[diagrams.py]
-    wiki --> glossary[glossary.py]
-    wiki --> inheritance[inheritance.py]
-    wiki --> coverage[coverage.py]
-    wiki --> crosslinks[crosslinks.py]
-    wiki --> see_also[see_also.py]
-    wiki --> toc[toc.py]
-    wiki --> search[search.py]
+    wiki[wiki.py]
+
+    subgraph content[Content Generators]
+        wiki_files[wiki_files]
+        wiki_modules[wiki_modules]
+        wiki_pages[wiki_pages]
+    end
+
+    subgraph analysis[Analysis & Diagrams]
+        diagrams[diagrams]
+        inheritance[inheritance]
+        coverage[coverage]
+    end
+
+    subgraph navigation[Navigation & Links]
+        glossary[glossary]
+        crosslinks[crosslinks]
+        see_also[see_also]
+        toc[toc]
+        search[search]
+    end
+
+    wiki --> content
+    wiki --> analysis
+    wiki --> navigation
 ```
 
 ### Providers
