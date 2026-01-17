@@ -4,7 +4,7 @@ import asyncio
 import re
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Awaitable, Callable
 
 from local_deepwiki.config import Config
 from local_deepwiki.core.git_utils import (
@@ -26,6 +26,7 @@ from local_deepwiki.models import ChunkType, CodeChunk, FileInfo, IndexStatus, P
 from local_deepwiki.providers.base import LLMProvider
 
 if TYPE_CHECKING:
+    from local_deepwiki.generators.progress_tracker import GenerationProgress
     from local_deepwiki.generators.wiki_status import WikiStatusManager
 
 logger = get_logger(__name__)
@@ -457,6 +458,10 @@ Do NOT include mermaid class diagrams - they will be auto-generated."""
     return page, False  # Generated new
 
 
+# Type alias for async write callback
+WriteCallback = Callable[[WikiPage], Awaitable[None]]
+
+
 async def generate_file_docs(
     index_status: IndexStatus,
     vector_store: VectorStore,
@@ -467,11 +472,14 @@ async def generate_file_docs(
     config: Config,
     progress_callback: ProgressCallback | None = None,
     full_rebuild: bool = False,
+    write_callback: WriteCallback | None = None,
+    generation_progress: "GenerationProgress | None" = None,
 ) -> tuple[list[WikiPage], int, int]:
     """Generate documentation for individual source files.
 
     Uses parallel LLM calls for faster generation, controlled by
-    config.wiki.max_concurrent_llm_calls.
+    config.wiki.max_concurrent_llm_calls. Pages are written to disk
+    immediately as they complete if write_callback is provided.
 
     Args:
         index_status: Index status with file information.
@@ -483,6 +491,8 @@ async def generate_file_docs(
         config: Configuration.
         progress_callback: Optional progress callback.
         full_rebuild: If True, regenerate all pages.
+        write_callback: Optional async callback to write pages immediately as they complete.
+        generation_progress: Optional live progress tracker for status updates.
 
     Returns:
         Tuple of (pages list, generated count, skipped count).
@@ -523,12 +533,17 @@ async def generate_file_docs(
         f"(max {max_concurrent} concurrent)"
     )
 
+    # Initialize live progress tracking
+    if generation_progress:
+        generation_progress.start_phase("file_docs", total=len(significant_files))
+
     async def generate_with_semaphore(
         file_info: FileInfo,
-    ) -> tuple[WikiPage | None, bool]:
+    ) -> tuple[FileInfo, WikiPage | None, bool]:
+        """Generate doc for a file, returning file_info for tracking."""
         async with semaphore:
             logger.debug(f"Generating doc for {file_info.path}")
-            return await generate_single_file_doc(
+            page, was_skipped = await generate_single_file_doc(
                 file_info=file_info,
                 index_status=index_status,
                 vector_store=vector_store,
@@ -539,30 +554,54 @@ async def generate_file_docs(
                 config=config,
                 full_rebuild=full_rebuild,
             )
+            return file_info, page, was_skipped
 
-    # Run all file doc generations concurrently (limited by semaphore)
-    results = await asyncio.gather(
-        *[generate_with_semaphore(f) for f in significant_files],
-        return_exceptions=True,
-    )
+    # Create tasks for all file doc generations
+    tasks = [
+        asyncio.create_task(generate_with_semaphore(f))
+        for f in significant_files
+    ]
 
-    # Process results
+    # Process results as they complete (write immediately)
     pages = []
     pages_generated = 0
     pages_skipped = 0
+    completed = 0
+    total = len(tasks)
 
-    for file_info, result in zip(significant_files, results):
-        if isinstance(result, BaseException):
-            logger.error(f"Error generating doc for {file_info.path}: {result}")
-            continue
+    for coro in asyncio.as_completed(tasks):
+        try:
+            file_info, page, was_skipped = await coro
+            completed += 1
 
-        page, was_skipped = result
-        if page is not None:
-            pages.append(page)
-            if was_skipped:
-                pages_skipped += 1
-            else:
-                pages_generated += 1
+            if page is not None:
+                pages.append(page)
+                if was_skipped:
+                    pages_skipped += 1
+                else:
+                    pages_generated += 1
+
+                # Write page immediately if callback provided
+                if write_callback:
+                    await write_callback(page)
+
+                if progress_callback:
+                    progress_callback(
+                        f"Generated {file_info.path}",
+                        completed,
+                        total,
+                    )
+
+            # Update live progress tracker
+            if generation_progress:
+                generation_progress.complete_file(file_info.path)
+
+        except Exception as e:
+            completed += 1
+            logger.error(f"Error generating file doc: {e}")
+            # Still update progress on error
+            if generation_progress:
+                generation_progress.complete_file()
 
     # Create files index (always regenerate since it depends on all file pages)
     if pages:
@@ -575,6 +614,10 @@ async def generate_file_docs(
         )
         pages.insert(0, files_index)
         status_manager.record_page_status(files_index, all_file_paths)
+
+    # Mark phase complete
+    if generation_progress:
+        generation_progress.complete_phase()
 
     logger.info(f"File docs complete: {pages_generated} generated, {pages_skipped} skipped")
     return pages, pages_generated, pages_skipped

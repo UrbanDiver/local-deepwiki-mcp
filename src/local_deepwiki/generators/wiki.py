@@ -13,6 +13,7 @@ from local_deepwiki.generators.stale_detection import generate_stale_report_page
 from local_deepwiki.generators.glossary import generate_glossary_page
 from local_deepwiki.generators.inheritance import generate_inheritance_page
 from local_deepwiki.generators.manifest import ProjectManifest, get_cached_manifest
+from local_deepwiki.generators.progress_tracker import GenerationProgress
 from local_deepwiki.generators.search import write_full_search_index
 from local_deepwiki.generators.see_also import RelationshipAnalyzer, add_see_also_sections
 from local_deepwiki.generators.source_refs import add_source_refs_sections
@@ -133,6 +134,10 @@ class WikiGenerator:
         logger.info(f"Starting wiki generation for {index_status.repo_path}")
         logger.debug(f"Full rebuild: {full_rebuild}, Total files: {index_status.total_files}")
 
+        # Initialize live progress tracker
+        self._progress = GenerationProgress(wiki_path=self.wiki_path)
+        self._progress.start_phase("initializing", total=0)
+
         pages: list[WikiPage] = []
         total_steps = 13  # overview, architecture, modules, files, dependencies, changelog, inheritance, glossary, coverage, cross-links, see-also, search, freshness
         pages_generated = 0
@@ -211,6 +216,9 @@ class WikiGenerator:
         if progress_callback:
             progress_callback("Generating module documentation", 2, total_steps)
 
+        # Track module docs phase
+        self._progress.start_phase("modules", total=0)
+
         module_pages, gen_count, skip_count = await generate_module_docs(
             index_status=index_status,
             vector_store=self.vector_store,
@@ -221,6 +229,11 @@ class WikiGenerator:
         )
         pages_generated += gen_count
         pages_skipped += skip_count
+
+        # Update module stats and write pages
+        self._progress._phase_stats["modules"].items_completed = len(module_pages)
+        self._progress.complete_phase()
+
         for page in module_pages:
             pages.append(page)
             await self._write_page(page)
@@ -239,12 +252,13 @@ class WikiGenerator:
             config=self.config,
             progress_callback=progress_callback,
             full_rebuild=full_rebuild,
+            write_callback=self._write_page,  # Write pages as they complete
+            generation_progress=self._progress,  # Live status tracking
         )
         pages_generated += gen_count
         pages_skipped += skip_count
-        for page in file_pages:
-            pages.append(page)
-            await self._write_page(page)
+        # Pages already written by write_callback, just add to list
+        pages.extend(file_pages)
 
         # Generate dependencies page - depends on all files
         if progress_callback:
@@ -407,6 +421,11 @@ class WikiGenerator:
             f"Wiki generation complete: {pages_generated} pages generated, "
             f"{pages_skipped} pages unchanged, {len(pages)} total pages"
         )
+
+        # Finalize progress tracker and print summary
+        summary = self._progress.finalize(success=True)
+        print(summary)
+
         return WikiStructure(root=str(self.wiki_path), pages=pages)
 
     async def _generate_overview(self, index_status: IndexStatus) -> WikiPage:
