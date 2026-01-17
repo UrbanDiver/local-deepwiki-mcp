@@ -423,9 +423,24 @@
             border-radius: 8px;
             margin: 16px 0;
             text-align: center;
+            overflow-x: auto;
+            overflow-y: hidden;
         }
         .mermaid svg {
-            max-width: 100%;
+            max-width: none;
+            min-width: min-content;
+        }
+        /* Hint for scrollable diagrams */
+        .mermaid::-webkit-scrollbar {
+            height: 8px;
+        }
+        .mermaid::-webkit-scrollbar-track {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+        .mermaid::-webkit-scrollbar-thumb {
+            background: #666;
+            border-radius: 4px;
         }
         @media (max-width: 768px) {
             .sidebar-toggle {

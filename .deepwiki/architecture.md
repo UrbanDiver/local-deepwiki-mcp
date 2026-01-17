@@ -2,72 +2,124 @@
 
 ## System Overview
 
-Local DeepWiki is a documentation generation system that processes codebases to create comprehensive wiki-style documentation. The system uses multiple LLM providers (Ollama, Anthropic, OpenAI) and embedding models to analyze code and generate intelligent documentation with features like inheritance diagrams, cross-linking, and module documentation.
+This system is a local documentation and wiki generation tool that processes codebases to create comprehensive documentation. Based on the code structure, it provides multiple LLM providers (Ollama, Anthropic, OpenAI), embedding capabilities, and various generators for creating different types of documentation including inheritance diagrams, API documentation, and module documentation.
+
+The system is built around a configuration-driven architecture with pluggable providers and uses tree-sitter for code parsing across multiple programming languages.
 
 ## Key Components
 
 ### Configuration Management
-The **[Config](files/src/local_deepwiki/config.md)** class serves as the central configuration hub, managing settings for LLM providers, embedding models, and system behavior. The **[LLMConfig](files/src/local_deepwiki/config.md)** class specifically handles LLM provider selection with support for Ollama, Anthropic, and OpenAI through dedicated configuration classes (**[OllamaConfig](files/src/local_deepwiki/config.md)**, **[AnthropicConfig](files/src/local_deepwiki/config.md)**, **[OpenAILLMConfig](files/src/local_deepwiki/config.md)**). The **[EmbeddingConfig](files/src/local_deepwiki/config.md)** class manages embedding provider settings with **[LocalEmbeddingConfig](files/src/local_deepwiki/config.md)** and **[OpenAIEmbeddingConfig](files/src/local_deepwiki/config.md)** for different embedding backends.
 
-### LLM Provider System
-The **[OllamaProvider](files/src/local_deepwiki/providers/llm/ollama.md)** implements LLM functionality for local Ollama models, providing methods for health checking, text generation, and streaming responses. The system uses a factory pattern through the `get_llm_provider` function to instantiate the appropriate provider based on configuration.
+**[LLMConfig](files/src/local_deepwiki/config.md)** - Manages LLM provider configuration with support for three providers: Ollama, Anthropic, and OpenAI. Uses Pydantic for validation and includes nested configuration objects for each provider.
 
-### Code Analysis and Documentation
-The **[ClassNode](files/src/local_deepwiki/generators/inheritance.md)** represents classes in the codebase with information about inheritance relationships, file locations, and documentation. This component supports inheritance tree analysis and diagram generation for understanding code structure.
+**[EmbeddingConfig](files/src/local_deepwiki/config.md)** - Handles embedding provider configuration, supporting both local and OpenAI embedding providers with provider-specific settings.
 
-### Chunking and Parsing
-The **[ChunkType](files/src/local_deepwiki/models.md)** enumeration defines different types of code chunks for processing. The system includes comprehensive parsing capabilities that handle multiple programming languages including Python, TypeScript, Java, Swift, C++, Ruby, PHP, Kotlin, and C#, as evidenced by the inheritance testing across these languages.
+### LLM Providers
+
+**[OllamaProvider](files/src/local_deepwiki/providers/llm/ollama.md)** - Implements the LLM provider interface for Ollama, including health checking, text generation, and streaming capabilities. Provides both synchronous and asynchronous generation methods.
+
+**[AnthropicProvider](files/src/local_deepwiki/providers/llm/anthropic.md)** - Provides integration with Anthropic's API, implementing the standard LLM provider interface with model-specific naming.
+
+### Code Analysis and Structure
+
+**[ClassNode](files/src/local_deepwiki/generators/inheritance.md)** - Represents a class in the inheritance tree with properties for name, file path, parent/child relationships, abstract status, and docstring information.
+
+**[ClassInfo](files/src/local_deepwiki/generators/diagrams.md)** - Contains metadata about classes discovered during code analysis.
+
+**[Parameter](files/src/local_deepwiki/generators/api_docs.md)** - Represents function or method parameters with type and documentation information.
+
+**[FunctionSignature](files/src/local_deepwiki/generators/api_docs.md)** and **[ClassSignature](files/src/local_deepwiki/generators/api_docs.md)** - Capture method and class signatures for API documentation generation.
+
+### Content Generation
+
+**[ChunkType](files/src/local_deepwiki/models.md)** - Enumeration defining different types of content chunks for processing and organization.
+
+**[UsageExample](files/src/local_deepwiki/generators/test_examples.md)** - Stores code usage examples for documentation generation.
+
+### Provider Factories
+
+**get_llm_provider** - Factory function that creates the appropriate LLM provider instance based on configuration, supporting dynamic provider selection.
+
+**get_embedding_provider** - Factory function for creating embedding provider instances with support for local and OpenAI providers.
 
 ## Data Flow
 
-1. **Configuration Loading**: The system loads configuration through the [Config](files/src/local_deepwiki/config.md) class, determining which LLM and embedding providers to use
-2. **Code Parsing**: Source code files are parsed and analyzed to extract class information, creating [ClassNode](files/src/local_deepwiki/generators/inheritance.md) instances with inheritance relationships
-3. **Provider Instantiation**: Based on configuration, appropriate LLM and embedding providers are created through factory functions
-4. **Documentation Generation**: The system processes code chunks and generates documentation using the configured LLM providers
-5. **Output Generation**: Results are exported to various formats including HTML and markdown
+1. **Configuration Loading** - The system loads configuration through the config module, which manages LLM and embedding provider settings using Pydantic models.
+
+2. **Provider Initialization** - Factory functions create appropriate provider instances based on configuration, with support for multiple LLM and embedding providers.
+
+3. **Code Analysis** - The system parses source code using tree-sitter to extract class information, inheritance relationships, and function signatures.
+
+4. **Content Generation** - Various generators process the analyzed code to create documentation, including inheritance diagrams and module documentation.
+
+5. **Output Processing** - Generated content is organized and exported to various formats including HTML and markdown.
 
 ## Component Diagram
 
 ```mermaid
-graph TB
-    Config --> LLMConfig
-    Config --> EmbeddingConfig
+classDiagram
+    class LLMConfig {
+        +provider: str
+        +ollama: OllamaConfig
+        +anthropic: AnthropicConfig
+        +openai: OpenAILLMConfig
+    }
     
-    LLMConfig --> OllamaConfig
-    LLMConfig --> AnthropicConfig
-    LLMConfig --> OpenAILLMConfig
+    class EmbeddingConfig {
+        +provider: str
+        +local: LocalEmbeddingConfig
+        +openai: OpenAIEmbeddingConfig
+    }
     
-    EmbeddingConfig --> LocalEmbeddingConfig
-    EmbeddingConfig --> OpenAIEmbeddingConfig
+    class OllamaProvider {
+        +check_health()
+        +generate()
+        +generate_stream()
+        +name()
+    }
     
-    LLMConfig --> OllamaProvider
+    class AnthropicProvider {
+        +name()
+    }
     
-    ClassNode --> ClassInfo
-    ClassNode --> ClassSignature
-    ClassSignature --> FunctionSignature
-    FunctionSignature --> Parameter
+    class ClassNode {
+        +name: str
+        +file_path: str
+        +parents: list
+        +children: list
+        +is_abstract: bool
+        +docstring: str
+    }
     
-    ChunkType --> ClassNode
+    class ClassInfo
+    class Parameter
+    class FunctionSignature
+    class ClassSignature
+    class UsageExample
     
-    UsageExample --> ClassInfo
+    LLMConfig --> OllamaProvider : creates
+    LLMConfig --> AnthropicProvider : creates
+    ClassNode --> ClassInfo : contains
+    FunctionSignature --> Parameter : has
+    ClassSignature --> Parameter : has
 ```
 
 ## Key Design Decisions
 
-### Provider Abstraction Pattern
-The system implements a provider pattern for both LLM and embedding services, allowing easy switching between different backends (Ollama, Anthropic, OpenAI) without changing core logic. This is evident in the factory functions and configuration structure.
+### Provider Pattern Implementation
+The system implements a provider pattern for both LLM and embedding services, allowing runtime selection of different providers through configuration. This is evident in the factory functions that create provider instances based on configuration settings.
 
 ### Configuration-Driven Architecture
-All major system behavior is controlled through Pydantic-based configuration classes, providing type safety and validation. The configuration system supports context management and thread-safe operations.
+The system uses Pydantic models for configuration management, providing type safety and validation. The hierarchical configuration structure allows for provider-specific settings while maintaining a consistent interface.
 
-### Multi-Language Code Analysis
-The architecture supports parsing multiple programming languages through a unified interface, as demonstrated by the comprehensive test coverage for inheritance detection across Python, TypeScript, Java, Swift, C++, Ruby, PHP, Kotlin, and C#.
+### Tree-Sitter Integration
+The system leverages tree-sitter for multi-language code parsing, as evidenced by the support for various programming languages in the test files and the extraction of class inheritance information.
 
-### Modular Testing Strategy
-The system employs extensive test coverage with dedicated test classes for each component, ensuring reliability across different scenarios including edge cases for file processing, provider instantiation, and code analysis.
+### Modular Testing Structure
+The extensive test suite is organized by functionality, with separate test classes for different components like TestGetLLMProvider, TestGetEmbeddingProvider, and TestGetParentClasses, indicating a well-structured testing approach.
 
-### Chunked Processing Model
-Code is processed in chunks (defined by [ChunkType](files/src/local_deepwiki/models.md)) allowing for efficient handling of large codebases and enabling targeted analysis of specific code sections.
+### Inheritance Analysis
+The [ClassNode](files/src/local_deepwiki/generators/inheritance.md) structure supports comprehensive inheritance analysis with bidirectional parent-child relationships and abstract class detection, enabling sophisticated documentation generation for object-oriented codebases.
 
 ## Workflow Sequences
 
@@ -223,4 +275,4 @@ The following source files were used to generate this documentation:
 - `tests/test_wiki_coverage.py:50-120`
 
 
-*Showing 10 of 98 source files.*
+*Showing 10 of 100 source files.*

@@ -105,6 +105,9 @@ def generate_inheritance_diagram(
 ) -> str | None:
     """Generate a Mermaid class diagram showing inheritance relationships.
 
+    Only shows classes with internal inheritance relationships (excludes
+    classes that only inherit from external bases like BaseModel, Enum, ABC).
+
     Args:
         classes: Dictionary of class nodes.
         max_classes: Maximum number of classes to include.
@@ -112,35 +115,37 @@ def generate_inheritance_diagram(
     Returns:
         Mermaid diagram string or None if no inheritance found.
     """
-    # Filter to classes that have inheritance relationships
-    classes_with_inheritance = {
-        name: node
-        for name, node in classes.items()
-        if node.parents or node.children
-    }
+    # Filter to classes that have INTERNAL inheritance relationships
+    # (parent or child is also in our codebase)
+    classes_with_internal_inheritance = {}
+    for name, node in classes.items():
+        has_internal_parent = any(p in classes for p in node.parents)
+        has_children = bool(node.children)
+        if has_internal_parent or has_children:
+            classes_with_internal_inheritance[name] = node
 
-    if not classes_with_inheritance:
+    if not classes_with_internal_inheritance:
         return None
 
-    # If too many, prioritize classes with most relationships
-    if len(classes_with_inheritance) > max_classes:
+    # If too many, prioritize classes with most internal relationships
+    if len(classes_with_internal_inheritance) > max_classes:
         scored = [
-            (name, len(node.parents) + len(node.children))
-            for name, node in classes_with_inheritance.items()
+            (name, len([p for p in node.parents if p in classes]) + len(node.children))
+            for name, node in classes_with_internal_inheritance.items()
         ]
         scored.sort(key=lambda x: x[1], reverse=True)
         keep_names = {name for name, _ in scored[:max_classes]}
-        classes_with_inheritance = {
+        classes_with_internal_inheritance = {
             name: node
-            for name, node in classes_with_inheritance.items()
+            for name, node in classes_with_internal_inheritance.items()
             if name in keep_names
         }
 
     lines = ["```mermaid", "classDiagram"]
 
     # Add class definitions
-    for class_name in sorted(classes_with_inheritance.keys()):
-        node = classes_with_inheritance[class_name]
+    for class_name in sorted(classes_with_internal_inheritance.keys()):
+        node = classes_with_internal_inheritance[class_name]
         safe_name = sanitize_mermaid_name(class_name)
 
         if node.is_abstract:
@@ -150,12 +155,12 @@ def generate_inheritance_diagram(
         else:
             lines.append(f"    class {safe_name}")
 
-    # Add inheritance relationships
-    for class_name, node in sorted(classes_with_inheritance.items()):
+    # Add inheritance relationships (only internal)
+    for class_name, node in sorted(classes_with_internal_inheritance.items()):
         safe_child = sanitize_mermaid_name(class_name)
         for parent in node.parents:
-            # Only add if parent is in our diagram
-            if parent in classes_with_inheritance:
+            # Only add if parent is in our codebase
+            if parent in classes_with_internal_inheritance:
                 safe_parent = sanitize_mermaid_name(parent)
                 lines.append(f"    {safe_child} --|> {safe_parent}")
 
@@ -244,12 +249,13 @@ async def generate_inheritance_page(
     if not classes:
         return None
 
-    # Filter to classes with inheritance
-    classes_with_inheritance = {
-        name: node
-        for name, node in classes.items()
-        if node.parents or node.children
-    }
+    # Filter to classes with INTERNAL inheritance relationships
+    classes_with_inheritance = {}
+    for name, node in classes.items():
+        has_internal_parent = any(p in classes for p in node.parents)
+        has_children = bool(node.children)
+        if has_internal_parent or has_children:
+            classes_with_inheritance[name] = node
 
     if not classes_with_inheritance:
         return None
