@@ -153,6 +153,13 @@ class ChunkingConfig(BaseModel):
         default=100,
         description="Line count threshold above which classes are split into summary + method chunks",
     )
+    parallel_workers: int = Field(
+        default=4,
+        ge=1,
+        le=16,
+        description="Number of parallel workers for file parsing. "
+        "Higher values speed up indexing on multi-core systems.",
+    )
 
 
 class WikiConfig(BaseModel):

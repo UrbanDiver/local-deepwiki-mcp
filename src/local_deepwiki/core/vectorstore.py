@@ -318,21 +318,46 @@ class VectorStore:
     def get_stats(self) -> dict[str, Any]:
         """Get statistics about the vector store.
 
+        Uses PyArrow for memory-efficient aggregation instead of loading
+        the entire table into pandas.
+
         Returns:
             Dictionary with store statistics.
         """
+        import pyarrow.compute as pc
+
         table = self._get_table()
         if table is None:
-            return {"total_chunks": 0, "languages": {}, "chunk_types": {}}
+            return {"total_chunks": 0, "languages": {}, "chunk_types": {}, "files": 0}
 
-        # Get all data for stats
-        all_data = table.to_pandas()
+        # Use count_rows() for total - doesn't load data
+        total_chunks = table.count_rows()
+
+        # Use arrow for efficient aggregation
+        arrow_table = table.to_arrow()
+
+        # Count by language
+        lang_counts = pc.value_counts(arrow_table.column("language"))
+        languages = {
+            str(k): int(v)
+            for k, v in zip(lang_counts.field("values"), lang_counts.field("counts"))
+        }
+
+        # Count by chunk type
+        type_counts = pc.value_counts(arrow_table.column("chunk_type"))
+        chunk_types = {
+            str(k): int(v)
+            for k, v in zip(type_counts.field("values"), type_counts.field("counts"))
+        }
+
+        # Count unique files
+        unique_files = pc.unique(arrow_table.column("file_path"))
 
         return {
-            "total_chunks": len(all_data),
-            "languages": all_data["language"].value_counts().to_dict(),
-            "chunk_types": all_data["chunk_type"].value_counts().to_dict(),
-            "files": all_data["file_path"].nunique(),
+            "total_chunks": total_chunks,
+            "languages": languages,
+            "chunk_types": chunk_types,
+            "files": len(unique_files),
         }
 
     def _row_to_chunk(self, row: dict[str, Any]) -> CodeChunk:

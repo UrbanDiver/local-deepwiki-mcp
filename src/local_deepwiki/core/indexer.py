@@ -1,8 +1,11 @@
 """Repository indexing orchestration with incremental update support."""
 
+import asyncio
 import fnmatch
 import json
 import time
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
 from pathlib import Path
 
 from local_deepwiki.config import Config, get_config
@@ -14,6 +17,17 @@ from local_deepwiki.models import CodeChunk, FileInfo, IndexStatus, ProgressCall
 from local_deepwiki.providers.embeddings import get_embedding_provider
 
 logger = get_logger(__name__)
+
+
+@dataclass
+class ParseResult:
+    """Result of parsing a single file."""
+
+    file_path: Path
+    file_info: FileInfo
+    chunks: list[CodeChunk]
+    error: str | None = None
+
 
 # Schema version for tracking index format changes.
 # Increment this when the schema changes in a way that requires re-indexing.
@@ -98,6 +112,30 @@ class RepositoryIndexer:
         self.embedding_provider = get_embedding_provider(self.config.embedding)
         self.vector_store = VectorStore(self.vector_db_path, self.embedding_provider)
 
+    def _parse_single_file(self, file_path: Path) -> ParseResult:
+        """Parse and chunk a single file (CPU-bound, runs in thread pool).
+
+        Args:
+            file_path: Path to the file to parse.
+
+        Returns:
+            ParseResult with file info and chunks, or error message.
+        """
+        try:
+            file_info = self.parser.get_file_info(file_path, self.repo_path)
+            chunks = list(self.chunker.chunk_file(file_path, self.repo_path))
+            file_info.chunk_count = len(chunks)
+            return ParseResult(file_path=file_path, file_info=file_info, chunks=chunks)
+        except (OSError, ValueError, RuntimeError, UnicodeDecodeError) as e:
+            # Return error result instead of raising
+            file_info = self.parser.get_file_info(file_path, self.repo_path)
+            return ParseResult(
+                file_path=file_path,
+                file_info=file_info,
+                chunks=[],
+                error=str(e),
+            )
+
     async def index(
         self,
         full_rebuild: bool = False,
@@ -162,31 +200,50 @@ class RepositoryIndexer:
                 len(files_to_process),
             )
 
-        # Process files and collect chunks in batches for memory efficiency
+        # Process files in parallel using thread pool for CPU-bound parsing
         batch_size = self.config.chunking.batch_size
+        parallel_workers = self.config.chunking.parallel_workers
         chunk_batch: list[CodeChunk] = []
         processed_files: list[FileInfo] = []
         total_chunks_processed = 0
         is_first_batch = True
 
-        for i, file_path in enumerate(files_to_process):
-            if progress_callback:
-                progress_callback(f"Parsing {file_path.name}", i, len(files_to_process))
+        logger.info(f"Parsing files with {parallel_workers} parallel workers")
 
-            try:
-                # Get file info
-                file_info = self.parser.get_file_info(file_path, self.repo_path)
+        # Use thread pool for parallel parsing (CPU-bound work)
+        with ThreadPoolExecutor(max_workers=parallel_workers) as executor:
+            # Submit all parsing tasks
+            futures = {
+                executor.submit(self._parse_single_file, file_path): file_path
+                for file_path in files_to_process
+            }
+
+            # Process results as they complete
+            from concurrent.futures import as_completed
+
+            for i, future in enumerate(as_completed(futures)):
+                file_path = futures[future]
+                if progress_callback:
+                    progress_callback(f"Parsing {file_path.name}", i, len(files_to_process))
+
+                result = future.result()
+
+                if result.error:
+                    logger.warning(f"Error processing {result.file_path}: {result.error}")
+                    if progress_callback:
+                        progress_callback(
+                            f"Error processing {result.file_path}: {result.error}",
+                            i,
+                            len(files_to_process),
+                        )
+                    continue
 
                 # If incremental, delete old chunks for this file before adding new ones
                 if not full_rebuild and previous_status:
-                    await self.vector_store.delete_chunks_by_file(file_info.path)
+                    await self.vector_store.delete_chunks_by_file(result.file_info.path)
 
-                # Extract chunks
-                chunks = list(self.chunker.chunk_file(file_path, self.repo_path))
-                file_info.chunk_count = len(chunks)
-
-                chunk_batch.extend(chunks)
-                processed_files.append(file_info)
+                chunk_batch.extend(result.chunks)
+                processed_files.append(result.file_info)
 
                 # Process batch if it reaches the batch size
                 if len(chunk_batch) >= batch_size:
@@ -205,18 +262,6 @@ class RepositoryIndexer:
 
                     total_chunks_processed += len(chunk_batch)
                     chunk_batch = []  # Clear batch to free memory
-
-            except (OSError, ValueError, RuntimeError, UnicodeDecodeError) as e:
-                # OSError: File read/write issues
-                # ValueError: Parsing or chunking errors
-                # RuntimeError: Vector store operation failures
-                # UnicodeDecodeError: File encoding issues
-                # Log error but continue with other files
-                logger.warning(f"Error processing {file_path}: {e}")
-                if progress_callback:
-                    progress_callback(
-                        f"Error processing {file_path}: {e}", i, len(files_to_process)
-                    )
 
         # Process any remaining chunks in the final batch
         if chunk_batch:
@@ -271,39 +316,70 @@ class RepositoryIndexer:
     def _find_source_files(self) -> list[Path]:
         """Find all source files in the repository.
 
-        Yields:
-            Paths to source files.
+        Uses os.walk() with early directory filtering to skip excluded
+        directories entirely (e.g., node_modules, .git, vendor) instead
+        of traversing them and checking each file.
+
+        Returns:
+            List of paths to source files.
         """
+        import os
+        import re
+
         files = []
         exclude_patterns = self.config.parsing.exclude_patterns
         max_size = self.config.parsing.max_file_size
 
-        for file_path in self.repo_path.rglob("*"):
-            if not file_path.is_file():
-                continue
+        # Extract directory names to skip entirely (patterns like "node_modules/**")
+        skip_dirs = set()
+        file_patterns = []
+        for pattern in exclude_patterns:
+            # Patterns like "node_modules/**" or ".git/**" -> skip the directory
+            if pattern.endswith("/**"):
+                skip_dirs.add(pattern[:-3])
+            else:
+                file_patterns.append(pattern)
 
-            # Check against exclude patterns
-            rel_path = str(file_path.relative_to(self.repo_path))
-            if any(fnmatch.fnmatch(rel_path, pattern) for pattern in exclude_patterns):
-                continue
+        # Compile patterns for faster matching
+        compiled_patterns = [re.compile(fnmatch.translate(p)) for p in file_patterns]
 
-            # Check file size
-            try:
-                if file_path.stat().st_size > max_size:
+        for root, dirs, filenames in os.walk(self.repo_path):
+            root_path = Path(root)
+            rel_root = root_path.relative_to(self.repo_path)
+
+            # Early directory filtering - modify dirs in-place to skip subdirs
+            dirs[:] = [
+                d for d in dirs
+                if d not in skip_dirs
+                and str(rel_root / d) not in skip_dirs
+                and not d.startswith(".")  # Skip hidden directories
+            ]
+
+            for filename in filenames:
+                file_path = root_path / filename
+                rel_path = str(file_path.relative_to(self.repo_path))
+
+                # Check against compiled file patterns
+                if any(p.match(rel_path) for p in compiled_patterns):
                     continue
-            except OSError:
-                continue
 
-            # Check if language is supported
-            language = self.parser.detect_language(file_path)
-            if language is None:
-                continue
+                # Check file size
+                try:
+                    if file_path.stat().st_size > max_size:
+                        continue
+                except OSError:
+                    continue
 
-            # Check if language is in configured list
-            if language.value not in self.config.parsing.languages:
-                continue
+                # Check if language is supported
+                language = self.parser.detect_language(file_path)
+                if language is None:
+                    continue
 
-            files.append(file_path)
+                # Check if language is in configured list
+                if language.value not in self.config.parsing.languages:
+                    continue
+
+                files.append(file_path)
 
         return files
 
