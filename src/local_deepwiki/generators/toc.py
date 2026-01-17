@@ -77,6 +77,10 @@ def generate_toc(pages: list[dict[str, str]]) -> TableOfContents:
         ("index.md", "Overview"),
         ("architecture.md", "Architecture"),
         ("dependencies.md", "Dependencies"),
+        ("glossary.md", "Glossary"),
+        ("inheritance.md", "Inheritance"),
+        ("changelog.md", "Changelog"),
+        ("freshness.md", "Freshness Report"),
     ]
 
     # Define the fixed order for sections

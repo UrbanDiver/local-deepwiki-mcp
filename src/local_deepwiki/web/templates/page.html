@@ -153,13 +153,41 @@
             margin-left: 12px;
             border-left: 1px solid var(--border-color);
             padding-left: 8px;
+            overflow: hidden;
+            transition: max-height 0.2s ease-out;
         }
         .sidebar .toc-item {
             margin: 4px 0;
         }
-        .sidebar .toc-item > a {
+        .sidebar .toc-item > a,
+        .sidebar .toc-item > .toc-header {
             display: flex;
             align-items: baseline;
+        }
+        .sidebar .toc-header {
+            cursor: pointer;
+            user-select: none;
+        }
+        .sidebar .toc-toggle {
+            width: 16px;
+            height: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 4px;
+            font-size: 10px;
+            color: #6e7681;
+            transition: transform 0.2s ease;
+            flex-shrink: 0;
+        }
+        .sidebar .toc-item.collapsed > .toc-header .toc-toggle,
+        .sidebar .toc-item.collapsed > a .toc-toggle {
+            transform: rotate(-90deg);
+        }
+        .sidebar .toc-item.collapsed > .toc-nested {
+            max-height: 0 !important;
+            margin-top: 0;
+            margin-bottom: 0;
         }
         .sidebar .toc-parent {
             font-weight: 500;
@@ -452,18 +480,20 @@
         {# Hierarchical numbered TOC #}
         <div class="toc">
             {% macro render_toc_entry(entry, depth=0) %}
-            <div class="toc-item {% if entry.children %}toc-parent{% endif %}">
+            <div class="toc-item {% if entry.children %}toc-parent has-children{% endif %}" data-toc-id="{{ entry.number }}">
                 {% if entry.path %}
                 <a href="{{ url_for('view_page', path=entry.path) }}"
                    class="{{ 'active' if entry.path == current_path else '' }}">
+                    {% if entry.children %}<span class="toc-toggle">▼</span>{% endif %}
                     <span class="toc-number">{{ entry.number }}</span>
                     <span>{{ entry.title }}</span>
                 </a>
                 {% else %}
-                <span class="toc-parent">
+                <div class="toc-header toc-parent">
+                    {% if entry.children %}<span class="toc-toggle">▼</span>{% endif %}
                     <span class="toc-number">{{ entry.number }}</span>
                     <span>{{ entry.title }}</span>
-                </span>
+                </div>
                 {% endif %}
                 {% if entry.children %}
                 <div class="toc-nested">
@@ -566,8 +596,9 @@
                     } else {
                         searchIndex = data;
                     }
+                    console.log('Search index loaded:', searchIndex.pages?.length, 'pages,', searchIndex.entities?.length, 'entities');
                 })
-                .catch(err => console.log('Search index not available'));
+                .catch(err => console.error('Search index failed to load:', err));
 
             // Filter button click handlers
             filterButtons.forEach(btn => {
@@ -670,6 +701,7 @@
 
             // Perform search
             function search(query) {
+                console.log('Search called with:', query, 'Index loaded:', !!searchIndex);
                 if (!searchIndex || query.length < 2) {
                     searchResults.classList.remove('active');
                     return;
@@ -809,9 +841,11 @@
                     index = Math.max(index - 1, 0);
                     results.forEach((r, i) => r.classList.toggle('active', i === index));
                     if (results[index]) results[index].scrollIntoView({ block: 'nearest' });
-                } else if (e.key === 'Enter' && index >= 0) {
+                } else if (e.key === 'Enter' && results.length > 0) {
                     e.preventDefault();
-                    results[index].click();
+                    // If no result selected, click the first one
+                    const targetIndex = index >= 0 ? index : 0;
+                    results[targetIndex].click();
                 } else if (e.key === 'Escape') {
                     searchResults.classList.remove('active');
                     searchInput.blur();
@@ -865,6 +899,78 @@
                     sidebar.classList.remove('open');
                 }
             });
+        })();
+
+        // TOC collapse/expand functionality
+        (function() {
+            const STORAGE_KEY = 'deepwiki-toc-collapsed';
+
+            // Load collapsed state from localStorage
+            function getCollapsedState() {
+                try {
+                    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+                } catch {
+                    return {};
+                }
+            }
+
+            // Save collapsed state to localStorage
+            function saveCollapsedState(state) {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            }
+
+            // Initialize TOC items
+            const tocItems = document.querySelectorAll('.toc-item.has-children');
+            const collapsedState = getCollapsedState();
+
+            tocItems.forEach(item => {
+                const tocId = item.dataset.tocId;
+                const nested = item.querySelector(':scope > .toc-nested');
+                const toggle = item.querySelector(':scope > a .toc-toggle, :scope > .toc-header .toc-toggle');
+
+                if (!nested || !toggle) return;
+
+                // Set initial height for animation
+                nested.style.maxHeight = nested.scrollHeight + 'px';
+
+                // Restore collapsed state
+                if (collapsedState[tocId]) {
+                    item.classList.add('collapsed');
+                }
+
+                // Handle toggle click
+                toggle.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    const isCollapsed = item.classList.toggle('collapsed');
+
+                    // Update stored state
+                    const state = getCollapsedState();
+                    if (isCollapsed) {
+                        state[tocId] = true;
+                    } else {
+                        delete state[tocId];
+                        // Reset max-height for expansion
+                        nested.style.maxHeight = nested.scrollHeight + 'px';
+                    }
+                    saveCollapsedState(state);
+                });
+            });
+
+            // Expand parent items of the active page
+            const activeLink = document.querySelector('.toc a.active');
+            if (activeLink) {
+                let parent = activeLink.closest('.toc-item');
+                while (parent) {
+                    parent.classList.remove('collapsed');
+                    const nested = parent.querySelector(':scope > .toc-nested');
+                    if (nested) {
+                        nested.style.maxHeight = nested.scrollHeight + 'px';
+                    }
+                    parent = parent.parentElement.closest('.toc-item');
+                }
+            }
         })();
 
         // Syntax highlighting
