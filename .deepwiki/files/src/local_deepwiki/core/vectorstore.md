@@ -2,48 +2,47 @@
 
 ## File Overview
 
-The `vectorstore.py` module provides vector storage functionality for the local_deepwiki system using LanceDB as the underlying database. It handles storage and retrieval of code chunks with their embeddings for semantic search capabilities.
+The `vectorstore.py` module provides vector storage functionality for the local_deepwiki system. It handles the storage and retrieval of code chunks using vector embeddings through LanceDB as the underlying database.
 
 ## Classes
 
 ### VectorStore
 
-The VectorStore class manages vector storage operations for code chunks, providing functionality to store embeddings and perform similarity searches.
+The VectorStore class manages vector storage operations for code chunks, enabling semantic search capabilities through embeddings.
 
-**Purpose**: Handles vector database operations including storing code chunks with embeddings and performing semantic searches.
+**Purpose**: Provides an interface for storing, retrieving, and searching code chunks using vector embeddings in a LanceDB database.
 
-**Dependencies**: 
-- Uses LanceDB for vector storage
+**Key Dependencies**:
+- Uses `lancedb` for vector database operations
 - Integrates with [EmbeddingProvider](../providers/base.md) for generating embeddings
-- Works with [CodeChunk](../models.md) and [SearchResult](../models.md) models
+- Works with [CodeChunk](../models.md) and [SearchResult](../models.md) models for data handling
 
 ## Functions
 
 ### _sanitize_string_value
 
-A utility function for sanitizing string values, likely used for data cleaning before storage operations.
+A utility function for sanitizing string values, likely used for data preprocessing before storage operations.
 
 ## Related Components
 
 This module integrates with several other components of the local_deepwiki system:
 
 - **[EmbeddingProvider](../providers/base.md)**: Base class for embedding generation services
-- **[CodeChunk](../models.md)**: Model representing code segments with metadata
+- **[CodeChunk](../models.md)**: Model representing code chunks to be stored
 - **[SearchResult](../models.md)**: Model for search operation results
 - **[ChunkType](../models.md)**: Enumeration for different types of code chunks
 - **[Language](../models.md)**: Enumeration for programming languages
 
-The module uses LanceDB as the vector database backend and includes logging functionality through the local_deepwiki logging system.
-
 ## Usage Context
 
-Based on the imports and class structure, this module serves as the core vector storage layer for the local_deepwiki system, enabling semantic search capabilities over code chunks by:
+The VectorStore class serves as the core data layer for the local_deepwiki system, enabling:
 
-1. Storing code chunks with their vector embeddings
-2. Performing similarity searches to [find](../generators/manifest.md) relevant code
-3. Managing the vector database connection and operations
+- Storage of code chunks with their vector embeddings
+- Semantic search capabilities across stored code
+- Integration with various embedding providers
+- Support for multiple programming languages and chunk types
 
-The integration with the [EmbeddingProvider](../providers/base.md) suggests this module works in conjunction with embedding generation services to create searchable vector representations of code.
+The module uses LanceDB's Table interface for efficient vector operations and includes logging capabilities for monitoring operations.
 
 ## API Reference
 
@@ -55,7 +54,7 @@ Vector store using LanceDB for code chunk storage and semantic search.
 
 
 <details>
-<summary>View Source (lines 37-388) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/vectorstore.py#L37-L388">GitHub</a></summary>
+<summary>View Source (lines 37-388) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/vectorstore.py#L37-L388">GitHub</a></summary>
 
 ```python
 class VectorStore:
@@ -80,7 +79,7 @@ Initialize the vector store.
 
 
 <details>
-<summary>View Source (lines 42-52) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/vectorstore.py#L42-L52">GitHub</a></summary>
+<summary>View Source (lines 42-52) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/vectorstore.py#L42-L52">GitHub</a></summary>
 
 ```python
 def __init__(self, db_path: Path, embedding_provider: EmbeddingProvider):
@@ -113,7 +112,7 @@ Create or update the vector table with code chunks.
 
 
 <details>
-<summary>View Source (lines 130-164) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/vectorstore.py#L130-L164">GitHub</a></summary>
+<summary>View Source (lines 130-164) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/vectorstore.py#L130-L164">GitHub</a></summary>
 
 ```python
 async def create_or_update_table(self, chunks: list[CodeChunk]) -> int:
@@ -170,7 +169,7 @@ Add chunks to existing table.
 
 
 <details>
-<summary>View Source (lines 166-193) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/vectorstore.py#L166-L193">GitHub</a></summary>
+<summary>View Source (lines 166-193) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/vectorstore.py#L166-L193">GitHub</a></summary>
 
 ```python
 async def add_chunks(self, chunks: list[CodeChunk]) -> int:
@@ -223,7 +222,7 @@ Search for similar code chunks.
 
 
 <details>
-<summary>View Source (lines 195-255) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/vectorstore.py#L195-L255">GitHub</a></summary>
+<summary>View Source (lines 195-255) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/vectorstore.py#L195-L255">GitHub</a></summary>
 
 ```python
 async def search(
@@ -306,7 +305,7 @@ Get a specific chunk by ID.
 
 
 <details>
-<summary>View Source (lines 257-275) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/vectorstore.py#L257-L275">GitHub</a></summary>
+<summary>View Source (lines 257-275) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/vectorstore.py#L257-L275">GitHub</a></summary>
 
 ```python
 async def get_chunk_by_id(self, chunk_id: str) -> CodeChunk | None:
@@ -347,7 +346,7 @@ Get all chunks for a specific file.
 
 
 <details>
-<summary>View Source (lines 277-292) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/vectorstore.py#L277-L292">GitHub</a></summary>
+<summary>View Source (lines 277-292) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/vectorstore.py#L277-L292">GitHub</a></summary>
 
 ```python
 async def get_chunks_by_file(self, file_path: str) -> list[CodeChunk]:
@@ -385,7 +384,7 @@ Delete all chunks for a specific file.
 
 
 <details>
-<summary>View Source (lines 294-316) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/vectorstore.py#L294-L316">GitHub</a></summary>
+<summary>View Source (lines 294-316) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/vectorstore.py#L294-L316">GitHub</a></summary>
 
 ```python
 async def delete_chunks_by_file(self, file_path: str) -> int:
@@ -427,7 +426,7 @@ Get statistics about the vector store.
 
 
 <details>
-<summary>View Source (lines 318-336) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/vectorstore.py#L318-L336">GitHub</a></summary>
+<summary>View Source (lines 318-336) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/vectorstore.py#L318-L336">GitHub</a></summary>
 
 ```python
 def get_stats(self) -> dict[str, Any]:
@@ -605,49 +604,102 @@ Functions and methods in this file and their callers:
 
 ### Test that creating a table creates scalar indexes
 
-From `test_vectorstore.py::test_create_table_creates_indexes`:
+From `test_vectorstore.py::TestVectorStoreIndexes::test_create_table_creates_indexes`:
 
 ```python
 table = populated_store._get_table()
 assert table is not None
+
+# Check that indexes exist
+indexes = {idx["name"] for idx in table.list_indices()}
+# Index names are based on column names
+assert "id_idx" in indexes or any("id" in idx for idx in indexes)
 ```
 
 ### Test that get_chunk_by_id can find chunks efficiently
 
-From `test_vectorstore.py::test_get_chunk_by_id_uses_index`:
+From `test_vectorstore.py::TestVectorStoreIndexes::test_get_chunk_by_id_uses_index`:
 
 ```python
+# Should find existing chunk
 chunk = await populated_store.get_chunk_by_id("chunk_1")
 assert chunk is not None
+assert chunk.id == "chunk_1"
+assert chunk.file_path == "src/main.py"
+
+# Should return None for non-existent chunk
+chunk = await populated_store.get_chunk_by_id("nonexistent")
+assert chunk is None
 ```
 
 ### Test that get_chunks_by_file can find chunks efficiently
 
-From `test_vectorstore.py::test_get_chunks_by_file_uses_index`:
+From `test_vectorstore.py::TestVectorStoreIndexes::test_get_chunks_by_file_uses_index`:
 
 ```python
+# Get all chunks for main.py
 chunks = await populated_store.get_chunks_by_file("src/main.py")
 assert len(chunks) == 2
+assert all(c.file_path == "src/main.py" for c in chunks)
+
+# Get chunks for different file
+chunks = await populated_store.get_chunks_by_file("src/utils.py")
+assert len(chunks) == 1
+assert chunks[0].id == "chunk_3"
+
+# Non-existent file returns empty list
+chunks = await populated_store.get_chunks_by_file("nonexistent.py")
+assert chunks == []
 ```
 
 ### Test that delete_chunks_by_file works efficiently
 
-From `test_vectorstore.py::test_delete_chunks_by_file_uses_index`:
+From `test_vectorstore.py::TestVectorStoreIndexes::test_delete_chunks_by_file_uses_index`:
 
 ```python
 chunks = await populated_store.get_chunks_by_file("src/main.py")
 assert len(chunks) == 0
+
+# Other files unaffected
+chunks = await populated_store.get_chunks_by_file("src/utils.py")
+assert len(chunks) == 1
 ```
 
 ### Test that delete_chunks_by_file works efficiently
 
-From `test_vectorstore.py::test_delete_chunks_by_file_uses_index`:
+From `test_vectorstore.py::TestVectorStoreIndexes::test_delete_chunks_by_file_uses_index`:
 
 ```python
 deleted = await populated_store.delete_chunks_by_file("src/main.py")
 assert deleted == 2
+
+# Verify deletion
+chunks = await populated_store.get_chunks_by_file("src/main.py")
+assert len(chunks) == 0
 ```
 
+
+## Last Modified
+
+| Entity | Type | Author | Date | Commit |
+|--------|------|--------|------|--------|
+| `VectorStore` | class | Brian Breidenbach | today | `0d91a70` Apply Python best practices... |
+| `_ensure_scalar_indexes` | method | Brian Breidenbach | today | `0d91a70` Apply Python best practices... |
+| `_create_index_safe` | method | Brian Breidenbach | yesterday | `39e8c73` Replace generic except Exce... |
+| `search` | method | Brian Breidenbach | yesterday | `51c0806` Refactor: Extract _row_to_c... |
+| `get_chunk_by_id` | method | Brian Breidenbach | yesterday | `51c0806` Refactor: Extract _row_to_c... |
+| `get_chunks_by_file` | method | Brian Breidenbach | yesterday | `51c0806` Refactor: Extract _row_to_c... |
+| `_row_to_chunk` | method | Brian Breidenbach | yesterday | `51c0806` Refactor: Extract _row_to_c... |
+| `_get_table` | method | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
+| `_create_scalar_indexes` | method | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
+| `create_or_update_table` | method | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
+| `add_chunks` | method | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
+| `delete_chunks_by_file` | method | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
+| `_sanitize_string_value` | function | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
+| `__init__` | method | Brian Breidenbach | 5 days ago | `cdae76f` Initial commit: Local DeepW... |
+| `_connect` | method | Brian Breidenbach | 5 days ago | `cdae76f` Initial commit: Local DeepW... |
+| `get_stats` | method | Brian Breidenbach | 5 days ago | `cdae76f` Initial commit: Local DeepW... |
+| `_chunk_to_text` | method | Brian Breidenbach | 5 days ago | `cdae76f` Initial commit: Local DeepW... |
 
 ## Additional Source Code
 
@@ -656,7 +708,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_sanitize_string_value`
 
 <details>
-<summary>View Source (lines 22-34) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/vectorstore.py#L22-L34">GitHub</a></summary>
+<summary>View Source (lines 22-34) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/vectorstore.py#L22-L34">GitHub</a></summary>
 
 ```python
 def _sanitize_string_value(value: str) -> str:
@@ -680,7 +732,7 @@ def _sanitize_string_value(value: str) -> str:
 #### `_connect`
 
 <details>
-<summary>View Source (lines 54-59) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/vectorstore.py#L54-L59">GitHub</a></summary>
+<summary>View Source (lines 54-59) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/vectorstore.py#L54-L59">GitHub</a></summary>
 
 ```python
 def _connect(self) -> lancedb.DBConnection:
@@ -697,7 +749,7 @@ def _connect(self) -> lancedb.DBConnection:
 #### `_get_table`
 
 <details>
-<summary>View Source (lines 61-69) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/vectorstore.py#L61-L69">GitHub</a></summary>
+<summary>View Source (lines 61-69) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/vectorstore.py#L61-L69">GitHub</a></summary>
 
 ```python
 def _get_table(self) -> Table | None:
@@ -717,7 +769,7 @@ def _get_table(self) -> Table | None:
 #### `_ensure_scalar_indexes`
 
 <details>
-<summary>View Source (lines 71-101) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/vectorstore.py#L71-L101">GitHub</a></summary>
+<summary>View Source (lines 71-101) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/vectorstore.py#L71-L101">GitHub</a></summary>
 
 ```python
 def _ensure_scalar_indexes(self) -> None:
@@ -759,7 +811,7 @@ def _ensure_scalar_indexes(self) -> None:
 #### `_create_index_safe`
 
 <details>
-<summary>View Source (lines 103-119) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/vectorstore.py#L103-L119">GitHub</a></summary>
+<summary>View Source (lines 103-119) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/vectorstore.py#L103-L119">GitHub</a></summary>
 
 ```python
 def _create_index_safe(self, column: str) -> None:
@@ -787,7 +839,7 @@ def _create_index_safe(self, column: str) -> None:
 #### `_create_scalar_indexes`
 
 <details>
-<summary>View Source (lines 121-128) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/vectorstore.py#L121-L128">GitHub</a></summary>
+<summary>View Source (lines 121-128) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/vectorstore.py#L121-L128">GitHub</a></summary>
 
 ```python
 def _create_scalar_indexes(self) -> None:
@@ -806,7 +858,7 @@ def _create_scalar_indexes(self) -> None:
 #### `_row_to_chunk`
 
 <details>
-<summary>View Source (lines 338-359) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/vectorstore.py#L338-L359">GitHub</a></summary>
+<summary>View Source (lines 338-359) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/vectorstore.py#L338-L359">GitHub</a></summary>
 
 ```python
 def _row_to_chunk(self, row: dict[str, Any]) -> CodeChunk:
@@ -839,7 +891,7 @@ def _row_to_chunk(self, row: dict[str, Any]) -> CodeChunk:
 #### `_chunk_to_text`
 
 <details>
-<summary>View Source (lines 361-388) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/core/vectorstore.py#L361-L388">GitHub</a></summary>
+<summary>View Source (lines 361-388) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/vectorstore.py#L361-L388">GitHub</a></summary>
 
 ```python
 def _chunk_to_text(self, chunk: CodeChunk) -> str:
@@ -880,8 +932,8 @@ def _chunk_to_text(self, chunk: CodeChunk) -> str:
 
 ## See Also
 
-- [inheritance](../generators/inheritance.md) - uses this
 - [glossary](../generators/glossary.md) - uses this
-- [wiki](../generators/wiki.md) - uses this
 - [coverage](../generators/coverage.md) - uses this
 - [search](../generators/search.md) - uses this
+- [inheritance](../generators/inheritance.md) - uses this
+- [models](../models.md) - dependency

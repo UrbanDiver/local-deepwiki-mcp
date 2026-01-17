@@ -2,37 +2,39 @@
 
 ## File Overview
 
-The `manifest.py` file provides functionality for parsing and caching project manifest files from various package managers and build systems. It extracts metadata like project name, version, dependencies, and language information from files such as `pyproject.toml`, `setup.py`, `requirements.txt`, `package.json`, and `build.gradle`. The module includes intelligent caching to avoid re-parsing manifest files when they haven't changed.
+The manifest module provides functionality for parsing and caching project manifest files from various package managers and build systems. It extracts metadata such as project name, version, dependencies, and language information from files like `pyproject.toml`, `setup.py`, `package.json`, and `build.gradle`.
+
+The module implements a caching system to avoid re-parsing manifest files when they haven't changed, improving performance for incremental operations.
 
 ## Classes
 
 ### ProjectManifest
 
-A dataclass that stores extracted project metadata from manifest files.
+A data class that stores project metadata extracted from manifest files.
 
 **Attributes:**
 - `name`: Project name
 - `version`: Project version
 - `description`: Project description
 - `language`: Programming language
-- `language_version`: [Language](../models.md) version
-- `dependencies`: Runtime dependencies dictionary
-- `dev_dependencies`: Development dependencies dictionary
-- `entry_points`: Entry points dictionary
-- `scripts`: Scripts dictionary
+- `language_version`: Version of the programming language
+- `dependencies`: Runtime dependencies
+- `dev_dependencies`: Development dependencies
+- `entry_points`: Entry points configuration
+- `scripts`: Script definitions
 - `repository`: Repository URL
 - `license`: License information
 
 **Methods:**
 - `has_data()`: Check if manifest contains any data
-- `get_tech_stack_summary()`: Get summary of technology stack
+- `get_tech_stack_summary()`: Get a summary of the technology stack
 - `_categorize_dependencies()`: Categorize dependencies by type
-- `get_dependency_list()`: Get list of dependencies
+- `get_dependency_list()`: Get formatted list of dependencies
 - `get_entry_points_summary()`: Get summary of entry points
 
 ### ManifestCacheEntry
 
-A dataclass for storing cached manifest data along with file modification times for cache validation.
+A data class that represents a cached manifest entry with file modification times for cache validation.
 
 **Attributes:**
 - `manifest_data`: Dictionary containing the manifest data
@@ -40,7 +42,7 @@ A dataclass for storing cached manifest data along with file modification times 
 
 **Methods:**
 - `to_dict()`: Convert to dictionary for JSON serialization
-- `from_dict(data)`: Class method to create instance from dictionary
+- `from_dict(data)`: Create instance from dictionary (class method)
 
 ## Functions
 
@@ -50,14 +52,13 @@ A dataclass for storing cached manifest data along with file modification times 
 def get_cached_manifest(repo_path: Path, cache_dir: Path | None = None) -> ProjectManifest
 ```
 
-Get project manifest using cache if available and valid. This is the preferred method for getting manifest data as it avoids re-parsing when manifest files haven't changed.
+Get project manifest using cache if available and valid. Checks if cached manifest exists and is still valid by comparing file modification times.
 
 **Parameters:**
 - `repo_path`: Path to the repository root
 - `cache_dir`: Directory for cache storage (defaults to `repo_path/.deepwiki`)
 
-**Returns:**
-- ProjectManifest with extracted metadata
+**Returns:** ProjectManifest with extracted metadata
 
 ### parse_manifest
 
@@ -65,42 +66,12 @@ Get project manifest using cache if available and valid. This is the preferred m
 def parse_manifest(repo_path: Path) -> ProjectManifest
 ```
 
-Parse all recognized package manifests in a repository. For incremental updates, prefer `get_cached_manifest()` which avoids re-parsing when manifest files haven't changed.
+Parse all recognized package manifests in a repository without using cache. For incremental updates, prefer get_cached_manifest which avoids re-parsing when manifest files haven't changed.
 
 **Parameters:**
 - `repo_path`: Path to the repository root
 
-**Returns:**
-- ProjectManifest with extracted metadata
-
-### _get_manifest_mtimes
-
-```python
-def _get_manifest_mtimes(repo_path: Path) -> dict[str, float]
-```
-
-Get modification times for all manifest files.
-
-**Parameters:**
-- `repo_path`: Path to the repository root
-
-**Returns:**
-- Dictionary mapping filename to modification time (0 if file doesn't exist)
-
-### _is_cache_valid
-
-```python
-def _is_cache_valid(cache_entry: ManifestCacheEntry, current_mtimes: dict[str, float]) -> bool
-```
-
-Check if cached manifest is still valid by comparing file modification times.
-
-**Parameters:**
-- `cache_entry`: The cached manifest entry
-- `current_mtimes`: Current modification times of manifest files
-
-**Returns:**
-- True if cache is valid, False if any file has changed
+**Returns:** ProjectManifest with extracted metadata
 
 ### _load_manifest_cache
 
@@ -113,8 +84,7 @@ Load manifest cache from disk.
 **Parameters:**
 - `cache_path`: Path to the cache file
 
-**Returns:**
-- ManifestCacheEntry or None if not found/invalid
+**Returns:** ManifestCacheEntry or None if not found/invalid
 
 ### _save_manifest_cache
 
@@ -128,6 +98,33 @@ Save manifest cache to disk.
 - `cache_path`: Path to the cache file
 - `entry`: The cache entry to save
 
+### _is_cache_valid
+
+```python
+def _is_cache_valid(cache_entry: ManifestCacheEntry, current_mtimes: dict[str, float]) -> bool
+```
+
+Check if cached manifest is still valid by comparing file modification times.
+
+**Parameters:**
+- `cache_entry`: The cached manifest entry
+- `current_mtimes`: Current modification times of manifest files
+
+**Returns:** True if cache is valid, False if any file has changed
+
+### _get_manifest_mtimes
+
+```python
+def _get_manifest_mtimes(repo_path: Path) -> dict[str, float]
+```
+
+Get modification times for all manifest files.
+
+**Parameters:**
+- `repo_path`: Path to the repository root
+
+**Returns:** Dictionary mapping filename to modification time (0 if file doesn't exist)
+
 ### _manifest_to_dict
 
 ```python
@@ -137,10 +134,9 @@ def _manifest_to_dict(manifest: ProjectManifest) -> dict[str, Any]
 Convert ProjectManifest to dictionary for caching.
 
 **Parameters:**
-- `manifest`: ProjectManifest instance to convert
+- `manifest`: The ProjectManifest instance to convert
 
-**Returns:**
-- Dictionary representation of the manifest
+**Returns:** Dictionary representation of the manifest
 
 ### _manifest_from_dict
 
@@ -153,8 +149,7 @@ Create ProjectManifest from dictionary.
 **Parameters:**
 - `data`: Dictionary containing manifest data
 
-**Returns:**
-- ProjectManifest instance
+**Returns:** ProjectManifest instance
 
 ### _parse_setup_py
 
@@ -162,11 +157,11 @@ Create ProjectManifest from dictionary.
 def _parse_setup_py(filepath: Path, manifest: ProjectManifest) -> None
 ```
 
-Parse `setup.py` (Python legacy) and extract project metadata.
+Parse setup.py (Python legacy format) and update the manifest with extracted information.
 
 **Parameters:**
 - `filepath`: Path to the setup.py file
-- `manifest`: ProjectManifest instance to populate
+- `manifest`: ProjectManifest instance to update
 
 ### _parse_build_gradle
 
@@ -174,54 +169,70 @@ Parse `setup.py` (Python legacy) and extract project metadata.
 def _parse_build_gradle(filepath: Path, manifest: ProjectManifest) -> None
 ```
 
-Parse `build.gradle` (Java/Kotlin Gradle) and extract project metadata. Detects Kotlin vs Java based on file content and extension.
+Parse build.gradle (Java/Kotlin Gradle) and update the manifest. Detects whether the project uses Kotlin or Java based on file content and extension.
 
 **Parameters:**
 - `filepath`: Path to the build.gradle file
-- `manifest`: ProjectManifest instance to populate
+- `manifest`: ProjectManifest instance to update
 
 ## Usage Examples
 
-### Basic Usage
+### Basic manifest parsing
 
 ```python
 from pathlib import Path
-from local_deepwiki.generators.manifest import get_cached_manifest, parse_manifest
+from local_deepwiki.generators.manifest import parse_manifest
 
-# Get manifest with caching (recommended)
-repo_path = Path("path/to/repository")
-manifest = get_cached_manifest(repo_path)
-
-# Parse manifest without caching
+# Parse manifest files in a repository
+repo_path = Path("/path/to/repository")
 manifest = parse_manifest(repo_path)
 
-# Access manifest data
-if manifest.has_data():
-    print(f"Project: {manifest.name}")
-    print(f"Version: {manifest.version}")
-    print(f"Language: {manifest.language}")
+print(f"Project: {manifest.name}")
+print(f"Version: {manifest.version}")
+print(f"Language: {manifest.language}")
 ```
 
-### Working with Cache
+### Using cached manifest
 
 ```python
 from pathlib import Path
 from local_deepwiki.generators.manifest import get_cached_manifest
 
-# Use custom cache directory
-repo_path = Path("path/to/repository")
-cache_dir = Path("custom/cache/location")
-manifest = get_cached_manifest(repo_path, cache_dir)
+# Get manifest with caching for better performance
+repo_path = Path("/path/to/repository")
+manifest = get_cached_manifest(repo_path)
+
+# Check if manifest has data
+if manifest.has_data():
+    tech_summary = manifest.get_tech_stack_summary()
+    dependencies = manifest.get_dependency_list()
+```
+
+### Working with cache entries
+
+```python
+from local_deepwiki.generators.manifest import ManifestCacheEntry
+
+# Create cache entry
+cache_entry = ManifestCacheEntry(
+    manifest_data={"name": "example", "version": "1.0.0"},
+    file_mtimes={"pyproject.toml": 1234567890.0}
+)
+
+# Convert to dictionary for serialization
+cache_dict = cache_entry.to_dict()
+
+# Create from dictionary
+restored_entry = ManifestCacheEntry.from_dict(cache_dict)
 ```
 
 ## Related Components
 
 This module integrates with:
 - `local_deepwiki.logging` for logging functionality
-- Standard library modules: `json`, `pathlib`, `re`, `dataclasses`, `typing`
-- TOML parsing libraries: `tomllib` and `tomli` as fallback
-
-The module supports parsing various manifest file formats including Python (`pyproject.toml`, `setup.py`, `requirements.txt`), Node.js (`package.json`), and Java/Kotlin (`build.gradle`) projects.
+- JSON serialization for cache storage
+- TOML parsing libraries (`tomllib`, `tomli`) for parsing configuration files
+- Regular expressions for extracting information from various manifest formats
 
 ## API Reference
 
@@ -233,7 +244,7 @@ Cache entry storing manifest data and file modification times.
 
 
 <details>
-<summary>View Source (lines 33-52) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/manifest.py#L33-L52">GitHub</a></summary>
+<summary>View Source (lines 33-52) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L33-L52">GitHub</a></summary>
 
 ```python
 class ManifestCacheEntry:
@@ -270,7 +281,7 @@ Convert to dictionary for JSON serialization.
 
 
 <details>
-<summary>View Source (lines 33-52) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/manifest.py#L33-L52">GitHub</a></summary>
+<summary>View Source (lines 33-52) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L33-L52">GitHub</a></summary>
 
 ```python
 class ManifestCacheEntry:
@@ -313,7 +324,7 @@ Create from dictionary.
 
 
 <details>
-<summary>View Source (lines 33-52) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/manifest.py#L33-L52">GitHub</a></summary>
+<summary>View Source (lines 33-52) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L33-L52">GitHub</a></summary>
 
 ```python
 class ManifestCacheEntry:
@@ -348,7 +359,7 @@ Extracted project metadata from package manifests.
 
 
 <details>
-<summary>View Source (lines 56-205) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/manifest.py#L56-L205">GitHub</a></summary>
+<summary>View Source (lines 56-205) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L56-L205">GitHub</a></summary>
 
 ```python
 class ProjectManifest:
@@ -367,7 +378,7 @@ Check if any meaningful data was extracted.
 
 
 <details>
-<summary>View Source (lines 81-83) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/manifest.py#L81-L83">GitHub</a></summary>
+<summary>View Source (lines 81-83) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L81-L83">GitHub</a></summary>
 
 ```python
 def has_data(self) -> bool:
@@ -387,7 +398,7 @@ Generate a factual tech stack summary.
 
 
 <details>
-<summary>View Source (lines 85-102) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/manifest.py#L85-L102">GitHub</a></summary>
+<summary>View Source (lines 85-102) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L85-L102">GitHub</a></summary>
 
 ```python
 def get_tech_stack_summary(self) -> str:
@@ -422,7 +433,7 @@ Get a formatted list of all dependencies.
 
 
 <details>
-<summary>View Source (lines 171-187) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/manifest.py#L171-L187">GitHub</a></summary>
+<summary>View Source (lines 171-187) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L171-L187">GitHub</a></summary>
 
 ```python
 def get_dependency_list(self) -> str:
@@ -459,7 +470,7 @@ Get a summary of entry points and scripts.
 
 
 <details>
-<summary>View Source (lines 189-205) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/manifest.py#L189-L205">GitHub</a></summary>
+<summary>View Source (lines 189-205) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L189-L205">GitHub</a></summary>
 
 ```python
 def get_entry_points_summary(self) -> str:
@@ -504,7 +515,7 @@ Get project manifest, using cache if available and valid.  This function checks 
 
 
 <details>
-<summary>View Source (lines 339-378) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/manifest.py#L339-L378">GitHub</a></summary>
+<summary>View Source (lines 339-378) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L339-L378">GitHub</a></summary>
 
 ```python
 def get_cached_manifest(repo_path: Path, cache_dir: Path | None = None) -> ProjectManifest:
@@ -569,7 +580,7 @@ Parse all recognized package manifests in a repository.  Note: For incremental u
 
 
 <details>
-<summary>View Source (lines 381-421) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/manifest.py#L381-L421">GitHub</a></summary>
+<summary>View Source (lines 381-421) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L381-L421">GitHub</a></summary>
 
 ```python
 def parse_manifest(repo_path: Path) -> ProjectManifest:
@@ -633,7 +644,7 @@ def find(path: str) -> Any
 
 
 <details>
-<summary>View Source (lines 674-678) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/manifest.py#L674-L678">GitHub</a></summary>
+<summary>View Source (lines 674-678) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L674-L678">GitHub</a></summary>
 
 ```python
 def find(path: str) -> Any:
@@ -665,7 +676,7 @@ Generate a directory tree structure for the repository.
 
 
 <details>
-<summary>View Source (lines 758-838) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/manifest.py#L758-L838">GitHub</a></summary>
+<summary>View Source (lines 758-838) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L758-L838">GitHub</a></summary>
 
 ```python
 def get_directory_tree(repo_path: Path, max_depth: int = 3, max_items: int = 50) -> str:
@@ -769,7 +780,7 @@ def should_skip(name: str) -> bool
 
 
 <details>
-<summary>View Source (lines 796-801) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/manifest.py#L796-L801">GitHub</a></summary>
+<summary>View Source (lines 796-801) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L796-L801">GitHub</a></summary>
 
 ```python
 def should_skip(name: str) -> bool:
@@ -801,7 +812,7 @@ def traverse(path: Path, prefix: str, depth: int) -> None
 
 
 <details>
-<summary>View Source (lines 803-832) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/manifest.py#L803-L832">GitHub</a></summary>
+<summary>View Source (lines 803-832) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L803-L832">GitHub</a></summary>
 
 ```python
 def traverse(path: Path, prefix: str, depth: int) -> None:
@@ -988,7 +999,7 @@ Functions and methods in this file and their callers:
 
 ### Empty manifest has no data
 
-From `test_manifest.py::test_has_data_empty`:
+From `test_manifest.py::TestProjectManifest::test_has_data_empty`:
 
 ```python
 manifest = ProjectManifest()
@@ -997,7 +1008,7 @@ assert not manifest.has_data()
 
 ### Empty manifest has no data
 
-From `test_manifest.py::test_has_data_empty`:
+From `test_manifest.py::TestProjectManifest::test_has_data_empty`:
 
 ```python
 manifest = ProjectManifest()
@@ -1006,15 +1017,16 @@ assert not manifest.has_data()
 
 ### Empty manifest has no data
 
-From `test_manifest.py::test_has_data_empty`:
+From `test_manifest.py::TestProjectManifest::test_has_data_empty`:
 
 ```python
+manifest = ProjectManifest()
 assert not manifest.has_data()
 ```
 
 ### Manifest with name has data
 
-From `test_manifest.py::test_has_data_with_name`:
+From `test_manifest.py::TestProjectManifest::test_has_data_with_name`:
 
 ```python
 manifest = ProjectManifest(name="test-project")
@@ -1023,13 +1035,47 @@ assert manifest.has_data()
 
 ### Manifest with name has data
 
-From `test_manifest.py::test_has_data_with_name`:
+From `test_manifest.py::TestProjectManifest::test_has_data_with_name`:
 
 ```python
 manifest = ProjectManifest(name="test-project")
 assert manifest.has_data()
 ```
 
+
+## Last Modified
+
+| Entity | Type | Author | Date | Commit |
+|--------|------|--------|------|--------|
+| `_parse_pyproject_toml` | function | Brian Breidenbach | today | `0d91a70` Apply Python best practices... |
+| `_load_manifest_cache` | function | Brian Breidenbach | yesterday | `815ed5f` Fix remaining generic excep... |
+| `_save_manifest_cache` | function | Brian Breidenbach | yesterday | `815ed5f` Fix remaining generic excep... |
+| `parse_manifest` | function | Brian Breidenbach | yesterday | `815ed5f` Fix remaining generic excep... |
+| `ManifestCacheEntry` | class | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
+| `ProjectManifest` | class | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
+| `has_data` | method | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
+| `_categorize_dependencies` | method | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
+| `_get_manifest_mtimes` | function | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
+| `_is_cache_valid` | function | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
+| `_manifest_to_dict` | function | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
+| `_manifest_from_dict` | function | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
+| `get_cached_manifest` | function | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
+| `_parse_python_dep` | function | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
+| `_parse_setup_py` | function | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
+| `_parse_package_json` | function | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
+| `_parse_go_mod` | function | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
+| `_parse_build_gradle` | function | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
+| `get_directory_tree` | function | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
+| `get_tech_stack_summary` | method | Brian Breidenbach | 4 days ago | `d159315` Add manifest parsing to red... |
+| `get_dependency_list` | method | Brian Breidenbach | 4 days ago | `d159315` Add manifest parsing to red... |
+| `get_entry_points_summary` | method | Brian Breidenbach | 4 days ago | `d159315` Add manifest parsing to red... |
+| `_parse_requirements_txt` | function | Brian Breidenbach | 4 days ago | `d159315` Add manifest parsing to red... |
+| `_parse_cargo_toml` | function | Brian Breidenbach | 4 days ago | `d159315` Add manifest parsing to red... |
+| `_parse_pom_xml` | function | Brian Breidenbach | 4 days ago | `d159315` Add manifest parsing to red... |
+| `find` | function | Brian Breidenbach | 4 days ago | `d159315` Add manifest parsing to red... |
+| `_parse_gemfile` | function | Brian Breidenbach | 4 days ago | `d159315` Add manifest parsing to red... |
+| `should_skip` | function | Brian Breidenbach | 4 days ago | `d159315` Add manifest parsing to red... |
+| `traverse` | function | Brian Breidenbach | 4 days ago | `d159315` Add manifest parsing to red... |
 
 ## Additional Source Code
 
@@ -1038,7 +1084,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_categorize_dependencies`
 
 <details>
-<summary>View Source (lines 104-169) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/manifest.py#L104-L169">GitHub</a></summary>
+<summary>View Source (lines 104-169) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L104-L169">GitHub</a></summary>
 
 ```python
 def _categorize_dependencies(self) -> dict[str, list[str]]:
@@ -1115,7 +1161,7 @@ def _categorize_dependencies(self) -> dict[str, list[str]]:
 #### `_get_manifest_mtimes`
 
 <details>
-<summary>View Source (lines 208-226) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/manifest.py#L208-L226">GitHub</a></summary>
+<summary>View Source (lines 208-226) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L208-L226">GitHub</a></summary>
 
 ```python
 def _get_manifest_mtimes(repo_path: Path) -> dict[str, float]:
@@ -1145,7 +1191,7 @@ def _get_manifest_mtimes(repo_path: Path) -> dict[str, float]:
 #### `_is_cache_valid`
 
 <details>
-<summary>View Source (lines 229-256) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/manifest.py#L229-L256">GitHub</a></summary>
+<summary>View Source (lines 229-256) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L229-L256">GitHub</a></summary>
 
 ```python
 def _is_cache_valid(cache_entry: ManifestCacheEntry, current_mtimes: dict[str, float]) -> bool:
@@ -1184,7 +1230,7 @@ def _is_cache_valid(cache_entry: ManifestCacheEntry, current_mtimes: dict[str, f
 #### `_load_manifest_cache`
 
 <details>
-<summary>View Source (lines 259-280) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/manifest.py#L259-L280">GitHub</a></summary>
+<summary>View Source (lines 259-280) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L259-L280">GitHub</a></summary>
 
 ```python
 def _load_manifest_cache(cache_path: Path) -> ManifestCacheEntry | None:
@@ -1217,7 +1263,7 @@ def _load_manifest_cache(cache_path: Path) -> ManifestCacheEntry | None:
 #### `_save_manifest_cache`
 
 <details>
-<summary>View Source (lines 283-298) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/manifest.py#L283-L298">GitHub</a></summary>
+<summary>View Source (lines 283-298) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L283-L298">GitHub</a></summary>
 
 ```python
 def _save_manifest_cache(cache_path: Path, entry: ManifestCacheEntry) -> None:
@@ -1244,7 +1290,7 @@ def _save_manifest_cache(cache_path: Path, entry: ManifestCacheEntry) -> None:
 #### `_manifest_to_dict`
 
 <details>
-<summary>View Source (lines 301-317) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/manifest.py#L301-L317">GitHub</a></summary>
+<summary>View Source (lines 301-317) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L301-L317">GitHub</a></summary>
 
 ```python
 def _manifest_to_dict(manifest: "ProjectManifest") -> dict[str, Any]:
@@ -1272,7 +1318,7 @@ def _manifest_to_dict(manifest: "ProjectManifest") -> dict[str, Any]:
 #### `_manifest_from_dict`
 
 <details>
-<summary>View Source (lines 320-336) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/manifest.py#L320-L336">GitHub</a></summary>
+<summary>View Source (lines 320-336) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L320-L336">GitHub</a></summary>
 
 ```python
 def _manifest_from_dict(data: dict[str, Any]) -> "ProjectManifest":
@@ -1300,7 +1346,7 @@ def _manifest_from_dict(data: dict[str, Any]) -> "ProjectManifest":
 #### `_parse_pyproject_toml`
 
 <details>
-<summary>View Source (lines 424-490) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/manifest.py#L424-L490">GitHub</a></summary>
+<summary>View Source (lines 424-490) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L424-L490">GitHub</a></summary>
 
 ```python
 def _parse_pyproject_toml(filepath: Path, manifest: ProjectManifest) -> None:
@@ -1378,7 +1424,7 @@ def _parse_pyproject_toml(filepath: Path, manifest: ProjectManifest) -> None:
 #### `_parse_python_dep`
 
 <details>
-<summary>View Source (lines 493-499) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/manifest.py#L493-L499">GitHub</a></summary>
+<summary>View Source (lines 493-499) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L493-L499">GitHub</a></summary>
 
 ```python
 def _parse_python_dep(dep: str) -> tuple[str, str]:
@@ -1396,7 +1442,7 @@ def _parse_python_dep(dep: str) -> tuple[str, str]:
 #### `_parse_setup_py`
 
 <details>
-<summary>View Source (lines 502-524) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/manifest.py#L502-L524">GitHub</a></summary>
+<summary>View Source (lines 502-524) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L502-L524">GitHub</a></summary>
 
 ```python
 def _parse_setup_py(filepath: Path, manifest: ProjectManifest) -> None:
@@ -1430,7 +1476,7 @@ def _parse_setup_py(filepath: Path, manifest: ProjectManifest) -> None:
 #### `_parse_requirements_txt`
 
 <details>
-<summary>View Source (lines 527-540) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/manifest.py#L527-L540">GitHub</a></summary>
+<summary>View Source (lines 527-540) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L527-L540">GitHub</a></summary>
 
 ```python
 def _parse_requirements_txt(filepath: Path, manifest: ProjectManifest) -> None:
@@ -1455,7 +1501,7 @@ def _parse_requirements_txt(filepath: Path, manifest: ProjectManifest) -> None:
 #### `_parse_package_json`
 
 <details>
-<summary>View Source (lines 543-591) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/manifest.py#L543-L591">GitHub</a></summary>
+<summary>View Source (lines 543-591) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L543-L591">GitHub</a></summary>
 
 ```python
 def _parse_package_json(filepath: Path, manifest: ProjectManifest) -> None:
@@ -1515,7 +1561,7 @@ def _parse_package_json(filepath: Path, manifest: ProjectManifest) -> None:
 #### `_parse_cargo_toml`
 
 <details>
-<summary>View Source (lines 594-632) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/manifest.py#L594-L632">GitHub</a></summary>
+<summary>View Source (lines 594-632) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L594-L632">GitHub</a></summary>
 
 ```python
 def _parse_cargo_toml(filepath: Path, manifest: ProjectManifest) -> None:
@@ -1565,7 +1611,7 @@ def _parse_cargo_toml(filepath: Path, manifest: ProjectManifest) -> None:
 #### `_parse_go_mod`
 
 <details>
-<summary>View Source (lines 635-660) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/manifest.py#L635-L660">GitHub</a></summary>
+<summary>View Source (lines 635-660) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L635-L660">GitHub</a></summary>
 
 ```python
 def _parse_go_mod(filepath: Path, manifest: ProjectManifest) -> None:
@@ -1602,7 +1648,7 @@ def _parse_go_mod(filepath: Path, manifest: ProjectManifest) -> None:
 #### `_parse_pom_xml`
 
 <details>
-<summary>View Source (lines 663-713) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/manifest.py#L663-L713">GitHub</a></summary>
+<summary>View Source (lines 663-713) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L663-L713">GitHub</a></summary>
 
 ```python
 def _parse_pom_xml(filepath: Path, manifest: ProjectManifest) -> None:
@@ -1664,7 +1710,7 @@ def _parse_pom_xml(filepath: Path, manifest: ProjectManifest) -> None:
 #### `_parse_build_gradle`
 
 <details>
-<summary>View Source (lines 716-741) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/manifest.py#L716-L741">GitHub</a></summary>
+<summary>View Source (lines 716-741) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L716-L741">GitHub</a></summary>
 
 ```python
 def _parse_build_gradle(filepath: Path, manifest: ProjectManifest) -> None:
@@ -1701,7 +1747,7 @@ def _parse_build_gradle(filepath: Path, manifest: ProjectManifest) -> None:
 #### `_parse_gemfile`
 
 <details>
-<summary>View Source (lines 744-755) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/manifest.py#L744-L755">GitHub</a></summary>
+<summary>View Source (lines 744-755) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L744-L755">GitHub</a></summary>
 
 ```python
 def _parse_gemfile(filepath: Path, manifest: ProjectManifest) -> None:
@@ -1723,7 +1769,3 @@ def _parse_gemfile(filepath: Path, manifest: ProjectManifest) -> None:
 ## Relevant Source Files
 
 - `src/local_deepwiki/generators/manifest.py:33-52`
-
-## See Also
-
-- [wiki](wiki.md) - uses this

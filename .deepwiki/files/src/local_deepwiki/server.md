@@ -2,71 +2,70 @@
 
 ## File Overview
 
-The `server.py` module implements the main MCP (Model Context Protocol) server for the Local DeepWiki application. It serves as the entry point that sets up and runs the server, handling tool registration and execution for various wiki-related operations.
+This file implements an MCP (Model Context Protocol) server for the Local DeepWiki system. It serves as the main entry point that exposes various wiki and code analysis tools through a standardized server interface, handling tool discovery and execution requests.
 
 ## Functions
 
 ### list_tools()
 
-Returns the list of available tools that the server can execute. Based on the imports, this function likely registers tools for repository indexing, wiki operations, code searching, and content export functionality.
+Returns the list of available tools that can be called through the MCP server interface.
 
-### call_tool()
+**Returns:** List of Tool objects representing the available functionality
 
-Handles the execution of tools called by clients. This function routes tool calls to the appropriate handler functions imported from the handlers module.
+### call_tool(name: str, arguments: dict[str, Any] | None) 
+
+Handles tool execution requests by dispatching to the appropriate handler functions based on the tool name.
 
 **Parameters:**
-- Tool execution parameters (specific signature not visible in the provided code)
+- `name`: The name of the tool to execute
+- `arguments`: Dictionary containing the arguments to pass to the tool handler
 
-**Returns:**
-- Tool execution results (specific return type not visible in the provided code)
+**Returns:** List of TextContent objects containing the tool execution results
 
 ### main()
 
-The main entry point function that sets up and configures the MCP server. This function likely initializes the Server instance and registers the tool handlers.
+Sets up and configures the MCP server with the available tools and handlers.
+
+**Returns:** Server instance configured with tool capabilities
 
 ### run()
 
-Executes the server using the stdio transport mechanism. This function starts the server and keeps it running to handle incoming requests.
+Starts the MCP server using stdio transport for communication.
+
+## Related Components
+
+This server module integrates with several handler functions from the `local_deepwiki.handlers` module:
+
+- **ToolHandler**: Base handler class for tool operations
+- **[handle_ask_question](handlers.md)**: Processes question-answering requests
+- **[handle_deep_research](handlers.md)**: Performs comprehensive research operations  
+- **[handle_export_wiki_html](handlers.md)**: Exports wiki content to HTML format
+- **[handle_export_wiki_pdf](handlers.md)**: Exports wiki content to PDF format
+- **[handle_index_repository](handlers.md)**: Indexes code repositories for analysis
+- **[handle_read_wiki_page](handlers.md)**: Retrieves specific wiki page content
+- **[handle_read_wiki_structure](handlers.md)**: Returns the overall wiki structure
+- **[handle_search_code](handlers.md)**: Searches through indexed code content
+
+The module also uses the `local_deepwiki.logging` module for logging functionality.
 
 ## Usage Examples
 
 ```python
-# Run the server (typical usage)
+# Run the MCP server
 from local_deepwiki.server import run
 
-# Start the MCP server
+# Start the server (typically called from command line)
 run()
 ```
 
 ```python
-# Alternative entry through main function
-from local_deepwiki.server import main
+# Get available tools
+from local_deepwiki.server import list_tools
 
-# Initialize and run the server
-main()
+tools = list_tools()
+for tool in tools:
+    print(f"Tool: {tool.name}")
 ```
-
-## Related Components
-
-This module integrates with several other components from the Local DeepWiki system:
-
-- **ToolHandler**: Base handler class for tool operations
-- **Handler functions**: Specific handlers for different operations:
-  - [`handle_ask_question`](handlers.md): Processes question-answering requests
-  - [`handle_deep_research`](handlers.md): Performs deep research operations
-  - [`handle_export_wiki_html`](handlers.md): Exports wiki content as HTML
-  - [`handle_export_wiki_pdf`](handlers.md): Exports wiki content as PDF
-  - [`handle_index_repository`](handlers.md): Handles repository indexing
-  - [`handle_read_wiki_page`](handlers.md): Reads individual wiki pages
-  - [`handle_read_wiki_structure`](handlers.md): Reads wiki structure information
-  - [`handle_search_code`](handlers.md): Performs code search operations
-
-The module uses the MCP server framework components:
-- **Server**: Main server class from the mcp.server package
-- **stdio_server**: Standard I/O server transport
-- **TextContent** and **Tool**: MCP type definitions for content and tool handling
-
-The logging functionality is provided through the [`get_logger`](logging.md) function from the local_deepwiki.logging module.
 
 ## API Reference
 
@@ -87,7 +86,7 @@ List available tools.
 
 
 <details>
-<summary>View Source (lines 31-222) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/server.py#L31-L222">GitHub</a></summary>
+<summary>View Source (lines 31-222) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/server.py#L31-L222">GitHub</a></summary>
 
 ```python
 async def list_tools() -> list[Tool]:
@@ -307,7 +306,7 @@ Handle tool calls.
 
 
 <details>
-<summary>View Source (lines 240-254) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/server.py#L240-L254">GitHub</a></summary>
+<summary>View Source (lines 240-254) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/server.py#L240-L254">GitHub</a></summary>
 
 ```python
 async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
@@ -340,7 +339,7 @@ Main entry point for the MCP server.
 
 
 <details>
-<summary>View Source (lines 257-269) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/server.py#L257-L269">GitHub</a></summary>
+<summary>View Source (lines 257-269) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/server.py#L257-L269">GitHub</a></summary>
 
 ```python
 def main():
@@ -370,7 +369,7 @@ async def run()
 
 
 <details>
-<summary>View Source (lines 261-267) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/server.py#L261-L267">GitHub</a></summary>
+<summary>View Source (lines 261-267) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/server.py#L261-L267">GitHub</a></summary>
 
 ```python
 async def run():
@@ -423,6 +422,15 @@ Functions and methods in this file and their callers:
 - **`handler`**: called by `call_tool`
 - **`run`**: called by `main`, `run`
 - **`stdio_server`**: called by `main`, `run`
+
+## Last Modified
+
+| Entity | Type | Author | Date | Commit |
+|--------|------|--------|------|--------|
+| `call_tool` | function | Brian Breidenbach | yesterday | `8457af3` Refactor: Split server.py i... |
+| `list_tools` | function | Brian Breidenbach | 2 days ago | `52202b9` Add automatic cloud provide... |
+| `main` | function | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
+| `run` | function | Brian Breidenbach | 5 days ago | `cdae76f` Initial commit: Local DeepW... |
 
 ## Relevant Source Files
 

@@ -153,4 +153,4 @@ The following source files were used to generate this documentation:
 - `tests/test_wiki_coverage.py:50-120`
 
 
-*Showing 10 of 98 source files.*
+*Showing 10 of 100 source files.*

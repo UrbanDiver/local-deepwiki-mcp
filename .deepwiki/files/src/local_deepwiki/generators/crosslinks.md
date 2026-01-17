@@ -1,8 +1,8 @@
-# CrossLinks Module
+# crosslinks.py
 
 ## File Overview
 
-The `crosslinks.py` module provides functionality for adding cross-links between wiki pages. It processes wiki page content to identify and link references to documented entities, creating navigable connections throughout the documentation.
+This module provides cross-linking functionality for wiki pages, automatically creating links between entities mentioned in the documentation and their corresponding pages. The module processes wiki page content to identify entity references and converts them into markdown links.
 
 ## Classes
 
@@ -12,23 +12,20 @@ A data class that stores information about documented entities.
 
 ### EntityRegistry
 
-Manages a collection of documented entities and provides lookup functionality for cross-linking.
+A registry that manages documented entities and provides lookup functionality for cross-linking.
 
 ### CrossLinker
 
-The [main](../export/pdf.md) class responsible for processing wiki pages and adding cross-links to entity references.
+The [main](../export/pdf.md) class responsible for adding cross-links to wiki pages. It processes page content and replaces entity mentions with appropriate markdown links.
 
-#### Key Methods
-
-- **add_links**: Processes a [WikiPage](../models.md) and returns a new [WikiPage](../models.md) with cross-links added
-- **_process_content**: Internal method for processing page content
-- **_split_by_code_blocks**: Splits content while preserving code block boundaries
-- **_add_links_to_text**: Adds links to text sections outside of code blocks
-- **_replace_entity_mentions**: Replaces entity mentions with markdown links
-- **protect**: Protects certain text patterns from link replacement
-- **_link_backticked_entities**: Handles linking of backticked entity references
-- **qualified_replacement**: Handles qualified entity name replacements
-- **_relative_path**: Calculates relative paths between wiki pages
+**Key Methods:**
+- `add_links(page: WikiPage) -> WikiPage` - Adds cross-links to a wiki page and returns a new [WikiPage](../models.md) instance
+- `_process_content(content: str, page_path: str) -> str` - Processes the content of a page to add cross-links
+- `_split_by_code_blocks(content: str) -> list` - Splits content while preserving code blocks
+- `_add_links_to_text(text: str, page_path: str) -> str` - Adds links to text content
+- `_replace_entity_mentions(text: str, page_path: str) -> str` - Replaces entity mentions with links
+- `_link_backticked_entities(text: str, page_path: str) -> str` - Handles entities within backticks
+- `_relative_path(from_path: str, to_path: str) -> str` - Calculates relative paths between pages
 
 ## Functions
 
@@ -41,55 +38,54 @@ def add_cross_links(
 ) -> list[WikiPage]:
 ```
 
-Processes a list of wiki pages to add cross-links throughout the documentation.
+Adds cross-links to all wiki pages in a collection.
 
 **Parameters:**
-- `pages`: List of [WikiPage](../models.md) objects to process
-- `registry`: EntityRegistry containing documented entities for linking
+- `pages` - List of wiki pages to process
+- `registry` - Entity registry with documented entities
 
 **Returns:**
-- List of [WikiPage](../models.md) objects with cross-links added
+- List of wiki pages with cross-links added
 
 ### camel_to_spaced
 
-Utility function for converting camelCase names to spaced format (implementation details not shown in provided code).
+A utility function for converting camelCase names to spaced format (implementation not shown in provided code).
 
 ## Usage Examples
 
-### Basic Cross-Linking
+### Processing Individual Pages
 
 ```python
-from local_deepwiki.generators.crosslinks import add_cross_links, EntityRegistry
-
-# Create entity registry and pages
-registry = EntityRegistry()
-pages = [...]  # List of WikiPage objects
-
-# Add cross-links to all pages
-linked_pages = add_cross_links(pages, registry)
-```
-
-### Using CrossLinker Directly
-
-```python
-from local_deepwiki.generators.crosslinks import CrossLinker
-
-# Create linker with entity registry
+# Create a cross-linker with an entity registry
 linker = CrossLinker(registry)
 
-# Process individual page
-linked_page = linker.add_links(original_page)
+# Add cross-links to a single page
+updated_page = linker.add_links(original_page)
+```
+
+### Processing Multiple Pages
+
+```python
+# Process all pages at once
+updated_pages = add_cross_links(pages, registry)
+```
+
+### Path Calculation
+
+```python
+linker = CrossLinker(registry)
+relative_path = linker._relative_path("modules/src.md", "files/src/indexer.md")
 ```
 
 ## Related Components
 
 This module works with the following components from the codebase:
 
-- **[WikiPage](../models.md)**: From `local_deepwiki.models`, represents individual wiki pages with path, title, content, and generation timestamp
-- **[CodeChunk](../models.md)**: From `local_deepwiki.models`, represents code chunks with type information
-- **[ChunkType](../models.md)**: From `local_deepwiki.models`, enumeration for different types of code chunks
+- **[WikiPage](../models.md)** - The data model representing wiki pages (from `local_deepwiki.models`)
+- **[CodeChunk](../models.md)** - Represents code chunks in the documentation (from `local_deepwiki.models`)
+- **[ChunkType](../models.md)** - Enumeration for different types of content chunks (from `local_deepwiki.models`)
 
-The module uses standard Python libraries including `re` for regular expressions, `collections.abc.Callable` for type hints, `dataclasses` for data structures, and `pathlib.Path` for file path operations.
+The module processes [WikiPage](../models.md) instances and uses EntityRegistry to look up documented entities for creating appropriate cross-references in the generated documentation.
 
 ## API Reference
 
@@ -99,7 +95,7 @@ Information about a documented entity.
 
 
 <details>
-<summary>View Source (lines 16-23) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/crosslinks.py#L16-L23">GitHub</a></summary>
+<summary>View Source (lines 16-23) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/crosslinks.py#L16-L23">GitHub</a></summary>
 
 ```python
 class EntityInfo:
@@ -122,7 +118,7 @@ Registry of documented entities and their wiki page locations.  This class maint
 
 
 <details>
-<summary>View Source (lines 64-260) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/crosslinks.py#L64-L260">GitHub</a></summary>
+<summary>View Source (lines 64-260) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/crosslinks.py#L64-L260">GitHub</a></summary>
 
 ```python
 class EntityRegistry:
@@ -141,7 +137,7 @@ Initialize an empty entity registry.
 
 
 <details>
-<summary>View Source (lines 71-138) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/crosslinks.py#L71-L138">GitHub</a></summary>
+<summary>View Source (lines 71-138) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/crosslinks.py#L71-L138">GitHub</a></summary>
 
 ```python
 def __init__(self) -> None:
@@ -235,7 +231,7 @@ Register a documented entity.
 
 
 <details>
-<summary>View Source (lines 140-182) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/crosslinks.py#L140-L182">GitHub</a></summary>
+<summary>View Source (lines 140-182) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/crosslinks.py#L140-L182">GitHub</a></summary>
 
 ```python
 def register_entity(
@@ -301,7 +297,7 @@ Register entities from a list of code chunks.
 
 
 <details>
-<summary>View Source (lines 184-206) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/crosslinks.py#L184-L206">GitHub</a></summary>
+<summary>View Source (lines 184-206) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/crosslinks.py#L184-L206">GitHub</a></summary>
 
 ```python
 def register_from_chunks(
@@ -346,7 +342,7 @@ Get entity info by name.
 
 
 <details>
-<summary>View Source (lines 208-217) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/crosslinks.py#L208-L217">GitHub</a></summary>
+<summary>View Source (lines 208-217) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/crosslinks.py#L208-L217">GitHub</a></summary>
 
 ```python
 def get_entity(self, name: str) -> EntityInfo | None:
@@ -378,7 +374,7 @@ Get entity info by alias (spaced name).
 
 
 <details>
-<summary>View Source (lines 219-233) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/crosslinks.py#L219-L233">GitHub</a></summary>
+<summary>View Source (lines 219-233) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/crosslinks.py#L219-L233">GitHub</a></summary>
 
 ```python
 def get_entity_by_alias(self, alias: str) -> tuple[str, EntityInfo] | None:
@@ -410,7 +406,7 @@ Get all registered aliases.
 
 
 <details>
-<summary>View Source (lines 235-241) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/crosslinks.py#L235-L241">GitHub</a></summary>
+<summary>View Source (lines 235-241) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/crosslinks.py#L235-L241">GitHub</a></summary>
 
 ```python
 def get_all_aliases(self) -> dict[str, str]:
@@ -434,7 +430,7 @@ Get all registered entities.
 
 
 <details>
-<summary>View Source (lines 243-249) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/crosslinks.py#L243-L249">GitHub</a></summary>
+<summary>View Source (lines 243-249) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/crosslinks.py#L243-L249">GitHub</a></summary>
 
 ```python
 def get_all_entities(self) -> dict[str, EntityInfo]:
@@ -464,7 +460,7 @@ Get all entities defined in a specific wiki page.
 
 
 <details>
-<summary>View Source (lines 251-260) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/crosslinks.py#L251-L260">GitHub</a></summary>
+<summary>View Source (lines 251-260) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/crosslinks.py#L251-L260">GitHub</a></summary>
 
 ```python
 def get_page_entities(self, wiki_path: str) -> list[str]:
@@ -489,7 +485,7 @@ Adds cross-links to wiki page content.  This class processes wiki page content a
 
 
 <details>
-<summary>View Source (lines 263-553) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/crosslinks.py#L263-L553">GitHub</a></summary>
+<summary>View Source (lines 263-553) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/crosslinks.py#L263-L553">GitHub</a></summary>
 
 ```python
 class CrossLinker:
@@ -513,7 +509,7 @@ Initialize the cross-linker.
 
 
 <details>
-<summary>View Source (lines 270-276) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/crosslinks.py#L270-L276">GitHub</a></summary>
+<summary>View Source (lines 270-276) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/crosslinks.py#L270-L276">GitHub</a></summary>
 
 ```python
 def __init__(self, registry: EntityRegistry) -> None:
@@ -542,7 +538,7 @@ Add cross-links to a wiki page.
 
 
 <details>
-<summary>View Source (lines 278-294) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/crosslinks.py#L278-L294">GitHub</a></summary>
+<summary>View Source (lines 278-294) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/crosslinks.py#L278-L294">GitHub</a></summary>
 
 ```python
 def add_links(self, page: WikiPage) -> WikiPage:
@@ -579,7 +575,7 @@ def protect(match: re.Match) -> str
 
 
 <details>
-<summary>View Source (lines 448-453) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/crosslinks.py#L448-L453">GitHub</a></summary>
+<summary>View Source (lines 448-453) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/crosslinks.py#L448-L453">GitHub</a></summary>
 
 ```python
 def protect(match: re.Match) -> str:
@@ -608,7 +604,7 @@ def qualified_replacement(match: re.Match) -> str
 
 
 <details>
-<summary>View Source (lines 516-519) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/crosslinks.py#L516-L519">GitHub</a></summary>
+<summary>View Source (lines 516-519) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/crosslinks.py#L516-L519">GitHub</a></summary>
 
 ```python
 def qualified_replacement(match: re.Match) -> str:
@@ -639,7 +635,7 @@ Convert CamelCase to 'Spaced Words'.
 
 
 <details>
-<summary>View Source (lines 26-61) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/crosslinks.py#L26-L61">GitHub</a></summary>
+<summary>View Source (lines 26-61) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/crosslinks.py#L26-L61">GitHub</a></summary>
 
 ```python
 def camel_to_spaced(name: str) -> str | None:
@@ -702,7 +698,7 @@ Add cross-links to all wiki pages.
 
 
 <details>
-<summary>View Source (lines 556-570) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/crosslinks.py#L556-L570">GitHub</a></summary>
+<summary>View Source (lines 556-570) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/crosslinks.py#L556-L570">GitHub</a></summary>
 
 ```python
 def add_cross_links(
@@ -861,31 +857,35 @@ Functions and methods in this file and their callers:
 
 ### Test simple CamelCase conversion
 
-From `test_crosslinks.py::test_simple_camel_case`:
+From `test_crosslinks.py::TestCamelToSpaced::test_simple_camel_case`:
 
 ```python
 assert camel_to_spaced("VectorStore") == "Vector Store"
+assert camel_to_spaced("WikiGenerator") == "Wiki Generator"
+assert camel_to_spaced("CodeChunker") == "Code Chunker"
 ```
 
 ### Test multi-word CamelCase
 
-From `test_crosslinks.py::test_multi_word`:
+From `test_crosslinks.py::TestCamelToSpaced::test_multi_word`:
 
 ```python
+assert camel_to_spaced("RepositoryIndexer") == "Repository Indexer"
 assert camel_to_spaced("CrossLinker") == "Cross Linker"
 ```
 
 ### Test multi-word CamelCase
 
-From `test_crosslinks.py::test_multi_word`:
+From `test_crosslinks.py::TestCamelToSpaced::test_multi_word`:
 
 ```python
 assert camel_to_spaced("RepositoryIndexer") == "Repository Indexer"
+assert camel_to_spaced("CrossLinker") == "Cross Linker"
 ```
 
 ### Test registering an entity
 
-From `test_crosslinks.py::test_register_entity`:
+From `test_crosslinks.py::TestEntityRegistry::test_register_entity`:
 
 ```python
 registry = EntityRegistry()
@@ -898,11 +898,12 @@ registry.register_entity(
 
 entity = registry.get_entity("WikiGenerator")
 assert entity is not None
+assert entity.name == "WikiGenerator"
 ```
 
 ### Test registering an entity
 
-From `test_crosslinks.py::test_register_entity`:
+From `test_crosslinks.py::TestEntityRegistry::test_register_entity`:
 
 ```python
 registry.register_entity(
@@ -914,8 +915,37 @@ registry.register_entity(
 
 entity = registry.get_entity("WikiGenerator")
 assert entity is not None
+assert entity.name == "WikiGenerator"
 ```
 
+
+## Last Modified
+
+| Entity | Type | Author | Date | Commit |
+|--------|------|--------|------|--------|
+| `CrossLinker` | class | Brian Breidenbach | today | `0d91a70` Apply Python best practices... |
+| `_add_links_to_text` | method | Brian Breidenbach | today | `0d91a70` Apply Python best practices... |
+| `EntityRegistry` | class | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
+| `__init__` | method | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
+| `_split_by_code_blocks` | method | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
+| `_replace_entity_mentions` | method | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
+| `_link_backticked_entities` | method | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
+| `qualified_replacement` | method | Brian Breidenbach | 5 days ago | `1315c7f` Add wiki improvements: incr... |
+| `EntityInfo` | class | Brian Breidenbach | 5 days ago | `f933c46` Add cross-linking between w... |
+| `register_entity` | method | Brian Breidenbach | 5 days ago | `f933c46` Add cross-linking between w... |
+| `register_from_chunks` | method | Brian Breidenbach | 5 days ago | `f933c46` Add cross-linking between w... |
+| `get_entity` | method | Brian Breidenbach | 5 days ago | `f933c46` Add cross-linking between w... |
+| `get_entity_by_alias` | method | Brian Breidenbach | 5 days ago | `f933c46` Add cross-linking between w... |
+| `get_all_aliases` | method | Brian Breidenbach | 5 days ago | `f933c46` Add cross-linking between w... |
+| `get_all_entities` | method | Brian Breidenbach | 5 days ago | `f933c46` Add cross-linking between w... |
+| `get_page_entities` | method | Brian Breidenbach | 5 days ago | `f933c46` Add cross-linking between w... |
+| `__init__` | method | Brian Breidenbach | 5 days ago | `f933c46` Add cross-linking between w... |
+| `add_links` | method | Brian Breidenbach | 5 days ago | `f933c46` Add cross-linking between w... |
+| `_process_content` | method | Brian Breidenbach | 5 days ago | `f933c46` Add cross-linking between w... |
+| `protect` | method | Brian Breidenbach | 5 days ago | `f933c46` Add cross-linking between w... |
+| `_relative_path` | method | Brian Breidenbach | 5 days ago | `f933c46` Add cross-linking between w... |
+| `camel_to_spaced` | function | Brian Breidenbach | 5 days ago | `f933c46` Add cross-linking between w... |
+| `add_cross_links` | function | Brian Breidenbach | 5 days ago | `f933c46` Add cross-linking between w... |
 
 ## Additional Source Code
 
@@ -924,7 +954,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_process_content`
 
 <details>
-<summary>View Source (lines 296-324) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/crosslinks.py#L296-L324">GitHub</a></summary>
+<summary>View Source (lines 296-324) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/crosslinks.py#L296-L324">GitHub</a></summary>
 
 ```python
 def _process_content(self, content: str, current_page: str) -> str:
@@ -964,7 +994,7 @@ def _process_content(self, content: str, current_page: str) -> str:
 #### `_split_by_code_blocks`
 
 <details>
-<summary>View Source (lines 326-355) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/crosslinks.py#L326-L355">GitHub</a></summary>
+<summary>View Source (lines 326-355) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/crosslinks.py#L326-L355">GitHub</a></summary>
 
 ```python
 def _split_by_code_blocks(self, content: str) -> list[tuple[str, bool]]:
@@ -1005,7 +1035,7 @@ def _split_by_code_blocks(self, content: str) -> list[tuple[str, bool]]:
 #### `_add_links_to_text`
 
 <details>
-<summary>View Source (lines 357-424) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/crosslinks.py#L357-L424">GitHub</a></summary>
+<summary>View Source (lines 357-424) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/crosslinks.py#L357-L424">GitHub</a></summary>
 
 ```python
 def _add_links_to_text(
@@ -1084,7 +1114,7 @@ def _add_links_to_text(
 #### `_replace_entity_mentions`
 
 <details>
-<summary>View Source (lines 426-482) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/crosslinks.py#L426-L482">GitHub</a></summary>
+<summary>View Source (lines 426-482) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/crosslinks.py#L426-L482">GitHub</a></summary>
 
 ```python
 def _replace_entity_mentions(
@@ -1152,7 +1182,7 @@ def _replace_entity_mentions(
 #### `_link_backticked_entities`
 
 <details>
-<summary>View Source (lines 484-526) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/crosslinks.py#L484-L526">GitHub</a></summary>
+<summary>View Source (lines 484-526) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/crosslinks.py#L484-L526">GitHub</a></summary>
 
 ```python
 def _link_backticked_entities(
@@ -1206,7 +1236,7 @@ def _link_backticked_entities(
 #### `_relative_path`
 
 <details>
-<summary>View Source (lines 528-553) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/crosslinks.py#L528-L553">GitHub</a></summary>
+<summary>View Source (lines 528-553) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/crosslinks.py#L528-L553">GitHub</a></summary>
 
 ```python
 def _relative_path(self, from_path: str, to_path: str) -> str:
@@ -1245,7 +1275,6 @@ def _relative_path(self, from_path: str, to_path: str) -> str:
 
 ## See Also
 
-- [wiki](wiki.md) - uses this
 - [models](../models.md) - dependency
 - [see_also](see_also.md) - shares 4 dependencies
 - [diagrams](diagrams.md) - shares 4 dependencies

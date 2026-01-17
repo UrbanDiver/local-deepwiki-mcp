@@ -2,52 +2,75 @@
 
 ## File Overview
 
-This file implements a local embedding provider that uses sentence-transformers models to generate embeddings. It provides an implementation of the [EmbeddingProvider](../base.md) interface for running embedding models locally rather than using external APIs.
+This file implements a local embedding provider that uses sentence-transformers models to generate embeddings. It provides a concrete implementation of the [EmbeddingProvider](../base.md) interface for running models locally without requiring external API calls.
 
 ## Classes
 
 ### LocalEmbeddingProvider
 
-The LocalEmbeddingProvider class provides text embedding functionality using local sentence-transformers models. It inherits from [EmbeddingProvider](../base.md) and implements lazy loading of the underlying model.
+The LocalEmbeddingProvider class extends [EmbeddingProvider](../base.md) to provide local text embedding capabilities using sentence-transformers models.
+
+**Key Features:**
+- Lazy loading of sentence-transformer models
+- Configurable model selection
+- Local processing without external dependencies
 
 **Attributes:**
 - `_model_name`: The name of the sentence-transformers model to use
-- `_model`: The loaded SentenceTransformer model instance (initially None for lazy loading)
-- `_dimension`: The dimension of the embeddings produced by the model (initially None)
+- `_model`: The loaded SentenceTransformer model instance (lazy-loaded)
+- `_dimension`: The embedding dimension of the loaded model
 
-**Methods:**
+## Methods
 
-#### `__init__(model_name: str = "all-MiniLM-L6-v2")`
+### `__init__(model_name: str = "all-MiniLM-L6-v2")`
 
 Initializes the local embedding provider with a specified model.
 
 **Parameters:**
 - `model_name` (str, optional): Name of the sentence-transformers model to use. Defaults to "all-MiniLM-L6-v2"
 
-#### `_load_model() -> SentenceTransformer`
+**Example:**
+```python
+# Use default model
+provider = LocalEmbeddingProvider()
 
-Private method that implements lazy loading of the sentence-transformers model. The model is only loaded when first needed rather than during initialization.
+# Use custom model
+provider = LocalEmbeddingProvider(model_name="all-mpnet-base-v2")
+```
+
+### `_load_model() -> SentenceTransformer`
+
+Private method that implements lazy loading of the sentence-transformer model.
 
 **Returns:**
-- `SentenceTransformer`: The loaded sentence-transformers model instance
+- `SentenceTransformer`: The loaded model instance
+
+**Note:** This method ensures the model is only loaded when first needed, improving initialization performance.
 
 ## Usage Examples
 
+### Basic Usage
+
 ```python
 # Initialize with default model
-provider = LocalEmbeddingProvider()
+embedding_provider = LocalEmbeddingProvider()
 
-# Initialize with custom model
-provider = LocalEmbeddingProvider(model_name="all-mpnet-base-v2")
+# Initialize with specific model
+embedding_provider = LocalEmbeddingProvider(model_name="all-mpnet-base-v2")
+```
+
+### Custom Model Selection
+
+```python
+# Use a different sentence-transformers model
+provider = LocalEmbeddingProvider(model_name="paraphrase-MiniLM-L6-v2")
 ```
 
 ## Related Components
 
 This class works with:
-- [EmbeddingProvider](../base.md) (parent class)
-- SentenceTransformer (from the sentence-transformers library)
-
-The implementation follows a lazy loading pattern where the actual sentence-transformers model is only instantiated when first needed, which can help reduce memory usage and startup time.
+- **[EmbeddingProvider](../base.md)**: The base class that this implementation extends
+- **SentenceTransformer**: The underlying model class from the sentence-transformers library used for generating embeddings
 
 ## API Reference
 
@@ -61,7 +84,7 @@ Embedding provider using local sentence-transformers models.
 
 
 <details>
-<summary>View Source (lines 10-57) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/providers/embeddings/local.py#L10-L57">GitHub</a></summary>
+<summary>View Source (lines 10-57) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/embeddings/local.py#L10-L57">GitHub</a></summary>
 
 ```python
 class LocalEmbeddingProvider(EmbeddingProvider):
@@ -131,7 +154,7 @@ Initialize the local embedding provider.
 
 
 <details>
-<summary>View Source (lines 10-57) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/providers/embeddings/local.py#L10-L57">GitHub</a></summary>
+<summary>View Source (lines 10-57) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/embeddings/local.py#L10-L57">GitHub</a></summary>
 
 ```python
 class LocalEmbeddingProvider(EmbeddingProvider):
@@ -201,7 +224,7 @@ Generate embeddings for a list of texts.
 
 
 <details>
-<summary>View Source (lines 10-57) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/providers/embeddings/local.py#L10-L57">GitHub</a></summary>
+<summary>View Source (lines 10-57) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/embeddings/local.py#L10-L57">GitHub</a></summary>
 
 ```python
 class LocalEmbeddingProvider(EmbeddingProvider):
@@ -266,7 +289,7 @@ Get the embedding dimension.
 
 
 <details>
-<summary>View Source (lines 10-57) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/providers/embeddings/local.py#L10-L57">GitHub</a></summary>
+<summary>View Source (lines 10-57) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/embeddings/local.py#L10-L57">GitHub</a></summary>
 
 ```python
 class LocalEmbeddingProvider(EmbeddingProvider):
@@ -333,7 +356,7 @@ Get the provider name.
 
 
 <details>
-<summary>View Source (lines 10-57) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/providers/embeddings/local.py#L10-L57">GitHub</a></summary>
+<summary>View Source (lines 10-57) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/embeddings/local.py#L10-L57">GitHub</a></summary>
 
 ```python
 class LocalEmbeddingProvider(EmbeddingProvider):
@@ -441,6 +464,63 @@ Functions and methods in this file and their callers:
 - **`encode`**: called by `LocalEmbeddingProvider.embed`
 - **`get_sentence_embedding_dimension`**: called by `LocalEmbeddingProvider._load_model`
 - **`tolist`**: called by `LocalEmbeddingProvider.embed`
+
+## Usage Examples
+
+*Examples extracted from test files*
+
+### Test provider initialization
+
+From `test_local_embedding_provider.py::TestLocalEmbeddingProvider::test_initialization`:
+
+```python
+from local_deepwiki.providers.embeddings.local import LocalEmbeddingProvider
+
+provider = LocalEmbeddingProvider(model_name="all-MiniLM-L6-v2")
+assert provider.name == "local:all-MiniLM-L6-v2"
+assert provider._model is None  # Lazy loaded
+```
+
+### Test provider initialization
+
+From `test_local_embedding_provider.py::TestLocalEmbeddingProvider::test_initialization`:
+
+```python
+from local_deepwiki.providers.embeddings.local import LocalEmbeddingProvider
+
+provider = LocalEmbeddingProvider(model_name="all-MiniLM-L6-v2")
+assert provider.name == "local:all-MiniLM-L6-v2"
+assert provider._model is None  # Lazy loaded
+```
+
+### Test provider initialization with default model
+
+From `test_local_embedding_provider.py::TestLocalEmbeddingProvider::test_initialization_default_model`:
+
+```python
+from local_deepwiki.providers.embeddings.local import LocalEmbeddingProvider
+
+provider = LocalEmbeddingProvider()
+assert provider.name == "local:all-MiniLM-L6-v2"
+```
+
+### Test provider initialization with default model
+
+From `test_local_embedding_provider.py::TestLocalEmbeddingProvider::test_initialization_default_model`:
+
+```python
+from local_deepwiki.providers.embeddings.local import LocalEmbeddingProvider
+
+provider = LocalEmbeddingProvider()
+assert provider.name == "local:all-MiniLM-L6-v2"
+```
+
+
+## Last Modified
+
+| Entity | Type | Author | Date | Commit |
+|--------|------|--------|------|--------|
+| `LocalEmbeddingProvider` | class | Brian Breidenbach | today | `0d91a70` Apply Python best practices... |
 
 ## Relevant Source Files
 

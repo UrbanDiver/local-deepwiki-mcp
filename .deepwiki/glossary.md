@@ -4,7 +4,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 
 **Quick Navigation:** [#](##) | [A](#a) | [B](#b) | [C](#c) | [D](#d) | [E](#e) | [F](#f) | [G](#g) | [H](#h) | [I](#i) | [L](#l) | [M](#m) | [N](#n) | [O](#o) | [P](#p) | [Q](#q) | [R](#r) | [S](#s) | [T](#t) | [U](#u) | [V](#v) | [W](#w)
 
-**Total:** 1458 entities (388 classes, 267 functions, 803 methods)
+**Total:** 1493 entities (407 classes, 283 functions, 803 methods)
 
 ---
 
@@ -72,10 +72,11 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`_extract_usage_snippet`](files/src/local_deepwiki/generators/test_examples.md)** `(func_node: Node, source: bytes, entity_name: str, ...+1) → str | None` (`test_examples.py`) - Extract a clean usage snippet from a test function.
 - 🔹 **[`_find_circular_dependencies`](files/src/local_deepwiki/generators/diagrams.md)** `(deps: dict[str, set[str]]) → set[tuple[str, str]]` (`diagrams.py`) - Find circular dependencies in a dependency graph.
 - ▪️ **[`RepositoryIndexer._find_source_files`](files/src/local_deepwiki/core/indexer.md)** `(...) → list[Path]` (`indexer.py`) - Find all source files in the repository.
-- 🔹 **[`_find_test_functions`](files/src/local_deepwiki/generators/test_examples.md)** `(root: Node) → list[Node]` (`test_examples.py`) - Find all test function definitions in the AST.
+- 🔹 **[`_find_test_functions`](files/src/local_deepwiki/generators/test_examples.md)** `(root: Node) → list[tuple[Node, str | None]]` (`test_examples.py`) - Find all test function definitions in the AST.
 - 🔹 **[`_format_file_entry`](files/src/local_deepwiki/generators/source_refs.md)** `(file_path: str, wiki_path: str | None, current_wiki_path: str, ...+1) → str` (`source_refs.py`) - Format a single source file entry with optional line numb...
 - 🔹 **[`_format_signature`](files/src/local_deepwiki/generators/glossary.md)** `(entity: EntityEntry, max_params: int) → str` (`glossary.py`) - Format a compact function/method signature showing types.
 - ▪️⚡ **[`WikiGenerator._generate_architecture`](files/src/local_deepwiki/generators/wiki.md)** `(index_status: IndexStatus) → WikiPage` (`wiki.py`) - Generate architecture documentation with diagrams and gro...
+- 🔹 **[`_generate_blame_section`](files/src/local_deepwiki/generators/wiki_files.md)** `(repo_path: Path, file_path: str, chunks: list[CodeChunk]) → str | None` (`wiki_files.py`) - Generate a "Last Modified" section with git blame info.
 - ▪️⚡ **[`WikiGenerator._generate_changelog`](files/src/local_deepwiki/generators/wiki.md)** `(...) → WikiPage | None` (`wiki.py`) - Generate changelog page from git history.
 - ▪️⚡ **[`WikiGenerator._generate_dependencies`](files/src/local_deepwiki/generators/wiki.md)** `(index_status: IndexStatus) → tuple[WikiPage, list[str]]` (`wiki.py`) - Generate dependencies documentation with grounded facts f...
 - 🔹 **[`_generate_files_index`](files/src/local_deepwiki/generators/wiki_files.md)** `(file_pages: list[WikiPage]) → str` (`wiki_files.py`) - Generate index page for file documentation.
@@ -123,6 +124,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`_module_to_wiki_path`](files/src/local_deepwiki/generators/diagrams.md)** `(module: str, project_name: str) → str` (`diagrams.py`) - Convert module name to wiki file path.
 - 🔹 **[`_needs_migration`](files/src/local_deepwiki/core/indexer.md)** `(status: IndexStatus) → bool` (`indexer.py`) - Check if an index status needs migration to the current s...
 - ▪️⚡ **[`DeepResearchPipeline._parallel_retrieve`](files/src/local_deepwiki/core/deep_research.md)** `(sub_questions: list[SubQuestion]) → list[SearchResult]` (`deep_research.py`) - Retrieve code chunks for each sub-question in parallel.
+- 🔹 **[`_parse_all_porcelain_blame`](files/src/local_deepwiki/core/git_utils.md)** `(output: str) → list[BlameInfo]` (`git_utils.py`) - Parse git blame porcelain format output for multiple entr...
 - 🔹 **[`_parse_build_gradle`](files/src/local_deepwiki/generators/manifest.md)** `(filepath: Path, manifest: ProjectManifest) → None` (`manifest.py`) - Parse build.gradle (Java/Kotlin Gradle).
 - 🔹 **[`_parse_cargo_toml`](files/src/local_deepwiki/generators/manifest.md)** `(filepath: Path, manifest: ProjectManifest) → None` (`manifest.py`) - Parse Cargo.toml (Rust).
 - ▪️ **[`DeepResearchPipeline._parse_decomposition_response`](files/src/local_deepwiki/core/deep_research.md)** `(response: str) → list[SubQuestion]` (`deep_research.py`) - Parse the LLM decomposition response.
@@ -132,8 +134,10 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`_parse_go_mod`](files/src/local_deepwiki/generators/manifest.md)** `(filepath: Path, manifest: ProjectManifest) → None` (`manifest.py`) - Parse go.mod (Go).
 - 🔹 **[`_parse_import_line`](files/src/local_deepwiki/generators/diagrams.md)** `(line: str, project_name: str) → str | None` (`diagrams.py`) - Parse an import line to extract module name.
 - ▪️ **[`RelationshipAnalyzer._parse_import_line`](files/src/local_deepwiki/generators/see_also.md)** `(line: str) → str | None` (`see_also.py`) - Parse a Python import line to extract the imported module.
+- 🔹 **[`_parse_line_blame_map`](files/src/local_deepwiki/core/git_utils.md)** `(output: str) → dict[int, BlameInfo]` (`git_utils.py`) - Parse git blame porcelain output into a line number -> Bl...
 - 🔹 **[`_parse_package_json`](files/src/local_deepwiki/generators/manifest.md)** `(filepath: Path, manifest: ProjectManifest) → None` (`manifest.py`) - Parse package.json (Node.js).
 - 🔹 **[`_parse_pom_xml`](files/src/local_deepwiki/generators/manifest.md)** `(filepath: Path, manifest: ProjectManifest) → None` (`manifest.py`) - Parse pom.xml (Java/Maven).
+- 🔹 **[`_parse_porcelain_blame`](files/src/local_deepwiki/core/git_utils.md)** `(output: str) → BlameInfo | None` (`git_utils.py`) - Parse git blame porcelain format output for a single entry.
 - 🔹 **[`_parse_pyproject_toml`](files/src/local_deepwiki/generators/manifest.md)** `(filepath: Path, manifest: ProjectManifest) → None` (`manifest.py`) - Parse pyproject.toml (Python).
 - 🔹 **[`_parse_python_dep`](files/src/local_deepwiki/generators/manifest.md)** `(dep: str) → tuple[str, str]` (`manifest.py`) - Parse a Python dependency string like 'requests>=2.0'.
 - 🔹 **[`_parse_requirements_txt`](files/src/local_deepwiki/generators/manifest.md)** `(filepath: Path, manifest: ProjectManifest) → None` (`manifest.py`) - Parse requirements.txt (Python).
@@ -182,6 +186,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️ **[`CrossLinker.add_links`](files/src/local_deepwiki/generators/crosslinks.md)** `(page: WikiPage) → WikiPage` (`crosslinks.py`) - Add cross-links to a wiki page.
 - 🔹 **[`add_see_also_sections`](files/src/local_deepwiki/generators/see_also.md)** `(pages: list[WikiPage], analyzer: RelationshipAnalyzer) → list[WikiPage]` (`see_also.py`) - Add See Also sections to wiki pages.
 - 🔹 **[`add_source_refs_sections`](files/src/local_deepwiki/generators/source_refs.md)** `(pages: list[WikiPage], page_statuses: dict[str, WikiPageStatus], wiki_path: Path | None) → list[WikiPage]` (`source_refs.py`) - Add Relevant Source Files sections to wiki pages.
+- 🔹 **[`add_stale_banners`](files/src/local_deepwiki/generators/stale_detection.md)** `(pages: list[WikiPage], repo_path: Path, wiki_status: WikiGenerationStatus, ...+1) → list[WikiPage]` (`stale_detection.py`) - Add stale warning banners to pages with outdated document...
 - ▪️ **[`TestResearchCancellation.always_cancelled`](files/tests/test_deep_research.md)** `(...) → bool` (`test_deep_research.py`)
 - ▪️⚡ **[`TestWithRetry.always_fails`](files/tests/test_retry.md)** `(...)` ⚠️`ConnectionError` (`test_retry.py`)
 - ▪️⚡ **[`TestRetryDecorator.always_fails`](files/tests/test_provider_errors.md)** `(...)` ⚠️`ConnectionError` (`test_provider_errors.py`)
@@ -190,6 +195,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️ **[`RelationshipAnalyzer.analyze_chunks`](files/src/local_deepwiki/generators/see_also.md)** `(chunks: list[CodeChunk]) → None` (`see_also.py`) - Analyze import chunks to build relationship graph.
 - 🔹⚡ **[`analyze_file_coverage`](files/src/local_deepwiki/generators/coverage.md)** `(file_path: str, vector_store: VectorStore) → FileCoverage` (`coverage.py`) - Analyze documentation coverage for a single file.
 - 🔹⚡ **[`analyze_project_coverage`](files/src/local_deepwiki/generators/coverage.md)** `(index_status: IndexStatus, vector_store: VectorStore) → tuple[CoverageStats, list[FileCoverage]]` (`coverage.py`) - Analyze documentation coverage for the entire project.
+- 🔹 **[`analyze_staleness`](files/src/local_deepwiki/generators/stale_detection.md)** `(repo_path: Path, wiki_status: WikiGenerationStatus, stale_threshold_days: int) → StaleReport` (`stale_detection.py`) - Analyze all wiki pages for staleness.
 - 🔷 **[`AnthropicConfig`](files/src/local_deepwiki/config.md)** (`config.py`) - Configuration for Anthropic LLM.
 - 🔷 **[`AnthropicProvider`](files/src/local_deepwiki/providers/llm/anthropic.md)** (`anthropic.py`) - LLM provider using Anthropic API.
 - 🔹 **[`api_chat`](files/src/local_deepwiki/web/app.md)** `(...)` (`app.py`) - Handle chat Q&A with streaming response.
@@ -199,6 +205,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 ## B
 
 - ▪️⚡ **[`TestRetryDecorator.bad_gateway`](files/tests/test_provider_errors.md)** `(...)` ⚠️`Exception` (`test_provider_errors.py`)
+- 🔷 **[`BlameInfo`](files/src/local_deepwiki/core/git_utils.md)** (`git_utils.py`) - Git blame information for a line or range.
 - 🔹 **[`build_breadcrumb`](files/src/local_deepwiki/web/app.md)** `(wiki_path: Path, current_path: str) → str` (`app.py`) - Build breadcrumb navigation HTML with clickable links.
 - 🔹 **[`build_commit_url`](files/src/local_deepwiki/generators/changelog.md)** `(repo_info: GitRepoInfo, commit_hash: str) → str | None` (`changelog.py`) - Build URL to commit on GitHub/GitLab.
 - 🔹 **[`build_file_to_wiki_map`](files/src/local_deepwiki/generators/source_refs.md)** `(pages: list[WikiPage], wiki_path: Path | None) → dict[str, str]` (`source_refs.py`) - Build a mapping from source file paths to wiki page paths.
@@ -232,6 +239,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️⚡ **[`TestDeepResearchProgress.capture`](files/tests/test_deep_research.md)** `(p: ResearchProgress) → None` (`test_deep_research.py`)
 - 🔹 **[`chat_page`](files/src/local_deepwiki/web/app.md)** `(...)` (`app.py`) - Render the chat interface.
 - ▪️⚡ **[`OllamaProvider.check_health`](files/src/local_deepwiki/providers/llm/ollama.md)** `(...) → bool` ⚠️`OllamaConnectionError, OllamaModelNotFoundError` (`ollama.py`) - Check if Ollama is running and the model is available.
+- 🔹 **[`check_page_staleness`](files/src/local_deepwiki/core/git_utils.md)** `(repo_path: Path, page_path: str, generated_at: float, ...+2) → StaleInfo | None` (`git_utils.py`) - Check if a wiki page is potentially stale.
 - ▪️ **[`CodeChunker.chunk_file`](files/src/local_deepwiki/core/chunker.md)** `(file_path: Path, repo_root: Path) → Iterator[CodeChunk]` (`chunker.py`) - Extract code chunks from a source file.
 - 🔷 **[`ChunkingConfig`](files/src/local_deepwiki/config.md)** (`config.py`) - Chunking configuration.
 - 🔷 **[`ChunkType`](files/src/local_deepwiki/models.md)** (`models.py`) - Types of code chunks.
@@ -275,6 +283,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️ **[`TestLLMCacheEdgeCases.embedding_provider`](files/tests/test_llm_cache.md)** `(...) → MockEmbeddingProvider` (`test_llm_cache.py`) - Create a mock embedding provider.
 - 🔷 **[`EmbeddingConfig`](files/src/local_deepwiki/config.md)** (`config.py`) - Embedding provider configuration.
 - 🔷 **[`EmbeddingProvider`](files/src/local_deepwiki/providers/base.md)** (`base.py`) - Abstract base class for embedding providers.
+- 🔷 **[`EntityBlameInfo`](files/src/local_deepwiki/core/git_utils.md)** (`git_utils.py`) - Blame information for a code entity (function, class, met...
 - 🔷 **[`EntityEntry`](files/src/local_deepwiki/generators/glossary.md)** (`glossary.py`) - An entry in the glossary.
 - 🔷 **[`EntityInfo`](files/src/local_deepwiki/generators/crosslinks.md)** (`crosslinks.py`) - Information about a documented entity.
 - 🔷 **[`EntityRegistry`](files/src/local_deepwiki/generators/crosslinks.md)** (`crosslinks.py`) - Registry of documented entities and their wiki page locat...
@@ -320,8 +329,10 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`find_raise_statements`](files/src/local_deepwiki/core/chunker.md)** `(node: Node) → None` (`chunker.py`) - Recursively [find](files/src/local_deepwiki/generators/manifest.md) raise statements in the AST.
 - 🔹 **[`find_root_classes`](files/src/local_deepwiki/generators/inheritance.md)** `(classes: dict[str, ClassNode]) → list[str]` (`inheritance.py`) - Find classes that have no parents (root of inheritance tr...
 - 🔹 **[`find_test_file`](files/src/local_deepwiki/generators/test_examples.md)** `(source_file: Path, repo_root: Path) → Path | None` (`test_examples.py`) - Find the corresponding test file for a source file.
+- 🔹 **[`find_test_files`](files/src/local_deepwiki/generators/test_examples.md)** `(source_file: Path, repo_root: Path) → list[Path]` (`test_examples.py`) - Find all corresponding test files for a source file.
 - ▪️⚡ **[`TestWithRetry.flaky_func`](files/tests/test_retry.md)** `(...)` ⚠️`ConnectionError` (`test_retry.py`)
 - ▪️⚡ **[`TestRetryDecorator.flaky_function`](files/tests/test_provider_errors.md)** `(...)` ⚠️`ConnectionError` (`test_provider_errors.py`)
+- 🔹 **[`format_blame_date`](files/src/local_deepwiki/core/git_utils.md)** `(dt: datetime) → str` (`git_utils.py`) - Format a blame date for display.
 - 🔹 **[`format_examples_markdown`](files/src/local_deepwiki/generators/test_examples.md)** `(examples: list[UsageExample], max_examples: int) → str` (`test_examples.py`) - Format usage examples as markdown.
 - 🔹 **[`format_function_signature_line`](files/src/local_deepwiki/generators/api_docs.md)** `(sig: FunctionSignature) → str` (`api_docs.py`) - Format a function signature as a single line.
 - 🔹 **[`format_parameter`](files/src/local_deepwiki/generators/api_docs.md)** `(param: Parameter) → str` (`api_docs.py`) - Format a parameter for display.
@@ -365,6 +376,8 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️⚡ **[`TestGenerateFileDocs.generate_side_effect`](files/tests/test_wiki_files_coverage.md)** `(...)` ⚠️`ValueError` (`test_wiki_files_coverage.py`)
 - 🔹⚡ **[`generate_single_file_doc`](files/src/local_deepwiki/generators/wiki_files.md)** `(file_info: FileInfo, index_status: IndexStatus, vector_store: VectorStore, ...+6) → tuple[WikiPage | None, bool]` (`wiki_files.py`) - Generate documentation for a single source file.
 - 🔹 **[`generate_source_refs_section`](files/src/local_deepwiki/generators/source_refs.md)** `(source_files: list[str], current_wiki_path: str, file_to_wiki: dict[str, str], ...+2) → str | None` (`source_refs.py`) - Generate a Relevant Source Files section for a wiki page.
+- 🔹 **[`generate_stale_banner`](files/src/local_deepwiki/generators/stale_detection.md)** `(stale_info: StaleInfo) → str` (`stale_detection.py`) - Generate a warning banner for a stale page.
+- 🔹 **[`generate_stale_report_page`](files/src/local_deepwiki/generators/stale_detection.md)** `(repo_path: Path, wiki_status: WikiGenerationStatus, stale_threshold_days: int) → WikiPage` (`stale_detection.py`) - Generate a wiki page reporting potentially stale document...
 - ▪️⚡ **[`CachingLLMProvider.generate_stream`](files/src/local_deepwiki/providers/llm/cached.md)** `(prompt: str, system_prompt: str | None, max_tokens: int, ...+1) → AsyncIterator[str]` (`cached.py`) - Stream generation with caching.
 - ▪️⚡ **[`AnthropicProvider.generate_stream`](files/src/local_deepwiki/providers/llm/anthropic.md)** `(prompt: str, system_prompt: str | None, max_tokens: int, ...+1) → AsyncIterator[str]` (`anthropic.py`) - Generate text from a prompt with streaming.
 - ▪️⚡ **[`OllamaProvider.generate_stream`](files/src/local_deepwiki/providers/llm/ollama.md)** `(prompt: str, system_prompt: str | None, max_tokens: int, ...+1) → AsyncIterator[str]` ⚠️`OllamaConnectionError, OllamaModelNotFoundError` (`ollama.py`) - Generate text from a prompt with streaming.
@@ -397,15 +410,20 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`get_file_api_docs`](files/src/local_deepwiki/generators/api_docs.md)** `(file_path: Path) → str | None` (`api_docs.py`) - Get API documentation for a single file.
 - 🔹 **[`get_file_call_graph`](files/src/local_deepwiki/generators/callgraph.md)** `(file_path: Path, repo_root: Path) → str | None` (`callgraph.py`) - Get a call graph diagram for a single file.
 - 🔹 **[`get_file_callers`](files/src/local_deepwiki/generators/callgraph.md)** `(file_path: Path, repo_root: Path) → dict[str, list[str]]` (`callgraph.py`) - Get a mapping of function/method names to their callers w...
+- 🔹 **[`get_file_entity_blame`](files/src/local_deepwiki/core/git_utils.md)** `(repo_path: Path, file_path: str, entities: list[tuple[str, str, int, int]]) → list[EntityBlameInfo]` (`git_utils.py`) - Get blame information for multiple code entities in a file.
 - 🔹 **[`get_file_examples`](files/src/local_deepwiki/generators/test_examples.md)** `(source_file: Path, repo_root: Path, entity_names: list[str], ...+1) → str | None` (`test_examples.py`) - Get formatted usage examples for a source file.
 - ▪️ **[`CodeParser.get_file_info`](files/src/local_deepwiki/core/parser.md)** `(file_path: Path, repo_root: Path) → FileInfo` (`parser.py`) - Get information about a source file.
+- 🔹 **[`get_file_last_modified`](files/src/local_deepwiki/core/git_utils.md)** `(repo_path: Path, file_path: str) → datetime | None` (`git_utils.py`) - Get the last modification date of a file from git history.
+- 🔹 **[`get_files_last_modified`](files/src/local_deepwiki/core/git_utils.md)** `(repo_path: Path, file_paths: list[str]) → dict[str, datetime]` (`git_utils.py`) - Get last modification dates for multiple files efficiently.
 - 🔹 **[`get_git_remote_url`](files/src/local_deepwiki/core/git_utils.md)** `(repo_path: Path) → str | None` (`git_utils.py`) - Get the remote origin URL from git config.
+- 🔹 **[`get_line_blame`](files/src/local_deepwiki/core/git_utils.md)** `(repo_path: Path, file_path: str, line_number: int) → BlameInfo | None` (`git_utils.py`) - Get git blame information for a specific line.
 - 🔹 **[`get_llm_provider`](files/src/local_deepwiki/providers/llm/__init__.md)** `(config: LLMConfig | None) → LLMProvider` ⚠️`ValueError` (`__init__.py`) - Get the configured LLM provider.
 - 🔹 **[`get_logger`](files/src/local_deepwiki/logging.md)** `(name: str) → logging.Logger` (`logging.py`) - Get a logger for a specific module.
 - 🔹 **[`get_node_name`](files/src/local_deepwiki/core/parser.md)** `(node: Node, source: bytes, language: LangEnum) → str | None` (`parser.py`) - Extract the name from a function/class/method node.
 - 🔹 **[`get_node_text`](files/src/local_deepwiki/core/parser.md)** `(node: Node, source: bytes) → str` (`parser.py`) - Extract text content from a tree-sitter node.
 - ▪️ **[`EntityRegistry.get_page_entities`](files/src/local_deepwiki/generators/crosslinks.md)** `(wiki_path: str) → list[str]` (`crosslinks.py`) - Get all entities defined in a specific wiki page.
 - 🔹 **[`get_parent_classes`](files/src/local_deepwiki/core/chunker.md)** `(class_node: Node, source: bytes, language: Language) → list[str]` (`chunker.py`) - Extract parent class names from a class definition.
+- 🔹 **[`get_range_blame`](files/src/local_deepwiki/core/git_utils.md)** `(repo_path: Path, file_path: str, start_line: int, ...+1) → BlameInfo | None` (`git_utils.py`) - Get the most recent blame information for a line range.
 - ▪️ **[`RelationshipAnalyzer.get_relationships`](files/src/local_deepwiki/generators/see_also.md)** `(file_path: str) → FileRelationships` (`see_also.py`) - Get all relationships for a file.
 - 🔹 **[`get_repo_info`](files/src/local_deepwiki/core/git_utils.md)** `(repo_path: Path) → GitRepoInfo` (`git_utils.py`) - Get complete git repository information.
 - ▪️ **[`VectorStore.get_stats`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → dict[str, Any]` (`vectorstore.py`) - Get statistics about the vector store.
@@ -662,6 +680,8 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️ **[`TestCodeChunker.setup_method`](files/tests/test_chunker.md)** `(...)` (`test_chunker.py`) - Set up test fixtures.
 - 🔹 **[`should_skip`](files/src/local_deepwiki/generators/manifest.md)** `(name: str) → bool` (`manifest.py`)
 - 🔷 **[`SourceReference`](files/src/local_deepwiki/models.md)** (`models.py`) - A reference to a source code location.
+- 🔷 **[`StaleInfo`](files/src/local_deepwiki/core/git_utils.md)** (`git_utils.py`) - Information about a potentially stale wiki page.
+- 🔷 **[`StaleReport`](files/src/local_deepwiki/generators/stale_detection.md)** (`stale_detection.py`) - Summary of stale documentation analysis.
 - ▪️ **[`LLMCache.stats`](files/src/local_deepwiki/core/llm_cache.md)** `(...) → dict[str, int]` (`llm_cache.py`) - Get cache statistics.
 - ▪️ **[`CachingLLMProvider.stats`](files/src/local_deepwiki/providers/llm/cached.md)** `(...) → dict[str, int]` (`cached.py`) - Get cache statistics.
 - ▪️ **[`TestWikiStatusManagerHelpers.status_manager`](files/tests/test_incremental_wiki.md)** `(...)` (`test_incremental_wiki.py`) - Create a [WikiStatusManager](files/src/local_deepwiki/generators/wiki_status.md) instance.
@@ -1196,6 +1216,8 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔷 **[`TestAddSeeAlsoSections`](files/tests/test_see_also.md)** (`test_see_also.py`) - Tests for [add_see_also_sections](files/src/local_deepwiki/generators/see_also.md) function.
 - 🔷 **[`TestAddSourceRefsSections`](files/tests/test_source_refs.md)** (`test_source_refs.py`) - Tests for [add_source_refs_sections](files/src/local_deepwiki/generators/source_refs.md) function.
 - 🔷 **[`TestAddSourceRefsSectionsWithLineInfo`](files/tests/test_source_refs.md)** (`test_source_refs.py`) - Tests for [add_source_refs_sections](files/src/local_deepwiki/generators/source_refs.md) with line info in status.
+- 🔷 **[`TestAddStaleBanners`](files/tests/test_stale_detection.md)** (`test_stale_detection.py`) - Tests for [add_stale_banners](files/src/local_deepwiki/generators/stale_detection.md) function.
+- 🔷 **[`TestAnalyzeStaleness`](files/tests/test_stale_detection.md)** (`test_stale_detection.py`) - Tests for [analyze_staleness](files/src/local_deepwiki/generators/stale_detection.md) function.
 - 🔷 **[`TestAnthropicProvider`](files/tests/test_llm_providers.md)** (`test_llm_providers.py`) - Tests for [AnthropicProvider](files/src/local_deepwiki/providers/llm/anthropic.md).
 - 🔷 **[`TestApiChatStreaming`](files/tests/test_web.md)** (`test_web.py`) - Tests for [api_chat](files/src/local_deepwiki/web/app.md) streaming functionality.
 - 🔷 **[`TestAPIDocExtractor`](files/tests/test_api_docs.md)** (`test_api_docs.py`) - Test [APIDocExtractor](files/src/local_deepwiki/generators/api_docs.md) class.
@@ -1218,6 +1240,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔷 **[`TestCargoTomlEdgeCases`](files/tests/test_manifest.md)** (`test_manifest.py`) - Tests for Cargo.toml edge cases.
 - 🔷 **[`TestCCallExtraction`](files/tests/test_callgraph.md)** (`test_callgraph.py`) - Test call extraction for C code.
 - 🔷 **[`TestChatEndpoints`](files/tests/test_web.md)** (`test_web.py`) - Tests for chat functionality.
+- 🔷 **[`TestCheckPageStaleness`](files/tests/test_stale_detection.md)** (`test_stale_detection.py`) - Tests for [check_page_staleness](files/src/local_deepwiki/core/git_utils.md) function.
 - 🔷 **[`TestChunkerWithConfig`](files/tests/test_chunker.md)** (`test_chunker.py`) - Tests for [CodeChunker](files/src/local_deepwiki/core/chunker.md) with custom config.
 - 🔷 **[`TestChunkingConfigBatchSize`](files/tests/test_indexer.md)** (`test_indexer.py`) - Tests for batch_size configuration.
 - 🔷 **[`TestClassInfo`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for [ClassInfo](files/src/local_deepwiki/generators/diagrams.md) dataclass.
@@ -1264,6 +1287,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔷 **[`TestExtractClassSignature`](files/tests/test_api_docs.md)** (`test_api_docs.py`) - Test class signature extraction.
 - 🔷 **[`TestExtractCodeTerms`](files/tests/test_search.md)** (`test_search.py`) - Tests for [extract_code_terms](files/src/local_deepwiki/generators/search.md) function.
 - 🔷 **[`TestExtractExamplesForEntities`](files/tests/test_test_examples.md)** (`test_test_examples.py`) - Tests for [extract_examples_for_entities](files/src/local_deepwiki/generators/test_examples.md) function.
+- 🔷 **[`TestExtractFromTestClasses`](files/tests/test_test_examples.md)** (`test_test_examples.py`) - Tests for extracting examples from test classes.
 - 🔷 **[`TestExtractFunctionSignature`](files/tests/test_api_docs.md)** (`test_api_docs.py`) - Test function signature extraction.
 - 🔷 **[`TestExtractFunctionTypeMetadata`](files/tests/test_type_annotations.md)** (`test_type_annotations.py`) - Tests for [extract_function_type_metadata](files/src/local_deepwiki/core/chunker.md) function.
 - 🔷 **[`TestExtractHeadings`](files/tests/test_search.md)** (`test_search.py`) - Tests for [extract_headings](files/src/local_deepwiki/generators/search.md) function.
@@ -1286,7 +1310,9 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔷 **[`TestFindCircularDependencies`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for _find_circular_dependencies function.
 - 🔷 **[`TestFindRootClasses`](files/tests/test_inheritance.md)** (`test_inheritance.py`) - Tests for [find_root_classes](files/src/local_deepwiki/generators/inheritance.md) function.
 - 🔷 **[`TestFindTestFile`](files/tests/test_test_examples.md)** (`test_test_examples.py`) - Tests for [find_test_file](files/src/local_deepwiki/generators/test_examples.md) function.
+- 🔷 **[`TestFindTestFiles`](files/tests/test_test_examples.md)** (`test_test_examples.py`) - Tests for [find_test_files](files/src/local_deepwiki/generators/test_examples.md) function (plural).
 - 🔷 **[`TestFlaskApp`](files/tests/test_web.md)** (`test_web.py`) - Tests for Flask app functionality.
+- 🔷 **[`TestFormatBlameDate`](files/tests/test_git_utils.md)** (`test_git_utils.py`) - Tests for [format_blame_date](files/src/local_deepwiki/core/git_utils.md) function.
 - 🔷 **[`TestFormatExamplesMarkdown`](files/tests/test_test_examples.md)** (`test_test_examples.py`) - Tests for [format_examples_markdown](files/src/local_deepwiki/generators/test_examples.md) function.
 - 🔷 **[`TestFormatFileEntry`](files/tests/test_source_refs.md)** (`test_source_refs.py`) - Tests for _format_file_entry function.
 - 🔷 **[`TestFormatFunctionSignatureLine`](files/tests/test_api_docs.md)** (`test_api_docs.py`) - Test function signature line formatting.
@@ -1319,6 +1345,8 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔷 **[`TestGenerateSingleFileDoc`](files/tests/test_wiki_files_coverage.md)** (`test_wiki_files_coverage.py`) - Tests for [generate_single_file_doc](files/src/local_deepwiki/generators/wiki_files.md) function.
 - 🔷 **[`TestGenerateSourceRefsSection`](files/tests/test_source_refs.md)** (`test_source_refs.py`) - Tests for [generate_source_refs_section](files/src/local_deepwiki/generators/source_refs.md) function.
 - 🔷 **[`TestGenerateSourceRefsSectionWithLineInfo`](files/tests/test_source_refs.md)** (`test_source_refs.py`) - Tests for [generate_source_refs_section](files/src/local_deepwiki/generators/source_refs.md) with line info.
+- 🔷 **[`TestGenerateStaleBanner`](files/tests/test_stale_detection.md)** (`test_stale_detection.py`) - Tests for [generate_stale_banner](files/src/local_deepwiki/generators/stale_detection.md) function.
+- 🔷 **[`TestGenerateStaleReportPage`](files/tests/test_stale_detection.md)** (`test_stale_detection.py`) - Tests for [generate_stale_report_page](files/src/local_deepwiki/generators/stale_detection.md) function.
 - 🔷 **[`TestGenerateToc`](files/tests/test_toc.md)** (`test_toc.py`) - Tests for [generate_toc](files/src/local_deepwiki/generators/toc.md) function.
 - 🔷 **[`TestGenerateWikiFunction`](files/tests/test_wiki_coverage.md)** (`test_wiki_coverage.py`) - Tests for the [generate_wiki](files/src/local_deepwiki/generators/wiki.md) convenience function.
 - 🔷 **[`TestGetBriefDescription`](files/tests/test_glossary.md)** (`test_glossary.py`) - Tests for _get_brief_description function.
@@ -1330,12 +1358,17 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔷 **[`TestGetEmbeddingProvider`](files/tests/test_provider_factories.md)** (`test_provider_factories.py`) - Tests for get_embedding_provider factory function.
 - 🔷 **[`TestGetFileApiDocs`](files/tests/test_api_docs.md)** (`test_api_docs.py`) - Test the convenience function.
 - 🔷 **[`TestGetFileCallGraph`](files/tests/test_callgraph.md)** (`test_callgraph.py`) - Test the convenience function for getting file call graph.
+- 🔷 **[`TestGetFileEntityBlame`](files/tests/test_git_utils.md)** (`test_git_utils.py`) - Tests for [get_file_entity_blame](files/src/local_deepwiki/core/git_utils.md) function.
 - 🔷 **[`TestGetFileExamples`](files/tests/test_test_examples.md)** (`test_test_examples.py`) - Tests for [get_file_examples](files/src/local_deepwiki/generators/test_examples.md) function.
+- 🔷 **[`TestGetFileLastModified`](files/tests/test_stale_detection.md)** (`test_stale_detection.py`) - Tests for [get_file_last_modified](files/src/local_deepwiki/core/git_utils.md) function.
+- 🔷 **[`TestGetFilesLastModified`](files/tests/test_stale_detection.md)** (`test_stale_detection.py`) - Tests for [get_files_last_modified](files/src/local_deepwiki/core/git_utils.md) function.
 - 🔷 **[`TestGetGitRemoteUrl`](files/tests/test_git_utils.md)** (`test_git_utils.py`) - Tests for [get_git_remote_url](files/src/local_deepwiki/core/git_utils.md) function.
+- 🔷 **[`TestGetLineBlame`](files/tests/test_git_utils.md)** (`test_git_utils.py`) - Tests for [get_line_blame](files/src/local_deepwiki/core/git_utils.md) function.
 - 🔷 **[`TestGetLLMProvider`](files/tests/test_provider_factories.md)** (`test_provider_factories.py`) - Tests for get_llm_provider factory function.
 - 🔷 **[`TestGetLogger`](files/tests/test_logging_coverage.md)** (`test_logging_coverage.py`) - Tests for [get_logger](files/src/local_deepwiki/logging.md) function.
 - 🔷 **[`TestGetMainDefinitionLines`](files/tests/test_wiki_coverage.md)** (`test_wiki_coverage.py`) - Tests for _get_main_definition_lines method.
 - 🔷 **[`TestGetParentClasses`](files/tests/test_chunker.md)** (`test_chunker.py`) - Tests for [get_parent_classes](files/src/local_deepwiki/core/chunker.md) function.
+- 🔷 **[`TestGetRangeBlame`](files/tests/test_git_utils.md)** (`test_git_utils.py`) - Tests for [get_range_blame](files/src/local_deepwiki/core/git_utils.md) function.
 - 🔷 **[`TestGetRepoInfo`](files/tests/test_git_utils.md)** (`test_git_utils.py`) - Tests for [get_repo_info](files/src/local_deepwiki/core/git_utils.md) function.
 - 🔷 **[`TestGetWikiLink`](files/tests/test_glossary.md)** (`test_glossary.py`) - Tests for _get_wiki_link function.
 - 🔷 **[`TestGetWikiStructure`](files/tests/test_web.md)** (`test_web.py`) - Tests for [get_wiki_structure](files/src/local_deepwiki/web/app.md) function.
@@ -1415,9 +1448,11 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔷 **[`TestParseGoMod`](files/tests/test_manifest.md)** (`test_manifest.py`) - Tests for parsing go.mod files.
 - 🔷 **[`TestParseGoogleDocstring`](files/tests/test_api_docs.md)** (`test_api_docs.py`) - Test Google-style docstring parsing.
 - 🔷 **[`TestParseImportLine`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for _parse_import_line function.
+- 🔷 **[`TestParseLineBlameMap`](files/tests/test_git_utils.md)** (`test_git_utils.py`) - Tests for _parse_line_blame_map function.
 - 🔷 **[`TestParseManifestExceptionHandling`](files/tests/test_manifest.md)** (`test_manifest.py`) - Tests for [parse_manifest](files/src/local_deepwiki/generators/manifest.md) exception handling.
 - 🔷 **[`TestParseNumpyDocstring`](files/tests/test_api_docs.md)** (`test_api_docs.py`) - Test NumPy-style docstring parsing.
 - 🔷 **[`TestParsePackageJson`](files/tests/test_manifest.md)** (`test_manifest.py`) - Tests for parsing package.json files.
+- 🔷 **[`TestParsePorcelainBlame`](files/tests/test_git_utils.md)** (`test_git_utils.py`) - Tests for _parse_all_porcelain_blame function.
 - 🔷 **[`TestParsePyprojectToml`](files/tests/test_manifest.md)** (`test_manifest.py`) - Tests for parsing pyproject.toml files.
 - 🔷 **[`TestParseRemoteUrl`](files/tests/test_git_utils.md)** (`test_git_utils.py`) - Tests for [parse_remote_url](files/src/local_deepwiki/core/git_utils.md) function.
 - 🔷 **[`TestParseRequirementsTxt`](files/tests/test_manifest.md)** (`test_manifest.py`) - Tests for parsing requirements.txt files.
@@ -1515,7 +1550,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 ## W
 
 - 🔹 **[`walk`](files/src/local_deepwiki/core/parser.md)** `(node: Node)` (`parser.py`)
-- 🔹 **[`walk`](files/src/local_deepwiki/generators/test_examples.md)** `(node: Node) → None` (`test_examples.py`)
+- 🔹 **[`walk`](files/src/local_deepwiki/generators/test_examples.md)** `(node: Node, current_class: str | None) → None` (`test_examples.py`)
 - 🔹 **[`wiki_dir`](files/tests/test_web.md)** `(...)` (`test_web.py`) - Create a temporary wiki directory structure.
 - ▪️ **[`TestPdfExporterEdgeCases.wiki_with_empty_paths`](files/tests/test_pdf_export.md)** `(tmp_path: Path) → Path` (`test_pdf_export.py`) - Create a wiki with TOC entries that have empty paths.
 - 🔷 **[`WikiConfig`](files/src/local_deepwiki/config.md)** (`config.py`) - Wiki generation configuration.
@@ -1552,4 +1587,4 @@ The following source files were used to generate this documentation:
 - `tests/test_wiki_coverage.py:50-120`
 
 
-*Showing 10 of 98 source files.*
+*Showing 10 of 100 source files.*

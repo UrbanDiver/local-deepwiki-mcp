@@ -2,57 +2,53 @@
 
 ## File Overview
 
-This module provides functionality for generating documentation for code modules, focusing on creating wiki pages from code analysis. It integrates with the vector store system and status management to track documentation generation progress.
+This module provides functionality for generating documentation for code modules in a wiki format. It integrates with vector storage, language model providers, and wiki status management to create comprehensive module documentation.
 
 ## Functions
 
 ### generate_module_docs
 
-Generates documentation for code modules and creates wiki pages.
+Generates documentation for code modules using the provided components.
 
 **Parameters:**
-- Parameters not visible in the provided code
+- Based on the imports, this function likely works with [VectorStore](../core/vectorstore.md), [LLMProvider](../providers/base.md), and [WikiStatusManager](wiki_status.md) instances
+- May accept parameters for specifying which modules to document
 
-**Returns:**
-- Return type not visible in the provided code
+**Note:** The specific function signature and implementation details are not visible in the provided code chunks.
 
 ### _generate_modules_index
 
-Internal function for generating a modules index, likely used to create an overview or navigation structure for generated module documentation.
+A private helper function that appears to generate an index of modules.
 
-**Parameters:**
-- Parameters not visible in the provided code
-
-**Returns:**
-- Return type not visible in the provided code
+**Note:** The specific function signature and implementation details are not visible in the provided code chunks.
 
 ## Related Components
 
-This module integrates with several other components in the local_deepwiki system:
+This module integrates with several other components based on its imports:
 
-- **[VectorStore](../core/vectorstore.md)**: Used for storing and retrieving vectorized documentation data
-- **[IndexStatus](../models.md)**: Model for tracking the status of documentation indexing operations
-- **[WikiPage](../models.md)**: Model representing individual wiki pages generated from code
-- **[LLMProvider](../providers/base.md)**: Base provider class for language model interactions
-- **[WikiStatusManager](wiki_status.md)**: Manages the status and progress of wiki generation operations
+- **[VectorStore](../core/vectorstore.md)** from `local_deepwiki.core.vectorstore` - Handles vector storage operations for the documentation system
+- **[LLMProvider](../providers/base.md)** from `local_deepwiki.providers.base` - Provides language model functionality for generating documentation
+- **[WikiStatusManager](wiki_status.md)** from `local_deepwiki.generators.wiki_status` - Manages the status of wiki generation processes
+- **[IndexStatus](../models.md)** and **[WikiPage](../models.md)** from `local_deepwiki.models` - Data models for tracking index status and representing wiki pages
 
 ## Dependencies
 
-The module relies on:
-- `time`: For timing operations
-- `pathlib.Path`: For file system path handling
-- Standard typing annotations for type checking
+The module uses the following standard library imports:
+
+- `time` - For timing operations
+- `pathlib.Path` - For file system path handling
+- `typing.TYPE_CHECKING` - For type checking support
 
 ## Usage Context
 
-Based on the imports and function names, this module appears to be part of a larger system that:
-1. Analyzes code modules
-2. Generates documentation using language models
-3. Creates wiki pages from the generated content
-4. Tracks the status of documentation generation processes
-5. Stores the results in a vector database for retrieval
+This module appears to be part of a larger documentation generation system that:
 
-The module works in conjunction with status management and vector storage systems to provide a complete documentation generation workflow.
+1. Processes code modules to extract documentation
+2. Uses vector storage for efficient content management
+3. Leverages language models for enhanced documentation generation
+4. Tracks the status of wiki page generation processes
+
+The module works with [WikiPage](../models.md) models and [IndexStatus](../models.md) tracking, suggesting it's part of a system that maintains an index of generated documentation with status monitoring capabilities.
 
 ## API Reference
 
@@ -82,7 +78,7 @@ Generate documentation for each module/directory.
 
 
 <details>
-<summary>View Source (lines 15-132) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/wiki_modules.py#L15-L132">GitHub</a></summary>
+<summary>View Source (lines 15-132) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_modules.py#L15-L132">GitHub</a></summary>
 
 ```python
 async def generate_module_docs(
@@ -252,6 +248,69 @@ Functions and methods in this file and their callers:
 - **`setdefault`**: called by `generate_module_docs`
 - **`time`**: called by `generate_module_docs`
 
+## Usage Examples
+
+*Examples extracted from test files*
+
+### Test returns empty when no files in index
+
+From `test_wiki_modules_coverage.py::TestGenerateModuleDocs::test_returns_empty_for_no_files`:
+
+```python
+pages, generated, skipped = await generate_module_docs(
+    index_status=index_status,
+    vector_store=mock_vector_store,
+    llm=mock_llm,
+    system_prompt="System prompt",
+    status_manager=mock_status_manager,
+    full_rebuild=True,
+)
+
+assert pages == []
+assert generated == 0
+```
+
+### Test generates basic index content
+
+From `test_wiki_modules_coverage.py::TestGenerateModulesIndex::test_generates_basic_index`:
+
+```python
+pages = [
+    WikiPage(
+        path="modules/src.md", title="Module: src", content="", generated_at=time.time()
+    ),
+    WikiPage(
+        path="modules/tests.md", title="Module: tests", content="", generated_at=time.time()
+    ),
+]
+
+result = _generate_modules_index(pages)
+
+assert "# Modules" in result
+assert "[Module: src](src.md)" in result
+assert "[Module: tests](tests.md)" in result
+```
+
+### Test excludes the index page itself from listings
+
+From `test_wiki_modules_coverage.py::TestGenerateModulesIndex::test_excludes_index_page_from_listing`:
+
+```python
+result = _generate_modules_index(pages)
+
+# Should have link to src.md but not to index.md
+assert "[Module: src](src.md)" in result
+assert "index.md" not in result
+```
+
+
+## Last Modified
+
+| Entity | Type | Author | Date | Commit |
+|--------|------|--------|------|--------|
+| `generate_module_docs` | function | Brian Breidenbach | yesterday | `3defaaa` Refactor: Extract validatio... |
+| `_generate_modules_index` | function | Brian Breidenbach | yesterday | `3defaaa` Refactor: Extract validatio... |
+
 ## Additional Source Code
 
 Source code for functions and methods not listed in the API Reference above.
@@ -259,7 +318,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_generate_modules_index`
 
 <details>
-<summary>View Source (lines 135-151) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/wiki_modules.py#L135-L151">GitHub</a></summary>
+<summary>View Source (lines 135-151) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_modules.py#L135-L151">GitHub</a></summary>
 
 ```python
 def _generate_modules_index(module_pages: list[WikiPage]) -> str:
@@ -286,7 +345,3 @@ def _generate_modules_index(module_pages: list[WikiPage]) -> str:
 ## Relevant Source Files
 
 - `src/local_deepwiki/generators/wiki_modules.py:15-132`
-
-## See Also
-
-- [wiki](wiki.md) - uses this

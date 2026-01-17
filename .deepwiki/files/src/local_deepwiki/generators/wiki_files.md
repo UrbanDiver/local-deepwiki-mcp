@@ -2,66 +2,69 @@
 
 ## File Overview
 
-The `wiki_files.py` module is responsible for generating documentation for individual source code files. It provides functionality to create comprehensive documentation that includes source code details, API documentation, call graphs, and cross-references between different parts of the codebase.
+The `wiki_files.py` module is responsible for generating wiki documentation files from source code. It handles the creation of documentation that includes source code details, API documentation, call graphs, and cross-references. The module integrates with Git for source information, vector stores for semantic search, and various generators for different types of documentation content.
 
 ## Functions
 
 ### _get_syntax_lang
 
-Determines the appropriate syntax highlighting language identifier for a given file path.
+```python
+def _get_syntax_lang(file_path: Path) -> str
+```
+
+Determines the appropriate syntax highlighting language identifier based on the file extension.
+
+**Parameters:**
+- `file_path`: Path object representing the file to analyze
+
+**Returns:**
+- String representing the syntax highlighting language identifier
 
 ### _create_source_details
 
-Creates detailed source information for a file, including metadata and formatting details needed for documentation generation.
+```python
+def _create_source_details(file_path: Path, repo_info: GitRepoInfo) -> str
+```
 
-### _inject_inline_source_code
-
-Injects inline source code snippets into documentation content, allowing for embedded code examples within the generated documentation.
-
-### get_chunk_url
-
-Generates URLs for specific code chunks, enabling navigation to particular sections of source files.
+Creates source details section for documentation, including Git blame information and source URLs.
 
 **Parameters:**
-- Takes parameters related to chunk identification and URL construction
+- `file_path`: Path to the source file
+- `repo_info`: [GitRepoInfo](../core/git_utils.md) object containing repository information
 
-### generate_single_file_doc
+**Returns:**
+- Formatted string containing source details
 
-Generates comprehensive documentation for a single source code file.
+### _inject_inl
 
-**Functionality:**
-- Creates detailed documentation for an individual file
-- Integrates multiple documentation components including API docs, call graphs, and cross-references
-- Returns formatted documentation content
+```python
+def _inject_inl(content: str, entity_registry: EntityRegistry) -> str
+```
 
-### generate_
+Injects inline links into content by replacing entity references with appropriate cross-links.
 
-This appears to be an incomplete function name in the provided code chunk, likely part of a larger function for batch documentation generation.
+**Parameters:**
+- `content`: The content string to process
+- `entity_registry`: [EntityRegistry](crosslinks.md) instance for resolving entity references
 
-## Dependencies and Integration
+**Returns:**
+- Content string with injected inline links
 
-The module integrates with several other components of the system:
+## Related Components
 
-- **[Config](../config.md)**: Uses the [Config](../config.md) class for configuration management
-- **[GitRepoInfo](../core/git_utils.md)**: Leverages git repository information through [GitRepoInfo](../core/git_utils.md), [build_source_url](../core/git_utils.md), and [get_repo_info](../core/git_utils.md) functions
-- **[VectorStore](../core/vectorstore.md)**: Integrates with the [VectorStore](../core/vectorstore.md) class for semantic search capabilities
-- **API Documentation**: Uses [get_file_api_docs](api_docs.md) for generating API documentation
-- **Call Graph Analysis**: Integrates [get_file_call_graph](callgraph.md) and [get_file_callers](callgraph.md) for code relationship analysis
-- **Cross-linking**: Works with [EntityRegistry](crosslinks.md) for managing cross-references
-- **Diagram Generation**: Uses [generate_class_diagram](diagrams.md) for visual documentation
-- **Test Integration**: Imports test-related functionality (partially visible)
+This module works closely with several other components:
 
-## Core Functionality
+- **[Config](../config.md)**: Provides configuration settings for the documentation generation process
+- **[GitRepoInfo](../core/git_utils.md)**: Supplies Git repository information for source details
+- **[VectorStore](../core/vectorstore.md)**: Enables semantic search capabilities for documentation
+- **[EntityRegistry](crosslinks.md)**: Manages cross-references between different entities in the documentation
+- **API documentation generators**: Integrates with [`get_file_api_docs`](api_docs.md) for generating API documentation
+- **Call graph generators**: Uses [`get_file_call_graph`](callgraph.md) and [`get_file_callers`](callgraph.md) for analyzing code relationships
+- **Git utilities**: Leverages various Git-related functions for blame information, source URLs, and repository details
 
-The module appears to be a central component for file-level documentation generation, combining:
+## Usage Context
 
-1. **Source Code Analysis**: Processing and formatting source code content
-2. **API Documentation**: Generating structured API documentation
-3. **Relationship Mapping**: Creating call graphs and caller relationships
-4. **Cross-referencing**: Managing links between different code entities
-5. **Visual Documentation**: Integrating diagrams and visual aids
-
-The module uses asynchronous programming patterns (via `asyncio`) and includes utilities for URL generation, syntax highlighting, and content injection, making it a comprehensive solution for automated documentation generation from source code.
+The module appears to be part of a larger documentation generation system that creates comprehensive wiki-style documentation from source code repositories. It combines static analysis, Git history, and semantic relationships to produce rich, interconnected documentation files.
 
 ## API Reference
 
@@ -85,7 +88,7 @@ Build GitHub URL for a chunk.
 
 
 <details>
-<summary>View Source (lines 126-130) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/wiki_files.py#L126-L130">GitHub</a></summary>
+<summary>View Source (lines 132-136) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_files.py#L132-L136">GitHub</a></summary>
 
 ```python
 def get_chunk_url(chunk: CodeChunk) -> str | None:
@@ -123,7 +126,7 @@ Generate documentation for a single source file.
 
 
 <details>
-<summary>View Source (lines 252-429) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/wiki_files.py#L252-L429">GitHub</a></summary>
+<summary>View Source (lines 258-444) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_files.py#L258-L444">GitHub</a></summary>
 
 ```python
 async def generate_single_file_doc(
@@ -288,6 +291,15 @@ Do NOT include mermaid class diagrams - they will be auto-generated."""
         if examples_md:
             content += "\n\n" + examples_md
 
+    # Add git blame "Last Modified" section
+    blame_section = _generate_blame_section(
+        repo_path=Path(index_status.repo_path),
+        file_path=file_info.path,
+        chunks=all_file_chunks,
+    )
+    if blame_section:
+        content += "\n\n" + blame_section
+
     # Inject inline source code after each function/class in API Reference
     lang_str = file_info.language.value if file_info.language else None
     repo_info = get_repo_info(Path(index_status.repo_path))
@@ -334,7 +346,7 @@ Generate documentation for individual source files.  Uses parallel LLM calls for
 
 
 <details>
-<summary>View Source (lines 432-554) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/wiki_files.py#L432-L554">GitHub</a></summary>
+<summary>View Source (lines 447-569) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_files.py#L447-L569">GitHub</a></summary>
 
 ```python
 async def generate_file_docs(
@@ -482,7 +494,7 @@ Check if a file is a test file.
 
 
 <details>
-<summary>View Source (lines 464-469) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/wiki_files.py#L464-L469">GitHub</a></summary>
+<summary>View Source (lines 479-484) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_files.py#L479-L484">GitHub</a></summary>
 
 ```python
 def is_test_file(path: str) -> bool:
@@ -512,7 +524,7 @@ async def generate_with_semaphore(file_info: FileInfo) -> tuple[WikiPage | None,
 
 
 <details>
-<summary>View Source (lines 500-515) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/wiki_files.py#L500-L515">GitHub</a></summary>
+<summary>View Source (lines 515-530) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_files.py#L515-L530">GitHub</a></summary>
 
 ```python
 async def generate_with_semaphore(
@@ -540,9 +552,9 @@ async def generate_with_semaphore(
 ```mermaid
 flowchart TD
     N0[Path]
-    N1[Semaphore]
-    N2[WikiPage]
-    N3[_create_source_details]
+    N1[WikiPage]
+    N2[_create_source_details]
+    N3[_generate_blame_section]
     N4[_generate_files_index]
     N5[_get_syntax_lang]
     N6[_inject_inline_source_code]
@@ -572,7 +584,7 @@ flowchart TD
     N6 --> N7
     N6 --> N5
     N6 --> N8
-    N6 --> N3
+    N6 --> N2
     N6 --> N15
     N15 --> N8
     N13 --> N0
@@ -590,15 +602,15 @@ flowchart TD
     N13 --> N18
     N13 --> N19
     N13 --> N20
+    N13 --> N3
     N13 --> N21
     N13 --> N6
-    N13 --> N2
+    N13 --> N1
     N13 --> N29
     N12 --> N22
-    N12 --> N1
     N12 --> N13
     N12 --> N14
-    N12 --> N2
+    N12 --> N1
     N12 --> N4
     N12 --> N29
     N12 --> N25
@@ -616,12 +628,14 @@ Functions and methods in this file and their callers:
 - **`Semaphore`**: called by `generate_file_docs`
 - **[`WikiPage`](../models.md)**: called by `generate_file_docs`, `generate_single_file_doc`
 - **`_create_source_details`**: called by `_inject_inline_source_code`
+- **`_generate_blame_section`**: called by `generate_single_file_doc`
 - **`_generate_files_index`**: called by `generate_file_docs`
 - **`_get_syntax_lang`**: called by `_inject_inline_source_code`
 - **`_inject_inline_source_code`**: called by `generate_single_file_doc`
 - **`add`**: called by `_inject_inline_source_code`
 - **[`build_source_url`](../core/git_utils.md)**: called by `_inject_inline_source_code`, `get_chunk_url`
 - **`exists`**: called by `generate_single_file_doc`
+- **[`format_blame_date`](../core/git_utils.md)**: called by `_generate_blame_section`
 - **`gather`**: called by `generate_file_docs`
 - **`generate`**: called by `generate_single_file_doc`
 - **[`generate_class_diagram`](diagrams.md)**: called by `generate_single_file_doc`
@@ -632,6 +646,7 @@ Functions and methods in this file and their callers:
 - **[`get_file_api_docs`](api_docs.md)**: called by `generate_single_file_doc`
 - **[`get_file_call_graph`](callgraph.md)**: called by `generate_single_file_doc`
 - **[`get_file_callers`](callgraph.md)**: called by `generate_single_file_doc`
+- **[`get_file_entity_blame`](../core/git_utils.md)**: called by `_generate_blame_section`
 - **[`get_file_examples`](test_examples.md)**: called by `generate_single_file_doc`
 - **[`get_repo_info`](../core/git_utils.md)**: called by `generate_single_file_doc`
 - **`is_test_file`**: called by `generate_file_docs`
@@ -641,8 +656,134 @@ Functions and methods in this file and their callers:
 - **`register_from_chunks`**: called by `generate_single_file_doc`
 - **`search`**: called by `generate_single_file_doc`
 - **`setdefault`**: called by `_generate_files_index`
+- **`sort`**: called by `_generate_blame_section`
 - **`sub`**: called by `generate_single_file_doc`
 - **`time`**: called by `generate_file_docs`, `generate_single_file_doc`
+
+## Usage Examples
+
+*Examples extracted from test files*
+
+### Test returns empty when no files in index
+
+From `test_wiki_files_coverage.py::TestGenerateFileDocs::test_returns_empty_for_no_files`:
+
+```python
+pages, generated, skipped = await generate_file_docs(
+    index_status=index_status,
+    vector_store=mock_vector_store,
+    llm=mock_llm,
+    system_prompt="System prompt",
+    status_manager=mock_status_manager,
+    entity_registry=mock_entity_registry,
+    config=mock_config,
+    full_rebuild=True,
+)
+
+assert pages == []
+assert generated == 0
+```
+
+### Test filters out __init__.py files
+
+From `test_wiki_files_coverage.py::TestGenerateFileDocs::test_filters_init_files`:
+
+```python
+pages, generated, skipped = await generate_file_docs(
+    index_status=index_status,
+    vector_store=mock_vector_store,
+    llm=mock_llm,
+    system_prompt="System prompt",
+    status_manager=mock_status_manager,
+    entity_registry=mock_entity_registry,
+    config=mock_config,
+    full_rebuild=True,
+)
+
+assert pages == []
+```
+
+### Test generates basic index content
+
+From `test_wiki_files_coverage.py::TestGenerateFilesIndex::test_generates_basic_index`:
+
+```python
+pages = [
+    WikiPage(
+        path="files/src/main.md", title="main.py", content="", generated_at=time.time()
+    ),
+    WikiPage(
+        path="files/src/utils.md", title="utils.py", content="", generated_at=time.time()
+    ),
+]
+
+result = _generate_files_index(pages)
+
+assert "# Source Files" in result
+assert "[main.py]" in result
+assert "[utils.py]" in result
+```
+
+### Test groups files by directory
+
+From `test_wiki_files_coverage.py::TestGenerateFilesIndex::test_groups_by_directory`:
+
+```python
+pages = [
+    WikiPage(
+        path="files/src/main.md", title="main.py", content="", generated_at=time.time()
+    ),
+    WikiPage(
+        path="files/tests/test_main.md",
+        title="test_main.py",
+        content="",
+        generated_at=time.time(),
+    ),
+]
+
+result = _generate_files_index(pages)
+
+assert "## src" in result
+assert "## tests" in result
+```
+
+### Test creates a properly formatted details block
+
+From `test_wiki_files_coverage.py::TestCreateSourceDetails::test_creates_details_block`:
+
+```python
+chunk = make_code_chunk(
+    name="my_func",
+    chunk_type=ChunkType.FUNCTION,
+    content="def my_func():\n    pass",
+    start_line=10,
+    end_line=12,
+)
+
+result = _create_source_details(chunk, "python")
+
+assert "<details>" in result
+assert "</details>" in result
+assert "View Source (lines 10-12)" in result
+assert "```python" in result
+assert "def my_func():" in result
+```
+
+
+## Last Modified
+
+| Entity | Type | Author | Date | Commit |
+|--------|------|--------|------|--------|
+| `generate_single_file_doc` | function | Brian Breidenbach | today | `37aec0f` Add git blame integration t... |
+| `_generate_blame_section` | function | Brian Breidenbach | today | `37aec0f` Add git blame integration t... |
+| `_create_source_details` | function | Brian Breidenbach | today | `62e3290` Add GitHub source links and... |
+| `_inject_inline_source_code` | function | Brian Breidenbach | today | `62e3290` Add GitHub source links and... |
+| `get_chunk_url` | function | Brian Breidenbach | today | `62e3290` Add GitHub source links and... |
+| `_get_syntax_lang` | function | Brian Breidenbach | today | `d275583` Add inline expandable sourc... |
+| `generate_file_docs` | function | Brian Breidenbach | today | `0d91a70` Apply Python best practices... |
+| `is_test_file` | function | Brian Breidenbach | yesterday | `3defaaa` Refactor: Extract validatio... |
+| `generate_with_semaphore` | function | Brian Breidenbach | yesterday | `3defaaa` Refactor: Extract validatio... |
+| `_generate_files_index` | function | Brian Breidenbach | yesterday | `3defaaa` Refactor: Extract validatio... |
 
 ## Additional Source Code
 
@@ -651,7 +792,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_get_syntax_lang`
 
 <details>
-<summary>View Source (lines 27-52) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/wiki_files.py#L27-L52">GitHub</a></summary>
+<summary>View Source (lines 33-58) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_files.py#L33-L58">GitHub</a></summary>
 
 ```python
 def _get_syntax_lang(language: str | None) -> str:
@@ -661,7 +802,7 @@ def _get_syntax_lang(language: str | None) -> str:
         language: Programming language name.
 
     Returns:
-        Language string for markdown code blocks.
+        [Language](../models.md) string for markdown code blocks.
     """
     lang_map = {
         "python": "python",
@@ -688,11 +829,11 @@ def _get_syntax_lang(language: str | None) -> str:
 #### `_create_source_details`
 
 <details>
-<summary>View Source (lines 55-81) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/wiki_files.py#L55-L81">GitHub</a></summary>
+<summary>View Source (lines 61-87) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_files.py#L61-L87">GitHub</a></summary>
 
 ```python
 def _create_source_details(
-    chunk: CodeChunk, syntax_lang: str, github_url: str | None = None
+    chunk: [CodeChunk](../models.md), syntax_lang: str, github_url: str | None = None
 ) -> str:
     """Create a collapsible source code block for a chunk.
 
@@ -726,14 +867,14 @@ def _create_source_details(
 #### `_inject_inline_source_code`
 
 <details>
-<summary>View Source (lines 84-249) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/wiki_files.py#L84-L249">GitHub</a></summary>
+<summary>View Source (lines 90-255) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_files.py#L90-L255">GitHub</a></summary>
 
 ```python
 def _inject_inline_source_code(
     content: str,
-    chunks: list[CodeChunk],
+    chunks: list[[CodeChunk](../models.md)],
     language: str | None,
-    repo_info: GitRepoInfo | None = None,
+    repo_info: [GitRepoInfo](../core/git_utils.md) | None = None,
 ) -> str:
     """Inject collapsible source code after each function/class in the API Reference.
 
@@ -748,13 +889,13 @@ def _inject_inline_source_code(
     """
     # Build maps of entity names to their chunks
     # Use both simple names and qualified names (Parent.method) for methods
-    chunk_map: dict[str, CodeChunk] = {}
-    class_map: dict[str, CodeChunk] = {}  # For fallback to class source
+    chunk_map: dict[str, [CodeChunk](../models.md)] = {}
+    class_map: dict[str, [CodeChunk](../models.md)] = {}  # For fallback to class source
     all_chunks: set[str] = set()  # Track all chunk IDs
     used_chunks: set[str] = set()  # Track which chunks we've injected
 
     for chunk in chunks:
-        if chunk.name and chunk.chunk_type in (ChunkType.CLASS, ChunkType.FUNCTION, ChunkType.METHOD):
+        if chunk.name and chunk.chunk_type in ([ChunkType](../models.md).CLASS, [ChunkType](../models.md).FUNCTION, [ChunkType](../models.md).METHOD):
             all_chunks.add(chunk.id)
             # Store by simple name (may be overwritten by duplicates)
             chunk_map[chunk.name] = chunk
@@ -763,7 +904,7 @@ def _inject_inline_source_code(
                 qualified_name = f"{chunk.parent_name}.{chunk.name}"
                 chunk_map[qualified_name] = chunk
             # Build class map for fallback
-            if chunk.chunk_type == ChunkType.CLASS:
+            if chunk.chunk_type == [ChunkType](../models.md).CLASS:
                 class_map[chunk.name] = chunk
 
     if not chunk_map:
@@ -771,11 +912,11 @@ def _inject_inline_source_code(
 
     syntax_lang = _get_syntax_lang(language)
 
-    def get_chunk_url(chunk: CodeChunk) -> str | None:
+    def get_chunk_url(chunk: [CodeChunk](../models.md)) -> str | None:
         """Build GitHub URL for a chunk."""
         if repo_info is None:
             return None
-        return build_source_url(repo_info, chunk.file_path, chunk.start_line, chunk.end_line)
+        return [build_source_url](../core/git_utils.md)(repo_info, chunk.file_path, chunk.start_line, chunk.end_line)
 
     # Split into lines for processing
     lines = content.split("\n")
@@ -790,15 +931,15 @@ def _inject_inline_source_code(
         # Track class context from headings like "### class `ClassName`"
         if line.startswith("### class `"):
             start = line.find("`") + 1
-            end = line.find("`", start)
+            end = line.[find](manifest.md)("`", start)
             if start > 0 and end > start:
                 current_class = line[start:end]
 
         # Look for API Reference function/class headings
         # Matches: #### `name`, ### `name`, ### class `name`
         if line.startswith("#### `") or line.startswith("### `") or line.startswith("### class `"):
-            # Extract entity name from heading like "#### `setup_logging`"
-            start = line.find("`") + 1
+            # Extract entity name from heading like "#### [`setup_logging`](../logging.md)"
+            start = line.[find](manifest.md)("`") + 1
             end = line.find("`", start)
             if start > 0 and end > start:
                 entity_name = line[start:end]
@@ -813,7 +954,7 @@ def _inject_inline_source_code(
                     # This is a class heading, update context
                     current_class = entity_name
 
-                # Try to find the chunk - first try qualified name, then simple name
+                # Try to [find](manifest.md) the chunk - first try qualified name, then simple name
                 chunk = None
                 if current_class and entity_name != current_class:
                     # This is likely a method under the current class
@@ -886,7 +1027,7 @@ def _inject_inline_source_code(
         result_lines.append("")
 
         for chunk in sorted(unused_chunks, key=lambda c: c.start_line):
-            if chunk.chunk_type == ChunkType.CLASS:
+            if chunk.chunk_type == [ChunkType](../models.md).CLASS:
                 result_lines.append(f"### `{chunk.name}`")
             else:
                 result_lines.append(f"#### `{chunk.name}`")
@@ -900,13 +1041,93 @@ def _inject_inline_source_code(
 </details>
 
 
+#### `_generate_blame_section`
+
+<details>
+<summary>View Source (lines 572-640) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_files.py#L572-L640">GitHub</a></summary>
+
+```python
+def _generate_blame_section(
+    repo_path: Path,
+    file_path: str,
+    chunks: list[[CodeChunk](../models.md)],
+) -> str | None:
+    """Generate a "Last Modified" section with git blame info.
+
+    Args:
+        repo_path: Path to the repository root.
+        file_path: Relative path to the source file.
+        chunks: Code chunks from the file.
+
+    Returns:
+        Markdown section or None if no blame info available.
+    """
+    # Build entity list for blame lookup
+    entities: list[tuple[str, str, int, int]] = []
+
+    for chunk in chunks:
+        if chunk.name and chunk.chunk_type in ([ChunkType](../models.md).CLASS, [ChunkType](../models.md).FUNCTION, [ChunkType](../models.md).METHOD):
+            entities.append((
+                chunk.name,
+                chunk.chunk_type.value,
+                chunk.start_line,
+                chunk.end_line,
+            ))
+
+    if not entities:
+        return None
+
+    # Get blame info for all entities
+    blame_infos = [get_file_entity_blame](../core/git_utils.md)(repo_path, file_path, entities)
+
+    if not blame_infos:
+        return None
+
+    # Sort by most recently modified first
+    blame_infos.sort(key=lambda b: b.last_modified_date, reverse=True)
+
+    # Build the section
+    lines = [
+        "## Last Modified",
+        "",
+        "| Entity | Type | Author | Date | Commit |",
+        "|--------|------|--------|------|--------|",
+    ]
+
+    for blame in blame_infos:
+        entity_name = blame.entity_name
+        entity_type = blame.entity_type
+        author = blame.last_modified_by
+        date_str = [format_blame_date](../core/git_utils.md)(blame.last_modified_date)
+        commit_short = blame.commit_hash[:7]
+
+        # Truncate long author names
+        if len(author) > 20:
+            author = author[:17] + "..."
+
+        # Add commit summary if available (truncated)
+        commit_info = f"`{commit_short}`"
+        if blame.commit_summary:
+            summary = blame.commit_summary
+            if len(summary) > 30:
+                summary = summary[:27] + "..."
+            commit_info = f"`{commit_short}` {summary}"
+
+        lines.append(f"| `{entity_name}` | {entity_type} | {author} | {date_str} | {commit_info} |")
+
+    return "\n".join(lines)
+```
+
+</details>
+
+
 #### `_generate_files_index`
 
 <details>
-<summary>View Source (lines 557-590) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/wiki_files.py#L557-L590">GitHub</a></summary>
+<summary>View Source (lines 643-676) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_files.py#L643-L676">GitHub</a></summary>
 
 ```python
-def _generate_files_index(file_pages: list[WikiPage]) -> str:
+def _generate_files_index(file_pages: list[[WikiPage](../models.md)]) -> str:
     """Generate index page for file documentation.
 
     Args:
@@ -921,7 +1142,7 @@ def _generate_files_index(file_pages: list[WikiPage]) -> str:
     ]
 
     # Group by directory
-    by_dir: dict[str, list[WikiPage]] = {}
+    by_dir: dict[str, list[[WikiPage](../models.md)]] = {}
     for page in file_pages:
         if page.path == "files/index.md":
             continue
@@ -946,8 +1167,4 @@ def _generate_files_index(file_pages: list[WikiPage]) -> str:
 
 ## Relevant Source Files
 
-- `src/local_deepwiki/generators/wiki_files.py:27-52`
-
-## See Also
-
-- [wiki](wiki.md) - uses this
+- `src/local_deepwiki/generators/wiki_files.py:33-58`

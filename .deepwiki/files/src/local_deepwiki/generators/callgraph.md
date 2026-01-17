@@ -1,19 +1,14 @@
-# callgraph.py
+# Call Graph Generator
 
 ## File Overview
 
-This module provides functionality for extracting and generating call graphs from source code files. It analyzes code to identify function and method calls, then generates visual Mermaid diagrams representing the call relationships.
+This module provides functionality for extracting and visualizing call graphs from source code files. It analyzes code to identify function and method calls, then generates Mermaid diagrams to visualize the calling relationships between different functions and classes.
 
 ## Classes
 
 ### CallGraphExtractor
 
-The CallGraphExtractor class handles the extraction of call graph information from source code files. It uses the tree-sitter parser to analyze code structure and identify function calls.
-
-**Key functionality:**
-- Extracts call relationships from source files
-- Works with the [CodeParser](../core/parser.md) for code analysis
-- Supports call graph generation for individual files
+The CallGraphExtractor class is responsible for parsing source code and extracting call relationships between functions and methods. It uses tree-sitter parsing to analyze code structure and identify function calls.
 
 ## Functions
 
@@ -32,40 +27,62 @@ Generates a call graph diagram for a single source file.
 **Returns:**
 - `str | None`: Mermaid diagram string representing the call graph, or None if no calls are found
 
-**[Usage Example](test_examples.md):**
+### extract_call_name
+
+Extracts the name of a function or method call from a tree-sitter node.
+
+### extract_calls_from_function
+
+Analyzes a function node to extract all the calls it makes to other functions or methods.
+
+### generate_call_graph_diagram
+
+Converts call graph data into a Mermaid diagram format for visualization.
+
+### build_reverse_call_graph
+
+Builds a reverse mapping of the call graph to identify which functions call a given function.
+
+### get_file_callers
+
+Retrieves information about what functions or methods call into a specific file.
+
+## Usage Examples
 
 ```python
 from pathlib import Path
 from local_deepwiki.generators.callgraph import get_file_call_graph
 
+# Generate call graph for a Python file
 file_path = Path("src/my_module.py")
 repo_root = Path(".")
+
 diagram = get_file_call_graph(file_path, repo_root)
 if diagram:
-    print(diagram)
+    print(diagram)  # Outputs Mermaid diagram string
 ```
 
-### Additional Functions
-
-The module includes several other functions for call graph processing:
-
-- `extract_call_name`: Extracts function call names from code
-- `extract_calls_from_function`: Identifies calls within function bodies
-- `_is_builtin_or_noise`: Filters out built-in functions and noise
-- `generate_call_graph_diagram`: Creates Mermaid diagram strings from call data
-- `build_reverse_call_graph`: Builds reverse call relationships
-- `get_file_callers`: Identifies callers of functions in a file
+```python
+# Using the CallGraphExtractor directly
+extractor = CallGraphExtractor()
+call_graph = extractor.extract_from_file(file_path, repo_root)
+```
 
 ## Related Components
 
 This module integrates with several other components:
 
-- **[CodeParser](../core/parser.md)**: Used for parsing source code with tree-sitter
-- **Chunker**: Utilizes `CLASS_NODE_TYPES` and `FUNCTION_NODE_TYPES` constants for node identification
-- **Parser utilities**: Uses [`find_nodes_by_type`](../core/parser.md), [`get_node_name`](../core/parser.md), and [`get_node_text`](../core/parser.md) functions
-- **[Language](../models.md) model**: Works with the [Language](../models.md) enum for language-specific processing
+- **[CodeParser](../core/parser.md)**: Used for parsing source code files with tree-sitter
+- **[Language](../models.md)**: Enum for specifying programming language types
+- **Chunker**: Provides constants for identifying class and function node types (`CLASS_NODE_TYPES`, `FUNCTION_NODE_TYPES`)
 
-The module processes tree-sitter Node objects and works within the broader local_deepwiki documentation generation system.
+The module uses helper functions from the parser module including [`find_nodes_by_type`](../core/parser.md), [`get_node_name`](../core/parser.md), and [`get_node_text`](../core/parser.md) for tree-sitter node manipulation.
+
+## Internal Functions
+
+### _is_builtin_or_noise
+
+Private function that filters out built-in functions or noise from the call graph analysis to focus on meaningful application-level calls.
 
 ## API Reference
 
@@ -77,7 +94,7 @@ Extracts call graphs from source files.
 
 
 <details>
-<summary>View Source (lines 257-324) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/callgraph.py#L257-L324">GitHub</a></summary>
+<summary>View Source (lines 257-324) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/callgraph.py#L257-L324">GitHub</a></summary>
 
 ```python
 class CallGraphExtractor:
@@ -162,7 +179,7 @@ Initialize the extractor.
 
 
 <details>
-<summary>View Source (lines 257-324) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/callgraph.py#L257-L324">GitHub</a></summary>
+<summary>View Source (lines 257-324) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/callgraph.py#L257-L324">GitHub</a></summary>
 
 ```python
 class CallGraphExtractor:
@@ -256,7 +273,7 @@ Extract call graph from a source file.
 
 
 <details>
-<summary>View Source (lines 257-324) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/callgraph.py#L257-L324">GitHub</a></summary>
+<summary>View Source (lines 257-324) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/callgraph.py#L257-L324">GitHub</a></summary>
 
 ```python
 class CallGraphExtractor:
@@ -353,7 +370,7 @@ Extract the function/method name from a call expression.
 
 
 <details>
-<summary>View Source (lines 25-115) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/callgraph.py#L25-L115">GitHub</a></summary>
+<summary>View Source (lines 25-115) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/callgraph.py#L25-L115">GitHub</a></summary>
 
 ```python
 def extract_call_name(call_node: Node, source: bytes, language: Language) -> str | None:
@@ -471,7 +488,7 @@ Extract all function calls from a function body.
 
 
 <details>
-<summary>View Source (lines 118-147) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/callgraph.py#L118-L147">GitHub</a></summary>
+<summary>View Source (lines 118-147) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/callgraph.py#L118-L147">GitHub</a></summary>
 
 ```python
 def extract_calls_from_function(
@@ -528,7 +545,7 @@ Generate a Mermaid flowchart for a call graph.
 
 
 <details>
-<summary>View Source (lines 327-407) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/callgraph.py#L327-L407">GitHub</a></summary>
+<summary>View Source (lines 327-407) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/callgraph.py#L327-L407">GitHub</a></summary>
 
 ```python
 def generate_call_graph_diagram(
@@ -635,7 +652,7 @@ Get a call graph diagram for a single file.
 
 
 <details>
-<summary>View Source (lines 410-422) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/callgraph.py#L410-L422">GitHub</a></summary>
+<summary>View Source (lines 410-422) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/callgraph.py#L410-L422">GitHub</a></summary>
 
 ```python
 def get_file_call_graph(file_path: Path, repo_root: Path) -> str | None:
@@ -673,7 +690,7 @@ Build a reverse call graph mapping callee to callers.
 
 
 <details>
-<summary>View Source (lines 425-441) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/callgraph.py#L425-L441">GitHub</a></summary>
+<summary>View Source (lines 425-441) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/callgraph.py#L425-L441">GitHub</a></summary>
 
 ```python
 def build_reverse_call_graph(call_graph: dict[str, list[str]]) -> dict[str, list[str]]:
@@ -717,7 +734,7 @@ Get a mapping of function/method names to their callers within a file.
 
 
 <details>
-<summary>View Source (lines 444-456) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/callgraph.py#L444-L456">GitHub</a></summary>
+<summary>View Source (lines 444-456) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/callgraph.py#L444-L456">GitHub</a></summary>
 
 ```python
 def get_file_callers(file_path: Path, repo_root: Path) -> dict[str, list[str]]:
@@ -822,23 +839,27 @@ Functions and methods in this file and their callers:
 
 ### Test that common built-ins are filtered
 
-From `test_callgraph.py::test_common_builtins_filtered`:
+From `test_callgraph.py::TestIsBuiltinOrNoise::test_common_builtins_filtered`:
 
 ```python
 assert _is_builtin_or_noise("print", Language.PYTHON) is True
+assert _is_builtin_or_noise("len", Language.PYTHON) is True
+assert _is_builtin_or_noise("str", Language.PYTHON) is True
+assert _is_builtin_or_noise("isinstance", Language.PYTHON) is True
 ```
 
 ### Test Python-specific built-ins are filtered
 
-From `test_callgraph.py::test_python_specific_builtins`:
+From `test_callgraph.py::TestIsBuiltinOrNoise::test_python_specific_builtins`:
 
 ```python
 assert _is_builtin_or_noise("super", Language.PYTHON) is True
+assert _is_builtin_or_noise("next", Language.PYTHON) is True
 ```
 
 ### Test extracting a simple function call
 
-From `test_callgraph.py::test_simple_function_call`:
+From `test_callgraph.py::TestExtractCallsPython::test_simple_function_call`:
 
 ```python
 source = dedent(
@@ -856,7 +877,7 @@ assert "process_data" in calls
 
 ### Test extracting multiple function calls
 
-From `test_callgraph.py::test_multiple_function_calls`:
+From `test_callgraph.py::TestExtractCallsPython::test_multiple_function_calls`:
 
 ```python
 source = dedent(
@@ -872,17 +893,31 @@ func_node = root.children[0]
 
 calls = extract_calls_from_function(func_node, source.encode(), Language.PYTHON)
 assert "load_data" in calls
+assert "process_data" in calls
 ```
 
 ### Test that empty call graph returns None
 
-From `test_callgraph.py::test_empty_graph_returns_none`:
+From `test_callgraph.py::TestGenerateCallGraphDiagram::test_empty_graph_returns_none`:
 
 ```python
 result = generate_call_graph_diagram({})
 assert result is None
 ```
 
+
+## Last Modified
+
+| Entity | Type | Author | Date | Commit |
+|--------|------|--------|------|--------|
+| `build_reverse_call_graph` | function | Brian Breidenbach | today | `62e3290` Add GitHub source links and... |
+| `get_file_callers` | function | Brian Breidenbach | today | `62e3290` Add GitHub source links and... |
+| `generate_call_graph_diagram` | function | Brian Breidenbach | yesterday | `8078321` Fix ruff and pyright code q... |
+| `_is_builtin_or_noise` | function | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
+| `CallGraphExtractor` | class | Brian Breidenbach | 5 days ago | `71d32c1` Add call graph diagrams to ... |
+| `extract_call_name` | function | Brian Breidenbach | 5 days ago | `71d32c1` Add call graph diagrams to ... |
+| `extract_calls_from_function` | function | Brian Breidenbach | 5 days ago | `71d32c1` Add call graph diagrams to ... |
+| `get_file_call_graph` | function | Brian Breidenbach | 5 days ago | `71d32c1` Add call graph diagrams to ... |
 
 ## Additional Source Code
 
@@ -891,7 +926,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_is_builtin_or_noise`
 
 <details>
-<summary>View Source (lines 150-254) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/callgraph.py#L150-L254">GitHub</a></summary>
+<summary>View Source (lines 150-254) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/callgraph.py#L150-L254">GitHub</a></summary>
 
 ```python
 def _is_builtin_or_noise(name: str, language: Language) -> bool:
@@ -1009,6 +1044,6 @@ def _is_builtin_or_noise(name: str, language: Language) -> bool:
 
 ## See Also
 
-- [chunker](../core/chunker.md) - dependency
 - [models](../models.md) - dependency
+- [chunker](../core/chunker.md) - dependency
 - [api_docs](api_docs.md) - shares 5 dependencies

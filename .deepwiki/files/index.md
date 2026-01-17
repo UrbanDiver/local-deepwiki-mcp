@@ -38,6 +38,7 @@ Detailed documentation for individual source files.
 - [see_also.py](src/local_deepwiki/generators/see_also.md)
 - [server.py](src/local_deepwiki/server.md)
 - [source_refs.py](src/local_deepwiki/generators/source_refs.md)
+- [stale_detection.py](src/local_deepwiki/generators/stale_detection.md)
 - [test_examples.py](src/local_deepwiki/generators/test_examples.md)
 - [toc.py](src/local_deepwiki/generators/toc.md)
 - [validation.py](src/local_deepwiki/validation.md)

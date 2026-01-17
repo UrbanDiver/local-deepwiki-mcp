@@ -1,52 +1,68 @@
-# Search Module Documentation
+# search.py
 
 ## File Overview
 
-The search module provides functionality for generating search indexes for wiki content. It creates JSON-based search indexes that include page metadata, content snippets, and searchable terms extracted from wiki pages.
+This module provides functionality for generating search indexes from wiki pages. It creates JSON-based search indexes that can be used to enable search functionality within the wiki system.
 
 ## Functions
 
 ### write_search_index
 
-Generates and writes a search index to disk for wiki pages.
+```python
+def write_search_index(wiki_path: Path, pages: list[WikiPage]) -> Path
+```
+
+Generates and writes a search index to disk using a legacy page-only approach.
 
 **Parameters:**
-- `wiki_path` (Path): Path to the wiki directory where the search index will be written
-- `pages` (list[[WikiPage](../models.md)]): List of [WikiPage](../models.md) objects to include in the search index
+- `wiki_path`: Path to the wiki directory where the search index will be written
+- `pages`: List of [WikiPage](../models.md) objects to include in the search index
 
 **Returns:**
-- Path: Path to the generated `search.json` file
+- Path to the generated `search.json` file
 
 **Description:**
-This function creates a search index by calling `generate_search_index` with the provided pages, then writes the resulting index as a JSON file to the wiki directory. The JSON output is formatted with 2-space indentation for readability.
+This function creates a search index from the provided wiki pages and saves it as a JSON file in the wiki directory. It uses the generate_search_index function internally to build the index data structure.
 
-**Example Usage:**
+### Additional Functions
+
+Based on the module structure, this file contains several other functions that work together to build search indexes:
+
+- `extract_headings`: Extracts heading information from content
+- `extract_code_terms`: Extracts code-related terms for indexing
+- `extract_snippet`: Extracts content snippets for search results
+- `generate_search_entry`: Creates individual search entries
+- `generate_search_index`: Builds the [main](../export/pdf.md) search index structure
+- `generate_entity_entries`: Creates entries for entities in the index
+- `_build_keywords`: Internal function for building keyword lists
+- `generate_full_search_index`: Creates a comprehensive search index
+- `write_full_search_index`: Writes the full search index to disk
+
+## Usage Examples
+
+### Basic Search Index Generation
+
 ```python
 from pathlib import Path
 from local_deepwiki.generators.search import write_search_index
 
-# Generate search index for a list of wiki pages
-wiki_directory = Path("/path/to/wiki")
+# Generate search index for wiki pages
+wiki_directory = Path("./my_wiki")
 wiki_pages = [...]  # List of WikiPage objects
-index_file_path = write_search_index(wiki_directory, wiki_pages)
+search_file_path = write_search_index(wiki_directory, wiki_pages)
+print(f"Search index written to: {search_file_path}")
 ```
 
 ## Related Components
 
-This module works with the following components based on the imports:
+This module integrates with several other components:
 
-- **[WikiPage](../models.md)**: The primary data model for wiki pages that get indexed
+- **[WikiPage](../models.md)**: The primary data model for wiki pages that are indexed
 - **[VectorStore](../core/vectorstore.md)**: Used for vector-based search capabilities
 - **[ChunkType](../models.md)**: Enumeration for different types of content chunks
 - **[IndexStatus](../models.md)**: Status tracking for indexing operations
 
-The module also contains additional functions for search index generation (`generate_search_index`, `generate_entity_entries`, `generate_full_search_index`, `write_full_search_index`) and content extraction (`extract_headings`, `extract_code_terms`, `extract_snippet`, `generate_search_entry`), though their implementations are not shown in the provided code.
-
-## Dependencies
-
-- `json`: For JSON serialization of search indexes
-- `re`: For regular expression pattern matching in content extraction
-- `pathlib.Path`: For file system path operations
+The module uses standard Python libraries including `json` for serialization, `re` for regular expressions, and `pathlib` for file system operations.
 
 ## API Reference
 
@@ -70,7 +86,7 @@ Extract all headings from markdown content.
 
 
 <details>
-<summary>View Source (lines 16-35) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/search.py#L16-L35">GitHub</a></summary>
+<summary>View Source (lines 16-35) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/search.py#L16-L35">GitHub</a></summary>
 
 ```python
 def extract_headings(content: str) -> list[str]:
@@ -115,7 +131,7 @@ Extract code terms (class names, function names) from content.
 
 
 <details>
-<summary>View Source (lines 38-59) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/search.py#L38-L59">GitHub</a></summary>
+<summary>View Source (lines 38-59) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/search.py#L38-L59">GitHub</a></summary>
 
 ```python
 def extract_code_terms(content: str) -> list[str]:
@@ -163,7 +179,7 @@ Extract a text snippet from markdown content.
 
 
 <details>
-<summary>View Source (lines 62-86) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/search.py#L62-L86">GitHub</a></summary>
+<summary>View Source (lines 62-86) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/search.py#L62-L86">GitHub</a></summary>
 
 ```python
 def extract_snippet(content: str, max_length: int = 200) -> str:
@@ -213,7 +229,7 @@ Generate a search index entry for a wiki page.
 
 
 <details>
-<summary>View Source (lines 89-108) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/search.py#L89-L108">GitHub</a></summary>
+<summary>View Source (lines 89-108) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/search.py#L89-L108">GitHub</a></summary>
 
 ```python
 def generate_search_entry(page: WikiPage) -> dict:
@@ -258,7 +274,7 @@ Generate a search index from wiki pages.
 
 
 <details>
-<summary>View Source (lines 111-120) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/search.py#L111-L120">GitHub</a></summary>
+<summary>View Source (lines 111-120) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/search.py#L111-L120">GitHub</a></summary>
 
 ```python
 def generate_search_index(pages: list[WikiPage]) -> list[dict]:
@@ -294,7 +310,7 @@ Generate search entries for individual code entities.  Creates searchable entrie
 
 
 <details>
-<summary>View Source (lines 123-204) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/search.py#L123-L204">GitHub</a></summary>
+<summary>View Source (lines 123-204) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/search.py#L123-L204">GitHub</a></summary>
 
 ```python
 async def generate_entity_entries(
@@ -403,7 +419,7 @@ Generate a comprehensive search index with pages and entities.
 
 
 <details>
-<summary>View Source (lines 262-290) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/search.py#L262-L290">GitHub</a></summary>
+<summary>View Source (lines 262-290) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/search.py#L262-L290">GitHub</a></summary>
 
 ```python
 async def generate_full_search_index(
@@ -458,7 +474,7 @@ Generate and write search index to disk (legacy page-only version).
 
 
 <details>
-<summary>View Source (lines 293-306) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/search.py#L293-L306">GitHub</a></summary>
+<summary>View Source (lines 293-306) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/search.py#L293-L306">GitHub</a></summary>
 
 ```python
 def write_search_index(wiki_path: Path, pages: list[WikiPage]) -> Path:
@@ -501,7 +517,7 @@ Generate and write comprehensive search index to disk.  Includes both page-level
 
 
 <details>
-<summary>View Source (lines 309-331) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/search.py#L309-L331">GitHub</a></summary>
+<summary>View Source (lines 309-331) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/search.py#L309-L331">GitHub</a></summary>
 
 ```python
 async def write_full_search_index(
@@ -611,50 +627,80 @@ Functions and methods in this file and their callers:
 
 ### Test extraction of h1 headings
 
-From `test_search.py::test_extracts_h1_headings`:
+From `test_search.py::TestExtractHeadings::test_extracts_h1_headings`:
 
 ```python
+content = "# Main Title\n\nSome content"
 headings = extract_headings(content)
 assert "Main Title" in headings
 ```
 
 ### Test extraction of h1, h2, h3 headings
 
-From `test_search.py::test_extracts_multiple_heading_levels`:
+From `test_search.py::TestExtractHeadings::test_extracts_multiple_heading_levels`:
 
 ```python
-headings = extract_headings(content)
-assert len(headings) == 4
+content = """# Title
+## Section One
+### Subsection
+## Section Two
+"""
+        headings = extract_headings(content)
+        assert len(headings) == 4
+        assert "Title" in headings
+        assert "Section One" in headings
+        assert "Subsection" in headings
+        assert "Section Two" in headings
 ```
 
 ### Test extraction of simple backticked terms
 
-From `test_search.py::test_extracts_simple_terms`:
+From `test_search.py::TestExtractCodeTerms::test_extracts_simple_terms`:
 
 ```python
+content = "Use `VectorStore` and `WikiGenerator` for docs."
 terms = extract_code_terms(content)
 assert "VectorStore" in terms
+assert "WikiGenerator" in terms
 ```
 
 ### Test extraction of qualified names
 
-From `test_search.py::test_extracts_qualified_names`:
+From `test_search.py::TestExtractCodeTerms::test_extracts_qualified_names`:
 
 ```python
+content = "Import `local_deepwiki.core.VectorStore` from module."
 terms = extract_code_terms(content)
 # Should include both full qualified name and last part
 assert "VectorStore" in terms
+assert "local_deepwiki.core.VectorStore" in terms
 ```
 
 ### Test basic snippet extraction
 
-From `test_search.py::test_extracts_plain_text`:
+From `test_search.py::TestExtractSnippet::test_extracts_plain_text`:
 
 ```python
+content = "This is a simple paragraph of text."
 snippet = extract_snippet(content)
 assert "simple paragraph" in snippet
 ```
 
+
+## Last Modified
+
+| Entity | Type | Author | Date | Commit |
+|--------|------|--------|------|--------|
+| `generate_entity_entries` | function | Brian Breidenbach | today | `553a2ee` Add entity-level search wit... |
+| `_build_keywords` | function | Brian Breidenbach | today | `553a2ee` Add entity-level search wit... |
+| `generate_full_search_index` | function | Brian Breidenbach | today | `553a2ee` Add entity-level search wit... |
+| `write_search_index` | function | Brian Breidenbach | today | `553a2ee` Add entity-level search wit... |
+| `write_full_search_index` | function | Brian Breidenbach | today | `553a2ee` Add entity-level search wit... |
+| `extract_headings` | function | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
+| `extract_code_terms` | function | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
+| `extract_snippet` | function | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
+| `generate_search_entry` | function | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
+| `generate_search_index` | function | Brian Breidenbach | 5 days ago | `1315c7f` Add wiki improvements: incr... |
 
 ## Additional Source Code
 
@@ -663,7 +709,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_build_keywords`
 
 <details>
-<summary>View Source (lines 207-259) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/generators/search.py#L207-L259">GitHub</a></summary>
+<summary>View Source (lines 207-259) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/search.py#L207-L259">GitHub</a></summary>
 
 ```python
 def _build_keywords(
@@ -729,8 +775,8 @@ def _build_keywords(
 
 ## See Also
 
-- [wiki](wiki.md) - uses this
 - [models](../models.md) - dependency
 - [vectorstore](../core/vectorstore.md) - dependency
 - [crosslinks](crosslinks.md) - shares 3 dependencies
 - [see_also](see_also.md) - shares 3 dependencies
+- [diagrams](diagrams.md) - shares 3 dependencies

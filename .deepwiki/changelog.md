@@ -6,6 +6,18 @@ Recent changes to this repository.
 
 ### January 16, 2026
 
+- [`216880e`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/216880e) Expand test example extraction with multiple test files and class methods
+  - Files: `src/local_deepwiki/generators/test_examples.py`, `tests/test_test_examples.py`
+
+- [`37aec0f`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/37aec0f) Add git blame integration to show last modified info for code entities
+  - Files: `src/local_deepwiki/core/git_utils.py`, `src/local_deepwiki/generators/wiki_files.py`, `tests/test_git_utils.py`
+
+- [`32b5840`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/32b5840) Regenerate wiki with entity search index
+  - Files: `.deepwiki/architecture.md`, `.deepwiki/changelog.md`, `.deepwiki/coverage.md`, `.deepwiki/dependencies.md`, `.deepwiki/files/src/local_deepwiki/config.md` (+50 more)
+
+- [`553a2ee`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/553a2ee) Add entity-level search with type filtering and fuzzy matching
+  - Files: `src/local_deepwiki/generators/search.py`, `src/local_deepwiki/generators/wiki.py`, `src/local_deepwiki/web/templates/page.html`, `tests/test_search.py`, `tests/test_wiki_coverage.py`
+
 - [`202b96d`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/202b96d) Add exception documentation to glossary
   - Files: `src/local_deepwiki/core/chunker.py`, `src/local_deepwiki/generators/glossary.py`, `tests/test_type_annotations.py`
 
@@ -88,18 +100,6 @@ Recent changes to this repository.
 - [`39e8c73`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/39e8c73) Replace generic except Exception with specific exception types
   - Files: `src/local_deepwiki/core/indexer.py`, `src/local_deepwiki/core/llm_cache.py`, `src/local_deepwiki/core/vectorstore.py`, `src/local_deepwiki/generators/wiki_status.py`, `src/local_deepwiki/handlers.py` (+1 more)
 
-- [`3defaaa`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/3defaaa) Refactor: Extract validation and wiki submodules for cleaner architecture
-  - Files: `CLAUDE.md`, `src/local_deepwiki/generators/wiki.py`, `src/local_deepwiki/generators/wiki_files.py`, `src/local_deepwiki/generators/wiki_modules.py`, `src/local_deepwiki/generators/wiki_status.py` (+4 more)
-
-- [`10625ea`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/10625ea) Regenerate wiki with TypeScript/TSX parsing support
-  - Files: `.deepwiki/architecture.md`, `.deepwiki/changelog.md`, `.deepwiki/dependencies.md`, `.deepwiki/files/index.md`, `.deepwiki/files/src/local_deepwiki/config.md` (+42 more)
-
-- [`55d665c`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/55d665c) Fix TypeScript/TSX parsing by handling module-specific language functions
-  - Files: `src/local_deepwiki/core/parser.py`, `src/local_deepwiki/models.py`, `tests/test_parser.py`
-
-- [`63a29fc`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/63a29fc) Remove remaining test file documentation from wiki
-  - Files: `.deepwiki/files/tests/test_api_docs.md`, `.deepwiki/files/tests/test_config.md`, `.deepwiki/files/tests/test_crosslinks.md`, `.deepwiki/files/tests/test_deep_research.md`, `.deepwiki/files/tests/test_diagrams.md` (+6 more)
-
 ## Statistics
 
 - **Commits shown**: 30
@@ -122,4 +122,4 @@ The following source files were used to generate this documentation:
 - `tests/test_wiki_coverage.py:50-120`
 
 
-*Showing 10 of 98 source files.*
+*Showing 10 of 100 source files.*

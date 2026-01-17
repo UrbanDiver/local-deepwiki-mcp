@@ -2,7 +2,7 @@
 
 ## File Overview
 
-This file implements a file system watcher that monitors a repository for changes and automatically regenerates wiki documentation. It uses the watchdog library to detect file system events and triggers wiki regeneration with debouncing to avoid excessive rebuilds.
+This module provides file system watching functionality for automatically regenerating wiki documentation when repository files change. It uses the watchdog library to monitor file system events and triggers wiki regeneration with configurable debouncing.
 
 ## Functions
 
@@ -22,33 +22,29 @@ Main entry point for the watch command. Sets up command-line argument parsing fo
 
 **Command-line Arguments:**
 - `repo_path` (optional): Path to the repository to watch, defaults to current directory
-- `--debounce` (optional): Seconds to wait after changes before reindexing, defaults to 2.0
+- `--debounce`: Seconds to wait after changes before reindexing, defaults to 2.0
 
 ## Related Components
 
-This file integrates with several other components in the local_deepwiki system:
+This module integrates with several other components of the local_deepwiki system:
 
-- **[Config](config.md)**: Uses the configuration system to manage settings
-- **[RepositoryIndexer](core/indexer.md)**: Handles indexing of repository files
-- **[WikiGenerator](generators/wiki.md)**: Generates wiki documentation through the [`generate_wiki`](generators/wiki.md) function
-- **EXTENSION_MAP**: References supported file extensions from the parser module
+- **[Config](config.md)**: Uses the [Config](config.md) class and [get_config](config.md) function for configuration management
+- **[RepositoryIndexer](core/indexer.md)**: Works with the [RepositoryIndexer](core/indexer.md) class for processing repository changes
+- **[WikiGenerator](generators/wiki.md)**: Integrates with the [generate_wiki](generators/wiki.md) function for documentation generation
+- **Parser**: References EXTENSION_MAP from the parser module for file type handling
 
-The watcher leverages the watchdog library's Observer and FileSystemEventHandler classes to monitor file system changes, and uses Rich Console for output formatting.
+## Dependencies
 
-## Usage Examples
+The module relies on several external libraries:
+- `watchdog`: For file system monitoring (FileSystemEvent, FileSystemEventHandler, Observer classes)
+- `rich`: For console output formatting
+- `argparse`: For command-line interface
+- `asyncio`: For asynchronous operations
+- `pathlib`: For path handling
 
-Based on the argument parser configuration, the watcher can be used as:
+## Usage Context
 
-```bash
-# Watch current directory with default settings
-python -m local_deepwiki.watcher
-
-# Watch specific repository path
-python -m local_deepwiki.watcher /path/to/repo
-
-# Watch with custom debounce timing
-python -m local_deepwiki.watcher --debounce 5.0 /path/to/repo
-```
+This module appears to be designed as a command-line tool that can be invoked to continuously monitor a repository for changes and automatically regenerate documentation when files are modified. The debouncing feature helps prevent excessive regeneration when multiple files are changed in quick succession.
 
 ## API Reference
 
@@ -62,7 +58,7 @@ File system event handler with debouncing.
 
 
 <details>
-<summary>View Source (lines 35-235) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/watcher.py#L35-L235">GitHub</a></summary>
+<summary>View Source (lines 35-235) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/watcher.py#L35-L235">GitHub</a></summary>
 
 ```python
 class DebouncedHandler(FileSystemEventHandler):
@@ -89,7 +85,7 @@ Initialize the handler.
 
 
 <details>
-<summary>View Source (lines 38-59) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/watcher.py#L38-L59">GitHub</a></summary>
+<summary>View Source (lines 38-59) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/watcher.py#L38-L59">GitHub</a></summary>
 
 ```python
 def __init__(
@@ -133,7 +129,7 @@ def progress_callback(msg: str, current: int, total: int) -> None
 
 
 <details>
-<summary>View Source (lines 141-145) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/watcher.py#L141-L145">GitHub</a></summary>
+<summary>View Source (lines 141-145) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/watcher.py#L141-L145">GitHub</a></summary>
 
 ```python
 def progress_callback(msg: str, current: int, total: int) -> None:
@@ -160,7 +156,7 @@ Handle file modification events.
 
 
 <details>
-<summary>View Source (lines 190-198) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/watcher.py#L190-L198">GitHub</a></summary>
+<summary>View Source (lines 190-198) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/watcher.py#L190-L198">GitHub</a></summary>
 
 ```python
 def on_modified(self, event: FileSystemEvent) -> None:
@@ -191,7 +187,7 @@ Handle file creation events.
 
 
 <details>
-<summary>View Source (lines 200-208) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/watcher.py#L200-L208">GitHub</a></summary>
+<summary>View Source (lines 200-208) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/watcher.py#L200-L208">GitHub</a></summary>
 
 ```python
 def on_created(self, event: FileSystemEvent) -> None:
@@ -222,7 +218,7 @@ Handle file deletion events.
 
 
 <details>
-<summary>View Source (lines 210-218) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/watcher.py#L210-L218">GitHub</a></summary>
+<summary>View Source (lines 210-218) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/watcher.py#L210-L218">GitHub</a></summary>
 
 ```python
 def on_deleted(self, event: FileSystemEvent) -> None:
@@ -254,7 +250,7 @@ Handle file move events.
 
 
 <details>
-<summary>View Source (lines 220-235) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/watcher.py#L220-L235">GitHub</a></summary>
+<summary>View Source (lines 220-235) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/watcher.py#L220-L235">GitHub</a></summary>
 
 ```python
 def on_moved(self, event: FileSystemEvent) -> None:
@@ -285,7 +281,7 @@ Watches a repository for file changes and triggers reindexing.
 
 
 <details>
-<summary>View Source (lines 238-290) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/watcher.py#L238-L290">GitHub</a></summary>
+<summary>View Source (lines 238-290) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/watcher.py#L238-L290">GitHub</a></summary>
 
 ```python
 class RepositoryWatcher:
@@ -363,7 +359,7 @@ Initialize the watcher.
 
 
 <details>
-<summary>View Source (lines 238-290) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/watcher.py#L238-L290">GitHub</a></summary>
+<summary>View Source (lines 238-290) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/watcher.py#L238-L290">GitHub</a></summary>
 
 ```python
 class RepositoryWatcher:
@@ -433,7 +429,7 @@ Start watching the repository.
 
 
 <details>
-<summary>View Source (lines 238-290) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/watcher.py#L238-L290">GitHub</a></summary>
+<summary>View Source (lines 238-290) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/watcher.py#L238-L290">GitHub</a></summary>
 
 ```python
 class RepositoryWatcher:
@@ -503,7 +499,7 @@ Stop watching the repository.
 
 
 <details>
-<summary>View Source (lines 238-290) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/watcher.py#L238-L290">GitHub</a></summary>
+<summary>View Source (lines 238-290) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/watcher.py#L238-L290">GitHub</a></summary>
 
 ```python
 class RepositoryWatcher:
@@ -576,7 +572,7 @@ Check if the watcher is running.
 
 
 <details>
-<summary>View Source (lines 238-290) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/watcher.py#L238-L290">GitHub</a></summary>
+<summary>View Source (lines 238-290) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/watcher.py#L238-L290">GitHub</a></summary>
 
 ```python
 class RepositoryWatcher:
@@ -659,7 +655,7 @@ Perform initial indexing before starting watch mode.
 
 
 <details>
-<summary>View Source (lines 293-343) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/watcher.py#L293-L343">GitHub</a></summary>
+<summary>View Source (lines 293-343) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/watcher.py#L293-L343">GitHub</a></summary>
 
 ```python
 async def initial_index(
@@ -735,7 +731,7 @@ def progress_callback(msg: str, current: int, total: int) -> None
 
 
 <details>
-<summary>View Source (lines 311-315) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/watcher.py#L311-L315">GitHub</a></summary>
+<summary>View Source (lines 311-315) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/watcher.py#L311-L315">GitHub</a></summary>
 
 ```python
 def progress_callback(msg: str, current: int, total: int) -> None:
@@ -761,7 +757,7 @@ Main entry point for the watch command.
 
 
 <details>
-<summary>View Source (lines 346-433) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/watcher.py#L346-L433">GitHub</a></summary>
+<summary>View Source (lines 346-433) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/watcher.py#L346-L433">GitHub</a></summary>
 
 ```python
 def main() -> None:
@@ -1011,41 +1007,49 @@ Functions and methods in this file and their callers:
 
 ### Test that Python files are watched
 
-From `test_watcher.py::test_should_watch_python_file`:
+From `test_watcher.py::TestDebouncedHandler::test_should_watch_python_file`:
 
 ```python
+test_file = tmp_path / "test.py"
+test_file.touch()
 assert handler._should_watch_file(str(test_file)) is True
 ```
 
 ### Test that TypeScript files are watched
 
-From `test_watcher.py::test_should_watch_typescript_file`:
+From `test_watcher.py::TestDebouncedHandler::test_should_watch_typescript_file`:
 
 ```python
+test_file = tmp_path / "test.ts"
+test_file.touch()
 assert handler._should_watch_file(str(test_file)) is True
 ```
 
 ### Test creating a watcher
 
-From `test_watcher.py::test_create_watcher`:
+From `test_watcher.py::TestRepositoryWatcher::test_create_watcher`:
 
 ```python
 watcher = RepositoryWatcher(repo_path=tmp_path)
 assert watcher.repo_path == tmp_path
+assert watcher.debounce_seconds == 2.0
+assert not watcher.is_running()
 ```
 
 ### Test creating a watcher
 
-From `test_watcher.py::test_create_watcher`:
+From `test_watcher.py::TestRepositoryWatcher::test_create_watcher`:
 
 ```python
 watcher = RepositoryWatcher(repo_path=tmp_path)
 assert watcher.repo_path == tmp_path
+assert watcher.debounce_seconds == 2.0
+assert not watcher.is_running()
 ```
 
 ### Test creating a watcher with options
 
-From `test_watcher.py::test_create_watcher_with_options`:
+From `test_watcher.py::TestRepositoryWatcher::test_create_watcher_with_options`:
 
 ```python
 watcher = RepositoryWatcher(
@@ -1055,8 +1059,29 @@ watcher = RepositoryWatcher(
     llm_provider="anthropic",
 )
 assert watcher.debounce_seconds == 5.0
+assert watcher.llm_provider == "anthropic"
 ```
 
+
+## Last Modified
+
+| Entity | Type | Author | Date | Commit |
+|--------|------|--------|------|--------|
+| `DebouncedHandler` | class | Brian Breidenbach | yesterday | `8078321` Fix ruff and pyright code q... |
+| `on_modified` | method | Brian Breidenbach | yesterday | `8078321` Fix ruff and pyright code q... |
+| `on_created` | method | Brian Breidenbach | yesterday | `8078321` Fix ruff and pyright code q... |
+| `on_deleted` | method | Brian Breidenbach | yesterday | `8078321` Fix ruff and pyright code q... |
+| `on_moved` | method | Brian Breidenbach | yesterday | `8078321` Fix ruff and pyright code q... |
+| `RepositoryWatcher` | class | Brian Breidenbach | yesterday | `8078321` Fix ruff and pyright code q... |
+| `_do_reindex` | method | Brian Breidenbach | yesterday | `815ed5f` Fix remaining generic excep... |
+| `_should_watch_file` | method | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
+| `initial_index` | function | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
+| `main` | function | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
+| `__init__` | method | Brian Breidenbach | 5 days ago | `ce31583` Add watch mode for auto-rei... |
+| `_schedule_reindex` | method | Brian Breidenbach | 5 days ago | `ce31583` Add watch mode for auto-rei... |
+| `_trigger_reindex` | method | Brian Breidenbach | 5 days ago | `ce31583` Add watch mode for auto-rei... |
+| `progress_callback` | method | Brian Breidenbach | 5 days ago | `ce31583` Add watch mode for auto-rei... |
+| `progress_callback` | function | Brian Breidenbach | 5 days ago | `ce31583` Add watch mode for auto-rei... |
 
 ## Additional Source Code
 
@@ -1065,7 +1090,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_should_watch_file`
 
 <details>
-<summary>View Source (lines 61-89) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/watcher.py#L61-L89">GitHub</a></summary>
+<summary>View Source (lines 61-89) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/watcher.py#L61-L89">GitHub</a></summary>
 
 ```python
 def _should_watch_file(self, path: str) -> bool:
@@ -1105,7 +1130,7 @@ def _should_watch_file(self, path: str) -> bool:
 #### `_schedule_reindex`
 
 <details>
-<summary>View Source (lines 91-97) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/watcher.py#L91-L97">GitHub</a></summary>
+<summary>View Source (lines 91-97) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/watcher.py#L91-L97">GitHub</a></summary>
 
 ```python
 def _schedule_reindex(self) -> None:
@@ -1123,7 +1148,7 @@ def _schedule_reindex(self) -> None:
 #### `_trigger_reindex`
 
 <details>
-<summary>View Source (lines 99-111) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/watcher.py#L99-L111">GitHub</a></summary>
+<summary>View Source (lines 99-111) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/watcher.py#L99-L111">GitHub</a></summary>
 
 ```python
 def _trigger_reindex(self) -> None:
@@ -1147,7 +1172,7 @@ def _trigger_reindex(self) -> None:
 #### `_do_reindex`
 
 <details>
-<summary>View Source (lines 113-188) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/watcher.py#L113-L188">GitHub</a></summary>
+<summary>View Source (lines 113-188) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/watcher.py#L113-L188">GitHub</a></summary>
 
 ```python
 async def _do_reindex(self, changed_files: list[str]) -> None:

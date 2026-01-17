@@ -2,93 +2,107 @@
 
 ## Module Purpose
 
-The tests module contains comprehensive test suites for various components of the local_deepwiki system. The tests cover core functionality including wiki generation, parsing, provider factories, diagram generation, source references, test examples extraction, and more.
+The tests module contains comprehensive test suites for the local_deepwiki application. Based on the code shown, it focuses heavily on testing wiki generation functionality, provider factories, and various utility components. The tests use pytest and unittest.mock for creating isolated test environments.
 
 ## Key Classes and Functions
 
 ### TestGenerateModuleDocs
 
-This test class focuses on testing module documentation generation functionality. It includes several test methods that verify different aspects of the module documentation process:
+A test class that validates the module documentation generation functionality. This class contains multiple test methods that verify different aspects of the wiki module generation process:
 
-- **mock_llm**: Creates a mock LLM provider for testing purposes
-- **test_generates_multiple_modules**: Tests the generation of documentation pages for multiple modules
-- **test_generates_modules_index**: Tests the creation of a modules index page
+- **mock_llm**: Creates a mock LLM provider that returns standardized test responses
+- **test_generates_multiple_modules**: Tests the generation of documentation for multiple code modules
+- **test_generates_modules_index**: Validates the creation of a modules index page
+- Various other test methods for handling edge cases like empty directories and cache management
 
-### TestProviderExports
+### TestProviderExports  
 
-This test class verifies that the provider modules export the expected components correctly. It ensures that the LLM module exports required names like `get_llm_provider`, `get_cached_llm_provider`, [`LLMProvider`](../files/src/local_deepwiki/providers/base.md), and `OllamaConnect`.
+Tests module exports for provider functionality, specifically validating that the LLM module exports expected components like `get_llm_provider`, `get_cached_llm_provider`, [`LLMProvider`](../files/src/local_deepwiki/providers/base.md), and `OllamaConnect`.
 
 ### TestPathToModule
 
-This test class validates path-to-module conversion functionality:
+Tests path-to-module conversion functionality:
 
-- **test_converts_simple_path**: Tests basic path conversion from file paths to module names
-- **test_skips_init_files**: Verifies that `__init__.py` files return None during conversion
-
-### TestCodeParser
-
-This test class provides comprehensive testing for the [CodeParser](../files/src/local_deepwiki/core/parser.md) component:
-
-- **setup_method**: Sets up test fixtures with a [CodeParser](../files/src/local_deepwiki/core/parser.md) instance
-- **test_detect_language_python**: Tests Python language detection for `.py` and `.pyi` files
+- **test_converts_simple_path**: Validates basic file path to module name conversion
+- **test_skips_init_files**: Ensures `__init__.py` files are handled appropriately
 
 ### TestAddSourceRefsSections
 
-This test class validates the addition of source reference sections to wiki pages, including handling of different page types and proper insertion logic.
+Tests the addition of source reference sections to wiki pages:
+
+- Handles different page types (file pages, index pages, module pages, architecture pages)
+- Manages section insertion and formatting
+- Deals with missing status information
 
 ### TestGetFileExamples
 
-This test class focuses on testing file example extraction functionality, including markdown generation, handling of missing test files, and filtering logic.
+Tests example extraction from test files:
+
+- **test_get_file_examples_returns_markdown**: Validates markdown output generation
+- **test_get_file_examples_no_test_file**: Handles cases where no test file exists
+- **test_get_file_examples_filters_short_names**: Tests filtering logic for test names
 
 ## How Components Interact
 
-The test classes work together to provide comprehensive coverage of the local_deepwiki system:
+The test classes work together to validate the complete wiki generation pipeline:
 
-1. **Mock Infrastructure**: The TestGenerateModuleDocs class creates mock objects for LLM providers, vector stores, and status managers to isolate testing
-2. **Integration Testing**: Tests verify that components like parsers, generators, and providers work correctly with each other
-3. **Data Flow Testing**: Tests ensure proper handling of code chunks, search results, and wiki pages throughout the system
+1. **Mock Creation**: Test classes like TestGenerateModuleDocs create mock objects for LLM providers, vector stores, and status managers
+2. **Data Flow Testing**: Tests validate how code chunks flow through the system, from file parsing to wiki page generation
+3. **Integration Validation**: Components test the interaction between different parts of the system, such as how the module generator uses vector store search results
 
 ## Usage Examples
 
-### Running Module Documentation Tests
+### Creating Mock LLM Provider
 
 ```python
-# Test mock LLM creation
-mock = TestGenerateModuleDocs().mock_llm()
-result = await mock.generate("test query")
-assert result == "## Module Purpose\n\nTest module."
+@pytest.fixture
+def mock_llm(self):
+    """Create a mock LLM provider."""
+    mock = MagicMock()
+    mock.generate = AsyncMock(return_value="## Module Purpose\n\nTest module.")
+    return mock
 ```
 
-### Testing Language Detection
+### Testing Module Generation
 
 ```python
-parser = CodeParser()
-language = parser.detect_language(Path("test.py"))
-assert language == Language.PYTHON
+async def test_generates_multiple_modules(
+    self, mock_llm, mock_vector_store, mock_status_manager, tmp_path
+):
+    """Test generates pages for multiple modules."""
+    src_chunk = make_code_chunk(file_path="src/main.py", name="main")
+    tests_chunk = make_code_chunk(file_path="tests/test_main.py", name="test_main")
+    
+    async def search_side_effect(query, **_kwargs):
+        # Test implementation
 ```
 
-### Testing Provider Exports
+### Testing Path Conversion
 
 ```python
-from local_deepwiki.providers import llm
-
-# Verify expected exports are available
-assert hasattr(llm, "get_llm_provider")
-assert hasattr(llm, "LLMProvider")
+def test_converts_simple_path(self):
+    """Test basic path conversion."""
+    result = _path_to_module("src/mypackage/core/parser.py")
+    assert result is not None
+    assert "parser" in result
 ```
 
 ## Dependencies
 
-Based on the imports shown, the tests module depends on:
+Based on the imports shown in the code context:
 
-- **unittest.mock**: For creating AsyncMock and MagicMock objects
 - **pytest**: Testing framework
-- **time**: For timing-related functionality
-- **local_deepwiki.generators.wiki_modules**: For module documentation generation functions
-- **local_deepwiki.models**: For data models like [ChunkType](../files/src/local_deepwiki/models.md), [CodeChunk](../files/src/local_deepwiki/models.md), [FileInfo](../files/src/local_deepwiki/models.md), [IndexStatus](../files/src/local_deepwiki/models.md), [Language](../files/src/local_deepwiki/models.md), [SearchResult](../files/src/local_deepwiki/models.md), and [WikiPage](../files/src/local_deepwiki/models.md)
-- **local_deepwiki.providers**: For LLM provider functionality
+- **unittest.mock**: For creating AsyncMock and MagicMock objects
+- **pathlib.Path**: File system path handling
+- **textwrap.dedent**: Text formatting utilities
+- **time**: Time-related functionality
 
-The tests are designed to validate the core functionality while maintaining isolation through mocking and fixture setup.
+### Internal Dependencies
+
+- **local_deepwiki.generators.wiki_modules**: Module documentation generation
+- **local_deepwiki.generators.test_examples**: Test example extraction
+- **local_deepwiki.models**: Core data models ([ChunkType](../files/src/local_deepwiki/models.md), [CodeChunk](../files/src/local_deepwiki/models.md), [FileInfo](../files/src/local_deepwiki/models.md), [IndexStatus](../files/src/local_deepwiki/models.md), [Language](../files/src/local_deepwiki/models.md), [SearchResult](../files/src/local_deepwiki/models.md), [WikiPage](../files/src/local_deepwiki/models.md))
+- **local_deepwiki.providers**: Provider factory functionality
 
 ## Relevant Source Files
 
@@ -106,4 +120,4 @@ The following source files were used to generate this documentation:
 - `tests/test_wiki_coverage.py:50-120`
 
 
-*Showing 10 of 46 source files.*
+*Showing 10 of 47 source files.*

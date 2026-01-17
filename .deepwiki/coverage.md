@@ -4,16 +4,16 @@ This report shows the documentation coverage for the codebase.
 
 ## Summary
 
-🟢 **Overall Coverage: 93.8%**
+🟢 **Overall Coverage: 94.0%**
 
-- **1368** / **1458** entities documented
+- **1403** / **1493** entities documented
 
 ### By Type
 
 | Type | Documented | Total | Coverage |
 |------|------------|-------|----------|
-| Classes | 388 | 388 | 100.0% |
-| Functions | 248 | 267 | 92.9% |
+| Classes | 407 | 407 | 100.0% |
+| Functions | 264 | 283 | 93.3% |
 | Methods | 732 | 803 | 91.2% |
 
 ## Coverage by File
@@ -32,12 +32,12 @@ This report shows the documentation coverage for the codebase.
 | 🟡 [app.py](files/src/local_deepwiki/web/app.md) | 18 | 21 | 85.7% |
 | 🟡 [diagrams.py](files/src/local_deepwiki/generators/diagrams.md) | 19 | 22 | 86.4% |
 | 🟡 [watcher.py](files/src/local_deepwiki/watcher.md) | 13 | 15 | 86.7% |
-| 🟡 [wiki_files.py](files/src/local_deepwiki/generators/wiki_files.md) | 8 | 9 | 88.9% |
 | 🟡 [manifest.py](files/src/local_deepwiki/generators/manifest.md) | 26 | 29 | 89.7% |
+| 🟢 [wiki_files.py](files/src/local_deepwiki/generators/wiki_files.md) | 9 | 10 | 90.0% |
 | 🟢 [wiki.py](files/src/local_deepwiki/generators/wiki.md) | 10 | 11 | 90.9% |
 | 🟢 [crosslinks.py](files/src/local_deepwiki/generators/crosslinks.md) | 21 | 23 | 91.3% |
-| 🟢 [test_examples.py](files/src/local_deepwiki/generators/test_examples.md) | 12 | 13 | 92.3% |
 | 🟢 [test_watcher.py](files/tests/test_watcher.md) | 38 | 41 | 92.7% |
+| 🟢 [test_examples.py](files/src/local_deepwiki/generators/test_examples.md) | 13 | 14 | 92.9% |
 | 🟢 [test_wiki_files_coverage.py](files/tests/test_wiki_files_coverage.md) | 61 | 65 | 93.8% |
 | 🟢 [test_handlers_coverage.py](files/tests/test_handlers_coverage.md) | 32 | 34 | 94.1% |
 | 🟢 [test_wiki_coverage.py](files/tests/test_wiki_coverage.md) | 17 | 18 | 94.4% |
@@ -60,11 +60,12 @@ This report shows the documentation coverage for the codebase.
 | 🟢 [test_incremental_wiki.py](files/tests/test_incremental_wiki.md) | 13 | 13 | 100.0% |
 | 🟢 [test_local_embedding_provider.py](files/tests/test_local_embedding_provider.md) | 8 | 8 | 100.0% |
 | 🟢 [test_web.py](files/tests/test_web.md) | 19 | 19 | 100.0% |
-| 🟢 [test_git_utils.py](files/tests/test_git_utils.md) | 15 | 15 | 100.0% |
+| 🟢 [test_git_utils.py](files/tests/test_git_utils.md) | 21 | 21 | 100.0% |
 | 🟢 [test_manifest.py](files/tests/test_manifest.md) | 34 | 34 | 100.0% |
 | 🟢 [test_export_init.py](files/tests/test_export_init.md) | 1 | 1 | 100.0% |
 | 🟢 [test_see_also.py](files/tests/test_see_also.md) | 10 | 10 | 100.0% |
 | 🟢 [test_html_export.py](files/tests/test_html_export.md) | 13 | 13 | 100.0% |
+| 🟢 [test_stale_detection.py](files/tests/test_stale_detection.md) | 7 | 7 | 100.0% |
 | 🟢 [test_type_annotations.py](files/tests/test_type_annotations.md) | 9 | 9 | 100.0% |
 | 🟢 [test_config.py](files/tests/test_config.md) | 43 | 43 | 100.0% |
 | 🟢 [test_openai_embedding_provider.py](files/tests/test_openai_embedding_provider.md) | 1 | 1 | 100.0% |
@@ -74,7 +75,7 @@ This report shows the documentation coverage for the codebase.
 | 🟢 [test_logging_coverage.py](files/tests/test_logging_coverage.md) | 21 | 21 | 100.0% |
 | 🟢 [test_llm_cache.py](files/tests/test_llm_cache.md) | 62 | 62 | 100.0% |
 | 🟢 [test_crosslinks.py](files/tests/test_crosslinks.md) | 24 | 24 | 100.0% |
-| 🟢 [test_test_examples.py](files/tests/test_test_examples.md) | 15 | 15 | 100.0% |
+| 🟢 [test_test_examples.py](files/tests/test_test_examples.md) | 17 | 17 | 100.0% |
 | 🟢 [test_source_refs.py](files/tests/test_source_refs.md) | 18 | 18 | 100.0% |
 | 🟢 [test_diagrams.py](files/tests/test_diagrams.md) | 22 | 22 | 100.0% |
 | 🟢 [test_server_validation.py](files/tests/test_server_validation.md) | 6 | 6 | 100.0% |
@@ -86,7 +87,7 @@ This report shows the documentation coverage for the codebase.
 | 🟢 [llm_cache.py](files/src/local_deepwiki/core/llm_cache.md) | 14 | 14 | 100.0% |
 | 🟢 [vectorstore.py](files/src/local_deepwiki/core/vectorstore.md) | 17 | 17 | 100.0% |
 | 🟢 [indexer.py](files/src/local_deepwiki/core/indexer.md) | 10 | 10 | 100.0% |
-| 🟢 [git_utils.py](files/src/local_deepwiki/core/git_utils.md) | 7 | 7 | 100.0% |
+| 🟢 [git_utils.py](files/src/local_deepwiki/core/git_utils.md) | 20 | 20 | 100.0% |
 | 🟢 [deep_research.py](files/src/local_deepwiki/core/deep_research.md) | 24 | 24 | 100.0% |
 | 🟢 [__init__.py](files/src/local_deepwiki/providers/llm/__init__.md) | 2 | 2 | 100.0% |
 | 🟢 [cached.py](files/src/local_deepwiki/providers/llm/cached.md) | 6 | 6 | 100.0% |
@@ -97,6 +98,7 @@ This report shows the documentation coverage for the codebase.
 | 🟢 [__init__.py](files/src/local_deepwiki/providers/embeddings/__init__.md) | 1 | 1 | 100.0% |
 | 🟢 [openai.py](files/src/local_deepwiki/providers/embeddings/openai.md) | 1 | 1 | 100.0% |
 | 🟢 [toc.py](files/src/local_deepwiki/generators/toc.md) | 7 | 7 | 100.0% |
+| 🟢 [stale_detection.py](files/src/local_deepwiki/generators/stale_detection.md) | 5 | 5 | 100.0% |
 | 🟢 [wiki_pages.py](files/src/local_deepwiki/generators/wiki_pages.md) | 4 | 4 | 100.0% |
 | 🟢 [callgraph.py](files/src/local_deepwiki/generators/callgraph.md) | 8 | 8 | 100.0% |
 | 🟢 [coverage.py](files/src/local_deepwiki/generators/coverage.md) | 8 | 8 | 100.0% |
@@ -132,4 +134,4 @@ The following source files were used to generate this documentation:
 - `tests/test_wiki_coverage.py:50-120`
 
 
-*Showing 10 of 98 source files.*
+*Showing 10 of 100 source files.*

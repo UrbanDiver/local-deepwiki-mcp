@@ -1,40 +1,27 @@
-# logging.py
+# Logging Module
 
 ## File Overview
 
-This module provides logging configuration utilities for the local-deepwiki package. It offers a centralized way to set up logging with customizable levels, formats, and output destinations.
+The `logging.py` module provides centralized logging configuration for the local-deepwiki package. It offers flexible logging setup with support for different output formats, multiple destinations (console and file), and environment-based configuration.
 
 ## Functions
 
 ### setup_logging
 
-```python
-def setup_logging(
-    level: str | int | None = None,
-    format_style: Literal["simple", "detailed"] = "simple",
-    stream: bool = True,
-    log_file: str | None = None,
-) -> logging.Logger
-```
-
-Configures logging for the local-deepwiki package with flexible options for level, format, and output destinations.
+Configures logging for the local-deepwiki package with customizable options.
 
 **Parameters:**
-- `level`: Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL). Defaults to INFO, or uses the `DEEPWIKI_LOG_LEVEL` environment variable if set
-- `format_style`: Logging format style - either "simple" for basic format or "detailed" for format including file and line information
-- `stream`: Whether to enable logging to stderr (default: True)
-- `log_file`: Optional file path for file-based logging
+- `level` (str | int | None): Log level such as DEBUG, INFO, WARNING, ERROR, or CRITICAL. Defaults to INFO, or uses the `DEEPWIKI_LOG_LEVEL` environment variable if set
+- `format_style` (Literal["simple", "detailed"]): Format style - "simple" for basic format or "detailed" for format including file and line information. Defaults to "simple"
+- `stream` (bool): Whether to enable logging to stderr. Defaults to True
+- `log_file` (str | None): Optional file path for file-based logging. Defaults to None
 
 **Returns:**
 - `logging.Logger`: The configured logger instance
 
 ### get_logger
 
-```python
-get_logger()
-```
-
-Retrieves a logger instance. The specific implementation details are not visible in the provided code.
+Based on the function name shown in the module summary, this function exists but its implementation details are not visible in the provided code.
 
 ## Usage Examples
 
@@ -45,38 +32,36 @@ from local_deepwiki.logging import setup_logging
 
 # Simple setup with default INFO level
 logger = setup_logging()
-
-# Setup with custom level
-logger = setup_logging(level="DEBUG")
 ```
 
 ### Detailed Logging Configuration
 
 ```python
-# Setup with detailed format and file output
+from local_deepwiki.logging import setup_logging
+
+# Configure with detailed format and file output
 logger = setup_logging(
-    level="WARNING",
+    level="DEBUG",
     format_style="detailed",
     stream=True,
     log_file="/path/to/logfile.log"
 )
 ```
 
-### Environment Variable Configuration
+### Environment-Based Configuration
 
-The logging level can be controlled via environment variable:
+```python
+import os
+from local_deepwiki.logging import setup_logging
 
-```bash
-export DEEPWIKI_LOG_LEVEL=DEBUG
+# Set log level via environment variable
+os.environ["DEEPWIKI_LOG_LEVEL"] = "WARNING"
+logger = setup_logging()
 ```
 
-## Dependencies
+## Related Components
 
-This module uses the following standard library components:
-- `logging`: Core logging functionality
-- `os`: Environment variable access
-- `sys`: System-specific parameters
-- `typing`: Type hints including Literal for format style options
+This module uses the standard Python `logging` library and integrates with the operating system through `os` for environment variable access and `sys` for system-level operations.
 
 ## API Reference
 
@@ -103,7 +88,7 @@ Configure logging for the local-deepwiki package.
 
 
 <details>
-<summary>View Source (lines 18-72) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/logging.py#L18-L72">GitHub</a></summary>
+<summary>View Source (lines 18-72) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/logging.py#L18-L72">GitHub</a></summary>
 
 ```python
 def setup_logging(
@@ -184,7 +169,7 @@ Get a logger for a specific module.
 
 
 <details>
-<summary>View Source (lines 75-89) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/feature/better-search/src/local_deepwiki/logging.py#L75-L89">GitHub</a></summary>
+<summary>View Source (lines 75-89) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/logging.py#L75-L89">GitHub</a></summary>
 
 ```python
 def get_logger(name: str) -> logging.Logger:
@@ -243,14 +228,81 @@ Functions and methods in this file and their callers:
 - **`setFormatter`**: called by `setup_logging`
 - **`setLevel`**: called by `setup_logging`
 
+## Usage Examples
+
+*Examples extracted from test files*
+
+### Test setup_logging uses INFO as default level
+
+From `test_logging_coverage.py::TestSetupLogging::test_setup_logging_default_level`:
+
+```python
+logger = setup_logging()
+
+assert logger.name == PACKAGE_NAME
+assert logger.level == logging.INFO
+assert len(logger.handlers) == 1
+assert isinstance(logger.handlers[0], logging.StreamHandler)
+```
+
+### Test setup_logging uses INFO as default level
+
+From `test_logging_coverage.py::TestSetupLogging::test_setup_logging_default_level`:
+
+```python
+logger = setup_logging()
+
+assert logger.name == PACKAGE_NAME
+assert logger.level == logging.INFO
+assert len(logger.handlers) == 1
+assert isinstance(logger.handlers[0], logging.StreamHandler)
+```
+
+### Test setup_logging accepts string level
+
+From `test_logging_coverage.py::TestSetupLogging::test_setup_logging_with_string_level`:
+
+```python
+logger = setup_logging(level="DEBUG")
+
+assert logger.level == logging.DEBUG
+```
+
+### Test setup_logging accepts string level
+
+From `test_logging_coverage.py::TestSetupLogging::test_setup_logging_with_string_level`:
+
+```python
+logger = setup_logging(level="DEBUG")
+
+assert logger.level == logging.DEBUG
+```
+
+### Test get_logger with name starting with package name
+
+From `test_logging_coverage.py::TestGetLogger::test_get_logger_with_package_prefix`:
+
+```python
+module_name = f"{PACKAGE_NAME}.some_module"
+logger = get_logger(module_name)
+
+assert logger.name == module_name
+```
+
+
+## Last Modified
+
+| Entity | Type | Author | Date | Commit |
+|--------|------|--------|------|--------|
+| `setup_logging` | function | Brian Breidenbach | yesterday | `8078321` Fix ruff and pyright code q... |
+| `get_logger` | function | Brian Breidenbach | 3 days ago | `60f9bc9` Add structured logging module |
+
 ## Relevant Source Files
 
 - `src/local_deepwiki/logging.py:18-72`
 
 ## See Also
 
-- [chunker](core/chunker.md) - uses this
 - [test_examples](generators/test_examples.md) - uses this
-- [wiki](generators/wiki.md) - uses this
-- [git_utils](core/git_utils.md) - uses this
 - [vectorstore](core/vectorstore.md) - uses this
+- [chunker](core/chunker.md) - uses this
