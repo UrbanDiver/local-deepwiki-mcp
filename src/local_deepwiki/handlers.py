@@ -4,7 +4,11 @@ import asyncio
 import json
 from functools import wraps
 from pathlib import Path
-from typing import Any, Awaitable, Callable
+from typing import TYPE_CHECKING, Any, Awaitable, Callable
+
+if TYPE_CHECKING:
+    from local_deepwiki.core.deep_research import DeepResearchPipeline
+    from local_deepwiki.models import ResearchProgress
 
 from mcp.types import TextContent
 
@@ -277,11 +281,43 @@ async def handle_deep_research(
         return [TextContent(type="text", text=f"Error: {e}")]
 
 
-async def _handle_deep_research_impl(
+class _DeepResearchContext:
+    """Context object holding state for deep research execution."""
+
+    def __init__(
+        self,
+        repo_path: Path,
+        question: str,
+        max_chunks: int,
+        preset: str | None,
+        server: Any,
+    ):
+        self.repo_path = repo_path
+        self.question = question
+        self.max_chunks = max_chunks
+        self.preset = preset
+        self.server = server
+        self.config = get_config()
+        self.progress_token: str | int | None = None
+        self.cancellation_event = asyncio.Event()
+
+
+def _setup_deep_research_config(
     args: dict[str, Any],
     server: Any = None,
-) -> list[TextContent]:
-    """Internal implementation of deep_research handler."""
+) -> _DeepResearchContext:
+    """Handle config setup and input validation for deep research.
+
+    Args:
+        args: Tool arguments containing repo_path, question, max_chunks, preset.
+        server: Optional MCP server instance for progress notifications.
+
+    Returns:
+        DeepResearchContext with validated inputs and config.
+
+    Raises:
+        ValueError: If inputs are invalid or repository not indexed.
+    """
     repo_path = Path(args["repo_path"]).resolve()
 
     # Validate inputs
@@ -300,108 +336,72 @@ async def _handle_deep_research_impl(
     logger.info(f"Deep research on {repo_path}: {question[:100]}...")
     logger.debug(f"Max chunks: {max_chunks}, preset: {preset or 'default'}")
 
-    config = get_config()
-    vector_db_path = config.get_vector_db_path(repo_path)
+    # Create context
+    ctx = _DeepResearchContext(
+        repo_path=repo_path,
+        question=question,
+        max_chunks=max_chunks,
+        preset=preset,
+        server=server,
+    )
 
+    # Validate repository is indexed
+    vector_db_path = ctx.config.get_vector_db_path(repo_path)
     if not vector_db_path.exists():
         raise ValueError("Repository not indexed. Run index_repository first.")
 
-    # Create vector store and LLM provider
-    embedding_provider = get_embedding_provider(config.embedding)
-    vector_store = VectorStore(vector_db_path, embedding_provider)
-
-    from local_deepwiki.core.deep_research import DeepResearchPipeline, ResearchCancelledError
-    from local_deepwiki.models import ResearchProgress, ResearchProgressType
-    from local_deepwiki.providers.llm import get_cached_llm_provider
-
-    cache_path = config.get_wiki_path(repo_path) / "llm_cache.lance"
-    llm = get_cached_llm_provider(
-        cache_path=cache_path,
-        embedding_provider=embedding_provider,
-        cache_config=config.llm_cache,
-        llm_config=config.llm,
-    )
-
-    # Get progress token from MCP request context (if client provided one)
-    progress_token: str | int | None = None
+    # Extract progress token from MCP request context
     if server is not None:
         try:
-            ctx = server.request_context
-            if ctx.meta and ctx.meta.progressToken:
-                progress_token = ctx.meta.progressToken
+            request_ctx = server.request_context
+            if request_ctx.meta and request_ctx.meta.progressToken:
+                ctx.progress_token = request_ctx.meta.progressToken
         except LookupError:
             # Not in a request context (e.g., testing)
             pass
 
-    # Create cancellation event for cooperative cancellation
-    cancellation_event = asyncio.Event()
+    return ctx
 
-    def is_cancelled() -> bool:
-        """Check if the research should be cancelled."""
-        # Check both our event and the current task's cancellation state
-        if cancellation_event.is_set():
-            return True
-        # Check if current asyncio task is being cancelled
-        try:
-            task = asyncio.current_task()
-            if task and task.cancelled():
-                return True
-        except RuntimeError:
-            pass
-        return False
 
-    # Create progress callback that sends MCP notifications
-    async def progress_callback(progress: ResearchProgress) -> None:
-        if progress_token is None or server is None:
-            return
-        try:
-            ctx = server.request_context
-            await ctx.session.send_progress_notification(
-                progress_token=progress_token,
-                progress=float(progress.step),
-                total=float(progress.total_steps),
-                message=progress.model_dump_json(),
-            )
-        except (RuntimeError, OSError, AttributeError) as e:
-            # RuntimeError: Session or context issues
-            # OSError: Network communication failures
-            # AttributeError: Missing session/context attributes
-            logger.warning(f"Failed to send progress notification: {e}")
+def _create_research_pipeline(
+    ctx: _DeepResearchContext,
+    args: dict[str, Any],
+) -> tuple["DeepResearchPipeline", "VectorStore", Any]:
+    """Create the DeepResearchPipeline instance with providers.
 
-    async def send_cancellation_notification(step: str) -> None:
-        """Send a cancellation progress notification."""
-        if progress_token is None or server is None:
-            return
-        try:
-            ctx = server.request_context
-            progress = ResearchProgress(
-                step=0,
-                step_type=ResearchProgressType.CANCELLED,
-                message=f"Research cancelled during {step}",
-            )
-            await ctx.session.send_progress_notification(
-                progress_token=progress_token,
-                progress=0.0,
-                total=5.0,
-                message=progress.model_dump_json(),
-            )
-        except (RuntimeError, OSError, AttributeError) as e:
-            # RuntimeError: Session or context issues
-            # OSError: Network communication failures
-            # AttributeError: Missing session/context attributes
-            logger.warning(f"Failed to send cancellation notification: {e}")
+    Args:
+        ctx: Deep research context with config and settings.
+        args: Original tool arguments for max_chunks override check.
 
-    # Create and run the deep research pipeline with config parameters
+    Returns:
+        Tuple of (pipeline, vector_store, llm_provider).
+    """
+    from local_deepwiki.core.deep_research import DeepResearchPipeline
+    from local_deepwiki.providers.llm import get_cached_llm_provider
+
+    # Create vector store and LLM provider
+    embedding_provider = get_embedding_provider(ctx.config.embedding)
+    vector_db_path = ctx.config.get_vector_db_path(ctx.repo_path)
+    vector_store = VectorStore(vector_db_path, embedding_provider)
+
+    cache_path = ctx.config.get_wiki_path(ctx.repo_path) / "llm_cache.lance"
+    llm = get_cached_llm_provider(
+        cache_path=cache_path,
+        embedding_provider=embedding_provider,
+        cache_config=ctx.config.llm_cache,
+        llm_config=ctx.config.llm,
+    )
+
     # Apply preset if specified (overrides config file values)
-    dr_config = config.deep_research.with_preset(preset)
+    dr_config = ctx.config.deep_research.with_preset(ctx.preset)
 
     # Use max_chunks from args if provided, otherwise use preset/config value
     effective_max_chunks = (
-        max_chunks if args.get("max_chunks") is not None else dr_config.max_total_chunks
+        ctx.max_chunks if args.get("max_chunks") is not None else dr_config.max_total_chunks
     )
 
     # Get provider-specific prompts
-    prompts = config.get_prompts()
+    prompts = ctx.config.get_prompts()
 
     pipeline = DeepResearchPipeline(
         vector_store=vector_store,
@@ -417,43 +417,152 @@ async def _handle_deep_research_impl(
         synthesis_prompt=prompts.research_synthesis,
     )
 
+    return pipeline, vector_store, llm
+
+
+def _create_progress_callbacks(
+    ctx: _DeepResearchContext,
+) -> tuple[Callable[[], bool], Callable[["ResearchProgress"], Awaitable[None]], Callable[[str], Awaitable[None]]]:
+    """Create cancellation checker and progress callback functions.
+
+    Args:
+        ctx: Deep research context with server and progress token.
+
+    Returns:
+        Tuple of (is_cancelled, progress_callback, send_cancellation_notification).
+    """
+    from local_deepwiki.models import ResearchProgress, ResearchProgressType
+
+    def is_cancelled() -> bool:
+        """Check if the research should be cancelled."""
+        # Check both our event and the current task's cancellation state
+        if ctx.cancellation_event.is_set():
+            return True
+        # Check if current asyncio task is being cancelled
+        try:
+            task = asyncio.current_task()
+            if task and task.cancelled():
+                return True
+        except RuntimeError:
+            pass
+        return False
+
+    async def progress_callback(progress: ResearchProgress) -> None:
+        """Send MCP progress notifications."""
+        if ctx.progress_token is None or ctx.server is None:
+            return
+        try:
+            request_ctx = ctx.server.request_context
+            await request_ctx.session.send_progress_notification(
+                progress_token=ctx.progress_token,
+                progress=float(progress.step),
+                total=float(progress.total_steps),
+                message=progress.model_dump_json(),
+            )
+        except (RuntimeError, OSError, AttributeError) as e:
+            # RuntimeError: Session or context issues
+            # OSError: Network communication failures
+            # AttributeError: Missing session/context attributes
+            logger.warning(f"Failed to send progress notification: {e}")
+
+    async def send_cancellation_notification(step: str) -> None:
+        """Send a cancellation progress notification."""
+        if ctx.progress_token is None or ctx.server is None:
+            return
+        try:
+            request_ctx = ctx.server.request_context
+            progress = ResearchProgress(
+                step=0,
+                step_type=ResearchProgressType.CANCELLED,
+                message=f"Research cancelled during {step}",
+            )
+            await request_ctx.session.send_progress_notification(
+                progress_token=ctx.progress_token,
+                progress=0.0,
+                total=5.0,
+                message=progress.model_dump_json(),
+            )
+        except (RuntimeError, OSError, AttributeError) as e:
+            # RuntimeError: Session or context issues
+            # OSError: Network communication failures
+            # AttributeError: Missing session/context attributes
+            logger.warning(f"Failed to send cancellation notification: {e}")
+
+    return is_cancelled, progress_callback, send_cancellation_notification
+
+
+def _format_research_results(result: Any) -> dict[str, Any]:
+    """Format the research results for return.
+
+    Args:
+        result: The ResearchResult from the pipeline.
+
+    Returns:
+        Formatted dictionary ready for JSON serialization.
+    """
+    return {
+        "question": result.question,
+        "answer": result.answer,
+        "sub_questions": [
+            {"question": sq.question, "category": sq.category} for sq in result.sub_questions
+        ],
+        "sources": [
+            {
+                "file": src.file_path,
+                "lines": f"{src.start_line}-{src.end_line}",
+                "type": src.chunk_type,
+                "name": src.name,
+                "relevance": round(src.relevance_score, 3),
+            }
+            for src in result.sources
+        ],
+        "research_trace": [
+            {
+                "step": step.step_type.value,
+                "description": step.description,
+                "duration_ms": step.duration_ms,
+            }
+            for step in result.reasoning_trace
+        ],
+        "stats": {
+            "chunks_analyzed": result.total_chunks_analyzed,
+            "llm_calls": result.total_llm_calls,
+        },
+    }
+
+
+async def _execute_research_phases(
+    ctx: _DeepResearchContext,
+    pipeline: "DeepResearchPipeline",
+    is_cancelled: Callable[[], bool],
+    progress_callback: Callable[["ResearchProgress"], Awaitable[None]],
+    send_cancellation_notification: Callable[[str], Awaitable[None]],
+) -> list[TextContent]:
+    """Execute the research phases with progress tracking.
+
+    Args:
+        ctx: Deep research context.
+        pipeline: The configured DeepResearchPipeline.
+        is_cancelled: Function to check if research is cancelled.
+        progress_callback: Function to send progress updates.
+        send_cancellation_notification: Function to send cancellation notifications.
+
+    Returns:
+        List of TextContent with research results.
+
+    Raises:
+        asyncio.CancelledError: If the task is cancelled.
+    """
+    from local_deepwiki.core.deep_research import ResearchCancelledError
+
     try:
         result = await pipeline.research(
-            question,
+            ctx.question,
             progress_callback=progress_callback,
             cancellation_check=is_cancelled,
         )
 
-        # Format the response
-        response = {
-            "question": result.question,
-            "answer": result.answer,
-            "sub_questions": [
-                {"question": sq.question, "category": sq.category} for sq in result.sub_questions
-            ],
-            "sources": [
-                {
-                    "file": src.file_path,
-                    "lines": f"{src.start_line}-{src.end_line}",
-                    "type": src.chunk_type,
-                    "name": src.name,
-                    "relevance": round(src.relevance_score, 3),
-                }
-                for src in result.sources
-            ],
-            "research_trace": [
-                {
-                    "step": step.step_type.value,
-                    "description": step.description,
-                    "duration_ms": step.duration_ms,
-                }
-                for step in result.reasoning_trace
-            ],
-            "stats": {
-                "chunks_analyzed": result.total_chunks_analyzed,
-                "llm_calls": result.total_llm_calls,
-            },
-        }
+        response = _format_research_results(result)
 
         logger.info(
             f"Deep research complete: {result.total_chunks_analyzed} chunks, "
@@ -480,6 +589,44 @@ async def _handle_deep_research_impl(
         logger.info("Deep research task cancelled")
         await send_cancellation_notification("task_cancellation")
         raise  # Re-raise to properly propagate cancellation
+
+
+async def _handle_deep_research_impl(
+    args: dict[str, Any],
+    server: Any = None,
+) -> list[TextContent]:
+    """Internal implementation of deep_research handler.
+
+    Coordinates the deep research process by delegating to focused helper functions:
+    1. Setup and validation via _setup_deep_research_config()
+    2. Pipeline creation via _create_research_pipeline()
+    3. Progress callbacks via _create_progress_callbacks()
+    4. Execution via _execute_research_phases()
+
+    Args:
+        args: Tool arguments.
+        server: Optional MCP server instance for progress notifications.
+
+    Returns:
+        List of TextContent with research results.
+    """
+    # Step 1: Setup config and validate inputs
+    ctx = _setup_deep_research_config(args, server)
+
+    # Step 2: Create the research pipeline with providers
+    pipeline, _vector_store, _llm = _create_research_pipeline(ctx, args)
+
+    # Step 3: Create progress and cancellation callbacks
+    is_cancelled, progress_callback, send_cancellation_notification = _create_progress_callbacks(ctx)
+
+    # Step 4: Execute research phases with progress tracking
+    return await _execute_research_phases(
+        ctx,
+        pipeline,
+        is_cancelled,
+        progress_callback,
+        send_cancellation_notification,
+    )
 
 
 @handle_tool_errors

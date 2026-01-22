@@ -139,57 +139,65 @@ class RepositoryIndexer:
                 error=str(e),
             )
 
-    async def index(
-        self,
-        full_rebuild: bool = False,
-        progress_callback: ProgressCallback | None = None,
-    ) -> IndexStatus:
-        """Index the repository.
+    def _load_previous_status(
+        self, full_rebuild: bool
+    ) -> tuple[IndexStatus | None, dict[str, FileInfo], bool]:
+        """Load and validate previous index status for incremental updates.
 
         Args:
-            full_rebuild: If True, rebuild entire index. Otherwise, incremental update.
-            progress_callback: Optional callback for progress updates (message, current, total).
+            full_rebuild: If True, skip loading previous status.
 
         Returns:
-            IndexStatus with indexing results.
+            Tuple of (previous_status, prev_files_by_path, full_rebuild_required).
+            prev_files_by_path is a hash map for O(1) lookups.
+            full_rebuild_required may be True if schema migration requires it.
         """
-        # Ensure wiki directory exists
-        self.wiki_path.mkdir(parents=True, exist_ok=True)
+        if full_rebuild:
+            return None, {}, full_rebuild
 
-        logger.info(f"Starting indexing for repository: {self.repo_path}")
-        logger.debug(f"Wiki path: {self.wiki_path}, Full rebuild: {full_rebuild}")
-
-        # Load previous status for incremental updates
-        previous_status = None
-        if not full_rebuild:
-            previous_status, requires_rebuild = self._load_status()
-            if requires_rebuild:
-                logger.info("Schema migration requires full rebuild")
-                full_rebuild = True
-                previous_status = None
+        previous_status, requires_rebuild = self._load_status()
+        if requires_rebuild:
+            logger.info("Schema migration requires full rebuild")
+            return None, {}, True
 
         if previous_status:
             logger.debug(f"Loaded previous index status: {previous_status.total_files} files")
+            # Pre-build hash map for O(1) lookups instead of O(N) linear scan per file
+            # This reduces O(N*M) to O(N+M) for file comparison
+            prev_files_by_path = {f.path: f for f in previous_status.files}
+            return previous_status, prev_files_by_path, full_rebuild
 
-        # Find all source files
+        return None, {}, full_rebuild
+
+    def _collect_files_to_process(
+        self,
+        prev_files_by_path: dict[str, FileInfo],
+        progress_callback: ProgressCallback | None,
+    ) -> tuple[list[Path], list[FileInfo]]:
+        """Gather source files and determine what needs processing.
+
+        Args:
+            prev_files_by_path: Hash map of previous files for O(1) lookup.
+            progress_callback: Optional callback for progress updates.
+
+        Returns:
+            Tuple of (files_to_process, files_unchanged).
+        """
         source_files = list(self._find_source_files())
         logger.info(f"Found {len(source_files)} source files to consider")
 
         if progress_callback:
             progress_callback("Found source files", len(source_files), len(source_files))
 
-        # Determine which files need processing
         files_to_process: list[Path] = []
         files_unchanged: list[FileInfo] = []
 
         for file_path in source_files:
             file_info = self.parser.get_file_info(file_path, self.repo_path)
 
-            if previous_status and not full_rebuild:
-                # Check if file has changed
-                prev_file = next(
-                    (f for f in previous_status.files if f.path == file_info.path), None
-                )
+            if prev_files_by_path:
+                # Check if file has changed using O(1) dict lookup
+                prev_file = prev_files_by_path.get(file_info.path)
                 if prev_file and prev_file.hash == file_info.hash:
                     files_unchanged.append(prev_file)
                     continue
@@ -203,31 +211,59 @@ class RepositoryIndexer:
                 len(files_to_process),
             )
 
-        # For incremental updates, batch delete old chunks for all files being re-processed
-        # This avoids N+1 delete problem by doing a single batch delete upfront
-        if not full_rebuild and previous_status and files_to_process:
-            # Get relative paths for files that existed in previous index
-            files_to_delete = []
-            for file_path in files_to_process:
-                file_info = self.parser.get_file_info(file_path, self.repo_path)
-                # Only delete if file existed in previous index (was modified, not new)
-                prev_file = next(
-                    (f for f in previous_status.files if f.path == file_info.path), None
+        return files_to_process, files_unchanged
+
+    async def _delete_old_chunks_for_modified_files(
+        self,
+        files_to_process: list[Path],
+        prev_files_by_path: dict[str, FileInfo],
+        progress_callback: ProgressCallback | None,
+    ) -> None:
+        """Batch delete old chunks for files being re-processed.
+
+        This avoids N+1 delete problem by doing a single batch delete upfront.
+
+        Args:
+            files_to_process: List of file paths to be processed.
+            prev_files_by_path: Hash map of previous files for O(1) lookup.
+            progress_callback: Optional callback for progress updates.
+        """
+        files_to_delete = []
+        for file_path in files_to_process:
+            file_info = self.parser.get_file_info(file_path, self.repo_path)
+            # Only delete if file existed in previous index (was modified, not new)
+            # Use O(1) dict lookup instead of O(N) linear scan
+            if file_info.path in prev_files_by_path:
+                files_to_delete.append(file_info.path)
+
+        if files_to_delete:
+            if progress_callback:
+                progress_callback(
+                    f"Removing old chunks for {len(files_to_delete)} modified files...",
+                    0,
+                    len(files_to_process),
                 )
-                if prev_file:
-                    files_to_delete.append(file_info.path)
+            await self.vector_store.delete_chunks_by_files(files_to_delete)
+            logger.debug(f"Batch deleted chunks for {len(files_to_delete)} modified files")
 
-            if files_to_delete:
-                if progress_callback:
-                    progress_callback(
-                        f"Removing old chunks for {len(files_to_delete)} modified files...",
-                        0,
-                        len(files_to_process),
-                    )
-                await self.vector_store.delete_chunks_by_files(files_to_delete)
-                logger.debug(f"Batch deleted chunks for {len(files_to_delete)} modified files")
+    async def _parse_files_parallel(
+        self,
+        files_to_process: list[Path],
+        full_rebuild: bool,
+        progress_callback: ProgressCallback | None,
+    ) -> tuple[list[FileInfo], int]:
+        """Handle parallel file parsing with ThreadPoolExecutor.
 
-        # Process files in parallel using thread pool for CPU-bound parsing
+        Args:
+            files_to_process: List of file paths to parse.
+            full_rebuild: If True, this is a full rebuild (affects table creation).
+            progress_callback: Optional callback for progress updates.
+
+        Returns:
+            Tuple of (processed_files, total_chunks_processed).
+        """
+        from concurrent.futures import as_completed
+
         batch_size = self.config.chunking.batch_size
         parallel_workers = self.config.chunking.parallel_workers
         chunk_batch: list[CodeChunk] = []
@@ -237,16 +273,11 @@ class RepositoryIndexer:
 
         logger.info(f"Parsing files with {parallel_workers} parallel workers")
 
-        # Use thread pool for parallel parsing (CPU-bound work)
         with ThreadPoolExecutor(max_workers=parallel_workers) as executor:
-            # Submit all parsing tasks
             futures = {
                 executor.submit(self._parse_single_file, file_path): file_path
                 for file_path in files_to_process
             }
-
-            # Process results as they complete
-            from concurrent.futures import as_completed
 
             for i, future in enumerate(as_completed(futures)):
                 file_path = futures[future]
@@ -265,45 +296,93 @@ class RepositoryIndexer:
                         )
                     continue
 
-                # Old chunks already batch-deleted above, just add new chunks
                 chunk_batch.extend(result.chunks)
                 processed_files.append(result.file_info)
 
                 # Process batch if it reaches the batch size
                 if len(chunk_batch) >= batch_size:
-                    if progress_callback:
-                        progress_callback(
-                            f"Storing batch of {len(chunk_batch)} chunks...",
-                            i,
-                            len(files_to_process),
-                        )
-
-                    if full_rebuild and is_first_batch:
-                        await self.vector_store.create_or_update_table(chunk_batch)
-                        is_first_batch = False
-                    else:
-                        await self.vector_store.add_chunks(chunk_batch)
-
-                    total_chunks_processed += len(chunk_batch)
-                    chunk_batch = []  # Clear batch to free memory
+                    chunks_stored = await self._process_chunk_batch(
+                        chunk_batch,
+                        full_rebuild,
+                        is_first_batch,
+                        progress_callback,
+                        i,
+                        len(files_to_process),
+                    )
+                    total_chunks_processed += chunks_stored
+                    is_first_batch = False
+                    chunk_batch = []
 
         # Process any remaining chunks in the final batch
         if chunk_batch:
-            if progress_callback:
-                progress_callback(
-                    f"Storing final batch of {len(chunk_batch)} chunks...",
-                    len(files_to_process),
-                    len(files_to_process),
-                )
+            chunks_stored = await self._process_chunk_batch(
+                chunk_batch,
+                full_rebuild,
+                is_first_batch,
+                progress_callback,
+                len(files_to_process),
+                len(files_to_process),
+                is_final=True,
+            )
+            total_chunks_processed += chunks_stored
 
-            if full_rebuild and is_first_batch:
-                await self.vector_store.create_or_update_table(chunk_batch)
-            else:
-                await self.vector_store.add_chunks(chunk_batch)
+        return processed_files, total_chunks_processed
 
-            total_chunks_processed += len(chunk_batch)
+    async def _process_chunk_batch(
+        self,
+        chunk_batch: list[CodeChunk],
+        full_rebuild: bool,
+        is_first_batch: bool,
+        progress_callback: ProgressCallback | None,
+        current: int,
+        total: int,
+        is_final: bool = False,
+    ) -> int:
+        """Process a batch of chunks and store in vector store.
 
-        # Combine processed and unchanged files
+        Args:
+            chunk_batch: List of code chunks to store.
+            full_rebuild: If True, may need to create table on first batch.
+            is_first_batch: True if this is the first batch being processed.
+            progress_callback: Optional callback for progress updates.
+            current: Current progress index.
+            total: Total number of files being processed.
+            is_final: True if this is the final batch.
+
+        Returns:
+            Number of chunks processed.
+        """
+        batch_type = "final batch" if is_final else "batch"
+        if progress_callback:
+            progress_callback(
+                f"Storing {batch_type} of {len(chunk_batch)} chunks...",
+                current,
+                total,
+            )
+
+        if full_rebuild and is_first_batch:
+            await self.vector_store.create_or_update_table(chunk_batch)
+        else:
+            await self.vector_store.add_chunks(chunk_batch)
+
+        return len(chunk_batch)
+
+    def _create_index_status(
+        self,
+        processed_files: list[FileInfo],
+        files_unchanged: list[FileInfo],
+        total_chunks_processed: int,
+    ) -> IndexStatus:
+        """Create the final index status with statistics.
+
+        Args:
+            processed_files: List of files that were processed.
+            files_unchanged: List of files that were unchanged.
+            total_chunks_processed: Number of chunks processed in this run.
+
+        Returns:
+            IndexStatus with complete indexing results.
+        """
         all_files = processed_files + files_unchanged
 
         # Calculate language statistics
@@ -313,8 +392,7 @@ class RepositoryIndexer:
                 lang = file_info.language.value
                 languages[lang] = languages.get(lang, 0) + 1
 
-        # Create status with current schema version
-        status = IndexStatus(
+        return IndexStatus(
             repo_path=str(self.repo_path),
             indexed_at=time.time(),
             total_files=len(all_files),
@@ -324,13 +402,67 @@ class RepositoryIndexer:
             schema_version=CURRENT_SCHEMA_VERSION,
         )
 
-        # Save status
-        self._save_status(status)
+    def _save_index_status(self, status: IndexStatus) -> None:
+        """Save the final index status and log completion.
 
+        Args:
+            status: The IndexStatus to save.
+        """
+        self._save_status(status)
         logger.info(
             f"Indexing complete: {status.total_files} files, "
             f"{status.total_chunks} chunks, languages: {list(status.languages.keys())}"
         )
+
+    async def index(
+        self,
+        full_rebuild: bool = False,
+        progress_callback: ProgressCallback | None = None,
+    ) -> IndexStatus:
+        """Index the repository.
+
+        This method coordinates the indexing process by delegating to
+        focused private methods for each phase of the operation.
+
+        Args:
+            full_rebuild: If True, rebuild entire index. Otherwise, incremental update.
+            progress_callback: Optional callback for progress updates (message, current, total).
+
+        Returns:
+            IndexStatus with indexing results.
+        """
+        # Ensure wiki directory exists
+        self.wiki_path.mkdir(parents=True, exist_ok=True)
+
+        logger.info(f"Starting indexing for repository: {self.repo_path}")
+        logger.debug(f"Wiki path: {self.wiki_path}, Full rebuild: {full_rebuild}")
+
+        # Phase 1: Load previous status for incremental updates
+        previous_status, prev_files_by_path, full_rebuild = self._load_previous_status(
+            full_rebuild
+        )
+
+        # Phase 2: Collect files to process
+        files_to_process, files_unchanged = self._collect_files_to_process(
+            prev_files_by_path, progress_callback
+        )
+
+        # Phase 3: Delete old chunks for modified files (incremental only)
+        if not full_rebuild and prev_files_by_path and files_to_process:
+            await self._delete_old_chunks_for_modified_files(
+                files_to_process, prev_files_by_path, progress_callback
+            )
+
+        # Phase 4: Parse files in parallel and store chunks
+        processed_files, total_chunks_processed = await self._parse_files_parallel(
+            files_to_process, full_rebuild, progress_callback
+        )
+
+        # Phase 5: Create and save index status
+        status = self._create_index_status(
+            processed_files, files_unchanged, total_chunks_processed
+        )
+        self._save_index_status(status)
 
         if progress_callback:
             progress_callback("Indexing complete", 1, 1)

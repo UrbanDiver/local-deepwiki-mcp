@@ -310,7 +310,7 @@ class TestGenerateSingleFileDoc:
         assert was_skipped is False
         mock_llm.generate.assert_called()
 
-    async def test_fallback_search_by_filename(
+    async def test_uses_direct_lookup_for_file_chunks(
         self,
         mock_llm,
         mock_vector_store,
@@ -319,16 +319,9 @@ class TestGenerateSingleFileDoc:
         mock_config,
         tmp_path,
     ):
-        """Test falls back to searching by filename when no direct matches."""
+        """Test uses get_chunks_by_file for efficient direct lookup instead of semantic search."""
         chunk = make_code_chunk(file_path="src/main.py", name="main")
 
-        # First search returns no matching chunks, second returns match
-        async def search_side_effect(query, **_kwargs):
-            if "file:" in query:
-                return []  # No direct matches
-            return [make_search_result(chunk)]  # Fallback matches
-
-        mock_vector_store.search = AsyncMock(side_effect=search_side_effect)
         mock_vector_store.get_chunks_by_file = AsyncMock(return_value=[chunk])
 
         file_info = make_file_info(path="src/main.py")
@@ -347,9 +340,11 @@ class TestGenerateSingleFileDoc:
         )
 
         assert page is not None
-        # Should have called search at least twice (direct + fallback)
-        # Context builder may add additional searches for callers/related files
-        assert mock_vector_store.search.call_count >= 2
+        # Should use get_chunks_by_file for direct lookup (called twice:
+        # once for main chunk retrieval, once for class diagram/entity registration)
+        assert mock_vector_store.get_chunks_by_file.call_count >= 1
+        # First call should be for the file path
+        mock_vector_store.get_chunks_by_file.assert_any_call("src/main.py")
 
     async def test_registers_entities_for_crosslinking(
         self,

@@ -22,7 +22,14 @@ from local_deepwiki.generators.crosslinks import EntityRegistry
 from local_deepwiki.generators.diagrams import generate_class_diagram
 from local_deepwiki.generators.test_examples import get_file_examples
 from local_deepwiki.logging import get_logger
-from local_deepwiki.models import ChunkType, CodeChunk, FileInfo, IndexStatus, ProgressCallback, WikiPage
+from local_deepwiki.models import (
+    ChunkType,
+    CodeChunk,
+    FileInfo,
+    IndexStatus,
+    ProgressCallback,
+    WikiPage,
+)
 from local_deepwiki.providers.base import LLMProvider
 
 if TYPE_CHECKING:
@@ -114,7 +121,11 @@ def _inject_inline_source_code(
     used_chunks: set[str] = set()  # Track which chunks we've injected
 
     for chunk in chunks:
-        if chunk.name and chunk.chunk_type in (ChunkType.CLASS, ChunkType.FUNCTION, ChunkType.METHOD):
+        if chunk.name and chunk.chunk_type in (
+            ChunkType.CLASS,
+            ChunkType.FUNCTION,
+            ChunkType.METHOD,
+        ):
             all_chunks.add(chunk.id)
             # Store by simple name (may be overwritten by duplicates)
             chunk_map[chunk.name] = chunk
@@ -202,11 +213,17 @@ def _inject_inline_source_code(
                     while j < len(lines):
                         next_line = lines[j]
                         # Stop at next heading of same or higher level
-                        if next_line.startswith("#### ") or next_line.startswith("### ") or next_line.startswith("## "):
+                        if (
+                            next_line.startswith("#### ")
+                            or next_line.startswith("### ")
+                            or next_line.startswith("## ")
+                        ):
                             # Inject source before next heading if no Returns found
                             if not found_returns:
                                 result_lines.append("")
-                                result_lines.append(_create_source_details(chunk, syntax_lang, get_chunk_url(chunk)))
+                                result_lines.append(
+                                    _create_source_details(chunk, syntax_lang, get_chunk_url(chunk))
+                                )
                             i = j - 1  # Back up so we process next heading
                             break
                         # Track if we found Returns
@@ -221,7 +238,9 @@ def _inject_inline_source_code(
                                 j += 1
                             # Insert source code here
                             result_lines.append("")
-                            result_lines.append(_create_source_details(chunk, syntax_lang, get_chunk_url(chunk)))
+                            result_lines.append(
+                                _create_source_details(chunk, syntax_lang, get_chunk_url(chunk))
+                            )
                             i = j - 1  # Continue from here
                             break
                         result_lines.append(lines[j])
@@ -231,7 +250,9 @@ def _inject_inline_source_code(
                         # Add source code at the end
                         if not found_returns:
                             result_lines.append("")
-                            result_lines.append(_create_source_details(chunk, syntax_lang, get_chunk_url(chunk)))
+                            result_lines.append(
+                                _create_source_details(chunk, syntax_lang, get_chunk_url(chunk))
+                            )
                         i = j - 1
 
         i += 1
@@ -242,7 +263,9 @@ def _inject_inline_source_code(
         result_lines.append("")
         result_lines.append("## Additional Source Code")
         result_lines.append("")
-        result_lines.append("Source code for functions and methods not listed in the API Reference above.")
+        result_lines.append(
+            "Source code for functions and methods not listed in the API Reference above."
+        )
         result_lines.append("")
 
         for chunk in sorted(unused_chunks, key=lambda c: c.start_line):
@@ -257,81 +280,30 @@ def _inject_inline_source_code(
     return "\n".join(result_lines)
 
 
-async def generate_single_file_doc(
+async def _gather_file_context(
     file_info: FileInfo,
     index_status: IndexStatus,
     vector_store: VectorStore,
-    llm: LLMProvider,
-    system_prompt: str,
-    status_manager: "WikiStatusManager",
-    entity_registry: EntityRegistry,
-    config: Config,
-    full_rebuild: bool,
-) -> tuple[WikiPage | None, bool]:
-    """Generate documentation for a single source file.
+) -> tuple[list[CodeChunk], str, str] | None:
+    """Collect chunks, imports, and related context for the file.
 
     Args:
         file_info: File status information.
         index_status: Index status with repo information.
         vector_store: Vector store with indexed code.
-        llm: LLM provider for generation.
-        system_prompt: System prompt for LLM.
-        status_manager: Wiki status manager for incremental updates.
-        entity_registry: Entity registry for cross-linking.
-        config: Configuration.
-        full_rebuild: If True, regenerate even if unchanged.
 
     Returns:
-        Tuple of (WikiPage or None, was_skipped).
-        Returns (None, False) if file should be skipped entirely.
-        Returns (page, True) if existing page was reused.
-        Returns (page, False) if new page was generated.
+        Tuple of (chunks_list, context_text, rich_context_text) or None if no content.
     """
-    file_path = Path(file_info.path)
-
-    # Create nested path structure: files/module/filename.md
-    parts = file_path.parts
-    if len(parts) > 1:
-        wiki_path = f"files/{'/'.join(parts[:-1])}/{file_path.stem}.md"
-    else:
-        wiki_path = f"files/{file_path.stem}.md"
-
-    source_files = [file_info.path]
-
-    # Check if this file page needs regeneration
-    if not full_rebuild and not status_manager.needs_regeneration(wiki_path, source_files):
-        existing_page = await status_manager.load_existing_page(wiki_path)
-        if existing_page is not None:
-            # Still need to register entities for cross-linking
-            all_file_chunks = await vector_store.get_chunks_by_file(file_info.path)
-            entity_registry.register_from_chunks(all_file_chunks, wiki_path)
-            status_manager.record_page_status(existing_page, source_files)
-            return existing_page, True  # Skipped (reused existing)
-
-    # Get all chunks for this file
-    search_results = await vector_store.search(
-        f"file:{file_info.path}",
-        limit=config.wiki.context_search_limit,
-    )
-
-    # Filter to chunks from this specific file
-    file_chunks = [r for r in search_results if r.chunk.file_path == file_info.path]
+    # Get all chunks for this file using direct lookup (efficient scalar index)
+    file_chunks = await vector_store.get_chunks_by_file(file_info.path)
 
     if not file_chunks:
-        # Fallback: search by filename
-        search_results = await vector_store.search(
-            file_path.stem,
-            limit=config.wiki.fallback_search_limit,
-        )
-        file_chunks = [r for r in search_results if r.chunk.file_path == file_info.path]
-
-    if not file_chunks:
-        return None, False  # No content to document
+        return None  # No content to document
 
     # Build context from chunks
     context_parts = []
-    for r in file_chunks[:15]:  # Limit context size
-        chunk = r.chunk
+    for chunk in file_chunks[:15]:  # Limit context size
         context_parts.append(
             f"Type: {chunk.chunk_type.value}\n"
             f"Name: {chunk.name}\n"
@@ -342,16 +314,33 @@ async def generate_single_file_doc(
     context = "\n\n".join(context_parts)
 
     # Build rich context with imports, callers, and related files
-    chunks_list = [r.chunk for r in file_chunks]
     rich_context = await build_file_context(
         file_path=file_info.path,
-        chunks=chunks_list,
+        chunks=file_chunks,
         repo_path=Path(index_status.repo_path),
         vector_store=vector_store,
     )
     rich_context_text = format_context_for_llm(rich_context)
 
-    prompt = f"""Generate documentation for the file '{file_info.path}' based on the code and context provided.
+    return file_chunks, context, rich_context_text
+
+
+def _build_llm_prompt(
+    file_info: FileInfo,
+    context: str,
+    rich_context_text: str,
+) -> str:
+    """Construct the LLM prompt with all context.
+
+    Args:
+        file_info: File status information.
+        context: Code context text.
+        rich_context_text: Rich context with imports and callers.
+
+    Returns:
+        The formatted LLM prompt string.
+    """
+    return f"""Generate documentation for the file '{file_info.path}' based on the code and context provided.
 
 Language: {file_info.language}
 Total code chunks: {file_info.chunk_count}
@@ -378,6 +367,22 @@ CRITICAL CONSTRAINTS:
 Format as markdown with clear sections.
 Do NOT include mermaid class diagrams - they will be auto-generated."""
 
+
+async def _generate_and_format_doc(
+    prompt: str,
+    llm: LLMProvider,
+    system_prompt: str,
+) -> str:
+    """Call LLM and format the response.
+
+    Args:
+        prompt: The LLM prompt.
+        llm: LLM provider for generation.
+        system_prompt: System prompt for LLM.
+
+    Returns:
+        The formatted documentation content.
+    """
     content = await llm.generate(prompt, system_prompt=system_prompt)
 
     # Strip any LLM-generated class diagram sections (we add our own)
@@ -388,29 +393,54 @@ Do NOT include mermaid class diagrams - they will be auto-generated."""
         flags=re.DOTALL | re.IGNORECASE,
     )
 
+    return content
+
+
+def _generate_file_enrichments(
+    content: str,
+    abs_file_path: Path,
+    repo_path: Path,
+    file_path: str,
+    all_file_chunks: list[CodeChunk],
+) -> str:
+    """Generate diagrams, call graphs, examples, and blame info.
+
+    Args:
+        content: The base documentation content.
+        abs_file_path: Absolute path to the source file.
+        repo_path: Path to the repository root.
+        file_path: Relative path to the source file.
+        all_file_chunks: All code chunks from the file.
+
+    Returns:
+        The enriched documentation content.
+    """
     # Generate API reference section with type signatures
-    abs_file_path = Path(index_status.repo_path) / file_info.path
     if abs_file_path.exists():
         api_docs = get_file_api_docs(abs_file_path)
         if api_docs:
             content += "\n\n## API Reference\n\n" + api_docs
 
     # Generate class diagram if file has classes
-    all_file_chunks = await vector_store.get_chunks_by_file(file_info.path)
     class_diagram = generate_class_diagram(all_file_chunks)
     if class_diagram:
         content += "\n\n## Class Diagram\n\n" + class_diagram
 
     # Generate call graph diagram and used-by information
     if abs_file_path.exists():
-        call_graph = get_file_call_graph(abs_file_path, Path(index_status.repo_path))
+        call_graph = get_file_call_graph(abs_file_path, repo_path)
         if call_graph:
             content += "\n\n## Call Graph\n\n```mermaid\n" + call_graph + "\n```"
 
         # Add "Used by" section showing callers for each function
-        callers_map = get_file_callers(abs_file_path, Path(index_status.repo_path))
+        callers_map = get_file_callers(abs_file_path, repo_path)
         if callers_map:
-            used_by_lines = ["## Used By", "", "Functions and methods in this file and their callers:", ""]
+            used_by_lines = [
+                "## Used By",
+                "",
+                "Functions and methods in this file and their callers:",
+                "",
+            ]
             for callee in sorted(callers_map.keys()):
                 callers = callers_map[callee]
                 if callers:
@@ -424,7 +454,7 @@ Do NOT include mermaid class diagrams - they will be auto-generated."""
     if entity_names:
         examples_md = get_file_examples(
             source_file=abs_file_path,
-            repo_root=Path(index_status.repo_path),
+            repo_root=repo_path,
             entity_names=entity_names,
             max_examples=5,
         )
@@ -433,20 +463,119 @@ Do NOT include mermaid class diagrams - they will be auto-generated."""
 
     # Add git blame "Last Modified" section
     blame_section = _generate_blame_section(
-        repo_path=Path(index_status.repo_path),
-        file_path=file_info.path,
+        repo_path=repo_path,
+        file_path=file_path,
         chunks=all_file_chunks,
     )
     if blame_section:
         content += "\n\n" + blame_section
 
+    return content
+
+
+async def generate_single_file_doc(
+    file_info: FileInfo,
+    index_status: IndexStatus,
+    vector_store: VectorStore,
+    llm: LLMProvider,
+    system_prompt: str,
+    status_manager: "WikiStatusManager",
+    entity_registry: EntityRegistry,
+    config: Config,
+    full_rebuild: bool,
+) -> tuple[WikiPage | None, bool]:
+    """Generate documentation for a single source file.
+
+    Coordinates the documentation generation pipeline:
+    1. Check if regeneration is needed
+    2. Gather file context (chunks, imports, related context)
+    3. Build LLM prompt with all context
+    4. Generate and format documentation via LLM
+    5. Add enrichments (diagrams, call graphs, examples, blame)
+    6. Inject inline source code and register entities
+
+    Args:
+        file_info: File status information.
+        index_status: Index status with repo information.
+        vector_store: Vector store with indexed code.
+        llm: LLM provider for generation.
+        system_prompt: System prompt for LLM.
+        status_manager: Wiki status manager for incremental updates.
+        entity_registry: Entity registry for cross-linking.
+        config: Configuration.
+        full_rebuild: If True, regenerate even if unchanged.
+
+    Returns:
+        Tuple of (WikiPage or None, was_skipped).
+        Returns (None, False) if file should be skipped entirely.
+        Returns (page, True) if existing page was reused.
+        Returns (page, False) if new page was generated.
+    """
+    file_path = Path(file_info.path)
+    repo_path = Path(index_status.repo_path)
+
+    # Create nested path structure: files/module/filename.md
+    parts = file_path.parts
+    if len(parts) > 1:
+        wiki_path = f"files/{'/'.join(parts[:-1])}/{file_path.stem}.md"
+    else:
+        wiki_path = f"files/{file_path.stem}.md"
+
+    source_files = [file_info.path]
+
+    # Check if this file page needs regeneration
+    if not full_rebuild and not status_manager.needs_regeneration(wiki_path, source_files):
+        existing_page = await status_manager.load_existing_page(wiki_path)
+        if existing_page is not None:
+            # Still need to register entities for cross-linking
+            all_file_chunks = await vector_store.get_chunks_by_file(file_info.path)
+            entity_registry.register_from_chunks(all_file_chunks, wiki_path)
+            status_manager.record_page_status(existing_page, source_files)
+            return existing_page, True  # Skipped (reused existing)
+
+    # Step 1: Gather file context (chunks, imports, related context)
+    context_result = await _gather_file_context(
+        file_info=file_info,
+        index_status=index_status,
+        vector_store=vector_store,
+    )
+
+    if context_result is None:
+        return None, False  # No content to document
+
+    file_chunks, context, rich_context_text = context_result
+
+    # Step 2: Build the LLM prompt
+    prompt = _build_llm_prompt(
+        file_info=file_info,
+        context=context,
+        rich_context_text=rich_context_text,
+    )
+
+    # Step 3: Generate and format the documentation
+    content = await _generate_and_format_doc(
+        prompt=prompt,
+        llm=llm,
+        system_prompt=system_prompt,
+    )
+
+    # Step 4: Generate enrichments (diagrams, call graphs, examples, blame)
+    abs_file_path = repo_path / file_info.path
+    content = _generate_file_enrichments(
+        content=content,
+        abs_file_path=abs_file_path,
+        repo_path=repo_path,
+        file_path=file_info.path,
+        all_file_chunks=file_chunks,
+    )
+
     # Inject inline source code after each function/class in API Reference
     lang_str = file_info.language.value if file_info.language else None
-    repo_info = get_repo_info(Path(index_status.repo_path))
-    content = _inject_inline_source_code(content, all_file_chunks, lang_str, repo_info)
+    repo_info = get_repo_info(repo_path)
+    content = _inject_inline_source_code(content, file_chunks, lang_str, repo_info)
 
     # Register entities for cross-linking
-    entity_registry.register_from_chunks(all_file_chunks, wiki_path)
+    entity_registry.register_from_chunks(file_chunks, wiki_path)
 
     page = WikiPage(
         path=wiki_path,
@@ -557,10 +686,7 @@ async def generate_file_docs(
             return file_info, page, was_skipped
 
     # Create tasks for all file doc generations
-    tasks = [
-        asyncio.create_task(generate_with_semaphore(f))
-        for f in significant_files
-    ]
+    tasks = [asyncio.create_task(generate_with_semaphore(f)) for f in significant_files]
 
     # Process results as they complete (write immediately)
     pages = []
@@ -642,13 +768,19 @@ def _generate_blame_section(
     entities: list[tuple[str, str, int, int]] = []
 
     for chunk in chunks:
-        if chunk.name and chunk.chunk_type in (ChunkType.CLASS, ChunkType.FUNCTION, ChunkType.METHOD):
-            entities.append((
-                chunk.name,
-                chunk.chunk_type.value,
-                chunk.start_line,
-                chunk.end_line,
-            ))
+        if chunk.name and chunk.chunk_type in (
+            ChunkType.CLASS,
+            ChunkType.FUNCTION,
+            ChunkType.METHOD,
+        ):
+            entities.append(
+                (
+                    chunk.name,
+                    chunk.chunk_type.value,
+                    chunk.start_line,
+                    chunk.end_line,
+                )
+            )
 
     if not entities:
         return None
