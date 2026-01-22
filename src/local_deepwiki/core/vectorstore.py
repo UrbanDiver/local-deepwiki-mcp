@@ -127,6 +127,31 @@ class VectorStore:
         self._create_index_safe("id")
         self._create_index_safe("file_path")
 
+    async def _batch_embed(
+        self, texts: list[str], batch_size: int, log_progress: bool = False
+    ) -> list[list[float]]:
+        """Generate embeddings in batches.
+
+        Args:
+            texts: List of text strings to embed.
+            batch_size: Number of texts to embed per batch.
+            log_progress: Whether to log batch progress.
+
+        Returns:
+            List of embedding vectors.
+        """
+        embeddings: list[list[float]] = []
+        for i in range(0, len(texts), batch_size):
+            batch = texts[i : i + batch_size]
+            batch_embeddings = await self.embedding_provider.embed(batch)
+            embeddings.extend(batch_embeddings)
+            if log_progress and len(texts) > batch_size:
+                logger.debug(
+                    f"Embedded batch {i // batch_size + 1}/"
+                    f"{(len(texts) + batch_size - 1) // batch_size}"
+                )
+        return embeddings
+
     async def create_or_update_table(
         self, chunks: list[CodeChunk], embedding_batch_size: int = 100
     ) -> int:
@@ -148,16 +173,7 @@ class VectorStore:
 
         # Generate embeddings in batches to avoid OOM and API limits
         texts = [self._chunk_to_text(chunk) for chunk in chunks]
-        embeddings: list[list[float]] = []
-        for i in range(0, len(texts), embedding_batch_size):
-            batch = texts[i : i + embedding_batch_size]
-            batch_embeddings = await self.embedding_provider.embed(batch)
-            embeddings.extend(batch_embeddings)
-            if len(texts) > embedding_batch_size:
-                logger.debug(
-                    f"Embedded batch {i // embedding_batch_size + 1}/"
-                    f"{(len(texts) + embedding_batch_size - 1) // embedding_batch_size}"
-                )
+        embeddings = await self._batch_embed(texts, embedding_batch_size, log_progress=True)
 
         # Prepare data for LanceDB
         data = [
@@ -197,11 +213,7 @@ class VectorStore:
 
         # Generate embeddings in batches to avoid OOM and API limits
         texts = [self._chunk_to_text(chunk) for chunk in chunks]
-        embeddings: list[list[float]] = []
-        for i in range(0, len(texts), embedding_batch_size):
-            batch = texts[i : i + embedding_batch_size]
-            batch_embeddings = await self.embedding_provider.embed(batch)
-            embeddings.extend(batch_embeddings)
+        embeddings = await self._batch_embed(texts, embedding_batch_size)
 
         # Prepare data
         data = [
@@ -367,6 +379,45 @@ class VectorStore:
 
         logger.debug(f"Batch deleted chunks for {len(file_paths)} files")
         return len(file_paths)
+
+    def get_main_definition_lines(self) -> dict[str, tuple[int, int]]:
+        """Get line range of main definition (first class or function) per file.
+
+        Uses LanceDB queries for memory-efficient access instead of loading
+        the entire table into a DataFrame.
+
+        Returns:
+            Dict mapping file_path to (start_line, end_line) tuple.
+        """
+        table = self._get_table()
+        if table is None:
+            return {}
+
+        result: dict[str, tuple[int, int]] = {}
+
+        # Query classes and functions separately using LanceDB queries
+        # This avoids loading the entire table into memory
+        for chunk_type in ["class", "function"]:
+            rows = (
+                table.search()
+                .where(f"chunk_type = '{chunk_type}'")
+                .select(["file_path", "start_line", "end_line"])
+                .limit(10000)
+                .to_list()
+            )
+
+            for row in rows:
+                file_path = str(row["file_path"])
+                # Only add if not already present (classes take priority over functions)
+                if file_path not in result:
+                    result[file_path] = (int(row["start_line"]), int(row["end_line"]))
+                elif chunk_type == "class":
+                    # Class found for file that already has a function - class takes priority
+                    # But only if this class starts earlier
+                    if int(row["start_line"]) < result[file_path][0]:
+                        result[file_path] = (int(row["start_line"]), int(row["end_line"]))
+
+        return result
 
     def get_stats(self) -> dict[str, Any]:
         """Get statistics about the vector store.

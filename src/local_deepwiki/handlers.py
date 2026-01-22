@@ -641,7 +641,8 @@ async def handle_read_wiki_structure(args: dict[str, Any]) -> list[TextContent]:
     toc_path = wiki_path / "toc.json"
     if toc_path.exists():
         try:
-            toc_data = json.loads(toc_path.read_text())
+            toc_content = await asyncio.to_thread(toc_path.read_text)
+            toc_data = json.loads(toc_content)
             return [TextContent(type="text", text=json.dumps(toc_data, indent=2))]
         except (json.JSONDecodeError, OSError):
             pass  # Fall back to dynamic generation
@@ -652,9 +653,9 @@ async def handle_read_wiki_structure(args: dict[str, Any]) -> list[TextContent]:
         rel_path = str(md_file.relative_to(wiki_path))
         # Read first line for title
         try:
-            with open(md_file) as f:
-                first_line = f.readline().strip()
-                title = first_line.lstrip("#").strip() if first_line.startswith("#") else rel_path
+            file_content = await asyncio.to_thread(md_file.read_text)
+            first_line = file_content.split("\n", 1)[0].strip()
+            title = first_line.lstrip("#").strip() if first_line.startswith("#") else rel_path
         except (OSError, UnicodeDecodeError) as e:
             # OSError: File access issues
             # UnicodeDecodeError: File encoding issues
@@ -699,7 +700,7 @@ async def handle_read_wiki_page(args: dict[str, Any]) -> list[TextContent]:
     if not page_path.exists():
         raise ValueError(f"Page not found: {page}")
 
-    content = page_path.read_text()
+    content = await asyncio.to_thread(page_path.read_text)
     return [TextContent(type="text", text=content)]
 
 
