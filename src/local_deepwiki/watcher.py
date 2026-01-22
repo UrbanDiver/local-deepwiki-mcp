@@ -51,7 +51,8 @@ class DebouncedHandler(FileSystemEventHandler):
             llm_provider: Optional LLM provider override.
         """
         self.repo_path = repo_path
-        self.config = config
+        # Store a defensive copy to prevent external mutation
+        self.config = config.model_copy(deep=True)
         self.debounce_seconds = debounce_seconds
         self.llm_provider = llm_provider
         self._timer: Timer | None = None
@@ -254,7 +255,9 @@ class RepositoryWatcher:
             llm_provider: Optional LLM provider override.
         """
         self.repo_path = repo_path.resolve()
-        self.config = config or get_config()
+        base_config = config or get_config()
+        # Store a defensive copy to prevent external mutation
+        self.config = base_config.model_copy(deep=True)
         self.debounce_seconds = debounce_seconds
         self.llm_provider = llm_provider
         self._observer: BaseObserver | None = None

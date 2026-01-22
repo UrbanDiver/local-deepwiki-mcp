@@ -43,7 +43,8 @@ class LLMCache:
         """
         self.cache_path = cache_path
         self.embedding_provider = embedding_provider
-        self.config = config
+        # Store a defensive copy to prevent external mutation
+        self.config = config.model_copy(deep=True)
         self._db: lancedb.DBConnection | None = None
         self._table: Table | None = None
         self._stats = {"hits": 0, "misses": 0, "skipped": 0}

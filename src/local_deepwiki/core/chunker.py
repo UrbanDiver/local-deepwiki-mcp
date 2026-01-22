@@ -504,7 +504,9 @@ class CodeChunker:
         Args:
             config: Optional chunking configuration.
         """
-        self.config = config or get_config().chunking
+        base_config = config or get_config().chunking
+        # Store a defensive copy to prevent external mutation
+        self.config = base_config.model_copy(deep=True)
         self.parser = CodeParser()
 
     def chunk_file(self, file_path: Path, repo_root: Path) -> Iterator[CodeChunk]:

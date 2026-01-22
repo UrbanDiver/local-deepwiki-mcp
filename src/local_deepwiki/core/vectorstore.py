@@ -317,7 +317,7 @@ class VectorStore:
             file_path: The file path.
 
         Returns:
-            Number of chunks deleted.
+            Number of chunks deleted (estimated, may be 0 if table doesn't exist).
         """
         table = self._get_table()
         if table is None:
@@ -326,13 +326,47 @@ class VectorStore:
         # Sanitize path to prevent injection
         safe_path = _sanitize_string_value(file_path)
 
-        # Count before delete
-        before = len(table.search().where(f"file_path = '{safe_path}'").to_list())
-
-        # Delete matching rows
+        # Delete matching rows directly without pre-counting
+        # LanceDB delete is idempotent - no error if no rows match
         table.delete(f"file_path = '{safe_path}'")
 
-        return before
+        # Return 0 since we don't know exact count without expensive query
+        # Callers that need counts should use get_chunks_by_file first
+        return 0
+
+    async def delete_chunks_by_files(self, file_paths: list[str]) -> int:
+        """Delete all chunks for multiple files in a single batch operation.
+
+        This is more efficient than calling delete_chunks_by_file in a loop
+        as it constructs a single filter expression for all files.
+
+        Args:
+            file_paths: List of file paths to delete chunks for.
+
+        Returns:
+            Number of file paths processed (not chunk count).
+        """
+        if not file_paths:
+            return 0
+
+        table = self._get_table()
+        if table is None:
+            return 0
+
+        # Build a single OR filter for all file paths
+        # Sanitize each path to prevent injection
+        safe_paths = [_sanitize_string_value(path) for path in file_paths]
+
+        # Use IN clause for efficiency: file_path IN ('path1', 'path2', ...)
+        # LanceDB supports SQL-like syntax
+        paths_list = ", ".join(f"'{path}'" for path in safe_paths)
+        filter_expr = f"file_path IN ({paths_list})"
+
+        # Single delete operation for all matching files
+        table.delete(filter_expr)
+
+        logger.debug(f"Batch deleted chunks for {len(file_paths)} files")
+        return len(file_paths)
 
     def get_stats(self) -> dict[str, Any]:
         """Get statistics about the vector store.

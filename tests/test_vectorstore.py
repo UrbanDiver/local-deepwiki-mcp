@@ -112,16 +112,76 @@ class TestVectorStoreIndexes:
 
     async def test_delete_chunks_by_file_uses_index(self, populated_store):
         """Test that delete_chunks_by_file works efficiently."""
-        # Delete chunks for main.py
-        deleted = await populated_store.delete_chunks_by_file("src/main.py")
-        assert deleted == 2
+        # Verify chunks exist before delete
+        chunks_before = await populated_store.get_chunks_by_file("src/main.py")
+        assert len(chunks_before) == 2
 
-        # Verify deletion
+        # Delete chunks for main.py
+        await populated_store.delete_chunks_by_file("src/main.py")
+
+        # Verify deletion by checking chunks are gone
         chunks = await populated_store.get_chunks_by_file("src/main.py")
         assert len(chunks) == 0
 
         # Other files unaffected
         chunks = await populated_store.get_chunks_by_file("src/utils.py")
+        assert len(chunks) == 1
+
+    async def test_delete_chunks_by_files_batch(self, populated_store):
+        """Test that delete_chunks_by_files deletes multiple files in one operation."""
+        # Verify chunks exist before delete
+        chunks_main = await populated_store.get_chunks_by_file("src/main.py")
+        chunks_utils = await populated_store.get_chunks_by_file("src/utils.py")
+        assert len(chunks_main) == 2
+        assert len(chunks_utils) == 1
+
+        # Batch delete chunks for both files
+        result = await populated_store.delete_chunks_by_files(["src/main.py", "src/utils.py"])
+        assert result == 2  # Returns count of file paths processed
+
+        # Verify all chunks are gone
+        chunks = await populated_store.get_chunks_by_file("src/main.py")
+        assert len(chunks) == 0
+        chunks = await populated_store.get_chunks_by_file("src/utils.py")
+        assert len(chunks) == 0
+
+    async def test_delete_chunks_by_files_empty_list(self, populated_store):
+        """Test that delete_chunks_by_files handles empty list."""
+        result = await populated_store.delete_chunks_by_files([])
+        assert result == 0
+
+        # Verify nothing was deleted
+        chunks = await populated_store.get_chunks_by_file("src/main.py")
+        assert len(chunks) == 2
+
+    async def test_delete_chunks_by_files_nonexistent(self, populated_store):
+        """Test that delete_chunks_by_files handles nonexistent files gracefully."""
+        result = await populated_store.delete_chunks_by_files(["nonexistent1.py", "nonexistent2.py"])
+        assert result == 2  # Returns count of paths processed, even if no rows matched
+
+        # Verify existing chunks unaffected
+        chunks = await populated_store.get_chunks_by_file("src/main.py")
+        assert len(chunks) == 2
+
+    async def test_delete_chunks_by_files_with_quotes(self, vector_store):
+        """Test batch delete with file paths containing quotes."""
+        chunks = [
+            make_chunk("test1", file_path="path'one.py"),
+            make_chunk("test2", file_path="path'two.py"),
+            make_chunk("test3", file_path="normal.py"),
+        ]
+        await vector_store.create_or_update_table(chunks)
+
+        # Batch delete files with quotes
+        await vector_store.delete_chunks_by_files(["path'one.py", "path'two.py"])
+
+        # Verify deletion
+        chunks = await vector_store.get_chunks_by_file("path'one.py")
+        assert len(chunks) == 0
+        chunks = await vector_store.get_chunks_by_file("path'two.py")
+        assert len(chunks) == 0
+        # Normal file unaffected
+        chunks = await vector_store.get_chunks_by_file("normal.py")
         assert len(chunks) == 1
 
     async def test_ensure_indexes_on_existing_table(self, vector_store, tmp_path):
@@ -356,8 +416,11 @@ class TestVectorStoreEdgeCases:
         await vector_store.create_or_update_table([chunk])
 
         # Should delete successfully without injection
-        deleted = await vector_store.delete_chunks_by_file("path'with'quotes.py")
-        assert deleted == 1
+        await vector_store.delete_chunks_by_file("path'with'quotes.py")
+
+        # Verify deletion by checking chunks are gone
+        chunks = await vector_store.get_chunks_by_file("path'with'quotes.py")
+        assert len(chunks) == 0
 
     async def test_chunk_id_injection_attempt(self, vector_store):
         """Test that SQL-like injection in chunk_id is neutralized."""
@@ -502,10 +565,9 @@ class TestVectorStoreEdgeCases:
         assert len(results) == 50
 
         # Delete all
-        deleted = await vector_store.delete_chunks_by_file("big_file.py")
-        assert deleted == 50
+        await vector_store.delete_chunks_by_file("big_file.py")
 
-        # Verify deletion
+        # Verify deletion by checking chunks are gone
         results = await vector_store.get_chunks_by_file("big_file.py")
         assert len(results) == 0
 

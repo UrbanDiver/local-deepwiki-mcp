@@ -98,11 +98,14 @@ class RepositoryIndexer:
             embedding_provider_name: Override embedding provider ("local" or "openai").
         """
         self.repo_path = repo_path.resolve()
-        self.config = config or get_config()
+        base_config = config or get_config()
 
-        # Override embedding provider if specified
+        # Create a copy with overridden embedding provider if specified
         if embedding_provider_name:
-            self.config.embedding.provider = embedding_provider_name  # type: ignore
+            self.config = base_config.with_embedding_provider(embedding_provider_name)  # type: ignore
+        else:
+            # Store a defensive copy to prevent external mutation
+            self.config = base_config.model_copy(deep=True)
 
         self.wiki_path = self.config.get_wiki_path(self.repo_path)
         self.vector_db_path = self.config.get_vector_db_path(self.repo_path)
@@ -200,6 +203,30 @@ class RepositoryIndexer:
                 len(files_to_process),
             )
 
+        # For incremental updates, batch delete old chunks for all files being re-processed
+        # This avoids N+1 delete problem by doing a single batch delete upfront
+        if not full_rebuild and previous_status and files_to_process:
+            # Get relative paths for files that existed in previous index
+            files_to_delete = []
+            for file_path in files_to_process:
+                file_info = self.parser.get_file_info(file_path, self.repo_path)
+                # Only delete if file existed in previous index (was modified, not new)
+                prev_file = next(
+                    (f for f in previous_status.files if f.path == file_info.path), None
+                )
+                if prev_file:
+                    files_to_delete.append(file_info.path)
+
+            if files_to_delete:
+                if progress_callback:
+                    progress_callback(
+                        f"Removing old chunks for {len(files_to_delete)} modified files...",
+                        0,
+                        len(files_to_process),
+                    )
+                await self.vector_store.delete_chunks_by_files(files_to_delete)
+                logger.debug(f"Batch deleted chunks for {len(files_to_delete)} modified files")
+
         # Process files in parallel using thread pool for CPU-bound parsing
         batch_size = self.config.chunking.batch_size
         parallel_workers = self.config.chunking.parallel_workers
@@ -238,10 +265,7 @@ class RepositoryIndexer:
                         )
                     continue
 
-                # If incremental, delete old chunks for this file before adding new ones
-                if not full_rebuild and previous_status:
-                    await self.vector_store.delete_chunks_by_file(result.file_info.path)
-
+                # Old chunks already batch-deleted above, just add new chunks
                 chunk_batch.extend(result.chunks)
                 processed_files.append(result.file_info)
 

@@ -51,6 +51,8 @@ RESEARCH_PRESETS: dict[ResearchPreset, dict[str, Any]] = {
 class LocalEmbeddingConfig(BaseModel):
     """Configuration for local embedding model."""
 
+    model_config = {"frozen": True}
+
     model: str = Field(
         default="all-MiniLM-L6-v2", description="Model name for sentence-transformers"
     )
@@ -59,11 +61,15 @@ class LocalEmbeddingConfig(BaseModel):
 class OpenAIEmbeddingConfig(BaseModel):
     """Configuration for OpenAI embedding model."""
 
+    model_config = {"frozen": True}
+
     model: str = Field(default="text-embedding-3-small", description="OpenAI embedding model")
 
 
 class EmbeddingConfig(BaseModel):
     """Embedding provider configuration."""
+
+    model_config = {"frozen": True}
 
     provider: Literal["local", "openai"] = Field(default="local", description="Embedding provider")
     local: LocalEmbeddingConfig = Field(default_factory=LocalEmbeddingConfig)
@@ -73,6 +79,8 @@ class EmbeddingConfig(BaseModel):
 class OllamaConfig(BaseModel):
     """Configuration for Ollama LLM."""
 
+    model_config = {"frozen": True}
+
     model: str = Field(default="qwen3-coder:30b", description="Ollama model name")
     base_url: str = Field(default="http://localhost:11434", description="Ollama API URL")
 
@@ -80,17 +88,23 @@ class OllamaConfig(BaseModel):
 class AnthropicConfig(BaseModel):
     """Configuration for Anthropic LLM."""
 
+    model_config = {"frozen": True}
+
     model: str = Field(default="claude-sonnet-4-20250514", description="Anthropic model name")
 
 
 class OpenAILLMConfig(BaseModel):
     """Configuration for OpenAI LLM."""
 
+    model_config = {"frozen": True}
+
     model: str = Field(default="gpt-4o", description="OpenAI model name")
 
 
 class LLMConfig(BaseModel):
     """LLM provider configuration."""
+
+    model_config = {"frozen": True}
 
     provider: Literal["ollama", "anthropic", "openai"] = Field(
         default="ollama", description="LLM provider"
@@ -102,6 +116,8 @@ class LLMConfig(BaseModel):
 
 class ParsingConfig(BaseModel):
     """Code parsing configuration."""
+
+    model_config = {"frozen": True}
 
     languages: list[str] = Field(
         default=[
@@ -144,6 +160,8 @@ class ParsingConfig(BaseModel):
 class ChunkingConfig(BaseModel):
     """Chunking configuration."""
 
+    model_config = {"frozen": True}
+
     max_chunk_tokens: int = Field(default=512, description="Max tokens per chunk")
     overlap_tokens: int = Field(default=50, description="Overlap between chunks")
     batch_size: int = Field(
@@ -164,6 +182,8 @@ class ChunkingConfig(BaseModel):
 
 class WikiConfig(BaseModel):
     """Wiki generation configuration."""
+
+    model_config = {"frozen": True}
 
     max_file_docs: int = Field(
         default=500,
@@ -204,6 +224,8 @@ class WikiConfig(BaseModel):
 
 class DeepResearchConfig(BaseModel):
     """Deep research pipeline configuration."""
+
+    model_config = {"frozen": True}
 
     max_sub_questions: int = Field(
         default=4,
@@ -276,12 +298,16 @@ class DeepResearchConfig(BaseModel):
 class OutputConfig(BaseModel):
     """Output configuration."""
 
+    model_config = {"frozen": True}
+
     wiki_dir: str = Field(default=".deepwiki", description="Wiki output directory name")
     vector_db_name: str = Field(default="vectors.lance", description="Vector DB filename")
 
 
 class LLMCacheConfig(BaseModel):
     """LLM response caching configuration."""
+
+    model_config = {"frozen": True}
 
     enabled: bool = Field(default=True, description="Enable LLM response caching")
     ttl_seconds: int = Field(
@@ -400,6 +426,8 @@ Guidelines:
 class ProviderPromptsConfig(BaseModel):
     """Prompts configuration for a specific provider."""
 
+    model_config = {"frozen": True}
+
     wiki_system: str = Field(description="System prompt for wiki documentation generation")
     research_decomposition: str = Field(description="System prompt for question decomposition")
     research_gap_analysis: str = Field(description="System prompt for gap analysis")
@@ -408,6 +436,8 @@ class ProviderPromptsConfig(BaseModel):
 
 class PromptsConfig(BaseModel):
     """Provider-specific prompts configuration."""
+
+    model_config = {"frozen": True}
 
     ollama: ProviderPromptsConfig = Field(
         default_factory=lambda: ProviderPromptsConfig(
@@ -454,7 +484,14 @@ class PromptsConfig(BaseModel):
 
 
 class Config(BaseModel):
-    """Main configuration."""
+    """Main configuration.
+
+    This class and all nested config classes are frozen (immutable) to prevent
+    accidental mutation of shared configuration state. Use model_copy(update={...})
+    or the with_*() helper methods to create modified copies.
+    """
+
+    model_config = {"frozen": True}
 
     embedding: EmbeddingConfig = Field(default_factory=EmbeddingConfig)
     llm: LLMConfig = Field(default_factory=LLMConfig)
@@ -465,6 +502,32 @@ class Config(BaseModel):
     deep_research: DeepResearchConfig = Field(default_factory=DeepResearchConfig)
     output: OutputConfig = Field(default_factory=OutputConfig)
     prompts: PromptsConfig = Field(default_factory=PromptsConfig)
+
+    def with_embedding_provider(self, provider: Literal["local", "openai"]) -> "Config":
+        """Return a new Config with the embedding provider changed.
+
+        Args:
+            provider: The embedding provider to use.
+
+        Returns:
+            A new Config instance with the updated embedding provider.
+        """
+        new_embedding = self.embedding.model_copy(update={"provider": provider})
+        return self.model_copy(update={"embedding": new_embedding})
+
+    def with_llm_provider(
+        self, provider: Literal["ollama", "anthropic", "openai"]
+    ) -> "Config":
+        """Return a new Config with the LLM provider changed.
+
+        Args:
+            provider: The LLM provider to use.
+
+        Returns:
+            A new Config instance with the updated LLM provider.
+        """
+        new_llm = self.llm.model_copy(update={"provider": provider})
+        return self.model_copy(update={"llm": new_llm})
 
     def get_prompts(self) -> ProviderPromptsConfig:
         """Get prompts for the currently configured LLM provider.

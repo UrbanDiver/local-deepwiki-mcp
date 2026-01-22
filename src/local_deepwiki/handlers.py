@@ -89,17 +89,26 @@ async def handle_index_repository(args: dict[str, Any]) -> list[TextContent]:
         args.get("embedding_provider"), VALID_EMBEDDING_PROVIDERS, "embedding_provider"
     )
 
-    # Get config
-    config = get_config()
+    # Get config (immutable, create copy with any overrides)
+    base_config = get_config()
+    config_updates: dict = {}
 
     # Override languages if specified
     if languages:
-        config.parsing.languages = languages
+        new_parsing = base_config.parsing.model_copy(update={"languages": languages})
+        config_updates["parsing"] = new_parsing
 
     # Override use_cloud_for_github if specified
     use_cloud_for_github = args.get("use_cloud_for_github")
     if use_cloud_for_github is not None:
-        config.wiki.use_cloud_for_github = use_cloud_for_github
+        new_wiki = base_config.wiki.model_copy(update={"use_cloud_for_github": use_cloud_for_github})
+        config_updates["wiki"] = new_wiki
+
+    # Create modified config or use base if no overrides
+    if config_updates:
+        config = base_config.model_copy(update=config_updates)
+    else:
+        config = base_config
 
     # Create indexer
     indexer = RepositoryIndexer(

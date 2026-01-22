@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from local_deepwiki.config import ChunkingConfig, Config
+from local_deepwiki.config import ChunkingConfig, Config, ParsingConfig
 from local_deepwiki.core.indexer import (
     CURRENT_SCHEMA_VERSION,
     RepositoryIndexer,
@@ -59,9 +59,10 @@ def function_{i}_c():
             )
 
         # Create config with small batch size
-        config = Config()
-        config.chunking.batch_size = 3  # Small batch size for testing
-        config.parsing.languages = ["python"]
+        # Config classes are frozen, so we use model_copy to create modified versions
+        chunking = ChunkingConfig().model_copy(update={"batch_size": 3})
+        parsing = ParsingConfig().model_copy(update={"languages": ["python"]})
+        config = Config().model_copy(update={"chunking": chunking, "parsing": parsing})
 
         # Track calls to vector store methods
         create_calls = []
@@ -78,12 +79,16 @@ def function_{i}_c():
         async def mock_delete_chunks_by_file(file_path):
             return 0
 
+        async def mock_delete_chunks_by_files(file_paths):
+            return len(file_paths)
+
         # Create indexer with mocked vector store
         with patch("local_deepwiki.core.indexer.VectorStore") as MockVectorStore:
             mock_store = MagicMock()
             mock_store.create_or_update_table = AsyncMock(side_effect=mock_create_or_update_table)
             mock_store.add_chunks = AsyncMock(side_effect=mock_add_chunks)
             mock_store.delete_chunks_by_file = AsyncMock(side_effect=mock_delete_chunks_by_file)
+            mock_store.delete_chunks_by_files = AsyncMock(side_effect=mock_delete_chunks_by_files)
             MockVectorStore.return_value = mock_store
 
             indexer = RepositoryIndexer(repo_path, config)
@@ -123,9 +128,10 @@ def function_b():
 """
         )
 
-        config = Config()
-        config.chunking.batch_size = 2
-        config.parsing.languages = ["python"]
+        # Config classes are frozen, so we use model_copy to create modified versions
+        chunking = ChunkingConfig().model_copy(update={"batch_size": 2})
+        parsing = ParsingConfig().model_copy(update={"languages": ["python"]})
+        config = Config().model_copy(update={"chunking": chunking, "parsing": parsing})
 
         delete_calls = []
         add_calls = []
@@ -136,7 +142,11 @@ def function_b():
 
         async def mock_delete_chunks_by_file(file_path):
             delete_calls.append(file_path)
-            return 1
+            return 0
+
+        async def mock_delete_chunks_by_files(file_paths):
+            delete_calls.extend(file_paths)
+            return len(file_paths)
 
         async def mock_create_or_update_table(chunks):
             return len(chunks)
@@ -146,6 +156,7 @@ def function_b():
             mock_store.create_or_update_table = AsyncMock(side_effect=mock_create_or_update_table)
             mock_store.add_chunks = AsyncMock(side_effect=mock_add_chunks)
             mock_store.delete_chunks_by_file = AsyncMock(side_effect=mock_delete_chunks_by_file)
+            mock_store.delete_chunks_by_files = AsyncMock(side_effect=mock_delete_chunks_by_files)
             MockVectorStore.return_value = mock_store
 
             indexer = RepositoryIndexer(repo_path, config)
@@ -178,9 +189,10 @@ def function_c():
         repo_path = tmp_path / "repo"
         repo_path.mkdir()
 
-        config = Config()
-        config.chunking.batch_size = 10
-        config.parsing.languages = ["python"]
+        # Config classes are frozen, so we use model_copy to create modified versions
+        chunking = ChunkingConfig().model_copy(update={"batch_size": 10})
+        parsing = ParsingConfig().model_copy(update={"languages": ["python"]})
+        config = Config().model_copy(update={"chunking": chunking, "parsing": parsing})
 
         with patch("local_deepwiki.core.indexer.VectorStore") as MockVectorStore:
             mock_store = MagicMock()
@@ -281,8 +293,9 @@ class TestSchemaMigration:
         repo_path = tmp_path / "repo"
         repo_path.mkdir()
 
-        config = Config()
-        config.parsing.languages = ["python"]
+        # Config classes are frozen, so we use model_copy to create modified versions
+        parsing = ParsingConfig().model_copy(update={"languages": ["python"]})
+        config = Config().model_copy(update={"parsing": parsing})
 
         with patch("local_deepwiki.core.indexer.VectorStore") as MockVectorStore:
             mock_store = MagicMock()
@@ -317,8 +330,9 @@ class TestSchemaMigration:
         repo_path.mkdir()
         (repo_path / "test.py").write_text("def test(): pass")
 
-        config = Config()
-        config.parsing.languages = ["python"]
+        # Config classes are frozen, so we use model_copy to create modified versions
+        parsing = ParsingConfig().model_copy(update={"languages": ["python"]})
+        config = Config().model_copy(update={"parsing": parsing})
 
         with patch("local_deepwiki.core.indexer.VectorStore") as MockVectorStore:
             mock_store = MagicMock()
@@ -354,8 +368,9 @@ class TestSchemaMigration:
         repo_path = tmp_path / "repo"
         repo_path.mkdir()
 
-        config = Config()
-        config.parsing.languages = ["python"]
+        # Config classes are frozen, so we use model_copy to create modified versions
+        parsing = ParsingConfig().model_copy(update={"languages": ["python"]})
+        config = Config().model_copy(update={"parsing": parsing})
 
         with patch("local_deepwiki.core.indexer.VectorStore") as MockVectorStore:
             mock_store = MagicMock()

@@ -56,6 +56,11 @@ class TestWikiGeneratorInit:
             config = MagicMock()
             config.llm = MagicMock()
             config.get_prompts.return_value = MagicMock(wiki_system="System prompt")
+            # Make model_copy return a new mock to simulate defensive copying
+            config_copy = MagicMock()
+            config_copy.llm = config.llm
+            config_copy.get_prompts.return_value = config.get_prompts.return_value
+            config.model_copy.return_value = config_copy
             mock_config.return_value = config
 
             with patch("local_deepwiki.generators.wiki.get_llm_provider") as mock_llm:
@@ -71,7 +76,8 @@ class TestWikiGeneratorInit:
 
                 assert generator.wiki_path == tmp_path
                 assert generator.vector_store == mock_vector_store
-                assert generator.config == config
+                # Config should be a copy (via model_copy), not the original
+                assert generator.config == config_copy
                 assert generator.entity_registry is not None
                 assert generator.relationship_analyzer is not None
                 assert generator.status_manager is not None
@@ -86,6 +92,11 @@ class TestWikiGeneratorInit:
             custom_config = MagicMock()
             custom_config.llm = MagicMock()
             custom_config.get_prompts.return_value = MagicMock(wiki_system="Custom prompt")
+            # Make model_copy return a new mock to simulate defensive copying
+            config_copy = MagicMock()
+            config_copy.llm = custom_config.llm
+            config_copy.get_prompts.return_value = custom_config.get_prompts.return_value
+            custom_config.model_copy.return_value = config_copy
 
             mock_vector_store = MagicMock()
             generator = WikiGenerator(
@@ -94,14 +105,24 @@ class TestWikiGeneratorInit:
                 config=custom_config,
             )
 
-            assert generator.config == custom_config
+            # Config should be a copy (via model_copy), not the original
+            assert generator.config == config_copy
 
     def test_init_with_llm_provider_override(self, tmp_path):
         """Test WikiGenerator initialization with LLM provider override."""
         with patch("local_deepwiki.generators.wiki.get_config") as mock_config:
             config = MagicMock()
             config.llm = MagicMock()
+            config.llm.provider = "ollama"  # Original provider
             config.get_prompts.return_value = MagicMock(wiki_system="System prompt")
+
+            # Mock with_llm_provider to return a new config with updated provider
+            config_with_provider = MagicMock()
+            config_with_provider.llm = MagicMock()
+            config_with_provider.llm.provider = "anthropic"
+            config_with_provider.get_prompts.return_value = config.get_prompts.return_value
+            config.with_llm_provider.return_value = config_with_provider
+
             mock_config.return_value = config
 
             with patch("local_deepwiki.generators.wiki.get_llm_provider") as mock_llm:
@@ -116,8 +137,11 @@ class TestWikiGeneratorInit:
                     llm_provider_name="anthropic",
                 )
 
-                # Provider should be overridden
-                assert config.llm.provider == "anthropic"
+                # with_llm_provider should have been called with "anthropic"
+                config.with_llm_provider.assert_called_once_with("anthropic")
+                # Generator's config should be the modified copy
+                assert generator.config == config_with_provider
+                assert generator.config.llm.provider == "anthropic"
 
 
 class TestGetMainDefinitionLines:

@@ -12,6 +12,7 @@ from local_deepwiki.config import (
     RESEARCH_PRESETS,
     RESEARCH_SYNTHESIS_PROMPTS,
     WIKI_SYSTEM_PROMPTS,
+    ChunkingConfig,
     Config,
     DeepResearchConfig,
     PromptsConfig,
@@ -142,8 +143,9 @@ class TestConfig:
 
     def test_set_config(self):
         """Test setting global config."""
-        new_config = Config()
-        new_config.chunking.max_chunk_tokens = 1024
+        # Config classes are frozen, so we use model_copy to create modified versions
+        new_chunking = ChunkingConfig().model_copy(update={"max_chunk_tokens": 1024})
+        new_config = Config().model_copy(update={"chunking": new_chunking})
 
         set_config(new_config)
         retrieved = get_config()
@@ -197,8 +199,9 @@ class TestThreadSafeConfig:
 
         def modify_config(value: int):
             try:
-                new_config = Config()
-                new_config.chunking.max_chunk_tokens = value
+                # Config classes are frozen, so we use model_copy to create modified versions
+                new_chunking = ChunkingConfig().model_copy(update={"max_chunk_tokens": value})
+                new_config = Config().model_copy(update={"chunking": new_chunking})
                 set_config(new_config)
                 # Read back
                 retrieved = get_config()
@@ -224,8 +227,9 @@ class TestConfigContext:
         global_config = get_config()
         assert global_config.chunking.max_chunk_tokens == 512
 
-        custom_config = Config()
-        custom_config.chunking.max_chunk_tokens = 2048
+        # Config classes are frozen, so we use model_copy to create modified versions
+        custom_chunking = ChunkingConfig().model_copy(update={"max_chunk_tokens": 2048})
+        custom_config = Config().model_copy(update={"chunking": custom_chunking})
 
         with config_context(custom_config):
             context_config = get_config()
@@ -238,8 +242,9 @@ class TestConfigContext:
 
     def test_config_context_restores_on_exception(self):
         """Test that config_context restores config even on exception."""
-        custom_config = Config()
-        custom_config.chunking.max_chunk_tokens = 4096
+        # Config classes are frozen, so we use model_copy to create modified versions
+        custom_chunking = ChunkingConfig().model_copy(update={"max_chunk_tokens": 4096})
+        custom_config = Config().model_copy(update={"chunking": custom_chunking})
 
         try:
             with config_context(custom_config):
@@ -253,11 +258,12 @@ class TestConfigContext:
 
     def test_nested_config_context(self):
         """Test nested config_context calls."""
-        config1 = Config()
-        config1.chunking.max_chunk_tokens = 1000
+        # Config classes are frozen, so we use model_copy to create modified versions
+        chunking1 = ChunkingConfig().model_copy(update={"max_chunk_tokens": 1000})
+        config1 = Config().model_copy(update={"chunking": chunking1})
 
-        config2 = Config()
-        config2.chunking.max_chunk_tokens = 2000
+        chunking2 = ChunkingConfig().model_copy(update={"max_chunk_tokens": 2000})
+        config2 = Config().model_copy(update={"chunking": chunking2})
 
         with config_context(config1):
             assert get_config().chunking.max_chunk_tokens == 1000
@@ -273,8 +279,9 @@ class TestConfigContext:
 
     def test_config_context_yields_config(self):
         """Test that config_context yields the provided config."""
-        custom_config = Config()
-        custom_config.chunking.max_chunk_tokens = 768
+        # Config classes are frozen, so we use model_copy to create modified versions
+        custom_chunking = ChunkingConfig().model_copy(update={"max_chunk_tokens": 768})
+        custom_config = Config().model_copy(update={"chunking": custom_chunking})
 
         with config_context(custom_config) as cfg:
             assert cfg is custom_config
@@ -471,16 +478,14 @@ class TestProviderPrompts:
 
     def test_config_get_prompts_changes_with_provider(self):
         """Test Config.get_prompts() changes when provider changes."""
-        config = Config()
+        # Config classes are frozen, so we use with_llm_provider to create modified versions
+        config_anthropic = Config().with_llm_provider("anthropic")
+        prompts_anthropic = config_anthropic.get_prompts()
+        assert prompts_anthropic == config_anthropic.prompts.anthropic
 
-        # Test with different providers
-        config.llm.provider = "anthropic"  # type: ignore
-        prompts_anthropic = config.get_prompts()
-        assert prompts_anthropic == config.prompts.anthropic
-
-        config.llm.provider = "openai"  # type: ignore
-        prompts_openai = config.get_prompts()
-        assert prompts_openai == config.prompts.openai
+        config_openai = Config().with_llm_provider("openai")
+        prompts_openai = config_openai.get_prompts()
+        assert prompts_openai == config_openai.prompts.openai
 
     def test_wiki_system_prompts_dict_has_all_providers(self):
         """Test WIKI_SYSTEM_PROMPTS has entries for all providers."""
