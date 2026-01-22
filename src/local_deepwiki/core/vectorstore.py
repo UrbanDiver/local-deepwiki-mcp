@@ -127,11 +127,14 @@ class VectorStore:
         self._create_index_safe("id")
         self._create_index_safe("file_path")
 
-    async def create_or_update_table(self, chunks: list[CodeChunk]) -> int:
+    async def create_or_update_table(
+        self, chunks: list[CodeChunk], embedding_batch_size: int = 100
+    ) -> int:
         """Create or update the vector table with code chunks.
 
         Args:
             chunks: List of code chunks to store.
+            embedding_batch_size: Batch size for embedding generation to avoid OOM.
 
         Returns:
             Number of chunks stored.
@@ -143,9 +146,18 @@ class VectorStore:
         logger.info(f"Creating/updating vector table with {len(chunks)} chunks")
         db = self._connect()
 
-        # Generate embeddings for all chunks
+        # Generate embeddings in batches to avoid OOM and API limits
         texts = [self._chunk_to_text(chunk) for chunk in chunks]
-        embeddings = await self.embedding_provider.embed(texts)
+        embeddings: list[list[float]] = []
+        for i in range(0, len(texts), embedding_batch_size):
+            batch = texts[i : i + embedding_batch_size]
+            batch_embeddings = await self.embedding_provider.embed(batch)
+            embeddings.extend(batch_embeddings)
+            if len(texts) > embedding_batch_size:
+                logger.debug(
+                    f"Embedded batch {i // embedding_batch_size + 1}/"
+                    f"{(len(texts) + embedding_batch_size - 1) // embedding_batch_size}"
+                )
 
         # Prepare data for LanceDB
         data = [
@@ -163,11 +175,14 @@ class VectorStore:
 
         return len(data)
 
-    async def add_chunks(self, chunks: list[CodeChunk]) -> int:
+    async def add_chunks(
+        self, chunks: list[CodeChunk], embedding_batch_size: int = 100
+    ) -> int:
         """Add chunks to existing table.
 
         Args:
             chunks: List of code chunks to add.
+            embedding_batch_size: Batch size for embedding generation to avoid OOM.
 
         Returns:
             Number of chunks added.
@@ -178,11 +193,15 @@ class VectorStore:
         logger.debug(f"Adding {len(chunks)} chunks to existing table")
         table = self._get_table()
         if table is None:
-            return await self.create_or_update_table(chunks)
+            return await self.create_or_update_table(chunks, embedding_batch_size)
 
-        # Generate embeddings
+        # Generate embeddings in batches to avoid OOM and API limits
         texts = [self._chunk_to_text(chunk) for chunk in chunks]
-        embeddings = await self.embedding_provider.embed(texts)
+        embeddings: list[list[float]] = []
+        for i in range(0, len(texts), embedding_batch_size):
+            batch = texts[i : i + embedding_batch_size]
+            batch_embeddings = await self.embedding_provider.embed(batch)
+            embeddings.extend(batch_embeddings)
 
         # Prepare data
         data = [

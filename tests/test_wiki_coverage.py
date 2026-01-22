@@ -149,8 +149,6 @@ class TestGetMainDefinitionLines:
 
     def test_returns_class_lines(self, tmp_path):
         """Test returns lines for class definitions."""
-        import pandas as pd
-
         with patch("local_deepwiki.generators.wiki.get_config") as mock_config:
             config = MagicMock()
             config.llm = MagicMock()
@@ -162,18 +160,44 @@ class TestGetMainDefinitionLines:
 
                 from local_deepwiki.generators.wiki import WikiGenerator
 
-                # Create mock table with pandas DataFrame
-                mock_df = pd.DataFrame(
-                    {
-                        "file_path": ["src/test.py", "src/test.py"],
-                        "chunk_type": ["class", "function"],
-                        "start_line": [10, 50],
-                        "end_line": [40, 60],
-                    }
-                )
+                # Create mock query chain for LanceDB
+                def mock_search_results(chunk_type):
+                    if chunk_type == "class":
+                        return [
+                            {"file_path": "src/test.py", "start_line": 10, "end_line": 40}
+                        ]
+                    elif chunk_type == "function":
+                        return [
+                            {"file_path": "src/test.py", "start_line": 50, "end_line": 60}
+                        ]
+                    return []
 
                 mock_table = MagicMock()
-                mock_table.to_pandas.return_value = mock_df
+                # Chain: table.search().where().select().limit().to_list()
+                mock_search = MagicMock()
+                mock_table.search.return_value = mock_search
+                mock_where = MagicMock()
+                mock_search.where.side_effect = lambda filter_str: mock_where
+                mock_select = MagicMock()
+                mock_where.select.return_value = mock_select
+                mock_limit = MagicMock()
+                mock_select.limit.return_value = mock_limit
+                # Return different results based on the filter
+                mock_search.where.side_effect = lambda f: (
+                    MagicMock(
+                        select=MagicMock(
+                            return_value=MagicMock(
+                                limit=MagicMock(
+                                    return_value=MagicMock(
+                                        to_list=MagicMock(
+                                            return_value=mock_search_results("class" if "class" in f else "function")
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
 
                 mock_vector_store = MagicMock()
                 mock_vector_store._get_table.return_value = mock_table
@@ -190,8 +214,6 @@ class TestGetMainDefinitionLines:
 
     def test_returns_function_lines_when_no_class(self, tmp_path):
         """Test returns function lines when no class exists."""
-        import pandas as pd
-
         with patch("local_deepwiki.generators.wiki.get_config") as mock_config:
             config = MagicMock()
             config.llm = MagicMock()
@@ -203,18 +225,36 @@ class TestGetMainDefinitionLines:
 
                 from local_deepwiki.generators.wiki import WikiGenerator
 
-                # Create mock table with only functions
-                mock_df = pd.DataFrame(
-                    {
-                        "file_path": ["src/utils.py", "src/utils.py"],
-                        "chunk_type": ["function", "function"],
-                        "start_line": [5, 20],
-                        "end_line": [15, 30],
-                    }
-                )
+                # Create mock query chain for LanceDB - only functions, no classes
+                def mock_search_results(chunk_type):
+                    if chunk_type == "class":
+                        return []  # No classes
+                    elif chunk_type == "function":
+                        return [
+                            {"file_path": "src/utils.py", "start_line": 5, "end_line": 15},
+                            {"file_path": "src/utils.py", "start_line": 20, "end_line": 30},
+                        ]
+                    return []
 
                 mock_table = MagicMock()
-                mock_table.to_pandas.return_value = mock_df
+                mock_search = MagicMock()
+                mock_table.search.return_value = mock_search
+                # Return different results based on the filter
+                mock_search.where.side_effect = lambda f: (
+                    MagicMock(
+                        select=MagicMock(
+                            return_value=MagicMock(
+                                limit=MagicMock(
+                                    return_value=MagicMock(
+                                        to_list=MagicMock(
+                                            return_value=mock_search_results("class" if "class" in f else "function")
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
 
                 mock_vector_store = MagicMock()
                 mock_vector_store._get_table.return_value = mock_table

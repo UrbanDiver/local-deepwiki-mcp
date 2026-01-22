@@ -1,5 +1,6 @@
 """Local embedding provider using sentence-transformers."""
 
+import asyncio
 from typing import cast
 
 from sentence_transformers import SentenceTransformer
@@ -37,8 +38,10 @@ class LocalEmbeddingProvider(EmbeddingProvider):
             List of embedding vectors.
         """
         model = self._load_model()
-        # sentence-transformers is synchronous, but we keep async interface for consistency
-        embeddings = model.encode(texts, convert_to_numpy=True)
+        # Run CPU-bound encoding in thread pool to avoid blocking async event loop
+        embeddings = await asyncio.to_thread(
+            model.encode, texts, convert_to_numpy=True
+        )
         return cast(list[list[float]], embeddings.tolist())
 
     def get_dimension(self) -> int:

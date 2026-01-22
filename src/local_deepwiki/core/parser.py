@@ -458,6 +458,7 @@ _DOCSTRING_EXTRACTORS: dict[LangEnum, Any] = {
     LangEnum.PYTHON: lambda n, s: _get_python_docstring(n, s),
     LangEnum.JAVASCRIPT: lambda n, s: _get_jsdoc_or_line_comments(n, s),
     LangEnum.TYPESCRIPT: lambda n, s: _get_jsdoc_or_line_comments(n, s),
+    LangEnum.TSX: lambda n, s: _get_jsdoc_or_line_comments(n, s),
     LangEnum.GO: lambda n, s: _get_line_comments(n, s, "comment", "//"),
     LangEnum.JAVA: lambda n, s: _get_javadoc_or_doxygen(n, s),
     LangEnum.C: lambda n, s: _get_javadoc_or_doxygen(n, s),

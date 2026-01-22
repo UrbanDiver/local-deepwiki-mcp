@@ -89,6 +89,9 @@ class WikiGenerator:
     def _get_main_definition_lines(self) -> dict[str, tuple[int, int]]:
         """Get line range of main definition (first class or function) per file.
 
+        Uses PyArrow for memory-efficient queries instead of loading the entire
+        table into a Pandas DataFrame.
+
         Returns:
             Dict mapping file_path to (start_line, end_line) tuple.
         """
@@ -96,22 +99,29 @@ class WikiGenerator:
         if table is None:
             return {}
 
-        df = table.to_pandas()
         result: dict[str, tuple[int, int]] = {}
 
-        for file_path, group in df.groupby("file_path"):
-            # Sort by start_line to get first definitions
-            classes = group[group["chunk_type"] == "class"].sort_values(by="start_line")  # type: ignore[call-overload]
-            functions = group[group["chunk_type"] == "function"].sort_values(by="start_line")  # type: ignore[call-overload]
+        # Query classes and functions separately using LanceDB queries
+        # This avoids loading the entire table into memory
+        for chunk_type in ["class", "function"]:
+            rows = (
+                table.search()
+                .where(f"chunk_type = '{chunk_type}'")
+                .select(["file_path", "start_line", "end_line"])
+                .limit(10000)
+                .to_list()
+            )
 
-            if not classes.empty:
-                # Use first class definition
-                row = classes.iloc[0]
-                result[str(file_path)] = (int(row["start_line"]), int(row["end_line"]))
-            elif not functions.empty:
-                # Use first function definition
-                row = functions.iloc[0]
-                result[str(file_path)] = (int(row["start_line"]), int(row["end_line"]))
+            for row in rows:
+                file_path = str(row["file_path"])
+                # Only add if not already present (classes take priority over functions)
+                if file_path not in result:
+                    result[file_path] = (int(row["start_line"]), int(row["end_line"]))
+                elif chunk_type == "class":
+                    # Class found for file that already has a function - class takes priority
+                    # But only if this class starts earlier
+                    if int(row["start_line"]) < result[file_path][0]:
+                        result[file_path] = (int(row["start_line"]), int(row["end_line"]))
 
         return result
 
