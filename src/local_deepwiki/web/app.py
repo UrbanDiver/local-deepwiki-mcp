@@ -177,7 +177,10 @@ def view_page(path: str):
         logger.error("Wiki path not configured")
         abort(500, "Wiki path not configured")
 
-    file_path = WIKI_PATH / path
+    file_path = (WIKI_PATH / path).resolve()
+    if not file_path.is_relative_to(WIKI_PATH):
+        logger.warning(f"Path traversal attempt blocked: {path}")
+        abort(403, "Invalid path")
     if not file_path.exists() or not file_path.is_file():
         logger.warning(f"Page not found: {path}")
         abort(404, f"Page not found: {path}")

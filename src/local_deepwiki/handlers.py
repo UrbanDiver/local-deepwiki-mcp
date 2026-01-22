@@ -614,7 +614,7 @@ async def _handle_deep_research_impl(
     ctx = _setup_deep_research_config(args, server)
 
     # Step 2: Create the research pipeline with providers
-    pipeline, _vector_store, _llm = _create_research_pipeline(ctx, args)
+    pipeline, *_ = _create_research_pipeline(ctx, args)
 
     # Step 3: Create progress and cancellation callbacks
     is_cancelled, progress_callback, send_cancellation_notification = _create_progress_callbacks(ctx)
