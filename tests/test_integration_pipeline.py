@@ -412,7 +412,7 @@ class TestWikiGenerationPipeline:
 
         mock_store = create_mock_vector_store()
 
-        with patch("local_deepwiki.generators.wiki.get_llm_provider") as mock_get_llm:
+        with patch("local_deepwiki.generators.wiki.get_cached_llm_provider") as mock_get_llm:
             mock_get_llm.return_value = mock_llm_provider
 
             generator = WikiGenerator(
@@ -449,7 +449,7 @@ class TestWikiGenerationPipeline:
 
         mock_store = create_mock_vector_store()
 
-        with patch("local_deepwiki.generators.wiki.get_llm_provider") as mock_get_llm:
+        with patch("local_deepwiki.generators.wiki.get_cached_llm_provider") as mock_get_llm:
             mock_get_llm.return_value = mock_llm_provider
 
             generator = WikiGenerator(
@@ -663,7 +663,7 @@ class TestFullPipeline:
             wiki_path = indexer.wiki_path
 
             with patch(
-                "local_deepwiki.generators.wiki.get_llm_provider"
+                "local_deepwiki.generators.wiki.get_cached_llm_provider"
             ) as mock_get_llm:
                 mock_get_llm.return_value = mock_llm_provider
 
@@ -714,7 +714,7 @@ class TestFullPipeline:
             wiki_path = indexer.wiki_path
 
             with patch(
-                "local_deepwiki.generators.wiki.get_llm_provider"
+                "local_deepwiki.generators.wiki.get_cached_llm_provider"
             ) as mock_get_llm:
                 mock_get_llm.return_value = mock_llm_provider
 

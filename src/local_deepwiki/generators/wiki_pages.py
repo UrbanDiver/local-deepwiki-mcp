@@ -1,5 +1,6 @@
 """Wiki page generators for specific documentation pages."""
 
+import asyncio
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -44,14 +45,10 @@ async def generate_overview_page(
     """
     repo_name = Path(index_status.repo_path).name
 
-    # Search for main entry points and key classes for context
-    entry_search = await vector_store.search(
-        "main entry point init server app",
-        limit=10,
-    )
-    key_class_search = await vector_store.search(
-        "class main core primary",
-        limit=10,
+    # Search for main entry points and key classes for context (parallel)
+    entry_search, key_class_search = await asyncio.gather(
+        vector_store.search("main entry point init server app", limit=10),
+        vector_store.search("class main core primary", limit=10),
     )
 
     # Combine and deduplicate
@@ -213,30 +210,16 @@ async def generate_architecture_page(
     Returns:
         WikiPage with architecture documentation.
     """
-    # Gather multiple types of context for comprehensive architecture view
-
-    # 1. Search for core/main components
-    core_results = await vector_store.search(
-        "main core primary class module",
-        limit=15,
-    )
-
-    # 2. Search for architectural patterns
-    pattern_results = await vector_store.search(
-        "factory provider service handler controller",
-        limit=10,
-    )
-
-    # 3. Search for data flow / pipeline
-    flow_results = await vector_store.search(
-        "process pipeline flow parse index generate",
-        limit=10,
-    )
-
-    # 4. Get all classes for class list
-    class_results = await vector_store.search(
-        "class def __init__",
-        limit=30,
+    # Gather multiple types of context for comprehensive architecture view (parallel)
+    core_results, pattern_results, flow_results, class_results = await asyncio.gather(
+        # 1. Search for core/main components
+        vector_store.search("main core primary class module", limit=15),
+        # 2. Search for architectural patterns
+        vector_store.search("factory provider service handler controller", limit=10),
+        # 3. Search for data flow / pipeline
+        vector_store.search("process pipeline flow parse index generate", limit=10),
+        # 4. Get all classes for class list
+        vector_store.search("class def __init__", limit=30),
     )
 
     # Combine and deduplicate results
