@@ -383,8 +383,8 @@ class VectorStore:
     def get_main_definition_lines(self) -> dict[str, tuple[int, int]]:
         """Get line range of main definition (first class or function) per file.
 
-        Uses LanceDB queries for memory-efficient access instead of loading
-        the entire table into a DataFrame.
+        Uses a single LanceDB query for memory-efficient access instead of
+        loading the entire table into a DataFrame.
 
         Returns:
             Dict mapping file_path to (start_line, end_line) tuple.
@@ -393,29 +393,37 @@ class VectorStore:
         if table is None:
             return {}
 
+        # Single query for both classes and functions
+        rows = (
+            table.search()
+            .where("chunk_type IN ('class', 'function')")
+            .select(["file_path", "start_line", "end_line", "chunk_type"])
+            .limit(10000)
+            .to_list()
+        )
+
         result: dict[str, tuple[int, int]] = {}
+        result_types: dict[str, str] = {}  # Track chunk type for priority
 
-        # Query classes and functions separately using LanceDB queries
-        # This avoids loading the entire table into memory
-        for chunk_type in ["class", "function"]:
-            rows = (
-                table.search()
-                .where(f"chunk_type = '{chunk_type}'")
-                .select(["file_path", "start_line", "end_line"])
-                .limit(10000)
-                .to_list()
-            )
+        for row in rows:
+            file_path = str(row["file_path"])
+            chunk_type = str(row["chunk_type"])
+            start_line = int(row["start_line"])
+            end_line = int(row["end_line"])
 
-            for row in rows:
-                file_path = str(row["file_path"])
-                # Only add if not already present (classes take priority over functions)
-                if file_path not in result:
-                    result[file_path] = (int(row["start_line"]), int(row["end_line"]))
-                elif chunk_type == "class":
-                    # Class found for file that already has a function - class takes priority
-                    # But only if this class starts earlier
-                    if int(row["start_line"]) < result[file_path][0]:
-                        result[file_path] = (int(row["start_line"]), int(row["end_line"]))
+            if file_path not in result:
+                # First definition for this file
+                result[file_path] = (start_line, end_line)
+                result_types[file_path] = chunk_type
+            elif chunk_type == "class" and result_types[file_path] == "function":
+                # Class takes priority over function if it starts earlier
+                if start_line < result[file_path][0]:
+                    result[file_path] = (start_line, end_line)
+                    result_types[file_path] = chunk_type
+            elif chunk_type == result_types[file_path]:
+                # Same type - keep the one that starts earlier
+                if start_line < result[file_path][0]:
+                    result[file_path] = (start_line, end_line)
 
         return result
 
