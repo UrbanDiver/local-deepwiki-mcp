@@ -63,7 +63,7 @@ class TestWikiGeneratorInit:
             config.model_copy.return_value = config_copy
             mock_config.return_value = config
 
-            with patch("local_deepwiki.generators.wiki.get_llm_provider") as mock_llm:
+            with patch("local_deepwiki.generators.wiki.get_cached_llm_provider") as mock_llm:
                 mock_llm.return_value = MagicMock()
 
                 from local_deepwiki.generators.wiki import WikiGenerator
@@ -84,7 +84,7 @@ class TestWikiGeneratorInit:
 
     def test_init_with_custom_config(self, tmp_path):
         """Test WikiGenerator initialization with custom config."""
-        with patch("local_deepwiki.generators.wiki.get_llm_provider") as mock_llm:
+        with patch("local_deepwiki.generators.wiki.get_cached_llm_provider") as mock_llm:
             mock_llm.return_value = MagicMock()
 
             from local_deepwiki.generators.wiki import WikiGenerator
@@ -125,7 +125,7 @@ class TestWikiGeneratorInit:
 
             mock_config.return_value = config
 
-            with patch("local_deepwiki.generators.wiki.get_llm_provider") as mock_llm:
+            with patch("local_deepwiki.generators.wiki.get_cached_llm_provider") as mock_llm:
                 mock_llm.return_value = MagicMock()
 
                 from local_deepwiki.generators.wiki import WikiGenerator
@@ -155,13 +155,14 @@ class TestGetMainDefinitionLines:
             config.get_prompts.return_value = MagicMock(wiki_system="System prompt")
             mock_config.return_value = config
 
-            with patch("local_deepwiki.generators.wiki.get_llm_provider") as mock_llm:
+            with patch("local_deepwiki.generators.wiki.get_cached_llm_provider") as mock_llm:
                 mock_llm.return_value = MagicMock()
 
                 from local_deepwiki.generators.wiki import WikiGenerator
 
                 mock_vector_store = MagicMock()
-                mock_vector_store._get_table.return_value = None
+                # Mock the public method that WikiGenerator delegates to
+                mock_vector_store.get_main_definition_lines.return_value = {}
 
                 generator = WikiGenerator(
                     wiki_path=tmp_path,
@@ -179,52 +180,16 @@ class TestGetMainDefinitionLines:
             config.get_prompts.return_value = MagicMock(wiki_system="System prompt")
             mock_config.return_value = config
 
-            with patch("local_deepwiki.generators.wiki.get_llm_provider") as mock_llm:
+            with patch("local_deepwiki.generators.wiki.get_cached_llm_provider") as mock_llm:
                 mock_llm.return_value = MagicMock()
 
                 from local_deepwiki.generators.wiki import WikiGenerator
 
-                # Create mock query chain for LanceDB
-                def mock_search_results(chunk_type):
-                    if chunk_type == "class":
-                        return [
-                            {"file_path": "src/test.py", "start_line": 10, "end_line": 40}
-                        ]
-                    elif chunk_type == "function":
-                        return [
-                            {"file_path": "src/test.py", "start_line": 50, "end_line": 60}
-                        ]
-                    return []
-
-                mock_table = MagicMock()
-                # Chain: table.search().where().select().limit().to_list()
-                mock_search = MagicMock()
-                mock_table.search.return_value = mock_search
-                mock_where = MagicMock()
-                mock_search.where.side_effect = lambda filter_str: mock_where
-                mock_select = MagicMock()
-                mock_where.select.return_value = mock_select
-                mock_limit = MagicMock()
-                mock_select.limit.return_value = mock_limit
-                # Return different results based on the filter
-                mock_search.where.side_effect = lambda f: (
-                    MagicMock(
-                        select=MagicMock(
-                            return_value=MagicMock(
-                                limit=MagicMock(
-                                    return_value=MagicMock(
-                                        to_list=MagicMock(
-                                            return_value=mock_search_results("class" if "class" in f else "function")
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                    )
-                )
-
                 mock_vector_store = MagicMock()
-                mock_vector_store._get_table.return_value = mock_table
+                # Mock the public method - returns class lines (first definition)
+                mock_vector_store.get_main_definition_lines.return_value = {
+                    "src/test.py": (10, 40)
+                }
 
                 generator = WikiGenerator(
                     wiki_path=tmp_path,
@@ -244,44 +209,16 @@ class TestGetMainDefinitionLines:
             config.get_prompts.return_value = MagicMock(wiki_system="System prompt")
             mock_config.return_value = config
 
-            with patch("local_deepwiki.generators.wiki.get_llm_provider") as mock_llm:
+            with patch("local_deepwiki.generators.wiki.get_cached_llm_provider") as mock_llm:
                 mock_llm.return_value = MagicMock()
 
                 from local_deepwiki.generators.wiki import WikiGenerator
 
-                # Create mock query chain for LanceDB - only functions, no classes
-                def mock_search_results(chunk_type):
-                    if chunk_type == "class":
-                        return []  # No classes
-                    elif chunk_type == "function":
-                        return [
-                            {"file_path": "src/utils.py", "start_line": 5, "end_line": 15},
-                            {"file_path": "src/utils.py", "start_line": 20, "end_line": 30},
-                        ]
-                    return []
-
-                mock_table = MagicMock()
-                mock_search = MagicMock()
-                mock_table.search.return_value = mock_search
-                # Return different results based on the filter
-                mock_search.where.side_effect = lambda f: (
-                    MagicMock(
-                        select=MagicMock(
-                            return_value=MagicMock(
-                                limit=MagicMock(
-                                    return_value=MagicMock(
-                                        to_list=MagicMock(
-                                            return_value=mock_search_results("class" if "class" in f else "function")
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                    )
-                )
-
                 mock_vector_store = MagicMock()
-                mock_vector_store._get_table.return_value = mock_table
+                # Mock the public method - returns function lines when no class exists
+                mock_vector_store.get_main_definition_lines.return_value = {
+                    "src/utils.py": (5, 15)
+                }
 
                 generator = WikiGenerator(
                     wiki_path=tmp_path,
@@ -305,7 +242,7 @@ class TestWritePage:
             config.get_prompts.return_value = MagicMock(wiki_system="System prompt")
             mock_config.return_value = config
 
-            with patch("local_deepwiki.generators.wiki.get_llm_provider") as mock_llm:
+            with patch("local_deepwiki.generators.wiki.get_cached_llm_provider") as mock_llm:
                 mock_llm.return_value = MagicMock()
 
                 from local_deepwiki.generators.wiki import WikiGenerator
@@ -337,7 +274,7 @@ class TestWritePage:
             config.get_prompts.return_value = MagicMock(wiki_system="System prompt")
             mock_config.return_value = config
 
-            with patch("local_deepwiki.generators.wiki.get_llm_provider") as mock_llm:
+            with patch("local_deepwiki.generators.wiki.get_cached_llm_provider") as mock_llm:
                 mock_llm.return_value = MagicMock()
 
                 from local_deepwiki.generators.wiki import WikiGenerator
@@ -514,7 +451,7 @@ class TestWikiGeneratorGenerate:
             config.get_prompts.return_value = MagicMock(wiki_system="System prompt")
             mock_config.return_value = config
 
-            with patch("local_deepwiki.generators.wiki.get_llm_provider") as mock_llm:
+            with patch("local_deepwiki.generators.wiki.get_cached_llm_provider") as mock_llm:
                 mock_llm.return_value = MagicMock()
 
                 from local_deepwiki.generators.wiki import WikiGenerator

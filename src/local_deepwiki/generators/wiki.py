@@ -42,7 +42,7 @@ from local_deepwiki.models import (
     WikiPage,
     WikiStructure,
 )
-from local_deepwiki.providers.llm import get_llm_provider
+from local_deepwiki.providers.llm import get_cached_llm_provider
 
 logger = get_logger(__name__)
 
@@ -106,7 +106,14 @@ class WikiGenerator:
             # Store a defensive copy to prevent external mutation
             self.config = base_config.model_copy(deep=True)
 
-        self.llm = get_llm_provider(self.config.llm)
+        # Use cached LLM provider for better performance on repeated generations
+        cache_path = wiki_path / "llm_cache.lance"
+        self.llm = get_cached_llm_provider(
+            cache_path=cache_path,
+            embedding_provider=vector_store.embedding_provider,
+            cache_config=self.config.llm_cache,
+            llm_config=self.config.llm,
+        )
 
         # Get provider-specific system prompt
         self._system_prompt = self.config.get_prompts().wiki_system
