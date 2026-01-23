@@ -18,6 +18,9 @@ MIN_DEEP_RESEARCH_CHUNKS = 10
 MAX_DEEP_RESEARCH_CHUNKS = 50
 DEFAULT_DEEP_RESEARCH_CHUNKS = 30
 
+# File size limits (in bytes)
+MAX_WIKI_PAGE_SIZE = 10 * 1024 * 1024  # 10 MB
+
 
 def validate_positive_int(value: Any, name: str, min_val: int, max_val: int, default: int) -> int:
     """Validate and bound an integer parameter.

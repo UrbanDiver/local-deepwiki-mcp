@@ -321,6 +321,26 @@ class TestHandleReadWikiPage:
         assert len(result) == 1
         assert result[0].text == page_content
 
+    async def test_rejects_oversized_file(self, tmp_path):
+        """Test that oversized files are rejected to prevent memory exhaustion."""
+        from local_deepwiki.validation import MAX_WIKI_PAGE_SIZE
+
+        # Create a file that exceeds the size limit
+        large_file = tmp_path / "large.md"
+        # Write just over the limit (10 MB + 1 byte)
+        large_file.write_bytes(b"x" * (MAX_WIKI_PAGE_SIZE + 1))
+
+        result = await handle_read_wiki_page(
+            {
+                "wiki_path": str(tmp_path),
+                "page": "large.md",
+            }
+        )
+
+        assert len(result) == 1
+        assert "Error" in result[0].text
+        assert "too large" in result[0].text
+
 
 class TestHandleExportWikiHtml:
     """Tests for handle_export_wiki_html handler."""

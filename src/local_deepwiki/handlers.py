@@ -23,6 +23,7 @@ from local_deepwiki.validation import (
     MAX_CONTEXT_CHUNKS,
     MAX_DEEP_RESEARCH_CHUNKS,
     MAX_SEARCH_LIMIT,
+    MAX_WIKI_PAGE_SIZE,
     MIN_CONTEXT_CHUNKS,
     MIN_DEEP_RESEARCH_CHUNKS,
     MIN_SEARCH_LIMIT,
@@ -699,6 +700,13 @@ async def handle_read_wiki_page(args: dict[str, Any]) -> list[TextContent]:
 
     if not page_path.exists():
         raise ValueError(f"Page not found: {page}")
+
+    # Check file size to prevent memory exhaustion
+    file_size = page_path.stat().st_size
+    if file_size > MAX_WIKI_PAGE_SIZE:
+        raise ValueError(
+            f"Page too large: {file_size:,} bytes (max {MAX_WIKI_PAGE_SIZE:,} bytes)"
+        )
 
     content = await asyncio.to_thread(page_path.read_text)
     return [TextContent(type="text", text=content)]
