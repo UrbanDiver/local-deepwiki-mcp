@@ -610,7 +610,7 @@ def api_research():
 def create_app(wiki_path: str | Path) -> Flask:
     """Create Flask app with wiki path configured."""
     global WIKI_PATH
-    WIKI_PATH = Path(wiki_path)
+    WIKI_PATH = Path(wiki_path).resolve()
     if not WIKI_PATH.exists():
         logger.error(f"Wiki path does not exist: {wiki_path}")
         raise ValueError(f"Wiki path does not exist: {wiki_path}")

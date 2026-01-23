@@ -6,6 +6,12 @@ Recent changes to this repository.
 
 ### January 16, 2026
 
+- [`06f832d`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/06f832d) Add parallel processing and performance improvements for larger repos
+  - Files: `.deepwiki/index_status.json`, `src/local_deepwiki/config.py`, `src/local_deepwiki/core/indexer.py`, `src/local_deepwiki/core/vectorstore.py`
+
+- [`2d33e4a`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/2d33e4a) Improve scalability defaults for larger repositories
+  - Files: `.deepwiki/architecture.md`, `.deepwiki/changelog.md`, `.deepwiki/coverage.md`, `.deepwiki/dependencies.md`, `.deepwiki/files/index.md` (+37 more)
+
 - [`8257db4`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/8257db4) Update generated wiki documentation
   - Files: `.deepwiki/changelog.md`, `.deepwiki/coverage.md`, `.deepwiki/files/index.md`, `.deepwiki/files/src/local_deepwiki/config.md`, `.deepwiki/files/src/local_deepwiki/core/chunker.md` (+51 more)
 
@@ -92,12 +98,6 @@ Recent changes to this repository.
 - [`887852b`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/887852b) Improve handlers.py test coverage from 71% to 94%
   - Files: `tests/test_handlers_coverage.py`
 
-- [`c047afd`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/c047afd) Improve logging.py test coverage from 46% to 100%
-  - Files: `tests/test_logging_coverage.py`
-
-- [`bf37297`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/bf37297) Improve watcher.py test coverage from 48% to 99%
-  - Files: `tests/test_watcher.py`
-
 ## Statistics
 
 - **Commits shown**: 30
@@ -108,13 +108,13 @@ Recent changes to this repository.
 
 The following source files were used to generate this documentation:
 
-- `tests/test_provider_factories.py:21-99`
 - `tests/test_parser.py:24-123`
+- `tests/test_provider_factories.py:21-99`
 - `tests/test_retry.py:8-144`
 - `tests/test_ollama_health.py:16-19`
-- `tests/test_server_handlers.py:15-75`
 - `tests/test_chunker.py:13-428`
 - `tests/test_changelog.py:18-96`
+- `tests/test_server_handlers.py:15-75`
 - `tests/test_coverage.py:13-50`
 - `tests/test_vectorstore.py:9-28`
 - `tests/test_wiki_coverage.py:50-120`

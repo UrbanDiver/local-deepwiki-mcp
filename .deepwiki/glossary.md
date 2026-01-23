@@ -4,7 +4,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 
 **Quick Navigation:** [#](##) | [A](#a) | [B](#b) | [C](#c) | [D](#d) | [E](#e) | [F](#f) | [G](#g) | [H](#h) | [I](#i) | [L](#l) | [M](#m) | [N](#n) | [O](#o) | [P](#p) | [Q](#q) | [R](#r) | [S](#s) | [T](#t) | [U](#u) | [V](#v) | [W](#w)
 
-**Total:** 1506 entities (412 classes, 291 functions, 803 methods)
+**Total:** 1508 entities (413 classes, 291 functions, 804 methods)
 
 ---
 
@@ -13,19 +13,19 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`__getattr__`](files/src/local_deepwiki/export/__init__.md)** `(name: str)` ⚠️`AttributeError` (`__init__.py`) - Lazy import PDF-related symbols to avoid WeasyPrint impor...
 - ▪️ **[`DebouncedHandler.__init__`](files/src/local_deepwiki/watcher.md)** `(repo_path: Path, config: Config, debounce_seconds: float, ...+1)` (`watcher.py`) - Initialize the handler.
 - ▪️ **[`CodeChunker.__init__`](files/src/local_deepwiki/core/chunker.md)** `(config: ChunkingConfig | None)` (`chunker.py`) - Initialize the chunker.
-- ▪️ **[`LLMCache.__init__`](files/src/local_deepwiki/core/llm_cache.md)** `(cache_path: Path, embedding_provider: EmbeddingProvider, config: LLMCacheConfig)` (`llm_cache.py`) - Initialize the LLM cache.
 - ▪️ **[`VectorStore.__init__`](files/src/local_deepwiki/core/vectorstore.md)** `(db_path: Path, embedding_provider: EmbeddingProvider)` (`vectorstore.py`) - Initialize the vector store.
-- ▪️ **[`CodeParser.__init__`](files/src/local_deepwiki/core/parser.md)** `(...)` (`parser.py`) - Initialize the parser with language support.
+- ▪️ **[`LLMCache.__init__`](files/src/local_deepwiki/core/llm_cache.md)** `(cache_path: Path, embedding_provider: EmbeddingProvider, config: LLMCacheConfig)` (`llm_cache.py`) - Initialize the LLM cache.
 - ▪️ **[`RepositoryIndexer.__init__`](files/src/local_deepwiki/core/indexer.md)** `(repo_path: Path, config: Config | None, embedding_provider_name: str | None)` (`indexer.py`) - Initialize the indexer.
+- ▪️ **[`CodeParser.__init__`](files/src/local_deepwiki/core/parser.md)** `(...)` (`parser.py`) - Initialize the parser with language support.
 - ▪️ **[`DeepResearchPipeline.__init__`](files/src/local_deepwiki/core/deep_research.md)** `(vector_store: VectorStore, llm_provider: LLMProvider, max_sub_questions: int, ...+8)` (`deep_research.py`) - Initialize the deep research pipeline.
 - ▪️ **[`CachingLLMProvider.__init__`](files/src/local_deepwiki/providers/llm/cached.md)** `(provider: LLMProvider, cache: LLMCache)` (`cached.py`) - Initialize the caching provider.
-- ▪️ **[`AnthropicProvider.__init__`](files/src/local_deepwiki/providers/llm/anthropic.md)** `(model: str, api_key: str | None)` (`anthropic.py`) - Initialize the Anthropic provider.
 - ▪️ **[`OllamaProvider.__init__`](files/src/local_deepwiki/providers/llm/ollama.md)** `(model: str, base_url: str)` (`ollama.py`) - Initialize the Ollama provider.
+- ▪️ **[`AnthropicProvider.__init__`](files/src/local_deepwiki/providers/llm/anthropic.md)** `(model: str, api_key: str | None)` (`anthropic.py`) - Initialize the Anthropic provider.
 - ▪️ **[`EntityRegistry.__init__`](files/src/local_deepwiki/generators/crosslinks.md)** `(...) → None` (`crosslinks.py`) - Initialize an empty entity registry.
 - ▪️ **[`CrossLinker.__init__`](files/src/local_deepwiki/generators/crosslinks.md)** `(registry: EntityRegistry) → None` (`crosslinks.py`) - Initialize the cross-linker.
 - ▪️ **[`WikiStatusManager.__init__`](files/src/local_deepwiki/generators/wiki_status.md)** `(wiki_path: Path)` (`wiki_status.py`) - Initialize the status manager.
-- ▪️ **[`RelationshipAnalyzer.__init__`](files/src/local_deepwiki/generators/see_also.md)** `(...) → None` (`see_also.py`) - Initialize an empty relationship analyzer.
 - ▪️ **[`WikiGenerator.__init__`](files/src/local_deepwiki/generators/wiki.md)** `(wiki_path: Path, vector_store: VectorStore, config: Config | None, ...+1)` (`wiki.py`) - Initialize the wiki generator.
+- ▪️ **[`RelationshipAnalyzer.__init__`](files/src/local_deepwiki/generators/see_also.md)** `(...) → None` (`see_also.py`) - Initialize an empty relationship analyzer.
 - ▪️ **[`HtmlExporter.__init__`](files/src/local_deepwiki/export/html.md)** `(wiki_path: Path, output_path: Path)` (`html.py`) - Initialize the exporter.
 - ▪️ **[`PdfExporter.__init__`](files/src/local_deepwiki/export/pdf.md)** `(wiki_path: Path, output_path: Path)` (`pdf.py`) - Initialize the exporter.
 - ▪️ **[`CrossLinker._add_links_to_text`](files/src/local_deepwiki/generators/crosslinks.md)** `(text: str, current_page: str, current_page_entities: set[str]) → str` (`crosslinks.py`) - Add links to a text section (not code).
@@ -45,8 +45,8 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`_collect_preceding_comments`](files/src/local_deepwiki/core/parser.md)** `(node: Node, source: bytes, comment_types: set[str], ...+1) → list[str]` (`parser.py`) - Collect all consecutive preceding comment lines.
 - 🔹 **[`_compute_file_hash`](files/src/local_deepwiki/core/parser.md)** `(file_path: Path) → str` (`parser.py`) - Compute SHA-256 hash of a file using chunked reading.
 - ▪️ **[`LLMCache._compute_hash`](files/src/local_deepwiki/core/llm_cache.md)** `(system_prompt: str | None, prompt: str) → str` (`llm_cache.py`) - Compute exact match hash for fast lookup.
-- ▪️ **[`LLMCache._connect`](files/src/local_deepwiki/core/llm_cache.md)** `(...) → lancedb.DBConnection` (`llm_cache.py`) - Get or create database connection.
 - ▪️ **[`VectorStore._connect`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → lancedb.DBConnection` (`vectorstore.py`) - Get or create database connection.
+- ▪️ **[`LLMCache._connect`](files/src/local_deepwiki/core/llm_cache.md)** `(...) → lancedb.DBConnection` (`llm_cache.py`) - Get or create database connection.
 - ▪️ **[`CodeChunker._create_class_summary_chunk`](files/src/local_deepwiki/core/chunker.md)** `(class_node: Node, source: bytes, language: Language, ...+4) → CodeChunk` (`chunker.py`) - Create a summary chunk for a large class.
 - ▪️ **[`CodeChunker._create_file_summary`](files/src/local_deepwiki/core/chunker.md)** `(root: Node, source: bytes, language: Language) → str` (`chunker.py`) - Create a summary of file structure for the module chunk.
 - ▪️ **[`CodeChunker._create_function_chunk`](files/src/local_deepwiki/core/chunker.md)** `(func_node: Node, source: bytes, language: Language, ...+1) → CodeChunk` (`chunker.py`) - Create a chunk for a top-level function.
@@ -82,7 +82,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`_generate_files_index`](files/src/local_deepwiki/generators/wiki_files.md)** `(file_pages: list[WikiPage]) → str` (`wiki_files.py`) - Generate index page for file documentation.
 - ▪️ **[`CodeChunker._generate_id`](files/src/local_deepwiki/core/chunker.md)** `(file_path: str, name: str, line: int) → str` (`chunker.py`) - Generate a unique chunk ID.
 - 🔹 **[`_generate_modules_index`](files/src/local_deepwiki/generators/wiki_modules.md)** `(module_pages: list[WikiPage]) → str` (`wiki_modules.py`) - Generate index page for modules.
-- ▪️⚡ **[`WikiGenerator._generate_overview`](files/src/local_deepwiki/generators/wiki.md)** `(index_status: IndexStatus) → WikiPage` (`wiki.py`) - Generate the [main](files/src/local_deepwiki/export/pdf.md) overview/index page with grounded facts.
+- ▪️⚡ **[`WikiGenerator._generate_overview`](files/src/local_deepwiki/generators/wiki.md)** `(index_status: IndexStatus) → WikiPage` (`wiki.py`) - Generate the [main](files/src/local_deepwiki/export/html.md) overview/index page with grounded facts.
 - 🔹 **[`_get_block_comment`](files/src/local_deepwiki/core/parser.md)** `(node: Node, source: bytes, comment_type: str) → str | None` (`parser.py`) - Extract /** */ block comment of specified type.
 - 🔹 **[`_get_brief_description`](files/src/local_deepwiki/generators/glossary.md)** `(docstring: str | None, max_length: int) → str` (`glossary.py`) - Extract a brief description from a docstring.
 - 🔹 **[`_get_coverage_emoji`](files/src/local_deepwiki/generators/coverage.md)** `(percent: float) → str` (`coverage.py`) - Get an emoji indicator for coverage level.
@@ -92,15 +92,15 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`_get_javadoc_or_doxygen`](files/src/local_deepwiki/core/parser.md)** `(node: Node, source: bytes) → str | None` (`parser.py`) - Extract Javadoc/Doxygen (/** */) or /// comments.
 - 🔹 **[`_get_jsdoc_or_line_comments`](files/src/local_deepwiki/core/parser.md)** `(node: Node, source: bytes) → str | None` (`parser.py`) - Extract JSDoc (/** */) or multi-line // comments.
 - 🔹 **[`_get_line_comments`](files/src/local_deepwiki/core/parser.md)** `(node: Node, source: bytes, comment_type: str, ...+1) → str | None` (`parser.py`) - Extract multi-line comments with a specific prefix.
-- ▪️ **[`WikiGenerator._get_main_definition_lines`](files/src/local_deepwiki/generators/wiki.md)** `(...) → dict[str, tuple[int, int]]` (`wiki.py`) - Get line range of [main](files/src/local_deepwiki/export/pdf.md) definition (first class or functio...
+- ▪️ **[`WikiGenerator._get_main_definition_lines`](files/src/local_deepwiki/generators/wiki.md)** `(...) → dict[str, tuple[int, int]]` (`wiki.py`) - Get line range of [main](files/src/local_deepwiki/export/html.md) definition (first class or functio...
 - 🔹 **[`_get_manifest_mtimes`](files/src/local_deepwiki/generators/manifest.md)** `(repo_path: Path) → dict[str, float]` (`manifest.py`) - Get modification times for all manifest files.
 - 🔹 **[`_get_node_text`](files/src/local_deepwiki/generators/test_examples.md)** `(node: Node, source: bytes) → str` (`test_examples.py`) - Get the text content of a tree-sitter node.
 - ▪️ **[`CodeParser._get_parser`](files/src/local_deepwiki/core/parser.md)** `(language: LangEnum) → Parser` ⚠️`ValueError` (`parser.py`) - Get or create a parser for the given language.
 - 🔹 **[`_get_python_docstring`](files/src/local_deepwiki/core/parser.md)** `(node: Node, source: bytes) → str | None` (`parser.py`) - Extract Python docstring from function/class body.
 - 🔹 **[`_get_swift_docstring`](files/src/local_deepwiki/core/parser.md)** `(node: Node, source: bytes) → str | None` (`parser.py`) - Extract Swift /// comments or /** */ block.
 - 🔹 **[`_get_syntax_lang`](files/src/local_deepwiki/generators/wiki_files.md)** `(language: str | None) → str` (`wiki_files.py`) - Get syntax highlighting language string.
-- ▪️ **[`LLMCache._get_table`](files/src/local_deepwiki/core/llm_cache.md)** `(...) → Table | None` (`llm_cache.py`) - Get the cache table if it exists.
 - ▪️ **[`VectorStore._get_table`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → Table | None` (`vectorstore.py`) - Get the chunks table if it exists.
+- ▪️ **[`LLMCache._get_table`](files/src/local_deepwiki/core/llm_cache.md)** `(...) → Table | None` (`llm_cache.py`) - Get the cache table if it exists.
 - 🔹 **[`_get_wiki_link`](files/src/local_deepwiki/generators/coverage.md)** `(file_path: str) → str` (`coverage.py`) - Convert a source file path to a wiki link.
 - 🔹 **[`_get_wiki_link`](files/src/local_deepwiki/generators/glossary.md)** `(file_path: str) → str` (`glossary.py`) - Convert a source file path to a wiki link.
 - 🔹⚡ **[`_handle_deep_research_impl`](files/src/local_deepwiki/handlers.md)** `(args: dict[str, Any], server: Any) → list[TextContent]` ⚠️`ValueError` (`handlers.py`) - Internal implementation of deep_research handler.
@@ -143,6 +143,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`_parse_python_dep`](files/src/local_deepwiki/generators/manifest.md)** `(dep: str) → tuple[str, str]` (`manifest.py`) - Parse a Python dependency string like 'requests>=2.0'.
 - 🔹 **[`_parse_requirements_txt`](files/src/local_deepwiki/generators/manifest.md)** `(filepath: Path, manifest: ProjectManifest) → None` (`manifest.py`) - Parse requirements.txt (Python).
 - 🔹 **[`_parse_setup_py`](files/src/local_deepwiki/generators/manifest.md)** `(filepath: Path, manifest: ProjectManifest) → None` (`manifest.py`) - Parse setup.py (Python legacy).
+- ▪️ **[`RepositoryIndexer._parse_single_file`](files/src/local_deepwiki/core/indexer.md)** `(file_path: Path) → ParseResult` (`indexer.py`) - Parse and chunk a single file (CPU-bound, runs in thread ...
 - 🔹 **[`_path_to_module`](files/src/local_deepwiki/generators/diagrams.md)** `(file_path: str) → str | None` (`diagrams.py`) - Convert file path to module name.
 - ▪️ **[`DeepResearchPipeline._prepare_results_for_synthesis`](files/src/local_deepwiki/core/deep_research.md)** `(initial_results: list[SearchResult], additional_results: list[SearchResult]) → list[SearchResult]` (`deep_research.py`) - Deduplicate and limit results for synthesis.
 - ▪️ **[`CrossLinker._process_content`](files/src/local_deepwiki/generators/crosslinks.md)** `(content: str, current_page: str) → str` (`crosslinks.py`) - Process content to add cross-links.
@@ -349,8 +350,8 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 ## G
 
 - ▪️⚡ **[`CachingLLMProvider.generate`](files/src/local_deepwiki/providers/llm/cached.md)** `(prompt: str, system_prompt: str | None, max_tokens: int, ...+1) → str` (`cached.py`) - Generate text with caching.
-- ▪️⚡ **[`AnthropicProvider.generate`](files/src/local_deepwiki/providers/llm/anthropic.md)** `(prompt: str, system_prompt: str | None, max_tokens: int, ...+1) → str` (`anthropic.py`) - Generate text from a prompt.
 - ▪️⚡ **[`OllamaProvider.generate`](files/src/local_deepwiki/providers/llm/ollama.md)** `(prompt: str, system_prompt: str | None, max_tokens: int, ...+1) → str` ⚠️`OllamaConnectionError, OllamaModelNotFoundError` (`ollama.py`) - Generate text from a prompt.
+- ▪️⚡ **[`AnthropicProvider.generate`](files/src/local_deepwiki/providers/llm/anthropic.md)** `(prompt: str, system_prompt: str | None, max_tokens: int, ...+1) → str` (`anthropic.py`) - Generate text from a prompt.
 - ▪️⚡ **[`WikiGenerator.generate`](files/src/local_deepwiki/generators/wiki.md)** `(index_status: IndexStatus, progress_callback: ProgressCallback | None, full_rebuild: bool) → WikiStructure` (`wiki.py`) - Generate wiki documentation for the indexed repository.
 - 🔹 **[`generate_api_reference_markdown`](files/src/local_deepwiki/generators/api_docs.md)** `(functions: list[FunctionSignature], classes: list[ClassSignature], include_private: bool) → str` (`api_docs.py`) - Generate markdown API reference documentation.
 - 🔹⚡ **[`generate_architecture_page`](files/src/local_deepwiki/generators/wiki_pages.md)** `(index_status: IndexStatus, vector_store: VectorStore, llm: LLMProvider, ...+3) → WikiPage` (`wiki_pages.py`) - Generate architecture documentation with diagrams and gro...
@@ -373,7 +374,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`generate_language_pie_chart`](files/src/local_deepwiki/generators/diagrams.md)** `(index_status: IndexStatus) → str | None` (`diagrams.py`) - Generate a pie chart showing language distribution.
 - 🔹⚡ **[`generate_module_docs`](files/src/local_deepwiki/generators/wiki_modules.md)** `(index_status: IndexStatus, vector_store: VectorStore, llm: LLMProvider, ...+3) → tuple[list[WikiPage], int, int]` (`wiki_modules.py`) - Generate documentation for each module/directory.
 - 🔹 **[`generate_module_overview`](files/src/local_deepwiki/generators/diagrams.md)** `(index_status: IndexStatus, show_file_counts: bool) → str | None` (`diagrams.py`) - Generate a high-level module overview diagram.
-- 🔹⚡ **[`generate_overview_page`](files/src/local_deepwiki/generators/wiki_pages.md)** `(index_status: IndexStatus, vector_store: VectorStore, llm: LLMProvider, ...+3) → WikiPage` (`wiki_pages.py`) - Generate the [main](files/src/local_deepwiki/export/pdf.md) overview/index page with grounded facts.
+- 🔹⚡ **[`generate_overview_page`](files/src/local_deepwiki/generators/wiki_pages.md)** `(index_status: IndexStatus, vector_store: VectorStore, llm: LLMProvider, ...+3) → WikiPage` (`wiki_pages.py`) - Generate the [main](files/src/local_deepwiki/export/html.md) overview/index page with grounded facts.
 - 🔹⚡ **[`generate_response`](files/src/local_deepwiki/web/app.md)** `(...) → AsyncIterator[str]` (`app.py`) - Async generator that streams the chat response.
 - 🔹 **[`generate_search_entry`](files/src/local_deepwiki/generators/search.md)** `(page: WikiPage) → dict` (`search.py`) - Generate a search index entry for a wiki page.
 - 🔹 **[`generate_search_index`](files/src/local_deepwiki/generators/search.md)** `(pages: list[WikiPage]) → list[dict]` (`search.py`) - Generate a search index from wiki pages.
@@ -385,8 +386,8 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`generate_stale_banner`](files/src/local_deepwiki/generators/stale_detection.md)** `(stale_info: StaleInfo) → str` (`stale_detection.py`) - Generate a warning banner for a stale page.
 - 🔹 **[`generate_stale_report_page`](files/src/local_deepwiki/generators/stale_detection.md)** `(repo_path: Path, wiki_status: WikiGenerationStatus, stale_threshold_days: int) → WikiPage` (`stale_detection.py`) - Generate a wiki page reporting potentially stale document...
 - ▪️⚡ **[`CachingLLMProvider.generate_stream`](files/src/local_deepwiki/providers/llm/cached.md)** `(prompt: str, system_prompt: str | None, max_tokens: int, ...+1) → AsyncIterator[str]` (`cached.py`) - Stream generation with caching.
-- ▪️⚡ **[`AnthropicProvider.generate_stream`](files/src/local_deepwiki/providers/llm/anthropic.md)** `(prompt: str, system_prompt: str | None, max_tokens: int, ...+1) → AsyncIterator[str]` (`anthropic.py`) - Generate text from a prompt with streaming.
 - ▪️⚡ **[`OllamaProvider.generate_stream`](files/src/local_deepwiki/providers/llm/ollama.md)** `(prompt: str, system_prompt: str | None, max_tokens: int, ...+1) → AsyncIterator[str]` ⚠️`OllamaConnectionError, OllamaModelNotFoundError` (`ollama.py`) - Generate text from a prompt with streaming.
+- ▪️⚡ **[`AnthropicProvider.generate_stream`](files/src/local_deepwiki/providers/llm/anthropic.md)** `(prompt: str, system_prompt: str | None, max_tokens: int, ...+1) → AsyncIterator[str]` (`anthropic.py`) - Generate text from a prompt with streaming.
 - 🔹 **[`generate_toc`](files/src/local_deepwiki/generators/toc.md)** `(pages: list[dict[str, str]]) → TableOfContents` (`toc.py`) - Generate hierarchical numbered table of contents from wik...
 - 🔹⚡ **[`generate_wiki`](files/src/local_deepwiki/generators/wiki.md)** `(repo_path: Path, wiki_path: Path, vector_store: VectorStore, ...+5) → WikiStructure` (`wiki.py`) - Convenience function to generate wiki documentation.
 - 🔹 **[`generate_wiki_generation_sequence`](files/src/local_deepwiki/generators/diagrams.md)** `(...) → str` (`diagrams.py`) - Generate sequence diagram for wiki generation.
@@ -575,8 +576,8 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 ## N
 
 - ▪️ **[`CachingLLMProvider.name`](files/src/local_deepwiki/providers/llm/cached.md)** `(...) → str` (`cached.py`) - Get the provider name with cache prefix.
-- ▪️ **[`AnthropicProvider.name`](files/src/local_deepwiki/providers/llm/anthropic.md)** `(...) → str` (`anthropic.py`) - Get the provider name.
 - ▪️ **[`OllamaProvider.name`](files/src/local_deepwiki/providers/llm/ollama.md)** `(...) → str` (`ollama.py`) - Get the provider name.
+- ▪️ **[`AnthropicProvider.name`](files/src/local_deepwiki/providers/llm/anthropic.md)** `(...) → str` (`anthropic.py`) - Get the provider name.
 - ▪️ **[`WikiStatusManager.needs_regeneration`](files/src/local_deepwiki/generators/wiki_status.md)** `(page_path: str, source_files: list[str]) → bool` (`wiki_status.py`) - Check if a page needs regeneration based on source file c...
 - ▪️ **[`TestResearchCancellation.never_cancelled`](files/tests/test_deep_research.md)** `(...) → bool` (`test_deep_research.py`)
 - ▪️⚡ **[`TestRetryDecorator.no_jitter_function`](files/tests/test_provider_errors.md)** `(...)` ⚠️`ConnectionError` (`test_provider_errors.py`)
@@ -617,6 +618,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️ **[`TestExtractPythonParameters.parser`](files/tests/test_api_docs.md)** `(...)` (`test_api_docs.py`)
 - 🔹 **[`parser`](files/tests/test_type_annotations.md)** `(...)` (`test_type_annotations.py`) - Create a code parser for testing.
 - ▪️ **[`TestExtractCallsPython.parser`](files/tests/test_callgraph.md)** `(...)` (`test_callgraph.py`)
+- 🔷 **[`ParseResult`](files/src/local_deepwiki/core/indexer.md)** (`indexer.py`) - Result of parsing a single file.
 - 🔷 **[`ParsingConfig`](files/src/local_deepwiki/config.md)** (`config.py`) - Code parsing configuration.
 - 🔷 **[`PdfExporter`](files/src/local_deepwiki/export/pdf.md)** (`pdf.py`) - Export wiki markdown to PDF format.
 - ▪️ **[`WikiStatusManager.previous_status`](files/src/local_deepwiki/generators/wiki_status.md)** `(...) → WikiGenerationStatus | None` (`wiki_status.py`) - Get previous wiki generation status.
@@ -1004,20 +1006,20 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️ **[`TestLocalEmbeddingProvider.test_load_model`](files/tests/test_local_embedding_provider.md)** `(...)` (`test_local_embedding_provider.py`) - Test lazy model loading.
 - ▪️ **[`TestLocalEmbeddingProvider.test_load_model_cached`](files/tests/test_local_embedding_provider.md)** `(...)` (`test_local_embedding_provider.py`) - Test that model is only loaded once.
 - ▪️⚡ **[`TestSchemaMigration.test_load_status_handles_legacy_files`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`) - Test that loading status handles legacy files without sch...
-- ▪️ **[`TestMainCli.test_main_custom_wiki_path`](files/tests/test_pdf_export.md)** `(tmp_path: Path)` (`test_pdf_export.py`) - Test [main](files/src/local_deepwiki/export/pdf.md) with custom wiki path.
-- ▪️ **[`TestMainCli.test_main_default_args`](files/tests/test_pdf_export.md)** `(tmp_path: Path)` (`test_pdf_export.py`) - Test [main](files/src/local_deepwiki/export/pdf.md) with default arguments.
-- ▪️ **[`TestMain.test_main_default_repo_path`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test [main](files/src/local_deepwiki/export/pdf.md) uses current directory as default.
-- ▪️ **[`TestMainCli.test_main_handles_export_exception`](files/tests/test_pdf_export.md)** `(tmp_path: Path)` (`test_pdf_export.py`) - Test [main](files/src/local_deepwiki/export/pdf.md) handles exceptions from [export_to_pdf](files/src/local_deepwiki/export/pdf.md).
-- ▪️ **[`TestMainCli.test_main_nonexistent_wiki_path`](files/tests/test_pdf_export.md)** `(tmp_path: Path)` (`test_pdf_export.py`) - Test [main](files/src/local_deepwiki/export/pdf.md) with nonexistent wiki path.
-- ▪️ **[`TestMain.test_main_path_does_not_exist`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test [main](files/src/local_deepwiki/export/pdf.md) exits when path doesn't exist.
-- ▪️ **[`TestMain.test_main_path_is_not_directory`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test [main](files/src/local_deepwiki/export/pdf.md) exits when path is not a directory.
-- ▪️ **[`TestMain.test_main_runs_initial_index`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test [main](files/src/local_deepwiki/export/pdf.md) runs initial index by default.
-- ▪️ **[`TestMain.test_main_skip_initial_starts_watcher`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test [main](files/src/local_deepwiki/export/pdf.md) with --skip-initial starts watcher immediately.
-- ▪️ **[`TestMain.test_main_watcher_stops_on_interrupt`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test [main](files/src/local_deepwiki/export/pdf.md) handles KeyboardInterrupt gracefully.
-- ▪️ **[`TestMain.test_main_with_full_rebuild`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test [main](files/src/local_deepwiki/export/pdf.md) with --full-rebuild flag.
-- ▪️ **[`TestMain.test_main_with_options`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test [main](files/src/local_deepwiki/export/pdf.md) with various CLI options.
-- ▪️ **[`TestMainCli.test_main_with_output_option`](files/tests/test_pdf_export.md)** `(tmp_path: Path)` (`test_pdf_export.py`) - Test [main](files/src/local_deepwiki/export/pdf.md) with -o/--output option.
-- ▪️ **[`TestMainCli.test_main_with_separate_option`](files/tests/test_pdf_export.md)** `(tmp_path: Path)` (`test_pdf_export.py`) - Test [main](files/src/local_deepwiki/export/pdf.md) with --separate option.
+- ▪️ **[`TestMainCli.test_main_custom_wiki_path`](files/tests/test_pdf_export.md)** `(tmp_path: Path)` (`test_pdf_export.py`) - Test [main](files/src/local_deepwiki/export/html.md) with custom wiki path.
+- ▪️ **[`TestMainCli.test_main_default_args`](files/tests/test_pdf_export.md)** `(tmp_path: Path)` (`test_pdf_export.py`) - Test [main](files/src/local_deepwiki/export/html.md) with default arguments.
+- ▪️ **[`TestMain.test_main_default_repo_path`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test [main](files/src/local_deepwiki/export/html.md) uses current directory as default.
+- ▪️ **[`TestMainCli.test_main_handles_export_exception`](files/tests/test_pdf_export.md)** `(tmp_path: Path)` (`test_pdf_export.py`) - Test [main](files/src/local_deepwiki/export/html.md) handles exceptions from [export_to_pdf](files/src/local_deepwiki/export/pdf.md).
+- ▪️ **[`TestMainCli.test_main_nonexistent_wiki_path`](files/tests/test_pdf_export.md)** `(tmp_path: Path)` (`test_pdf_export.py`) - Test [main](files/src/local_deepwiki/export/html.md) with nonexistent wiki path.
+- ▪️ **[`TestMain.test_main_path_does_not_exist`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test [main](files/src/local_deepwiki/export/html.md) exits when path doesn't exist.
+- ▪️ **[`TestMain.test_main_path_is_not_directory`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test [main](files/src/local_deepwiki/export/html.md) exits when path is not a directory.
+- ▪️ **[`TestMain.test_main_runs_initial_index`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test [main](files/src/local_deepwiki/export/html.md) runs initial index by default.
+- ▪️ **[`TestMain.test_main_skip_initial_starts_watcher`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test [main](files/src/local_deepwiki/export/html.md) with --skip-initial starts watcher immediately.
+- ▪️ **[`TestMain.test_main_watcher_stops_on_interrupt`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test [main](files/src/local_deepwiki/export/html.md) handles KeyboardInterrupt gracefully.
+- ▪️ **[`TestMain.test_main_with_full_rebuild`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test [main](files/src/local_deepwiki/export/html.md) with --full-rebuild flag.
+- ▪️ **[`TestMain.test_main_with_options`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test [main](files/src/local_deepwiki/export/html.md) with various CLI options.
+- ▪️ **[`TestMainCli.test_main_with_output_option`](files/tests/test_pdf_export.md)** `(tmp_path: Path)` (`test_pdf_export.py`) - Test [main](files/src/local_deepwiki/export/html.md) with -o/--output option.
+- ▪️ **[`TestMainCli.test_main_with_separate_option`](files/tests/test_pdf_export.md)** `(tmp_path: Path)` (`test_pdf_export.py`) - Test [main](files/src/local_deepwiki/export/html.md) with --separate option.
 - ▪️⚡ **[`TestVectorStoreEdgeCases.test_many_chunks_same_file`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test many chunks from same file.
 - ▪️ **[`TestEnhancedDependencyGraph.test_max_external_limit`](files/tests/test_diagrams.md)** `(...)` (`test_diagrams.py`) - Test max_external limits number of external deps shown.
 - ▪️⚡ **[`TestLLMCacheEdgeCases.test_maybe_evict_exception_handling`](files/tests/test_llm_cache.md)** `(cache: LLMCache)` (`test_llm_cache.py`) - Test _maybe_evict handles exceptions gracefully.
@@ -1314,9 +1316,9 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔷 **[`TestExtractPythonReturnType`](files/tests/test_type_annotations.md)** (`test_type_annotations.py`) - Tests for [extract_python_return_type](files/src/local_deepwiki/generators/api_docs.md) function.
 - 🔷 **[`TestExtractSnippet`](files/tests/test_search.md)** (`test_search.py`) - Tests for [extract_snippet](files/src/local_deepwiki/generators/search.md) function.
 - 🔷 **[`TestExtractTitle`](files/tests/test_pdf_export.md)** (`test_pdf_export.py`) - Tests for title extraction.
-- 🔷 **[`TestExtractTitle`](files/tests/test_web.md)** (`test_web.py`) - Tests for [extract_title](files/src/local_deepwiki/export/pdf.md) function.
+- 🔷 **[`TestExtractTitle`](files/tests/test_web.md)** (`test_web.py`) - Tests for [extract_title](files/src/local_deepwiki/export/html.md) function.
 - 🔷 **[`TestExtractTitle`](files/tests/test_html_export.md)** (`test_html_export.py`) - Tests for title extraction.
-- 🔷 **[`TestExtractTitleErrorHandling`](files/tests/test_pdf_export.md)** (`test_pdf_export.py`) - Tests for [extract_title](files/src/local_deepwiki/export/pdf.md) error handling.
+- 🔷 **[`TestExtractTitleErrorHandling`](files/tests/test_pdf_export.md)** (`test_pdf_export.py`) - Tests for [extract_title](files/src/local_deepwiki/export/html.md) error handling.
 - 🔷 **[`TestFileContextDataclass`](files/tests/test_context_builder.md)** (`test_context_builder.py`) - Tests for the [FileContext](files/src/local_deepwiki/generators/context_builder.md) dataclass.
 - 🔷 **[`TestFileCoverage`](files/tests/test_coverage.md)** (`test_coverage.py`) - Tests for [FileCoverage](files/src/local_deepwiki/generators/coverage.md) dataclass.
 - 🔷 **[`TestFindCircularDependencies`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for _find_circular_dependencies function.
@@ -1427,9 +1429,9 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔷 **[`TestLocalEmbeddingProvider`](files/tests/test_local_embedding_provider.md)** (`test_local_embedding_provider.py`) - Tests for [LocalEmbeddingProvider](files/src/local_deepwiki/providers/embeddings/local.md).
 - 🔷 **[`TestLoggingConstants`](files/tests/test_logging_coverage.md)** (`test_logging_coverage.py`) - Tests for logging constants.
 - 🔷 **[`TestLoggingIntegration`](files/tests/test_logging_coverage.md)** (`test_logging_coverage.py`) - Integration tests for logging functionality.
-- 🔷 **[`TestMain`](files/tests/test_watcher.md)** (`test_watcher.py`) - Test [main](files/src/local_deepwiki/export/pdf.md) CLI entry point.
-- 🔷 **[`TestMainAndRunServer`](files/tests/test_web.md)** (`test_web.py`) - Tests for [main](files/src/local_deepwiki/export/pdf.md)() and [run_server](files/src/local_deepwiki/web/app.md)() functions.
-- 🔷 **[`TestMainCli`](files/tests/test_pdf_export.md)** (`test_pdf_export.py`) - Tests for the [main](files/src/local_deepwiki/export/pdf.md)() CLI entry point.
+- 🔷 **[`TestMain`](files/tests/test_watcher.md)** (`test_watcher.py`) - Test [main](files/src/local_deepwiki/export/html.md) CLI entry point.
+- 🔷 **[`TestMainAndRunServer`](files/tests/test_web.md)** (`test_web.py`) - Tests for [main](files/src/local_deepwiki/export/html.md)() and [run_server](files/src/local_deepwiki/web/app.md)() functions.
+- 🔷 **[`TestMainCli`](files/tests/test_pdf_export.md)** (`test_pdf_export.py`) - Tests for the [main](files/src/local_deepwiki/export/html.md)() CLI entry point.
 - 🔷 **[`TestManifestCaching`](files/tests/test_manifest.md)** (`test_manifest.py`) - Tests for manifest caching functionality.
 - 🔷 **[`TestMermaidCliRendering`](files/tests/test_pdf_export.md)** (`test_pdf_export.py`) - Tests for mermaid rendering with CLI available (uses PNG).
 - 🔷 **[`TestMermaidHandling`](files/tests/test_pdf_export.md)** (`test_pdf_export.py`) - Tests for mermaid diagram handling in PDF export without ...
@@ -1588,13 +1590,13 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 
 The following source files were used to generate this documentation:
 
-- `tests/test_provider_factories.py:21-99`
 - `tests/test_parser.py:24-123`
+- `tests/test_provider_factories.py:21-99`
 - `tests/test_retry.py:8-144`
 - `tests/test_ollama_health.py:16-19`
-- `tests/test_server_handlers.py:15-75`
 - `tests/test_chunker.py:13-428`
 - `tests/test_changelog.py:18-96`
+- `tests/test_server_handlers.py:15-75`
 - `tests/test_coverage.py:13-50`
 - `tests/test_vectorstore.py:9-28`
 - `tests/test_wiki_coverage.py:50-120`

@@ -63,13 +63,13 @@ classDiagram
 
 The following source files were used to generate this documentation:
 
-- `tests/test_provider_factories.py:21-99`
 - `tests/test_parser.py:24-123`
+- `tests/test_provider_factories.py:21-99`
 - `tests/test_retry.py:8-144`
 - `tests/test_ollama_health.py:16-19`
-- `tests/test_server_handlers.py:15-75`
 - `tests/test_chunker.py:13-428`
 - `tests/test_changelog.py:18-96`
+- `tests/test_server_handlers.py:15-75`
 - `tests/test_coverage.py:13-50`
 - `tests/test_vectorstore.py:9-28`
 - `tests/test_wiki_coverage.py:50-120`

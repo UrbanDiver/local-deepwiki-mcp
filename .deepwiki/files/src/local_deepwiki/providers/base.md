@@ -938,3 +938,15 @@ Functions and methods in this file and their callers:
 - [openai](embeddings/openai.md) - uses this
 - [vectorstore](../core/vectorstore.md) - uses this
 - [local](embeddings/local.md) - uses this
+
+## See Also
+
+- [vectorstore](../core/vectorstore.md) - uses this
+- [local](embeddings/local.md) - uses this
+- [openai](embeddings/openai.md) - uses this
+
+## See Also
+
+- [vectorstore](../core/vectorstore.md) - uses this
+- [openai](embeddings/openai.md) - uses this
+- [local](embeddings/local.md) - uses this

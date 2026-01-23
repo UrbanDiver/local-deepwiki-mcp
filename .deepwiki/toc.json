@@ -2,7 +2,7 @@
   "entries": [
     {
       "number": "1",
-      "title": "Overview",
+      "title": "Index",
       "path": "index.md"
     },
     {
@@ -37,12 +37,12 @@
       "children": [
         {
           "number": "7.1",
-          "title": "Module: src",
+          "title": "Src",
           "path": "modules/src.md"
         },
         {
           "number": "7.2",
-          "title": "Module: tests",
+          "title": "Tests",
           "path": "modules/tests.md"
         }
       ]
@@ -178,7 +178,7 @@
                     },
                     {
                       "number": "8.1.1.10.4",
-                      "title": "context_builder.py",
+                      "title": "Context Builder",
                       "path": "files/src/local_deepwiki/generators/context_builder.md"
                     },
                     {
@@ -203,7 +203,7 @@
                     },
                     {
                       "number": "8.1.1.10.9",
-                      "title": "inheritance.py",
+                      "title": "Inheritance",
                       "path": "files/src/local_deepwiki/generators/inheritance.md"
                     },
                     {
@@ -238,7 +238,7 @@
                     },
                     {
                       "number": "8.1.1.10.16",
-                      "title": "toc.py",
+                      "title": "Toc",
                       "path": "files/src/local_deepwiki/generators/toc.md"
                     },
                     {
@@ -248,7 +248,7 @@
                     },
                     {
                       "number": "8.1.1.10.18",
-                      "title": "wiki_files.py",
+                      "title": "Wiki Files",
                       "path": "files/src/local_deepwiki/generators/wiki_files.md"
                     },
                     {

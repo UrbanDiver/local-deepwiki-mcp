@@ -6,15 +6,15 @@ This report shows the documentation coverage for the codebase.
 
 🟢 **Overall Coverage: 94.0%**
 
-- **1416** / **1506** entities documented
+- **1418** / **1508** entities documented
 
 ### By Type
 
 | Type | Documented | Total | Coverage |
 |------|------------|-------|----------|
-| Classes | 412 | 412 | 100.0% |
+| Classes | 413 | 413 | 100.0% |
 | Functions | 272 | 291 | 93.5% |
-| Methods | 732 | 803 | 91.2% |
+| Methods | 733 | 804 | 91.2% |
 
 ## Coverage by File
 
@@ -46,70 +46,70 @@ This report shows the documentation coverage for the codebase.
 | 🟢 [test_callgraph.py](files/tests/test_callgraph.md) | 21 | 22 | 95.5% |
 | 🟢 [parser.py](files/src/local_deepwiki/core/parser.md) | 21 | 22 | 95.5% |
 | 🟢 [test_wiki_pages_coverage.py](files/tests/test_wiki_pages_coverage.md) | 37 | 38 | 97.4% |
-| 🟢 [test_provider_factories.py](files/tests/test_provider_factories.md) | 4 | 4 | 100.0% |
 | 🟢 [test_parser.py](files/tests/test_parser.md) | 26 | 26 | 100.0% |
+| 🟢 [test_provider_factories.py](files/tests/test_provider_factories.md) | 4 | 4 | 100.0% |
 | 🟢 [test_ollama_health.py](files/tests/test_ollama_health.md) | 8 | 8 | 100.0% |
-| 🟢 [test_server_handlers.py](files/tests/test_server_handlers.md) | 6 | 6 | 100.0% |
 | 🟢 [test_chunker.py](files/tests/test_chunker.md) | 34 | 34 | 100.0% |
 | 🟢 [test_changelog.py](files/tests/test_changelog.md) | 10 | 10 | 100.0% |
+| 🟢 [test_server_handlers.py](files/tests/test_server_handlers.md) | 6 | 6 | 100.0% |
 | 🟢 [test_coverage.py](files/tests/test_coverage.md) | 4 | 4 | 100.0% |
 | 🟢 [test_vectorstore.py](files/tests/test_vectorstore.md) | 27 | 27 | 100.0% |
 | 🟢 [test_pdf_export.py](files/tests/test_pdf_export.md) | 37 | 37 | 100.0% |
 | 🟢 [test_search.py](files/tests/test_search.md) | 18 | 18 | 100.0% |
 | 🟢 [test_toc.py](files/tests/test_toc.md) | 5 | 5 | 100.0% |
-| 🟢 [test_incremental_wiki.py](files/tests/test_incremental_wiki.md) | 13 | 13 | 100.0% |
 | 🟢 [test_local_embedding_provider.py](files/tests/test_local_embedding_provider.md) | 8 | 8 | 100.0% |
-| 🟢 [test_web.py](files/tests/test_web.md) | 19 | 19 | 100.0% |
+| 🟢 [test_incremental_wiki.py](files/tests/test_incremental_wiki.md) | 13 | 13 | 100.0% |
 | 🟢 [test_git_utils.py](files/tests/test_git_utils.md) | 21 | 21 | 100.0% |
-| 🟢 [test_manifest.py](files/tests/test_manifest.md) | 34 | 34 | 100.0% |
+| 🟢 [test_web.py](files/tests/test_web.md) | 19 | 19 | 100.0% |
 | 🟢 [test_export_init.py](files/tests/test_export_init.md) | 1 | 1 | 100.0% |
+| 🟢 [test_manifest.py](files/tests/test_manifest.md) | 34 | 34 | 100.0% |
 | 🟢 [test_see_also.py](files/tests/test_see_also.md) | 10 | 10 | 100.0% |
-| 🟢 [test_html_export.py](files/tests/test_html_export.md) | 13 | 13 | 100.0% |
 | 🟢 [test_stale_detection.py](files/tests/test_stale_detection.md) | 7 | 7 | 100.0% |
+| 🟢 [test_html_export.py](files/tests/test_html_export.md) | 13 | 13 | 100.0% |
+| 🟢 [test_openai_embedding_provider.py](files/tests/test_openai_embedding_provider.md) | 1 | 1 | 100.0% |
 | 🟢 [test_type_annotations.py](files/tests/test_type_annotations.md) | 9 | 9 | 100.0% |
 | 🟢 [test_config.py](files/tests/test_config.md) | 43 | 43 | 100.0% |
-| 🟢 [test_openai_embedding_provider.py](files/tests/test_openai_embedding_provider.md) | 1 | 1 | 100.0% |
 | 🟢 [test_glossary.py](files/tests/test_glossary.md) | 4 | 4 | 100.0% |
-| 🟢 [test_models.py](files/tests/test_models.md) | 19 | 19 | 100.0% |
 | 🟢 [test_inheritance.py](files/tests/test_inheritance.md) | 4 | 4 | 100.0% |
-| 🟢 [test_logging_coverage.py](files/tests/test_logging_coverage.md) | 21 | 21 | 100.0% |
-| 🟢 [test_llm_cache.py](files/tests/test_llm_cache.md) | 62 | 62 | 100.0% |
+| 🟢 [test_models.py](files/tests/test_models.md) | 19 | 19 | 100.0% |
 | 🟢 [test_crosslinks.py](files/tests/test_crosslinks.md) | 24 | 24 | 100.0% |
+| 🟢 [test_llm_cache.py](files/tests/test_llm_cache.md) | 62 | 62 | 100.0% |
+| 🟢 [test_logging_coverage.py](files/tests/test_logging_coverage.md) | 21 | 21 | 100.0% |
 | 🟢 [test_test_examples.py](files/tests/test_test_examples.md) | 17 | 17 | 100.0% |
 | 🟢 [test_source_refs.py](files/tests/test_source_refs.md) | 18 | 18 | 100.0% |
 | 🟢 [test_context_builder.py](files/tests/test_context_builder.md) | 5 | 5 | 100.0% |
-| 🟢 [test_diagrams.py](files/tests/test_diagrams.md) | 22 | 22 | 100.0% |
-| 🟢 [test_server_validation.py](files/tests/test_server_validation.md) | 6 | 6 | 100.0% |
 | 🟢 [logging.py](files/src/local_deepwiki/logging.md) | 2 | 2 | 100.0% |
-| 🟢 [config.py](files/src/local_deepwiki/config.md) | 21 | 21 | 100.0% |
+| 🟢 [test_server_validation.py](files/tests/test_server_validation.md) | 6 | 6 | 100.0% |
+| 🟢 [test_diagrams.py](files/tests/test_diagrams.md) | 22 | 22 | 100.0% |
 | 🟢 [models.py](files/src/local_deepwiki/models.md) | 18 | 18 | 100.0% |
-| 🟢 [validation.py](files/src/local_deepwiki/validation.md) | 5 | 5 | 100.0% |
+| 🟢 [config.py](files/src/local_deepwiki/config.md) | 21 | 21 | 100.0% |
 | 🟢 [chunker.py](files/src/local_deepwiki/core/chunker.md) | 21 | 21 | 100.0% |
-| 🟢 [llm_cache.py](files/src/local_deepwiki/core/llm_cache.md) | 14 | 14 | 100.0% |
+| 🟢 [validation.py](files/src/local_deepwiki/validation.md) | 5 | 5 | 100.0% |
 | 🟢 [vectorstore.py](files/src/local_deepwiki/core/vectorstore.md) | 17 | 17 | 100.0% |
-| 🟢 [indexer.py](files/src/local_deepwiki/core/indexer.md) | 10 | 10 | 100.0% |
+| 🟢 [llm_cache.py](files/src/local_deepwiki/core/llm_cache.md) | 14 | 14 | 100.0% |
+| 🟢 [indexer.py](files/src/local_deepwiki/core/indexer.md) | 12 | 12 | 100.0% |
 | 🟢 [git_utils.py](files/src/local_deepwiki/core/git_utils.md) | 20 | 20 | 100.0% |
 | 🟢 [deep_research.py](files/src/local_deepwiki/core/deep_research.md) | 24 | 24 | 100.0% |
-| 🟢 [__init__.py](files/src/local_deepwiki/providers/llm/__init__.md) | 2 | 2 | 100.0% |
 | 🟢 [cached.py](files/src/local_deepwiki/providers/llm/cached.md) | 6 | 6 | 100.0% |
-| 🟢 [openai.py](files/src/local_deepwiki/providers/llm/openai.md) | 1 | 1 | 100.0% |
-| 🟢 [anthropic.py](files/src/local_deepwiki/providers/llm/anthropic.md) | 5 | 5 | 100.0% |
+| 🟢 [__init__.py](files/src/local_deepwiki/providers/llm/__init__.md) | 2 | 2 | 100.0% |
 | 🟢 [ollama.py](files/src/local_deepwiki/providers/llm/ollama.md) | 9 | 9 | 100.0% |
+| 🟢 [openai.py](files/src/local_deepwiki/providers/llm/openai.md) | 1 | 1 | 100.0% |
 | 🟢 [local.py](files/src/local_deepwiki/providers/embeddings/local.md) | 1 | 1 | 100.0% |
-| 🟢 [__init__.py](files/src/local_deepwiki/providers/embeddings/__init__.md) | 1 | 1 | 100.0% |
+| 🟢 [anthropic.py](files/src/local_deepwiki/providers/llm/anthropic.md) | 5 | 5 | 100.0% |
 | 🟢 [openai.py](files/src/local_deepwiki/providers/embeddings/openai.md) | 1 | 1 | 100.0% |
 | 🟢 [toc.py](files/src/local_deepwiki/generators/toc.md) | 7 | 7 | 100.0% |
+| 🟢 [__init__.py](files/src/local_deepwiki/providers/embeddings/__init__.md) | 1 | 1 | 100.0% |
 | 🟢 [stale_detection.py](files/src/local_deepwiki/generators/stale_detection.md) | 5 | 5 | 100.0% |
-| 🟢 [wiki_pages.py](files/src/local_deepwiki/generators/wiki_pages.md) | 4 | 4 | 100.0% |
 | 🟢 [context_builder.py](files/src/local_deepwiki/generators/context_builder.md) | 8 | 8 | 100.0% |
-| 🟢 [callgraph.py](files/src/local_deepwiki/generators/callgraph.md) | 8 | 8 | 100.0% |
+| 🟢 [wiki_pages.py](files/src/local_deepwiki/generators/wiki_pages.md) | 4 | 4 | 100.0% |
 | 🟢 [coverage.py](files/src/local_deepwiki/generators/coverage.md) | 8 | 8 | 100.0% |
+| 🟢 [callgraph.py](files/src/local_deepwiki/generators/callgraph.md) | 8 | 8 | 100.0% |
 | 🟢 [changelog.py](files/src/local_deepwiki/generators/changelog.md) | 4 | 4 | 100.0% |
 | 🟢 [wiki_modules.py](files/src/local_deepwiki/generators/wiki_modules.md) | 2 | 2 | 100.0% |
 | 🟢 [source_refs.py](files/src/local_deepwiki/generators/source_refs.md) | 6 | 6 | 100.0% |
 | 🟢 [search.py](files/src/local_deepwiki/generators/search.md) | 10 | 10 | 100.0% |
-| 🟢 [see_also.py](files/src/local_deepwiki/generators/see_also.md) | 13 | 13 | 100.0% |
 | 🟢 [api_docs.py](files/src/local_deepwiki/generators/api_docs.md) | 17 | 17 | 100.0% |
+| 🟢 [see_also.py](files/src/local_deepwiki/generators/see_also.md) | 13 | 13 | 100.0% |
 | 🟢 [inheritance.py](files/src/local_deepwiki/generators/inheritance.md) | 6 | 6 | 100.0% |
 | 🟢 [glossary.py](files/src/local_deepwiki/generators/glossary.md) | 7 | 7 | 100.0% |
 | 🟢 [html.py](files/src/local_deepwiki/export/html.md) | 11 | 11 | 100.0% |
@@ -124,13 +124,13 @@ This report shows the documentation coverage for the codebase.
 
 The following source files were used to generate this documentation:
 
-- `tests/test_provider_factories.py:21-99`
 - `tests/test_parser.py:24-123`
+- `tests/test_provider_factories.py:21-99`
 - `tests/test_retry.py:8-144`
 - `tests/test_ollama_health.py:16-19`
-- `tests/test_server_handlers.py:15-75`
 - `tests/test_chunker.py:13-428`
 - `tests/test_changelog.py:18-96`
+- `tests/test_server_handlers.py:15-75`
 - `tests/test_coverage.py:13-50`
 - `tests/test_vectorstore.py:9-28`
 - `tests/test_wiki_coverage.py:50-120`

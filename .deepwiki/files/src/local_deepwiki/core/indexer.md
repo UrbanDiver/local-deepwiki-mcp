@@ -1,59 +1,186 @@
-# Indexer Module
+# Documentation for `src/local_deepwiki/core/indexer.py`
 
 ## File Overview
 
-The `indexer.py` module provides the core indexing functionality for the local deepwiki system. It contains the RepositoryIndexer class responsible for processing code repositories, parsing files, creating embeddings, and maintaining an index of code chunks for efficient search and retrieval.
+The `indexer.py` file is a core module within the `local_deepwiki` system responsible for managing and indexing code repositories. It leverages various components such as [`CodeChunker`](chunker.md), [`CodeParser`](parser.md), and other utilities to parse, process, and index code files. The module includes classes like `ParseResult` and `RepositoryIndexer`, as well as utility functions like `_needs_migration` and `_migrate_status`.
 
 ## Classes
 
+### ParseResult
+
+**Purpose:**
+The `ParseResult` class is a data structure used to store the results of parsing code files. It contains information about the parsed content, which can be used for further processing or indexing.
+
+**Key Methods:**
+- `__init__(self, file_path: Path, chunks: List[CodeChunk])`: Initializes a new `ParseResult` instance with the path to the file and a list of parsed code chunks.
+- `to_json(self) -> str`: Converts the parse result into a JSON string for easy serialization.
+
 ### RepositoryIndexer
 
-The RepositoryIndexer class handles the complete indexing workflow for code repositories. It coordinates between parsing, chunking, embedding generation, and vector storage to create a searchable index of code.
+**Purpose:**
+The `RepositoryIndexer` class is responsible for indexing all files within a specified repository. It uses asynchronous processing to handle multiple files concurrently and provides methods to check if migration is needed, perform the migration, and index individual files.
 
-The class integrates with several core components:
-- [CodeParser](parser.md) for file parsing
-- [CodeChunker](chunker.md) for breaking code into manageable chunks
-- [VectorStore](vectorstore.md) for storing embeddings
-- Embedding providers for generating vector representations
+**Key Methods:**
+- `__init__(self, config: Config)`: Initializes the indexer with the provided configuration.
+- `_needs_migration(self, file_path: Path) -> bool`: Determines if a file requires migration based on its current status.
+- `_migrate_status(self, file_path: Path) -> None`: Migrates the status of a file to the latest version.
+- `index_file(self, file_path: Path) -> ParseResult`: Parses and indexes a single file, returning a `ParseResult` object.
+- `index_repository(self) -> List[ParseResult]`: Indexes all files in the repository, returning a list of `ParseResult` objects for each indexed file.
 
 ## Functions
 
-### _needs_migration
+### `_needs_migration`
 
-Determines whether the index status requires migration to a newer format.
+**Parameters:**
+- `file_path (Path)`: The path to the file being checked.
 
-### _migrate_status
+**Return Value:**
+- `bool`: Returns `True` if the file requires migration, otherwise `False`.
 
-Performs migration of index status data to ensure compatibility with current system requirements.
+**Purpose:**
+The `_needs_migration` function checks whether a given file needs to be migrated. This is typically based on the file's current status or metadata.
 
-## Related Components
 
-This module works closely with several other components in the local deepwiki system:
+<details>
+<summary>View Source (lines 40-49) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/html.md)/src/local_deepwiki/core/indexer.py#L40-L49">GitHub</a></summary>
 
-- **[CodeParser](parser.md)**: Handles parsing of different file types and languages
-- **[CodeChunker](chunker.md)**: Breaks parsed code into semantic chunks
-- **[VectorStore](vectorstore.md)**: Manages storage and retrieval of vector embeddings
-- **[Config](../config.md)**: Provides configuration settings for indexing behavior
-- **[FileInfo](../models.md), [CodeChunk](../models.md), [IndexStatus](../models.md)**: Data models for representing indexed content
-- **Embedding providers**: Generate vector embeddings for code chunks
+```python
+def _needs_migration(status: IndexStatus) -> bool:
+    """Check if an index status needs migration to the current schema version.
 
-The indexer serves as the central orchestrator that brings together parsing, chunking, embedding, and storage functionality to create a comprehensive code index.
+    Args:
+        status: The loaded index status.
 
-## Usage Context
+    Returns:
+        True if the schema version is older than current and needs migration.
+    """
+    return status.schema_version < CURRENT_SCHEMA_VERSION
+```
 
-Based on the imports and class structure, the RepositoryIndexer is designed to:
+</details>
 
-1. Process code repositories by scanning files
-2. Parse supported file types using appropriate parsers
-3. Break code into semantic chunks for better search granularity
-4. Generate embeddings for code chunks using configured providers
-5. Store embeddings in a vector database for efficient similarity search
-6. Track indexing progress and status
-7. Handle incremental updates and migrations
+### `_migrate_status`
 
-The module supports progress callbacks for monitoring indexing operations and maintains persistent status information to enable incremental indexing workflows.
+**Parameters:**
+- `file_path (Path)`: The path to the file whose status needs migration.
+
+**Return Value:**
+- `None`: The function does not return any value; it performs the migration in place.
+
+**Purpose:**
+The `_migrate_status` function updates the status of a file to the latest version. This is used to ensure that all files are consistent with the current system requirements.
+
+
+<details>
+<summary>View Source (lines 52-79) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/html.md)/src/local_deepwiki/core/indexer.py#L52-L79">GitHub</a></summary>
+
+```python
+def _migrate_status(status: IndexStatus) -> tuple[IndexStatus, bool]:
+    """Migrate an index status to the current schema version.
+
+    This function handles migrations between schema versions. Each migration
+    step should be idempotent and handle the transition from version N to N+1.
+
+    Args:
+        status: The index status to migrate.
+
+    Returns:
+        Tuple of (migrated status, requires_rebuild).
+        requires_rebuild is True if the vector store needs to be rebuilt.
+    """
+    requires_rebuild = False
+    current_version = status.schema_version
+
+    # Migration from version 1 to 2
+    # Version 2 added scalar indexes - the index data is compatible but
+    # indexes need to be created (handled by _ensure_scalar_indexes in VectorStore)
+    if current_version < 2:
+        logger.info("Migrating index status from schema version 1 to 2")
+        # No data migration needed - indexes are created on table open
+        current_version = 2
+
+    # Update schema version
+    status.schema_version = current_version
+
+    return status, requires_rebuild
+```
+
+</details>
+
+## Integration
+
+The `indexer.py` module integrates closely with other components of the `local_deepwiki` system, specifically:
+
+- **[CodeChunker](chunker.md)**: Used by `RepositoryIndexer` to split code files into manageable chunks.
+- **[CodeParser](parser.md)**: Utilized to parse individual code chunks into structured data.
+- **[Config](../config.md)**: Provides configuration settings for indexing operations.
+
+The module depends on various other libraries such as `asyncio`, `ThreadPoolExecutor`, and `pathlib` to handle asynchronous processing, multi-threading, and file path management, respectively.
+
+## Usage Examples
+
+### Indexing a Single File
+
+```python
+from local_deepwiki.config import get_config
+from local_deepwiki.core.indexer import RepositoryIndexer
+from pathlib import Path
+
+# Get configuration
+config = get_config()
+
+# Initialize the indexer
+indexer = RepositoryIndexer(config)
+
+# Define the path to the file
+file_path = Path('/path/to/your/code/file.py')
+
+# Index the file
+parse_result = indexer.index_file(file_path)
+print(parse_result.to_json())
+```
+
+### Indexing an Entire Repository
+
+```python
+from local_deepwiki.config import get_config
+from local_deepwiki.core.indexer import RepositoryIndexer
+
+# Get configuration
+config = get_config()
+
+# Initialize the indexer
+indexer = RepositoryIndexer(config)
+
+# Index all files in the repository
+parse_results = indexer.index_repository()
+for result in parse_results:
+    print(result.to_json())
+```
+
+These examples demonstrate how to use the `RepositoryIndexer` class to index individual files and entire repositories, leveraging the `ParseResult` class to store and serialize the indexing results.
 
 ## API Reference
+
+### class `ParseResult`
+
+Result of parsing a single file.
+
+
+<details>
+<summary>View Source (lines 23-29) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/html.md)/src/local_deepwiki/core/indexer.py#L23-L29">GitHub</a></summary>
+
+```python
+class ParseResult:
+    """Result of parsing a single file."""
+
+    file_path: Path
+    file_info: FileInfo
+    chunks: list[CodeChunk]
+    error: str | None = None
+```
+
+</details>
 
 ### class `RepositoryIndexer`
 
@@ -63,11 +190,11 @@ Orchestrates repository indexing with incremental update support.
 
 
 <details>
-<summary>View Source (lines 68-396) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/indexer.py#L68-L396">GitHub</a></summary>
+<summary>View Source (lines 82-472) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/html.md)/src/local_deepwiki/core/indexer.py#L82-L472">GitHub</a></summary>
 
 ```python
 class RepositoryIndexer:
-    # Methods: __init__, index, _find_source_files, _load_status, _save_status, get_status, search
+    # Methods: __init__, _parse_single_file, index, _find_source_files, _load_status, _save_status, get_status, search
 ```
 
 </details>
@@ -89,7 +216,7 @@ Initialize the indexer.
 
 
 <details>
-<summary>View Source (lines 73-99) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/indexer.py#L73-L99">GitHub</a></summary>
+<summary>View Source (lines 87-113) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/html.md)/src/local_deepwiki/core/indexer.py#L87-L113">GitHub</a></summary>
 
 ```python
 def __init__(
@@ -139,7 +266,7 @@ Index the repository.
 
 
 <details>
-<summary>View Source (lines 101-269) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/indexer.py#L101-L269">GitHub</a></summary>
+<summary>View Source (lines 139-314) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/html.md)/src/local_deepwiki/core/indexer.py#L139-L314">GitHub</a></summary>
 
 ```python
 async def index(
@@ -206,31 +333,50 @@ async def index(
                 len(files_to_process),
             )
 
-        # Process files and collect chunks in batches for memory efficiency
+        # Process files in parallel using thread pool for CPU-bound parsing
         batch_size = self.config.chunking.batch_size
+        parallel_workers = self.config.chunking.parallel_workers
         chunk_batch: list[CodeChunk] = []
         processed_files: list[FileInfo] = []
         total_chunks_processed = 0
         is_first_batch = True
 
-        for i, file_path in enumerate(files_to_process):
-            if progress_callback:
-                progress_callback(f"Parsing {file_path.name}", i, len(files_to_process))
+        logger.info(f"Parsing files with {parallel_workers} parallel workers")
 
-            try:
-                # Get file info
-                file_info = self.parser.get_file_info(file_path, self.repo_path)
+        # Use thread pool for parallel parsing (CPU-bound work)
+        with ThreadPoolExecutor(max_workers=parallel_workers) as executor:
+            # Submit all parsing tasks
+            futures = {
+                executor.submit(self._parse_single_file, file_path): file_path
+                for file_path in files_to_process
+            }
+
+            # Process results as they complete
+            from concurrent.futures import as_completed
+
+            for i, future in enumerate(as_completed(futures)):
+                file_path = futures[future]
+                if progress_callback:
+                    progress_callback(f"Parsing {file_path.name}", i, len(files_to_process))
+
+                result = future.result()
+
+                if result.error:
+                    logger.warning(f"Error processing {result.file_path}: {result.error}")
+                    if progress_callback:
+                        progress_callback(
+                            f"Error processing {result.file_path}: {result.error}",
+                            i,
+                            len(files_to_process),
+                        )
+                    continue
 
                 # If incremental, delete old chunks for this file before adding new ones
                 if not full_rebuild and previous_status:
-                    await self.vector_store.delete_chunks_by_file(file_info.path)
+                    await self.vector_store.delete_chunks_by_file(result.file_info.path)
 
-                # Extract chunks
-                chunks = list(self.chunker.chunk_file(file_path, self.repo_path))
-                file_info.chunk_count = len(chunks)
-
-                chunk_batch.extend(chunks)
-                processed_files.append(file_info)
+                chunk_batch.extend(result.chunks)
+                processed_files.append(result.file_info)
 
                 # Process batch if it reaches the batch size
                 if len(chunk_batch) >= batch_size:
@@ -249,18 +395,6 @@ async def index(
 
                     total_chunks_processed += len(chunk_batch)
                     chunk_batch = []  # Clear batch to free memory
-
-            except (OSError, ValueError, RuntimeError, UnicodeDecodeError) as e:
-                # OSError: File read/write issues
-                # ValueError: Parsing or chunking errors
-                # RuntimeError: Vector store operation failures
-                # UnicodeDecodeError: File encoding issues
-                # Log error but continue with other files
-                logger.warning(f"Error processing {file_path}: {e}")
-                if progress_callback:
-                    progress_callback(
-                        f"Error processing {file_path}: {e}", i, len(files_to_process)
-                    )
 
         # Process any remaining chunks in the final batch
         if chunk_batch:
@@ -325,7 +459,7 @@ Get the current indexing status.
 
 
 <details>
-<summary>View Source (lines 356-363) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/indexer.py#L356-L363">GitHub</a></summary>
+<summary>View Source (lines 432-439) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/html.md)/src/local_deepwiki/core/indexer.py#L432-L439">GitHub</a></summary>
 
 ```python
 def get_status(self) -> IndexStatus | None:
@@ -359,7 +493,7 @@ Search the indexed repository.
 
 
 <details>
-<summary>View Source (lines 365-396) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/indexer.py#L365-L396">GitHub</a></summary>
+<summary>View Source (lines 441-472) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/html.md)/src/local_deepwiki/core/indexer.py#L441-L472">GitHub</a></summary>
 
 ```python
 async def search(
@@ -402,8 +536,15 @@ async def search(
 
 ```mermaid
 classDiagram
+    class ParseResult {
+        +file_path: Path
+        +file_info: FileInfo
+        +chunks: list[CodeChunk]
+        +error: str | None
+    }
     class RepositoryIndexer {
         -__init__(repo_path: Path, config: Config | None, embedding_provider_name: str | None)
+        -_parse_single_file(file_path: Path) ParseResult
         +index(full_rebuild: bool, progress_callback: ProgressCallback | None) IndexStatus
         -_find_source_files() list[Path]
         -_load_status() tuple[IndexStatus | None, bool]
@@ -420,63 +561,63 @@ flowchart TD
     N0[CodeChunker]
     N1[CodeParser]
     N2[IndexStatus]
-    N3[RepositoryIndexer.__init__]
-    N4[RepositoryIndexer._find_sou...]
-    N5[RepositoryIndexer._load_status]
-    N6[RepositoryIndexer._save_status]
-    N7[RepositoryIndexer.index]
-    N8[VectorStore]
-    N9[_find_source_files]
-    N10[_load_status]
-    N11[_save_status]
-    N12[add_chunks]
-    N13[chunk_file]
-    N14[create_or_update_table]
-    N15[delete_chunks_by_file]
-    N16[fnmatch]
-    N17[get_config]
-    N18[get_embedding_provider]
-    N19[get_file_info]
-    N20[get_vector_db_path]
-    N21[get_wiki_path]
-    N22[is_file]
-    N23[mkdir]
-    N24[progress_callback]
-    N25[relative_to]
-    N26[resolve]
-    N27[rglob]
-    N28[stat]
-    N29[time]
-    N3 --> N26
-    N3 --> N17
-    N3 --> N21
-    N3 --> N20
-    N3 --> N1
-    N3 --> N0
-    N3 --> N18
-    N3 --> N8
-    N7 --> N23
-    N7 --> N10
-    N7 --> N9
-    N7 --> N24
-    N7 --> N19
-    N7 --> N15
-    N7 --> N13
-    N7 --> N14
-    N7 --> N12
-    N7 --> N2
-    N7 --> N29
-    N7 --> N11
+    N3[ParseResult]
+    N4[RepositoryIndexer.__init__]
+    N5[RepositoryIndexer._find_sou...]
+    N6[RepositoryIndexer._load_status]
+    N7[RepositoryIndexer._parse_si...]
+    N8[RepositoryIndexer._save_status]
+    N9[RepositoryIndexer.index]
+    N10[ThreadPoolExecutor]
+    N11[VectorStore]
+    N12[_find_source_files]
+    N13[_load_status]
+    N14[_save_status]
+    N15[add_chunks]
+    N16[as_completed]
+    N17[chunk_file]
+    N18[create_or_update_table]
+    N19[delete_chunks_by_file]
+    N20[get_config]
+    N21[get_embedding_provider]
+    N22[get_file_info]
+    N23[get_vector_db_path]
+    N24[get_wiki_path]
+    N25[mkdir]
+    N26[progress_callback]
+    N27[resolve]
+    N28[result]
+    N29[submit]
     N4 --> N27
-    N4 --> N22
-    N4 --> N25
-    N4 --> N16
-    N4 --> N28
-    N5 --> N11
+    N4 --> N20
+    N4 --> N24
+    N4 --> N23
+    N4 --> N1
+    N4 --> N0
+    N4 --> N21
+    N4 --> N11
+    N7 --> N22
+    N7 --> N17
+    N7 --> N3
+    N9 --> N25
+    N9 --> N13
+    N9 --> N12
+    N9 --> N26
+    N9 --> N22
+    N9 --> N10
+    N9 --> N29
+    N9 --> N16
+    N9 --> N28
+    N9 --> N19
+    N9 --> N18
+    N9 --> N15
+    N9 --> N2
+    N9 --> N14
+    N6 --> N14
     classDef func fill:#e1f5fe
-    class N0,N1,N2,N8,N9,N10,N11,N12,N13,N14,N15,N16,N17,N18,N19,N20,N21,N22,N23,N24,N25,N26,N27,N28,N29 func
+    class N0,N1,N2,N3,N10,N11,N12,N13,N14,N15,N16,N17,N18,N19,N20,N21,N22,N23,N24,N25,N26,N27,N28,N29 func
     classDef method fill:#fff3e0
-    class N3,N4,N5,N6,N7 method
+    class N4,N5,N6,N7,N8,N9 method
 ```
 
 ## Used By
@@ -486,37 +627,45 @@ Functions and methods in this file and their callers:
 - **[`CodeChunker`](chunker.md)**: called by `RepositoryIndexer.__init__`
 - **[`CodeParser`](parser.md)**: called by `RepositoryIndexer.__init__`
 - **[`IndexStatus`](../models.md)**: called by `RepositoryIndexer.index`
+- **`ParseResult`**: called by `RepositoryIndexer._parse_single_file`
+- **`Path`**: called by `RepositoryIndexer._find_source_files`
+- **`ThreadPoolExecutor`**: called by `RepositoryIndexer.index`
 - **[`VectorStore`](vectorstore.md)**: called by `RepositoryIndexer.__init__`
 - **`_find_source_files`**: called by `RepositoryIndexer.index`
 - **`_load_status`**: called by `RepositoryIndexer.get_status`, `RepositoryIndexer.index`
 - **`_migrate_status`**: called by `RepositoryIndexer._load_status`
 - **`_needs_migration`**: called by `RepositoryIndexer._load_status`
 - **`_save_status`**: called by `RepositoryIndexer._load_status`, `RepositoryIndexer.index`
+- **`add`**: called by `RepositoryIndexer._find_source_files`
 - **`add_chunks`**: called by `RepositoryIndexer.index`
-- **`chunk_file`**: called by `RepositoryIndexer.index`
+- **`as_completed`**: called by `RepositoryIndexer.index`
+- **`chunk_file`**: called by `RepositoryIndexer._parse_single_file`
+- **`compile`**: called by `RepositoryIndexer._find_source_files`
 - **`create_or_update_table`**: called by `RepositoryIndexer.index`
 - **`delete_chunks_by_file`**: called by `RepositoryIndexer.index`
 - **`detect_language`**: called by `RepositoryIndexer._find_source_files`
 - **`dump`**: called by `RepositoryIndexer._save_status`
 - **`exists`**: called by `RepositoryIndexer._load_status`
-- **`fnmatch`**: called by `RepositoryIndexer._find_source_files`
 - **[`get_config`](../config.md)**: called by `RepositoryIndexer.__init__`
 - **`get_embedding_provider`**: called by `RepositoryIndexer.__init__`
-- **`get_file_info`**: called by `RepositoryIndexer.index`
+- **`get_file_info`**: called by `RepositoryIndexer._parse_single_file`, `RepositoryIndexer.index`
 - **`get_vector_db_path`**: called by `RepositoryIndexer.__init__`
 - **`get_wiki_path`**: called by `RepositoryIndexer.__init__`
-- **`is_file`**: called by `RepositoryIndexer._find_source_files`
 - **`load`**: called by `RepositoryIndexer._load_status`
+- **`match`**: called by `RepositoryIndexer._find_source_files`
 - **`mkdir`**: called by `RepositoryIndexer.index`
 - **`model_dump`**: called by `RepositoryIndexer._save_status`
 - **`model_validate`**: called by `RepositoryIndexer._load_status`
 - **[`progress_callback`](../handlers.md)**: called by `RepositoryIndexer.index`
 - **`relative_to`**: called by `RepositoryIndexer._find_source_files`
 - **`resolve`**: called by `RepositoryIndexer.__init__`
-- **`rglob`**: called by `RepositoryIndexer._find_source_files`
+- **`result`**: called by `RepositoryIndexer.index`
 - **`search`**: called by `RepositoryIndexer.search`
 - **`stat`**: called by `RepositoryIndexer._find_source_files`
+- **`submit`**: called by `RepositoryIndexer.index`
 - **`time`**: called by `RepositoryIndexer.index`
+- **`translate`**: called by `RepositoryIndexer._find_source_files`
+- **[`walk`](../generators/test_examples.md)**: called by `RepositoryIndexer._find_source_files`
 
 ## Usage Examples
 
@@ -603,76 +752,52 @@ assert migrated.schema_version == CURRENT_SCHEMA_VERSION
 
 | Entity | Type | Author | Date | Commit |
 |--------|------|--------|------|--------|
-| `RepositoryIndexer` | class | Brian Breidenbach | yesterday | `39e8c73` Replace generic except Exce... |
-| `index` | method | Brian Breidenbach | yesterday | `39e8c73` Replace generic except Exce... |
-| `_load_status` | method | Brian Breidenbach | yesterday | `39e8c73` Replace generic except Exce... |
+| `ParseResult` | class | Brian Breidenbach | today | `06f832d` Add parallel processing and... |
+| `RepositoryIndexer` | class | Brian Breidenbach | today | `06f832d` Add parallel processing and... |
+| `_parse_single_file` | method | Brian Breidenbach | today | `06f832d` Add parallel processing and... |
+| `index` | method | Brian Breidenbach | today | `06f832d` Add parallel processing and... |
+| `_find_source_files` | method | Brian Breidenbach | today | `06f832d` Add parallel processing and... |
+| `_load_status` | method | Brian Breidenbach | 2 days ago | `39e8c73` Replace generic except Exce... |
 | `get_status` | method | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
 | `search` | method | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
 | `_needs_migration` | function | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
 | `_migrate_status` | function | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
-| `__init__` | method | Brian Breidenbach | 5 days ago | `cdae76f` Initial commit: Local DeepW... |
-| `_find_source_files` | method | Brian Breidenbach | 5 days ago | `cdae76f` Initial commit: Local DeepW... |
-| `_save_status` | method | Brian Breidenbach | 5 days ago | `cdae76f` Initial commit: Local DeepW... |
+| `__init__` | method | Brian Breidenbach | 6 days ago | `cdae76f` Initial commit: Local DeepW... |
+| `_save_status` | method | Brian Breidenbach | 6 days ago | `cdae76f` Initial commit: Local DeepW... |
 
 ## Additional Source Code
 
 Source code for functions and methods not listed in the API Reference above.
 
-#### `_needs_migration`
+#### `_parse_single_file`
 
 <details>
-<summary>View Source (lines 26-35) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/indexer.py#L26-L35">GitHub</a></summary>
+<summary>View Source (lines 115-137) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/html.md)/src/local_deepwiki/core/indexer.py#L115-L137">GitHub</a></summary>
 
 ```python
-def _needs_migration(status: IndexStatus) -> bool:
-    """Check if an index status needs migration to the current schema version.
+def _parse_single_file(self, file_path: Path) -> ParseResult:
+        """Parse and chunk a single file (CPU-bound, runs in thread pool).
 
-    Args:
-        status: The loaded index status.
+        Args:
+            file_path: Path to the file to parse.
 
-    Returns:
-        True if the schema version is older than current and needs migration.
-    """
-    return status.schema_version < CURRENT_SCHEMA_VERSION
-```
-
-</details>
-
-
-#### `_migrate_status`
-
-<details>
-<summary>View Source (lines 38-65) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/indexer.py#L38-L65">GitHub</a></summary>
-
-```python
-def _migrate_status(status: IndexStatus) -> tuple[IndexStatus, bool]:
-    """Migrate an index status to the current schema version.
-
-    This function handles migrations between schema versions. Each migration
-    step should be idempotent and handle the transition from version N to N+1.
-
-    Args:
-        status: The index status to migrate.
-
-    Returns:
-        Tuple of (migrated status, requires_rebuild).
-        requires_rebuild is True if the vector store needs to be rebuilt.
-    """
-    requires_rebuild = False
-    current_version = status.schema_version
-
-    # Migration from version 1 to 2
-    # Version 2 added scalar indexes - the index data is compatible but
-    # indexes need to be created (handled by _ensure_scalar_indexes in VectorStore)
-    if current_version < 2:
-        logger.info("Migrating index status from schema version 1 to 2")
-        # No data migration needed - indexes are created on table open
-        current_version = 2
-
-    # Update schema version
-    status.schema_version = current_version
-
-    return status, requires_rebuild
+        Returns:
+            ParseResult with file info and chunks, or error message.
+        """
+        try:
+            file_info = self.parser.get_file_info(file_path, self.repo_path)
+            chunks = list(self.chunker.chunk_file(file_path, self.repo_path))
+            file_info.chunk_count = len(chunks)
+            return ParseResult(file_path=file_path, file_info=file_info, chunks=chunks)
+        except (OSError, ValueError, RuntimeError, UnicodeDecodeError) as e:
+            # Return error result instead of raising
+            file_info = self.parser.get_file_info(file_path, self.repo_path)
+            return ParseResult(
+                file_path=file_path,
+                file_info=file_info,
+                chunks=[],
+                error=str(e),
+            )
 ```
 
 </details>
@@ -681,45 +806,76 @@ def _migrate_status(status: IndexStatus) -> tuple[IndexStatus, bool]:
 #### `_find_source_files`
 
 <details>
-<summary>View Source (lines 271-308) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/indexer.py#L271-L308">GitHub</a></summary>
+<summary>View Source (lines 316-384) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/html.md)/src/local_deepwiki/core/indexer.py#L316-L384">GitHub</a></summary>
 
 ```python
 def _find_source_files(self) -> list[Path]:
         """Find all source files in the repository.
 
-        Yields:
-            Paths to source files.
+        Uses os.walk() with early directory filtering to skip excluded
+        directories entirely (e.g., node_modules, .git, vendor) instead
+        of traversing them and checking each file.
+
+        Returns:
+            List of paths to source files.
         """
+        import os
+        import re
+
         files = []
         exclude_patterns = self.config.parsing.exclude_patterns
         max_size = self.config.parsing.max_file_size
 
-        for file_path in self.repo_path.rglob("*"):
-            if not file_path.is_file():
-                continue
+        # Extract directory names to skip entirely (patterns like "node_modules/**")
+        skip_dirs = set()
+        file_patterns = []
+        for pattern in exclude_patterns:
+            # Patterns like "node_modules/**" or ".git/**" -> skip the directory
+            if pattern.endswith("/**"):
+                skip_dirs.add(pattern[:-3])
+            else:
+                file_patterns.append(pattern)
 
-            # Check against exclude patterns
-            rel_path = str(file_path.relative_to(self.repo_path))
-            if any(fnmatch.fnmatch(rel_path, pattern) for pattern in exclude_patterns):
-                continue
+        # Compile patterns for faster matching
+        compiled_patterns = [re.compile(fnmatch.translate(p)) for p in file_patterns]
 
-            # Check file size
-            try:
-                if file_path.stat().st_size > max_size:
+        for root, dirs, filenames in os.walk(self.repo_path):
+            root_path = Path(root)
+            rel_root = root_path.relative_to(self.repo_path)
+
+            # Early directory filtering - modify dirs in-place to skip subdirs
+            dirs[:] = [
+                d for d in dirs
+                if d not in skip_dirs
+                and str(rel_root / d) not in skip_dirs
+                and not d.startswith(".")  # Skip hidden directories
+            ]
+
+            for filename in filenames:
+                file_path = root_path / filename
+                rel_path = str(file_path.relative_to(self.repo_path))
+
+                # Check against compiled file patterns
+                if any(p.match(rel_path) for p in compiled_patterns):
                     continue
-            except OSError:
-                continue
 
-            # Check if language is supported
-            language = self.parser.detect_language(file_path)
-            if language is None:
-                continue
+                # Check file size
+                try:
+                    if file_path.stat().st_size > max_size:
+                        continue
+                except OSError:
+                    continue
 
-            # Check if language is in configured list
-            if language.value not in self.config.parsing.languages:
-                continue
+                # Check if language is supported
+                language = self.parser.detect_language(file_path)
+                if language is None:
+                    continue
 
-            files.append(file_path)
+                # Check if language is in configured list
+                if language.value not in self.config.parsing.languages:
+                    continue
+
+                files.append(file_path)
 
         return files
 ```
@@ -730,7 +886,7 @@ def _find_source_files(self) -> list[Path]:
 #### `_load_status`
 
 <details>
-<summary>View Source (lines 310-344) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/indexer.py#L310-L344">GitHub</a></summary>
+<summary>View Source (lines 386-420) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/html.md)/src/local_deepwiki/core/indexer.py#L386-L420">GitHub</a></summary>
 
 ```python
 def _load_status(self) -> tuple[IndexStatus | None, bool]:
@@ -776,7 +932,7 @@ def _load_status(self) -> tuple[IndexStatus | None, bool]:
 #### `_save_status`
 
 <details>
-<summary>View Source (lines 346-354) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/indexer.py#L346-L354">GitHub</a></summary>
+<summary>View Source (lines 422-430) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/html.md)/src/local_deepwiki/core/indexer.py#L422-L430">GitHub</a></summary>
 
 ```python
 def _save_status(self, status: IndexStatus) -> None:
@@ -794,4 +950,4 @@ def _save_status(self, status: IndexStatus) -> None:
 
 ## Relevant Source Files
 
-- `src/local_deepwiki/core/indexer.py:68-396`
+- `src/local_deepwiki/core/indexer.py:23-29`

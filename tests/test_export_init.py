@@ -2,10 +2,23 @@
 
 import pytest
 
+# Check if WeasyPrint is available (requires native libraries like libgobject)
+try:
+    from weasyprint import HTML  # noqa: F401
+    WEASYPRINT_AVAILABLE = True
+except (ImportError, OSError):
+    WEASYPRINT_AVAILABLE = False
+
+weasyprint_required = pytest.mark.skipif(
+    not WEASYPRINT_AVAILABLE,
+    reason="WeasyPrint requires native libraries (libgobject, etc.)"
+)
+
 
 class TestExportLazyImports:
     """Tests for lazy import functionality in export/__init__.py."""
 
+    @weasyprint_required
     def test_lazy_import_pdf_exporter(self):
         """Test lazy import of PdfExporter."""
         from local_deepwiki import export
@@ -15,6 +28,7 @@ class TestExportLazyImports:
         exporter_class = export.PdfExporter
         assert exporter_class is not None
 
+    @weasyprint_required
     def test_lazy_import_export_to_pdf(self):
         """Test lazy import of export_to_pdf."""
         from local_deepwiki import export
@@ -23,6 +37,7 @@ class TestExportLazyImports:
         func = export.export_to_pdf
         assert callable(func)
 
+    @weasyprint_required
     def test_lazy_import_is_mmdc_available(self):
         """Test lazy import of is_mmdc_available."""
         from local_deepwiki import export
@@ -31,6 +46,7 @@ class TestExportLazyImports:
         func = export.is_mmdc_available
         assert callable(func)
 
+    @weasyprint_required
     def test_lazy_import_render_mermaid_to_png(self):
         """Test lazy import of render_mermaid_to_png."""
         from local_deepwiki import export
@@ -39,6 +55,7 @@ class TestExportLazyImports:
         func = export.render_mermaid_to_png
         assert callable(func)
 
+    @weasyprint_required
     def test_lazy_import_render_mermaid_to_svg(self):
         """Test lazy import of render_mermaid_to_svg."""
         from local_deepwiki import export

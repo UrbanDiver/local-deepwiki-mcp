@@ -1,96 +1,138 @@
-# System Overview
+# Architecture Documentation
 
-The system is a documentation generation tool that processes code repositories to create wikis and diagrams. It supports multiple LLM providers (Ollama, Anthropic, OpenAI) and embedding providers (local, OpenAI). The system parses code files to extract class information, inheritance relationships, and function signatures. It generates documentation in markdown format and supports features like incremental updates, caching, and cross-referencing.
+## System Overview
 
-# Key Components
+The system is designed to manage and generate various components related to codebase documentation, configuration management, and API testing. The primary functionalities include parsing code files, generating module documentation, handling LLM (Large [Language](files/src/local_deepwiki/models.md) Model) providers, and managing inheritance diagrams.
 
-## LLMConfig
-The [LLMConfig](files/src/local_deepwiki/config.md) class holds configuration for LLM providers including Ollama, Anthropic, and OpenAI. It manages provider selection and specific configurations for each provider type.
+## Key Components
 
-## ClassNode
-The [ClassNode](files/src/local_deepwiki/generators/inheritance.md) class represents a class in the inheritance tree. It stores class metadata including name, file path, parent classes, child classes, abstract status, and docstring.
+1. **[LLMConfig](files/src/local_deepwiki/config.md)**
+   - Manages the configuration for different Large [Language](files/src/local_deepwiki/models.md) Models such as Ollama, Anthropic, and OpenAI. It uses Pydantic's BaseModel to enforce type safety and provide default configurations.
 
-## OllamaProvider
-The [OllamaProvider](files/src/local_deepwiki/providers/llm/ollama.md) class implements the [LLMProvider](files/src/local_deepwiki/providers/base.md) interface for Ollama-based LLMs. It handles health checks, generation, and streaming responses from Ollama models.
+2. **[OllamaProvider](files/src/local_deepwiki/providers/llm/ollama.md)**
+   - A specific implementation of an LLM provider that interacts with the Ollama model. It includes methods like `check_health`, `generate`, and `generate_stream`.
 
-## AnthropicProvider
-The [AnthropicProvider](files/src/local_deepwiki/providers/llm/anthropic.md) class implements the [LLMProvider](files/src/local_deepwiki/providers/base.md) interface for Anthropic-based LLMs. It manages generation and streaming responses from Anthropic models.
+3. **[ClassNode](files/src/local_deepwiki/generators/inheritance.md)**
+   - Represents a class in the inheritance tree, holding information such as the class name, file path, parents, children, whether it is abstract, and its docstring.
 
-## EmbeddingConfig
-The [EmbeddingConfig](files/src/local_deepwiki/config.md) class holds configuration for embedding providers including local and OpenAI options. It manages provider selection and specific configurations for each provider type.
+4. **TestMain** and **TestMainCli**
+   - Test classes for the [main](files/src/local_deepwiki/export/html.md) application logic, covering scenarios like non-existent paths, running initial indices, handling full rebuilds, and CLI-specific functionalities like custom wiki paths and export options.
 
-## TestGetLogger
-The TestGetLogger class contains tests for the [get_logger](files/src/local_deepwiki/logging.md) function, which handles logger creation with proper package prefixing.
+5. **[EmbeddingConfig](files/src/local_deepwiki/config.md)**
+   - Manages configurations for embedding providers, similar to [LLMConfig](files/src/local_deepwiki/config.md), with support for local and OpenAI embeddings.
 
-## TestMain
-The TestMain class contains tests for the [main](files/src/local_deepwiki/export/pdf.md) application functionality, covering path validation, watcher behavior, and initial indexing.
+6. **TestGetLLMProvider** and **TestGetEmbeddingProvider**
+   - Test classes for factory functions that return specific provider instances based on configuration settings.
 
-## TestMainCli
-The TestMainCli class contains tests for the command-line interface, covering various argument combinations and error handling.
+7. **TestGenerateModuleDocs**
+   - Tests the generation of module documentation, ensuring modules are correctly indexed and documented from the source code.
 
-## TestGetParentClasses
-The TestGetParentClasses class contains tests for extracting parent classes from code files in multiple languages (Python, TypeScript, Java, etc.).
+8. **[ResearchCancelledError](files/src/local_deepwiki/core/deep_research.md)**
+   - An error class indicating that a research operation has been cancelled.
 
-## TestGetLLMProvider
-The TestGetLLMProvider class contains tests for the get_llm_provider factory function, ensuring correct provider instantiation based on configuration.
+## Data Flow
 
-## TestGetEmbeddingProvider
-The TestGetEmbeddingProvider class contains tests for the get_embedding_provider factory function, ensuring correct embedding provider instantiation based on configuration.
+1. **Configuration Management**: The system starts by loading configuration settings using [`LLMConfig`](files/src/local_deepwiki/config.md) and [`EmbeddingConfig`](files/src/local_deepwiki/config.md). These configurations dictate which LLM or embedding provider is used.
 
-## TestModuleToWikiPath
-The TestModuleToWikiPath class contains tests for converting module paths to wiki file paths.
+2. **[LLM Provider](files/src/local_deepwiki/providers/base.md) Initialization**: Based on the configuration, the appropriate LLM provider (e.g., [OllamaProvider](files/src/local_deepwiki/providers/llm/ollama.md)) is instantiated through the `get_llm_provider` function.
 
-## TestGenerateModuleDocs
-The TestGenerateModuleDocs class contains tests for module documentation generation, covering caching, filtering, and status management.
+3. **Code Parsing**: The system parses code files to extract class information and inheritance relationships using classes like [`ClassNode`](files/src/local_deepwiki/generators/inheritance.md).
 
-# Data Flow
+4. **Inheritance Diagram Generation**: Using parsed data, the system generates inheritance diagrams that visualize class hierarchies.
 
-1. The system starts by parsing code files using a parser that identifies class declarations and inheritance relationships
-2. Class information is extracted and stored in [ClassNode](files/src/local_deepwiki/generators/inheritance.md) objects
-3. The inheritance tree is generated by analyzing parent-child relationships between classes
-4. LLM providers are instantiated based on configuration and used to generate documentation content
-5. Generated content is processed and saved as markdown files in the wiki structure
-6. The system maintains a cache to avoid regenerating unchanged documentation
-7. Module documentation is grouped by directory and generated into index files
+5. **Module Documentation Generation**: The system processes modules, generating documentation based on parsed source code. This includes indexing and handling of different file types and directories.
 
-# Component Diagram
+6. **Testing**: Various test classes (e.g., `TestMain`, `TestGetParentClasses`) validate the functionality of core components, ensuring that configurations are correctly applied and operations behave as expected.
+
+## Component Diagram
 
 ```mermaid
-graph TD
-    A[LLMConfig] --> B[OllamaProvider]
-    A[LLMConfig] --> C[AnthropicProvider]
-    A[LLMConfig] --> D[OpenAIProvider]
-    E[EmbeddingConfig] --> F[LocalEmbeddingProvider]
-    E[EmbeddingConfig] --> G[OpenAIEmbeddingProvider]
-    H[ClassNode] --> I[InheritanceTree]
-    J[get_llm_provider] --> B
-    J[get_llm_provider] --> C
-    J[get_llm_provider] --> D
-    K[get_embedding_provider] --> F
-    K[get_embedding_provider] --> G
-    L[TestGetLogger] --> M[get_logger]
-    N[TestMain] --> O[main]
-    P[TestMainCli] --> Q[main_cli]
-    R[TestGetParentClasses] --> S[get_parent_classes]
-    T[TestGetLLMProvider] --> J
-    U[TestGetEmbeddingProvider] --> K
-    V[TestModuleToWikiPath] --> W[_module_to_wiki_path]
-    X[TestGenerateModuleDocs] --> Y[generate_module_docs]
+classDiagram
+    class LLMConfig {
+        +provider: Literal["ollama", "anthropic", "openai"]
+        +ollama: OllamaConfig
+        +anthropic: AnthropicConfig
+        +openai: OpenAILLMConfig
+    }
+
+    class OllamaProvider {
+        +__init__(model: str, base_url: str)
+        +check_health()
+        +_ensure_healthy()
+        +generate(prompt: str)
+        +generate_stream(prompt: str)
+        +name() String
+    }
+
+    class ClassNode {
+        +name: str
+        +file_path: str
+        +parents: list[str]
+        +children: list[str]
+        +is_abstract: bool
+        +docstring: str | None
+    }
+
+    class TestMain {
+        +test_main_path_does_not_exist()
+        +test_main_path_is_not_directory()
+        +test_main_skip_initial_starts_watcher()
+        +test_main_with_options()
+        +test_main_runs_initial_index()
+        +test_main_with_full_rebuild()
+        +test_main_default_repo_path()
+        +test_main_watcher_stops_on_interrupt()
+    }
+
+    class TestMainCli {
+        +test_main_default_args()
+        +test_main_custom_wiki_path()
+        +test_main_with_output_option()
+        +test_main_with_separate_option()
+        +test_main_nonexistent_wiki_path()
+        +test_main_handles_export_exception()
+    }
+
+    class EmbeddingConfig {
+        +provider: Literal["local", "openai"]
+        +local: LocalEmbeddingConfig
+        +openai: OpenAIEmbeddingConfig
+    }
+
+    class TestGetLLMProvider {
+        +test_returns_ollama_provider()
+        +test_returns_anthropic_provider()
+    }
+
+    class TestGetEmbeddingProvider {
+        +test_returns_local_provider()
+        +test_returns_openai_provider()
+    }
+
+    class TestGenerateModuleDocs {
+        +generate_module_docs_from_source()
+        +index_modules()
+    }
+
+    LLMConfig --> OllamaProvider
+    ClassNode -->|parses from| TestMain
+    ClassNode -->|parses from| TestGetParentClasses
+    TestMain -->|uses| EmbeddingConfig
+    TestMainCli -->|uses| EmbeddingConfig
+    TestGetLLMProvider -->|uses| LLMConfig
+    TestGetEmbeddingProvider -->|uses| EmbeddingConfig
+    TestGenerateModuleDocs -->|generates from| ClassNode
 ```
 
-# Key Design Decisions
+## Key Design Decisions
 
-1. **Factory Pattern for Providers**: The system uses factory functions (get_llm_provider, get_embedding_provider) to instantiate different provider implementations based on configuration, enabling easy extension with new providers.
+1. **Configuration Management**: The use of Pydantic's `BaseModel` for configuration classes like [`LLMConfig`](files/src/local_deepwiki/config.md) and [`EmbeddingConfig`](files/src/local_deepwiki/config.md) ensures strong typing and easy management of default values.
 
-2. **Configuration-Driven Architecture**: All major system components are configured through Pydantic models ([LLMConfig](files/src/local_deepwiki/config.md), [EmbeddingConfig](files/src/local_deepwiki/config.md)), allowing for flexible and type-safe configuration management.
+2. **Factory Pattern**: The `get_llm_provider` function exemplifies the factory pattern, allowing for dynamic instantiation of LLM providers based on configuration settings. This design promotes flexibility and decouples provider creation from application logic.
 
-3. **Separation of Concerns**: The system separates concerns between parsing (code analysis), generation (LLM usage), and storage (wiki file generation), making components reusable and testable.
+3. **Modular Testing**: The system is highly modular with dedicated test classes for each major component (e.g., `TestMain`, `TestGetParentClasses`). This approach ensures that individual components can be tested in isolation, facilitating easier maintenance and development.
 
-4. **Incremental Updates**: The system maintains caching and status tracking to avoid regenerating unchanged documentation, improving performance for large codebases.
-
-5. **Multi-[Language](files/src/local_deepwiki/models.md) Support**: The parser and parent class extraction logic support multiple programming languages, making the system applicable to diverse code repositories.
-
-6. **Modular Documentation Generation**: The system generates documentation in a structured wiki format with proper directory organization and index files for easy navigation.
+4. **Inheritance Diagram Generation**: By parsing code files into [`ClassNode`](files/src/local_deepwiki/generators/inheritance.md) objects, the system efficiently constructs inheritance diagrams, providing a visual representation of class hierarchies within the codebase.
 
 ## Workflow Sequences
 
@@ -234,13 +276,13 @@ sequenceDiagram
 
 The following source files were used to generate this documentation:
 
-- `tests/test_provider_factories.py:21-99`
 - `tests/test_parser.py:24-123`
+- `tests/test_provider_factories.py:21-99`
 - `tests/test_retry.py:8-144`
 - `tests/test_ollama_health.py:16-19`
-- `tests/test_server_handlers.py:15-75`
 - `tests/test_chunker.py:13-428`
 - `tests/test_changelog.py:18-96`
+- `tests/test_server_handlers.py:15-75`
 - `tests/test_coverage.py:13-50`
 - `tests/test_vectorstore.py:9-28`
 - `tests/test_wiki_coverage.py:50-120`

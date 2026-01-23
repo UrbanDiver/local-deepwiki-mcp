@@ -793,6 +793,14 @@ assert result is None
 
 - `src/local_deepwiki/generators/wiki_pages.py:20-192`
 
+ PROTECTED0 
+
+- `src/local_deepwiki/generators/wiki_pages.py:20-192`
+
+ PROTECTED0 
+
+- `src/local_deepwiki/generators/wiki_pages.py:20-192`
+
 ## Relevant Source Files
 
 - `src/local_deepwiki/generators/wiki_pages.py:20-192`
