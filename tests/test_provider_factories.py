@@ -176,7 +176,7 @@ class TestGetEmbeddingProvider:
     """Tests for get_embedding_provider factory function."""
 
     def test_returns_local_provider(self):
-        """Test that local provider is returned when configured."""
+        """Test that local provider is returned when configured (without cache)."""
         from local_deepwiki.providers.embeddings import get_embedding_provider
         from local_deepwiki.providers.embeddings.local import LocalEmbeddingProvider
 
@@ -185,14 +185,15 @@ class TestGetEmbeddingProvider:
             local=LocalEmbeddingConfig(model="all-MiniLM-L6-v2"),
         )
 
-        provider = get_embedding_provider(config)
+        # Disable cache to test the base provider
+        provider = get_embedding_provider(config, enable_cache=False)
 
         assert isinstance(provider, LocalEmbeddingProvider)
         assert provider.name == "local:all-MiniLM-L6-v2"
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
     def test_returns_openai_provider(self):
-        """Test that openai provider is returned when configured."""
+        """Test that openai provider is returned when configured (without cache)."""
         from local_deepwiki.providers.embeddings import get_embedding_provider
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
 
@@ -201,7 +202,8 @@ class TestGetEmbeddingProvider:
             openai=OpenAIEmbeddingConfig(model="text-embedding-3-small"),
         )
 
-        provider = get_embedding_provider(config)
+        # Disable cache to test the base provider
+        provider = get_embedding_provider(config, enable_cache=False)
 
         assert isinstance(provider, OpenAIEmbeddingProvider)
         assert provider.name == "openai:text-embedding-3-small"
@@ -215,10 +217,10 @@ class TestGetEmbeddingProvider:
         object.__setattr__(config, "provider", "unknown")
 
         with pytest.raises(ValueError, match="Unknown embedding provider: unknown"):
-            get_embedding_provider(config)
+            get_embedding_provider(config, enable_cache=False)
 
     def test_uses_global_config_when_none_provided(self):
-        """Test that global config is used when no config provided."""
+        """Test that global config is used when no config provided (without cache)."""
         from local_deepwiki.providers.embeddings import get_embedding_provider
         from local_deepwiki.providers.embeddings.local import LocalEmbeddingProvider
 
@@ -230,10 +232,30 @@ class TestGetEmbeddingProvider:
         )
 
         with patch("local_deepwiki.providers.embeddings.get_config", return_value=mock_config):
-            provider = get_embedding_provider()
+            # Disable cache to test the base provider
+            provider = get_embedding_provider(enable_cache=False)
 
         assert isinstance(provider, LocalEmbeddingProvider)
         assert provider.name == "local:test-model"
+
+    def test_returns_cached_provider_by_default(self, tmp_path):
+        """Test that cached provider is returned when cache is enabled (default)."""
+        from local_deepwiki.config import Config, config_context
+        from local_deepwiki.providers.embeddings import get_embedding_provider
+        from local_deepwiki.providers.embeddings.cache import CachedEmbeddingProvider
+
+        config = EmbeddingConfig(
+            provider="local",
+            local=LocalEmbeddingConfig(model="all-MiniLM-L6-v2"),
+        )
+
+        # Use config context to enable caching
+        global_config = Config()
+        with config_context(global_config):
+            provider = get_embedding_provider(config, cache_dir=tmp_path)
+
+        assert isinstance(provider, CachedEmbeddingProvider)
+        assert "cached:" in provider.name
 
 
 class TestProviderExports:
@@ -255,3 +277,5 @@ class TestProviderExports:
 
         assert hasattr(embeddings, "get_embedding_provider")
         assert hasattr(embeddings, "EmbeddingProvider")
+        assert hasattr(embeddings, "CachedEmbeddingProvider")
+        assert hasattr(embeddings, "EmbeddingCacheConfig")

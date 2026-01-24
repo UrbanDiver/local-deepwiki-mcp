@@ -90,6 +90,14 @@ class TestConfig:
         assert config.wiki.context_search_limit == 50
         assert config.wiki.fallback_search_limit == 30
 
+    def test_embedding_cache_config(self):
+        """Test embedding cache configuration."""
+        config = Config()
+
+        assert config.embedding_cache.enabled is True
+        assert config.embedding_cache.ttl_seconds == 604800  # 7 days
+        assert config.embedding_cache.max_entries == 100000
+
     def test_deep_research_config(self):
         """Test deep research configuration."""
         config = Config()

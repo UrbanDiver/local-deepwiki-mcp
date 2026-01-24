@@ -1,7 +1,7 @@
 """Anthropic LLM provider."""
 
 import os
-from typing import AsyncIterator
+from typing import Any, AsyncIterator
 
 from anthropic import AsyncAnthropic
 
@@ -24,6 +24,35 @@ class AnthropicProvider(LLMProvider):
         self._model = model
         self._client = AsyncAnthropic(api_key=api_key or os.environ.get("ANTHROPIC_API_KEY"))
 
+    def _build_kwargs(
+        self,
+        prompt: str,
+        system_prompt: str | None,
+        max_tokens: int,
+        temperature: float,
+    ) -> dict[str, Any]:
+        """Build kwargs for Anthropic API calls.
+
+        Args:
+            prompt: The user prompt.
+            system_prompt: Optional system prompt.
+            max_tokens: Maximum tokens to generate.
+            temperature: Sampling temperature.
+
+        Returns:
+            Dict of kwargs for messages.create/stream.
+        """
+        kwargs: dict[str, Any] = {
+            "model": self._model,
+            "max_tokens": max_tokens,
+            "messages": [{"role": "user", "content": prompt}],
+        }
+        if system_prompt:
+            kwargs["system"] = system_prompt
+        if temperature > 0:
+            kwargs["temperature"] = temperature
+        return kwargs
+
     @with_retry(max_attempts=3, base_delay=1.0, max_delay=30.0)
     async def generate(
         self,
@@ -45,35 +74,8 @@ class AnthropicProvider(LLMProvider):
         """
         logger.debug(f"Generating with Anthropic model {self._model}, prompt length: {len(prompt)}")
 
-        # Use explicit arguments to satisfy type checker
-        if system_prompt and temperature > 0:
-            response = await self._client.messages.create(
-                model=self._model,
-                max_tokens=max_tokens,
-                messages=[{"role": "user", "content": prompt}],
-                system=system_prompt,
-                temperature=temperature,
-            )
-        elif system_prompt:
-            response = await self._client.messages.create(
-                model=self._model,
-                max_tokens=max_tokens,
-                messages=[{"role": "user", "content": prompt}],
-                system=system_prompt,
-            )
-        elif temperature > 0:
-            response = await self._client.messages.create(
-                model=self._model,
-                max_tokens=max_tokens,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=temperature,
-            )
-        else:
-            response = await self._client.messages.create(
-                model=self._model,
-                max_tokens=max_tokens,
-                messages=[{"role": "user", "content": prompt}],
-            )
+        kwargs = self._build_kwargs(prompt, system_prompt, max_tokens, temperature)
+        response = await self._client.messages.create(**kwargs)
 
         # Get text from the first content block (should be TextBlock)
         first_block = response.content[0]
@@ -100,43 +102,10 @@ class AnthropicProvider(LLMProvider):
         Yields:
             Generated text chunks.
         """
-        # Use explicit arguments to satisfy type checker
-        if system_prompt and temperature > 0:
-            async with self._client.messages.stream(
-                model=self._model,
-                max_tokens=max_tokens,
-                messages=[{"role": "user", "content": prompt}],
-                system=system_prompt,
-                temperature=temperature,
-            ) as stream:
-                async for text in stream.text_stream:
-                    yield text
-        elif system_prompt:
-            async with self._client.messages.stream(
-                model=self._model,
-                max_tokens=max_tokens,
-                messages=[{"role": "user", "content": prompt}],
-                system=system_prompt,
-            ) as stream:
-                async for text in stream.text_stream:
-                    yield text
-        elif temperature > 0:
-            async with self._client.messages.stream(
-                model=self._model,
-                max_tokens=max_tokens,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=temperature,
-            ) as stream:
-                async for text in stream.text_stream:
-                    yield text
-        else:
-            async with self._client.messages.stream(
-                model=self._model,
-                max_tokens=max_tokens,
-                messages=[{"role": "user", "content": prompt}],
-            ) as stream:
-                async for text in stream.text_stream:
-                    yield text
+        kwargs = self._build_kwargs(prompt, system_prompt, max_tokens, temperature)
+        async with self._client.messages.stream(**kwargs) as stream:
+            async for text in stream.text_stream:
+                yield text
 
     @property
     def name(self) -> str:
