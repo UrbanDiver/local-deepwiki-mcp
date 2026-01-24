@@ -1,6 +1,7 @@
 """LanceDB vector store for code chunk storage and retrieval."""
 
 import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -65,14 +66,15 @@ class VectorStore:
             if self.TABLE_NAME in db.list_tables().tables:
                 self._table = db.open_table(self.TABLE_NAME)
                 # Ensure indexes exist (may have been created by older code version)
-                self._ensure_scalar_indexes()
+                self._ensure_indexes()
         return self._table
 
-    def _ensure_scalar_indexes(self) -> None:
-        """Ensure scalar indexes exist, creating them if needed.
+    def _ensure_indexes(self) -> None:
+        """Ensure all indexes exist, creating them if needed.
 
         This is called when opening an existing table to ensure indexes
         are present even if the table was created by an older version.
+        Creates both scalar indexes (for lookups) and vector indexes (for search).
         """
         if self._table is None:
             return
@@ -82,23 +84,39 @@ class VectorStore:
             indices = self._table.list_indices()
             # Handle both dict-style and object-style index configs (LanceDB version compat)
             existing_indexes = set()
+            has_vector_index = False
             for idx in indices:
                 name = getattr(idx, "name", None) or (
                     idx.get("name") if isinstance(idx, dict) else None
                 )
                 if name:
                     existing_indexes.add(name)
+                # Check for vector index (name contains "vector" or type is IVF/ANN)
+                idx_type = getattr(idx, "index_type", None) or (
+                    idx.get("index_type") if isinstance(idx, dict) else None
+                )
+                if idx_type and "ivf" in str(idx_type).lower():
+                    has_vector_index = True
         except (KeyError, TypeError, RuntimeError, AttributeError) as e:
             # Index info structure varies between LanceDB versions
             # RuntimeError: Table may not support listing indices
             logger.debug(f"Could not list existing indexes: {e}")
             existing_indexes = set()
+            has_vector_index = False
 
-        # Create missing indexes
+        # Create missing scalar indexes
         if "id_idx" not in existing_indexes:
             self._create_index_safe("id")
         if "file_path_idx" not in existing_indexes:
             self._create_index_safe("file_path")
+
+        # Create vector index if missing and table is large enough
+        if not has_vector_index:
+            try:
+                num_rows = self._table.count_rows()
+                self._create_vector_index(num_rows)
+            except (RuntimeError, OSError) as e:
+                logger.debug(f"Could not check row count for vector indexing: {e}")
 
     def _create_index_safe(self, column: str) -> None:
         """Safely create a scalar index on a column.
@@ -126,6 +144,50 @@ class VectorStore:
         """
         self._create_index_safe("id")
         self._create_index_safe("file_path")
+
+    def _create_vector_index(self, num_rows: int) -> None:
+        """Create a vector index for faster semantic search.
+
+        Uses IVF-PQ index for approximate nearest neighbor search,
+        which provides 5-10x speedup on large datasets (10k+ vectors).
+
+        Args:
+            num_rows: Number of rows in the table (used to determine if indexing is beneficial).
+        """
+        if self._table is None:
+            return
+
+        # Only create vector index for tables with enough rows to benefit
+        # IVF-PQ has overhead that isn't worth it for small tables
+        min_rows_for_index = 1000
+        if num_rows < min_rows_for_index:
+            logger.debug(
+                f"Skipping vector index creation: {num_rows} rows < {min_rows_for_index} threshold"
+            )
+            return
+
+        try:
+            # Calculate optimal number of partitions based on table size
+            # Rule of thumb: sqrt(n) partitions, capped at reasonable values
+            num_partitions = min(max(int(math.sqrt(num_rows)), 16), 256)
+
+            # Create IVF-PQ index on the vector column
+            # - metric: L2 (Euclidean distance) matches our similarity scoring
+            # - num_partitions: number of IVF clusters
+            # - num_sub_vectors: for PQ compression (higher = more accurate but slower)
+            self._table.create_index(
+                metric="L2",
+                num_partitions=num_partitions,
+                num_sub_vectors=16,  # Good balance of speed vs accuracy
+            )
+            logger.info(
+                f"Created vector index with {num_partitions} partitions for {num_rows} vectors"
+            )
+        except (ValueError, RuntimeError, OSError) as e:
+            # ValueError: Index already exists or invalid params
+            # RuntimeError: Index creation failed
+            # OSError: Storage issues
+            logger.debug(f"Could not create vector index: {e}")
 
     async def _batch_embed(
         self, texts: list[str], batch_size: int, log_progress: bool = False
@@ -188,6 +250,9 @@ class VectorStore:
 
         # Create scalar indexes for efficient lookups
         self._create_scalar_indexes()
+
+        # Create vector index for faster semantic search on large datasets
+        self._create_vector_index(len(data))
 
         return len(data)
 

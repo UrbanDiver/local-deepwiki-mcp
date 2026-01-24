@@ -1,10 +1,62 @@
 """Tests for PDF export functionality."""
 
 import json
+import shutil
+import subprocess
+import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+# Check if WeasyPrint is available (requires native libraries like libgobject)
+# This must be done before importing the pdf module, which imports weasyprint at module level
+try:
+    from weasyprint import HTML as _HTML  # noqa: F401
+
+    WEASYPRINT_IMPORTABLE = True
+except (ImportError, OSError):
+    WEASYPRINT_IMPORTABLE = False
+
+# Skip entire module if weasyprint can't be imported
+if not WEASYPRINT_IMPORTABLE:
+    pytest.skip(
+        "WeasyPrint requires native libraries (libgobject, etc.)",
+        allow_module_level=True,
+    )
+
+
+def _check_weasyprint_functional() -> bool:
+    """Check if WeasyPrint can actually create PDFs.
+
+    WeasyPrint may import but fail at runtime if system libraries are incomplete.
+    """
+    try:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                "from weasyprint import HTML; HTML(string='<html></html>').write_pdf()",
+            ],
+            capture_output=True,
+            timeout=10,
+        )
+        return result.returncode == 0
+    except Exception:
+        return False
+
+
+# Lazy check for full functionality (including PDF generation)
+_WEASYPRINT_FUNCTIONAL: bool | None = None
+
+
+def weasyprint_functional() -> bool:
+    """Check if WeasyPrint can actually generate PDFs."""
+    global _WEASYPRINT_FUNCTIONAL
+    if _WEASYPRINT_FUNCTIONAL is None:
+        _WEASYPRINT_FUNCTIONAL = _check_weasyprint_functional()
+    return _WEASYPRINT_FUNCTIONAL
+
 
 from local_deepwiki.export.pdf import (
     PDF_HTML_TEMPLATE,
@@ -1101,3 +1153,370 @@ class TestExportToPdfEdgeCases:
         # Pass as string
         result = export_to_pdf(str(wiki_path))
         assert "Exported wiki to PDF" in result
+
+
+@pytest.mark.skipif(not weasyprint_functional(), reason="WeasyPrint not fully functional")
+class TestPdfExportIntegration:
+    """Integration tests that actually create PDF files.
+
+    These tests are skipped if WeasyPrint is not properly installed.
+    They verify that the PDF export functionality works end-to-end.
+    """
+
+    @pytest.fixture
+    def wiki_with_content(self, tmp_path: Path) -> Path:
+        """Create a wiki with various content types for testing."""
+        wiki_path = tmp_path / ".deepwiki"
+        wiki_path.mkdir()
+
+        # Index page with various markdown elements
+        (wiki_path / "index.md").write_text("""# Documentation Overview
+
+Welcome to the project documentation.
+
+## Features
+
+- Feature 1: Does something useful
+- Feature 2: Does something else
+
+## Quick Start
+
+```python
+from myproject import main
+main()
+```
+
+| Column A | Column B |
+|----------|----------|
+| Value 1  | Value 2  |
+""")
+
+        # Architecture page
+        (wiki_path / "architecture.md").write_text("""# Architecture
+
+This document describes the system architecture.
+
+## Components
+
+The system consists of several components:
+
+1. **Frontend**: User interface
+2. **Backend**: API server
+3. **Database**: Data storage
+
+> Note: This is an important architecture decision.
+""")
+
+        # Modules directory
+        modules_dir = wiki_path / "modules"
+        modules_dir.mkdir()
+
+        (modules_dir / "index.md").write_text("""# Modules
+
+Overview of all modules in the project.
+""")
+
+        (modules_dir / "core.md").write_text("""# Core Module
+
+The core module provides essential functionality.
+
+## Functions
+
+### `process_data(data: dict) -> dict`
+
+Processes input data and returns results.
+
+```python
+def process_data(data: dict) -> dict:
+    return {"processed": True, **data}
+```
+""")
+
+        # TOC for ordering
+        toc = {
+            "entries": [
+                {"number": "1", "title": "Overview", "path": "index.md"},
+                {"number": "2", "title": "Architecture", "path": "architecture.md"},
+                {
+                    "number": "3",
+                    "title": "Modules",
+                    "path": "modules/index.md",
+                    "children": [
+                        {"number": "3.1", "title": "Core Module", "path": "modules/core.md"}
+                    ],
+                },
+            ]
+        }
+        (wiki_path / "toc.json").write_text(json.dumps(toc))
+
+        return wiki_path
+
+    def test_export_single_creates_valid_pdf(self, wiki_with_content: Path, tmp_path: Path):
+        """Test that export_single creates a valid PDF file."""
+        output_path = tmp_path / "output.pdf"
+
+        exporter = PdfExporter(wiki_with_content, output_path)
+        result = exporter.export_single()
+
+        # File should exist
+        assert result.exists(), f"PDF file was not created at {result}"
+
+        # File should have content
+        file_size = result.stat().st_size
+        assert file_size > 0, "PDF file is empty"
+
+        # File should be a valid PDF (check magic bytes)
+        with open(result, "rb") as f:
+            magic_bytes = f.read(8)
+            assert magic_bytes[:5] == b"%PDF-", f"Invalid PDF magic bytes: {magic_bytes!r}"
+
+        # PDF should be reasonably sized (at least 1KB for this content)
+        assert file_size > 1024, f"PDF seems too small: {file_size} bytes"
+
+    def test_export_separate_creates_multiple_pdfs(self, wiki_with_content: Path, tmp_path: Path):
+        """Test that export_separate creates valid PDF files for each page."""
+        output_dir = tmp_path / "pdfs"
+
+        exporter = PdfExporter(wiki_with_content, output_dir)
+        results = exporter.export_separate()
+
+        # Should create 4 PDFs (index, architecture, modules/index, modules/core)
+        assert len(results) == 4, f"Expected 4 PDFs, got {len(results)}"
+
+        # All files should exist and be valid PDFs
+        for pdf_path in results:
+            assert pdf_path.exists(), f"PDF not created: {pdf_path}"
+            assert pdf_path.stat().st_size > 0, f"PDF is empty: {pdf_path}"
+
+            with open(pdf_path, "rb") as f:
+                magic_bytes = f.read(5)
+                assert magic_bytes == b"%PDF-", f"Invalid PDF at {pdf_path}"
+
+    def test_export_to_pdf_function_creates_pdf(self, wiki_with_content: Path, tmp_path: Path):
+        """Test the convenience function creates a valid PDF."""
+        output_path = tmp_path / "wiki.pdf"
+
+        result_msg = export_to_pdf(wiki_with_content, output_path)
+
+        assert "Exported wiki to PDF" in result_msg
+        assert output_path.exists()
+        assert output_path.stat().st_size > 1024
+
+        # Verify PDF magic bytes
+        with open(output_path, "rb") as f:
+            assert f.read(5) == b"%PDF-"
+
+    def test_pdf_contains_expected_content(self, wiki_with_content: Path, tmp_path: Path):
+        """Test that the PDF contains expected text content.
+
+        We can't easily extract text from PDF, but we can verify the HTML
+        generation includes expected content before PDF conversion.
+        """
+        output_path = tmp_path / "output.pdf"
+        exporter = PdfExporter(wiki_with_content, output_path)
+
+        # Load TOC
+        toc_path = wiki_with_content / "toc.json"
+        toc_data = json.loads(toc_path.read_text())
+        exporter.toc_entries = toc_data.get("entries", [])
+
+        pages = exporter._collect_pages_in_order()
+        html = exporter._build_combined_html(pages)
+
+        # Check that key content is in the HTML
+        assert "Documentation Overview" in html
+        assert "Architecture" in html
+        assert "Core Module" in html
+        assert "process_data" in html
+        assert "<table>" in html
+        assert "<code" in html
+
+    def test_pdf_with_special_characters(self, tmp_path: Path):
+        """Test PDF generation with special characters in content."""
+        wiki_path = tmp_path / ".deepwiki"
+        wiki_path.mkdir()
+
+        # Content with various special characters
+        (wiki_path / "index.md").write_text("""# Special Characters Test
+
+## Unicode Characters
+
+- Arrows: → ← ↑ ↓
+- Greek: α β γ δ
+- Math: ∑ ∫ √ ∞
+- Emoji: 🚀 📝 ✅
+
+## Code with Special Chars
+
+```python
+def greet(name: str) -> str:
+    return f"Hello, {name}! 👋"
+```
+
+## Quotes and Symbols
+
+"Double quotes" and 'single quotes'
+
+Copyright © 2024 — All rights reserved.
+""")
+        (wiki_path / "toc.json").write_text('{"entries": []}')
+
+        output_path = tmp_path / "special.pdf"
+        exporter = PdfExporter(wiki_path, output_path)
+        result = exporter.export_single()
+
+        # Should create valid PDF even with special characters
+        assert result.exists()
+        assert result.stat().st_size > 0
+        with open(result, "rb") as f:
+            assert f.read(5) == b"%PDF-"
+
+    def test_pdf_with_long_content(self, tmp_path: Path):
+        """Test PDF generation with longer content (multiple pages)."""
+        wiki_path = tmp_path / ".deepwiki"
+        wiki_path.mkdir()
+
+        # Create content long enough to span multiple pages
+        long_content = "# Long Document\n\n"
+        for i in range(50):
+            long_content += f"## Section {i + 1}\n\n"
+            long_content += "Lorem ipsum dolor sit amet, consectetur adipiscing elit. " * 10
+            long_content += "\n\n"
+            long_content += "```python\n"
+            long_content += f"def function_{i}():\n"
+            long_content += f"    return {i}\n"
+            long_content += "```\n\n"
+
+        (wiki_path / "index.md").write_text(long_content)
+        (wiki_path / "toc.json").write_text('{"entries": []}')
+
+        output_path = tmp_path / "long.pdf"
+        exporter = PdfExporter(wiki_path, output_path)
+        result = exporter.export_single()
+
+        # Should create valid PDF
+        assert result.exists()
+
+        # Long content should produce larger PDF (at least 50KB)
+        file_size = result.stat().st_size
+        assert file_size > 50 * 1024, f"PDF seems too small for long content: {file_size} bytes"
+
+        with open(result, "rb") as f:
+            assert f.read(5) == b"%PDF-"
+
+    def test_pdf_with_empty_wiki(self, tmp_path: Path):
+        """Test PDF generation with minimal content."""
+        wiki_path = tmp_path / ".deepwiki"
+        wiki_path.mkdir()
+
+        (wiki_path / "index.md").write_text("# Empty\n")
+        (wiki_path / "toc.json").write_text('{"entries": []}')
+
+        output_path = tmp_path / "empty.pdf"
+        exporter = PdfExporter(wiki_path, output_path)
+        result = exporter.export_single()
+
+        # Should still create valid PDF
+        assert result.exists()
+        assert result.stat().st_size > 0
+        with open(result, "rb") as f:
+            assert f.read(5) == b"%PDF-"
+
+
+@pytest.mark.skipif(not shutil.which("mmdc"), reason="Mermaid CLI (mmdc) not installed")
+class TestMermaidCliIntegration:
+    """Integration tests for mermaid diagram rendering.
+
+    These tests require mmdc (mermaid-cli) to be installed.
+    They verify actual diagram rendering, not just mocking.
+    """
+
+    def test_render_mermaid_to_png_creates_image(self):
+        """Test that render_mermaid_to_png creates actual PNG bytes."""
+        diagram = """graph TD
+    A[Start] --> B[Process]
+    B --> C[End]"""
+
+        result = render_mermaid_to_png(diagram)
+
+        if result is not None:  # May be None if mmdc fails
+            # Should be PNG bytes
+            assert isinstance(result, bytes)
+            assert result[:8] == b"\x89PNG\r\n\x1a\n", "Not a valid PNG"
+            assert len(result) > 100, "PNG seems too small"
+
+    def test_render_mermaid_to_svg_creates_svg(self):
+        """Test that render_mermaid_to_svg creates actual SVG content."""
+        diagram = """sequenceDiagram
+    Alice->>Bob: Hello
+    Bob->>Alice: Hi"""
+
+        result = render_mermaid_to_svg(diagram)
+
+        if result is not None:  # May be None if mmdc fails
+            # Should be SVG string
+            assert isinstance(result, str)
+            assert "<svg" in result
+            assert "</svg>" in result
+
+    def test_render_markdown_with_mermaid_embeds_image(self, tmp_path: Path):
+        """Test that markdown with mermaid gets PNG embedded."""
+        md_content = """# Test
+
+```mermaid
+graph LR
+    A --> B
+```
+
+Some text after.
+"""
+        html = render_markdown_for_pdf(md_content, render_mermaid=True)
+
+        # If mmdc worked, should have embedded image
+        if "data:image/png;base64," in html:
+            assert "mermaid-diagram" in html
+            assert "mermaid-note" not in html
+        # If mmdc failed, should have fallback note
+        else:
+            assert "mermaid-note" in html
+
+    @pytest.mark.skipif(not weasyprint_functional(), reason="WeasyPrint not fully functional")
+    def test_pdf_with_rendered_mermaid_diagram(self, tmp_path: Path):
+        """Test full PDF export with actual mermaid diagram rendering."""
+        wiki_path = tmp_path / ".deepwiki"
+        wiki_path.mkdir()
+
+        (wiki_path / "index.md").write_text("""# Diagram Test
+
+Below is a flowchart:
+
+```mermaid
+graph TD
+    A[Input] --> B{Decision}
+    B -->|Yes| C[Process]
+    B -->|No| D[Skip]
+    C --> E[Output]
+    D --> E
+```
+
+And a sequence diagram:
+
+```mermaid
+sequenceDiagram
+    Client->>Server: Request
+    Server->>Database: Query
+    Database->>Server: Result
+    Server->>Client: Response
+```
+""")
+        (wiki_path / "toc.json").write_text('{"entries": []}')
+
+        output_path = tmp_path / "diagrams.pdf"
+        exporter = PdfExporter(wiki_path, output_path)
+        result = exporter.export_single()
+
+        # Should create valid PDF
+        assert result.exists()
+        assert result.stat().st_size > 1024
+        with open(result, "rb") as f:
+            assert f.read(5) == b"%PDF-"

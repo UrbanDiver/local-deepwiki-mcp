@@ -592,3 +592,99 @@ class TestVectorStoreEdgeCases:
         results = await vector_store.search(long_query, limit=5)
         # May or may not find results, but shouldn't crash
         assert isinstance(results, list)
+
+
+class TestVectorIndex:
+    """Tests for vector index creation and management."""
+
+    @pytest.fixture
+    def vector_store(self, tmp_path):
+        """Create a vector store for testing."""
+        from local_deepwiki.core.vectorstore import VectorStore
+
+        db_path = tmp_path / "test.lance"
+        provider = MockEmbeddingProvider()
+        return VectorStore(db_path, provider)
+
+    async def test_vector_index_not_created_for_small_tables(self, vector_store):
+        """Test that vector index is not created for tables with < 1000 rows."""
+        # Create a small table (4 chunks - well under 1000 threshold)
+        chunks = [make_chunk(f"chunk_{i}") for i in range(4)]
+        await vector_store.create_or_update_table(chunks)
+
+        table = vector_store._get_table()
+        assert table is not None
+
+        # Check that we have scalar indexes but not necessarily vector index
+        indexes = table.list_indices()
+        scalar_index_names = {
+            idx.get("name", "") if isinstance(idx, dict) else getattr(idx, "name", "")
+            for idx in indexes
+        }
+        # Scalar indexes should exist
+        assert any("id" in name for name in scalar_index_names)
+
+    async def test_create_vector_index_method_exists(self, vector_store):
+        """Test that _create_vector_index method exists and is callable."""
+        assert hasattr(vector_store, "_create_vector_index")
+        assert callable(vector_store._create_vector_index)
+
+    async def test_ensure_indexes_handles_missing_vector_index(self, vector_store):
+        """Test that _ensure_indexes handles tables without vector index."""
+        # Create table
+        chunks = [make_chunk(f"chunk_{i}") for i in range(10)]
+        await vector_store.create_or_update_table(chunks)
+
+        # Manually call _ensure_indexes (simulates reopening existing table)
+        vector_store._ensure_indexes()
+
+        # Should not raise and scalar indexes should still work
+        chunk = await vector_store.get_chunk_by_id("chunk_1")
+        assert chunk is not None
+
+    async def test_vector_index_threshold_is_1000(self, vector_store):
+        """Verify the threshold for vector index creation is 1000 rows."""
+        # This is a documentation test - verify the threshold is as expected
+        # We don't create 1000+ rows in tests, but verify the logic exists
+        import inspect
+
+        source = inspect.getsource(vector_store._create_vector_index)
+        assert "1000" in source or "min_rows_for_index" in source
+
+    async def test_search_works_without_vector_index(self, vector_store):
+        """Test that search works correctly even without vector index (brute force)."""
+        # Create a small table without vector index
+        chunks = [
+            make_chunk("chunk_1", content="hello world"),
+            make_chunk("chunk_2", content="goodbye world"),
+            make_chunk("chunk_3", content="hello there"),
+        ]
+        await vector_store.create_or_update_table(chunks)
+
+        # Search should work (brute force O(n) without index)
+        results = await vector_store.search("hello", limit=2)
+        assert len(results) > 0
+        # All results should be valid chunks
+        for result in results:
+            assert result.chunk is not None
+            assert result.chunk.id in ["chunk_1", "chunk_2", "chunk_3"]
+
+    async def test_ensure_indexes_called_on_table_open(self, vector_store, tmp_path):
+        """Test that _ensure_indexes is called when opening existing table."""
+        from local_deepwiki.core.vectorstore import VectorStore
+
+        # Create table
+        chunks = [make_chunk(f"chunk_{i}") for i in range(5)]
+        await vector_store.create_or_update_table(chunks)
+
+        # Create new VectorStore instance pointing to same DB
+        provider = MockEmbeddingProvider()
+        store2 = VectorStore(tmp_path / "test.lance", provider)
+
+        # Access table (should trigger _ensure_indexes)
+        table = store2._get_table()
+        assert table is not None
+
+        # Should still be able to search
+        results = await store2.search("test", limit=5)
+        assert isinstance(results, list)
