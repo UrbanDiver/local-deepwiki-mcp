@@ -382,3 +382,296 @@ class TestAddStaleBanners:
 
         assert len(result) == 1
         assert "⚠️" not in result[0].content
+
+    def test_does_not_add_banner_to_non_file_pages(self, tmp_path: Path) -> None:
+        """Test does not add banners to non-file pages (index, overview, etc.)."""
+        pages = [
+            WikiPage(
+                path="index.md",
+                title="Index",
+                content="# Index\n\nOverview content.",
+                generated_at=time.time(),
+            )
+        ]
+
+        wiki_status = WikiGenerationStatus(
+            repo_path=str(tmp_path),
+            generated_at=time.time(),
+            total_pages=1,
+            pages={
+                "index.md": WikiPageStatus(
+                    path="index.md",
+                    source_files=["test.py"],
+                    source_hashes={"test.py": "abc123"},
+                    content_hash="xyz789",
+                    generated_at=time.time() - 86400,  # Old
+                ),
+            },
+        )
+
+        result = add_stale_banners(pages, tmp_path, wiki_status)
+
+        assert len(result) == 1
+        # Should not have banner since path doesn't start with "files/"
+        assert "⚠️" not in result[0].content
+
+    def test_preserves_pages_without_status(self, tmp_path: Path) -> None:
+        """Test preserves pages that don't have status info."""
+        pages = [
+            WikiPage(
+                path="files/unknown.md",
+                title="Unknown",
+                content="# Unknown\n\nContent.",
+                generated_at=time.time(),
+            )
+        ]
+
+        wiki_status = WikiGenerationStatus(
+            repo_path=str(tmp_path),
+            generated_at=time.time(),
+            total_pages=0,
+            pages={},  # No status for this page
+        )
+
+        result = add_stale_banners(pages, tmp_path, wiki_status)
+
+        assert len(result) == 1
+        assert result[0].content == "# Unknown\n\nContent."
+
+
+class TestAnalyzeStalenessWithStalePages:
+    """Tests for analyze_staleness when stale pages exist."""
+
+    def test_detects_stale_pages(self, tmp_path: Path) -> None:
+        """Test detects and returns stale pages."""
+        # Initialize git repo with a recent commit
+        subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True)
+        subprocess.run(
+            ["git", "config", "user.email", "test@test.com"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "Test"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+        (tmp_path / "source.py").write_text("# source code")
+        subprocess.run(["git", "add", "."], cwd=tmp_path, capture_output=True)
+        subprocess.run(
+            ["git", "commit", "-m", "initial"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+
+        # Create wiki status with OLD generation time (before commit)
+        old_time = time.time() - 86400 * 5  # 5 days ago
+        wiki_status = WikiGenerationStatus(
+            repo_path=str(tmp_path),
+            generated_at=old_time,
+            total_pages=1,
+            pages={
+                "files/source.md": WikiPageStatus(
+                    path="files/source.md",
+                    source_files=["source.py"],
+                    source_hashes={"source.py": "abc123"},
+                    content_hash="xyz789",
+                    generated_at=old_time,
+                ),
+            },
+        )
+
+        result = analyze_staleness(tmp_path, wiki_status)
+
+        assert isinstance(result, StaleReport)
+        assert result.total_pages == 1
+        assert result.stale_pages == 1
+        assert len(result.stale_info) == 1
+        assert result.stale_info[0].page_path == "files/source.md"
+
+    def test_sorts_stale_pages_by_staleness(self, tmp_path: Path) -> None:
+        """Test that stale pages are sorted by days stale (most stale first)."""
+        # Initialize git repo
+        subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True)
+        subprocess.run(
+            ["git", "config", "user.email", "test@test.com"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "Test"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+        (tmp_path / "old.py").write_text("# old")
+        (tmp_path / "new.py").write_text("# new")
+        subprocess.run(["git", "add", "."], cwd=tmp_path, capture_output=True)
+        subprocess.run(
+            ["git", "commit", "-m", "initial"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+
+        # Create wiki status with different generation times
+        very_old_time = time.time() - 86400 * 10  # 10 days ago
+        slightly_old_time = time.time() - 86400 * 2  # 2 days ago
+
+        wiki_status = WikiGenerationStatus(
+            repo_path=str(tmp_path),
+            generated_at=time.time(),
+            total_pages=2,
+            pages={
+                "files/new.md": WikiPageStatus(
+                    path="files/new.md",
+                    source_files=["new.py"],
+                    source_hashes={"new.py": "abc"},
+                    content_hash="xyz",
+                    generated_at=slightly_old_time,
+                ),
+                "files/old.md": WikiPageStatus(
+                    path="files/old.md",
+                    source_files=["old.py"],
+                    source_hashes={"old.py": "def"},
+                    content_hash="uvw",
+                    generated_at=very_old_time,
+                ),
+            },
+        )
+
+        result = analyze_staleness(tmp_path, wiki_status)
+
+        assert result.stale_pages == 2
+        # Should be sorted by days_stale descending (most stale first)
+        assert result.stale_info[0].days_stale >= result.stale_info[1].days_stale
+
+
+class TestGenerateStaleReportPageWithStalePages:
+    """Tests for generate_stale_report_page when stale pages exist."""
+
+    def test_generates_report_with_stale_pages_table(self, tmp_path: Path) -> None:
+        """Test generates report with summary and stale pages table."""
+        # Initialize git repo with a recent commit
+        subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True)
+        subprocess.run(
+            ["git", "config", "user.email", "test@test.com"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "Test"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+        (tmp_path / "stale.py").write_text("# stale code")
+        subprocess.run(["git", "add", "."], cwd=tmp_path, capture_output=True)
+        subprocess.run(
+            ["git", "commit", "-m", "initial"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+
+        # Create wiki status with OLD generation time
+        old_time = time.time() - 86400 * 5  # 5 days ago
+        wiki_status = WikiGenerationStatus(
+            repo_path=str(tmp_path),
+            generated_at=old_time,
+            total_pages=2,
+            pages={
+                "files/stale.md": WikiPageStatus(
+                    path="files/stale.md",
+                    source_files=["stale.py"],
+                    source_hashes={"stale.py": "abc123"},
+                    content_hash="xyz789",
+                    generated_at=old_time,
+                ),
+                "files/fresh.md": WikiPageStatus(
+                    path="files/fresh.md",
+                    source_files=[],  # No source files = not stale
+                    source_hashes={},
+                    content_hash="def456",
+                    generated_at=time.time(),
+                ),
+            },
+        )
+
+        result = generate_stale_report_page(tmp_path, wiki_status)
+
+        assert isinstance(result, WikiPage)
+        assert result.path == "freshness.md"
+        # Should contain summary section
+        assert "## Summary" in result.content
+        assert "Total file pages" in result.content
+        assert "Potentially stale" in result.content
+        assert "Freshness" in result.content
+        # Should contain stale pages section
+        assert "Potentially Stale Documentation" in result.content
+        assert "Page | Days Stale" in result.content
+        # Should contain link to stale page
+        assert "stale" in result.content
+        # Should contain recommendations
+        assert "Recommendations" in result.content
+
+    def test_calculates_freshness_percentage(self, tmp_path: Path) -> None:
+        """Test calculates correct freshness percentage."""
+        # Initialize git repo
+        subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True)
+        subprocess.run(
+            ["git", "config", "user.email", "test@test.com"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "Test"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+        (tmp_path / "file1.py").write_text("# file1")
+        (tmp_path / "file2.py").write_text("# file2")
+        subprocess.run(["git", "add", "."], cwd=tmp_path, capture_output=True)
+        subprocess.run(
+            ["git", "commit", "-m", "initial"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+
+        old_time = time.time() - 86400 * 5
+        wiki_status = WikiGenerationStatus(
+            repo_path=str(tmp_path),
+            generated_at=time.time(),
+            total_pages=4,
+            pages={
+                "files/file1.md": WikiPageStatus(
+                    path="files/file1.md",
+                    source_files=["file1.py"],
+                    source_hashes={"file1.py": "abc"},
+                    content_hash="xyz",
+                    generated_at=old_time,  # Stale
+                ),
+                "files/file2.md": WikiPageStatus(
+                    path="files/file2.md",
+                    source_files=["file2.py"],
+                    source_hashes={"file2.py": "def"},
+                    content_hash="uvw",
+                    generated_at=old_time,  # Stale
+                ),
+                "files/fresh1.md": WikiPageStatus(
+                    path="files/fresh1.md",
+                    source_files=[],
+                    source_hashes={},
+                    content_hash="aaa",
+                    generated_at=time.time(),  # Fresh
+                ),
+                "files/fresh2.md": WikiPageStatus(
+                    path="files/fresh2.md",
+                    source_files=[],
+                    source_hashes={},
+                    content_hash="bbb",
+                    generated_at=time.time(),  # Fresh
+                ),
+            },
+        )
+
+        result = generate_stale_report_page(tmp_path, wiki_status)
+
+        # 2 fresh out of 4 = 50% freshness
+        assert "50%" in result.content
