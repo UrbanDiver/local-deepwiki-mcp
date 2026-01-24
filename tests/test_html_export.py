@@ -1,11 +1,14 @@
 """Tests for HTML export functionality."""
 
 import json
+import runpy
+import sys
 from pathlib import Path
+from unittest import mock
 
 import pytest
 
-from local_deepwiki.export.html import HtmlExporter, export_to_html, extract_title, render_markdown
+from local_deepwiki.export.html import HtmlExporter, export_to_html, extract_title, main, render_markdown
 
 
 class TestRenderMarkdown:
@@ -62,6 +65,20 @@ class TestExtractTitle:
         md_file = tmp_path / "my_test_file.md"
         md_file.write_text("Just some content without a title.")
         assert extract_title(md_file) == "My Test File"
+
+    def test_oserror_fallback_to_filename(self, tmp_path: Path):
+        """Test fallback to filename when OSError occurs (e.g., permission denied)."""
+        md_file = tmp_path / "unreadable_file.md"
+        # Create a file that doesn't exist to trigger OSError
+        non_existent = tmp_path / "does_not_exist.md"
+        assert extract_title(non_existent) == "Does Not Exist"
+
+    def test_unicode_decode_error_fallback(self, tmp_path: Path):
+        """Test fallback to filename when UnicodeDecodeError occurs."""
+        md_file = tmp_path / "binary_file.md"
+        # Write binary content that can't be decoded as UTF-8
+        md_file.write_bytes(b"\xff\xfe\x00\x01invalid utf-8 \x80\x81\x82")
+        assert extract_title(md_file) == "Binary File"
 
 
 class TestHtmlExporter:
@@ -236,3 +253,178 @@ class TestExportToHtml:
         assert "Exported" in result
         assert "pages" in result
         assert str(output_path) in result
+
+
+class TestBreadcrumbDeepNesting:
+    """Tests for deeply nested breadcrumb navigation."""
+
+    @pytest.fixture
+    def deep_wiki(self, tmp_path: Path) -> Path:
+        """Create a wiki with deeply nested structure (3+ levels)."""
+        wiki_path = tmp_path / ".deepwiki"
+        wiki_path.mkdir()
+
+        # Create index.md at root
+        (wiki_path / "index.md").write_text("# Root\n\nRoot page.")
+
+        # Create level1/level2/level3/deep.md (3 levels deep)
+        deep_path = wiki_path / "level1" / "level2" / "level3"
+        deep_path.mkdir(parents=True)
+        (deep_path / "deep.md").write_text("# Deep Page\n\nDeep content.")
+
+        # Create index files at intermediate levels
+        (wiki_path / "level1").mkdir(exist_ok=True)
+        (wiki_path / "level1" / "index.md").write_text("# Level 1\n\nLevel 1 page.")
+        (wiki_path / "level1" / "level2").mkdir(exist_ok=True)
+        (wiki_path / "level1" / "level2" / "index.md").write_text("# Level 2\n\nLevel 2 page.")
+
+        # Create toc.json
+        (wiki_path / "toc.json").write_text('{"entries": []}')
+
+        return wiki_path
+
+    def test_deeply_nested_breadcrumb_cumulative_path(self, deep_wiki: Path, tmp_path: Path):
+        """Test that deeply nested pages build cumulative paths correctly (covers line 835)."""
+        output_path = tmp_path / "html_output"
+        exporter = HtmlExporter(deep_wiki, output_path)
+        exporter.export()
+
+        # Check the deeply nested page has proper breadcrumb with cumulative path
+        deep_html = (output_path / "level1" / "level2" / "level3" / "deep.html").read_text()
+        assert "breadcrumb" in deep_html
+        assert "Home" in deep_html
+        # The breadcrumb uses titlecased directory names: Level1, Level2, Level3
+        assert "Level1" in deep_html
+        assert "Level2" in deep_html
+        assert "Level3" in deep_html
+
+
+class TestTocEntryWithoutPath:
+    """Tests for TOC entries without paths (grouping labels)."""
+
+    @pytest.fixture
+    def wiki_with_grouping_toc(self, tmp_path: Path) -> Path:
+        """Create a wiki with TOC entries that have no path (grouping labels)."""
+        wiki_path = tmp_path / ".deepwiki"
+        wiki_path.mkdir()
+
+        # Create some pages
+        (wiki_path / "index.md").write_text("# Home\n\nWelcome.")
+        (wiki_path / "page1.md").write_text("# Page 1\n\nContent.")
+        (wiki_path / "page2.md").write_text("# Page 2\n\nContent.")
+
+        # Create toc.json with a grouping entry that has no path
+        toc = {
+            "entries": [
+                {"number": "1", "title": "Home", "path": "index.md"},
+                {
+                    "number": "2",
+                    "title": "Section Group",  # No path - just a grouping label
+                    "children": [
+                        {"number": "2.1", "title": "Page 1", "path": "page1.md"},
+                        {"number": "2.2", "title": "Page 2", "path": "page2.md"},
+                    ],
+                },
+            ]
+        }
+        (wiki_path / "toc.json").write_text(json.dumps(toc))
+
+        return wiki_path
+
+    def test_toc_entry_without_path_renders_as_span(self, wiki_with_grouping_toc: Path, tmp_path: Path):
+        """Test that TOC entries without paths render as spans, not links (covers line 796)."""
+        output_path = tmp_path / "html_output"
+        exporter = HtmlExporter(wiki_with_grouping_toc, output_path)
+        exporter.export()
+
+        html = (output_path / "index.html").read_text()
+        # The grouping label should be rendered as a span, not a link
+        assert "Section Group" in html
+        # Should contain the toc-parent span structure for the grouping label
+        assert '<span class="toc-parent">' in html
+
+
+class TestMain:
+    """Tests for the main() CLI entry point."""
+
+    @pytest.fixture
+    def cli_wiki(self, tmp_path: Path) -> Path:
+        """Create a simple wiki for CLI testing."""
+        wiki_path = tmp_path / ".deepwiki"
+        wiki_path.mkdir()
+        (wiki_path / "index.md").write_text("# CLI Test\n\nHello from CLI.")
+        (wiki_path / "toc.json").write_text('{"entries": []}')
+        return wiki_path
+
+    def test_main_default_args(self, cli_wiki: Path, tmp_path: Path, capsys):
+        """Test main() with default arguments."""
+        # Change to the temp directory so .deepwiki is found
+        with mock.patch("sys.argv", ["html_export", str(cli_wiki)]):
+            result = main()
+
+        assert result == 0
+        captured = capsys.readouterr()
+        assert "Exported" in captured.out
+        assert "index.html" in captured.out
+
+    def test_main_with_output_arg(self, cli_wiki: Path, tmp_path: Path, capsys):
+        """Test main() with --output argument."""
+        output_path = tmp_path / "custom_output"
+        with mock.patch("sys.argv", ["html_export", str(cli_wiki), "--output", str(output_path)]):
+            result = main()
+
+        assert result == 0
+        assert output_path.exists()
+        captured = capsys.readouterr()
+        assert "Exported" in captured.out
+
+    def test_main_wiki_not_found(self, tmp_path: Path, capsys):
+        """Test main() when wiki path doesn't exist."""
+        non_existent = tmp_path / "non_existent_wiki"
+        with mock.patch("sys.argv", ["html_export", str(non_existent)]):
+            result = main()
+
+        assert result == 1
+        captured = capsys.readouterr()
+        assert "Error" in captured.out
+        assert "does not exist" in captured.out
+
+    def test_main_short_output_flag(self, cli_wiki: Path, tmp_path: Path, capsys):
+        """Test main() with -o short flag for output."""
+        output_path = tmp_path / "short_flag_output"
+        with mock.patch("sys.argv", ["html_export", str(cli_wiki), "-o", str(output_path)]):
+            result = main()
+
+        assert result == 0
+        assert output_path.exists()
+
+
+class TestMainEntryPoint:
+    """Test for the __main__ entry point."""
+
+    def test_main_module_entry_point(self, tmp_path: Path):
+        """Test that the module can be run as __main__."""
+        wiki_path = tmp_path / ".deepwiki"
+        wiki_path.mkdir()
+        (wiki_path / "index.md").write_text("# Test\n\nContent.")
+        (wiki_path / "toc.json").write_text('{"entries": []}')
+
+        # Test that main() can be called and returns an exit code
+        with mock.patch("sys.argv", ["html_export", str(wiki_path)]):
+            exit_code = main()
+            assert exit_code == 0
+
+    def test_module_run_as_main(self, tmp_path: Path):
+        """Test the if __name__ == '__main__' block (line 918)."""
+        wiki_path = tmp_path / ".deepwiki"
+        wiki_path.mkdir()
+        (wiki_path / "index.md").write_text("# Test\n\nContent.")
+        (wiki_path / "toc.json").write_text('{"entries": []}')
+
+        # Mock sys.argv and catch the SystemExit from exit()
+        with mock.patch.object(sys, "argv", ["html_export", str(wiki_path)]):
+            with pytest.raises(SystemExit) as exc_info:
+                # Run the module as __main__ - this will call exit(main())
+                runpy.run_module("local_deepwiki.export.html", run_name="__main__", alter_sys=True)
+            # exit(0) means successful execution
+            assert exc_info.value.code == 0

@@ -672,3 +672,1397 @@ class TestWikiGeneratorGenerate:
                                                                             "overview"
                                                                             in progress_calls[0][0].lower()
                                                                         )
+
+
+class TestIncrementalGeneration:
+    """Tests for incremental wiki generation (not full_rebuild).
+
+    These tests cover lines 236, 278, 294, 318-324, 433-448.
+    """
+
+    @pytest.fixture
+    def setup_generator(self, tmp_path):
+        """Create a WikiGenerator for incremental tests."""
+        with patch("local_deepwiki.generators.wiki.get_config") as mock_config:
+            config = MagicMock()
+            config.llm = MagicMock()
+            config.wiki = MagicMock()
+            config.wiki.import_search_limit = 100
+            config.get_prompts.return_value = MagicMock(wiki_system="System prompt")
+            mock_config.return_value = config
+
+            with patch("local_deepwiki.generators.wiki.get_cached_llm_provider") as mock_llm:
+                mock_llm.return_value = MagicMock()
+
+                from local_deepwiki.generators.wiki import WikiGenerator
+
+                mock_vector_store = MagicMock()
+                mock_vector_store._get_table.return_value = None
+                mock_vector_store.search = AsyncMock(return_value=[])
+                mock_vector_store.get_main_definition_lines.return_value = {}
+
+                generator = WikiGenerator(
+                    wiki_path=tmp_path,
+                    vector_store=mock_vector_store,
+                )
+
+                yield generator, tmp_path
+
+    async def test_incremental_loads_previous_status(self, setup_generator):
+        """Test incremental generation loads previous status (line 236)."""
+        generator, tmp_path = setup_generator
+
+        index_status = make_index_status(
+            repo_path=str(tmp_path),
+            files=[make_file_info(path="src/main.py", hash="same_hash")],
+        )
+
+        # Create existing index.md and architecture.md for caching
+        (tmp_path / "index.md").write_text("# Cached Overview")
+        (tmp_path / "architecture.md").write_text("# Cached Architecture")
+        (tmp_path / "dependencies.md").write_text("# Cached Dependencies")
+
+        # Mock status_manager.load_status to track the call
+        with patch.object(
+            generator.status_manager, "load_status", new_callable=AsyncMock
+        ) as mock_load:
+            mock_load.return_value = None  # No previous status initially
+
+            with patch("local_deepwiki.generators.wiki.generate_overview_page") as mock_overview:
+                mock_overview.return_value = WikiPage(
+                    path="index.md",
+                    title="Overview",
+                    content="# Overview",
+                    generated_at=time.time(),
+                )
+
+                with patch("local_deepwiki.generators.wiki.generate_architecture_page") as mock_arch:
+                    mock_arch.return_value = WikiPage(
+                        path="architecture.md",
+                        title="Architecture",
+                        content="# Architecture",
+                        generated_at=time.time(),
+                    )
+
+                    with patch(
+                        "local_deepwiki.generators.wiki.generate_module_docs", return_value=([], 0, 0)
+                    ):
+                        with patch(
+                            "local_deepwiki.generators.wiki.generate_file_docs", return_value=([], 0, 0)
+                        ):
+                            with patch(
+                                "local_deepwiki.generators.wiki.generate_dependencies_page"
+                            ) as mock_deps:
+                                mock_deps.return_value = (
+                                    WikiPage(
+                                        path="dependencies.md",
+                                        title="Dependencies",
+                                        content="# Dependencies",
+                                        generated_at=time.time(),
+                                    ),
+                                    [],
+                                )
+
+                                with patch(
+                                    "local_deepwiki.generators.wiki.generate_changelog_page",
+                                    return_value=None,
+                                ):
+                                    with patch(
+                                        "local_deepwiki.generators.wiki.generate_inheritance_page",
+                                        return_value=None,
+                                    ):
+                                        with patch(
+                                            "local_deepwiki.generators.wiki.generate_glossary_page",
+                                            return_value=None,
+                                        ):
+                                            with patch(
+                                                "local_deepwiki.generators.wiki.generate_coverage_page",
+                                                return_value=None,
+                                            ):
+                                                with patch(
+                                                    "local_deepwiki.generators.wiki.add_cross_links",
+                                                    side_effect=lambda p, _: p,
+                                                ):
+                                                    with patch(
+                                                        "local_deepwiki.generators.wiki.add_source_refs_sections",
+                                                        side_effect=lambda p, _, __: p,
+                                                    ):
+                                                        with patch(
+                                                            "local_deepwiki.generators.wiki.add_see_also_sections",
+                                                            side_effect=lambda p, _: p,
+                                                        ):
+                                                            with patch(
+                                                                "local_deepwiki.generators.wiki.write_full_search_index"
+                                                            ):
+                                                                with patch(
+                                                                    "local_deepwiki.generators.wiki.generate_toc",
+                                                                    return_value=[],
+                                                                ):
+                                                                    with patch(
+                                                                        "local_deepwiki.generators.wiki.write_toc"
+                                                                    ):
+                                                                        with patch(
+                                                                            "local_deepwiki.generators.wiki.get_cached_manifest"
+                                                                        ):
+                                                                            await generator.generate(
+                                                                                index_status=index_status,
+                                                                                full_rebuild=False,  # Incremental mode
+                                                                            )
+
+                                                                            # load_status should have been called for incremental
+                                                                            mock_load.assert_called_once()
+
+    async def test_incremental_skips_unchanged_pages(self, setup_generator):
+        """Test incremental generation skips unchanged pages (lines 278, 294, 318-324)."""
+        generator, tmp_path = setup_generator
+
+        index_status = make_index_status(
+            repo_path=str(tmp_path),
+            files=[make_file_info(path="src/main.py", hash="same_hash")],
+        )
+
+        # Create existing pages that will be cached
+        (tmp_path / "index.md").write_text("# Cached Overview\nContent here")
+        (tmp_path / "architecture.md").write_text("# Cached Architecture\nContent here")
+        (tmp_path / "dependencies.md").write_text("# Cached Dependencies")
+
+        # Set up previous status so pages are NOT regenerated
+        from local_deepwiki.models import WikiGenerationStatus, WikiPageStatus
+
+        prev_status = WikiGenerationStatus(
+            repo_path=str(tmp_path),
+            generated_at=time.time(),
+            total_pages=3,
+            pages={
+                "index.md": WikiPageStatus(
+                    path="index.md",
+                    source_files=["src/main.py"],
+                    source_hashes={"src/main.py": "same_hash"},
+                    content_hash="abc",
+                    generated_at=time.time(),
+                ),
+                "architecture.md": WikiPageStatus(
+                    path="architecture.md",
+                    source_files=["src/main.py"],
+                    source_hashes={"src/main.py": "same_hash"},
+                    content_hash="def",
+                    generated_at=time.time(),
+                ),
+                "dependencies.md": WikiPageStatus(
+                    path="dependencies.md",
+                    source_files=["src/main.py"],
+                    source_hashes={"src/main.py": "same_hash"},
+                    content_hash="ghi",
+                    generated_at=time.time(),
+                ),
+            },
+        )
+        generator.status_manager._previous_status = prev_status
+        generator.status_manager.file_hashes = {"src/main.py": "same_hash"}
+
+        # Mock generators - they should NOT be called for cached pages
+        with patch("local_deepwiki.generators.wiki.generate_overview_page") as mock_overview:
+            mock_overview.return_value = WikiPage(
+                path="index.md",
+                title="New Overview",
+                content="# New",
+                generated_at=time.time(),
+            )
+
+            with patch("local_deepwiki.generators.wiki.generate_architecture_page") as mock_arch:
+                mock_arch.return_value = WikiPage(
+                    path="architecture.md",
+                    title="New Arch",
+                    content="# New Arch",
+                    generated_at=time.time(),
+                )
+
+                with patch(
+                    "local_deepwiki.generators.wiki.generate_module_docs", return_value=([], 0, 0)
+                ):
+                    with patch(
+                        "local_deepwiki.generators.wiki.generate_file_docs", return_value=([], 0, 0)
+                    ):
+                        with patch(
+                            "local_deepwiki.generators.wiki.generate_dependencies_page"
+                        ) as mock_deps:
+                            mock_deps.return_value = (
+                                WikiPage(
+                                    path="dependencies.md",
+                                    title="New Deps",
+                                    content="# New Deps",
+                                    generated_at=time.time(),
+                                ),
+                                [],
+                            )
+
+                            with patch(
+                                "local_deepwiki.generators.wiki.generate_changelog_page",
+                                return_value=None,
+                            ):
+                                with patch(
+                                    "local_deepwiki.generators.wiki.generate_inheritance_page",
+                                    return_value=None,
+                                ):
+                                    with patch(
+                                        "local_deepwiki.generators.wiki.generate_glossary_page",
+                                        return_value=None,
+                                    ):
+                                        with patch(
+                                            "local_deepwiki.generators.wiki.generate_coverage_page",
+                                            return_value=None,
+                                        ):
+                                            with patch(
+                                                "local_deepwiki.generators.wiki.add_cross_links",
+                                                side_effect=lambda p, _: p,
+                                            ):
+                                                with patch(
+                                                    "local_deepwiki.generators.wiki.add_source_refs_sections",
+                                                    side_effect=lambda p, _, __: p,
+                                                ):
+                                                    with patch(
+                                                        "local_deepwiki.generators.wiki.add_see_also_sections",
+                                                        side_effect=lambda p, _: p,
+                                                    ):
+                                                        with patch(
+                                                            "local_deepwiki.generators.wiki.write_full_search_index"
+                                                        ):
+                                                            with patch(
+                                                                "local_deepwiki.generators.wiki.generate_toc",
+                                                                return_value=[],
+                                                            ):
+                                                                with patch(
+                                                                    "local_deepwiki.generators.wiki.write_toc"
+                                                                ):
+                                                                    with patch(
+                                                                        "local_deepwiki.generators.wiki.get_cached_manifest"
+                                                                    ):
+                                                                        result = await generator.generate(
+                                                                            index_status=index_status,
+                                                                            full_rebuild=False,
+                                                                        )
+
+                                                                        # Overview and architecture generators should NOT be called
+                                                                        # because pages are cached
+                                                                        assert mock_overview.call_count == 0
+                                                                        assert mock_arch.call_count == 0
+                                                                        # Dependencies also cached
+                                                                        assert mock_deps.call_count == 0
+
+    async def test_generate_or_load_page_loads_from_cache(self, setup_generator):
+        """Test _generate_or_load_page loads from cache when available (lines 318-324)."""
+        generator, tmp_path = setup_generator
+
+        # Create existing page file
+        (tmp_path / "test_page.md").write_text("# Cached Page Content")
+
+        # Set up previous status
+        from local_deepwiki.generators.wiki import _GenerationContext
+        from local_deepwiki.models import WikiGenerationStatus, WikiPageStatus
+
+        ctx = _GenerationContext(
+            pages=[],
+            pages_generated=0,
+            pages_skipped=0,
+            all_source_files=["src/main.py"],
+            full_rebuild=False,
+        )
+
+        prev_status = WikiGenerationStatus(
+            repo_path=str(tmp_path),
+            generated_at=time.time(),
+            total_pages=1,
+            pages={
+                "test_page.md": WikiPageStatus(
+                    path="test_page.md",
+                    source_files=["src/main.py"],
+                    source_hashes={"src/main.py": "same_hash"},
+                    content_hash="xyz",
+                    generated_at=12345.0,
+                ),
+            },
+        )
+        generator.status_manager._previous_status = prev_status
+        generator.status_manager.file_hashes = {"src/main.py": "same_hash"}
+
+        # Generator function that should NOT be called
+        async def mock_generator_fn():
+            return WikiPage(
+                path="test_page.md",
+                title="New Page",
+                content="# New",
+                generated_at=time.time(),
+            )
+
+        page, was_generated = await generator._generate_or_load_page(
+            ctx=ctx,
+            page_path="test_page.md",
+            generator=mock_generator_fn,
+            source_files=["src/main.py"],
+        )
+
+        # Should load from cache
+        assert was_generated is False
+        assert "# Cached Page Content" in page.content
+        assert page.generated_at == 12345.0
+
+    async def test_generate_or_load_page_generates_when_cache_missing(self, setup_generator):
+        """Test _generate_or_load_page generates when cache file missing (lines 320-321)."""
+        generator, tmp_path = setup_generator
+
+        # Don't create the page file (simulating missing cache)
+        from local_deepwiki.generators.wiki import _GenerationContext
+        from local_deepwiki.models import WikiGenerationStatus, WikiPageStatus
+
+        ctx = _GenerationContext(
+            pages=[],
+            pages_generated=0,
+            pages_skipped=0,
+            all_source_files=["src/main.py"],
+            full_rebuild=False,
+        )
+
+        prev_status = WikiGenerationStatus(
+            repo_path=str(tmp_path),
+            generated_at=time.time(),
+            total_pages=1,
+            pages={
+                "missing_page.md": WikiPageStatus(
+                    path="missing_page.md",
+                    source_files=["src/main.py"],
+                    source_hashes={"src/main.py": "same_hash"},
+                    content_hash="xyz",
+                    generated_at=12345.0,
+                ),
+            },
+        )
+        generator.status_manager._previous_status = prev_status
+        generator.status_manager.file_hashes = {"src/main.py": "same_hash"}
+
+        # Generator that will be called since file is missing
+        async def mock_generator_fn():
+            return WikiPage(
+                path="missing_page.md",
+                title="Generated Page",
+                content="# Generated Content",
+                generated_at=99999.0,
+            )
+
+        page, was_generated = await generator._generate_or_load_page(
+            ctx=ctx,
+            page_path="missing_page.md",
+            generator=mock_generator_fn,
+            source_files=["src/main.py"],
+        )
+
+        # Should generate since cache file doesn't exist
+        assert was_generated is True
+        assert "# Generated Content" in page.content
+
+
+class TestModulePageProcessing:
+    """Tests for module page processing (lines 373-374)."""
+
+    @pytest.fixture
+    def setup_generator(self, tmp_path):
+        """Create a WikiGenerator for module tests."""
+        with patch("local_deepwiki.generators.wiki.get_config") as mock_config:
+            config = MagicMock()
+            config.llm = MagicMock()
+            config.wiki = MagicMock()
+            config.wiki.import_search_limit = 100
+            config.get_prompts.return_value = MagicMock(wiki_system="System prompt")
+            mock_config.return_value = config
+
+            with patch("local_deepwiki.generators.wiki.get_cached_llm_provider") as mock_llm:
+                mock_llm.return_value = MagicMock()
+
+                from local_deepwiki.generators.wiki import WikiGenerator
+
+                mock_vector_store = MagicMock()
+                mock_vector_store._get_table.return_value = None
+                mock_vector_store.search = AsyncMock(return_value=[])
+                mock_vector_store.get_main_definition_lines.return_value = {}
+
+                generator = WikiGenerator(
+                    wiki_path=tmp_path,
+                    vector_store=mock_vector_store,
+                )
+
+                yield generator, tmp_path
+
+    async def test_module_pages_written(self, setup_generator):
+        """Test module pages are appended and written (lines 373-374)."""
+        generator, tmp_path = setup_generator
+
+        index_status = make_index_status(repo_path=str(tmp_path))
+
+        # Create module pages that will be returned
+        module_page1 = WikiPage(
+            path="modules/core.md",
+            title="Core Module",
+            content="# Core Module",
+            generated_at=time.time(),
+        )
+        module_page2 = WikiPage(
+            path="modules/utils.md",
+            title="Utils Module",
+            content="# Utils Module",
+            generated_at=time.time(),
+        )
+
+        with patch("local_deepwiki.generators.wiki.generate_overview_page") as mock_overview:
+            mock_overview.return_value = WikiPage(
+                path="index.md",
+                title="Overview",
+                content="# Overview",
+                generated_at=time.time(),
+            )
+
+            with patch("local_deepwiki.generators.wiki.generate_architecture_page") as mock_arch:
+                mock_arch.return_value = WikiPage(
+                    path="architecture.md",
+                    title="Architecture",
+                    content="# Architecture",
+                    generated_at=time.time(),
+                )
+
+                with patch("local_deepwiki.generators.wiki.generate_module_docs") as mock_modules:
+                    # Return module pages with gen_count
+                    mock_modules.return_value = ([module_page1, module_page2], 2, 0)
+
+                    with patch(
+                        "local_deepwiki.generators.wiki.generate_file_docs", return_value=([], 0, 0)
+                    ):
+                        with patch(
+                            "local_deepwiki.generators.wiki.generate_dependencies_page"
+                        ) as mock_deps:
+                            mock_deps.return_value = (
+                                WikiPage(
+                                    path="dependencies.md",
+                                    title="Deps",
+                                    content="# Deps",
+                                    generated_at=time.time(),
+                                ),
+                                [],
+                            )
+
+                            with patch(
+                                "local_deepwiki.generators.wiki.generate_changelog_page",
+                                return_value=None,
+                            ):
+                                with patch(
+                                    "local_deepwiki.generators.wiki.generate_inheritance_page",
+                                    return_value=None,
+                                ):
+                                    with patch(
+                                        "local_deepwiki.generators.wiki.generate_glossary_page",
+                                        return_value=None,
+                                    ):
+                                        with patch(
+                                            "local_deepwiki.generators.wiki.generate_coverage_page",
+                                            return_value=None,
+                                        ):
+                                            with patch(
+                                                "local_deepwiki.generators.wiki.add_cross_links",
+                                                side_effect=lambda p, _: p,
+                                            ):
+                                                with patch(
+                                                    "local_deepwiki.generators.wiki.add_source_refs_sections",
+                                                    side_effect=lambda p, _, __: p,
+                                                ):
+                                                    with patch(
+                                                        "local_deepwiki.generators.wiki.add_see_also_sections",
+                                                        side_effect=lambda p, _: p,
+                                                    ):
+                                                        with patch(
+                                                            "local_deepwiki.generators.wiki.write_full_search_index"
+                                                        ):
+                                                            with patch(
+                                                                "local_deepwiki.generators.wiki.generate_toc",
+                                                                return_value=[],
+                                                            ):
+                                                                with patch(
+                                                                    "local_deepwiki.generators.wiki.write_toc"
+                                                                ):
+                                                                    with patch(
+                                                                        "local_deepwiki.generators.wiki.get_cached_manifest"
+                                                                    ):
+                                                                        result = await generator.generate(
+                                                                            index_status=index_status,
+                                                                            full_rebuild=True,
+                                                                        )
+
+                                                                        # Module pages should be in result
+                                                                        paths = [p.path for p in result.pages]
+                                                                        assert "modules/core.md" in paths
+                                                                        assert "modules/utils.md" in paths
+
+                                                                        # Module files should be written
+                                                                        assert (tmp_path / "modules" / "core.md").exists()
+                                                                        assert (tmp_path / "modules" / "utils.md").exists()
+
+
+class TestChangelogPageGeneration:
+    """Tests for changelog page generation (lines 470-473)."""
+
+    @pytest.fixture
+    def setup_generator(self, tmp_path):
+        """Create a WikiGenerator for changelog tests."""
+        with patch("local_deepwiki.generators.wiki.get_config") as mock_config:
+            config = MagicMock()
+            config.llm = MagicMock()
+            config.wiki = MagicMock()
+            config.wiki.import_search_limit = 100
+            config.get_prompts.return_value = MagicMock(wiki_system="System prompt")
+            mock_config.return_value = config
+
+            with patch("local_deepwiki.generators.wiki.get_cached_llm_provider") as mock_llm:
+                mock_llm.return_value = MagicMock()
+
+                from local_deepwiki.generators.wiki import WikiGenerator
+
+                mock_vector_store = MagicMock()
+                mock_vector_store._get_table.return_value = None
+                mock_vector_store.search = AsyncMock(return_value=[])
+                mock_vector_store.get_main_definition_lines.return_value = {}
+
+                generator = WikiGenerator(
+                    wiki_path=tmp_path,
+                    vector_store=mock_vector_store,
+                )
+
+                yield generator, tmp_path
+
+    async def test_changelog_page_generated(self, setup_generator):
+        """Test changelog page is added when generated (lines 470-473)."""
+        generator, tmp_path = setup_generator
+
+        index_status = make_index_status(repo_path=str(tmp_path))
+
+        changelog_page = WikiPage(
+            path="changelog.md",
+            title="Changelog",
+            content="# Changelog\n\n## v1.0.0\n- Initial release",
+            generated_at=time.time(),
+        )
+
+        with patch("local_deepwiki.generators.wiki.generate_overview_page") as mock_overview:
+            mock_overview.return_value = WikiPage(
+                path="index.md",
+                title="Overview",
+                content="# Overview",
+                generated_at=time.time(),
+            )
+
+            with patch("local_deepwiki.generators.wiki.generate_architecture_page") as mock_arch:
+                mock_arch.return_value = WikiPage(
+                    path="architecture.md",
+                    title="Architecture",
+                    content="# Architecture",
+                    generated_at=time.time(),
+                )
+
+                with patch(
+                    "local_deepwiki.generators.wiki.generate_module_docs", return_value=([], 0, 0)
+                ):
+                    with patch(
+                        "local_deepwiki.generators.wiki.generate_file_docs", return_value=([], 0, 0)
+                    ):
+                        with patch(
+                            "local_deepwiki.generators.wiki.generate_dependencies_page"
+                        ) as mock_deps:
+                            mock_deps.return_value = (
+                                WikiPage(
+                                    path="dependencies.md",
+                                    title="Deps",
+                                    content="# Deps",
+                                    generated_at=time.time(),
+                                ),
+                                [],
+                            )
+
+                            with patch(
+                                "local_deepwiki.generators.wiki.generate_changelog_page"
+                            ) as mock_changelog:
+                                # Return a changelog page
+                                mock_changelog.return_value = changelog_page
+
+                                with patch(
+                                    "local_deepwiki.generators.wiki.generate_inheritance_page",
+                                    return_value=None,
+                                ):
+                                    with patch(
+                                        "local_deepwiki.generators.wiki.generate_glossary_page",
+                                        return_value=None,
+                                    ):
+                                        with patch(
+                                            "local_deepwiki.generators.wiki.generate_coverage_page",
+                                            return_value=None,
+                                        ):
+                                            with patch(
+                                                "local_deepwiki.generators.wiki.add_cross_links",
+                                                side_effect=lambda p, _: p,
+                                            ):
+                                                with patch(
+                                                    "local_deepwiki.generators.wiki.add_source_refs_sections",
+                                                    side_effect=lambda p, _, __: p,
+                                                ):
+                                                    with patch(
+                                                        "local_deepwiki.generators.wiki.add_see_also_sections",
+                                                        side_effect=lambda p, _: p,
+                                                    ):
+                                                        with patch(
+                                                            "local_deepwiki.generators.wiki.write_full_search_index"
+                                                        ):
+                                                            with patch(
+                                                                "local_deepwiki.generators.wiki.generate_toc",
+                                                                return_value=[],
+                                                            ):
+                                                                with patch(
+                                                                    "local_deepwiki.generators.wiki.write_toc"
+                                                                ):
+                                                                    with patch(
+                                                                        "local_deepwiki.generators.wiki.get_cached_manifest"
+                                                                    ):
+                                                                        result = await generator.generate(
+                                                                            index_status=index_status,
+                                                                            full_rebuild=True,
+                                                                        )
+
+                                                                        # Changelog should be in result
+                                                                        paths = [p.path for p in result.pages]
+                                                                        assert "changelog.md" in paths
+
+                                                                        # Changelog file should be written
+                                                                        changelog_file = tmp_path / "changelog.md"
+                                                                        assert changelog_file.exists()
+                                                                        assert "# Changelog" in changelog_file.read_text()
+
+
+class TestAuxiliaryPagesGeneration:
+    """Tests for auxiliary pages (inheritance, glossary, coverage) - lines 494-537."""
+
+    @pytest.fixture
+    def setup_generator(self, tmp_path):
+        """Create a WikiGenerator for auxiliary page tests."""
+        with patch("local_deepwiki.generators.wiki.get_config") as mock_config:
+            config = MagicMock()
+            config.llm = MagicMock()
+            config.wiki = MagicMock()
+            config.wiki.import_search_limit = 100
+            config.get_prompts.return_value = MagicMock(wiki_system="System prompt")
+            mock_config.return_value = config
+
+            with patch("local_deepwiki.generators.wiki.get_cached_llm_provider") as mock_llm:
+                mock_llm.return_value = MagicMock()
+
+                from local_deepwiki.generators.wiki import WikiGenerator
+
+                mock_vector_store = MagicMock()
+                mock_vector_store._get_table.return_value = None
+                mock_vector_store.search = AsyncMock(return_value=[])
+                mock_vector_store.get_main_definition_lines.return_value = {}
+
+                generator = WikiGenerator(
+                    wiki_path=tmp_path,
+                    vector_store=mock_vector_store,
+                )
+
+                yield generator, tmp_path
+
+    async def test_inheritance_page_generated(self, setup_generator):
+        """Test inheritance page is added when content is generated (lines 494-503)."""
+        generator, tmp_path = setup_generator
+
+        index_status = make_index_status(repo_path=str(tmp_path))
+
+        with patch("local_deepwiki.generators.wiki.generate_overview_page") as mock_overview:
+            mock_overview.return_value = WikiPage(
+                path="index.md",
+                title="Overview",
+                content="# Overview",
+                generated_at=time.time(),
+            )
+
+            with patch("local_deepwiki.generators.wiki.generate_architecture_page") as mock_arch:
+                mock_arch.return_value = WikiPage(
+                    path="architecture.md",
+                    title="Architecture",
+                    content="# Architecture",
+                    generated_at=time.time(),
+                )
+
+                with patch(
+                    "local_deepwiki.generators.wiki.generate_module_docs", return_value=([], 0, 0)
+                ):
+                    with patch(
+                        "local_deepwiki.generators.wiki.generate_file_docs", return_value=([], 0, 0)
+                    ):
+                        with patch(
+                            "local_deepwiki.generators.wiki.generate_dependencies_page"
+                        ) as mock_deps:
+                            mock_deps.return_value = (
+                                WikiPage(
+                                    path="dependencies.md",
+                                    title="Deps",
+                                    content="# Deps",
+                                    generated_at=time.time(),
+                                ),
+                                [],
+                            )
+
+                            with patch(
+                                "local_deepwiki.generators.wiki.generate_changelog_page",
+                                return_value=None,
+                            ):
+                                with patch(
+                                    "local_deepwiki.generators.wiki.generate_inheritance_page"
+                                ) as mock_inheritance:
+                                    # Return content for inheritance page
+                                    mock_inheritance.return_value = "# Class Inheritance\n\nBaseClass -> DerivedClass"
+
+                                    with patch(
+                                        "local_deepwiki.generators.wiki.generate_glossary_page",
+                                        return_value=None,
+                                    ):
+                                        with patch(
+                                            "local_deepwiki.generators.wiki.generate_coverage_page",
+                                            return_value=None,
+                                        ):
+                                            with patch(
+                                                "local_deepwiki.generators.wiki.add_cross_links",
+                                                side_effect=lambda p, _: p,
+                                            ):
+                                                with patch(
+                                                    "local_deepwiki.generators.wiki.add_source_refs_sections",
+                                                    side_effect=lambda p, _, __: p,
+                                                ):
+                                                    with patch(
+                                                        "local_deepwiki.generators.wiki.add_see_also_sections",
+                                                        side_effect=lambda p, _: p,
+                                                    ):
+                                                        with patch(
+                                                            "local_deepwiki.generators.wiki.write_full_search_index"
+                                                        ):
+                                                            with patch(
+                                                                "local_deepwiki.generators.wiki.generate_toc",
+                                                                return_value=[],
+                                                            ):
+                                                                with patch(
+                                                                    "local_deepwiki.generators.wiki.write_toc"
+                                                                ):
+                                                                    with patch(
+                                                                        "local_deepwiki.generators.wiki.get_cached_manifest"
+                                                                    ):
+                                                                        result = await generator.generate(
+                                                                            index_status=index_status,
+                                                                            full_rebuild=True,
+                                                                        )
+
+                                                                        # Inheritance should be in result
+                                                                        paths = [p.path for p in result.pages]
+                                                                        assert "inheritance.md" in paths
+
+                                                                        # File should be written
+                                                                        assert (tmp_path / "inheritance.md").exists()
+
+    async def test_glossary_page_generated(self, setup_generator):
+        """Test glossary page is added when content is generated (lines 511-520)."""
+        generator, tmp_path = setup_generator
+
+        index_status = make_index_status(repo_path=str(tmp_path))
+
+        with patch("local_deepwiki.generators.wiki.generate_overview_page") as mock_overview:
+            mock_overview.return_value = WikiPage(
+                path="index.md",
+                title="Overview",
+                content="# Overview",
+                generated_at=time.time(),
+            )
+
+            with patch("local_deepwiki.generators.wiki.generate_architecture_page") as mock_arch:
+                mock_arch.return_value = WikiPage(
+                    path="architecture.md",
+                    title="Architecture",
+                    content="# Architecture",
+                    generated_at=time.time(),
+                )
+
+                with patch(
+                    "local_deepwiki.generators.wiki.generate_module_docs", return_value=([], 0, 0)
+                ):
+                    with patch(
+                        "local_deepwiki.generators.wiki.generate_file_docs", return_value=([], 0, 0)
+                    ):
+                        with patch(
+                            "local_deepwiki.generators.wiki.generate_dependencies_page"
+                        ) as mock_deps:
+                            mock_deps.return_value = (
+                                WikiPage(
+                                    path="dependencies.md",
+                                    title="Deps",
+                                    content="# Deps",
+                                    generated_at=time.time(),
+                                ),
+                                [],
+                            )
+
+                            with patch(
+                                "local_deepwiki.generators.wiki.generate_changelog_page",
+                                return_value=None,
+                            ):
+                                with patch(
+                                    "local_deepwiki.generators.wiki.generate_inheritance_page",
+                                    return_value=None,
+                                ):
+                                    with patch(
+                                        "local_deepwiki.generators.wiki.generate_glossary_page"
+                                    ) as mock_glossary:
+                                        # Return content for glossary page
+                                        mock_glossary.return_value = "# Glossary\n\n**API** - Application Programming Interface"
+
+                                        with patch(
+                                            "local_deepwiki.generators.wiki.generate_coverage_page",
+                                            return_value=None,
+                                        ):
+                                            with patch(
+                                                "local_deepwiki.generators.wiki.add_cross_links",
+                                                side_effect=lambda p, _: p,
+                                            ):
+                                                with patch(
+                                                    "local_deepwiki.generators.wiki.add_source_refs_sections",
+                                                    side_effect=lambda p, _, __: p,
+                                                ):
+                                                    with patch(
+                                                        "local_deepwiki.generators.wiki.add_see_also_sections",
+                                                        side_effect=lambda p, _: p,
+                                                    ):
+                                                        with patch(
+                                                            "local_deepwiki.generators.wiki.write_full_search_index"
+                                                        ):
+                                                            with patch(
+                                                                "local_deepwiki.generators.wiki.generate_toc",
+                                                                return_value=[],
+                                                            ):
+                                                                with patch(
+                                                                    "local_deepwiki.generators.wiki.write_toc"
+                                                                ):
+                                                                    with patch(
+                                                                        "local_deepwiki.generators.wiki.get_cached_manifest"
+                                                                    ):
+                                                                        result = await generator.generate(
+                                                                            index_status=index_status,
+                                                                            full_rebuild=True,
+                                                                        )
+
+                                                                        # Glossary should be in result
+                                                                        paths = [p.path for p in result.pages]
+                                                                        assert "glossary.md" in paths
+
+                                                                        # File should be written
+                                                                        assert (tmp_path / "glossary.md").exists()
+
+    async def test_coverage_page_generated(self, setup_generator):
+        """Test coverage page is added when content is generated (lines 528-537)."""
+        generator, tmp_path = setup_generator
+
+        index_status = make_index_status(repo_path=str(tmp_path))
+
+        with patch("local_deepwiki.generators.wiki.generate_overview_page") as mock_overview:
+            mock_overview.return_value = WikiPage(
+                path="index.md",
+                title="Overview",
+                content="# Overview",
+                generated_at=time.time(),
+            )
+
+            with patch("local_deepwiki.generators.wiki.generate_architecture_page") as mock_arch:
+                mock_arch.return_value = WikiPage(
+                    path="architecture.md",
+                    title="Architecture",
+                    content="# Architecture",
+                    generated_at=time.time(),
+                )
+
+                with patch(
+                    "local_deepwiki.generators.wiki.generate_module_docs", return_value=([], 0, 0)
+                ):
+                    with patch(
+                        "local_deepwiki.generators.wiki.generate_file_docs", return_value=([], 0, 0)
+                    ):
+                        with patch(
+                            "local_deepwiki.generators.wiki.generate_dependencies_page"
+                        ) as mock_deps:
+                            mock_deps.return_value = (
+                                WikiPage(
+                                    path="dependencies.md",
+                                    title="Deps",
+                                    content="# Deps",
+                                    generated_at=time.time(),
+                                ),
+                                [],
+                            )
+
+                            with patch(
+                                "local_deepwiki.generators.wiki.generate_changelog_page",
+                                return_value=None,
+                            ):
+                                with patch(
+                                    "local_deepwiki.generators.wiki.generate_inheritance_page",
+                                    return_value=None,
+                                ):
+                                    with patch(
+                                        "local_deepwiki.generators.wiki.generate_glossary_page",
+                                        return_value=None,
+                                    ):
+                                        with patch(
+                                            "local_deepwiki.generators.wiki.generate_coverage_page"
+                                        ) as mock_coverage:
+                                            # Return content for coverage page
+                                            mock_coverage.return_value = "# Documentation Coverage\n\n80% documented"
+
+                                            with patch(
+                                                "local_deepwiki.generators.wiki.add_cross_links",
+                                                side_effect=lambda p, _: p,
+                                            ):
+                                                with patch(
+                                                    "local_deepwiki.generators.wiki.add_source_refs_sections",
+                                                    side_effect=lambda p, _, __: p,
+                                                ):
+                                                    with patch(
+                                                        "local_deepwiki.generators.wiki.add_see_also_sections",
+                                                        side_effect=lambda p, _: p,
+                                                    ):
+                                                        with patch(
+                                                            "local_deepwiki.generators.wiki.write_full_search_index"
+                                                        ):
+                                                            with patch(
+                                                                "local_deepwiki.generators.wiki.generate_toc",
+                                                                return_value=[],
+                                                            ):
+                                                                with patch(
+                                                                    "local_deepwiki.generators.wiki.write_toc"
+                                                                ):
+                                                                    with patch(
+                                                                        "local_deepwiki.generators.wiki.get_cached_manifest"
+                                                                    ):
+                                                                        result = await generator.generate(
+                                                                            index_status=index_status,
+                                                                            full_rebuild=True,
+                                                                        )
+
+                                                                        # Coverage should be in result
+                                                                        paths = [p.path for p in result.pages]
+                                                                        assert "coverage.md" in paths
+
+                                                                        # File should be written
+                                                                        assert (tmp_path / "coverage.md").exists()
+
+    async def test_all_auxiliary_pages_generated(self, setup_generator):
+        """Test all auxiliary pages are generated when content is returned."""
+        generator, tmp_path = setup_generator
+
+        index_status = make_index_status(repo_path=str(tmp_path))
+
+        with patch("local_deepwiki.generators.wiki.generate_overview_page") as mock_overview:
+            mock_overview.return_value = WikiPage(
+                path="index.md",
+                title="Overview",
+                content="# Overview",
+                generated_at=time.time(),
+            )
+
+            with patch("local_deepwiki.generators.wiki.generate_architecture_page") as mock_arch:
+                mock_arch.return_value = WikiPage(
+                    path="architecture.md",
+                    title="Architecture",
+                    content="# Architecture",
+                    generated_at=time.time(),
+                )
+
+                with patch(
+                    "local_deepwiki.generators.wiki.generate_module_docs", return_value=([], 0, 0)
+                ):
+                    with patch(
+                        "local_deepwiki.generators.wiki.generate_file_docs", return_value=([], 0, 0)
+                    ):
+                        with patch(
+                            "local_deepwiki.generators.wiki.generate_dependencies_page"
+                        ) as mock_deps:
+                            mock_deps.return_value = (
+                                WikiPage(
+                                    path="dependencies.md",
+                                    title="Deps",
+                                    content="# Deps",
+                                    generated_at=time.time(),
+                                ),
+                                [],
+                            )
+
+                            with patch(
+                                "local_deepwiki.generators.wiki.generate_changelog_page"
+                            ) as mock_changelog:
+                                mock_changelog.return_value = WikiPage(
+                                    path="changelog.md",
+                                    title="Changelog",
+                                    content="# Changelog",
+                                    generated_at=time.time(),
+                                )
+
+                                with patch(
+                                    "local_deepwiki.generators.wiki.generate_inheritance_page"
+                                ) as mock_inheritance:
+                                    mock_inheritance.return_value = "# Class Inheritance"
+
+                                    with patch(
+                                        "local_deepwiki.generators.wiki.generate_glossary_page"
+                                    ) as mock_glossary:
+                                        mock_glossary.return_value = "# Glossary"
+
+                                        with patch(
+                                            "local_deepwiki.generators.wiki.generate_coverage_page"
+                                        ) as mock_coverage:
+                                            mock_coverage.return_value = "# Documentation Coverage"
+
+                                            with patch(
+                                                "local_deepwiki.generators.wiki.add_cross_links",
+                                                side_effect=lambda p, _: p,
+                                            ):
+                                                with patch(
+                                                    "local_deepwiki.generators.wiki.add_source_refs_sections",
+                                                    side_effect=lambda p, _, __: p,
+                                                ):
+                                                    with patch(
+                                                        "local_deepwiki.generators.wiki.add_see_also_sections",
+                                                        side_effect=lambda p, _: p,
+                                                    ):
+                                                        with patch(
+                                                            "local_deepwiki.generators.wiki.write_full_search_index"
+                                                        ):
+                                                            with patch(
+                                                                "local_deepwiki.generators.wiki.generate_toc",
+                                                                return_value=[],
+                                                            ):
+                                                                with patch(
+                                                                    "local_deepwiki.generators.wiki.write_toc"
+                                                                ):
+                                                                    with patch(
+                                                                        "local_deepwiki.generators.wiki.get_cached_manifest"
+                                                                    ):
+                                                                        result = await generator.generate(
+                                                                            index_status=index_status,
+                                                                            full_rebuild=True,
+                                                                        )
+
+                                                                        # All auxiliary pages should be in result
+                                                                        paths = [p.path for p in result.pages]
+                                                                        assert "changelog.md" in paths
+                                                                        assert "inheritance.md" in paths
+                                                                        assert "glossary.md" in paths
+                                                                        assert "coverage.md" in paths
+
+                                                                        # All files should be written
+                                                                        assert (tmp_path / "changelog.md").exists()
+                                                                        assert (tmp_path / "inheritance.md").exists()
+                                                                        assert (tmp_path / "glossary.md").exists()
+                                                                        assert (tmp_path / "coverage.md").exists()
+
+
+class TestDependenciesIncrementalLogic:
+    """Tests for dependencies page incremental logic (lines 433-448)."""
+
+    @pytest.fixture
+    def setup_generator(self, tmp_path):
+        """Create a WikiGenerator for dependencies tests."""
+        with patch("local_deepwiki.generators.wiki.get_config") as mock_config:
+            config = MagicMock()
+            config.llm = MagicMock()
+            config.wiki = MagicMock()
+            config.wiki.import_search_limit = 100
+            config.get_prompts.return_value = MagicMock(wiki_system="System prompt")
+            mock_config.return_value = config
+
+            with patch("local_deepwiki.generators.wiki.get_cached_llm_provider") as mock_llm:
+                mock_llm.return_value = MagicMock()
+
+                from local_deepwiki.generators.wiki import WikiGenerator
+
+                mock_vector_store = MagicMock()
+                mock_vector_store._get_table.return_value = None
+                mock_vector_store.search = AsyncMock(return_value=[])
+                mock_vector_store.get_main_definition_lines.return_value = {}
+
+                generator = WikiGenerator(
+                    wiki_path=tmp_path,
+                    vector_store=mock_vector_store,
+                )
+
+                yield generator, tmp_path
+
+    async def test_dependencies_cached_incremental(self, setup_generator):
+        """Test dependencies page is loaded from cache in incremental mode (lines 433-448)."""
+        generator, tmp_path = setup_generator
+
+        index_status = make_index_status(
+            repo_path=str(tmp_path),
+            files=[make_file_info(path="src/main.py", hash="same_hash")],
+        )
+
+        # Create cached dependencies file
+        (tmp_path / "dependencies.md").write_text("# Cached Dependencies\nOld content")
+        (tmp_path / "index.md").write_text("# Cached Overview")
+        (tmp_path / "architecture.md").write_text("# Cached Architecture")
+
+        # Set up previous status so dependencies page is NOT regenerated
+        from local_deepwiki.models import WikiGenerationStatus, WikiPageStatus
+
+        prev_status = WikiGenerationStatus(
+            repo_path=str(tmp_path),
+            generated_at=time.time(),
+            total_pages=3,
+            pages={
+                "index.md": WikiPageStatus(
+                    path="index.md",
+                    source_files=["src/main.py"],
+                    source_hashes={"src/main.py": "same_hash"},
+                    content_hash="abc",
+                    generated_at=1000.0,
+                ),
+                "architecture.md": WikiPageStatus(
+                    path="architecture.md",
+                    source_files=["src/main.py"],
+                    source_hashes={"src/main.py": "same_hash"},
+                    content_hash="def",
+                    generated_at=1000.0,
+                ),
+                "dependencies.md": WikiPageStatus(
+                    path="dependencies.md",
+                    source_files=["src/main.py"],
+                    source_hashes={"src/main.py": "same_hash"},
+                    content_hash="ghi",
+                    generated_at=2000.0,
+                ),
+            },
+        )
+        generator.status_manager._previous_status = prev_status
+        generator.status_manager.file_hashes = {"src/main.py": "same_hash"}
+
+        with patch("local_deepwiki.generators.wiki.generate_overview_page") as mock_overview:
+            mock_overview.return_value = WikiPage(
+                path="index.md",
+                title="New Overview",
+                content="# New",
+                generated_at=time.time(),
+            )
+
+            with patch("local_deepwiki.generators.wiki.generate_architecture_page") as mock_arch:
+                mock_arch.return_value = WikiPage(
+                    path="architecture.md",
+                    title="New Arch",
+                    content="# New Arch",
+                    generated_at=time.time(),
+                )
+
+                with patch(
+                    "local_deepwiki.generators.wiki.generate_module_docs", return_value=([], 0, 0)
+                ):
+                    with patch(
+                        "local_deepwiki.generators.wiki.generate_file_docs", return_value=([], 0, 0)
+                    ):
+                        with patch(
+                            "local_deepwiki.generators.wiki.generate_dependencies_page"
+                        ) as mock_deps:
+                            mock_deps.return_value = (
+                                WikiPage(
+                                    path="dependencies.md",
+                                    title="New Dependencies",
+                                    content="# New Dependencies",
+                                    generated_at=time.time(),
+                                ),
+                                ["src/main.py"],
+                            )
+
+                            with patch(
+                                "local_deepwiki.generators.wiki.generate_changelog_page",
+                                return_value=None,
+                            ):
+                                with patch(
+                                    "local_deepwiki.generators.wiki.generate_inheritance_page",
+                                    return_value=None,
+                                ):
+                                    with patch(
+                                        "local_deepwiki.generators.wiki.generate_glossary_page",
+                                        return_value=None,
+                                    ):
+                                        with patch(
+                                            "local_deepwiki.generators.wiki.generate_coverage_page",
+                                            return_value=None,
+                                        ):
+                                            with patch(
+                                                "local_deepwiki.generators.wiki.add_cross_links",
+                                                side_effect=lambda p, _: p,
+                                            ):
+                                                with patch(
+                                                    "local_deepwiki.generators.wiki.add_source_refs_sections",
+                                                    side_effect=lambda p, _, __: p,
+                                                ):
+                                                    with patch(
+                                                        "local_deepwiki.generators.wiki.add_see_also_sections",
+                                                        side_effect=lambda p, _: p,
+                                                    ):
+                                                        with patch(
+                                                            "local_deepwiki.generators.wiki.write_full_search_index"
+                                                        ):
+                                                            with patch(
+                                                                "local_deepwiki.generators.wiki.generate_toc",
+                                                                return_value=[],
+                                                            ):
+                                                                with patch(
+                                                                    "local_deepwiki.generators.wiki.write_toc"
+                                                                ):
+                                                                    with patch(
+                                                                        "local_deepwiki.generators.wiki.get_cached_manifest"
+                                                                    ):
+                                                                        result = await generator.generate(
+                                                                            index_status=index_status,
+                                                                            full_rebuild=False,  # Incremental mode
+                                                                        )
+
+                                                                        # Dependencies page should NOT be regenerated
+                                                                        assert mock_deps.call_count == 0
+
+                                                                        # Dependencies page should be in result (loaded from cache)
+                                                                        paths = [p.path for p in result.pages]
+                                                                        assert "dependencies.md" in paths
+
+    async def test_dependencies_regenerated_when_file_missing(self, setup_generator):
+        """Test dependencies page regenerated when cache file is missing (lines 434-436)."""
+        generator, tmp_path = setup_generator
+
+        index_status = make_index_status(
+            repo_path=str(tmp_path),
+            files=[make_file_info(path="src/main.py", hash="same_hash")],
+        )
+
+        # Create other cached files but NOT dependencies.md
+        (tmp_path / "index.md").write_text("# Cached Overview")
+        (tmp_path / "architecture.md").write_text("# Cached Architecture")
+        # dependencies.md is intentionally NOT created
+
+        from local_deepwiki.models import WikiGenerationStatus, WikiPageStatus
+
+        prev_status = WikiGenerationStatus(
+            repo_path=str(tmp_path),
+            generated_at=time.time(),
+            total_pages=3,
+            pages={
+                "index.md": WikiPageStatus(
+                    path="index.md",
+                    source_files=["src/main.py"],
+                    source_hashes={"src/main.py": "same_hash"},
+                    content_hash="abc",
+                    generated_at=1000.0,
+                ),
+                "architecture.md": WikiPageStatus(
+                    path="architecture.md",
+                    source_files=["src/main.py"],
+                    source_hashes={"src/main.py": "same_hash"},
+                    content_hash="def",
+                    generated_at=1000.0,
+                ),
+                "dependencies.md": WikiPageStatus(
+                    path="dependencies.md",
+                    source_files=["src/main.py"],
+                    source_hashes={"src/main.py": "same_hash"},
+                    content_hash="ghi",
+                    generated_at=2000.0,
+                ),
+            },
+        )
+        generator.status_manager._previous_status = prev_status
+        generator.status_manager.file_hashes = {"src/main.py": "same_hash"}
+
+        with patch("local_deepwiki.generators.wiki.generate_overview_page") as mock_overview:
+            mock_overview.return_value = WikiPage(
+                path="index.md",
+                title="Overview",
+                content="# Overview",
+                generated_at=time.time(),
+            )
+
+            with patch("local_deepwiki.generators.wiki.generate_architecture_page") as mock_arch:
+                mock_arch.return_value = WikiPage(
+                    path="architecture.md",
+                    title="Architecture",
+                    content="# Architecture",
+                    generated_at=time.time(),
+                )
+
+                with patch(
+                    "local_deepwiki.generators.wiki.generate_module_docs", return_value=([], 0, 0)
+                ):
+                    with patch(
+                        "local_deepwiki.generators.wiki.generate_file_docs", return_value=([], 0, 0)
+                    ):
+                        with patch(
+                            "local_deepwiki.generators.wiki.generate_dependencies_page"
+                        ) as mock_deps:
+                            mock_deps.return_value = (
+                                WikiPage(
+                                    path="dependencies.md",
+                                    title="Generated Dependencies",
+                                    content="# Generated Dependencies",
+                                    generated_at=time.time(),
+                                ),
+                                ["src/main.py"],
+                            )
+
+                            with patch(
+                                "local_deepwiki.generators.wiki.generate_changelog_page",
+                                return_value=None,
+                            ):
+                                with patch(
+                                    "local_deepwiki.generators.wiki.generate_inheritance_page",
+                                    return_value=None,
+                                ):
+                                    with patch(
+                                        "local_deepwiki.generators.wiki.generate_glossary_page",
+                                        return_value=None,
+                                    ):
+                                        with patch(
+                                            "local_deepwiki.generators.wiki.generate_coverage_page",
+                                            return_value=None,
+                                        ):
+                                            with patch(
+                                                "local_deepwiki.generators.wiki.add_cross_links",
+                                                side_effect=lambda p, _: p,
+                                            ):
+                                                with patch(
+                                                    "local_deepwiki.generators.wiki.add_source_refs_sections",
+                                                    side_effect=lambda p, _, __: p,
+                                                ):
+                                                    with patch(
+                                                        "local_deepwiki.generators.wiki.add_see_also_sections",
+                                                        side_effect=lambda p, _: p,
+                                                    ):
+                                                        with patch(
+                                                            "local_deepwiki.generators.wiki.write_full_search_index"
+                                                        ):
+                                                            with patch(
+                                                                "local_deepwiki.generators.wiki.generate_toc",
+                                                                return_value=[],
+                                                            ):
+                                                                with patch(
+                                                                    "local_deepwiki.generators.wiki.write_toc"
+                                                                ):
+                                                                    with patch(
+                                                                        "local_deepwiki.generators.wiki.get_cached_manifest"
+                                                                    ):
+                                                                        await generator.generate(
+                                                                            index_status=index_status,
+                                                                            full_rebuild=False,
+                                                                        )
+
+                                                                        # Dependencies SHOULD be regenerated because file doesn't exist
+                                                                        assert mock_deps.call_count == 1

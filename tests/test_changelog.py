@@ -3,6 +3,7 @@
 import subprocess
 from datetime import datetime
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -94,6 +95,53 @@ class TestGetCommitHistory:
         commits = get_commit_history(tmp_path, limit=3)
 
         assert len(commits) == 3
+
+    def test_handles_invalid_date_format(self, tmp_path: Path) -> None:
+        """Test that invalid date format falls back to datetime.now()."""
+        # Mock subprocess.run to return output with invalid date
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_result.stdout = "abc1234|abc1234567890abcdef|Test Author|invalid-date|Test message\nfile.py\n"
+
+        with patch("local_deepwiki.generators.changelog.subprocess.run", return_value=mock_result):
+            commits = get_commit_history(tmp_path, limit=10)
+
+        assert len(commits) == 1
+        assert commits[0].hash == "abc1234"
+        assert commits[0].message == "Test message"
+        # Date should be set to approximately now (within last minute)
+        time_diff = abs((datetime.now() - commits[0].date).total_seconds())
+        assert time_diff < 60
+
+    def test_handles_timeout(self, tmp_path: Path) -> None:
+        """Test that TimeoutExpired returns empty list."""
+        with patch(
+            "local_deepwiki.generators.changelog.subprocess.run",
+            side_effect=subprocess.TimeoutExpired(cmd="git", timeout=30),
+        ):
+            commits = get_commit_history(tmp_path, limit=10)
+
+        assert commits == []
+
+    def test_handles_file_not_found_error(self, tmp_path: Path) -> None:
+        """Test that FileNotFoundError returns empty list."""
+        with patch(
+            "local_deepwiki.generators.changelog.subprocess.run",
+            side_effect=FileNotFoundError("git not found"),
+        ):
+            commits = get_commit_history(tmp_path, limit=10)
+
+        assert commits == []
+
+    def test_handles_os_error(self, tmp_path: Path) -> None:
+        """Test that OSError returns empty list."""
+        with patch(
+            "local_deepwiki.generators.changelog.subprocess.run",
+            side_effect=OSError("Permission denied"),
+        ):
+            commits = get_commit_history(tmp_path, limit=10)
+
+        assert commits == []
 
 
 class TestBuildCommitUrl:
@@ -302,6 +350,70 @@ class TestGenerateChangelogContent:
         assert "**Commits shown**:" in content
         assert "**Contributors**:" in content
         assert "**Latest commit**:" in content
+
+    def test_truncates_long_messages(self, tmp_path: Path) -> None:
+        """Test that commit messages longer than 80 chars are truncated."""
+        # Initialize git repo
+        subprocess.run(["git", "init", "-b", "main"], cwd=tmp_path, capture_output=True)
+        subprocess.run(
+            ["git", "config", "user.email", "test@test.com"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "Test"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+
+        # Create commit with very long message (>80 chars)
+        long_message = "A" * 100  # 100 character message
+        (tmp_path / "file.py").write_text("# Test")
+        subprocess.run(["git", "add", "."], cwd=tmp_path, capture_output=True)
+        subprocess.run(
+            ["git", "commit", "-m", long_message],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+
+        content = generate_changelog_content(tmp_path)
+
+        assert content is not None
+        # Message should be truncated to 77 chars + "..."
+        assert "A" * 77 + "..." in content
+        # Full message should NOT be present
+        assert "A" * 100 not in content
+
+    def test_shows_more_files_indicator(self, tmp_path: Path) -> None:
+        """Test that '+N more' is shown when commit has more than 5 files."""
+        # Initialize git repo
+        subprocess.run(["git", "init", "-b", "main"], cwd=tmp_path, capture_output=True)
+        subprocess.run(
+            ["git", "config", "user.email", "test@test.com"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "Test"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+
+        # Create commit with more than 5 files
+        for i in range(8):
+            (tmp_path / f"file{i}.py").write_text(f"# File {i}")
+        subprocess.run(["git", "add", "."], cwd=tmp_path, capture_output=True)
+        subprocess.run(
+            ["git", "commit", "-m", "Add multiple files"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+
+        content = generate_changelog_content(tmp_path)
+
+        assert content is not None
+        # Should show "+3 more" (8 files - 5 shown = 3 more)
+        assert "(+3 more)" in content
 
 
 class TestCommitInfo:
