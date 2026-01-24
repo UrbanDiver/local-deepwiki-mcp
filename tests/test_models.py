@@ -7,10 +7,15 @@ import pytest
 from local_deepwiki.models import (
     ChunkType,
     CodeChunk,
+    DeepResearchResult,
     FileInfo,
     IndexStatus,
     Language,
+    ResearchStep,
+    ResearchStepType,
     SearchResult,
+    SourceReference,
+    SubQuestion,
     WikiGenerationStatus,
     WikiPage,
     WikiPageStatus,
@@ -309,3 +314,192 @@ class TestModelRepr:
         assert "WikiGenerationStatus" in result
         assert "/home/user/project" in result
         assert "15 pages" in result
+
+    def test_research_step_repr(self):
+        """Test ResearchStep repr."""
+        step = ResearchStep(
+            step_type=ResearchStepType.RETRIEVAL,
+            description="Retrieved code chunks",
+            duration_ms=150,
+        )
+        result = repr(step)
+        assert "ResearchStep" in result
+        assert "retrieval" in result
+        assert "150ms" in result
+
+    def test_sub_question_repr(self):
+        """Test SubQuestion repr."""
+        sq = SubQuestion(
+            question="How does the authentication flow work in this codebase?",
+            category="flow",
+        )
+        result = repr(sq)
+        assert "SubQuestion" in result
+        assert "flow" in result
+        assert "How does the authentication" in result
+
+    def test_source_reference_repr_with_name(self):
+        """Test SourceReference repr with a name."""
+        ref = SourceReference(
+            file_path="src/auth.py",
+            start_line=10,
+            end_line=25,
+            chunk_type="function",
+            name="authenticate_user",
+            relevance_score=0.92,
+        )
+        result = repr(ref)
+        assert "Source" in result
+        assert "src/auth.py:10-25" in result
+        assert "authenticate_user" in result
+
+    def test_source_reference_repr_without_name(self):
+        """Test SourceReference repr without a name (uses chunk_type)."""
+        ref = SourceReference(
+            file_path="src/module.py",
+            start_line=1,
+            end_line=50,
+            chunk_type="module",
+            name=None,
+            relevance_score=0.75,
+        )
+        result = repr(ref)
+        assert "Source" in result
+        assert "src/module.py:1-50" in result
+        assert "module" in result
+
+    def test_deep_research_result_repr(self):
+        """Test DeepResearchResult repr."""
+        result_obj = DeepResearchResult(
+            question="How does caching work?",
+            answer="The caching system uses Redis...",
+            sub_questions=[
+                SubQuestion(question="What is cached?", category="structure"),
+                SubQuestion(question="When is cache invalidated?", category="flow"),
+            ],
+            sources=[
+                SourceReference(
+                    file_path="src/cache.py",
+                    start_line=1,
+                    end_line=100,
+                    chunk_type="module",
+                    relevance_score=0.95,
+                ),
+            ],
+            total_chunks_analyzed=25,
+            total_llm_calls=5,
+        )
+        result = repr(result_obj)
+        assert "DeepResearchResult" in result
+        assert "2 sub-questions" in result
+        assert "1 sources" in result
+        assert "5 LLM calls" in result
+
+
+class TestWikiStructureToToc:
+    """Tests for WikiStructure.to_toc method."""
+
+    def test_empty_structure(self):
+        """Test to_toc with no pages."""
+        structure = WikiStructure(root="/project/.deepwiki", pages=[])
+        toc = structure.to_toc()
+        assert toc == {"sections": []}
+
+    def test_flat_pages(self):
+        """Test to_toc with pages in root directory."""
+        structure = WikiStructure(
+            root="/project/.deepwiki",
+            pages=[
+                WikiPage(path="index.md", title="Home", content="# Home", generated_at=1.0),
+                WikiPage(path="overview.md", title="Overview", content="# Overview", generated_at=1.0),
+            ],
+        )
+        toc = structure.to_toc()
+        assert "sections" in toc
+        assert "pages" in toc
+        assert len(toc["pages"]) == 2
+        # Pages should be sorted by path
+        assert toc["pages"][0]["path"] == "index.md"
+        assert toc["pages"][0]["title"] == "Home"
+        assert toc["pages"][1]["path"] == "overview.md"
+        assert toc["pages"][1]["title"] == "Overview"
+
+    def test_nested_structure(self):
+        """Test to_toc with nested directory structure."""
+        structure = WikiStructure(
+            root="/project/.deepwiki",
+            pages=[
+                WikiPage(path="index.md", title="Home", content="# Home", generated_at=1.0),
+                WikiPage(path="files/main.md", title="Main", content="# Main", generated_at=1.0),
+                WikiPage(
+                    path="files/src/utils.md", title="Utils", content="# Utils", generated_at=1.0
+                ),
+            ],
+        )
+        toc = structure.to_toc()
+
+        # Root level should have sections and pages
+        assert "sections" in toc
+        assert "pages" in toc
+
+        # Find the 'files' section
+        files_section = next((s for s in toc["sections"] if s["name"] == "files"), None)
+        assert files_section is not None
+        assert "sections" in files_section
+        assert "pages" in files_section
+
+        # files/main.md should be in files section pages
+        assert any(p["path"] == "files/main.md" for p in files_section["pages"])
+
+        # Find the 'src' section inside 'files'
+        src_section = next((s for s in files_section["sections"] if s["name"] == "src"), None)
+        assert src_section is not None
+        assert any(p["path"] == "files/src/utils.md" for p in src_section["pages"])
+
+    def test_deeply_nested_structure(self):
+        """Test to_toc with deeply nested paths."""
+        structure = WikiStructure(
+            root="/project/.deepwiki",
+            pages=[
+                WikiPage(
+                    path="a/b/c/d/file.md",
+                    title="Deep File",
+                    content="# Deep",
+                    generated_at=1.0,
+                ),
+            ],
+        )
+        toc = structure.to_toc()
+
+        # Navigate down the nested sections
+        current = toc
+        for level in ["a", "b", "c", "d"]:
+            section = next((s for s in current.get("sections", []) if s["name"] == level), None)
+            assert section is not None, f"Section '{level}' not found"
+            current = section
+
+        # The final section should have the page
+        assert any(p["path"] == "a/b/c/d/file.md" for p in current.get("pages", []))
+
+    def test_multiple_pages_same_directory(self):
+        """Test to_toc with multiple pages in the same directory."""
+        structure = WikiStructure(
+            root="/project/.deepwiki",
+            pages=[
+                WikiPage(
+                    path="files/alpha.md", title="Alpha", content="# Alpha", generated_at=1.0
+                ),
+                WikiPage(path="files/beta.md", title="Beta", content="# Beta", generated_at=1.0),
+                WikiPage(
+                    path="files/gamma.md", title="Gamma", content="# Gamma", generated_at=1.0
+                ),
+            ],
+        )
+        toc = structure.to_toc()
+
+        files_section = next((s for s in toc["sections"] if s["name"] == "files"), None)
+        assert files_section is not None
+        assert len(files_section["pages"]) == 3
+        # Should be sorted alphabetically by path
+        paths = [p["path"] for p in files_section["pages"]]
+        assert paths == ["files/alpha.md", "files/beta.md", "files/gamma.md"]

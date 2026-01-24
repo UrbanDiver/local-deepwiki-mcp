@@ -1505,3 +1505,627 @@ A function.
         # Should include GitHub link
         assert "GitHub" in result
         assert "https://github.com/owner/repo/blob/main/src/example.py#L10-L12" in result
+
+
+class TestExtractEntityFromHeading:
+    """Tests for _extract_entity_from_heading function."""
+
+    def test_returns_none_for_heading_without_backticks(self):
+        """Test returns None when heading has no backticks."""
+        from local_deepwiki.generators.wiki_files import _extract_entity_from_heading
+
+        entity, is_class = _extract_entity_from_heading("### No backticks here")
+
+        assert entity is None
+        assert is_class is False
+
+    def test_returns_none_for_incomplete_backticks(self):
+        """Test returns None when heading has only opening backtick."""
+        from local_deepwiki.generators.wiki_files import _extract_entity_from_heading
+
+        entity, is_class = _extract_entity_from_heading("#### `incomplete")
+
+        assert entity is None
+        assert is_class is False
+
+    def test_returns_none_for_empty_backticks(self):
+        """Test returns None for empty backticks ``."""
+        from local_deepwiki.generators.wiki_files import _extract_entity_from_heading
+
+        entity, is_class = _extract_entity_from_heading("#### ``")
+
+        assert entity is None
+        assert is_class is False
+
+
+class TestGenerateBlameSectionCoverage:
+    """Tests for _generate_blame_section to cover uncovered lines."""
+
+    def test_returns_none_for_empty_chunks(self):
+        """Test returns None when chunks list is empty."""
+        from local_deepwiki.generators.wiki_files import _generate_blame_section
+
+        result = _generate_blame_section(
+            repo_path=Path("/tmp/repo"),
+            file_path="src/test.py",
+            chunks=[],
+        )
+
+        assert result is None
+
+    def test_returns_none_for_chunks_without_code_entities(self):
+        """Test returns None when chunks have no function/class/method types."""
+        from local_deepwiki.generators.wiki_files import _generate_blame_section
+
+        # Create chunks that are imports or modules (not function/class/method)
+        chunk = make_code_chunk(
+            name="imports",
+            chunk_type=ChunkType.IMPORT,
+            content="import os",
+        )
+
+        result = _generate_blame_section(
+            repo_path=Path("/tmp/repo"),
+            file_path="src/test.py",
+            chunks=[chunk],
+        )
+
+        assert result is None
+
+    def test_generates_blame_section_with_entities(self, tmp_path):
+        """Test generates blame section when blame info is available."""
+        from datetime import datetime
+        from local_deepwiki.generators.wiki_files import _generate_blame_section
+        from local_deepwiki.core.git_utils import EntityBlameInfo
+
+        chunks = [
+            make_code_chunk(
+                name="my_func",
+                chunk_type=ChunkType.FUNCTION,
+                content="def my_func():\n    pass",
+                start_line=1,
+                end_line=3,
+            ),
+            make_code_chunk(
+                name="MyClass",
+                chunk_type=ChunkType.CLASS,
+                content="class MyClass:\n    pass",
+                start_line=5,
+                end_line=8,
+            ),
+        ]
+
+        mock_blame_info = [
+            EntityBlameInfo(
+                entity_name="my_func",
+                entity_type="function",
+                start_line=1,
+                end_line=3,
+                last_modified_by="John Doe",
+                last_modified_date=datetime(2024, 1, 15),
+                commit_hash="abc1234567890",
+                commit_summary="Add my_func",
+            ),
+            EntityBlameInfo(
+                entity_name="MyClass",
+                entity_type="class",
+                start_line=5,
+                end_line=8,
+                last_modified_by="Jane Smith",
+                last_modified_date=datetime(2024, 2, 20),
+                commit_hash="def5678901234",
+                commit_summary="Add MyClass implementation",
+            ),
+        ]
+
+        with patch("local_deepwiki.generators.wiki_files.get_file_entity_blame") as mock_blame:
+            mock_blame.return_value = mock_blame_info
+
+            result = _generate_blame_section(
+                repo_path=tmp_path,
+                file_path="src/test.py",
+                chunks=chunks,
+            )
+
+        assert result is not None
+        assert "## Last Modified" in result
+        assert "| Entity | Type | Author | Date | Commit |" in result
+        assert "`my_func`" in result
+        assert "`MyClass`" in result
+        assert "John Doe" in result
+        assert "Jane Smith" in result
+        assert "`abc1234`" in result
+        assert "`def5678`" in result
+        assert "Add my_func" in result
+
+    def test_truncates_long_author_names(self, tmp_path):
+        """Test truncates author names longer than 20 characters."""
+        from datetime import datetime
+        from local_deepwiki.generators.wiki_files import _generate_blame_section
+        from local_deepwiki.core.git_utils import EntityBlameInfo
+
+        chunks = [
+            make_code_chunk(
+                name="func",
+                chunk_type=ChunkType.FUNCTION,
+                content="def func(): pass",
+                start_line=1,
+                end_line=2,
+            ),
+        ]
+
+        mock_blame_info = [
+            EntityBlameInfo(
+                entity_name="func",
+                entity_type="function",
+                start_line=1,
+                end_line=2,
+                last_modified_by="Very Long Author Name That Exceeds Twenty Characters",
+                last_modified_date=datetime(2024, 1, 1),
+                commit_hash="abc1234567890",
+                commit_summary="Short",
+            ),
+        ]
+
+        with patch("local_deepwiki.generators.wiki_files.get_file_entity_blame") as mock_blame:
+            mock_blame.return_value = mock_blame_info
+
+            result = _generate_blame_section(
+                repo_path=tmp_path,
+                file_path="src/test.py",
+                chunks=chunks,
+            )
+
+        assert result is not None
+        # Author name should be truncated to 17 chars + "..."
+        assert "Very Long Author ..." in result
+
+    def test_truncates_long_commit_summary(self, tmp_path):
+        """Test truncates commit summaries longer than 30 characters."""
+        from datetime import datetime
+        from local_deepwiki.generators.wiki_files import _generate_blame_section
+        from local_deepwiki.core.git_utils import EntityBlameInfo
+
+        chunks = [
+            make_code_chunk(
+                name="func",
+                chunk_type=ChunkType.FUNCTION,
+                content="def func(): pass",
+                start_line=1,
+                end_line=2,
+            ),
+        ]
+
+        mock_blame_info = [
+            EntityBlameInfo(
+                entity_name="func",
+                entity_type="function",
+                start_line=1,
+                end_line=2,
+                last_modified_by="Author",
+                last_modified_date=datetime(2024, 1, 1),
+                commit_hash="abc1234567890",
+                commit_summary="This is a very long commit summary that should be truncated",
+            ),
+        ]
+
+        with patch("local_deepwiki.generators.wiki_files.get_file_entity_blame") as mock_blame:
+            mock_blame.return_value = mock_blame_info
+
+            result = _generate_blame_section(
+                repo_path=tmp_path,
+                file_path="src/test.py",
+                chunks=chunks,
+            )
+
+        assert result is not None
+        # Summary should be truncated to 27 chars + "..."
+        assert "This is a very long commit ..." in result
+
+    def test_returns_none_when_no_blame_info(self, tmp_path):
+        """Test returns None when get_file_entity_blame returns empty list."""
+        from local_deepwiki.generators.wiki_files import _generate_blame_section
+
+        chunks = [
+            make_code_chunk(
+                name="func",
+                chunk_type=ChunkType.FUNCTION,
+                content="def func(): pass",
+                start_line=1,
+                end_line=2,
+            ),
+        ]
+
+        with patch("local_deepwiki.generators.wiki_files.get_file_entity_blame") as mock_blame:
+            mock_blame.return_value = []
+
+            result = _generate_blame_section(
+                repo_path=tmp_path,
+                file_path="src/test.py",
+                chunks=chunks,
+            )
+
+        assert result is None
+
+
+class TestGenerateFileEnrichmentsUsedBy:
+    """Tests for 'Used By' section in _generate_file_enrichments."""
+
+    def test_adds_used_by_section_when_callers_exist(self, tmp_path):
+        """Test adds Used By section when file has callers."""
+        from local_deepwiki.generators.wiki_files import _generate_file_enrichments
+
+        # Create a real file
+        (tmp_path / "main.py").write_text("def main(): pass")
+
+        chunks = [
+            make_code_chunk(
+                name="main",
+                chunk_type=ChunkType.FUNCTION,
+                content="def main(): pass",
+                start_line=1,
+                end_line=2,
+            ),
+        ]
+
+        with (
+            patch("local_deepwiki.generators.wiki_files.get_file_api_docs") as mock_api,
+            patch("local_deepwiki.generators.wiki_files.generate_class_diagram") as mock_diagram,
+            patch("local_deepwiki.generators.wiki_files.get_file_call_graph") as mock_graph,
+            patch("local_deepwiki.generators.wiki_files.get_file_callers") as mock_callers,
+            patch("local_deepwiki.generators.wiki_files.get_file_examples") as mock_examples,
+            patch("local_deepwiki.generators.wiki_files._generate_blame_section") as mock_blame,
+        ):
+            mock_api.return_value = ""
+            mock_diagram.return_value = ""
+            mock_graph.return_value = ""
+            mock_callers.return_value = {
+                "main": ["app.run", "cli.execute"],
+                "helper": ["utils.format"],
+            }
+            mock_examples.return_value = ""
+            mock_blame.return_value = None
+
+            result = _generate_file_enrichments(
+                content="## Overview\n\nTest content.",
+                abs_file_path=tmp_path / "main.py",
+                repo_path=tmp_path,
+                file_path="main.py",
+                all_file_chunks=chunks,
+            )
+
+        assert "## Used By" in result
+        assert "Functions and methods in this file and their callers:" in result
+        assert "**`helper`**: called by `utils.format`" in result
+        assert "**`main`**: called by `app.run`, `cli.execute`" in result
+
+    def test_skips_used_by_when_no_callers(self, tmp_path):
+        """Test does not add Used By when callers_map is empty."""
+        from local_deepwiki.generators.wiki_files import _generate_file_enrichments
+
+        (tmp_path / "main.py").write_text("def main(): pass")
+
+        chunks = [
+            make_code_chunk(
+                name="main",
+                chunk_type=ChunkType.FUNCTION,
+                content="def main(): pass",
+            ),
+        ]
+
+        with (
+            patch("local_deepwiki.generators.wiki_files.get_file_api_docs") as mock_api,
+            patch("local_deepwiki.generators.wiki_files.generate_class_diagram") as mock_diagram,
+            patch("local_deepwiki.generators.wiki_files.get_file_call_graph") as mock_graph,
+            patch("local_deepwiki.generators.wiki_files.get_file_callers") as mock_callers,
+            patch("local_deepwiki.generators.wiki_files.get_file_examples") as mock_examples,
+            patch("local_deepwiki.generators.wiki_files._generate_blame_section") as mock_blame,
+        ):
+            mock_api.return_value = ""
+            mock_diagram.return_value = ""
+            mock_graph.return_value = ""
+            mock_callers.return_value = {}  # No callers
+            mock_examples.return_value = ""
+            mock_blame.return_value = None
+
+            result = _generate_file_enrichments(
+                content="## Overview",
+                abs_file_path=tmp_path / "main.py",
+                repo_path=tmp_path,
+                file_path="main.py",
+                all_file_chunks=chunks,
+            )
+
+        assert "## Used By" not in result
+
+    def test_skips_used_by_when_callers_are_empty_lists(self, tmp_path):
+        """Test does not add Used By when all caller lists are empty."""
+        from local_deepwiki.generators.wiki_files import _generate_file_enrichments
+
+        (tmp_path / "main.py").write_text("def main(): pass")
+
+        chunks = [
+            make_code_chunk(
+                name="main",
+                chunk_type=ChunkType.FUNCTION,
+                content="def main(): pass",
+            ),
+        ]
+
+        with (
+            patch("local_deepwiki.generators.wiki_files.get_file_api_docs") as mock_api,
+            patch("local_deepwiki.generators.wiki_files.generate_class_diagram") as mock_diagram,
+            patch("local_deepwiki.generators.wiki_files.get_file_call_graph") as mock_graph,
+            patch("local_deepwiki.generators.wiki_files.get_file_callers") as mock_callers,
+            patch("local_deepwiki.generators.wiki_files.get_file_examples") as mock_examples,
+            patch("local_deepwiki.generators.wiki_files._generate_blame_section") as mock_blame,
+        ):
+            mock_api.return_value = ""
+            mock_diagram.return_value = ""
+            mock_graph.return_value = ""
+            # Has entries but all empty lists
+            mock_callers.return_value = {"main": [], "helper": []}
+            mock_examples.return_value = ""
+            mock_blame.return_value = None
+
+            result = _generate_file_enrichments(
+                content="## Overview",
+                abs_file_path=tmp_path / "main.py",
+                repo_path=tmp_path,
+                file_path="main.py",
+                all_file_chunks=chunks,
+            )
+
+        # Should not include Used By when all caller lists are empty
+        assert "## Used By" not in result
+
+    def test_adds_blame_section_when_available(self, tmp_path):
+        """Test adds blame section when _generate_blame_section returns content."""
+        from local_deepwiki.generators.wiki_files import _generate_file_enrichments
+
+        (tmp_path / "main.py").write_text("def main(): pass")
+
+        chunks = [
+            make_code_chunk(
+                name="main",
+                chunk_type=ChunkType.FUNCTION,
+                content="def main(): pass",
+            ),
+        ]
+
+        blame_content = """## Last Modified
+
+| Entity | Type | Author | Date | Commit |
+|--------|------|--------|------|--------|
+| `main` | function | John | 2024-01-15 | `abc1234` |"""
+
+        with (
+            patch("local_deepwiki.generators.wiki_files.get_file_api_docs") as mock_api,
+            patch("local_deepwiki.generators.wiki_files.generate_class_diagram") as mock_diagram,
+            patch("local_deepwiki.generators.wiki_files.get_file_call_graph") as mock_graph,
+            patch("local_deepwiki.generators.wiki_files.get_file_callers") as mock_callers,
+            patch("local_deepwiki.generators.wiki_files.get_file_examples") as mock_examples,
+            patch("local_deepwiki.generators.wiki_files._generate_blame_section") as mock_blame,
+        ):
+            mock_api.return_value = ""
+            mock_diagram.return_value = ""
+            mock_graph.return_value = ""
+            mock_callers.return_value = {}
+            mock_examples.return_value = ""
+            mock_blame.return_value = blame_content
+
+            result = _generate_file_enrichments(
+                content="## Overview",
+                abs_file_path=tmp_path / "main.py",
+                repo_path=tmp_path,
+                file_path="main.py",
+                all_file_chunks=chunks,
+            )
+
+        assert "## Last Modified" in result
+        assert "`main`" in result
+
+
+class TestGenerateFileDocsCallbacks:
+    """Tests for callback functionality in generate_file_docs."""
+
+    @pytest.fixture
+    def mock_llm(self):
+        """Create a mock LLM provider."""
+        mock = MagicMock()
+        mock.generate = AsyncMock(return_value="## File Overview\n\nDoc content.")
+        return mock
+
+    @pytest.fixture
+    def mock_vector_store(self):
+        """Create a mock vector store."""
+        mock = MagicMock()
+        mock.search = AsyncMock(return_value=[])
+        mock.get_chunks_by_file = AsyncMock(return_value=[])
+        return mock
+
+    @pytest.fixture
+    def mock_status_manager(self):
+        """Create a mock WikiStatusManager."""
+        mock = MagicMock()
+        mock.needs_regeneration = MagicMock(return_value=True)
+        mock.load_existing_page = AsyncMock(return_value=None)
+        mock.record_page_status = MagicMock()
+        return mock
+
+    @pytest.fixture
+    def mock_entity_registry(self):
+        """Create a mock EntityRegistry."""
+        mock = MagicMock()
+        mock.register_from_chunks = MagicMock()
+        return mock
+
+    @pytest.fixture
+    def mock_config(self):
+        """Create a mock Config."""
+        mock = MagicMock()
+        mock.wiki = MagicMock()
+        mock.wiki.context_search_limit = 20
+        mock.wiki.fallback_search_limit = 10
+        mock.wiki.max_file_docs = 50
+        mock.wiki.max_concurrent_llm_calls = 3
+        return mock
+
+    async def test_calls_write_callback_for_each_page(
+        self,
+        mock_llm,
+        mock_vector_store,
+        mock_status_manager,
+        mock_entity_registry,
+        mock_config,
+        tmp_path,
+    ):
+        """Test calls write_callback for each generated page."""
+        chunk = make_code_chunk(file_path="src/main.py", name="main")
+        mock_vector_store.get_chunks_by_file = AsyncMock(return_value=[chunk])
+
+        index_status = make_index_status(
+            repo_path=str(tmp_path),
+            files=[make_file_info(path="src/main.py")],
+        )
+
+        written_pages = []
+
+        async def write_callback(page: WikiPage):
+            written_pages.append(page)
+
+        pages, generated, _skipped = await generate_file_docs(
+            index_status=index_status,
+            vector_store=mock_vector_store,
+            llm=mock_llm,
+            system_prompt="System prompt",
+            status_manager=mock_status_manager,
+            entity_registry=mock_entity_registry,
+            config=mock_config,
+            full_rebuild=True,
+            write_callback=write_callback,
+        )
+
+        # write_callback should be called for the generated page
+        assert len(written_pages) >= 1
+        assert any(p.path == "files/src/main.md" for p in written_pages)
+
+    async def test_calls_progress_callback_for_each_file(
+        self,
+        mock_llm,
+        mock_vector_store,
+        mock_status_manager,
+        mock_entity_registry,
+        mock_config,
+        tmp_path,
+    ):
+        """Test calls progress_callback for each processed file."""
+        chunk = make_code_chunk(file_path="src/main.py", name="main")
+        mock_vector_store.get_chunks_by_file = AsyncMock(return_value=[chunk])
+
+        index_status = make_index_status(
+            repo_path=str(tmp_path),
+            files=[make_file_info(path="src/main.py")],
+        )
+
+        progress_calls = []
+
+        def progress_callback(message: str, current: int, total: int):
+            progress_calls.append((message, current, total))
+
+        pages, _generated, _skipped = await generate_file_docs(
+            index_status=index_status,
+            vector_store=mock_vector_store,
+            llm=mock_llm,
+            system_prompt="System prompt",
+            status_manager=mock_status_manager,
+            entity_registry=mock_entity_registry,
+            config=mock_config,
+            full_rebuild=True,
+            progress_callback=progress_callback,
+        )
+
+        # progress_callback should be called at least once
+        assert len(progress_calls) >= 1
+        # Should include file path in message
+        assert any("src/main.py" in call[0] for call in progress_calls)
+
+    async def test_calls_generation_progress_complete_file_on_error(
+        self,
+        mock_llm,
+        mock_vector_store,
+        mock_status_manager,
+        mock_entity_registry,
+        mock_config,
+        tmp_path,
+    ):
+        """Test calls generation_progress.complete_file() on error."""
+        # Make get_chunks_by_file raise an error
+        mock_vector_store.get_chunks_by_file = AsyncMock(
+            side_effect=ValueError("Test error")
+        )
+
+        index_status = make_index_status(
+            repo_path=str(tmp_path),
+            files=[make_file_info(path="src/main.py")],
+        )
+
+        mock_progress = MagicMock()
+        mock_progress.start_phase = MagicMock()
+        mock_progress.complete_file = MagicMock()
+        mock_progress.complete_phase = MagicMock()
+
+        # Should not raise - errors are caught
+        pages, _generated, _skipped = await generate_file_docs(
+            index_status=index_status,
+            vector_store=mock_vector_store,
+            llm=mock_llm,
+            system_prompt="System prompt",
+            status_manager=mock_status_manager,
+            entity_registry=mock_entity_registry,
+            config=mock_config,
+            full_rebuild=True,
+            generation_progress=mock_progress,
+        )
+
+        # complete_file should be called even on error (without filename arg)
+        mock_progress.complete_file.assert_called()
+
+    async def test_generation_progress_start_and_complete_phase(
+        self,
+        mock_llm,
+        mock_vector_store,
+        mock_status_manager,
+        mock_entity_registry,
+        mock_config,
+        tmp_path,
+    ):
+        """Test generation_progress start_phase and complete_phase are called."""
+        chunk = make_code_chunk(file_path="src/main.py", name="main")
+        mock_vector_store.get_chunks_by_file = AsyncMock(return_value=[chunk])
+
+        index_status = make_index_status(
+            repo_path=str(tmp_path),
+            files=[make_file_info(path="src/main.py")],
+        )
+
+        mock_progress = MagicMock()
+        mock_progress.start_phase = MagicMock()
+        mock_progress.complete_file = MagicMock()
+        mock_progress.complete_phase = MagicMock()
+
+        await generate_file_docs(
+            index_status=index_status,
+            vector_store=mock_vector_store,
+            llm=mock_llm,
+            system_prompt="System prompt",
+            status_manager=mock_status_manager,
+            entity_registry=mock_entity_registry,
+            config=mock_config,
+            full_rebuild=True,
+            generation_progress=mock_progress,
+        )
+
+        mock_progress.start_phase.assert_called_once_with("file_docs", total=1)
+        mock_progress.complete_file.assert_called()
+        mock_progress.complete_phase.assert_called_once()

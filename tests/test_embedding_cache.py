@@ -503,3 +503,314 @@ class TestGetEmbeddingProviderWithCache:
             provider = get_embedding_provider(enable_cache=False)
 
         assert "cached:" not in provider.name
+
+
+class TestEmbeddingCacheErrorHandling:
+    """Tests for error handling paths in EmbeddingCache."""
+
+    @pytest.fixture
+    def cache_dir(self):
+        """Create a temporary cache directory."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            yield Path(tmpdir)
+
+    @pytest.fixture
+    def provider(self):
+        """Create a mock embedding provider."""
+        return MockEmbeddingProvider()
+
+    def test_init_db_sqlite_error(self, cache_dir, provider):
+        """Test _init_db handles sqlite3.Error gracefully (lines 151-152)."""
+        config = EmbeddingCacheConfig(
+            cache_dir=cache_dir,
+            batch_write_threshold=1,
+        )
+        cache = EmbeddingCache(provider, config)
+
+        # Create a mock connection that raises on executescript
+        mock_conn = MagicMock()
+        mock_conn.executescript.side_effect = sqlite3.Error("Test error")
+
+        with patch.object(cache, "_get_connection", return_value=mock_conn):
+            # Re-init should handle the error gracefully (logs warning)
+            cache._init_db()
+            # Should not raise, just log warning
+
+    def test_get_cached_sqlite_error(self, cache_dir, provider):
+        """Test _get_cached handles sqlite3.Error (lines 237-240)."""
+        config = EmbeddingCacheConfig(
+            cache_dir=cache_dir,
+            batch_write_threshold=1,
+        )
+        cache = EmbeddingCache(provider, config)
+
+        # Create a mock connection that raises on execute
+        mock_conn = MagicMock()
+        mock_conn.execute.side_effect = sqlite3.Error("Test error")
+
+        with patch.object(cache, "_get_connection", return_value=mock_conn):
+            result = cache._get_cached("some_key")
+
+            assert result is None
+            assert cache._stats["errors"] == 1
+
+    def test_flush_pending_writes_empty_after_lock(self, cache_dir, provider):
+        """Test _flush_pending_writes handles empty writes after lock (line 276)."""
+        config = EmbeddingCacheConfig(
+            cache_dir=cache_dir,
+            batch_write_threshold=100,  # High threshold to not auto-flush
+        )
+        cache = EmbeddingCache(provider, config)
+
+        # Test the empty pending writes early return (line 268-269)
+        cache._pending_writes.clear()
+        cache._flush_pending_writes()  # Should return early on first check
+
+        # To hit line 276, we need to simulate the scenario where writes
+        # list becomes empty after the lock is acquired but the copy was empty.
+        # This is a race condition check. We can test by manipulating pending_writes
+        # so that the copy in line 272 ends up empty.
+
+        # Add an entry then simulate race by clearing during the copy
+        cache._pending_writes.append(("key", [0.1, 0.2], time.time(), 3600))
+
+        # Override the list slicing to return empty
+        original_pending = cache._pending_writes
+
+        class EmptyOnCopyList(list):
+            """A list that returns empty when copied."""
+
+            def __getitem__(self, key):
+                if isinstance(key, slice):
+                    return []  # Return empty on slice copy
+                return super().__getitem__(key)
+
+        cache._pending_writes = EmptyOnCopyList(original_pending)
+        cache._flush_pending_writes()  # Should return early at line 275-276
+
+    def test_flush_pending_writes_sqlite_error(self, cache_dir, provider):
+        """Test _flush_pending_writes handles sqlite3.Error (lines 304-306)."""
+        config = EmbeddingCacheConfig(
+            cache_dir=cache_dir,
+            batch_write_threshold=100,
+        )
+        cache = EmbeddingCache(provider, config)
+
+        # Add pending write
+        cache._pending_writes.append(("key", [0.1, 0.2, 0.3], time.time(), 3600))
+
+        # Create a mock connection that raises on executemany
+        mock_conn = MagicMock()
+        mock_conn.executemany.side_effect = sqlite3.Error("Test error")
+
+        with patch.object(cache, "_get_connection", return_value=mock_conn):
+            cache._flush_pending_writes()
+
+            assert cache._stats["errors"] == 1
+
+    def test_get_entry_count_sqlite_error(self, cache_dir, provider):
+        """Test get_entry_count handles sqlite3.Error (lines 395-396)."""
+        config = EmbeddingCacheConfig(
+            cache_dir=cache_dir,
+            batch_write_threshold=1,
+        )
+        cache = EmbeddingCache(provider, config)
+
+        # Create a mock connection that raises on execute
+        mock_conn = MagicMock()
+        mock_conn.execute.side_effect = sqlite3.Error("Test error")
+
+        with patch.object(cache, "_get_connection", return_value=mock_conn):
+            result = cache.get_entry_count()
+
+            assert result == 0
+
+    def test_clear_sqlite_error(self, cache_dir, provider):
+        """Test clear handles sqlite3.Error (lines 414-416)."""
+        config = EmbeddingCacheConfig(
+            cache_dir=cache_dir,
+            batch_write_threshold=1,
+        )
+        cache = EmbeddingCache(provider, config)
+
+        # Create a mock connection that raises on execute
+        mock_conn = MagicMock()
+        mock_conn.execute.side_effect = sqlite3.Error("Test error")
+
+        with patch.object(cache, "_get_connection", return_value=mock_conn):
+            result = cache.clear()
+
+            assert result == 0
+
+    def test_cleanup_expired_sqlite_error(self, cache_dir, provider):
+        """Test cleanup_expired handles sqlite3.Error (lines 439-441)."""
+        config = EmbeddingCacheConfig(
+            cache_dir=cache_dir,
+            batch_write_threshold=1,
+        )
+        cache = EmbeddingCache(provider, config)
+
+        # Create a mock connection that raises on execute
+        mock_conn = MagicMock()
+        mock_conn.execute.side_effect = sqlite3.Error("Test error")
+
+        with patch.object(cache, "_get_connection", return_value=mock_conn):
+            result = cache.cleanup_expired()
+
+            assert result == 0
+
+    @pytest.mark.asyncio
+    async def test_cleanup_if_needed_under_limit(self, cache_dir, provider):
+        """Test cleanup_if_needed returns early when under limit (line 463)."""
+        config = EmbeddingCacheConfig(
+            cache_dir=cache_dir,
+            ttl_seconds=3600,
+            max_entries=100,  # High limit
+            batch_write_threshold=1,
+        )
+        cache = EmbeddingCache(provider, config)
+
+        # Add a few entries (under limit)
+        await cache.embed(["text1", "text2", "text3"])
+        assert cache.get_entry_count() == 3
+
+        # cleanup_if_needed should return only expired count (0)
+        # because count (3) <= max_entries (100)
+        result = cache.cleanup_if_needed()
+
+        # Should only clean expired entries (0 in this case)
+        assert result == 0
+        assert cache.get_entry_count() == 3
+
+    def test_cleanup_if_needed_sqlite_error(self, cache_dir, provider):
+        """Test cleanup_if_needed handles sqlite3.Error (lines 487-489)."""
+        config = EmbeddingCacheConfig(
+            cache_dir=cache_dir,
+            batch_write_threshold=1,
+        )
+        cache = EmbeddingCache(provider, config)
+
+        # Create a mock connection that raises on execute
+        mock_conn = MagicMock()
+        mock_conn.execute.side_effect = sqlite3.Error("Test error")
+
+        with patch.object(cache, "_get_connection", return_value=mock_conn):
+            result = cache.cleanup_if_needed()
+
+            assert result == 0
+
+    def test_invalidate_by_model_sqlite_error(self, cache_dir, provider):
+        """Test invalidate_by_model handles sqlite3.Error (lines 514-516)."""
+        config = EmbeddingCacheConfig(
+            cache_dir=cache_dir,
+            batch_write_threshold=1,
+        )
+        cache = EmbeddingCache(provider, config)
+
+        # Create a mock connection that raises on execute
+        mock_conn = MagicMock()
+        mock_conn.execute.side_effect = sqlite3.Error("Test error")
+
+        with patch.object(cache, "_get_connection", return_value=mock_conn):
+            result = cache.invalidate_by_model("test-model")
+
+            assert result == 0
+
+    def test_close_sqlite_error(self, cache_dir, provider):
+        """Test close handles sqlite3.Error (lines 531-532)."""
+        config = EmbeddingCacheConfig(
+            cache_dir=cache_dir,
+            batch_write_threshold=1,
+        )
+        cache = EmbeddingCache(provider, config)
+
+        # Access connection to create it
+        _ = cache._get_connection()
+        assert cache._local.conn is not None
+
+        # Create a mock connection that raises on close
+        mock_conn = MagicMock()
+        mock_conn.close.side_effect = sqlite3.Error("Test error")
+
+        # Replace the connection with our mock
+        cache._local.conn = mock_conn
+
+        # Should not raise
+        cache.close()
+
+        # Connection should be set to None despite error
+        assert cache._local.conn is None
+
+    def test_del_handles_exception(self, cache_dir, provider):
+        """Test __del__ handles exceptions (lines 539-540)."""
+        config = EmbeddingCacheConfig(
+            cache_dir=cache_dir,
+            batch_write_threshold=1,
+        )
+        cache = EmbeddingCache(provider, config)
+
+        # Mock close to raise an exception
+        with patch.object(cache, "close", side_effect=Exception("Test error")):
+            # __del__ should not raise
+            cache.__del__()
+
+
+class TestCachedEmbeddingProviderCleanup:
+    """Tests for CachedEmbeddingProvider cleanup methods."""
+
+    @pytest.fixture
+    def cache_dir(self):
+        """Create a temporary cache directory."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            yield Path(tmpdir)
+
+    @pytest.fixture
+    def provider(self):
+        """Create a mock embedding provider."""
+        return MockEmbeddingProvider()
+
+    @pytest.fixture
+    def cached_provider(self, cache_dir, provider):
+        """Create a CachedEmbeddingProvider instance."""
+        config = EmbeddingCacheConfig(
+            cache_dir=cache_dir,
+            batch_write_threshold=1,
+        )
+        return CachedEmbeddingProvider(provider, config)
+
+    @pytest.mark.asyncio
+    async def test_cleanup_cache(self, cached_provider):
+        """Test cleanup_cache method (line 610)."""
+        # Add some entries
+        await cached_provider.embed(["text1", "text2", "text3"])
+        assert cached_provider.get_entry_count() == 3
+
+        # cleanup_cache should call cleanup_if_needed
+        result = cached_provider.cleanup_cache()
+
+        # Should return 0 since no entries are expired and under limit
+        assert result == 0
+        assert cached_provider.get_entry_count() == 3
+
+    @pytest.mark.asyncio
+    async def test_cleanup_cache_with_expired(self, cache_dir, provider):
+        """Test cleanup_cache with expired entries."""
+        config = EmbeddingCacheConfig(
+            cache_dir=cache_dir,
+            ttl_seconds=1,  # 1 second TTL
+            batch_write_threshold=1,
+        )
+        cached_provider = CachedEmbeddingProvider(provider, config)
+
+        # Add entries
+        await cached_provider.embed(["text1", "text2"])
+        assert cached_provider.get_entry_count() == 2
+
+        # Wait for expiration
+        time.sleep(1.5)
+
+        # cleanup_cache should remove expired entries
+        result = cached_provider.cleanup_cache()
+
+        assert result == 2
+        assert cached_provider.get_entry_count() == 0

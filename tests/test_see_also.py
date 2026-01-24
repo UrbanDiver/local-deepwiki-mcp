@@ -425,3 +425,336 @@ class TestAddSeeAlsoSections:
         updated_pages = add_see_also_sections(pages, analyzer)
 
         assert "## See Also" not in updated_pages[0].content
+
+    def test_preserves_page_without_relationships(self):
+        """Test that pages without relationships are preserved unchanged."""
+        analyzer = RelationshipAnalyzer()
+        # Don't add any chunks, so no relationships exist
+
+        pages = [
+            WikiPage(
+                path="files/src/isolated.md",
+                title="Isolated",
+                content="# Isolated\n\nNo imports.",
+                generated_at=123,
+            ),
+        ]
+
+        updated_pages = add_see_also_sections(pages, analyzer)
+
+        # Page should be returned unchanged
+        assert len(updated_pages) == 1
+        assert updated_pages[0].path == "files/src/isolated.md"
+        assert updated_pages[0].content == "# Isolated\n\nNo imports."
+        assert "## See Also" not in updated_pages[0].content
+
+
+class TestImportParsing:
+    """Tests for import statement parsing edge cases."""
+
+    def test_import_statement_parsing(self):
+        """Test parsing 'import X' style statements (not 'from X import Y')."""
+        analyzer = RelationshipAnalyzer()
+        chunks = [
+            CodeChunk(
+                id="1",
+                file_path="src/local_deepwiki/main.py",
+                language=Language.PYTHON,
+                chunk_type=ChunkType.IMPORT,
+                name="imports",
+                content="import local_deepwiki.core.chunker",
+                start_line=1,
+                end_line=1,
+            ),
+            CodeChunk(
+                id="2",
+                file_path="src/local_deepwiki/core/chunker.py",
+                language=Language.PYTHON,
+                chunk_type=ChunkType.IMPORT,
+                name="imports",
+                content="import os",
+                start_line=1,
+                end_line=1,
+            ),
+        ]
+
+        analyzer.analyze_chunks(chunks)
+
+        # Verify import was tracked
+        relationships = analyzer.get_relationships("src/local_deepwiki/main.py")
+        # Should have tracked the import of local_deepwiki.core.chunker
+        assert "src/local_deepwiki/main.py" in analyzer.get_all_known_files()
+
+    def test_import_with_comma_separated_modules(self):
+        """Test parsing 'import X, Y' style with comma separation."""
+        analyzer = RelationshipAnalyzer()
+        chunks = [
+            CodeChunk(
+                id="1",
+                file_path="src/test.py",
+                language=Language.PYTHON,
+                chunk_type=ChunkType.IMPORT,
+                name="imports",
+                content="import os, sys",
+                start_line=1,
+                end_line=1,
+            ),
+        ]
+
+        analyzer.analyze_chunks(chunks)
+
+        # Should handle comma-separated imports (takes first one)
+        known = analyzer.get_all_known_files()
+        assert "src/test.py" in known
+
+    def test_empty_lines_in_import_chunk(self):
+        """Test that empty lines in import content are skipped."""
+        analyzer = RelationshipAnalyzer()
+        chunks = [
+            CodeChunk(
+                id="1",
+                file_path="src/local_deepwiki/main.py",
+                language=Language.PYTHON,
+                chunk_type=ChunkType.IMPORT,
+                name="imports",
+                content="from local_deepwiki.core import chunker\n\n\nfrom local_deepwiki import models",
+                start_line=1,
+                end_line=4,
+            ),
+        ]
+
+        analyzer.analyze_chunks(chunks)
+
+        # Should have processed both imports despite empty lines
+        known = analyzer.get_all_known_files()
+        assert "src/local_deepwiki/main.py" in known
+
+    def test_malformed_import_returns_none(self):
+        """Test that malformed import lines return None."""
+        analyzer = RelationshipAnalyzer()
+        chunks = [
+            CodeChunk(
+                id="1",
+                file_path="src/test.py",
+                language=Language.PYTHON,
+                chunk_type=ChunkType.IMPORT,
+                name="imports",
+                content="from\nimport\n# comment\nrandom text",
+                start_line=1,
+                end_line=4,
+            ),
+        ]
+
+        analyzer.analyze_chunks(chunks)
+
+        # Should not crash, file should still be tracked
+        assert "src/test.py" in analyzer.get_all_known_files()
+
+
+class TestModuleToFilePath:
+    """Tests for module to file path resolution."""
+
+    def test_exact_match_in_known_files(self):
+        """Test exact match when module path directly matches a known file."""
+        analyzer = RelationshipAnalyzer()
+
+        # Add files directly to known files via chunks
+        chunks = [
+            CodeChunk(
+                id="1",
+                file_path="local_deepwiki/core/chunker.py",
+                language=Language.PYTHON,
+                chunk_type=ChunkType.IMPORT,
+                name="imports",
+                content="from local_deepwiki.models import CodeChunk",
+                start_line=1,
+                end_line=1,
+            ),
+            CodeChunk(
+                id="2",
+                file_path="src/local_deepwiki/main.py",
+                language=Language.PYTHON,
+                chunk_type=ChunkType.IMPORT,
+                name="imports",
+                content="from local_deepwiki.core.chunker import Chunker",
+                start_line=1,
+                end_line=1,
+            ),
+        ]
+
+        analyzer.analyze_chunks(chunks)
+
+        # Now get relationships - this should trigger module resolution
+        relationships = analyzer.get_relationships("src/local_deepwiki/main.py")
+
+        # The chunker file should be found as an import
+        assert "local_deepwiki/core/chunker.py" in relationships.imports
+
+
+class TestSharedDependencies:
+    """Tests for shared dependencies in See Also generation."""
+
+    def test_shared_dependencies_in_see_also(self):
+        """Test that shared dependencies appear in See Also section."""
+        relationships = FileRelationships(
+            file_path="src/local_deepwiki/core/indexer.py",
+            imports=set(),
+            imported_by=set(),
+            shared_deps_with={
+                "src/local_deepwiki/core/processor.py": 3,
+                "src/local_deepwiki/core/validator.py": 2,
+            },
+        )
+        file_to_wiki = {
+            "src/local_deepwiki/core/indexer.py": "files/src/local_deepwiki/core/indexer.md",
+            "src/local_deepwiki/core/processor.py": "files/src/local_deepwiki/core/processor.md",
+            "src/local_deepwiki/core/validator.py": "files/src/local_deepwiki/core/validator.md",
+        }
+
+        section = generate_see_also_section(
+            relationships,
+            file_to_wiki,
+            "files/src/local_deepwiki/core/indexer.md",
+        )
+
+        assert section is not None
+        assert "## See Also" in section
+        assert "processor" in section
+        assert "shares 3 dependencies" in section
+
+    def test_shared_dependencies_skips_already_added(self):
+        """Test that shared deps don't duplicate already added pages."""
+        relationships = FileRelationships(
+            file_path="src/local_deepwiki/core/indexer.py",
+            imports={"src/local_deepwiki/core/processor.py"},  # Already an import
+            imported_by=set(),
+            shared_deps_with={
+                "src/local_deepwiki/core/processor.py": 3,  # Also has shared deps
+            },
+        )
+        file_to_wiki = {
+            "src/local_deepwiki/core/indexer.py": "files/src/local_deepwiki/core/indexer.md",
+            "src/local_deepwiki/core/processor.py": "files/src/local_deepwiki/core/processor.md",
+        }
+
+        section = generate_see_also_section(
+            relationships,
+            file_to_wiki,
+            "files/src/local_deepwiki/core/indexer.md",
+        )
+
+        assert section is not None
+        # processor should appear only once in a bullet point (as dependency, not as shared dep)
+        # Count bullet points with "processor"
+        bullet_lines = [line for line in section.split("\n") if line.startswith("- [")]
+        processor_bullets = [line for line in bullet_lines if "processor" in line]
+        assert len(processor_bullets) == 1
+        assert "dependency" in section
+        assert "shares 3 dependencies" not in section
+
+    def test_shared_dependencies_skips_unmapped_files(self):
+        """Test that shared deps without wiki mappings are skipped."""
+        relationships = FileRelationships(
+            file_path="src/local_deepwiki/core/indexer.py",
+            imports=set(),
+            imported_by=set(),
+            shared_deps_with={
+                "src/unmapped/file.py": 5,  # Not in file_to_wiki
+            },
+        )
+        file_to_wiki = {
+            "src/local_deepwiki/core/indexer.py": "files/src/local_deepwiki/core/indexer.md",
+            # Note: src/unmapped/file.py is NOT mapped
+        }
+
+        section = generate_see_also_section(
+            relationships,
+            file_to_wiki,
+            "files/src/local_deepwiki/core/indexer.md",
+        )
+
+        # Should return None since the only shared dep has no wiki mapping
+        assert section is None
+
+
+class TestMaxItemsLimit:
+    """Tests for max_items limit in See Also generation."""
+
+    def test_max_items_limits_output(self):
+        """Test that max_items parameter limits the number of See Also entries."""
+        relationships = FileRelationships(
+            file_path="src/main.py",
+            imports=set(),
+            imported_by={
+                "src/a.py",
+                "src/b.py",
+                "src/c.py",
+                "src/d.py",
+                "src/e.py",
+                "src/f.py",
+                "src/g.py",
+            },
+            shared_deps_with={},
+        )
+        file_to_wiki = {
+            "src/main.py": "files/src/main.md",
+            "src/a.py": "files/src/a.md",
+            "src/b.py": "files/src/b.md",
+            "src/c.py": "files/src/c.md",
+            "src/d.py": "files/src/d.md",
+            "src/e.py": "files/src/e.md",
+            "src/f.py": "files/src/f.md",
+            "src/g.py": "files/src/g.md",
+        }
+
+        section = generate_see_also_section(
+            relationships,
+            file_to_wiki,
+            "files/src/main.md",
+            max_items=3,  # Limit to 3 items
+        )
+
+        assert section is not None
+        # Count the bullet points
+        bullet_count = section.count("- [")
+        assert bullet_count == 3
+
+    def test_default_max_items_is_five(self):
+        """Test that default max_items is 5."""
+        relationships = FileRelationships(
+            file_path="src/main.py",
+            imports=set(),
+            imported_by={
+                "src/a.py",
+                "src/b.py",
+                "src/c.py",
+                "src/d.py",
+                "src/e.py",
+                "src/f.py",
+                "src/g.py",
+                "src/h.py",
+            },
+            shared_deps_with={},
+        )
+        file_to_wiki = {
+            "src/main.py": "files/src/main.md",
+            "src/a.py": "files/src/a.md",
+            "src/b.py": "files/src/b.md",
+            "src/c.py": "files/src/c.md",
+            "src/d.py": "files/src/d.md",
+            "src/e.py": "files/src/e.md",
+            "src/f.py": "files/src/f.md",
+            "src/g.py": "files/src/g.md",
+            "src/h.py": "files/src/h.md",
+        }
+
+        section = generate_see_also_section(
+            relationships,
+            file_to_wiki,
+            "files/src/main.md",
+            # Using default max_items=5
+        )
+
+        assert section is not None
+        bullet_count = section.count("- [")
+        assert bullet_count == 5

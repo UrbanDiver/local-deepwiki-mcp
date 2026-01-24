@@ -101,8 +101,8 @@ def with_retry(
                         raise
 
             # Should not reach here, but just in case
-            if last_exception:
-                raise last_exception
+            if last_exception:  # pragma: no cover
+                raise last_exception  # pragma: no cover
             raise RuntimeError(f"{func.__name__} failed unexpectedly")
 
         return wrapper
