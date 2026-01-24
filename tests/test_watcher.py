@@ -3,6 +3,7 @@
 import sys
 import time
 from pathlib import Path
+from threading import Thread
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -10,7 +11,11 @@ import pytest
 from local_deepwiki.config import Config
 from local_deepwiki.watcher import (
     WATCHED_EXTENSIONS,
+    ChangeType,
     DebouncedHandler,
+    FileChange,
+    ReindexCallback,
+    ReindexResult,
     RepositoryWatcher,
     initial_index,
     main,
@@ -938,3 +943,565 @@ class TestMain:
         print_calls = [str(c) for c in mock_console.print.call_args_list]
         assert any("Stopping" in str(c) for c in print_calls)
         assert any("Done" in str(c) for c in print_calls)
+
+
+class TestChangeTypeEnum:
+    """Test ChangeType enum."""
+
+    def test_change_type_values(self):
+        """Test that ChangeType has expected values."""
+        assert ChangeType.CREATED.value == "created"
+        assert ChangeType.MODIFIED.value == "modified"
+        assert ChangeType.DELETED.value == "deleted"
+        assert ChangeType.MOVED.value == "moved"
+
+    def test_change_type_members(self):
+        """Test that all expected members exist."""
+        members = list(ChangeType)
+        assert len(members) == 4
+        assert ChangeType.CREATED in members
+        assert ChangeType.MODIFIED in members
+        assert ChangeType.DELETED in members
+        assert ChangeType.MOVED in members
+
+
+class TestFileChange:
+    """Test FileChange dataclass."""
+
+    def test_file_change_creation(self):
+        """Test creating a FileChange."""
+        change = FileChange(
+            path="/path/to/file.py",
+            change_type=ChangeType.MODIFIED,
+        )
+        assert change.path == "/path/to/file.py"
+        assert change.change_type == ChangeType.MODIFIED
+        assert change.timestamp > 0
+        assert change.dest_path is None
+
+    def test_file_change_with_dest_path(self):
+        """Test FileChange with destination path for moved files."""
+        change = FileChange(
+            path="/old/path.py",
+            change_type=ChangeType.MOVED,
+            dest_path="/new/path.py",
+        )
+        assert change.path == "/old/path.py"
+        assert change.change_type == ChangeType.MOVED
+        assert change.dest_path == "/new/path.py"
+
+    def test_file_change_timestamp_auto_set(self):
+        """Test that timestamp is automatically set."""
+        before = time.time()
+        change = FileChange(path="/file.py", change_type=ChangeType.CREATED)
+        after = time.time()
+        assert before <= change.timestamp <= after
+
+
+class TestReindexResult:
+    """Test ReindexResult dataclass."""
+
+    def test_reindex_result_success(self):
+        """Test successful ReindexResult."""
+        result = ReindexResult(
+            success=True,
+            files_processed=10,
+            pages_generated=5,
+            duration_seconds=2.5,
+        )
+        assert result.success is True
+        assert result.files_processed == 10
+        assert result.pages_generated == 5
+        assert result.duration_seconds == 2.5
+        assert result.error is None
+        assert result.changed_files == []
+
+    def test_reindex_result_failure(self):
+        """Test failed ReindexResult."""
+        result = ReindexResult(
+            success=False,
+            files_processed=0,
+            pages_generated=0,
+            duration_seconds=0.5,
+            error="Index failed",
+            changed_files=["/path/file.py"],
+        )
+        assert result.success is False
+        assert result.error == "Index failed"
+        assert result.changed_files == ["/path/file.py"]
+
+
+class TestDebouncedHandlerCallback:
+    """Test callback mechanism in DebouncedHandler."""
+
+    @pytest.fixture
+    def handler_with_callback(self, tmp_path):
+        """Create a handler with a callback for testing."""
+        config = Config()
+        callback_results = []
+
+        def on_complete(result: ReindexResult) -> None:
+            callback_results.append(result)
+
+        handler = DebouncedHandler(
+            repo_path=tmp_path,
+            config=config,
+            debounce_seconds=0.1,
+            on_reindex_complete=on_complete,
+        )
+        handler._callback_results = callback_results  # For test access
+        return handler
+
+    @pytest.mark.asyncio
+    async def test_callback_invoked_on_success(self, handler_with_callback, tmp_path):
+        """Test that callback is invoked on successful reindex."""
+        test_file = tmp_path / "test.py"
+        test_file.write_text("print('hello')")
+
+        mock_status = MagicMock()
+        mock_status.total_files = 1
+
+        mock_wiki_structure = MagicMock()
+        mock_wiki_structure.pages = []
+
+        with (
+            patch("local_deepwiki.watcher.RepositoryIndexer") as mock_indexer_class,
+            patch(
+                "local_deepwiki.watcher.generate_wiki", new_callable=AsyncMock
+            ) as mock_generate_wiki,
+            patch("local_deepwiki.watcher.console"),
+        ):
+            mock_indexer = MagicMock()
+            mock_indexer.index = AsyncMock(return_value=mock_status)
+            mock_indexer.wiki_path = tmp_path / ".deepwiki"
+            mock_indexer.vector_store = MagicMock()
+            mock_indexer_class.return_value = mock_indexer
+
+            mock_generate_wiki.return_value = mock_wiki_structure
+
+            await handler_with_callback._do_reindex([str(test_file)])
+
+        # Verify callback was invoked
+        assert len(handler_with_callback._callback_results) == 1
+        result = handler_with_callback._callback_results[0]
+        assert result.success is True
+        assert result.files_processed == 1
+        assert result.error is None
+
+    @pytest.mark.asyncio
+    async def test_callback_invoked_on_failure(self, handler_with_callback, tmp_path):
+        """Test that callback is invoked on failed reindex."""
+        test_file = tmp_path / "test.py"
+        test_file.write_text("print('hello')")
+
+        with (
+            patch("local_deepwiki.watcher.RepositoryIndexer") as mock_indexer_class,
+            patch("local_deepwiki.watcher.console"),
+        ):
+            mock_indexer = MagicMock()
+            mock_indexer.index = AsyncMock(side_effect=Exception("Index failed"))
+            mock_indexer_class.return_value = mock_indexer
+
+            await handler_with_callback._do_reindex([str(test_file)])
+
+        # Verify callback was invoked with error
+        assert len(handler_with_callback._callback_results) == 1
+        result = handler_with_callback._callback_results[0]
+        assert result.success is False
+        assert result.error == "Index failed"
+
+    @pytest.mark.asyncio
+    async def test_callback_exception_handled(self, tmp_path):
+        """Test that exceptions in callback are handled gracefully."""
+        config = Config()
+
+        def bad_callback(result: ReindexResult) -> None:
+            raise RuntimeError("Callback exploded")
+
+        handler = DebouncedHandler(
+            repo_path=tmp_path,
+            config=config,
+            debounce_seconds=0.1,
+            on_reindex_complete=bad_callback,
+        )
+
+        test_file = tmp_path / "test.py"
+        test_file.write_text("print('hello')")
+
+        mock_status = MagicMock()
+        mock_status.total_files = 1
+
+        mock_wiki_structure = MagicMock()
+        mock_wiki_structure.pages = []
+
+        with (
+            patch("local_deepwiki.watcher.RepositoryIndexer") as mock_indexer_class,
+            patch(
+                "local_deepwiki.watcher.generate_wiki", new_callable=AsyncMock
+            ) as mock_generate_wiki,
+            patch("local_deepwiki.watcher.console"),
+        ):
+            mock_indexer = MagicMock()
+            mock_indexer.index = AsyncMock(return_value=mock_status)
+            mock_indexer.wiki_path = tmp_path / ".deepwiki"
+            mock_indexer.vector_store = MagicMock()
+            mock_indexer_class.return_value = mock_indexer
+
+            mock_generate_wiki.return_value = mock_wiki_structure
+
+            # Should not raise despite callback exception
+            await handler._do_reindex([str(test_file)])
+
+        # Verify handler state is correct
+        assert handler._is_processing is False
+
+
+class TestChangeTypeTracking:
+    """Test that change types are tracked correctly."""
+
+    @pytest.fixture
+    def handler(self, tmp_path):
+        """Create a handler for testing."""
+        config = Config()
+        return DebouncedHandler(
+            repo_path=tmp_path,
+            config=config,
+            debounce_seconds=0.1,
+        )
+
+    def test_modified_change_tracked(self, handler, tmp_path):
+        """Test that modified changes are tracked with correct type."""
+        test_file = tmp_path / "test.py"
+        test_file.touch()
+
+        event = MagicMock()
+        event.is_directory = False
+        event.src_path = str(test_file)
+
+        handler.on_modified(event)
+
+        assert str(test_file) in handler._pending_changes
+        assert handler._pending_changes[str(test_file)].change_type == ChangeType.MODIFIED
+
+        # Cancel timer
+        if handler._timer:
+            handler._timer.cancel()
+
+    def test_created_change_tracked(self, handler, tmp_path):
+        """Test that created changes are tracked with correct type."""
+        test_file = tmp_path / "new_file.py"
+        test_file.touch()
+
+        event = MagicMock()
+        event.is_directory = False
+        event.src_path = str(test_file)
+
+        handler.on_created(event)
+
+        assert str(test_file) in handler._pending_changes
+        assert handler._pending_changes[str(test_file)].change_type == ChangeType.CREATED
+
+        if handler._timer:
+            handler._timer.cancel()
+
+    def test_deleted_change_tracked(self, handler, tmp_path):
+        """Test that deleted changes are tracked with correct type."""
+        test_file = tmp_path / "deleted.py"
+
+        event = MagicMock()
+        event.is_directory = False
+        event.src_path = str(test_file)
+
+        handler.on_deleted(event)
+
+        assert str(test_file) in handler._pending_changes
+        assert handler._pending_changes[str(test_file)].change_type == ChangeType.DELETED
+
+        if handler._timer:
+            handler._timer.cancel()
+
+    def test_moved_change_tracked_with_dest(self, handler, tmp_path):
+        """Test that moved changes track destination path."""
+        src_file = tmp_path / "old_name.py"
+        src_file.touch()
+        dest_file = tmp_path / "new_name.py"
+        dest_file.touch()
+
+        event = MagicMock()
+        event.is_directory = False
+        event.src_path = str(src_file)
+        event.dest_path = str(dest_file)
+
+        handler.on_moved(event)
+
+        # Source should be tracked as MOVED with dest_path
+        assert str(src_file) in handler._pending_changes
+        change = handler._pending_changes[str(src_file)]
+        assert change.change_type == ChangeType.MOVED
+        assert change.dest_path == str(dest_file)
+
+        # Dest should be tracked as CREATED
+        assert str(dest_file) in handler._pending_changes
+        assert handler._pending_changes[str(dest_file)].change_type == ChangeType.CREATED
+
+        if handler._timer:
+            handler._timer.cancel()
+
+
+class TestThreadSafety:
+    """Test thread safety of the watcher."""
+
+    @pytest.fixture
+    def handler(self, tmp_path):
+        """Create a handler for testing."""
+        config = Config()
+        return DebouncedHandler(
+            repo_path=tmp_path,
+            config=config,
+            debounce_seconds=10.0,  # Long debounce to prevent actual trigger
+        )
+
+    def test_concurrent_add_pending_change(self, handler, tmp_path):
+        """Test that concurrent calls to _add_pending_change are thread-safe."""
+        num_files = 100
+        files = [tmp_path / f"file{i}.py" for i in range(num_files)]
+        for f in files:
+            f.touch()
+
+        threads = []
+        for i, f in enumerate(files):
+            t = Thread(
+                target=handler._add_pending_change,
+                args=(str(f), ChangeType.MODIFIED),
+            )
+            threads.append(t)
+
+        # Start all threads
+        for t in threads:
+            t.start()
+
+        # Wait for all to complete
+        for t in threads:
+            t.join()
+
+        # Verify all files were added
+        assert len(handler._pending_files) == num_files
+        assert len(handler._pending_changes) == num_files
+
+        if handler._timer:
+            handler._timer.cancel()
+
+    def test_concurrent_event_handling(self, handler, tmp_path):
+        """Test that concurrent event handling is thread-safe."""
+        num_events = 50
+        files = [tmp_path / f"event{i}.py" for i in range(num_events)]
+        for f in files:
+            f.touch()
+
+        def simulate_events(file_list: list[Path]) -> None:
+            for f in file_list:
+                event = MagicMock()
+                event.is_directory = False
+                event.src_path = str(f)
+                handler.on_modified(event)
+
+        # Split files into groups for different threads
+        group_size = num_events // 5
+        threads = []
+        for i in range(5):
+            start = i * group_size
+            end = start + group_size
+            t = Thread(target=simulate_events, args=(files[start:end],))
+            threads.append(t)
+
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        # Verify all files were added
+        assert len(handler._pending_files) == num_events
+
+        if handler._timer:
+            handler._timer.cancel()
+
+
+class TestRepositoryWatcherCallback:
+    """Test callback mechanism in RepositoryWatcher."""
+
+    def test_create_watcher_with_callback(self, tmp_path):
+        """Test creating a watcher with a callback."""
+        results = []
+
+        def on_complete(result: ReindexResult) -> None:
+            results.append(result)
+
+        watcher = RepositoryWatcher(
+            repo_path=tmp_path,
+            on_reindex_complete=on_complete,
+        )
+        assert watcher.on_reindex_complete is on_complete
+
+    def test_callback_passed_to_handler(self, tmp_path):
+        """Test that callback is passed to handler on start."""
+        results = []
+
+        def on_complete(result: ReindexResult) -> None:
+            results.append(result)
+
+        watcher = RepositoryWatcher(
+            repo_path=tmp_path,
+            on_reindex_complete=on_complete,
+            debounce_seconds=0.1,
+        )
+
+        watcher.start()
+        try:
+            assert watcher._handler is not None
+            assert watcher._handler.on_reindex_complete is on_complete
+        finally:
+            watcher.stop()
+
+
+class TestGetPendingChanges:
+    """Test get_pending_changes method."""
+
+    def test_get_pending_changes_empty(self, tmp_path):
+        """Test get_pending_changes with no pending changes."""
+        watcher = RepositoryWatcher(repo_path=tmp_path)
+        watcher.start()
+        try:
+            changes = watcher.get_pending_changes()
+            assert changes == []
+        finally:
+            watcher.stop()
+
+    def test_get_pending_changes_not_started(self, tmp_path):
+        """Test get_pending_changes when watcher not started."""
+        watcher = RepositoryWatcher(repo_path=tmp_path)
+        changes = watcher.get_pending_changes()
+        assert changes == []
+
+    def test_get_pending_changes_with_events(self, tmp_path):
+        """Test get_pending_changes returns pending changes."""
+        watcher = RepositoryWatcher(
+            repo_path=tmp_path,
+            debounce_seconds=10.0,  # Long debounce to keep changes pending
+        )
+        watcher.start()
+        try:
+            # Simulate a file change directly on handler
+            test_file = tmp_path / "test.py"
+            test_file.touch()
+
+            event = MagicMock()
+            event.is_directory = False
+            event.src_path = str(test_file)
+
+            watcher._handler.on_modified(event)
+
+            changes = watcher.get_pending_changes()
+            assert len(changes) == 1
+            assert changes[0].path == str(test_file)
+            assert changes[0].change_type == ChangeType.MODIFIED
+
+            # Cancel timer
+            if watcher._handler._timer:
+                watcher._handler._timer.cancel()
+        finally:
+            watcher.stop()
+
+
+class TestDoReindexWithChanges:
+    """Test _do_reindex with FileChange details."""
+
+    @pytest.fixture
+    def handler(self, tmp_path):
+        """Create a handler for testing."""
+        config = Config()
+        return DebouncedHandler(
+            repo_path=tmp_path,
+            config=config,
+            debounce_seconds=0.1,
+        )
+
+    @pytest.mark.asyncio
+    async def test_do_reindex_logs_change_types(self, handler, tmp_path):
+        """Test that reindex logs change type summary."""
+        test_file = tmp_path / "test.py"
+        test_file.write_text("print('hello')")
+
+        changes = {
+            str(test_file): FileChange(
+                path=str(test_file),
+                change_type=ChangeType.MODIFIED,
+            ),
+        }
+
+        mock_status = MagicMock()
+        mock_status.total_files = 1
+
+        mock_wiki_structure = MagicMock()
+        mock_wiki_structure.pages = []
+
+        with (
+            patch("local_deepwiki.watcher.RepositoryIndexer") as mock_indexer_class,
+            patch(
+                "local_deepwiki.watcher.generate_wiki", new_callable=AsyncMock
+            ) as mock_generate_wiki,
+            patch("local_deepwiki.watcher.console") as mock_console,
+            patch("local_deepwiki.watcher.logger") as mock_logger,
+        ):
+            mock_indexer = MagicMock()
+            mock_indexer.index = AsyncMock(return_value=mock_status)
+            mock_indexer.wiki_path = tmp_path / ".deepwiki"
+            mock_indexer.vector_store = MagicMock()
+            mock_indexer_class.return_value = mock_indexer
+
+            mock_generate_wiki.return_value = mock_wiki_structure
+
+            await handler._do_reindex([str(test_file)], changes)
+
+        # Verify change types were logged
+        info_calls = [str(c) for c in mock_logger.info.call_args_list]
+        assert any("Change types" in str(c) for c in info_calls)
+
+    @pytest.mark.asyncio
+    async def test_do_reindex_shows_change_type_in_output(self, handler, tmp_path):
+        """Test that reindex shows change type prefix in console output."""
+        test_file = tmp_path / "test.py"
+        test_file.write_text("print('hello')")
+
+        changes = {
+            str(test_file): FileChange(
+                path=str(test_file),
+                change_type=ChangeType.CREATED,
+            ),
+        }
+
+        mock_status = MagicMock()
+        mock_status.total_files = 1
+
+        mock_wiki_structure = MagicMock()
+        mock_wiki_structure.pages = []
+
+        with (
+            patch("local_deepwiki.watcher.RepositoryIndexer") as mock_indexer_class,
+            patch(
+                "local_deepwiki.watcher.generate_wiki", new_callable=AsyncMock
+            ) as mock_generate_wiki,
+            patch("local_deepwiki.watcher.console") as mock_console,
+        ):
+            mock_indexer = MagicMock()
+            mock_indexer.index = AsyncMock(return_value=mock_status)
+            mock_indexer.wiki_path = tmp_path / ".deepwiki"
+            mock_indexer.vector_store = MagicMock()
+            mock_indexer_class.return_value = mock_indexer
+
+            mock_generate_wiki.return_value = mock_wiki_structure
+
+            await handler._do_reindex([str(test_file)], changes)
+
+        # Verify change type shown in output
+        print_calls = [str(c) for c in mock_console.print.call_args_list]
+        assert any("[created]" in str(c) for c in print_calls)

@@ -254,6 +254,10 @@ class RepositoryIndexer:
     ) -> tuple[list[FileInfo], int]:
         """Handle parallel file parsing with ThreadPoolExecutor.
 
+        Uses multiple threads to parse files concurrently, significantly speeding up
+        indexing for large repositories. Embedding generation remains sequential
+        to respect API rate limits.
+
         Args:
             files_to_process: List of file paths to parse.
             full_rebuild: If True, this is a full rebuild (affects table creation).
@@ -270,8 +274,18 @@ class RepositoryIndexer:
         processed_files: list[FileInfo] = []
         total_chunks_processed = 0
         is_first_batch = True
+        error_count = 0
 
-        logger.info(f"Parsing files with {parallel_workers} parallel workers")
+        file_count = len(files_to_process)
+        if file_count == 0:
+            logger.info("No files to parse")
+            return processed_files, total_chunks_processed
+
+        logger.info(
+            f"Starting parallel file parsing: {file_count} files with "
+            f"{parallel_workers} workers"
+        )
+        parse_start_time = time.time()
 
         with ThreadPoolExecutor(max_workers=parallel_workers) as executor:
             futures = {
@@ -282,17 +296,18 @@ class RepositoryIndexer:
             for i, future in enumerate(as_completed(futures)):
                 file_path = futures[future]
                 if progress_callback:
-                    progress_callback(f"Parsing {file_path.name}", i, len(files_to_process))
+                    progress_callback(f"Parsing {file_path.name}", i, file_count)
 
                 result = future.result()
 
                 if result.error:
+                    error_count += 1
                     logger.warning(f"Error processing {result.file_path}: {result.error}")
                     if progress_callback:
                         progress_callback(
                             f"Error processing {result.file_path}: {result.error}",
                             i,
-                            len(files_to_process),
+                            file_count,
                         )
                     continue
 
@@ -307,7 +322,7 @@ class RepositoryIndexer:
                         is_first_batch,
                         progress_callback,
                         i,
-                        len(files_to_process),
+                        file_count,
                     )
                     total_chunks_processed += chunks_stored
                     is_first_batch = False
@@ -320,11 +335,24 @@ class RepositoryIndexer:
                 full_rebuild,
                 is_first_batch,
                 progress_callback,
-                len(files_to_process),
-                len(files_to_process),
+                file_count,
+                file_count,
                 is_final=True,
             )
             total_chunks_processed += chunks_stored
+
+        # Log performance metrics
+        parse_duration = time.time() - parse_start_time
+        files_parsed = len(processed_files)
+        files_per_second = files_parsed / parse_duration if parse_duration > 0 else 0
+        chunks_per_second = total_chunks_processed / parse_duration if parse_duration > 0 else 0
+
+        logger.info(
+            f"Parallel parsing complete: {files_parsed} files, "
+            f"{total_chunks_processed} chunks in {parse_duration:.2f}s "
+            f"({files_per_second:.1f} files/s, {chunks_per_second:.1f} chunks/s, "
+            f"{parallel_workers} workers, {error_count} errors)"
+        )
 
         return processed_files, total_chunks_processed
 

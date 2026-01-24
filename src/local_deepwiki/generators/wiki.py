@@ -201,6 +201,23 @@ class WikiGenerator:
             f"{ctx.pages_skipped} pages unchanged, {len(ctx.pages)} total pages"
         )
 
+        # Log LLM cache statistics if available
+        if hasattr(self.llm, "stats"):
+            try:
+                cache_stats = self.llm.stats
+                hits = int(cache_stats.get("hits", 0))
+                misses = int(cache_stats.get("misses", 0))
+                skipped = int(cache_stats.get("skipped", 0))
+                total = hits + misses
+                hit_rate = (hits / total * 100) if total > 0 else 0.0
+                logger.info(
+                    f"LLM cache stats: {hits} hits, {misses} misses, {skipped} skipped "
+                    f"({hit_rate:.1f}% hit rate)"
+                )
+            except (TypeError, ValueError, AttributeError):
+                # Skip logging if stats are not properly available (e.g., mock objects)
+                pass
+
         # Finalize progress tracker and print summary
         summary = self._progress.finalize(success=True)
         print(summary)

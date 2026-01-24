@@ -31,6 +31,40 @@ class TestChunkingConfigBatchSize:
         assert config.batch_size == 100
 
 
+class TestParallelWorkersConfig:
+    """Tests for parallel_workers configuration."""
+
+    def test_default_parallel_workers_based_on_cpu(self):
+        """Test that default parallel_workers is based on CPU count."""
+        import os
+
+        config = ChunkingConfig()
+        cpu_count = os.cpu_count() or 4
+        expected = min(cpu_count, 8)
+        assert config.parallel_workers == expected
+
+    def test_custom_parallel_workers(self):
+        """Test that parallel_workers can be customized."""
+        config = ChunkingConfig(parallel_workers=2)
+        assert config.parallel_workers == 2
+
+    def test_parallel_workers_max_value(self):
+        """Test that parallel_workers can be set to maximum (32)."""
+        config = ChunkingConfig(parallel_workers=32)
+        assert config.parallel_workers == 32
+
+    def test_parallel_workers_min_value(self):
+        """Test that parallel_workers minimum is 1."""
+        config = ChunkingConfig(parallel_workers=1)
+        assert config.parallel_workers == 1
+
+    def test_parallel_workers_in_full_config(self):
+        """Test that parallel_workers is accessible in full config."""
+        config = Config()
+        assert hasattr(config.chunking, "parallel_workers")
+        assert config.chunking.parallel_workers >= 1
+
+
 class TestBatchedProcessing:
     """Tests for batched chunk processing in the indexer."""
 
@@ -1140,3 +1174,178 @@ class TestIndexWithProgressCallback:
 
             # Should have called progress callback with "Indexing complete"
             assert any("Indexing complete" in msg for msg in progress_messages)
+
+
+class TestParallelParsingPerformance:
+    """Tests for parallel parsing performance logging.
+
+    Note: The local_deepwiki logger has propagate=False for clean MCP output,
+    so we mock the logger to capture log calls.
+    """
+
+    async def test_parallel_parsing_logs_performance_metrics(self, tmp_path):
+        """Test that parallel parsing logs performance metrics."""
+        repo_path = tmp_path / "repo"
+        repo_path.mkdir()
+
+        # Create multiple files to ensure parallel parsing is used
+        for i in range(3):
+            (repo_path / f"module{i}.py").write_text(f"def func{i}(): pass")
+
+        parsing = ParsingConfig().model_copy(update={"languages": ["python"]})
+        chunking = ChunkingConfig().model_copy(update={"parallel_workers": 2})
+        config = Config().model_copy(update={"parsing": parsing, "chunking": chunking})
+
+        log_messages = []
+
+        with patch("local_deepwiki.core.indexer.VectorStore") as MockVectorStore:
+            mock_store = MagicMock()
+            mock_store.create_or_update_table = AsyncMock(return_value=1)
+            mock_store.add_chunks = AsyncMock(return_value=0)
+            MockVectorStore.return_value = mock_store
+
+            indexer = RepositoryIndexer(repo_path, config)
+            indexer.vector_store = mock_store
+
+            # Mock logger.info to capture messages
+            with patch("local_deepwiki.core.indexer.logger") as mock_logger:
+                mock_logger.info = MagicMock(side_effect=lambda msg: log_messages.append(msg))
+                mock_logger.warning = MagicMock()
+                mock_logger.debug = MagicMock()
+
+                await indexer.index(full_rebuild=True)
+
+        # Check that performance logging occurred
+        parsing_log = [m for m in log_messages if "Parallel parsing complete" in m]
+        assert len(parsing_log) == 1
+
+        # Verify the log contains key metrics
+        log_msg = parsing_log[0]
+        assert "files" in log_msg
+        assert "chunks" in log_msg
+        assert "files/s" in log_msg
+        assert "chunks/s" in log_msg
+        assert "workers" in log_msg
+
+    async def test_parallel_parsing_uses_configured_workers(self, tmp_path):
+        """Test that parallel parsing uses the configured number of workers."""
+        repo_path = tmp_path / "repo"
+        repo_path.mkdir()
+
+        (repo_path / "test.py").write_text("def test(): pass")
+
+        parsing = ParsingConfig().model_copy(update={"languages": ["python"]})
+        # Use explicit worker count
+        chunking = ChunkingConfig().model_copy(update={"parallel_workers": 4})
+        config = Config().model_copy(update={"parsing": parsing, "chunking": chunking})
+
+        log_messages = []
+
+        with patch("local_deepwiki.core.indexer.VectorStore") as MockVectorStore:
+            mock_store = MagicMock()
+            mock_store.create_or_update_table = AsyncMock(return_value=1)
+            mock_store.add_chunks = AsyncMock(return_value=0)
+            MockVectorStore.return_value = mock_store
+
+            indexer = RepositoryIndexer(repo_path, config)
+            indexer.vector_store = mock_store
+
+            # Mock logger.info to capture messages
+            with patch("local_deepwiki.core.indexer.logger") as mock_logger:
+                mock_logger.info = MagicMock(side_effect=lambda msg: log_messages.append(msg))
+                mock_logger.warning = MagicMock()
+                mock_logger.debug = MagicMock()
+
+                await indexer.index(full_rebuild=True)
+
+        # Check log mentions the correct worker count
+        worker_log = [m for m in log_messages if "4 workers" in m]
+        assert len(worker_log) >= 1
+
+    async def test_parallel_parsing_handles_empty_file_list(self, tmp_path):
+        """Test that parallel parsing handles empty file list gracefully."""
+        repo_path = tmp_path / "repo"
+        repo_path.mkdir()
+
+        # No files to process
+        parsing = ParsingConfig().model_copy(update={"languages": ["python"]})
+        config = Config().model_copy(update={"parsing": parsing})
+
+        log_messages = []
+
+        with patch("local_deepwiki.core.indexer.VectorStore") as MockVectorStore:
+            mock_store = MagicMock()
+            mock_store.create_or_update_table = AsyncMock(return_value=0)
+            mock_store.add_chunks = AsyncMock(return_value=0)
+            MockVectorStore.return_value = mock_store
+
+            indexer = RepositoryIndexer(repo_path, config)
+            indexer.vector_store = mock_store
+
+            # Mock logger.info to capture messages
+            with patch("local_deepwiki.core.indexer.logger") as mock_logger:
+                mock_logger.info = MagicMock(side_effect=lambda msg: log_messages.append(msg))
+                mock_logger.warning = MagicMock()
+                mock_logger.debug = MagicMock()
+
+                status = await indexer.index(full_rebuild=True)
+
+        # Should complete without errors
+        assert status.total_files == 0
+        assert status.total_chunks == 0
+
+        # Should log "No files to parse"
+        assert any("No files to parse" in m for m in log_messages)
+
+    async def test_parallel_parsing_counts_errors(self, tmp_path):
+        """Test that parallel parsing counts and logs errors."""
+        repo_path = tmp_path / "repo"
+        repo_path.mkdir()
+
+        (repo_path / "good.py").write_text("def good(): pass")
+        (repo_path / "bad.py").write_text("def bad(): pass")
+
+        parsing = ParsingConfig().model_copy(update={"languages": ["python"]})
+        chunking = ChunkingConfig().model_copy(update={"parallel_workers": 2})
+        config = Config().model_copy(update={"parsing": parsing, "chunking": chunking})
+
+        log_messages = []
+
+        with patch("local_deepwiki.core.indexer.VectorStore") as MockVectorStore:
+            mock_store = MagicMock()
+            mock_store.create_or_update_table = AsyncMock(return_value=1)
+            mock_store.add_chunks = AsyncMock(return_value=0)
+            MockVectorStore.return_value = mock_store
+
+            indexer = RepositoryIndexer(repo_path, config)
+            indexer.vector_store = mock_store
+
+            # Mock _parse_single_file to simulate one error
+            from local_deepwiki.core.indexer import ParseResult
+
+            def mock_parse_single_file(file_path):
+                file_info = indexer.parser.get_file_info(file_path, repo_path)
+                if file_path.name == "bad.py":
+                    return ParseResult(
+                        file_path=file_path,
+                        file_info=file_info,
+                        chunks=[],
+                        error="Simulated parsing error",
+                    )
+                chunks = list(indexer.chunker.chunk_file(file_path, repo_path))
+                file_info.chunk_count = len(chunks)
+                return ParseResult(file_path=file_path, file_info=file_info, chunks=chunks)
+
+            # Mock logger.info to capture messages
+            with patch("local_deepwiki.core.indexer.logger") as mock_logger:
+                mock_logger.info = MagicMock(side_effect=lambda msg: log_messages.append(msg))
+                mock_logger.warning = MagicMock()
+                mock_logger.debug = MagicMock()
+
+                with patch.object(indexer, "_parse_single_file", mock_parse_single_file):
+                    await indexer.index(full_rebuild=True)
+
+        # Check that error count is logged
+        parsing_log = [m for m in log_messages if "Parallel parsing complete" in m]
+        assert len(parsing_log) == 1
+        assert "1 errors" in parsing_log[0]

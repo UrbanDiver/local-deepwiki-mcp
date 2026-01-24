@@ -2066,3 +2066,404 @@ class TestDependenciesIncrementalLogic:
 
                                                                         # Dependencies SHOULD be regenerated because file doesn't exist
                                                                         assert mock_deps.call_count == 1
+
+
+class TestCacheStatisticsLogging:
+    """Tests for LLM cache statistics logging in wiki generation."""
+
+    @pytest.mark.asyncio
+    async def test_logs_cache_stats_when_available(self, tmp_path):
+        """Test that cache statistics are logged when LLM provider has stats."""
+        from contextlib import ExitStack
+
+        with patch("local_deepwiki.generators.wiki.get_config") as mock_config:
+            config = MagicMock()
+            config.llm = MagicMock()
+            config.wiki = MagicMock()
+            config.wiki.max_file_docs = 0
+            config.wiki.import_search_limit = 10
+            config.wiki.max_concurrent_llm_calls = 1
+            config.get_prompts.return_value = MagicMock(wiki_system="System prompt")
+            mock_config.return_value = config
+
+            with patch("local_deepwiki.generators.wiki.get_cached_llm_provider") as mock_llm:
+                # Create mock LLM with proper stats
+                llm_mock = MagicMock()
+                llm_mock.stats = {"hits": 5, "misses": 10, "skipped": 2}
+                llm_mock.generate = AsyncMock(return_value="Generated content")
+                mock_llm.return_value = llm_mock
+
+                from local_deepwiki.generators.wiki import WikiGenerator
+
+                mock_vector_store = MagicMock()
+                mock_vector_store.search = AsyncMock(return_value=[])
+                mock_vector_store.embedding_provider = MagicMock()
+                mock_vector_store.get_main_definition_lines.return_value = {}
+
+                generator = WikiGenerator(
+                    wiki_path=tmp_path,
+                    vector_store=mock_vector_store,
+                )
+
+                index_status = make_index_status(
+                    repo_path=str(tmp_path),
+                    total_files=0,
+                    total_chunks=0,
+                    files=[],
+                )
+
+                # Use ExitStack to avoid too many nested with blocks
+                with ExitStack() as stack:
+                    stack.enter_context(
+                        patch.object(generator.status_manager, "load_status", new_callable=AsyncMock)
+                    )
+                    stack.enter_context(
+                        patch.object(generator.status_manager, "save_status", new_callable=AsyncMock)
+                    )
+                    stack.enter_context(
+                        patch.object(generator.status_manager, "needs_regeneration", return_value=True)
+                    )
+                    stack.enter_context(
+                        patch.object(
+                            generator.status_manager,
+                            "load_existing_page",
+                            new_callable=AsyncMock,
+                            return_value=None,
+                        )
+                    )
+
+                    mock_overview = stack.enter_context(
+                        patch(
+                            "local_deepwiki.generators.wiki.generate_overview_page",
+                            new_callable=AsyncMock,
+                        )
+                    )
+                    mock_overview.return_value = WikiPage(
+                        path="index.md",
+                        title="Overview",
+                        content="# Overview",
+                        generated_at=time.time(),
+                    )
+
+                    mock_arch = stack.enter_context(
+                        patch(
+                            "local_deepwiki.generators.wiki.generate_architecture_page",
+                            new_callable=AsyncMock,
+                        )
+                    )
+                    mock_arch.return_value = WikiPage(
+                        path="architecture.md",
+                        title="Architecture",
+                        content="# Architecture",
+                        generated_at=time.time(),
+                    )
+
+                    stack.enter_context(
+                        patch(
+                            "local_deepwiki.generators.wiki.generate_module_docs",
+                            new_callable=AsyncMock,
+                            return_value=([], 0, 0),
+                        )
+                    )
+                    stack.enter_context(
+                        patch(
+                            "local_deepwiki.generators.wiki.generate_file_docs",
+                            new_callable=AsyncMock,
+                            return_value=([], 0, 0),
+                        )
+                    )
+
+                    mock_deps = stack.enter_context(
+                        patch(
+                            "local_deepwiki.generators.wiki.generate_dependencies_page",
+                            new_callable=AsyncMock,
+                        )
+                    )
+                    deps_page = WikiPage(
+                        path="dependencies.md",
+                        title="Dependencies",
+                        content="# Dependencies",
+                        generated_at=time.time(),
+                    )
+                    mock_deps.return_value = (deps_page, [])
+
+                    stack.enter_context(
+                        patch(
+                            "local_deepwiki.generators.wiki.generate_changelog_page",
+                            new_callable=AsyncMock,
+                            return_value=None,
+                        )
+                    )
+                    stack.enter_context(
+                        patch(
+                            "local_deepwiki.generators.wiki.generate_inheritance_page",
+                            new_callable=AsyncMock,
+                            return_value=None,
+                        )
+                    )
+                    stack.enter_context(
+                        patch(
+                            "local_deepwiki.generators.wiki.generate_glossary_page",
+                            new_callable=AsyncMock,
+                            return_value=None,
+                        )
+                    )
+                    stack.enter_context(
+                        patch(
+                            "local_deepwiki.generators.wiki.generate_coverage_page",
+                            new_callable=AsyncMock,
+                            return_value=None,
+                        )
+                    )
+                    stack.enter_context(
+                        patch(
+                            "local_deepwiki.generators.wiki.add_cross_links",
+                            side_effect=lambda p, _: p,
+                        )
+                    )
+                    stack.enter_context(
+                        patch(
+                            "local_deepwiki.generators.wiki.add_source_refs_sections",
+                            side_effect=lambda p, _, __: p,
+                        )
+                    )
+                    stack.enter_context(
+                        patch(
+                            "local_deepwiki.generators.wiki.add_see_also_sections",
+                            side_effect=lambda p, _: p,
+                        )
+                    )
+                    stack.enter_context(
+                        patch("local_deepwiki.generators.wiki.write_full_search_index")
+                    )
+                    stack.enter_context(
+                        patch("local_deepwiki.generators.wiki.generate_toc", return_value=[])
+                    )
+                    stack.enter_context(patch("local_deepwiki.generators.wiki.write_toc"))
+
+                    mock_stale = stack.enter_context(
+                        patch("local_deepwiki.generators.wiki.generate_stale_report_page")
+                    )
+                    mock_stale.return_value = WikiPage(
+                        path="freshness.md",
+                        title="Freshness",
+                        content="# Fresh",
+                        generated_at=time.time(),
+                    )
+                    stack.enter_context(
+                        patch("local_deepwiki.generators.wiki.get_cached_manifest")
+                    )
+
+                    # Capture logger calls
+                    mock_logger = stack.enter_context(
+                        patch("local_deepwiki.generators.wiki.logger")
+                    )
+
+                    await generator.generate(
+                        index_status=index_status,
+                        full_rebuild=True,
+                    )
+
+                    # Check that cache stats were logged
+                    info_calls = [str(call) for call in mock_logger.info.call_args_list]
+                    cache_stats_logged = any("LLM cache stats" in call for call in info_calls)
+                    assert cache_stats_logged, f"Cache stats not logged. Calls: {info_calls}"
+
+                    # Verify the specific stats were included
+                    stats_call = [call for call in info_calls if "LLM cache stats" in call][0]
+                    assert "5 hits" in stats_call
+                    assert "10 misses" in stats_call
+                    assert "33.3%" in stats_call
+
+    @pytest.mark.asyncio
+    async def test_handles_mock_stats_gracefully(self, tmp_path):
+        """Test that mock stats (non-integer) are handled gracefully."""
+        from contextlib import ExitStack
+
+        with patch("local_deepwiki.generators.wiki.get_config") as mock_config:
+            config = MagicMock()
+            config.llm = MagicMock()
+            config.wiki = MagicMock()
+            config.wiki.max_file_docs = 0
+            config.wiki.import_search_limit = 10
+            config.wiki.max_concurrent_llm_calls = 1
+            config.get_prompts.return_value = MagicMock(wiki_system="System prompt")
+            mock_config.return_value = config
+
+            with patch("local_deepwiki.generators.wiki.get_cached_llm_provider") as mock_llm:
+                # Create mock LLM with MagicMock stats (simulates test mocking)
+                llm_mock = MagicMock()
+                # stats returns MagicMock by default, which caused the original failure
+                llm_mock.generate = AsyncMock(return_value="Generated content")
+                mock_llm.return_value = llm_mock
+
+                from local_deepwiki.generators.wiki import WikiGenerator
+
+                mock_vector_store = MagicMock()
+                mock_vector_store.search = AsyncMock(return_value=[])
+                mock_vector_store.embedding_provider = MagicMock()
+                mock_vector_store.get_main_definition_lines.return_value = {}
+
+                generator = WikiGenerator(
+                    wiki_path=tmp_path,
+                    vector_store=mock_vector_store,
+                )
+
+                index_status = make_index_status(
+                    repo_path=str(tmp_path),
+                    total_files=0,
+                    total_chunks=0,
+                    files=[],
+                )
+
+                # Use ExitStack to avoid too many nested with blocks
+                with ExitStack() as stack:
+                    stack.enter_context(
+                        patch.object(generator.status_manager, "load_status", new_callable=AsyncMock)
+                    )
+                    stack.enter_context(
+                        patch.object(generator.status_manager, "save_status", new_callable=AsyncMock)
+                    )
+                    stack.enter_context(
+                        patch.object(generator.status_manager, "needs_regeneration", return_value=True)
+                    )
+                    stack.enter_context(
+                        patch.object(
+                            generator.status_manager,
+                            "load_existing_page",
+                            new_callable=AsyncMock,
+                            return_value=None,
+                        )
+                    )
+
+                    mock_overview = stack.enter_context(
+                        patch(
+                            "local_deepwiki.generators.wiki.generate_overview_page",
+                            new_callable=AsyncMock,
+                        )
+                    )
+                    mock_overview.return_value = WikiPage(
+                        path="index.md",
+                        title="Overview",
+                        content="# Overview",
+                        generated_at=time.time(),
+                    )
+
+                    mock_arch = stack.enter_context(
+                        patch(
+                            "local_deepwiki.generators.wiki.generate_architecture_page",
+                            new_callable=AsyncMock,
+                        )
+                    )
+                    mock_arch.return_value = WikiPage(
+                        path="architecture.md",
+                        title="Architecture",
+                        content="# Architecture",
+                        generated_at=time.time(),
+                    )
+
+                    stack.enter_context(
+                        patch(
+                            "local_deepwiki.generators.wiki.generate_module_docs",
+                            new_callable=AsyncMock,
+                            return_value=([], 0, 0),
+                        )
+                    )
+                    stack.enter_context(
+                        patch(
+                            "local_deepwiki.generators.wiki.generate_file_docs",
+                            new_callable=AsyncMock,
+                            return_value=([], 0, 0),
+                        )
+                    )
+
+                    mock_deps = stack.enter_context(
+                        patch(
+                            "local_deepwiki.generators.wiki.generate_dependencies_page",
+                            new_callable=AsyncMock,
+                        )
+                    )
+                    deps_page = WikiPage(
+                        path="dependencies.md",
+                        title="Dependencies",
+                        content="# Dependencies",
+                        generated_at=time.time(),
+                    )
+                    mock_deps.return_value = (deps_page, [])
+
+                    stack.enter_context(
+                        patch(
+                            "local_deepwiki.generators.wiki.generate_changelog_page",
+                            new_callable=AsyncMock,
+                            return_value=None,
+                        )
+                    )
+                    stack.enter_context(
+                        patch(
+                            "local_deepwiki.generators.wiki.generate_inheritance_page",
+                            new_callable=AsyncMock,
+                            return_value=None,
+                        )
+                    )
+                    stack.enter_context(
+                        patch(
+                            "local_deepwiki.generators.wiki.generate_glossary_page",
+                            new_callable=AsyncMock,
+                            return_value=None,
+                        )
+                    )
+                    stack.enter_context(
+                        patch(
+                            "local_deepwiki.generators.wiki.generate_coverage_page",
+                            new_callable=AsyncMock,
+                            return_value=None,
+                        )
+                    )
+                    stack.enter_context(
+                        patch(
+                            "local_deepwiki.generators.wiki.add_cross_links",
+                            side_effect=lambda p, _: p,
+                        )
+                    )
+                    stack.enter_context(
+                        patch(
+                            "local_deepwiki.generators.wiki.add_source_refs_sections",
+                            side_effect=lambda p, _, __: p,
+                        )
+                    )
+                    stack.enter_context(
+                        patch(
+                            "local_deepwiki.generators.wiki.add_see_also_sections",
+                            side_effect=lambda p, _: p,
+                        )
+                    )
+                    stack.enter_context(
+                        patch("local_deepwiki.generators.wiki.write_full_search_index")
+                    )
+                    stack.enter_context(
+                        patch("local_deepwiki.generators.wiki.generate_toc", return_value=[])
+                    )
+                    stack.enter_context(patch("local_deepwiki.generators.wiki.write_toc"))
+
+                    mock_stale = stack.enter_context(
+                        patch("local_deepwiki.generators.wiki.generate_stale_report_page")
+                    )
+                    mock_stale.return_value = WikiPage(
+                        path="freshness.md",
+                        title="Freshness",
+                        content="# Fresh",
+                        generated_at=time.time(),
+                    )
+                    stack.enter_context(
+                        patch("local_deepwiki.generators.wiki.get_cached_manifest")
+                    )
+
+                    # Should not raise an exception (mock stats are handled gracefully)
+                    result = await generator.generate(
+                        index_status=index_status,
+                        full_rebuild=True,
+                    )
+
+                    # Should complete successfully
+                    assert result is not None
+                    assert len(result.pages) > 0

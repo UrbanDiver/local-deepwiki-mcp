@@ -157,6 +157,24 @@ class ParsingConfig(BaseModel):
     )
 
 
+def _get_default_parallel_workers() -> int:
+    """Get the default number of parallel workers based on CPU count.
+
+    Returns a reasonable default: min(CPU count, 8) to avoid excessive overhead.
+    Falls back to 4 if CPU count cannot be determined.
+    """
+    import os
+
+    try:
+        cpu_count = os.cpu_count()
+        if cpu_count is None:
+            return 4
+        # Cap at 8 to avoid excessive thread overhead
+        return min(cpu_count, 8)
+    except Exception:
+        return 4
+
+
 class ChunkingConfig(BaseModel):
     """Chunking configuration."""
 
@@ -172,11 +190,11 @@ class ChunkingConfig(BaseModel):
         description="Line count threshold above which classes are split into summary + method chunks",
     )
     parallel_workers: int = Field(
-        default=4,
+        default_factory=_get_default_parallel_workers,
         ge=1,
-        le=16,
+        le=32,
         description="Number of parallel workers for file parsing. "
-        "Higher values speed up indexing on multi-core systems.",
+        "Defaults to min(CPU count, 8). Higher values speed up indexing on multi-core systems.",
     )
 
 
