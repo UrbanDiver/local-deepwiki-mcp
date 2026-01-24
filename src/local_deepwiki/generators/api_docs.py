@@ -3,12 +3,29 @@
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TypedDict
 
 from tree_sitter import Node
 
 from local_deepwiki.core.chunker import CLASS_NODE_TYPES, FUNCTION_NODE_TYPES
 from local_deepwiki.core.parser import CodeParser, find_nodes_by_type, get_node_name, get_node_text
 from local_deepwiki.models import Language
+
+
+class ArgInfo(TypedDict):
+    """Type for argument info in parsed docstrings."""
+
+    type: str | None
+    description: str
+
+
+class ParsedDocstring(TypedDict):
+    """Type for parsed docstring result."""
+
+    description: str
+    args: dict[str, ArgInfo]
+    returns: str | None
+    raises: list[str]
 
 
 @dataclass
@@ -57,7 +74,7 @@ def extract_python_parameters(func_node: Node, source: bytes) -> list[Parameter]
     Returns:
         List of Parameter objects.
     """
-    parameters = []
+    parameters: list[Parameter] = []
     params_node = func_node.child_by_field_name("parameters")
     if not params_node:
         return parameters
@@ -149,7 +166,7 @@ def extract_python_decorators(func_node: Node, source: bytes) -> list[str]:
     Returns:
         List of decorator strings.
     """
-    decorators = []
+    decorators: list[str] = []
     # Look at siblings before the function
     if func_node.parent:
         prev_sibling = func_node.prev_sibling
@@ -197,7 +214,7 @@ def extract_python_docstring(node: Node, source: bytes) -> str | None:
     return None
 
 
-def parse_google_docstring(docstring: str) -> dict:
+def parse_google_docstring(docstring: str) -> ParsedDocstring:
     """Parse a Google-style docstring.
 
     Args:
@@ -206,20 +223,17 @@ def parse_google_docstring(docstring: str) -> dict:
     Returns:
         Dictionary with 'description', 'args', 'returns', 'raises' keys.
     """
-    result = {
-        "description": "",
-        "args": {},
-        "returns": None,
-        "raises": [],
-    }
+    args_dict: dict[str, ArgInfo] = {}
+    returns_str: str | None = None
+    raises_list: list[str] = []
 
     if not docstring:
-        return result
+        return {"description": "", "args": args_dict, "returns": None, "raises": raises_list}
 
     lines = docstring.split("\n")
     current_section = "description"
-    current_param = None
-    description_lines = []
+    current_param: str | None = None
+    description_lines: list[str] = []
 
     for line in lines:
         stripped = line.strip()
@@ -251,29 +265,29 @@ def parse_google_docstring(docstring: str) -> dict:
                 param_name = param_match.group(1)
                 param_type = param_match.group(2)
                 param_desc = param_match.group(3) or ""
-                result["args"][param_name] = {
-                    "type": param_type,
-                    "description": param_desc.strip(),
-                }
+                args_dict[param_name] = ArgInfo(
+                    type=param_type,
+                    description=param_desc.strip(),
+                )
                 current_param = param_name
             elif current_param and stripped:
                 # Continuation of previous param description
-                result["args"][current_param]["description"] += " " + stripped
+                args_dict[current_param]["description"] += " " + stripped
         elif current_section == "returns":
-            if result["returns"] is None:
-                result["returns"] = stripped
+            if returns_str is None:
+                returns_str = stripped
             elif stripped:
-                result["returns"] += " " + stripped
+                returns_str += " " + stripped
 
-    result["description"] = " ".join(description_lines).strip()
+    description = " ".join(description_lines).strip()
     # Take just first paragraph for description
-    if "\n\n" in result["description"]:
-        result["description"] = result["description"].split("\n\n")[0]
+    if "\n\n" in description:
+        description = description.split("\n\n")[0]
 
-    return result
+    return {"description": description, "args": args_dict, "returns": returns_str, "raises": raises_list}
 
 
-def parse_numpy_docstring(docstring: str) -> dict:
+def parse_numpy_docstring(docstring: str) -> ParsedDocstring:
     """Parse a NumPy-style docstring.
 
     Args:
@@ -282,20 +296,17 @@ def parse_numpy_docstring(docstring: str) -> dict:
     Returns:
         Dictionary with 'description', 'args', 'returns', 'raises' keys.
     """
-    result = {
-        "description": "",
-        "args": {},
-        "returns": None,
-        "raises": [],
-    }
+    args_dict: dict[str, ArgInfo] = {}
+    returns_str: str | None = None
+    raises_list: list[str] = []
 
     if not docstring:
-        return result
+        return {"description": "", "args": args_dict, "returns": None, "raises": raises_list}
 
     lines = docstring.split("\n")
     current_section = "description"
-    current_param = None
-    description_lines = []
+    current_param: str | None = None
+    description_lines: list[str] = []
 
     i = 0
     while i < len(lines):
@@ -329,30 +340,30 @@ def parse_numpy_docstring(docstring: str) -> dict:
             if param_match and not line.startswith("    "):
                 param_name = param_match.group(1)
                 param_type = param_match.group(2)
-                result["args"][param_name] = {
-                    "type": param_type.strip() if param_type else None,
-                    "description": "",
-                }
+                args_dict[param_name] = ArgInfo(
+                    type=param_type.strip() if param_type else None,
+                    description="",
+                )
                 current_param = param_name
             elif current_param and stripped:
                 # Description line (indented)
-                result["args"][current_param]["description"] += " " + stripped
+                args_dict[current_param]["description"] += " " + stripped
         elif current_section == "returns":
-            if result["returns"] is None:
-                result["returns"] = stripped
+            if returns_str is None:
+                returns_str = stripped
             elif stripped:
-                result["returns"] += " " + stripped
+                returns_str += " " + stripped
 
         i += 1
 
-    result["description"] = " ".join(description_lines).strip()
-    if "\n\n" in result["description"]:
-        result["description"] = result["description"].split("\n\n")[0]
+    description = " ".join(description_lines).strip()
+    if "\n\n" in description:
+        description = description.split("\n\n")[0]
 
-    return result
+    return {"description": description, "args": args_dict, "returns": returns_str, "raises": raises_list}
 
 
-def parse_docstring(docstring: str) -> dict:
+def parse_docstring(docstring: str) -> ParsedDocstring:
     """Parse a docstring, auto-detecting format.
 
     Args:
@@ -510,9 +521,9 @@ class APIDocExtractor:
 
         # Extract classes
         for class_node in find_nodes_by_type(root, class_types):
-            sig = extract_class_signature(class_node, source, language)
-            if sig:
-                classes.append(sig)
+            class_sig = extract_class_signature(class_node, source, language)
+            if class_sig:
+                classes.append(class_sig)
 
         return functions, classes
 

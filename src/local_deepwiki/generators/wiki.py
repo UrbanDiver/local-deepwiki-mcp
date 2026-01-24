@@ -633,6 +633,7 @@ class WikiGenerator:
         """
         total_steps = 13
 
+        assert self._repo_path is not None, "Repository path must be set before generating wiki"
         freshness_page = generate_stale_report_page(
             repo_path=self._repo_path,
             wiki_status=wiki_status,

@@ -361,7 +361,7 @@ def extract_python_decorators(func_node: Node, source: bytes) -> list[str]:
     Returns:
         List of decorator strings.
     """
-    decorators = []
+    decorators: list[str] = []
     if func_node.parent:
         prev_sibling = func_node.prev_sibling
         while prev_sibling:

@@ -66,7 +66,7 @@ class GenerationProgress:
     phase_started_at: float = field(default_factory=time.time)
 
     # Rolling window for rate calculation (last N completion times)
-    _completion_times: deque = field(default_factory=lambda: deque(maxlen=20))
+    _completion_times: deque[float] = field(default_factory=lambda: deque(maxlen=20))
     _last_completion_time: float = field(default_factory=time.time)
 
     # Phase statistics for summary

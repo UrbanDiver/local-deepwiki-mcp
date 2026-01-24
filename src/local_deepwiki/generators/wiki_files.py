@@ -185,27 +185,27 @@ def _inject_inline_source_code(
                     current_class = entity_name
 
                 # Try to find the chunk - first try qualified name, then simple name
-                chunk = None
+                matched_chunk: CodeChunk | None = None
                 if current_class and entity_name != current_class:
                     # This is likely a method under the current class
                     qualified_name = f"{current_class}.{entity_name}"
-                    chunk = chunk_map.get(qualified_name)
-                if chunk is None:
+                    matched_chunk = chunk_map.get(qualified_name)
+                if matched_chunk is None:
                     candidate = chunk_map.get(entity_name)
                     # Only use simple name match if:
                     # - It's a class/function (no parent), OR
                     # - Its parent matches our current context
                     if candidate is not None:
                         if candidate.parent_name is None or candidate.parent_name == current_class:
-                            chunk = candidate
+                            matched_chunk = candidate
 
                 # Part A: Fallback to class source for unmatched methods
-                if chunk is None and current_class and entity_name != current_class:
+                if matched_chunk is None and current_class and entity_name != current_class:
                     # Method not found, use parent class source as fallback
-                    chunk = class_map.get(current_class)
+                    matched_chunk = class_map.get(current_class)
 
-                if chunk is not None:
-                    used_chunks.add(chunk.id)
+                if matched_chunk is not None:
+                    used_chunks.add(matched_chunk.id)
                     # Find the end of this function's documentation
                     # Look for: next heading at same or higher level, or **Returns:** line
                     j = i + 1
@@ -222,7 +222,7 @@ def _inject_inline_source_code(
                             if not found_returns:
                                 result_lines.append("")
                                 result_lines.append(
-                                    _create_source_details(chunk, syntax_lang, get_chunk_url(chunk))
+                                    _create_source_details(matched_chunk, syntax_lang, get_chunk_url(matched_chunk))
                                 )
                             i = j - 1  # Back up so we process next heading
                             break
@@ -239,7 +239,7 @@ def _inject_inline_source_code(
                             # Insert source code here
                             result_lines.append("")
                             result_lines.append(
-                                _create_source_details(chunk, syntax_lang, get_chunk_url(chunk))
+                                _create_source_details(matched_chunk, syntax_lang, get_chunk_url(matched_chunk))
                             )
                             i = j - 1  # Continue from here
                             break
@@ -251,7 +251,7 @@ def _inject_inline_source_code(
                         if not found_returns:
                             result_lines.append("")
                             result_lines.append(
-                                _create_source_details(chunk, syntax_lang, get_chunk_url(chunk))
+                                _create_source_details(matched_chunk, syntax_lang, get_chunk_url(matched_chunk))
                             )
                         i = j - 1
 
