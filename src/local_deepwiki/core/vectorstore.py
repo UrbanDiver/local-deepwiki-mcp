@@ -294,18 +294,30 @@ class VectorStore:
         limit: int = 10,
         language: str | None = None,
         chunk_type: str | None = None,
+        path_pattern: str | None = None,
+        use_fuzzy: bool = False,
+        fuzzy_weight: float = 0.3,
     ) -> list[SearchResult]:
         """Search for similar code chunks.
 
         Args:
             query: Search query text.
             limit: Maximum number of results.
-            language: Optional language filter.
-            chunk_type: Optional chunk type filter.
+            language: Optional language filter (e.g., "python", "typescript").
+            chunk_type: Optional chunk type filter (e.g., "function", "class", "method").
+            path_pattern: Optional file path pattern filter (e.g., "src/**/*.py").
+            use_fuzzy: Whether to use fuzzy matching to re-rank results.
+            fuzzy_weight: Weight for fuzzy score when use_fuzzy is True (0.0-1.0).
 
         Returns:
             List of search results with scores.
         """
+        from local_deepwiki.core.fuzzy_search import (
+            extract_highlights,
+            filter_by_path,
+            rerank_with_fuzzy,
+        )
+
         table = self._get_table()
         if table is None:
             logger.debug("No table found for search")
@@ -316,8 +328,11 @@ class VectorStore:
         # Generate query embedding
         query_embedding = (await self.embedding_provider.embed([query]))[0]
 
+        # Fetch more results if using path filter or fuzzy (we'll filter/rerank after)
+        fetch_limit = limit * 3 if (path_pattern or use_fuzzy) else limit
+
         # Build search query
-        search = table.search(query_embedding).limit(limit)
+        search = table.search(query_embedding).limit(fetch_limit)
 
         # Apply filters with validation to prevent injection
         filters = []
@@ -347,6 +362,21 @@ class VectorStore:
                     highlights=[],
                 )
             )
+
+        # Apply path pattern filter
+        if path_pattern:
+            search_results = filter_by_path(search_results, path_pattern)
+
+        # Apply fuzzy re-ranking
+        if use_fuzzy and search_results:
+            search_results = rerank_with_fuzzy(search_results, query, fuzzy_weight)
+
+            # Add highlights for fuzzy matches
+            for result in search_results:
+                result.highlights = extract_highlights(result.chunk.content, query)
+
+        # Limit results to requested amount
+        search_results = search_results[:limit]
 
         return search_results
 

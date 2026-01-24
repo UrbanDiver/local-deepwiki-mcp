@@ -17,6 +17,8 @@ from rich.console import Console
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 
+from local_deepwiki.cli_progress import MultiPhaseProgress, ProgressCallback
+
 if TYPE_CHECKING:
     from watchdog.observers.api import BaseObserver
 
@@ -456,6 +458,8 @@ async def initial_index(
     config: Config,
     llm_provider: str | None = None,
     full_rebuild: bool = False,
+    *,
+    no_progress: bool = False,
 ) -> None:
     """Perform initial indexing before starting watch mode.
 
@@ -464,40 +468,64 @@ async def initial_index(
         config: Configuration instance.
         llm_provider: Optional LLM provider override.
         full_rebuild: Whether to do a full rebuild.
+        no_progress: If True, disable progress bars.
     """
     console.print("[yellow]Running initial index...[/yellow]")
 
     indexer = RepositoryIndexer(repo_path=repo_path, config=config)
-
-    def progress_callback(msg: str, current: int, total: int) -> None:
-        if total > 0:
-            console.print(f"  [{current}/{total}] {msg}")
-        else:
-            console.print(f"  {msg}")
-
     start_time = time.time()
-    status = await indexer.index(
-        full_rebuild=full_rebuild,
-        progress_callback=progress_callback,
-    )
 
-    console.print(
-        f"[green]Indexed {status.total_files} files, {status.total_chunks} chunks[/green]"
-    )
+    with MultiPhaseProgress(disable=no_progress) as progress:
+        # Add phases
+        progress.add_phase("indexing", "Indexing repository", total=0)
+        progress.add_phase("wiki", "Generating wiki", total=0)
 
-    # Generate wiki
-    console.print("[yellow]Generating wiki...[/yellow]")
+        # Create callback adapter for indexing phase
+        index_callback = progress.get_callback("indexing")
 
-    wiki_structure = await generate_wiki(
-        repo_path=repo_path,
-        wiki_path=indexer.wiki_path,
-        vector_store=indexer.vector_store,
-        index_status=status,
-        config=config,
-        llm_provider=llm_provider,
-        progress_callback=progress_callback,
-        full_rebuild=full_rebuild,
-    )
+        def indexing_progress(msg: str, current: int, total: int) -> None:
+            if index_callback:
+                index_callback(msg, current, total)
+            else:
+                if total > 0:
+                    console.print(f"  [{current}/{total}] {msg}")
+                else:
+                    console.print(f"  {msg}")
+
+        status = await indexer.index(
+            full_rebuild=full_rebuild,
+            progress_callback=indexing_progress,
+        )
+
+        progress.complete_phase("indexing")
+        console.print(
+            f"[green]Indexed {status.total_files} files, {status.total_chunks} chunks[/green]"
+        )
+
+        # Create callback adapter for wiki phase
+        wiki_callback = progress.get_callback("wiki")
+
+        def wiki_progress(msg: str, current: int, total: int) -> None:
+            if wiki_callback:
+                wiki_callback(msg, current, total)
+            else:
+                if total > 0:
+                    console.print(f"  [{current}/{total}] {msg}")
+                else:
+                    console.print(f"  {msg}")
+
+        wiki_structure = await generate_wiki(
+            repo_path=repo_path,
+            wiki_path=indexer.wiki_path,
+            vector_store=indexer.vector_store,
+            index_status=status,
+            config=config,
+            llm_provider=llm_provider,
+            progress_callback=wiki_progress,
+            full_rebuild=full_rebuild,
+        )
+
+        progress.complete_phase("wiki")
 
     total_time = time.time() - start_time
     console.print(f"[green]Generated {len(wiki_structure.pages)} wiki pages[/green]")
@@ -538,6 +566,11 @@ def main() -> None:
         action="store_true",
         help="Skip initial indexing, just start watching",
     )
+    parser.add_argument(
+        "--no-progress",
+        action="store_true",
+        help="Disable progress bars (for non-interactive use)",
+    )
 
     args = parser.parse_args()
 
@@ -567,6 +600,7 @@ def main() -> None:
                 config=config,
                 llm_provider=args.llm,
                 full_rebuild=args.full_rebuild,
+                no_progress=args.no_progress,
             )
         )
 

@@ -477,6 +477,7 @@ class TestHandleSearchCodeWithResults:
                     mock_result = MagicMock()
                     mock_result.chunk = mock_chunk
                     mock_result.score = 0.95
+                    mock_result.highlights = []
 
                     mock_store = MagicMock()
                     mock_store.search = AsyncMock(return_value=[mock_result])
@@ -548,6 +549,7 @@ class TestHandleSearchCodeWithResults:
             mock_result = MagicMock()
             mock_result.chunk = mock_chunk
             mock_result.score = 0.8
+            mock_result.highlights = []
 
             with patch("local_deepwiki.handlers.get_embedding_provider"):
                 with patch("local_deepwiki.handlers.VectorStore") as mock_vs:

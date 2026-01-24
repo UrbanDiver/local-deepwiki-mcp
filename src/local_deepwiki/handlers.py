@@ -29,9 +29,12 @@ from local_deepwiki.validation import (
     MIN_SEARCH_LIMIT,
     VALID_EMBEDDING_PROVIDERS,
     VALID_LLM_PROVIDERS,
+    validate_chunk_type,
+    validate_fuzzy_weight,
     validate_language,
     validate_languages_list,
     validate_non_empty_string,
+    validate_path_pattern,
     validate_positive_int,
     validate_provider,
 )
@@ -714,7 +717,11 @@ async def handle_read_wiki_page(args: dict[str, Any]) -> list[TextContent]:
 
 @handle_tool_errors
 async def handle_search_code(args: dict[str, Any]) -> list[TextContent]:
-    """Handle search_code tool call."""
+    """Handle search_code tool call.
+
+    Supports both vector similarity search and optional fuzzy matching,
+    with filters for language, chunk type, and file path patterns.
+    """
     repo_path = Path(args["repo_path"]).resolve()
 
     # Validate inputs
@@ -727,9 +734,16 @@ async def handle_search_code(args: dict[str, Any]) -> list[TextContent]:
         default=10,
     )
     language = validate_language(args.get("language"))
+    chunk_type = validate_chunk_type(args.get("type"))
+    path_pattern = validate_path_pattern(args.get("path"))
+    use_fuzzy = bool(args.get("fuzzy", False))
+    fuzzy_weight = validate_fuzzy_weight(args.get("fuzzy_weight"))
 
     logger.info(f"Code search in {repo_path}: {query[:50]}...")
-    logger.debug(f"Search limit: {limit}, language filter: {language}")
+    logger.debug(
+        f"Search limit: {limit}, language: {language}, type: {chunk_type}, "
+        f"path: {path_pattern}, fuzzy: {use_fuzzy}"
+    )
 
     config = get_config()
     vector_db_path = config.get_vector_db_path(repo_path)
@@ -741,8 +755,16 @@ async def handle_search_code(args: dict[str, Any]) -> list[TextContent]:
     embedding_provider = get_embedding_provider(config.embedding)
     vector_store = VectorStore(vector_db_path, embedding_provider)
 
-    # Search
-    results = await vector_store.search(query, limit=limit, language=language)
+    # Search with filters
+    results = await vector_store.search(
+        query,
+        limit=limit,
+        language=language,
+        chunk_type=chunk_type,
+        path_pattern=path_pattern,
+        use_fuzzy=use_fuzzy,
+        fuzzy_weight=fuzzy_weight,
+    )
 
     logger.info(f"Search returned {len(results)} results")
     if not results:
@@ -751,20 +773,22 @@ async def handle_search_code(args: dict[str, Any]) -> list[TextContent]:
     output = []
     for r in results:
         chunk = r.chunk
-        output.append(
-            {
-                "file_path": chunk.file_path,
-                "name": chunk.name,
-                "type": chunk.chunk_type.value,
-                "language": chunk.language.value,
-                "lines": f"{chunk.start_line}-{chunk.end_line}",
-                "score": round(r.score, 4),
-                "preview": (
-                    chunk.content[:300] + "..." if len(chunk.content) > 300 else chunk.content
-                ),
-                "docstring": chunk.docstring,
-            }
-        )
+        result_entry: dict[str, Any] = {
+            "file_path": chunk.file_path,
+            "name": chunk.name,
+            "type": chunk.chunk_type.value,
+            "language": chunk.language.value,
+            "lines": f"{chunk.start_line}-{chunk.end_line}",
+            "score": round(r.score, 4),
+            "preview": (
+                chunk.content[:300] + "..." if len(chunk.content) > 300 else chunk.content
+            ),
+            "docstring": chunk.docstring,
+        }
+        # Include highlights if present (from fuzzy search)
+        if r.highlights:
+            result_entry["highlights"] = r.highlights
+        output.append(result_entry)
 
     return [TextContent(type="text", text=json.dumps(output, indent=2))]
 

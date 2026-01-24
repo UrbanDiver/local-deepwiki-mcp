@@ -8,6 +8,7 @@ from typing import cast
 
 import markdown
 
+from local_deepwiki.cli_progress import create_progress, is_interactive
 from local_deepwiki.logging import get_logger
 
 logger = get_logger(__name__)
@@ -664,16 +665,24 @@ def extract_title(md_file: Path) -> str:
 class HtmlExporter:
     """Export wiki markdown to static HTML files."""
 
-    def __init__(self, wiki_path: Path, output_path: Path):
+    def __init__(
+        self,
+        wiki_path: Path,
+        output_path: Path,
+        *,
+        no_progress: bool = False,
+    ):
         """Initialize the exporter.
 
         Args:
             wiki_path: Path to the .deepwiki directory
             output_path: Output directory for HTML files
+            no_progress: If True, disable progress bars
         """
         self.wiki_path = Path(wiki_path)
         self.output_path = Path(output_path)
         self.toc_entries: list[dict] = []
+        self._no_progress = no_progress
 
     def export(self) -> int:
         """Export all wiki pages to HTML.
@@ -699,12 +708,19 @@ class HtmlExporter:
             shutil.copy(search_src, self.output_path / "search.json")
             logger.debug("Copied search.json to output directory")
 
-        # Find and export all markdown files
+        # Find all markdown files
+        md_files = list(self.wiki_path.rglob("*.md"))
+
+        # Export with progress bar
         exported = 0
-        for md_file in self.wiki_path.rglob("*.md"):
-            rel_path = md_file.relative_to(self.wiki_path)
-            self._export_page(md_file, rel_path)
-            exported += 1
+        with create_progress(disable=self._no_progress) as progress:
+            task = progress.add_task("Exporting HTML", total=len(md_files))
+            for md_file in md_files:
+                rel_path = md_file.relative_to(self.wiki_path)
+                progress.update(task, description=f"Exporting {rel_path.name}")
+                self._export_page(md_file, rel_path)
+                exported += 1
+                progress.update(task, advance=1)
 
         logger.info(f"Exported {exported} pages to HTML")
         return exported
@@ -860,12 +876,18 @@ class HtmlExporter:
         )
 
 
-def export_to_html(wiki_path: str | Path, output_path: str | Path | None = None) -> str:
+def export_to_html(
+    wiki_path: str | Path,
+    output_path: str | Path | None = None,
+    *,
+    no_progress: bool = False,
+) -> str:
     """Export wiki to static HTML files.
 
     Args:
         wiki_path: Path to the .deepwiki directory
         output_path: Output directory (default: {wiki_path}_html)
+        no_progress: If True, disable progress bars
 
     Returns:
         Path to the output directory
@@ -877,14 +899,14 @@ def export_to_html(wiki_path: str | Path, output_path: str | Path | None = None)
         output_path = Path(output_path)
 
     logger.info(f"Exporting wiki from {wiki_path} to {output_path}")
-    exporter = HtmlExporter(wiki_path, output_path)
+    exporter = HtmlExporter(wiki_path, output_path, no_progress=no_progress)
     count = exporter.export()
 
     logger.info(f"HTML export complete: {count} pages")
     return f"Exported {count} pages to {output_path}"
 
 
-def main():
+def main() -> int:
     """CLI entry point for HTML export."""
     parser = argparse.ArgumentParser(description="Export DeepWiki documentation to static HTML")
     parser.add_argument(
@@ -894,6 +916,11 @@ def main():
         help="Path to the .deepwiki directory (default: .deepwiki)",
     )
     parser.add_argument("--output", "-o", help="Output directory (default: {wiki_path}_html)")
+    parser.add_argument(
+        "--no-progress",
+        action="store_true",
+        help="Disable progress bars (for non-interactive use)",
+    )
 
     args = parser.parse_args()
 
@@ -904,7 +931,7 @@ def main():
 
     output_path = Path(args.output).resolve() if args.output else None
 
-    result = export_to_html(wiki_path, output_path)
+    result = export_to_html(wiki_path, output_path, no_progress=args.no_progress)
     print(result)
 
     # Print location hint

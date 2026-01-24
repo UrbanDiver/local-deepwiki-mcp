@@ -14,6 +14,7 @@ from typing import cast
 import markdown
 from weasyprint import CSS, HTML
 
+from local_deepwiki.cli_progress import create_progress
 from local_deepwiki.logging import get_logger
 
 logger = get_logger(__name__)
@@ -496,16 +497,24 @@ def extract_title(md_file: Path) -> str:
 class PdfExporter:
     """Export wiki markdown to PDF format."""
 
-    def __init__(self, wiki_path: Path, output_path: Path):
+    def __init__(
+        self,
+        wiki_path: Path,
+        output_path: Path,
+        *,
+        no_progress: bool = False,
+    ):
         """Initialize the exporter.
 
         Args:
             wiki_path: Path to the .deepwiki directory.
             output_path: Output path for PDF file(s).
+            no_progress: If True, disable progress bars.
         """
         self.wiki_path = Path(wiki_path)
         self.output_path = Path(output_path)
         self.toc_entries: list[dict] = []
+        self._no_progress = no_progress
 
     def export_single(self) -> Path:
         """Export all wiki pages to a single PDF.
@@ -526,7 +535,7 @@ class PdfExporter:
         pages = self._collect_pages_in_order()
         logger.info(f"Found {len(pages)} pages to export")
 
-        # Build combined HTML
+        # Build combined HTML with progress
         combined_html = self._build_combined_html(pages)
 
         # Generate PDF
@@ -536,9 +545,13 @@ class PdfExporter:
 
         output_file.parent.mkdir(parents=True, exist_ok=True)
 
-        html_doc = HTML(string=combined_html)
-        css = CSS(string=PRINT_CSS)
-        html_doc.write_pdf(output_file, stylesheets=[css])
+        with create_progress(disable=self._no_progress) as progress:
+            task = progress.add_task("Generating PDF", total=1)
+            progress.update(task, description="Writing PDF file")
+            html_doc = HTML(string=combined_html)
+            css = CSS(string=PRINT_CSS)
+            html_doc.write_pdf(output_file, stylesheets=[css])
+            progress.update(task, advance=1)
 
         logger.info(f"Generated PDF: {output_file}")
         return output_file
@@ -557,14 +570,21 @@ class PdfExporter:
 
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        generated = []
-        for md_file in sorted(self.wiki_path.rglob("*.md")):
-            rel_path = md_file.relative_to(self.wiki_path)
-            output_file = output_dir / rel_path.with_suffix(".pdf")
-            output_file.parent.mkdir(parents=True, exist_ok=True)
+        # Collect all markdown files
+        md_files = sorted(self.wiki_path.rglob("*.md"))
 
-            self._export_page(md_file, output_file)
-            generated.append(output_file)
+        generated = []
+        with create_progress(disable=self._no_progress) as progress:
+            task = progress.add_task("Exporting PDFs", total=len(md_files))
+            for md_file in md_files:
+                rel_path = md_file.relative_to(self.wiki_path)
+                progress.update(task, description=f"Exporting {rel_path.name}")
+                output_file = output_dir / rel_path.with_suffix(".pdf")
+                output_file.parent.mkdir(parents=True, exist_ok=True)
+
+                self._export_page(md_file, output_file)
+                generated.append(output_file)
+                progress.update(task, advance=1)
 
         logger.info(f"Generated {len(generated)} PDF files")
         return generated
@@ -623,15 +643,19 @@ class PdfExporter:
         parts.append(self._build_toc_html(pages))
         parts.append('<div class="page-break"></div>')
 
-        # Add each page
-        for i, page in enumerate(pages):
-            content = page.read_text()
-            html_content = render_markdown_for_pdf(content)
-            parts.append(html_content)
+        # Add each page with progress tracking
+        with create_progress(disable=self._no_progress) as progress:
+            task = progress.add_task("Processing pages", total=len(pages))
+            for i, page in enumerate(pages):
+                progress.update(task, description=f"Processing {page.name}")
+                content = page.read_text()
+                html_content = render_markdown_for_pdf(content)
+                parts.append(html_content)
 
-            # Add page break between pages (except last)
-            if i < len(pages) - 1:
-                parts.append('<div class="page-break"></div>')
+                # Add page break between pages (except last)
+                if i < len(pages) - 1:
+                    parts.append('<div class="page-break"></div>')
+                progress.update(task, advance=1)
 
         combined_content = "\n".join(parts)
         return PDF_HTML_TEMPLATE.format(
@@ -684,6 +708,8 @@ def export_to_pdf(
     wiki_path: Path | str,
     output_path: Path | str | None = None,
     single_file: bool = True,
+    *,
+    no_progress: bool = False,
 ) -> str:
     """Export wiki to PDF format.
 
@@ -691,6 +717,7 @@ def export_to_pdf(
         wiki_path: Path to the .deepwiki directory.
         output_path: Output path (default: wiki.pdf or wiki_pdfs/).
         single_file: If True, combine all pages into one PDF.
+        no_progress: If True, disable progress bars.
 
     Returns:
         Success message with output path.
@@ -708,7 +735,7 @@ def export_to_pdf(
     else:
         output_path = Path(output_path)
 
-    exporter = PdfExporter(wiki_path, output_path)
+    exporter = PdfExporter(wiki_path, output_path, no_progress=no_progress)
 
     if single_file:
         result = exporter.export_single()
@@ -740,6 +767,11 @@ def main() -> None:
         action="store_true",
         help="Export each page as a separate PDF instead of combining",
     )
+    parser.add_argument(
+        "--no-progress",
+        action="store_true",
+        help="Disable progress bars (for non-interactive use)",
+    )
 
     args = parser.parse_args()
 
@@ -752,6 +784,7 @@ def main() -> None:
             wiki_path=args.wiki_path,
             output_path=args.output,
             single_file=not args.separate,
+            no_progress=args.no_progress,
         )
         print(result)
         print("Open the PDF file to view the documentation.")

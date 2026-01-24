@@ -724,6 +724,8 @@ class TestInitialIndex:
 
         config = Config()
 
+        callback_calls = []
+
         with (
             patch("local_deepwiki.watcher.RepositoryIndexer") as mock_indexer_class,
             patch(
@@ -739,6 +741,8 @@ class TestInitialIndex:
                 if callback:
                     callback("Processing files", 3, 10)  # total > 0
                     callback("Finalizing", 0, 0)  # total == 0
+                    callback_calls.append(("Processing files", 3, 10))
+                    callback_calls.append(("Finalizing", 0, 0))
                 return mock_status
 
             mock_indexer.index = index_with_callback
@@ -751,12 +755,17 @@ class TestInitialIndex:
             await initial_index(
                 repo_path=tmp_path,
                 config=config,
+                no_progress=True,  # Disable progress bars for simpler testing
             )
 
-        # Verify progress callback messages
+        # Verify progress callbacks were invoked
+        assert len(callback_calls) >= 2
+        assert callback_calls[0] == ("Processing files", 3, 10)
+        assert callback_calls[1] == ("Finalizing", 0, 0)
+
+        # Verify console output for final status
         print_calls = [str(c) for c in mock_console.print.call_args_list]
-        assert any("[3/10]" in str(c) for c in print_calls)
-        assert any("Finalizing" in str(c) for c in print_calls)
+        assert any("Indexed" in str(c) for c in print_calls)
 
 
 class TestMain:

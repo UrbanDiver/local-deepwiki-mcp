@@ -155,7 +155,7 @@ async def list_tools() -> list[Tool]:
         ),
         Tool(
             name="search_code",
-            description="Semantic search across the indexed codebase. Returns relevant code chunks with similarity scores.",
+            description="Semantic search across the indexed codebase with optional fuzzy matching and filters. Returns relevant code chunks with similarity scores.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -173,7 +173,40 @@ async def list_tools() -> list[Tool]:
                     },
                     "language": {
                         "type": "string",
-                        "description": "Optional language filter",
+                        "enum": [
+                            "python",
+                            "javascript",
+                            "typescript",
+                            "tsx",
+                            "go",
+                            "rust",
+                            "java",
+                            "c",
+                            "cpp",
+                            "swift",
+                            "ruby",
+                            "php",
+                            "kotlin",
+                            "csharp",
+                        ],
+                        "description": "Filter by programming language",
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": ["function", "class", "method", "module", "import", "comment", "other"],
+                        "description": "Filter by chunk type (e.g., function, class, method)",
+                    },
+                    "path": {
+                        "type": "string",
+                        "description": "Filter by file path pattern (e.g., 'src/**/*.py', 'tests/*')",
+                    },
+                    "fuzzy": {
+                        "type": "boolean",
+                        "description": "Enable fuzzy matching to improve results for exact name matches (default: false)",
+                    },
+                    "fuzzy_weight": {
+                        "type": "number",
+                        "description": "Weight for fuzzy matching score (0.0-1.0, default: 0.3). Higher values favor exact text matches over semantic similarity.",
                     },
                 },
                 "required": ["repo_path", "query"],
