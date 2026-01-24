@@ -3,6 +3,7 @@
 import re
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from local_deepwiki.models import ChunkType, IndexStatus
 
@@ -39,6 +40,139 @@ def sanitize_mermaid_name(name: str) -> str:
     return result
 
 
+def _unwrap_chunk(chunk: Any) -> Any:
+    """Unwrap SearchResult to get the underlying chunk."""
+    return chunk.chunk if hasattr(chunk, "chunk") else chunk
+
+
+def _collect_class_from_chunk(
+    chunk: Any,
+    classes: dict[str, ClassInfo],
+    methods_by_class: dict[str, list[tuple[str, str | None]]],
+    show_attributes: bool,
+) -> None:
+    """Extract class info from a CLASS chunk and add to dictionaries."""
+    class_name = chunk.name or "Unknown"
+    if class_name in classes:
+        return
+
+    attributes = _extract_class_attributes(
+        chunk.content, chunk.language.value if hasattr(chunk, "language") else "python"
+    )
+
+    is_abstract = (
+        "ABC" in str(chunk.metadata.get("parent_classes", []))
+        or "abstract" in chunk.content.lower()
+    )
+    is_dataclass = "@dataclass" in chunk.content or "BaseModel" in str(
+        chunk.metadata.get("parent_classes", [])
+    )
+
+    classes[class_name] = ClassInfo(
+        name=class_name,
+        methods=[],
+        attributes=attributes if show_attributes else [],
+        parents=chunk.metadata.get("parent_classes", []),
+        is_abstract=is_abstract,
+        is_dataclass=is_dataclass,
+        docstring=chunk.docstring,
+    )
+    methods_by_class[class_name] = []
+
+
+def _collect_method_from_chunk(
+    chunk: Any,
+    methods_by_class: dict[str, list[tuple[str, str | None]]],
+    show_types: bool,
+) -> None:
+    """Extract method info from a METHOD chunk and add to dictionary."""
+    parent = chunk.parent_name or "Unknown"
+    method_name = chunk.name or "unknown"
+
+    signature = _extract_method_signature(chunk.content) if show_types else None
+
+    if parent not in methods_by_class:
+        methods_by_class[parent] = []
+
+    existing = [m[0] for m in methods_by_class[parent]]
+    if method_name not in existing:
+        methods_by_class[parent].append((method_name, signature))
+
+
+def _extract_methods_from_class_content(
+    chunks: list,
+    classes: dict[str, ClassInfo],
+    methods_by_class: dict[str, list[tuple[str, str | None]]],
+    show_types: bool,
+) -> None:
+    """Extract methods from class content for classes without METHOD chunks."""
+    method_pattern = re.compile(r"(?:async\s+)?def\s+(\w+)\s*\([^)]*\)(?:\s*->\s*([^:]+))?:")
+
+    for class_name in classes:
+        if methods_by_class.get(class_name):
+            continue
+
+        for chunk in chunks:
+            chunk = _unwrap_chunk(chunk)
+            if chunk.chunk_type == ChunkType.CLASS and chunk.name == class_name:
+                for match in method_pattern.finditer(chunk.content):
+                    method_name = match.group(1)
+                    return_type = match.group(2)
+                    if method_name not in [m[0] for m in methods_by_class.get(class_name, [])]:
+                        if class_name not in methods_by_class:
+                            methods_by_class[class_name] = []
+                        sig = (
+                            f"() -> {return_type.strip()}"
+                            if return_type and show_types
+                            else "()"
+                        )
+                        methods_by_class[class_name].append((method_name, sig))
+
+
+def _build_class_lines(
+    class_name: str,
+    class_info: ClassInfo,
+    methods_by_class: dict[str, list[tuple[str, str | None]]],
+    max_methods: int,
+    show_types: bool,
+) -> list[str]:
+    """Build Mermaid diagram lines for a single class."""
+    lines: list[str] = []
+    safe_name = sanitize_mermaid_name(class_name)
+
+    lines.append(f"    class {safe_name} {{")
+    if class_info.is_dataclass:
+        lines.append("        <<dataclass>>")
+    elif class_info.is_abstract:
+        lines.append("        <<abstract>>")
+
+    for attr in class_info.attributes[:10]:
+        lines.append(f"        {attr}")
+
+    method_list = methods_by_class.get(class_name, [])
+    for method_name, signature in method_list[:max_methods]:
+        prefix = "-" if method_name.startswith("_") else "+"
+        safe_method = sanitize_mermaid_name(method_name)
+        if signature and show_types:
+            lines.append(f"        {prefix}{safe_method}{signature}")
+        else:
+            lines.append(f"        {prefix}{safe_method}()")
+
+    lines.append("    }")
+    return lines
+
+
+def _build_inheritance_lines(classes: dict[str, ClassInfo]) -> list[str]:
+    """Build Mermaid inheritance relationship lines."""
+    lines: list[str] = []
+    for class_name, class_info in sorted(classes.items()):
+        safe_child = sanitize_mermaid_name(class_name)
+        for parent in class_info.parents:
+            safe_parent = sanitize_mermaid_name(parent)
+            lines.append(f"    {safe_child} --|> {safe_parent}")
+    return lines
+
+
 def generate_class_diagram(
     chunks: list,
     show_attributes: bool = True,
@@ -62,130 +196,35 @@ def generate_class_diagram(
     Returns:
         Mermaid class diagram markdown string, or None if no classes found.
     """
-    # Collect class information
     classes: dict[str, ClassInfo] = {}
-    methods_by_class: dict[str, list[tuple[str, str | None]]] = {}  # class -> [(method, signature)]
+    methods_by_class: dict[str, list[tuple[str, str | None]]] = {}
 
+    # Collect class and method info from chunks
     for chunk in chunks:
-        # Handle SearchResult objects
-        if hasattr(chunk, "chunk"):
-            chunk = chunk.chunk
-
+        chunk = _unwrap_chunk(chunk)
         if chunk.chunk_type == ChunkType.CLASS:
-            class_name = chunk.name or "Unknown"
-            if class_name not in classes:
-                # Extract attributes from class content
-                attributes = _extract_class_attributes(
-                    chunk.content, chunk.language.value if hasattr(chunk, "language") else "python"
-                )
-
-                # Check for special class types
-                is_abstract = (
-                    "ABC" in str(chunk.metadata.get("parent_classes", []))
-                    or "abstract" in chunk.content.lower()
-                )
-                is_dataclass = "@dataclass" in chunk.content or "BaseModel" in str(
-                    chunk.metadata.get("parent_classes", [])
-                )
-
-                classes[class_name] = ClassInfo(
-                    name=class_name,
-                    methods=[],
-                    attributes=attributes if show_attributes else [],
-                    parents=chunk.metadata.get("parent_classes", []),
-                    is_abstract=is_abstract,
-                    is_dataclass=is_dataclass,
-                    docstring=chunk.docstring,
-                )
-                methods_by_class[class_name] = []
-
+            _collect_class_from_chunk(chunk, classes, methods_by_class, show_attributes)
         elif chunk.chunk_type == ChunkType.METHOD:
-            parent = chunk.parent_name or "Unknown"
-            method_name = chunk.name or "unknown"
+            _collect_method_from_chunk(chunk, methods_by_class, show_types)
 
-            # Extract signature with types if available
-            signature = _extract_method_signature(chunk.content) if show_types else None
+    # Extract methods from class content for classes without METHOD chunks
+    _extract_methods_from_class_content(chunks, classes, methods_by_class, show_types)
 
-            if parent not in methods_by_class:
-                methods_by_class[parent] = []
-
-            # Avoid duplicates
-            existing = [m[0] for m in methods_by_class[parent]]
-            if method_name not in existing:
-                methods_by_class[parent].append((method_name, signature))
-
-    # For classes without METHOD chunks, extract from content
-    method_pattern = re.compile(r"(?:async\s+)?def\s+(\w+)\s*\([^)]*\)(?:\s*->\s*([^:]+))?:")
-    for class_name, class_info in classes.items():
-        if not methods_by_class.get(class_name):
-            # Look for class chunk content
-            for chunk in chunks:
-                if hasattr(chunk, "chunk"):
-                    chunk = chunk.chunk
-                if chunk.chunk_type == ChunkType.CLASS and chunk.name == class_name:
-                    for match in method_pattern.finditer(chunk.content):
-                        method_name = match.group(1)
-                        return_type = match.group(2)
-                        if method_name not in [m[0] for m in methods_by_class.get(class_name, [])]:
-                            if class_name not in methods_by_class:
-                                methods_by_class[class_name] = []
-                            sig = (
-                                f"() -> {return_type.strip()}"
-                                if return_type and show_types
-                                else "()"
-                            )
-                            methods_by_class[class_name].append((method_name, sig))
-
-    # Build class info with methods
+    # Assign methods to classes
     for class_name, method_list in methods_by_class.items():
         if class_name in classes:
             classes[class_name].methods = [m[0] for m in method_list[:max_methods]]
 
-    # Filter empty classes
+    # Filter to classes with content
     classes_with_content = {k: v for k, v in classes.items() if v.methods or v.attributes}
-
     if not classes_with_content:
         return None
 
     # Build Mermaid diagram
     lines = ["```mermaid", "classDiagram"]
-
     for class_name, class_info in sorted(classes_with_content.items()):
-        safe_name = sanitize_mermaid_name(class_name)
-
-        # Add stereotype annotation
-        if class_info.is_dataclass:
-            lines.append(f"    class {safe_name} {{")
-            lines.append("        <<dataclass>>")
-        elif class_info.is_abstract:
-            lines.append(f"    class {safe_name} {{")
-            lines.append("        <<abstract>>")
-        else:
-            lines.append(f"    class {safe_name} {{")
-
-        # Add attributes
-        for attr in class_info.attributes[:10]:  # Limit attributes
-            lines.append(f"        {attr}")
-
-        # Add methods
-        method_list = methods_by_class.get(class_name, [])
-        for method_name, signature in method_list[:max_methods]:
-            prefix = "-" if method_name.startswith("_") else "+"
-            safe_method = sanitize_mermaid_name(method_name)
-            if signature and show_types:
-                lines.append(f"        {prefix}{safe_method}{signature}")
-            else:
-                lines.append(f"        {prefix}{safe_method}()")
-
-        lines.append("    }")
-
-    # Add inheritance relationships
-    for class_name, class_info in sorted(classes_with_content.items()):
-        safe_child = sanitize_mermaid_name(class_name)
-        for parent in class_info.parents:
-            safe_parent = sanitize_mermaid_name(parent)
-            lines.append(f"    {safe_child} --|> {safe_parent}")
-
+        lines.extend(_build_class_lines(class_name, class_info, methods_by_class, max_methods, show_types))
+    lines.extend(_build_inheritance_lines(classes_with_content))
     lines.append("```")
 
     return "\n".join(lines)

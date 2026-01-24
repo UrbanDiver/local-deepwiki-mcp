@@ -676,6 +676,73 @@ async def generate_single_file_doc(
 WriteCallback = Callable[[WikiPage], Awaitable[None]]
 
 
+def _is_test_file(path: str) -> bool:
+    """Check if a file is a test file in tests/ directory.
+
+    Note: Don't skip test_*.py in src/ (e.g., test_examples.py is a source file).
+
+    Args:
+        path: File path to check.
+
+    Returns:
+        True if file is in tests/ directory.
+    """
+    parts = path.split("/")
+    return "tests" in parts
+
+
+def _filter_significant_files(files: list[FileInfo], max_files: int) -> list[FileInfo]:
+    """Filter and limit files for documentation generation.
+
+    Args:
+        files: All indexed files.
+        max_files: Maximum files to document (0 = unlimited).
+
+    Returns:
+        Filtered and prioritized list of files.
+    """
+    # Filter: skip __init__.py, test files, and files with minimal content
+    significant = [
+        f
+        for f in files
+        if not f.path.endswith("__init__.py")
+        and not _is_test_file(f.path)
+        and f.chunk_count >= 2
+    ]
+
+    # Limit and prioritize by complexity (chunk count)
+    if max_files > 0 and len(significant) > max_files:
+        significant = sorted(significant, key=lambda x: x.chunk_count, reverse=True)[:max_files]
+
+    return significant
+
+
+def _create_files_index_page(
+    pages: list[WikiPage],
+    significant_files: list[FileInfo],
+    status_manager: "WikiStatusManager",
+) -> WikiPage:
+    """Create the files index page.
+
+    Args:
+        pages: All generated file pages.
+        significant_files: Files that were documented.
+        status_manager: Status manager for recording.
+
+    Returns:
+        Files index WikiPage.
+    """
+    all_file_paths = [f.path for f in significant_files]
+    files_index = WikiPage(
+        path="files/index.md",
+        title="Source Files",
+        content=_generate_files_index(pages),
+        generated_at=time.time(),
+    )
+    status_manager.record_page_status(files_index, all_file_paths)
+    return files_index
+
+
 async def generate_file_docs(
     index_status: IndexStatus,
     vector_store: VectorStore,
@@ -711,31 +778,7 @@ async def generate_file_docs(
     Returns:
         Tuple of (pages list, generated count, skipped count).
     """
-
-    # Filter files: skip __init__.py and test files
-    def is_test_file(path: str) -> bool:
-        """Check if a file is a test file."""
-        parts = path.split("/")
-        # Skip files in tests/ directory only
-        # Don't skip test_*.py in src/ (e.g., test_examples.py is a source file)
-        return "tests" in parts
-
-    significant_files = [
-        f
-        for f in index_status.files
-        if not f.path.endswith("__init__.py")
-        and not is_test_file(f.path)
-        and f.chunk_count >= 2  # Has meaningful content
-    ]
-
-    # Limit file docs if max_file_docs is set (0 = unlimited)
-    max_files = config.wiki.max_file_docs
-    if max_files > 0 and len(significant_files) > max_files:
-        # Prioritize files with more chunks (more complex)
-        significant_files = sorted(significant_files, key=lambda x: x.chunk_count, reverse=True)[
-            :max_files
-        ]
-
+    significant_files = _filter_significant_files(index_status.files, config.wiki.max_file_docs)
     if not significant_files:
         return [], 0, 0
 
@@ -747,7 +790,6 @@ async def generate_file_docs(
         f"(max {max_concurrent} concurrent)"
     )
 
-    # Initialize live progress tracking
     if generation_progress:
         generation_progress.start_phase("file_docs", total=len(significant_files))
 
@@ -770,20 +812,15 @@ async def generate_file_docs(
             )
             return file_info, page, was_skipped
 
-    # Create tasks for all file doc generations
+    # Create and process tasks
     tasks = [asyncio.create_task(generate_with_semaphore(f)) for f in significant_files]
-
-    # Process results as they complete (write immediately)
-    pages = []
+    pages: list[WikiPage] = []
     pages_generated = 0
     pages_skipped = 0
-    completed = 0
-    total = len(tasks)
 
     for coro in asyncio.as_completed(tasks):
         try:
             file_info, page, was_skipped = await coro
-            completed += 1
 
             if page is not None:
                 pages.append(page)
@@ -792,41 +829,25 @@ async def generate_file_docs(
                 else:
                     pages_generated += 1
 
-                # Write page immediately if callback provided
                 if write_callback:
                     await write_callback(page)
 
                 if progress_callback:
-                    progress_callback(
-                        f"Generated {file_info.path}",
-                        completed,
-                        total,
-                    )
+                    progress_callback(f"Generated {file_info.path}", len(pages), len(tasks))
 
-            # Update live progress tracker
             if generation_progress:
                 generation_progress.complete_file(file_info.path)
 
         except Exception as e:
-            completed += 1
             logger.error(f"Error generating file doc: {e}")
-            # Still update progress on error
             if generation_progress:
                 generation_progress.complete_file()
 
-    # Create files index (always regenerate since it depends on all file pages)
+    # Create files index
     if pages:
-        all_file_paths = [f.path for f in significant_files]
-        files_index = WikiPage(
-            path="files/index.md",
-            title="Source Files",
-            content=_generate_files_index(pages),
-            generated_at=time.time(),
-        )
+        files_index = _create_files_index_page(pages, significant_files, status_manager)
         pages.insert(0, files_index)
-        status_manager.record_page_status(files_index, all_file_paths)
 
-    # Mark phase complete
     if generation_progress:
         generation_progress.complete_phase()
 
