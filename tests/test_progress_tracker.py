@@ -356,3 +356,91 @@ class TestGenerationProgress:
         assert "phases" in data
         assert "indexing" in data["phases"]
         assert data["phases"]["indexing"]["items_completed"] == 5
+
+    def test_log_write_oserror_handled(self, tmp_path):
+        """Test that OSError during log write is caught gracefully (lines 102-103)."""
+        progress = GenerationProgress(wiki_path=tmp_path)
+
+        class FailingWrite:
+            """Mock file object that raises OSError on write."""
+            def write(self, msg):
+                raise OSError("Simulated write failure")
+            def close(self):
+                pass
+
+        progress._log_file = FailingWrite()
+        # This should not raise - OSError is caught
+        progress._log("Test message that triggers OSError")
+        # Verify we can still finalize
+        progress._log_file = None  # Prevent issues in finalize
+        progress.finalize()
+
+    def test_calculate_rate_zero_avg_time(self, tmp_path):
+        """Test rate calculation when average time is zero (line 194)."""
+        progress = GenerationProgress(wiki_path=tmp_path)
+        progress.start_phase("test", total=10)
+        # Manually add zero completion times to trigger avg_time <= 0 branch
+        progress._completion_times.append(0.0)
+        progress._completion_times.append(0.0)
+        rate = progress._calculate_rate()
+        assert rate == 0.0
+        progress.finalize()
+
+    def test_write_status_oserror_handled(self, tmp_path):
+        """Test that OSError during status write is caught gracefully (lines 237-238)."""
+        # Create a wiki path that is a file, not a directory
+        # This will cause mkdir to fail with OSError when _write_status tries to ensure directory exists
+        blocking_file = tmp_path / "blocked_wiki_for_status"
+        blocking_file.write_text("blocking")
+        progress = GenerationProgress(wiki_path=blocking_file)
+        # The _write_status call should not raise - OSError is caught
+        progress._write_status()
+        # Verify log_file is None (init also failed)
+        assert progress._log_file is None
+
+    def test_get_summary_sets_ended_at_for_incomplete_phase(self, tmp_path):
+        """Test that get_summary sets ended_at for phases that haven't ended (line 262)."""
+        progress = GenerationProgress(wiki_path=tmp_path)
+        progress.start_phase("incomplete_phase", total=10)
+        progress.complete_file("file1.py")
+        # Don't call complete_phase - leave it incomplete
+        assert progress._phase_stats["incomplete_phase"].ended_at is None
+        # get_summary should set ended_at for the incomplete phase
+        summary = progress.get_summary()
+        assert progress._phase_stats["incomplete_phase"].ended_at is not None
+        assert "incomplete_phase" in summary
+        progress.finalize()
+
+    def test_finalize_status_write_oserror_handled(self, tmp_path):
+        """Test that OSError during finalize status write is caught (lines 321-322)."""
+        progress = GenerationProgress(wiki_path=tmp_path)
+        progress.start_phase("test", total=2)
+        progress.complete_file("file1.py")
+        # Remove status file and replace with a directory to cause OSError on write
+        status_path = tmp_path / "generation_status.json"
+        if status_path.exists():
+            status_path.unlink()
+        status_path.mkdir(parents=True, exist_ok=True)
+        # This should not raise - OSError is caught
+        summary = progress.finalize(success=True)
+        assert "Wiki Generation Complete" in summary
+        # Clean up
+        status_path.rmdir()
+
+    def test_finalize_log_close_oserror_handled(self, tmp_path):
+        """Test that OSError during log file close is caught (lines 328-329)."""
+        progress = GenerationProgress(wiki_path=tmp_path)
+        progress.start_phase("test", total=2)
+        progress.complete_file("file1.py")
+
+        class FailingClose:
+            """Mock file object that raises OSError on close."""
+            def write(self, msg):
+                pass
+            def close(self):
+                raise OSError("Simulated close failure")
+
+        progress._log_file = FailingClose()
+        # This should not raise - OSError is caught
+        summary = progress.finalize(success=True)
+        assert "Wiki Generation Complete" in summary

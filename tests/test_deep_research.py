@@ -1119,3 +1119,382 @@ class TestResearchCancellation:
     async def test_cancelled_progress_type_exists(self):
         """Test that CANCELLED progress type exists."""
         assert ResearchProgressType.CANCELLED == "cancelled"
+
+
+class TestDeepResearchEdgeCases:
+    """Tests for edge cases and error handling to improve coverage."""
+
+    @pytest.fixture
+    def mock_vector_store(self):
+        """Create a mock vector store."""
+        store = MagicMock()
+        store.search = AsyncMock(
+            return_value=[
+                make_search_result(make_chunk("c1")),
+            ]
+        )
+        return store
+
+    async def test_prepare_results_truncates_when_exceeds_max(self):
+        """Test that _prepare_results_for_synthesis truncates results exceeding max_total_chunks."""
+        # Lines 442-443: Truncation when results exceed max_total_chunks
+        mock_store = MagicMock()
+
+        # Create many search results
+        many_results = [
+            make_search_result(make_chunk(f"c{i}", f"file{i}.py"), score=0.9 - i * 0.01)
+            for i in range(50)
+        ]
+        mock_store.search = AsyncMock(return_value=many_results)
+
+        llm = MockLLMProvider(
+            responses=[
+                json.dumps(
+                    {
+                        "sub_questions": [
+                            {"question": "Q1?", "category": "structure"},
+                            {"question": "Q2?", "category": "flow"},
+                        ]
+                    }
+                ),
+                json.dumps({"gaps": [], "follow_up_queries": []}),
+                "Synthesized answer",
+            ]
+        )
+
+        # Set a small max_total_chunks to trigger truncation
+        pipeline = DeepResearchPipeline(
+            vector_store=mock_store,
+            llm_provider=llm,
+            max_total_chunks=10,
+        )
+
+        result = await pipeline.research("Question")
+
+        # Should be limited to max_total_chunks
+        assert result.total_chunks_analyzed <= 10
+
+    async def test_parse_decomposition_handles_json_decode_error(self, mock_vector_store):
+        """Test that _parse_decomposition_response handles JSONDecodeError gracefully."""
+        # Lines 538-540: json.JSONDecodeError handling
+        llm = MockLLMProvider(
+            responses=[
+                # Response with JSON-like structure but invalid JSON
+                '{"sub_questions": [{"question": "Q1?", category: invalid}]}',  # Missing quotes
+                json.dumps({"gaps": [], "follow_up_queries": []}),
+                "Final answer",
+            ]
+        )
+
+        pipeline = DeepResearchPipeline(
+            vector_store=mock_vector_store,
+            llm_provider=llm,
+        )
+
+        result = await pipeline.research("Question")
+
+        # Should handle gracefully with empty sub_questions
+        assert result.sub_questions == []
+
+    async def test_parallel_retrieve_handles_search_exceptions(self):
+        """Test that _parallel_retrieve handles exceptions from search."""
+        # Lines 567-568: Handling search exceptions
+        mock_store = MagicMock()
+
+        # First search succeeds, second throws an exception
+        async def search_side_effect(query, limit=5):
+            if "fail" in query.lower():
+                raise RuntimeError("Search failed")
+            return [make_search_result(make_chunk("c1"))]
+
+        mock_store.search = AsyncMock(side_effect=search_side_effect)
+
+        llm = MockLLMProvider(
+            responses=[
+                json.dumps(
+                    {
+                        "sub_questions": [
+                            {"question": "Working query?", "category": "structure"},
+                            {"question": "This will fail query?", "category": "flow"},
+                        ]
+                    }
+                ),
+                json.dumps({"gaps": [], "follow_up_queries": []}),
+                "Answer with partial results",
+            ]
+        )
+
+        pipeline = DeepResearchPipeline(
+            vector_store=mock_store,
+            llm_provider=llm,
+        )
+
+        # Should not raise, should continue with partial results
+        result = await pipeline.research("Question")
+        assert result.answer is not None
+
+    async def test_build_context_summary_empty_results(self, mock_vector_store):
+        """Test that _build_context_summary handles empty results."""
+        # Line 628: Empty results case
+        pipeline = DeepResearchPipeline(
+            vector_store=mock_vector_store,
+            llm_provider=MockLLMProvider(),
+        )
+
+        # Call the method directly with empty results
+        summary = pipeline._build_context_summary([])
+
+        assert summary == "No code context retrieved."
+
+    async def test_parse_gap_analysis_no_json_match(self, mock_vector_store):
+        """Test that _parse_gap_analysis_response handles no JSON in response."""
+        # Line 660: No JSON match case
+        llm = MockLLMProvider(
+            responses=[
+                json.dumps({"sub_questions": [{"question": "Q?", "category": "structure"}]}),
+                # Response with no JSON at all
+                "This response has no JSON content at all, just plain text.",
+                "Final answer",
+            ]
+        )
+
+        pipeline = DeepResearchPipeline(
+            vector_store=mock_vector_store,
+            llm_provider=llm,
+        )
+
+        result = await pipeline.research("Question")
+
+        # Should handle gracefully - no follow-up queries
+        assert result.answer is not None
+
+    async def test_parse_gap_analysis_json_decode_error(self, mock_vector_store):
+        """Test that _parse_gap_analysis_response handles JSONDecodeError."""
+        # Lines 668-670: json.JSONDecodeError handling
+        llm = MockLLMProvider(
+            responses=[
+                json.dumps({"sub_questions": [{"question": "Q?", "category": "structure"}]}),
+                # Invalid JSON that looks like JSON (has braces)
+                '{gaps: ["missing"], follow_up_queries: [invalid]}',
+                "Final answer",
+            ]
+        )
+
+        pipeline = DeepResearchPipeline(
+            vector_store=mock_vector_store,
+            llm_provider=llm,
+        )
+
+        result = await pipeline.research("Question")
+
+        # Should handle gracefully
+        assert result.answer is not None
+
+    async def test_targeted_retrieve_empty_queries(self):
+        """Test that _targeted_retrieve handles empty query list."""
+        # Line 682: Empty queries case
+        mock_store = MagicMock()
+        mock_store.search = AsyncMock(return_value=[])
+
+        pipeline = DeepResearchPipeline(
+            vector_store=mock_store,
+            llm_provider=MockLLMProvider(),
+        )
+
+        # Call the method directly with empty queries
+        results = await pipeline._targeted_retrieve([])
+
+        assert results == []
+        # Search should not have been called
+        mock_store.search.assert_not_called()
+
+    async def test_targeted_retrieve_handles_search_exceptions(self):
+        """Test that _targeted_retrieve handles exceptions from search."""
+        # Lines 694-695: Handling search exceptions in targeted retrieval
+        mock_store = MagicMock()
+
+        # Create side effect that fails on certain queries
+        async def search_side_effect(query, limit=3):
+            if "error" in query.lower():
+                raise RuntimeError("Targeted search failed")
+            return [make_search_result(make_chunk("c1"))]
+
+        mock_store.search = AsyncMock(side_effect=search_side_effect)
+
+        llm = MockLLMProvider(
+            responses=[
+                json.dumps({"sub_questions": [{"question": "Q?", "category": "structure"}]}),
+                json.dumps(
+                    {
+                        "gaps": ["missing info"],
+                        "follow_up_queries": ["working query", "error query", "another query"],
+                    }
+                ),
+                "Answer with partial follow-up results",
+            ]
+        )
+
+        pipeline = DeepResearchPipeline(
+            vector_store=mock_store,
+            llm_provider=llm,
+        )
+
+        # Should not raise, should continue with partial results
+        result = await pipeline.research("Question")
+        assert result.answer is not None
+
+    async def test_parallel_retrieve_with_empty_sub_questions(self):
+        """Test that _parallel_retrieve handles empty sub_questions list."""
+        mock_store = MagicMock()
+        mock_store.search = AsyncMock(return_value=[])
+
+        pipeline = DeepResearchPipeline(
+            vector_store=mock_store,
+            llm_provider=MockLLMProvider(),
+        )
+
+        # Call the method directly with empty list
+        results = await pipeline._parallel_retrieve([])
+
+        assert results == []
+        # Search should not have been called
+        mock_store.search.assert_not_called()
+
+    async def test_targeted_retrieve_async_directly(self):
+        """Test _targeted_retrieve with empty queries directly via async."""
+        mock_store = MagicMock()
+        mock_store.search = AsyncMock(return_value=[])
+
+        pipeline = DeepResearchPipeline(
+            vector_store=mock_store,
+            llm_provider=MockLLMProvider(),
+        )
+
+        # Call directly with empty list
+        results = await pipeline._targeted_retrieve([])
+
+        assert results == []
+        mock_store.search.assert_not_called()
+
+    async def test_analyze_gaps_with_no_results(self):
+        """Test that _analyze_gaps returns original question when no results."""
+        mock_store = MagicMock()
+        mock_store.search = AsyncMock(return_value=[])
+
+        llm = MockLLMProvider(
+            responses=[
+                json.dumps({"sub_questions": [{"question": "Q?", "category": "structure"}]}),
+                json.dumps({"gaps": [], "follow_up_queries": []}),
+                "Answer",
+            ]
+        )
+
+        pipeline = DeepResearchPipeline(
+            vector_store=mock_store,
+            llm_provider=llm,
+        )
+
+        # Call _analyze_gaps directly with empty results
+        sub_questions = [SubQuestion(question="Q?", category="structure")]
+        follow_ups = await pipeline._analyze_gaps(
+            "Original question?",
+            sub_questions,
+            []  # Empty results
+        )
+
+        # Should return original question as follow-up
+        assert follow_ups == ["Original question?"]
+
+    def test_parse_gap_analysis_filters_empty_strings(self, mock_vector_store):
+        """Test that _parse_gap_analysis_response filters out empty strings."""
+        pipeline = DeepResearchPipeline(
+            vector_store=mock_vector_store,
+            llm_provider=MockLLMProvider(),
+        )
+
+        # Response with empty strings and non-string values in follow_up_queries
+        response = json.dumps({
+            "gaps": ["gap"],
+            "follow_up_queries": ["valid query", "", "  ", None, 123, "another valid"]
+        })
+
+        result = pipeline._parse_gap_analysis_response(response)
+
+        # Should only contain non-empty string queries
+        assert "valid query" in result
+        assert "another valid" in result
+        assert "" not in result
+        # None and 123 are filtered because isinstance(q, str) check
+
+    def test_parse_decomposition_missing_question_key(self, mock_vector_store):
+        """Test parsing decomposition when items are missing question key."""
+        pipeline = DeepResearchPipeline(
+            vector_store=mock_vector_store,
+            llm_provider=MockLLMProvider(),
+        )
+
+        # Response with some items missing 'question' key
+        response = json.dumps({
+            "sub_questions": [
+                {"question": "Valid question?", "category": "structure"},
+                {"category": "flow"},  # Missing 'question'
+                "not a dict",  # Not a dict
+                {"question": "Another valid?", "category": "dependencies"},
+            ]
+        })
+
+        result = pipeline._parse_decomposition_response(response)
+
+        # Should only return valid items with 'question' key
+        assert len(result) == 2
+        assert result[0].question == "Valid question?"
+        assert result[1].question == "Another valid?"
+
+    def test_parse_decomposition_default_category(self, mock_vector_store):
+        """Test that decomposition uses default category when missing."""
+        pipeline = DeepResearchPipeline(
+            vector_store=mock_vector_store,
+            llm_provider=MockLLMProvider(),
+        )
+
+        # Response with missing category
+        response = json.dumps({
+            "sub_questions": [
+                {"question": "Question without category?"},
+            ]
+        })
+
+        result = pipeline._parse_decomposition_response(response)
+
+        # Should use "structure" as default category
+        assert len(result) == 1
+        assert result[0].category == "structure"
+
+    async def test_custom_prompts_are_used(self, mock_vector_store):
+        """Test that custom prompts are used when provided."""
+        custom_decomposition = "Custom decomposition prompt"
+        custom_gap_analysis = "Custom gap analysis prompt"
+        custom_synthesis = "Custom synthesis prompt"
+
+        llm = MockLLMProvider(
+            responses=[
+                json.dumps({"sub_questions": [{"question": "Q?", "category": "structure"}]}),
+                json.dumps({"gaps": [], "follow_up_queries": []}),
+                "Final answer",
+            ]
+        )
+
+        pipeline = DeepResearchPipeline(
+            vector_store=mock_vector_store,
+            llm_provider=llm,
+            decomposition_prompt=custom_decomposition,
+            gap_analysis_prompt=custom_gap_analysis,
+            synthesis_prompt=custom_synthesis,
+        )
+
+        await pipeline.research("Question")
+
+        # Verify custom prompts were used
+        assert custom_decomposition in llm.system_prompts
+        assert custom_gap_analysis in llm.system_prompts
+        assert custom_synthesis in llm.system_prompts

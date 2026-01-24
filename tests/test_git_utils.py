@@ -11,12 +11,16 @@ from local_deepwiki.core.git_utils import (
     BlameInfo,
     EntityBlameInfo,
     GitRepoInfo,
+    StaleInfo,
     _parse_all_porcelain_blame,
     _parse_line_blame_map,
     build_source_url,
+    check_page_staleness,
     format_blame_date,
     get_default_branch,
     get_file_entity_blame,
+    get_file_last_modified,
+    get_files_last_modified,
     get_git_remote_url,
     get_line_blame,
     get_range_blame,
@@ -578,6 +582,15 @@ class TestFormatBlameDate:
         # Should contain month abbreviation and year
         assert len(result) > 5  # e.g., "Nov 15, 2024"
 
+    def test_year_or_older_format(self) -> None:
+        """Test formatting dates older than a year."""
+        very_old_date = datetime.now() - timedelta(days=400)
+        result = format_blame_date(very_old_date)
+        # Should still use "Mon DD, YYYY" format
+        assert len(result) > 5
+        # Verify it contains a year and is properly formatted
+        assert "," in result
+
 
 class TestGetLineBlame:
     """Tests for get_line_blame function."""
@@ -728,3 +741,440 @@ class MyClass:
         """Test returns empty list for empty entities input."""
         result = get_file_entity_blame(tmp_path, "test.py", [])
         assert result == []
+
+    def test_handles_timeout_error(self, tmp_path: Path) -> None:
+        """Test returns empty list when subprocess times out."""
+        with patch("subprocess.run") as mock_run:
+            mock_run.side_effect = subprocess.TimeoutExpired(cmd="git", timeout=60)
+            entities = [("foo", "function", 1, 2)]
+            result = get_file_entity_blame(tmp_path, "test.py", entities)
+            assert result == []
+
+    def test_handles_file_not_found_error(self, tmp_path: Path) -> None:
+        """Test returns empty list when git is not found."""
+        with patch("subprocess.run") as mock_run:
+            mock_run.side_effect = FileNotFoundError("git not found")
+            entities = [("foo", "function", 1, 2)]
+            result = get_file_entity_blame(tmp_path, "test.py", entities)
+            assert result == []
+
+    def test_handles_os_error(self, tmp_path: Path) -> None:
+        """Test returns empty list on OSError."""
+        with patch("subprocess.run") as mock_run:
+            mock_run.side_effect = OSError("Permission denied")
+            entities = [("foo", "function", 1, 2)]
+            result = get_file_entity_blame(tmp_path, "test.py", entities)
+            assert result == []
+
+    def test_returns_empty_when_line_blame_empty(self, tmp_path: Path) -> None:
+        """Test returns empty list when line_blame map is empty."""
+        with patch("subprocess.run") as mock_run:
+            # Return success but with empty/invalid output
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=[], returncode=0, stdout="", stderr=""
+            )
+            entities = [("foo", "function", 1, 2)]
+            result = get_file_entity_blame(tmp_path, "test.py", entities)
+            assert result == []
+
+
+class TestGetLineBlameExceptionHandling:
+    """Additional tests for get_line_blame exception handling."""
+
+    def test_handles_timeout_error(self, tmp_path: Path) -> None:
+        """Test returns None when subprocess times out."""
+        with patch("subprocess.run") as mock_run:
+            mock_run.side_effect = subprocess.TimeoutExpired(cmd="git", timeout=10)
+            result = get_line_blame(tmp_path, "test.py", 1)
+            assert result is None
+
+    def test_handles_file_not_found_error(self, tmp_path: Path) -> None:
+        """Test returns None when git is not found."""
+        with patch("subprocess.run") as mock_run:
+            mock_run.side_effect = FileNotFoundError("git not found")
+            result = get_line_blame(tmp_path, "test.py", 1)
+            assert result is None
+
+    def test_handles_os_error(self, tmp_path: Path) -> None:
+        """Test returns None on OSError."""
+        with patch("subprocess.run") as mock_run:
+            mock_run.side_effect = OSError("Permission denied")
+            result = get_line_blame(tmp_path, "test.py", 1)
+            assert result is None
+
+
+class TestGetRangeBlameExceptionHandling:
+    """Additional tests for get_range_blame exception handling."""
+
+    def test_handles_timeout_error(self, tmp_path: Path) -> None:
+        """Test returns None when subprocess times out."""
+        with patch("subprocess.run") as mock_run:
+            mock_run.side_effect = subprocess.TimeoutExpired(cmd="git", timeout=30)
+            result = get_range_blame(tmp_path, "test.py", 1, 10)
+            assert result is None
+
+    def test_handles_file_not_found_error(self, tmp_path: Path) -> None:
+        """Test returns None when git is not found."""
+        with patch("subprocess.run") as mock_run:
+            mock_run.side_effect = FileNotFoundError("git not found")
+            result = get_range_blame(tmp_path, "test.py", 1, 10)
+            assert result is None
+
+    def test_handles_os_error(self, tmp_path: Path) -> None:
+        """Test returns None on OSError."""
+        with patch("subprocess.run") as mock_run:
+            mock_run.side_effect = OSError("Permission denied")
+            result = get_range_blame(tmp_path, "test.py", 1, 10)
+            assert result is None
+
+    def test_returns_none_when_returncode_nonzero(self, tmp_path: Path) -> None:
+        """Test returns None when git blame returns non-zero exit code."""
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=[], returncode=128, stdout="", stderr="fatal: no such path"
+            )
+            result = get_range_blame(tmp_path, "nonexistent.py", 1, 10)
+            assert result is None
+
+    def test_returns_none_when_entries_empty(self, tmp_path: Path) -> None:
+        """Test returns None when parsed entries are empty."""
+        with patch("subprocess.run") as mock_run:
+            # Return success but with output that produces no valid entries
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=[], returncode=0, stdout="", stderr=""
+            )
+            result = get_range_blame(tmp_path, "test.py", 1, 10)
+            assert result is None
+
+
+class TestParsePorcelainBlameValueError:
+    """Tests for invalid author-time handling in blame parsing."""
+
+    def test_handles_invalid_author_time(self) -> None:
+        """Test skipping entries with non-integer author-time."""
+        output = """abc123def456abc123def456abc123def456abc12345 1 1 1
+author Alice
+author-mail <alice@example.com>
+author-time not_a_number
+summary Bad commit
+filename test.py
+\tline 1
+"""
+        entries = _parse_all_porcelain_blame(output)
+        # Entry should be skipped because author_time is not a valid integer
+        assert entries == []
+
+    def test_handles_empty_author_time(self) -> None:
+        """Test skipping entries with empty author-time."""
+        output = """abc123def456abc123def456abc123def456abc12345 1 1 1
+author Alice
+author-time
+summary Bad commit
+filename test.py
+\tline 1
+"""
+        entries = _parse_all_porcelain_blame(output)
+        assert entries == []
+
+
+class TestParseLineBlameMapEdgeCases:
+    """Tests for edge cases in _parse_line_blame_map."""
+
+    def test_handles_invalid_author_time(self) -> None:
+        """Test skipping entries with non-integer author-time in line map."""
+        output = """abc123def456abc123def456abc123def456abc12345 1 1 1
+author Alice
+author-time not_a_number
+filename test.py
+\tdef foo():
+"""
+        line_map = _parse_line_blame_map(output)
+        # Line should not be added because author_time is invalid
+        assert 1 not in line_map
+
+    def test_handles_non_commit_lines(self) -> None:
+        """Test handling of non-commit lines in output (garbage lines)."""
+        output = """some random garbage line
+abc123def456abc123def456abc123def456abc12345 1 1 1
+author Alice
+author-time 1700000000
+filename test.py
+\tdef foo():
+another garbage line
+"""
+        line_map = _parse_line_blame_map(output)
+        # Should still parse the valid entry
+        assert 1 in line_map
+        assert line_map[1].author == "Alice"
+
+    def test_handles_abbreviated_entry_with_cache(self) -> None:
+        """Test handling of abbreviated entries using commit cache."""
+        # First entry has full info, second entry from same commit has abbreviated info
+        output = """abc123def456abc123def456abc123def456abc12345 1 1 1
+author Alice
+author-mail <alice@example.com>
+author-time 1700000000
+summary First commit
+filename test.py
+\tline 1
+abc123def456abc123def456abc123def456abc12345 2 2
+filename test.py
+\tline 2
+"""
+        line_map = _parse_line_blame_map(output)
+        # Both lines should use the cached blame info
+        assert 1 in line_map
+        assert 2 in line_map
+        assert line_map[1].author == "Alice"
+        assert line_map[2].author == "Alice"
+        # They should be the same object (cached)
+        assert line_map[1] is line_map[2]
+
+
+class TestGetFileLastModified:
+    """Tests for get_file_last_modified function."""
+
+    def test_returns_date_for_committed_file(self, tmp_path: Path) -> None:
+        """Test getting last modified date for a committed file."""
+        # Set up git repo with a committed file
+        subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True)
+        subprocess.run(
+            ["git", "config", "user.email", "test@example.com"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "Test User"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+
+        test_file = tmp_path / "test.py"
+        test_file.write_text("def hello(): pass\n")
+        subprocess.run(["git", "add", "test.py"], cwd=tmp_path, capture_output=True)
+        subprocess.run(
+            ["git", "commit", "-m", "Add file"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+
+        result = get_file_last_modified(tmp_path, "test.py")
+
+        assert result is not None
+        assert isinstance(result, datetime)
+        # Should be within the last minute
+        assert (datetime.now() - result).total_seconds() < 60
+
+    def test_returns_none_for_non_git_dir(self, tmp_path: Path) -> None:
+        """Test returns None for non-git directory."""
+        test_file = tmp_path / "test.py"
+        test_file.write_text("def hello(): pass\n")
+
+        result = get_file_last_modified(tmp_path, "test.py")
+        assert result is None
+
+    def test_returns_none_for_uncommitted_file(self, tmp_path: Path) -> None:
+        """Test returns None for file not in git history."""
+        subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True)
+
+        test_file = tmp_path / "test.py"
+        test_file.write_text("def hello(): pass\n")
+
+        result = get_file_last_modified(tmp_path, "test.py")
+        assert result is None
+
+    def test_handles_timeout_error(self, tmp_path: Path) -> None:
+        """Test returns None when subprocess times out."""
+        with patch("local_deepwiki.core.git_utils.subprocess.run") as mock_run:
+            mock_run.side_effect = subprocess.TimeoutExpired(cmd="git", timeout=10)
+            result = get_file_last_modified(tmp_path, "test.py")
+            assert result is None
+
+    def test_handles_file_not_found_error(self, tmp_path: Path) -> None:
+        """Test returns None when git is not found."""
+        with patch("local_deepwiki.core.git_utils.subprocess.run") as mock_run:
+            mock_run.side_effect = FileNotFoundError("git not found")
+            result = get_file_last_modified(tmp_path, "test.py")
+            assert result is None
+
+    def test_handles_os_error(self, tmp_path: Path) -> None:
+        """Test returns None on OSError."""
+        with patch("local_deepwiki.core.git_utils.subprocess.run") as mock_run:
+            mock_run.side_effect = OSError("Permission denied")
+            result = get_file_last_modified(tmp_path, "test.py")
+            assert result is None
+
+    def test_handles_value_error_invalid_timestamp(self, tmp_path: Path) -> None:
+        """Test returns None when timestamp cannot be parsed."""
+        with patch("local_deepwiki.core.git_utils.subprocess.run") as mock_run:
+            mock_run.return_value = subprocess.CompletedProcess(
+                args=[], returncode=0, stdout="not_a_timestamp\n", stderr=""
+            )
+            result = get_file_last_modified(tmp_path, "test.py")
+            assert result is None
+
+
+class TestGetFilesLastModified:
+    """Tests for get_files_last_modified function."""
+
+    def test_returns_empty_dict_for_empty_file_paths(self, tmp_path: Path) -> None:
+        """Test returns empty dict when file_paths is empty."""
+        result = get_files_last_modified(tmp_path, [])
+        assert result == {}
+
+    def test_returns_dates_for_multiple_files(self, tmp_path: Path) -> None:
+        """Test getting modification dates for multiple committed files."""
+        # Set up git repo with committed files
+        subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True)
+        subprocess.run(
+            ["git", "config", "user.email", "test@example.com"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "Test User"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+
+        (tmp_path / "file1.py").write_text("def foo(): pass\n")
+        (tmp_path / "file2.py").write_text("def bar(): pass\n")
+        subprocess.run(["git", "add", "."], cwd=tmp_path, capture_output=True)
+        subprocess.run(
+            ["git", "commit", "-m", "Add files"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+
+        result = get_files_last_modified(tmp_path, ["file1.py", "file2.py"])
+
+        assert len(result) == 2
+        assert "file1.py" in result
+        assert "file2.py" in result
+        assert isinstance(result["file1.py"], datetime)
+        assert isinstance(result["file2.py"], datetime)
+
+
+class TestCheckPageStaleness:
+    """Tests for check_page_staleness function."""
+
+    def test_returns_none_for_empty_source_files(self, tmp_path: Path) -> None:
+        """Test returns None when source_files is empty."""
+        result = check_page_staleness(
+            tmp_path, "page.md", datetime.now().timestamp(), []
+        )
+        assert result is None
+
+    def test_returns_none_when_source_not_newer(self, tmp_path: Path) -> None:
+        """Test returns None when source file is not newer than doc."""
+        # Set up git repo with a committed file
+        subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True)
+        subprocess.run(
+            ["git", "config", "user.email", "test@example.com"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "Test User"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+
+        test_file = tmp_path / "test.py"
+        test_file.write_text("def hello(): pass\n")
+        subprocess.run(["git", "add", "test.py"], cwd=tmp_path, capture_output=True)
+        subprocess.run(
+            ["git", "commit", "-m", "Add file"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+
+        # Document generated "now" (after the commit)
+        future_time = (datetime.now() + timedelta(seconds=10)).timestamp()
+        result = check_page_staleness(
+            tmp_path, "page.md", future_time, ["test.py"]
+        )
+        assert result is None
+
+    def test_returns_stale_info_when_source_newer(self, tmp_path: Path) -> None:
+        """Test returns StaleInfo when source file is newer than doc."""
+        # Set up git repo with a committed file
+        subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True)
+        subprocess.run(
+            ["git", "config", "user.email", "test@example.com"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "Test User"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+
+        test_file = tmp_path / "test.py"
+        test_file.write_text("def hello(): pass\n")
+        subprocess.run(["git", "add", "test.py"], cwd=tmp_path, capture_output=True)
+        subprocess.run(
+            ["git", "commit", "-m", "Add file"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+
+        # Document generated in the past (before the commit)
+        past_time = (datetime.now() - timedelta(days=30)).timestamp()
+        result = check_page_staleness(
+            tmp_path, "page.md", past_time, ["test.py"]
+        )
+
+        assert result is not None
+        assert isinstance(result, StaleInfo)
+        assert result.page_path == "page.md"
+        assert result.source_files == ["test.py"]
+
+    def test_returns_none_when_below_threshold(self, tmp_path: Path) -> None:
+        """Test returns None when staleness is below threshold."""
+        # Set up git repo with a committed file
+        subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True)
+        subprocess.run(
+            ["git", "config", "user.email", "test@example.com"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "Test User"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+
+        test_file = tmp_path / "test.py"
+        test_file.write_text("def hello(): pass\n")
+        subprocess.run(["git", "add", "test.py"], cwd=tmp_path, capture_output=True)
+        subprocess.run(
+            ["git", "commit", "-m", "Add file"],
+            cwd=tmp_path,
+            capture_output=True,
+        )
+
+        # Document generated 1 day ago
+        past_time = (datetime.now() - timedelta(days=1)).timestamp()
+        # But threshold is 7 days
+        result = check_page_staleness(
+            tmp_path,
+            "page.md",
+            past_time,
+            ["test.py"],
+            stale_threshold_days=7,
+        )
+        # Should return None because days_stale (around 1) < threshold (7)
+        assert result is None
+
+    def test_returns_none_when_no_mod_dates(self, tmp_path: Path) -> None:
+        """Test returns None when no modification dates can be retrieved."""
+        subprocess.run(["git", "init"], cwd=tmp_path, capture_output=True)
+
+        # No committed files, so no modification dates
+        past_time = (datetime.now() - timedelta(days=30)).timestamp()
+        result = check_page_staleness(
+            tmp_path, "page.md", past_time, ["nonexistent.py"]
+        )
+        assert result is None

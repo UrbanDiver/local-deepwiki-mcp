@@ -1174,6 +1174,334 @@ class TestHandleDeepResearchImpl:
                             assert len(result) == 1
 
 
+class TestCancellationAndProgressCallbacks:
+    """Tests for _create_progress_callbacks and cancellation handling."""
+
+    async def test_is_cancelled_returns_true_when_event_set(self, tmp_path):
+        """Test is_cancelled returns True when cancellation_event is set."""
+        from local_deepwiki.handlers import _DeepResearchContext, _create_progress_callbacks
+
+        # Create a context with the cancellation event set
+        ctx = _DeepResearchContext(
+            repo_path=tmp_path,
+            question="Test question",
+            max_chunks=20,
+            preset=None,
+            server=None,
+        )
+        ctx.cancellation_event.set()  # Set the cancellation event
+
+        is_cancelled, _, _ = _create_progress_callbacks(ctx)
+
+        # Should return True because event is set
+        assert is_cancelled() is True
+
+    async def test_is_cancelled_returns_false_when_not_cancelled(self, tmp_path):
+        """Test is_cancelled returns False when nothing is cancelled."""
+        from local_deepwiki.handlers import _DeepResearchContext, _create_progress_callbacks
+
+        ctx = _DeepResearchContext(
+            repo_path=tmp_path,
+            question="Test question",
+            max_chunks=20,
+            preset=None,
+            server=None,
+        )
+
+        is_cancelled, _, _ = _create_progress_callbacks(ctx)
+
+        # Should return False - neither event set nor task cancelled
+        assert is_cancelled() is False
+
+    async def test_is_cancelled_checks_task_cancelled_state(self, tmp_path):
+        """Test is_cancelled checks asyncio task cancelled state."""
+        from local_deepwiki.handlers import _DeepResearchContext, _create_progress_callbacks
+
+        ctx = _DeepResearchContext(
+            repo_path=tmp_path,
+            question="Test question",
+            max_chunks=20,
+            preset=None,
+            server=None,
+        )
+
+        is_cancelled, _, _ = _create_progress_callbacks(ctx)
+
+        # Create a task and cancel it to test the task.cancelled() branch
+        async def check_cancelled():
+            # Get current task and check if is_cancelled sees it
+            task = asyncio.current_task()
+            # Without cancellation, should return False
+            return is_cancelled()
+
+        result = await check_cancelled()
+        assert result is False
+
+    async def test_is_cancelled_returns_true_when_task_cancelled(self, tmp_path):
+        """Test is_cancelled returns True when current task is cancelled."""
+        from local_deepwiki.handlers import _DeepResearchContext, _create_progress_callbacks
+
+        ctx = _DeepResearchContext(
+            repo_path=tmp_path,
+            question="Test question",
+            max_chunks=20,
+            preset=None,
+            server=None,
+        )
+
+        is_cancelled, _, _ = _create_progress_callbacks(ctx)
+
+        # Mock asyncio.current_task to return a cancelled task
+        mock_task = MagicMock()
+        mock_task.cancelled.return_value = True
+
+        with patch("asyncio.current_task", return_value=mock_task):
+            result = is_cancelled()
+
+        assert result is True
+
+    async def test_is_cancelled_handles_runtime_error(self, tmp_path):
+        """Test is_cancelled handles RuntimeError from asyncio.current_task()."""
+        from local_deepwiki.handlers import _DeepResearchContext, _create_progress_callbacks
+
+        ctx = _DeepResearchContext(
+            repo_path=tmp_path,
+            question="Test question",
+            max_chunks=20,
+            preset=None,
+            server=None,
+        )
+
+        is_cancelled, _, _ = _create_progress_callbacks(ctx)
+
+        # Mock asyncio.current_task to raise RuntimeError
+        with patch("asyncio.current_task", side_effect=RuntimeError("No running event loop")):
+            result = is_cancelled()
+
+        # Should return False, not raise
+        assert result is False
+
+    async def test_progress_callback_handles_runtime_error(self, tmp_path):
+        """Test progress_callback logs warning on RuntimeError."""
+        from local_deepwiki.handlers import _DeepResearchContext, _create_progress_callbacks
+        from local_deepwiki.models import ResearchProgress, ResearchProgressType
+
+        # Create mock server that raises RuntimeError
+        mock_server = MagicMock()
+        mock_ctx = MagicMock()
+        mock_ctx.meta.progressToken = "test-token"
+        mock_ctx.session.send_progress_notification = AsyncMock(
+            side_effect=RuntimeError("Session closed")
+        )
+        mock_server.request_context = mock_ctx
+
+        ctx = _DeepResearchContext(
+            repo_path=tmp_path,
+            question="Test question",
+            max_chunks=20,
+            preset=None,
+            server=mock_server,
+        )
+        ctx.progress_token = "test-token"
+
+        _, progress_callback, _ = _create_progress_callbacks(ctx)
+
+        # Should not raise, just log warning
+        progress = ResearchProgress(
+            step=1,
+            step_type=ResearchProgressType.DECOMPOSITION_COMPLETE,
+            message="Test progress",
+        )
+        await progress_callback(progress)  # Should not raise
+
+    async def test_progress_callback_handles_os_error(self, tmp_path):
+        """Test progress_callback logs warning on OSError."""
+        from local_deepwiki.handlers import _DeepResearchContext, _create_progress_callbacks
+        from local_deepwiki.models import ResearchProgress, ResearchProgressType
+
+        mock_server = MagicMock()
+        mock_ctx = MagicMock()
+        mock_ctx.meta.progressToken = "test-token"
+        mock_ctx.session.send_progress_notification = AsyncMock(
+            side_effect=OSError("Network error")
+        )
+        mock_server.request_context = mock_ctx
+
+        ctx = _DeepResearchContext(
+            repo_path=tmp_path,
+            question="Test question",
+            max_chunks=20,
+            preset=None,
+            server=mock_server,
+        )
+        ctx.progress_token = "test-token"
+
+        _, progress_callback, _ = _create_progress_callbacks(ctx)
+
+        progress = ResearchProgress(
+            step=1,
+            step_type=ResearchProgressType.DECOMPOSITION_COMPLETE,
+            message="Test progress",
+        )
+        await progress_callback(progress)  # Should not raise
+
+    async def test_progress_callback_handles_attribute_error(self, tmp_path):
+        """Test progress_callback logs warning on AttributeError."""
+        from local_deepwiki.handlers import _DeepResearchContext, _create_progress_callbacks
+        from local_deepwiki.models import ResearchProgress, ResearchProgressType
+
+        mock_server = MagicMock()
+        mock_ctx = MagicMock()
+        mock_ctx.meta.progressToken = "test-token"
+        mock_ctx.session.send_progress_notification = AsyncMock(
+            side_effect=AttributeError("Missing attribute")
+        )
+        mock_server.request_context = mock_ctx
+
+        ctx = _DeepResearchContext(
+            repo_path=tmp_path,
+            question="Test question",
+            max_chunks=20,
+            preset=None,
+            server=mock_server,
+        )
+        ctx.progress_token = "test-token"
+
+        _, progress_callback, _ = _create_progress_callbacks(ctx)
+
+        progress = ResearchProgress(
+            step=1,
+            step_type=ResearchProgressType.DECOMPOSITION_COMPLETE,
+            message="Test progress",
+        )
+        await progress_callback(progress)  # Should not raise
+
+    async def test_send_cancellation_notification_sends_notification(self, tmp_path):
+        """Test send_cancellation_notification sends proper notification."""
+        from local_deepwiki.handlers import _DeepResearchContext, _create_progress_callbacks
+
+        mock_server = MagicMock()
+        mock_ctx = MagicMock()
+        mock_ctx.meta.progressToken = "test-token"
+        mock_ctx.session.send_progress_notification = AsyncMock()
+        mock_server.request_context = mock_ctx
+
+        ctx = _DeepResearchContext(
+            repo_path=tmp_path,
+            question="Test question",
+            max_chunks=20,
+            preset=None,
+            server=mock_server,
+        )
+        ctx.progress_token = "test-token"
+
+        _, _, send_cancellation_notification = _create_progress_callbacks(ctx)
+
+        await send_cancellation_notification("synthesis")
+
+        # Verify notification was sent
+        mock_ctx.session.send_progress_notification.assert_called_once()
+        call_kwargs = mock_ctx.session.send_progress_notification.call_args[1]
+        assert call_kwargs["progress_token"] == "test-token"
+        assert call_kwargs["progress"] == 0.0
+        assert call_kwargs["total"] == 5.0
+        assert "cancelled" in call_kwargs["message"].lower()
+
+    async def test_send_cancellation_notification_skips_without_token(self, tmp_path):
+        """Test send_cancellation_notification does nothing without progress token."""
+        from local_deepwiki.handlers import _DeepResearchContext, _create_progress_callbacks
+
+        ctx = _DeepResearchContext(
+            repo_path=tmp_path,
+            question="Test question",
+            max_chunks=20,
+            preset=None,
+            server=None,
+        )
+        # progress_token is None by default
+
+        _, _, send_cancellation_notification = _create_progress_callbacks(ctx)
+
+        # Should complete without error, doing nothing
+        await send_cancellation_notification("test_step")
+
+    async def test_send_cancellation_notification_handles_runtime_error(self, tmp_path):
+        """Test send_cancellation_notification logs warning on RuntimeError."""
+        from local_deepwiki.handlers import _DeepResearchContext, _create_progress_callbacks
+
+        mock_server = MagicMock()
+        mock_ctx = MagicMock()
+        mock_ctx.meta.progressToken = "test-token"
+        mock_ctx.session.send_progress_notification = AsyncMock(
+            side_effect=RuntimeError("Session closed")
+        )
+        mock_server.request_context = mock_ctx
+
+        ctx = _DeepResearchContext(
+            repo_path=tmp_path,
+            question="Test question",
+            max_chunks=20,
+            preset=None,
+            server=mock_server,
+        )
+        ctx.progress_token = "test-token"
+
+        _, _, send_cancellation_notification = _create_progress_callbacks(ctx)
+
+        # Should not raise, just log warning
+        await send_cancellation_notification("synthesis")
+
+    async def test_send_cancellation_notification_handles_os_error(self, tmp_path):
+        """Test send_cancellation_notification logs warning on OSError."""
+        from local_deepwiki.handlers import _DeepResearchContext, _create_progress_callbacks
+
+        mock_server = MagicMock()
+        mock_ctx = MagicMock()
+        mock_ctx.meta.progressToken = "test-token"
+        mock_ctx.session.send_progress_notification = AsyncMock(
+            side_effect=OSError("Network error")
+        )
+        mock_server.request_context = mock_ctx
+
+        ctx = _DeepResearchContext(
+            repo_path=tmp_path,
+            question="Test question",
+            max_chunks=20,
+            preset=None,
+            server=mock_server,
+        )
+        ctx.progress_token = "test-token"
+
+        _, _, send_cancellation_notification = _create_progress_callbacks(ctx)
+
+        await send_cancellation_notification("synthesis")
+
+    async def test_send_cancellation_notification_handles_attribute_error(self, tmp_path):
+        """Test send_cancellation_notification logs warning on AttributeError."""
+        from local_deepwiki.handlers import _DeepResearchContext, _create_progress_callbacks
+
+        mock_server = MagicMock()
+        mock_ctx = MagicMock()
+        mock_ctx.meta.progressToken = "test-token"
+        mock_ctx.session.send_progress_notification = AsyncMock(
+            side_effect=AttributeError("Missing attribute")
+        )
+        mock_server.request_context = mock_ctx
+
+        ctx = _DeepResearchContext(
+            repo_path=tmp_path,
+            question="Test question",
+            max_chunks=20,
+            preset=None,
+            server=mock_server,
+        )
+        ctx.progress_token = "test-token"
+
+        _, _, send_cancellation_notification = _create_progress_callbacks(ctx)
+
+        await send_cancellation_notification("synthesis")
+
+
 class TestHandleExportWikiPdf:
     """Tests for handle_export_wiki_pdf handler."""
 

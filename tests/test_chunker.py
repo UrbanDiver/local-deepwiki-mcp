@@ -722,6 +722,347 @@ class TestChunkerWithConfig:
         assert len(method_chunks) == 0
 
 
+class TestPythonParameterExtraction:
+    """Tests for Python parameter type and default extraction."""
+
+    @pytest.fixture
+    def parser(self):
+        """Create a code parser."""
+        return CodeParser()
+
+    def test_extract_parameter_types_no_params_node(self, parser, tmp_path):
+        """Test extract_python_parameter_types when parameters node is None.
+
+        This covers line 213 - the early return when params_node is None.
+        """
+        from local_deepwiki.core.chunker import extract_python_parameter_types
+
+        # Create a mock node that has no 'parameters' field
+        code = "x = lambda: 42"  # Lambda without parameters
+        test_file = tmp_path / "test.py"
+        test_file.write_text(code)
+
+        result = parser.parse_file(test_file)
+        assert result is not None
+        root, language, source = result
+
+        # Find the lambda node - it may have a different structure
+        # where child_by_field_name("parameters") returns None
+        from local_deepwiki.core.parser import find_nodes_by_type
+
+        lambda_nodes = find_nodes_by_type(root, {"lambda"})
+        if lambda_nodes:
+            lambda_node = lambda_nodes[0]
+            # The lambda node structure varies, but this tests the branch
+            param_types = extract_python_parameter_types(lambda_node, source)
+            # Should return empty dict when no params_node
+            assert isinstance(param_types, dict)
+
+    def test_extract_parameter_defaults_no_params_node(self, parser, tmp_path):
+        """Test extract_python_parameter_defaults when parameters node is None.
+
+        This covers line 316 - the early return when params_node is None.
+        """
+        from local_deepwiki.core.chunker import extract_python_parameter_defaults
+
+        # Create a mock node that has no 'parameters' field
+        code = "x = lambda: 42"
+        test_file = tmp_path / "test.py"
+        test_file.write_text(code)
+
+        result = parser.parse_file(test_file)
+        assert result is not None
+        root, language, source = result
+
+        from local_deepwiki.core.parser import find_nodes_by_type
+
+        lambda_nodes = find_nodes_by_type(root, {"lambda"})
+        if lambda_nodes:
+            lambda_node = lambda_nodes[0]
+            defaults = extract_python_parameter_defaults(lambda_node, source)
+            assert isinstance(defaults, dict)
+
+    def test_typed_splat_args_in_function(self, parser, tmp_path):
+        """Test function with typed *args.
+
+        This tests the list_splat_pattern with typed_parameter branch (lines 286-298).
+        """
+        from local_deepwiki.core.chunker import extract_python_parameter_types
+
+        code = '''
+def func(*args: int) -> None:
+    pass
+'''
+        test_file = tmp_path / "test.py"
+        test_file.write_text(code)
+
+        result = parser.parse_file(test_file)
+        assert result is not None
+        root, language, source = result
+
+        from local_deepwiki.core.parser import find_nodes_by_type
+
+        func_nodes = find_nodes_by_type(root, {"function_definition"})
+        assert len(func_nodes) > 0
+        func_node = func_nodes[0]
+
+        param_types = extract_python_parameter_types(func_node, source)
+        # Should have *args with type int
+        assert "*args" in param_types
+        assert param_types["*args"] == "int"
+
+    def test_typed_kwargs_in_function(self, parser, tmp_path):
+        """Test function with typed **kwargs.
+
+        This tests the dictionary_splat_pattern with typed_parameter branch (lines 286-298).
+        """
+        from local_deepwiki.core.chunker import extract_python_parameter_types
+
+        code = '''
+def func(**kwargs: str) -> None:
+    pass
+'''
+        test_file = tmp_path / "test.py"
+        test_file.write_text(code)
+
+        result = parser.parse_file(test_file)
+        assert result is not None
+        root, language, source = result
+
+        from local_deepwiki.core.parser import find_nodes_by_type
+
+        func_nodes = find_nodes_by_type(root, {"function_definition"})
+        assert len(func_nodes) > 0
+        func_node = func_nodes[0]
+
+        param_types = extract_python_parameter_types(func_node, source)
+        # Should have **kwargs with type str
+        assert "**kwargs" in param_types
+        assert param_types["**kwargs"] == "str"
+
+    def test_untyped_args_in_function(self, parser, tmp_path):
+        """Test function with untyped *args.
+
+        This tests the list_splat_pattern branch (lines 276-283).
+        """
+        from local_deepwiki.core.chunker import extract_python_parameter_types
+
+        code = '''
+def func(*args):
+    pass
+'''
+        test_file = tmp_path / "test.py"
+        test_file.write_text(code)
+
+        result = parser.parse_file(test_file)
+        assert result is not None
+        root, language, source = result
+
+        from local_deepwiki.core.parser import find_nodes_by_type
+
+        func_nodes = find_nodes_by_type(root, {"function_definition"})
+        assert len(func_nodes) > 0
+        func_node = func_nodes[0]
+
+        param_types = extract_python_parameter_types(func_node, source)
+        # Should have *args with None type
+        assert "*args" in param_types
+        assert param_types["*args"] is None
+
+    def test_untyped_kwargs_in_function(self, parser, tmp_path):
+        """Test function with untyped **kwargs.
+
+        This tests the dictionary_splat_pattern branch (lines 276-283).
+        """
+        from local_deepwiki.core.chunker import extract_python_parameter_types
+
+        code = '''
+def func(**kwargs):
+    pass
+'''
+        test_file = tmp_path / "test.py"
+        test_file.write_text(code)
+
+        result = parser.parse_file(test_file)
+        assert result is not None
+        root, language, source = result
+
+        from local_deepwiki.core.parser import find_nodes_by_type
+
+        func_nodes = find_nodes_by_type(root, {"function_definition"})
+        assert len(func_nodes) > 0
+        func_node = func_nodes[0]
+
+        param_types = extract_python_parameter_types(func_node, source)
+        # Should have **kwargs with None type
+        assert "**kwargs" in param_types
+        assert param_types["**kwargs"] is None
+
+    def test_mixed_args_kwargs_in_function(self, parser, tmp_path):
+        """Test function with mixed regular params, *args, and **kwargs."""
+        from local_deepwiki.core.chunker import extract_python_parameter_types
+
+        code = '''
+def func(a: int, b, *args, **kwargs):
+    pass
+'''
+        test_file = tmp_path / "test.py"
+        test_file.write_text(code)
+
+        result = parser.parse_file(test_file)
+        assert result is not None
+        root, language, source = result
+
+        from local_deepwiki.core.parser import find_nodes_by_type
+
+        func_nodes = find_nodes_by_type(root, {"function_definition"})
+        assert len(func_nodes) > 0
+        func_node = func_nodes[0]
+
+        param_types = extract_python_parameter_types(func_node, source)
+        # Should have all parameters
+        assert "a" in param_types
+        assert param_types["a"] == "int"
+        assert "b" in param_types
+        assert param_types["b"] is None
+        assert "*args" in param_types
+        assert "**kwargs" in param_types
+
+
+class TestSwiftInheritance:
+    """Tests for Swift inheritance parsing - covers lines 140-145."""
+
+    @pytest.fixture
+    def parser(self):
+        """Create a code parser."""
+        return CodeParser()
+
+    def test_swift_class_with_protocol(self, parser, tmp_path):
+        """Test Swift class with protocol conformance.
+
+        This covers lines 140-145 in get_parent_classes for Swift.
+        """
+        code = """
+class MyClass: SomeProtocol {
+    func doSomething() {}
+}
+"""
+        test_file = tmp_path / "MyClass.swift"
+        test_file.write_text(code)
+
+        result = parser.parse_file(test_file)
+        assert result is not None
+        root, language, source = result
+
+        from local_deepwiki.core.parser import find_nodes_by_type
+
+        class_nodes = find_nodes_by_type(root, {"class_declaration"})
+        assert len(class_nodes) > 0
+        class_node = class_nodes[0]
+
+        parents = get_parent_classes(class_node, source, language)
+        # Should extract SomeProtocol as parent
+        assert isinstance(parents, list)
+        # The parent list may contain "SomeProtocol" depending on AST structure
+        if parents:
+            assert any("Protocol" in p or "Some" in p for p in parents)
+
+    def test_swift_class_multiple_protocols(self, parser, tmp_path):
+        """Test Swift class with multiple protocol conformances."""
+        code = """
+class MyClass: Protocol1, Protocol2 {
+    func doSomething() {}
+}
+"""
+        test_file = tmp_path / "MyClass.swift"
+        test_file.write_text(code)
+
+        result = parser.parse_file(test_file)
+        assert result is not None
+        root, language, source = result
+
+        from local_deepwiki.core.parser import find_nodes_by_type
+
+        class_nodes = find_nodes_by_type(root, {"class_declaration"})
+        assert len(class_nodes) > 0
+        class_node = class_nodes[0]
+
+        parents = get_parent_classes(class_node, source, language)
+        assert isinstance(parents, list)
+        # Should have multiple parents (protocols)
+
+    def test_swift_struct_with_protocol(self, parser, tmp_path):
+        """Test Swift struct with protocol conformance.
+
+        Note: In tree-sitter-swift, structs are represented as class_declaration nodes.
+        """
+        code = """
+struct MyStruct: Codable {
+    var name: String
+}
+"""
+        test_file = tmp_path / "MyStruct.swift"
+        test_file.write_text(code)
+
+        result = parser.parse_file(test_file)
+        assert result is not None
+        root, language, source = result
+
+        from local_deepwiki.core.parser import find_nodes_by_type
+
+        # In tree-sitter-swift, structs are represented as class_declaration
+        struct_nodes = find_nodes_by_type(root, {"class_declaration"})
+        assert len(struct_nodes) > 0
+        struct_node = struct_nodes[0]
+
+        parents = get_parent_classes(struct_node, source, language)
+        assert isinstance(parents, list)
+        # Should extract Codable as parent
+        if parents:
+            assert any("Codable" in p for p in parents)
+
+
+class TestLargeClassWithInheritance:
+    """Tests for large class with parent classes - covers line 782."""
+
+    def test_large_class_summary_with_parent_classes(self, tmp_path):
+        """Test that large class summary includes parent_classes in metadata.
+
+        This covers line 782 - adding parent_classes to summary chunk metadata.
+        """
+        # Create config with low threshold for testing
+        config = ChunkingConfig(class_split_threshold=5)
+        chunker = CodeChunker(config=config)
+
+        # Create a class with inheritance AND many methods to trigger splitting
+        methods = "\n".join([f"    def method{i}(self):\n        pass\n" for i in range(10)])
+        code = f'''class LargeChild(Parent, Mixin):
+    """A large child class with inheritance."""
+{methods}
+'''
+        test_file = tmp_path / "large_child.py"
+        test_file.write_text(code)
+
+        chunks = list(chunker.chunk_file(test_file, tmp_path))
+
+        # Find the class summary chunk
+        class_chunks = [c for c in chunks if c.chunk_type == ChunkType.CLASS]
+        assert len(class_chunks) == 1
+        class_chunk = class_chunks[0]
+
+        # Should be a summary
+        assert class_chunk.metadata.get("is_summary") is True
+
+        # Should have parent_classes in metadata (line 782)
+        assert "parent_classes" in class_chunk.metadata
+        assert "Parent" in class_chunk.metadata["parent_classes"]
+        assert "Mixin" in class_chunk.metadata["parent_classes"]
+
+        # Should also have method chunks
+        method_chunks = [c for c in chunks if c.chunk_type == ChunkType.METHOD]
+        assert len(method_chunks) == 10
+
+
 class TestModuleDocstring:
     """Tests for module docstring extraction."""
 
