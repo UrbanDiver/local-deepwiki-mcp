@@ -18,6 +18,128 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 
+def _build_tech_stack_section(manifest: ProjectManifest, max_deps: int = 12) -> str:
+    """Build technology stack section from manifest.
+
+    Args:
+        manifest: Project manifest with dependencies.
+        max_deps: Maximum dependencies to list.
+
+    Returns:
+        Markdown section for tech stack.
+    """
+    if not manifest.dependencies:
+        return ""
+
+    lines = ["\n## Technology Stack\n"]
+    if manifest.language:
+        lang_str = manifest.language
+        if manifest.language_version:
+            lang_str += f" {manifest.language_version}"
+        lines.append(f"- **{lang_str}**")
+
+    key_deps = sorted(manifest.dependencies.keys())
+    if key_deps:
+        lines.append(f"- **Dependencies**: {', '.join(key_deps[:max_deps])}")
+        if len(key_deps) > max_deps:
+            lines.append(f"  - Plus {len(key_deps) - max_deps} more...")
+
+    return "\n".join(lines)
+
+
+def _build_directory_section(repo_path: Path) -> str:
+    """Build directory structure section.
+
+    Args:
+        repo_path: Path to repository root.
+
+    Returns:
+        Markdown section for directory structure.
+    """
+    dir_tree = get_directory_tree(repo_path, max_depth=2, max_items=25)
+    return f"\n## Directory Structure\n\n```\n{dir_tree}\n```"
+
+
+def _build_quick_start_section(manifest: ProjectManifest) -> str:
+    """Build quick start section from entry points.
+
+    Args:
+        manifest: Project manifest with entry points.
+
+    Returns:
+        Markdown section for quick start.
+    """
+    if not manifest.entry_points:
+        return ""
+
+    lines = ["\n## Quick Start\n"]
+    for cmd, target in sorted(manifest.entry_points.items()):
+        lines.append(f"- `{cmd}` → `{target}`")
+    return "\n".join(lines)
+
+
+async def _gather_code_context(vector_store: VectorStore) -> list[str]:
+    """Search for main entry points and key classes for context.
+
+    Args:
+        vector_store: Vector store for code search.
+
+    Returns:
+        List of formatted code context strings.
+    """
+    entry_search, key_class_search = await asyncio.gather(
+        vector_store.search("main entry point init server app", limit=10),
+        vector_store.search("class main core primary", limit=10),
+    )
+
+    seen_paths: set[str] = set()
+    code_parts: list[str] = []
+    for r in entry_search + key_class_search:
+        if r.chunk.file_path not in seen_paths and len(code_parts) < 8:
+            seen_paths.add(r.chunk.file_path)
+            code_parts.append(
+                f"File: {r.chunk.file_path}\n"
+                f"Type: {r.chunk.chunk_type.value}\n"
+                f"Name: {r.chunk.name}\n"
+                f"```\n{r.chunk.content[:400]}\n```"
+            )
+    return code_parts
+
+
+def _build_overview_prompt(pre_generated: str, code_samples: str) -> str:
+    """Build the LLM prompt for overview generation.
+
+    Args:
+        pre_generated: Already-generated content sections.
+        code_samples: Formatted code samples for context.
+
+    Returns:
+        Formatted prompt for LLM.
+    """
+    return f"""You are filling in sections of a README. Some sections are already written below. You need to write the "## Description" and "## Key Features" sections ONLY.
+
+ALREADY WRITTEN (do not modify):
+{pre_generated}
+
+CODE SAMPLES FOR CONTEXT:
+{code_samples}
+
+YOUR TASK:
+Write ONLY these two sections:
+
+1. **## Description** (2-3 sentences explaining what this project does based on the code samples and existing content)
+
+2. **## Key Features** (bullet list of 3-5 features you can VERIFY from the code samples shown)
+
+RULES:
+- ONLY describe functionality visible in the code samples
+- Do NOT invent features not shown
+- Do NOT mention libraries not in the Technology Stack section
+- Keep it factual and grounded
+
+Return ONLY the Description and Key Features sections as markdown."""
+
+
 async def generate_overview_page(
     index_status: IndexStatus,
     vector_store: VectorStore,
@@ -45,146 +167,53 @@ async def generate_overview_page(
     """
     repo_name = Path(index_status.repo_path).name
 
-    # Search for main entry points and key classes for context (parallel)
-    entry_search, key_class_search = await asyncio.gather(
-        vector_store.search("main entry point init server app", limit=10),
-        vector_store.search("class main core primary", limit=10),
-    )
+    # Gather code context for LLM
+    code_context_parts = await _gather_code_context(vector_store)
+    code_samples = "\n\n".join(code_context_parts) if code_context_parts else "No code samples available."
 
-    # Combine and deduplicate
-    seen_paths: set[str] = set()
-    code_context_parts: list[str] = []
-    for r in entry_search + key_class_search:
-        if r.chunk.file_path not in seen_paths and len(code_context_parts) < 8:
-            seen_paths.add(r.chunk.file_path)
-            code_context_parts.append(
-                f"File: {r.chunk.file_path}\n"
-                f"Type: {r.chunk.chunk_type.value}\n"
-                f"Name: {r.chunk.name}\n"
-                f"```\n{r.chunk.content[:400]}\n```"
-            )
-
-    # Build a more structured prompt that leaves less room for hallucination
+    # Build pre-generated sections for LLM context
     prompt_parts = [f"# {repo_name}\n"]
-
-    # Use manifest description directly if available
     if manifest and manifest.description:
         prompt_parts.append(f"\n{manifest.description}\n")
-
-    # Key features - extract from README if available, otherwise from code
     prompt_parts.append(
-        """
-Based on the code samples below, write a "## Key Features" section listing 3-5 features you can VERIFY from the actual code. Each feature must reference specific code you see.
-"""
+        '\nBased on the code samples below, write a "## Key Features" section '
+        "listing 3-5 features you can VERIFY from the actual code.\n"
     )
-
-    # Technology stack - generate this programmatically, not via LLM
-    if manifest and manifest.dependencies:
-        tech_lines = ["\n## Technology Stack\n"]
-        if manifest.language:
-            lang_str = manifest.language
-            if manifest.language_version:
-                lang_str += f" {manifest.language_version}"
-            tech_lines.append(f"- **{lang_str}**")
-
-        # Group key dependencies
-        key_deps = []
-        for dep in sorted(manifest.dependencies.keys()):
-            key_deps.append(dep)
-        if key_deps:
-            tech_lines.append(f"- **Dependencies**: {', '.join(key_deps[:10])}")
-            if len(key_deps) > 10:
-                tech_lines.append(f"  - Plus {len(key_deps) - 10} more...")
-
-        prompt_parts.append("\n".join(tech_lines))
-
-    # Directory structure - use actual tree
+    if manifest:
+        tech_section = _build_tech_stack_section(manifest, max_deps=10)
+        if tech_section:
+            prompt_parts.append(tech_section)
     if repo_path:
-        dir_tree = get_directory_tree(repo_path, max_depth=2, max_items=25)
-        prompt_parts.append(f"\n## Directory Structure\n\n```\n{dir_tree}\n```\n")
+        prompt_parts.append(_build_directory_section(repo_path) + "\n")
+    if manifest:
+        qs_section = _build_quick_start_section(manifest)
+        if qs_section:
+            prompt_parts.append(qs_section)
 
-    # Quick start - use actual entry points
-    if manifest and manifest.entry_points:
-        qs_lines = ["\n## Quick Start\n"]
-        for cmd, target in sorted(manifest.entry_points.items()):
-            qs_lines.append(f"- `{cmd}` - runs `{target}`")
-        prompt_parts.append("\n".join(qs_lines))
-
-    # Now ask LLM only for the description/features part
     pre_generated = "\n".join(prompt_parts)
-
-    # Build code samples context
-    code_samples = (
-        "\n\n".join(code_context_parts) if code_context_parts else "No code samples available."
-    )
-
-    prompt = f"""You are filling in sections of a README. Some sections are already written below. You need to write the "## Description" and "## Key Features" sections ONLY.
-
-ALREADY WRITTEN (do not modify):
-{pre_generated}
-
-CODE SAMPLES FOR CONTEXT:
-{code_samples}
-
-YOUR TASK:
-Write ONLY these two sections:
-
-1. **## Description** (2-3 sentences explaining what this project does based on the code samples and existing content)
-
-2. **## Key Features** (bullet list of 3-5 features you can VERIFY from the code samples shown)
-
-RULES:
-- ONLY describe functionality visible in the code samples
-- Do NOT invent features not shown
-- Do NOT mention libraries not in the Technology Stack section
-- Keep it factual and grounded
-
-Return ONLY the Description and Key Features sections as markdown."""
-
+    prompt = _build_overview_prompt(pre_generated, code_samples)
     llm_content = await llm.generate(prompt, system_prompt=system_prompt)
 
-    # Build final content: title + LLM sections + pre-generated sections
+    # Build final content
     final_parts = [f"# {repo_name}\n"]
-
-    # Add manifest description as subtitle if available
     if manifest and manifest.description:
         final_parts.append(f"\n{manifest.description}\n")
-
-    # Add LLM-generated description and features
     final_parts.append(llm_content)
-
-    # Add pre-generated sections (tech stack, directory, quick start)
-    if manifest and manifest.dependencies:
-        tech_lines = ["\n## Technology Stack\n"]
-        if manifest.language:
-            lang_str = manifest.language
-            if manifest.language_version:
-                lang_str += f" {manifest.language_version}"
-            tech_lines.append(f"- **{lang_str}**")
-
-        key_deps = sorted(manifest.dependencies.keys())
-        if key_deps:
-            tech_lines.append(f"- **Dependencies**: {', '.join(key_deps[:12])}")
-            if len(key_deps) > 12:
-                tech_lines.append(f"  - Plus {len(key_deps) - 12} more...")
-        final_parts.append("\n".join(tech_lines))
-
+    if manifest:
+        tech_section = _build_tech_stack_section(manifest)
+        if tech_section:
+            final_parts.append(tech_section)
     if repo_path:
-        dir_tree = get_directory_tree(repo_path, max_depth=2, max_items=25)
-        final_parts.append(f"\n## Directory Structure\n\n```\n{dir_tree}\n```")
-
-    if manifest and manifest.entry_points:
-        qs_lines = ["\n## Quick Start\n"]
-        for cmd, target in sorted(manifest.entry_points.items()):
-            qs_lines.append(f"- `{cmd}` → `{target}`")
-        final_parts.append("\n".join(qs_lines))
-
-    content = "\n".join(final_parts)
+        final_parts.append(_build_directory_section(repo_path))
+    if manifest:
+        qs_section = _build_quick_start_section(manifest)
+        if qs_section:
+            final_parts.append(qs_section)
 
     return WikiPage(
         path="index.md",
         title="Overview",
-        content=content,
+        content="\n".join(final_parts),
         generated_at=time.time(),
     )
 
