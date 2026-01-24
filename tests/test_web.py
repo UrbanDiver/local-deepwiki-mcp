@@ -873,3 +873,493 @@ class TestApiResearchStreaming:
         # Should have no-cache headers
         assert response.headers.get("Cache-Control") == "no-cache"
         assert response.headers.get("X-Accel-Buffering") == "no"
+
+
+class TestPathTraversal:
+    """Tests for path traversal attack prevention."""
+
+    def test_path_traversal_blocked(self, wiki_dir):
+        """Test that path traversal attempts are blocked."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+
+        # Try various path traversal attacks
+        response = client.get("/wiki/../../../etc/passwd")
+        assert response.status_code == 403
+
+    def test_path_traversal_with_encoded_dots(self, wiki_dir):
+        """Test that URL-encoded path traversal is blocked."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+
+        # Try with ../ pattern that resolves outside wiki
+        response = client.get("/wiki/modules/../../../etc/passwd")
+        assert response.status_code == 403
+
+    def test_absolute_path_outside_wiki(self, wiki_dir):
+        """Test that absolute paths outside wiki are blocked."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+
+        # Try to access file outside wiki using symbolic links or absolute path patterns
+        response = client.get("/wiki/../index.md")
+        # Should be 403 (blocked) or 404 (not found after path resolution)
+        assert response.status_code in (403, 404)
+
+
+class TestApiChatFullFlow:
+    """Tests for api_chat with mocked providers."""
+
+    def test_api_chat_with_indexed_repo(self, wiki_dir):
+        """Test api_chat with fully mocked providers and vector store."""
+        import local_deepwiki.web.app as web_app
+        from unittest.mock import AsyncMock
+
+        # Create vector db path inside wiki_dir
+        vector_db_path = wiki_dir / "vector_db"
+        vector_db_path.mkdir(exist_ok=True)
+
+        original = web_app.WIKI_PATH
+        web_app.WIKI_PATH = wiki_dir
+
+        try:
+            # Mock the config and providers
+            mock_config = MagicMock()
+            mock_config.get_vector_db_path.return_value = vector_db_path
+            mock_config.get_wiki_path.return_value = wiki_dir
+            mock_config.wiki.chat_llm_provider = "default"
+
+            # Mock search result
+            mock_chunk = SimpleNamespace(
+                file_path="test.py",
+                start_line=1,
+                end_line=10,
+                chunk_type=SimpleNamespace(value="function"),
+                name="test_func",
+                content="def test(): pass",
+            )
+            mock_search_result = SimpleNamespace(chunk=mock_chunk, score=0.9)
+
+            # Mock vector store
+            mock_vector_store = MagicMock()
+            mock_vector_store.search = AsyncMock(return_value=[mock_search_result])
+
+            # Mock LLM provider with async generator
+            async def mock_stream(*args, **kwargs):
+                yield "This is "
+                yield "a test "
+                yield "response."
+
+            mock_llm = MagicMock()
+            mock_llm.generate_stream = mock_stream
+
+            with patch("local_deepwiki.config.get_config", return_value=mock_config):
+                with patch("local_deepwiki.core.vectorstore.VectorStore", return_value=mock_vector_store):
+                    with patch("local_deepwiki.providers.embeddings.get_embedding_provider"):
+                        with patch("local_deepwiki.providers.llm.get_cached_llm_provider", return_value=mock_llm):
+                            client = app.test_client()
+                            response = client.post(
+                                "/api/chat",
+                                json={"question": "What does test do?"},
+                            )
+
+                            assert response.content_type.startswith("text/event-stream")
+                            data = response.get_data(as_text=True)
+                            # Should contain sources
+                            assert "sources" in data
+                            # Should contain tokens
+                            assert "token" in data
+                            # Should contain done
+                            assert "done" in data
+        finally:
+            web_app.WIKI_PATH = original
+
+    def test_api_chat_no_search_results(self, wiki_dir):
+        """Test api_chat when no search results are found."""
+        import local_deepwiki.web.app as web_app
+        from unittest.mock import AsyncMock
+
+        # Create vector db path inside wiki_dir
+        vector_db_path = wiki_dir / "vector_db2"
+        vector_db_path.mkdir(exist_ok=True)
+
+        original = web_app.WIKI_PATH
+        web_app.WIKI_PATH = wiki_dir
+
+        try:
+            mock_config = MagicMock()
+            mock_config.get_vector_db_path.return_value = vector_db_path
+            mock_config.get_wiki_path.return_value = wiki_dir
+            mock_config.wiki.chat_llm_provider = "default"
+
+            # Mock vector store returning empty results
+            mock_vector_store = MagicMock()
+            mock_vector_store.search = AsyncMock(return_value=[])
+
+            with patch("local_deepwiki.config.get_config", return_value=mock_config):
+                with patch("local_deepwiki.core.vectorstore.VectorStore", return_value=mock_vector_store):
+                    with patch("local_deepwiki.providers.embeddings.get_embedding_provider"):
+                        with patch("local_deepwiki.providers.llm.get_cached_llm_provider"):
+                            client = app.test_client()
+                            response = client.post(
+                                "/api/chat",
+                                json={"question": "Unknown topic?"},
+                            )
+
+                            data = response.get_data(as_text=True)
+                            # Should report no relevant code found
+                            assert "No relevant code found" in data
+        finally:
+            web_app.WIKI_PATH = original
+
+    def test_api_chat_with_custom_provider(self, wiki_dir):
+        """Test api_chat with non-default chat provider."""
+        import local_deepwiki.web.app as web_app
+        from unittest.mock import AsyncMock
+
+        vector_db_path = wiki_dir / "vector_db3"
+        vector_db_path.mkdir(exist_ok=True)
+
+        original = web_app.WIKI_PATH
+        web_app.WIKI_PATH = wiki_dir
+
+        try:
+            mock_config = MagicMock()
+            mock_config.get_vector_db_path.return_value = vector_db_path
+            mock_config.get_wiki_path.return_value = wiki_dir
+            # Use non-default provider
+            mock_config.wiki.chat_llm_provider = "anthropic"
+            mock_config.llm.model_copy = MagicMock(return_value=mock_config.llm)
+
+            mock_chunk = SimpleNamespace(
+                file_path="test.py",
+                start_line=1,
+                end_line=10,
+                chunk_type=SimpleNamespace(value="function"),
+                name="test_func",
+                content="def test(): pass",
+            )
+            mock_search_result = SimpleNamespace(chunk=mock_chunk, score=0.9)
+
+            mock_vector_store = MagicMock()
+            mock_vector_store.search = AsyncMock(return_value=[mock_search_result])
+
+            async def mock_stream(*args, **kwargs):
+                yield "Response"
+
+            mock_llm = MagicMock()
+            mock_llm.generate_stream = mock_stream
+
+            with patch("local_deepwiki.config.get_config", return_value=mock_config):
+                with patch("local_deepwiki.core.vectorstore.VectorStore", return_value=mock_vector_store):
+                    with patch("local_deepwiki.providers.embeddings.get_embedding_provider"):
+                        with patch("local_deepwiki.providers.llm.get_cached_llm_provider", return_value=mock_llm):
+                            client = app.test_client()
+                            response = client.post(
+                                "/api/chat",
+                                json={"question": "Test?"},
+                            )
+
+                            # Should have called model_copy to update provider
+                            mock_config.llm.model_copy.assert_called_once()
+        finally:
+            web_app.WIKI_PATH = original
+
+    def test_api_chat_llm_error(self, wiki_dir):
+        """Test api_chat handles LLM errors gracefully."""
+        import local_deepwiki.web.app as web_app
+        from unittest.mock import AsyncMock
+
+        vector_db_path = wiki_dir / "vector_db4"
+        vector_db_path.mkdir(exist_ok=True)
+
+        original = web_app.WIKI_PATH
+        web_app.WIKI_PATH = wiki_dir
+
+        try:
+            mock_config = MagicMock()
+            mock_config.get_vector_db_path.return_value = vector_db_path
+            mock_config.get_wiki_path.return_value = wiki_dir
+            mock_config.wiki.chat_llm_provider = "default"
+
+            mock_chunk = SimpleNamespace(
+                file_path="test.py",
+                start_line=1,
+                end_line=10,
+                chunk_type=SimpleNamespace(value="function"),
+                name="test_func",
+                content="def test(): pass",
+            )
+            mock_search_result = SimpleNamespace(chunk=mock_chunk, score=0.9)
+
+            mock_vector_store = MagicMock()
+            mock_vector_store.search = AsyncMock(return_value=[mock_search_result])
+
+            # Mock LLM that raises error
+            async def failing_stream(*args, **kwargs):
+                yield "Starting..."
+                raise RuntimeError("LLM API error")
+
+            mock_llm = MagicMock()
+            mock_llm.generate_stream = failing_stream
+
+            with patch("local_deepwiki.config.get_config", return_value=mock_config):
+                with patch("local_deepwiki.core.vectorstore.VectorStore", return_value=mock_vector_store):
+                    with patch("local_deepwiki.providers.embeddings.get_embedding_provider"):
+                        with patch("local_deepwiki.providers.llm.get_cached_llm_provider", return_value=mock_llm):
+                            client = app.test_client()
+                            response = client.post(
+                                "/api/chat",
+                                json={"question": "Test?"},
+                            )
+
+                            data = response.get_data(as_text=True)
+                            # Should contain error message
+                            assert "error" in data
+                            assert "LLM API error" in data
+        finally:
+            web_app.WIKI_PATH = original
+
+
+class TestApiResearchFullFlow:
+    """Tests for api_research with mocked providers."""
+
+    def test_api_research_with_indexed_repo(self, wiki_dir):
+        """Test api_research with fully mocked pipeline."""
+        import local_deepwiki.web.app as web_app
+        from unittest.mock import AsyncMock
+
+        vector_db_path = wiki_dir / "vector_db_research"
+        vector_db_path.mkdir(exist_ok=True)
+
+        original = web_app.WIKI_PATH
+        web_app.WIKI_PATH = wiki_dir
+
+        try:
+            mock_config = MagicMock()
+            mock_config.get_vector_db_path.return_value = vector_db_path
+            mock_config.get_wiki_path.return_value = wiki_dir
+            mock_config.wiki.chat_llm_provider = "default"
+            mock_config.deep_research.max_sub_questions = 3
+            mock_config.deep_research.chunks_per_subquestion = 5
+            mock_config.deep_research.max_total_chunks = 20
+            mock_config.deep_research.max_follow_up_queries = 2
+            mock_config.deep_research.synthesis_temperature = 0.3
+            mock_config.deep_research.synthesis_max_tokens = 2000
+
+            # Mock research result
+            mock_result = SimpleNamespace(
+                answer="The answer is 42.",
+                sub_questions=[
+                    SimpleNamespace(question="Sub Q1", category="architecture"),
+                ],
+                sources=[
+                    SimpleNamespace(
+                        file_path="test.py",
+                        start_line=1,
+                        end_line=10,
+                        chunk_type="function",
+                        name="test_func",
+                        relevance_score=0.95,
+                    ),
+                ],
+                reasoning_trace=[
+                    SimpleNamespace(
+                        step_type=SimpleNamespace(value="decomposition"),
+                        description="Breaking down question",
+                        duration_ms=100,
+                    ),
+                ],
+                total_chunks_analyzed=5,
+                total_llm_calls=3,
+            )
+
+            mock_pipeline = MagicMock()
+            mock_pipeline.research = AsyncMock(return_value=mock_result)
+
+            with patch("local_deepwiki.config.get_config", return_value=mock_config):
+                with patch("local_deepwiki.core.vectorstore.VectorStore"):
+                    with patch("local_deepwiki.providers.embeddings.get_embedding_provider"):
+                        with patch("local_deepwiki.providers.llm.get_cached_llm_provider"):
+                            with patch("local_deepwiki.core.deep_research.DeepResearchPipeline", return_value=mock_pipeline):
+                                client = app.test_client()
+                                response = client.post(
+                                    "/api/research",
+                                    json={"question": "How does this work?"},
+                                )
+
+                                assert response.content_type.startswith("text/event-stream")
+                                data = response.get_data(as_text=True)
+                                # Should contain result
+                                assert "result" in data
+                                assert "42" in data
+                                assert "done" in data
+        finally:
+            web_app.WIKI_PATH = original
+
+    def test_api_research_with_custom_provider(self, wiki_dir):
+        """Test api_research with non-default provider."""
+        import local_deepwiki.web.app as web_app
+        from unittest.mock import AsyncMock
+
+        vector_db_path = wiki_dir / "vector_db_research2"
+        vector_db_path.mkdir(exist_ok=True)
+
+        original = web_app.WIKI_PATH
+        web_app.WIKI_PATH = wiki_dir
+
+        try:
+            mock_config = MagicMock()
+            mock_config.get_vector_db_path.return_value = vector_db_path
+            mock_config.get_wiki_path.return_value = wiki_dir
+            mock_config.wiki.chat_llm_provider = "openai"  # Non-default
+            mock_config.llm.model_copy = MagicMock(return_value=mock_config.llm)
+            mock_config.deep_research.max_sub_questions = 3
+            mock_config.deep_research.chunks_per_subquestion = 5
+            mock_config.deep_research.max_total_chunks = 20
+            mock_config.deep_research.max_follow_up_queries = 2
+            mock_config.deep_research.synthesis_temperature = 0.3
+            mock_config.deep_research.synthesis_max_tokens = 2000
+
+            mock_result = SimpleNamespace(
+                answer="Result",
+                sub_questions=[],
+                sources=[],
+                reasoning_trace=[],
+                total_chunks_analyzed=0,
+                total_llm_calls=1,
+            )
+
+            mock_pipeline = MagicMock()
+            mock_pipeline.research = AsyncMock(return_value=mock_result)
+
+            with patch("local_deepwiki.config.get_config", return_value=mock_config):
+                with patch("local_deepwiki.core.vectorstore.VectorStore"):
+                    with patch("local_deepwiki.providers.embeddings.get_embedding_provider"):
+                        with patch("local_deepwiki.providers.llm.get_cached_llm_provider"):
+                            with patch("local_deepwiki.core.deep_research.DeepResearchPipeline", return_value=mock_pipeline):
+                                client = app.test_client()
+                                response = client.post(
+                                    "/api/research",
+                                    json={"question": "Test?"},
+                                )
+
+                                # Should have called model_copy
+                                mock_config.llm.model_copy.assert_called_once()
+        finally:
+            web_app.WIKI_PATH = original
+
+    def test_api_research_pipeline_error(self, wiki_dir):
+        """Test api_research handles pipeline errors gracefully."""
+        import local_deepwiki.web.app as web_app
+        from unittest.mock import AsyncMock
+
+        vector_db_path = wiki_dir / "vector_db_research3"
+        vector_db_path.mkdir(exist_ok=True)
+
+        original = web_app.WIKI_PATH
+        web_app.WIKI_PATH = wiki_dir
+
+        try:
+            mock_config = MagicMock()
+            mock_config.get_vector_db_path.return_value = vector_db_path
+            mock_config.get_wiki_path.return_value = wiki_dir
+            mock_config.wiki.chat_llm_provider = "default"
+            mock_config.deep_research.max_sub_questions = 3
+            mock_config.deep_research.chunks_per_subquestion = 5
+            mock_config.deep_research.max_total_chunks = 20
+            mock_config.deep_research.max_follow_up_queries = 2
+            mock_config.deep_research.synthesis_temperature = 0.3
+            mock_config.deep_research.synthesis_max_tokens = 2000
+
+            mock_pipeline = MagicMock()
+            mock_pipeline.research = AsyncMock(side_effect=RuntimeError("Pipeline failed"))
+
+            with patch("local_deepwiki.config.get_config", return_value=mock_config):
+                with patch("local_deepwiki.core.vectorstore.VectorStore"):
+                    with patch("local_deepwiki.providers.embeddings.get_embedding_provider"):
+                        with patch("local_deepwiki.providers.llm.get_cached_llm_provider"):
+                            with patch("local_deepwiki.core.deep_research.DeepResearchPipeline", return_value=mock_pipeline):
+                                client = app.test_client()
+                                response = client.post(
+                                    "/api/research",
+                                    json={"question": "Test?"},
+                                )
+
+                                data = response.get_data(as_text=True)
+                                assert "error" in data
+                                assert "Pipeline failed" in data
+        finally:
+            web_app.WIKI_PATH = original
+
+    def test_api_research_progress_callback(self, wiki_dir):
+        """Test api_research sends progress updates."""
+        import local_deepwiki.web.app as web_app
+        from local_deepwiki.models import ResearchProgress, ResearchProgressType, SubQuestion
+
+        vector_db_path = wiki_dir / "vector_db_research4"
+        vector_db_path.mkdir(exist_ok=True)
+
+        original = web_app.WIKI_PATH
+        web_app.WIKI_PATH = wiki_dir
+
+        try:
+            mock_config = MagicMock()
+            mock_config.get_vector_db_path.return_value = vector_db_path
+            mock_config.get_wiki_path.return_value = wiki_dir
+            mock_config.wiki.chat_llm_provider = "default"
+            mock_config.deep_research.max_sub_questions = 3
+            mock_config.deep_research.chunks_per_subquestion = 5
+            mock_config.deep_research.max_total_chunks = 20
+            mock_config.deep_research.max_follow_up_queries = 2
+            mock_config.deep_research.synthesis_temperature = 0.3
+            mock_config.deep_research.synthesis_max_tokens = 2000
+
+            mock_result = SimpleNamespace(
+                answer="Done",
+                sub_questions=[],
+                sources=[],
+                reasoning_trace=[],
+                total_chunks_analyzed=0,
+                total_llm_calls=1,
+            )
+
+            # Mock pipeline that calls progress callback
+            async def mock_research(_question, progress_callback=None):
+                if progress_callback:
+                    # Send progress update with all optional fields
+                    progress = ResearchProgress(
+                        step=1,
+                        total_steps=3,
+                        step_type=ResearchProgressType.DECOMPOSITION_COMPLETE,
+                        message="Decomposing question",
+                        sub_questions=[
+                            SubQuestion(question="Sub Q", category="general"),
+                        ],
+                        chunks_retrieved=5,
+                        follow_up_queries=["follow up 1"],
+                        duration_ms=100,
+                    )
+                    await progress_callback(progress)
+                return mock_result
+
+            mock_pipeline = MagicMock()
+            mock_pipeline.research = mock_research
+
+            with patch("local_deepwiki.config.get_config", return_value=mock_config):
+                with patch("local_deepwiki.core.vectorstore.VectorStore"):
+                    with patch("local_deepwiki.providers.embeddings.get_embedding_provider"):
+                        with patch("local_deepwiki.providers.llm.get_cached_llm_provider"):
+                            with patch("local_deepwiki.core.deep_research.DeepResearchPipeline", return_value=mock_pipeline):
+                                client = app.test_client()
+                                response = client.post(
+                                    "/api/research",
+                                    json={"question": "Test?"},
+                                )
+
+                                data = response.get_data(as_text=True)
+                                # Should contain progress updates
+                                assert "progress" in data
+                                assert "Decomposing question" in data
+        finally:
+            web_app.WIKI_PATH = original
