@@ -688,3 +688,693 @@ class TestVectorIndex:
         # Should still be able to search
         results = await store2.search("test", limit=5)
         assert isinstance(results, list)
+
+
+class TestEnsureIndexesEdgeCases:
+    """Tests for _ensure_indexes edge cases and error handling."""
+
+    @pytest.fixture
+    def vector_store(self, tmp_path):
+        """Create a vector store for testing."""
+        from local_deepwiki.core.vectorstore import VectorStore
+
+        db_path = tmp_path / "test.lance"
+        provider = MockEmbeddingProvider()
+        return VectorStore(db_path, provider)
+
+    def test_ensure_indexes_when_table_is_none(self, vector_store):
+        """Test _ensure_indexes returns early when table is None."""
+        # Table is None before any data is added
+        assert vector_store._table is None
+        # Should not raise
+        vector_store._ensure_indexes()
+        # Still None after call
+        assert vector_store._table is None
+
+    async def test_ensure_indexes_handles_list_indices_exception(self, vector_store):
+        """Test _ensure_indexes handles exceptions from list_indices."""
+        from unittest.mock import MagicMock, patch
+
+        # Create table first
+        chunks = [make_chunk("test_1")]
+        await vector_store.create_or_update_table(chunks)
+
+        # Mock list_indices to raise RuntimeError
+        with patch.object(vector_store._table, "list_indices", side_effect=RuntimeError("Cannot list")):
+            # Should not raise, just log debug and continue
+            vector_store._ensure_indexes()
+
+    async def test_ensure_indexes_handles_type_error(self, vector_store):
+        """Test _ensure_indexes handles TypeError from list_indices."""
+        from unittest.mock import patch
+
+        chunks = [make_chunk("test_1")]
+        await vector_store.create_or_update_table(chunks)
+
+        with patch.object(vector_store._table, "list_indices", side_effect=TypeError("Bad type")):
+            vector_store._ensure_indexes()
+
+    async def test_ensure_indexes_handles_key_error(self, vector_store):
+        """Test _ensure_indexes handles KeyError from index access."""
+        from unittest.mock import patch
+
+        chunks = [make_chunk("test_1")]
+        await vector_store.create_or_update_table(chunks)
+
+        with patch.object(vector_store._table, "list_indices", side_effect=KeyError("Missing key")):
+            vector_store._ensure_indexes()
+
+    async def test_ensure_indexes_handles_attribute_error(self, vector_store):
+        """Test _ensure_indexes handles AttributeError from index access."""
+        from unittest.mock import patch
+
+        chunks = [make_chunk("test_1")]
+        await vector_store.create_or_update_table(chunks)
+
+        with patch.object(vector_store._table, "list_indices", side_effect=AttributeError("No attr")):
+            vector_store._ensure_indexes()
+
+    async def test_ensure_indexes_handles_count_rows_exception(self, vector_store):
+        """Test _ensure_indexes handles exception when checking row count."""
+        from unittest.mock import patch
+
+        chunks = [make_chunk("test_1")]
+        await vector_store.create_or_update_table(chunks)
+
+        # list_indices returns empty (so it tries to create vector index)
+        # count_rows raises exception
+        with patch.object(vector_store._table, "list_indices", return_value=[]):
+            with patch.object(vector_store._table, "count_rows", side_effect=RuntimeError("DB error")):
+                vector_store._ensure_indexes()
+
+    async def test_ensure_indexes_creates_missing_id_index(self, vector_store):
+        """Test _ensure_indexes creates id_idx when missing."""
+        from unittest.mock import patch, MagicMock
+
+        chunks = [make_chunk("test_1")]
+        await vector_store.create_or_update_table(chunks)
+
+        # Mock list_indices to return indexes without id_idx
+        mock_indices = [{"name": "file_path_idx"}]
+        with patch.object(vector_store._table, "list_indices", return_value=mock_indices):
+            with patch.object(vector_store._table, "create_scalar_index") as mock_create:
+                with patch.object(vector_store._table, "count_rows", return_value=10):
+                    vector_store._ensure_indexes()
+                    # Should have tried to create id index
+                    mock_create.assert_called()
+
+    async def test_ensure_indexes_creates_missing_file_path_index(self, vector_store):
+        """Test _ensure_indexes creates file_path_idx when missing."""
+        from unittest.mock import patch
+
+        chunks = [make_chunk("test_1")]
+        await vector_store.create_or_update_table(chunks)
+
+        mock_indices = [{"name": "id_idx"}]
+        with patch.object(vector_store._table, "list_indices", return_value=mock_indices):
+            with patch.object(vector_store._table, "create_scalar_index") as mock_create:
+                with patch.object(vector_store._table, "count_rows", return_value=10):
+                    vector_store._ensure_indexes()
+                    mock_create.assert_called()
+
+
+class TestCreateIndexSafeEdgeCases:
+    """Tests for _create_index_safe edge cases."""
+
+    @pytest.fixture
+    def vector_store(self, tmp_path):
+        """Create a vector store for testing."""
+        from local_deepwiki.core.vectorstore import VectorStore
+
+        db_path = tmp_path / "test.lance"
+        provider = MockEmbeddingProvider()
+        return VectorStore(db_path, provider)
+
+    def test_create_index_safe_when_table_is_none(self, vector_store):
+        """Test _create_index_safe returns early when table is None."""
+        assert vector_store._table is None
+        # Should not raise
+        vector_store._create_index_safe("id")
+
+    async def test_create_index_safe_handles_value_error(self, vector_store):
+        """Test _create_index_safe handles ValueError (index already exists)."""
+        from unittest.mock import patch
+
+        chunks = [make_chunk("test_1")]
+        await vector_store.create_or_update_table(chunks)
+
+        with patch.object(
+            vector_store._table, "create_scalar_index", side_effect=ValueError("Index exists")
+        ):
+            # Should not raise
+            vector_store._create_index_safe("test_column")
+
+    async def test_create_index_safe_handles_runtime_error(self, vector_store):
+        """Test _create_index_safe handles RuntimeError."""
+        from unittest.mock import patch
+
+        chunks = [make_chunk("test_1")]
+        await vector_store.create_or_update_table(chunks)
+
+        with patch.object(
+            vector_store._table, "create_scalar_index", side_effect=RuntimeError("Creation failed")
+        ):
+            vector_store._create_index_safe("test_column")
+
+    async def test_create_index_safe_handles_os_error(self, vector_store):
+        """Test _create_index_safe handles OSError."""
+        from unittest.mock import patch
+
+        chunks = [make_chunk("test_1")]
+        await vector_store.create_or_update_table(chunks)
+
+        with patch.object(
+            vector_store._table, "create_scalar_index", side_effect=OSError("Storage issue")
+        ):
+            vector_store._create_index_safe("test_column")
+
+
+class TestCreateVectorIndexEdgeCases:
+    """Tests for _create_vector_index edge cases."""
+
+    @pytest.fixture
+    def vector_store(self, tmp_path):
+        """Create a vector store for testing."""
+        from local_deepwiki.core.vectorstore import VectorStore
+
+        db_path = tmp_path / "test.lance"
+        provider = MockEmbeddingProvider()
+        return VectorStore(db_path, provider)
+
+    def test_create_vector_index_when_table_is_none(self, vector_store):
+        """Test _create_vector_index returns early when table is None."""
+        assert vector_store._table is None
+        # Should not raise
+        vector_store._create_vector_index(1000)
+
+    async def test_create_vector_index_skipped_for_small_tables(self, vector_store):
+        """Test _create_vector_index skips for tables under threshold."""
+        from unittest.mock import patch
+
+        chunks = [make_chunk("test_1")]
+        await vector_store.create_or_update_table(chunks)
+
+        with patch.object(vector_store._table, "create_index") as mock_create:
+            vector_store._create_vector_index(999)  # Just under threshold
+            mock_create.assert_not_called()
+
+    async def test_create_vector_index_creates_for_large_tables(self, vector_store):
+        """Test _create_vector_index creates index for tables at threshold."""
+        from unittest.mock import patch
+
+        chunks = [make_chunk("test_1")]
+        await vector_store.create_or_update_table(chunks)
+
+        with patch.object(vector_store._table, "create_index") as mock_create:
+            vector_store._create_vector_index(1000)  # At threshold
+            mock_create.assert_called_once()
+            # Check it was called with correct params
+            call_kwargs = mock_create.call_args[1]
+            assert call_kwargs["metric"] == "L2"
+            assert call_kwargs["num_sub_vectors"] == 16
+
+    async def test_create_vector_index_calculates_partitions(self, vector_store):
+        """Test _create_vector_index calculates correct number of partitions."""
+        from unittest.mock import patch
+        import math
+
+        chunks = [make_chunk("test_1")]
+        await vector_store.create_or_update_table(chunks)
+
+        # Test with 10000 rows -> sqrt(10000) = 100 partitions
+        with patch.object(vector_store._table, "create_index") as mock_create:
+            vector_store._create_vector_index(10000)
+            call_kwargs = mock_create.call_args[1]
+            assert call_kwargs["num_partitions"] == 100
+
+        # Test with very large table -> capped at 256
+        with patch.object(vector_store._table, "create_index") as mock_create:
+            vector_store._create_vector_index(100000)
+            call_kwargs = mock_create.call_args[1]
+            assert call_kwargs["num_partitions"] == 256
+
+    async def test_create_vector_index_handles_value_error(self, vector_store):
+        """Test _create_vector_index handles ValueError (index exists)."""
+        from unittest.mock import patch
+
+        chunks = [make_chunk("test_1")]
+        await vector_store.create_or_update_table(chunks)
+
+        with patch.object(
+            vector_store._table, "create_index", side_effect=ValueError("Index exists")
+        ):
+            # Should not raise
+            vector_store._create_vector_index(2000)
+
+    async def test_create_vector_index_handles_runtime_error(self, vector_store):
+        """Test _create_vector_index handles RuntimeError."""
+        from unittest.mock import patch
+
+        chunks = [make_chunk("test_1")]
+        await vector_store.create_or_update_table(chunks)
+
+        with patch.object(
+            vector_store._table, "create_index", side_effect=RuntimeError("Creation failed")
+        ):
+            vector_store._create_vector_index(2000)
+
+    async def test_create_vector_index_handles_os_error(self, vector_store):
+        """Test _create_vector_index handles OSError."""
+        from unittest.mock import patch
+
+        chunks = [make_chunk("test_1")]
+        await vector_store.create_or_update_table(chunks)
+
+        with patch.object(
+            vector_store._table, "create_index", side_effect=OSError("Storage issue")
+        ):
+            vector_store._create_vector_index(2000)
+
+
+class TestBatchEmbed:
+    """Tests for _batch_embed functionality."""
+
+    @pytest.fixture
+    def vector_store(self, tmp_path):
+        """Create a vector store for testing."""
+        from local_deepwiki.core.vectorstore import VectorStore
+
+        db_path = tmp_path / "test.lance"
+        provider = MockEmbeddingProvider()
+        return VectorStore(db_path, provider)
+
+    async def test_batch_embed_with_progress_logging(self, vector_store):
+        """Test _batch_embed logs progress for large batches."""
+        texts = [f"text_{i}" for i in range(10)]
+        # Small batch size to trigger multiple batches
+        embeddings = await vector_store._batch_embed(texts, batch_size=3, log_progress=True)
+        assert len(embeddings) == 10
+        # Each embedding should have correct dimension
+        assert all(len(e) == 384 for e in embeddings)
+
+    async def test_batch_embed_without_progress_logging(self, vector_store):
+        """Test _batch_embed without progress logging."""
+        texts = [f"text_{i}" for i in range(10)]
+        embeddings = await vector_store._batch_embed(texts, batch_size=3, log_progress=False)
+        assert len(embeddings) == 10
+
+    async def test_batch_embed_single_batch(self, vector_store):
+        """Test _batch_embed with single batch (no progress logging needed)."""
+        texts = ["text_1", "text_2"]
+        embeddings = await vector_store._batch_embed(texts, batch_size=100, log_progress=True)
+        assert len(embeddings) == 2
+
+
+class TestGetMainDefinitionLines:
+    """Tests for get_main_definition_lines functionality."""
+
+    @pytest.fixture
+    def vector_store(self, tmp_path):
+        """Create a vector store for testing."""
+        from local_deepwiki.core.vectorstore import VectorStore
+
+        db_path = tmp_path / "test.lance"
+        provider = MockEmbeddingProvider()
+        return VectorStore(db_path, provider)
+
+    def test_get_main_definition_lines_empty_store(self, vector_store):
+        """Test get_main_definition_lines on empty store."""
+        result = vector_store.get_main_definition_lines()
+        assert result == {}
+
+    async def test_get_main_definition_lines_with_functions(self, vector_store):
+        """Test get_main_definition_lines with function chunks."""
+        chunks = [
+            CodeChunk(
+                id="func1",
+                file_path="src/main.py",
+                language=Language.PYTHON,
+                chunk_type=ChunkType.FUNCTION,
+                name="main",
+                content="def main(): pass",
+                start_line=10,
+                end_line=20,
+            ),
+            CodeChunk(
+                id="func2",
+                file_path="src/main.py",
+                language=Language.PYTHON,
+                chunk_type=ChunkType.FUNCTION,
+                name="helper",
+                content="def helper(): pass",
+                start_line=25,
+                end_line=30,
+            ),
+        ]
+        await vector_store.create_or_update_table(chunks)
+
+        result = vector_store.get_main_definition_lines()
+        assert "src/main.py" in result
+        # Should return the first (earliest) function
+        assert result["src/main.py"] == (10, 20)
+
+    async def test_get_main_definition_lines_with_classes(self, vector_store):
+        """Test get_main_definition_lines with class chunks."""
+        chunks = [
+            CodeChunk(
+                id="class1",
+                file_path="src/models.py",
+                language=Language.PYTHON,
+                chunk_type=ChunkType.CLASS,
+                name="User",
+                content="class User: pass",
+                start_line=5,
+                end_line=50,
+            ),
+        ]
+        await vector_store.create_or_update_table(chunks)
+
+        result = vector_store.get_main_definition_lines()
+        assert result["src/models.py"] == (5, 50)
+
+    async def test_get_main_definition_lines_class_priority(self, vector_store):
+        """Test that class takes priority over function if it starts earlier."""
+        chunks = [
+            CodeChunk(
+                id="func1",
+                file_path="src/module.py",
+                language=Language.PYTHON,
+                chunk_type=ChunkType.FUNCTION,
+                name="helper",
+                content="def helper(): pass",
+                start_line=20,
+                end_line=25,
+            ),
+            CodeChunk(
+                id="class1",
+                file_path="src/module.py",
+                language=Language.PYTHON,
+                chunk_type=ChunkType.CLASS,
+                name="MyClass",
+                content="class MyClass: pass",
+                start_line=5,
+                end_line=15,
+            ),
+        ]
+        await vector_store.create_or_update_table(chunks)
+
+        result = vector_store.get_main_definition_lines()
+        # Class starts earlier, so it should be returned
+        assert result["src/module.py"] == (5, 15)
+
+    async def test_get_main_definition_lines_function_first_when_earlier(self, vector_store):
+        """Test that function is kept if it starts earlier than class."""
+        chunks = [
+            CodeChunk(
+                id="func1",
+                file_path="src/module.py",
+                language=Language.PYTHON,
+                chunk_type=ChunkType.FUNCTION,
+                name="early_func",
+                content="def early_func(): pass",
+                start_line=1,
+                end_line=5,
+            ),
+            CodeChunk(
+                id="class1",
+                file_path="src/module.py",
+                language=Language.PYTHON,
+                chunk_type=ChunkType.CLASS,
+                name="LaterClass",
+                content="class LaterClass: pass",
+                start_line=10,
+                end_line=20,
+            ),
+        ]
+        await vector_store.create_or_update_table(chunks)
+
+        result = vector_store.get_main_definition_lines()
+        # Function starts earlier
+        assert result["src/module.py"] == (1, 5)
+
+    async def test_get_main_definition_lines_multiple_files(self, vector_store):
+        """Test get_main_definition_lines with multiple files."""
+        chunks = [
+            CodeChunk(
+                id="func1",
+                file_path="src/a.py",
+                language=Language.PYTHON,
+                chunk_type=ChunkType.FUNCTION,
+                name="func_a",
+                content="def func_a(): pass",
+                start_line=10,
+                end_line=20,
+            ),
+            CodeChunk(
+                id="class1",
+                file_path="src/b.py",
+                language=Language.PYTHON,
+                chunk_type=ChunkType.CLASS,
+                name="ClassB",
+                content="class ClassB: pass",
+                start_line=5,
+                end_line=50,
+            ),
+        ]
+        await vector_store.create_or_update_table(chunks)
+
+        result = vector_store.get_main_definition_lines()
+        assert len(result) == 2
+        assert result["src/a.py"] == (10, 20)
+        assert result["src/b.py"] == (5, 50)
+
+    async def test_get_main_definition_lines_ignores_other_types(self, vector_store):
+        """Test that get_main_definition_lines ignores module/import chunks."""
+        chunks = [
+            CodeChunk(
+                id="module1",
+                file_path="src/init.py",
+                language=Language.PYTHON,
+                chunk_type=ChunkType.MODULE,
+                name="init",
+                content="# module",
+                start_line=1,
+                end_line=5,
+            ),
+        ]
+        await vector_store.create_or_update_table(chunks)
+
+        result = vector_store.get_main_definition_lines()
+        # Module chunks are not included
+        assert result == {}
+
+    async def test_get_main_definition_lines_same_type_keeps_earlier(self, vector_store):
+        """Test that same type chunks keep the earlier one."""
+        chunks = [
+            CodeChunk(
+                id="func1",
+                file_path="src/funcs.py",
+                language=Language.PYTHON,
+                chunk_type=ChunkType.FUNCTION,
+                name="late_func",
+                content="def late_func(): pass",
+                start_line=50,
+                end_line=60,
+            ),
+            CodeChunk(
+                id="func2",
+                file_path="src/funcs.py",
+                language=Language.PYTHON,
+                chunk_type=ChunkType.FUNCTION,
+                name="early_func",
+                content="def early_func(): pass",
+                start_line=10,
+                end_line=20,
+            ),
+        ]
+        await vector_store.create_or_update_table(chunks)
+
+        result = vector_store.get_main_definition_lines()
+        # Earlier function should be kept
+        assert result["src/funcs.py"] == (10, 20)
+
+
+class TestChunkToText:
+    """Tests for _chunk_to_text functionality."""
+
+    @pytest.fixture
+    def vector_store(self, tmp_path):
+        """Create a vector store for testing."""
+        from local_deepwiki.core.vectorstore import VectorStore
+
+        db_path = tmp_path / "test.lance"
+        provider = MockEmbeddingProvider()
+        return VectorStore(db_path, provider)
+
+    def test_chunk_to_text_with_parent_name(self, vector_store):
+        """Test _chunk_to_text includes parent_name when present."""
+        chunk = CodeChunk(
+            id="method1",
+            file_path="src/module.py",
+            language=Language.PYTHON,
+            chunk_type=ChunkType.FUNCTION,
+            name="my_method",
+            content="def my_method(self): pass",
+            start_line=10,
+            end_line=15,
+            parent_name="MyClass",
+        )
+
+        text = vector_store._chunk_to_text(chunk)
+        assert "in MyClass" in text
+        assert "my_method" in text
+        assert "python" in text
+
+    def test_chunk_to_text_with_docstring(self, vector_store):
+        """Test _chunk_to_text includes docstring when present."""
+        chunk = CodeChunk(
+            id="func1",
+            file_path="src/module.py",
+            language=Language.PYTHON,
+            chunk_type=ChunkType.FUNCTION,
+            name="documented_func",
+            content="def documented_func(): pass",
+            start_line=1,
+            end_line=5,
+            docstring="This is the docstring for the function.",
+        )
+
+        text = vector_store._chunk_to_text(chunk)
+        assert "This is the docstring" in text
+        assert "documented_func" in text
+
+    def test_chunk_to_text_with_parent_and_docstring(self, vector_store):
+        """Test _chunk_to_text with both parent_name and docstring."""
+        chunk = CodeChunk(
+            id="method1",
+            file_path="src/module.py",
+            language=Language.PYTHON,
+            chunk_type=ChunkType.FUNCTION,
+            name="full_method",
+            content="def full_method(self): return True",
+            start_line=10,
+            end_line=20,
+            parent_name="ParentClass",
+            docstring="Method docstring here.",
+        )
+
+        text = vector_store._chunk_to_text(chunk)
+        assert "in ParentClass" in text
+        assert "Method docstring here" in text
+        assert "full_method" in text
+        assert "def full_method" in text
+
+    def test_chunk_to_text_without_name(self, vector_store):
+        """Test _chunk_to_text when name is None."""
+        chunk = CodeChunk(
+            id="anon1",
+            file_path="src/module.py",
+            language=Language.PYTHON,
+            chunk_type=ChunkType.MODULE,
+            name=None,
+            content="# Some module content",
+            start_line=1,
+            end_line=5,
+        )
+
+        text = vector_store._chunk_to_text(chunk)
+        assert "python" in text
+        assert "# Some module content" in text
+
+
+class TestSanitizeStringValue:
+    """Tests for _sanitize_string_value function."""
+
+    def test_sanitize_single_quote(self):
+        """Test that single quotes are escaped."""
+        from local_deepwiki.core.vectorstore import _sanitize_string_value
+
+        result = _sanitize_string_value("test'value")
+        assert result == "test''value"
+
+    def test_sanitize_multiple_quotes(self):
+        """Test multiple single quotes are escaped."""
+        from local_deepwiki.core.vectorstore import _sanitize_string_value
+
+        result = _sanitize_string_value("it's a 'test'")
+        assert result == "it''s a ''test''"
+
+    def test_sanitize_no_quotes(self):
+        """Test string without quotes is unchanged."""
+        from local_deepwiki.core.vectorstore import _sanitize_string_value
+
+        result = _sanitize_string_value("normal string")
+        assert result == "normal string"
+
+
+class TestDeleteChunksByFilesEdgeCases:
+    """Tests for delete_chunks_by_files edge cases."""
+
+    @pytest.fixture
+    def vector_store(self, tmp_path):
+        """Create a vector store for testing."""
+        from local_deepwiki.core.vectorstore import VectorStore
+
+        db_path = tmp_path / "test.lance"
+        provider = MockEmbeddingProvider()
+        return VectorStore(db_path, provider)
+
+    async def test_delete_chunks_by_files_empty_db(self, vector_store):
+        """Test delete_chunks_by_files returns 0 when table doesn't exist."""
+        # Don't create any table, just try to delete
+        result = await vector_store.delete_chunks_by_files(["file1.py", "file2.py"])
+        assert result == 0
+
+
+class TestEnsureIndexesVectorIndexDetection:
+    """Tests for vector index detection in _ensure_indexes."""
+
+    @pytest.fixture
+    def vector_store(self, tmp_path):
+        """Create a vector store for testing."""
+        from local_deepwiki.core.vectorstore import VectorStore
+
+        db_path = tmp_path / "test.lance"
+        provider = MockEmbeddingProvider()
+        return VectorStore(db_path, provider)
+
+    async def test_ensure_indexes_detects_ivf_index(self, vector_store):
+        """Test _ensure_indexes detects IVF vector index."""
+        from unittest.mock import patch, MagicMock
+
+        chunks = [make_chunk("test_1")]
+        await vector_store.create_or_update_table(chunks)
+
+        # Mock list_indices to return an index with IVF type
+        mock_index = MagicMock()
+        mock_index.name = "vector_idx"
+        mock_index.index_type = "IVF_PQ"
+
+        with patch.object(vector_store._table, "list_indices", return_value=[mock_index]):
+            with patch.object(vector_store._table, "create_index") as mock_create:
+                with patch.object(vector_store._table, "count_rows", return_value=2000):
+                    vector_store._ensure_indexes()
+                    # Should NOT try to create vector index since IVF was detected
+                    mock_create.assert_not_called()
+
+    async def test_ensure_indexes_detects_ivf_in_dict_index(self, vector_store):
+        """Test _ensure_indexes detects IVF in dict-style index."""
+        from unittest.mock import patch
+
+        chunks = [make_chunk("test_1")]
+        await vector_store.create_or_update_table(chunks)
+
+        # Mock list_indices to return dict-style index with IVF type
+        mock_index = {"name": "vector_idx", "index_type": "ivf_flat"}
+
+        with patch.object(vector_store._table, "list_indices", return_value=[mock_index]):
+            with patch.object(vector_store._table, "create_index") as mock_create:
+                with patch.object(vector_store._table, "count_rows", return_value=2000):
+                    vector_store._ensure_indexes()
+                    # Should NOT try to create vector index since IVF was detected
+                    mock_create.assert_not_called()
