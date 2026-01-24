@@ -9,21 +9,21 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-# Check if WeasyPrint is available (requires native libraries like libgobject)
-# This must be done before importing the pdf module, which imports weasyprint at module level
+# Mock weasyprint before importing pdf module if native libraries aren't available
+# This allows tests to run even without libgobject/pango installed
+_weasyprint_mock = None
+_weasyprint_available = False
+
 try:
-    from weasyprint import HTML as _HTML  # noqa: F401
+    from weasyprint import CSS as _CSS, HTML as _HTML  # noqa: F401
 
-    WEASYPRINT_IMPORTABLE = True
+    _weasyprint_available = True
 except (ImportError, OSError):
-    WEASYPRINT_IMPORTABLE = False
-
-# Skip entire module if weasyprint can't be imported
-if not WEASYPRINT_IMPORTABLE:
-    pytest.skip(
-        "WeasyPrint requires native libraries (libgobject, etc.)",
-        allow_module_level=True,
-    )
+    # Create mock classes for weasyprint
+    _weasyprint_mock = MagicMock()
+    _weasyprint_mock.HTML = MagicMock
+    _weasyprint_mock.CSS = MagicMock
+    sys.modules["weasyprint"] = _weasyprint_mock
 
 
 def _check_weasyprint_functional() -> bool:
@@ -31,6 +31,8 @@ def _check_weasyprint_functional() -> bool:
 
     WeasyPrint may import but fail at runtime if system libraries are incomplete.
     """
+    if not _weasyprint_available:
+        return False
     try:
         result = subprocess.run(
             [
