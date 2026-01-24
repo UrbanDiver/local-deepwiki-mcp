@@ -175,8 +175,8 @@ async def find_related_files(
             for result in results:
                 if result.chunk.file_path != file_path:
                     related.add(result.chunk.file_path)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Error searching for related module '{module}': {e}")
 
     return sorted(related)[:max_files]
 
@@ -229,8 +229,8 @@ async def get_type_definitions_used(
                     if type_name in first_line:
                         type_defs.append(f"{type_name}: {first_line}")
                         break
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Error searching for type definition '{type_name}': {e}")
 
     return type_defs
 

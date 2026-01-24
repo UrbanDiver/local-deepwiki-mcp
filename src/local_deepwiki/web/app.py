@@ -29,6 +29,44 @@ app = Flask(__name__, template_folder=str(_MODULE_DIR / "templates"))
 WIKI_PATH: Path | None = None
 
 
+@app.after_request
+def add_security_headers(response: Response) -> Response:
+    """Add security headers to all responses.
+
+    These headers protect against common web vulnerabilities:
+    - X-Content-Type-Options: Prevents MIME type sniffing
+    - X-Frame-Options: Prevents clickjacking attacks
+    - X-XSS-Protection: Enables browser XSS filtering (legacy but still useful)
+    - Content-Security-Policy: Controls allowed content sources
+    - Referrer-Policy: Controls referrer information leakage
+    """
+    # Prevent MIME type sniffing
+    response.headers["X-Content-Type-Options"] = "nosniff"
+
+    # Prevent clickjacking - page cannot be embedded in frames
+    response.headers["X-Frame-Options"] = "DENY"
+
+    # Enable browser XSS filtering (legacy, but still helpful for older browsers)
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+
+    # Content Security Policy - restrict content sources
+    # Allow: self, CDN for mermaid.js, inline scripts/styles for markdown rendering
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data:; "
+        "font-src 'self'; "
+        "connect-src 'self'; "
+        "frame-ancestors 'none'"
+    )
+
+    # Control referrer information
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+
+    return response
+
+
 def get_wiki_structure(wiki_path: Path) -> tuple[list, dict, list | None]:
     """Get wiki pages and sections, with optional hierarchical TOC.
 

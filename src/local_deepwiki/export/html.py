@@ -398,9 +398,10 @@ STATIC_HTML_TEMPLATE = """<!DOCTYPE html>
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
     <script>
         // Initialize mermaid with base theme
+        // securityLevel: 'strict' prevents XSS from user-controlled diagram content
         mermaid.initialize({{
             startOnLoad: false,
-            securityLevel: 'loose',
+            securityLevel: 'strict',
             theme: 'base',
             themeVariables: {{
                 primaryColor: '#238636',
