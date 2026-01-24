@@ -294,6 +294,247 @@ def _is_test_module(module: str, file_path: str) -> bool:
     return False
 
 
+@dataclass
+class _DependencyData:
+    """Internal data structure for dependency graph generation."""
+
+    dependencies: dict[str, set[str]]
+    external_deps: dict[str, int]
+    module_external_deps: dict[str, set[str]]
+    all_internal_modules: set[str]
+
+
+def _collect_dependencies(
+    chunks: list,
+    project_name: str,
+    show_external: bool,
+    exclude_tests: bool,
+) -> _DependencyData:
+    """Collect module dependencies from import chunks.
+
+    Args:
+        chunks: List of CodeChunk objects.
+        project_name: Name of the project for filtering internal imports.
+        show_external: Whether to collect external dependencies.
+        exclude_tests: Whether to exclude test modules.
+
+    Returns:
+        DependencyData with collected dependencies.
+    """
+    dependencies: dict[str, set[str]] = {}
+    external_deps: dict[str, int] = {}
+    module_external_deps: dict[str, set[str]] = {}
+    all_internal_modules: set[str] = set()
+
+    for chunk in chunks:
+        if hasattr(chunk, "chunk"):
+            chunk = chunk.chunk
+        if chunk.chunk_type != ChunkType.IMPORT:
+            continue
+
+        file_path = chunk.file_path
+        module = _path_to_module(file_path)
+        if not module:
+            continue
+
+        if exclude_tests and _is_test_module(module, file_path):
+            continue
+
+        if module not in dependencies:
+            dependencies[module] = set()
+        if module not in module_external_deps:
+            module_external_deps[module] = set()
+        all_internal_modules.add(module)
+
+        for line in chunk.content.split("\n"):
+            line = line.strip()
+            if not line:
+                continue
+
+            imported = _parse_import_line(line, project_name)
+            if imported:
+                if exclude_tests and imported.startswith("test_"):
+                    continue
+                dependencies[module].add(imported)
+                all_internal_modules.add(imported)
+            elif show_external:
+                ext_module = _parse_external_import(line)
+                if ext_module:
+                    external_deps[ext_module] = external_deps.get(ext_module, 0) + 1
+                    module_external_deps[module].add(ext_module)
+
+    return _DependencyData(
+        dependencies=dependencies,
+        external_deps=external_deps,
+        module_external_deps=module_external_deps,
+        all_internal_modules=all_internal_modules,
+    )
+
+
+def _build_internal_deps(
+    dependencies: dict[str, set[str]],
+    internal_modules: set[str],
+) -> dict[str, set[str]]:
+    """Filter dependencies to only include internal modules.
+
+    Args:
+        dependencies: Raw dependency mapping.
+        internal_modules: Set of known internal modules.
+
+    Returns:
+        Filtered dependency mapping.
+    """
+    internal_deps: dict[str, set[str]] = {}
+    for module, imports in dependencies.items():
+        internal_imports = {imp for imp in imports if imp in internal_modules}
+        if internal_imports:
+            internal_deps[module] = internal_imports
+    return internal_deps
+
+
+def _group_modules(modules: set[str]) -> dict[str, list[str]]:
+    """Group modules by top-level directory for subgraphs.
+
+    Args:
+        modules: Set of module names.
+
+    Returns:
+        Mapping of group name to list of modules.
+    """
+    groups: dict[str, list[str]] = {}
+    for module in sorted(modules):
+        parts = module.split(".")
+        group = parts[0] if parts else "other"
+        if group not in groups:
+            groups[group] = []
+        groups[group].append(module)
+    return groups
+
+
+def _build_node_ids(modules: set[str]) -> dict[str, str]:
+    """Create unique node IDs for each module.
+
+    Args:
+        modules: Set of module names.
+
+    Returns:
+        Mapping of module name to node ID.
+    """
+    return {module: f"M{i}" for i, module in enumerate(sorted(modules))}
+
+
+def _add_subgraphs(
+    lines: list[str],
+    module_groups: dict[str, list[str]],
+    node_ids: dict[str, str],
+) -> None:
+    """Add subgraph definitions for module groups.
+
+    Args:
+        lines: Lines list to append to.
+        module_groups: Mapping of group to modules.
+        node_ids: Mapping of module to node ID.
+    """
+    for group_name in sorted(module_groups.keys()):
+        modules = module_groups[group_name]
+        safe_group = sanitize_mermaid_name(group_name)
+        display_group = group_name.replace("_", " ").title()
+        lines.append(f"    subgraph {safe_group}[{display_group}]")
+        for module in sorted(modules):
+            node_id = node_ids[module]
+            display_name = module.split(".")[-1]
+            lines.append(f"        {node_id}[{display_name}]")
+        lines.append("    end")
+
+
+def _add_external_subgraph(
+    lines: list[str],
+    external_deps: dict[str, int],
+    max_external: int,
+) -> dict[str, str]:
+    """Add external dependencies subgraph.
+
+    Args:
+        lines: Lines list to append to.
+        external_deps: External dependency counts.
+        max_external: Maximum externals to show.
+
+    Returns:
+        Mapping of external module to node ID.
+    """
+    ext_node_ids: dict[str, str] = {}
+    if not external_deps:
+        return ext_node_ids
+
+    top_external = sorted(external_deps.items(), key=lambda x: -x[1])[:max_external]
+    if top_external:
+        lines.append("    subgraph external[External Dependencies]")
+        for i, (ext, _count) in enumerate(top_external):
+            ext_id = f"E{i}"
+            ext_node_ids[ext] = ext_id
+            lines.append(f"        {ext_id}([{ext}]):::external")
+        lines.append("    end")
+    return ext_node_ids
+
+
+def _add_edges(
+    lines: list[str],
+    internal_deps: dict[str, set[str]],
+    node_ids: dict[str, str],
+    circular_edges: set[tuple[str, str]],
+) -> None:
+    """Add internal dependency edges to the diagram.
+
+    Args:
+        lines: Lines list to append to.
+        internal_deps: Internal dependency mapping.
+        node_ids: Module to node ID mapping.
+        circular_edges: Set of circular dependency edges.
+    """
+    for module, imports in sorted(internal_deps.items()):
+        from_id = node_ids.get(module)
+        if not from_id:
+            continue
+        for imp in sorted(imports):
+            to_id = node_ids.get(imp)
+            if to_id and from_id != to_id:
+                if (module, imp) in circular_edges or (imp, module) in circular_edges:
+                    lines.append(f"    {from_id} -.->|circular| {to_id}")
+                else:
+                    lines.append(f"    {from_id} --> {to_id}")
+
+
+def _add_circular_styling(
+    lines: list[str],
+    internal_deps: dict[str, set[str]],
+    node_ids: dict[str, str],
+    circular_edges: set[tuple[str, str]],
+) -> None:
+    """Add styling for circular dependencies.
+
+    Args:
+        lines: Lines list to append to.
+        internal_deps: Internal dependency mapping.
+        node_ids: Module to node ID mapping.
+        circular_edges: Set of circular dependency edges.
+    """
+    if not circular_edges:
+        return
+
+    lines.append("    linkStyle default stroke:#666")
+    link_idx = 0
+    for module, imports in sorted(internal_deps.items()):
+        from_id = node_ids.get(module)
+        if not from_id:
+            continue
+        for imp in sorted(imports):
+            to_id = node_ids.get(imp)
+            if to_id and from_id != to_id:
+                if (module, imp) in circular_edges or (imp, module) in circular_edges:
+                    lines.append(f"    linkStyle {link_idx} stroke:#f00,stroke-width:2px")
+                link_idx += 1
+
+
 def generate_dependency_graph(
     chunks: list,
     project_name: str = "project",
@@ -323,79 +564,16 @@ def generate_dependency_graph(
     Returns:
         Mermaid flowchart markdown string, or None if no dependencies found.
     """
-    # Collect dependencies: module -> set of internal imports
-    dependencies: dict[str, set[str]] = {}
-    # Collect external dependencies: ext_module -> count of imports
-    external_deps: dict[str, int] = {}
-    # Track which modules import which external deps
-    module_external_deps: dict[str, set[str]] = {}
-    # Track ALL internal modules (both importing and imported)
-    all_internal_modules: set[str] = set()
+    # Collect all dependency data
+    data = _collect_dependencies(chunks, project_name, show_external, exclude_tests)
 
-    for chunk in chunks:
-        if hasattr(chunk, "chunk"):
-            chunk = chunk.chunk
-        if chunk.chunk_type != ChunkType.IMPORT:
-            continue
-
-        file_path = chunk.file_path
-        module = _path_to_module(file_path)
-        if not module:
-            continue
-
-        # Skip test modules if exclude_tests is True
-        if exclude_tests and _is_test_module(module, file_path):
-            continue
-
-        if module not in dependencies:
-            dependencies[module] = set()
-        if module not in module_external_deps:
-            module_external_deps[module] = set()
-        all_internal_modules.add(module)
-
-        # Parse imports from content
-        for line in chunk.content.split("\n"):
-            line = line.strip()
-            if not line:
-                continue
-
-            # Check for internal import
-            imported = _parse_import_line(line, project_name)
-            if imported:
-                # Skip test module imports if exclude_tests is True
-                if exclude_tests and imported.startswith("test_"):
-                    continue
-                dependencies[module].add(imported)
-                # Also track the imported module even if it has no import chunks itself
-                all_internal_modules.add(imported)
-            elif show_external:
-                # Parse external import
-                ext_module = _parse_external_import(line)
-                if ext_module:
-                    external_deps[ext_module] = external_deps.get(ext_module, 0) + 1
-                    module_external_deps[module].add(ext_module)
-
-    if not dependencies:
+    if not data.dependencies:
         return None
 
-    # Use all discovered internal modules (not just those with import chunks)
-    internal_modules = all_internal_modules
-    internal_deps: dict[str, set[str]] = {}
-
-    for module, imports in dependencies.items():
-        # Include all internal imports, even to modules without their own imports
-        internal_imports = {imp for imp in imports if imp in internal_modules}
-        if internal_imports:
-            internal_deps[module] = internal_imports
-
-    # Group modules by top-level directory for subgraphs
-    module_groups: dict[str, list[str]] = {}
-    for module in sorted(internal_modules):
-        parts = module.split(".")
-        group = parts[0] if parts else "other"
-        if group not in module_groups:
-            module_groups[group] = []
-        module_groups[group].append(module)
+    # Build internal dependency graph
+    internal_deps = _build_internal_deps(data.dependencies, data.all_internal_modules)
+    module_groups = _group_modules(data.all_internal_modules)
+    node_ids = _build_node_ids(data.all_internal_modules)
 
     # Detect circular dependencies
     circular_edges: set[tuple[str, str]] = set()
@@ -405,55 +583,20 @@ def generate_dependency_graph(
     # Build Mermaid flowchart
     lines = ["```mermaid", "flowchart TD"]
 
-    # Create node IDs mapping
-    node_ids: dict[str, str] = {}
-    node_idx = 0
-    for module in sorted(internal_modules):
-        node_ids[module] = f"M{node_idx}"
-        node_idx += 1
-
-    # Add subgraphs for each module group
-    for group_name in sorted(module_groups.keys()):
-        modules = module_groups[group_name]
-        safe_group = sanitize_mermaid_name(group_name)
-        display_group = group_name.replace("_", " ").title()
-        lines.append(f"    subgraph {safe_group}[{display_group}]")
-        for module in sorted(modules):
-            node_id = node_ids[module]
-            display_name = module.split(".")[-1]
-            lines.append(f"        {node_id}[{display_name}]")
-        lines.append("    end")
+    # Add module subgraphs
+    _add_subgraphs(lines, module_groups, node_ids)
 
     # Add external dependencies if enabled
     ext_node_ids: dict[str, str] = {}
-    if show_external and external_deps:
-        # Get top external deps by import count
-        top_external = sorted(external_deps.items(), key=lambda x: -x[1])[:max_external]
-        if top_external:
-            lines.append("    subgraph external[External Dependencies]")
-            for i, (ext, _count) in enumerate(top_external):
-                ext_id = f"E{i}"
-                ext_node_ids[ext] = ext_id
-                # Use rounded rectangle for external deps
-                lines.append(f"        {ext_id}([{ext}]):::external")
-            lines.append("    end")
+    if show_external:
+        ext_node_ids = _add_external_subgraph(lines, data.external_deps, max_external)
 
     # Add internal dependency edges
-    for module, imports in sorted(internal_deps.items()):
-        from_id = node_ids.get(module)
-        if not from_id:
-            continue
-        for imp in sorted(imports):
-            to_id = node_ids.get(imp)
-            if to_id and from_id != to_id:
-                if (module, imp) in circular_edges or (imp, module) in circular_edges:
-                    lines.append(f"    {from_id} -.->|circular| {to_id}")
-                else:
-                    lines.append(f"    {from_id} --> {to_id}")
+    _add_edges(lines, internal_deps, node_ids, circular_edges)
 
     # Add external dependency edges
     if show_external and ext_node_ids:
-        for module, ext_imports in sorted(module_external_deps.items()):
+        for module, ext_imports in sorted(data.module_external_deps.items()):
             from_id = node_ids.get(module)
             if not from_id:
                 continue
@@ -470,22 +613,7 @@ def generate_dependency_graph(
 
     # Add styling
     lines.append("    classDef external fill:#2d2d3d,stroke:#666,stroke-dasharray: 5 5")
-
-    # Style circular dependencies
-    if circular_edges:
-        lines.append("    linkStyle default stroke:#666")
-        # Find indices of circular links
-        link_idx = 0
-        for module, imports in sorted(internal_deps.items()):
-            from_id = node_ids.get(module)
-            if not from_id:
-                continue
-            for imp in sorted(imports):
-                to_id = node_ids.get(imp)
-                if to_id and from_id != to_id:
-                    if (module, imp) in circular_edges or (imp, module) in circular_edges:
-                        lines.append(f"    linkStyle {link_idx} stroke:#f00,stroke-width:2px")
-                    link_idx += 1
+    _add_circular_styling(lines, internal_deps, node_ids, circular_edges)
 
     lines.append("```")
 
