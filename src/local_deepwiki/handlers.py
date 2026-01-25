@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Awaitable, Callable
 
 if TYPE_CHECKING:
     from local_deepwiki.core.deep_research import DeepResearchPipeline
-    from local_deepwiki.models import ResearchProgress
+    from local_deepwiki.models import IndexingProgress, ResearchProgress
 
 from mcp.types import TextContent
 from pydantic import ValidationError
@@ -18,6 +18,8 @@ from local_deepwiki.models import (
     DeepResearchArgs,
     ExportWikiHtmlArgs,
     ExportWikiPdfArgs,
+    IndexingProgress,
+    IndexingProgressType,
     IndexRepositoryArgs,
     ReadWikiPageArgs,
     ReadWikiStructureArgs,
@@ -77,9 +79,36 @@ def handle_tool_errors(func: ToolHandler) -> ToolHandler:
     return wrapper
 
 
-@handle_tool_errors
-async def handle_index_repository(args: dict[str, Any]) -> list[TextContent]:
-    """Handle index_repository tool call."""
+async def handle_index_repository(
+    args: dict[str, Any],
+    server: Any = None,
+) -> list[TextContent]:
+    """Handle index_repository tool call with streaming progress.
+
+    Args:
+        args: Tool arguments.
+        server: Optional MCP server instance for progress notifications.
+
+    Returns:
+        List of TextContent with indexing results.
+    """
+    try:
+        return await _handle_index_repository_impl(args, server)
+    except ValueError as e:
+        logger.error(f"Invalid input in handle_index_repository: {e}")
+        return [TextContent(type="text", text=f"Error: {e}")]
+    except asyncio.CancelledError:
+        raise
+    except Exception as e:  # noqa: BLE001
+        logger.exception(f"Error in handle_index_repository: {e}")
+        return [TextContent(type="text", text=f"Error: {e}")]
+
+
+async def _handle_index_repository_impl(
+    args: dict[str, Any],
+    server: Any = None,
+) -> list[TextContent]:
+    """Internal implementation of index_repository with progress streaming."""
     # Validate with Pydantic
     try:
         validated = IndexRepositoryArgs.model_validate(args)
@@ -121,6 +150,17 @@ async def handle_index_repository(args: dict[str, Any]) -> list[TextContent]:
     else:
         config = base_config
 
+    # Extract progress token from MCP request context
+    progress_token: str | int | None = None
+    if server is not None:
+        try:
+            request_ctx = server.request_context
+            if request_ctx.meta and request_ctx.meta.progressToken:
+                progress_token = request_ctx.meta.progressToken
+        except LookupError:
+            # Not in a request context (e.g., testing)
+            pass
+
     # Create indexer
     indexer = RepositoryIndexer(
         repo_path=repo_path,
@@ -130,19 +170,81 @@ async def handle_index_repository(args: dict[str, Any]) -> list[TextContent]:
 
     # Index the repository
     full_rebuild = validated.full_rebuild
+    messages: list[str] = []
 
-    messages = []
+    # Track indexing state for progress
+    indexing_state = {
+        "current_step": 0,
+        "total_steps": 6,  # scan, parse, embed, store, generate wiki, complete
+        "files_processed": 0,
+        "total_files": 0,
+        "chunks_created": 0,
+        "pages_generated": 0,
+    }
 
-    def progress_callback(msg: str, current: int, total: int):
+    async def send_progress(
+        step_type: IndexingProgressType,
+        message: str,
+        **kwargs: Any,
+    ) -> None:
+        """Send MCP progress notification."""
+        messages.append(f"[{indexing_state['current_step']}/{indexing_state['total_steps']}] {message}")
+
+        if progress_token is None or server is None:
+            return
+
+        progress = IndexingProgress(
+            step=indexing_state["current_step"],
+            total_steps=indexing_state["total_steps"],
+            step_type=step_type,
+            message=message,
+            files_processed=indexing_state.get("files_processed"),
+            total_files=indexing_state.get("total_files"),
+            chunks_created=indexing_state.get("chunks_created"),
+            pages_generated=indexing_state.get("pages_generated"),
+            **kwargs,
+        )
+
+        try:
+            request_ctx = server.request_context
+            await request_ctx.session.send_progress_notification(
+                progress_token=progress_token,
+                progress=float(indexing_state["current_step"]),
+                total=float(indexing_state["total_steps"]),
+                message=progress.model_dump_json(),
+            )
+        except (RuntimeError, OSError, AttributeError) as e:
+            logger.warning(f"Failed to send progress notification: {e}")
+
+    def sync_progress_callback(msg: str, current: int, total: int) -> None:
+        """Sync callback for indexer - updates state for next async notification."""
+        indexing_state["files_processed"] = current
+        indexing_state["total_files"] = total
         messages.append(f"[{current}/{total}] {msg}")
+
+    # Step 1: Started
+    indexing_state["current_step"] = 1
+    await send_progress(IndexingProgressType.STARTED, f"Starting indexing of {repo_path.name}")
+
+    # Step 2-4: Index repository (parsing, embedding, storing)
+    indexing_state["current_step"] = 2
+    await send_progress(IndexingProgressType.PARSING_FILES, "Parsing source files...")
 
     status = await indexer.index(
         full_rebuild=full_rebuild,
-        progress_callback=progress_callback,
+        progress_callback=sync_progress_callback,
     )
 
-    # Generate wiki documentation
-    messages.append("Generating wiki documentation...")
+    indexing_state["chunks_created"] = status.total_chunks
+    indexing_state["current_step"] = 4
+    await send_progress(
+        IndexingProgressType.STORING_VECTORS,
+        f"Indexed {status.total_files} files, {status.total_chunks} chunks",
+    )
+
+    # Step 5: Generate wiki documentation
+    indexing_state["current_step"] = 5
+    await send_progress(IndexingProgressType.GENERATING_WIKI, "Generating wiki documentation...")
 
     wiki_structure = await generate_wiki(
         repo_path=repo_path,
@@ -151,8 +253,17 @@ async def handle_index_repository(args: dict[str, Any]) -> list[TextContent]:
         index_status=status,
         config=config,
         llm_provider=llm_provider,
-        progress_callback=progress_callback,
+        progress_callback=sync_progress_callback,
         full_rebuild=full_rebuild,
+    )
+
+    indexing_state["pages_generated"] = len(wiki_structure.pages)
+
+    # Step 6: Complete
+    indexing_state["current_step"] = 6
+    await send_progress(
+        IndexingProgressType.COMPLETE,
+        f"Complete: {status.total_files} files, {status.total_chunks} chunks, {len(wiki_structure.pages)} pages",
     )
 
     result = {

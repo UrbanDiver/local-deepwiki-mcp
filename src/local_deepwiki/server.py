@@ -257,9 +257,8 @@ async def list_tools() -> list[Tool]:
 
 # Tool handler dispatch dictionary
 # Maps tool names to their async handler functions
-# Note: deep_research is handled specially due to server context requirement
+# Note: index_repository and deep_research are handled specially for progress streaming
 TOOL_HANDLERS: dict[str, ToolHandler] = {
-    "index_repository": handle_index_repository,
     "ask_question": handle_ask_question,
     "read_wiki_structure": handle_read_wiki_structure,
     "read_wiki_page": handle_read_wiki_page,
@@ -268,6 +267,9 @@ TOOL_HANDLERS: dict[str, ToolHandler] = {
     "export_wiki_pdf": handle_export_wiki_pdf,
 }
 
+# Tools that need server context for progress streaming
+PROGRESS_ENABLED_TOOLS = {"index_repository", "deep_research"}
+
 
 @server.call_tool()
 async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
@@ -275,7 +277,10 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
     logger.info(f"Tool call received: {name}")
     logger.debug(f"Tool arguments: {arguments}")
 
-    # Special handling for deep_research (needs server context for progress)
+    # Special handling for tools that need server context for progress streaming
+    if name == "index_repository":
+        return await handle_index_repository(arguments, server=server)
+
     if name == "deep_research":
         return await handle_deep_research(arguments, server=server)
 

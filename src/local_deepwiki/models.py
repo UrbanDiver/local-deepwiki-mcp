@@ -312,6 +312,37 @@ class DeepResearchResult(BaseModel):
         )
 
 
+class IndexingProgressType(str, Enum):
+    """Types of indexing progress events."""
+
+    STARTED = "started"
+    SCANNING_FILES = "scanning_files"
+    PARSING_FILES = "parsing_files"
+    GENERATING_EMBEDDINGS = "generating_embeddings"
+    STORING_VECTORS = "storing_vectors"
+    GENERATING_WIKI = "generating_wiki"
+    GENERATING_PAGES = "generating_pages"
+    COMPLETE = "complete"
+
+
+class IndexingProgress(BaseModel):
+    """Progress update from repository indexing.
+
+    Sent via MCP progress notifications to provide real-time feedback
+    during long-running indexing operations.
+    """
+
+    step: int = Field(description="Current step number")
+    total_steps: int = Field(description="Total number of steps")
+    step_type: IndexingProgressType = Field(description="Type of progress event")
+    message: str = Field(description="Human-readable progress message")
+    files_processed: int | None = Field(default=None, description="Number of files processed")
+    total_files: int | None = Field(default=None, description="Total files to process")
+    chunks_created: int | None = Field(default=None, description="Number of chunks created")
+    pages_generated: int | None = Field(default=None, description="Wiki pages generated")
+    duration_ms: int | None = Field(default=None, description="Duration of step in milliseconds")
+
+
 class ResearchProgressType(str, Enum):
     """Types of deep research progress events."""
 

@@ -35,8 +35,8 @@ class TestServer:
 
     def test_tool_handlers_dictionary_has_expected_tools(self):
         """Test that TOOL_HANDLERS contains all expected tools."""
+        # index_repository and deep_research are handled specially for progress streaming
         expected_tools = [
-            "index_repository",
             "ask_question",
             "read_wiki_structure",
             "read_wiki_page",
@@ -47,10 +47,11 @@ class TestServer:
         for tool_name in expected_tools:
             assert tool_name in TOOL_HANDLERS, f"Missing tool: {tool_name}"
 
-    def test_deep_research_not_in_tool_handlers(self):
-        """Test that deep_research is NOT in TOOL_HANDLERS (handled specially)."""
-        # deep_research is handled specially in call_tool due to server context requirement
+    def test_progress_enabled_tools_not_in_tool_handlers(self):
+        """Test that progress-enabled tools are NOT in TOOL_HANDLERS (handled specially)."""
+        # index_repository and deep_research are handled specially for progress streaming
         assert "deep_research" not in TOOL_HANDLERS
+        assert "index_repository" not in TOOL_HANDLERS
 
 
 class TestListTools:
@@ -205,14 +206,18 @@ class TestCallTool:
         assert "nonexistent_tool" in result[0].text
 
     async def test_calls_index_repository_handler(self, tmp_path):
-        """Test that index_repository dispatches to handler."""
+        """Test that index_repository dispatches to handler with server context."""
         mock_handler = AsyncMock(return_value=[TextContent(type="text", text="success")])
-        with patch.dict(TOOL_HANDLERS, {"index_repository": mock_handler}):
+        # index_repository is called directly with server context for progress streaming
+        with patch("local_deepwiki.server.handle_index_repository", mock_handler):
             args = {"repo_path": str(tmp_path)}
 
             result = await call_tool("index_repository", args)
 
-            mock_handler.assert_called_once_with(args)
+            # Handler is called with args and server context
+            mock_handler.assert_called_once()
+            call_args = mock_handler.call_args
+            assert call_args[0][0] == args  # First positional arg is args
             assert result[0].text == "success"
 
     async def test_calls_ask_question_handler(self, tmp_path):
