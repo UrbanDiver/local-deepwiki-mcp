@@ -1,10 +1,6 @@
 """Tests for wiki status management functionality."""
 
 import json
-import time
-from pathlib import Path
-
-import pytest
 
 from local_deepwiki.generators.wiki_status import WikiStatusManager
 from local_deepwiki.models import WikiGenerationStatus, WikiPage, WikiPageStatus
@@ -393,15 +389,246 @@ class TestWikiStatusManagerRecordPageStatus:
         """Test that content hash is computed for recorded status."""
         manager = WikiStatusManager(wiki_path=tmp_path)
         manager.file_hashes = {}
-        
+
         page = WikiPage(
             path="files/main.md",
             title="Main",
             content="# Unique Content",
             generated_at=1.0,
         )
-        
+
         manager.record_page_status(page, [])
-        
+
         status = manager.page_statuses["files/main.md"]
         assert len(status.content_hash) == 16
+
+
+class TestWikiStatusManagerGetChangedFiles:
+    """Tests for get_changed_files method."""
+
+    def test_no_previous_status_all_files_changed(self, tmp_path):
+        """Test all files reported as changed when no previous status."""
+        manager = WikiStatusManager(wiki_path=tmp_path)
+        manager.file_hashes = {"src/a.py": "hash1", "src/b.py": "hash2"}
+
+        changed = manager.get_changed_files()
+
+        assert changed == {"src/a.py", "src/b.py"}
+
+    def test_detects_changed_file(self, tmp_path):
+        """Test detecting a changed file."""
+        manager = WikiStatusManager(wiki_path=tmp_path)
+        manager.file_hashes = {"src/a.py": "new_hash", "src/b.py": "same_hash"}
+
+        page_status = WikiPageStatus(
+            path="files/a.md",
+            source_files=["src/a.py"],
+            source_hashes={"src/a.py": "old_hash"},
+            content_hash="xyz",
+            generated_at=1.0,
+        )
+        page_status_b = WikiPageStatus(
+            path="files/b.md",
+            source_files=["src/b.py"],
+            source_hashes={"src/b.py": "same_hash"},
+            content_hash="xyz",
+            generated_at=1.0,
+        )
+        manager._previous_status = WikiGenerationStatus(
+            repo_path="/test",
+            generated_at=1.0,
+            total_pages=2,
+            pages={"files/a.md": page_status, "files/b.md": page_status_b},
+        )
+
+        changed = manager.get_changed_files()
+
+        assert "src/a.py" in changed
+        assert "src/b.py" not in changed
+
+    def test_detects_new_file(self, tmp_path):
+        """Test detecting a new file not in previous status."""
+        manager = WikiStatusManager(wiki_path=tmp_path)
+        manager.file_hashes = {"src/a.py": "hash1", "src/new.py": "hash2"}
+
+        page_status = WikiPageStatus(
+            path="files/a.md",
+            source_files=["src/a.py"],
+            source_hashes={"src/a.py": "hash1"},
+            content_hash="xyz",
+            generated_at=1.0,
+        )
+        manager._previous_status = WikiGenerationStatus(
+            repo_path="/test",
+            generated_at=1.0,
+            total_pages=1,
+            pages={"files/a.md": page_status},
+        )
+
+        changed = manager.get_changed_files()
+
+        assert "src/new.py" in changed
+        assert "src/a.py" not in changed
+
+
+class TestWikiStatusManagerBuildReverseIndex:
+    """Tests for build_reverse_index method."""
+
+    def test_no_previous_status_empty_index(self, tmp_path):
+        """Test empty reverse index when no previous status."""
+        manager = WikiStatusManager(wiki_path=tmp_path)
+
+        reverse_index = manager.build_reverse_index()
+
+        assert reverse_index == {}
+
+    def test_builds_reverse_index(self, tmp_path):
+        """Test building reverse index from previous status."""
+        manager = WikiStatusManager(wiki_path=tmp_path)
+
+        page_status_a = WikiPageStatus(
+            path="files/a.md",
+            source_files=["src/a.py", "src/shared.py"],
+            source_hashes={"src/a.py": "h1", "src/shared.py": "h2"},
+            content_hash="xyz",
+            generated_at=1.0,
+        )
+        page_status_b = WikiPageStatus(
+            path="files/b.md",
+            source_files=["src/b.py", "src/shared.py"],
+            source_hashes={"src/b.py": "h3", "src/shared.py": "h2"},
+            content_hash="xyz",
+            generated_at=1.0,
+        )
+        manager._previous_status = WikiGenerationStatus(
+            repo_path="/test",
+            generated_at=1.0,
+            total_pages=2,
+            pages={"files/a.md": page_status_a, "files/b.md": page_status_b},
+        )
+
+        reverse_index = manager.build_reverse_index()
+
+        assert reverse_index["src/a.py"] == {"files/a.md"}
+        assert reverse_index["src/b.py"] == {"files/b.md"}
+        assert reverse_index["src/shared.py"] == {"files/a.md", "files/b.md"}
+
+
+class TestWikiStatusManagerGetAffectedPages:
+    """Tests for get_affected_pages method."""
+
+    def test_no_changes_no_affected_pages(self, tmp_path):
+        """Test no affected pages when nothing changed."""
+        manager = WikiStatusManager(wiki_path=tmp_path)
+
+        affected = manager.get_affected_pages(changed_files=set())
+
+        assert affected == set()
+
+    def test_finds_affected_pages(self, tmp_path):
+        """Test finding pages affected by file changes."""
+        manager = WikiStatusManager(wiki_path=tmp_path)
+
+        page_status_a = WikiPageStatus(
+            path="files/a.md",
+            source_files=["src/a.py"],
+            source_hashes={"src/a.py": "h1"},
+            content_hash="xyz",
+            generated_at=1.0,
+        )
+        page_status_b = WikiPageStatus(
+            path="files/b.md",
+            source_files=["src/b.py"],
+            source_hashes={"src/b.py": "h2"},
+            content_hash="xyz",
+            generated_at=1.0,
+        )
+        manager._previous_status = WikiGenerationStatus(
+            repo_path="/test",
+            generated_at=1.0,
+            total_pages=2,
+            pages={"files/a.md": page_status_a, "files/b.md": page_status_b},
+        )
+
+        affected = manager.get_affected_pages(changed_files={"src/a.py"})
+
+        assert affected == {"files/a.md"}
+
+    def test_shared_file_affects_multiple_pages(self, tmp_path):
+        """Test that changing a shared file affects multiple pages."""
+        manager = WikiStatusManager(wiki_path=tmp_path)
+
+        page_status_a = WikiPageStatus(
+            path="files/a.md",
+            source_files=["src/shared.py"],
+            source_hashes={"src/shared.py": "h1"},
+            content_hash="xyz",
+            generated_at=1.0,
+        )
+        page_status_b = WikiPageStatus(
+            path="files/b.md",
+            source_files=["src/shared.py"],
+            source_hashes={"src/shared.py": "h1"},
+            content_hash="xyz",
+            generated_at=1.0,
+        )
+        manager._previous_status = WikiGenerationStatus(
+            repo_path="/test",
+            generated_at=1.0,
+            total_pages=2,
+            pages={"files/a.md": page_status_a, "files/b.md": page_status_b},
+        )
+
+        affected = manager.get_affected_pages(changed_files={"src/shared.py"})
+
+        assert affected == {"files/a.md", "files/b.md"}
+
+
+class TestWikiStatusManagerGetRegenerationSummary:
+    """Tests for get_regeneration_summary method."""
+
+    def test_summary_full_rebuild(self, tmp_path):
+        """Test summary when doing full rebuild (no previous status)."""
+        manager = WikiStatusManager(wiki_path=tmp_path)
+        manager.file_hashes = {"src/a.py": "h1", "src/b.py": "h2"}
+
+        summary = manager.get_regeneration_summary()
+
+        assert summary["is_full_rebuild"] is True
+        assert summary["changed_file_count"] == 2
+        assert set(summary["changed_files"]) == {"src/a.py", "src/b.py"}
+
+    def test_summary_incremental(self, tmp_path):
+        """Test summary for incremental update."""
+        manager = WikiStatusManager(wiki_path=tmp_path)
+        manager.file_hashes = {"src/a.py": "new_hash", "src/b.py": "same_hash"}
+
+        page_status_a = WikiPageStatus(
+            path="files/a.md",
+            source_files=["src/a.py"],
+            source_hashes={"src/a.py": "old_hash"},
+            content_hash="xyz",
+            generated_at=1.0,
+        )
+        page_status_b = WikiPageStatus(
+            path="files/b.md",
+            source_files=["src/b.py"],
+            source_hashes={"src/b.py": "same_hash"},
+            content_hash="xyz",
+            generated_at=1.0,
+        )
+        manager._previous_status = WikiGenerationStatus(
+            repo_path="/test",
+            generated_at=1.0,
+            total_pages=2,
+            pages={"files/a.md": page_status_a, "files/b.md": page_status_b},
+        )
+
+        summary = manager.get_regeneration_summary()
+
+        assert summary["is_full_rebuild"] is False
+        assert summary["changed_file_count"] == 1
+        assert summary["affected_page_count"] == 1
+        assert summary["unchanged_page_count"] == 1
+        assert "src/a.py" in summary["changed_files"]
+        assert "files/a.md" in summary["affected_pages"]

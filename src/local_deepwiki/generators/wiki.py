@@ -252,6 +252,20 @@ class WikiGenerator:
         if not full_rebuild:
             await self.status_manager.load_status()
 
+            # Log regeneration summary for incremental updates
+            summary = self.status_manager.get_regeneration_summary()
+            if summary["is_full_rebuild"]:
+                logger.info("No previous wiki status found, performing full generation")
+            else:
+                logger.info(
+                    f"Incremental update: {summary['changed_file_count']} files changed, "
+                    f"{summary['affected_page_count']} pages to regenerate, "
+                    f"{summary['unchanged_page_count']} pages unchanged"
+                )
+                if summary["changed_file_count"] <= 5:
+                    for f in summary["changed_files"]:
+                        logger.debug(f"  Changed: {f}")
+
         # Pre-compute line info for source files (for source refs with line numbers)
         self.status_manager.file_line_info = self._get_main_definition_lines()
 

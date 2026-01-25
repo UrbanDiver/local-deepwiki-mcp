@@ -6,6 +6,8 @@ import json
 import time
 from pathlib import Path
 
+from typing import Any
+
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import WikiGenerationStatus, WikiPage, WikiPageStatus
 
@@ -218,3 +220,101 @@ class WikiStatusManager:
             content_hash=self.compute_content_hash(page.content),
             generated_at=page.generated_at,
         )
+
+    def get_changed_files(self) -> set[str]:
+        """Get set of files that have changed since last generation.
+
+        Compares current file hashes with previous generation's hashes.
+
+        Returns:
+            Set of file paths that have changed or are new.
+        """
+        if self._previous_status is None:
+            # No previous status means all files are "new"
+            return set(self._file_hashes.keys())
+
+        changed = set()
+
+        # Check each current file against previous hashes
+        for file_path, current_hash in self._file_hashes.items():
+            # Find any page that previously tracked this file
+            prev_hash = None
+            for page_status in self._previous_status.pages.values():
+                if file_path in page_status.source_hashes:
+                    prev_hash = page_status.source_hashes[file_path]
+                    break
+
+            if prev_hash is None or prev_hash != current_hash:
+                changed.add(file_path)
+
+        return changed
+
+    def build_reverse_index(self) -> dict[str, set[str]]:
+        """Build reverse index mapping source files to dependent wiki pages.
+
+        Uses previous generation's page statuses to build the mapping.
+
+        Returns:
+            Dict mapping source file path to set of wiki page paths that depend on it.
+        """
+        reverse_index: dict[str, set[str]] = {}
+
+        if self._previous_status is None:
+            return reverse_index
+
+        for page_path, page_status in self._previous_status.pages.items():
+            for source_file in page_status.source_files:
+                if source_file not in reverse_index:
+                    reverse_index[source_file] = set()
+                reverse_index[source_file].add(page_path)
+
+        return reverse_index
+
+    def get_affected_pages(self, changed_files: set[str] | None = None) -> set[str]:
+        """Get set of wiki pages affected by file changes.
+
+        Uses reverse index to efficiently find all pages that depend on changed files.
+
+        Args:
+            changed_files: Optional set of changed files. If None, computes automatically.
+
+        Returns:
+            Set of wiki page paths that need regeneration.
+        """
+        if changed_files is None:
+            changed_files = self.get_changed_files()
+
+        if not changed_files:
+            return set()
+
+        reverse_index = self.build_reverse_index()
+        affected: set[str] = set()
+
+        for file_path in changed_files:
+            if file_path in reverse_index:
+                affected.update(reverse_index[file_path])
+
+        return affected
+
+    def get_regeneration_summary(self) -> dict[str, Any]:
+        """Get a summary of what will be regenerated and why.
+
+        Returns:
+            Dict with 'changed_files', 'affected_pages', 'unchanged_pages' counts.
+        """
+        changed_files = self.get_changed_files()
+        affected_pages = self.get_affected_pages(changed_files)
+
+        total_previous_pages = (
+            len(self._previous_status.pages) if self._previous_status else 0
+        )
+        unchanged_pages = total_previous_pages - len(affected_pages)
+
+        return {
+            "changed_files": list(changed_files),
+            "changed_file_count": len(changed_files),
+            "affected_pages": list(affected_pages),
+            "affected_page_count": len(affected_pages),
+            "unchanged_page_count": max(0, unchanged_pages),
+            "is_full_rebuild": self._previous_status is None,
+        }
