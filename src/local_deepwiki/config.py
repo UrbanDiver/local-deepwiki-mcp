@@ -477,6 +477,13 @@ class PromptsConfig(BaseModel):
 
     model_config = {"frozen": True}
 
+    custom_dir: str | None = Field(
+        default=None,
+        description="Custom prompts directory path. Prompts in this directory "
+        "override built-in defaults. Supports files like wiki_system.md, "
+        "wiki_system.anthropic.md (provider-specific), etc.",
+    )
+
     ollama: ProviderPromptsConfig = Field(
         default_factory=lambda: ProviderPromptsConfig(
             wiki_system=WIKI_SYSTEM_PROMPTS["ollama"],

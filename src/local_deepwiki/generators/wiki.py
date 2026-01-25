@@ -35,6 +35,7 @@ from local_deepwiki.generators.wiki_pages import (
 )
 from local_deepwiki.generators.wiki_status import WikiStatusManager
 from local_deepwiki.logging import get_logger
+from local_deepwiki.prompts import PromptManager
 from local_deepwiki.models import (
     IndexStatus,
     ProgressCallback,
@@ -115,8 +116,19 @@ class WikiGenerator:
             llm_config=self.config.llm,
         )
 
-        # Get provider-specific system prompt
-        self._system_prompt = self.config.get_prompts().wiki_system
+        # Initialize prompt manager for custom prompt support
+        custom_prompts_dir = None
+        if self.config.prompts.custom_dir:
+            custom_prompts_dir = Path(self.config.prompts.custom_dir)
+        self._prompt_manager = PromptManager(
+            custom_dir=custom_prompts_dir,
+            repo_path=None,  # Will be set during generation
+        )
+
+        # Get provider-specific system prompt (may be overridden by custom prompts)
+        self._system_prompt = self._prompt_manager.get_wiki_system_prompt(
+            provider=self.config.llm.provider,
+        )
 
         # Entity registry for cross-linking
         self.entity_registry = EntityRegistry()
@@ -243,6 +255,14 @@ class WikiGenerator:
         # Store repo path and parse manifest for grounded generation (with caching)
         self._repo_path = Path(index_status.repo_path)
         self._manifest = get_cached_manifest(self._repo_path, cache_dir=self.wiki_path)
+
+        # Update prompt manager with repo path for per-project prompts
+        self._prompt_manager.loader.repo_path = self._repo_path
+        self._prompt_manager.loader.clear_cache()  # Clear cache to pick up repo prompts
+        # Reload system prompt in case repo has custom prompts
+        self._system_prompt = self._prompt_manager.get_wiki_system_prompt(
+            provider=self.config.llm.provider,
+        )
 
         # Build file hash map for incremental generation
         self.status_manager.file_hashes = {f.path: f.hash for f in index_status.files}
