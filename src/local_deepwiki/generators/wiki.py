@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    pass  # Future type-only imports can go here
+    from local_deepwiki.plugins.base import WikiGeneratorPlugin
 
 from local_deepwiki.config import Config, get_config
 from local_deepwiki.core.vectorstore import VectorStore
@@ -44,6 +44,7 @@ from local_deepwiki.models import (
     WikiPage,
     WikiStructure,
 )
+from local_deepwiki.plugins.registry import get_plugin_registry
 from local_deepwiki.providers.llm import get_cached_llm_provider
 
 logger = get_logger(__name__)
@@ -209,6 +210,9 @@ class WikiGenerator:
 
         # Phase 7: Generate auxiliary pages (inheritance, glossary, coverage)
         await self._generate_auxiliary_pages(ctx, index_status, progress_callback)
+
+        # Phase 7b: Run wiki generator plugins
+        await self._run_plugin_generators(ctx, index_status, progress_callback)
 
         # Phase 8: Apply cross-links and see-also sections
         ctx.pages = await self._apply_cross_linking(ctx.pages, progress_callback)
@@ -621,6 +625,66 @@ class WikiGenerator:
             self.status_manager.record_page_status(coverage_page, ctx.all_source_files)
             await self._write_page(coverage_page)
             ctx.pages_generated += 1
+
+    async def _run_plugin_generators(
+        self,
+        ctx: _GenerationContext,
+        index_status: IndexStatus,
+        progress_callback: ProgressCallback | None,
+    ) -> None:
+        """Run registered wiki generator plugins.
+
+        Args:
+            ctx: Generation context.
+            index_status: Index status.
+            progress_callback: Optional progress callback.
+        """
+        registry = get_plugin_registry()
+        generators: list["WikiGeneratorPlugin"] = list(registry.wiki_generators.values())
+
+        if not generators:
+            return
+
+        # Sort by priority (higher first), then handle run_after dependencies
+        generators.sort(key=lambda g: g.priority, reverse=True)
+
+        logger.info(f"Running {len(generators)} wiki generator plugin(s)")
+
+        # Build context dict for plugins
+        plugin_context = {
+            "vector_store": self.vector_store,
+            "llm": self.llm,
+            "config": self.config,
+            "existing_pages": list(ctx.pages),
+        }
+
+        for generator in generators:
+            try:
+                logger.debug(f"Running wiki generator plugin: {generator.generator_name}")
+                result = await generator.generate(
+                    index_status=index_status,
+                    wiki_path=self.wiki_path,
+                    context=plugin_context,
+                )
+
+                # Add generated pages
+                for page in result.pages:
+                    ctx.pages.append(page)
+                    self.status_manager.record_page_status(page, ctx.all_source_files)
+                    await self._write_page(page)
+                    ctx.pages_generated += 1
+
+                # Update existing_pages in context for subsequent plugins
+                plugin_context["existing_pages"] = list(ctx.pages)
+
+                logger.debug(
+                    f"Plugin '{generator.generator_name}' generated {len(result.pages)} page(s)"
+                )
+
+            except Exception as e:
+                logger.warning(
+                    f"Wiki generator plugin '{generator.generator_name}' failed: {e}"
+                )
 
     async def _apply_cross_linking(
         self,

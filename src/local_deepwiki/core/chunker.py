@@ -16,6 +16,7 @@ from local_deepwiki.core.parser import (
 )
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import ChunkType, CodeChunk, Language
+from local_deepwiki.plugins.registry import get_plugin_registry
 
 logger = get_logger(__name__)
 
@@ -512,6 +513,10 @@ class CodeChunker:
     def chunk_file(self, file_path: Path, repo_root: Path) -> Iterator[CodeChunk]:
         """Extract code chunks from a source file.
 
+        Checks for registered language parser plugins first. If a plugin
+        handles the file extension, uses the plugin's parse_file method.
+        Otherwise falls back to the built-in tree-sitter parser.
+
         Args:
             file_path: Path to the source file.
             repo_root: Root directory of the repository.
@@ -519,6 +524,22 @@ class CodeChunker:
         Yields:
             CodeChunk objects for each semantic unit found.
         """
+        # Check for plugin parser first
+        registry = get_plugin_registry()
+        plugin_parser = registry.get_parser_for_extension(file_path.suffix)
+
+        if plugin_parser is not None:
+            # Use plugin parser - it returns CodeChunk objects directly
+            logger.debug(f"Using plugin parser '{plugin_parser.language_name}' for {file_path.name}")
+            try:
+                source = file_path.read_bytes()
+                chunks = plugin_parser.parse_file(file_path, source)
+                yield from chunks
+                return
+            except Exception as e:
+                logger.warning(f"Plugin parser failed for {file_path}: {e}, falling back to built-in")
+
+        # Fall back to built-in tree-sitter parser
         result = self.parser.parse_file(file_path)
         if result is None:
             logger.debug(f"Skipping unsupported file: {file_path}")

@@ -1,13 +1,42 @@
 """Embedding providers."""
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from local_deepwiki.config import EmbeddingConfig, get_config
+
+if TYPE_CHECKING:
+    from local_deepwiki.plugins.base import EmbeddingProviderPlugin
+
+from local_deepwiki.logging import get_logger
+from local_deepwiki.plugins.registry import get_plugin_registry
 from local_deepwiki.providers.base import EmbeddingProvider
 from local_deepwiki.providers.embeddings.cache import (
     CachedEmbeddingProvider,
     EmbeddingCacheConfig,
 )
+
+logger = get_logger(__name__)
+
+
+class _PluginEmbeddingProviderWrapper(EmbeddingProvider):
+    """Wrapper to adapt EmbeddingProviderPlugin to EmbeddingProvider interface."""
+
+    def __init__(self, plugin: "EmbeddingProviderPlugin") -> None:
+        self._plugin = plugin
+
+    async def embed(self, texts: list[str]) -> list[list[float]]:
+        """Generate embeddings using the plugin."""
+        return await self._plugin.embed(texts)
+
+    def get_dimension(self) -> int:
+        """Get embedding dimension from the plugin."""
+        return self._plugin.get_dimension()
+
+    @property
+    def name(self) -> str:
+        """Get provider name from the plugin."""
+        return self._plugin.provider_name
 
 
 def get_embedding_provider(
@@ -36,7 +65,16 @@ def get_embedding_provider(
 
     # Create the base provider
     provider: EmbeddingProvider
-    if config.provider == "local":
+
+    # Check for plugin provider first
+    registry = get_plugin_registry()
+    plugin_provider = registry.get_embedding_provider(config.provider)
+
+    if plugin_provider is not None:
+        # Use plugin provider - wrap it to match EmbeddingProvider interface
+        logger.debug(f"Using plugin embedding provider: {plugin_provider.provider_name}")
+        provider = _PluginEmbeddingProviderWrapper(plugin_provider)
+    elif config.provider == "local":
         from local_deepwiki.providers.embeddings.local import LocalEmbeddingProvider
 
         provider = LocalEmbeddingProvider(model_name=config.local.model)
