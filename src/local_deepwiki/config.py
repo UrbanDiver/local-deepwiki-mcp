@@ -313,6 +313,23 @@ class DeepResearchConfig(BaseModel):
         return self.model_copy(update=preset_values)
 
 
+class PluginsConfig(BaseModel):
+    """Plugin system configuration."""
+
+    model_config = {"frozen": True}
+
+    enabled: bool = Field(default=True, description="Enable plugin system")
+    custom_dir: str | None = Field(
+        default=None,
+        description="Custom plugins directory path. Plugins in this directory "
+        "are loaded in addition to repo and user plugins.",
+    )
+    disable_entry_points: bool = Field(
+        default=False,
+        description="Disable loading plugins from setuptools entry points",
+    )
+
+
 class OutputConfig(BaseModel):
     """Output configuration."""
 
@@ -548,6 +565,7 @@ class Config(BaseModel):
     deep_research: DeepResearchConfig = Field(default_factory=DeepResearchConfig)
     output: OutputConfig = Field(default_factory=OutputConfig)
     prompts: PromptsConfig = Field(default_factory=PromptsConfig)
+    plugins: PluginsConfig = Field(default_factory=PluginsConfig)
 
     def with_embedding_provider(self, provider: Literal["local", "openai"]) -> "Config":
         """Return a new Config with the embedding provider changed.
