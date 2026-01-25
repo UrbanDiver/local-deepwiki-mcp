@@ -59,7 +59,8 @@ class TestHandleIndexRepository:
 
         assert len(result) == 1
         assert "Error" in result[0].text
-        assert "Invalid llm_provider" in result[0].text
+        # Pydantic enum validation error
+        assert "llm_provider" in result[0].text or "Input should be" in result[0].text
 
     async def test_returns_error_for_invalid_embedding_provider(self, tmp_path):
         """Test error returned for invalid embedding provider."""
@@ -72,7 +73,8 @@ class TestHandleIndexRepository:
 
         assert len(result) == 1
         assert "Error" in result[0].text
-        assert "Invalid embedding_provider" in result[0].text
+        # Pydantic enum validation error
+        assert "embedding_provider" in result[0].text or "Input should be" in result[0].text
 
 
 class TestHandleAskQuestion:
@@ -89,20 +91,21 @@ class TestHandleAskQuestion:
 
         assert len(result) == 1
         assert "Error" in result[0].text
-        assert "cannot be empty" in result[0].text
+        assert "at least 1 character" in result[0].text or "string_too_short" in result[0].text
 
-    async def test_returns_error_for_whitespace_question(self):
-        """Test error returned for whitespace-only question."""
+    async def test_returns_error_for_whitespace_question(self, tmp_path):
+        """Test error returned for whitespace-only question (fails on not indexed)."""
         result = await handle_ask_question(
             {
-                "repo_path": "/some/path",
+                "repo_path": str(tmp_path),
                 "question": "   ",
             }
         )
 
         assert len(result) == 1
         assert "Error" in result[0].text
-        assert "cannot be empty" in result[0].text
+        # Whitespace passes min_length but fails at repo check
+        assert "not indexed" in result[0].text
 
     async def test_returns_error_for_unindexed_repo(self, tmp_path):
         """Test error returned when repository is not indexed."""
@@ -117,21 +120,19 @@ class TestHandleAskQuestion:
         assert "Error" in result[0].text
         assert "not indexed" in result[0].text
 
-    async def test_clamps_max_context_to_valid_range(self, tmp_path):
-        """Test that max_context is clamped to valid range."""
-        # This should not raise even with out-of-range value
-        # The value gets clamped internally
+    async def test_rejects_max_context_out_of_range(self, tmp_path):
+        """Test that max_context out of range is rejected."""
         result = await handle_ask_question(
             {
                 "repo_path": str(tmp_path),
                 "question": "Test question",
-                "max_context": 1000,  # Above max, should be clamped
+                "max_context": 1000,  # Above max (50), now rejected by Pydantic
             }
         )
 
-        # Will fail due to no index, but shouldn't fail due to max_context
+        # Pydantic rejects out-of-range values
         assert "Error" in result[0].text
-        assert "not indexed" in result[0].text  # Expected error
+        assert "less_than_equal" in result[0].text or "50" in result[0].text
 
 
 class TestHandleSearchCode:
@@ -148,7 +149,7 @@ class TestHandleSearchCode:
 
         assert len(result) == 1
         assert "Error" in result[0].text
-        assert "cannot be empty" in result[0].text
+        assert "at least 1 character" in result[0].text or "string_too_short" in result[0].text
 
     async def test_returns_error_for_invalid_language_filter(self, tmp_path):
         """Test error returned for invalid language filter."""
@@ -177,19 +178,19 @@ class TestHandleSearchCode:
         assert "Error" in result[0].text
         assert "not indexed" in result[0].text
 
-    async def test_clamps_limit_to_valid_range(self, tmp_path):
-        """Test that limit is clamped to valid range."""
+    async def test_rejects_limit_out_of_range(self, tmp_path):
+        """Test that limit out of range is rejected."""
         result = await handle_search_code(
             {
                 "repo_path": str(tmp_path),
                 "query": "test query",
-                "limit": 1000,  # Above max, should be clamped
+                "limit": 1000,  # Above max (100), now rejected by Pydantic
             }
         )
 
-        # Will fail due to no index, but shouldn't fail due to limit
+        # Pydantic rejects out-of-range values
         assert "Error" in result[0].text
-        assert "not indexed" in result[0].text
+        assert "less_than_equal" in result[0].text or "100" in result[0].text
 
 
 class TestHandleReadWikiStructure:

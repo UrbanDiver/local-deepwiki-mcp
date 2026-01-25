@@ -52,3 +52,20 @@ Thumbs.db
 .claude/
 html-export/
 .playwright-mcp/
+.deepwiki/
+
+# Coverage
+coverage.json
+coverage.xml
+
+# Logs
+*.log
+logs/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Ruff
+.ruff_cache/

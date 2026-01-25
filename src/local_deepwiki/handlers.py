@@ -11,6 +11,18 @@ if TYPE_CHECKING:
     from local_deepwiki.models import ResearchProgress
 
 from mcp.types import TextContent
+from pydantic import ValidationError
+
+from local_deepwiki.models import (
+    AskQuestionArgs,
+    DeepResearchArgs,
+    ExportWikiHtmlArgs,
+    ExportWikiPdfArgs,
+    IndexRepositoryArgs,
+    ReadWikiPageArgs,
+    ReadWikiStructureArgs,
+    SearchCodeArgs,
+)
 
 from local_deepwiki.config import get_config
 from local_deepwiki.core.indexer import RepositoryIndexer
@@ -19,24 +31,11 @@ from local_deepwiki.generators.wiki import generate_wiki
 from local_deepwiki.logging import get_logger
 from local_deepwiki.providers.embeddings import get_embedding_provider
 from local_deepwiki.validation import (
-    DEFAULT_DEEP_RESEARCH_CHUNKS,
-    MAX_CONTEXT_CHUNKS,
-    MAX_DEEP_RESEARCH_CHUNKS,
-    MAX_SEARCH_LIMIT,
     MAX_WIKI_PAGE_SIZE,
-    MIN_CONTEXT_CHUNKS,
-    MIN_DEEP_RESEARCH_CHUNKS,
-    MIN_SEARCH_LIMIT,
-    VALID_EMBEDDING_PROVIDERS,
-    VALID_LLM_PROVIDERS,
     validate_chunk_type,
-    validate_fuzzy_weight,
     validate_language,
     validate_languages_list,
-    validate_non_empty_string,
     validate_path_pattern,
-    validate_positive_int,
-    validate_provider,
 )
 
 logger = get_logger(__name__)
@@ -81,7 +80,13 @@ def handle_tool_errors(func: ToolHandler) -> ToolHandler:
 @handle_tool_errors
 async def handle_index_repository(args: dict[str, Any]) -> list[TextContent]:
     """Handle index_repository tool call."""
-    repo_path = Path(args["repo_path"]).resolve()
+    # Validate with Pydantic
+    try:
+        validated = IndexRepositoryArgs.model_validate(args)
+    except ValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
     logger.info(f"Indexing repository: {repo_path}")
 
     if not repo_path.exists():
@@ -90,12 +95,10 @@ async def handle_index_repository(args: dict[str, Any]) -> list[TextContent]:
     if not repo_path.is_dir():
         raise ValueError(f"Path is not a directory: {repo_path}")
 
-    # Validate optional parameters
-    languages = validate_languages_list(args.get("languages"))
-    llm_provider = validate_provider(args.get("llm_provider"), VALID_LLM_PROVIDERS, "llm_provider")
-    embedding_provider = validate_provider(
-        args.get("embedding_provider"), VALID_EMBEDDING_PROVIDERS, "embedding_provider"
-    )
+    # Use validated values
+    languages = validate_languages_list(validated.languages)
+    llm_provider = validated.llm_provider.value if validated.llm_provider else None
+    embedding_provider = validated.embedding_provider.value if validated.embedding_provider else None
 
     # Get config (immutable, create copy with any overrides)
     base_config = get_config()
@@ -107,7 +110,7 @@ async def handle_index_repository(args: dict[str, Any]) -> list[TextContent]:
         config_updates["parsing"] = new_parsing
 
     # Override use_cloud_for_github if specified
-    use_cloud_for_github = args.get("use_cloud_for_github")
+    use_cloud_for_github = validated.use_cloud_for_github
     if use_cloud_for_github is not None:
         new_wiki = base_config.wiki.model_copy(update={"use_cloud_for_github": use_cloud_for_github})
         config_updates["wiki"] = new_wiki
@@ -126,7 +129,7 @@ async def handle_index_repository(args: dict[str, Any]) -> list[TextContent]:
     )
 
     # Index the repository
-    full_rebuild = args.get("full_rebuild", False)
+    full_rebuild = validated.full_rebuild
 
     messages = []
 
@@ -172,17 +175,15 @@ async def handle_index_repository(args: dict[str, Any]) -> list[TextContent]:
 @handle_tool_errors
 async def handle_ask_question(args: dict[str, Any]) -> list[TextContent]:
     """Handle ask_question tool call."""
-    repo_path = Path(args["repo_path"]).resolve()
+    # Validate with Pydantic
+    try:
+        validated = AskQuestionArgs.model_validate(args)
+    except ValidationError as e:
+        raise ValueError(str(e)) from e
 
-    # Validate inputs
-    question = validate_non_empty_string(args.get("question", ""), "question")
-    max_context = validate_positive_int(
-        args.get("max_context"),
-        "max_context",
-        MIN_CONTEXT_CHUNKS,
-        MAX_CONTEXT_CHUNKS,
-        default=5,
-    )
+    repo_path = Path(validated.repo_path).resolve()
+    question = validated.question
+    max_context = validated.max_context
 
     logger.info(f"Question about {repo_path}: {question[:100]}...")
     logger.debug(f"Max context chunks: {max_context}")
@@ -322,20 +323,16 @@ def _setup_deep_research_config(
     Raises:
         ValueError: If inputs are invalid or repository not indexed.
     """
-    repo_path = Path(args["repo_path"]).resolve()
+    # Validate with Pydantic
+    try:
+        validated = DeepResearchArgs.model_validate(args)
+    except ValidationError as e:
+        raise ValueError(str(e)) from e
 
-    # Validate inputs
-    question = validate_non_empty_string(args.get("question", ""), "question")
-    max_chunks = validate_positive_int(
-        args.get("max_chunks"),
-        "max_chunks",
-        MIN_DEEP_RESEARCH_CHUNKS,
-        MAX_DEEP_RESEARCH_CHUNKS,
-        default=DEFAULT_DEEP_RESEARCH_CHUNKS,
-    )
-
-    # Get preset parameter (optional)
-    preset = args.get("preset")
+    repo_path = Path(validated.repo_path).resolve()
+    question = validated.question
+    max_chunks = validated.max_chunks
+    preset = validated.preset
 
     logger.info(f"Deep research on {repo_path}: {question[:100]}...")
     logger.debug(f"Max chunks: {max_chunks}, preset: {preset or 'default'}")
@@ -636,7 +633,13 @@ async def _handle_deep_research_impl(
 @handle_tool_errors
 async def handle_read_wiki_structure(args: dict[str, Any]) -> list[TextContent]:
     """Handle read_wiki_structure tool call."""
-    wiki_path = Path(args["wiki_path"]).resolve()
+    # Validate with Pydantic
+    try:
+        validated = ReadWikiStructureArgs.model_validate(args)
+    except ValidationError as e:
+        raise ValueError(str(e)) from e
+
+    wiki_path = Path(validated.wiki_path).resolve()
 
     if not wiki_path.exists():
         raise ValueError(f"Wiki path does not exist: {wiki_path}")
@@ -692,8 +695,14 @@ async def handle_read_wiki_structure(args: dict[str, Any]) -> list[TextContent]:
 @handle_tool_errors
 async def handle_read_wiki_page(args: dict[str, Any]) -> list[TextContent]:
     """Handle read_wiki_page tool call."""
-    wiki_path = Path(args["wiki_path"]).resolve()
-    page = args["page"]
+    # Validate with Pydantic
+    try:
+        validated = ReadWikiPageArgs.model_validate(args)
+    except ValidationError as e:
+        raise ValueError(str(e)) from e
+
+    wiki_path = Path(validated.wiki_path).resolve()
+    page = validated.page
 
     # Resolve the full path and validate it's within the wiki directory
     # This prevents path traversal attacks (e.g., "../../etc/passwd")
@@ -722,22 +731,20 @@ async def handle_search_code(args: dict[str, Any]) -> list[TextContent]:
     Supports both vector similarity search and optional fuzzy matching,
     with filters for language, chunk type, and file path patterns.
     """
-    repo_path = Path(args["repo_path"]).resolve()
+    # Validate with Pydantic
+    try:
+        validated = SearchCodeArgs.model_validate(args)
+    except ValidationError as e:
+        raise ValueError(str(e)) from e
 
-    # Validate inputs
-    query = validate_non_empty_string(args.get("query", ""), "query")
-    limit = validate_positive_int(
-        args.get("limit"),
-        "limit",
-        MIN_SEARCH_LIMIT,
-        MAX_SEARCH_LIMIT,
-        default=10,
-    )
-    language = validate_language(args.get("language"))
-    chunk_type = validate_chunk_type(args.get("type"))
-    path_pattern = validate_path_pattern(args.get("path"))
-    use_fuzzy = bool(args.get("fuzzy", False))
-    fuzzy_weight = validate_fuzzy_weight(args.get("fuzzy_weight"))
+    repo_path = Path(validated.repo_path).resolve()
+    query = validated.query
+    limit = validated.limit
+    language = validate_language(validated.language)
+    chunk_type = validate_chunk_type(validated.type)
+    path_pattern = validate_path_pattern(validated.path)
+    use_fuzzy = validated.fuzzy
+    fuzzy_weight = validated.fuzzy_weight
 
     logger.info(f"Code search in {repo_path}: {query[:50]}...")
     logger.debug(
@@ -798,8 +805,14 @@ async def handle_export_wiki_html(args: dict[str, Any]) -> list[TextContent]:
     """Handle export_wiki_html tool call."""
     from local_deepwiki.export.html import export_to_html
 
-    wiki_path = Path(args["wiki_path"]).resolve()
-    output_path = args.get("output_path")
+    # Validate with Pydantic
+    try:
+        validated = ExportWikiHtmlArgs.model_validate(args)
+    except ValidationError as e:
+        raise ValueError(str(e)) from e
+
+    wiki_path = Path(validated.wiki_path).resolve()
+    output_path = validated.output_path
 
     if not wiki_path.exists():
         raise ValueError(f"Wiki path does not exist: {wiki_path}")
@@ -827,9 +840,15 @@ async def handle_export_wiki_pdf(args: dict[str, Any]) -> list[TextContent]:
     """Handle export_wiki_pdf tool call."""
     from local_deepwiki.export.pdf import export_to_pdf
 
-    wiki_path = Path(args["wiki_path"]).resolve()
-    output_path = args.get("output_path")
-    single_file = args.get("single_file", True)
+    # Validate with Pydantic
+    try:
+        validated = ExportWikiPdfArgs.model_validate(args)
+    except ValidationError as e:
+        raise ValueError(str(e)) from e
+
+    wiki_path = Path(validated.wiki_path).resolve()
+    output_path = validated.output_path
+    single_file = validated.single_file
 
     if not wiki_path.exists():
         raise ValueError(f"Wiki path does not exist: {wiki_path}")

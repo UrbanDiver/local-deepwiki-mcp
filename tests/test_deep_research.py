@@ -627,7 +627,7 @@ class TestHandleDeepResearch:
 
         assert len(result) == 1
         assert "Error" in result[0].text
-        assert "cannot be empty" in result[0].text
+        assert "at least 1 character" in result[0].text or "string_too_short" in result[0].text
 
     async def test_returns_error_for_unindexed_repo(self, tmp_path):
         """Test error returned when repository is not indexed."""

@@ -348,3 +348,115 @@ class ResearchProgress(BaseModel):
     duration_ms: int | None = Field(
         default=None, description="Duration of completed step in milliseconds"
     )
+
+
+# =============================================================================
+# MCP Tool Argument Models
+# =============================================================================
+
+
+class LLMProviderType(str, Enum):
+    """Supported LLM providers."""
+
+    OLLAMA = "ollama"
+    ANTHROPIC = "anthropic"
+    OPENAI = "openai"
+
+
+class EmbeddingProviderType(str, Enum):
+    """Supported embedding providers."""
+
+    LOCAL = "local"
+    OPENAI = "openai"
+
+
+class IndexRepositoryArgs(BaseModel):
+    """Arguments for the index_repository tool."""
+
+    repo_path: str = Field(description="Absolute path to the repository to index")
+    output_dir: str | None = Field(
+        default=None, description="Output directory for wiki (default: {repo}/.deepwiki)"
+    )
+    languages: list[str] | None = Field(
+        default=None, description="Languages to include (default: all supported)"
+    )
+    full_rebuild: bool = Field(
+        default=False, description="Force full rebuild instead of incremental update"
+    )
+    llm_provider: LLMProviderType | None = Field(
+        default=None, description="LLM provider for wiki generation"
+    )
+    embedding_provider: EmbeddingProviderType | None = Field(
+        default=None, description="Embedding provider for semantic search"
+    )
+    use_cloud_for_github: bool | None = Field(
+        default=None, description="Use cloud LLM for GitHub repos"
+    )
+
+
+class AskQuestionArgs(BaseModel):
+    """Arguments for the ask_question tool."""
+
+    repo_path: str = Field(description="Path to the indexed repository")
+    question: str = Field(min_length=1, description="Question about the codebase")
+    max_context: int = Field(
+        default=5, ge=1, le=50, description="Maximum code chunks for context (1-50)"
+    )
+
+
+class DeepResearchArgs(BaseModel):
+    """Arguments for the deep_research tool."""
+
+    repo_path: str = Field(description="Path to the indexed repository")
+    question: str = Field(min_length=1, description="Complex question requiring deep analysis")
+    max_chunks: int = Field(
+        default=30, ge=10, le=50, description="Maximum code chunks to analyze (10-50)"
+    )
+    preset: str | None = Field(
+        default=None, description="Research preset: 'fast', 'deep', or 'comprehensive'"
+    )
+
+
+class ReadWikiStructureArgs(BaseModel):
+    """Arguments for the read_wiki_structure tool."""
+
+    wiki_path: str = Field(description="Path to the wiki directory")
+
+
+class ReadWikiPageArgs(BaseModel):
+    """Arguments for the read_wiki_page tool."""
+
+    wiki_path: str = Field(description="Path to the wiki directory")
+    page: str = Field(min_length=1, description="Relative path to the page within the wiki")
+
+
+class SearchCodeArgs(BaseModel):
+    """Arguments for the search_code tool."""
+
+    repo_path: str = Field(description="Path to the indexed repository")
+    query: str = Field(min_length=1, description="Search query")
+    limit: int = Field(default=10, ge=1, le=100, description="Maximum results (1-100)")
+    language: str | None = Field(default=None, description="Filter by language")
+    type: str | None = Field(
+        default=None, description="Filter by chunk type (function, class, method, etc.)"
+    )
+    path: str | None = Field(default=None, description="Filter by file path pattern")
+    fuzzy: bool = Field(default=False, description="Enable fuzzy text matching")
+    fuzzy_weight: float = Field(
+        default=0.3, ge=0.0, le=1.0, description="Weight for fuzzy vs vector (0.0-1.0)"
+    )
+
+
+class ExportWikiHtmlArgs(BaseModel):
+    """Arguments for the export_wiki_html tool."""
+
+    wiki_path: str = Field(description="Path to the wiki directory to export")
+    output_path: str | None = Field(default=None, description="Output directory for HTML files")
+
+
+class ExportWikiPdfArgs(BaseModel):
+    """Arguments for the export_wiki_pdf tool."""
+
+    wiki_path: str = Field(description="Path to the wiki directory to export")
+    output_path: str | None = Field(default=None, description="Output path for PDF")
+    single_file: bool = Field(default=True, description="Combine all pages into single PDF")

@@ -338,7 +338,7 @@ class TestToolHandlersIntegration:
 
         assert len(result) == 1
         assert "Error" in result[0].text
-        assert "cannot be empty" in result[0].text
+        assert "at least 1 character" in result[0].text or "string_too_short" in result[0].text
 
     async def test_search_code_real_handler_validation(self):
         """Test that real search_code handler validates inputs."""
@@ -346,7 +346,7 @@ class TestToolHandlersIntegration:
 
         assert len(result) == 1
         assert "Error" in result[0].text
-        assert "cannot be empty" in result[0].text
+        assert "at least 1 character" in result[0].text or "string_too_short" in result[0].text
 
     async def test_read_wiki_structure_real_handler_validation(self, tmp_path):
         """Test that real read_wiki_structure handler validates inputs."""

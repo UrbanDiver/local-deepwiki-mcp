@@ -54,6 +54,7 @@ deepwiki-serve = "local_deepwiki.web.app:main"
 deepwiki-watch = "local_deepwiki.watcher:main"
 deepwiki-export = "local_deepwiki.export.html:main"
 deepwiki-export-pdf = "local_deepwiki.export.pdf:main"
+deepwiki-config = "local_deepwiki.cli.config_cli:main"
 
 [build-system]
 requires = ["hatchling"]

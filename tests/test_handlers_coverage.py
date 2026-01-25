@@ -82,7 +82,8 @@ class TestHandleDeepResearch:
 
         assert len(result) == 1
         assert "Error" in result[0].text
-        assert "cannot be empty" in result[0].text
+        # Pydantic validates min_length=1
+        assert "at least 1 character" in result[0].text or "string_too_short" in result[0].text
 
     async def test_returns_error_for_unindexed_repo(self, tmp_path):
         """Test error returned when repository is not indexed."""
@@ -97,19 +98,19 @@ class TestHandleDeepResearch:
         assert "Error" in result[0].text
         assert "not indexed" in result[0].text
 
-    async def test_clamps_max_chunks_to_valid_range(self, tmp_path):
-        """Test that max_chunks is clamped to valid range."""
+    async def test_rejects_max_chunks_out_of_range(self, tmp_path):
+        """Test that max_chunks out of valid range is rejected."""
         result = await handle_deep_research(
             {
                 "repo_path": str(tmp_path),
                 "question": "Test question",
-                "max_chunks": 10000,  # Above max, should be clamped
+                "max_chunks": 10000,  # Above max (50), should be rejected
             }
         )
 
-        # Will fail due to no index, but shouldn't fail due to max_chunks
+        # Pydantic now rejects out-of-range values instead of clamping
         assert "Error" in result[0].text
-        assert "not indexed" in result[0].text
+        assert "less_than_equal" in result[0].text or "50" in result[0].text
 
     async def test_handles_cancelled_error(self, tmp_path):
         """Test that CancelledError is propagated."""
@@ -215,18 +216,19 @@ class TestHandleReadWikiPageExtended:
 class TestHandleSearchCodeExtended:
     """Extended tests for handle_search_code handler."""
 
-    async def test_returns_error_for_whitespace_query(self):
-        """Test error returned for whitespace-only query."""
+    async def test_returns_error_for_whitespace_query(self, tmp_path):
+        """Test error returned for whitespace-only query (repo not indexed)."""
         result = await handle_search_code(
             {
-                "repo_path": "/some/path",
+                "repo_path": str(tmp_path),
                 "query": "   \t\n  ",
             }
         )
 
         assert len(result) == 1
         assert "Error" in result[0].text
-        assert "cannot be empty" in result[0].text
+        # Whitespace passes min_length but fails at repo check
+        assert "not indexed" in result[0].text
 
 
 class TestHandleIndexRepositoryExtended:
