@@ -12,6 +12,7 @@ from local_deepwiki.config import Config, get_config
 from local_deepwiki.core.chunker import CodeChunker
 from local_deepwiki.core.parser import CodeParser
 from local_deepwiki.core.vectorstore import VectorStore
+from local_deepwiki.events import EventType, get_event_emitter
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import CodeChunk, FileInfo, IndexStatus, ProgressCallback
 from local_deepwiki.providers.embeddings import get_embedding_provider
@@ -309,10 +310,30 @@ class RepositoryIndexer:
                             i,
                             file_count,
                         )
+                    # Emit INDEX_ERROR event for file processing errors
+                    emitter = get_event_emitter()
+                    await emitter.emit(
+                        EventType.INDEX_ERROR,
+                        {
+                            "file_path": str(result.file_path),
+                            "error": result.error,
+                        },
+                    )
                     continue
 
                 chunk_batch.extend(result.chunks)
                 processed_files.append(result.file_info)
+
+                # Emit INDEX_FILE event for successfully parsed file
+                emitter = get_event_emitter()
+                await emitter.emit(
+                    EventType.INDEX_FILE,
+                    {
+                        "file_path": str(result.file_path),
+                        "language": result.file_info.language.value if result.file_info.language else None,
+                        "chunk_count": len(result.chunks),
+                    },
+                )
 
                 # Process batch if it reaches the batch size
                 if len(chunk_batch) >= batch_size:
@@ -465,6 +486,16 @@ class RepositoryIndexer:
         logger.info(f"Starting indexing for repository: {self.repo_path}")
         logger.debug(f"Wiki path: {self.wiki_path}, Full rebuild: {full_rebuild}")
 
+        # Emit INDEX_START event
+        emitter = get_event_emitter()
+        await emitter.emit(
+            EventType.INDEX_START,
+            {
+                "repo_path": str(self.repo_path),
+                "full_rebuild": full_rebuild,
+            },
+        )
+
         # Phase 1: Load previous status for incremental updates
         previous_status, prev_files_by_path, full_rebuild = self._load_previous_status(
             full_rebuild
@@ -494,6 +525,17 @@ class RepositoryIndexer:
 
         if progress_callback:
             progress_callback("Indexing complete", 1, 1)
+
+        # Emit INDEX_COMPLETE event
+        await emitter.emit(
+            EventType.INDEX_COMPLETE,
+            {
+                "repo_path": str(self.repo_path),
+                "total_files": status.total_files,
+                "total_chunks": status.total_chunks,
+                "languages": list(status.languages.keys()),
+            },
+        )
 
         return status
 

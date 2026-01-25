@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 
 from local_deepwiki.config import Config, get_config
 from local_deepwiki.core.vectorstore import VectorStore
+from local_deepwiki.events import EventType, get_event_emitter
 from local_deepwiki.generators.coverage import generate_coverage_page
 from local_deepwiki.generators.crosslinks import EntityRegistry, add_cross_links
 from local_deepwiki.generators.stale_detection import generate_stale_report_page
@@ -174,6 +175,17 @@ class WikiGenerator:
         logger.info(f"Starting wiki generation for {index_status.repo_path}")
         logger.debug(f"Full rebuild: {full_rebuild}, Total files: {index_status.total_files}")
 
+        # Emit WIKI_START event
+        emitter = get_event_emitter()
+        await emitter.emit(
+            EventType.WIKI_START,
+            {
+                "repo_path": index_status.repo_path,
+                "full_rebuild": full_rebuild,
+                "total_files": index_status.total_files,
+            },
+        )
+
         # Initialize generation context
         ctx = await self._init_generation_context(index_status, full_rebuild)
 
@@ -233,6 +245,17 @@ class WikiGenerator:
         # Finalize progress tracker and print summary
         summary = self._progress.finalize(success=True)
         print(summary)
+
+        # Emit WIKI_COMPLETE event
+        await emitter.emit(
+            EventType.WIKI_COMPLETE,
+            {
+                "repo_path": index_status.repo_path,
+                "total_pages": len(ctx.pages),
+                "pages_generated": ctx.pages_generated,
+                "pages_skipped": ctx.pages_skipped,
+            },
+        )
 
         return WikiStructure(root=str(self.wiki_path), pages=ctx.pages)
 
@@ -376,6 +399,18 @@ class WikiGenerator:
 
         self.status_manager.record_page_status(page, source_files)
         await self._write_page(page)
+
+        # Emit WIKI_PAGE_COMPLETE event
+        emitter = get_event_emitter()
+        await emitter.emit(
+            EventType.WIKI_PAGE_COMPLETE,
+            {
+                "page_path": page.path,
+                "page_title": page.title,
+                "was_generated": was_generated,
+            },
+        )
+
         return page, was_generated
 
     async def _analyze_imports_for_relationships(self) -> None:

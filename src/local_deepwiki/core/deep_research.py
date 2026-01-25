@@ -7,6 +7,7 @@ import time
 from collections.abc import Awaitable, Callable
 
 from local_deepwiki.core.vectorstore import VectorStore
+from local_deepwiki.events import EventType, get_event_emitter
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import (
     DeepResearchResult,
@@ -248,6 +249,13 @@ class DeepResearchPipeline:
         trace: list[ResearchStep] = []
         llm_calls = 0
 
+        # Emit RESEARCH_START event
+        emitter = get_event_emitter()
+        await emitter.emit(
+            EventType.RESEARCH_START,
+            {"question": question},
+        )
+
         await self._report_progress(0, ResearchProgressType.STARTED, "Starting deep research...")
 
         # Step 1: Decompose question
@@ -291,6 +299,17 @@ class DeepResearchPipeline:
             duration_ms=step.duration_ms,
         )
 
+        # Emit RESEARCH_COMPLETE event
+        await emitter.emit(
+            EventType.RESEARCH_COMPLETE,
+            {
+                "question": question,
+                "sub_question_count": len(sub_questions),
+                "chunks_analyzed": len(all_results),
+                "llm_calls": llm_calls,
+            },
+        )
+
         return DeepResearchResult(
             question=question,
             answer=answer,
@@ -320,6 +339,18 @@ class DeepResearchPipeline:
         )
 
         logger.info(f"Decomposed question into {len(sub_questions)} sub-questions")
+
+        # Emit RESEARCH_QUERY events for each sub-question
+        emitter = get_event_emitter()
+        for sq in sub_questions:
+            await emitter.emit(
+                EventType.RESEARCH_QUERY,
+                {
+                    "question": sq.question,
+                    "category": sq.category,
+                },
+            )
+
         await self._report_progress(
             1,
             ResearchProgressType.DECOMPOSITION_COMPLETE,
