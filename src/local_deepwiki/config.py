@@ -330,6 +330,25 @@ class PluginsConfig(BaseModel):
     )
 
 
+class HooksConfig(BaseModel):
+    """Event hooks configuration."""
+
+    model_config = {"frozen": True}
+
+    enabled: bool = Field(default=True, description="Enable event hooks system")
+    scripts_dir: str | None = Field(
+        default=None,
+        description="Directory containing hook scripts. Scripts are named by event type "
+        "(e.g., index.complete.sh, wiki.page.complete.py).",
+    )
+    timeout_seconds: int = Field(
+        default=30,
+        ge=1,
+        le=300,
+        description="Maximum execution time for hook scripts in seconds",
+    )
+
+
 class OutputConfig(BaseModel):
     """Output configuration."""
 
@@ -566,6 +585,7 @@ class Config(BaseModel):
     output: OutputConfig = Field(default_factory=OutputConfig)
     prompts: PromptsConfig = Field(default_factory=PromptsConfig)
     plugins: PluginsConfig = Field(default_factory=PluginsConfig)
+    hooks: HooksConfig = Field(default_factory=HooksConfig)
 
     def with_embedding_provider(self, provider: Literal["local", "openai"]) -> "Config":
         """Return a new Config with the embedding provider changed.
