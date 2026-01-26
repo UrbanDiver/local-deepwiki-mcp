@@ -4,10 +4,117 @@ import asyncio
 import logging
 import random
 from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
 from functools import wraps
 from typing import Any, AsyncIterator, Callable
 
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# Standardized Provider Exceptions
+# =============================================================================
+
+
+class ProviderError(Exception):
+    """Base exception for all provider errors."""
+
+    def __init__(self, message: str, provider_name: str | None = None):
+        self.provider_name = provider_name
+        super().__init__(message)
+
+
+class ProviderConnectionError(ProviderError):
+    """Raised when a provider cannot be reached or connected to."""
+
+    def __init__(
+        self,
+        message: str,
+        provider_name: str | None = None,
+        original_error: Exception | None = None,
+    ):
+        self.original_error = original_error
+        super().__init__(message, provider_name)
+
+
+class ProviderRateLimitError(ProviderError):
+    """Raised when a provider rate limits the request."""
+
+    def __init__(
+        self,
+        message: str,
+        provider_name: str | None = None,
+        retry_after: float | None = None,
+    ):
+        self.retry_after = retry_after
+        super().__init__(message, provider_name)
+
+
+class ProviderModelNotFoundError(ProviderError):
+    """Raised when the requested model is not available."""
+
+    def __init__(
+        self,
+        model: str,
+        provider_name: str | None = None,
+        available_models: list[str] | None = None,
+    ):
+        self.model = model
+        self.available_models = available_models or []
+        if available_models:
+            models_str = ", ".join(available_models[:10])
+            if len(available_models) > 10:
+                models_str += f"... ({len(available_models)} total)"
+            message = f"Model '{model}' not found. Available models: {models_str}"
+        else:
+            message = f"Model '{model}' not found"
+        super().__init__(message, provider_name)
+
+
+class ProviderAuthenticationError(ProviderError):
+    """Raised when authentication with the provider fails."""
+
+    pass
+
+
+class ProviderConfigurationError(ProviderError):
+    """Raised when the provider is misconfigured."""
+
+    pass
+
+
+# =============================================================================
+# Provider Capabilities
+# =============================================================================
+
+
+@dataclass
+class LLMProviderCapabilities:
+    """Capabilities of an LLM provider."""
+
+    supports_streaming: bool = True
+    supports_system_prompt: bool = True
+    max_tokens: int = 4096
+    max_context_length: int = 128000
+    models: list[str] = field(default_factory=list)
+    supports_function_calling: bool = False
+    supports_vision: bool = False
+
+
+@dataclass
+class EmbeddingProviderCapabilities:
+    """Capabilities of an embedding provider."""
+
+    max_batch_size: int = 100
+    max_tokens_per_text: int = 8192
+    dimension: int = 0
+    models: list[str] = field(default_factory=list)
+    supports_truncation: bool = True
+
+
+# =============================================================================
+# Retry Logic
+# =============================================================================
 
 
 # Exception types that should trigger a retry
@@ -15,6 +122,8 @@ RETRYABLE_EXCEPTIONS = (
     ConnectionError,
     TimeoutError,
     OSError,  # Covers network-related OS errors
+    ProviderConnectionError,
+    ProviderRateLimitError,
 )
 
 
@@ -110,8 +219,17 @@ def with_retry(
     return decorator
 
 
+# =============================================================================
+# Base Provider Classes
+# =============================================================================
+
+
 class EmbeddingProvider(ABC):
-    """Abstract base class for embedding providers."""
+    """Abstract base class for embedding providers.
+
+    All embedding providers must implement the abstract methods defined here.
+    The base class provides default implementations for optional methods.
+    """
 
     @abstractmethod
     async def embed(self, texts: list[str]) -> list[list[float]]:
@@ -121,7 +239,12 @@ class EmbeddingProvider(ABC):
             texts: List of text strings to embed.
 
         Returns:
-            List of embedding vectors.
+            List of embedding vectors, one per input text.
+
+        Raises:
+            ProviderConnectionError: If the provider cannot be reached.
+            ProviderRateLimitError: If rate limited by the provider.
+            ProviderAuthenticationError: If authentication fails.
         """
         pass
 
@@ -137,12 +260,70 @@ class EmbeddingProvider(ABC):
     @property
     @abstractmethod
     def name(self) -> str:
-        """Get the provider name."""
+        """Get the provider name.
+
+        Returns:
+            A string identifier for this provider (e.g., "openai:text-embedding-3-small").
+        """
         pass
+
+    async def validate_connectivity(self) -> bool:
+        """Test that the provider is reachable and configured correctly.
+
+        Returns:
+            True if the provider is accessible and properly configured.
+
+        Raises:
+            ProviderConnectionError: If the provider cannot be reached.
+            ProviderAuthenticationError: If authentication fails.
+            ProviderConfigurationError: If misconfigured.
+        """
+        # Default implementation: try to embed a simple text
+        try:
+            await self.embed(["test"])
+            return True
+        except Exception as e:
+            raise ProviderConnectionError(
+                f"Failed to validate connectivity: {e}",
+                provider_name=self.name,
+                original_error=e,
+            ) from e
+
+    def get_max_batch_size(self) -> int:
+        """Return maximum number of texts that can be embedded in a single call.
+
+        Returns:
+            Maximum batch size. Default is 100.
+        """
+        return 100
+
+    def get_max_tokens(self) -> int:
+        """Return maximum tokens per text.
+
+        Returns:
+            Maximum tokens per text. Default is 8192.
+        """
+        return 8192
+
+    def get_capabilities(self) -> EmbeddingProviderCapabilities:
+        """Return provider capabilities.
+
+        Returns:
+            EmbeddingProviderCapabilities dataclass with provider information.
+        """
+        return EmbeddingProviderCapabilities(
+            max_batch_size=self.get_max_batch_size(),
+            max_tokens_per_text=self.get_max_tokens(),
+            dimension=self.get_dimension(),
+        )
 
 
 class LLMProvider(ABC):
-    """Abstract base class for LLM providers."""
+    """Abstract base class for LLM providers.
+
+    All LLM providers must implement the abstract methods defined here.
+    The base class provides default implementations for optional methods.
+    """
 
     @abstractmethod
     async def generate(
@@ -158,10 +339,16 @@ class LLMProvider(ABC):
             prompt: The user prompt.
             system_prompt: Optional system prompt.
             max_tokens: Maximum tokens to generate.
-            temperature: Sampling temperature.
+            temperature: Sampling temperature (0.0 to 1.0+).
 
         Returns:
             Generated text.
+
+        Raises:
+            ProviderConnectionError: If the provider cannot be reached.
+            ProviderRateLimitError: If rate limited by the provider.
+            ProviderAuthenticationError: If authentication fails.
+            ProviderModelNotFoundError: If the model is not available.
         """
         pass
 
@@ -183,6 +370,12 @@ class LLMProvider(ABC):
 
         Yields:
             Generated text chunks.
+
+        Raises:
+            ProviderConnectionError: If the provider cannot be reached.
+            ProviderRateLimitError: If rate limited by the provider.
+            ProviderAuthenticationError: If authentication fails.
+            ProviderModelNotFoundError: If the model is not available.
         """
         # Make this an async generator for proper typing
         if False:  # pragma: no cover
@@ -192,5 +385,62 @@ class LLMProvider(ABC):
     @property
     @abstractmethod
     def name(self) -> str:
-        """Get the provider name."""
+        """Get the provider name.
+
+        Returns:
+            A string identifier for this provider (e.g., "anthropic:claude-sonnet-4-20250514").
+        """
         pass
+
+    async def validate_connectivity(self) -> bool:
+        """Test that the provider is reachable and configured correctly.
+
+        Returns:
+            True if the provider is accessible and properly configured.
+
+        Raises:
+            ProviderConnectionError: If the provider cannot be reached.
+            ProviderAuthenticationError: If authentication fails.
+            ProviderConfigurationError: If misconfigured.
+        """
+        # Default implementation: try a simple generation
+        try:
+            await self.generate("Say 'OK'", max_tokens=10)
+            return True
+        except ProviderModelNotFoundError:
+            # Model not found is a valid response - connectivity works
+            raise
+        except Exception as e:
+            raise ProviderConnectionError(
+                f"Failed to validate connectivity: {e}",
+                provider_name=self.name,
+                original_error=e,
+            ) from e
+
+    async def validate_model(self, model_name: str) -> bool:
+        """Test that a specific model is available.
+
+        Args:
+            model_name: The model name to validate.
+
+        Returns:
+            True if the model is available.
+
+        Raises:
+            ProviderModelNotFoundError: If the model is not available.
+            ProviderConnectionError: If the provider cannot be reached.
+        """
+        # Default implementation - subclasses should override for better validation
+        # This just checks if the current model matches
+        current_model = self.name.split(":")[-1] if ":" in self.name else self.name
+        if current_model == model_name:
+            return True
+        raise ProviderModelNotFoundError(model_name, provider_name=self.name)
+
+    def get_capabilities(self) -> LLMProviderCapabilities:
+        """Return provider capabilities.
+
+        Returns:
+            LLMProviderCapabilities dataclass with provider information.
+        """
+        return LLMProviderCapabilities()

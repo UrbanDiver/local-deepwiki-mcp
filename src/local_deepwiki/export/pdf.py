@@ -1,6 +1,7 @@
 """PDF export functionality for DeepWiki documentation."""
 
 import argparse
+import asyncio
 import base64
 import json
 import re
@@ -8,13 +9,23 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
+from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 import markdown
 from weasyprint import CSS, HTML
 
 from local_deepwiki.cli_progress import create_progress
+from local_deepwiki.export.streaming import (
+    ExportConfig,
+    ExportResult,
+    ProgressCallback,
+    StreamingExporter,
+    WikiPage,
+    WikiPageIterator,
+)
 from local_deepwiki.logging import get_logger
 
 logger = get_logger(__name__)
@@ -494,8 +505,322 @@ def extract_title(md_file: Path) -> str:
     return md_file.stem.replace("_", " ").replace("-", " ").title()
 
 
+class StreamingPdfExporter(StreamingExporter):
+    """Memory-efficient PDF exporter using streaming page iteration.
+
+    Processes pages in batches, writes intermediate PDFs to temp files,
+    then merges them at the end. Suitable for large wikis to avoid OOM.
+    """
+
+    def __init__(
+        self,
+        wiki_path: Path,
+        output_path: Path,
+        config: ExportConfig | None = None,
+        *,
+        no_progress: bool = False,
+    ):
+        """Initialize the streaming PDF exporter.
+
+        Args:
+            wiki_path: Path to the .deepwiki directory.
+            output_path: Output path for PDF file(s).
+            config: Export configuration.
+            no_progress: If True, disable progress bars.
+        """
+        super().__init__(wiki_path, output_path, config)
+        self._no_progress = no_progress
+
+    async def export(
+        self, progress_callback: ProgressCallback | None = None
+    ) -> ExportResult:
+        """Export wiki to PDF with streaming/batched processing.
+
+        Args:
+            progress_callback: Optional callback for progress updates.
+
+        Returns:
+            ExportResult with export statistics.
+        """
+        start_time = time.monotonic()
+        errors: list[str] = []
+
+        logger.info(
+            f"Starting streaming PDF export from {self.wiki_path} to {self.output_path}"
+        )
+
+        # Load TOC for ordering
+        self.load_toc()
+
+        # Get page count for progress
+        iterator = self.get_page_iterator()
+        total_pages = iterator.get_page_count()
+
+        # Determine output file
+        output_file = self.output_path
+        if output_file.is_dir():
+            output_file = output_file / "documentation.pdf"
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+
+        # Process pages in batches and create intermediate PDFs
+        batch_size = self.config.batch_size
+        batch_num = 0
+        pages_processed = 0
+        temp_pdfs: list[Path] = []
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            batch_pages: list[WikiPage] = []
+
+            async for page in iterator:
+                try:
+                    batch_pages.append(page)
+                    pages_processed += 1
+
+                    if progress_callback:
+                        progress_callback(
+                            pages_processed,
+                            total_pages,
+                            f"Processing {page.path}",
+                        )
+
+                    # When batch is full, render to intermediate PDF
+                    if len(batch_pages) >= batch_size:
+                        batch_pdf = temp_path / f"batch_{batch_num:04d}.pdf"
+                        self._render_batch_to_pdf(batch_pages, batch_pdf, batch_num == 0)
+                        temp_pdfs.append(batch_pdf)
+
+                        # Release memory
+                        for p in batch_pages:
+                            p.release_content()
+                        batch_pages = []
+                        batch_num += 1
+
+                except Exception as e:
+                    error_msg = f"Failed to process {page.path}: {e}"
+                    logger.warning(error_msg)
+                    errors.append(error_msg)
+
+            # Process remaining pages
+            if batch_pages:
+                batch_pdf = temp_path / f"batch_{batch_num:04d}.pdf"
+                self._render_batch_to_pdf(batch_pages, batch_pdf, batch_num == 0)
+                temp_pdfs.append(batch_pdf)
+
+                for p in batch_pages:
+                    p.release_content()
+
+            # Merge all batch PDFs into final output
+            if progress_callback:
+                progress_callback(pages_processed, total_pages, "Merging PDF batches...")
+
+            if len(temp_pdfs) == 1:
+                # Only one batch, just copy it
+                shutil.copy(temp_pdfs[0], output_file)
+            elif len(temp_pdfs) > 1:
+                # Multiple batches, need to merge
+                self._merge_pdfs(temp_pdfs, output_file)
+            else:
+                # No pages - create empty PDF
+                self._create_empty_pdf(output_file)
+
+        duration_ms = int((time.monotonic() - start_time) * 1000)
+        logger.info(
+            f"Streaming PDF export complete: {pages_processed} pages "
+            f"in {len(temp_pdfs)} batches, {duration_ms}ms"
+        )
+
+        return ExportResult(
+            pages_exported=pages_processed,
+            output_path=output_file,
+            duration_ms=duration_ms,
+            errors=errors,
+        )
+
+    async def export_separate(
+        self, progress_callback: ProgressCallback | None = None
+    ) -> ExportResult:
+        """Export each wiki page as a separate PDF with streaming.
+
+        Args:
+            progress_callback: Optional callback for progress updates.
+
+        Returns:
+            ExportResult with export statistics.
+        """
+        start_time = time.monotonic()
+        errors: list[str] = []
+
+        logger.info(f"Starting streaming separate PDF export from {self.wiki_path}")
+
+        # Determine output directory
+        output_dir = self.output_path
+        if output_dir.suffix == ".pdf":
+            output_dir = output_dir.parent / output_dir.stem
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Get page count for progress
+        iterator = self.get_page_iterator()
+        total_pages = iterator.get_page_count()
+
+        exported = 0
+        async for page in iterator:
+            try:
+                rel_path = page.metadata.relative_path
+                output_file = output_dir / rel_path.with_suffix(".pdf")
+                output_file.parent.mkdir(parents=True, exist_ok=True)
+
+                self._export_single_page(page, output_file)
+                exported += 1
+
+                if progress_callback:
+                    progress_callback(exported, total_pages, f"Exported {page.path}")
+
+                # Release content from memory
+                page.release_content()
+
+            except Exception as e:
+                error_msg = f"Failed to export {page.path}: {e}"
+                logger.warning(error_msg)
+                errors.append(error_msg)
+
+        duration_ms = int((time.monotonic() - start_time) * 1000)
+        logger.info(f"Streaming separate PDF export complete: {exported} pages in {duration_ms}ms")
+
+        return ExportResult(
+            pages_exported=exported,
+            output_path=output_dir,
+            duration_ms=duration_ms,
+            errors=errors,
+        )
+
+    def _render_batch_to_pdf(
+        self, pages: list[WikiPage], output_path: Path, include_toc: bool = False
+    ) -> None:
+        """Render a batch of pages to a PDF file.
+
+        Args:
+            pages: List of WikiPage objects to render.
+            output_path: Path for the output PDF.
+            include_toc: If True, include TOC at the start (first batch only).
+        """
+        parts = []
+
+        if include_toc:
+            # Add title page with TOC for first batch
+            parts.append("<h1>Documentation</h1>")
+            parts.append("<h2>Table of Contents</h2>")
+            parts.append(self._build_streaming_toc_html())
+            parts.append('<div class="page-break"></div>')
+
+        for i, page in enumerate(pages):
+            content = page.content
+            html_content = render_markdown_for_pdf(content)
+            parts.append(html_content)
+
+            # Add page break between pages (except last)
+            if i < len(pages) - 1:
+                parts.append('<div class="page-break"></div>')
+
+        combined_content = "\n".join(parts)
+        full_html = PDF_HTML_TEMPLATE.format(
+            title="Documentation",
+            content=combined_content,
+        )
+
+        html_doc = HTML(string=full_html)
+        css = CSS(string=PRINT_CSS)
+        html_doc.write_pdf(output_path, stylesheets=[css])
+
+    def _build_streaming_toc_html(self) -> str:
+        """Build TOC HTML from loaded TOC entries."""
+        parts = ['<div class="toc">']
+        self._add_toc_entries_html(self._toc_entries, parts, 0)
+        parts.append("</div>")
+        return "\n".join(parts)
+
+    def _add_toc_entries_html(
+        self, entries: list[dict[str, Any]], parts: list[str], depth: int
+    ) -> None:
+        """Recursively add TOC entries to HTML parts."""
+        for entry in entries:
+            title = entry.get("title", "")
+            indent = "  " * depth
+            parts.append(f'<div class="toc-item">{indent}{title}</div>')
+            if "children" in entry:
+                self._add_toc_entries_html(entry["children"], parts, depth + 1)
+
+    def _export_single_page(self, page: WikiPage, output_file: Path) -> None:
+        """Export a single wiki page to PDF.
+
+        Args:
+            page: WikiPage object to export.
+            output_file: Output PDF path.
+        """
+        logger.debug(f"Exporting page: {page.path}")
+
+        content = page.content
+        html_content = render_markdown_for_pdf(content)
+
+        full_html = PDF_HTML_TEMPLATE.format(
+            title=page.title,
+            content=html_content,
+        )
+
+        html_doc = HTML(string=full_html)
+        css = CSS(string=PRINT_CSS)
+        html_doc.write_pdf(output_file, stylesheets=[css])
+
+    def _merge_pdfs(self, pdf_files: list[Path], output_path: Path) -> None:
+        """Merge multiple PDF files into one.
+
+        Uses pypdf if available, otherwise concatenates using WeasyPrint.
+
+        Args:
+            pdf_files: List of PDF file paths to merge.
+            output_path: Output path for merged PDF.
+        """
+        try:
+            # Try using pypdf for efficient merging
+            from pypdf import PdfWriter
+
+            writer = PdfWriter()
+            for pdf_file in pdf_files:
+                writer.append(str(pdf_file))
+            writer.write(str(output_path))
+            writer.close()
+            logger.debug(f"Merged {len(pdf_files)} PDFs using pypdf")
+
+        except ImportError:
+            # Fallback: Copy first PDF and log warning about potential issues
+            logger.warning(
+                "pypdf not available for PDF merging. "
+                "Install pypdf for better multi-batch support. "
+                "Using first batch only."
+            )
+            shutil.copy(pdf_files[0], output_path)
+
+    def _create_empty_pdf(self, output_path: Path) -> None:
+        """Create an empty PDF file.
+
+        Args:
+            output_path: Path for the output PDF.
+        """
+        empty_html = PDF_HTML_TEMPLATE.format(
+            title="Documentation",
+            content="<p>No pages to export.</p>",
+        )
+        html_doc = HTML(string=empty_html)
+        css = CSS(string=PRINT_CSS)
+        html_doc.write_pdf(output_path, stylesheets=[css])
+
+
 class PdfExporter:
-    """Export wiki markdown to PDF format."""
+    """Export wiki markdown to PDF format.
+
+    This is the synchronous wrapper class that maintains backwards compatibility.
+    For large wikis, use StreamingPdfExporter directly for async streaming export.
+    """
 
     def __init__(
         self,

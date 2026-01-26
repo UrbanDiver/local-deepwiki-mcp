@@ -412,6 +412,31 @@ class HooksConfig(BaseModel):
     )
 
 
+class ExportBatchConfig(BaseModel):
+    """Export configuration for HTML and PDF generation."""
+
+    model_config = {"frozen": True}
+
+    batch_size: int = Field(
+        default=50,
+        ge=1,
+        le=500,
+        description="Pages per batch for PDF generation in streaming mode",
+    )
+    memory_limit_mb: int = Field(
+        default=500,
+        ge=100,
+        le=4096,
+        description="Memory threshold to trigger streaming mode (MB). "
+        "Wikis larger than this will use streaming export.",
+    )
+    enable_streaming: bool = Field(
+        default=True,
+        description="Enable streaming mode for large wikis. "
+        "When enabled, pages are processed one at a time to avoid OOM.",
+    )
+
+
 class OutputConfig(BaseModel):
     """Output configuration."""
 
@@ -496,6 +521,44 @@ class SearchCacheConfig(BaseModel):
         ge=0.0,
         le=1.0,
         description="Minimum similarity score for semantic cache hit (0.0-1.0)",
+    )
+
+
+class LazyIndexConfig(BaseModel):
+    """Lazy vector index configuration for deferred index creation.
+
+    When enabled, vector indexes are not created immediately when the table
+    reaches the minimum row threshold. Instead, index creation is scheduled
+    as a background task after initial indexing completes, or triggered
+    on-demand when search latency exceeds the threshold.
+    """
+
+    model_config = {"frozen": True}
+
+    enabled: bool = Field(
+        default=True,
+        description="Enable lazy/deferred vector index creation. "
+        "When enabled, indexes are created in the background after initial indexing.",
+    )
+    latency_threshold_ms: int = Field(
+        default=500,
+        ge=50,
+        le=5000,
+        description="Search latency threshold in milliseconds. "
+        "If average latency exceeds this, index creation is triggered automatically.",
+    )
+    min_rows: int = Field(
+        default=1000,
+        ge=100,
+        le=100000,
+        description="Minimum number of rows before considering index creation. "
+        "Tables smaller than this threshold use brute-force search.",
+    )
+    latency_window_size: int = Field(
+        default=10,
+        ge=3,
+        le=100,
+        description="Number of recent searches to consider for latency calculation.",
     )
 
 
@@ -669,12 +732,14 @@ class Config(BaseModel):
     llm: LLMConfig = Field(default_factory=LLMConfig)
     llm_cache: LLMCacheConfig = Field(default_factory=LLMCacheConfig)
     search_cache: SearchCacheConfig = Field(default_factory=SearchCacheConfig)
+    lazy_index: LazyIndexConfig = Field(default_factory=LazyIndexConfig)
     parsing: ParsingConfig = Field(default_factory=ParsingConfig)
     ast_cache: ASTCacheConfig = Field(default_factory=ASTCacheConfig)
     chunking: ChunkingConfig = Field(default_factory=ChunkingConfig)
     wiki: WikiConfig = Field(default_factory=WikiConfig)
     deep_research: DeepResearchConfig = Field(default_factory=DeepResearchConfig)
     output: OutputConfig = Field(default_factory=OutputConfig)
+    export: ExportBatchConfig = Field(default_factory=ExportBatchConfig)
     prompts: PromptsConfig = Field(default_factory=PromptsConfig)
     plugins: PluginsConfig = Field(default_factory=PluginsConfig)
     hooks: HooksConfig = Field(default_factory=HooksConfig)

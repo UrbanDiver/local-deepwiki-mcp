@@ -1,14 +1,24 @@
 """HTML export functionality for DeepWiki documentation."""
 
 import argparse
+import asyncio
 import json
 import shutil
+import time
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 import markdown
 
 from local_deepwiki.cli_progress import create_progress, is_interactive
+from local_deepwiki.export.streaming import (
+    ExportConfig,
+    ExportResult,
+    ProgressCallback,
+    StreamingExporter,
+    WikiPage,
+    WikiPageIterator,
+)
 from local_deepwiki.logging import get_logger
 
 logger = get_logger(__name__)
@@ -662,8 +672,229 @@ def extract_title(md_file: Path) -> str:
     return md_file.stem.replace("_", " ").replace("-", " ").title()
 
 
+class StreamingHtmlExporter(StreamingExporter):
+    """Memory-efficient HTML exporter using streaming page iteration.
+
+    Writes each page to disk as it's processed, avoiding loading all
+    pages into memory at once. Suitable for large wikis.
+    """
+
+    def __init__(
+        self,
+        wiki_path: Path,
+        output_path: Path,
+        config: ExportConfig | None = None,
+        *,
+        no_progress: bool = False,
+    ):
+        """Initialize the streaming HTML exporter.
+
+        Args:
+            wiki_path: Path to the .deepwiki directory.
+            output_path: Output directory for HTML files.
+            config: Export configuration.
+            no_progress: If True, disable progress bars.
+        """
+        super().__init__(wiki_path, output_path, config)
+        self._no_progress = no_progress
+
+    async def export(
+        self, progress_callback: ProgressCallback | None = None
+    ) -> ExportResult:
+        """Export wiki to HTML with streaming.
+
+        Args:
+            progress_callback: Optional callback for progress updates.
+
+        Returns:
+            ExportResult with export statistics.
+        """
+        start_time = time.monotonic()
+        errors: list[str] = []
+
+        logger.info(
+            f"Starting streaming HTML export from {self.wiki_path} to {self.output_path}"
+        )
+
+        # Load TOC for navigation
+        self.load_toc()
+
+        # Create output directory
+        self.output_path.mkdir(parents=True, exist_ok=True)
+
+        # Copy search.json
+        search_src = self.wiki_path / "search.json"
+        if search_src.exists():
+            shutil.copy(search_src, self.output_path / "search.json")
+            logger.debug("Copied search.json to output directory")
+
+        # Get page count for progress
+        iterator = self.get_page_iterator()
+        total_pages = iterator.get_page_count()
+
+        # Export pages one at a time
+        exported = 0
+        async for page in iterator:
+            try:
+                self._export_wiki_page(page)
+                exported += 1
+
+                if progress_callback:
+                    progress_callback(exported, total_pages, f"Exported {page.path}")
+
+                # Release content from memory after writing
+                page.release_content()
+
+            except Exception as e:
+                error_msg = f"Failed to export {page.path}: {e}"
+                logger.warning(error_msg)
+                errors.append(error_msg)
+
+        duration_ms = int((time.monotonic() - start_time) * 1000)
+        logger.info(f"Streaming HTML export complete: {exported} pages in {duration_ms}ms")
+
+        return ExportResult(
+            pages_exported=exported,
+            output_path=self.output_path,
+            duration_ms=duration_ms,
+            errors=errors,
+        )
+
+    def _export_wiki_page(self, page: WikiPage) -> None:
+        """Export a single wiki page to HTML.
+
+        Args:
+            page: WikiPage object with content loaded on demand.
+        """
+        rel_path = page.metadata.relative_path
+        logger.debug(f"Exporting page: {rel_path}")
+
+        # Render markdown to HTML
+        html_content = render_markdown(page.content)
+
+        # Calculate depth for relative paths
+        depth = len(rel_path.parts) - 1
+        root_path = "../" * depth if depth > 0 else "./"
+
+        # Build TOC HTML with correct relative paths
+        toc_html = self._render_toc(self._toc_entries, str(rel_path), root_path)
+
+        # Build breadcrumb HTML
+        breadcrumb_html = self._build_breadcrumb(rel_path, root_path)
+
+        # Calculate search.json path relative to this page
+        search_json_path = root_path + "search.json"
+
+        # Render full HTML
+        html = STATIC_HTML_TEMPLATE.format(
+            title=page.title,
+            toc_html=toc_html,
+            breadcrumb_html=breadcrumb_html,
+            content_html=html_content,
+            search_json_path=search_json_path,
+            root_path=root_path,
+        )
+
+        # Write output file
+        output_file = self.output_path / rel_path.with_suffix(".html")
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        output_file.write_text(html)
+
+    def _render_toc(
+        self, entries: list[dict[str, Any]], current_path: str, root_path: str
+    ) -> str:
+        """Render TOC entries as HTML."""
+        html_parts = []
+        for entry in entries:
+            html_parts.append(self._render_toc_entry(entry, current_path, root_path))
+        return "\n".join(html_parts)
+
+    def _render_toc_entry(
+        self, entry: dict[str, Any], current_path: str, root_path: str
+    ) -> str:
+        """Render a single TOC entry recursively."""
+        has_children = bool(entry.get("children"))
+        parent_class = "toc-parent" if has_children else ""
+
+        html = f'<div class="toc-item {parent_class}">'
+
+        if entry.get("path"):
+            # Convert .md to .html for static export
+            html_path = entry["path"].replace(".md", ".html")
+            active = "active" if entry["path"] == current_path else ""
+            html += f"""<a href="{root_path}{html_path}" class="{active}">
+                <span class="toc-number">{entry.get("number", "")}</span>
+                <span>{entry.get("title", "")}</span>
+            </a>"""
+        else:
+            # No link, just a grouping label
+            html += f"""<span class="toc-parent">
+                <span class="toc-number">{entry.get("number", "")}</span>
+                <span>{entry.get("title", "")}</span>
+            </span>"""
+
+        if has_children:
+            html += '<div class="toc-nested">'
+            for child in entry["children"]:
+                html += self._render_toc_entry(child, current_path, root_path)
+            html += "</div>"
+
+        html += "</div>"
+        return html
+
+    def _build_breadcrumb(self, rel_path: Path, root_path: str) -> str:
+        """Build breadcrumb navigation HTML."""
+        parts = list(rel_path.parts)
+
+        # Root pages don't need breadcrumbs
+        if len(parts) == 1:
+            return ""
+
+        breadcrumb_items = []
+
+        # Always start with Home
+        breadcrumb_items.append(f'<a href="{root_path}index.html">Home</a>')
+
+        # Build path progressively
+        cumulative_path = ""
+        for part in parts[:-1]:  # Exclude current page
+            if cumulative_path:
+                cumulative_path = f"{cumulative_path}/{part}"
+            else:
+                cumulative_path = part
+
+            # Check if there's an index.md in this folder
+            index_path = self.wiki_path / cumulative_path / "index.md"
+            display_name = part.replace("_", " ").replace("-", " ").title()
+
+            if index_path.exists():
+                link_path = f"{cumulative_path}/index.html"
+                breadcrumb_items.append(
+                    f'<a href="{root_path}{link_path}">{display_name}</a>'
+                )
+            else:
+                breadcrumb_items.append(f"<span>{display_name}</span>")
+
+        # Add current page name
+        current_page = parts[-1]
+        if current_page.endswith(".md"):
+            current_page = current_page[:-3]
+        current_page = current_page.replace("_", " ").replace("-", " ").title()
+        breadcrumb_items.append(f'<span class="current">{current_page}</span>')
+
+        return (
+            '<div class="breadcrumb">'
+            + ' <span class="separator">&rsaquo;</span> '.join(breadcrumb_items)
+            + "</div>"
+        )
+
+
 class HtmlExporter:
-    """Export wiki markdown to static HTML files."""
+    """Export wiki markdown to static HTML files.
+
+    This is the synchronous wrapper class that maintains backwards compatibility.
+    For large wikis, use StreamingHtmlExporter directly for async streaming export.
+    """
 
     def __init__(
         self,
@@ -692,6 +923,43 @@ class HtmlExporter:
         """
         logger.info(f"Starting HTML export from {self.wiki_path} to {self.output_path}")
 
+        # Check if we should use streaming mode
+        iterator = WikiPageIterator(self.wiki_path)
+        use_streaming = iterator.should_use_streaming()
+
+        if use_streaming:
+            logger.info("Large wiki detected, using streaming export mode")
+            return self._export_streaming()
+
+        return self._export_standard()
+
+    def _export_streaming(self) -> int:
+        """Export using streaming mode for large wikis."""
+        streaming_exporter = StreamingHtmlExporter(
+            self.wiki_path,
+            self.output_path,
+            no_progress=self._no_progress,
+        )
+
+        # Run async export in event loop
+        with create_progress(disable=self._no_progress) as progress:
+            task_id = progress.add_task("Exporting HTML (streaming)", total=None)
+
+            def progress_callback(current: int, total: int, message: str) -> None:
+                progress.update(task_id, total=total, completed=current, description=message)
+
+            loop = asyncio.new_event_loop()
+            try:
+                result = loop.run_until_complete(
+                    streaming_exporter.export(progress_callback=progress_callback)
+                )
+            finally:
+                loop.close()
+
+        return result.pages_exported
+
+    def _export_standard(self) -> int:
+        """Export using standard mode (loads all pages in memory)."""
         # Load TOC
         toc_path = self.wiki_path / "toc.json"
         if toc_path.exists():

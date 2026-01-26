@@ -328,6 +328,11 @@ Format as markdown with clear sections."""
     content += "The following diagrams show how data flows through key operations:\n\n"
     content += generate_workflow_sequences()
 
+    # Add link to detailed dependency graph
+    content += "\n\n## Module Dependencies\n\n"
+    content += "For a detailed view of module interdependencies including circular dependency "
+    content += "detection, see the [Dependency Graph](dependency-graph.md) page.\n"
+
     return WikiPage(
         path="architecture.md",
         title="Architecture",

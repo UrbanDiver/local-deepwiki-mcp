@@ -14,6 +14,7 @@ from local_deepwiki.handlers import (
     handle_deep_research,
     handle_export_wiki_html,
     handle_export_wiki_pdf,
+    handle_get_operation_progress,
     handle_index_repository,
     handle_list_research_checkpoints,
     handle_read_wiki_page,
@@ -309,6 +310,20 @@ async def list_tools() -> list[Tool]:
                 "required": ["repo_path", "research_id"],
             },
         ),
+        Tool(
+            name="get_operation_progress",
+            description="Get progress for active long-running operations. Supports polling-based progress tracking for clients that cannot receive push notifications. Returns current progress, ETA, and phase information.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "operation_id": {
+                        "type": "string",
+                        "description": "Specific operation ID to get progress for. If not provided, returns all active operations.",
+                    },
+                },
+                "required": [],
+            },
+        ),
     ]
 
 
@@ -324,6 +339,7 @@ TOOL_HANDLERS: dict[str, ToolHandler] = {
     "export_wiki_pdf": handle_export_wiki_pdf,
     "list_research_checkpoints": handle_list_research_checkpoints,
     "cancel_research": handle_cancel_research,
+    "get_operation_progress": handle_get_operation_progress,
 }
 
 # Tools that need server context for progress streaming

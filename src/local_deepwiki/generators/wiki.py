@@ -17,6 +17,10 @@ from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.events import EventType, get_event_emitter
 from local_deepwiki.generators.coverage import generate_coverage_page
 from local_deepwiki.generators.crosslinks import EntityRegistry, add_cross_links
+from local_deepwiki.generators.dependency_graph import (
+    DependencyGraphGenerator,
+    generate_dependency_graph_page,
+)
 from local_deepwiki.generators.stale_detection import generate_stale_report_page
 from local_deepwiki.generators.glossary import generate_glossary_page
 from local_deepwiki.generators.inheritance import generate_inheritance_page
@@ -625,6 +629,32 @@ class WikiGenerator:
             self.status_manager.record_page_status(coverage_page, ctx.all_source_files)
             await self._write_page(coverage_page)
             ctx.pages_generated += 1
+
+        # Dependency graph page
+        if progress_callback:
+            progress_callback("Generating dependency graph", 9, 13)
+
+        try:
+            dependency_content = await generate_dependency_graph_page(
+                index_status=index_status,
+                vector_store=self.vector_store,
+                show_external=True,
+                max_external=10,
+                wiki_base_path="files/",
+            )
+            if dependency_content:
+                dependency_page = WikiPage(
+                    path="dependency-graph.md",
+                    title="Dependency Graph",
+                    content=dependency_content,
+                    generated_at=time.time(),
+                )
+                ctx.pages.append(dependency_page)
+                self.status_manager.record_page_status(dependency_page, ctx.all_source_files)
+                await self._write_page(dependency_page)
+                ctx.pages_generated += 1
+        except Exception as e:
+            logger.warning(f"Failed to generate dependency graph: {e}")
 
     def _sort_generators_by_dependencies(
         self,

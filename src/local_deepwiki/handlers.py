@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import uuid
 from functools import wraps
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Awaitable, Callable
@@ -43,6 +44,16 @@ from local_deepwiki.models import (
     ResearchCheckpoint,
     ResumeResearchArgs,
     SearchCodeArgs,
+)
+
+from local_deepwiki.progress import (
+    GetOperationProgressArgs,
+    OperationType,
+    ProgressBuffer,
+    ProgressManager,
+    ProgressPhase,
+    ProgressUpdate,
+    get_progress_registry,
 )
 
 from local_deepwiki.config import get_config
@@ -156,7 +167,7 @@ async def _handle_index_repository_impl(
     args: dict[str, Any],
     server: Any = None,
 ) -> list[TextContent]:
-    """Internal implementation of index_repository with progress streaming."""
+    """Internal implementation of index_repository with progress streaming and ETA."""
     # Validate with Pydantic
     try:
         validated = IndexRepositoryArgs.model_validate(args)
@@ -203,16 +214,18 @@ async def _handle_index_repository_impl(
     else:
         config = base_config
 
-    # Extract progress token from MCP request context
-    progress_token: str | int | None = None
-    if server is not None:
-        try:
-            request_ctx = server.request_context
-            if request_ctx.meta and request_ctx.meta.progressToken:
-                progress_token = request_ctx.meta.progressToken
-        except LookupError:
-            # Not in a request context (e.g., testing or direct API calls)
-            logger.debug("No MCP request context available for progress token extraction")
+    # Initialize progress registry data path for persistence
+    registry = get_progress_registry()
+    wiki_path = config.get_wiki_path(repo_path)
+    progress_data_path = wiki_path / "progress_history.json"
+    registry.set_data_path(progress_data_path)
+
+    # Create progress notifier with ETA support
+    notifier, operation_id = create_progress_notifier(
+        operation_type=OperationType.INDEX_REPOSITORY,
+        server=server,
+        total=6,  # Total steps: scan, parse, embed, store, generate wiki, complete
+    )
 
     # Create indexer
     indexer = RepositoryIndexer(
@@ -223,102 +236,113 @@ async def _handle_index_repository_impl(
 
     # Index the repository
     full_rebuild = validated.full_rebuild
-    messages: list[str] = []
 
-    # Track indexing state for progress
+    # Track indexing state for backward compatibility
     indexing_state = {
-        "current_step": 0,
-        "total_steps": 6,  # scan, parse, embed, store, generate wiki, complete
         "files_processed": 0,
         "total_files": 0,
         "chunks_created": 0,
         "pages_generated": 0,
     }
 
-    async def send_progress(
-        step_type: IndexingProgressType,
-        message: str,
-        **kwargs: Any,
-    ) -> None:
-        """Send MCP progress notification."""
-        messages.append(f"[{indexing_state['current_step']}/{indexing_state['total_steps']}] {message}")
-
-        if progress_token is None or server is None:
-            return
-
-        progress = IndexingProgress(
-            step=indexing_state["current_step"],
-            total_steps=indexing_state["total_steps"],
-            step_type=step_type,
-            message=message,
-            files_processed=indexing_state.get("files_processed"),
-            total_files=indexing_state.get("total_files"),
-            chunks_created=indexing_state.get("chunks_created"),
-            pages_generated=indexing_state.get("pages_generated"),
-            **kwargs,
-        )
-
-        try:
-            request_ctx = server.request_context
-            await request_ctx.session.send_progress_notification(
-                progress_token=progress_token,
-                progress=float(indexing_state["current_step"]),
-                total=float(indexing_state["total_steps"]),
-                message=progress.model_dump_json(),
-            )
-        except (RuntimeError, OSError, AttributeError) as e:
-            logger.warning(f"Failed to send progress notification: {e}")
+    # Capture all progress messages for backward compatibility
+    progress_messages: list[str] = []
 
     def sync_progress_callback(msg: str, current: int, total: int) -> None:
         """Sync callback for indexer - updates state for next async notification."""
         indexing_state["files_processed"] = current
         indexing_state["total_files"] = total
-        messages.append(f"[{current}/{total}] {msg}")
+        progress_messages.append(f"[{current}/{total}] {msg}")
 
-    # Step 1: Started
-    indexing_state["current_step"] = 1
-    await send_progress(IndexingProgressType.STARTED, f"Starting indexing of {repo_path.name}")
+    try:
+        # Step 1: Started
+        if notifier:
+            await notifier.update(
+                current=1,
+                phase=ProgressPhase.SCANNING,
+                message=f"Starting indexing of {repo_path.name}",
+                metadata={
+                    "files_processed": 0,
+                    "total_files": 0,
+                    "chunks_created": 0,
+                    "pages_generated": 0,
+                },
+            )
 
-    # Step 2-4: Index repository (parsing, embedding, storing)
-    indexing_state["current_step"] = 2
-    await send_progress(IndexingProgressType.PARSING_FILES, "Parsing source files...")
+        # Step 2-4: Index repository (parsing, embedding, storing)
+        if notifier:
+            await notifier.update(
+                current=2,
+                phase=ProgressPhase.PARSING,
+                message="Parsing source files...",
+            )
 
-    status = await indexer.index(
-        full_rebuild=full_rebuild,
-        progress_callback=sync_progress_callback,
-    )
+        status = await indexer.index(
+            full_rebuild=full_rebuild,
+            progress_callback=sync_progress_callback,
+        )
 
-    indexing_state["chunks_created"] = status.total_chunks
-    indexing_state["current_step"] = 4
-    await send_progress(
-        IndexingProgressType.STORING_VECTORS,
-        f"Indexed {status.total_files} files, {status.total_chunks} chunks",
-    )
+        indexing_state["chunks_created"] = status.total_chunks
 
-    # Step 5: Generate wiki documentation
-    indexing_state["current_step"] = 5
-    await send_progress(IndexingProgressType.GENERATING_WIKI, "Generating wiki documentation...")
+        if notifier:
+            await notifier.update(
+                current=4,
+                phase=ProgressPhase.STORING,
+                message=f"Indexed {status.total_files} files, {status.total_chunks} chunks",
+                metadata={
+                    "files_processed": status.total_files,
+                    "total_files": status.total_files,
+                    "chunks_created": status.total_chunks,
+                },
+            )
 
-    wiki_structure = await generate_wiki(
-        repo_path=repo_path,
-        wiki_path=indexer.wiki_path,
-        vector_store=indexer.vector_store,
-        index_status=status,
-        config=config,
-        llm_provider=llm_provider,
-        progress_callback=sync_progress_callback,
-        full_rebuild=full_rebuild,
-    )
+        # Step 5: Generate wiki documentation
+        if notifier:
+            await notifier.update(
+                current=5,
+                phase=ProgressPhase.WIKI_GENERATION,
+                message="Generating wiki documentation...",
+            )
 
-    indexing_state["pages_generated"] = len(wiki_structure.pages)
+        wiki_structure = await generate_wiki(
+            repo_path=repo_path,
+            wiki_path=indexer.wiki_path,
+            vector_store=indexer.vector_store,
+            index_status=status,
+            config=config,
+            llm_provider=llm_provider,
+            progress_callback=sync_progress_callback,
+            full_rebuild=full_rebuild,
+        )
 
-    # Step 6: Complete
-    indexing_state["current_step"] = 6
-    await send_progress(
-        IndexingProgressType.COMPLETE,
-        f"Complete: {status.total_files} files, {status.total_chunks} chunks, {len(wiki_structure.pages)} pages",
-    )
+        indexing_state["pages_generated"] = len(wiki_structure.pages)
 
+        # Step 6: Complete
+        if notifier:
+            await notifier.update(
+                current=6,
+                phase=ProgressPhase.COMPLETE,
+                message=f"Complete: {status.total_files} files, {status.total_chunks} chunks, {len(wiki_structure.pages)} pages",
+                metadata={
+                    "files_processed": status.total_files,
+                    "total_files": status.total_files,
+                    "chunks_created": status.total_chunks,
+                    "pages_generated": len(wiki_structure.pages),
+                },
+            )
+            await notifier.flush()
+
+        # Complete operation in registry (records timing for future ETA predictions)
+        registry.complete_operation(operation_id, record_timing=True)
+
+    except Exception:
+        # Clean up operation on error
+        registry.complete_operation(operation_id, record_timing=False)
+        raise
+
+    # Build result with ETA information
+    # Combine notifier messages with sync callback messages for full history
+    all_messages = (notifier.messages if notifier else []) + progress_messages
     result = {
         "status": "success",
         "repo_path": str(repo_path),
@@ -327,7 +351,8 @@ async def _handle_index_repository_impl(
         "chunks_created": status.total_chunks,
         "languages": status.languages,
         "wiki_pages": len(wiki_structure.pages),
-        "messages": messages,
+        "operation_id": operation_id,
+        "messages": all_messages,
     }
 
     logger.info(
@@ -979,8 +1004,9 @@ async def handle_search_code(args: dict[str, Any]) -> list[TextContent]:
 
 @handle_tool_errors
 async def handle_export_wiki_html(args: dict[str, Any]) -> list[TextContent]:
-    """Handle export_wiki_html tool call."""
+    """Handle export_wiki_html tool call with streaming support for large wikis."""
     from local_deepwiki.export.html import export_to_html
+    from local_deepwiki.export.streaming import ExportConfig, WikiPageIterator
 
     # Validate with Pydantic
     try:
@@ -997,6 +1023,17 @@ async def handle_export_wiki_html(args: dict[str, Any]) -> list[TextContent]:
     if output_path:
         output_path = Path(output_path).resolve()
 
+    # Check wiki size and recommend streaming if large
+    iterator = WikiPageIterator(wiki_path)
+    page_count = iterator.get_page_count()
+    total_size_mb = iterator.get_total_size_bytes() / (1024 * 1024)
+    use_streaming = iterator.should_use_streaming()
+
+    logger.info(
+        f"Wiki export: {page_count} pages, {total_size_mb:.2f}MB, "
+        f"streaming: {use_streaming}"
+    )
+
     result = export_to_html(wiki_path, output_path)
 
     # Get actual output path for the response
@@ -1007,6 +1044,11 @@ async def handle_export_wiki_html(args: dict[str, Any]) -> list[TextContent]:
         "message": result,
         "output_path": str(actual_output),
         "open_with": f"open {actual_output}/index.html",
+        "stats": {
+            "pages_exported": page_count,
+            "total_size_mb": round(total_size_mb, 2),
+            "streaming_mode": use_streaming,
+        },
     }
 
     return [TextContent(type="text", text=json.dumps(response, indent=2))]
@@ -1014,8 +1056,9 @@ async def handle_export_wiki_html(args: dict[str, Any]) -> list[TextContent]:
 
 @handle_tool_errors
 async def handle_export_wiki_pdf(args: dict[str, Any]) -> list[TextContent]:
-    """Handle export_wiki_pdf tool call."""
+    """Handle export_wiki_pdf tool call with streaming support for large wikis."""
     from local_deepwiki.export.pdf import export_to_pdf
+    from local_deepwiki.export.streaming import ExportConfig, WikiPageIterator
 
     # Validate with Pydantic
     try:
@@ -1033,6 +1076,17 @@ async def handle_export_wiki_pdf(args: dict[str, Any]) -> list[TextContent]:
     if output_path:
         output_path = Path(output_path).resolve()
 
+    # Check wiki size for stats
+    iterator = WikiPageIterator(wiki_path)
+    page_count = iterator.get_page_count()
+    total_size_mb = iterator.get_total_size_bytes() / (1024 * 1024)
+    use_streaming = iterator.should_use_streaming()
+
+    logger.info(
+        f"PDF export: {page_count} pages, {total_size_mb:.2f}MB, "
+        f"streaming: {use_streaming}"
+    )
+
     result = export_to_pdf(wiki_path, output_path, single_file=single_file)
 
     # Get actual output path for the response
@@ -1045,6 +1099,11 @@ async def handle_export_wiki_pdf(args: dict[str, Any]) -> list[TextContent]:
         "status": "success",
         "message": result,
         "output_path": str(actual_output),
+        "stats": {
+            "pages_exported": page_count,
+            "total_size_mb": round(total_size_mb, 2),
+            "streaming_mode": use_streaming,
+        },
     }
 
     return [TextContent(type="text", text=json.dumps(response, indent=2))]
@@ -1192,3 +1251,197 @@ async def handle_resume_research(
     }
 
     return await handle_deep_research(deep_research_args, server)
+
+
+@handle_tool_errors
+async def handle_get_operation_progress(args: dict[str, Any]) -> list[TextContent]:
+    """Handle get_operation_progress tool call.
+
+    Returns current progress for active operations, supporting the
+    pull-based progress model for clients that cannot receive push notifications.
+    """
+    # Validate with Pydantic
+    try:
+        validated = GetOperationProgressArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    registry = get_progress_registry()
+    operation_id = validated.operation_id
+
+    if operation_id:
+        # Get progress for specific operation
+        progress = registry.get_operation_progress(operation_id)
+        if not progress:
+            return [TextContent(type="text", text=json.dumps({
+                "status": "not_found",
+                "message": f"Operation {operation_id} not found or already completed",
+            }, indent=2))]
+        return [TextContent(type="text", text=json.dumps(progress, indent=2))]
+    else:
+        # List all active operations
+        operations = registry.list_operations()
+        response = {
+            "status": "success",
+            "active_operations": len(operations),
+            "operations": operations,
+        }
+        return [TextContent(type="text", text=json.dumps(response, indent=2))]
+
+
+class ProgressNotifier:
+    """Helper class for sending buffered MCP progress notifications.
+
+    Integrates ProgressManager with MCP server notifications,
+    handling buffering and async notification delivery.
+    """
+
+    def __init__(
+        self,
+        progress_manager: ProgressManager,
+        server: Any,
+        progress_token: str | int | None,
+        buffer_interval: float = 0.5,
+    ):
+        """Initialize the notifier.
+
+        Args:
+            progress_manager: The ProgressManager to use for tracking.
+            server: MCP server instance.
+            progress_token: Progress token from MCP request.
+            buffer_interval: Minimum seconds between notifications.
+        """
+        self.progress_manager = progress_manager
+        self.server = server
+        self.progress_token = progress_token
+        self.buffer = ProgressBuffer(flush_interval=buffer_interval)
+        self._messages: list[str] = []
+
+    async def update(
+        self,
+        current: int | None = None,
+        total: int | None = None,
+        message: str = "",
+        phase: ProgressPhase | None = None,
+        step_type: IndexingProgressType | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        """Update progress and send buffered notification.
+
+        Args:
+            current: Current progress value.
+            total: Total items.
+            message: Status message.
+            phase: Current phase.
+            step_type: IndexingProgressType for backward compatibility.
+            metadata: Additional metadata.
+        """
+        # Track message history
+        if message:
+            self._messages.append(message)
+
+        # Update progress manager
+        update = self.progress_manager.update(
+            current=current,
+            total=total,
+            message=message,
+            phase=phase,
+            metadata=metadata,
+        )
+
+        # Add to buffer
+        updates_to_send = self.buffer.add(update)
+
+        # Send notifications if buffer flushed
+        if updates_to_send:
+            await self._send_notifications(updates_to_send)
+
+    async def flush(self) -> None:
+        """Flush any pending notifications."""
+        updates = self.buffer.flush()
+        if updates:
+            await self._send_notifications(updates)
+
+    async def _send_notifications(self, updates: list[ProgressUpdate]) -> None:
+        """Send MCP progress notifications.
+
+        Args:
+            updates: List of progress updates to send.
+        """
+        if not self.progress_token or not self.server:
+            return
+
+        # Send the most recent update (MCP expects single progress per notification)
+        latest = updates[-1]
+
+        try:
+            request_ctx = self.server.request_context
+
+            # Build backward-compatible progress message
+            progress_data = {
+                "step": latest.current,
+                "total_steps": latest.total or 0,
+                "step_type": latest.phase.value,
+                "message": latest.message,
+                "eta_seconds": latest.eta_seconds,
+                **latest.metadata,
+            }
+
+            await request_ctx.session.send_progress_notification(
+                progress_token=self.progress_token,
+                progress=float(latest.current),
+                total=float(latest.total) if latest.total else None,
+                message=json.dumps(progress_data),
+            )
+        except (RuntimeError, OSError, AttributeError, LookupError) as e:
+            logger.warning(f"Failed to send progress notification: {e}")
+
+    @property
+    def messages(self) -> list[str]:
+        """Get accumulated progress messages."""
+        return self._messages
+
+
+def create_progress_notifier(
+    operation_type: OperationType,
+    server: Any,
+    total: int | None = None,
+) -> tuple[ProgressNotifier | None, str]:
+    """Create a ProgressNotifier for an MCP operation.
+
+    Args:
+        operation_type: Type of operation.
+        server: MCP server instance.
+        total: Total items to process.
+
+    Returns:
+        Tuple of (ProgressNotifier or None, operation_id).
+    """
+    operation_id = str(uuid.uuid4())
+    registry = get_progress_registry()
+
+    # Extract progress token from MCP request context
+    progress_token: str | int | None = None
+    if server is not None:
+        try:
+            request_ctx = server.request_context
+            if request_ctx.meta and request_ctx.meta.progressToken:
+                progress_token = request_ctx.meta.progressToken
+        except LookupError:
+            logger.debug("No MCP request context available for progress token extraction")
+
+    # Create progress manager
+    progress_manager = registry.start_operation(
+        operation_id=operation_id,
+        operation_type=operation_type,
+        total=total,
+    )
+
+    # Create notifier
+    notifier = ProgressNotifier(
+        progress_manager=progress_manager,
+        server=server,
+        progress_token=progress_token,
+    )
+
+    return notifier, operation_id
