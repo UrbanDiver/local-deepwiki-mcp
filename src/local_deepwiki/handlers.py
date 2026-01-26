@@ -158,8 +158,8 @@ async def _handle_index_repository_impl(
             if request_ctx.meta and request_ctx.meta.progressToken:
                 progress_token = request_ctx.meta.progressToken
         except LookupError:
-            # Not in a request context (e.g., testing)
-            pass
+            # Not in a request context (e.g., testing or direct API calls)
+            logger.debug("No MCP request context available for progress token extraction")
 
     # Create indexer
     indexer = RepositoryIndexer(
@@ -469,8 +469,8 @@ def _setup_deep_research_config(
             if request_ctx.meta and request_ctx.meta.progressToken:
                 ctx.progress_token = request_ctx.meta.progressToken
         except LookupError:
-            # Not in a request context (e.g., testing)
-            pass
+            # Not in a request context (e.g., testing or direct API calls)
+            logger.debug("No MCP request context available for deep research progress token")
 
     return ctx
 
