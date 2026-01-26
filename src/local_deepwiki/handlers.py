@@ -11,7 +11,22 @@ if TYPE_CHECKING:
     from local_deepwiki.models import IndexingProgress, ResearchProgress
 
 from mcp.types import TextContent
-from pydantic import ValidationError
+from pydantic import ValidationError as PydanticValidationError
+
+from local_deepwiki.errors import (
+    DeepWikiError,
+    ExportError,
+    IndexingError,
+    ProviderError,
+    ResearchError,
+    ValidationError,
+    format_error_response,
+    indexing_error,
+    map_exception_to_deepwiki_error,
+    not_indexed_error,
+    path_not_found_error,
+    provider_error,
+)
 
 from local_deepwiki.models import (
     AskQuestionArgs,
@@ -49,9 +64,13 @@ ToolHandler = Callable[[dict[str, Any]], Awaitable[list[TextContent]]]
 def handle_tool_errors(func: ToolHandler) -> ToolHandler:
     """Decorator for consistent error handling in tool handlers.
 
-    Catches common exceptions and returns properly formatted error responses:
+    Catches exceptions and returns properly formatted error responses with
+    actionable hints when available:
+
+    - DeepWikiError subclasses: Format with message and hint
     - ValueError: Input validation errors (logged at ERROR level)
-    - Exception: Unexpected errors (logged with full traceback)
+    - Common exceptions: Map to DeepWikiError with appropriate hints
+    - Other exceptions: Log with traceback and return generic error
 
     Args:
         func: The async tool handler function to wrap.
@@ -64,17 +83,42 @@ def handle_tool_errors(func: ToolHandler) -> ToolHandler:
     async def wrapper(args: dict[str, Any]) -> list[TextContent]:
         try:
             return await func(args)
+        except DeepWikiError as e:
+            # Our custom errors already have good messages and hints
+            logger.error(f"DeepWiki error in {func.__name__}: {e.message}")
+            if e.context:
+                logger.debug(f"Error context: {e.context}")
+            return [TextContent(type="text", text=format_error_response(e))]
         except ValueError as e:
-            logger.error(f"Invalid input in {func.__name__}: {e}")
-            return [TextContent(type="text", text=f"Error: {e}")]
+            # Wrap ValueError in ValidationError for better hints
+            error = ValidationError(
+                message=str(e),
+                hint="Check that all input parameters are valid.",
+            )
+            logger.error(f"Validation error in {func.__name__}: {e}")
+            return [TextContent(type="text", text=format_error_response(error))]
+        except (FileNotFoundError, PermissionError) as e:
+            # Map common file system errors
+            error = map_exception_to_deepwiki_error(e)
+            logger.error(f"File system error in {func.__name__}: {e}")
+            return [TextContent(type="text", text=format_error_response(error))]
+        except (ConnectionError, TimeoutError) as e:
+            # Map common network errors
+            error = map_exception_to_deepwiki_error(e)
+            logger.error(f"Network error in {func.__name__}: {e}")
+            return [TextContent(type="text", text=format_error_response(error))]
         except asyncio.CancelledError:
             # Re-raise cancellation to propagate properly
             raise
         except Exception as e:  # noqa: BLE001
             # Broad catch is intentional: top-level error handler for MCP tools
             # that converts any unhandled exception to a user-friendly error message
-            logger.exception(f"Error in {func.__name__}: {e}")
-            return [TextContent(type="text", text=f"Error: {e}")]
+            logger.exception(f"Unexpected error in {func.__name__}: {e}")
+            error = DeepWikiError(
+                message=f"An unexpected error occurred: {e}",
+                hint="Check the logs for more details. If this persists, please report the issue.",
+            )
+            return [TextContent(type="text", text=format_error_response(error))]
 
     return wrapper
 
@@ -112,17 +156,22 @@ async def _handle_index_repository_impl(
     # Validate with Pydantic
     try:
         validated = IndexRepositoryArgs.model_validate(args)
-    except ValidationError as e:
+    except PydanticValidationError as e:
         raise ValueError(str(e)) from e
 
     repo_path = Path(validated.repo_path).resolve()
     logger.info(f"Indexing repository: {repo_path}")
 
     if not repo_path.exists():
-        raise ValueError(f"Repository path does not exist: {repo_path}")
+        raise path_not_found_error(str(repo_path), "repository")
 
     if not repo_path.is_dir():
-        raise ValueError(f"Path is not a directory: {repo_path}")
+        raise ValidationError(
+            message=f"Path is not a directory: {repo_path}",
+            hint="Provide a path to a directory, not a file.",
+            field="repo_path",
+            value=str(repo_path),
+        )
 
     # Use validated values
     languages = validate_languages_list(validated.languages)
@@ -289,7 +338,7 @@ async def handle_ask_question(args: dict[str, Any]) -> list[TextContent]:
     # Validate with Pydantic
     try:
         validated = AskQuestionArgs.model_validate(args)
-    except ValidationError as e:
+    except PydanticValidationError as e:
         raise ValueError(str(e)) from e
 
     repo_path = Path(validated.repo_path).resolve()
@@ -304,7 +353,7 @@ async def handle_ask_question(args: dict[str, Any]) -> list[TextContent]:
     vector_db_path = config.get_vector_db_path(repo_path)
 
     if not vector_db_path.exists():
-        raise ValueError("Repository not indexed. Run index_repository first.")
+        raise not_indexed_error(str(repo_path))
 
     # Create vector store
     embedding_provider = get_embedding_provider(config.embedding)
@@ -437,7 +486,7 @@ def _setup_deep_research_config(
     # Validate with Pydantic
     try:
         validated = DeepResearchArgs.model_validate(args)
-    except ValidationError as e:
+    except PydanticValidationError as e:
         raise ValueError(str(e)) from e
 
     repo_path = Path(validated.repo_path).resolve()
@@ -460,7 +509,7 @@ def _setup_deep_research_config(
     # Validate repository is indexed
     vector_db_path = ctx.config.get_vector_db_path(repo_path)
     if not vector_db_path.exists():
-        raise ValueError("Repository not indexed. Run index_repository first.")
+        raise not_indexed_error(str(repo_path))
 
     # Extract progress token from MCP request context
     if server is not None:
@@ -747,13 +796,13 @@ async def handle_read_wiki_structure(args: dict[str, Any]) -> list[TextContent]:
     # Validate with Pydantic
     try:
         validated = ReadWikiStructureArgs.model_validate(args)
-    except ValidationError as e:
+    except PydanticValidationError as e:
         raise ValueError(str(e)) from e
 
     wiki_path = Path(validated.wiki_path).resolve()
 
     if not wiki_path.exists():
-        raise ValueError(f"Wiki path does not exist: {wiki_path}")
+        raise path_not_found_error(str(wiki_path), "wiki")
 
     # Check for toc.json (numbered hierarchical structure)
     toc_path = wiki_path / "toc.json"
@@ -809,7 +858,7 @@ async def handle_read_wiki_page(args: dict[str, Any]) -> list[TextContent]:
     # Validate with Pydantic
     try:
         validated = ReadWikiPageArgs.model_validate(args)
-    except ValidationError as e:
+    except PydanticValidationError as e:
         raise ValueError(str(e)) from e
 
     wiki_path = Path(validated.wiki_path).resolve()
@@ -819,16 +868,25 @@ async def handle_read_wiki_page(args: dict[str, Any]) -> list[TextContent]:
     # This prevents path traversal attacks (e.g., "../../etc/passwd")
     page_path = (wiki_path / page).resolve()
     if not page_path.is_relative_to(wiki_path):
-        raise ValueError("Invalid page path")
+        raise ValidationError(
+            message="Invalid page path: path traversal not allowed",
+            hint="The page path must be within the wiki directory.",
+            field="page",
+            value=page,
+        )
 
     if not page_path.exists():
-        raise ValueError(f"Page not found: {page}")
+        raise path_not_found_error(page, "wiki page")
 
     # Check file size to prevent memory exhaustion
     file_size = page_path.stat().st_size
     if file_size > MAX_WIKI_PAGE_SIZE:
-        raise ValueError(
-            f"Page too large: {file_size:,} bytes (max {MAX_WIKI_PAGE_SIZE:,} bytes)"
+        raise ValidationError(
+            message=f"Page too large: {file_size:,} bytes",
+            hint=f"Maximum allowed size is {MAX_WIKI_PAGE_SIZE:,} bytes. Consider splitting the content.",
+            field="page",
+            value=page,
+            context={"file_size": file_size, "max_size": MAX_WIKI_PAGE_SIZE},
         )
 
     content = await asyncio.to_thread(page_path.read_text)
@@ -845,7 +903,7 @@ async def handle_search_code(args: dict[str, Any]) -> list[TextContent]:
     # Validate with Pydantic
     try:
         validated = SearchCodeArgs.model_validate(args)
-    except ValidationError as e:
+    except PydanticValidationError as e:
         raise ValueError(str(e)) from e
 
     repo_path = Path(validated.repo_path).resolve()
@@ -867,7 +925,7 @@ async def handle_search_code(args: dict[str, Any]) -> list[TextContent]:
     vector_db_path = config.get_vector_db_path(repo_path)
 
     if not vector_db_path.exists():
-        raise ValueError("Repository not indexed. Run index_repository first.")
+        raise not_indexed_error(str(repo_path))
 
     # Create vector store
     embedding_provider = get_embedding_provider(config.embedding)
@@ -919,14 +977,14 @@ async def handle_export_wiki_html(args: dict[str, Any]) -> list[TextContent]:
     # Validate with Pydantic
     try:
         validated = ExportWikiHtmlArgs.model_validate(args)
-    except ValidationError as e:
+    except PydanticValidationError as e:
         raise ValueError(str(e)) from e
 
     wiki_path = Path(validated.wiki_path).resolve()
     output_path = validated.output_path
 
     if not wiki_path.exists():
-        raise ValueError(f"Wiki path does not exist: {wiki_path}")
+        raise path_not_found_error(str(wiki_path), "wiki")
 
     if output_path:
         output_path = Path(output_path).resolve()
@@ -954,7 +1012,7 @@ async def handle_export_wiki_pdf(args: dict[str, Any]) -> list[TextContent]:
     # Validate with Pydantic
     try:
         validated = ExportWikiPdfArgs.model_validate(args)
-    except ValidationError as e:
+    except PydanticValidationError as e:
         raise ValueError(str(e)) from e
 
     wiki_path = Path(validated.wiki_path).resolve()
@@ -962,7 +1020,7 @@ async def handle_export_wiki_pdf(args: dict[str, Any]) -> list[TextContent]:
     single_file = validated.single_file
 
     if not wiki_path.exists():
-        raise ValueError(f"Wiki path does not exist: {wiki_path}")
+        raise path_not_found_error(str(wiki_path), "wiki")
 
     if output_path:
         output_path = Path(output_path).resolve()

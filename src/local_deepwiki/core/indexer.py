@@ -2,7 +2,6 @@
 
 import asyncio
 import fnmatch
-import json
 import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
@@ -10,6 +9,13 @@ from pathlib import Path
 
 from local_deepwiki.config import Config, get_config
 from local_deepwiki.core.chunker import CodeChunker
+from local_deepwiki.core.index_manager import (
+    CURRENT_SCHEMA_VERSION,
+    INDEX_STATUS_FILE,
+    IndexStatusManager,
+    _migrate_status,
+    _needs_migration,
+)
 from local_deepwiki.core.parser import CodeParser
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.events import EventType, get_event_emitter
@@ -30,60 +36,22 @@ class ParseResult:
     error: str | None = None
 
 
-# Schema version for tracking index format changes.
-# Increment this when the schema changes in a way that requires re-indexing.
-# Version history:
-#   1 - Initial schema (all versions prior to explicit versioning)
-#   2 - Added schema_version field and scalar indexes on id/file_path columns
-CURRENT_SCHEMA_VERSION = 2
-
-
-def _needs_migration(status: IndexStatus) -> bool:
-    """Check if an index status needs migration to the current schema version.
-
-    Args:
-        status: The loaded index status.
-
-    Returns:
-        True if the schema version is older than current and needs migration.
-    """
-    return status.schema_version < CURRENT_SCHEMA_VERSION
-
-
-def _migrate_status(status: IndexStatus) -> tuple[IndexStatus, bool]:
-    """Migrate an index status to the current schema version.
-
-    This function handles migrations between schema versions. Each migration
-    step should be idempotent and handle the transition from version N to N+1.
-
-    Args:
-        status: The index status to migrate.
-
-    Returns:
-        Tuple of (migrated status, requires_rebuild).
-        requires_rebuild is True if the vector store needs to be rebuilt.
-    """
-    requires_rebuild = False
-    current_version = status.schema_version
-
-    # Migration from version 1 to 2
-    # Version 2 added scalar indexes - the index data is compatible but
-    # indexes need to be created (handled by _ensure_scalar_indexes in VectorStore)
-    if current_version < 2:
-        logger.info("Migrating index status from schema version 1 to 2")
-        # No data migration needed - indexes are created on table open
-        current_version = 2
-
-    # Update schema version
-    status.schema_version = current_version
-
-    return status, requires_rebuild
+# Re-export for backward compatibility - these are now defined in index_manager
+__all__ = [
+    "CURRENT_SCHEMA_VERSION",
+    "INDEX_STATUS_FILE",
+    "ParseResult",
+    "RepositoryIndexer",
+    "_migrate_status",
+    "_needs_migration",
+]
 
 
 class RepositoryIndexer:
     """Orchestrates repository indexing with incremental update support."""
 
-    INDEX_STATUS_FILE = "index_status.json"
+    # Backward compatibility: keep class constant
+    INDEX_STATUS_FILE = INDEX_STATUS_FILE
 
     def __init__(
         self,
@@ -115,6 +83,9 @@ class RepositoryIndexer:
         self.chunker = CodeChunker(self.config.chunking)
         self.embedding_provider = get_embedding_provider(self.config.embedding)
         self.vector_store = VectorStore(self.vector_db_path, self.embedding_provider)
+
+        # Use IndexStatusManager for all status operations
+        self._status_manager = IndexStatusManager()
 
     def _parse_single_file(self, file_path: Path) -> ParseResult:
         """Parse and chunk a single file (CPU-bound, runs in thread pool).
@@ -156,7 +127,9 @@ class RepositoryIndexer:
         if full_rebuild:
             return None, {}, full_rebuild
 
-        previous_status, requires_rebuild = self._load_status()
+        previous_status, requires_rebuild = self._status_manager.load_with_migration_info(
+            self.wiki_path
+        )
         if requires_rebuild:
             logger.info("Schema migration requires full rebuild")
             return None, {}, True
@@ -432,23 +405,14 @@ class RepositoryIndexer:
         Returns:
             IndexStatus with complete indexing results.
         """
-        all_files = processed_files + files_unchanged
+        all_files, total_chunks = self._status_manager.merge_files(
+            processed_files, files_unchanged, total_chunks_processed
+        )
 
-        # Calculate language statistics
-        languages: dict[str, int] = {}
-        for file_info in all_files:
-            if file_info.language:
-                lang = file_info.language.value
-                languages[lang] = languages.get(lang, 0) + 1
-
-        return IndexStatus(
-            repo_path=str(self.repo_path),
-            indexed_at=time.time(),
-            total_files=len(all_files),
-            total_chunks=total_chunks_processed + sum(f.chunk_count for f in files_unchanged),
-            languages=languages,
+        return self._status_manager.create(
+            repo_path=self.repo_path,
             files=all_files,
-            schema_version=CURRENT_SCHEMA_VERSION,
+            total_chunks=total_chunks,
         )
 
     def _save_index_status(self, status: IndexStatus) -> None:
@@ -457,7 +421,7 @@ class RepositoryIndexer:
         Args:
             status: The IndexStatus to save.
         """
-        self._save_status(status)
+        self._status_manager.save(self.wiki_path, status)
         logger.info(
             f"Indexing complete: {status.total_files} files, "
             f"{status.total_chunks} chunks, languages: {list(status.languages.keys())}"
@@ -616,34 +580,7 @@ class RepositoryIndexer:
             Tuple of (IndexStatus or None, requires_rebuild).
             requires_rebuild is True if the index should be fully rebuilt.
         """
-        status_path = self.wiki_path / self.INDEX_STATUS_FILE
-        if not status_path.exists():
-            return None, False
-
-        try:
-            with open(status_path) as f:
-                data = json.load(f)
-
-            # Handle legacy status files without schema_version
-            if "schema_version" not in data:
-                data["schema_version"] = 1
-
-            status = IndexStatus.model_validate(data)
-
-            # Check if migration is needed
-            if _needs_migration(status):
-                status, requires_rebuild = _migrate_status(status)
-                # Save the migrated status
-                self._save_status(status)
-                return status, requires_rebuild
-
-            return status, False
-        except (json.JSONDecodeError, OSError, ValueError) as e:
-            # json.JSONDecodeError: Corrupted or invalid JSON
-            # OSError: File read issues
-            # ValueError: Pydantic validation failure
-            logger.warning(f"Failed to load index status from {status_path}: {e}")
-            return None, False
+        return self._status_manager.load_with_migration_info(self.wiki_path)
 
     def _save_status(self, status: IndexStatus) -> None:
         """Save indexing status.
@@ -651,9 +588,7 @@ class RepositoryIndexer:
         Args:
             status: The IndexStatus to save.
         """
-        status_path = self.wiki_path / self.INDEX_STATUS_FILE
-        with open(status_path, "w") as f:
-            json.dump(status.model_dump(), f, indent=2)
+        self._status_manager.save(self.wiki_path, status)
 
     def get_status(self) -> IndexStatus | None:
         """Get the current indexing status.
@@ -661,8 +596,7 @@ class RepositoryIndexer:
         Returns:
             IndexStatus or None if not indexed.
         """
-        status, _ = self._load_status()
-        return status
+        return self._status_manager.load(self.wiki_path)
 
     async def search(
         self,

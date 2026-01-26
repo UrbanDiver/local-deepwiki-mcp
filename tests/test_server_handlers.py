@@ -271,7 +271,8 @@ class TestHandleReadWikiPage:
 
         assert len(result) == 1
         assert "Error" in result[0].text
-        assert "not found" in result[0].text
+        # Error message now includes hints and may say "does not exist" instead of "not found"
+        assert "not found" in result[0].text.lower() or "does not exist" in result[0].text.lower()
 
     async def test_returns_page_content(self, tmp_path):
         """Test returns page content successfully."""

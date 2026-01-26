@@ -370,7 +370,8 @@ class TestToolHandlersIntegration:
 
         assert len(result) == 1
         assert "Error" in result[0].text
-        assert "not found" in result[0].text
+        # Error message may say "not found" or "does not exist" depending on error type
+        assert "not found" in result[0].text.lower() or "does not exist" in result[0].text.lower()
 
     async def test_export_wiki_html_real_handler_validation(self, tmp_path):
         """Test that real export_wiki_html handler validates inputs."""

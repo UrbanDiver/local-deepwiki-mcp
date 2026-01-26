@@ -55,7 +55,9 @@ class TestHandleToolErrorsDecorator:
 
         result = await failing_handler({})
         assert len(result) == 1
-        assert "Error: Something went wrong" in result[0].text
+        # Error now includes hints and wraps the original message
+        assert "Something went wrong" in result[0].text
+        assert "Error" in result[0].text
 
     async def test_propagates_cancelled_error(self):
         """Test decorator re-raises CancelledError."""

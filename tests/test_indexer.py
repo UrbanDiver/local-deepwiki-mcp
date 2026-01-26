@@ -1101,8 +1101,10 @@ class TestLoadPreviousStatus:
 
             indexer = RepositoryIndexer(repo_path, config)
 
-            # Mock _load_status to return status with requires_rebuild=True
-            with patch.object(indexer, "_load_status", return_value=(None, True)):
+            # Mock the status manager's load_with_migration_info to return requires_rebuild=True
+            with patch.object(
+                indexer._status_manager, "load_with_migration_info", return_value=(None, True)
+            ):
                 status, prev_files, rebuild = indexer._load_previous_status(full_rebuild=False)
 
                 assert status is None

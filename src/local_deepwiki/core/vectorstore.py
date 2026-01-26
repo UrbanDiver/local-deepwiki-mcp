@@ -3,12 +3,16 @@
 import json
 import math
 import threading
+import time
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 import lancedb
+import numpy as np
 from lancedb.table import Table
 
+from local_deepwiki.config import SearchCacheConfig
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import ChunkType, CodeChunk, Language, SearchResult
 from local_deepwiki.providers.base import EmbeddingProvider
@@ -19,6 +23,275 @@ logger = get_logger(__name__)
 # Valid values for filtering - used to prevent injection attacks
 VALID_LANGUAGES = {lang.value for lang in Language}
 VALID_CHUNK_TYPES = {ct.value for ct in ChunkType}
+
+
+@dataclass
+class SearchCacheEntry:
+    """A cached search result entry."""
+
+    query_text: str
+    query_embedding: list[float]
+    results: list[SearchResult]
+    created_at: float
+    filters: dict[str, Any] = field(default_factory=dict)
+
+
+class SearchCache:
+    """In-memory cache for search results with semantic deduplication.
+
+    Uses embedding similarity to find cached results for semantically similar queries.
+    Entries expire based on TTL and are evicted using LRU when max_entries is reached.
+    """
+
+    def __init__(self, config: SearchCacheConfig):
+        """Initialize the search cache.
+
+        Args:
+            config: Cache configuration.
+        """
+        self.config = config
+        self._cache: dict[str, SearchCacheEntry] = {}
+        self._lock = threading.RLock()
+        self._stats = {"hits": 0, "misses": 0, "invalidations": 0}
+
+    @property
+    def stats(self) -> dict[str, int]:
+        """Get cache statistics."""
+        return self._stats.copy()
+
+    def _compute_similarity(
+        self, embedding1: list[float], embedding2: list[float]
+    ) -> float:
+        """Compute cosine similarity between two embeddings.
+
+        Args:
+            embedding1: First embedding vector.
+            embedding2: Second embedding vector.
+
+        Returns:
+            Cosine similarity score (0.0 to 1.0).
+        """
+        arr1 = np.array(embedding1)
+        arr2 = np.array(embedding2)
+
+        # Compute cosine similarity
+        dot_product = np.dot(arr1, arr2)
+        norm1 = np.linalg.norm(arr1)
+        norm2 = np.linalg.norm(arr2)
+
+        if norm1 == 0 or norm2 == 0:
+            return 0.0
+
+        return float(dot_product / (norm1 * norm2))
+
+    def _is_valid_entry(self, entry: SearchCacheEntry) -> bool:
+        """Check if a cache entry is still valid (not expired).
+
+        Args:
+            entry: Cache entry to check.
+
+        Returns:
+            True if entry is valid, False if expired.
+        """
+        age = time.time() - entry.created_at
+        return age < self.config.ttl_seconds
+
+    def _filters_match(
+        self, cached_filters: dict[str, Any], query_filters: dict[str, Any]
+    ) -> bool:
+        """Check if cached filters match the query filters.
+
+        Args:
+            cached_filters: Filters from cached entry.
+            query_filters: Filters from current query.
+
+        Returns:
+            True if filters match, False otherwise.
+        """
+        # Both must have the same keys and values
+        return cached_filters == query_filters
+
+    def get(
+        self,
+        query_embedding: list[float],
+        filters: dict[str, Any] | None = None,
+    ) -> list[SearchResult] | None:
+        """Try to get cached results for a semantically similar query.
+
+        Args:
+            query_embedding: Embedding of the search query.
+            filters: Optional filters applied to the search (language, chunk_type, etc.)
+
+        Returns:
+            Cached search results if found and valid, None otherwise.
+        """
+        if not self.config.enabled:
+            return None
+
+        filters = filters or {}
+
+        with self._lock:
+            best_match: SearchCacheEntry | None = None
+            best_similarity = 0.0
+
+            # Find the most similar valid cached query
+            expired_keys: list[str] = []
+            for key, entry in self._cache.items():
+                if not self._is_valid_entry(entry):
+                    expired_keys.append(key)
+                    continue
+
+                # Check if filters match
+                if not self._filters_match(entry.filters, filters):
+                    continue
+
+                # Compute similarity
+                similarity = self._compute_similarity(query_embedding, entry.query_embedding)
+
+                if similarity >= self.config.similarity_threshold and similarity > best_similarity:
+                    best_similarity = similarity
+                    best_match = entry
+
+            # Clean up expired entries
+            for key in expired_keys:
+                del self._cache[key]
+
+            if best_match is not None:
+                self._stats["hits"] += 1
+                logger.debug(
+                    f"Search cache hit: similarity={best_similarity:.3f}, "
+                    f"query='{best_match.query_text[:50]}...'"
+                )
+                return best_match.results
+
+            self._stats["misses"] += 1
+            return None
+
+    def set(
+        self,
+        query_text: str,
+        query_embedding: list[float],
+        results: list[SearchResult],
+        filters: dict[str, Any] | None = None,
+    ) -> None:
+        """Cache search results for a query.
+
+        Args:
+            query_text: Original query text.
+            query_embedding: Embedding of the query.
+            results: Search results to cache.
+            filters: Optional filters applied to the search.
+        """
+        if not self.config.enabled:
+            return
+
+        filters = filters or {}
+
+        with self._lock:
+            # Create a unique key based on query text and filters
+            filter_str = json.dumps(filters, sort_keys=True)
+            cache_key = f"{query_text}:{filter_str}"
+
+            entry = SearchCacheEntry(
+                query_text=query_text,
+                query_embedding=query_embedding,
+                results=results,
+                created_at=time.time(),
+                filters=filters,
+            )
+
+            self._cache[cache_key] = entry
+
+            logger.debug(
+                f"Cached search results: query='{query_text[:50]}...', "
+                f"results={len(results)}"
+            )
+
+            # Evict if over capacity
+            self._maybe_evict()
+
+    def _maybe_evict(self) -> None:
+        """Evict old entries if cache exceeds max_entries.
+
+        Uses a two-phase eviction strategy:
+        1. First, remove all expired entries (TTL-based)
+        2. If still over limit, remove oldest entries (LRU)
+        """
+        if len(self._cache) <= self.config.max_entries:
+            return
+
+        logger.debug(
+            f"Search cache has {len(self._cache)} entries "
+            f"(max: {self.config.max_entries}), evicting..."
+        )
+
+        # Phase 1: Remove expired entries
+        now = time.time()
+        expired_keys = [
+            key for key, entry in self._cache.items()
+            if now - entry.created_at >= self.config.ttl_seconds
+        ]
+        for key in expired_keys:
+            del self._cache[key]
+
+        if expired_keys:
+            logger.debug(f"Evicted {len(expired_keys)} expired search cache entries")
+
+        # Phase 2: LRU eviction if still over limit
+        if len(self._cache) > self.config.max_entries:
+            # Sort by created_at (oldest first)
+            sorted_entries = sorted(
+                self._cache.items(),
+                key=lambda x: x[1].created_at
+            )
+
+            # Calculate how many to remove (with 20% buffer)
+            target_count = int(self.config.max_entries * 0.8)
+            to_remove = len(self._cache) - target_count
+
+            for key, _ in sorted_entries[:to_remove]:
+                del self._cache[key]
+
+            logger.debug(f"Evicted {to_remove} LRU search cache entries")
+
+    def invalidate(self) -> int:
+        """Invalidate all cache entries.
+
+        Called when the index is updated (new chunks added/removed).
+
+        Returns:
+            Number of entries invalidated.
+        """
+        with self._lock:
+            count = len(self._cache)
+            self._cache.clear()
+            self._stats["invalidations"] += 1
+            if count > 0:
+                logger.debug(f"Invalidated {count} search cache entries")
+            return count
+
+    def get_stats(self) -> dict[str, Any]:
+        """Get detailed cache statistics.
+
+        Returns:
+            Dictionary with cache statistics.
+        """
+        with self._lock:
+            return {
+                "enabled": self.config.enabled,
+                "entries": len(self._cache),
+                "max_entries": self.config.max_entries,
+                "ttl_seconds": self.config.ttl_seconds,
+                "similarity_threshold": self.config.similarity_threshold,
+                "hits": self._stats["hits"],
+                "misses": self._stats["misses"],
+                "invalidations": self._stats["invalidations"],
+                "hit_rate": (
+                    self._stats["hits"] / (self._stats["hits"] + self._stats["misses"])
+                    if (self._stats["hits"] + self._stats["misses"]) > 0
+                    else 0.0
+                ),
+            }
 
 
 def _sanitize_string_value(value: str) -> str:
@@ -41,18 +314,30 @@ class VectorStore:
 
     TABLE_NAME = "code_chunks"
 
-    def __init__(self, db_path: Path, embedding_provider: EmbeddingProvider):
+    def __init__(
+        self,
+        db_path: Path,
+        embedding_provider: EmbeddingProvider,
+        search_cache_config: SearchCacheConfig | None = None,
+    ):
         """Initialize the vector store.
 
         Args:
             db_path: Path to the LanceDB database directory.
             embedding_provider: Provider for generating embeddings.
+            search_cache_config: Optional search cache configuration.
+                If None, uses default SearchCacheConfig.
         """
         self.db_path = db_path
         self.embedding_provider = embedding_provider
         self._db: lancedb.DBConnection | None = None
         self._table: Table | None = None
         self._lock = threading.RLock()  # Reentrant lock for nested calls
+
+        # Initialize search cache
+        if search_cache_config is None:
+            search_cache_config = SearchCacheConfig()
+        self._search_cache = SearchCache(search_cache_config)
 
     def _connect(self) -> lancedb.DBConnection:
         """Get or create database connection.
@@ -263,6 +548,9 @@ class VectorStore:
 
             self._table = db.create_table(self.TABLE_NAME, data)
 
+        # Invalidate search cache since index has changed
+        self._search_cache.invalidate()
+
         # Create scalar indexes for efficient lookups
         self._create_scalar_indexes()
 
@@ -301,6 +589,10 @@ class VectorStore:
         ]
 
         table.add(data)
+
+        # Invalidate search cache since index has changed
+        self._search_cache.invalidate()
+
         return len(data)
 
     async def search(
@@ -343,6 +635,25 @@ class VectorStore:
         # Generate query embedding
         query_embedding = (await self.embedding_provider.embed([query]))[0]
 
+        # Build cache filter key (only cache-relevant filters, not path_pattern/fuzzy)
+        cache_filters: dict[str, Any] = {"limit": limit}
+        if language:
+            if language not in VALID_LANGUAGES:
+                raise ValueError(f"Invalid language filter: {language}")
+            cache_filters["language"] = language
+        if chunk_type:
+            if chunk_type not in VALID_CHUNK_TYPES:
+                raise ValueError(f"Invalid chunk_type filter: {chunk_type}")
+            cache_filters["chunk_type"] = chunk_type
+
+        # Try to get cached results (only for non-fuzzy, non-path-pattern searches)
+        # Fuzzy and path_pattern modify results after retrieval, so we can't cache them directly
+        use_cache = not use_fuzzy and not path_pattern
+        if use_cache:
+            cached_results = self._search_cache.get(query_embedding, cache_filters)
+            if cached_results is not None:
+                return cached_results
+
         # Fetch more results if using path filter or fuzzy (we'll filter/rerank after)
         fetch_limit = limit * 3 if (path_pattern or use_fuzzy) else limit
 
@@ -352,12 +663,8 @@ class VectorStore:
         # Apply filters with validation to prevent injection
         filters = []
         if language:
-            if language not in VALID_LANGUAGES:
-                raise ValueError(f"Invalid language filter: {language}")
             filters.append(f"language = '{language}'")
         if chunk_type:
-            if chunk_type not in VALID_CHUNK_TYPES:
-                raise ValueError(f"Invalid chunk_type filter: {chunk_type}")
             filters.append(f"chunk_type = '{chunk_type}'")
 
         if filters:
@@ -392,6 +699,10 @@ class VectorStore:
 
         # Limit results to requested amount
         search_results = search_results[:limit]
+
+        # Cache results (only for non-fuzzy, non-path-pattern searches)
+        if use_cache:
+            self._search_cache.set(query, query_embedding, search_results, cache_filters)
 
         return search_results
 
@@ -452,6 +763,9 @@ class VectorStore:
         # LanceDB delete is idempotent - no error if no rows match
         table.delete(f"file_path = '{safe_path}'")
 
+        # Invalidate search cache since index has changed
+        self._search_cache.invalidate()
+
         # Return 0 since we don't know exact count without expensive query
         # Callers that need counts should use get_chunks_by_file first
         return 0
@@ -486,6 +800,9 @@ class VectorStore:
 
         # Single delete operation for all matching files
         table.delete(filter_expr)
+
+        # Invalidate search cache since index has changed
+        self._search_cache.invalidate()
 
         logger.debug(f"Batch deleted chunks for {len(file_paths)} files")
         return len(file_paths)
@@ -633,3 +950,31 @@ class VectorStore:
         parts.append(f"\n{chunk.content}")
 
         return " ".join(parts)
+
+    def invalidate_search_cache(self) -> int:
+        """Invalidate all search cache entries.
+
+        Call this when the index is updated externally or when you want
+        to force fresh search results.
+
+        Returns:
+            Number of cache entries invalidated.
+        """
+        return self._search_cache.invalidate()
+
+    def get_search_cache_stats(self) -> dict[str, Any]:
+        """Get search cache statistics.
+
+        Returns:
+            Dictionary with cache statistics including:
+            - enabled: Whether caching is enabled
+            - entries: Current number of cached entries
+            - max_entries: Maximum allowed entries
+            - ttl_seconds: Cache entry TTL
+            - similarity_threshold: Minimum similarity for cache hit
+            - hits: Number of cache hits
+            - misses: Number of cache misses
+            - invalidations: Number of cache invalidations
+            - hit_rate: Cache hit rate (0.0-1.0)
+        """
+        return self._search_cache.get_stats()

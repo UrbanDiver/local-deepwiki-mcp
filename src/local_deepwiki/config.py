@@ -410,6 +410,32 @@ class LLMCacheConfig(BaseModel):
     )
 
 
+class SearchCacheConfig(BaseModel):
+    """Search result caching configuration for vector store."""
+
+    model_config = {"frozen": True}
+
+    enabled: bool = Field(default=True, description="Enable search result caching")
+    ttl_seconds: int = Field(
+        default=3600,  # 1 hour
+        ge=60,
+        le=86400,  # 24 hours max
+        description="Cache TTL in seconds (default: 1 hour)",
+    )
+    max_entries: int = Field(
+        default=1000,
+        ge=100,
+        le=10000,
+        description="Maximum cache entries before eviction",
+    )
+    similarity_threshold: float = Field(
+        default=0.95,
+        ge=0.0,
+        le=1.0,
+        description="Minimum similarity score for semantic cache hit (0.0-1.0)",
+    )
+
+
 # Default prompts optimized for each provider
 # Ollama: Concise, direct (local models have limited context)
 # Anthropic: Detailed, nuanced (Claude excels at complex instructions)
@@ -578,6 +604,7 @@ class Config(BaseModel):
     embedding_cache: EmbeddingCacheConfig = Field(default_factory=EmbeddingCacheConfig)
     llm: LLMConfig = Field(default_factory=LLMConfig)
     llm_cache: LLMCacheConfig = Field(default_factory=LLMCacheConfig)
+    search_cache: SearchCacheConfig = Field(default_factory=SearchCacheConfig)
     parsing: ParsingConfig = Field(default_factory=ParsingConfig)
     chunking: ChunkingConfig = Field(default_factory=ChunkingConfig)
     wiki: WikiConfig = Field(default_factory=WikiConfig)
