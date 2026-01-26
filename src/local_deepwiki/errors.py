@@ -25,6 +25,8 @@ Example usage:
 
 from __future__ import annotations
 
+import re
+from pathlib import Path
 from typing import Any
 
 
@@ -731,6 +733,70 @@ def map_exception_to_deepwiki_error(
     )
 
 
+def sanitize_error_message(message: str, sanitize_paths: bool = True) -> str:
+    """Remove sensitive information from error messages.
+
+    This function sanitizes error messages before returning them to users
+    to prevent information disclosure about internal paths, URLs, API
+    configuration, and other sensitive details.
+
+    Args:
+        message: Original error message potentially containing sensitive info.
+        sanitize_paths: Whether to remove file paths (default: True).
+
+    Returns:
+        Sanitized message safe for user display.
+
+    Examples:
+        >>> sanitize_error_message("/home/user/.config/app/config.yaml: File not found")
+        "~/.config/app/config.yaml: File not found"
+
+        >>> sanitize_error_message("Connection refused to http://localhost:11434")
+        "Connection refused to internal-service"
+    """
+    if not isinstance(message, str):
+        return str(message)
+
+    result = message
+
+    if sanitize_paths:
+        # Replace home directory paths
+        home = str(Path.home())
+        result = result.replace(home, "~")
+
+        # Remove absolute paths (keep only filename)
+        # Pattern: /path/to/file.py → file.py
+        result = re.sub(r'/[a-zA-Z0-9/_.-]*\.py', '.py', result)
+        result = re.sub(r'/[a-zA-Z0-9/_.-]*\.yml', '.yml', result)
+        result = re.sub(r'/[a-zA-Z0-9/_.-]*\.yaml', '.yaml', result)
+
+        # Remove absolute paths in general
+        result = re.sub(r'/[a-zA-Z0-9/_.-]+', '<path>', result)
+
+    # Remove localhost URLs (prevents revealing local service configuration)
+    result = re.sub(r'http://localhost:\d+', 'http://internal-service', result)
+    result = re.sub(r'http://127\.0\.0\.1:\d+', 'http://internal-service', result)
+    result = re.sub(r'localhost:\d+', 'internal-service', result)
+    result = re.sub(r'127\.0\.0\.1:\d+', 'internal-service', result)
+
+    # Remove API keys (patterns)
+    result = re.sub(r'sk-[a-zA-Z0-9]{40,}', '[REDACTED_KEY]', result)
+    result = re.sub(r'Bearer [a-zA-Z0-9_-]{20,}', 'Bearer [REDACTED_TOKEN]', result)
+    result = re.sub(r'token [a-zA-Z0-9_-]{20,}', 'token [REDACTED_TOKEN]', result)
+
+    # Remove database connection strings
+    result = re.sub(
+        r'(postgres|mysql|mongodb)://[a-zA-Z0-9_-]+:[a-zA-Z0-9_-]+@[^/\s]+',
+        r'\1://[REDACTED]@[REDACTED]',
+        result
+    )
+
+    # Remove AWS credentials patterns
+    result = re.sub(r'AKIA[0-9A-Z]{16}', '[REDACTED_AWS_KEY]', result)
+
+    return result
+
+
 def format_error_response(error: DeepWikiError) -> str:
     """Format an error for display to users.
 
@@ -740,7 +806,14 @@ def format_error_response(error: DeepWikiError) -> str:
     Returns:
         A formatted string suitable for display.
     """
-    lines = [f"Error: {error.message}"]
+    # Sanitize the message to remove sensitive information
+    safe_message = sanitize_error_message(error.message)
     if error.hint:
-        lines.append(f"\nHint: {error.hint}")
+        safe_hint = sanitize_error_message(error.hint)
+    else:
+        safe_hint = None
+
+    lines = [f"Error: {safe_message}"]
+    if safe_hint:
+        lines.append(f"\nHint: {safe_hint}")
     return "".join(lines)

@@ -1,6 +1,5 @@
 """Anthropic LLM provider."""
 
-import os
 from typing import Any, AsyncIterator
 
 from anthropic import APIConnectionError, APIStatusError, AsyncAnthropic, AuthenticationError
@@ -15,6 +14,7 @@ from local_deepwiki.providers.base import (
     ProviderRateLimitError,
     with_retry,
 )
+from local_deepwiki.providers.credentials import CredentialManager
 
 logger = get_logger(__name__)
 
@@ -40,10 +40,30 @@ class AnthropicProvider(LLMProvider):
         Args:
             model: Anthropic model name.
             api_key: Optional API key. Uses ANTHROPIC_API_KEY env var if not provided.
+
+        Raises:
+            ProviderAuthenticationError: If no API key is configured or format is invalid.
         """
         self._model = model
-        self._api_key = api_key or os.environ.get("ANTHROPIC_API_KEY")
-        self._client = AsyncAnthropic(api_key=self._api_key)
+
+        # Get API key without storing in instance variable
+        api_key = api_key or CredentialManager.get_api_key("ANTHROPIC_API_KEY", "anthropic")
+
+        if not api_key:
+            raise ProviderAuthenticationError(
+                "No Anthropic API key configured. Set ANTHROPIC_API_KEY environment variable.",
+                provider_name="anthropic:claude",
+            )
+
+        # Validate format
+        if not CredentialManager.validate_key_format(api_key, "anthropic"):
+            raise ProviderAuthenticationError(
+                "Anthropic API key format appears invalid.",
+                provider_name="anthropic:claude",
+            )
+
+        # Pass directly to client, don't store in self
+        self._client = AsyncAnthropic(api_key=api_key)
 
     def _build_kwargs(
         self,
@@ -137,12 +157,6 @@ class AnthropicProvider(LLMProvider):
             ProviderConnectionError: If the API cannot be reached.
             ProviderAuthenticationError: If authentication fails.
         """
-        if not self._api_key:
-            raise ProviderAuthenticationError(
-                "No Anthropic API key configured. Set ANTHROPIC_API_KEY environment variable.",
-                provider_name=self.name,
-            )
-
         try:
             # Make a minimal API call to verify connectivity
             await self._client.messages.create(

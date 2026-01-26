@@ -1,0 +1,11 @@
+{
+  "timestamp": "2026-01-23T23:48:55.550Z",
+  "projectRoot": "/Users/brian/Projects/local-deepwiki-mcp",
+  "structure": {
+    "hasPackageJson": false,
+    "hasTsConfig": false,
+    "hasClaudeConfig": true,
+    "hasClaudeFlow": true
+  },
+  "scannedAt": 1769212135550
+}

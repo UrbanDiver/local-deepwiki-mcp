@@ -1,0 +1,340 @@
+================================================================================
+                    SECURITY AUDIT - EXECUTIVE SUMMARY
+                     Local DeepWiki MCP Project
+                           January 26, 2026
+================================================================================
+
+PROJECT: Local DeepWiki MCP Server
+AUDITOR: Security Auditor Agent (V3)
+STATUS: 3 HIGH, 5 MEDIUM, 3 LOW findings identified
+RISK LEVEL: MEDIUM (Pre-remediation) → LOW (Post-remediation)
+
+================================================================================
+                              QUICK OVERVIEW
+================================================================================
+
+STRENGTHS (✓ SECURE):
+  ✓ Path traversal protection is strong
+    - Uses Path.resolve() and is_relative_to()
+    - Properly validates relative paths
+  ✓ Input validation comprehensive
+    - Pydantic models validate all inputs
+    - Type hints throughout codebase
+  ✓ Error handling structure good
+    - Consistent exception handling
+    - Custom error types for scenarios
+  ✓ No SQL injection vulnerabilities
+    - Uses LanceDB with parameterized queries
+  ✓ No command injection patterns
+    - No eval() or unsafe shell execution
+
+WEAKNESSES (⚠️ REQUIRE FIXES):
+  ⚠️ API keys stored in plaintext (HIGH)
+  ⚠️ Error messages leak sensitive info (HIGH)
+  ⚠️ No access control layer (MEDIUM)
+  ⚠️ Weak dependency version pinning (MEDIUM)
+  ⚠️ No audit logging (MEDIUM)
+
+================================================================================
+                          CRITICAL FINDINGS (3)
+================================================================================
+
+FINDING 1: API KEY EXPOSURE IN MEMORY
+  Severity: HIGH | CVSS: 7.5 | CWE-798
+  Location:
+    - /src/local_deepwiki/providers/llm/anthropic.py:45
+    - /src/local_deepwiki/providers/llm/openai.py:49
+    - /src/local_deepwiki/providers/embeddings/openai.py:35
+
+  Problem:
+    API keys loaded from environment and stored as instance variables
+    Keys remain in memory for provider lifetime
+    Accessible via process memory dumps or debugging tools
+
+  Risk:
+    - Attacker gains API credentials
+    - Can make unlimited API calls at victim's expense
+    - Can access all documents via LLM services
+
+  Fix Time: 2-3 hours
+  Fix: Implement secure credential manager, pass keys directly to SDK
+
+================================================================================
+
+FINDING 2: ERROR MESSAGE INFORMATION DISCLOSURE
+  Severity: HIGH | CVSS: 6.0 | CWE-209
+  Location: /src/local_deepwiki/handlers.py:131-135 (main issue)
+
+  Problem:
+    Full exception text returned to users
+    Reveals internal paths: /home/user/.config/local-deepwiki/...
+    Reveals API endpoints: http://localhost:11434/api/chat
+    Reveals model information and configuration
+
+  Risk:
+    - Attacker maps infrastructure
+    - Understands internal architecture
+    - May find new attack vectors
+
+  Fix Time: 1-2 hours
+  Fix: Sanitize error messages, remove paths and URLs before returning
+
+================================================================================
+
+FINDING 3: NO ACCESS CONTROL LAYER
+  Severity: MEDIUM (HIGH in multi-user) | CVSS: 6.5 | CWE-639
+  Location: All tool handlers in /src/local_deepwiki/handlers.py
+
+  Problem:
+    No authentication or authorization checks
+    Any user can access any repository
+    Can index sensitive repositories without permission
+    No audit trail of who accessed what
+
+  Risk:
+    - Unauthorized access to private code
+    - Secret exposure (API keys in config files)
+    - Compliance violations (HIPAA, GDPR, SOC2)
+
+  Attack Scenario:
+    User A: ask_question("/path/to/user-b-private-repo")
+    → System returns code from User B's repo without checks
+    → User A can extract all secrets
+
+  Fix Time: 3-4 hours
+  Fix: Add AccessController with allowlist/denylist
+
+================================================================================
+                       REMEDIATION ROADMAP
+================================================================================
+
+PHASE 1: CRITICAL FIXES (Week 1 - 6-8 hours)
+  [ ] Implement secure credential manager
+      - Files: Create /src/local_deepwiki/providers/credentials.py
+      - Modify: anthropic.py, openai.py (3 files)
+      - Effort: 2-3 hours
+      - Impact: Eliminates API key exposure
+
+  [ ] Sanitize error messages
+      - File: /src/local_deepwiki/errors.py (add sanitization)
+      - Modify: handlers.py (use sanitization)
+      - Effort: 1-2 hours
+      - Impact: Prevents information disclosure
+
+PHASE 2: HIGH-PRIORITY (Week 2 - 6-8 hours)
+  [ ] Implement access control
+      - Create: /src/local_deepwiki/access_control.py
+      - Modify: handlers.py (all tool functions)
+      - Effort: 3-4 hours
+      - Impact: Prevents unauthorized access
+
+  [ ] Fix dependency pinning
+      - Modify: pyproject.toml (add upper bounds)
+      - Effort: 30 minutes
+      - Impact: Prevents version conflicts
+
+  [ ] Verify YAML safety
+      - Search: config.py for yaml.load()
+      - Change: All to yaml.safe_load()
+      - Effort: 30 minutes
+      - Impact: Prevents YAML deserialization RCE
+
+PHASE 3: MEDIUM-PRIORITY (Week 2-3 - 4-6 hours)
+  [ ] Add input size validation
+      - Modify: validation.py (add MAX_* constants)
+      - Modify: handlers.py (add checks)
+      - Effort: 1-2 hours
+      - Impact: Prevents DoS attacks
+
+  [ ] Implement audit logging
+      - Create: /src/local_deepwiki/audit.py
+      - Modify: handlers.py (log all access)
+      - Effort: 2-3 hours
+      - Impact: Creates security audit trail
+
+  [ ] Add secret detection
+      - Create: /src/local_deepwiki/core/secret_detector.py
+      - Modify: core/indexer.py (use detector)
+      - Effort: 1-2 hours
+      - Impact: Warns about secrets in code
+
+================================================================================
+                        TOTAL REMEDIATION EFFORT
+================================================================================
+
+Estimated Hours: 20-26 hours
+Estimated Days: 3-4 days (assuming 6-8 hour dev days)
+Recommended Schedule:
+
+  Day 1: API Key Security + Error Sanitization
+         - Critical fixes complete
+         - Deploy to staging
+
+  Day 2: Access Control + Dependency Pinning
+         - Medium-high fixes complete
+         - Full security testing
+
+  Day 3: Secret Detection + Audit Logging
+         - Lower-priority fixes complete
+         - Final testing
+
+  Day 4: Deployment to Production + Monitoring
+         - Monitor logs for issues
+         - Document access control setup
+
+================================================================================
+                          RISK ASSESSMENT
+================================================================================
+
+Current Risk (Pre-Remediation):
+  - User accessing private repositories: HIGH risk
+  - API keys leaked: HIGH risk
+  - Infrastructure exposed: MEDIUM risk
+  - Overall: MEDIUM risk
+
+Post-Remediation Risk (After implementing all fixes):
+  - Overall: LOW risk
+  - Residual risks: Access control configuration errors, zero-day exploits
+
+Compliance Impact:
+  Current: May violate SOC2, HIPAA, GDPR (no access control, no audit logs)
+  Fixed: Complies with most security standards
+
+================================================================================
+                         DEPENDENCIES ANALYSIS
+================================================================================
+
+Version Pinning Issues Found:
+  - pyyaml >= 6.0     → Add upper bound < 7.0
+  - weasyprint >= 68.0 → Add upper bound < 69.0
+  - ollama >= 0.4     → Add upper bound < 1.0
+  - flask >= 3.0      → Add upper bound < 4.0
+
+Critical: Verify only yaml.safe_load() used (not yaml.load)
+Warning: weasyprint has complex HTML/CSS parsing, potential DoS
+Note: All dependencies currently at acceptable versions
+
+================================================================================
+                          TESTING REQUIRED
+================================================================================
+
+Security Test Suite to Implement:
+  1. Path Traversal Tests
+     └─ Verify ../../../etc/passwd blocked
+
+  2. Error Message Tests
+     └─ Ensure no paths/URLs/keys in responses
+
+  3. API Key Tests
+     └─ Verify keys not stored in instances
+
+  4. Access Control Tests
+     └─ Verify allowlist/denylist works
+
+  5. Audit Log Tests
+     └─ Verify all access logged
+
+  6. Dependency Tests
+     └─ bandit, pip-audit, mypy all pass
+
+Commands to Run:
+  bandit -r src/local_deepwiki/
+  pip-audit
+  safety check
+  mypy src/ --strict
+
+================================================================================
+                        COMPLIANCE MAPPING
+================================================================================
+
+SOC2 Compliance:
+  ✓ Access Control: Implement in Phase 2
+  ✓ Audit Logging: Implement in Phase 3
+  ✓ Encryption: Currently adequate (HTTPS if deployed)
+  ⚠️ API Key Management: Implement in Phase 1
+
+GDPR Compliance:
+  ✓ Data Minimization: Implement in Phase 3 (secret detection)
+  ⚠️ Access Control: Implement in Phase 2
+  ✓ Right to Erasure: Already supported (delete repo)
+
+HIPAA Compliance:
+  ⚠️ Access Control: Implement in Phase 2 (critical)
+  ✓ Audit Logging: Implement in Phase 3
+  ✓ Encryption: Document HTTPS/TLS usage
+
+================================================================================
+                         RECOMMENDATIONS
+================================================================================
+
+IMMEDIATE (Do First):
+  1. Implement API key security (Phase 1)
+  2. Sanitize error messages (Phase 1)
+  3. Review code for hardcoded secrets
+  4. Document current access model
+
+SHORT-TERM (Next 2-3 weeks):
+  5. Implement access control (Phase 2)
+  6. Add audit logging (Phase 3)
+  7. Fix dependency pinning (Phase 2)
+  8. Deploy to production with monitoring
+
+MEDIUM-TERM (Next month):
+  9. Run penetration testing
+  10. Implement secret detection
+  11. Add rate limiting
+  12. Document security architecture
+
+LONG-TERM (Ongoing):
+  13. Regular dependency updates
+  14. Security testing in CI/CD
+  15. Annual penetration testing
+  16. Incident response procedures
+
+================================================================================
+                            SUCCESS CRITERIA
+================================================================================
+
+Fix is COMPLETE when:
+
+  Security:
+  ✓ No HIGH severity findings
+  ✓ All files pass bandit analysis
+  ✓ All dependencies pass pip-audit
+  ✓ mypy passes with --strict flag
+  ✓ No API keys in instance variables
+  ✓ Error messages don't leak paths
+
+  Functionality:
+  ✓ All existing tests pass
+  ✓ New security tests pass
+  ✓ Access control working correctly
+  ✓ Audit logging captures events
+  ✓ No breaking changes to API
+
+  Deployment:
+  ✓ Staging deployment successful
+  ✓ Security testing on staging passed
+  ✓ Production deployment successful
+  ✓ Zero security incidents in first week
+
+================================================================================
+                          SIGN-OFF
+================================================================================
+
+Audit Completed: January 26, 2026
+Auditor: Security Auditor Agent (V3)
+Severity: 3 HIGH, 5 MEDIUM, 3 LOW
+
+This audit identified several important security issues that should be
+addressed according to the remediation roadmap above. The project has good
+security fundamentals but needs immediate attention to API key management
+and access control.
+
+Overall Assessment: MEDIUM RISK → LOW RISK after remediation
+
+For detailed findings, see: SECURITY_FINDINGS_DETAILS.md
+For remediation steps, see: REMEDIATION_GUIDE.md
+For full report, see: SECURITY_AUDIT_REPORT.md
+
+================================================================================

@@ -1,7 +1,5 @@
 """OpenAI embedding provider."""
 
-import os
-
 from openai import APIConnectionError, APIStatusError, AsyncOpenAI, AuthenticationError
 
 from local_deepwiki.providers.base import (
@@ -11,6 +9,7 @@ from local_deepwiki.providers.base import (
     ProviderConnectionError,
     ProviderRateLimitError,
 )
+from local_deepwiki.providers.credentials import CredentialManager
 
 
 # Embedding dimensions and max tokens for OpenAI models
@@ -30,10 +29,30 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         Args:
             model: OpenAI embedding model name.
             api_key: Optional API key. Uses OPENAI_API_KEY env var if not provided.
+
+        Raises:
+            ProviderAuthenticationError: If no API key is configured or format is invalid.
         """
         self._model = model
-        self._api_key = api_key or os.environ.get("OPENAI_API_KEY")
-        self._client = AsyncOpenAI(api_key=self._api_key)
+
+        # Get API key without storing in instance variable
+        api_key = api_key or CredentialManager.get_api_key("OPENAI_API_KEY", "openai")
+
+        if not api_key:
+            raise ProviderAuthenticationError(
+                "No OpenAI API key configured. Set OPENAI_API_KEY environment variable.",
+                provider_name="openai:embedding",
+            )
+
+        # Validate format
+        if not CredentialManager.validate_key_format(api_key, "openai"):
+            raise ProviderAuthenticationError(
+                "OpenAI API key format appears invalid.",
+                provider_name="openai:embedding",
+            )
+
+        # Pass directly to client, don't store in self
+        self._client = AsyncOpenAI(api_key=api_key)
         model_info = OPENAI_EMBEDDING_MODELS.get(model, {})
         self._dimension = model_info.get("dimension", 1536)
 

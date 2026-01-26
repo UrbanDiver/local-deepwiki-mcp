@@ -399,36 +399,30 @@ class TestValidationMethods:
 
     @patch.dict(os.environ, {"ANTHROPIC_API_KEY": ""})
     async def test_anthropic_validate_no_api_key(self):
-        """Test Anthropic validation fails without API key."""
+        """Test Anthropic initialization fails without API key (early validation)."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
 
-        provider = AnthropicProvider(api_key=None)
-        provider._api_key = None
-
+        # With secure implementation, ProviderAuthenticationError is raised at init time
         with pytest.raises(ProviderAuthenticationError):
-            await provider.validate_connectivity()
+            AnthropicProvider(api_key=None)
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": ""})
     async def test_openai_validate_no_api_key(self):
-        """Test OpenAI validation fails without API key."""
+        """Test OpenAI initialization fails without API key (early validation)."""
         from local_deepwiki.providers.llm.openai import OpenAILLMProvider
 
-        provider = OpenAILLMProvider(api_key=None)
-        provider._api_key = None
-
+        # With secure implementation, ProviderAuthenticationError is raised at init time
         with pytest.raises(ProviderAuthenticationError):
-            await provider.validate_connectivity()
+            OpenAILLMProvider(api_key=None)
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": ""})
     async def test_openai_embedding_validate_no_api_key(self):
-        """Test OpenAI embedding validation fails without API key."""
+        """Test OpenAI embedding initialization fails without API key (early validation)."""
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
 
-        provider = OpenAIEmbeddingProvider(api_key=None)
-        provider._api_key = None
-
+        # With secure implementation, ProviderAuthenticationError is raised at init time
         with pytest.raises(ProviderAuthenticationError):
-            await provider.validate_connectivity()
+            OpenAIEmbeddingProvider(api_key=None)
 
     @dataclass
     class MockModel:

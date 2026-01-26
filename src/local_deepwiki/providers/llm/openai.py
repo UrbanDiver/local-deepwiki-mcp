@@ -1,6 +1,5 @@
 """OpenAI LLM provider."""
 
-import os
 from typing import AsyncIterator
 
 from openai import APIConnectionError, APIStatusError, AsyncOpenAI, AuthenticationError
@@ -16,6 +15,7 @@ from local_deepwiki.providers.base import (
     ProviderRateLimitError,
     with_retry,
 )
+from local_deepwiki.providers.credentials import CredentialManager
 
 logger = get_logger(__name__)
 
@@ -44,10 +44,30 @@ class OpenAILLMProvider(LLMProvider):
         Args:
             model: OpenAI model name.
             api_key: Optional API key. Uses OPENAI_API_KEY env var if not provided.
+
+        Raises:
+            ProviderAuthenticationError: If no API key is configured or format is invalid.
         """
         self._model = model
-        self._api_key = api_key or os.environ.get("OPENAI_API_KEY")
-        self._client = AsyncOpenAI(api_key=self._api_key)
+
+        # Get API key without storing in instance variable
+        api_key = api_key or CredentialManager.get_api_key("OPENAI_API_KEY", "openai")
+
+        if not api_key:
+            raise ProviderAuthenticationError(
+                "No OpenAI API key configured. Set OPENAI_API_KEY environment variable.",
+                provider_name="openai:gpt",
+            )
+
+        # Validate format
+        if not CredentialManager.validate_key_format(api_key, "openai"):
+            raise ProviderAuthenticationError(
+                "OpenAI API key format appears invalid.",
+                provider_name="openai:gpt",
+            )
+
+        # Pass directly to client, don't store in self
+        self._client = AsyncOpenAI(api_key=api_key)
 
     def _handle_api_error(self, e: Exception) -> None:
         """Convert OpenAI API errors to standardized provider errors.
