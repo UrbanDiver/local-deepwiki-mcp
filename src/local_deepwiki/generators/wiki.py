@@ -626,6 +626,85 @@ class WikiGenerator:
             await self._write_page(coverage_page)
             ctx.pages_generated += 1
 
+    def _sort_generators_by_dependencies(
+        self,
+        generators: list["WikiGeneratorPlugin"],
+    ) -> list["WikiGeneratorPlugin"]:
+        """Sort generators respecting run_after dependencies with validation.
+
+        Uses topological sort to ensure generators run after their dependencies.
+        Validates that all dependencies exist and warns about missing ones.
+
+        Args:
+            generators: List of generator plugins to sort.
+
+        Returns:
+            Sorted list of generators respecting dependencies.
+        """
+        if not generators:
+            return generators
+
+        # Build name -> generator mapping
+        by_name: dict[str, "WikiGeneratorPlugin"] = {g.generator_name: g for g in generators}
+        available_names = set(by_name.keys())
+
+        # Validate dependencies exist and warn about missing ones
+        for generator in generators:
+            missing_deps = set(generator.run_after) - available_names
+            if missing_deps:
+                logger.warning(
+                    f"Wiki generator '{generator.generator_name}' has missing dependencies: "
+                    f"{missing_deps}. These generators are not registered and will be skipped."
+                )
+
+        # Build dependency graph for topological sort
+        # in_degree[name] = number of dependencies that must run first
+        in_degree: dict[str, int] = {g.generator_name: 0 for g in generators}
+        # dependents[name] = list of generators that depend on this one
+        dependents: dict[str, list[str]] = {g.generator_name: [] for g in generators}
+
+        for generator in generators:
+            for dep in generator.run_after:
+                if dep in available_names:
+                    in_degree[generator.generator_name] += 1
+                    dependents[dep].append(generator.generator_name)
+
+        # Kahn's algorithm for topological sort
+        # Start with generators that have no dependencies
+        # Sort by priority (higher first) within each level
+        ready = [g for g in generators if in_degree[g.generator_name] == 0]
+        ready.sort(key=lambda g: g.priority, reverse=True)
+
+        sorted_generators: list["WikiGeneratorPlugin"] = []
+        while ready:
+            # Take the highest priority generator from ready list
+            current = ready.pop(0)
+            sorted_generators.append(current)
+
+            # Update dependents
+            for dep_name in dependents[current.generator_name]:
+                in_degree[dep_name] -= 1
+                if in_degree[dep_name] == 0:
+                    # Insert in priority order
+                    dep_gen = by_name[dep_name]
+                    insert_idx = 0
+                    for i, g in enumerate(ready):
+                        if dep_gen.priority > g.priority:
+                            insert_idx = i
+                            break
+                        insert_idx = i + 1
+                    ready.insert(insert_idx, dep_gen)
+
+        # Check for cycles (some generators still have unresolved dependencies)
+        if len(sorted_generators) != len(generators):
+            unresolved = [g.generator_name for g in generators if g not in sorted_generators]
+            logger.error(
+                f"Circular dependency detected in wiki generators: {unresolved}. "
+                f"These generators will not run."
+            )
+
+        return sorted_generators
+
     async def _run_plugin_generators(
         self,
         ctx: _GenerationContext,
@@ -645,8 +724,8 @@ class WikiGenerator:
         if not generators:
             return
 
-        # Sort by priority (higher first), then handle run_after dependencies
-        generators.sort(key=lambda g: g.priority, reverse=True)
+        # Validate and sort generators respecting run_after dependencies
+        generators = self._sort_generators_by_dependencies(generators)
 
         logger.info(f"Running {len(generators)} wiki generator plugin(s)")
 

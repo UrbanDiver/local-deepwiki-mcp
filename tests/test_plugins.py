@@ -838,3 +838,202 @@ class TestWikiGeneratorPluginIntegration:
 
         assert ctx.pages_generated == 0
         assert len(ctx.pages) == 0
+
+    async def test_wiki_generator_respects_run_after_dependencies(self, tmp_path):
+        """Test that generators run in dependency order."""
+        from local_deepwiki.generators.wiki import WikiGenerator, _GenerationContext
+        from local_deepwiki.core.vectorstore import VectorStore
+        from local_deepwiki.models import IndexStatus
+        from unittest.mock import MagicMock
+
+        execution_order: list[str] = []
+
+        class DependentGenerator(WikiGeneratorPlugin):
+            def __init__(self, name: str, run_after: list[str]):
+                self._name = name
+                self._run_after = run_after
+
+            @property
+            def metadata(self) -> PluginMetadata:
+                return PluginMetadata(name=self._name, version="1.0.0")
+
+            @property
+            def generator_name(self) -> str:
+                return self._name
+
+            @property
+            def run_after(self) -> list[str]:
+                return self._run_after
+
+            async def generate(
+                self, index_status: IndexStatus, wiki_path: Path, context: dict[str, Any]
+            ) -> WikiGeneratorResult:
+                execution_order.append(self._name)
+                return WikiGeneratorResult(pages=[])
+
+        # Register generators with dependencies
+        # C depends on B, B depends on A
+        registry = get_plugin_registry()
+        registry.register_wiki_generator(DependentGenerator("gen-c", ["gen-b"]))
+        registry.register_wiki_generator(DependentGenerator("gen-a", []))
+        registry.register_wiki_generator(DependentGenerator("gen-b", ["gen-a"]))
+
+        mock_store = MagicMock(spec=VectorStore)
+        mock_store.embedding_provider = MagicMock()
+        mock_store.embedding_provider.get_dimension.return_value = 384
+        mock_store.get_main_definition_lines.return_value = {}
+
+        wiki_path = tmp_path / "wiki"
+        wiki_path.mkdir()
+
+        generator = WikiGenerator(wiki_path=wiki_path, vector_store=mock_store)
+
+        index_status = IndexStatus(
+            repo_path=str(tmp_path),
+            indexed_at=0.0,
+            total_files=0,
+            total_chunks=0,
+        )
+
+        ctx = _GenerationContext(
+            pages=[],
+            pages_generated=0,
+            pages_skipped=0,
+            all_source_files=[],
+            full_rebuild=True,
+        )
+
+        await generator._run_plugin_generators(ctx, index_status, None)
+
+        # A must run before B, B must run before C
+        assert execution_order.index("gen-a") < execution_order.index("gen-b")
+        assert execution_order.index("gen-b") < execution_order.index("gen-c")
+
+    async def test_wiki_generator_handles_missing_dependencies(self, tmp_path):
+        """Test that generators with missing dependencies still run (deps are skipped)."""
+        from local_deepwiki.generators.wiki import WikiGenerator, _GenerationContext
+        from local_deepwiki.core.vectorstore import VectorStore
+        from local_deepwiki.models import IndexStatus
+        from unittest.mock import MagicMock
+
+        executed = []
+
+        class DependentGenerator(WikiGeneratorPlugin):
+            @property
+            def metadata(self) -> PluginMetadata:
+                return PluginMetadata(name="dependent", version="1.0.0")
+
+            @property
+            def generator_name(self) -> str:
+                return "dependent"
+
+            @property
+            def run_after(self) -> list[str]:
+                return ["nonexistent-generator"]  # This doesn't exist
+
+            async def generate(
+                self, index_status: IndexStatus, wiki_path: Path, context: dict[str, Any]
+            ) -> WikiGeneratorResult:
+                executed.append("dependent")
+                return WikiGeneratorResult(pages=[])
+
+        registry = get_plugin_registry()
+        registry.register_wiki_generator(DependentGenerator())
+
+        mock_store = MagicMock(spec=VectorStore)
+        mock_store.embedding_provider = MagicMock()
+        mock_store.embedding_provider.get_dimension.return_value = 384
+        mock_store.get_main_definition_lines.return_value = {}
+
+        wiki_path = tmp_path / "wiki"
+        wiki_path.mkdir()
+
+        generator = WikiGenerator(wiki_path=wiki_path, vector_store=mock_store)
+
+        index_status = IndexStatus(
+            repo_path=str(tmp_path),
+            indexed_at=0.0,
+            total_files=0,
+            total_chunks=0,
+        )
+
+        ctx = _GenerationContext(
+            pages=[],
+            pages_generated=0,
+            pages_skipped=0,
+            all_source_files=[],
+            full_rebuild=True,
+        )
+
+        await generator._run_plugin_generators(ctx, index_status, None)
+
+        # Generator should still run even with missing dependency (warning logged)
+        assert "dependent" in executed
+
+    async def test_wiki_generator_handles_circular_dependencies(self, tmp_path):
+        """Test that circular dependencies prevent generators from running."""
+        from local_deepwiki.generators.wiki import WikiGenerator, _GenerationContext
+        from local_deepwiki.core.vectorstore import VectorStore
+        from local_deepwiki.models import IndexStatus
+        from unittest.mock import MagicMock
+
+        executed = []
+
+        class CircularGenerator(WikiGeneratorPlugin):
+            def __init__(self, name: str, run_after: list[str]):
+                self._name = name
+                self._run_after = run_after
+
+            @property
+            def metadata(self) -> PluginMetadata:
+                return PluginMetadata(name=self._name, version="1.0.0")
+
+            @property
+            def generator_name(self) -> str:
+                return self._name
+
+            @property
+            def run_after(self) -> list[str]:
+                return self._run_after
+
+            async def generate(
+                self, index_status: IndexStatus, wiki_path: Path, context: dict[str, Any]
+            ) -> WikiGeneratorResult:
+                executed.append(self._name)
+                return WikiGeneratorResult(pages=[])
+
+        # Create circular dependency: A -> B -> C -> A
+        registry = get_plugin_registry()
+        registry.register_wiki_generator(CircularGenerator("cycle-a", ["cycle-c"]))
+        registry.register_wiki_generator(CircularGenerator("cycle-b", ["cycle-a"]))
+        registry.register_wiki_generator(CircularGenerator("cycle-c", ["cycle-b"]))
+
+        mock_store = MagicMock(spec=VectorStore)
+        mock_store.embedding_provider = MagicMock()
+        mock_store.embedding_provider.get_dimension.return_value = 384
+        mock_store.get_main_definition_lines.return_value = {}
+
+        wiki_path = tmp_path / "wiki"
+        wiki_path.mkdir()
+
+        generator = WikiGenerator(wiki_path=wiki_path, vector_store=mock_store)
+
+        index_status = IndexStatus(
+            repo_path=str(tmp_path),
+            indexed_at=0.0,
+            total_files=0,
+            total_chunks=0,
+        )
+
+        ctx = _GenerationContext(
+            pages=[],
+            pages_generated=0,
+            pages_skipped=0,
+            all_source_files=[],
+            full_rebuild=True,
+        )
+
+        await generator._run_plugin_generators(ctx, index_status, None)
+
+        # None of the circular generators should have executed
+        assert len(executed) == 0, f"Expected no generators to run due to cycle, but got: {executed}"
