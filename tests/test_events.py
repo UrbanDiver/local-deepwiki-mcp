@@ -385,30 +385,49 @@ class TestHookRunner:
         return EventEmitter()
 
     @pytest.fixture
-    def runner(self, emitter: EventEmitter):
-        """Create a hook runner with emitter."""
-        return HookRunner(emitter)
+    def scripts_dir(self, tmp_path: Path):
+        """Create a temporary scripts directory."""
+        scripts = tmp_path / "hooks"
+        scripts.mkdir()
+        return scripts
 
-    def test_register_script(self, runner: HookRunner):
+    @pytest.fixture
+    def runner(self, emitter: EventEmitter, scripts_dir: Path):
+        """Create a hook runner with emitter and scripts_dir."""
+        return HookRunner(emitter, scripts_dir=scripts_dir)
+
+    def test_register_script(self, runner: HookRunner, scripts_dir: Path):
         """Test registering a script."""
-        runner.register_script(EventType.INDEX_COMPLETE, "/path/to/script.sh")
+        script = scripts_dir / "script.sh"
+        script.write_text("#!/bin/bash\necho hello")
+
+        runner.register_script(EventType.INDEX_COMPLETE, script)
         scripts = runner.list_scripts(EventType.INDEX_COMPLETE)
 
         assert EventType.INDEX_COMPLETE in scripts
-        assert Path("/path/to/script.sh") in scripts[EventType.INDEX_COMPLETE]
+        assert script.resolve() in scripts[EventType.INDEX_COMPLETE]
 
-    def test_register_multiple_scripts(self, runner: HookRunner):
+    def test_register_multiple_scripts(self, runner: HookRunner, scripts_dir: Path):
         """Test registering multiple scripts for same event."""
-        runner.register_script(EventType.INDEX_COMPLETE, "script1.sh")
-        runner.register_script(EventType.INDEX_COMPLETE, "script2.py")
+        script1 = scripts_dir / "script1.sh"
+        script1.write_text("#!/bin/bash\necho 1")
+        script2 = scripts_dir / "script2.py"
+        script2.write_text("print(2)")
+
+        runner.register_script(EventType.INDEX_COMPLETE, script1)
+        runner.register_script(EventType.INDEX_COMPLETE, script2)
 
         scripts = runner.list_scripts(EventType.INDEX_COMPLETE)
         assert len(scripts[EventType.INDEX_COMPLETE]) == 2
 
-    def test_unregister_script(self, runner: HookRunner):
+    def test_unregister_script(self, runner: HookRunner, scripts_dir: Path):
         """Test unregistering a script."""
-        runner.register_script(EventType.INDEX_COMPLETE, "script.sh")
-        result = runner.unregister_script(EventType.INDEX_COMPLETE, "script.sh")
+        script = scripts_dir / "script.sh"
+        script.write_text("#!/bin/bash\necho test")
+
+        runner.register_script(EventType.INDEX_COMPLETE, script)
+        # Unregister using the resolved path
+        result = runner.unregister_script(EventType.INDEX_COMPLETE, script.resolve())
 
         assert result is True
         scripts = runner.list_scripts(EventType.INDEX_COMPLETE)
@@ -419,23 +438,28 @@ class TestHookRunner:
         result = runner.unregister_script(EventType.INDEX_COMPLETE, "nonexistent.sh")
         assert result is False
 
-    def test_list_all_scripts(self, runner: HookRunner):
+    def test_list_all_scripts(self, runner: HookRunner, scripts_dir: Path):
         """Test listing all registered scripts."""
-        runner.register_script(EventType.INDEX_COMPLETE, "index.sh")
-        runner.register_script(EventType.WIKI_COMPLETE, "wiki.sh")
+        index_script = scripts_dir / "index.sh"
+        index_script.write_text("#!/bin/bash\necho index")
+        wiki_script = scripts_dir / "wiki.sh"
+        wiki_script.write_text("#!/bin/bash\necho wiki")
+
+        runner.register_script(EventType.INDEX_COMPLETE, index_script)
+        runner.register_script(EventType.WIKI_COMPLETE, wiki_script)
 
         all_scripts = runner.list_scripts()
 
         assert EventType.INDEX_COMPLETE in all_scripts
         assert EventType.WIKI_COMPLETE in all_scripts
 
-    async def test_script_execution(
-        self, emitter: EventEmitter, runner: HookRunner, tmp_path: Path
-    ):
+    async def test_script_execution(self, emitter: EventEmitter, scripts_dir: Path):
         """Test script is executed on event."""
+        runner = HookRunner(emitter, scripts_dir=scripts_dir)
+
         # Create a simple script that writes to a file
-        marker_file = tmp_path / "marker.txt"
-        script = tmp_path / "hook.sh"
+        marker_file = scripts_dir / "marker.txt"
+        script = scripts_dir / "hook.sh"
         script.write_text(f"#!/bin/bash\necho 'executed' > {marker_file}")
         script.chmod(0o755)
 
@@ -449,11 +473,13 @@ class TestHookRunner:
         assert marker_file.read_text().strip() == "executed"
 
     async def test_script_receives_env_vars(
-        self, emitter: EventEmitter, runner: HookRunner, tmp_path: Path
+        self, emitter: EventEmitter, scripts_dir: Path
     ):
         """Test script receives event data as environment variables."""
-        output_file = tmp_path / "output.txt"
-        script = tmp_path / "hook.sh"
+        runner = HookRunner(emitter, scripts_dir=scripts_dir)
+
+        output_file = scripts_dir / "output.txt"
+        script = scripts_dir / "hook.sh"
         script.write_text(
             f"#!/bin/bash\necho $DEEPWIKI_EVENT_TYPE > {output_file}"
         )
@@ -467,14 +493,62 @@ class TestHookRunner:
         assert output_file.exists()
         assert "index.complete" in output_file.read_text()
 
-    async def test_missing_script_doesnt_crash(
-        self, emitter: EventEmitter, runner: HookRunner
+    def test_script_outside_scripts_dir_rejected(
+        self, emitter: EventEmitter, scripts_dir: Path, tmp_path: Path
     ):
-        """Test missing script file doesn't crash emit."""
-        runner.register_script(EventType.INDEX_COMPLETE, "/nonexistent/script.sh")
+        """Test that scripts outside the allowed directory are rejected."""
+        runner = HookRunner(emitter, scripts_dir=scripts_dir)
 
-        # Should not raise
-        await emitter.emit(EventType.INDEX_COMPLETE)
+        # Create script outside the scripts_dir
+        outside_script = tmp_path / "malicious.sh"
+        outside_script.write_text("#!/bin/bash\nrm -rf /")
+
+        with pytest.raises(ValueError, match="must be within"):
+            runner.register_script(EventType.INDEX_COMPLETE, outside_script)
+
+    def test_nonexistent_script_rejected(
+        self, emitter: EventEmitter, scripts_dir: Path
+    ):
+        """Test that registering a non-existent script raises ValueError."""
+        runner = HookRunner(emitter, scripts_dir=scripts_dir)
+
+        with pytest.raises(ValueError, match="Script not found"):
+            runner.register_script(
+                EventType.INDEX_COMPLETE, scripts_dir / "nonexistent.sh"
+            )
+
+    def test_invalid_extension_rejected(
+        self, emitter: EventEmitter, scripts_dir: Path
+    ):
+        """Test that scripts with invalid extensions are rejected."""
+        runner = HookRunner(emitter, scripts_dir=scripts_dir)
+
+        bad_script = scripts_dir / "script.exe"
+        bad_script.write_text("malicious content")
+
+        with pytest.raises(ValueError, match="Invalid script extension"):
+            runner.register_script(EventType.INDEX_COMPLETE, bad_script)
+
+    def test_allowed_extensions(self, emitter: EventEmitter, scripts_dir: Path):
+        """Test all allowed extensions can be registered."""
+        runner = HookRunner(emitter, scripts_dir=scripts_dir)
+
+        for ext in HookRunner.ALLOWED_EXTENSIONS:
+            script = scripts_dir / f"test{ext}"
+            script.write_text("# test script")
+
+            # Should not raise
+            runner.register_script(EventType.INDEX_COMPLETE, script)
+
+    def test_directory_rejected(self, emitter: EventEmitter, scripts_dir: Path):
+        """Test that directories cannot be registered as scripts."""
+        runner = HookRunner(emitter, scripts_dir=scripts_dir)
+
+        subdir = scripts_dir / "subdir.sh"  # Directory with .sh extension
+        subdir.mkdir()
+
+        with pytest.raises(ValueError, match="not a regular file"):
+            runner.register_script(EventType.INDEX_COMPLETE, subdir)
 
 
 class TestGlobalEventEmitter:

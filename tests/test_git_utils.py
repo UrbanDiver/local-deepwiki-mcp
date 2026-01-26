@@ -10,10 +10,13 @@ import pytest
 from local_deepwiki.core.git_utils import (
     BlameInfo,
     EntityBlameInfo,
+    GitPathValidationError,
     GitRepoInfo,
     StaleInfo,
     _parse_all_porcelain_blame,
     _parse_line_blame_map,
+    _validate_git_path,
+    _validate_repo_path,
     build_source_url,
     check_page_staleness,
     format_blame_date,
@@ -28,6 +31,86 @@ from local_deepwiki.core.git_utils import (
     is_github_repo,
     parse_remote_url,
 )
+
+
+class TestValidateGitPath:
+    """Tests for _validate_git_path function (security validation)."""
+
+    def test_valid_path_returns_resolved_path(self, tmp_path: Path) -> None:
+        """Test valid path returns absolute Path object."""
+        test_file = tmp_path / "test.txt"
+        test_file.write_text("test")
+        result = _validate_git_path(test_file)
+        assert result.is_absolute()
+        assert result.exists()
+
+    def test_rejects_path_starting_with_dash(self, tmp_path: Path) -> None:
+        """Test rejects paths starting with dash (option injection prevention)."""
+        with pytest.raises(GitPathValidationError, match="starts with '-'"):
+            _validate_git_path("-malicious")
+
+    def test_rejects_path_with_null_byte(self, tmp_path: Path) -> None:
+        """Test rejects paths containing null bytes."""
+        with pytest.raises(GitPathValidationError, match="null byte"):
+            _validate_git_path("path\x00with_null")
+
+    def test_rejects_nonexistent_path(self, tmp_path: Path) -> None:
+        """Test rejects paths that don't exist."""
+        with pytest.raises(GitPathValidationError, match="does not exist"):
+            _validate_git_path(tmp_path / "nonexistent")
+
+    def test_accepts_directory(self, tmp_path: Path) -> None:
+        """Test accepts directory paths."""
+        result = _validate_git_path(tmp_path)
+        assert result == tmp_path.resolve()
+
+    def test_accepts_file(self, tmp_path: Path) -> None:
+        """Test accepts file paths."""
+        test_file = tmp_path / "file.txt"
+        test_file.write_text("content")
+        result = _validate_git_path(test_file)
+        assert result == test_file.resolve()
+
+
+class TestValidateRepoPath:
+    """Tests for _validate_repo_path function (repository validation)."""
+
+    def test_valid_repo_returns_resolved_path(self, tmp_path: Path) -> None:
+        """Test valid git repo returns absolute Path object."""
+        (tmp_path / ".git").mkdir()
+        result = _validate_repo_path(tmp_path)
+        assert result.is_absolute()
+        assert result.exists()
+
+    def test_rejects_file_path(self, tmp_path: Path) -> None:
+        """Test rejects file paths (must be directory)."""
+        test_file = tmp_path / "file.txt"
+        test_file.write_text("content")
+        with pytest.raises(GitPathValidationError, match="not a directory"):
+            _validate_repo_path(test_file)
+
+    def test_rejects_non_git_directory(self, tmp_path: Path) -> None:
+        """Test rejects directory without .git."""
+        with pytest.raises(GitPathValidationError, match="not inside a git repository"):
+            _validate_repo_path(tmp_path)
+
+    def test_accepts_subdirectory_in_git_repo(self, tmp_path: Path) -> None:
+        """Test accepts subdirectory inside a git repository."""
+        (tmp_path / ".git").mkdir()
+        subdir = tmp_path / "src"
+        subdir.mkdir()
+        result = _validate_repo_path(subdir)
+        assert result == subdir.resolve()
+
+    def test_rejects_path_starting_with_dash(self, tmp_path: Path) -> None:
+        """Test inherits dash rejection from _validate_git_path."""
+        with pytest.raises(GitPathValidationError, match="starts with '-'"):
+            _validate_repo_path("-malicious")
+
+    def test_rejects_path_with_null_byte(self, tmp_path: Path) -> None:
+        """Test inherits null byte rejection from _validate_git_path."""
+        with pytest.raises(GitPathValidationError, match="null byte"):
+            _validate_repo_path("path\x00with_null")
 
 
 class TestParseRemoteUrl:
@@ -298,6 +381,8 @@ class TestGetDefaultBranch:
 
     def test_gets_branch_from_remote_head(self, tmp_path: Path) -> None:
         """Test getting branch from remote HEAD when in detached state."""
+        # Create .git directory so path validation passes
+        (tmp_path / ".git").mkdir()
         with patch("subprocess.run") as mock_run:
             # First call returns detached HEAD
             mock_result1 = subprocess.CompletedProcess(

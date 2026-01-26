@@ -16,6 +16,86 @@ from local_deepwiki.logging import get_logger
 logger = get_logger(__name__)
 
 
+class GitPathValidationError(ValueError):
+    """Raised when a path fails git-specific validation."""
+
+    pass
+
+
+def _validate_git_path(path: str | Path) -> Path:
+    """Validate a path for safe use in git commands.
+
+    Prevents git option injection and other path-based attacks.
+
+    Args:
+        path: Path to validate.
+
+    Returns:
+        Validated absolute Path object.
+
+    Raises:
+        GitPathValidationError: If the path fails validation.
+    """
+    # Check for null bytes first (could truncate path in C-based git)
+    # Must check before Path operations since they raise ValueError on null bytes
+    if "\x00" in str(path):
+        raise GitPathValidationError(f"Path contains null byte: {path!r}")
+
+    # Convert to Path and resolve to absolute
+    path_obj = Path(path).resolve()
+
+    # Check for option injection (paths starting with -)
+    # After resolve(), check both the full path and the original input
+    if str(path).lstrip().startswith("-"):
+        raise GitPathValidationError(
+            f"Path starts with '-' which could be interpreted as git option: {path!r}"
+        )
+
+    # Check that the path exists
+    if not path_obj.exists():
+        raise GitPathValidationError(f"Path does not exist: {path_obj}")
+
+    return path_obj
+
+
+def _validate_repo_path(repo_path: str | Path) -> Path:
+    """Validate a repository path for safe use in git commands.
+
+    Performs all checks from _validate_git_path plus repository-specific checks.
+
+    Args:
+        repo_path: Path to the repository root.
+
+    Returns:
+        Validated absolute Path object.
+
+    Raises:
+        GitPathValidationError: If the path fails validation.
+    """
+    validated = _validate_git_path(repo_path)
+
+    # Must be a directory
+    if not validated.is_dir():
+        raise GitPathValidationError(f"Repository path is not a directory: {validated}")
+
+    # Check if it's a git repository (has .git or is inside one)
+    # Walk up to find .git directory
+    check_path = validated
+    found_git = False
+    while check_path != check_path.parent:
+        if (check_path / ".git").exists():
+            found_git = True
+            break
+        check_path = check_path.parent
+
+    if not found_git:
+        raise GitPathValidationError(
+            f"Path is not inside a git repository: {validated}"
+        )
+
+    return validated
+
+
 @dataclass
 class GitRepoInfo:
     """Information about a git repository."""
@@ -37,16 +117,17 @@ def get_git_remote_url(repo_path: Path) -> str | None:
         Remote URL string or None if not a git repo or no remote.
     """
     try:
+        validated_repo = _validate_repo_path(repo_path)
         result = subprocess.run(
             ["git", "config", "--get", "remote.origin.url"],
-            cwd=repo_path,
+            cwd=validated_repo,
             capture_output=True,
             text=True,
             timeout=5,
         )
         if result.returncode == 0:
             return result.stdout.strip()
-    except (subprocess.TimeoutExpired, FileNotFoundError, OSError) as e:
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError, GitPathValidationError) as e:
         logger.debug(f"Failed to get git remote URL: {e}")
     return None
 
@@ -105,11 +186,17 @@ def get_default_branch(repo_path: Path) -> str:
     Returns:
         Branch name string.
     """
+    # Validate repo path once for both operations
+    try:
+        validated_repo = _validate_repo_path(repo_path)
+    except GitPathValidationError:
+        return "main"
+
     # Try to get current branch
     try:
         result = subprocess.run(
             ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-            cwd=repo_path,
+            cwd=validated_repo,
             capture_output=True,
             text=True,
             timeout=5,
@@ -125,7 +212,7 @@ def get_default_branch(repo_path: Path) -> str:
     try:
         result = subprocess.run(
             ["git", "symbolic-ref", "refs/remotes/origin/HEAD"],
-            cwd=repo_path,
+            cwd=validated_repo,
             capture_output=True,
             text=True,
             timeout=5,
@@ -272,13 +359,19 @@ def get_line_blame(
         BlameInfo or None if blame fails.
     """
     try:
+        validated_repo = _validate_repo_path(repo_path)
+        # Validate file_path relative to repo (construct full path for validation)
+        full_file_path = validated_repo / file_path
+        _validate_git_path(full_file_path)
+
         # Use porcelain format for easy parsing
+        # Use -- separator to prevent option injection from file_path
         result = subprocess.run(
             [
                 "git", "blame", "-L", f"{line_number},{line_number}",
-                "--porcelain", file_path
+                "--porcelain", "--", file_path
             ],
-            cwd=repo_path,
+            cwd=validated_repo,
             capture_output=True,
             text=True,
             timeout=10,
@@ -288,7 +381,7 @@ def get_line_blame(
 
         return _parse_porcelain_blame(result.stdout)
 
-    except (subprocess.TimeoutExpired, FileNotFoundError, OSError) as e:
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError, GitPathValidationError) as e:
         logger.debug(f"Failed to get git blame: {e}")
         return None
 
@@ -313,12 +406,18 @@ def get_range_blame(
         BlameInfo for the most recently modified line, or None.
     """
     try:
+        validated_repo = _validate_repo_path(repo_path)
+        # Validate file_path relative to repo
+        full_file_path = validated_repo / file_path
+        _validate_git_path(full_file_path)
+
+        # Use -- separator to prevent option injection from file_path
         result = subprocess.run(
             [
                 "git", "blame", "-L", f"{start_line},{end_line}",
-                "--porcelain", file_path
+                "--porcelain", "--", file_path
             ],
-            cwd=repo_path,
+            cwd=validated_repo,
             capture_output=True,
             text=True,
             timeout=30,
@@ -334,7 +433,7 @@ def get_range_blame(
         # Return the most recently modified entry
         return max(entries, key=lambda e: e.date)
 
-    except (subprocess.TimeoutExpired, FileNotFoundError, OSError) as e:
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError, GitPathValidationError) as e:
         logger.debug(f"Failed to get git blame for range: {e}")
         return None
 
@@ -437,10 +536,16 @@ def get_file_entity_blame(
         return []
 
     try:
+        validated_repo = _validate_repo_path(repo_path)
+        # Validate file_path relative to repo
+        full_file_path = validated_repo / file_path
+        _validate_git_path(full_file_path)
+
         # Get blame for entire file
+        # Use -- separator to prevent option injection from file_path
         result = subprocess.run(
-            ["git", "blame", "--porcelain", file_path],
-            cwd=repo_path,
+            ["git", "blame", "--porcelain", "--", file_path],
+            cwd=validated_repo,
             capture_output=True,
             text=True,
             timeout=60,
@@ -479,7 +584,7 @@ def get_file_entity_blame(
 
         return entity_blames
 
-    except (subprocess.TimeoutExpired, FileNotFoundError, OSError) as e:
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError, GitPathValidationError) as e:
         logger.debug(f"Failed to get file entity blame: {e}")
         return []
 
@@ -597,9 +702,15 @@ def get_file_last_modified(repo_path: Path, file_path: str) -> datetime | None:
         datetime of last modification, or None if not in git or error.
     """
     try:
+        validated_repo = _validate_repo_path(repo_path)
+        # Validate file_path relative to repo
+        full_file_path = validated_repo / file_path
+        _validate_git_path(full_file_path)
+
+        # Use -- separator to prevent option injection from file_path
         result = subprocess.run(
             ["git", "log", "-1", "--format=%ct", "--", file_path],
-            cwd=repo_path,
+            cwd=validated_repo,
             capture_output=True,
             text=True,
             timeout=10,
@@ -607,7 +718,7 @@ def get_file_last_modified(repo_path: Path, file_path: str) -> datetime | None:
         if result.returncode == 0 and result.stdout.strip():
             timestamp = int(result.stdout.strip())
             return datetime.fromtimestamp(timestamp)
-    except (subprocess.TimeoutExpired, FileNotFoundError, OSError, ValueError) as e:
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError, ValueError, GitPathValidationError) as e:
         logger.debug(f"Failed to get last modified date for {file_path}: {e}")
     return None
 

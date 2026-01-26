@@ -86,6 +86,103 @@ logger = get_logger(__name__)
 # Type alias for tool handler functions
 ToolHandler = Callable[[dict[str, Any]], Awaitable[list[TextContent]]]
 
+# Forbidden directories for export operations (security: prevent writing to sensitive locations)
+# Note: /var and /private/var are excluded because temp directories live there
+FORBIDDEN_EXPORT_DIRS = frozenset({
+    "/etc",
+    "/usr",
+    "/bin",
+    "/sbin",
+    "/System",
+    "/Library",
+    "/private/etc",
+    str(Path.home() / ".ssh"),
+})
+
+# Additional forbidden prefixes under /var that should be blocked
+# (but not /var/folders or /var/tmp which are user temp directories)
+FORBIDDEN_VAR_SUBDIRS = frozenset({
+    "/var/log",
+    "/var/db",
+    "/var/root",
+    "/var/run",
+    "/private/var/log",
+    "/private/var/db",
+    "/private/var/root",
+    "/private/var/run",
+})
+
+
+def _validate_export_path(output_path: Path, wiki_path: Path) -> Path:
+    """Validate that export output path is not in a sensitive system directory.
+
+    Args:
+        output_path: The requested output path (must be resolved to absolute).
+        wiki_path: The source wiki path (for context in error messages).
+
+    Returns:
+        The validated output path.
+
+    Raises:
+        ValidationError: If the output path is in a forbidden directory.
+    """
+    resolved = output_path.resolve()
+    resolved_str = str(resolved)
+
+    # Check against forbidden directories
+    for forbidden in FORBIDDEN_EXPORT_DIRS:
+        if resolved_str == forbidden or resolved_str.startswith(forbidden + "/"):
+            raise ValidationError(
+                message=f"Cannot export to system directory: {forbidden}",
+                hint="Choose an output path in your project or home directory.",
+                field="output_path",
+                value=str(output_path),
+            )
+
+    # Check against forbidden /var subdirectories (but allow /var/folders, /var/tmp for temp files)
+    for forbidden in FORBIDDEN_VAR_SUBDIRS:
+        if resolved_str == forbidden or resolved_str.startswith(forbidden + "/"):
+            raise ValidationError(
+                message=f"Cannot export to system directory: {forbidden}",
+                hint="Choose an output path in your project or home directory.",
+                field="output_path",
+                value=str(output_path),
+            )
+
+    # Check for ~/.config (allow only ~/.config/local-deepwiki)
+    config_dir = Path.home() / ".config"
+    local_deepwiki_config = config_dir / "local-deepwiki"
+    if resolved_str.startswith(str(config_dir) + "/"):
+        if not resolved_str.startswith(str(local_deepwiki_config) + "/") and resolved != local_deepwiki_config:
+            raise ValidationError(
+                message=f"Cannot export to config directory: {config_dir}",
+                hint="Choose an output path in your project or home directory.",
+                field="output_path",
+                value=str(output_path),
+            )
+
+    # Ensure parent directory exists or can be created
+    parent = resolved.parent
+    if not parent.exists():
+        try:
+            parent.mkdir(parents=True, exist_ok=True)
+        except PermissionError as e:
+            raise ValidationError(
+                message=f"Cannot create output directory: {parent}",
+                hint="Ensure you have write permissions to the parent directory.",
+                field="output_path",
+                value=str(output_path),
+            ) from e
+        except OSError as e:
+            raise ValidationError(
+                message=f"Failed to create output directory: {e}",
+                hint="Check that the path is valid and accessible.",
+                field="output_path",
+                value=str(output_path),
+            ) from e
+
+    return resolved
+
 
 def handle_tool_errors(func: ToolHandler) -> ToolHandler:
     """Decorator for consistent error handling in tool handlers.
@@ -1149,8 +1246,13 @@ async def handle_export_wiki_html(args: dict[str, Any]) -> list[TextContent]:
     if not wiki_path.exists():
         raise path_not_found_error(str(wiki_path), "wiki")
 
+    # Determine and validate output path
     if output_path:
-        output_path = Path(output_path).resolve()
+        output_path = _validate_export_path(Path(output_path), wiki_path)
+    else:
+        output_path = wiki_path.parent / f"{wiki_path.name}_html"
+        # Validate default path as well
+        output_path = _validate_export_path(output_path, wiki_path)
 
     # Get subject ID for audit logging
     subject = controller.get_current_subject()
@@ -1159,7 +1261,7 @@ async def handle_export_wiki_html(args: dict[str, Any]) -> list[TextContent]:
     start_time = time.time()
 
     # Audit: Log export operation started
-    actual_output = output_path or (wiki_path.parent / f"{wiki_path.name}_html")
+    actual_output = output_path
     audit_logger.log_export_operation(
         subject_id=subject_id,
         wiki_path=str(wiki_path),
@@ -1234,8 +1336,17 @@ async def handle_export_wiki_pdf(args: dict[str, Any]) -> list[TextContent]:
     if not wiki_path.exists():
         raise path_not_found_error(str(wiki_path), "wiki")
 
+    # Determine and validate output path
     if output_path:
-        output_path = Path(output_path).resolve()
+        output_path = _validate_export_path(Path(output_path), wiki_path)
+    else:
+        # Determine default path based on single_file mode
+        if single_file:
+            output_path = wiki_path.parent / f"{wiki_path.name}.pdf"
+        else:
+            output_path = wiki_path.parent / f"{wiki_path.name}_pdfs"
+        # Validate default path as well
+        output_path = _validate_export_path(output_path, wiki_path)
 
     # Get subject ID for audit logging
     subject = controller.get_current_subject()
@@ -1243,11 +1354,7 @@ async def handle_export_wiki_pdf(args: dict[str, Any]) -> list[TextContent]:
     audit_logger = get_audit_logger()
     start_time = time.time()
 
-    # Determine actual output path for audit logging
-    if single_file:
-        actual_output = output_path or (wiki_path.parent / f"{wiki_path.name}.pdf")
-    else:
-        actual_output = output_path or (wiki_path.parent / f"{wiki_path.name}_pdfs")
+    actual_output = output_path
 
     # Audit: Log export operation started
     audit_logger.log_export_operation(

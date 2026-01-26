@@ -768,6 +768,7 @@ class HookRunner:
     """Runner for external hook scripts.
 
     Allows registering shell commands or Python scripts to run on events.
+    Scripts must be located within an allowed directory for security.
 
     Example:
         runner = HookRunner(emitter)
@@ -775,14 +776,77 @@ class HookRunner:
         runner.register_script(EventType.WIKI_COMPLETE, "deploy.py")
     """
 
-    def __init__(self, emitter: EventEmitter) -> None:
+    ALLOWED_EXTENSIONS: set[str] = {".sh", ".py", ".js", ".ts"}
+
+    def __init__(
+        self,
+        emitter: EventEmitter,
+        scripts_dir: Path | str | None = None,
+    ) -> None:
         """Initialize the hook runner.
 
         Args:
             emitter: The event emitter to subscribe to.
+            scripts_dir: Directory where hook scripts must be located.
+                        Defaults to ~/.config/local-deepwiki/hooks.
         """
         self._emitter = emitter
         self._scripts: dict[EventType, list[Path]] = {}
+
+        if scripts_dir is None:
+            self._scripts_dir = Path.home() / ".config" / "local-deepwiki" / "hooks"
+        else:
+            self._scripts_dir = Path(scripts_dir).resolve()
+
+    def _validate_script_path(self, script_path: Path) -> Path:
+        """Validate that a script path is safe to execute.
+
+        Args:
+            script_path: Path to the script file.
+
+        Returns:
+            The resolved absolute path if valid.
+
+        Raises:
+            ValueError: If the script path fails validation.
+        """
+        resolved = script_path.resolve()
+
+        # Check script is within allowed directory
+        try:
+            resolved.relative_to(self._scripts_dir)
+        except ValueError:
+            raise ValueError(
+                f"Script must be within {self._scripts_dir}, got {resolved}"
+            )
+
+        # Check the file exists
+        if not resolved.exists():
+            raise ValueError(f"Script not found: {resolved}")
+
+        # Check it's a regular file (not directory, not symlink pointing outside)
+        if not resolved.is_file():
+            raise ValueError(f"Script is not a regular file: {resolved}")
+
+        # For symlinks, verify the target is also within the allowed directory
+        if script_path.is_symlink():
+            target = script_path.resolve()
+            try:
+                target.relative_to(self._scripts_dir)
+            except ValueError:
+                raise ValueError(
+                    f"Symlink target must be within {self._scripts_dir}, "
+                    f"got {target}"
+                )
+
+        # Check extension
+        if resolved.suffix.lower() not in self.ALLOWED_EXTENSIONS:
+            raise ValueError(
+                f"Invalid script extension: {resolved.suffix}. "
+                f"Allowed: {', '.join(sorted(self.ALLOWED_EXTENSIONS))}"
+            )
+
+        return resolved
 
     def register_script(
         self,
@@ -794,13 +858,18 @@ class HookRunner:
 
         Args:
             event_type: The event type to trigger the script.
-            script_path: Path to the script file.
+            script_path: Path to the script file. Must be within the allowed
+                        scripts directory.
             priority: Handler priority (default -100, runs after other handlers).
+
+        Raises:
+            ValueError: If the script path fails security validation.
         """
         if isinstance(event_type, str):
             event_type = EventType(event_type)
 
         path = Path(script_path)
+        validated_path = self._validate_script_path(path)
 
         if event_type not in self._scripts:
             self._scripts[event_type] = []
@@ -811,8 +880,8 @@ class HookRunner:
 
             self._emitter.add_handler(event_type, run_scripts, priority)
 
-        self._scripts[event_type].append(path)
-        logger.info(f"Registered hook script for {event_type}: {path}")
+        self._scripts[event_type].append(validated_path)
+        logger.info(f"Registered hook script for {event_type}: {validated_path}")
 
     async def _run_scripts_for_event(self, event: Event) -> None:
         """Run all scripts registered for an event.
