@@ -198,3 +198,180 @@ def validate_fuzzy_weight(weight: float | None) -> float:
     if weight < 0.0 or weight > 1.0:
         raise ValueError(f"fuzzy_weight must be between 0.0 and 1.0, got {weight}")
     return float(weight)
+
+
+# =============================================================================
+# Phase 3: Resource Limits and Input Size Validation (CWE-400 Prevention)
+# =============================================================================
+
+from pathlib import Path
+
+
+class ResourceLimits:
+    """Resource consumption limits for security (CWE-400 prevention).
+
+    These limits prevent denial of service attacks via resource exhaustion.
+    All limits are intentionally conservative to protect system resources.
+    """
+
+    # Query parameters
+    MAX_QUERY_LENGTH = 5000  # Characters
+    MAX_QUESTION_LENGTH = 2000  # Characters
+
+    # Repository indexing
+    MAX_REPO_SIZE = 1_000_000_000  # 1GB
+    MAX_FILES_PER_REPO = 50_000
+    MAX_FILE_SIZE = 50_000_000  # 50MB per file
+
+    # Deep research
+    MAX_SUB_QUESTIONS = 20
+    MAX_RESEARCH_DEPTH = 5
+    MAX_CONTEXT_CHUNKS = 500
+
+    # Export operations
+    MAX_PDF_PAGES = 10_000
+    MAX_HTML_SIZE = 100_000_000  # 100MB
+
+
+# Valid deep research presets
+VALID_RESEARCH_PRESETS = {"quick", "default", "thorough"}
+
+
+def validate_query_parameters(
+    query: str,
+    repo_path: str,
+    max_results: int,
+) -> None:
+    """Validate query parameters against resource limits.
+
+    Ensures query string length, repository path validity, and result
+    count are within acceptable bounds to prevent resource exhaustion.
+
+    Args:
+        query: The search query string.
+        repo_path: Path to the repository.
+        max_results: Maximum number of results to return.
+
+    Raises:
+        ValueError: If any parameter violates resource limits.
+    """
+    # Validate query length
+    if len(query) > ResourceLimits.MAX_QUERY_LENGTH:
+        raise ValueError(
+            f"Query exceeds maximum length ({ResourceLimits.MAX_QUERY_LENGTH} characters)"
+        )
+
+    if len(query) < 1:
+        raise ValueError("Query cannot be empty")
+
+    # Validate repo_path exists and is a directory
+    repo_path_obj = Path(repo_path)
+    if not repo_path_obj.exists():
+        raise ValueError(f"Repository path does not exist: {repo_path}")
+
+    if not repo_path_obj.is_dir():
+        raise ValueError(f"Repository path is not a directory: {repo_path}")
+
+    # Validate max_results is in acceptable range
+    if max_results < 1 or max_results > ResourceLimits.MAX_CONTEXT_CHUNKS:
+        raise ValueError(
+            f"max_results must be between 1 and {ResourceLimits.MAX_CONTEXT_CHUNKS}"
+        )
+
+
+def validate_index_parameters(
+    repo_path: str,
+) -> tuple[int, int]:
+    """Validate repository indexing parameters.
+
+    Scans the repository to ensure it doesn't exceed size limits.
+    Checks total repository size, file count, and individual file sizes.
+
+    Args:
+        repo_path: Path to the repository to index.
+
+    Returns:
+        Tuple of (total_size, file_count) for the repository.
+
+    Raises:
+        ValueError: If repository exceeds any resource limits.
+    """
+    repo_path_obj = Path(repo_path)
+    total_size = 0
+    file_count = 0
+
+    for file_path in repo_path_obj.rglob("*"):
+        if file_path.is_file():
+            try:
+                file_size = file_path.stat().st_size
+            except OSError:
+                # Skip files that can't be stat'd (permissions, etc.)
+                continue
+
+            # Check individual file size
+            if file_size > ResourceLimits.MAX_FILE_SIZE:
+                raise ValueError(
+                    f"File too large: {file_path} ({file_size:,} bytes, "
+                    f"max {ResourceLimits.MAX_FILE_SIZE:,})"
+                )
+
+            total_size += file_size
+            file_count += 1
+
+            # Check total repository size (early exit)
+            if total_size > ResourceLimits.MAX_REPO_SIZE:
+                raise ValueError(
+                    f"Repository exceeds maximum size "
+                    f"({ResourceLimits.MAX_REPO_SIZE:,} bytes)"
+                )
+
+            # Check file count (early exit)
+            if file_count > ResourceLimits.MAX_FILES_PER_REPO:
+                raise ValueError(
+                    f"Repository exceeds maximum file count "
+                    f"({ResourceLimits.MAX_FILES_PER_REPO:,} files)"
+                )
+
+    return total_size, file_count
+
+
+def validate_deep_research_parameters(
+    question: str,
+    preset: str | None,
+    max_chunks: int,
+) -> None:
+    """Validate deep research parameters.
+
+    Ensures question length, preset validity, and chunk count are
+    within acceptable bounds for deep research operations.
+
+    Args:
+        question: The research question.
+        preset: Research preset (quick/default/thorough) or None.
+        max_chunks: Maximum number of context chunks to use.
+
+    Raises:
+        ValueError: If any parameter violates resource limits.
+    """
+    # Validate question length
+    if len(question) > ResourceLimits.MAX_QUESTION_LENGTH:
+        raise ValueError(
+            f"Question exceeds maximum length "
+            f"({ResourceLimits.MAX_QUESTION_LENGTH} characters)"
+        )
+
+    if len(question) < 1:
+        raise ValueError("Question cannot be empty")
+
+    # Validate preset if provided
+    if preset is not None and preset not in VALID_RESEARCH_PRESETS:
+        raise ValueError(
+            f"Invalid preset: '{preset}'. "
+            f"Valid options: {sorted(VALID_RESEARCH_PRESETS)}"
+        )
+
+    # Validate max_chunks is in acceptable range
+    if max_chunks < 1 or max_chunks > ResourceLimits.MAX_CONTEXT_CHUNKS:
+        raise ValueError(
+            f"max_chunks must be between 1 and {ResourceLimits.MAX_CONTEXT_CHUNKS}"
+        )

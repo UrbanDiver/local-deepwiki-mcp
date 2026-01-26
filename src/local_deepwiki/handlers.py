@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import time
 import uuid
 from functools import wraps
 from pathlib import Path
@@ -57,6 +58,7 @@ from local_deepwiki.progress import (
 )
 
 from local_deepwiki.config import get_config
+from local_deepwiki.core.audit import get_audit_logger
 from local_deepwiki.core.indexer import RepositoryIndexer
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.generators.wiki import generate_wiki
@@ -71,9 +73,12 @@ from local_deepwiki.security import (
 from local_deepwiki.validation import (
     MAX_WIKI_PAGE_SIZE,
     validate_chunk_type,
+    validate_deep_research_parameters,
+    validate_index_parameters,
     validate_language,
     validate_languages_list,
     validate_path_pattern,
+    validate_query_parameters,
 )
 
 logger = get_logger(__name__)
@@ -202,7 +207,27 @@ async def _handle_index_repository_impl(
         raise ValueError(str(e)) from e
 
     repo_path = Path(validated.repo_path).resolve()
-    logger.info(f"Indexing repository: {repo_path}")
+
+    # Validate input size limits (CWE-400 prevention)
+    total_size, file_count = validate_index_parameters(str(repo_path))
+    logger.info(
+        f"Indexing repository: {repo_path} "
+        f"({total_size:,} bytes, {file_count:,} files)"
+    )
+
+    # Get subject ID for audit logging
+    subject = controller.get_current_subject()
+    subject_id = subject.identifier if subject else "anonymous"
+
+    # Audit: Log index operation started
+    audit_logger = get_audit_logger()
+    start_time = time.time()
+    audit_logger.log_index_operation(
+        subject_id=subject_id,
+        repo_path=str(repo_path),
+        operation="started",
+        success=True,
+    )
 
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
@@ -362,10 +387,33 @@ async def _handle_index_repository_impl(
         # Complete operation in registry (records timing for future ETA predictions)
         registry.complete_operation(operation_id, record_timing=True)
 
-    except Exception:
+    except Exception as e:
         # Clean up operation on error
         registry.complete_operation(operation_id, record_timing=False)
+
+        # Audit: Log index operation failed
+        duration_ms = int((time.time() - start_time) * 1000)
+        audit_logger.log_index_operation(
+            subject_id=subject_id,
+            repo_path=str(repo_path),
+            operation="failed",
+            success=False,
+            duration_ms=duration_ms,
+            error_message=str(e),
+        )
         raise
+
+    # Audit: Log index operation completed
+    duration_ms = int((time.time() - start_time) * 1000)
+    audit_logger.log_index_operation(
+        subject_id=subject_id,
+        repo_path=str(repo_path),
+        operation="completed",
+        success=True,
+        files_processed=status.total_files,
+        chunks_created=status.total_chunks,
+        duration_ms=duration_ms,
+    )
 
     # Build result with ETA information
     # Combine notifier messages with sync callback messages for full history
@@ -405,6 +453,15 @@ async def handle_ask_question(args: dict[str, Any]) -> list[TextContent]:
     repo_path = Path(validated.repo_path).resolve()
     question = validated.question
     max_context = validated.max_context
+
+    # Validate input size limits (CWE-400 prevention)
+    validate_query_parameters(question, str(repo_path), max_context)
+
+    # Get subject ID for audit logging
+    subject = controller.get_current_subject()
+    subject_id = subject.identifier if subject else "anonymous"
+    audit_logger = get_audit_logger()
+    start_time = time.time()
 
     logger.info(f"Question about {repo_path}: {question[:100]}...")
     logger.debug(f"Max context chunks: {max_context}")
@@ -475,6 +532,18 @@ Provide a clear, accurate answer based only on the code provided. If the code do
             for r in search_results
         ],
     }
+
+    # Audit: Log query execution success
+    duration_ms = int((time.time() - start_time) * 1000)
+    audit_logger.log_query_execution(
+        subject_id=subject_id,
+        repo_path=str(repo_path),
+        query=question,
+        success=True,
+        query_type="ask_question",
+        chunks_returned=len(search_results),
+        duration_ms=duration_ms,
+    )
 
     logger.info(f"Generated answer with {len(search_results)} sources")
     return [TextContent(type="text", text=json.dumps(result, indent=2))]
@@ -557,6 +626,9 @@ def _setup_deep_research_config(
     max_chunks = validated.max_chunks
     preset = validated.preset
     resume_research_id = validated.resume_research_id
+
+    # Validate input size limits (CWE-400 prevention)
+    validate_deep_research_parameters(question, preset, max_chunks)
 
     logger.info(f"Deep research on {repo_path}: {question[:100]}...")
     logger.debug(f"Max chunks: {max_chunks}, preset: {preset or 'default'}, resume: {resume_research_id or 'new'}")
@@ -1080,6 +1152,23 @@ async def handle_export_wiki_html(args: dict[str, Any]) -> list[TextContent]:
     if output_path:
         output_path = Path(output_path).resolve()
 
+    # Get subject ID for audit logging
+    subject = controller.get_current_subject()
+    subject_id = subject.identifier if subject else "anonymous"
+    audit_logger = get_audit_logger()
+    start_time = time.time()
+
+    # Audit: Log export operation started
+    actual_output = output_path or (wiki_path.parent / f"{wiki_path.name}_html")
+    audit_logger.log_export_operation(
+        subject_id=subject_id,
+        wiki_path=str(wiki_path),
+        output_path=str(actual_output),
+        export_type="html",
+        operation="started",
+        success=True,
+    )
+
     # Check wiki size and recommend streaming if large
     iterator = WikiPageIterator(wiki_path)
     page_count = iterator.get_page_count()
@@ -1093,8 +1182,18 @@ async def handle_export_wiki_html(args: dict[str, Any]) -> list[TextContent]:
 
     result = export_to_html(wiki_path, output_path)
 
-    # Get actual output path for the response
-    actual_output = output_path or (wiki_path.parent / f"{wiki_path.name}_html")
+    # Audit: Log export operation completed
+    duration_ms = int((time.time() - start_time) * 1000)
+    audit_logger.log_export_operation(
+        subject_id=subject_id,
+        wiki_path=str(wiki_path),
+        output_path=str(actual_output),
+        export_type="html",
+        operation="completed",
+        success=True,
+        pages_exported=page_count,
+        duration_ms=duration_ms,
+    )
 
     response = {
         "status": "success",
@@ -1138,6 +1237,28 @@ async def handle_export_wiki_pdf(args: dict[str, Any]) -> list[TextContent]:
     if output_path:
         output_path = Path(output_path).resolve()
 
+    # Get subject ID for audit logging
+    subject = controller.get_current_subject()
+    subject_id = subject.identifier if subject else "anonymous"
+    audit_logger = get_audit_logger()
+    start_time = time.time()
+
+    # Determine actual output path for audit logging
+    if single_file:
+        actual_output = output_path or (wiki_path.parent / f"{wiki_path.name}.pdf")
+    else:
+        actual_output = output_path or (wiki_path.parent / f"{wiki_path.name}_pdfs")
+
+    # Audit: Log export operation started
+    audit_logger.log_export_operation(
+        subject_id=subject_id,
+        wiki_path=str(wiki_path),
+        output_path=str(actual_output),
+        export_type="pdf",
+        operation="started",
+        success=True,
+    )
+
     # Check wiki size for stats
     iterator = WikiPageIterator(wiki_path)
     page_count = iterator.get_page_count()
@@ -1151,11 +1272,18 @@ async def handle_export_wiki_pdf(args: dict[str, Any]) -> list[TextContent]:
 
     result = export_to_pdf(wiki_path, output_path, single_file=single_file)
 
-    # Get actual output path for the response
-    if single_file:
-        actual_output = output_path or (wiki_path.parent / f"{wiki_path.name}.pdf")
-    else:
-        actual_output = output_path or (wiki_path.parent / f"{wiki_path.name}_pdfs")
+    # Audit: Log export operation completed
+    duration_ms = int((time.time() - start_time) * 1000)
+    audit_logger.log_export_operation(
+        subject_id=subject_id,
+        wiki_path=str(wiki_path),
+        output_path=str(actual_output),
+        export_type="pdf",
+        operation="completed",
+        success=True,
+        pages_exported=page_count,
+        duration_ms=duration_ms,
+    )
 
     response = {
         "status": "success",

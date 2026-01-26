@@ -17,6 +17,7 @@ from local_deepwiki.core.index_manager import (
     _needs_migration,
 )
 from local_deepwiki.core.parser import ASTCache, CodeParser
+from local_deepwiki.core.secret_detector import scan_repository_for_secrets
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.events import EventType, get_event_emitter
 from local_deepwiki.logging import get_logger
@@ -98,6 +99,62 @@ class RepositoryIndexer:
 
         # Use IndexStatusManager for all status operations
         self._status_manager = IndexStatusManager()
+
+    async def _scan_for_secrets(
+        self,
+        progress_callback: ProgressCallback | None,
+    ) -> None:
+        """Scan repository for hardcoded secrets before indexing.
+
+        This method warns about potential secrets but does not fail indexing.
+        Users should remediate the findings, but indexing can proceed.
+
+        Args:
+            progress_callback: Optional callback for progress updates.
+        """
+        if progress_callback:
+            progress_callback("Scanning for hardcoded secrets...", 0, 1)
+
+        logger.info("Scanning for hardcoded secrets...")
+
+        secret_findings = scan_repository_for_secrets(self.repo_path)
+
+        if secret_findings:
+            total_secrets = sum(len(findings) for findings in secret_findings.values())
+            logger.warning(
+                f"SECURITY WARNING: Found {total_secrets} potential secret(s) "
+                f"in {len(secret_findings)} file(s)"
+            )
+
+            # Log each finding with recommendations
+            for file_path, findings in secret_findings.items():
+                for finding in findings:
+                    logger.warning(
+                        f"  [{finding.secret_type.value}] {finding.file_path}:{finding.line_number} "
+                        f"(confidence: {finding.confidence:.0%})"
+                    )
+                    logger.warning(f"    Context: {finding.context}")
+                    logger.warning(f"    Recommendation: {finding.recommendation}")
+
+            logger.warning(
+                "Please remediate these findings before sharing or deploying this code. "
+                "Indexing will continue, but secrets may appear in search results."
+            )
+
+            # Emit event for secret detection
+            emitter = get_event_emitter()
+            await emitter.emit(
+                EventType.INDEX_ERROR,
+                {
+                    "repo_path": str(self.repo_path),
+                    "error": f"Found {total_secrets} potential hardcoded secrets",
+                    "severity": "warning",
+                    "secret_count": total_secrets,
+                    "affected_files": len(secret_findings),
+                },
+            )
+        else:
+            logger.info("No hardcoded secrets detected")
 
     def _parse_single_file(self, file_path: Path) -> ParseResult:
         """Parse and chunk a single file (CPU-bound, runs in thread pool).
@@ -480,6 +537,9 @@ class RepositoryIndexer:
                 "full_rebuild": full_rebuild,
             },
         )
+
+        # Security: Scan for hardcoded secrets before indexing
+        await self._scan_for_secrets(progress_callback)
 
         # Phase 1: Load previous status for incremental updates
         previous_status, prev_files_by_path, full_rebuild = self._load_previous_status(
