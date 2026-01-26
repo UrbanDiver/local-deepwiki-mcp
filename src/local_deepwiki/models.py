@@ -187,11 +187,15 @@ class SearchResult(BaseModel):
     chunk: CodeChunk = Field(description="The matched code chunk")
     score: float = Field(description="Similarity score")
     highlights: list[str] = Field(default_factory=list, description="Relevant snippets")
+    suggestions: list[str] | None = Field(
+        default=None, description="'Did you mean?' suggestions when results are poor"
+    )
 
     def __repr__(self) -> str:
         """Return a concise representation for debugging."""
         name = self.chunk.name or self.chunk.chunk_type.value
-        return f"<SearchResult {name} score={self.score:.3f}>"
+        suggestion_str = f" suggestions={len(self.suggestions)}" if self.suggestions else ""
+        return f"<SearchResult {name} score={self.score:.3f}{suggestion_str}>"
 
 
 class WikiPageStatus(BaseModel):

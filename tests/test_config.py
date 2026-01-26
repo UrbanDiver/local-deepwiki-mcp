@@ -578,3 +578,367 @@ class TestProviderPrompts:
         config = Config(prompts=PromptsConfig(ollama=custom_ollama))
 
         assert config.prompts.ollama.wiki_system == custom_prompt
+
+
+class TestComputedFields:
+    """Tests for Pydantic computed fields."""
+
+    def test_effective_embedding_batch_size_local(self):
+        """Test effective_embedding_batch_size for local provider."""
+        config = Config()  # Default is local
+        assert config.embedding.provider == "local"
+        # Local providers can use up to 200
+        assert config.effective_embedding_batch_size <= 200
+        assert config.effective_embedding_batch_size <= config.embedding_batch.batch_size
+
+    def test_effective_embedding_batch_size_openai(self):
+        """Test effective_embedding_batch_size for OpenAI provider."""
+        config = Config().with_embedding_provider("openai")
+        # API providers should use max 50
+        assert config.effective_embedding_batch_size <= 50
+
+    def test_effective_max_workers(self):
+        """Test effective_max_workers respects CPU count."""
+        import os
+
+        config = Config()
+        cpu_count = os.cpu_count() or 4
+        assert config.effective_max_workers <= cpu_count
+        assert config.effective_max_workers >= 1
+
+    def test_effective_llm_concurrency_ollama(self):
+        """Test effective_llm_concurrency for local provider."""
+        config = Config()  # Default is ollama
+        assert config.llm.provider == "ollama"
+        # Local models get full concurrency
+        assert config.effective_llm_concurrency == config.wiki.max_concurrent_llm_calls
+
+    def test_effective_llm_concurrency_cloud(self):
+        """Test effective_llm_concurrency for cloud providers."""
+        config = Config().with_llm_provider("anthropic")
+        # Cloud providers are capped at 5
+        assert config.effective_llm_concurrency <= 5
+
+
+class TestValidationHooks:
+    """Tests for Pydantic validation hooks."""
+
+    def test_chunking_overlap_less_than_max(self):
+        """Test overlap_tokens must be less than max_chunk_tokens."""
+        from pydantic import ValidationError
+
+        # Valid configuration
+        config = Config(chunking={"max_chunk_tokens": 512, "overlap_tokens": 50})
+        assert config.chunking.overlap_tokens < config.chunking.max_chunk_tokens
+
+        # Invalid configuration
+        with pytest.raises(ValidationError):
+            Config(chunking={"max_chunk_tokens": 100, "overlap_tokens": 100})
+
+        with pytest.raises(ValidationError):
+            Config(chunking={"max_chunk_tokens": 100, "overlap_tokens": 150})
+
+    def test_wiki_search_limits_consistency(self):
+        """Test fallback_search_limit should not exceed context_search_limit."""
+        from pydantic import ValidationError
+
+        # Valid configuration
+        config = Config(wiki={"context_search_limit": 50, "fallback_search_limit": 30})
+        assert (
+            config.wiki.fallback_search_limit <= config.wiki.context_search_limit
+        )
+
+        # Invalid configuration
+        with pytest.raises(ValidationError):
+            Config(wiki={"context_search_limit": 30, "fallback_search_limit": 50})
+
+    def test_parallel_workers_capped_at_cpu_count(self):
+        """Test parallel_workers is capped at CPU count via validator."""
+        import os
+
+        cpu_count = os.cpu_count() or 4
+        # Use a value within the Field's le constraint but above CPU count
+        # The validator should cap it to CPU count
+        test_value = min(32, cpu_count + 4)  # Within 1-32 range but above CPU
+        config = Config(chunking={"parallel_workers": test_value})
+        # Should be capped at CPU count by the validator
+        assert config.chunking.parallel_workers <= cpu_count
+
+    def test_embedding_batch_concurrency_capped(self):
+        """Test embedding batch concurrency is capped reasonably via validator."""
+        import os
+
+        cpu_count = os.cpu_count() or 4
+        max_expected = min(16, cpu_count * 2)
+        # Use a value within the Field's le constraint (16)
+        config = Config(embedding_batch={"concurrency": 16})
+        assert config.embedding_batch.concurrency <= max_expected
+
+
+class TestConfigDiff:
+    """Tests for ConfigDiff class."""
+
+    def test_config_diff_no_changes(self):
+        """Test ConfigDiff with identical configs."""
+        from local_deepwiki.config import ConfigDiff
+
+        config1 = Config()
+        config2 = Config()
+        diff = ConfigDiff(config1, config2)
+
+        assert not diff.has_changes()
+        assert len(diff.get_changes()) == 0
+        assert diff.summary() == "No configuration changes"
+
+    def test_config_diff_detects_changes(self):
+        """Test ConfigDiff detects changed fields."""
+        from local_deepwiki.config import ConfigDiff
+
+        config1 = Config()
+        config2 = Config().with_llm_provider("anthropic")
+        diff = ConfigDiff(config1, config2)
+
+        assert diff.has_changes()
+        changes = diff.get_changes()
+        assert len(changes) >= 1
+
+        # Find the provider change
+        provider_changes = [c for c in changes if "provider" in c.field]
+        assert len(provider_changes) >= 1
+        assert any(c.new_value == "anthropic" for c in provider_changes)
+
+    def test_config_diff_nested_changes(self):
+        """Test ConfigDiff detects nested field changes."""
+        from local_deepwiki.config import ConfigDiff
+
+        config1 = Config()
+        config2 = Config(chunking={"max_chunk_tokens": 1024})
+        diff = ConfigDiff(config1, config2)
+
+        assert diff.has_changes()
+        changes = diff.get_changes()
+
+        # Find the max_chunk_tokens change
+        chunk_changes = [c for c in changes if "max_chunk_tokens" in c.field]
+        assert len(chunk_changes) == 1
+        assert chunk_changes[0].old_value == 512
+        assert chunk_changes[0].new_value == 1024
+
+    def test_config_diff_summary(self):
+        """Test ConfigDiff summary is human-readable."""
+        from local_deepwiki.config import ConfigDiff
+
+        config1 = Config()
+        config2 = Config().with_llm_provider("anthropic")
+        diff = ConfigDiff(config1, config2)
+
+        summary = diff.summary()
+        assert "Configuration changes" in summary
+        assert "anthropic" in summary
+
+    def test_config_diff_apply(self):
+        """Test ConfigDiff.apply creates correct config."""
+        from local_deepwiki.config import ConfigDiff
+
+        config1 = Config()
+        config2 = Config().with_llm_provider("anthropic")
+        diff = ConfigDiff(config1, config2)
+
+        # Apply to a fresh config
+        config3 = Config()
+        result = diff.apply(config3)
+
+        assert result.llm.provider == "anthropic"
+
+    def test_config_change_str(self):
+        """Test ConfigChange string representation."""
+        from local_deepwiki.config import ConfigChange
+
+        change = ConfigChange(
+            field="llm.provider",
+            old_value="ollama",
+            new_value="anthropic",
+            source="cli",
+        )
+        str_repr = str(change)
+        assert "llm.provider" in str_repr
+        assert "ollama" in str_repr
+        assert "anthropic" in str_repr
+        assert "cli" in str_repr
+
+
+class TestMergeConfigs:
+    """Tests for merge_configs function."""
+
+    def test_merge_configs_cli_highest_priority(self):
+        """Test CLI config has highest priority."""
+        from local_deepwiki.config import merge_configs
+
+        cli = {"llm": {"provider": "anthropic"}}
+        env = {"llm": {"provider": "openai"}}
+        file = {"llm": {"provider": "ollama"}}
+
+        config, diff = merge_configs(cli, env, file)
+
+        assert config.llm.provider == "anthropic"
+
+    def test_merge_configs_env_over_file(self):
+        """Test env config overrides file config."""
+        from local_deepwiki.config import merge_configs
+
+        env = {"embedding": {"provider": "openai"}}
+        file = {"embedding": {"provider": "local"}}
+
+        config, diff = merge_configs(None, env, file)
+
+        assert config.embedding.provider == "openai"
+
+    def test_merge_configs_file_over_defaults(self):
+        """Test file config overrides defaults."""
+        from local_deepwiki.config import merge_configs
+
+        file = {"chunking": {"max_chunk_tokens": 1024}}
+
+        config, diff = merge_configs(None, None, file)
+
+        assert config.chunking.max_chunk_tokens == 1024
+
+    def test_merge_configs_diff_tracks_source(self):
+        """Test merge_configs diff tracks sources correctly."""
+        from local_deepwiki.config import merge_configs
+
+        cli = {"llm": {"provider": "anthropic"}}
+        env = {"embedding": {"provider": "openai"}}
+
+        config, diff = merge_configs(cli, env, None)
+
+        # Check sources are tracked
+        for change in diff.get_changes():
+            if "llm" in change.field and "provider" in change.field:
+                assert change.source == "cli"
+            elif "embedding" in change.field and "provider" in change.field:
+                assert change.source == "env"
+
+    def test_merge_configs_returns_diff(self):
+        """Test merge_configs returns ConfigDiff."""
+        from local_deepwiki.config import ConfigDiff, merge_configs
+
+        cli = {"llm": {"provider": "anthropic"}}
+        config, diff = merge_configs(cli, None, None)
+
+        assert isinstance(diff, ConfigDiff)
+        assert diff.has_changes()
+
+    def test_merge_configs_deep_merge(self):
+        """Test merge_configs handles nested dicts correctly."""
+        from local_deepwiki.config import merge_configs
+
+        cli = {"wiki": {"max_file_docs": 100}}
+        file = {"wiki": {"max_concurrent_llm_calls": 4}}
+
+        config, diff = merge_configs(cli, None, file)
+
+        # Both values should be set
+        assert config.wiki.max_file_docs == 100
+        assert config.wiki.max_concurrent_llm_calls == 4
+
+
+class TestValidateConfig:
+    """Tests for validate_config function."""
+
+    def test_validate_config_default_no_warnings(self):
+        """Test default config with local providers has no major warnings."""
+        from local_deepwiki.config import validate_config
+
+        config = Config()  # Default uses local/ollama
+        warnings = validate_config(config)
+
+        # Default config should not warn about API keys
+        api_warnings = [w for w in warnings if "API_KEY" in w]
+        assert len(api_warnings) == 0
+
+    def test_validate_config_warns_missing_api_key(self, monkeypatch):
+        """Test validate_config warns about missing API keys."""
+        from local_deepwiki.config import validate_config
+
+        # Clear API keys
+        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+        config = Config().with_llm_provider("anthropic")
+        warnings = validate_config(config)
+
+        assert any("ANTHROPIC_API_KEY" in w for w in warnings)
+
+    def test_validate_config_warns_large_batch_size(self, monkeypatch):
+        """Test validate_config warns about large batch size with API provider."""
+        from local_deepwiki.config import validate_config
+
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+        config = Config(
+            embedding={"provider": "openai"},
+            embedding_batch={"batch_size": 200},
+        )
+        warnings = validate_config(config)
+
+        assert any("batch_size" in w.lower() for w in warnings)
+
+    def test_validate_config_warns_missing_plugin_dir(self, tmp_path):
+        """Test validate_config warns about missing plugin directory."""
+        from local_deepwiki.config import validate_config
+
+        fake_dir = tmp_path / "nonexistent_plugins"
+        config = Config(plugins={"custom_dir": str(fake_dir)})
+        warnings = validate_config(config)
+
+        assert any("plugins directory" in w.lower() for w in warnings)
+
+    def test_validate_config_returns_list(self):
+        """Test validate_config always returns a list."""
+        from local_deepwiki.config import validate_config
+
+        config = Config()
+        warnings = validate_config(config)
+
+        assert isinstance(warnings, list)
+
+
+class TestLoadConfigFromEnv:
+    """Tests for load_config_from_env function."""
+
+    def test_load_config_from_env_parses_values(self, monkeypatch):
+        """Test load_config_from_env parses different value types."""
+        from local_deepwiki.config import load_config_from_env
+
+        monkeypatch.setenv("DEEPWIKI_LLM_PROVIDER", "anthropic")
+        monkeypatch.setenv("DEEPWIKI_CHUNKING_MAX_CHUNK_TOKENS", "1024")
+        monkeypatch.setenv("DEEPWIKI_PLUGINS_ENABLED", "false")
+
+        env_config = load_config_from_env()
+
+        assert env_config["llm"]["provider"] == "anthropic"
+        assert env_config["chunking"]["max_chunk_tokens"] == 1024
+        assert env_config["plugins"]["enabled"] is False
+
+    def test_load_config_from_env_ignores_unrelated(self, monkeypatch):
+        """Test load_config_from_env ignores non-DEEPWIKI_ variables."""
+        from local_deepwiki.config import load_config_from_env
+
+        monkeypatch.setenv("SOME_OTHER_VAR", "value")
+        monkeypatch.setenv("DEEPWIKI_LLM_PROVIDER", "anthropic")
+
+        env_config = load_config_from_env()
+
+        assert "some_other_var" not in env_config
+        assert "some" not in env_config
+
+    def test_load_config_from_env_parses_floats(self, monkeypatch):
+        """Test load_config_from_env parses float values."""
+        from local_deepwiki.config import load_config_from_env
+
+        monkeypatch.setenv("DEEPWIKI_DEEPRESEARCH_SYNTHESIS_TEMPERATURE", "0.7")
+
+        env_config = load_config_from_env()
+
+        assert env_config["deepresearch"]["synthesis_temperature"] == 0.7

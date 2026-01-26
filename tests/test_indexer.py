@@ -50,9 +50,17 @@ class TestParallelWorkersConfig:
         assert config.parallel_workers == 2
 
     def test_parallel_workers_max_value(self):
-        """Test that parallel_workers can be set to maximum (32)."""
+        """Test that parallel_workers is capped at CPU count via field validator.
+
+        The Field allows up to 32, but the validator caps at os.cpu_count().
+        """
+        import os
+
+        cpu_count = os.cpu_count() or 4
         config = ChunkingConfig(parallel_workers=32)
-        assert config.parallel_workers == 32
+        # Validator caps at CPU count
+        assert config.parallel_workers <= cpu_count
+        assert config.parallel_workers >= 1
 
     def test_parallel_workers_min_value(self):
         """Test that parallel_workers minimum is 1."""

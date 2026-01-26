@@ -446,3 +446,284 @@ class TestVectorStoreSearchWithFilters:
         # Note: highlights depend on content containing the exact query
         # This is expected behavior
         assert len(results) > 0
+
+
+class TestFuzzySearchHelper:
+    """Tests for the FuzzySearchHelper class."""
+
+    @pytest.fixture
+    def vector_store(self, tmp_path):
+        """Create a vector store for testing."""
+        from local_deepwiki.core.vectorstore import VectorStore
+        from local_deepwiki.providers.base import EmbeddingProvider
+
+        class MockEmbeddingProvider(EmbeddingProvider):
+            @property
+            def name(self) -> str:
+                return "mock"
+
+            def get_dimension(self) -> int:
+                return 384
+
+            async def embed(self, texts: list[str]) -> list[list[float]]:
+                return [[0.1] * 384 for _ in texts]
+
+        db_path = tmp_path / "test.lance"
+        provider = MockEmbeddingProvider()
+        return VectorStore(db_path, provider)
+
+    @pytest.fixture
+    async def store_with_named_chunks(self, vector_store):
+        """Create a store with chunks that have names."""
+        chunks = [
+            CodeChunk(
+                id="func_1",
+                file_path="src/math.py",
+                language=Language.PYTHON,
+                chunk_type=ChunkType.FUNCTION,
+                name="calculate_sum",
+                content="def calculate_sum(a, b): return a + b",
+                start_line=1,
+                end_line=2,
+            ),
+            CodeChunk(
+                id="func_2",
+                file_path="src/math.py",
+                language=Language.PYTHON,
+                chunk_type=ChunkType.FUNCTION,
+                name="calculate_product",
+                content="def calculate_product(a, b): return a * b",
+                start_line=3,
+                end_line=4,
+            ),
+            CodeChunk(
+                id="func_3",
+                file_path="src/math.py",
+                language=Language.PYTHON,
+                chunk_type=ChunkType.FUNCTION,
+                name="calculate_difference",
+                content="def calculate_difference(a, b): return a - b",
+                start_line=5,
+                end_line=6,
+            ),
+            CodeChunk(
+                id="class_1",
+                file_path="src/user.py",
+                language=Language.PYTHON,
+                chunk_type=ChunkType.CLASS,
+                name="UserManager",
+                content="class UserManager: pass",
+                start_line=1,
+                end_line=10,
+            ),
+            CodeChunk(
+                id="method_1",
+                file_path="src/user.py",
+                language=Language.PYTHON,
+                chunk_type=ChunkType.METHOD,
+                name="get_user",
+                content="def get_user(self): pass",
+                start_line=5,
+                end_line=7,
+                parent_name="UserManager",
+            ),
+        ]
+        await vector_store.create_or_update_table(chunks)
+        return vector_store
+
+    async def test_build_name_index(self, store_with_named_chunks):
+        """Test building the fuzzy name index."""
+        from local_deepwiki.core.fuzzy_search import FuzzySearchHelper
+
+        helper = FuzzySearchHelper(store_with_named_chunks)
+        await helper.build_name_index()
+
+        assert helper.is_built
+        stats = helper.get_stats()
+        assert stats["total_names"] >= 5  # At least 5 names indexed
+        assert stats["unique_names"] >= 5
+
+    async def test_find_similar_names(self, store_with_named_chunks):
+        """Test finding similar names."""
+        from local_deepwiki.core.fuzzy_search import FuzzySearchHelper
+
+        helper = FuzzySearchHelper(store_with_named_chunks)
+        await helper.build_name_index()
+
+        # Exact match
+        results = helper.find_similar_names("calculate_sum", threshold=0.6)
+        assert len(results) > 0
+        names = [n for n, s in results]
+        assert "calculate_sum" in names
+
+    async def test_find_similar_names_with_typo(self, store_with_named_chunks):
+        """Test finding similar names with a typo."""
+        from local_deepwiki.core.fuzzy_search import FuzzySearchHelper
+
+        helper = FuzzySearchHelper(store_with_named_chunks)
+        await helper.build_name_index()
+
+        # Typo: "calcluate" instead of "calculate"
+        results = helper.find_similar_names("calcluate_sum", threshold=0.5)
+        assert len(results) > 0
+        # Should find calculate_sum despite typo
+        names = [n for n, s in results]
+        assert any("calculate" in n for n in names)
+
+    async def test_generate_suggestions_empty_results(self, store_with_named_chunks):
+        """Test generating suggestions when results are empty."""
+        from local_deepwiki.core.fuzzy_search import FuzzySearchHelper
+
+        helper = FuzzySearchHelper(store_with_named_chunks)
+        await helper.build_name_index()
+
+        suggestions = helper.generate_suggestions("calcluate", [], threshold=0.5)
+        assert len(suggestions) > 0
+        # Should suggest names containing "calculate"
+        assert any("calculate" in s for s in suggestions)
+
+    async def test_generate_suggestions_excludes_existing_names(self, store_with_named_chunks):
+        """Test that suggestions exclude names already in results."""
+        from local_deepwiki.core.fuzzy_search import FuzzySearchHelper
+
+        helper = FuzzySearchHelper(store_with_named_chunks)
+        await helper.build_name_index()
+
+        # Create mock result with calculate_sum
+        existing_chunk = CodeChunk(
+            id="existing",
+            file_path="test.py",
+            language=Language.PYTHON,
+            chunk_type=ChunkType.FUNCTION,
+            name="calculate_sum",
+            content="def calculate_sum(): pass",
+            start_line=1,
+            end_line=1,
+        )
+        existing_results = [SearchResult(chunk=existing_chunk, score=0.3, highlights=[])]
+
+        suggestions = helper.generate_suggestions("calculate", existing_results, threshold=0.5)
+        # Should not include calculate_sum
+        assert "calculate_sum" not in suggestions
+
+    async def test_get_stats(self, store_with_named_chunks):
+        """Test getting statistics about the name index."""
+        from local_deepwiki.core.fuzzy_search import FuzzySearchHelper
+
+        helper = FuzzySearchHelper(store_with_named_chunks)
+        await helper.build_name_index()
+
+        stats = helper.get_stats()
+        assert "total_names" in stats
+        assert "unique_names" in stats
+        assert stats["total_names"] >= 5
+
+
+class TestShouldAutoEnableFuzzy:
+    """Tests for the should_auto_enable_fuzzy function."""
+
+    def test_empty_results(self):
+        """Test that empty results trigger auto-fuzzy."""
+        from local_deepwiki.core.fuzzy_search import should_auto_enable_fuzzy
+
+        assert should_auto_enable_fuzzy([], threshold=0.5) is True
+
+    def test_low_score_results(self):
+        """Test that low-scoring results trigger auto-fuzzy."""
+        from local_deepwiki.core.fuzzy_search import should_auto_enable_fuzzy
+
+        chunk = CodeChunk(
+            id="test",
+            file_path="test.py",
+            language=Language.PYTHON,
+            chunk_type=ChunkType.FUNCTION,
+            name="test",
+            content="def test(): pass",
+            start_line=1,
+            end_line=1,
+        )
+        results = [SearchResult(chunk=chunk, score=0.3, highlights=[])]
+
+        assert should_auto_enable_fuzzy(results, threshold=0.5) is True
+
+    def test_high_score_results(self):
+        """Test that high-scoring results do not trigger auto-fuzzy."""
+        from local_deepwiki.core.fuzzy_search import should_auto_enable_fuzzy
+
+        chunk = CodeChunk(
+            id="test",
+            file_path="test.py",
+            language=Language.PYTHON,
+            chunk_type=ChunkType.FUNCTION,
+            name="test",
+            content="def test(): pass",
+            start_line=1,
+            end_line=1,
+        )
+        results = [SearchResult(chunk=chunk, score=0.8, highlights=[])]
+
+        assert should_auto_enable_fuzzy(results, threshold=0.5) is False
+
+    def test_multiple_results_best_score_matters(self):
+        """Test that only the best score matters for threshold check."""
+        from local_deepwiki.core.fuzzy_search import should_auto_enable_fuzzy
+
+        chunk1 = CodeChunk(
+            id="test1",
+            file_path="test.py",
+            language=Language.PYTHON,
+            chunk_type=ChunkType.FUNCTION,
+            name="test1",
+            content="def test1(): pass",
+            start_line=1,
+            end_line=1,
+        )
+        chunk2 = CodeChunk(
+            id="test2",
+            file_path="test.py",
+            language=Language.PYTHON,
+            chunk_type=ChunkType.FUNCTION,
+            name="test2",
+            content="def test2(): pass",
+            start_line=2,
+            end_line=2,
+        )
+        # One high score, one low score
+        results = [
+            SearchResult(chunk=chunk1, score=0.8, highlights=[]),
+            SearchResult(chunk=chunk2, score=0.2, highlights=[]),
+        ]
+
+        # Best score is 0.8, which is above threshold 0.5
+        assert should_auto_enable_fuzzy(results, threshold=0.5) is False
+
+
+class TestNameEntry:
+    """Tests for the NameEntry dataclass."""
+
+    def test_name_entry_creation(self):
+        """Test creating a NameEntry."""
+        from local_deepwiki.core.fuzzy_search import NameEntry
+
+        entry = NameEntry(
+            name="calculate_sum",
+            chunk_type=ChunkType.FUNCTION,
+            file_path="src/math.py",
+        )
+        assert entry.name == "calculate_sum"
+        assert entry.chunk_type == ChunkType.FUNCTION
+        assert entry.file_path == "src/math.py"
+        assert entry.full_qualified_name is None
+
+    def test_name_entry_with_qualified_name(self):
+        """Test creating a NameEntry with fully qualified name."""
+        from local_deepwiki.core.fuzzy_search import NameEntry
+
+        entry = NameEntry(
+            name="get_user",
+            chunk_type=ChunkType.METHOD,
+            file_path="src/user.py",
+            full_qualified_name="UserManager.get_user",
+        )
+        assert entry.name == "get_user"
+        assert entry.full_qualified_name == "UserManager.get_user"

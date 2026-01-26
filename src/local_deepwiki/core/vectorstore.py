@@ -7,8 +7,10 @@ import os
 import random
 import threading
 import time
+from collections import deque
 from collections.abc import AsyncIterator, Iterator
 from dataclasses import dataclass, field
+from enum import Enum
 from pathlib import Path
 from typing import Any, Callable
 
@@ -18,7 +20,13 @@ import psutil
 import pyarrow as pa
 from lancedb.table import Table
 
-from local_deepwiki.config import EmbeddingBatchConfig, LazyIndexConfig, SearchCacheConfig
+from local_deepwiki.config import (
+    EmbeddingBatchConfig,
+    FuzzySearchConfig,
+    LazyIndexConfig,
+    SearchCacheConfig,
+    SearchConfig,
+)
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import ChunkType, CodeChunk, Language, SearchResult
 from local_deepwiki.providers.base import EmbeddingProvider
@@ -74,6 +82,315 @@ class ChunkBatch:
     batch_index: int
     total_batches: int
     has_more: bool
+
+
+class SearchProfile(str, Enum):
+    """Search profile for precision/recall trade-off.
+
+    Profiles control how exhaustive the search is, trading off speed vs accuracy:
+    - FAST: Minimal candidates, fastest response, may miss some relevant results
+    - BALANCED: Default behavior, good balance of speed and recall
+    - THOROUGH: Exhaustive search, best recall but slower
+    """
+
+    FAST = "fast"
+    BALANCED = "balanced"
+    THOROUGH = "thorough"
+
+
+@dataclass
+class SearchProfileConfig:
+    """Configuration for a search profile.
+
+    Attributes:
+        profile: The search profile this config applies to.
+        fetch_multiplier: Multiplier for nprobes/candidates fetched.
+            Higher values fetch more candidates for better recall.
+        rerank_candidates: How many candidates to rerank.
+            More candidates = better final ranking but slower.
+        use_approximate: Whether to use approximate (ANN) search.
+            False means exact/exhaustive search.
+        min_similarity: Minimum similarity threshold.
+            Results below this threshold are filtered out.
+    """
+
+    profile: SearchProfile
+    fetch_multiplier: float
+    rerank_candidates: int
+    use_approximate: bool
+    min_similarity: float
+
+
+# Pre-configured search profiles
+SEARCH_PROFILES: dict[SearchProfile, SearchProfileConfig] = {
+    SearchProfile.FAST: SearchProfileConfig(
+        profile=SearchProfile.FAST,
+        fetch_multiplier=1.0,
+        rerank_candidates=10,
+        use_approximate=True,
+        min_similarity=0.3,
+    ),
+    SearchProfile.BALANCED: SearchProfileConfig(
+        profile=SearchProfile.BALANCED,
+        fetch_multiplier=2.0,
+        rerank_candidates=50,
+        use_approximate=True,
+        min_similarity=0.2,
+    ),
+    SearchProfile.THOROUGH: SearchProfileConfig(
+        profile=SearchProfile.THOROUGH,
+        fetch_multiplier=5.0,
+        rerank_candidates=200,
+        use_approximate=False,
+        min_similarity=0.1,
+    ),
+}
+
+
+@dataclass
+class SearchFeedback:
+    """User feedback on search result relevance.
+
+    Used to improve future search results by learning which results
+    are actually relevant for specific queries.
+
+    Attributes:
+        query: The original search query.
+        result_id: ID of the result being rated.
+        relevant: Whether the user marked this result as relevant.
+        timestamp: When the feedback was recorded.
+    """
+
+    query: str
+    result_id: str
+    relevant: bool
+    timestamp: float = field(default_factory=time.time)
+
+
+class AdaptiveSearcher:
+    """Adaptive search depth estimator based on query characteristics and history.
+
+    Learns from past searches to estimate optimal search depth for new queries.
+    Uses query characteristics (length, complexity) and historical performance
+    to adapt the search strategy.
+
+    Attributes:
+        _store: Reference to the VectorStore (set via property, not constructor).
+        _query_history: Recent query history with quality metrics.
+        _feedback_history: User feedback on search results.
+    """
+
+    # Maximum history size to prevent unbounded memory growth
+    MAX_HISTORY_SIZE = 1000
+    MAX_FEEDBACK_SIZE = 5000
+
+    def __init__(self) -> None:
+        """Initialize the adaptive searcher."""
+        self._store: "VectorStore | None" = None
+        # History: (query, quality_score, result_count, search_depth)
+        self._query_history: deque[tuple[str, float, int, int]] = deque(
+            maxlen=self.MAX_HISTORY_SIZE
+        )
+        self._feedback_history: deque[SearchFeedback] = deque(
+            maxlen=self.MAX_FEEDBACK_SIZE
+        )
+        # Query complexity cache for performance
+        self._complexity_cache: dict[str, float] = {}
+
+    def set_store(self, store: "VectorStore") -> None:
+        """Set the vector store reference.
+
+        Args:
+            store: The VectorStore instance this searcher is associated with.
+        """
+        self._store = store
+
+    def _calculate_query_complexity(self, query: str) -> float:
+        """Calculate a complexity score for a query.
+
+        Complexity is based on:
+        - Query length (longer = more complex)
+        - Number of distinct terms
+        - Presence of technical terms/operators
+
+        Args:
+            query: The search query text.
+
+        Returns:
+            Complexity score between 0.0 and 1.0.
+        """
+        if query in self._complexity_cache:
+            return self._complexity_cache[query]
+
+        # Normalize and tokenize
+        words = query.lower().split()
+        if not words:
+            return 0.0
+
+        # Factor 1: Query length (normalized to 0-1, saturates at 20 words)
+        length_score = min(len(words) / 20.0, 1.0)
+
+        # Factor 2: Vocabulary diversity (unique words / total words)
+        unique_words = len(set(words))
+        diversity_score = unique_words / len(words) if words else 0.0
+
+        # Factor 3: Technical term presence (common programming terms)
+        technical_terms = {
+            "function",
+            "class",
+            "method",
+            "async",
+            "await",
+            "import",
+            "export",
+            "interface",
+            "type",
+            "struct",
+            "enum",
+            "error",
+            "exception",
+            "api",
+            "database",
+            "query",
+            "handler",
+            "controller",
+            "service",
+            "repository",
+            "middleware",
+            "authentication",
+            "authorization",
+            "validation",
+            "parse",
+            "serialize",
+            "deserialize",
+        }
+        tech_count = sum(1 for w in words if w in technical_terms)
+        tech_score = min(tech_count / 3.0, 1.0)  # Saturates at 3 technical terms
+
+        # Weighted combination
+        complexity = 0.3 * length_score + 0.3 * diversity_score + 0.4 * tech_score
+
+        # Cache the result (limit cache size)
+        if len(self._complexity_cache) > 10000:
+            # Clear oldest entries (simple approach)
+            self._complexity_cache.clear()
+        self._complexity_cache[query] = complexity
+
+        return complexity
+
+    def estimate_optimal_depth(self, query: str, base_limit: int = 10) -> int:
+        """Estimate optimal search depth based on query characteristics.
+
+        Uses query complexity and historical performance to determine
+        how many candidates to fetch for the best results.
+
+        Args:
+            query: The search query text.
+            base_limit: The base number of results requested.
+
+        Returns:
+            Recommended search depth (number of candidates to fetch).
+        """
+        complexity = self._calculate_query_complexity(query)
+
+        # Base depth is the requested limit
+        base_depth = base_limit
+
+        # Complexity-based multiplier: more complex queries need deeper search
+        # Range: 1.5x to 4x based on complexity
+        complexity_multiplier = 1.5 + (complexity * 2.5)
+
+        # Historical adjustment: if similar queries had poor quality, increase depth
+        historical_multiplier = 1.0
+        if self._query_history:
+            # Look for similar queries (simple word overlap heuristic)
+            query_words = set(query.lower().split())
+            similar_qualities: list[float] = []
+
+            for hist_query, quality, _, _ in self._query_history:
+                hist_words = set(hist_query.lower().split())
+                overlap = len(query_words & hist_words)
+                if overlap >= min(2, len(query_words)):
+                    similar_qualities.append(quality)
+
+            if similar_qualities:
+                avg_quality = sum(similar_qualities) / len(similar_qualities)
+                # If quality was low, increase depth
+                # Quality 1.0 = multiplier 1.0, quality 0.0 = multiplier 2.0
+                historical_multiplier = 2.0 - avg_quality
+
+        # Combine multipliers
+        total_multiplier = complexity_multiplier * historical_multiplier
+
+        # Calculate final depth, capped at reasonable limits
+        optimal_depth = int(base_depth * total_multiplier)
+        return min(max(optimal_depth, base_limit), base_limit * 10)
+
+    def record_search_quality(
+        self, query: str, quality: float, result_count: int, depth_used: int
+    ) -> None:
+        """Record search quality for future adaptation.
+
+        Args:
+            query: The search query that was executed.
+            quality: Quality score between 0.0 (poor) and 1.0 (excellent).
+            result_count: Number of results returned.
+            depth_used: The search depth that was used.
+        """
+        quality = max(0.0, min(1.0, quality))  # Clamp to valid range
+        self._query_history.append((query, quality, result_count, depth_used))
+        logger.debug(
+            f"Recorded search quality: query='{query[:50]}...' quality={quality:.2f} "
+            f"results={result_count} depth={depth_used}"
+        )
+
+    def record_feedback(self, feedback: SearchFeedback) -> None:
+        """Record user feedback to improve future searches.
+
+        Feedback is used to update quality estimates for similar queries.
+
+        Args:
+            feedback: User feedback on a search result.
+        """
+        self._feedback_history.append(feedback)
+        logger.debug(
+            f"Recorded feedback: query='{feedback.query[:50]}...' "
+            f"result={feedback.result_id} relevant={feedback.relevant}"
+        )
+
+        # Update quality estimates for matching queries in history
+        # This provides indirect learning from user feedback
+        for i, (hist_query, quality, count, depth) in enumerate(self._query_history):
+            if hist_query == feedback.query:
+                # Adjust quality based on feedback
+                adjustment = 0.1 if feedback.relevant else -0.1
+                new_quality = max(0.0, min(1.0, quality + adjustment))
+                # Replace entry (deque doesn't support direct assignment)
+                self._query_history[i] = (hist_query, new_quality, count, depth)
+
+    def get_feedback_stats(self) -> dict[str, Any]:
+        """Get statistics about collected feedback.
+
+        Returns:
+            Dictionary with feedback statistics.
+        """
+        if not self._feedback_history:
+            return {
+                "total_feedback": 0,
+                "relevant_count": 0,
+                "irrelevant_count": 0,
+                "relevance_rate": 0.0,
+            }
+
+        relevant = sum(1 for f in self._feedback_history if f.relevant)
+        total = len(self._feedback_history)
+
+        return {
+            "total_feedback": total,
+            "relevant_count": relevant,
+            "irrelevant_count": total - relevant,
+            "relevance_rate": relevant / total if total > 0 else 0.0,
+        }
 
 
 @dataclass
@@ -1327,6 +1644,9 @@ class VectorStore:
         search_cache_config: SearchCacheConfig | None = None,
         embedding_batch_config: EmbeddingBatchConfig | None = None,
         lazy_index_config: LazyIndexConfig | None = None,
+        fuzzy_search_config: FuzzySearchConfig | None = None,
+        default_search_profile: SearchProfile = SearchProfile.BALANCED,
+        adaptive_search_enabled: bool = True,
     ):
         """Initialize the vector store.
 
@@ -1339,6 +1659,12 @@ class VectorStore:
                 If None, uses default EmbeddingBatchConfig.
             lazy_index_config: Optional lazy index configuration.
                 If None, uses default LazyIndexConfig (lazy indexing enabled).
+            fuzzy_search_config: Optional fuzzy search configuration.
+                If None, uses default FuzzySearchConfig.
+            default_search_profile: Default search profile for precision/recall trade-off.
+                Defaults to SearchProfile.BALANCED.
+            adaptive_search_enabled: Whether to enable adaptive search depth estimation.
+                When enabled, search depth adjusts based on query complexity and history.
         """
         self.db_path = db_path
         self.embedding_provider = embedding_provider
@@ -1363,6 +1689,22 @@ class VectorStore:
 
         # Initialize lazy index manager
         self._lazy_index_manager = LazyIndexManager(self, lazy_index_config)
+
+        # Initialize fuzzy search config
+        if fuzzy_search_config is None:
+            fuzzy_search_config = FuzzySearchConfig()
+        self._fuzzy_search_config = fuzzy_search_config
+
+        # Fuzzy search helper (lazy initialized when first needed)
+        self._fuzzy_search_helper: "FuzzySearchHelper | None" = None
+
+        # Search profile configuration
+        self._default_search_profile = default_search_profile
+        self._adaptive_search_enabled = adaptive_search_enabled
+
+        # Initialize adaptive searcher
+        self._adaptive_searcher = AdaptiveSearcher()
+        self._adaptive_searcher.set_store(self)
 
     def _connect(self) -> lancedb.DBConnection:
         """Get or create database connection.
@@ -1392,6 +1734,26 @@ class VectorStore:
                         # Ensure indexes exist (may have been created by older code version)
                         self._ensure_indexes()
         return self._table
+
+    async def _get_fuzzy_helper(self) -> "FuzzySearchHelper":
+        """Get or create the fuzzy search helper.
+
+        Lazily initializes and builds the fuzzy search helper when first needed.
+        The helper indexes all function/class/method names for fast fuzzy matching.
+
+        Returns:
+            FuzzySearchHelper instance with built name index.
+        """
+        from local_deepwiki.core.fuzzy_search import FuzzySearchHelper
+
+        if self._fuzzy_search_helper is None:
+            self._fuzzy_search_helper = FuzzySearchHelper(self)
+
+        # Build index if not already built
+        if not self._fuzzy_search_helper.is_built:
+            await self._fuzzy_search_helper.build_name_index()
+
+        return self._fuzzy_search_helper
 
     def _ensure_indexes(self) -> None:
         """Ensure all indexes exist, creating them if needed.
@@ -1889,6 +2251,9 @@ class VectorStore:
         path_pattern: str | None = None,
         use_fuzzy: bool = False,
         fuzzy_weight: float = 0.3,
+        profile: SearchProfile | str | None = None,
+        min_similarity: float | None = None,
+        auto_suggest: bool = True,
     ) -> list[SearchResult]:
         """Search for similar code chunks.
 
@@ -1900,14 +2265,25 @@ class VectorStore:
             path_pattern: Optional file path pattern filter (e.g., "src/**/*.py").
             use_fuzzy: Whether to use fuzzy matching to re-rank results.
             fuzzy_weight: Weight for fuzzy score when use_fuzzy is True (0.0-1.0).
+            profile: Search profile for precision/recall trade-off.
+                Can be SearchProfile enum or string ("fast", "balanced", "thorough").
+                If None, uses the store's default profile.
+            min_similarity: Minimum similarity threshold override.
+                Results below this score are filtered out.
+                If None, uses the profile's default threshold.
+            auto_suggest: Whether to generate "Did you mean?" suggestions when
+                results are poor quality. Defaults to True.
 
         Returns:
-            List of search results with scores.
+            List of search results with scores. When results are poor quality
+            and auto_suggest is True, the first result will include suggestions
+            in the `suggestions` field.
         """
         from local_deepwiki.core.fuzzy_search import (
             extract_highlights,
             filter_by_path,
             rerank_with_fuzzy,
+            should_auto_enable_fuzzy,
         )
 
         table = self._get_table()
@@ -1915,13 +2291,41 @@ class VectorStore:
             logger.debug("No table found for search")
             return []
 
-        logger.debug(f"Searching for: '{query[:50]}...' limit={limit}")
+        # Resolve search profile
+        if profile is None:
+            resolved_profile = self._default_search_profile
+        elif isinstance(profile, str):
+            try:
+                resolved_profile = SearchProfile(profile.lower())
+            except ValueError:
+                logger.warning(
+                    f"Invalid search profile '{profile}', using default"
+                )
+                resolved_profile = self._default_search_profile
+        else:
+            resolved_profile = profile
+
+        profile_config = SEARCH_PROFILES[resolved_profile]
+
+        # Resolve minimum similarity threshold
+        effective_min_similarity = (
+            min_similarity if min_similarity is not None else profile_config.min_similarity
+        )
+
+        logger.debug(
+            f"Searching for: '{query[:50]}...' limit={limit} "
+            f"profile={resolved_profile.value} min_sim={effective_min_similarity}"
+        )
 
         # Generate query embedding
         query_embedding = (await self.embedding_provider.embed([query]))[0]
 
         # Build cache filter key (only cache-relevant filters, not path_pattern/fuzzy)
-        cache_filters: dict[str, Any] = {"limit": limit}
+        cache_filters: dict[str, Any] = {
+            "limit": limit,
+            "profile": resolved_profile.value,
+            "min_similarity": effective_min_similarity,
+        }
         if language:
             if language not in VALID_LANGUAGES:
                 raise ValueError(f"Invalid language filter: {language}")
@@ -1939,8 +2343,24 @@ class VectorStore:
             if cached_results is not None:
                 return cached_results
 
-        # Fetch more results if using path filter or fuzzy (we'll filter/rerank after)
-        fetch_limit = limit * 3 if (path_pattern or use_fuzzy) else limit
+        # Calculate fetch limit based on profile and adaptive search
+        base_fetch_multiplier = profile_config.fetch_multiplier
+        if path_pattern or use_fuzzy:
+            # Need more candidates for post-filtering
+            base_fetch_multiplier = max(base_fetch_multiplier, 3.0)
+
+        # Use adaptive search depth if enabled
+        if self._adaptive_search_enabled:
+            adaptive_depth = self._adaptive_searcher.estimate_optimal_depth(query, limit)
+            fetch_limit = max(
+                int(limit * base_fetch_multiplier),
+                adaptive_depth,
+            )
+        else:
+            fetch_limit = int(limit * base_fetch_multiplier)
+
+        # Cap fetch limit based on rerank candidates from profile
+        fetch_limit = min(fetch_limit, profile_config.rerank_candidates)
 
         # Build search query
         search = table.search(query_embedding).limit(fetch_limit)
@@ -1972,14 +2392,18 @@ class VectorStore:
                 # No event loop running (e.g., in sync context)
                 logger.debug("Cannot schedule lazy index creation: no event loop")
 
-        # Convert to SearchResult objects
+        # Convert to SearchResult objects and apply similarity threshold
         search_results = []
         for row in results:
+            score = 1.0 - row.get("_distance", 0)  # Convert distance to similarity
+            # Apply minimum similarity threshold
+            if score < effective_min_similarity:
+                continue
             chunk = self._row_to_chunk(row)
             search_results.append(
                 SearchResult(
                     chunk=chunk,
-                    score=1.0 - row.get("_distance", 0),  # Convert distance to similarity
+                    score=score,
                     highlights=[],
                 )
             )
@@ -1988,8 +2412,22 @@ class VectorStore:
         if path_pattern:
             search_results = filter_by_path(search_results, path_pattern)
 
-        # Apply fuzzy re-ranking
-        if use_fuzzy and search_results:
+        # Check if auto-fuzzy should be enabled due to poor results
+        fuzzy_config = self._fuzzy_search_config
+        auto_fuzzy_enabled = False
+        if (
+            fuzzy_config.enable_auto_fuzzy
+            and not use_fuzzy
+            and should_auto_enable_fuzzy(search_results, fuzzy_config.auto_fuzzy_threshold)
+        ):
+            auto_fuzzy_enabled = True
+            logger.debug(
+                f"Auto-enabling fuzzy search due to poor results "
+                f"(best score below {fuzzy_config.auto_fuzzy_threshold})"
+            )
+
+        # Apply fuzzy re-ranking (either explicit or auto-enabled)
+        if (use_fuzzy or auto_fuzzy_enabled) and search_results:
             search_results = rerank_with_fuzzy(search_results, query, fuzzy_weight)
 
             # Add highlights for fuzzy matches
@@ -1999,8 +2437,52 @@ class VectorStore:
         # Limit results to requested amount
         search_results = search_results[:limit]
 
-        # Cache results (only for non-fuzzy, non-path-pattern searches)
-        if use_cache:
+        # Generate "Did you mean?" suggestions if results are poor and auto_suggest is enabled
+        suggestions: list[str] | None = None
+        if (
+            auto_suggest
+            and fuzzy_config.enable_auto_fuzzy
+            and should_auto_enable_fuzzy(search_results, fuzzy_config.auto_fuzzy_threshold)
+        ):
+            try:
+                fuzzy_helper = await self._get_fuzzy_helper()
+                suggestions = fuzzy_helper.generate_suggestions(
+                    query,
+                    search_results,
+                    threshold=fuzzy_config.suggestion_threshold,
+                    max_suggestions=fuzzy_config.max_suggestions,
+                )
+                if suggestions:
+                    logger.debug(f"Generated suggestions: {suggestions}")
+            except Exception as e:
+                logger.warning(f"Failed to generate suggestions: {e}")
+
+        # Attach suggestions to the first result if we have any
+        if suggestions and search_results:
+            # Create a new SearchResult with suggestions attached
+            first_result = search_results[0]
+            search_results[0] = SearchResult(
+                chunk=first_result.chunk,
+                score=first_result.score,
+                highlights=first_result.highlights,
+                suggestions=suggestions,
+            )
+        elif suggestions and not search_results:
+            # Create a placeholder result with suggestions when no results found
+            # This allows the caller to show "Did you mean?" even with empty results
+            # We don't add a fake result, but we can log for now
+            logger.debug(f"No results found, but have suggestions: {suggestions}")
+
+        # Record search for adaptive learning
+        if self._adaptive_search_enabled and search_results:
+            # Estimate quality based on score distribution
+            avg_score = sum(r.score for r in search_results) / len(search_results)
+            self._adaptive_searcher.record_search_quality(
+                query, avg_score, len(search_results), fetch_limit
+            )
+
+        # Cache results (only for non-fuzzy, non-path-pattern, non-auto-fuzzy searches)
+        if use_cache and not auto_fuzzy_enabled:
             self._search_cache.set(query, query_embedding, search_results, cache_filters)
 
         return search_results
@@ -2016,6 +2498,8 @@ class VectorStore:
         use_fuzzy: bool = False,
         fuzzy_weight: float = 0.3,
         cursor: str | None = None,
+        profile: SearchProfile | str | None = None,
+        min_similarity: float | None = None,
     ) -> SearchResultPage:
         """Search for similar code chunks with pagination support.
 
@@ -2033,6 +2517,12 @@ class VectorStore:
             use_fuzzy: Whether to use fuzzy matching to re-rank results.
             fuzzy_weight: Weight for fuzzy score when use_fuzzy is True (0.0-1.0).
             cursor: Optional cursor for cursor-based pagination (overrides offset).
+            profile: Search profile for precision/recall trade-off.
+                Can be SearchProfile enum or string ("fast", "balanced", "thorough").
+                If None, uses the store's default profile.
+            min_similarity: Minimum similarity threshold override.
+                Results below this score are filtered out.
+                If None, uses the profile's default threshold.
 
         Returns:
             SearchResultPage with results, total count, and pagination metadata.
@@ -2054,7 +2544,31 @@ class VectorStore:
                 has_more=False,
             )
 
-        logger.debug(f"Paginated search for: '{query[:50]}...' limit={limit} offset={offset}")
+        # Resolve search profile
+        if profile is None:
+            resolved_profile = self._default_search_profile
+        elif isinstance(profile, str):
+            try:
+                resolved_profile = SearchProfile(profile.lower())
+            except ValueError:
+                logger.warning(
+                    f"Invalid search profile '{profile}', using default"
+                )
+                resolved_profile = self._default_search_profile
+        else:
+            resolved_profile = profile
+
+        profile_config = SEARCH_PROFILES[resolved_profile]
+
+        # Resolve minimum similarity threshold
+        effective_min_similarity = (
+            min_similarity if min_similarity is not None else profile_config.min_similarity
+        )
+
+        logger.debug(
+            f"Paginated search for: '{query[:50]}...' limit={limit} offset={offset} "
+            f"profile={resolved_profile.value}"
+        )
 
         # Parse cursor if provided (format: "offset:{number}")
         if cursor:
@@ -2082,11 +2596,20 @@ class VectorStore:
 
         # For total count, we need to fetch more results (expensive but accurate)
         # In production, you might want to cache this or use approximate counts
-        count_limit = offset + limit + 1000  # Fetch enough to estimate total
+        # Profile affects how many candidates we consider
+        base_count_limit = int(1000 * profile_config.fetch_multiplier)
+        count_limit = offset + limit + base_count_limit
         count_search = table.search(query_embedding).limit(count_limit)
         if filter_expr:
             count_search = count_search.where(filter_expr)
         all_results = count_search.to_list()
+
+        # Apply similarity threshold filtering
+        all_results = [
+            row
+            for row in all_results
+            if (1.0 - row.get("_distance", 0)) >= effective_min_similarity
+        ]
         total_estimate = len(all_results)
 
         # Apply path pattern filter for accurate count
@@ -2134,6 +2657,77 @@ class VectorStore:
             has_more=has_more,
             cursor=next_cursor,
         )
+
+    def record_feedback(self, feedback: SearchFeedback) -> None:
+        """Record user feedback on a search result.
+
+        Feedback is used to improve future search results by learning which
+        results are actually relevant for specific queries.
+
+        Args:
+            feedback: User feedback on a search result.
+        """
+        self._adaptive_searcher.record_feedback(feedback)
+
+    def get_search_profile(self) -> SearchProfile:
+        """Get the current default search profile.
+
+        Returns:
+            The default SearchProfile used when none is specified.
+        """
+        return self._default_search_profile
+
+    def set_search_profile(self, profile: SearchProfile | str) -> None:
+        """Set the default search profile.
+
+        Args:
+            profile: The search profile to use as default.
+                Can be SearchProfile enum or string ("fast", "balanced", "thorough").
+
+        Raises:
+            ValueError: If the profile string is invalid.
+        """
+        if isinstance(profile, str):
+            try:
+                self._default_search_profile = SearchProfile(profile.lower())
+            except ValueError:
+                raise ValueError(
+                    f"Invalid search profile: {profile}. "
+                    f"Valid values: {[p.value for p in SearchProfile]}"
+                )
+        else:
+            self._default_search_profile = profile
+
+    def get_adaptive_search_enabled(self) -> bool:
+        """Check if adaptive search is enabled.
+
+        Returns:
+            True if adaptive search depth estimation is enabled.
+        """
+        return self._adaptive_search_enabled
+
+    def set_adaptive_search_enabled(self, enabled: bool) -> None:
+        """Enable or disable adaptive search.
+
+        Args:
+            enabled: Whether to enable adaptive search depth estimation.
+        """
+        self._adaptive_search_enabled = enabled
+
+    def get_adaptive_search_stats(self) -> dict[str, Any]:
+        """Get statistics about adaptive search performance.
+
+        Returns:
+            Dictionary with adaptive search statistics including:
+            - query_history_size: Number of queries in history
+            - feedback_stats: Feedback collection statistics
+        """
+        return {
+            "query_history_size": len(self._adaptive_searcher._query_history),
+            "feedback_stats": self._adaptive_searcher.get_feedback_stats(),
+            "adaptive_search_enabled": self._adaptive_search_enabled,
+            "default_profile": self._default_search_profile.value,
+        }
 
     async def get_chunk_by_id(self, chunk_id: str) -> CodeChunk | None:
         """Get a specific chunk by ID.
