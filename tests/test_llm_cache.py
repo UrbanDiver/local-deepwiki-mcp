@@ -1078,3 +1078,184 @@ class TestLLMCacheEdgeCases:
 
             # Verify create_scalar_index was called (even though it failed)
             mock_table.create_scalar_index.assert_called_once_with("exact_hash")
+
+    @pytest.mark.asyncio
+    async def test_record_hit_updates_entry(
+        self, cache_path: Path, embedding_provider: MockEmbeddingProvider
+    ):
+        """Test that _record_hit properly updates hit_count and last_hit_at."""
+        config = LLMCacheConfig(
+            enabled=True,
+            ttl_seconds=3600,
+            max_entries=1000,
+            similarity_threshold=0.95,
+            max_cacheable_temperature=0.5,
+        )
+        cache = LLMCache(cache_path, embedding_provider, config)
+
+        # Create an entry
+        await cache.set(
+            prompt="test prompt",
+            response="test response",
+            temperature=0.1,
+            model_name="test-model",
+        )
+
+        # Get the entry to find its ID
+        table = cache._get_table()
+        assert table is not None
+        entries = table.search().limit(1).to_list()
+        assert len(entries) == 1
+        entry_id = entries[0]["id"]
+        original_hit_count = entries[0].get("hit_count", 0)
+
+        # Record a hit
+        await cache._record_hit(entry_id)
+
+        # Verify the entry was updated
+        updated_entries = table.search().where(f"id = '{entry_id}'").limit(1).to_list()
+        assert len(updated_entries) == 1
+        assert updated_entries[0]["hit_count"] == original_hit_count + 1
+        assert updated_entries[0]["last_hit_at"] > entries[0]["last_hit_at"]
+
+    @pytest.mark.asyncio
+    async def test_record_hit_nonexistent_entry(
+        self, cache_path: Path, embedding_provider: MockEmbeddingProvider
+    ):
+        """Test that _record_hit handles nonexistent entries gracefully."""
+        config = LLMCacheConfig(
+            enabled=True,
+            ttl_seconds=3600,
+            max_entries=1000,
+            similarity_threshold=0.95,
+            max_cacheable_temperature=0.5,
+        )
+        cache = LLMCache(cache_path, embedding_provider, config)
+
+        # Create the table with an entry
+        await cache.set(
+            prompt="test",
+            response="response",
+            temperature=0.1,
+            model_name="m",
+        )
+
+        # Try to record hit for nonexistent entry - should not raise
+        await cache._record_hit("nonexistent-id-12345")
+
+    @pytest.mark.asyncio
+    async def test_lru_eviction_when_over_limit(self, cache_path: Path):
+        """Test that LRU eviction removes oldest entries when over max_entries."""
+        config = LLMCacheConfig(
+            enabled=True,
+            ttl_seconds=3600,
+            max_entries=100,  # Low limit for testing
+            similarity_threshold=0.95,
+            max_cacheable_temperature=0.5,
+        )
+        embedding_provider = MockEmbeddingProvider()
+        cache = LLMCache(cache_path, embedding_provider, config)
+
+        # Mock the table with entries over limit (all valid, none expired)
+        with patch.object(cache, "_get_table") as mock_get_table:
+            mock_table = MagicMock()
+            mock_table.count_rows.return_value = 150  # Over max_entries of 100
+
+            # Create entries with varying last_hit_at times
+            now = time.time()
+            entries = [
+                {
+                    "id": f"entry-{i}",
+                    "created_at": now - 1000,
+                    "last_hit_at": now - (100 - i),  # entry-0 is oldest, entry-99 is newest
+                    "ttl_seconds": 3600,
+                }
+                for i in range(150)
+            ]
+
+            mock_search = MagicMock()
+            mock_search.limit.return_value.to_list.return_value = entries
+            mock_table.search.return_value = mock_search
+
+            # Track deleted entries
+            deleted_ids = []
+
+            def track_delete(filter_expr):
+                # Extract ID from filter like "id = 'entry-5'"
+                import re
+
+                match = re.search(r"id = '([^']+)'", filter_expr)
+                if match:
+                    deleted_ids.append(match.group(1))
+
+            mock_table.delete.side_effect = track_delete
+            mock_get_table.return_value = mock_table
+
+            # Trigger eviction
+            await cache._maybe_evict()
+
+            # Should have deleted oldest entries (LRU)
+            # Target is 80% of max_entries = 80, so need to delete 150 - 80 = 70
+            assert len(deleted_ids) > 0
+            # The oldest entries (lowest last_hit_at) should be deleted first
+            # entry-0 through entry-69 should be deleted (they have oldest last_hit_at)
+            for deleted_id in deleted_ids:
+                entry_num = int(deleted_id.split("-")[1])
+                # Should be from the oldest entries
+                assert entry_num < 70, f"Entry {deleted_id} should not have been evicted (not old enough)"
+
+    @pytest.mark.asyncio
+    async def test_eviction_prefers_expired_over_lru(self, cache_path: Path):
+        """Test that eviction removes expired entries before LRU entries."""
+        config = LLMCacheConfig(
+            enabled=True,
+            ttl_seconds=60,
+            max_entries=100,
+            similarity_threshold=0.95,
+            max_cacheable_temperature=0.5,
+        )
+        embedding_provider = MockEmbeddingProvider()
+        cache = LLMCache(cache_path, embedding_provider, config)
+
+        with patch.object(cache, "_get_table") as mock_get_table:
+            mock_table = MagicMock()
+            mock_table.count_rows.return_value = 120  # Over limit
+
+            now = time.time()
+            # Mix of expired and valid entries
+            entries = [
+                # 20 expired entries (created long ago)
+                *[
+                    {
+                        "id": f"expired-{i}",
+                        "created_at": now - 10000,  # Long ago
+                        "last_hit_at": now - 1,  # Recent hit (would be kept by LRU)
+                        "ttl_seconds": 60,  # But expired
+                    }
+                    for i in range(20)
+                ],
+                # 100 valid entries
+                *[
+                    {
+                        "id": f"valid-{i}",
+                        "created_at": now - 30,  # Recent
+                        "last_hit_at": now - i,  # Varying recency
+                        "ttl_seconds": 3600,
+                    }
+                    for i in range(100)
+                ],
+            ]
+
+            mock_search = MagicMock()
+            mock_search.limit.return_value.to_list.return_value = entries
+            mock_table.search.return_value = mock_search
+
+            deleted_ids = []
+            mock_table.delete.side_effect = lambda f: deleted_ids.append(f)
+            mock_get_table.return_value = mock_table
+
+            await cache._maybe_evict()
+
+            # All 20 expired entries should be deleted
+            expired_deleted = sum(1 for d in deleted_ids if "expired-" in d)
+            assert expired_deleted == 20, "All expired entries should be deleted first"

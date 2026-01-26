@@ -285,6 +285,9 @@ class LLMCache:
     async def _record_hit(self, entry_id: str) -> None:
         """Record a cache hit for an entry.
 
+        Updates hit_count and last_hit_at for LRU tracking.
+        Since LanceDB doesn't support UPDATE, we delete and re-add the entry.
+
         Args:
             entry_id: ID of the cache entry.
         """
@@ -293,51 +296,107 @@ class LLMCache:
             if table is None:
                 return
 
-            # Update hit_count and last_hit_at
-            # Note: LanceDB doesn't support UPDATE, so we'd need to
-            # delete and re-add. For simplicity, we skip this for now.
-            # The hit tracking is mainly for future LRU eviction.
-            pass
-        except (KeyError, RuntimeError, OSError) as e:
-            # KeyError: Entry not found
+            # Find the entry
+            results = table.search().where(f"id = '{entry_id}'").limit(1).to_list()
+            if not results:
+                return
+
+            entry = results[0]
+
+            # Create updated record
+            updated_record = {
+                "id": entry["id"],
+                "exact_hash": entry["exact_hash"],
+                "vector": entry["vector"],
+                "system_prompt": entry["system_prompt"],
+                "prompt": entry["prompt"],
+                "response": entry["response"],
+                "temperature": entry["temperature"],
+                "model_name": entry["model_name"],
+                "created_at": entry["created_at"],
+                "hit_count": entry.get("hit_count", 0) + 1,
+                "last_hit_at": time.time(),
+                "ttl_seconds": entry.get("ttl_seconds", self.config.ttl_seconds),
+            }
+
+            # Delete old and add updated (LanceDB doesn't support UPDATE)
+            table.delete(f"id = '{entry_id}'")
+            table.add([updated_record])
+
+        except (KeyError, ValueError, RuntimeError, OSError) as e:
+            # KeyError: Entry not found or missing fields
+            # ValueError: Invalid query
             # RuntimeError: Database operation failure
             # OSError: Storage issues
             logger.debug(f"Failed to record hit: {e}")
 
     async def _maybe_evict(self) -> None:
-        """Evict old entries if cache exceeds max_entries."""
+        """Evict old entries if cache exceeds max_entries.
+
+        Uses a two-phase eviction strategy:
+        1. First, remove all expired entries (TTL-based)
+        2. If still over limit, remove oldest entries by last_hit_at (LRU)
+
+        Eviction is triggered when entry count exceeds max_entries.
+        """
         try:
             table = self._get_table()
             if table is None:
                 return
 
-            # Count entries (approximate)
+            # Count entries
             count = table.count_rows()
             if count <= self.config.max_entries:
                 return
 
-            logger.info(f"Cache has {count} entries, evicting old entries...")
+            logger.info(f"Cache has {count} entries (max: {self.config.max_entries}), evicting...")
 
-            # Get oldest entries to delete
-            # Note: LanceDB doesn't support ORDER BY + DELETE easily
-            # For now, we'll just delete expired entries
-            all_entries = table.search().limit(count).to_list()
+            # Fetch all entries for eviction analysis
+            # Limit to 2x max_entries to avoid memory issues on very large caches
+            fetch_limit = min(count, self.config.max_entries * 2)
+            all_entries = table.search().limit(fetch_limit).to_list()
 
+            # Phase 1: Identify and delete expired entries
             expired_ids = []
+            valid_entries = []
             for entry in all_entries:
                 if not self._is_valid_entry(entry):
                     expired_ids.append(entry["id"])
+                else:
+                    valid_entries.append(entry)
 
+            deleted_count = 0
             if expired_ids:
-                # Delete expired entries
-                for entry_id in expired_ids[:100]:  # Batch delete
+                for entry_id in expired_ids:
                     try:
                         table.delete(f"id = '{entry_id}'")
+                        deleted_count += 1
                     except (ValueError, RuntimeError, OSError):
-                        # Delete may fail for individual entries; continue with others
                         pass
 
-                logger.info(f"Evicted {len(expired_ids)} expired cache entries")
+                logger.info(f"Evicted {deleted_count} expired cache entries")
+
+            # Phase 2: LRU eviction if still over limit
+            remaining_count = count - deleted_count
+            if remaining_count > self.config.max_entries:
+                # Calculate how many to evict (remove 20% buffer to avoid frequent eviction)
+                target_count = int(self.config.max_entries * 0.8)
+                to_evict = remaining_count - target_count
+
+                if to_evict > 0 and valid_entries:
+                    # Sort by last_hit_at (oldest first = LRU)
+                    valid_entries.sort(key=lambda e: e.get("last_hit_at", e.get("created_at", 0)))
+
+                    # Delete oldest entries
+                    lru_deleted = 0
+                    for entry in valid_entries[:to_evict]:
+                        try:
+                            table.delete(f"id = '{entry['id']}'")
+                            lru_deleted += 1
+                        except (ValueError, RuntimeError, OSError):
+                            pass
+
+                    logger.info(f"Evicted {lru_deleted} LRU cache entries")
 
         except (KeyError, ValueError, RuntimeError, OSError) as e:
             # KeyError: Missing fields in entries
