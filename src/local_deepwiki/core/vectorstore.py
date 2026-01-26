@@ -2,6 +2,7 @@
 
 import json
 import math
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -51,22 +52,35 @@ class VectorStore:
         self.embedding_provider = embedding_provider
         self._db: lancedb.DBConnection | None = None
         self._table: Table | None = None
+        self._lock = threading.RLock()  # Reentrant lock for nested calls
 
     def _connect(self) -> lancedb.DBConnection:
-        """Get or create database connection."""
+        """Get or create database connection.
+
+        Thread-safe lazy initialization of the database connection.
+        """
         if self._db is None:
-            self.db_path.parent.mkdir(parents=True, exist_ok=True)
-            self._db = lancedb.connect(str(self.db_path))
+            with self._lock:
+                # Double-check after acquiring lock to avoid race condition
+                if self._db is None:
+                    self.db_path.parent.mkdir(parents=True, exist_ok=True)
+                    self._db = lancedb.connect(str(self.db_path))
         return self._db
 
     def _get_table(self) -> Table | None:
-        """Get the chunks table if it exists."""
+        """Get the chunks table if it exists.
+
+        Thread-safe lazy initialization of the table reference.
+        """
         if self._table is None:
-            db = self._connect()
-            if self.TABLE_NAME in db.list_tables().tables:
-                self._table = db.open_table(self.TABLE_NAME)
-                # Ensure indexes exist (may have been created by older code version)
-                self._ensure_indexes()
+            with self._lock:
+                # Double-check after acquiring lock to avoid race condition
+                if self._table is None:
+                    db = self._connect()
+                    if self.TABLE_NAME in db.list_tables().tables:
+                        self._table = db.open_table(self.TABLE_NAME)
+                        # Ensure indexes exist (may have been created by older code version)
+                        self._ensure_indexes()
         return self._table
 
     def _ensure_indexes(self) -> None:
@@ -242,11 +256,12 @@ class VectorStore:
             chunk.to_vector_record(vector=embedding) for chunk, embedding in zip(chunks, embeddings)
         ]
 
-        # Drop existing table and create new one
-        if self.TABLE_NAME in db.list_tables().tables:
-            db.drop_table(self.TABLE_NAME)
+        # Drop existing table and create new one (thread-safe)
+        with self._lock:
+            if self.TABLE_NAME in db.list_tables().tables:
+                db.drop_table(self.TABLE_NAME)
 
-        self._table = db.create_table(self.TABLE_NAME, data)
+            self._table = db.create_table(self.TABLE_NAME, data)
 
         # Create scalar indexes for efficient lookups
         self._create_scalar_indexes()
