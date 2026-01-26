@@ -22,6 +22,7 @@ from local_deepwiki.security.access_control import (
     AccessDeniedException,
     AuthenticationException,
     Permission,
+    RBACMode,
     Role,
     Subject,
     get_access_controller,
@@ -304,12 +305,65 @@ class TestSubject:
 
 
 # =============================================================================
+# RBACMode Enum Tests
+# =============================================================================
+
+
+class TestRBACModeEnum:
+    """Tests for the RBACMode enum."""
+
+    def test_all_mode_values_exist(self):
+        """Verify all expected mode values are defined."""
+        expected_modes = ["DISABLED", "PERMISSIVE", "ENFORCED"]
+        for mode_name in expected_modes:
+            assert hasattr(RBACMode, mode_name)
+
+    def test_mode_string_values(self):
+        """Verify mode enum values."""
+        assert RBACMode.DISABLED.value == "disabled"
+        assert RBACMode.PERMISSIVE.value == "permissive"
+        assert RBACMode.ENFORCED.value == "enforced"
+
+    def test_mode_is_string_enum(self):
+        """Verify RBACMode is a string enum."""
+        assert isinstance(RBACMode.DISABLED, str)
+        assert RBACMode.DISABLED == "disabled"
+
+
+# =============================================================================
 # AccessController Tests
 # =============================================================================
 
 
 class TestAccessController:
     """Tests for the AccessController class."""
+
+    def test_default_mode_is_permissive(self, controller):
+        """Verify default RBAC mode is PERMISSIVE."""
+        assert controller.mode == RBACMode.PERMISSIVE
+
+    def test_mode_property(self, controller):
+        """Verify mode property returns the current mode."""
+        assert controller.mode == RBACMode.PERMISSIVE
+        controller.set_mode(RBACMode.ENFORCED)
+        assert controller.mode == RBACMode.ENFORCED
+
+    def test_set_mode(self, controller):
+        """Verify set_mode changes the RBAC mode."""
+        controller.set_mode(RBACMode.DISABLED)
+        assert controller.mode == RBACMode.DISABLED
+        controller.set_mode(RBACMode.PERMISSIVE)
+        assert controller.mode == RBACMode.PERMISSIVE
+        controller.set_mode(RBACMode.ENFORCED)
+        assert controller.mode == RBACMode.ENFORCED
+
+    def test_init_with_mode(self):
+        """Verify AccessController can be initialized with a specific mode."""
+        disabled_controller = AccessController(mode=RBACMode.DISABLED)
+        assert disabled_controller.mode == RBACMode.DISABLED
+
+        enforced_controller = AccessController(mode=RBACMode.ENFORCED)
+        assert enforced_controller.mode == RBACMode.ENFORCED
 
     def test_set_subject_with_valid_subject(self, controller, admin_subject):
         """Verify set_subject works with a valid subject."""
@@ -356,10 +410,23 @@ class TestAccessController:
         with pytest.raises(AccessDeniedException, match="lacks permission"):
             controller.require_permission(Permission.INDEX_READ)
 
-    def test_require_permission_not_authenticated(self, controller):
-        """Verify require_permission raises AuthenticationException when not authenticated."""
+    def test_require_permission_permissive_mode_allows_unauthenticated(self, controller):
+        """Verify require_permission allows access in PERMISSIVE mode when not authenticated."""
+        # Default mode is PERMISSIVE - should allow access when no subject is set
+        controller.require_permission(Permission.QUERY_SEARCH)  # Should not raise
+
+    def test_require_permission_enforced_mode_not_authenticated(self, controller):
+        """Verify require_permission raises AuthenticationException in ENFORCED mode when not authenticated."""
+        controller.set_mode(RBACMode.ENFORCED)
         with pytest.raises(AuthenticationException, match="No subject authenticated"):
             controller.require_permission(Permission.QUERY_SEARCH)
+
+    def test_require_permission_disabled_mode(self, controller, guest_subject):
+        """Verify require_permission skips all checks in DISABLED mode."""
+        controller.set_mode(RBACMode.DISABLED)
+        controller.set_subject(guest_subject)
+        # Guest doesn't have INDEX_WRITE permission, but DISABLED mode skips checks
+        controller.require_permission(Permission.INDEX_WRITE)  # Should not raise
 
     def test_require_any_permission_success(self, controller, viewer_subject):
         """Verify require_any_permission succeeds when subject has one of the permissions."""
@@ -373,10 +440,23 @@ class TestAccessController:
         with pytest.raises(AccessDeniedException, match="lacks any of"):
             controller.require_any_permission(Permission.INDEX_READ, Permission.INDEX_WRITE)
 
-    def test_require_any_permission_not_authenticated(self, controller):
-        """Verify require_any_permission raises when not authenticated."""
+    def test_require_any_permission_permissive_mode_allows_unauthenticated(self, controller):
+        """Verify require_any_permission allows access in PERMISSIVE mode when not authenticated."""
+        # Default mode is PERMISSIVE - should allow access when no subject is set
+        controller.require_any_permission(Permission.QUERY_SEARCH)  # Should not raise
+
+    def test_require_any_permission_enforced_mode_not_authenticated(self, controller):
+        """Verify require_any_permission raises in ENFORCED mode when not authenticated."""
+        controller.set_mode(RBACMode.ENFORCED)
         with pytest.raises(AuthenticationException, match="No subject authenticated"):
             controller.require_any_permission(Permission.QUERY_SEARCH)
+
+    def test_require_any_permission_disabled_mode(self, controller, guest_subject):
+        """Verify require_any_permission skips all checks in DISABLED mode."""
+        controller.set_mode(RBACMode.DISABLED)
+        controller.set_subject(guest_subject)
+        # Guest doesn't have INDEX_WRITE permission, but DISABLED mode skips checks
+        controller.require_any_permission(Permission.INDEX_WRITE)  # Should not raise
 
     def test_require_all_permissions_success(self, controller, admin_subject):
         """Verify require_all_permissions succeeds when subject has all permissions."""
@@ -391,10 +471,23 @@ class TestAccessController:
         with pytest.raises(AccessDeniedException, match="lacks permission"):
             controller.require_all_permissions(Permission.INDEX_READ, Permission.SYSTEM_ADMIN)
 
-    def test_require_all_permissions_not_authenticated(self, controller):
-        """Verify require_all_permissions raises when not authenticated."""
+    def test_require_all_permissions_permissive_mode_allows_unauthenticated(self, controller):
+        """Verify require_all_permissions allows access in PERMISSIVE mode when not authenticated."""
+        # Default mode is PERMISSIVE - should allow access when no subject is set
+        controller.require_all_permissions(Permission.QUERY_SEARCH)  # Should not raise
+
+    def test_require_all_permissions_enforced_mode_not_authenticated(self, controller):
+        """Verify require_all_permissions raises in ENFORCED mode when not authenticated."""
+        controller.set_mode(RBACMode.ENFORCED)
         with pytest.raises(AuthenticationException, match="No subject authenticated"):
             controller.require_all_permissions(Permission.QUERY_SEARCH)
+
+    def test_require_all_permissions_disabled_mode(self, controller, guest_subject):
+        """Verify require_all_permissions skips all checks in DISABLED mode."""
+        controller.set_mode(RBACMode.DISABLED)
+        controller.set_subject(guest_subject)
+        # Guest doesn't have INDEX_WRITE permission, but DISABLED mode skips checks
+        controller.require_all_permissions(Permission.INDEX_WRITE)  # Should not raise
 
     def test_has_permission_returns_true(self, controller, admin_subject):
         """Verify has_permission returns True for valid permission."""
@@ -442,8 +535,20 @@ class TestRequirePermissionDecorator:
         with pytest.raises(AccessDeniedException):
             protected_function()
 
-    def test_sync_function_not_authenticated(self):
-        """Verify decorator blocks sync function when not authenticated."""
+    def test_sync_function_permissive_mode_allows_unauthenticated(self):
+        """Verify decorator allows sync function in PERMISSIVE mode when not authenticated."""
+
+        @require_permission(Permission.QUERY_SEARCH)
+        def protected_function():
+            return "success"
+
+        # Default mode is PERMISSIVE - should allow access when no subject is set
+        assert protected_function() == "success"
+
+    def test_sync_function_enforced_mode_not_authenticated(self):
+        """Verify decorator blocks sync function in ENFORCED mode when not authenticated."""
+        controller = get_access_controller()
+        controller.set_mode(RBACMode.ENFORCED)
 
         @require_permission(Permission.QUERY_SEARCH)
         def protected_function():

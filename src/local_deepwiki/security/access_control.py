@@ -15,6 +15,14 @@ from typing import Callable, Optional, TypeVar
 F = TypeVar("F", bound=Callable)
 
 
+class RBACMode(str, Enum):
+    """RBAC enforcement modes."""
+
+    DISABLED = "disabled"  # No permission checks
+    PERMISSIVE = "permissive"  # Check if subject set, allow if not (default)
+    ENFORCED = "enforced"  # Always require authenticated subject
+
+
 class Permission(str, Enum):
     """Available permissions in the system."""
 
@@ -138,11 +146,34 @@ class AccessController:
 
     This class provides centralized access control for the system,
     allowing permission checks and enforcement of access policies.
+
+    The controller supports three RBAC modes:
+    - DISABLED: No permission checks are performed
+    - PERMISSIVE: Checks only if a subject is set, allows if not (default)
+    - ENFORCED: Always requires an authenticated subject
     """
 
-    def __init__(self):
-        """Initialize the access controller."""
+    def __init__(self, mode: RBACMode = RBACMode.PERMISSIVE):
+        """Initialize the access controller.
+
+        Args:
+            mode: The RBAC enforcement mode. Defaults to PERMISSIVE.
+        """
         self._current_subject: Optional[Subject] = None
+        self._mode = mode
+
+    @property
+    def mode(self) -> RBACMode:
+        """Get the current RBAC mode."""
+        return self._mode
+
+    def set_mode(self, mode: RBACMode) -> None:
+        """Set the RBAC enforcement mode.
+
+        Args:
+            mode: The new RBAC mode.
+        """
+        self._mode = mode
 
     def set_subject(self, subject: Subject) -> None:
         """Set the current subject for access checks.
@@ -171,13 +202,28 @@ class AccessController:
     def require_permission(self, permission: Permission) -> None:
         """Check that the current subject has the required permission.
 
+        The behavior depends on the current RBAC mode:
+        - DISABLED: Skip all checks
+        - PERMISSIVE: Check only if subject is set, allow if not
+        - ENFORCED: Always require an authenticated subject
+
         Args:
             permission: The required permission.
 
         Raises:
-            AuthenticationException: If no subject is authenticated.
+            AuthenticationException: If no subject is authenticated (ENFORCED mode
+                or when subject is set in PERMISSIVE mode).
             AccessDeniedException: If the subject lacks the required permission.
         """
+        # If disabled, skip all checks
+        if self._mode == RBACMode.DISABLED:
+            return
+
+        # If permissive and no subject, allow
+        if self._mode == RBACMode.PERMISSIVE and not self._current_subject:
+            return
+
+        # Enforced mode or subject is set - do the check
         if not self._current_subject:
             raise AuthenticationException("No subject authenticated")
 
@@ -189,13 +235,28 @@ class AccessController:
     def require_any_permission(self, *permissions: Permission) -> None:
         """Check that the current subject has any of the required permissions.
 
+        The behavior depends on the current RBAC mode:
+        - DISABLED: Skip all checks
+        - PERMISSIVE: Check only if subject is set, allow if not
+        - ENFORCED: Always require an authenticated subject
+
         Args:
             *permissions: One or more permissions, any of which will satisfy the check.
 
         Raises:
-            AuthenticationException: If no subject is authenticated.
+            AuthenticationException: If no subject is authenticated (ENFORCED mode
+                or when subject is set in PERMISSIVE mode).
             AccessDeniedException: If the subject lacks all specified permissions.
         """
+        # If disabled, skip all checks
+        if self._mode == RBACMode.DISABLED:
+            return
+
+        # If permissive and no subject, allow
+        if self._mode == RBACMode.PERMISSIVE and not self._current_subject:
+            return
+
+        # Enforced mode or subject is set - do the check
         if not self._current_subject:
             raise AuthenticationException("No subject authenticated")
 
@@ -211,13 +272,28 @@ class AccessController:
     def require_all_permissions(self, *permissions: Permission) -> None:
         """Check that the current subject has all required permissions.
 
+        The behavior depends on the current RBAC mode:
+        - DISABLED: Skip all checks
+        - PERMISSIVE: Check only if subject is set, allow if not
+        - ENFORCED: Always require an authenticated subject
+
         Args:
             *permissions: Permissions that are all required.
 
         Raises:
-            AuthenticationException: If no subject is authenticated.
+            AuthenticationException: If no subject is authenticated (ENFORCED mode
+                or when subject is set in PERMISSIVE mode).
             AccessDeniedException: If the subject lacks any required permission.
         """
+        # If disabled, skip all checks
+        if self._mode == RBACMode.DISABLED:
+            return
+
+        # If permissive and no subject, allow
+        if self._mode == RBACMode.PERMISSIVE and not self._current_subject:
+            return
+
+        # Enforced mode or subject is set - do the check
         if not self._current_subject:
             raise AuthenticationException("No subject authenticated")
 

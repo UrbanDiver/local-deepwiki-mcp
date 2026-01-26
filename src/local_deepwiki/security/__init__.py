@@ -8,6 +8,7 @@ from local_deepwiki.security.access_control import (
     AccessDeniedException,
     AuthenticationException,
     Permission,
+    RBACMode,
     Role,
     ROLE_PERMISSIONS,
     Subject,
@@ -17,12 +18,29 @@ from local_deepwiki.security.access_control import (
     require_permission,
     reset_access_controller,
 )
+from local_deepwiki.security.repository_access import (
+    RepositoryAccessConfig,
+    RepositoryAccessController,
+    configure_repository_access,
+    get_repository_access_controller,
+    reset_repository_access,
+)
+from local_deepwiki.security.role_config import (
+    RoleAssignment,
+    RoleConfig,
+    RoleManager,
+    configure_roles,
+    get_role_manager,
+    reset_role_manager,
+)
 
 __all__ = [
+    # Access control
     "AccessController",
     "AccessDeniedException",
     "AuthenticationException",
     "Permission",
+    "RBACMode",
     "Role",
     "ROLE_PERMISSIONS",
     "Subject",
@@ -31,4 +49,17 @@ __all__ = [
     "require_any_permission",
     "require_permission",
     "reset_access_controller",
+    # Repository access
+    "RepositoryAccessConfig",
+    "RepositoryAccessController",
+    "configure_repository_access",
+    "get_repository_access_controller",
+    "reset_repository_access",
+    # Role configuration
+    "RoleAssignment",
+    "RoleConfig",
+    "RoleManager",
+    "configure_roles",
+    "get_role_manager",
+    "reset_role_manager",
 ]

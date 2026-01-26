@@ -69,6 +69,7 @@ from local_deepwiki.security import (
     AuthenticationException,
     Permission,
     get_access_controller,
+    get_repository_access_controller,
 )
 from local_deepwiki.validation import (
     MAX_WIKI_PAGE_SIZE,
@@ -292,10 +293,9 @@ async def _handle_index_repository_impl(
     server: Any = None,
 ) -> list[TextContent]:
     """Internal implementation of index_repository with progress streaming and ETA."""
-    # Optional RBAC check - only enforced when a subject is authenticated
+    # RBAC check - behavior depends on controller mode (disabled/permissive/enforced)
     controller = get_access_controller()
-    if controller.get_current_subject():
-        controller.require_permission(Permission.INDEX_WRITE)
+    controller.require_permission(Permission.INDEX_WRITE)
 
     # Validate with Pydantic
     try:
@@ -304,6 +304,10 @@ async def _handle_index_repository_impl(
         raise ValueError(str(e)) from e
 
     repo_path = Path(validated.repo_path).resolve()
+
+    # Check repository access (allowlist/denylist)
+    repo_access = get_repository_access_controller()
+    repo_access.require_access(repo_path)
 
     # Validate input size limits (CWE-400 prevention)
     total_size, file_count = validate_index_parameters(str(repo_path))
@@ -536,10 +540,9 @@ async def _handle_index_repository_impl(
 @handle_tool_errors
 async def handle_ask_question(args: dict[str, Any]) -> list[TextContent]:
     """Handle ask_question tool call."""
-    # Optional RBAC check - only enforced when a subject is authenticated
+    # RBAC check - behavior depends on controller mode (disabled/permissive/enforced)
     controller = get_access_controller()
-    if controller.get_current_subject():
-        controller.require_permission(Permission.QUERY_SEARCH)
+    controller.require_permission(Permission.QUERY_SEARCH)
 
     # Validate with Pydantic
     try:
@@ -1005,10 +1008,9 @@ async def _handle_deep_research_impl(
     Returns:
         List of TextContent with research results.
     """
-    # Optional RBAC check - only enforced when a subject is authenticated
+    # RBAC check - behavior depends on controller mode (disabled/permissive/enforced)
     controller = get_access_controller()
-    if controller.get_current_subject():
-        controller.require_permission(Permission.QUERY_DEEP_RESEARCH)
+    controller.require_permission(Permission.QUERY_DEEP_RESEARCH)
 
     # Step 1: Setup config and validate inputs
     ctx = _setup_deep_research_config(args, server)
@@ -1032,10 +1034,9 @@ async def _handle_deep_research_impl(
 @handle_tool_errors
 async def handle_read_wiki_structure(args: dict[str, Any]) -> list[TextContent]:
     """Handle read_wiki_structure tool call."""
-    # Optional RBAC check - only enforced when a subject is authenticated
+    # RBAC check - behavior depends on controller mode (disabled/permissive/enforced)
     controller = get_access_controller()
-    if controller.get_current_subject():
-        controller.require_permission(Permission.INDEX_READ)
+    controller.require_permission(Permission.INDEX_READ)
 
     # Validate with Pydantic
     try:
@@ -1099,10 +1100,9 @@ async def handle_read_wiki_structure(args: dict[str, Any]) -> list[TextContent]:
 @handle_tool_errors
 async def handle_read_wiki_page(args: dict[str, Any]) -> list[TextContent]:
     """Handle read_wiki_page tool call."""
-    # Optional RBAC check - only enforced when a subject is authenticated
+    # RBAC check - behavior depends on controller mode (disabled/permissive/enforced)
     controller = get_access_controller()
-    if controller.get_current_subject():
-        controller.require_permission(Permission.INDEX_READ)
+    controller.require_permission(Permission.INDEX_READ)
 
     # Validate with Pydantic
     try:
@@ -1149,10 +1149,9 @@ async def handle_search_code(args: dict[str, Any]) -> list[TextContent]:
     Supports both vector similarity search and optional fuzzy matching,
     with filters for language, chunk type, and file path patterns.
     """
-    # Optional RBAC check - only enforced when a subject is authenticated
+    # RBAC check - behavior depends on controller mode (disabled/permissive/enforced)
     controller = get_access_controller()
-    if controller.get_current_subject():
-        controller.require_permission(Permission.QUERY_SEARCH)
+    controller.require_permission(Permission.QUERY_SEARCH)
 
     # Validate with Pydantic
     try:
@@ -1226,10 +1225,9 @@ async def handle_search_code(args: dict[str, Any]) -> list[TextContent]:
 @handle_tool_errors
 async def handle_export_wiki_html(args: dict[str, Any]) -> list[TextContent]:
     """Handle export_wiki_html tool call with streaming support for large wikis."""
-    # Optional RBAC check - only enforced when a subject is authenticated
+    # RBAC check - behavior depends on controller mode (disabled/permissive/enforced)
     controller = get_access_controller()
-    if controller.get_current_subject():
-        controller.require_permission(Permission.EXPORT_HTML)
+    controller.require_permission(Permission.EXPORT_HTML)
 
     from local_deepwiki.export.html import export_to_html
     from local_deepwiki.export.streaming import ExportConfig, WikiPageIterator
@@ -1315,10 +1313,9 @@ async def handle_export_wiki_html(args: dict[str, Any]) -> list[TextContent]:
 @handle_tool_errors
 async def handle_export_wiki_pdf(args: dict[str, Any]) -> list[TextContent]:
     """Handle export_wiki_pdf tool call with streaming support for large wikis."""
-    # Optional RBAC check - only enforced when a subject is authenticated
+    # RBAC check - behavior depends on controller mode (disabled/permissive/enforced)
     controller = get_access_controller()
-    if controller.get_current_subject():
-        controller.require_permission(Permission.EXPORT_PDF)
+    controller.require_permission(Permission.EXPORT_PDF)
 
     from local_deepwiki.export.pdf import export_to_pdf
     from local_deepwiki.export.streaming import ExportConfig, WikiPageIterator

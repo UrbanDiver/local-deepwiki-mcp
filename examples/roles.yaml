@@ -1,0 +1,36 @@
+# Role configuration example
+#
+# This file configures how subjects (users/services) are assigned roles.
+# Role assignment follows this priority order:
+# 1. Admin identifiers (exact match -> ADMIN role)
+# 2. Pattern assignments (first matching pattern wins)
+# 3. Default role (fallback for unmatched subjects)
+#
+# Available roles: admin, editor, viewer, guest
+
+# Default role for subjects that don't match any pattern or admin identifier
+default_role: viewer
+
+# Identifiers that always get admin role (exact match)
+admin_identifiers:
+  - "admin"
+  - "root"
+
+# Pattern-based role assignments (checked in order, first match wins)
+# Supports glob patterns: * matches any characters, ? matches single character
+assignments:
+  # All users from admin domain get admin role
+  - pattern: "*@admin.example.com"
+    role: admin
+
+  # Editor service accounts
+  - pattern: "editor-*"
+    role: editor
+
+  # Generic service accounts get editor access
+  - pattern: "service-*"
+    role: editor
+
+  # Guest accounts have limited access
+  - pattern: "guest-*"
+    role: guest
