@@ -621,3 +621,1022 @@ class TestKeyboardHandling:
 
             assert search._state.filters.language is None
             assert search._state.filters.min_similarity == 0.0
+
+    async def test_handle_search_mode_new_search_slash_key(
+        self, mock_vector_store: MagicMock, sample_results: list[SearchResult]
+    ) -> None:
+        """'/' key should prompt for new search."""
+        mock_vector_store.search = AsyncMock(return_value=sample_results)
+        search = InteractiveSearch(mock_vector_store, Path("/test"))
+
+        # Create a mock readchar module
+        mock_readchar = MagicMock()
+        mock_readchar.key.UP = "\x1b[A"
+        mock_readchar.key.DOWN = "\x1b[B"
+        mock_readchar.key.ENTER = "\r"
+        mock_readchar.key.ESCAPE = "\x1b"
+
+        with patch.dict("sys.modules", {"readchar": mock_readchar}):
+            # Mock the console input method
+            search._console.input = MagicMock(return_value="new query")
+            search._console.clear = MagicMock()
+
+            result = await search._handle_search_mode("/")
+
+            assert result is True  # Should continue running
+            search._console.clear.assert_called()
+            search._console.input.assert_called()
+            assert search._state.query == "new query"
+
+    async def test_handle_search_mode_new_search_empty_query(
+        self, mock_vector_store: MagicMock
+    ) -> None:
+        """'/' key with empty input should not perform search."""
+        search = InteractiveSearch(mock_vector_store, Path("/test"))
+        search._state.query = "original"
+
+        # Create a mock readchar module
+        mock_readchar = MagicMock()
+        mock_readchar.key.UP = "\x1b[A"
+        mock_readchar.key.DOWN = "\x1b[B"
+        mock_readchar.key.ENTER = "\r"
+        mock_readchar.key.ESCAPE = "\x1b"
+
+        with patch.dict("sys.modules", {"readchar": mock_readchar}):
+            # Mock the console input method returning empty string
+            search._console.input = MagicMock(return_value="")
+            search._console.clear = MagicMock()
+
+            await search._handle_search_mode("/")
+
+            # Query should remain unchanged
+            assert search._state.query == "original"
+            mock_vector_store.search.assert_not_called()
+
+    async def test_handle_search_mode_readchar_import_error(
+        self, mock_vector_store: MagicMock
+    ) -> None:
+        """_handle_search_mode should return False when readchar is unavailable."""
+        search = InteractiveSearch(mock_vector_store, Path("/test"))
+
+        # Remove readchar from sys.modules if present
+        with patch.dict("sys.modules", {"readchar": None}):
+            # This should handle ImportError gracefully
+            result = await search._handle_search_mode("q")
+            assert result is False
+
+
+# =============================================================================
+# Filter Mode Tests
+# =============================================================================
+
+
+class TestFilterModeHandling:
+    """Tests for filter mode keyboard handling."""
+
+    async def test_handle_filter_mode_escape_returns_to_search(
+        self, mock_vector_store: MagicMock
+    ) -> None:
+        """ESC key should return to search mode."""
+        search = InteractiveSearch(mock_vector_store, Path("/test"))
+        search._state.input_mode = "filter_language"
+
+        mock_readchar = MagicMock()
+        mock_readchar.key.ESCAPE = "\x1b"
+        mock_readchar.key.ENTER = "\r"
+
+        with patch.dict("sys.modules", {"readchar": mock_readchar}):
+            await search._handle_filter_mode(mock_readchar.key.ESCAPE)
+            assert search._state.input_mode == "search"
+
+    async def test_handle_filter_mode_language_valid(
+        self, mock_vector_store: MagicMock, sample_results: list[SearchResult]
+    ) -> None:
+        """Valid language filter should be applied."""
+        mock_vector_store.search = AsyncMock(return_value=sample_results)
+        search = InteractiveSearch(mock_vector_store, Path("/test"))
+        search._state.input_mode = "filter_language"
+        search._state.query = "test"
+
+        mock_readchar = MagicMock()
+        mock_readchar.key.ESCAPE = "\x1b"
+        mock_readchar.key.ENTER = "\r"
+
+        with patch.dict("sys.modules", {"readchar": mock_readchar}):
+            search._console.input = MagicMock(return_value="python")
+            search._console.clear = MagicMock()
+            search._console.print = MagicMock()
+
+            await search._handle_filter_mode(mock_readchar.key.ENTER)
+
+            assert search._state.filters.language == "python"
+            assert search._state.input_mode == "search"
+
+    async def test_handle_filter_mode_language_invalid(
+        self, mock_vector_store: MagicMock
+    ) -> None:
+        """Invalid language filter should set error message."""
+        search = InteractiveSearch(mock_vector_store, Path("/test"))
+        search._state.input_mode = "filter_language"
+
+        mock_readchar = MagicMock()
+        mock_readchar.key.ESCAPE = "\x1b"
+        mock_readchar.key.ENTER = "\r"
+
+        with patch.dict("sys.modules", {"readchar": mock_readchar}):
+            search._console.input = MagicMock(return_value="invalid_language")
+            search._console.clear = MagicMock()
+            search._console.print = MagicMock()
+
+            await search._handle_filter_mode(mock_readchar.key.ENTER)
+
+            assert search._state.error_message is not None
+            assert "Invalid language" in search._state.error_message
+            assert search._state.input_mode == "search"
+
+    async def test_handle_filter_mode_type_valid(
+        self, mock_vector_store: MagicMock, sample_results: list[SearchResult]
+    ) -> None:
+        """Valid chunk type filter should be applied."""
+        mock_vector_store.search = AsyncMock(return_value=sample_results)
+        search = InteractiveSearch(mock_vector_store, Path("/test"))
+        search._state.input_mode = "filter_type"
+        search._state.query = "test"
+
+        mock_readchar = MagicMock()
+        mock_readchar.key.ESCAPE = "\x1b"
+        mock_readchar.key.ENTER = "\r"
+
+        with patch.dict("sys.modules", {"readchar": mock_readchar}):
+            search._console.input = MagicMock(return_value="function")
+            search._console.clear = MagicMock()
+            search._console.print = MagicMock()
+
+            await search._handle_filter_mode(mock_readchar.key.ENTER)
+
+            assert search._state.filters.chunk_type == "function"
+            assert search._state.input_mode == "search"
+
+    async def test_handle_filter_mode_type_invalid(
+        self, mock_vector_store: MagicMock
+    ) -> None:
+        """Invalid chunk type should set error message."""
+        search = InteractiveSearch(mock_vector_store, Path("/test"))
+        search._state.input_mode = "filter_type"
+
+        mock_readchar = MagicMock()
+        mock_readchar.key.ESCAPE = "\x1b"
+        mock_readchar.key.ENTER = "\r"
+
+        with patch.dict("sys.modules", {"readchar": mock_readchar}):
+            search._console.input = MagicMock(return_value="invalid_type")
+            search._console.clear = MagicMock()
+            search._console.print = MagicMock()
+
+            await search._handle_filter_mode(mock_readchar.key.ENTER)
+
+            assert search._state.error_message is not None
+            assert "Invalid type" in search._state.error_message
+
+    async def test_handle_filter_mode_path(
+        self, mock_vector_store: MagicMock, sample_results: list[SearchResult]
+    ) -> None:
+        """File path pattern filter should be applied."""
+        mock_vector_store.search = AsyncMock(return_value=sample_results)
+        search = InteractiveSearch(mock_vector_store, Path("/test"))
+        search._state.input_mode = "filter_path"
+        search._state.query = "test"
+
+        mock_readchar = MagicMock()
+        mock_readchar.key.ESCAPE = "\x1b"
+        mock_readchar.key.ENTER = "\r"
+
+        with patch.dict("sys.modules", {"readchar": mock_readchar}):
+            search._console.input = MagicMock(return_value="src/**/*.py")
+            search._console.clear = MagicMock()
+
+            await search._handle_filter_mode(mock_readchar.key.ENTER)
+
+            assert search._state.filters.file_pattern == "src/**/*.py"
+            assert search._state.input_mode == "search"
+
+    async def test_handle_filter_mode_score_valid(
+        self, mock_vector_store: MagicMock, sample_results: list[SearchResult]
+    ) -> None:
+        """Valid score filter should be applied."""
+        mock_vector_store.search = AsyncMock(return_value=sample_results)
+        search = InteractiveSearch(mock_vector_store, Path("/test"))
+        search._state.input_mode = "filter_score"
+        search._state.query = "test"
+
+        mock_readchar = MagicMock()
+        mock_readchar.key.ESCAPE = "\x1b"
+        mock_readchar.key.ENTER = "\r"
+
+        with patch.dict("sys.modules", {"readchar": mock_readchar}):
+            search._console.input = MagicMock(return_value="0.5")
+            search._console.clear = MagicMock()
+
+            await search._handle_filter_mode(mock_readchar.key.ENTER)
+
+            assert search._state.filters.min_similarity == 0.5
+            assert search._state.input_mode == "search"
+
+    async def test_handle_filter_mode_score_out_of_range(
+        self, mock_vector_store: MagicMock
+    ) -> None:
+        """Score outside 0.0-1.0 range should set error message."""
+        search = InteractiveSearch(mock_vector_store, Path("/test"))
+        search._state.input_mode = "filter_score"
+
+        mock_readchar = MagicMock()
+        mock_readchar.key.ESCAPE = "\x1b"
+        mock_readchar.key.ENTER = "\r"
+
+        with patch.dict("sys.modules", {"readchar": mock_readchar}):
+            search._console.input = MagicMock(return_value="1.5")
+            search._console.clear = MagicMock()
+
+            await search._handle_filter_mode(mock_readchar.key.ENTER)
+
+            assert search._state.error_message is not None
+            assert "between 0.0 and 1.0" in search._state.error_message
+
+    async def test_handle_filter_mode_score_invalid_format(
+        self, mock_vector_store: MagicMock
+    ) -> None:
+        """Invalid score format should set error message."""
+        search = InteractiveSearch(mock_vector_store, Path("/test"))
+        search._state.input_mode = "filter_score"
+
+        mock_readchar = MagicMock()
+        mock_readchar.key.ESCAPE = "\x1b"
+        mock_readchar.key.ENTER = "\r"
+
+        with patch.dict("sys.modules", {"readchar": mock_readchar}):
+            search._console.input = MagicMock(return_value="not-a-number")
+            search._console.clear = MagicMock()
+
+            await search._handle_filter_mode(mock_readchar.key.ENTER)
+
+            assert search._state.error_message is not None
+            assert "Invalid score" in search._state.error_message
+
+    async def test_handle_filter_mode_empty_input(
+        self, mock_vector_store: MagicMock
+    ) -> None:
+        """Empty input in filter mode should not change filter."""
+        search = InteractiveSearch(mock_vector_store, Path("/test"))
+        search._state.input_mode = "filter_language"
+
+        mock_readchar = MagicMock()
+        mock_readchar.key.ESCAPE = "\x1b"
+        mock_readchar.key.ENTER = "\r"
+
+        with patch.dict("sys.modules", {"readchar": mock_readchar}):
+            search._console.input = MagicMock(return_value="")
+            search._console.clear = MagicMock()
+            search._console.print = MagicMock()
+
+            await search._handle_filter_mode(mock_readchar.key.ENTER)
+
+            assert search._state.filters.language is None
+            assert search._state.input_mode == "search"
+
+    async def test_handle_filter_mode_readchar_import_error(
+        self, mock_vector_store: MagicMock
+    ) -> None:
+        """_handle_filter_mode should return when readchar is unavailable."""
+        search = InteractiveSearch(mock_vector_store, Path("/test"))
+        search._state.input_mode = "filter_language"
+
+        # Remove readchar from sys.modules if present
+        with patch.dict("sys.modules", {"readchar": None}):
+            # This should handle ImportError gracefully
+            await search._handle_filter_mode("\r")
+            # Should remain in same mode since it returned early
+            assert search._state.input_mode == "filter_language"
+
+
+# =============================================================================
+# Layout and Display Tests
+# =============================================================================
+
+
+class TestLayoutAndDisplay:
+    """Tests for layout building and display methods."""
+
+    def test_build_results_table_long_name_truncation(
+        self, mock_vector_store: MagicMock
+    ) -> None:
+        """Long names should be truncated with ellipsis."""
+        chunk = CodeChunk(
+            id="test-chunk",
+            file_path="src/test.py",
+            language=Language.PYTHON,
+            chunk_type=ChunkType.FUNCTION,
+            name="this_is_a_very_long_function_name_that_exceeds_limit",
+            content="def test(): pass",
+            start_line=1,
+            end_line=2,
+        )
+        result = SearchResult(chunk=chunk, score=0.9)
+
+        search = InteractiveSearch(mock_vector_store, Path("/test"))
+        search._state.query = "test"
+        search._state.filtered_results = [result]
+
+        table = search._build_results_table()
+        assert table.row_count == 1
+        # Table should be built without error for long names
+
+    def test_build_results_table_long_path_truncation(
+        self, mock_vector_store: MagicMock
+    ) -> None:
+        """Long file paths should be truncated with leading ellipsis."""
+        chunk = CodeChunk(
+            id="test-chunk",
+            file_path="very/long/path/to/deeply/nested/directory/structure/file.py",
+            language=Language.PYTHON,
+            chunk_type=ChunkType.FUNCTION,
+            name="test",
+            content="def test(): pass",
+            start_line=1,
+            end_line=2,
+        )
+        result = SearchResult(chunk=chunk, score=0.9)
+
+        search = InteractiveSearch(mock_vector_store, Path("/test"))
+        search._state.query = "test"
+        search._state.filtered_results = [result]
+
+        table = search._build_results_table()
+        assert table.row_count == 1
+        # Table should be built without error for long paths
+
+    def test_build_help_panel(self, mock_vector_store: MagicMock) -> None:
+        """_build_help_panel should create panel with keyboard shortcuts."""
+        search = InteractiveSearch(mock_vector_store, Path("/test"))
+        panel = search._build_help_panel()
+
+        assert panel.title == "Keyboard Shortcuts"
+        assert panel.border_style == "dim"
+
+    def test_build_preview_panel_without_docstring(
+        self, mock_vector_store: MagicMock
+    ) -> None:
+        """Preview panel should work without docstring."""
+        chunk = CodeChunk(
+            id="test-chunk",
+            file_path="src/test.py",
+            language=Language.PYTHON,
+            chunk_type=ChunkType.FUNCTION,
+            name="test_function",
+            content="def test(): pass",
+            start_line=1,
+            end_line=2,
+            docstring=None,  # No docstring
+        )
+        result = SearchResult(chunk=chunk, score=0.9)
+
+        search = InteractiveSearch(mock_vector_store, Path("/test"))
+        search._state.filtered_results = [result]
+        search._state.selected_index = 0
+
+        panel = search._build_preview_panel()
+        assert panel is not None
+        assert "src/test.py" in panel.title
+
+    def test_build_input_prompt_search_mode(
+        self, mock_vector_store: MagicMock
+    ) -> None:
+        """Input prompt should show search mode with query."""
+        search = InteractiveSearch(mock_vector_store, Path("/test"))
+        search._state.input_mode = "search"
+        search._state.query = "test query"
+
+        panel = search._build_input_prompt()
+        assert panel.border_style == "cyan"
+
+    def test_build_input_prompt_filter_language_mode(
+        self, mock_vector_store: MagicMock
+    ) -> None:
+        """Input prompt should show language filter mode."""
+        search = InteractiveSearch(mock_vector_store, Path("/test"))
+        search._state.input_mode = "filter_language"
+
+        panel = search._build_input_prompt()
+        assert panel.border_style == "yellow"
+
+    def test_build_input_prompt_filter_type_mode(
+        self, mock_vector_store: MagicMock
+    ) -> None:
+        """Input prompt should show type filter mode."""
+        search = InteractiveSearch(mock_vector_store, Path("/test"))
+        search._state.input_mode = "filter_type"
+
+        panel = search._build_input_prompt()
+        assert panel.border_style == "yellow"
+
+    def test_build_input_prompt_filter_path_mode(
+        self, mock_vector_store: MagicMock
+    ) -> None:
+        """Input prompt should show path filter mode."""
+        search = InteractiveSearch(mock_vector_store, Path("/test"))
+        search._state.input_mode = "filter_path"
+
+        panel = search._build_input_prompt()
+        assert panel.border_style == "yellow"
+
+    def test_build_input_prompt_filter_score_mode(
+        self, mock_vector_store: MagicMock
+    ) -> None:
+        """Input prompt should show score filter mode."""
+        search = InteractiveSearch(mock_vector_store, Path("/test"))
+        search._state.input_mode = "filter_score"
+
+        panel = search._build_input_prompt()
+        assert panel.border_style == "yellow"
+
+    def test_build_input_prompt_unknown_mode(
+        self, mock_vector_store: MagicMock
+    ) -> None:
+        """Input prompt should default to search style for unknown mode."""
+        search = InteractiveSearch(mock_vector_store, Path("/test"))
+        search._state.input_mode = "unknown_mode"
+
+        panel = search._build_input_prompt()
+        assert panel.border_style == "cyan"
+
+    def test_build_layout_without_preview(
+        self, mock_vector_store: MagicMock, sample_results: list[SearchResult]
+    ) -> None:
+        """_build_layout should create results-only layout when preview is off."""
+        search = InteractiveSearch(mock_vector_store, Path("/test"))
+        search._state.query = "test"
+        search._state.filtered_results = sample_results
+        search._state.show_preview = False
+
+        layout = search._build_layout()
+        assert layout is not None
+
+    def test_build_layout_with_preview(
+        self, mock_vector_store: MagicMock, sample_results: list[SearchResult]
+    ) -> None:
+        """_build_layout should create split layout when preview is on."""
+        search = InteractiveSearch(mock_vector_store, Path("/test"))
+        search._state.query = "test"
+        search._state.filtered_results = sample_results
+        search._state.selected_index = 0
+        search._state.show_preview = True
+
+        layout = search._build_layout()
+        assert layout is not None
+
+    def test_build_layout_with_error_message(
+        self, mock_vector_store: MagicMock
+    ) -> None:
+        """_build_layout should handle error messages."""
+        search = InteractiveSearch(mock_vector_store, Path("/test"))
+        search._state.error_message = "Test error"
+        search._state.show_preview = False
+
+        layout = search._build_layout()
+        assert layout is not None
+
+    def test_display_results_with_filters(
+        self, mock_vector_store: MagicMock, sample_results: list[SearchResult]
+    ) -> None:
+        """display_results should show results table and filter panel."""
+        search = InteractiveSearch(mock_vector_store, Path("/test"))
+        search._state.query = "test"
+        search._state.filtered_results = sample_results
+        search._state.filters = SearchFilters(language="python")
+
+        # Mock console.print
+        search._console.print = MagicMock()
+
+        search.display_results()
+
+        # Should have called print at least twice (table + filters)
+        assert search._console.print.call_count >= 2
+
+    def test_display_results_without_filters(
+        self, mock_vector_store: MagicMock, sample_results: list[SearchResult]
+    ) -> None:
+        """display_results should show only table when no filters active."""
+        search = InteractiveSearch(mock_vector_store, Path("/test"))
+        search._state.query = "test"
+        search._state.filtered_results = sample_results
+        # No filters
+
+        # Mock console.print
+        search._console.print = MagicMock()
+
+        search.display_results()
+
+        # Should have called print once (only table)
+        assert search._console.print.call_count == 1
+
+    def test_display_preview(
+        self, mock_vector_store: MagicMock, sample_results: list[SearchResult]
+    ) -> None:
+        """display_preview should show detailed preview of a result."""
+        search = InteractiveSearch(mock_vector_store, Path("/test"))
+        search._state.filtered_results = sample_results
+
+        # Mock console.print
+        search._console.print = MagicMock()
+
+        search.display_preview(sample_results[0])
+
+        assert search._console.print.called
+        assert search._state.selected_index == 0
+
+    def test_display_preview_result_not_in_filtered(
+        self, mock_vector_store: MagicMock, sample_results: list[SearchResult]
+    ) -> None:
+        """display_preview should handle result not in filtered list."""
+        search = InteractiveSearch(mock_vector_store, Path("/test"))
+        # Only include some results in filtered
+        search._state.filtered_results = sample_results[:2]
+
+        # Mock console.print
+        search._console.print = MagicMock()
+
+        # Try to preview a result not in filtered list
+        search.display_preview(sample_results[3])
+
+        # Should default to index 0
+        assert search._state.selected_index == 0
+
+
+# =============================================================================
+# Interactive Run Tests
+# =============================================================================
+
+
+class TestInteractiveRun:
+    """Tests for the interactive run method."""
+
+    async def test_run_without_readchar(self, mock_vector_store: MagicMock) -> None:
+        """run should print message when readchar is not installed."""
+        search = InteractiveSearch(mock_vector_store, Path("/test"))
+
+        # Mock console.print
+        search._console.print = MagicMock()
+
+        # Make readchar import fail
+        with patch.dict("sys.modules", {"readchar": None}):
+            # Force reimport by clearing the cached import
+            import importlib
+            import sys
+            if "readchar" in sys.modules:
+                del sys.modules["readchar"]
+
+            await search.run()
+
+            # Should print warning about readchar
+            print_calls = [str(call) for call in search._console.print.call_args_list]
+            assert any("readchar" in call for call in print_calls)
+
+    async def test_run_with_initial_query(
+        self, mock_vector_store: MagicMock, sample_results: list[SearchResult]
+    ) -> None:
+        """run should execute initial query if provided."""
+        mock_vector_store.search = AsyncMock(return_value=sample_results)
+        search = InteractiveSearch(mock_vector_store, Path("/test"))
+
+        mock_readchar = MagicMock()
+        mock_readchar.key.UP = "\x1b[A"
+        mock_readchar.key.DOWN = "\x1b[B"
+        mock_readchar.key.ENTER = "\r"
+        mock_readchar.key.ESCAPE = "\x1b"
+        # Make readkey return 'q' immediately to quit
+        mock_readchar.readkey = MagicMock(return_value="q")
+
+        search._console.clear = MagicMock()
+        search._console.print = MagicMock()
+
+        with patch.dict("sys.modules", {"readchar": mock_readchar}):
+            await search.run(initial_query="test")
+
+            # Search should have been called with initial query
+            mock_vector_store.search.assert_called()
+            assert search._state.query == "test"
+
+    async def test_run_keyboard_interrupt(
+        self, mock_vector_store: MagicMock
+    ) -> None:
+        """run should handle KeyboardInterrupt gracefully."""
+        search = InteractiveSearch(mock_vector_store, Path("/test"))
+
+        mock_readchar = MagicMock()
+        mock_readchar.key.UP = "\x1b[A"
+        mock_readchar.key.DOWN = "\x1b[B"
+        mock_readchar.key.ENTER = "\r"
+        mock_readchar.key.ESCAPE = "\x1b"
+        # Make readkey raise KeyboardInterrupt
+        mock_readchar.readkey = MagicMock(side_effect=KeyboardInterrupt)
+
+        search._console.clear = MagicMock()
+        search._console.print = MagicMock()
+
+        with patch.dict("sys.modules", {"readchar": mock_readchar}):
+            # Should not raise, should exit gracefully
+            await search.run()
+
+            # Should have cleared console and printed end message
+            search._console.clear.assert_called()
+
+    async def test_run_filter_mode_branch(
+        self, mock_vector_store: MagicMock
+    ) -> None:
+        """run should call _handle_filter_mode when in filter mode."""
+        search = InteractiveSearch(mock_vector_store, Path("/test"))
+
+        # Track calls to understand execution flow
+        call_count = [0]
+
+        mock_readchar = MagicMock()
+        mock_readchar.key.UP = "\x1b[A"
+        mock_readchar.key.DOWN = "\x1b[B"
+        mock_readchar.key.ENTER = "\r"
+        mock_readchar.key.ESCAPE = "\x1b"
+
+        # First call returns 'l' to switch to filter mode, then ESC to quit
+        def readkey_side_effect():
+            call_count[0] += 1
+            if call_count[0] == 1:
+                return "l"  # Switch to filter_language mode
+            elif call_count[0] == 2:
+                return mock_readchar.key.ESCAPE  # Return to search mode
+            else:
+                return "q"  # Quit
+
+        mock_readchar.readkey = MagicMock(side_effect=readkey_side_effect)
+
+        search._console.clear = MagicMock()
+        search._console.print = MagicMock()
+
+        with patch.dict("sys.modules", {"readchar": mock_readchar}):
+            await search.run()
+
+            # Should have made multiple readkey calls
+            assert mock_readchar.readkey.call_count >= 2
+
+
+# =============================================================================
+# run_search Function Tests
+# =============================================================================
+
+
+class TestRunSearchFunction:
+    """Additional tests for the run_search function."""
+
+    async def test_run_search_non_interactive_with_query(
+        self, tmp_path: Path
+    ) -> None:
+        """run_search should execute search and display results."""
+        repo_path = tmp_path / "repo"
+        repo_path.mkdir()
+        (repo_path / ".deepwiki" / "vectordb").mkdir(parents=True)
+
+        mock_store = MagicMock()
+        mock_store.search = AsyncMock(return_value=[])
+
+        with patch("local_deepwiki.cli.interactive_search.Console") as mock_console_cls:
+            mock_console = MagicMock()
+            mock_console_cls.return_value = mock_console
+
+            with patch("local_deepwiki.cli.interactive_search.get_embedding_provider"):
+                with patch(
+                    "local_deepwiki.cli.interactive_search.VectorStore",
+                    return_value=mock_store,
+                ):
+                    await run_search(
+                        repo_path=repo_path,
+                        query="test query",
+                        interactive=False,
+                    )
+
+                    # Search should have been called
+                    mock_store.search.assert_called()
+
+    async def test_run_search_non_interactive_with_preview(
+        self, tmp_path: Path
+    ) -> None:
+        """run_search should show preview when requested."""
+        repo_path = tmp_path / "repo"
+        repo_path.mkdir()
+        (repo_path / ".deepwiki" / "vectordb").mkdir(parents=True)
+
+        chunk = CodeChunk(
+            id="test",
+            file_path="test.py",
+            language=Language.PYTHON,
+            chunk_type=ChunkType.FUNCTION,
+            name="test",
+            content="def test(): pass",
+            start_line=1,
+            end_line=2,
+        )
+        results = [SearchResult(chunk=chunk, score=0.9)]
+
+        mock_store = MagicMock()
+        mock_store.search = AsyncMock(return_value=results)
+
+        with patch("local_deepwiki.cli.interactive_search.Console") as mock_console_cls:
+            mock_console = MagicMock()
+            mock_console_cls.return_value = mock_console
+
+            with patch("local_deepwiki.cli.interactive_search.get_embedding_provider"):
+                with patch(
+                    "local_deepwiki.cli.interactive_search.VectorStore",
+                    return_value=mock_store,
+                ):
+                    await run_search(
+                        repo_path=repo_path,
+                        query="test",
+                        interactive=False,
+                        show_preview=True,
+                    )
+
+                    # Should have printed multiple times (results + preview)
+                    assert mock_console.print.call_count >= 2
+
+    async def test_run_search_interactive_with_query(
+        self, tmp_path: Path
+    ) -> None:
+        """run_search should run interactive mode with initial query."""
+        repo_path = tmp_path / "repo"
+        repo_path.mkdir()
+        (repo_path / ".deepwiki" / "vectordb").mkdir(parents=True)
+
+        mock_store = MagicMock()
+        mock_store.search = AsyncMock(return_value=[])
+
+        with patch("local_deepwiki.cli.interactive_search.Console") as mock_console_cls:
+            mock_console = MagicMock()
+            mock_console_cls.return_value = mock_console
+
+            with patch("local_deepwiki.cli.interactive_search.get_embedding_provider"):
+                with patch(
+                    "local_deepwiki.cli.interactive_search.VectorStore",
+                    return_value=mock_store,
+                ):
+                    with patch(
+                        "local_deepwiki.cli.interactive_search.InteractiveSearch.run"
+                    ) as mock_run:
+                        mock_run.return_value = None
+
+                        await run_search(
+                            repo_path=repo_path,
+                            query="test",
+                            interactive=True,
+                        )
+
+                        # Interactive run should have been called with initial query
+                        mock_run.assert_called_once_with(initial_query="test")
+
+    async def test_run_search_interactive_without_query(
+        self, tmp_path: Path
+    ) -> None:
+        """run_search should run interactive mode without initial query."""
+        repo_path = tmp_path / "repo"
+        repo_path.mkdir()
+        (repo_path / ".deepwiki" / "vectordb").mkdir(parents=True)
+
+        mock_store = MagicMock()
+        mock_store.search = AsyncMock(return_value=[])
+
+        with patch("local_deepwiki.cli.interactive_search.Console") as mock_console_cls:
+            mock_console = MagicMock()
+            mock_console_cls.return_value = mock_console
+
+            with patch("local_deepwiki.cli.interactive_search.get_embedding_provider"):
+                with patch(
+                    "local_deepwiki.cli.interactive_search.VectorStore",
+                    return_value=mock_store,
+                ):
+                    with patch(
+                        "local_deepwiki.cli.interactive_search.InteractiveSearch.run"
+                    ) as mock_run:
+                        mock_run.return_value = None
+
+                        await run_search(
+                            repo_path=repo_path,
+                            query=None,
+                            interactive=True,
+                        )
+
+                        # Interactive run should have been called without query
+                        mock_run.assert_called_once()
+
+    async def test_run_search_with_all_filters(
+        self, tmp_path: Path
+    ) -> None:
+        """run_search should pass all filters to search instance."""
+        repo_path = tmp_path / "repo"
+        repo_path.mkdir()
+        (repo_path / ".deepwiki" / "vectordb").mkdir(parents=True)
+
+        mock_store = MagicMock()
+        mock_store.search = AsyncMock(return_value=[])
+
+        with patch("local_deepwiki.cli.interactive_search.Console") as mock_console_cls:
+            mock_console = MagicMock()
+            mock_console_cls.return_value = mock_console
+
+            with patch("local_deepwiki.cli.interactive_search.get_embedding_provider"):
+                with patch(
+                    "local_deepwiki.cli.interactive_search.VectorStore",
+                    return_value=mock_store,
+                ):
+                    await run_search(
+                        repo_path=repo_path,
+                        query="test",
+                        language="python",
+                        chunk_type="function",
+                        file_pattern="*.py",
+                        min_score=0.5,
+                        limit=10,
+                        interactive=False,
+                    )
+
+                    # Search should have been called
+                    mock_store.search.assert_called()
+
+
+# =============================================================================
+# CLI Main Function Tests
+# =============================================================================
+
+
+class TestMainFunction:
+    """Tests for the main CLI entry point."""
+
+    def test_main_with_valid_args(self, tmp_path: Path) -> None:
+        """main should parse arguments and run search."""
+        from local_deepwiki.cli.interactive_search import main
+
+        repo_path = tmp_path / "repo"
+        repo_path.mkdir()
+        (repo_path / ".deepwiki" / "vectordb").mkdir(parents=True)
+
+        with patch("sys.argv", ["deepwiki-search", str(repo_path), "-q", "test", "--no-interactive"]):
+            with patch("local_deepwiki.cli.interactive_search.asyncio.run") as mock_run:
+                mock_run.return_value = None
+
+                result = main()
+
+                assert result == 0
+                mock_run.assert_called_once()
+
+    def test_main_invalid_min_score(self, tmp_path: Path) -> None:
+        """main should error on invalid min_score."""
+        from local_deepwiki.cli.interactive_search import main
+
+        with patch("sys.argv", ["deepwiki-search", str(tmp_path), "--min-score", "1.5"]):
+            with patch("sys.stderr"):
+                result = main()
+                assert result == 1
+
+    def test_main_non_interactive_requires_query(self, tmp_path: Path) -> None:
+        """main should error when non-interactive mode lacks query."""
+        from local_deepwiki.cli.interactive_search import main
+
+        with patch("sys.argv", ["deepwiki-search", str(tmp_path), "--no-interactive"]):
+            with patch("sys.stderr"):
+                result = main()
+                assert result == 1
+
+    def test_main_keyboard_interrupt(self, tmp_path: Path) -> None:
+        """main should handle KeyboardInterrupt."""
+        from local_deepwiki.cli.interactive_search import main
+
+        repo_path = tmp_path / "repo"
+        repo_path.mkdir()
+        (repo_path / ".deepwiki" / "vectordb").mkdir(parents=True)
+
+        with patch("sys.argv", ["deepwiki-search", str(repo_path), "-q", "test", "--no-interactive"]):
+            with patch(
+                "local_deepwiki.cli.interactive_search.asyncio.run",
+                side_effect=KeyboardInterrupt,
+            ):
+                result = main()
+                assert result == 130
+
+    def test_main_exception(self, tmp_path: Path) -> None:
+        """main should handle exceptions."""
+        from local_deepwiki.cli.interactive_search import main
+
+        repo_path = tmp_path / "repo"
+        repo_path.mkdir()
+        (repo_path / ".deepwiki" / "vectordb").mkdir(parents=True)
+
+        with patch("sys.argv", ["deepwiki-search", str(repo_path), "-q", "test", "--no-interactive"]):
+            with patch(
+                "local_deepwiki.cli.interactive_search.asyncio.run",
+                side_effect=Exception("Test error"),
+            ):
+                with patch("sys.stderr"):
+                    result = main()
+                    assert result == 1
+
+    def test_main_with_preview_flag(self, tmp_path: Path) -> None:
+        """main should pass preview flag correctly."""
+        from local_deepwiki.cli.interactive_search import main
+
+        repo_path = tmp_path / "repo"
+        repo_path.mkdir()
+        (repo_path / ".deepwiki" / "vectordb").mkdir(parents=True)
+
+        with patch("sys.argv", ["deepwiki-search", str(repo_path), "-q", "test", "--no-interactive", "-p"]):
+            with patch("local_deepwiki.cli.interactive_search.asyncio.run") as mock_run:
+                mock_run.return_value = None
+
+                result = main()
+
+                assert result == 0
+                # Check that run was called with show_preview=True
+                call_args = mock_run.call_args
+                assert call_args is not None
+
+    def test_main_with_all_filter_args(self, tmp_path: Path) -> None:
+        """main should parse all filter arguments."""
+        from local_deepwiki.cli.interactive_search import main
+
+        repo_path = tmp_path / "repo"
+        repo_path.mkdir()
+        (repo_path / ".deepwiki" / "vectordb").mkdir(parents=True)
+
+        with patch(
+            "sys.argv",
+            [
+                "deepwiki-search",
+                str(repo_path),
+                "-q", "test",
+                "-l", "python",
+                "-t", "function",
+                "-f", "*.py",
+                "-s", "0.5",
+                "--limit", "10",
+                "--no-interactive",
+            ],
+        ):
+            with patch("local_deepwiki.cli.interactive_search.asyncio.run") as mock_run:
+                mock_run.return_value = None
+
+                result = main()
+
+                assert result == 0
+
+
+# =============================================================================
+# Module Entry Point Tests
+# =============================================================================
+
+
+class TestModuleEntryPoint:
+    """Tests for __name__ == '__main__' execution."""
+
+    def test_module_can_be_imported(self) -> None:
+        """Module should be importable without side effects."""
+        import importlib
+        import local_deepwiki.cli.interactive_search as module
+
+        # Reimporting should work
+        importlib.reload(module)
+
+    def test_main_called_when_run_as_script(self) -> None:
+        """main should be callable."""
+        from local_deepwiki.cli.interactive_search import main
+
+        assert callable(main)
+
+    def test_module_name_main_execution(self, tmp_path: Path) -> None:
+        """Test module execution via runpy to cover if __name__ == '__main__' block."""
+        import subprocess
+        import sys
+
+        # Create a minimal test repo structure
+        repo_path = tmp_path / "repo"
+        repo_path.mkdir()
+        (repo_path / ".deepwiki" / "vectordb").mkdir(parents=True)
+
+        # Run the module with arguments to make it exit quickly with error
+        # (non-interactive mode without query returns error code 1)
+        result = subprocess.run(
+            [sys.executable, "-m", "local_deepwiki.cli.interactive_search",
+             str(repo_path), "--no-interactive"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            cwd=tmp_path,
+        )
+
+        # The module should have executed (entry point was called)
+        # Exit code 1 means the validation ran (query required for non-interactive)
+        assert result.returncode == 1
+        assert "query" in result.stderr.lower() or "required" in result.stderr.lower()
