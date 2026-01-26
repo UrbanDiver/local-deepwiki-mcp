@@ -446,6 +446,9 @@ class DeepResearchArgs(BaseModel):
     preset: str | None = Field(
         default=None, description="Research preset: 'fast', 'deep', or 'comprehensive'"
     )
+    resume_research_id: str | None = Field(
+        default=None, description="Optional checkpoint ID to resume an interrupted research session"
+    )
 
 
 class ReadWikiStructureArgs(BaseModel):
@@ -491,3 +494,85 @@ class ExportWikiPdfArgs(BaseModel):
     wiki_path: str = Field(description="Path to the wiki directory to export")
     output_path: str | None = Field(default=None, description="Output path for PDF")
     single_file: bool = Field(default=True, description="Combine all pages into single PDF")
+
+
+# =============================================================================
+# Research Checkpoint Models
+# =============================================================================
+
+
+class ResearchCheckpointStep(str, Enum):
+    """Current step in a research checkpoint."""
+
+    DECOMPOSITION = "decomposition"
+    RETRIEVAL = "retrieval"
+    GAP_ANALYSIS = "gap_analysis"
+    FOLLOW_UP_RETRIEVAL = "follow_up_retrieval"
+    SYNTHESIS = "synthesis"
+    COMPLETE = "complete"
+    ERROR = "error"
+    CANCELLED = "cancelled"
+
+
+class ResearchCheckpoint(BaseModel):
+    """Checkpoint state for resumable deep research operations.
+
+    This model captures the complete state of a research operation,
+    allowing it to be saved after each step and resumed if interrupted.
+    """
+
+    research_id: str = Field(description="UUID for this research session")
+    question: str = Field(description="Original research question")
+    repo_path: str = Field(description="Path to the repository being researched")
+    started_at: float = Field(description="Unix timestamp when research started")
+    updated_at: float = Field(description="Unix timestamp of last update")
+    current_step: ResearchCheckpointStep = Field(
+        description="Current step in the research pipeline"
+    )
+    sub_questions: list[SubQuestion] | None = Field(
+        default=None, description="Decomposed sub-questions"
+    )
+    retrieved_contexts: dict[str, list[dict]] | None = Field(
+        default=None, description="Mapping of sub_question to retrieved chunk data"
+    )
+    follow_up_queries: list[str] | None = Field(
+        default=None, description="Follow-up queries from gap analysis"
+    )
+    follow_up_contexts: list[dict] | None = Field(
+        default=None, description="Retrieved contexts from follow-up queries"
+    )
+    partial_synthesis: str | None = Field(
+        default=None, description="Partial synthesis result if available"
+    )
+    error: str | None = Field(default=None, description="Error message if failed")
+    completed_steps: list[str] = Field(
+        default_factory=list, description="List of completed step names"
+    )
+
+    def __repr__(self) -> str:
+        """Return a concise representation for debugging."""
+        return (
+            f"<ResearchCheckpoint {self.research_id[:8]}... "
+            f"step={self.current_step.value} "
+            f"completed={len(self.completed_steps)}>"
+        )
+
+
+class ListResearchCheckpointsArgs(BaseModel):
+    """Arguments for the list_research_checkpoints tool."""
+
+    repo_path: str = Field(description="Path to the repository to list checkpoints for")
+
+
+class ResumeResearchArgs(BaseModel):
+    """Arguments for resuming research with a checkpoint."""
+
+    repo_path: str = Field(description="Path to the indexed repository")
+    research_id: str = Field(description="ID of the research checkpoint to resume")
+
+
+class CancelResearchArgs(BaseModel):
+    """Arguments for cancelling and checkpointing research."""
+
+    repo_path: str = Field(description="Path to the repository")
+    research_id: str = Field(description="ID of the research to cancel")

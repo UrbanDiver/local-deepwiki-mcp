@@ -4,13 +4,21 @@ import asyncio
 import json
 import re
 import time
+import uuid
 from collections.abc import Awaitable, Callable
+from pathlib import Path
+from typing import Any
 
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.events import EventType, get_event_emitter
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import (
+    ChunkType,
+    CodeChunk,
     DeepResearchResult,
+    Language,
+    ResearchCheckpoint,
+    ResearchCheckpointStep,
     ResearchProgress,
     ResearchProgressType,
     ResearchStep,
@@ -34,9 +42,186 @@ logger = get_logger(__name__)
 class ResearchCancelledError(Exception):
     """Raised when a deep research operation is cancelled."""
 
-    def __init__(self, step: str = "unknown"):
+    def __init__(self, step: str = "unknown", checkpoint_id: str | None = None):
         self.step = step
-        super().__init__(f"Research cancelled during {step}")
+        self.checkpoint_id = checkpoint_id
+        msg = f"Research cancelled during {step}"
+        if checkpoint_id:
+            msg += f" (checkpoint: {checkpoint_id})"
+        super().__init__(msg)
+
+
+class CheckpointManager:
+    """Manages saving and loading research checkpoints.
+
+    Checkpoints are stored as JSON files in the .deepwiki/research_checkpoints
+    directory within each repository.
+    """
+
+    def __init__(self, repo_path: Path):
+        """Initialize the checkpoint manager.
+
+        Args:
+            repo_path: Path to the repository.
+        """
+        self.repo_path = repo_path
+        self.checkpoint_dir = repo_path / ".deepwiki" / "research_checkpoints"
+
+    def _ensure_dir(self) -> None:
+        """Ensure the checkpoint directory exists."""
+        self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
+
+    def _checkpoint_path(self, research_id: str) -> Path:
+        """Get the path to a checkpoint file.
+
+        Args:
+            research_id: The research session ID.
+
+        Returns:
+            Path to the checkpoint JSON file.
+        """
+        return self.checkpoint_dir / f"{research_id}.json"
+
+    def save_checkpoint(self, checkpoint: ResearchCheckpoint) -> None:
+        """Save a checkpoint to disk.
+
+        Args:
+            checkpoint: The checkpoint to save.
+        """
+        self._ensure_dir()
+        checkpoint_path = self._checkpoint_path(checkpoint.research_id)
+        checkpoint_path.write_text(checkpoint.model_dump_json(indent=2))
+        logger.debug(f"Saved checkpoint {checkpoint.research_id} at step {checkpoint.current_step}")
+
+    def load_checkpoint(self, research_id: str) -> ResearchCheckpoint | None:
+        """Load a checkpoint from disk.
+
+        Args:
+            research_id: The research session ID.
+
+        Returns:
+            The loaded checkpoint, or None if not found.
+        """
+        checkpoint_path = self._checkpoint_path(research_id)
+        if not checkpoint_path.exists():
+            return None
+
+        try:
+            data = json.loads(checkpoint_path.read_text())
+            return ResearchCheckpoint.model_validate(data)
+        except (json.JSONDecodeError, ValueError) as e:
+            logger.warning(f"Failed to load checkpoint {research_id}: {e}")
+            return None
+
+    def list_checkpoints(self) -> list[ResearchCheckpoint]:
+        """List all checkpoints for this repository.
+
+        Returns:
+            List of checkpoints, sorted by updated_at descending.
+        """
+        if not self.checkpoint_dir.exists():
+            return []
+
+        checkpoints = []
+        for path in self.checkpoint_dir.glob("*.json"):
+            try:
+                data = json.loads(path.read_text())
+                checkpoint = ResearchCheckpoint.model_validate(data)
+                checkpoints.append(checkpoint)
+            except (json.JSONDecodeError, ValueError) as e:
+                logger.warning(f"Failed to load checkpoint {path.name}: {e}")
+                continue
+
+        # Sort by updated_at descending (most recent first)
+        return sorted(checkpoints, key=lambda c: c.updated_at, reverse=True)
+
+    def delete_checkpoint(self, research_id: str) -> bool:
+        """Delete a checkpoint.
+
+        Args:
+            research_id: The research session ID.
+
+        Returns:
+            True if deleted, False if not found.
+        """
+        checkpoint_path = self._checkpoint_path(research_id)
+        if checkpoint_path.exists():
+            checkpoint_path.unlink()
+            logger.debug(f"Deleted checkpoint {research_id}")
+            return True
+        return False
+
+    def get_incomplete_checkpoints(self) -> list[ResearchCheckpoint]:
+        """Get all incomplete (non-complete, non-error) checkpoints.
+
+        Returns:
+            List of incomplete checkpoints.
+        """
+        return [
+            c for c in self.list_checkpoints()
+            if c.current_step not in (
+                ResearchCheckpointStep.COMPLETE,
+                ResearchCheckpointStep.ERROR,
+            )
+        ]
+
+
+def _search_result_to_dict(result: SearchResult) -> dict[str, Any]:
+    """Convert a SearchResult to a serializable dictionary.
+
+    Args:
+        result: The search result to convert.
+
+    Returns:
+        Dictionary representation suitable for JSON serialization.
+    """
+    return {
+        "chunk": {
+            "id": result.chunk.id,
+            "file_path": result.chunk.file_path,
+            "language": result.chunk.language.value,
+            "chunk_type": result.chunk.chunk_type.value,
+            "name": result.chunk.name,
+            "content": result.chunk.content,
+            "start_line": result.chunk.start_line,
+            "end_line": result.chunk.end_line,
+            "docstring": result.chunk.docstring,
+            "parent_name": result.chunk.parent_name,
+            "metadata": result.chunk.metadata,
+        },
+        "score": result.score,
+        "highlights": result.highlights,
+    }
+
+
+def _dict_to_search_result(data: dict[str, Any]) -> SearchResult:
+    """Convert a dictionary back to a SearchResult.
+
+    Args:
+        data: Dictionary representation of a search result.
+
+    Returns:
+        Reconstructed SearchResult object.
+    """
+    chunk_data = data["chunk"]
+    chunk = CodeChunk(
+        id=chunk_data["id"],
+        file_path=chunk_data["file_path"],
+        language=Language(chunk_data["language"]),
+        chunk_type=ChunkType(chunk_data["chunk_type"]),
+        name=chunk_data.get("name"),
+        content=chunk_data["content"],
+        start_line=chunk_data["start_line"],
+        end_line=chunk_data["end_line"],
+        docstring=chunk_data.get("docstring"),
+        parent_name=chunk_data.get("parent_name"),
+        metadata=chunk_data.get("metadata", {}),
+    )
+    return SearchResult(
+        chunk=chunk,
+        score=data["score"],
+        highlights=data.get("highlights", []),
+    )
 
 
 # Prompts for each research step
@@ -135,6 +320,7 @@ class DeepResearchPipeline:
         decomposition_prompt: str | None = None,
         gap_analysis_prompt: str | None = None,
         synthesis_prompt: str | None = None,
+        repo_path: Path | None = None,
     ):
         """Initialize the deep research pipeline.
 
@@ -150,6 +336,7 @@ class DeepResearchPipeline:
             decomposition_prompt: Custom system prompt for decomposition (optional).
             gap_analysis_prompt: Custom system prompt for gap analysis (optional).
             synthesis_prompt: Custom system prompt for synthesis (optional).
+            repo_path: Path to the repository (required for checkpointing).
         """
         self.vector_store = vector_store
         self.llm = llm_provider
@@ -165,9 +352,17 @@ class DeepResearchPipeline:
         self.gap_analysis_prompt = gap_analysis_prompt or GAP_ANALYSIS_SYSTEM_PROMPT
         self.synthesis_prompt = synthesis_prompt or SYNTHESIS_SYSTEM_PROMPT
 
+        # Repository path for checkpointing
+        self.repo_path = repo_path
+        self._checkpoint_manager: CheckpointManager | None = None
+        if repo_path:
+            self._checkpoint_manager = CheckpointManager(repo_path)
+
         # Runtime state (set during research())
         self._progress_callback: ProgressCallback = None
         self._cancellation_check: CancellationCallback = None
+        self._current_checkpoint: ResearchCheckpoint | None = None
+        self._cancellation_event: asyncio.Event | None = None
 
     def _check_cancelled(self, step_name: str) -> None:
         """Check if research was cancelled and raise if so.
@@ -178,9 +373,163 @@ class DeepResearchPipeline:
         Raises:
             ResearchCancelledError: If cancellation was requested.
         """
+        # Check the cancellation event first
+        if self._cancellation_event and self._cancellation_event.is_set():
+            logger.info(f"Research cancelled via event during {step_name}")
+            checkpoint_id = self._current_checkpoint.research_id if self._current_checkpoint else None
+            raise ResearchCancelledError(step_name, checkpoint_id)
+
+        # Then check the callback
         if self._cancellation_check and self._cancellation_check():
             logger.info(f"Research cancelled during {step_name}")
-            raise ResearchCancelledError(step_name)
+            checkpoint_id = self._current_checkpoint.research_id if self._current_checkpoint else None
+            raise ResearchCancelledError(step_name, checkpoint_id)
+
+    def _save_checkpoint(
+        self,
+        step: ResearchCheckpointStep,
+        sub_questions: list[SubQuestion] | None = None,
+        retrieved_contexts: dict[str, list[dict]] | None = None,
+        follow_up_queries: list[str] | None = None,
+        follow_up_contexts: list[dict] | None = None,
+        partial_synthesis: str | None = None,
+        error: str | None = None,
+        completed_step: str | None = None,
+    ) -> None:
+        """Save the current research state as a checkpoint.
+
+        Args:
+            step: The current step in the research process.
+            sub_questions: Decomposed sub-questions (if available).
+            retrieved_contexts: Retrieved context data (if available).
+            follow_up_queries: Follow-up queries from gap analysis (if available).
+            follow_up_contexts: Follow-up retrieval contexts (if available).
+            partial_synthesis: Partial synthesis result (if available).
+            error: Error message if failed.
+            completed_step: Name of the step that was just completed.
+        """
+        if not self._checkpoint_manager or not self._current_checkpoint:
+            return
+
+        checkpoint = self._current_checkpoint
+
+        # Update checkpoint fields
+        checkpoint.current_step = step
+        checkpoint.updated_at = time.time()
+
+        if sub_questions is not None:
+            checkpoint.sub_questions = sub_questions
+        if retrieved_contexts is not None:
+            checkpoint.retrieved_contexts = retrieved_contexts
+        if follow_up_queries is not None:
+            checkpoint.follow_up_queries = follow_up_queries
+        if follow_up_contexts is not None:
+            checkpoint.follow_up_contexts = follow_up_contexts
+        if partial_synthesis is not None:
+            checkpoint.partial_synthesis = partial_synthesis
+        if error is not None:
+            checkpoint.error = error
+        if completed_step and completed_step not in checkpoint.completed_steps:
+            checkpoint.completed_steps.append(completed_step)
+
+        self._checkpoint_manager.save_checkpoint(checkpoint)
+
+    def _create_checkpoint(self, question: str) -> ResearchCheckpoint:
+        """Create a new checkpoint for a research session.
+
+        Args:
+            question: The research question.
+
+        Returns:
+            A new ResearchCheckpoint object.
+        """
+        now = time.time()
+        return ResearchCheckpoint(
+            research_id=str(uuid.uuid4()),
+            question=question,
+            repo_path=str(self.repo_path) if self.repo_path else "",
+            started_at=now,
+            updated_at=now,
+            current_step=ResearchCheckpointStep.DECOMPOSITION,
+            completed_steps=[],
+        )
+
+    def _results_to_checkpoint_format(
+        self,
+        results: list[SearchResult],
+        key: str = "default",
+    ) -> dict[str, list[dict]]:
+        """Convert search results to checkpoint-serializable format.
+
+        Args:
+            results: List of search results.
+            key: Key to use in the dictionary.
+
+        Returns:
+            Dictionary mapping key to list of serialized results.
+        """
+        return {key: [_search_result_to_dict(r) for r in results]}
+
+    def _checkpoint_to_results(
+        self,
+        contexts: dict[str, list[dict]] | None,
+    ) -> list[SearchResult]:
+        """Convert checkpoint context data back to SearchResults.
+
+        Args:
+            contexts: Dictionary of serialized contexts from checkpoint.
+
+        Returns:
+            List of reconstructed SearchResult objects.
+        """
+        if not contexts:
+            return []
+
+        results = []
+        for key_results in contexts.values():
+            for data in key_results:
+                try:
+                    results.append(_dict_to_search_result(data))
+                except (KeyError, ValueError) as e:
+                    logger.warning(f"Failed to restore search result: {e}")
+                    continue
+        return results
+
+    def load_checkpoint(self, research_id: str) -> ResearchCheckpoint | None:
+        """Load a checkpoint by ID.
+
+        Args:
+            research_id: The research session ID.
+
+        Returns:
+            The loaded checkpoint, or None if not found.
+        """
+        if not self._checkpoint_manager:
+            return None
+        return self._checkpoint_manager.load_checkpoint(research_id)
+
+    def list_checkpoints(self) -> list[ResearchCheckpoint]:
+        """List all checkpoints for this repository.
+
+        Returns:
+            List of checkpoints.
+        """
+        if not self._checkpoint_manager:
+            return []
+        return self._checkpoint_manager.list_checkpoints()
+
+    def delete_checkpoint(self, research_id: str) -> bool:
+        """Delete a checkpoint.
+
+        Args:
+            research_id: The research session ID.
+
+        Returns:
+            True if deleted, False if not found.
+        """
+        if not self._checkpoint_manager:
+            return False
+        return self._checkpoint_manager.delete_checkpoint(research_id)
 
     async def _report_progress(
         self,
@@ -212,6 +561,8 @@ class DeepResearchPipeline:
         question: str,
         progress_callback: ProgressCallback = None,
         cancellation_check: CancellationCallback = None,
+        resume_id: str | None = None,
+        cancellation_event: asyncio.Event | None = None,
     ) -> DeepResearchResult:
         """Execute the full research pipeline.
 
@@ -219,6 +570,8 @@ class DeepResearchPipeline:
             question: The complex question to research.
             progress_callback: Optional async callback for progress updates.
             cancellation_check: Optional callback that returns True if cancelled.
+            resume_id: Optional checkpoint ID to resume from.
+            cancellation_event: Optional asyncio.Event for cancellation signaling.
 
         Returns:
             DeepResearchResult with answer, sources, and reasoning trace.
@@ -229,13 +582,55 @@ class DeepResearchPipeline:
         # Store callbacks for use by helper methods
         self._progress_callback = progress_callback
         self._cancellation_check = cancellation_check
+        self._cancellation_event = cancellation_event
+
+        # Handle resume or create new checkpoint
+        if resume_id and self._checkpoint_manager:
+            checkpoint = self._checkpoint_manager.load_checkpoint(resume_id)
+            if checkpoint:
+                self._current_checkpoint = checkpoint
+                logger.info(f"Resuming research {resume_id} from step {checkpoint.current_step}")
+            else:
+                logger.warning(f"Checkpoint {resume_id} not found, starting fresh")
+                self._current_checkpoint = self._create_checkpoint(question)
+        elif self._checkpoint_manager:
+            self._current_checkpoint = self._create_checkpoint(question)
+        else:
+            self._current_checkpoint = None
 
         try:
-            return await self._execute_pipeline(question)
+            result = await self._execute_pipeline(question)
+
+            # Clean up checkpoint on successful completion
+            if self._current_checkpoint and self._checkpoint_manager:
+                self._checkpoint_manager.delete_checkpoint(self._current_checkpoint.research_id)
+
+            return result
+
+        except ResearchCancelledError:
+            # Save checkpoint on cancellation
+            if self._current_checkpoint:
+                self._save_checkpoint(
+                    step=ResearchCheckpointStep.CANCELLED,
+                    error="Research was cancelled by user",
+                )
+            raise
+
+        except Exception as e:
+            # Save checkpoint on error
+            if self._current_checkpoint:
+                self._save_checkpoint(
+                    step=ResearchCheckpointStep.ERROR,
+                    error=str(e),
+                )
+            raise
+
         finally:
             # Clear callbacks after execution
             self._progress_callback = None
             self._cancellation_check = None
+            self._cancellation_event = None
+            self._current_checkpoint = None
 
     async def _execute_pipeline(self, question: str) -> DeepResearchResult:
         """Execute the research pipeline steps.
@@ -249,38 +644,117 @@ class DeepResearchPipeline:
         trace: list[ResearchStep] = []
         llm_calls = 0
 
+        # Determine what steps to skip based on checkpoint
+        checkpoint = self._current_checkpoint
+        completed_steps = set(checkpoint.completed_steps) if checkpoint else set()
+        is_resuming = bool(completed_steps)
+
         # Emit RESEARCH_START event
         emitter = get_event_emitter()
-        await emitter.emit(
-            EventType.RESEARCH_START,
-            {"question": question},
-        )
-
-        await self._report_progress(0, ResearchProgressType.STARTED, "Starting deep research...")
+        if not is_resuming:
+            await emitter.emit(
+                EventType.RESEARCH_START,
+                {"question": question},
+            )
+            await self._report_progress(0, ResearchProgressType.STARTED, "Starting deep research...")
+        else:
+            await self._report_progress(
+                0,
+                ResearchProgressType.STARTED,
+                f"Resuming deep research from checkpoint (completed: {', '.join(completed_steps)})",
+            )
 
         # Step 1: Decompose question
-        sub_questions, step, calls = await self._step_decompose(question)
-        trace.append(step)
-        llm_calls += calls
+        if "decomposition" in completed_steps and checkpoint and checkpoint.sub_questions:
+            # Restore from checkpoint
+            sub_questions = checkpoint.sub_questions
+            logger.info(f"Restored {len(sub_questions)} sub-questions from checkpoint")
+            step = ResearchStep(
+                step_type=ResearchStepType.DECOMPOSITION,
+                description=f"Restored {len(sub_questions)} sub-questions from checkpoint",
+                duration_ms=0,
+            )
+            trace.append(step)
+        else:
+            sub_questions, step, calls = await self._step_decompose(question)
+            trace.append(step)
+            llm_calls += calls
+            # Save checkpoint after decomposition
+            self._save_checkpoint(
+                step=ResearchCheckpointStep.RETRIEVAL,
+                sub_questions=sub_questions,
+                completed_step="decomposition",
+            )
 
         # Step 2: Parallel retrieval
-        initial_results, step = await self._step_retrieve(sub_questions)
-        trace.append(step)
+        if "retrieval" in completed_steps and checkpoint and checkpoint.retrieved_contexts:
+            # Restore from checkpoint
+            initial_results = self._checkpoint_to_results(checkpoint.retrieved_contexts)
+            logger.info(f"Restored {len(initial_results)} chunks from checkpoint")
+            step = ResearchStep(
+                step_type=ResearchStepType.RETRIEVAL,
+                description=f"Restored {len(initial_results)} chunks from checkpoint",
+                duration_ms=0,
+            )
+            trace.append(step)
+        else:
+            initial_results, step = await self._step_retrieve(sub_questions)
+            trace.append(step)
+            # Save checkpoint after retrieval
+            self._save_checkpoint(
+                step=ResearchCheckpointStep.GAP_ANALYSIS,
+                retrieved_contexts=self._results_to_checkpoint_format(initial_results, "initial"),
+                completed_step="retrieval",
+            )
 
         # Step 3: Gap analysis
-        follow_up_queries, step, calls = await self._step_gap_analysis(
-            question, sub_questions, initial_results
-        )
-        trace.append(step)
-        llm_calls += calls
+        if "gap_analysis" in completed_steps and checkpoint and checkpoint.follow_up_queries is not None:
+            # Restore from checkpoint
+            follow_up_queries = checkpoint.follow_up_queries
+            logger.info(f"Restored {len(follow_up_queries)} follow-up queries from checkpoint")
+            step = ResearchStep(
+                step_type=ResearchStepType.GAP_ANALYSIS,
+                description=f"Restored {len(follow_up_queries)} follow-up queries from checkpoint",
+                duration_ms=0,
+            )
+            trace.append(step)
+        else:
+            follow_up_queries, step, calls = await self._step_gap_analysis(
+                question, sub_questions, initial_results
+            )
+            trace.append(step)
+            llm_calls += calls
+            # Save checkpoint after gap analysis
+            self._save_checkpoint(
+                step=ResearchCheckpointStep.FOLLOW_UP_RETRIEVAL if follow_up_queries else ResearchCheckpointStep.SYNTHESIS,
+                follow_up_queries=follow_up_queries,
+                completed_step="gap_analysis",
+            )
 
         # Step 4: Follow-up retrieval (if needed)
         additional_results: list[SearchResult] = []
         if follow_up_queries:
-            additional_results, step = await self._step_follow_up_retrieve(
-                follow_up_queries, len(initial_results)
-            )
-            trace.append(step)
+            if "follow_up_retrieval" in completed_steps and checkpoint and checkpoint.follow_up_contexts:
+                # Restore from checkpoint
+                additional_results = [_dict_to_search_result(d) for d in checkpoint.follow_up_contexts]
+                logger.info(f"Restored {len(additional_results)} follow-up chunks from checkpoint")
+                step = ResearchStep(
+                    step_type=ResearchStepType.RETRIEVAL,
+                    description=f"Restored {len(additional_results)} follow-up chunks from checkpoint",
+                    duration_ms=0,
+                )
+                trace.append(step)
+            else:
+                additional_results, step = await self._step_follow_up_retrieve(
+                    follow_up_queries, len(initial_results)
+                )
+                trace.append(step)
+                # Save checkpoint after follow-up retrieval
+                self._save_checkpoint(
+                    step=ResearchCheckpointStep.SYNTHESIS,
+                    follow_up_contexts=[_search_result_to_dict(r) for r in additional_results],
+                    completed_step="follow_up_retrieval",
+                )
 
         # Prepare results for synthesis
         all_results = self._prepare_results_for_synthesis(initial_results, additional_results)
@@ -289,6 +763,13 @@ class DeepResearchPipeline:
         answer, step, calls = await self._step_synthesize(question, sub_questions, all_results)
         trace.append(step)
         llm_calls += calls
+
+        # Mark checkpoint as complete
+        self._save_checkpoint(
+            step=ResearchCheckpointStep.COMPLETE,
+            partial_synthesis=answer,
+            completed_step="synthesis",
+        )
 
         # Report completion
         await self._report_progress(
@@ -835,3 +1316,75 @@ class DeepResearchPipeline:
             )
             for r in results
         ]
+
+
+def cancel_research(repo_path: Path, research_id: str) -> ResearchCheckpoint | None:
+    """Cancel a research operation and save its checkpoint.
+
+    This is a synchronous utility function that can be called to mark
+    a research session as cancelled. The checkpoint will be preserved
+    for potential resumption later.
+
+    Args:
+        repo_path: Path to the repository.
+        research_id: The research session ID to cancel.
+
+    Returns:
+        The cancelled checkpoint, or None if not found.
+    """
+    manager = CheckpointManager(repo_path)
+    checkpoint = manager.load_checkpoint(research_id)
+
+    if not checkpoint:
+        return None
+
+    # Mark as cancelled
+    checkpoint.current_step = ResearchCheckpointStep.CANCELLED
+    checkpoint.updated_at = time.time()
+    checkpoint.error = "Research was cancelled by user"
+
+    manager.save_checkpoint(checkpoint)
+    logger.info(f"Cancelled research {research_id}")
+
+    return checkpoint
+
+
+def list_research_checkpoints(repo_path: Path) -> list[ResearchCheckpoint]:
+    """List all research checkpoints for a repository.
+
+    Args:
+        repo_path: Path to the repository.
+
+    Returns:
+        List of checkpoints, sorted by updated_at descending.
+    """
+    manager = CheckpointManager(repo_path)
+    return manager.list_checkpoints()
+
+
+def get_research_checkpoint(repo_path: Path, research_id: str) -> ResearchCheckpoint | None:
+    """Get a specific research checkpoint.
+
+    Args:
+        repo_path: Path to the repository.
+        research_id: The research session ID.
+
+    Returns:
+        The checkpoint, or None if not found.
+    """
+    manager = CheckpointManager(repo_path)
+    return manager.load_checkpoint(research_id)
+
+
+def delete_research_checkpoint(repo_path: Path, research_id: str) -> bool:
+    """Delete a research checkpoint.
+
+    Args:
+        repo_path: Path to the repository.
+        research_id: The research session ID.
+
+    Returns:
+        True if deleted, False if not found.
+    """
+    manager = CheckpointManager(repo_path)
+    return manager.delete_checkpoint(research_id)

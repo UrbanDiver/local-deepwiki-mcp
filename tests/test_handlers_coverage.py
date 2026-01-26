@@ -947,7 +947,11 @@ class TestHandleDeepResearchImpl:
                             mock_result.total_llm_calls = 2
 
                             async def mock_research(
-                                question, progress_callback=None, cancellation_check=None
+                                question,
+                                progress_callback=None,
+                                cancellation_check=None,
+                                resume_id=None,
+                                cancellation_event=None,
                             ):
                                 # Call progress callback to test notification sending
                                 if progress_callback:
@@ -1022,7 +1026,11 @@ class TestHandleDeepResearchImpl:
                             mock_result.total_llm_calls = 2
 
                             async def mock_research(
-                                question, progress_callback=None, cancellation_check=None
+                                question,
+                                progress_callback=None,
+                                cancellation_check=None,
+                                resume_id=None,
+                                cancellation_event=None,
                             ):
                                 if progress_callback:
                                     from local_deepwiki.models import (
@@ -1620,3 +1628,171 @@ class TestHandleExportWikiPdf:
             mock_export.assert_called_once()
             call_kwargs = mock_export.call_args[1]
             assert call_kwargs["single_file"] is True
+
+
+class TestHandleListResearchCheckpoints:
+    """Tests for handle_list_research_checkpoints handler."""
+
+    async def test_returns_error_for_nonexistent_path(self):
+        """Test that handler returns error for nonexistent path."""
+        from local_deepwiki.handlers import handle_list_research_checkpoints
+
+        result = await handle_list_research_checkpoints(
+            {"repo_path": "/nonexistent/path"}
+        )
+        assert len(result) == 1
+        assert "Error" in result[0].text
+
+    async def test_returns_empty_list_when_no_checkpoints(self, tmp_path):
+        """Test listing checkpoints when none exist."""
+        from local_deepwiki.handlers import handle_list_research_checkpoints
+
+        result = await handle_list_research_checkpoints(
+            {"repo_path": str(tmp_path)}
+        )
+        assert len(result) == 1
+        data = json.loads(result[0].text)
+        assert data["status"] == "success"
+        assert data["checkpoints"] == []
+
+    async def test_returns_checkpoints_list(self, tmp_path):
+        """Test listing existing checkpoints."""
+        from local_deepwiki.handlers import handle_list_research_checkpoints
+        from local_deepwiki.core.deep_research import CheckpointManager
+        from local_deepwiki.models import ResearchCheckpoint, ResearchCheckpointStep
+        import time
+
+        # Create a checkpoint
+        manager = CheckpointManager(tmp_path)
+        checkpoint = ResearchCheckpoint(
+            research_id="test-list-123",
+            question="Test question for listing",
+            repo_path=str(tmp_path),
+            started_at=time.time(),
+            updated_at=time.time(),
+            current_step=ResearchCheckpointStep.RETRIEVAL,
+            completed_steps=["decomposition"],
+        )
+        manager.save_checkpoint(checkpoint)
+
+        result = await handle_list_research_checkpoints(
+            {"repo_path": str(tmp_path)}
+        )
+        assert len(result) == 1
+        data = json.loads(result[0].text)
+        assert data["status"] == "success"
+        assert data["checkpoint_count"] == 1
+        assert data["checkpoints"][0]["research_id"] == "test-list-123"
+        assert data["checkpoints"][0]["can_resume"] is True
+
+
+class TestHandleCancelResearch:
+    """Tests for handle_cancel_research handler."""
+
+    async def test_returns_error_for_nonexistent_path(self):
+        """Test that handler returns error for nonexistent path."""
+        from local_deepwiki.handlers import handle_cancel_research
+
+        result = await handle_cancel_research(
+            {"repo_path": "/nonexistent/path", "research_id": "test-123"}
+        )
+        assert len(result) == 1
+        assert "Error" in result[0].text
+
+    async def test_returns_error_for_nonexistent_checkpoint(self, tmp_path):
+        """Test cancelling a checkpoint that doesn't exist."""
+        from local_deepwiki.handlers import handle_cancel_research
+
+        result = await handle_cancel_research(
+            {"repo_path": str(tmp_path), "research_id": "nonexistent-id"}
+        )
+        assert len(result) == 1
+        data = json.loads(result[0].text)
+        assert data["status"] == "error"
+        assert "not found" in data["message"]
+
+    async def test_cancels_existing_checkpoint(self, tmp_path):
+        """Test successfully cancelling an existing checkpoint."""
+        from local_deepwiki.handlers import handle_cancel_research
+        from local_deepwiki.core.deep_research import CheckpointManager
+        from local_deepwiki.models import ResearchCheckpoint, ResearchCheckpointStep
+        import time
+
+        # Create a checkpoint
+        manager = CheckpointManager(tmp_path)
+        checkpoint = ResearchCheckpoint(
+            research_id="cancel-test-123",
+            question="Test question",
+            repo_path=str(tmp_path),
+            started_at=time.time(),
+            updated_at=time.time(),
+            current_step=ResearchCheckpointStep.RETRIEVAL,
+            completed_steps=["decomposition"],
+        )
+        manager.save_checkpoint(checkpoint)
+
+        result = await handle_cancel_research(
+            {"repo_path": str(tmp_path), "research_id": "cancel-test-123"}
+        )
+        assert len(result) == 1
+        data = json.loads(result[0].text)
+        assert data["status"] == "success"
+        assert "checkpoint" in data["message"]
+
+        # Verify checkpoint is now cancelled
+        updated = manager.load_checkpoint("cancel-test-123")
+        assert updated.current_step == ResearchCheckpointStep.CANCELLED
+
+
+class TestHandleResumeResearch:
+    """Tests for handle_resume_research handler."""
+
+    async def test_returns_error_for_nonexistent_path(self):
+        """Test that handler returns error for nonexistent path."""
+        from local_deepwiki.handlers import handle_resume_research
+
+        result = await handle_resume_research(
+            {"repo_path": "/nonexistent/path", "research_id": "test-123"}
+        )
+        assert len(result) == 1
+        assert "Error" in result[0].text
+
+    async def test_returns_error_for_nonexistent_checkpoint(self, tmp_path):
+        """Test resuming a checkpoint that doesn't exist."""
+        from local_deepwiki.handlers import handle_resume_research
+
+        result = await handle_resume_research(
+            {"repo_path": str(tmp_path), "research_id": "nonexistent-id"}
+        )
+        assert len(result) == 1
+        data = json.loads(result[0].text)
+        assert data["status"] == "error"
+        assert "not found" in data["message"]
+
+    async def test_returns_error_for_complete_checkpoint(self, tmp_path):
+        """Test resuming a checkpoint that is already complete."""
+        from local_deepwiki.handlers import handle_resume_research
+        from local_deepwiki.core.deep_research import CheckpointManager
+        from local_deepwiki.models import ResearchCheckpoint, ResearchCheckpointStep
+        import time
+
+        # Create a complete checkpoint
+        manager = CheckpointManager(tmp_path)
+        checkpoint = ResearchCheckpoint(
+            research_id="complete-test-123",
+            question="Test question",
+            repo_path=str(tmp_path),
+            started_at=time.time(),
+            updated_at=time.time(),
+            current_step=ResearchCheckpointStep.COMPLETE,
+            completed_steps=["decomposition", "retrieval", "gap_analysis", "synthesis"],
+        )
+        manager.save_checkpoint(checkpoint)
+
+        result = await handle_resume_research(
+            {"repo_path": str(tmp_path), "research_id": "complete-test-123"}
+        )
+        assert len(result) == 1
+        data = json.loads(result[0].text)
+        assert data["status"] == "error"
+        assert "already complete" in data["message"]

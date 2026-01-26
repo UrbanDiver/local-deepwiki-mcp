@@ -16,7 +16,7 @@ from local_deepwiki.core.index_manager import (
     _migrate_status,
     _needs_migration,
 )
-from local_deepwiki.core.parser import CodeParser
+from local_deepwiki.core.parser import ASTCache, CodeParser
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.events import EventType, get_event_emitter
 from local_deepwiki.logging import get_logger
@@ -79,7 +79,19 @@ class RepositoryIndexer:
         self.wiki_path = self.config.get_wiki_path(self.repo_path)
         self.vector_db_path = self.config.get_vector_db_path(self.repo_path)
 
-        self.parser = CodeParser()
+        # Create AST cache if enabled
+        self.ast_cache: ASTCache | None = None
+        if self.config.ast_cache.enabled:
+            self.ast_cache = ASTCache(
+                max_entries=self.config.ast_cache.max_entries,
+                ttl_seconds=self.config.ast_cache.ttl_seconds,
+            )
+            logger.debug(
+                f"AST cache enabled: max_entries={self.config.ast_cache.max_entries}, "
+                f"ttl={self.config.ast_cache.ttl_seconds}s"
+            )
+
+        self.parser = CodeParser(cache=self.ast_cache)
         self.chunker = CodeChunker(self.config.chunking)
         self.embedding_provider = get_embedding_provider(self.config.embedding)
         self.vector_store = VectorStore(self.vector_db_path, self.embedding_provider)
@@ -426,6 +438,15 @@ class RepositoryIndexer:
             f"Indexing complete: {status.total_files} files, "
             f"{status.total_chunks} chunks, languages: {list(status.languages.keys())}"
         )
+
+        # Log AST cache statistics if enabled
+        if self.ast_cache is not None:
+            cache_stats = self.ast_cache.get_stats()
+            logger.info(
+                f"AST cache stats: hits={cache_stats['hits']}, misses={cache_stats['misses']}, "
+                f"hit_rate={cache_stats['hit_rate']:.2%}, entries={cache_stats['total_entries']}, "
+                f"memory={cache_stats['estimated_memory_bytes'] / 1024:.1f}KB"
+            )
 
     async def index(
         self,

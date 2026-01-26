@@ -10,12 +10,15 @@ from mcp.types import TextContent, Tool
 from local_deepwiki.handlers import (
     ToolHandler,
     handle_ask_question,
+    handle_cancel_research,
     handle_deep_research,
     handle_export_wiki_html,
     handle_export_wiki_pdf,
     handle_index_repository,
+    handle_list_research_checkpoints,
     handle_read_wiki_page,
     handle_read_wiki_structure,
+    handle_resume_research,
     handle_search_code,
 )
 from local_deepwiki.logging import get_logger
@@ -96,7 +99,7 @@ async def list_tools() -> list[Tool]:
         ),
         Tool(
             name="deep_research",
-            description="Perform deep research on a codebase question using multi-step reasoning. Unlike ask_question (single retrieval), this performs query decomposition, parallel retrieval, gap analysis, and comprehensive synthesis. Best for complex architectural questions.",
+            description="Perform deep research on a codebase question using multi-step reasoning. Unlike ask_question (single retrieval), this performs query decomposition, parallel retrieval, gap analysis, and comprehensive synthesis. Best for complex architectural questions. Supports checkpointing for long-running research that can be resumed if interrupted.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -116,6 +119,10 @@ async def list_tools() -> list[Tool]:
                         "type": "string",
                         "enum": ["quick", "default", "thorough"],
                         "description": "Research mode preset: 'quick' (fast, fewer sub-questions), 'default' (balanced), 'thorough' (comprehensive, more analysis)",
+                    },
+                    "resume_research_id": {
+                        "type": "string",
+                        "description": "Optional checkpoint ID to resume an interrupted research session. Use list_research_checkpoints to see available checkpoints.",
                     },
                 },
                 "required": ["repo_path", "question"],
@@ -252,12 +259,62 @@ async def list_tools() -> list[Tool]:
                 "required": ["wiki_path"],
             },
         ),
+        Tool(
+            name="list_research_checkpoints",
+            description="List all research checkpoints for a repository. Shows incomplete and cancelled research sessions that can be resumed using the deep_research tool with resume_research_id.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "repo_path": {
+                        "type": "string",
+                        "description": "Path to the repository to list checkpoints for",
+                    },
+                },
+                "required": ["repo_path"],
+            },
+        ),
+        Tool(
+            name="cancel_research",
+            description="Cancel an active deep research session and save its checkpoint. The research can be resumed later using the deep_research tool with resume_research_id.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "repo_path": {
+                        "type": "string",
+                        "description": "Path to the repository",
+                    },
+                    "research_id": {
+                        "type": "string",
+                        "description": "ID of the research session to cancel (from list_research_checkpoints)",
+                    },
+                },
+                "required": ["repo_path", "research_id"],
+            },
+        ),
+        Tool(
+            name="resume_research",
+            description="Resume a previously interrupted deep research session from its checkpoint. This is a convenience wrapper - you can also use deep_research with resume_research_id directly.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "repo_path": {
+                        "type": "string",
+                        "description": "Path to the repository",
+                    },
+                    "research_id": {
+                        "type": "string",
+                        "description": "ID of the research checkpoint to resume (from list_research_checkpoints)",
+                    },
+                },
+                "required": ["repo_path", "research_id"],
+            },
+        ),
     ]
 
 
 # Tool handler dispatch dictionary
 # Maps tool names to their async handler functions
-# Note: index_repository and deep_research are handled specially for progress streaming
+# Note: index_repository, deep_research, and resume_research are handled specially for progress streaming
 TOOL_HANDLERS: dict[str, ToolHandler] = {
     "ask_question": handle_ask_question,
     "read_wiki_structure": handle_read_wiki_structure,
@@ -265,10 +322,12 @@ TOOL_HANDLERS: dict[str, ToolHandler] = {
     "search_code": handle_search_code,
     "export_wiki_html": handle_export_wiki_html,
     "export_wiki_pdf": handle_export_wiki_pdf,
+    "list_research_checkpoints": handle_list_research_checkpoints,
+    "cancel_research": handle_cancel_research,
 }
 
 # Tools that need server context for progress streaming
-PROGRESS_ENABLED_TOOLS = {"index_repository", "deep_research"}
+PROGRESS_ENABLED_TOOLS = {"index_repository", "deep_research", "resume_research"}
 
 
 @server.call_tool()
@@ -283,6 +342,9 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
 
     if name == "deep_research":
         return await handle_deep_research(arguments, server=server)
+
+    if name == "resume_research":
+        return await handle_resume_research(arguments, server=server)
 
     handler = TOOL_HANDLERS.get(name)
     if handler is None:

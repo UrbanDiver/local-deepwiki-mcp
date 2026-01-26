@@ -175,6 +175,69 @@ def _get_default_parallel_workers() -> int:
         return 4
 
 
+class EmbeddingBatchConfig(BaseModel):
+    """Embedding batch processing configuration."""
+
+    model_config = {"frozen": True}
+
+    batch_size: int = Field(
+        default=100,
+        ge=1,
+        le=500,
+        description="Number of texts to embed per batch. "
+        "Local models can handle larger batches (100-200), API providers should use smaller (20-50).",
+    )
+    concurrency: int = Field(
+        default=4,
+        ge=1,
+        le=16,
+        description="Number of batches to process in parallel. "
+        "Higher values speed up embedding but increase memory/API usage.",
+    )
+    rate_limit_rpm: int | None = Field(
+        default=None,
+        description="Requests per minute limit for API providers. "
+        "If set, embedding will be throttled to respect this limit. "
+        "Set to None for local providers or when using default API limits.",
+    )
+    retry_max_attempts: int = Field(
+        default=3,
+        ge=1,
+        le=10,
+        description="Maximum retry attempts for failed batches.",
+    )
+    retry_base_delay: float = Field(
+        default=1.0,
+        ge=0.1,
+        le=10.0,
+        description="Base delay in seconds between retry attempts (exponential backoff).",
+    )
+
+
+class ASTCacheConfig(BaseModel):
+    """AST cache configuration for tree-sitter parser.
+
+    Caches parsed ASTs to speed up incremental indexing by avoiding
+    re-parsing of unchanged files.
+    """
+
+    model_config = {"frozen": True}
+
+    enabled: bool = Field(default=True, description="Enable AST caching for incremental indexing")
+    max_entries: int = Field(
+        default=1000,
+        ge=100,
+        le=10000,
+        description="Maximum number of cached ASTs before LRU eviction",
+    )
+    ttl_seconds: int = Field(
+        default=3600,
+        ge=60,
+        le=86400,  # 24 hours max
+        description="Cache TTL in seconds (default: 1 hour)",
+    )
+
+
 class ChunkingConfig(BaseModel):
     """Chunking configuration."""
 
@@ -602,10 +665,12 @@ class Config(BaseModel):
 
     embedding: EmbeddingConfig = Field(default_factory=EmbeddingConfig)
     embedding_cache: EmbeddingCacheConfig = Field(default_factory=EmbeddingCacheConfig)
+    embedding_batch: EmbeddingBatchConfig = Field(default_factory=EmbeddingBatchConfig)
     llm: LLMConfig = Field(default_factory=LLMConfig)
     llm_cache: LLMCacheConfig = Field(default_factory=LLMCacheConfig)
     search_cache: SearchCacheConfig = Field(default_factory=SearchCacheConfig)
     parsing: ParsingConfig = Field(default_factory=ParsingConfig)
+    ast_cache: ASTCacheConfig = Field(default_factory=ASTCacheConfig)
     chunking: ChunkingConfig = Field(default_factory=ChunkingConfig)
     wiki: WikiConfig = Field(default_factory=WikiConfig)
     deep_research: DeepResearchConfig = Field(default_factory=DeepResearchConfig)

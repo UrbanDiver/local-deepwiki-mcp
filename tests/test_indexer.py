@@ -7,13 +7,14 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from local_deepwiki.config import ChunkingConfig, Config, ParsingConfig
+from local_deepwiki.config import ASTCacheConfig, ChunkingConfig, Config, ParsingConfig
 from local_deepwiki.core.indexer import (
     CURRENT_SCHEMA_VERSION,
     RepositoryIndexer,
     _migrate_status,
     _needs_migration,
 )
+from local_deepwiki.core.parser import ASTCache
 from local_deepwiki.models import ChunkType, CodeChunk, IndexStatus, Language
 
 
@@ -1351,3 +1352,164 @@ class TestParallelParsingPerformance:
         parsing_log = [m for m in log_messages if "Parallel parsing complete" in m]
         assert len(parsing_log) == 1
         assert "1 errors" in parsing_log[0]
+
+
+class TestASTCacheIntegration:
+    """Tests for AST cache integration with RepositoryIndexer."""
+
+    def test_indexer_creates_ast_cache_when_enabled(self, tmp_path):
+        """Test that indexer creates AST cache when enabled in config."""
+        repo_path = tmp_path / "repo"
+        repo_path.mkdir()
+
+        # AST cache enabled by default
+        parsing = ParsingConfig().model_copy(update={"languages": ["python"]})
+        config = Config().model_copy(update={"parsing": parsing})
+
+        with patch("local_deepwiki.core.indexer.VectorStore") as MockVectorStore:
+            mock_store = MagicMock()
+            MockVectorStore.return_value = mock_store
+
+            indexer = RepositoryIndexer(repo_path, config)
+
+            assert indexer.ast_cache is not None
+            assert isinstance(indexer.ast_cache, ASTCache)
+            assert indexer.parser.cache is indexer.ast_cache
+
+    def test_indexer_no_ast_cache_when_disabled(self, tmp_path):
+        """Test that indexer does not create AST cache when disabled."""
+        repo_path = tmp_path / "repo"
+        repo_path.mkdir()
+
+        parsing = ParsingConfig().model_copy(update={"languages": ["python"]})
+        ast_cache = ASTCacheConfig(enabled=False)
+        config = Config().model_copy(update={"parsing": parsing, "ast_cache": ast_cache})
+
+        with patch("local_deepwiki.core.indexer.VectorStore") as MockVectorStore:
+            mock_store = MagicMock()
+            MockVectorStore.return_value = mock_store
+
+            indexer = RepositoryIndexer(repo_path, config)
+
+            assert indexer.ast_cache is None
+            assert indexer.parser.cache is None
+
+    def test_indexer_ast_cache_uses_config_values(self, tmp_path):
+        """Test that AST cache uses configuration values."""
+        repo_path = tmp_path / "repo"
+        repo_path.mkdir()
+
+        parsing = ParsingConfig().model_copy(update={"languages": ["python"]})
+        ast_cache = ASTCacheConfig(enabled=True, max_entries=500, ttl_seconds=1800)
+        config = Config().model_copy(update={"parsing": parsing, "ast_cache": ast_cache})
+
+        with patch("local_deepwiki.core.indexer.VectorStore") as MockVectorStore:
+            mock_store = MagicMock()
+            MockVectorStore.return_value = mock_store
+
+            indexer = RepositoryIndexer(repo_path, config)
+
+            assert indexer.ast_cache is not None
+            # Check internal config by accessing private attributes
+            assert indexer.ast_cache._max_entries == 500
+            assert indexer.ast_cache._ttl_seconds == 1800
+
+    async def test_indexer_logs_ast_cache_stats_after_indexing(self, tmp_path):
+        """Test that indexer logs AST cache statistics after indexing."""
+        repo_path = tmp_path / "repo"
+        repo_path.mkdir()
+        (repo_path / "test.py").write_text("def test(): pass")
+
+        parsing = ParsingConfig().model_copy(update={"languages": ["python"]})
+        config = Config().model_copy(update={"parsing": parsing})
+
+        log_messages = []
+
+        with patch("local_deepwiki.core.indexer.VectorStore") as MockVectorStore:
+            mock_store = MagicMock()
+            mock_store.create_or_update_table = AsyncMock(return_value=1)
+            mock_store.add_chunks = AsyncMock(return_value=0)
+            MockVectorStore.return_value = mock_store
+
+            indexer = RepositoryIndexer(repo_path, config)
+            indexer.vector_store = mock_store
+
+            # Mock logger.info to capture messages
+            with patch("local_deepwiki.core.indexer.logger") as mock_logger:
+                mock_logger.info = MagicMock(side_effect=lambda msg: log_messages.append(msg))
+                mock_logger.warning = MagicMock()
+                mock_logger.debug = MagicMock()
+
+                await indexer.index(full_rebuild=True)
+
+        # Check that AST cache stats were logged
+        cache_log = [m for m in log_messages if "AST cache stats" in m]
+        assert len(cache_log) == 1
+        assert "hits=" in cache_log[0]
+        assert "misses=" in cache_log[0]
+        assert "hit_rate=" in cache_log[0]
+
+    async def test_indexer_ast_cache_hit_on_unchanged_file(self, tmp_path):
+        """Test that AST cache provides hits when parsing the same file."""
+        repo_path = tmp_path / "repo"
+        repo_path.mkdir()
+        (repo_path / "test.py").write_text("def test(): pass")
+
+        parsing = ParsingConfig().model_copy(update={"languages": ["python"]})
+        config = Config().model_copy(update={"parsing": parsing})
+
+        with patch("local_deepwiki.core.indexer.VectorStore") as MockVectorStore:
+            mock_store = MagicMock()
+            MockVectorStore.return_value = mock_store
+
+            indexer = RepositoryIndexer(repo_path, config)
+
+            # First parse - should be a cache miss
+            result1 = indexer.parser.parse_file(repo_path / "test.py")
+            assert result1 is not None
+
+            stats1 = indexer.ast_cache.get_stats()
+            assert stats1["misses"] == 1
+            assert stats1["hits"] == 0
+
+            # Second parse of same file - should be a cache hit
+            result2 = indexer.parser.parse_file(repo_path / "test.py")
+            assert result2 is not None
+
+            stats2 = indexer.ast_cache.get_stats()
+            assert stats2["hits"] == 1
+            assert stats2["misses"] == 1
+
+    async def test_indexer_ast_cache_miss_on_modified_file(self, tmp_path):
+        """Test that AST cache misses when file content changes."""
+        repo_path = tmp_path / "repo"
+        repo_path.mkdir()
+        (repo_path / "test.py").write_text("def test(): pass")
+
+        parsing = ParsingConfig().model_copy(update={"languages": ["python"]})
+        config = Config().model_copy(update={"parsing": parsing})
+
+        with patch("local_deepwiki.core.indexer.VectorStore") as MockVectorStore:
+            mock_store = MagicMock()
+            MockVectorStore.return_value = mock_store
+
+            indexer = RepositoryIndexer(repo_path, config)
+
+            # First parse
+            result1 = indexer.parser.parse_file(repo_path / "test.py")
+            assert result1 is not None
+
+            stats1 = indexer.ast_cache.get_stats()
+            assert stats1["misses"] == 1
+
+            # Modify the file
+            (repo_path / "test.py").write_text("def modified(): pass")
+
+            # Second parse - should miss because content changed
+            result2 = indexer.parser.parse_file(repo_path / "test.py")
+            assert result2 is not None
+
+            stats2 = indexer.ast_cache.get_stats()
+            # Both should be misses since content is different
+            assert stats2["misses"] == 2
+            assert stats2["hits"] == 0

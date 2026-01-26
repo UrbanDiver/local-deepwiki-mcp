@@ -1,18 +1,20 @@
 """LanceDB vector store for code chunk storage and retrieval."""
 
+import asyncio
 import json
 import math
+import random
 import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import lancedb
 import numpy as np
 from lancedb.table import Table
 
-from local_deepwiki.config import SearchCacheConfig
+from local_deepwiki.config import EmbeddingBatchConfig, SearchCacheConfig
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import ChunkType, CodeChunk, Language, SearchResult
 from local_deepwiki.providers.base import EmbeddingProvider
@@ -294,6 +296,108 @@ class SearchCache:
             }
 
 
+@dataclass
+class BatchEmbeddingResult:
+    """Result of a batch embedding operation."""
+
+    batch_index: int
+    embeddings: list[list[float]] | None
+    error: Exception | None = None
+    retry_count: int = 0
+
+
+@dataclass
+class EmbeddingProgress:
+    """Progress tracker for embedding operations."""
+
+    total_texts: int
+    total_batches: int
+    completed_batches: int = 0
+    failed_batches: int = 0
+    start_time: float = field(default_factory=time.time)
+    _lock: threading.Lock = field(default_factory=threading.Lock)
+
+    def update(self, success: bool = True) -> None:
+        """Update progress after a batch completes."""
+        with self._lock:
+            if success:
+                self.completed_batches += 1
+            else:
+                self.failed_batches += 1
+
+    @property
+    def elapsed_seconds(self) -> float:
+        """Get elapsed time in seconds."""
+        return time.time() - self.start_time
+
+    @property
+    def estimated_remaining_seconds(self) -> float | None:
+        """Estimate remaining time based on current progress."""
+        with self._lock:
+            if self.completed_batches == 0:
+                return None
+            avg_time_per_batch = self.elapsed_seconds / self.completed_batches
+            remaining_batches = self.total_batches - self.completed_batches - self.failed_batches
+            return avg_time_per_batch * remaining_batches
+
+    def log_progress(self) -> None:
+        """Log current progress."""
+        with self._lock:
+            completed = self.completed_batches
+            failed = self.failed_batches
+            total = self.total_batches
+            elapsed = self.elapsed_seconds
+
+        # Calculate outside lock to avoid deadlock with estimated_remaining_seconds
+        progress_pct = (completed + failed) / total * 100 if total > 0 else 0
+        if completed > 0:
+            avg_time_per_batch = elapsed / completed
+            remaining_batches = total - completed - failed
+            eta = avg_time_per_batch * remaining_batches
+            eta_str = f", ETA: {eta:.1f}s"
+        else:
+            eta_str = ""
+
+        logger.info(
+            f"Embedding progress: {completed}/{total} batches "
+            f"({progress_pct:.1f}%){eta_str}"
+        )
+
+
+class RateLimiter:
+    """Token bucket rate limiter for API requests."""
+
+    def __init__(self, requests_per_minute: int):
+        """Initialize rate limiter.
+
+        Args:
+            requests_per_minute: Maximum requests per minute.
+        """
+        self.rate = requests_per_minute / 60.0  # Requests per second
+        self.tokens = float(requests_per_minute)
+        self.max_tokens = float(requests_per_minute)
+        self.last_update = time.monotonic()
+        self._lock = asyncio.Lock()
+
+    async def acquire(self) -> None:
+        """Acquire a token, waiting if necessary."""
+        async with self._lock:
+            now = time.monotonic()
+            # Refill tokens based on elapsed time
+            elapsed = now - self.last_update
+            self.tokens = min(self.max_tokens, self.tokens + elapsed * self.rate)
+            self.last_update = now
+
+            if self.tokens < 1.0:
+                # Wait for tokens to refill
+                wait_time = (1.0 - self.tokens) / self.rate
+                await asyncio.sleep(wait_time)
+                self.tokens = 0.0
+                self.last_update = time.monotonic()
+            else:
+                self.tokens -= 1.0
+
+
 def _sanitize_string_value(value: str) -> str:
     """Sanitize a string value for use in LanceDB filter expressions.
 
@@ -319,6 +423,7 @@ class VectorStore:
         db_path: Path,
         embedding_provider: EmbeddingProvider,
         search_cache_config: SearchCacheConfig | None = None,
+        embedding_batch_config: EmbeddingBatchConfig | None = None,
     ):
         """Initialize the vector store.
 
@@ -327,6 +432,8 @@ class VectorStore:
             embedding_provider: Provider for generating embeddings.
             search_cache_config: Optional search cache configuration.
                 If None, uses default SearchCacheConfig.
+            embedding_batch_config: Optional embedding batch configuration.
+                If None, uses default EmbeddingBatchConfig.
         """
         self.db_path = db_path
         self.embedding_provider = embedding_provider
@@ -338,6 +445,16 @@ class VectorStore:
         if search_cache_config is None:
             search_cache_config = SearchCacheConfig()
         self._search_cache = SearchCache(search_cache_config)
+
+        # Initialize embedding batch config
+        if embedding_batch_config is None:
+            embedding_batch_config = EmbeddingBatchConfig()
+        self._embedding_batch_config = embedding_batch_config
+
+        # Rate limiter (created on-demand if rate limiting is configured)
+        self._rate_limiter: RateLimiter | None = None
+        if embedding_batch_config.rate_limit_rpm is not None:
+            self._rate_limiter = RateLimiter(embedding_batch_config.rate_limit_rpm)
 
     def _connect(self) -> lancedb.DBConnection:
         """Get or create database connection.
@@ -488,10 +605,237 @@ class VectorStore:
             # OSError: Storage issues
             logger.debug(f"Could not create vector index: {e}")
 
+    def _is_local_provider(self) -> bool:
+        """Check if the embedding provider is local (sentence-transformers).
+
+        Returns:
+            True if provider is local, False for API-based providers.
+        """
+        provider_name = self.embedding_provider.name.lower()
+        return provider_name.startswith("local:") or "sentence" in provider_name
+
+    def _get_optimal_batch_config(self) -> tuple[int, int]:
+        """Get optimal batch size and concurrency based on provider type.
+
+        Returns:
+            Tuple of (batch_size, concurrency).
+        """
+        config = self._embedding_batch_config
+        is_local = self._is_local_provider()
+
+        # Use configured values, but adjust defaults based on provider type
+        batch_size = config.batch_size
+        concurrency = config.concurrency
+
+        # For local providers, can use larger batches and higher concurrency
+        if is_local:
+            # Local models benefit from larger batches for GPU/CPU efficiency
+            batch_size = max(batch_size, 100)
+            concurrency = max(concurrency, 4)
+        else:
+            # API providers should use smaller batches to avoid rate limits
+            batch_size = min(batch_size, 50)
+            # Lower concurrency for APIs to avoid overwhelming the service
+            concurrency = min(concurrency, 4)
+
+        return batch_size, concurrency
+
+    async def _embed_single_batch_with_retry(
+        self,
+        batch_index: int,
+        texts: list[str],
+        progress: EmbeddingProgress,
+        semaphore: asyncio.Semaphore,
+    ) -> BatchEmbeddingResult:
+        """Embed a single batch with retry logic and rate limiting.
+
+        Args:
+            batch_index: Index of this batch for ordering results.
+            texts: Texts to embed in this batch.
+            progress: Progress tracker to update.
+            semaphore: Semaphore for concurrency control.
+
+        Returns:
+            BatchEmbeddingResult with embeddings or error.
+        """
+        config = self._embedding_batch_config
+        retry_count = 0
+
+        async with semaphore:
+            while retry_count < config.retry_max_attempts:
+                try:
+                    # Apply rate limiting if configured
+                    if self._rate_limiter is not None:
+                        await self._rate_limiter.acquire()
+
+                    # Generate embeddings
+                    embeddings = await self.embedding_provider.embed(texts)
+                    progress.update(success=True)
+
+                    return BatchEmbeddingResult(
+                        batch_index=batch_index,
+                        embeddings=embeddings,
+                        retry_count=retry_count,
+                    )
+
+                except Exception as e:
+                    retry_count += 1
+                    error_str = str(e).lower()
+
+                    # Check if this is a retryable error
+                    is_retryable = (
+                        isinstance(e, (ConnectionError, TimeoutError, OSError))
+                        or "rate" in error_str and "limit" in error_str
+                        or "overloaded" in error_str
+                        or "503" in error_str
+                        or "502" in error_str
+                        or "timeout" in error_str
+                    )
+
+                    if not is_retryable or retry_count >= config.retry_max_attempts:
+                        logger.warning(
+                            f"Batch {batch_index} failed after {retry_count} attempts: {e}"
+                        )
+                        progress.update(success=False)
+                        return BatchEmbeddingResult(
+                            batch_index=batch_index,
+                            embeddings=None,
+                            error=e,
+                            retry_count=retry_count,
+                        )
+
+                    # Calculate backoff delay with jitter
+                    delay = config.retry_base_delay * (2 ** (retry_count - 1))
+                    delay = delay * (0.5 + random.random())  # Add jitter
+                    logger.warning(
+                        f"Batch {batch_index} failed (attempt {retry_count}): {e}. "
+                        f"Retrying in {delay:.2f}s..."
+                    )
+                    await asyncio.sleep(delay)
+
+        # Should not reach here
+        progress.update(success=False)
+        return BatchEmbeddingResult(
+            batch_index=batch_index,
+            embeddings=None,
+            error=RuntimeError("Unexpected: exhausted retries without returning"),
+            retry_count=retry_count,
+        )
+
     async def _batch_embed(
+        self, texts: list[str], batch_size: int | None = None, log_progress: bool = False
+    ) -> list[list[float]]:
+        """Generate embeddings in parallel batches.
+
+        Uses concurrent batch processing for faster embedding generation.
+        For local providers, uses higher concurrency. For API providers,
+        respects rate limits and uses lower concurrency.
+
+        Args:
+            texts: List of text strings to embed.
+            batch_size: Number of texts to embed per batch. If None, uses config default.
+            log_progress: Whether to log batch progress.
+
+        Returns:
+            List of embedding vectors in the same order as input texts.
+
+        Raises:
+            RuntimeError: If any batches fail after all retry attempts.
+        """
+        if not texts:
+            return []
+
+        # Get optimal config based on provider type
+        optimal_batch_size, optimal_concurrency = self._get_optimal_batch_config()
+        batch_size = batch_size or optimal_batch_size
+
+        # Split texts into batches
+        batches: list[list[str]] = []
+        for i in range(0, len(texts), batch_size):
+            batches.append(texts[i : i + batch_size])
+
+        total_batches = len(batches)
+
+        # For single batch, still use retry logic but without parallel overhead
+        if total_batches == 1:
+            progress = EmbeddingProgress(total_texts=len(texts), total_batches=1)
+            semaphore = asyncio.Semaphore(1)
+            result = await self._embed_single_batch_with_retry(0, batches[0], progress, semaphore)
+            if result.error is not None:
+                raise RuntimeError(f"Failed to embed batch: {result.error}")
+            if log_progress:
+                logger.debug(f"Embedded 1/1 batches ({len(texts)} texts)")
+            return result.embeddings or []
+
+        # Create progress tracker
+        progress = EmbeddingProgress(
+            total_texts=len(texts),
+            total_batches=total_batches,
+        )
+
+        if log_progress:
+            logger.info(
+                f"Starting parallel embedding: {len(texts)} texts in {total_batches} batches "
+                f"(batch_size={batch_size}, concurrency={optimal_concurrency})"
+            )
+
+        # Create semaphore for concurrency control
+        semaphore = asyncio.Semaphore(optimal_concurrency)
+
+        # Create tasks for all batches
+        tasks = [
+            self._embed_single_batch_with_retry(i, batch, progress, semaphore)
+            for i, batch in enumerate(batches)
+        ]
+
+        # Execute all tasks concurrently
+        results: list[BatchEmbeddingResult] = await asyncio.gather(*tasks)
+
+        # Log final progress
+        if log_progress:
+            progress.log_progress()
+
+        # Sort results by batch index to maintain order
+        results.sort(key=lambda r: r.batch_index)
+
+        # Check for failures and collect errors
+        errors: list[tuple[int, Exception]] = []
+        all_embeddings: list[list[float]] = []
+
+        for result in results:
+            if result.error is not None:
+                errors.append((result.batch_index, result.error))
+            elif result.embeddings is not None:
+                all_embeddings.extend(result.embeddings)
+
+        # If there were failures, report them
+        if errors:
+            error_msgs = [f"Batch {idx}: {err}" for idx, err in errors]
+            error_summary = "\n".join(error_msgs)
+            logger.error(f"Embedding failed for {len(errors)} batches:\n{error_summary}")
+
+            # Raise an exception with details about the failures
+            raise RuntimeError(
+                f"Failed to embed {len(errors)} out of {total_batches} batches. "
+                f"First error: {errors[0][1]}"
+            )
+
+        if log_progress:
+            elapsed = progress.elapsed_seconds
+            rate = len(texts) / elapsed if elapsed > 0 else 0
+            logger.info(
+                f"Embedding complete: {len(texts)} texts in {elapsed:.2f}s ({rate:.1f} texts/sec)"
+            )
+
+        return all_embeddings
+
+    async def _batch_embed_sequential(
         self, texts: list[str], batch_size: int, log_progress: bool = False
     ) -> list[list[float]]:
-        """Generate embeddings in batches.
+        """Generate embeddings in sequential batches (legacy method).
+
+        This is the original sequential implementation, kept for backward
+        compatibility and testing purposes.
 
         Args:
             texts: List of text strings to embed.
@@ -978,3 +1322,29 @@ class VectorStore:
             - hit_rate: Cache hit rate (0.0-1.0)
         """
         return self._search_cache.get_stats()
+
+    def get_embedding_batch_config(self) -> dict[str, Any]:
+        """Get embedding batch configuration.
+
+        Returns:
+            Dictionary with batch configuration including:
+            - batch_size: Texts per batch
+            - concurrency: Parallel batch limit
+            - rate_limit_rpm: Rate limit (requests per minute)
+            - retry_max_attempts: Maximum retry attempts
+            - retry_base_delay: Base delay for retries
+            - is_local_provider: Whether using local embeddings
+            - optimal_batch_size: Calculated optimal batch size
+            - optimal_concurrency: Calculated optimal concurrency
+        """
+        optimal_batch_size, optimal_concurrency = self._get_optimal_batch_config()
+        return {
+            "batch_size": self._embedding_batch_config.batch_size,
+            "concurrency": self._embedding_batch_config.concurrency,
+            "rate_limit_rpm": self._embedding_batch_config.rate_limit_rpm,
+            "retry_max_attempts": self._embedding_batch_config.retry_max_attempts,
+            "retry_base_delay": self._embedding_batch_config.retry_base_delay,
+            "is_local_provider": self._is_local_provider(),
+            "optimal_batch_size": optimal_batch_size,
+            "optimal_concurrency": optimal_concurrency,
+        }

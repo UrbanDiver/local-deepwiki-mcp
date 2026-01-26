@@ -1,6 +1,7 @@
 """Tests for the code parser."""
 
 import tempfile
+import time
 from pathlib import Path
 
 import pytest
@@ -8,6 +9,9 @@ import pytest
 from local_deepwiki.core.parser import (
     HASH_CHUNK_SIZE,
     MMAP_THRESHOLD_BYTES,
+    ASTCache,
+    ASTCacheStats,
+    CachedAST,
     CodeParser,
     _collect_preceding_comments,
     _compute_file_hash,
@@ -1158,3 +1162,393 @@ class TestUnsupportedFileType:
 
         result = self.parser.parse_file(json_file)
         assert result is None
+
+
+class TestASTCache:
+    """Test suite for ASTCache."""
+
+    def test_cache_creation_defaults(self):
+        """Test creating cache with default parameters."""
+        cache = ASTCache()
+        assert cache.size == 0
+        stats = cache.get_stats()
+        assert stats["hits"] == 0
+        assert stats["misses"] == 0
+        assert stats["total_entries"] == 0
+
+    def test_cache_creation_custom_params(self):
+        """Test creating cache with custom parameters."""
+        cache = ASTCache(max_entries=100, ttl_seconds=1800)
+        assert cache.size == 0
+
+    def test_cache_set_and_get(self, tmp_path):
+        """Test storing and retrieving an AST from cache."""
+        cache = ASTCache(max_entries=10, ttl_seconds=3600)
+        parser = CodeParser()
+
+        # Parse a file
+        test_file = tmp_path / "test.py"
+        test_file.write_text("def foo(): pass")
+
+        result = parser.parse_file(test_file)
+        assert result is not None
+        root, lang, source = result
+
+        # Create a tree for caching (need to re-parse to get the Tree object)
+        import hashlib
+        file_hash = hashlib.sha256(source).hexdigest()
+
+        # Parse again to get the tree object
+        tree = parser._get_parser(lang).parse(source)
+
+        # Store in cache
+        cache.set(str(test_file), file_hash, tree, lang.value)
+
+        # Retrieve from cache
+        cached = cache.get(str(test_file), file_hash)
+        assert cached is not None
+        assert cached.root_node.type == "module"
+
+    def test_cache_miss_wrong_hash(self, tmp_path):
+        """Test cache miss when file hash doesn't match."""
+        cache = ASTCache(max_entries=10, ttl_seconds=3600)
+        parser = CodeParser()
+
+        test_file = tmp_path / "test.py"
+        test_file.write_text("def foo(): pass")
+
+        result = parser.parse_file(test_file)
+        assert result is not None
+        root, lang, source = result
+
+        import hashlib
+        file_hash = hashlib.sha256(source).hexdigest()
+        tree = parser._get_parser(lang).parse(source)
+
+        cache.set(str(test_file), file_hash, tree, lang.value)
+
+        # Try to get with different hash
+        wrong_hash = hashlib.sha256(b"different content").hexdigest()
+        cached = cache.get(str(test_file), wrong_hash)
+        assert cached is None
+
+        # Check stats
+        stats = cache.get_stats()
+        assert stats["hits"] == 0
+        assert stats["misses"] == 1
+
+    def test_cache_ttl_expiration(self, tmp_path):
+        """Test that cache entries expire after TTL."""
+        # Create cache with very short TTL
+        cache = ASTCache(max_entries=10, ttl_seconds=1)
+        parser = CodeParser()
+
+        test_file = tmp_path / "test.py"
+        test_file.write_text("def foo(): pass")
+
+        result = parser.parse_file(test_file)
+        assert result is not None
+        root, lang, source = result
+
+        import hashlib
+        file_hash = hashlib.sha256(source).hexdigest()
+        tree = parser._get_parser(lang).parse(source)
+
+        cache.set(str(test_file), file_hash, tree, lang.value)
+
+        # Should hit initially
+        cached = cache.get(str(test_file), file_hash)
+        assert cached is not None
+
+        # Wait for TTL to expire
+        time.sleep(1.1)
+
+        # Should miss after expiration
+        cached = cache.get(str(test_file), file_hash)
+        assert cached is None
+
+        stats = cache.get_stats()
+        assert stats["expirations"] == 1
+
+    def test_cache_lru_eviction(self, tmp_path):
+        """Test LRU eviction when cache is full."""
+        cache = ASTCache(max_entries=3, ttl_seconds=3600)
+        parser = CodeParser()
+
+        # Create and cache multiple files
+        trees = []
+        for i in range(5):
+            test_file = tmp_path / f"test_{i}.py"
+            test_file.write_text(f"def func_{i}(): pass")
+
+            result = parser.parse_file(test_file)
+            assert result is not None
+            root, lang, source = result
+
+            import hashlib
+            file_hash = hashlib.sha256(source).hexdigest()
+            tree = parser._get_parser(lang).parse(source)
+            trees.append((str(test_file), file_hash, tree, lang.value))
+
+            cache.set(str(test_file), file_hash, tree, lang.value)
+
+        # Cache should be at max entries
+        assert cache.size <= 3
+
+        # Check evictions occurred
+        stats = cache.get_stats()
+        assert stats["evictions"] >= 2
+
+    def test_cache_invalidate_file(self, tmp_path):
+        """Test invalidating a specific file from cache."""
+        cache = ASTCache(max_entries=10, ttl_seconds=3600)
+        parser = CodeParser()
+
+        test_file = tmp_path / "test.py"
+        test_file.write_text("def foo(): pass")
+
+        result = parser.parse_file(test_file)
+        assert result is not None
+        root, lang, source = result
+
+        import hashlib
+        file_hash = hashlib.sha256(source).hexdigest()
+        tree = parser._get_parser(lang).parse(source)
+
+        cache.set(str(test_file), file_hash, tree, lang.value)
+        assert cache.size == 1
+
+        # Invalidate the file
+        cache.invalidate(str(test_file))
+        assert cache.size == 0
+
+        stats = cache.get_stats()
+        assert stats["invalidations"] == 1
+
+    def test_cache_clear(self, tmp_path):
+        """Test clearing all cache entries."""
+        cache = ASTCache(max_entries=10, ttl_seconds=3600)
+        parser = CodeParser()
+
+        # Add multiple entries
+        for i in range(3):
+            test_file = tmp_path / f"test_{i}.py"
+            test_file.write_text(f"def func_{i}(): pass")
+
+            result = parser.parse_file(test_file)
+            assert result is not None
+            root, lang, source = result
+
+            import hashlib
+            file_hash = hashlib.sha256(source).hexdigest()
+            tree = parser._get_parser(lang).parse(source)
+            cache.set(str(test_file), file_hash, tree, lang.value)
+
+        assert cache.size == 3
+
+        cache.clear()
+        assert cache.size == 0
+
+    def test_cache_stats(self, tmp_path):
+        """Test cache statistics tracking."""
+        cache = ASTCache(max_entries=10, ttl_seconds=3600)
+        parser = CodeParser()
+
+        test_file = tmp_path / "test.py"
+        test_file.write_text("def foo(): pass")
+
+        result = parser.parse_file(test_file)
+        assert result is not None
+        root, lang, source = result
+
+        import hashlib
+        file_hash = hashlib.sha256(source).hexdigest()
+        tree = parser._get_parser(lang).parse(source)
+
+        # Miss first
+        cache.get(str(test_file), file_hash)
+
+        # Store
+        cache.set(str(test_file), file_hash, tree, lang.value)
+
+        # Hit
+        cache.get(str(test_file), file_hash)
+        cache.get(str(test_file), file_hash)
+
+        stats = cache.get_stats()
+        assert stats["hits"] == 2
+        assert stats["misses"] == 1
+        assert stats["hit_rate"] == 2 / 3
+        assert stats["total_entries"] == 1
+        assert stats["estimated_memory_bytes"] > 0
+
+    def test_cache_cleanup_expired(self, tmp_path):
+        """Test manual cleanup of expired entries."""
+        cache = ASTCache(max_entries=10, ttl_seconds=1)
+        parser = CodeParser()
+
+        # Add entries
+        for i in range(3):
+            test_file = tmp_path / f"test_{i}.py"
+            test_file.write_text(f"def func_{i}(): pass")
+
+            result = parser.parse_file(test_file)
+            assert result is not None
+            root, lang, source = result
+
+            import hashlib
+            file_hash = hashlib.sha256(source).hexdigest()
+            tree = parser._get_parser(lang).parse(source)
+            cache.set(str(test_file), file_hash, tree, lang.value)
+
+        assert cache.size == 3
+
+        # Wait for expiration
+        time.sleep(1.1)
+
+        # Manual cleanup
+        removed = cache.cleanup_expired()
+        assert removed == 3
+        assert cache.size == 0
+
+    def test_cached_ast_dataclass(self):
+        """Test CachedAST dataclass creation."""
+        import time as time_module
+
+        entry = CachedAST(
+            tree=None,
+            file_hash="abc123",
+            created_at=time_module.time(),
+            language="python",
+            estimated_size_bytes=1000,
+        )
+        assert entry.file_hash == "abc123"
+        assert entry.language == "python"
+        assert entry.estimated_size_bytes == 1000
+
+    def test_ast_cache_stats_to_dict(self):
+        """Test ASTCacheStats.to_dict method."""
+        stats = ASTCacheStats(
+            hits=10,
+            misses=5,
+            evictions=2,
+            expirations=1,
+            invalidations=1,
+            total_entries=50,
+            estimated_memory_bytes=100000,
+        )
+        d = stats.to_dict()
+        assert d["hits"] == 10
+        assert d["misses"] == 5
+        assert d["hit_rate"] == 10 / 15
+        assert d["evictions"] == 2
+        assert d["expirations"] == 1
+        assert d["invalidations"] == 1
+        assert d["total_entries"] == 50
+        assert d["estimated_memory_bytes"] == 100000
+
+    def test_ast_cache_stats_zero_requests(self):
+        """Test hit rate calculation with zero requests."""
+        stats = ASTCacheStats()
+        d = stats.to_dict()
+        assert d["hit_rate"] == 0.0
+
+
+class TestCodeParserWithCache:
+    """Test CodeParser integration with ASTCache."""
+
+    def test_parser_without_cache(self, tmp_path):
+        """Test parser works without cache."""
+        parser = CodeParser()
+        assert parser.cache is None
+        assert parser.get_cache_stats() is None
+
+        test_file = tmp_path / "test.py"
+        test_file.write_text("def foo(): pass")
+
+        result = parser.parse_file(test_file)
+        assert result is not None
+
+    def test_parser_with_cache(self, tmp_path):
+        """Test parser with cache integration."""
+        cache = ASTCache(max_entries=10, ttl_seconds=3600)
+        parser = CodeParser(cache=cache)
+
+        assert parser.cache is cache
+        assert parser.get_cache_stats() is not None
+
+        test_file = tmp_path / "test.py"
+        test_file.write_text("def foo(): pass")
+
+        # First parse - cache miss
+        result1 = parser.parse_file(test_file)
+        assert result1 is not None
+
+        stats = parser.get_cache_stats()
+        assert stats is not None
+        assert stats["misses"] == 1
+
+        # Second parse - cache hit
+        result2 = parser.parse_file(test_file)
+        assert result2 is not None
+
+        stats = parser.get_cache_stats()
+        assert stats["hits"] == 1
+
+    def test_parser_cache_miss_on_modified_file(self, tmp_path):
+        """Test cache miss when file content changes."""
+        cache = ASTCache(max_entries=10, ttl_seconds=3600)
+        parser = CodeParser(cache=cache)
+
+        test_file = tmp_path / "test.py"
+        test_file.write_text("def foo(): pass")
+
+        # First parse
+        result1 = parser.parse_file(test_file)
+        assert result1 is not None
+
+        stats = parser.get_cache_stats()
+        assert stats["misses"] == 1
+
+        # Modify file
+        test_file.write_text("def bar(): pass")
+
+        # Second parse - should miss due to different hash
+        result2 = parser.parse_file(test_file)
+        assert result2 is not None
+
+        stats = parser.get_cache_stats()
+        assert stats["misses"] == 2
+        assert stats["hits"] == 0
+
+    def test_parser_cache_property(self):
+        """Test the cache property."""
+        parser_no_cache = CodeParser()
+        assert parser_no_cache.cache is None
+
+        cache = ASTCache()
+        parser_with_cache = CodeParser(cache=cache)
+        assert parser_with_cache.cache is cache
+
+    def test_parser_multiple_files_cached(self, tmp_path):
+        """Test caching multiple files."""
+        cache = ASTCache(max_entries=10, ttl_seconds=3600)
+        parser = CodeParser(cache=cache)
+
+        # Create and parse multiple files
+        for i in range(5):
+            test_file = tmp_path / f"test_{i}.py"
+            test_file.write_text(f"def func_{i}(): pass")
+            parser.parse_file(test_file)
+
+        stats = parser.get_cache_stats()
+        assert stats["total_entries"] == 5
+        assert stats["misses"] == 5
+
+        # Parse all again - should hit
+        for i in range(5):
+            test_file = tmp_path / f"test_{i}.py"
+            parser.parse_file(test_file)
+
+        stats = parser.get_cache_stats()
+        assert stats["hits"] == 5

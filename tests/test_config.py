@@ -12,6 +12,7 @@ from local_deepwiki.config import (
     RESEARCH_PRESETS,
     RESEARCH_SYNTHESIS_PROMPTS,
     WIKI_SYSTEM_PROMPTS,
+    ASTCacheConfig,
     ChunkingConfig,
     Config,
     DeepResearchConfig,
@@ -126,6 +127,40 @@ class TestConfig:
 
         with pytest.raises(ValidationError):
             Config(deep_research={"synthesis_temperature": 2.5})  # Above max
+
+    def test_ast_cache_config_defaults(self):
+        """Test AST cache configuration defaults."""
+        config = Config()
+
+        assert config.ast_cache.enabled is True
+        assert config.ast_cache.max_entries == 1000
+        assert config.ast_cache.ttl_seconds == 3600
+
+    def test_ast_cache_config_custom(self):
+        """Test AST cache with custom configuration."""
+        config = Config(ast_cache={"enabled": False, "max_entries": 500, "ttl_seconds": 1800})
+
+        assert config.ast_cache.enabled is False
+        assert config.ast_cache.max_entries == 500
+        assert config.ast_cache.ttl_seconds == 1800
+
+    def test_ast_cache_config_validation(self):
+        """Test AST cache config validation bounds."""
+        from pydantic import ValidationError
+
+        # Test max_entries bounds
+        with pytest.raises(ValidationError):
+            Config(ast_cache={"max_entries": 50})  # Below min (100)
+
+        with pytest.raises(ValidationError):
+            Config(ast_cache={"max_entries": 20000})  # Above max (10000)
+
+        # Test ttl_seconds bounds
+        with pytest.raises(ValidationError):
+            Config(ast_cache={"ttl_seconds": 30})  # Below min (60)
+
+        with pytest.raises(ValidationError):
+            Config(ast_cache={"ttl_seconds": 100000})  # Above max (86400)
 
     def test_get_wiki_path(self, tmp_path):
         """Test wiki path generation."""

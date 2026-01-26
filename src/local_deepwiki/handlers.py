@@ -30,14 +30,18 @@ from local_deepwiki.errors import (
 
 from local_deepwiki.models import (
     AskQuestionArgs,
+    CancelResearchArgs,
     DeepResearchArgs,
     ExportWikiHtmlArgs,
     ExportWikiPdfArgs,
     IndexingProgress,
     IndexingProgressType,
     IndexRepositoryArgs,
+    ListResearchCheckpointsArgs,
     ReadWikiPageArgs,
     ReadWikiStructureArgs,
+    ResearchCheckpoint,
+    ResumeResearchArgs,
     SearchCodeArgs,
 )
 
@@ -456,12 +460,14 @@ class _DeepResearchContext:
         max_chunks: int,
         preset: str | None,
         server: Any,
+        resume_research_id: str | None = None,
     ):
         self.repo_path = repo_path
         self.question = question
         self.max_chunks = max_chunks
         self.preset = preset
         self.server = server
+        self.resume_research_id = resume_research_id
         self.config = get_config()
         self.progress_token: str | int | None = None
         self.cancellation_event = asyncio.Event()
@@ -493,9 +499,10 @@ def _setup_deep_research_config(
     question = validated.question
     max_chunks = validated.max_chunks
     preset = validated.preset
+    resume_research_id = validated.resume_research_id
 
     logger.info(f"Deep research on {repo_path}: {question[:100]}...")
-    logger.debug(f"Max chunks: {max_chunks}, preset: {preset or 'default'}")
+    logger.debug(f"Max chunks: {max_chunks}, preset: {preset or 'default'}, resume: {resume_research_id or 'new'}")
 
     # Create context
     ctx = _DeepResearchContext(
@@ -504,6 +511,7 @@ def _setup_deep_research_config(
         max_chunks=max_chunks,
         preset=preset,
         server=server,
+        resume_research_id=resume_research_id,
     )
 
     # Validate repository is indexed
@@ -576,6 +584,7 @@ def _create_research_pipeline(
         decomposition_prompt=prompts.research_decomposition,
         gap_analysis_prompt=prompts.research_gap_analysis,
         synthesis_prompt=prompts.research_synthesis,
+        repo_path=ctx.repo_path,  # Enable checkpointing
     )
 
     return pipeline, vector_store, llm
@@ -721,6 +730,8 @@ async def _execute_research_phases(
             ctx.question,
             progress_callback=progress_callback,
             cancellation_check=is_cancelled,
+            resume_id=ctx.resume_research_id,
+            cancellation_event=ctx.cancellation_event,
         )
 
         response = _format_research_results(result)
@@ -734,17 +745,14 @@ async def _execute_research_phases(
     except ResearchCancelledError as e:
         logger.info(f"Deep research cancelled: {e}")
         await send_cancellation_notification(e.step)
-        return [
-            TextContent(
-                type="text",
-                text=json.dumps(
-                    {
-                        "status": "cancelled",
-                        "message": f"Research cancelled during {e.step}",
-                    }
-                ),
-            )
-        ]
+        response = {
+            "status": "cancelled",
+            "message": f"Research cancelled during {e.step}",
+        }
+        if e.checkpoint_id:
+            response["checkpoint_id"] = e.checkpoint_id
+            response["hint"] = "Use resume_research_id to continue from where you left off"
+        return [TextContent(type="text", text=json.dumps(response))]
 
     except asyncio.CancelledError:
         logger.info("Deep research task cancelled")
@@ -1040,3 +1048,147 @@ async def handle_export_wiki_pdf(args: dict[str, Any]) -> list[TextContent]:
     }
 
     return [TextContent(type="text", text=json.dumps(response, indent=2))]
+
+
+@handle_tool_errors
+async def handle_list_research_checkpoints(args: dict[str, Any]) -> list[TextContent]:
+    """Handle list_research_checkpoints tool call.
+
+    Lists all research checkpoints for a repository, including incomplete
+    and cancelled research sessions that can be resumed.
+    """
+    from local_deepwiki.core.deep_research import list_research_checkpoints
+
+    # Validate with Pydantic
+    try:
+        validated = ListResearchCheckpointsArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    checkpoints = list_research_checkpoints(repo_path)
+
+    if not checkpoints:
+        return [TextContent(type="text", text=json.dumps({
+            "status": "success",
+            "message": "No research checkpoints found",
+            "checkpoints": [],
+        }, indent=2))]
+
+    # Format checkpoints for output
+    checkpoint_list = []
+    for cp in checkpoints:
+        checkpoint_list.append({
+            "research_id": cp.research_id,
+            "question": cp.question[:100] + "..." if len(cp.question) > 100 else cp.question,
+            "current_step": cp.current_step.value,
+            "completed_steps": cp.completed_steps,
+            "started_at": cp.started_at,
+            "updated_at": cp.updated_at,
+            "can_resume": cp.current_step.value not in ("complete", "error"),
+            "error": cp.error,
+        })
+
+    response = {
+        "status": "success",
+        "checkpoint_count": len(checkpoints),
+        "checkpoints": checkpoint_list,
+    }
+
+    logger.info(f"Listed {len(checkpoints)} research checkpoints for {repo_path}")
+    return [TextContent(type="text", text=json.dumps(response, indent=2))]
+
+
+@handle_tool_errors
+async def handle_cancel_research(args: dict[str, Any]) -> list[TextContent]:
+    """Handle cancel_research tool call.
+
+    Cancels an active research session and saves its checkpoint for
+    potential resumption later.
+    """
+    from local_deepwiki.core.deep_research import cancel_research
+
+    # Validate with Pydantic
+    try:
+        validated = CancelResearchArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+    research_id = validated.research_id
+
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    checkpoint = cancel_research(repo_path, research_id)
+
+    if not checkpoint:
+        return [TextContent(type="text", text=json.dumps({
+            "status": "error",
+            "message": f"Research checkpoint {research_id} not found",
+        }, indent=2))]
+
+    response = {
+        "status": "success",
+        "message": f"Research {research_id} cancelled and checkpointed",
+        "research_id": checkpoint.research_id,
+        "question": checkpoint.question,
+        "completed_steps": checkpoint.completed_steps,
+        "hint": "Use deep_research with resume_research_id to continue later",
+    }
+
+    logger.info(f"Cancelled research {research_id}")
+    return [TextContent(type="text", text=json.dumps(response, indent=2))]
+
+
+@handle_tool_errors
+async def handle_resume_research(
+    args: dict[str, Any],
+    server: Any = None,
+) -> list[TextContent]:
+    """Handle resume_research tool call.
+
+    Resumes a previously interrupted research session from its checkpoint.
+    This is a convenience wrapper around deep_research with resume_research_id.
+    """
+    from local_deepwiki.core.deep_research import get_research_checkpoint
+
+    # Validate with Pydantic
+    try:
+        validated = ResumeResearchArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+    research_id = validated.research_id
+
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    # Load the checkpoint to get the original question
+    checkpoint = get_research_checkpoint(repo_path, research_id)
+
+    if not checkpoint:
+        return [TextContent(type="text", text=json.dumps({
+            "status": "error",
+            "message": f"Research checkpoint {research_id} not found",
+        }, indent=2))]
+
+    if checkpoint.current_step.value == "complete":
+        return [TextContent(type="text", text=json.dumps({
+            "status": "error",
+            "message": f"Research {research_id} is already complete",
+        }, indent=2))]
+
+    # Delegate to deep_research handler with resume_research_id
+    deep_research_args = {
+        "repo_path": str(repo_path),
+        "question": checkpoint.question,
+        "resume_research_id": research_id,
+    }
+
+    return await handle_deep_research(deep_research_args, server)
