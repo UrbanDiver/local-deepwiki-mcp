@@ -4,6 +4,8 @@ This module provides role-based access control (RBAC) and permission checking
 for sensitive operations within the system.
 """
 
+import asyncio
+import threading
 from dataclasses import dataclass
 from enum import Enum
 from functools import wraps
@@ -240,24 +242,41 @@ class AccessController:
         return self._current_subject.has_permission(permission)
 
 
-# Global access controller instance
+# Global access controller instance with thread-safe initialization
 _access_controller: Optional[AccessController] = None
+_access_controller_lock = threading.Lock()
 
 
 def get_access_controller() -> AccessController:
-    """Get the global access controller instance.
+    """Get the global access controller instance (thread-safe).
 
     Returns:
         The global AccessController instance.
     """
     global _access_controller
     if _access_controller is None:
-        _access_controller = AccessController()
+        with _access_controller_lock:
+            # Double-check locking pattern
+            if _access_controller is None:
+                _access_controller = AccessController()
     return _access_controller
+
+
+def reset_access_controller() -> None:
+    """Reset the global access controller (for testing only).
+
+    This clears the global instance, allowing a fresh controller
+    to be created on the next call to get_access_controller().
+    """
+    global _access_controller
+    with _access_controller_lock:
+        _access_controller = None
 
 
 def require_permission(permission: Permission) -> Callable[[F], F]:
     """Decorator to require a specific permission for a function.
+
+    Supports both sync and async functions.
 
     Args:
         permission: The required permission.
@@ -271,19 +290,30 @@ def require_permission(permission: Permission) -> Callable[[F], F]:
     """
 
     def decorator(func: F) -> F:
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            controller = get_access_controller()
-            controller.require_permission(permission)
-            return func(*args, **kwargs)
+        if asyncio.iscoroutinefunction(func):
+            @wraps(func)
+            async def async_wrapper(*args, **kwargs):
+                controller = get_access_controller()
+                controller.require_permission(permission)
+                return await func(*args, **kwargs)
 
-        return wrapper  # type: ignore
+            return async_wrapper  # type: ignore
+        else:
+            @wraps(func)
+            def sync_wrapper(*args, **kwargs):
+                controller = get_access_controller()
+                controller.require_permission(permission)
+                return func(*args, **kwargs)
+
+            return sync_wrapper  # type: ignore
 
     return decorator
 
 
 def require_any_permission(*permissions: Permission) -> Callable[[F], F]:
     """Decorator to require any of the specified permissions.
+
+    Supports both sync and async functions.
 
     Args:
         *permissions: One or more permissions, any of which will satisfy the check.
@@ -297,19 +327,30 @@ def require_any_permission(*permissions: Permission) -> Callable[[F], F]:
     """
 
     def decorator(func: F) -> F:
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            controller = get_access_controller()
-            controller.require_any_permission(*permissions)
-            return func(*args, **kwargs)
+        if asyncio.iscoroutinefunction(func):
+            @wraps(func)
+            async def async_wrapper(*args, **kwargs):
+                controller = get_access_controller()
+                controller.require_any_permission(*permissions)
+                return await func(*args, **kwargs)
 
-        return wrapper  # type: ignore
+            return async_wrapper  # type: ignore
+        else:
+            @wraps(func)
+            def sync_wrapper(*args, **kwargs):
+                controller = get_access_controller()
+                controller.require_any_permission(*permissions)
+                return func(*args, **kwargs)
+
+            return sync_wrapper  # type: ignore
 
     return decorator
 
 
 def require_all_permissions(*permissions: Permission) -> Callable[[F], F]:
     """Decorator to require all of the specified permissions.
+
+    Supports both sync and async functions.
 
     Args:
         *permissions: Permissions that are all required.
@@ -323,12 +364,21 @@ def require_all_permissions(*permissions: Permission) -> Callable[[F], F]:
     """
 
     def decorator(func: F) -> F:
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            controller = get_access_controller()
-            controller.require_all_permissions(*permissions)
-            return func(*args, **kwargs)
+        if asyncio.iscoroutinefunction(func):
+            @wraps(func)
+            async def async_wrapper(*args, **kwargs):
+                controller = get_access_controller()
+                controller.require_all_permissions(*permissions)
+                return await func(*args, **kwargs)
 
-        return wrapper  # type: ignore
+            return async_wrapper  # type: ignore
+        else:
+            @wraps(func)
+            def sync_wrapper(*args, **kwargs):
+                controller = get_access_controller()
+                controller.require_all_permissions(*permissions)
+                return func(*args, **kwargs)
+
+            return sync_wrapper  # type: ignore
 
     return decorator
