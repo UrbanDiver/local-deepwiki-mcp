@@ -8,6 +8,8 @@ from dataclasses import dataclass, field
 from functools import wraps
 from typing import Any, AsyncIterator, Callable
 
+from local_deepwiki.errors import ProviderError as BaseProviderError
+
 logger = logging.getLogger(__name__)
 
 
@@ -16,12 +18,34 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 
 
-class ProviderError(Exception):
-    """Base exception for all provider errors."""
+class ProviderError(BaseProviderError):
+    """Base exception for all provider errors.
 
-    def __init__(self, message: str, provider_name: str | None = None):
-        self.provider_name = provider_name
-        super().__init__(message)
+    Inherits from local_deepwiki.errors.ProviderError (DeepWikiError subclass)
+    to provide consistent error handling with hints and context.
+
+    This class maintains backward compatibility with existing code that uses
+    the simpler (message, provider_name) signature while also supporting
+    the richer DeepWikiError features (hint, context, original_error).
+    """
+
+    def __init__(
+        self,
+        message: str,
+        provider_name: str | None = None,
+        *,
+        hint: str | None = None,
+        context: dict[str, Any] | None = None,
+        original_error: Exception | None = None,
+    ):
+        # Call the parent (BaseProviderError) __init__ with all parameters
+        super().__init__(
+            message=message,
+            hint=hint,
+            context=context,
+            provider_name=provider_name,
+            original_error=original_error,
+        )
 
 
 class ProviderConnectionError(ProviderError):
@@ -33,8 +57,12 @@ class ProviderConnectionError(ProviderError):
         provider_name: str | None = None,
         original_error: Exception | None = None,
     ):
-        self.original_error = original_error
-        super().__init__(message, provider_name)
+        super().__init__(
+            message,
+            provider_name,
+            original_error=original_error,
+            hint="Check your network connection and verify the service is accessible.",
+        )
 
 
 class ProviderRateLimitError(ProviderError):
@@ -47,7 +75,10 @@ class ProviderRateLimitError(ProviderError):
         retry_after: float | None = None,
     ):
         self.retry_after = retry_after
-        super().__init__(message, provider_name)
+        hint = "Wait a few minutes and try again, or consider upgrading your API plan."
+        if retry_after:
+            hint = f"Rate limited. Retry after {retry_after} seconds."
+        super().__init__(message, provider_name, hint=hint)
 
 
 class ProviderModelNotFoundError(ProviderError):
@@ -66,9 +97,11 @@ class ProviderModelNotFoundError(ProviderError):
             if len(available_models) > 10:
                 models_str += f"... ({len(available_models)} total)"
             message = f"Model '{model}' not found. Available models: {models_str}"
+            hint = f"Try one of the available models: {models_str}"
         else:
             message = f"Model '{model}' not found"
-        super().__init__(message, provider_name)
+            hint = "Check the model name and ensure it's accessible in your account."
+        super().__init__(message, provider_name, hint=hint)
 
 
 class ProviderAuthenticationError(ProviderError):

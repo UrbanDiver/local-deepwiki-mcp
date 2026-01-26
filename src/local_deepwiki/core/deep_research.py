@@ -9,6 +9,7 @@ from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any
 
+from local_deepwiki.core.rate_limiter import get_rate_limiter
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.events import EventType, get_event_emitter
 from local_deepwiki.logging import get_logger
@@ -635,6 +636,9 @@ class DeepResearchPipeline:
     async def _execute_pipeline(self, question: str) -> DeepResearchResult:
         """Execute the research pipeline steps.
 
+        This is a high-level orchestrator that coordinates the research steps,
+        delegating checkpoint restoration and step execution to helper methods.
+
         Args:
             question: The complex question to research.
 
@@ -647,10 +651,64 @@ class DeepResearchPipeline:
         # Determine what steps to skip based on checkpoint
         checkpoint = self._current_checkpoint
         completed_steps = set(checkpoint.completed_steps) if checkpoint else set()
+
+        # Emit start event and report progress
+        await self._emit_start_event(question, completed_steps)
+
+        # Step 1: Decompose question
+        sub_questions, step, calls = await self._execute_decomposition_step(
+            question, completed_steps
+        )
+        trace.append(step)
+        llm_calls += calls
+
+        # Step 2: Parallel retrieval
+        initial_results, step = await self._execute_retrieval_step(
+            sub_questions, completed_steps
+        )
+        trace.append(step)
+
+        # Step 3: Gap analysis
+        follow_up_queries, step, calls = await self._execute_gap_analysis_step(
+            question, sub_questions, initial_results, completed_steps
+        )
+        trace.append(step)
+        llm_calls += calls
+
+        # Step 4: Follow-up retrieval (if needed)
+        additional_results, follow_up_step = await self._execute_follow_up_step(
+            follow_up_queries, len(initial_results), completed_steps
+        )
+        if follow_up_step:
+            trace.append(follow_up_step)
+
+        # Prepare results for synthesis
+        all_results = self._prepare_results_for_synthesis(initial_results, additional_results)
+
+        # Step 5: Synthesis
+        answer, step, calls = await self._step_synthesize(question, sub_questions, all_results)
+        trace.append(step)
+        llm_calls += calls
+
+        # Finalize and build result
+        return await self._finalize_research(
+            question, answer, sub_questions, all_results, trace, llm_calls, step.duration_ms
+        )
+
+    async def _emit_start_event(
+        self,
+        question: str,
+        completed_steps: set[str],
+    ) -> None:
+        """Emit the research start event and report initial progress.
+
+        Args:
+            question: The research question.
+            completed_steps: Set of already completed step names.
+        """
+        emitter = get_event_emitter()
         is_resuming = bool(completed_steps)
 
-        # Emit RESEARCH_START event
-        emitter = get_event_emitter()
         if not is_resuming:
             await emitter.emit(
                 EventType.RESEARCH_START,
@@ -664,7 +722,22 @@ class DeepResearchPipeline:
                 f"Resuming deep research from checkpoint (completed: {', '.join(completed_steps)})",
             )
 
-        # Step 1: Decompose question
+    async def _execute_decomposition_step(
+        self,
+        question: str,
+        completed_steps: set[str],
+    ) -> tuple[list[SubQuestion], ResearchStep, int]:
+        """Execute or restore the decomposition step.
+
+        Args:
+            question: The research question.
+            completed_steps: Set of already completed step names.
+
+        Returns:
+            Tuple of (sub_questions, trace_step, llm_call_count).
+        """
+        checkpoint = self._current_checkpoint
+
         if "decomposition" in completed_steps and checkpoint and checkpoint.sub_questions:
             # Restore from checkpoint
             sub_questions = checkpoint.sub_questions
@@ -674,19 +747,34 @@ class DeepResearchPipeline:
                 description=f"Restored {len(sub_questions)} sub-questions from checkpoint",
                 duration_ms=0,
             )
-            trace.append(step)
-        else:
-            sub_questions, step, calls = await self._step_decompose(question)
-            trace.append(step)
-            llm_calls += calls
-            # Save checkpoint after decomposition
-            self._save_checkpoint(
-                step=ResearchCheckpointStep.RETRIEVAL,
-                sub_questions=sub_questions,
-                completed_step="decomposition",
-            )
+            return sub_questions, step, 0
 
-        # Step 2: Parallel retrieval
+        # Execute the step
+        sub_questions, step, calls = await self._step_decompose(question)
+        # Save checkpoint after decomposition
+        self._save_checkpoint(
+            step=ResearchCheckpointStep.RETRIEVAL,
+            sub_questions=sub_questions,
+            completed_step="decomposition",
+        )
+        return sub_questions, step, calls
+
+    async def _execute_retrieval_step(
+        self,
+        sub_questions: list[SubQuestion],
+        completed_steps: set[str],
+    ) -> tuple[list[SearchResult], ResearchStep]:
+        """Execute or restore the initial retrieval step.
+
+        Args:
+            sub_questions: The decomposed sub-questions.
+            completed_steps: Set of already completed step names.
+
+        Returns:
+            Tuple of (search_results, trace_step).
+        """
+        checkpoint = self._current_checkpoint
+
         if "retrieval" in completed_steps and checkpoint and checkpoint.retrieved_contexts:
             # Restore from checkpoint
             initial_results = self._checkpoint_to_results(checkpoint.retrieved_contexts)
@@ -696,18 +784,38 @@ class DeepResearchPipeline:
                 description=f"Restored {len(initial_results)} chunks from checkpoint",
                 duration_ms=0,
             )
-            trace.append(step)
-        else:
-            initial_results, step = await self._step_retrieve(sub_questions)
-            trace.append(step)
-            # Save checkpoint after retrieval
-            self._save_checkpoint(
-                step=ResearchCheckpointStep.GAP_ANALYSIS,
-                retrieved_contexts=self._results_to_checkpoint_format(initial_results, "initial"),
-                completed_step="retrieval",
-            )
+            return initial_results, step
 
-        # Step 3: Gap analysis
+        # Execute the step
+        initial_results, step = await self._step_retrieve(sub_questions)
+        # Save checkpoint after retrieval
+        self._save_checkpoint(
+            step=ResearchCheckpointStep.GAP_ANALYSIS,
+            retrieved_contexts=self._results_to_checkpoint_format(initial_results, "initial"),
+            completed_step="retrieval",
+        )
+        return initial_results, step
+
+    async def _execute_gap_analysis_step(
+        self,
+        question: str,
+        sub_questions: list[SubQuestion],
+        initial_results: list[SearchResult],
+        completed_steps: set[str],
+    ) -> tuple[list[str], ResearchStep, int]:
+        """Execute or restore the gap analysis step.
+
+        Args:
+            question: The original research question.
+            sub_questions: The decomposed sub-questions.
+            initial_results: Results from initial retrieval.
+            completed_steps: Set of already completed step names.
+
+        Returns:
+            Tuple of (follow_up_queries, trace_step, llm_call_count).
+        """
+        checkpoint = self._current_checkpoint
+
         if "gap_analysis" in completed_steps and checkpoint and checkpoint.follow_up_queries is not None:
             # Restore from checkpoint
             follow_up_queries = checkpoint.follow_up_queries
@@ -717,53 +825,88 @@ class DeepResearchPipeline:
                 description=f"Restored {len(follow_up_queries)} follow-up queries from checkpoint",
                 duration_ms=0,
             )
-            trace.append(step)
-        else:
-            follow_up_queries, step, calls = await self._step_gap_analysis(
-                question, sub_questions, initial_results
+            return follow_up_queries, step, 0
+
+        # Execute the step
+        follow_up_queries, step, calls = await self._step_gap_analysis(
+            question, sub_questions, initial_results
+        )
+        # Save checkpoint after gap analysis
+        self._save_checkpoint(
+            step=ResearchCheckpointStep.FOLLOW_UP_RETRIEVAL if follow_up_queries else ResearchCheckpointStep.SYNTHESIS,
+            follow_up_queries=follow_up_queries,
+            completed_step="gap_analysis",
+        )
+        return follow_up_queries, step, calls
+
+    async def _execute_follow_up_step(
+        self,
+        follow_up_queries: list[str],
+        initial_count: int,
+        completed_steps: set[str],
+    ) -> tuple[list[SearchResult], ResearchStep | None]:
+        """Execute or restore the follow-up retrieval step.
+
+        Args:
+            follow_up_queries: Queries from gap analysis.
+            initial_count: Number of results from initial retrieval.
+            completed_steps: Set of already completed step names.
+
+        Returns:
+            Tuple of (additional_results, trace_step or None if no follow-up needed).
+        """
+        if not follow_up_queries:
+            return [], None
+
+        checkpoint = self._current_checkpoint
+
+        if "follow_up_retrieval" in completed_steps and checkpoint and checkpoint.follow_up_contexts:
+            # Restore from checkpoint
+            additional_results = [_dict_to_search_result(d) for d in checkpoint.follow_up_contexts]
+            logger.info(f"Restored {len(additional_results)} follow-up chunks from checkpoint")
+            step = ResearchStep(
+                step_type=ResearchStepType.RETRIEVAL,
+                description=f"Restored {len(additional_results)} follow-up chunks from checkpoint",
+                duration_ms=0,
             )
-            trace.append(step)
-            llm_calls += calls
-            # Save checkpoint after gap analysis
-            self._save_checkpoint(
-                step=ResearchCheckpointStep.FOLLOW_UP_RETRIEVAL if follow_up_queries else ResearchCheckpointStep.SYNTHESIS,
-                follow_up_queries=follow_up_queries,
-                completed_step="gap_analysis",
-            )
+            return additional_results, step
 
-        # Step 4: Follow-up retrieval (if needed)
-        additional_results: list[SearchResult] = []
-        if follow_up_queries:
-            if "follow_up_retrieval" in completed_steps and checkpoint and checkpoint.follow_up_contexts:
-                # Restore from checkpoint
-                additional_results = [_dict_to_search_result(d) for d in checkpoint.follow_up_contexts]
-                logger.info(f"Restored {len(additional_results)} follow-up chunks from checkpoint")
-                step = ResearchStep(
-                    step_type=ResearchStepType.RETRIEVAL,
-                    description=f"Restored {len(additional_results)} follow-up chunks from checkpoint",
-                    duration_ms=0,
-                )
-                trace.append(step)
-            else:
-                additional_results, step = await self._step_follow_up_retrieve(
-                    follow_up_queries, len(initial_results)
-                )
-                trace.append(step)
-                # Save checkpoint after follow-up retrieval
-                self._save_checkpoint(
-                    step=ResearchCheckpointStep.SYNTHESIS,
-                    follow_up_contexts=[_search_result_to_dict(r) for r in additional_results],
-                    completed_step="follow_up_retrieval",
-                )
+        # Execute the step
+        additional_results, step = await self._step_follow_up_retrieve(
+            follow_up_queries, initial_count
+        )
+        # Save checkpoint after follow-up retrieval
+        self._save_checkpoint(
+            step=ResearchCheckpointStep.SYNTHESIS,
+            follow_up_contexts=[_search_result_to_dict(r) for r in additional_results],
+            completed_step="follow_up_retrieval",
+        )
+        return additional_results, step
 
-        # Prepare results for synthesis
-        all_results = self._prepare_results_for_synthesis(initial_results, additional_results)
+    async def _finalize_research(
+        self,
+        question: str,
+        answer: str,
+        sub_questions: list[SubQuestion],
+        all_results: list[SearchResult],
+        trace: list[ResearchStep],
+        llm_calls: int,
+        synthesis_duration_ms: int,
+    ) -> DeepResearchResult:
+        """Finalize the research by saving checkpoint and emitting completion events.
 
-        # Step 5: Synthesis
-        answer, step, calls = await self._step_synthesize(question, sub_questions, all_results)
-        trace.append(step)
-        llm_calls += calls
+        Args:
+            question: The original research question.
+            answer: The synthesized answer.
+            sub_questions: The decomposed sub-questions.
+            all_results: All retrieved search results.
+            trace: The reasoning trace.
+            llm_calls: Total number of LLM calls made.
+            synthesis_duration_ms: Duration of the synthesis step.
 
+        Returns:
+            The final DeepResearchResult.
+        """
         # Mark checkpoint as complete
         self._save_checkpoint(
             step=ResearchCheckpointStep.COMPLETE,
@@ -777,10 +920,11 @@ class DeepResearchPipeline:
             ResearchProgressType.COMPLETE,
             f"Research complete: {len(all_results)} chunks analyzed, {llm_calls} LLM calls",
             chunks_retrieved=len(all_results),
-            duration_ms=step.duration_ms,
+            duration_ms=synthesis_duration_ms,
         )
 
         # Emit RESEARCH_COMPLETE event
+        emitter = get_event_emitter()
         await emitter.emit(
             EventType.RESEARCH_COMPLETE,
             {
@@ -1002,11 +1146,13 @@ class DeepResearchPipeline:
         """
         prompt = DECOMPOSITION_USER_PROMPT.format(question=question)
 
-        response = await self.llm.generate(
-            prompt=prompt,
-            system_prompt=self.decomposition_prompt,
-            temperature=0.3,  # Lower temperature for structured output
-        )
+        # Acquire rate limit before LLM call
+        async with get_rate_limiter():
+            response = await self.llm.generate(
+                prompt=prompt,
+                system_prompt=self.decomposition_prompt,
+                temperature=0.3,  # Lower temperature for structured output
+            )
 
         # Parse JSON response
         sub_questions = self._parse_decomposition_response(response)
@@ -1112,11 +1258,13 @@ class DeepResearchPipeline:
             context_summary=context_summary,
         )
 
-        response = await self.llm.generate(
-            prompt=prompt,
-            system_prompt=self.gap_analysis_prompt,
-            temperature=0.3,
-        )
+        # Acquire rate limit before LLM call
+        async with get_rate_limiter():
+            response = await self.llm.generate(
+                prompt=prompt,
+                system_prompt=self.gap_analysis_prompt,
+                temperature=0.3,
+            )
 
         # Parse response
         follow_ups = self._parse_gap_analysis_response(response)
@@ -1265,12 +1413,14 @@ class DeepResearchPipeline:
             full_context=full_context,
         )
 
-        answer = await self.llm.generate(
-            prompt=prompt,
-            system_prompt=self.synthesis_prompt,
-            temperature=self.synthesis_temperature,
-            max_tokens=self.synthesis_max_tokens,
-        )
+        # Acquire rate limit before LLM call
+        async with get_rate_limiter():
+            answer = await self.llm.generate(
+                prompt=prompt,
+                system_prompt=self.synthesis_prompt,
+                temperature=self.synthesis_temperature,
+                max_tokens=self.synthesis_max_tokens,
+            )
 
         return answer
 

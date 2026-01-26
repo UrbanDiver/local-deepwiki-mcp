@@ -60,6 +60,7 @@ from local_deepwiki.progress import (
 from local_deepwiki.config import get_config
 from local_deepwiki.core.audit import get_audit_logger
 from local_deepwiki.core.indexer import RepositoryIndexer
+from local_deepwiki.core.rate_limiter import RateLimitExceeded, get_rate_limiter
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.generators.wiki import generate_wiki
 from local_deepwiki.logging import get_logger
@@ -204,9 +205,9 @@ def handle_tool_errors(func: ToolHandler) -> ToolHandler:
     """
 
     @wraps(func)
-    async def wrapper(args: dict[str, Any]) -> list[TextContent]:
+    async def wrapper(args: dict[str, Any], **kwargs: Any) -> list[TextContent]:
         try:
-            return await func(args)
+            return await func(args, **kwargs)
         except AccessDeniedException as e:
             # RBAC: User lacks required permission
             logger.warning(f"Access denied in {func.__name__}: {e}")
@@ -247,6 +248,14 @@ def handle_tool_errors(func: ToolHandler) -> ToolHandler:
             error = map_exception_to_deepwiki_error(e)
             logger.error(f"Network error in {func.__name__}: {e}")
             return [TextContent(type="text", text=format_error_response(error))]
+        except RateLimitExceeded as e:
+            # Rate limit exceeded - provide helpful message
+            logger.warning(f"Rate limit exceeded in {func.__name__}: {e}")
+            error = DeepWikiError(
+                message=str(e),
+                hint="Wait for the rate limit to reset, or reduce the frequency of requests.",
+            )
+            return [TextContent(type="text", text=format_error_response(error))]
         except asyncio.CancelledError:
             # Re-raise cancellation to propagate properly
             raise
@@ -263,6 +272,7 @@ def handle_tool_errors(func: ToolHandler) -> ToolHandler:
     return wrapper
 
 
+@handle_tool_errors
 async def handle_index_repository(
     args: dict[str, Any],
     server: Any = None,
@@ -276,16 +286,7 @@ async def handle_index_repository(
     Returns:
         List of TextContent with indexing results.
     """
-    try:
-        return await _handle_index_repository_impl(args, server)
-    except ValueError as e:
-        logger.error(f"Invalid input in handle_index_repository: {e}")
-        return [TextContent(type="text", text=f"Error: {e}")]
-    except asyncio.CancelledError:
-        raise
-    except Exception as e:  # noqa: BLE001
-        logger.exception(f"Error in handle_index_repository: {e}")
-        return [TextContent(type="text", text=f"Error: {e}")]
+    return await _handle_index_repository_impl(args, server)
 
 
 async def _handle_index_repository_impl(
@@ -617,7 +618,10 @@ Provide a clear, accurate answer based only on the code provided. If the code do
         "You are a helpful code assistant. Answer questions about code clearly and accurately."
     )
 
-    answer = await llm.generate(prompt, system_prompt=system_prompt)
+    # Acquire rate limit before LLM call
+    rate_limiter = get_rate_limiter()
+    async with rate_limiter:
+        answer = await llm.generate(prompt, system_prompt=system_prompt)
 
     result = {
         "question": question,
@@ -649,6 +653,7 @@ Provide a clear, accurate answer based only on the code provided. If the code do
     return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
 
+@handle_tool_errors
 async def handle_deep_research(
     args: dict[str, Any],
     server: Any = None,
@@ -662,18 +667,7 @@ async def handle_deep_research(
     Returns:
         List of TextContent with research results.
     """
-    try:
-        return await _handle_deep_research_impl(args, server)
-    except ValueError as e:
-        logger.error(f"Invalid input in handle_deep_research: {e}")
-        return [TextContent(type="text", text=f"Error: {e}")]
-    except asyncio.CancelledError:
-        raise
-    except Exception as e:  # noqa: BLE001
-        # Broad catch is intentional: top-level error handler for deep_research
-        # that converts any unhandled exception to a user-friendly error message
-        logger.exception(f"Error in handle_deep_research: {e}")
-        return [TextContent(type="text", text=f"Error: {e}")]
+    return await _handle_deep_research_impl(args, server)
 
 
 class _DeepResearchContext:
