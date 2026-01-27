@@ -458,28 +458,32 @@ class TestMainFunction:
 
         assert callable(main)
 
-    @patch("local_deepwiki.server.asyncio.run")
     @patch("local_deepwiki.server.stdio_server")
-    def test_main_calls_asyncio_run(self, mock_stdio, mock_asyncio_run):
+    def test_main_calls_asyncio_run(self, mock_stdio):
         """Test that main calls asyncio.run."""
         from local_deepwiki.server import main
 
-        # Setup mock to avoid actual server startup
-        mock_asyncio_run.return_value = None
+        def close_coro(coro):
+            """Close coroutine to avoid 'was never awaited' warning."""
+            coro.close()
+            return None
 
-        main()
-
-        mock_asyncio_run.assert_called_once()
+        with patch("local_deepwiki.server.asyncio.run", side_effect=close_coro) as mock_asyncio_run:
+            main()
+            mock_asyncio_run.assert_called_once()
 
     @patch("local_deepwiki.server.logger")
-    @patch("local_deepwiki.server.asyncio.run")
-    def test_main_logs_startup(self, mock_asyncio_run, mock_logger):
+    def test_main_logs_startup(self, mock_logger):
         """Test that main logs server startup."""
         from local_deepwiki.server import main
 
-        mock_asyncio_run.return_value = None
+        def close_coro(coro):
+            """Close coroutine to avoid 'was never awaited' warning."""
+            coro.close()
+            return None
 
-        main()
+        with patch("local_deepwiki.server.asyncio.run", side_effect=close_coro):
+            main()
 
         mock_logger.info.assert_called()
         # Check that startup message was logged

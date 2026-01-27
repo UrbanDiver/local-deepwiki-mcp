@@ -416,6 +416,8 @@ class TestMainEntryPoint:
 
     def test_module_run_as_main(self, tmp_path: Path):
         """Test the if __name__ == '__main__' block (line 918)."""
+        import warnings
+
         wiki_path = tmp_path / ".deepwiki"
         wiki_path.mkdir()
         (wiki_path / "index.md").write_text("# Test\n\nContent.")
@@ -424,7 +426,10 @@ class TestMainEntryPoint:
         # Mock sys.argv and catch the SystemExit from exit()
         with mock.patch.object(sys, "argv", ["html_export", str(wiki_path)]):
             with pytest.raises(SystemExit) as exc_info:
-                # Run the module as __main__ - this will call exit(main())
-                runpy.run_module("local_deepwiki.export.html", run_name="__main__", alter_sys=True)
+                # Suppress runpy warning about module already in sys.modules
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore", category=RuntimeWarning, message=".*found in sys.modules.*")
+                    # Run the module as __main__ - this will call exit(main())
+                    runpy.run_module("local_deepwiki.export.html", run_name="__main__", alter_sys=True)
             # exit(0) means successful execution
             assert exc_info.value.code == 0

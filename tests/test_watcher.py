@@ -856,10 +856,16 @@ class TestMain:
 
     def test_main_runs_initial_index(self, tmp_path):
         """Test main runs initial index by default."""
+
+        def close_coro(coro):
+            """Close coroutine to avoid 'was never awaited' warning."""
+            coro.close()
+            return None
+
         with (
             patch("sys.argv", ["deepwiki-watch", str(tmp_path)]),
             patch("local_deepwiki.watcher.console"),
-            patch("local_deepwiki.watcher.asyncio.run") as mock_asyncio_run,
+            patch("local_deepwiki.watcher.asyncio.run", side_effect=close_coro) as mock_asyncio_run,
             patch("local_deepwiki.watcher.RepositoryWatcher") as mock_watcher_class,
             patch("local_deepwiki.watcher.get_config") as mock_get_config,
             patch("time.sleep", side_effect=KeyboardInterrupt),
@@ -878,10 +884,16 @@ class TestMain:
 
     def test_main_with_full_rebuild(self, tmp_path):
         """Test main with --full-rebuild flag."""
+
+        def close_coro(coro):
+            """Close coroutine to avoid 'was never awaited' warning."""
+            coro.close()
+            return None
+
         with (
             patch("sys.argv", ["deepwiki-watch", str(tmp_path), "--full-rebuild"]),
             patch("local_deepwiki.watcher.console"),
-            patch("local_deepwiki.watcher.asyncio.run") as mock_asyncio_run,
+            patch("local_deepwiki.watcher.asyncio.run", side_effect=close_coro) as mock_asyncio_run,
             patch("local_deepwiki.watcher.RepositoryWatcher") as mock_watcher_class,
             patch("local_deepwiki.watcher.get_config") as mock_get_config,
             patch("time.sleep", side_effect=KeyboardInterrupt),

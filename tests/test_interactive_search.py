@@ -1484,10 +1484,13 @@ class TestMainFunction:
         repo_path.mkdir()
         (repo_path / ".deepwiki" / "vectordb").mkdir(parents=True)
 
-        with patch("sys.argv", ["deepwiki-search", str(repo_path), "-q", "test", "--no-interactive"]):
-            with patch("local_deepwiki.cli.interactive_search.asyncio.run") as mock_run:
-                mock_run.return_value = None
+        def close_coro(coro):
+            """Close coroutine to avoid 'was never awaited' warning."""
+            coro.close()
+            return None
 
+        with patch("sys.argv", ["deepwiki-search", str(repo_path), "-q", "test", "--no-interactive"]):
+            with patch("local_deepwiki.cli.interactive_search.asyncio.run", side_effect=close_coro) as mock_run:
                 result = main()
 
                 assert result == 0
@@ -1535,10 +1538,15 @@ class TestMainFunction:
         repo_path.mkdir()
         (repo_path / ".deepwiki" / "vectordb").mkdir(parents=True)
 
+        def close_coro_and_raise(coro):
+            """Close coroutine then raise exception."""
+            coro.close()
+            raise Exception("Test error")
+
         with patch("sys.argv", ["deepwiki-search", str(repo_path), "-q", "test", "--no-interactive"]):
             with patch(
                 "local_deepwiki.cli.interactive_search.asyncio.run",
-                side_effect=Exception("Test error"),
+                side_effect=close_coro_and_raise,
             ):
                 with patch("sys.stderr"):
                     result = main()
@@ -1552,16 +1560,21 @@ class TestMainFunction:
         repo_path.mkdir()
         (repo_path / ".deepwiki" / "vectordb").mkdir(parents=True)
 
-        with patch("sys.argv", ["deepwiki-search", str(repo_path), "-q", "test", "--no-interactive", "-p"]):
-            with patch("local_deepwiki.cli.interactive_search.asyncio.run") as mock_run:
-                mock_run.return_value = None
+        captured_coro = []
 
+        def close_coro(coro):
+            """Close coroutine to avoid 'was never awaited' warning."""
+            captured_coro.append(coro)
+            coro.close()
+            return None
+
+        with patch("sys.argv", ["deepwiki-search", str(repo_path), "-q", "test", "--no-interactive", "-p"]):
+            with patch("local_deepwiki.cli.interactive_search.asyncio.run", side_effect=close_coro):
                 result = main()
 
                 assert result == 0
-                # Check that run was called with show_preview=True
-                call_args = mock_run.call_args
-                assert call_args is not None
+                # Check that run was called with a coroutine
+                assert len(captured_coro) == 1
 
     def test_main_with_all_filter_args(self, tmp_path: Path) -> None:
         """main should parse all filter arguments."""
@@ -1570,6 +1583,11 @@ class TestMainFunction:
         repo_path = tmp_path / "repo"
         repo_path.mkdir()
         (repo_path / ".deepwiki" / "vectordb").mkdir(parents=True)
+
+        def close_coro(coro):
+            """Close coroutine to avoid 'was never awaited' warning."""
+            coro.close()
+            return None
 
         with patch(
             "sys.argv",
@@ -1585,9 +1603,7 @@ class TestMainFunction:
                 "--no-interactive",
             ],
         ):
-            with patch("local_deepwiki.cli.interactive_search.asyncio.run") as mock_run:
-                mock_run.return_value = None
-
+            with patch("local_deepwiki.cli.interactive_search.asyncio.run", side_effect=close_coro) as mock_run:
                 result = main()
 
                 assert result == 0
