@@ -8,7 +8,15 @@ from unittest import mock
 
 import pytest
 
-from local_deepwiki.export.html import HtmlExporter, export_to_html, extract_title, main, render_markdown
+from local_deepwiki.export.html import (
+    HtmlExporter,
+    add_external_link_targets,
+    export_to_html,
+    extract_title,
+    fix_internal_links,
+    main,
+    render_markdown,
+)
 
 
 class TestRenderMarkdown:
@@ -43,6 +51,107 @@ class TestRenderMarkdown:
         html = render_markdown(md)
         # Should be in a code block with mermaid class
         assert "language-mermaid" in html
+
+
+class TestFixInternalLinks:
+    """Tests for internal link conversion from .md to .html."""
+
+    def test_simple_md_link(self):
+        """Test converting simple .md link to .html."""
+        html = '<a href="files/database.md">Database</a>'
+        result = fix_internal_links(html)
+        assert 'href="files/database.html"' in result
+
+    def test_md_link_with_anchor(self):
+        """Test converting .md link with anchor."""
+        html = '<a href="files/database.md#section">Section</a>'
+        result = fix_internal_links(html)
+        assert 'href="files/database.html#section"' in result
+
+    def test_relative_path_link(self):
+        """Test converting relative path .md link."""
+        html = '<a href="../parent/file.md">Parent</a>'
+        result = fix_internal_links(html)
+        assert 'href="../parent/file.html"' in result
+
+    def test_preserves_external_links(self):
+        """Test that external HTTP links are not modified."""
+        html = '<a href="https://example.com/page.md">External</a>'
+        result = fix_internal_links(html)
+        assert 'href="https://example.com/page.md"' in result
+
+    def test_preserves_http_links(self):
+        """Test that HTTP links are not modified."""
+        html = '<a href="http://example.com/file.md">HTTP</a>'
+        result = fix_internal_links(html)
+        assert 'href="http://example.com/file.md"' in result
+
+    def test_preserves_mailto_links(self):
+        """Test that mailto links are not modified."""
+        html = '<a href="mailto:test@example.md">Email</a>'
+        result = fix_internal_links(html)
+        assert 'href="mailto:test@example.md"' in result
+
+    def test_preserves_anchor_only_links(self):
+        """Test that anchor-only links are not modified."""
+        html = '<a href="#section">Section</a>'
+        result = fix_internal_links(html)
+        assert 'href="#section"' in result
+
+    def test_multiple_links(self):
+        """Test converting multiple .md links."""
+        html = '<a href="a.md">A</a> and <a href="b.md">B</a>'
+        result = fix_internal_links(html)
+        assert 'href="a.html"' in result
+        assert 'href="b.html"' in result
+
+    def test_nested_path_link(self):
+        """Test converting deeply nested .md link."""
+        html = '<a href="files/comparison_tools/impl.md">Impl</a>'
+        result = fix_internal_links(html)
+        assert 'href="files/comparison_tools/impl.html"' in result
+
+
+class TestAddExternalLinkTargets:
+    """Tests for adding target="_blank" to external links."""
+
+    def test_https_link_gets_target(self):
+        """Test that HTTPS links get target="_blank"."""
+        html = '<a href="https://github.com/user/repo">GitHub</a>'
+        result = add_external_link_targets(html)
+        assert 'target="_blank"' in result
+        assert 'rel="noopener noreferrer"' in result
+
+    def test_http_link_gets_target(self):
+        """Test that HTTP links get target="_blank"."""
+        html = '<a href="http://example.com">Example</a>'
+        result = add_external_link_targets(html)
+        assert 'target="_blank"' in result
+
+    def test_internal_link_unchanged(self):
+        """Test that internal links are not modified."""
+        html = '<a href="files/database.html">Database</a>'
+        result = add_external_link_targets(html)
+        assert 'target="_blank"' not in result
+
+    def test_relative_link_unchanged(self):
+        """Test that relative links are not modified."""
+        html = '<a href="../index.html">Home</a>'
+        result = add_external_link_targets(html)
+        assert 'target="_blank"' not in result
+
+    def test_existing_target_not_duplicated(self):
+        """Test that links with existing target are not modified."""
+        html = '<a href="https://example.com" target="_self">Example</a>'
+        result = add_external_link_targets(html)
+        # Should not add another target
+        assert result.count('target=') == 1
+
+    def test_multiple_external_links(self):
+        """Test multiple external links all get targets."""
+        html = '<a href="https://a.com">A</a> and <a href="https://b.com">B</a>'
+        result = add_external_link_targets(html)
+        assert result.count('target="_blank"') == 2
 
 
 class TestExtractTitle:

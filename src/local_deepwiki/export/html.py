@@ -3,6 +3,7 @@
 import argparse
 import asyncio
 import json
+import re
 import shutil
 import time
 from pathlib import Path
@@ -456,7 +457,7 @@ STATIC_HTML_TEMPLATE = """<!DOCTYPE html>
             // Load search index - use relative path for static export
             fetch('{search_json_path}')
                 .then(response => response.json())
-                .then(data => {{ searchIndex = data; }})
+                .then(data => {{ searchIndex = data.pages || data; }})
                 .catch(err => console.log('Search index not available'));
 
             function fuzzyMatch(query, text) {{
@@ -655,6 +656,48 @@ def render_markdown(content: str) -> str:
     return cast(str, md.convert(content))
 
 
+def fix_internal_links(html_content: str) -> str:
+    """Convert internal .md links to .html links in rendered HTML.
+
+    Args:
+        html_content: HTML content with potential .md links.
+
+    Returns:
+        HTML content with .md links converted to .html links.
+    """
+    # Match href attributes pointing to .md files (internal links only)
+    # Excludes http://, https://, and other protocol links
+    pattern = r'href="((?!https?://|mailto:|#)[^"]*\.md)(#[^"]*)?"'
+
+    def replace_link(match: re.Match[str]) -> str:
+        md_path = match.group(1)
+        anchor = match.group(2) or ""
+        html_path = md_path[:-3] + ".html"  # Replace .md with .html
+        return f'href="{html_path}{anchor}"'
+
+    return re.sub(pattern, replace_link, html_content)
+
+
+def add_external_link_targets(html_content: str) -> str:
+    """Add target="_blank" to external links for opening in new tab.
+
+    Args:
+        html_content: HTML content with potential external links.
+
+    Returns:
+        HTML content with external links opening in new tabs.
+    """
+    # Match href attributes pointing to http:// or https:// URLs
+    # that don't already have a target attribute
+    pattern = r'<a\s+href="(https?://[^"]+)"(?![^>]*target=)'
+
+    def add_target(match: re.Match[str]) -> str:
+        url = match.group(1)
+        return f'<a href="{url}" target="_blank" rel="noopener noreferrer"'
+
+    return re.sub(pattern, add_target, html_content)
+
+
 def extract_title(md_file: Path) -> str:
     """Extract title from markdown file."""
     try:
@@ -769,8 +812,10 @@ class StreamingHtmlExporter(StreamingExporter):
         rel_path = page.metadata.relative_path
         logger.debug(f"Exporting page: {rel_path}")
 
-        # Render markdown to HTML
+        # Render markdown to HTML, fix internal links, and set external link targets
         html_content = render_markdown(page.content)
+        html_content = fix_internal_links(html_content)
+        html_content = add_external_link_targets(html_content)
 
         # Calculate depth for relative paths
         depth = len(rel_path.parts) - 1
@@ -1002,9 +1047,11 @@ class HtmlExporter:
         """
         logger.debug(f"Exporting page: {rel_path}")
 
-        # Read and convert markdown
+        # Read and convert markdown, fix internal links, set external link targets
         content = md_file.read_text()
         html_content = render_markdown(content)
+        html_content = fix_internal_links(html_content)
+        html_content = add_external_link_targets(html_content)
         title = extract_title(md_file)
 
         # Calculate depth for relative paths
