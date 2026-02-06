@@ -69,8 +69,12 @@ class CodeChunk(BaseModel):
     start_line: int = Field(description="Starting line number")
     end_line: int = Field(description="Ending line number")
     docstring: str | None = Field(default=None, description="Associated docstring")
-    parent_name: str | None = Field(default=None, description="Parent class/module name")
-    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+    parent_name: str | None = Field(
+        default=None, description="Parent class/module name"
+    )
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Additional metadata"
+    )
 
     def to_vector_record(self, vector: list[float] | None = None) -> dict[str, Any]:
         """Convert chunk to a dict suitable for vector store storage.
@@ -130,9 +134,13 @@ class IndexStatus(BaseModel):
     indexed_at: float = Field(description="Timestamp of last indexing")
     total_files: int = Field(description="Total files processed")
     total_chunks: int = Field(description="Total chunks extracted")
-    languages: dict[str, int] = Field(default_factory=dict, description="Files per language")
+    languages: dict[str, int] = Field(
+        default_factory=dict, description="Files per language"
+    )
     files: list[FileInfo] = Field(default_factory=list, description="Indexed file info")
-    schema_version: int = Field(default=1, description="Schema version for migration support")
+    schema_version: int = Field(
+        default=1, description="Schema version for migration support"
+    )
 
     def __repr__(self) -> str:
         """Return a concise representation for debugging."""
@@ -172,12 +180,16 @@ class WikiStructure(BaseModel):
             parts = Path(page.path).parts
             current = toc
             for part in parts[:-1]:
-                section = next((s for s in current.get("sections", []) if s["name"] == part), None)
+                section = next(
+                    (s for s in current.get("sections", []) if s["name"] == part), None
+                )
                 if not section:
                     section = {"name": part, "sections": [], "pages": []}
                     current.setdefault("sections", []).append(section)
                 current = section
-            current.setdefault("pages", []).append({"path": page.path, "title": page.title})
+            current.setdefault("pages", []).append(
+                {"path": page.path, "title": page.title}
+            )
         return toc
 
 
@@ -194,7 +206,9 @@ class SearchResult(BaseModel):
     def __repr__(self) -> str:
         """Return a concise representation for debugging."""
         name = self.chunk.name or self.chunk.chunk_type.value
-        suggestion_str = f" suggestions={len(self.suggestions)}" if self.suggestions else ""
+        suggestion_str = (
+            f" suggestions={len(self.suggestions)}" if self.suggestions else ""
+        )
         return f"<SearchResult {name} score={self.score:.3f}{suggestion_str}>"
 
 
@@ -340,11 +354,19 @@ class IndexingProgress(BaseModel):
     total_steps: int = Field(description="Total number of steps")
     step_type: IndexingProgressType = Field(description="Type of progress event")
     message: str = Field(description="Human-readable progress message")
-    files_processed: int | None = Field(default=None, description="Number of files processed")
+    files_processed: int | None = Field(
+        default=None, description="Number of files processed"
+    )
     total_files: int | None = Field(default=None, description="Total files to process")
-    chunks_created: int | None = Field(default=None, description="Number of chunks created")
-    pages_generated: int | None = Field(default=None, description="Wiki pages generated")
-    duration_ms: int | None = Field(default=None, description="Duration of step in milliseconds")
+    chunks_created: int | None = Field(
+        default=None, description="Number of chunks created"
+    )
+    pages_generated: int | None = Field(
+        default=None, description="Wiki pages generated"
+    )
+    duration_ms: int | None = Field(
+        default=None, description="Duration of step in milliseconds"
+    )
 
 
 class ResearchProgressType(str, Enum):
@@ -410,7 +432,8 @@ class IndexRepositoryArgs(BaseModel):
 
     repo_path: str = Field(description="Absolute path to the repository to index")
     output_dir: str | None = Field(
-        default=None, description="Output directory for wiki (default: {repo}/.deepwiki)"
+        default=None,
+        description="Output directory for wiki (default: {repo}/.deepwiki)",
     )
     languages: list[str] | None = Field(
         default=None, description="Languages to include (default: all supported)"
@@ -443,7 +466,9 @@ class DeepResearchArgs(BaseModel):
     """Arguments for the deep_research tool."""
 
     repo_path: str = Field(description="Path to the indexed repository")
-    question: str = Field(min_length=1, description="Complex question requiring deep analysis")
+    question: str = Field(
+        min_length=1, description="Complex question requiring deep analysis"
+    )
     max_chunks: int = Field(
         default=30, ge=10, le=50, description="Maximum code chunks to analyze (10-50)"
     )
@@ -451,7 +476,8 @@ class DeepResearchArgs(BaseModel):
         default=None, description="Research preset: 'fast', 'deep', or 'comprehensive'"
     )
     resume_research_id: str | None = Field(
-        default=None, description="Optional checkpoint ID to resume an interrupted research session"
+        default=None,
+        description="Optional checkpoint ID to resume an interrupted research session",
     )
 
 
@@ -465,7 +491,9 @@ class ReadWikiPageArgs(BaseModel):
     """Arguments for the read_wiki_page tool."""
 
     wiki_path: str = Field(description="Path to the wiki directory")
-    page: str = Field(min_length=1, description="Relative path to the page within the wiki")
+    page: str = Field(
+        min_length=1, description="Relative path to the page within the wiki"
+    )
 
 
 class SearchCodeArgs(BaseModel):
@@ -489,7 +517,9 @@ class ExportWikiHtmlArgs(BaseModel):
     """Arguments for the export_wiki_html tool."""
 
     wiki_path: str = Field(description="Path to the wiki directory to export")
-    output_path: str | None = Field(default=None, description="Output directory for HTML files")
+    output_path: str | None = Field(
+        default=None, description="Output directory for HTML files"
+    )
 
 
 class ExportWikiPdfArgs(BaseModel):
@@ -497,7 +527,9 @@ class ExportWikiPdfArgs(BaseModel):
 
     wiki_path: str = Field(description="Path to the wiki directory to export")
     output_path: str | None = Field(default=None, description="Output path for PDF")
-    single_file: bool = Field(default=True, description="Combine all pages into single PDF")
+    single_file: bool = Field(
+        default=True, description="Combine all pages into single PDF"
+    )
 
 
 # =============================================================================
@@ -580,3 +612,126 @@ class CancelResearchArgs(BaseModel):
 
     repo_path: str = Field(description="Path to the repository")
     research_id: str = Field(description="ID of the research to cancel")
+
+
+# =============================================================================
+# New Tool Argument Models
+# =============================================================================
+
+
+class DiagramType(str, Enum):
+    """Types of diagrams that can be generated."""
+
+    CLASS = "class"
+    DEPENDENCY = "dependency"
+    MODULE = "module"
+    SEQUENCE = "sequence"
+    LANGUAGE_PIE = "language_pie"
+
+
+class GetGlossaryArgs(BaseModel):
+    """Arguments for the get_glossary tool."""
+
+    repo_path: str = Field(description="Path to the indexed repository")
+    search: str | None = Field(
+        default=None, description="Optional search term to filter entities"
+    )
+
+
+class GetDiagramsArgs(BaseModel):
+    """Arguments for the get_diagrams tool."""
+
+    repo_path: str = Field(description="Path to the indexed repository")
+    diagram_type: DiagramType = Field(
+        default=DiagramType.CLASS, description="Type of diagram to generate"
+    )
+    entry_point: str | None = Field(
+        default=None,
+        description="Entry point function for sequence diagrams",
+    )
+
+
+class GetInheritanceArgs(BaseModel):
+    """Arguments for the get_inheritance tool."""
+
+    repo_path: str = Field(description="Path to the indexed repository")
+
+
+class GetCallGraphArgs(BaseModel):
+    """Arguments for the get_call_graph tool."""
+
+    repo_path: str = Field(description="Path to the indexed repository")
+    file_path: str | None = Field(
+        default=None,
+        description="Specific file to get call graph for (relative to repo root)",
+    )
+
+
+class GetCoverageArgs(BaseModel):
+    """Arguments for the get_coverage tool."""
+
+    repo_path: str = Field(description="Path to the indexed repository")
+
+
+class DetectStaleDocsArgs(BaseModel):
+    """Arguments for the detect_stale_docs tool."""
+
+    repo_path: str = Field(description="Path to the indexed repository")
+    threshold_days: int = Field(
+        default=0,
+        ge=0,
+        description="Minimum days since source changed to consider stale (default: 0)",
+    )
+
+
+class GetChangelogArgs(BaseModel):
+    """Arguments for the get_changelog tool."""
+
+    repo_path: str = Field(description="Path to the repository (must be a git repo)")
+    max_commits: int = Field(
+        default=30, ge=1, le=200, description="Maximum commits to include (1-200)"
+    )
+
+
+class DetectSecretsArgs(BaseModel):
+    """Arguments for the detect_secrets tool."""
+
+    repo_path: str = Field(description="Path to the repository to scan")
+
+
+class GetTestExamplesArgs(BaseModel):
+    """Arguments for the get_test_examples tool."""
+
+    repo_path: str = Field(description="Path to the indexed repository")
+    entity_name: str = Field(
+        min_length=1,
+        description="Name of function or class to find usage examples for",
+    )
+    max_examples: int = Field(
+        default=5, ge=1, le=20, description="Maximum examples to return (1-20)"
+    )
+
+
+class GetApiDocsArgs(BaseModel):
+    """Arguments for the get_api_docs tool."""
+
+    repo_path: str = Field(description="Path to the repository")
+    file_path: str = Field(
+        min_length=1,
+        description="File path relative to repo root to get API docs for",
+    )
+
+
+class ListIndexedReposArgs(BaseModel):
+    """Arguments for the list_indexed_repos tool."""
+
+    base_path: str | None = Field(
+        default=None,
+        description="Base directory to search for indexed repos (default: current directory)",
+    )
+
+
+class GetIndexStatusArgs(BaseModel):
+    """Arguments for the get_index_status tool."""
+
+    repo_path: str = Field(description="Path to the indexed repository")

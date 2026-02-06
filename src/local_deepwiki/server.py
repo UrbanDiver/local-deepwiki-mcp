@@ -12,10 +12,22 @@ from local_deepwiki.handlers import (
     handle_ask_question,
     handle_cancel_research,
     handle_deep_research,
+    handle_detect_secrets,
+    handle_detect_stale_docs,
     handle_export_wiki_html,
     handle_export_wiki_pdf,
+    handle_get_api_docs,
+    handle_get_call_graph,
+    handle_get_changelog,
+    handle_get_coverage,
+    handle_get_diagrams,
+    handle_get_glossary,
+    handle_get_index_status,
+    handle_get_inheritance,
     handle_get_operation_progress,
+    handle_get_test_examples,
     handle_index_repository,
+    handle_list_indexed_repos,
     handle_list_research_checkpoints,
     handle_read_wiki_page,
     handle_read_wiki_structure,
@@ -201,7 +213,15 @@ async def list_tools() -> list[Tool]:
                     },
                     "type": {
                         "type": "string",
-                        "enum": ["function", "class", "method", "module", "import", "comment", "other"],
+                        "enum": [
+                            "function",
+                            "class",
+                            "method",
+                            "module",
+                            "import",
+                            "comment",
+                            "other",
+                        ],
                         "description": "Filter by chunk type (e.g., function, class, method)",
                     },
                     "path": {
@@ -324,6 +344,217 @@ async def list_tools() -> list[Tool]:
                 "required": [],
             },
         ),
+        Tool(
+            name="get_glossary",
+            description="Get a searchable glossary of all code entities (classes, functions, methods) in an indexed repository. Useful for discovering what's in the codebase.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "repo_path": {
+                        "type": "string",
+                        "description": "Path to the indexed repository",
+                    },
+                    "search": {
+                        "type": "string",
+                        "description": "Optional search term to filter entities by name or docstring",
+                    },
+                },
+                "required": ["repo_path"],
+            },
+        ),
+        Tool(
+            name="get_diagrams",
+            description="Generate Mermaid diagrams for an indexed repository. Supports class diagrams, dependency graphs, module overviews, language distribution pie charts, and sequence diagrams.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "repo_path": {
+                        "type": "string",
+                        "description": "Path to the indexed repository",
+                    },
+                    "diagram_type": {
+                        "type": "string",
+                        "enum": [
+                            "class",
+                            "dependency",
+                            "module",
+                            "sequence",
+                            "language_pie",
+                        ],
+                        "description": "Type of diagram to generate (default: class)",
+                    },
+                    "entry_point": {
+                        "type": "string",
+                        "description": "Entry point function name (required for sequence diagrams)",
+                    },
+                },
+                "required": ["repo_path"],
+            },
+        ),
+        Tool(
+            name="get_inheritance",
+            description="Get class inheritance hierarchy trees for an indexed repository. Shows parent-child relationships, abstract classes, and generates a Mermaid inheritance diagram.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "repo_path": {
+                        "type": "string",
+                        "description": "Path to the indexed repository",
+                    },
+                },
+                "required": ["repo_path"],
+            },
+        ),
+        Tool(
+            name="get_call_graph",
+            description="Get function call graphs showing which functions call which. Can analyze a specific file or the entire repository. Returns a Mermaid flowchart.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "repo_path": {
+                        "type": "string",
+                        "description": "Path to the indexed repository",
+                    },
+                    "file_path": {
+                        "type": "string",
+                        "description": "Specific file to analyze (relative to repo root). If omitted, analyzes entire repo.",
+                    },
+                },
+                "required": ["repo_path"],
+            },
+        ),
+        Tool(
+            name="get_coverage",
+            description="Get documentation coverage report for an indexed repository. Shows which classes, functions, and methods have docstrings and which don't.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "repo_path": {
+                        "type": "string",
+                        "description": "Path to the indexed repository",
+                    },
+                },
+                "required": ["repo_path"],
+            },
+        ),
+        Tool(
+            name="detect_stale_docs",
+            description="Find wiki pages that may be outdated because their source files have been modified since the documentation was generated.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "repo_path": {
+                        "type": "string",
+                        "description": "Path to the indexed repository",
+                    },
+                    "threshold_days": {
+                        "type": "integer",
+                        "description": "Minimum days since source changed to consider stale (default: 0)",
+                    },
+                },
+                "required": ["repo_path"],
+            },
+        ),
+        Tool(
+            name="get_changelog",
+            description="Extract recent git commit history as a formatted changelog. Groups commits by date and includes file change information.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "repo_path": {
+                        "type": "string",
+                        "description": "Path to the repository (must be a git repo)",
+                    },
+                    "max_commits": {
+                        "type": "integer",
+                        "description": "Maximum number of commits to include (default: 30, max: 200)",
+                    },
+                },
+                "required": ["repo_path"],
+            },
+        ),
+        Tool(
+            name="detect_secrets",
+            description="Scan a repository for hardcoded credentials and secrets (API keys, tokens, passwords, private keys). Returns findings with type, location, confidence, and remediation advice.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "repo_path": {
+                        "type": "string",
+                        "description": "Path to the repository to scan",
+                    },
+                },
+                "required": ["repo_path"],
+            },
+        ),
+        Tool(
+            name="get_test_examples",
+            description="Find usage examples for a function or class by searching test files in the indexed repository. Returns code snippets showing how the entity is used in tests.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "repo_path": {
+                        "type": "string",
+                        "description": "Path to the indexed repository",
+                    },
+                    "entity_name": {
+                        "type": "string",
+                        "description": "Name of the function or class to find examples for",
+                    },
+                    "max_examples": {
+                        "type": "integer",
+                        "description": "Maximum number of examples to return (default: 5)",
+                    },
+                },
+                "required": ["repo_path", "entity_name"],
+            },
+        ),
+        Tool(
+            name="get_api_docs",
+            description="Get API documentation with function signatures, parameters, return types, and docstrings for a specific file. Uses tree-sitter AST parsing for accuracy.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "repo_path": {
+                        "type": "string",
+                        "description": "Path to the repository",
+                    },
+                    "file_path": {
+                        "type": "string",
+                        "description": "File path relative to repo root to get API docs for",
+                    },
+                },
+                "required": ["repo_path", "file_path"],
+            },
+        ),
+        Tool(
+            name="list_indexed_repos",
+            description="Discover all indexed repositories under a given directory. Searches for .deepwiki directories and returns index metadata for each.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "base_path": {
+                        "type": "string",
+                        "description": "Base directory to search for indexed repos (default: current directory)",
+                    },
+                },
+                "required": [],
+            },
+        ),
+        Tool(
+            name="get_index_status",
+            description="Get index statistics for a repository without re-indexing. Shows file count, chunk count, languages, and when it was last indexed.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "repo_path": {
+                        "type": "string",
+                        "description": "Path to the indexed repository",
+                    },
+                },
+                "required": ["repo_path"],
+            },
+        ),
     ]
 
 
@@ -340,6 +571,18 @@ TOOL_HANDLERS: dict[str, ToolHandler] = {
     "list_research_checkpoints": handle_list_research_checkpoints,
     "cancel_research": handle_cancel_research,
     "get_operation_progress": handle_get_operation_progress,
+    "get_glossary": handle_get_glossary,
+    "get_diagrams": handle_get_diagrams,
+    "get_inheritance": handle_get_inheritance,
+    "get_call_graph": handle_get_call_graph,
+    "get_coverage": handle_get_coverage,
+    "detect_stale_docs": handle_detect_stale_docs,
+    "get_changelog": handle_get_changelog,
+    "detect_secrets": handle_detect_secrets,
+    "get_test_examples": handle_get_test_examples,
+    "get_api_docs": handle_get_api_docs,
+    "list_indexed_repos": handle_list_indexed_repos,
+    "get_index_status": handle_get_index_status,
 }
 
 # Tools that need server context for progress streaming

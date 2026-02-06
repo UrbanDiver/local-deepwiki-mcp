@@ -34,11 +34,23 @@ from local_deepwiki.models import (
     AskQuestionArgs,
     CancelResearchArgs,
     DeepResearchArgs,
+    DetectSecretsArgs,
+    DetectStaleDocsArgs,
     ExportWikiHtmlArgs,
     ExportWikiPdfArgs,
+    GetApiDocsArgs,
+    GetCallGraphArgs,
+    GetChangelogArgs,
+    GetCoverageArgs,
+    GetDiagramsArgs,
+    GetGlossaryArgs,
+    GetIndexStatusArgs,
+    GetInheritanceArgs,
+    GetTestExamplesArgs,
     IndexingProgress,
     IndexingProgressType,
     IndexRepositoryArgs,
+    ListIndexedReposArgs,
     ListResearchCheckpointsArgs,
     ReadWikiPageArgs,
     ReadWikiStructureArgs,
@@ -90,29 +102,33 @@ ToolHandler = Callable[[dict[str, Any]], Awaitable[list[TextContent]]]
 
 # Forbidden directories for export operations (security: prevent writing to sensitive locations)
 # Note: /var and /private/var are excluded because temp directories live there
-FORBIDDEN_EXPORT_DIRS = frozenset({
-    "/etc",
-    "/usr",
-    "/bin",
-    "/sbin",
-    "/System",
-    "/Library",
-    "/private/etc",
-    str(Path.home() / ".ssh"),
-})
+FORBIDDEN_EXPORT_DIRS = frozenset(
+    {
+        "/etc",
+        "/usr",
+        "/bin",
+        "/sbin",
+        "/System",
+        "/Library",
+        "/private/etc",
+        str(Path.home() / ".ssh"),
+    }
+)
 
 # Additional forbidden prefixes under /var that should be blocked
 # (but not /var/folders or /var/tmp which are user temp directories)
-FORBIDDEN_VAR_SUBDIRS = frozenset({
-    "/var/log",
-    "/var/db",
-    "/var/root",
-    "/var/run",
-    "/private/var/log",
-    "/private/var/db",
-    "/private/var/root",
-    "/private/var/run",
-})
+FORBIDDEN_VAR_SUBDIRS = frozenset(
+    {
+        "/var/log",
+        "/var/db",
+        "/var/root",
+        "/var/run",
+        "/private/var/log",
+        "/private/var/db",
+        "/private/var/root",
+        "/private/var/run",
+    }
+)
 
 
 def _validate_export_path(output_path: Path, wiki_path: Path) -> Path:
@@ -155,7 +171,10 @@ def _validate_export_path(output_path: Path, wiki_path: Path) -> Path:
     config_dir = Path.home() / ".config"
     local_deepwiki_config = config_dir / "local-deepwiki"
     if resolved_str.startswith(str(config_dir) + "/"):
-        if not resolved_str.startswith(str(local_deepwiki_config) + "/") and resolved != local_deepwiki_config:
+        if (
+            not resolved_str.startswith(str(local_deepwiki_config) + "/")
+            and resolved != local_deepwiki_config
+        ):
             raise ValidationError(
                 message=f"Cannot export to config directory: {config_dir}",
                 hint="Choose an output path in your project or home directory.",
@@ -313,8 +332,7 @@ async def _handle_index_repository_impl(
     # Validate input size limits (CWE-400 prevention)
     total_size, file_count = validate_index_parameters(str(repo_path))
     logger.info(
-        f"Indexing repository: {repo_path} "
-        f"({total_size:,} bytes, {file_count:,} files)"
+        f"Indexing repository: {repo_path} ({total_size:,} bytes, {file_count:,} files)"
     )
 
     # Get subject ID for audit logging
@@ -345,7 +363,9 @@ async def _handle_index_repository_impl(
     # Use validated values
     languages = validate_languages_list(validated.languages)
     llm_provider = validated.llm_provider.value if validated.llm_provider else None
-    embedding_provider = validated.embedding_provider.value if validated.embedding_provider else None
+    embedding_provider = (
+        validated.embedding_provider.value if validated.embedding_provider else None
+    )
 
     # Get config (immutable, create copy with any overrides)
     base_config = get_config()
@@ -359,7 +379,9 @@ async def _handle_index_repository_impl(
     # Override use_cloud_for_github if specified
     use_cloud_for_github = validated.use_cloud_for_github
     if use_cloud_for_github is not None:
-        new_wiki = base_config.wiki.model_copy(update={"use_cloud_for_github": use_cloud_for_github})
+        new_wiki = base_config.wiki.model_copy(
+            update={"use_cloud_for_github": use_cloud_for_github}
+        )
         config_updates["wiki"] = new_wiki
 
     # Create modified config or use base if no overrides
@@ -582,7 +604,9 @@ async def handle_ask_question(args: dict[str, Any]) -> list[TextContent]:
     search_results = await vector_store.search(question, limit=max_context)
 
     if not search_results:
-        return [TextContent(type="text", text="No relevant code found for your question.")]
+        return [
+            TextContent(type="text", text="No relevant code found for your question.")
+        ]
 
     # Build context from search results
     context_parts = []
@@ -614,9 +638,7 @@ Code Context:
 
 Provide a clear, accurate answer based only on the code provided. If the code doesn't contain enough information to answer fully, say so."""
 
-    system_prompt = (
-        "You are a helpful code assistant. Answer questions about code clearly and accurately."
-    )
+    system_prompt = "You are a helpful code assistant. Answer questions about code clearly and accurately."
 
     # Acquire rate limit before LLM call
     rate_limiter = get_rate_limiter()
@@ -725,7 +747,9 @@ def _setup_deep_research_config(
     validate_deep_research_parameters(question, preset, max_chunks)
 
     logger.info(f"Deep research on {repo_path}: {question[:100]}...")
-    logger.debug(f"Max chunks: {max_chunks}, preset: {preset or 'default'}, resume: {resume_research_id or 'new'}")
+    logger.debug(
+        f"Max chunks: {max_chunks}, preset: {preset or 'default'}, resume: {resume_research_id or 'new'}"
+    )
 
     # Create context
     ctx = _DeepResearchContext(
@@ -750,7 +774,9 @@ def _setup_deep_research_config(
                 ctx.progress_token = request_ctx.meta.progressToken
         except LookupError:
             # Not in a request context (e.g., testing or direct API calls)
-            logger.debug("No MCP request context available for deep research progress token")
+            logger.debug(
+                "No MCP request context available for deep research progress token"
+            )
 
     return ctx
 
@@ -789,7 +815,9 @@ def _create_research_pipeline(
 
     # Use max_chunks from args if provided, otherwise use preset/config value
     effective_max_chunks = (
-        ctx.max_chunks if args.get("max_chunks") is not None else dr_config.max_total_chunks
+        ctx.max_chunks
+        if args.get("max_chunks") is not None
+        else dr_config.max_total_chunks
     )
 
     # Get provider-specific prompts
@@ -815,7 +843,11 @@ def _create_research_pipeline(
 
 def _create_progress_callbacks(
     ctx: _DeepResearchContext,
-) -> tuple[Callable[[], bool], Callable[["ResearchProgress"], Awaitable[None]], Callable[[str], Awaitable[None]]]:
+) -> tuple[
+    Callable[[], bool],
+    Callable[["ResearchProgress"], Awaitable[None]],
+    Callable[[str], Awaitable[None]],
+]:
     """Create cancellation checker and progress callback functions.
 
     Args:
@@ -897,7 +929,8 @@ def _format_research_results(result: Any) -> dict[str, Any]:
         "question": result.question,
         "answer": result.answer,
         "sub_questions": [
-            {"question": sq.question, "category": sq.category} for sq in result.sub_questions
+            {"question": sq.question, "category": sq.category}
+            for sq in result.sub_questions
         ],
         "sources": [
             {
@@ -974,7 +1007,9 @@ async def _execute_research_phases(
         }
         if e.checkpoint_id:
             response["checkpoint_id"] = e.checkpoint_id
-            response["hint"] = "Use resume_research_id to continue from where you left off"
+            response["hint"] = (
+                "Use resume_research_id to continue from where you left off"
+            )
         return [TextContent(type="text", text=json.dumps(response))]
 
     except asyncio.CancelledError:
@@ -1013,7 +1048,9 @@ async def _handle_deep_research_impl(
     pipeline, *_ = _create_research_pipeline(ctx, args)
 
     # Step 3: Create progress and cancellation callbacks
-    is_cancelled, progress_callback, send_cancellation_notification = _create_progress_callbacks(ctx)
+    is_cancelled, progress_callback, send_cancellation_notification = (
+        _create_progress_callbacks(ctx)
+    )
 
     # Step 4: Execute research phases with progress tracking
     return await _execute_research_phases(
@@ -1061,7 +1098,11 @@ async def handle_read_wiki_structure(args: dict[str, Any]) -> list[TextContent]:
         try:
             file_content = await asyncio.to_thread(md_file.read_text)
             first_line = file_content.split("\n", 1)[0].strip()
-            title = first_line.lstrip("#").strip() if first_line.startswith("#") else rel_path
+            title = (
+                first_line.lstrip("#").strip()
+                if first_line.startswith("#")
+                else rel_path
+            )
         except (OSError, UnicodeDecodeError) as e:
             # OSError: File access issues
             # UnicodeDecodeError: File encoding issues
@@ -1204,7 +1245,9 @@ async def handle_search_code(args: dict[str, Any]) -> list[TextContent]:
             "lines": f"{chunk.start_line}-{chunk.end_line}",
             "score": round(r.score, 4),
             "preview": (
-                chunk.content[:300] + "..." if len(chunk.content) > 300 else chunk.content
+                chunk.content[:300] + "..."
+                if len(chunk.content) > 300
+                else chunk.content
             ),
             "docstring": chunk.docstring,
         }
@@ -1420,25 +1463,37 @@ async def handle_list_research_checkpoints(args: dict[str, Any]) -> list[TextCon
     checkpoints = list_research_checkpoints(repo_path)
 
     if not checkpoints:
-        return [TextContent(type="text", text=json.dumps({
-            "status": "success",
-            "message": "No research checkpoints found",
-            "checkpoints": [],
-        }, indent=2))]
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(
+                    {
+                        "status": "success",
+                        "message": "No research checkpoints found",
+                        "checkpoints": [],
+                    },
+                    indent=2,
+                ),
+            )
+        ]
 
     # Format checkpoints for output
     checkpoint_list = []
     for cp in checkpoints:
-        checkpoint_list.append({
-            "research_id": cp.research_id,
-            "question": cp.question[:100] + "..." if len(cp.question) > 100 else cp.question,
-            "current_step": cp.current_step.value,
-            "completed_steps": cp.completed_steps,
-            "started_at": cp.started_at,
-            "updated_at": cp.updated_at,
-            "can_resume": cp.current_step.value not in ("complete", "error"),
-            "error": cp.error,
-        })
+        checkpoint_list.append(
+            {
+                "research_id": cp.research_id,
+                "question": cp.question[:100] + "..."
+                if len(cp.question) > 100
+                else cp.question,
+                "current_step": cp.current_step.value,
+                "completed_steps": cp.completed_steps,
+                "started_at": cp.started_at,
+                "updated_at": cp.updated_at,
+                "can_resume": cp.current_step.value not in ("complete", "error"),
+                "error": cp.error,
+            }
+        )
 
     response = {
         "status": "success",
@@ -1474,10 +1529,18 @@ async def handle_cancel_research(args: dict[str, Any]) -> list[TextContent]:
     checkpoint = cancel_research(repo_path, research_id)
 
     if not checkpoint:
-        return [TextContent(type="text", text=json.dumps({
-            "status": "error",
-            "message": f"Research checkpoint {research_id} not found",
-        }, indent=2))]
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(
+                    {
+                        "status": "error",
+                        "message": f"Research checkpoint {research_id} not found",
+                    },
+                    indent=2,
+                ),
+            )
+        ]
 
     response = {
         "status": "success",
@@ -1520,16 +1583,32 @@ async def handle_resume_research(
     checkpoint = get_research_checkpoint(repo_path, research_id)
 
     if not checkpoint:
-        return [TextContent(type="text", text=json.dumps({
-            "status": "error",
-            "message": f"Research checkpoint {research_id} not found",
-        }, indent=2))]
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(
+                    {
+                        "status": "error",
+                        "message": f"Research checkpoint {research_id} not found",
+                    },
+                    indent=2,
+                ),
+            )
+        ]
 
     if checkpoint.current_step.value == "complete":
-        return [TextContent(type="text", text=json.dumps({
-            "status": "error",
-            "message": f"Research {research_id} is already complete",
-        }, indent=2))]
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(
+                    {
+                        "status": "error",
+                        "message": f"Research {research_id} is already complete",
+                    },
+                    indent=2,
+                ),
+            )
+        ]
 
     # Delegate to deep_research handler with resume_research_id
     deep_research_args = {
@@ -1561,10 +1640,18 @@ async def handle_get_operation_progress(args: dict[str, Any]) -> list[TextConten
         # Get progress for specific operation
         progress = registry.get_operation_progress(operation_id)
         if not progress:
-            return [TextContent(type="text", text=json.dumps({
-                "status": "not_found",
-                "message": f"Operation {operation_id} not found or already completed",
-            }, indent=2))]
+            return [
+                TextContent(
+                    type="text",
+                    text=json.dumps(
+                        {
+                            "status": "not_found",
+                            "message": f"Operation {operation_id} not found or already completed",
+                        },
+                        indent=2,
+                    ),
+                )
+            ]
         return [TextContent(type="text", text=json.dumps(progress, indent=2))]
     else:
         # List all active operations
@@ -1575,6 +1662,758 @@ async def handle_get_operation_progress(args: dict[str, Any]) -> list[TextConten
             "operations": operations,
         }
         return [TextContent(type="text", text=json.dumps(response, indent=2))]
+
+
+# =============================================================================
+# New Tool Handlers
+# =============================================================================
+
+
+def _load_index_status(repo_path: Path) -> tuple[Any, Path, Any]:
+    """Load index status for a repository, raising if not indexed.
+
+    Args:
+        repo_path: Resolved path to the repository.
+
+    Returns:
+        Tuple of (IndexStatus, wiki_path, config).
+
+    Raises:
+        ValidationError: If repository is not indexed.
+    """
+    from local_deepwiki.core.index_manager import IndexStatusManager
+
+    config = get_config()
+    wiki_path = config.get_wiki_path(repo_path)
+    vector_db_path = config.get_vector_db_path(repo_path)
+
+    if not vector_db_path.exists():
+        raise not_indexed_error(str(repo_path))
+
+    manager = IndexStatusManager()
+    index_status = manager.load(wiki_path)
+    if index_status is None:
+        raise not_indexed_error(str(repo_path))
+
+    return index_status, wiki_path, config
+
+
+@handle_tool_errors
+async def handle_get_glossary(args: dict[str, Any]) -> list[TextContent]:
+    """Handle get_glossary tool call."""
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_READ)
+
+    try:
+        validated = GetGlossaryArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+    search_term = validated.search
+
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    index_status, wiki_path, config = _load_index_status(repo_path)
+
+    from local_deepwiki.generators.glossary import collect_all_entities
+
+    embedding_provider = get_embedding_provider(config.embedding)
+    vector_store = VectorStore(config.get_vector_db_path(repo_path), embedding_provider)
+
+    entities = await collect_all_entities(index_status, vector_store)
+
+    if search_term:
+        search_lower = search_term.lower()
+        entities = [
+            e
+            for e in entities
+            if search_lower in e.name.lower()
+            or (e.docstring and search_lower in e.docstring.lower())
+        ]
+
+    result = {
+        "status": "success",
+        "total_entities": len(entities),
+        "entities": [
+            {
+                "name": e.name,
+                "type": e.entity_type,
+                "file_path": e.file_path,
+                "docstring": e.docstring,
+            }
+            for e in entities
+        ],
+    }
+
+    logger.info(f"Glossary: {len(entities)} entities for {repo_path}")
+    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+
+
+@handle_tool_errors
+async def handle_get_diagrams(args: dict[str, Any]) -> list[TextContent]:
+    """Handle get_diagrams tool call."""
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_READ)
+
+    try:
+        validated = GetDiagramsArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+    diagram_type = validated.diagram_type
+    entry_point = validated.entry_point
+
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    index_status, wiki_path, config = _load_index_status(repo_path)
+
+    from local_deepwiki.generators.diagrams import (
+        generate_class_diagram,
+        generate_dependency_graph,
+        generate_language_pie_chart,
+        generate_module_overview,
+        generate_sequence_diagram,
+    )
+    from local_deepwiki.generators.callgraph import CallGraphExtractor
+
+    embedding_provider = get_embedding_provider(config.embedding)
+    vector_store = VectorStore(config.get_vector_db_path(repo_path), embedding_provider)
+
+    # Collect chunks from vector store for diagram generation
+    all_chunks = list(vector_store.get_all_chunks())
+
+    diagram: str | None = None
+
+    if diagram_type.value == "class":
+        diagram = generate_class_diagram(all_chunks)
+    elif diagram_type.value == "dependency":
+        diagram = generate_dependency_graph(all_chunks)
+    elif diagram_type.value == "module":
+        diagram = generate_module_overview(index_status)
+    elif diagram_type.value == "language_pie":
+        diagram = generate_language_pie_chart(index_status)
+    elif diagram_type.value == "sequence":
+        if entry_point:
+            # Build call graph first
+            extractor = CallGraphExtractor()
+            combined_graph: dict[str, list[str]] = {}
+            for file_info in index_status.files:
+                file_path = repo_path / file_info.path
+                if file_path.exists():
+                    graph = extractor.extract_from_file(file_path, repo_path)
+                    for k, v in graph.items():
+                        combined_graph.setdefault(k, []).extend(v)
+            diagram = generate_sequence_diagram(combined_graph, entry_point=entry_point)
+        else:
+            raise ValidationError(
+                message="entry_point is required for sequence diagrams",
+                hint="Provide the name of the function to use as the sequence diagram entry point.",
+                field="entry_point",
+            )
+
+    if diagram is None:
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(
+                    {
+                        "status": "success",
+                        "message": f"No {diagram_type.value} diagram could be generated (no relevant data found)",
+                    },
+                    indent=2,
+                ),
+            )
+        ]
+
+    result = {
+        "status": "success",
+        "diagram_type": diagram_type.value,
+        "mermaid": diagram,
+    }
+
+    logger.info(f"Generated {diagram_type.value} diagram for {repo_path}")
+    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+
+
+@handle_tool_errors
+async def handle_get_inheritance(args: dict[str, Any]) -> list[TextContent]:
+    """Handle get_inheritance tool call."""
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_READ)
+
+    try:
+        validated = GetInheritanceArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    index_status, wiki_path, config = _load_index_status(repo_path)
+
+    from local_deepwiki.generators.inheritance import (
+        collect_class_hierarchy,
+        generate_inheritance_diagram,
+    )
+
+    embedding_provider = get_embedding_provider(config.embedding)
+    vector_store = VectorStore(config.get_vector_db_path(repo_path), embedding_provider)
+
+    classes = await collect_class_hierarchy(index_status, vector_store)
+
+    if not classes:
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(
+                    {
+                        "status": "success",
+                        "message": "No class hierarchies found in the codebase",
+                        "classes": [],
+                    },
+                    indent=2,
+                ),
+            )
+        ]
+
+    diagram = generate_inheritance_diagram(classes)
+
+    result = {
+        "status": "success",
+        "total_classes": len(classes),
+        "classes": [
+            {
+                "name": node.name,
+                "file_path": node.file_path,
+                "parents": node.parents,
+                "children": node.children,
+                "is_abstract": node.is_abstract,
+                "docstring": node.docstring,
+            }
+            for node in classes.values()
+        ],
+        "mermaid_diagram": diagram,
+    }
+
+    logger.info(f"Inheritance: {len(classes)} classes for {repo_path}")
+    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+
+
+@handle_tool_errors
+async def handle_get_call_graph(args: dict[str, Any]) -> list[TextContent]:
+    """Handle get_call_graph tool call."""
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_READ)
+
+    try:
+        validated = GetCallGraphArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+    file_path = validated.file_path
+
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    from local_deepwiki.generators.callgraph import (
+        CallGraphExtractor,
+        generate_call_graph_diagram,
+    )
+
+    extractor = CallGraphExtractor()
+
+    if file_path:
+        # Validate file path is within repo (prevent traversal)
+        target = (repo_path / file_path).resolve()
+        if not target.is_relative_to(repo_path):
+            raise ValidationError(
+                message="Invalid file path: path traversal not allowed",
+                hint="The file path must be within the repository.",
+                field="file_path",
+                value=file_path,
+            )
+        if not target.exists():
+            raise path_not_found_error(file_path, "file")
+
+        graph = extractor.extract_from_file(target, repo_path)
+        diagram = generate_call_graph_diagram(graph, title=file_path)
+    else:
+        # Build combined call graph for entire repo
+        index_status, wiki_path, config = _load_index_status(repo_path)
+        combined_graph: dict[str, list[str]] = {}
+        for file_info in index_status.files:
+            fp = repo_path / file_info.path
+            if fp.exists():
+                graph = extractor.extract_from_file(fp, repo_path)
+                for k, v in graph.items():
+                    combined_graph.setdefault(k, []).extend(v)
+        diagram = generate_call_graph_diagram(combined_graph)
+
+    if diagram is None:
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(
+                    {
+                        "status": "success",
+                        "message": "No call relationships found",
+                    },
+                    indent=2,
+                ),
+            )
+        ]
+
+    result = {
+        "status": "success",
+        "mermaid": diagram,
+        "scope": file_path or "full_repository",
+    }
+
+    logger.info(f"Call graph generated for {file_path or repo_path}")
+    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+
+
+@handle_tool_errors
+async def handle_get_coverage(args: dict[str, Any]) -> list[TextContent]:
+    """Handle get_coverage tool call."""
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_READ)
+
+    try:
+        validated = GetCoverageArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    index_status, wiki_path, config = _load_index_status(repo_path)
+
+    from local_deepwiki.generators.coverage import analyze_project_coverage
+
+    embedding_provider = get_embedding_provider(config.embedding)
+    vector_store = VectorStore(config.get_vector_db_path(repo_path), embedding_provider)
+
+    stats, file_coverages = await analyze_project_coverage(index_status, vector_store)
+
+    result = {
+        "status": "success",
+        "overall": {
+            "total_entities": stats.total_entities,
+            "documented": stats.documented_entities,
+            "undocumented": stats.total_entities - stats.documented_entities,
+            "coverage_percent": round(stats.coverage_percent, 1),
+        },
+        "files": [
+            {
+                "file_path": fc.file_path,
+                "coverage_percent": round(fc.stats.coverage_percent, 1),
+                "undocumented": fc.undocumented,
+            }
+            for fc in file_coverages
+            if fc.undocumented  # Only include files with gaps
+        ],
+    }
+
+    logger.info(f"Coverage: {stats.coverage_percent:.1f}% for {repo_path}")
+    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+
+
+@handle_tool_errors
+async def handle_detect_stale_docs(args: dict[str, Any]) -> list[TextContent]:
+    """Handle detect_stale_docs tool call."""
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_READ)
+
+    try:
+        validated = DetectStaleDocsArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+    threshold_days = validated.threshold_days
+
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    config = get_config()
+    wiki_path = config.get_wiki_path(repo_path)
+
+    if not wiki_path.exists():
+        raise not_indexed_error(str(repo_path))
+
+    from local_deepwiki.generators.stale_detection import analyze_staleness
+    from local_deepwiki.generators.wiki_status import WikiStatusManager
+
+    manager = WikiStatusManager(wiki_path)
+    wiki_status = await manager.load_status()
+
+    if wiki_status is None:
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(
+                    {
+                        "status": "success",
+                        "message": "No wiki generation status found. Run index_repository first.",
+                        "stale_pages": [],
+                    },
+                    indent=2,
+                ),
+            )
+        ]
+
+    report = analyze_staleness(repo_path, wiki_status, threshold_days)
+
+    result = {
+        "status": "success",
+        "total_pages": report.total_pages,
+        "stale_count": report.stale_pages,
+        "stale_pages": [
+            {
+                "page_path": info.page_path,
+                "days_stale": info.days_stale,
+                "source_files": info.source_files,
+                "newest_source_date": info.newest_source_date.isoformat(),
+                "generated_at": info.generated_at.isoformat(),
+            }
+            for info in report.stale_info
+        ],
+    }
+
+    logger.info(
+        f"Stale detection: {report.stale_pages}/{report.total_pages} stale for {repo_path}"
+    )
+    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+
+
+@handle_tool_errors
+async def handle_get_changelog(args: dict[str, Any]) -> list[TextContent]:
+    """Handle get_changelog tool call."""
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_READ)
+
+    try:
+        validated = GetChangelogArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+    max_commits = validated.max_commits
+
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    from local_deepwiki.generators.changelog import generate_changelog_content
+
+    content = await asyncio.to_thread(
+        generate_changelog_content, repo_path, max_commits
+    )
+
+    if content is None:
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(
+                    {
+                        "status": "success",
+                        "message": "No git history found. Is this a git repository?",
+                    },
+                    indent=2,
+                ),
+            )
+        ]
+
+    result = {
+        "status": "success",
+        "changelog": content,
+    }
+
+    logger.info(f"Changelog generated for {repo_path}")
+    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+
+
+@handle_tool_errors
+async def handle_detect_secrets(args: dict[str, Any]) -> list[TextContent]:
+    """Handle detect_secrets tool call."""
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_READ)
+
+    try:
+        validated = DetectSecretsArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    if not repo_path.is_dir():
+        raise ValidationError(
+            message=f"Path is not a directory: {repo_path}",
+            hint="Provide a path to a directory, not a file.",
+            field="repo_path",
+            value=str(repo_path),
+        )
+
+    from local_deepwiki.core.secret_detector import scan_repository_for_secrets
+
+    findings_by_file = await asyncio.to_thread(scan_repository_for_secrets, repo_path)
+
+    total_findings = sum(len(findings) for findings in findings_by_file.values())
+
+    result = {
+        "status": "success",
+        "files_with_secrets": len(findings_by_file),
+        "total_findings": total_findings,
+        "findings": [
+            {
+                "file_path": file_path,
+                "secrets": [
+                    {
+                        "type": f.secret_type.value,
+                        "line": f.line_number,
+                        "confidence": round(f.confidence, 2),
+                        "recommendation": f.recommendation,
+                    }
+                    for f in findings
+                ],
+            }
+            for file_path, findings in findings_by_file.items()
+        ],
+    }
+
+    logger.info(
+        f"Secret scan: {total_findings} findings in {len(findings_by_file)} files for {repo_path}"
+    )
+    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+
+
+@handle_tool_errors
+async def handle_get_test_examples(args: dict[str, Any]) -> list[TextContent]:
+    """Handle get_test_examples tool call."""
+    controller = get_access_controller()
+    controller.require_permission(Permission.QUERY_SEARCH)
+
+    try:
+        validated = GetTestExamplesArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+    entity_name = validated.entity_name
+    max_examples = validated.max_examples
+
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    index_status, wiki_path, config = _load_index_status(repo_path)
+
+    from local_deepwiki.generators.test_examples import CodeExampleExtractor
+
+    embedding_provider = get_embedding_provider(config.embedding)
+    vector_store = VectorStore(config.get_vector_db_path(repo_path), embedding_provider)
+
+    extractor = CodeExampleExtractor(vector_store, repo_path=repo_path)
+
+    # Try function first, then class
+    examples = await extractor.extract_examples_for_function(
+        entity_name, max_examples=max_examples
+    )
+    if not examples:
+        examples = await extractor.extract_examples_for_class(
+            entity_name, max_examples=max_examples
+        )
+
+    if not examples:
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(
+                    {
+                        "status": "success",
+                        "message": f"No test examples found for '{entity_name}'",
+                        "examples": [],
+                    },
+                    indent=2,
+                ),
+            )
+        ]
+
+    result = {
+        "status": "success",
+        "entity_name": entity_name,
+        "total_examples": len(examples),
+        "examples": [
+            {
+                "source": e.source,
+                "code": e.code,
+                "description": e.description,
+                "test_file": e.test_file,
+                "language": e.language,
+            }
+            for e in examples
+        ],
+    }
+
+    logger.info(f"Test examples: {len(examples)} for '{entity_name}' in {repo_path}")
+    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+
+
+@handle_tool_errors
+async def handle_get_api_docs(args: dict[str, Any]) -> list[TextContent]:
+    """Handle get_api_docs tool call."""
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_READ)
+
+    try:
+        validated = GetApiDocsArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+    file_path = validated.file_path
+
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    # Validate file path is within repo (prevent traversal)
+    target = (repo_path / file_path).resolve()
+    if not target.is_relative_to(repo_path):
+        raise ValidationError(
+            message="Invalid file path: path traversal not allowed",
+            hint="The file path must be within the repository.",
+            field="file_path",
+            value=file_path,
+        )
+
+    if not target.exists():
+        raise path_not_found_error(file_path, "file")
+
+    from local_deepwiki.generators.api_docs import get_file_api_docs
+
+    api_docs = await asyncio.to_thread(get_file_api_docs, target)
+
+    if api_docs is None:
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(
+                    {
+                        "status": "success",
+                        "message": f"No API documentation could be extracted from '{file_path}'",
+                    },
+                    indent=2,
+                ),
+            )
+        ]
+
+    result = {
+        "status": "success",
+        "file_path": file_path,
+        "api_docs": api_docs,
+    }
+
+    logger.info(f"API docs generated for {file_path}")
+    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+
+
+@handle_tool_errors
+async def handle_list_indexed_repos(args: dict[str, Any]) -> list[TextContent]:
+    """Handle list_indexed_repos tool call."""
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_READ)
+
+    try:
+        validated = ListIndexedReposArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    base_path = (
+        Path(validated.base_path).resolve() if validated.base_path else Path.cwd()
+    )
+
+    if not base_path.exists():
+        raise path_not_found_error(str(base_path), "directory")
+
+    from local_deepwiki.core.index_manager import IndexStatusManager
+
+    manager = IndexStatusManager()
+    repos: list[dict[str, Any]] = []
+
+    # Search for .deepwiki directories
+    for deepwiki_dir in base_path.rglob(".deepwiki"):
+        if not deepwiki_dir.is_dir():
+            continue
+        status = manager.load(deepwiki_dir)
+        if status is not None:
+            repos.append(
+                {
+                    "repo_path": status.repo_path,
+                    "wiki_path": str(deepwiki_dir),
+                    "total_files": status.total_files,
+                    "total_chunks": status.total_chunks,
+                    "languages": status.languages,
+                    "indexed_at": status.indexed_at,
+                }
+            )
+
+    result = {
+        "status": "success",
+        "total_repos": len(repos),
+        "repos": repos,
+    }
+
+    logger.info(f"Found {len(repos)} indexed repos under {base_path}")
+    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+
+
+@handle_tool_errors
+async def handle_get_index_status(args: dict[str, Any]) -> list[TextContent]:
+    """Handle get_index_status tool call."""
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_READ)
+
+    try:
+        validated = GetIndexStatusArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    index_status, wiki_path, config = _load_index_status(repo_path)
+
+    from datetime import datetime
+
+    result = {
+        "status": "success",
+        "repo_path": index_status.repo_path,
+        "wiki_path": str(wiki_path),
+        "indexed_at": index_status.indexed_at,
+        "indexed_at_human": datetime.fromtimestamp(index_status.indexed_at).isoformat(),
+        "total_files": index_status.total_files,
+        "total_chunks": index_status.total_chunks,
+        "languages": index_status.languages,
+        "schema_version": index_status.schema_version,
+    }
+
+    logger.info(
+        f"Index status: {index_status.total_files} files, {index_status.total_chunks} chunks for {repo_path}"
+    )
+    return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
 
 class ProgressNotifier:
@@ -1716,7 +2555,9 @@ def create_progress_notifier(
             if request_ctx.meta and request_ctx.meta.progressToken:
                 progress_token = request_ctx.meta.progressToken
         except LookupError:
-            logger.debug("No MCP request context available for progress token extraction")
+            logger.debug(
+                "No MCP request context available for progress token extraction"
+            )
 
     # Create progress manager
     progress_manager = registry.start_operation(
