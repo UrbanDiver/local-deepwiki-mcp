@@ -9,6 +9,8 @@ from mcp.types import TextContent, Tool
 
 from local_deepwiki.handlers import (
     ToolHandler,
+    handle_analyze_diff,
+    handle_ask_about_diff,
     handle_ask_question,
     handle_cancel_research,
     handle_deep_research,
@@ -23,6 +25,7 @@ from local_deepwiki.handlers import (
     handle_get_changelog,
     handle_get_coverage,
     handle_get_diagrams,
+    handle_get_complexity_metrics,
     handle_get_file_context,
     handle_get_glossary,
     handle_get_index_status,
@@ -745,6 +748,80 @@ async def list_tools() -> list[Tool]:
                 "required": ["repo_path", "file_path"],
             },
         ),
+        Tool(
+            name="get_complexity_metrics",
+            description="Analyze code complexity for a source file using tree-sitter AST parsing. Returns function/class counts, line metrics, cyclomatic complexity, nesting depth, and parameter counts.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "repo_path": {
+                        "type": "string",
+                        "description": "Path to the indexed repository",
+                    },
+                    "file_path": {
+                        "type": "string",
+                        "description": "File path relative to repo root to analyze",
+                    },
+                },
+                "required": ["repo_path", "file_path"],
+            },
+        ),
+        Tool(
+            name="analyze_diff",
+            description="Analyze git diff between two refs and map changed files to affected wiki pages and code entities. Helps understand documentation impact of code changes.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "repo_path": {
+                        "type": "string",
+                        "description": "Path to the repository (must be a git repo)",
+                    },
+                    "base_ref": {
+                        "type": "string",
+                        "description": "Git ref to diff from (default: HEAD~1)",
+                    },
+                    "head_ref": {
+                        "type": "string",
+                        "description": "Git ref to diff to (default: HEAD)",
+                    },
+                    "include_content": {
+                        "type": "boolean",
+                        "description": "Include diff content for each file (default: false)",
+                    },
+                },
+                "required": ["repo_path"],
+            },
+        ),
+        Tool(
+            name="ask_about_diff",
+            description="Ask questions about recent code changes using RAG. Combines git diff with vector search context and LLM synthesis to answer questions like 'What changed?', 'Are there any bugs?', or 'What's the impact?'.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "repo_path": {
+                        "type": "string",
+                        "description": "Path to the indexed repository (must be a git repo)",
+                    },
+                    "question": {
+                        "type": "string",
+                        "description": "Question about the code changes",
+                    },
+                    "base_ref": {
+                        "type": "string",
+                        "description": "Git ref to diff from (default: HEAD~1)",
+                    },
+                    "head_ref": {
+                        "type": "string",
+                        "description": "Git ref to diff to (default: HEAD)",
+                    },
+                    "max_context": {
+                        "type": "integer",
+                        "description": "Maximum code chunks for context (default: 10, max: 30)",
+                    },
+                },
+                "required": ["repo_path", "question"],
+            },
+        ),
     ]
 
 
@@ -780,6 +857,9 @@ TOOL_HANDLERS: dict[str, ToolHandler] = {
     "get_wiki_stats": handle_get_wiki_stats,
     "explain_entity": handle_explain_entity,
     "impact_analysis": handle_impact_analysis,
+    "get_complexity_metrics": handle_get_complexity_metrics,
+    "analyze_diff": handle_analyze_diff,
+    "ask_about_diff": handle_ask_about_diff,
 }
 
 # Tools that need server context for progress streaming

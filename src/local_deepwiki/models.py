@@ -841,6 +841,60 @@ class ImpactAnalysisArgs(BaseModel):
     )
 
 
+class GetComplexityMetricsArgs(BaseModel):
+    """Arguments for the get_complexity_metrics tool."""
+
+    repo_path: str = Field(description="Path to the indexed repository")
+    file_path: str = Field(
+        min_length=1,
+        description="File path relative to repo root to analyze",
+    )
+
+
+class AnalyzeDiffArgs(BaseModel):
+    """Arguments for the analyze_diff tool."""
+
+    repo_path: str = Field(description="Path to the repository (must be a git repo)")
+    base_ref: str = Field(
+        default="HEAD~1",
+        description="Git ref to diff from (default: HEAD~1). Can be a commit SHA, branch, or tag.",
+    )
+    head_ref: str = Field(
+        default="HEAD",
+        description="Git ref to diff to (default: HEAD). Can be a commit SHA, branch, or tag.",
+    )
+    include_content: bool = Field(
+        default=False,
+        description="Include the actual diff content for each file (default: false, can be large)",
+    )
+
+
+class AskAboutDiffArgs(BaseModel):
+    """Arguments for the ask_about_diff tool."""
+
+    repo_path: str = Field(
+        description="Path to the indexed repository (must be a git repo)"
+    )
+    question: str = Field(
+        min_length=1,
+        description="Question about the code changes (e.g., 'What was changed?' or 'Does this diff introduce bugs?')",
+    )
+    base_ref: str = Field(
+        default="HEAD~1",
+        description="Git ref to diff from (default: HEAD~1)",
+    )
+    head_ref: str = Field(
+        default="HEAD",
+        description="Git ref to diff to (default: HEAD)",
+    )
+    max_context: int = Field(
+        default=10,
+        ge=1,
+        le=30,
+        description="Maximum number of code chunks for additional context (1-30)",
+    )
+
+
 class GetWikiStatsArgs(BaseModel):
     """Arguments for the get_wiki_stats tool."""
 

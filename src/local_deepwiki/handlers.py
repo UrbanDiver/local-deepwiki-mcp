@@ -31,6 +31,8 @@ from local_deepwiki.errors import (
 )
 
 from local_deepwiki.models import (
+    AnalyzeDiffArgs,
+    AskAboutDiffArgs,
     AskQuestionArgs,
     CancelResearchArgs,
     DeepResearchArgs,
@@ -51,6 +53,7 @@ from local_deepwiki.models import (
     GetInheritanceArgs,
     GetProjectManifestArgs,
     GetTestExamplesArgs,
+    GetComplexityMetricsArgs,
     GetWikiStatsArgs,
     ImpactAnalysisArgs,
     IndexingProgress,
@@ -3508,4 +3511,665 @@ async def handle_impact_analysis(args: dict[str, Any]) -> list[TextContent]:
         f"Impact analysis: {file_path} -> {total_affected_files} files, "
         f"risk={risk_level}"
     )
+    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+
+
+@handle_tool_errors
+async def handle_get_complexity_metrics(
+    args: dict[str, Any],
+) -> list[TextContent]:
+    """Handle get_complexity_metrics tool call.
+
+    Analyzes code complexity using tree-sitter AST parsing. Returns
+    function/class counts, line metrics, cyclomatic complexity,
+    nesting depth, and parameter counts.
+    """
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_READ)
+
+    try:
+        validated = GetComplexityMetricsArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+    file_path = validated.file_path
+
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    full_file = repo_path / file_path
+    if not full_file.resolve().is_relative_to(repo_path):
+        raise ValidationError(
+            message="Invalid file path: path traversal not allowed",
+            hint="The file path must be within the repository.",
+            field="file_path",
+            value=file_path,
+        )
+    if not full_file.exists():
+        raise path_not_found_error(file_path, "file")
+
+    from local_deepwiki.core.parser import CodeParser
+
+    parser = CodeParser()
+    parse_result = parser.parse_file(full_file)
+
+    if parse_result is None:
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(
+                    {
+                        "status": "success",
+                        "file_path": file_path,
+                        "message": (
+                            f"File type not supported for AST analysis:"
+                            f" {full_file.suffix}"
+                        ),
+                        "metrics": {},
+                    },
+                    indent=2,
+                ),
+            )
+        ]
+
+    root_node, language, source_bytes = parse_result
+    source_text = source_bytes.decode("utf-8", errors="replace")
+    lines = source_text.splitlines()
+
+    # --- Line counts ---
+    total_lines = len(lines)
+    blank_lines = sum(1 for line in lines if not line.strip())
+
+    def _count_comment_lines(root):
+        """Count lines that contain comments."""
+        comment_line_set: set[int] = set()
+
+        def _walk(n):
+            if n.type in ("comment", "line_comment", "block_comment"):
+                for line_no in range(n.start_point[0], n.end_point[0] + 1):
+                    comment_line_set.add(line_no)
+            for child in n.children:
+                _walk(child)
+
+        _walk(root)
+        return len(comment_line_set)
+
+    comment_lines = _count_comment_lines(root_node)
+
+    # --- AST traversal to collect function / class metrics ---
+    functions: list[dict[str, Any]] = []
+    classes: list[dict[str, Any]] = []
+    max_nesting = 0
+
+    nesting_types = frozenset(
+        {
+            "if_statement",
+            "for_statement",
+            "while_statement",
+            "try_statement",
+            "for_expression",
+            "while_expression",
+            "if_expression",
+            "match_statement",
+            "switch_statement",
+        }
+    )
+
+    function_types = frozenset(
+        {
+            "function_definition",
+            "function_declaration",
+            "method_definition",
+            "arrow_function",
+            "function_item",
+        }
+    )
+
+    class_types = frozenset(
+        {
+            "class_definition",
+            "class_declaration",
+            "struct_item",
+            "impl_item",
+        }
+    )
+
+    def _estimate_cyclomatic(node):
+        """Estimate cyclomatic complexity by counting decision points."""
+        count = 1  # Base complexity
+        branch_types = frozenset(
+            {
+                "if_statement",
+                "elif_clause",
+                "else_clause",
+                "for_statement",
+                "while_statement",
+                "try_statement",
+                "except_clause",
+                "case_clause",
+                "match_arm",
+                "conditional_expression",
+                "ternary_expression",
+                "boolean_operator",
+                "binary_expression",
+            }
+        )
+        logical_ops = frozenset({"and", "or", "&&", "||"})
+
+        def _count_branches(n):
+            nonlocal count
+            if n.type in branch_types:
+                count += 1
+            if n.type in ("boolean_operator", "binary_expression"):
+                for child in n.children:
+                    if child.type in ("and", "or") or (
+                        child.text
+                        and child.text.decode("utf-8", errors="replace") in logical_ops
+                    ):
+                        count += 1
+                        break
+            for child in n.children:
+                _count_branches(child)
+
+        _count_branches(node)
+        return count
+
+    def _extract_function_info(node, depth):
+        name = ""
+        param_count = 0
+        for child in node.children:
+            if child.type in ("identifier", "name", "property_identifier"):
+                name = (
+                    child.text.decode("utf-8", errors="replace") if child.text else ""
+                )
+            if child.type in (
+                "parameters",
+                "formal_parameters",
+                "parameter_list",
+            ):
+                param_count = sum(
+                    1
+                    for p in child.children
+                    if p.type not in ("(", ")", ",", "comment")
+                    and (p.text.decode("utf-8", errors="replace") if p.text else "")
+                    not in ("self", "cls")
+                )
+        cyclomatic = _estimate_cyclomatic(node)
+        return {
+            "name": name,
+            "line": node.start_point[0] + 1,
+            "end_line": node.end_point[0] + 1,
+            "param_count": param_count,
+            "nesting_depth": depth,
+            "cyclomatic_complexity": cyclomatic,
+        }
+
+    def _walk_node(node, depth=0):
+        nonlocal max_nesting
+        node_type = node.type
+
+        if node_type in function_types:
+            func_info = _extract_function_info(node, depth)
+            functions.append(func_info)
+
+        if node_type in class_types:
+            class_name = ""
+            for child in node.children:
+                if child.type in (
+                    "identifier",
+                    "name",
+                    "type_identifier",
+                ):
+                    class_name = (
+                        child.text.decode("utf-8", errors="replace")
+                        if child.text
+                        else ""
+                    )
+                    break
+            classes.append({"name": class_name, "line": node.start_point[0] + 1})
+
+        if node_type in nesting_types:
+            max_nesting = max(max_nesting, depth)
+
+        for child in node.children:
+            child_depth = depth + 1 if node_type in nesting_types else depth
+            _walk_node(child, child_depth)
+
+    _walk_node(root_node, 0)
+
+    # --- Compute aggregate metrics ---
+    param_counts = [f["param_count"] for f in functions]
+    cyclomatic_values = [f["cyclomatic_complexity"] for f in functions]
+    nesting_depths = [f["nesting_depth"] for f in functions]
+
+    avg_params = round(sum(param_counts) / len(param_counts), 2) if param_counts else 0
+    max_params = max(param_counts) if param_counts else 0
+    avg_cyclomatic = (
+        round(sum(cyclomatic_values) / len(cyclomatic_values), 2)
+        if cyclomatic_values
+        else 0
+    )
+    max_cyclomatic = max(cyclomatic_values) if cyclomatic_values else 0
+    avg_nesting = (
+        round(sum(nesting_depths) / len(nesting_depths), 2) if nesting_depths else 0
+    )
+
+    result = {
+        "status": "success",
+        "file_path": file_path,
+        "language": language.value,
+        "lines": {
+            "total": total_lines,
+            "blank": blank_lines,
+            "comment": comment_lines,
+            "code": total_lines - blank_lines - comment_lines,
+        },
+        "counts": {
+            "functions": len(functions),
+            "classes": len(classes),
+        },
+        "complexity": {
+            "avg_cyclomatic": avg_cyclomatic,
+            "max_cyclomatic": max_cyclomatic,
+            "avg_params": avg_params,
+            "max_params": max_params,
+            "avg_nesting_depth": avg_nesting,
+            "max_nesting_depth": max_nesting,
+        },
+        "functions": functions[:50],
+        "classes": classes[:50],
+    }
+
+    logger.info(
+        f"Complexity metrics: {len(functions)} functions, "
+        f"{len(classes)} classes for {file_path}"
+    )
+    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+
+
+@handle_tool_errors
+async def handle_analyze_diff(args: dict[str, Any]) -> list[TextContent]:
+    """Handle analyze_diff tool call.
+
+    Analyzes git diff and maps changed files to affected wiki pages and entities.
+    """
+    import re
+    import subprocess
+
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_READ)
+
+    try:
+        validated = AnalyzeDiffArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    # Validate git refs to prevent injection
+    ref_pattern = re.compile(r"^[a-zA-Z0-9_.\/\-~^]+$")
+    for ref_name, ref_value in [
+        ("base_ref", validated.base_ref),
+        ("head_ref", validated.head_ref),
+    ]:
+        if not ref_pattern.match(ref_value):
+            raise ValidationError(
+                message=f"Invalid git ref: {ref_value}",
+                hint="Git refs must contain only alphanumeric chars, /, -, _, ~, ^, and .",
+                field=ref_name,
+                value=ref_value,
+            )
+
+    # Run git diff --name-status
+    try:
+        diff_result = subprocess.run(
+            [
+                "git",
+                "diff",
+                "--name-status",
+                validated.base_ref,
+                validated.head_ref,
+            ],
+            cwd=str(repo_path),
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if diff_result.returncode != 0:
+            return [
+                TextContent(
+                    type="text",
+                    text=json.dumps(
+                        {
+                            "status": "error",
+                            "error": f"git diff failed: {diff_result.stderr.strip()}",
+                        },
+                        indent=2,
+                    ),
+                )
+            ]
+    except subprocess.TimeoutExpired:
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(
+                    {
+                        "status": "error",
+                        "error": "git diff timed out after 30 seconds",
+                    },
+                    indent=2,
+                ),
+            )
+        ]
+
+    # Parse git diff output
+    status_map = {
+        "A": "added",
+        "M": "modified",
+        "D": "deleted",
+        "R": "renamed",
+    }
+    changed_files: list[dict[str, Any]] = []
+    for line in diff_result.stdout.strip().splitlines():
+        if not line.strip():
+            continue
+        parts = line.split("\t", 1)
+        if len(parts) == 2:
+            status_code, file_name = parts
+            status = status_map.get(status_code[0], "modified")
+            changed_files.append({"file": file_name, "status": status})
+
+    if not changed_files:
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(
+                    {
+                        "status": "success",
+                        "base_ref": validated.base_ref,
+                        "head_ref": validated.head_ref,
+                        "message": "No file changes found between the specified refs.",
+                        "changed_files": [],
+                        "affected_wiki_pages": [],
+                        "affected_entities": [],
+                    },
+                    indent=2,
+                ),
+            )
+        ]
+
+    # Optionally get diff content per file
+    if validated.include_content:
+        for cf in changed_files:
+            try:
+                file_diff = subprocess.run(
+                    [
+                        "git",
+                        "diff",
+                        validated.base_ref,
+                        validated.head_ref,
+                        "--",
+                        cf["file"],
+                    ],
+                    cwd=str(repo_path),
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                )
+                cf["diff_content"] = file_diff.stdout[:5000]  # Limit size
+            except (subprocess.TimeoutExpired, OSError):
+                cf["diff_content"] = "(diff content unavailable)"
+
+    # Try to load index and map to wiki pages
+    affected_wiki_pages: list[dict[str, str]] = []
+    affected_entities: list[dict[str, str]] = []
+    try:
+        _index_status, wiki_path, _config = _load_index_status(repo_path)
+
+        # Map to wiki pages via toc.json
+        toc_path = wiki_path / "toc.json"
+        if toc_path.exists():
+            toc_data = json.loads(toc_path.read_text())
+            pages = (
+                toc_data if isinstance(toc_data, list) else toc_data.get("pages", [])
+            )
+            changed_file_set = {cf["file"] for cf in changed_files}
+            for page in pages:
+                source_file = page.get("source_file", "")
+                if source_file in changed_file_set:
+                    affected_wiki_pages.append(
+                        {
+                            "title": page.get("title", ""),
+                            "path": page.get("path", ""),
+                            "source_file": source_file,
+                        }
+                    )
+
+        # Map to entities via search.json
+        search_path = wiki_path / "search.json"
+        if search_path.exists():
+            search_data = json.loads(search_path.read_text())
+            entities = search_data.get("entities", [])
+            changed_file_set = {cf["file"] for cf in changed_files}
+            for entity in entities:
+                if entity.get("file", "") in changed_file_set:
+                    affected_entities.append(
+                        {
+                            "name": entity.get("display_name", entity.get("name", "")),
+                            "type": entity.get("entity_type", ""),
+                            "file": entity.get("file", ""),
+                        }
+                    )
+    except Exception:
+        # If no index exists, just skip wiki/entity mapping
+        pass
+
+    # Summary
+    summary = {
+        "total_changed_files": len(changed_files),
+        "added": sum(1 for f in changed_files if f["status"] == "added"),
+        "modified": sum(1 for f in changed_files if f["status"] == "modified"),
+        "deleted": sum(1 for f in changed_files if f["status"] == "deleted"),
+        "affected_wiki_pages": len(affected_wiki_pages),
+        "affected_entities": len(affected_entities),
+    }
+
+    result = {
+        "status": "success",
+        "base_ref": validated.base_ref,
+        "head_ref": validated.head_ref,
+        "summary": summary,
+        "changed_files": changed_files,
+        "affected_wiki_pages": affected_wiki_pages,
+        "affected_entities": affected_entities[:100],  # Limit size
+    }
+
+    logger.info(
+        f"Diff analysis: {len(changed_files)} files changed, "
+        f"{len(affected_wiki_pages)} wiki pages affected"
+    )
+    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+
+
+@handle_tool_errors
+async def handle_ask_about_diff(args: dict[str, Any]) -> list[TextContent]:
+    """Handle ask_about_diff tool call.
+
+    RAG-based Q&A about recent code changes, combining git diff
+    with vector search context and LLM synthesis.
+    """
+    import re
+    import subprocess
+
+    controller = get_access_controller()
+    controller.require_permission(Permission.QUERY_SEARCH)
+
+    try:
+        validated = AskAboutDiffArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+    question = validated.question
+
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    # Validate git refs to prevent injection
+    ref_pattern = re.compile(r"^[a-zA-Z0-9_.\/\-~^]+$")
+    for ref_name, ref_value in [
+        ("base_ref", validated.base_ref),
+        ("head_ref", validated.head_ref),
+    ]:
+        if not ref_pattern.match(ref_value):
+            raise ValidationError(
+                message=f"Invalid git ref: {ref_value}",
+                hint="Git refs must contain only alphanumeric chars, /, -, _, ~, ^, and .",
+                field=ref_name,
+                value=ref_value,
+            )
+
+    # Get the diff
+    try:
+        diff_result = subprocess.run(
+            ["git", "diff", validated.base_ref, validated.head_ref],
+            cwd=str(repo_path),
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if diff_result.returncode != 0:
+            return [
+                TextContent(
+                    type="text",
+                    text=json.dumps(
+                        {
+                            "status": "error",
+                            "error": f"git diff failed: {diff_result.stderr.strip()}",
+                        },
+                        indent=2,
+                    ),
+                )
+            ]
+    except subprocess.TimeoutExpired:
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(
+                    {
+                        "status": "error",
+                        "error": "git diff timed out after 30 seconds",
+                    },
+                    indent=2,
+                ),
+            )
+        ]
+
+    diff_text = diff_result.stdout
+    if not diff_text.strip():
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(
+                    {
+                        "status": "success",
+                        "question": question,
+                        "answer": "No changes found between the specified refs. There is nothing to analyze.",
+                        "sources": [],
+                    },
+                    indent=2,
+                ),
+            )
+        ]
+
+    # Truncate diff if very large (keep first 10000 chars)
+    if len(diff_text) > 10000:
+        diff_text = (
+            diff_text[:10000] + "\n... (diff truncated, showing first 10000 chars)"
+        )
+
+    # Get additional context from vector store
+    config = get_config()
+    vector_db_path = config.get_vector_db_path(repo_path)
+    wiki_path = config.get_wiki_path(repo_path)
+
+    context_parts: list[str] = []
+    sources: list[dict[str, Any]] = []
+
+    embedding_provider = get_embedding_provider(config.embedding)
+
+    if vector_db_path.exists():
+        vector_store = VectorStore(vector_db_path, embedding_provider)
+
+        # Search for relevant context using the question
+        search_results = await vector_store.search(
+            question, limit=validated.max_context
+        )
+
+        for sr in search_results:
+            chunk = sr.chunk
+            context_parts.append(
+                f"File: {chunk.file_path} (lines {chunk.start_line}-{chunk.end_line})\n"
+                f"Type: {chunk.chunk_type.value}\n"
+                f"```\n{chunk.content}\n```"
+            )
+            sources.append(
+                {
+                    "file": chunk.file_path,
+                    "lines": f"{chunk.start_line}-{chunk.end_line}",
+                    "type": chunk.chunk_type.value,
+                    "score": sr.score,
+                }
+            )
+
+    additional_context = (
+        "\n\n---\n\n".join(context_parts)
+        if context_parts
+        else "(No additional code context available)"
+    )
+
+    # Generate answer using LLM
+    from local_deepwiki.providers.llm import get_cached_llm_provider
+
+    cache_path = wiki_path / "llm_cache.lance"
+    llm = get_cached_llm_provider(
+        cache_path=cache_path,
+        embedding_provider=embedding_provider,
+        cache_config=config.llm_cache,
+        llm_config=config.llm,
+    )
+
+    prompt = (
+        f"You are analyzing recent code changes. Answer this question about the diff:\n\n"
+        f"Question: {question}\n\n"
+        f"## Git Diff (changes between {validated.base_ref} and {validated.head_ref}):\n"
+        f"```diff\n{diff_text}\n```\n\n"
+        f"## Additional Code Context (from the codebase):\n{additional_context}\n\n"
+        f"Provide a clear, specific answer based on the diff and context. "
+        f"Focus on what changed, why it might matter, and any potential issues."
+    )
+
+    system_prompt = "You are a code review assistant. Analyze code diffs and answer questions accurately."
+
+    rate_limiter = get_rate_limiter()
+    async with rate_limiter:
+        answer = await llm.generate(prompt, system_prompt=system_prompt)
+
+    result = {
+        "status": "success",
+        "question": question,
+        "base_ref": validated.base_ref,
+        "head_ref": validated.head_ref,
+        "answer": answer,
+        "diff_stats": {
+            "diff_length": len(diff_result.stdout),
+            "truncated": len(diff_result.stdout) > 10000,
+        },
+        "sources": sources,
+    }
+
+    logger.info(f"Ask about diff: '{question[:50]}...' for {repo_path}")
     return [TextContent(type="text", text=json.dumps(result, indent=2))]
