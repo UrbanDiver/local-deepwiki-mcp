@@ -754,7 +754,11 @@ class TestHandleGetWikiStats:
             result = await handle_get_wiki_stats({"repo_path": str(tmp_path)})
 
         data = json.loads(result[0].text)
-        assert data["coverage"]["coverage"] == 0.80
+        # Verify curated coverage output
+        assert data["coverage"]["documented_percentage"] == 80.0
+        assert data["coverage"]["total_entities"] == 10
+        assert data["coverage"]["documented_entities"] == 8
+        assert data["coverage"]["undocumented_entities"] == 2
 
 
 # ── Tool registration tests ──────────────────────────────────────────

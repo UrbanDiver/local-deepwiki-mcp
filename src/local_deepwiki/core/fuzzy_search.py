@@ -184,7 +184,9 @@ def rerank_with_fuzzy(
         content_fuzzy = fuzzy_score(query, chunk.content[:500])  # Limit content length
 
         # Also check docstring if present
-        docstring_fuzzy = fuzzy_score(query, chunk.docstring or "") if chunk.docstring else 0.0
+        docstring_fuzzy = (
+            fuzzy_score(query, chunk.docstring or "") if chunk.docstring else 0.0
+        )
 
         # Combined fuzzy score (weighted)
         fuzzy_combined = max(
@@ -322,8 +324,12 @@ class FuzzySearchHelper:
         """
         self._store = store
         self._name_cache: dict[str, list[NameEntry]] = {}  # chunk_type -> entries
-        self._all_names: list[str] = []  # Flat list of all names for rapid fuzzy matching
-        self._name_to_entries: dict[str, list[NameEntry]] = {}  # name -> entries mapping
+        self._all_names: list[
+            str
+        ] = []  # Flat list of all names for rapid fuzzy matching
+        self._name_to_entries: dict[
+            str, list[NameEntry]
+        ] = {}  # name -> entries mapping
         self._is_built = False
 
     @property
@@ -402,7 +408,10 @@ class FuzzySearchHelper:
                 self._name_to_entries[name].append(entry)
 
                 # Also index fully qualified name if present
-                if full_qualified_name and full_qualified_name not in self._name_to_entries:
+                if (
+                    full_qualified_name
+                    and full_qualified_name not in self._name_to_entries
+                ):
                     self._name_to_entries[full_qualified_name] = [entry]
                     self._all_names.append(full_qualified_name)
 
@@ -616,6 +625,17 @@ class FuzzySearchHelper:
                     break
 
         return results
+
+    def get_entries_for_name(self, name: str) -> list[NameEntry]:
+        """Get all entries for a given name.
+
+        Args:
+            name: The name to look up.
+
+        Returns:
+            List of NameEntry objects for this name, or empty list if not found.
+        """
+        return self._name_to_entries.get(name, [])
 
     def get_stats(self) -> dict[str, int]:
         """Get statistics about the name index.
