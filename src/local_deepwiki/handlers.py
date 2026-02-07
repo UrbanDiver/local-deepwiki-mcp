@@ -28,6 +28,7 @@ from local_deepwiki.errors import (
     not_indexed_error,
     path_not_found_error,
     provider_error,
+    sanitize_error_message,
 )
 
 from local_deepwiki.models import (
@@ -2443,7 +2444,7 @@ async def handle_search_wiki(args: dict[str, Any]) -> list[TextContent]:
 
     repo_path = Path(validated.repo_path).resolve()
     query = validated.query.lower()
-    max_results = validated.max_results
+    limit = validated.limit
     entity_types = validated.entity_types
 
     if not repo_path.exists():
@@ -2540,7 +2541,7 @@ async def handle_search_wiki(args: dict[str, Any]) -> list[TextContent]:
 
     # Sort by score descending, then limit
     matches.sort(key=lambda m: m["score"], reverse=True)
-    matches = matches[:max_results]
+    matches = matches[:limit]
 
     result = {
         "status": "success",
@@ -2643,7 +2644,17 @@ async def handle_get_file_context(args: dict[str, Any]) -> list[TextContent]:
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
-    full_file_path = repo_path / file_path
+    full_file_path = (repo_path / file_path).resolve()
+
+    # Validate file path is within repo (prevent traversal)
+    if not full_file_path.is_relative_to(repo_path):
+        raise ValidationError(
+            message="Invalid file path: path traversal not allowed",
+            hint="The file path must be within the repository.",
+            field="file_path",
+            value=file_path,
+        )
+
     if not full_file_path.exists():
         raise path_not_found_error(file_path, "file")
 
@@ -2805,7 +2816,7 @@ async def handle_get_wiki_stats(args: dict[str, Any]) -> list[TextContent]:
     stats: dict[str, Any] = {
         "status": "success",
         "repo_path": index_status.repo_path,
-        "wiki_path": str(wiki_path),
+        "wiki_dir": wiki_path.name,
     }
 
     # Index stats
@@ -3134,7 +3145,7 @@ async def handle_explain_entity(args: dict[str, Any]) -> list[TextContent]:
                 }
         except Exception as exc:
             logger.warning(f"Call graph extraction failed for '{entity_name}': {exc}")
-            result["call_graph"] = {"error": str(exc)}
+            result["call_graph"] = {"error": sanitize_error_message(str(exc))}
 
     # --- Step 3: Inheritance (classes only) ---
     if (
@@ -3163,7 +3174,7 @@ async def handle_explain_entity(args: dict[str, Any]) -> list[TextContent]:
                 }
         except Exception as exc:
             logger.warning(f"Inheritance lookup failed for '{entity_name}': {exc}")
-            result["inheritance"] = {"error": str(exc)}
+            result["inheritance"] = {"error": sanitize_error_message(str(exc))}
 
     # --- Step 4: Test examples ---
     if validated.include_test_examples and vector_store is not None:
@@ -3195,7 +3206,7 @@ async def handle_explain_entity(args: dict[str, Any]) -> list[TextContent]:
             ]
         except Exception as exc:
             logger.warning(f"Test example extraction failed for '{entity_name}': {exc}")
-            result["test_examples"] = {"error": str(exc)}
+            result["test_examples"] = {"error": sanitize_error_message(str(exc))}
 
     # --- Step 5: API docs ---
     if validated.include_api_docs and entity_file:
@@ -3295,7 +3306,7 @@ async def handle_explain_entity(args: dict[str, Any]) -> list[TextContent]:
                 result["api_docs"] = {"note": "Source file not found"}
         except Exception as exc:
             logger.warning(f"API doc extraction failed for '{entity_name}': {exc}")
-            result["api_docs"] = {"error": str(exc)}
+            result["api_docs"] = {"error": sanitize_error_message(str(exc))}
 
     logger.info(f"Explain entity: '{entity_name}' in {repo_path}")
     return [TextContent(type="text", text=json.dumps(result, indent=2))]
@@ -3380,7 +3391,7 @@ async def handle_impact_analysis(args: dict[str, Any]) -> list[TextContent]:
             logger.warning(
                 f"Reverse call graph extraction failed for '{file_path}': {exc}"
             )
-            result["reverse_call_graph"] = {"error": str(exc)}
+            result["reverse_call_graph"] = {"error": sanitize_error_message(str(exc))}
 
     # --- Section 2: Inheritance dependents ---
     if validated.include_inheritance:
@@ -3417,7 +3428,9 @@ async def handle_impact_analysis(args: dict[str, Any]) -> list[TextContent]:
             result["inheritance_dependents"] = inheritance_dependents
         except Exception as exc:
             logger.warning(f"Inheritance analysis failed for '{file_path}': {exc}")
-            result["inheritance_dependents"] = {"error": str(exc)}
+            result["inheritance_dependents"] = {
+                "error": sanitize_error_message(str(exc))
+            }
 
     # --- Section 3: File-level dependents ---
     if validated.include_dependents:
@@ -3462,7 +3475,7 @@ async def handle_impact_analysis(args: dict[str, Any]) -> list[TextContent]:
                 }
         except Exception as exc:
             logger.warning(f"File dependents analysis failed for '{file_path}': {exc}")
-            result["file_dependents"] = {"error": str(exc)}
+            result["file_dependents"] = {"error": sanitize_error_message(str(exc))}
 
     # --- Section 4: Affected wiki pages ---
     if validated.include_wiki_pages:
@@ -3488,7 +3501,7 @@ async def handle_impact_analysis(args: dict[str, Any]) -> list[TextContent]:
             result["affected_wiki_pages"] = matched_pages
         except Exception as exc:
             logger.warning(f"Wiki page lookup failed for '{file_path}': {exc}")
-            result["affected_wiki_pages"] = {"error": str(exc)}
+            result["affected_wiki_pages"] = {"error": sanitize_error_message(str(exc))}
 
     # --- Impact summary ---
     total_affected_files = len(affected_files)

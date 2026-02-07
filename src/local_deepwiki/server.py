@@ -579,7 +579,7 @@ async def list_tools() -> list[Tool]:
                         "type": "string",
                         "description": "Search query string",
                     },
-                    "max_results": {
+                    "limit": {
                         "type": "integer",
                         "description": "Maximum results to return (default: 20, max: 100)",
                     },
@@ -756,7 +756,7 @@ async def list_tools() -> list[Tool]:
                 "properties": {
                     "repo_path": {
                         "type": "string",
-                        "description": "Path to the indexed repository",
+                        "description": "Path to the repository",
                     },
                     "file_path": {
                         "type": "string",

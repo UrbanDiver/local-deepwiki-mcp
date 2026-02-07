@@ -741,8 +741,8 @@ class SearchWikiArgs(BaseModel):
     """Arguments for the search_wiki tool."""
 
     repo_path: str = Field(description="Path to the indexed repository")
-    query: str = Field(min_length=1, description="Search query string")
-    max_results: int = Field(
+    query: str = Field(min_length=1, max_length=1000, description="Search query string")
+    limit: int = Field(
         default=20, ge=1, le=100, description="Maximum results to return (1-100)"
     )
     entity_types: list[str] | None = Field(
@@ -776,7 +776,9 @@ class FuzzySearchArgs(BaseModel):
 
     repo_path: str = Field(description="Path to the indexed repository")
     query: str = Field(
-        min_length=1, description="Name to search for (function, class, method)"
+        min_length=1,
+        max_length=1000,
+        description="Name to search for (function, class, method)",
     )
     threshold: float = Field(
         default=0.6, ge=0.0, le=1.0, description="Minimum similarity score (0.0-1.0)"
@@ -795,7 +797,9 @@ class ExplainEntityArgs(BaseModel):
 
     repo_path: str = Field(description="Path to the indexed repository")
     entity_name: str = Field(
-        min_length=1, description="Name of function, class, or method to explain"
+        min_length=1,
+        max_length=500,
+        description="Name of function, class, or method to explain",
     )
     include_call_graph: bool = Field(
         default=True, description="Include call graph info (callers and callees)"
@@ -844,7 +848,7 @@ class ImpactAnalysisArgs(BaseModel):
 class GetComplexityMetricsArgs(BaseModel):
     """Arguments for the get_complexity_metrics tool."""
 
-    repo_path: str = Field(description="Path to the indexed repository")
+    repo_path: str = Field(description="Path to the repository")
     file_path: str = Field(
         min_length=1,
         description="File path relative to repo root to analyze",
@@ -877,6 +881,7 @@ class AskAboutDiffArgs(BaseModel):
     )
     question: str = Field(
         min_length=1,
+        max_length=2000,
         description="Question about the code changes (e.g., 'What was changed?' or 'Does this diff introduce bugs?')",
     )
     base_ref: str = Field(

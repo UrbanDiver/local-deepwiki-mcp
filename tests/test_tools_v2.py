@@ -30,17 +30,17 @@ class TestSearchWikiArgs:
     def test_valid_args(self):
         args = SearchWikiArgs(repo_path="/tmp/repo", query="test")
         assert args.query == "test"
-        assert args.max_results == 20
+        assert args.limit == 20
 
     def test_empty_query_rejected(self):
         with pytest.raises(Exception):
             SearchWikiArgs(repo_path="/tmp/repo", query="")
 
-    def test_max_results_bounds(self):
-        args = SearchWikiArgs(repo_path="/tmp/repo", query="test", max_results=100)
-        assert args.max_results == 100
+    def test_limit_bounds(self):
+        args = SearchWikiArgs(repo_path="/tmp/repo", query="test", limit=100)
+        assert args.limit == 100
         with pytest.raises(Exception):
-            SearchWikiArgs(repo_path="/tmp/repo", query="test", max_results=101)
+            SearchWikiArgs(repo_path="/tmp/repo", query="test", limit=101)
 
     def test_entity_types_filter(self):
         args = SearchWikiArgs(
@@ -529,6 +529,14 @@ class TestHandleGetFileContext:
     async def test_invalid_args_missing_file_path(self, mock_access_control):
         result = await handle_get_file_context({"repo_path": "/tmp/repo"})
         assert "Error" in result[0].text
+
+    async def test_path_traversal_rejected(self, tmp_path, mock_access_control):
+        """Path traversal via '../' must be blocked."""
+        result = await handle_get_file_context(
+            {"repo_path": str(tmp_path), "file_path": "../../etc/passwd"}
+        )
+        assert "Error" in result[0].text
+        assert "traversal" in result[0].text.lower()
 
 
 class TestHandleFuzzySearch:
