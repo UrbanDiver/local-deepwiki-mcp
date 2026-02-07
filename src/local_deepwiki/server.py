@@ -16,16 +16,20 @@ from local_deepwiki.handlers import (
     handle_detect_stale_docs,
     handle_export_wiki_html,
     handle_export_wiki_pdf,
+    handle_fuzzy_search,
     handle_get_api_docs,
     handle_get_call_graph,
     handle_get_changelog,
     handle_get_coverage,
     handle_get_diagrams,
+    handle_get_file_context,
     handle_get_glossary,
     handle_get_index_status,
     handle_get_inheritance,
     handle_get_operation_progress,
+    handle_get_project_manifest,
     handle_get_test_examples,
+    handle_get_wiki_stats,
     handle_index_repository,
     handle_list_indexed_repos,
     handle_list_research_checkpoints,
@@ -33,6 +37,7 @@ from local_deepwiki.handlers import (
     handle_read_wiki_structure,
     handle_resume_research,
     handle_search_code,
+    handle_search_wiki,
 )
 from local_deepwiki.logging import get_logger
 
@@ -555,6 +560,113 @@ async def list_tools() -> list[Tool]:
                 "required": ["repo_path"],
             },
         ),
+        Tool(
+            name="search_wiki",
+            description="Full-text search across wiki pages and code entities. Searches titles, headings, code terms, descriptions, and keywords. Returns ranked matches.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "repo_path": {
+                        "type": "string",
+                        "description": "Path to the indexed repository",
+                    },
+                    "query": {
+                        "type": "string",
+                        "description": "Search query string",
+                    },
+                    "max_results": {
+                        "type": "integer",
+                        "description": "Maximum results to return (default: 20, max: 100)",
+                    },
+                    "entity_types": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Filter by type: 'page', 'function', 'class', 'method'",
+                    },
+                },
+                "required": ["repo_path", "query"],
+            },
+        ),
+        Tool(
+            name="get_project_manifest",
+            description="Get parsed project metadata from package manifest files (pyproject.toml, package.json, Cargo.toml, go.mod, etc.). Returns name, version, dependencies, scripts, tech stack summary.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "repo_path": {
+                        "type": "string",
+                        "description": "Path to the repository",
+                    },
+                    "use_cache": {
+                        "type": "boolean",
+                        "description": "Use cached manifest if available (default: true)",
+                    },
+                },
+                "required": ["repo_path"],
+            },
+        ),
+        Tool(
+            name="get_file_context",
+            description="Get rich context for a source file: imports, callers (who uses this file), related files, and type definitions used. Helps understand a file's role in the codebase.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "repo_path": {
+                        "type": "string",
+                        "description": "Path to the indexed repository",
+                    },
+                    "file_path": {
+                        "type": "string",
+                        "description": "File path relative to repo root (e.g., 'src/local_deepwiki/server.py')",
+                    },
+                },
+                "required": ["repo_path", "file_path"],
+            },
+        ),
+        Tool(
+            name="fuzzy_search",
+            description="Fuzzy name matching for functions, classes, and methods using Levenshtein distance. Returns 'Did you mean?' suggestions, file locations, and similarity scores. Great for finding entities when you don't know the exact name.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "repo_path": {
+                        "type": "string",
+                        "description": "Path to the indexed repository",
+                    },
+                    "query": {
+                        "type": "string",
+                        "description": "Name to search for (function, class, method)",
+                    },
+                    "threshold": {
+                        "type": "number",
+                        "description": "Minimum similarity score 0.0-1.0 (default: 0.6)",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Maximum results to return (default: 10, max: 50)",
+                    },
+                    "entity_type": {
+                        "type": "string",
+                        "description": "Filter: 'function', 'class', 'method', or 'module'",
+                    },
+                },
+                "required": ["repo_path", "query"],
+            },
+        ),
+        Tool(
+            name="get_wiki_stats",
+            description="Get a wiki health dashboard with index stats, page counts, search index size, coverage data, and wiki status - all in a single call.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "repo_path": {
+                        "type": "string",
+                        "description": "Path to the indexed repository",
+                    },
+                },
+                "required": ["repo_path"],
+            },
+        ),
     ]
 
 
@@ -583,6 +695,11 @@ TOOL_HANDLERS: dict[str, ToolHandler] = {
     "get_api_docs": handle_get_api_docs,
     "list_indexed_repos": handle_list_indexed_repos,
     "get_index_status": handle_get_index_status,
+    "search_wiki": handle_search_wiki,
+    "get_project_manifest": handle_get_project_manifest,
+    "get_file_context": handle_get_file_context,
+    "fuzzy_search": handle_fuzzy_search,
+    "get_wiki_stats": handle_get_wiki_stats,
 }
 
 # Tools that need server context for progress streaming

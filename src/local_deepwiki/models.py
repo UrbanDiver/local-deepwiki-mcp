@@ -735,3 +735,62 @@ class GetIndexStatusArgs(BaseModel):
     """Arguments for the get_index_status tool."""
 
     repo_path: str = Field(description="Path to the indexed repository")
+
+
+class SearchWikiArgs(BaseModel):
+    """Arguments for the search_wiki tool."""
+
+    repo_path: str = Field(description="Path to the indexed repository")
+    query: str = Field(min_length=1, description="Search query string")
+    max_results: int = Field(
+        default=20, ge=1, le=100, description="Maximum results to return (1-100)"
+    )
+    entity_types: list[str] | None = Field(
+        default=None,
+        description="Optional filter by entity type: 'function', 'class', 'method', or 'page'",
+    )
+
+
+class GetProjectManifestArgs(BaseModel):
+    """Arguments for the get_project_manifest tool."""
+
+    repo_path: str = Field(description="Path to the repository")
+    use_cache: bool = Field(
+        default=True,
+        description="Use cached manifest if available and valid (default: true)",
+    )
+
+
+class GetFileContextArgs(BaseModel):
+    """Arguments for the get_file_context tool."""
+
+    repo_path: str = Field(description="Path to the indexed repository")
+    file_path: str = Field(
+        min_length=1,
+        description="File path relative to repo root (e.g., 'src/local_deepwiki/server.py')",
+    )
+
+
+class FuzzySearchArgs(BaseModel):
+    """Arguments for the fuzzy_search tool."""
+
+    repo_path: str = Field(description="Path to the indexed repository")
+    query: str = Field(
+        min_length=1, description="Name to search for (function, class, method)"
+    )
+    threshold: float = Field(
+        default=0.6, ge=0.0, le=1.0, description="Minimum similarity score (0.0-1.0)"
+    )
+    limit: int = Field(
+        default=10, ge=1, le=50, description="Maximum results to return (1-50)"
+    )
+    entity_type: str | None = Field(
+        default=None,
+        description="Optional filter: 'function', 'class', 'method', or 'module'",
+    )
+
+
+class GetWikiStatsArgs(BaseModel):
+    """Arguments for the get_wiki_stats tool."""
+
+    repo_path: str = Field(description="Path to the indexed repository")

@@ -38,15 +38,19 @@ from local_deepwiki.models import (
     DetectStaleDocsArgs,
     ExportWikiHtmlArgs,
     ExportWikiPdfArgs,
+    FuzzySearchArgs,
     GetApiDocsArgs,
     GetCallGraphArgs,
     GetChangelogArgs,
     GetCoverageArgs,
     GetDiagramsArgs,
+    GetFileContextArgs,
     GetGlossaryArgs,
     GetIndexStatusArgs,
     GetInheritanceArgs,
+    GetProjectManifestArgs,
     GetTestExamplesArgs,
+    GetWikiStatsArgs,
     IndexingProgress,
     IndexingProgressType,
     IndexRepositoryArgs,
@@ -57,6 +61,7 @@ from local_deepwiki.models import (
     ResearchCheckpoint,
     ResumeResearchArgs,
     SearchCodeArgs,
+    SearchWikiArgs,
 )
 
 from local_deepwiki.progress import (
@@ -2415,6 +2420,448 @@ async def handle_get_index_status(args: dict[str, Any]) -> list[TextContent]:
         f"Index status: {index_status.total_files} files, {index_status.total_chunks} chunks for {repo_path}"
     )
     return [TextContent(type="text", text=json.dumps(result, indent=2))]
+
+
+@handle_tool_errors
+async def handle_search_wiki(args: dict[str, Any]) -> list[TextContent]:
+    """Handle search_wiki tool call.
+
+    Searches across wiki pages and code entities using the pre-built search.json index.
+    """
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_READ)
+
+    try:
+        validated = SearchWikiArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+    query = validated.query.lower()
+    max_results = validated.max_results
+    entity_types = validated.entity_types
+
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    _index_status, wiki_path, _config = _load_index_status(repo_path)
+
+    search_index_path = wiki_path / "search.json"
+    if not search_index_path.exists():
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(
+                    {
+                        "status": "error",
+                        "error": "Search index not found. Re-index the repository to generate it.",
+                    },
+                    indent=2,
+                ),
+            )
+        ]
+
+    search_data = json.loads(search_index_path.read_text())
+    pages = search_data.get("pages", [])
+    entities = search_data.get("entities", [])
+
+    matches: list[dict] = []
+
+    # Search pages
+    if entity_types is None or "page" in entity_types:
+        for page in pages:
+            score = 0.0
+            title = (page.get("title") or "").lower()
+            if query in title:
+                score = 1.0
+            elif any(query in h.lower() for h in page.get("headings", [])):
+                score = 0.8
+            elif any(query in t.lower() for t in page.get("terms", [])):
+                score = 0.6
+            elif query in (page.get("snippet") or "").lower():
+                score = 0.4
+
+            if score > 0:
+                matches.append(
+                    {
+                        "type": "page",
+                        "title": page.get("title"),
+                        "path": page.get("path"),
+                        "snippet": page.get("snippet", ""),
+                        "score": score,
+                    }
+                )
+
+    # Search entities
+    allowed_entity_types = None
+    if entity_types is not None:
+        allowed_entity_types = [t for t in entity_types if t != "page"]
+
+    if entity_types is None or allowed_entity_types:
+        for entity in entities:
+            if (
+                allowed_entity_types
+                and entity.get("entity_type") not in allowed_entity_types
+            ):
+                continue
+
+            score = 0.0
+            name = (entity.get("name") or "").lower()
+            display_name = (entity.get("display_name") or "").lower()
+            description = (entity.get("description") or "").lower()
+            keywords = [k.lower() for k in entity.get("keywords", [])]
+
+            if query == name or query == display_name:
+                score = 1.0
+            elif query in name or query in display_name:
+                score = 0.85
+            elif query in description:
+                score = 0.6
+            elif any(query in k for k in keywords):
+                score = 0.5
+
+            if score > 0:
+                matches.append(
+                    {
+                        "type": "entity",
+                        "entity_type": entity.get("entity_type"),
+                        "name": entity.get("display_name"),
+                        "file": entity.get("file"),
+                        "signature": entity.get("signature", ""),
+                        "description": entity.get("description", ""),
+                        "score": score,
+                    }
+                )
+
+    # Sort by score descending, then limit
+    matches.sort(key=lambda m: m["score"], reverse=True)
+    matches = matches[:max_results]
+
+    result = {
+        "status": "success",
+        "query": validated.query,
+        "total_matches": len(matches),
+        "matches": matches,
+    }
+
+    logger.info(
+        f"Wiki search: {len(matches)} results for '{validated.query}' in {repo_path}"
+    )
+    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+
+
+@handle_tool_errors
+async def handle_get_project_manifest(args: dict[str, Any]) -> list[TextContent]:
+    """Handle get_project_manifest tool call.
+
+    Returns parsed project metadata from package manifest files
+    (pyproject.toml, package.json, Cargo.toml, etc.).
+    """
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_READ)
+
+    try:
+        validated = GetProjectManifestArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    from local_deepwiki.generators.manifest import get_cached_manifest, parse_manifest
+
+    if validated.use_cache:
+        manifest = get_cached_manifest(repo_path)
+    else:
+        manifest = parse_manifest(repo_path)
+
+    if not manifest.has_data():
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(
+                    {
+                        "status": "success",
+                        "message": "No recognized package manifest files found in repository.",
+                        "manifest": {},
+                    },
+                    indent=2,
+                ),
+            )
+        ]
+
+    manifest_dict = {
+        "name": manifest.name,
+        "version": manifest.version,
+        "description": manifest.description,
+        "language": manifest.language,
+        "language_version": manifest.language_version,
+        "repository": manifest.repository,
+        "license": manifest.license,
+        "authors": manifest.authors,
+        "manifest_files": manifest.manifest_files,
+        "dependencies": manifest.dependencies,
+        "dev_dependencies": manifest.dev_dependencies,
+        "entry_points": manifest.entry_points,
+        "scripts": manifest.scripts,
+        "tech_stack_summary": manifest.get_tech_stack_summary(),
+    }
+
+    result = {
+        "status": "success",
+        "manifest": manifest_dict,
+    }
+
+    logger.info(f"Project manifest: {manifest.name or 'unknown'} for {repo_path}")
+    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+
+
+@handle_tool_errors
+async def handle_get_file_context(args: dict[str, Any]) -> list[TextContent]:
+    """Handle get_file_context tool call.
+
+    Returns imports, callers, related files, and type definitions for a source file.
+    """
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_READ)
+
+    try:
+        validated = GetFileContextArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+    file_path = validated.file_path
+
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    full_file_path = repo_path / file_path
+    if not full_file_path.exists():
+        raise path_not_found_error(file_path, "file")
+
+    index_status, _wiki_path, config = _load_index_status(repo_path)
+
+    from local_deepwiki.generators.context_builder import build_file_context
+
+    embedding_provider = get_embedding_provider(config.embedding)
+    vector_store = VectorStore(config.get_vector_db_path(repo_path), embedding_provider)
+
+    # Get chunks for the file
+    chunks = await vector_store.get_chunks_by_file(file_path)
+
+    if not chunks:
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(
+                    {
+                        "status": "success",
+                        "message": f"No indexed chunks found for '{file_path}'. The file may not have been indexed.",
+                        "context": {"file_path": file_path},
+                    },
+                    indent=2,
+                ),
+            )
+        ]
+
+    context = await build_file_context(
+        file_path=file_path,
+        chunks=chunks,
+        repo_path=repo_path,
+        vector_store=vector_store,
+    )
+
+    result = {
+        "status": "success",
+        "context": {
+            "file_path": context.file_path,
+            "imports": context.imports,
+            "imported_modules": context.imported_modules,
+            "callers": context.callers,
+            "related_files": context.related_files,
+            "type_definitions": context.type_definitions,
+        },
+    }
+
+    logger.info(
+        f"File context: {len(context.imports)} imports, {len(context.callers)} callers for {file_path}"
+    )
+    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+
+
+@handle_tool_errors
+async def handle_fuzzy_search(args: dict[str, Any]) -> list[TextContent]:
+    """Handle fuzzy_search tool call.
+
+    Provides Levenshtein-based name matching with 'Did you mean?' suggestions.
+    """
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_READ)
+
+    try:
+        validated = FuzzySearchArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    _index_status, _wiki_path, config = _load_index_status(repo_path)
+
+    from local_deepwiki.core.fuzzy_search import FuzzySearchHelper
+    from local_deepwiki.models import ChunkType
+
+    embedding_provider = get_embedding_provider(config.embedding)
+    vector_store = VectorStore(config.get_vector_db_path(repo_path), embedding_provider)
+
+    helper = FuzzySearchHelper(vector_store)
+    await helper.build_name_index()
+
+    # Map entity_type string to ChunkType
+    chunk_type_filter = None
+    if validated.entity_type:
+        type_map = {
+            "function": ChunkType.FUNCTION,
+            "class": ChunkType.CLASS,
+            "method": ChunkType.METHOD,
+            "module": ChunkType.MODULE,
+        }
+        chunk_type_filter = type_map.get(validated.entity_type)
+
+    matches = helper.find_similar_names(
+        query=validated.query,
+        threshold=validated.threshold,
+        limit=validated.limit,
+        chunk_type=chunk_type_filter,
+    )
+
+    # Get file location info for each match
+    match_results = []
+    for name, score in matches:
+        entries = helper._name_to_entries.get(name, [])
+        locations = [
+            {"file_path": e.file_path, "type": e.chunk_type.value} for e in entries[:3]
+        ]
+        match_results.append(
+            {
+                "name": name,
+                "score": round(score, 4),
+                "locations": locations,
+            }
+        )
+
+    # Also get file suggestions
+    file_suggestions = helper.get_file_suggestions(validated.query, limit=3)
+
+    result = {
+        "status": "success",
+        "query": validated.query,
+        "total_matches": len(match_results),
+        "matches": match_results,
+        "file_suggestions": file_suggestions,
+        "index_stats": helper.get_stats(),
+    }
+
+    logger.info(
+        f"Fuzzy search: {len(match_results)} matches for '{validated.query}' in {repo_path}"
+    )
+    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+
+
+@handle_tool_errors
+async def handle_get_wiki_stats(args: dict[str, Any]) -> list[TextContent]:
+    """Handle get_wiki_stats tool call.
+
+    Returns a single-call wiki health dashboard aggregating index status,
+    coverage, staleness, and search index metadata.
+    """
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_READ)
+
+    try:
+        validated = GetWikiStatsArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    repo_path = Path(validated.repo_path).resolve()
+
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    index_status, wiki_path, _config = _load_index_status(repo_path)
+
+    from datetime import datetime
+
+    stats: dict[str, Any] = {
+        "status": "success",
+        "repo_path": index_status.repo_path,
+        "wiki_path": str(wiki_path),
+    }
+
+    # Index stats
+    stats["index"] = {
+        "indexed_at": index_status.indexed_at,
+        "indexed_at_human": datetime.fromtimestamp(index_status.indexed_at).isoformat(),
+        "total_files": index_status.total_files,
+        "total_chunks": index_status.total_chunks,
+        "languages": index_status.languages,
+        "schema_version": index_status.schema_version,
+    }
+
+    # Wiki page stats from toc.json
+    toc_path = wiki_path / "toc.json"
+    if toc_path.exists():
+        toc_data = json.loads(toc_path.read_text())
+        pages = toc_data if isinstance(toc_data, list) else toc_data.get("pages", [])
+        stats["wiki_pages"] = {
+            "total_pages": len(pages),
+        }
+    else:
+        stats["wiki_pages"] = {"total_pages": 0}
+
+    # Search index stats from search.json
+    search_path = wiki_path / "search.json"
+    if search_path.exists():
+        search_data = json.loads(search_path.read_text())
+        meta = search_data.get("meta", {})
+        stats["search_index"] = {
+            "total_page_entries": meta.get(
+                "total_pages", len(search_data.get("pages", []))
+            ),
+            "total_entity_entries": meta.get(
+                "total_entities", len(search_data.get("entities", []))
+            ),
+        }
+    else:
+        stats["search_index"] = {"available": False}
+
+    # Wiki status from wiki_status.json
+    wiki_status_path = wiki_path / "wiki_status.json"
+    if wiki_status_path.exists():
+        wiki_status_data = json.loads(wiki_status_path.read_text())
+        stats["wiki_status"] = wiki_status_data
+
+    # Coverage from coverage.json
+    coverage_path = wiki_path / "coverage.json"
+    if coverage_path.exists():
+        coverage_data = json.loads(coverage_path.read_text())
+        stats["coverage"] = coverage_data
+
+    # Manifest cache info
+    manifest_path = wiki_path / "manifest_cache.json"
+    stats["manifest_cached"] = manifest_path.exists()
+
+    # Count wiki markdown files
+    wiki_files = list(wiki_path.glob("**/*.md"))
+    stats["total_wiki_files"] = len(wiki_files)
+
+    logger.info(f"Wiki stats for {repo_path}")
+    return [TextContent(type="text", text=json.dumps(stats, indent=2))]
 
 
 class ProgressNotifier:
