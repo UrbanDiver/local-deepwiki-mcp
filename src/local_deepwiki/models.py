@@ -740,7 +740,9 @@ class GetIndexStatusArgs(BaseModel):
 class SearchWikiArgs(BaseModel):
     """Arguments for the search_wiki tool."""
 
-    repo_path: str = Field(description="Path to the indexed repository")
+    repo_path: str = Field(
+        max_length=4096, description="Path to the indexed repository"
+    )
     query: str = Field(min_length=1, max_length=1000, description="Search query string")
     limit: int = Field(
         default=20, ge=1, le=100, description="Maximum results to return (1-100)"
@@ -754,7 +756,7 @@ class SearchWikiArgs(BaseModel):
 class GetProjectManifestArgs(BaseModel):
     """Arguments for the get_project_manifest tool."""
 
-    repo_path: str = Field(description="Path to the repository")
+    repo_path: str = Field(max_length=4096, description="Path to the repository")
     use_cache: bool = Field(
         default=True,
         description="Use cached manifest if available and valid (default: true)",
@@ -764,7 +766,9 @@ class GetProjectManifestArgs(BaseModel):
 class GetFileContextArgs(BaseModel):
     """Arguments for the get_file_context tool."""
 
-    repo_path: str = Field(description="Path to the indexed repository")
+    repo_path: str = Field(
+        max_length=4096, description="Path to the indexed repository"
+    )
     file_path: str = Field(
         min_length=1,
         description="File path relative to repo root (e.g., 'src/local_deepwiki/server.py')",
@@ -774,7 +778,9 @@ class GetFileContextArgs(BaseModel):
 class FuzzySearchArgs(BaseModel):
     """Arguments for the fuzzy_search tool."""
 
-    repo_path: str = Field(description="Path to the indexed repository")
+    repo_path: str = Field(
+        max_length=4096, description="Path to the indexed repository"
+    )
     query: str = Field(
         min_length=1,
         max_length=1000,
@@ -795,7 +801,9 @@ class FuzzySearchArgs(BaseModel):
 class ExplainEntityArgs(BaseModel):
     """Arguments for the explain_entity tool."""
 
-    repo_path: str = Field(description="Path to the indexed repository")
+    repo_path: str = Field(
+        max_length=4096, description="Path to the indexed repository"
+    )
     entity_name: str = Field(
         min_length=1,
         max_length=500,
@@ -821,7 +829,9 @@ class ExplainEntityArgs(BaseModel):
 class ImpactAnalysisArgs(BaseModel):
     """Arguments for the impact_analysis tool."""
 
-    repo_path: str = Field(description="Path to the indexed repository")
+    repo_path: str = Field(
+        max_length=4096, description="Path to the indexed repository"
+    )
     file_path: str = Field(
         min_length=1,
         description="File path relative to repo root to analyze impact for",
@@ -848,7 +858,7 @@ class ImpactAnalysisArgs(BaseModel):
 class GetComplexityMetricsArgs(BaseModel):
     """Arguments for the get_complexity_metrics tool."""
 
-    repo_path: str = Field(description="Path to the repository")
+    repo_path: str = Field(max_length=4096, description="Path to the repository")
     file_path: str = Field(
         min_length=1,
         description="File path relative to repo root to analyze",
@@ -858,13 +868,17 @@ class GetComplexityMetricsArgs(BaseModel):
 class AnalyzeDiffArgs(BaseModel):
     """Arguments for the analyze_diff tool."""
 
-    repo_path: str = Field(description="Path to the repository (must be a git repo)")
+    repo_path: str = Field(
+        max_length=4096, description="Path to the repository (must be a git repo)"
+    )
     base_ref: str = Field(
         default="HEAD~1",
+        max_length=256,
         description="Git ref to diff from (default: HEAD~1). Can be a commit SHA, branch, or tag.",
     )
     head_ref: str = Field(
         default="HEAD",
+        max_length=256,
         description="Git ref to diff to (default: HEAD). Can be a commit SHA, branch, or tag.",
     )
     include_content: bool = Field(
@@ -877,7 +891,8 @@ class AskAboutDiffArgs(BaseModel):
     """Arguments for the ask_about_diff tool."""
 
     repo_path: str = Field(
-        description="Path to the indexed repository (must be a git repo)"
+        max_length=4096,
+        description="Path to the indexed repository (must be a git repo)",
     )
     question: str = Field(
         min_length=1,
@@ -886,10 +901,12 @@ class AskAboutDiffArgs(BaseModel):
     )
     base_ref: str = Field(
         default="HEAD~1",
+        max_length=256,
         description="Git ref to diff from (default: HEAD~1)",
     )
     head_ref: str = Field(
         default="HEAD",
+        max_length=256,
         description="Git ref to diff to (default: HEAD)",
     )
     max_context: int = Field(
@@ -903,4 +920,6 @@ class AskAboutDiffArgs(BaseModel):
 class GetWikiStatsArgs(BaseModel):
     """Arguments for the get_wiki_stats tool."""
 
-    repo_path: str = Field(description="Path to the indexed repository")
+    repo_path: str = Field(
+        max_length=4096, description="Path to the indexed repository"
+    )

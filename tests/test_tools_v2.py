@@ -631,6 +631,8 @@ class TestHandleFuzzySearch:
         data = json.loads(result[0].text)
         assert data["status"] == "success"
         assert data["total_matches"] == 0
+        assert "hint" in data
+        assert "lower the threshold" in data["hint"]
 
     async def test_fuzzy_search_with_entity_type(self, tmp_path, mock_access_control):
         index_status = _make_index_status(str(tmp_path))

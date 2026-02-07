@@ -2774,7 +2774,14 @@ async def handle_fuzzy_search(args: dict[str, Any]) -> list[TextContent]:
     # Also get file suggestions
     file_suggestions = helper.get_file_suggestions(validated.query, limit=3)
 
-    result = {
+    hint = None
+    if not match_results:
+        hint = (
+            "No matches found. Try a shorter or less specific query, "
+            "or lower the threshold (e.g. threshold=0.4)."
+        )
+
+    result: dict[str, Any] = {
         "status": "success",
         "query": validated.query,
         "total_matches": len(match_results),
@@ -2782,6 +2789,8 @@ async def handle_fuzzy_search(args: dict[str, Any]) -> list[TextContent]:
         "file_suggestions": file_suggestions,
         "index_stats": helper.get_stats(),
     }
+    if hint:
+        result["hint"] = hint
 
     logger.info(
         f"Fuzzy search: {len(match_results)} matches for '{validated.query}' in {repo_path}"
