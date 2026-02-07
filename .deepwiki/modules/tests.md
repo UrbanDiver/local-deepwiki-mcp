@@ -1,89 +1,131 @@
+# Module: tests
+
 ## Module Purpose
 
-This module contains unit tests designed to ensure the functionality and correctness of various components within a project, particularly those related to generating documentation from source files and managing wiki modules.
+The `tests/` module contains a comprehensive test suite for Local DeepWiki with 3,956 tests across 82 test files, achieving 95% code coverage. Tests use `pytest` with `pytest-asyncio` (auto mode) and mock LLM/embedding providers to avoid external calls.
 
-## Key Classes and Functions
+## Test Organization
 
-### TestGenerateModuleDocs (Class)
-- **Purpose**: Tests for methods involved in generating module documentation.
-- **Methods**:
-  - `mock_llm`: Creates a mock LLM provider.
-  - `test_returns_empty_for_no_files`: Ensures no files return an empty result.
-  - `test_skips_single_file_directories`: Skips directories with only one file.
-  - `test_groups_files_by_directory`: Groups files correctly by directory.
-  - `test_handles_root_level_files`: Handles root level files appropriately.
-  - `test_generates_modules_index`: Tests the generation of a modules index page.
-  - `test_skips_unchanged_pages`: Skips pages that have not changed.
-  - `test_full_rebuild_ignores_cache`: Ensures full rebuilds ignore cache.
-  - `test_filters_chunks_by_directory`: Filters chunks by directory correctly.
-  - `test_skips_directories_without_relevant_chunks`: Skips directories without relevant chunks.
+### Core Tests
 
-### mock_llm (Function)
-- **Purpose**: Creates a mock LLM provider for testing purposes.
-- **Returns**: A mock object with a `generate` method that returns a predefined string.
+| Test File | Tests For | Key Areas |
+|-----------|----------|-----------|
+| `test_parser.py` | `core/parser.py` | Multi-language AST parsing, tree-sitter grammars, error handling |
+| `test_chunker.py` | `core/chunker.py` | Semantic chunking, function/class boundary detection |
+| `test_vectorstore.py` | `core/vectorstore.py` | LanceDB operations, search, pagination, adaptive search |
+| `test_vectorstore_pagination.py` | `core/vectorstore.py` | Cursor-based pagination edge cases |
+| `test_indexer.py` | `core/indexer.py` | Full indexing pipeline, incremental updates, manifest |
+| `test_deep_research.py` | `core/deep_research.py` | Query decomposition, gap analysis, synthesis, checkpointing |
+| `test_llm_cache.py` | `core/llm_cache.py` | LRU cache operations, eviction, TTL |
+| `test_rate_limiter.py` | `core/rate_limiter.py` | Token bucket algorithm, rate limiting |
+| `test_secret_detector.py` | `core/secret_detector.py` | AWS keys, GitHub tokens, SSH keys, PGP, false positives |
+| `test_fuzzy_search.py` | `core/fuzzy_search.py` | Fuzzy matching, "did you mean?" suggestions |
+| `test_index_manager.py` | `core/index_manager.py` | Index status, schema versioning |
+| `test_git_utils.py` | `core/git_utils.py` | Git operations, injection prevention |
+| `test_audit.py` | `core/audit.py` | Audit logging operations |
+| `test_embedding_cache.py` | `providers/embeddings/cache.py` | Embedding caching, cache invalidation |
 
-## How Components Interact
+### Generator Tests
 
-The module uses classes like `TestGenerateModuleDocs` to encapsulate various test cases. Each class contains methods that mock specific components (like the LLM provider) and verify the behavior of functions under different scenarios. For instance, `mock_llm` provides a simulated LLM environment for tests that depend on language model generation.
+| Test File | Tests For | Key Areas |
+|-----------|----------|-----------|
+| `test_diagrams.py` | `generators/diagrams.py` | Mermaid diagram generation (class, sequence, module) |
+| `test_callgraph.py` | `generators/callgraph.py` | Call graph analysis, edge detection |
+| `test_glossary.py` | `generators/glossary.py` | Entity glossary generation |
+| `test_inheritance.py` | `generators/inheritance.py` | Class hierarchy extraction |
+| `test_coverage.py` | `generators/coverage.py` | Documentation coverage metrics |
+| `test_api_docs.py` | `generators/api_docs.py` | API documentation extraction |
+| `test_test_examples.py` | `generators/test_examples.py` | Test example extraction |
+| `test_changelog.py` | `generators/changelog.py` | Git changelog generation |
+| `test_crosslinks.py` | `generators/crosslinks.py` | Wiki cross-referencing |
+| `test_see_also.py` | `generators/see_also.py` | Related page suggestions |
+| `test_source_refs.py` | `generators/source_refs.py` | Source code reference links |
+| `test_stale_detection.py` | `generators/stale_detection.py` | Stale page detection |
+| `test_dependency_graph.py` | `generators/dependency_graph.py` | Import dependency analysis |
+| `test_context_builder.py` | `generators/context_builder.py` | LLM context assembly |
+| `test_manifest.py` | `generators/manifest.py` | File hash manifests |
+| `test_toc.py` | `generators/toc.py` | Table of contents generation |
+| `test_progress_tracker.py` | `generators/progress_tracker.py` | Progress reporting |
+| `test_wiki_status.py` | `generators/wiki_status.py` | Wiki page freshness |
+| `test_wiki_modules_coverage.py` | `generators/wiki_modules.py` | Module doc generation |
+| `test_wiki_pages_coverage.py` | `generators/wiki_pages.py` | Page generation |
+| `test_wiki_files_coverage.py` | `generators/wiki_files.py` | File doc generation |
+| `test_wiki_coverage.py` | `generators/wiki.py` | Overall wiki generation |
 
-## Usage Examples
+### Provider Tests
 
-### Example of Mocking an LLM Provider
+| Test File | Tests For | Key Areas |
+|-----------|----------|-----------|
+| `test_base_provider.py` | `providers/base.py` | Abstract base class contracts |
+| `test_providers.py` | Provider integration | Provider factory and selection |
+| `test_provider_factories.py` | Provider creation | Factory pattern tests |
+| `test_provider_errors.py` | Provider error handling | Error types and recovery |
+| `test_anthropic_provider.py` | `providers/llm/anthropic.py` | Anthropic API integration |
+| `test_openai_provider.py` | `providers/llm/openai.py` | OpenAI API integration |
+| `test_llm_providers.py` | LLM provider suite | Cross-provider compatibility |
+| `test_ollama_health.py` | `providers/llm/ollama.py` | Ollama connection health |
+| `test_local_embedding_provider.py` | `providers/embeddings/local.py` | sentence-transformers |
+| `test_openai_embeddings.py` | `providers/embeddings/openai.py` | OpenAI embedding API |
+| `test_openai_embedding_provider.py` | `providers/embeddings/openai.py` | Provider configuration |
+| `test_credentials.py` | `providers/credentials.py` | API key management |
 
-```python
-# Import necessary modules
-from unittest.mock import AsyncMock, MagicMock
+### Server & Handler Tests
 
-# Instantiate the test class
-test_instance = TestGenerateModuleDocs()
+| Test File | Tests For | Key Areas |
+|-----------|----------|-----------|
+| `test_server.py` | `server.py` | MCP server setup, tool registration |
+| `test_server_handlers.py` | `handlers.py` | Handler dispatch |
+| `test_handlers_coverage.py` | `handlers.py` | Comprehensive handler testing |
+| `test_server_validation.py` | `validation.py` | Input validation |
+| `test_resource_limits.py` | `validation.py` | CWE-400 resource limits |
+| `test_new_tools.py` | New MCP tools | Generator tool handlers |
 
-# Call the method to get a mock LLM provider
-mock_llm_provider = test_instance.mock_llm()
+### Security Tests
 
-# Use the mock LLM provider in tests
-await mock_llm_provider.generate("Some query")
-```
+| Test File | Tests For | Key Areas |
+|-----------|----------|-----------|
+| `test_access_control.py` | `security/access_control.py` | RBAC roles and permissions |
+| `test_role_config.py` | `security/role_config.py` | Role configuration |
+| `test_repository_access.py` | `security/repository_access.py` | Allowlist/denylist |
 
-### Example of Testing Module Documentation Generation
+### Export & UI Tests
 
-```python
-# Import necessary modules and classes
-from local_deepwiki.generators.wiki_modules import generate_module_docs
+| Test File | Tests For | Key Areas |
+|-----------|----------|-----------|
+| `test_html_export.py` | `export/html.py` | HTML generation, navigation |
+| `test_pdf_export.py` | `export/pdf.py` | PDF generation, WeasyPrint |
+| `test_streaming_export.py` | `export/streaming.py` | Streaming export |
+| `test_export_init.py` | `export/__init__.py` | Export module initialization |
+| `test_web.py` | `web/app.py` | Flask routes, chat, research UI |
 
-# Create an instance of TestGenerateModuleDocs
-test_instance = TestGenerateModuleDocs()
+### Other Tests
 
-# Prepare mock objects for dependencies
-mock_llm = test_instance.mock_llm()
-mock_vector_store = MagicMock()
-mock_status_manager = MagicMock()
+| Test File | Tests For | Key Areas |
+|-----------|----------|-----------|
+| `test_config.py` | `config.py` | Configuration loading, validation, overrides |
+| `test_models.py` | `models.py` | Data model serialization |
+| `test_events.py` | `events.py` | Event emission, handlers, priorities |
+| `test_errors.py` | `errors.py` | Error hierarchy, messages |
+| `test_prompts.py` | `prompts.py` | Prompt template rendering |
+| `test_watcher.py` | `watcher.py` | File watching, debouncing |
+| `test_plugins.py` | `plugins/` | Plugin loading, registry |
+| `test_plugin_registry.py` | `plugins/registry.py` | Plugin discovery |
+| `test_examples_plugin.py` | `generators/examples_plugin.py` | Examples plugin |
+| `test_search.py` | `generators/search.py` | Search index |
+| `test_progress.py` | `progress.py` | Progress reporting |
+| `test_type_annotations.py` | Type checking | Type annotation correctness |
+| `test_logging_coverage.py` | `logging.py` | Logging configuration |
+| `test_config_cli.py` | `cli/config_cli.py` | Config CLI commands |
+| `test_interactive_search.py` | `cli/interactive_search.py` | Interactive search UI |
+| `test_cli_progress.py` | `cli_progress.py` | CLI progress bars |
+| `test_integration_pipeline.py` | End-to-end | Full indexing + query pipeline |
+| `test_incremental_wiki.py` | Incremental | Incremental wiki regeneration |
+| `test_retry.py` | Retry logic | Exponential backoff |
 
-# Call the method to test module documentation generation
-await test_instance.test_generates_modules_index(mock_llm, mock_vector_store, mock_status_manager, tmp_path)
-```
+## Testing Patterns
 
-## Dependencies
-
-- **Imports from `unittest.mock`**: Used for creating mocks of objects and functions.
-- **Imports from `local_deepwiki`**: Includes modules like `generators`, `models`, and `providers`.
-- **Imports from other standard libraries**: Such as `time`, `pathlib`, and `pytest`.
-
-This module relies on the structure and functionality provided by these dependencies to perform its tests effectively.
-
-## Relevant Source Files
-
-The following source files were used to generate this documentation:
-
-- `tests/test_parser.py:24-123`
-- `tests/test_provider_factories.py:21-99`
-- `tests/test_retry.py:8-144`
-- `tests/test_ollama_health.py:16-19`
-- `tests/test_chunker.py:13-428`
-- `tests/test_changelog.py:18-96`
-- `tests/test_server_handlers.py:15-75`
-- `tests/test_coverage.py:13-50`
-- `tests/test_vectorstore.py:9-28`
-- `tests/test_wiki_coverage.py:50-120`
-
-
-*Showing 10 of 48 source files.*
+- **Mocking**: LLM and embedding providers are mocked to avoid external API calls. `AsyncMock` is used extensively for async operations.
+- **pytest-asyncio**: All async tests run automatically in auto mode (no `@pytest.mark.asyncio` needed).
+- **Temporary directories**: Tests use `tmp_path` fixtures for file system isolation.
+- **Self-contained**: Each test file is self-contained with its own fixtures -- no shared `conftest.py`.
+- **Coverage target**: 80% minimum per module, 95% achieved overall.

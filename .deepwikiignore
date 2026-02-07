@@ -1,0 +1,28 @@
+# Build artifacts
+coverage_html/
+coverage_openai_embeddings/
+htmlcov/
+
+# Claude-flow agent configs (not project source)
+agents/
+
+# Generated wiki (avoid self-referencing)
+.deepwiki/
+
+# IDE and tools
+.claude-flow/
+.swarm/
+.git/
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.egg-info/
+dist/
+build/
+.mypy_cache/
+.pytest_cache/
+
+# Environment
+.venv/
+.env

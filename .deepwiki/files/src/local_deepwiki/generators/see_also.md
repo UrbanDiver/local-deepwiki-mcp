@@ -1,62 +1,132 @@
-# see_also.py
+# File Overview
 
-## File Overview
+This file, `src/local_deepwiki/generators/see_also.py`, provides functionality for analyzing code import relationships and generating "See Also" sections in wiki documentation. It processes code chunks to build a graph of file dependencies and maps those to wiki pages to suggest related documentation.
 
-This module provides functionality for analyzing relationships between code files and generating "See Also" sections for wiki pages. It builds mappings between source files and their corresponding wiki pages, then analyzes code dependencies to suggest related pages.
+The module depends on:
+- `re` for regular expressions
+- `collections.defaultdict` for mapping data structures
+- `dataclasses.dataclass` for defining data models
+- `pathlib.Path` for path manipulation
+- `local_deepwiki.models` for `ChunkType`, `CodeChunk`, and `WikiPage` types
 
-## Classes
+It is used by:
+- `RelationshipAnalyzer` in `test_see_also`
+- `build_file_to_wiki_map` in `source_refs`, `test_see_also`, and `test_source_refs`
 
-### FileRelationships
+Related files in the project:
+- `src/local_deepwiki/cli/__init__.py`
+- `src/local_deepwiki/core/__init__.py`
+- `src/local_deepwiki/generators/source_refs.py`
+- `src/local_deepwiki/generators/wiki.py`
+- `tests/test_plugins.py`
 
-A data class that stores relationship information for files, including imports and other file dependencies.
+# Classes
 
-### RelationshipAnalyzer
+## FileRelationships
 
-Analyzes code chunks to identify relationships between files, such as import statements and cross-references.
+**Purpose**: Represents the relationships of a single file in terms of imports and dependencies.
 
-## Functions
+**Fields**:
+- `file_path`: Path to the source file.
+- `imports`: Set of files this file imports.
+- `imported_by`: Set of files that import this file.
+- `shared_deps_with`: Dictionary mapping file paths to the count of shared dependencies.
 
-### build_file_to_wiki_map
+## RelationshipAnalyzer
 
-```python
-def build_file_to_wiki_map(pages: list[WikiPage]) -> dict[str, str]:
-```
+**Purpose**: Analyzes code chunks to build a graph of file import relationships.
 
+**Methods**:
+
+### `__init__`
+Initializes an empty relationship analyzer.
+
+**Returns**: None
+
+### `analyze_chunks`
+Analyzes import chunks to build a relationship graph.
+
+**Parameters**:
+- `chunks`: List of `CodeChunk` objects (should include `IMPORT` chunks).
+
+**Returns**: None
+
+### `_parse_import_line`
+Parses a Python import line to extract the imported module.
+
+**Parameters**:
+- `line`: Import statement line.
+
+**Returns**: Module path that could map to a file, or `None`.
+
+### `_module_to_file_path`
+Tries to find a file path that matches a module name.
+
+**Parameters**:
+- `module`: Module name like `local_deepwiki.core.chunker`.
+
+**Returns**: Matching file path or `None`.
+
+### `get_relationships`
+Gets all relationships for a file.
+
+**Parameters**:
+- `file_path`: Path to the source file.
+
+**Returns**: `FileRelationships` object with all relationship data.
+
+### `_module_matches_file`
+Checks if a module name refers to a file path.
+
+**Parameters**:
+- `module`: Module name like `local_deepwiki.core.chunker`.
+- `file_path`: File path like `src/local_deepwiki/core/chunker.py`.
+
+**Returns**: `True` if they match.
+
+### `get_all_known_files`
+Gets all known file paths.
+
+**Returns**: Set of file paths.
+
+# Functions
+
+## `build_file_to_wiki_map`
 Builds a mapping from source file paths to wiki page paths.
 
-**Parameters:**
-- `pages`: List of [WikiPage](../models.md) objects
+**Parameters**:
+- `pages`: List of `WikiPage` objects.
 
-**Returns:**
-- Dictionary mapping source file path to wiki page path
+**Returns**: Dictionary mapping source file path to wiki page path.
 
-The function processes wiki pages with paths starting with "files/" and maps them to their corresponding source files by removing the "files/" prefix and changing the file extension.
+## `generate_see_also_section`
+Generates a See Also section for a wiki page.
 
-### generate_see_also_section
+**Parameters**:
+- `relationships`: The file relationships (`FileRelationships`).
+- `file_to_wiki`: Mapping of source files to wiki paths.
+- `current_wiki_path`: Path of the current wiki page.
+- `max_items`: Maximum number of items to include.
 
-Generates a "See Also" section for wiki pages based on file relationships.
+**Returns**: Markdown string for See Also section, or `None` if no related pages.
 
-### _relative_path
+## `_relative_path`
+Calculates relative path between two wiki pages.
 
-A utility function for calculating relative paths between files.
+**Parameters**:
+- `from_path`: Path of the source page.
+- `to_path`: Path of the target page.
 
-### add_see_also_sections
+**Returns**: Relative path from source to target.
 
-Adds "See Also" sections to existing wiki pages based on analyzed relationships.
+## `add_see_also_sections`
+Adds See Also sections to wiki pages.
 
-## Related Components
+**Parameters**:
+- `pages`: List of `WikiPage` objects.
+- `analyzer`: Relationship analyzer with import data.
 
-This module works with:
-
-- **[WikiPage](../models.md)**: The [main](../export/pdf.md) page model used throughout the system
-- **[CodeChunk](../models.md)**: Represents chunks of code with type information
-- **[ChunkType](../models.md)**: Enumeration of different code chunk types
-
-The module uses standard Python libraries including `re` for regular expressions, `collections.defaultdict` for data structures, `dataclasses` for the FileRelationships class, and `pathlib.Path` for file path operations.
-
-## Usage Context
-
-This module is part of the wiki generation pipeline, analyzing code relationships to create cross-references between related wiki pages. It processes the code chunks and wiki pages to identify which files are related through imports or other dependencies, then generates appropriate "See Also" sections to help users navigate between related documentation.
+**Returns**: List of `WikiPage` objects with See Also sections added.
 
 ## API Reference
 
@@ -66,7 +136,7 @@ Relationships for a single file.
 
 
 <details>
-<summary>View Source (lines 16-22) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/see_also.py#L16-L22">GitHub</a></summary>
+<summary>View Source (lines 16-22) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/see_also.py#L16-L22">GitHub</a></summary>
 
 ```python
 class FileRelationships:
@@ -88,7 +158,7 @@ Analyzes import relationships between source files.  This class builds a graph o
 
 
 <details>
-<summary>View Source (lines 25-182) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/see_also.py#L25-L182">GitHub</a></summary>
+<summary>View Source (lines 25-182) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/see_also.py#L25-L182">GitHub</a></summary>
 
 ```python
 class RelationshipAnalyzer:
@@ -107,7 +177,7 @@ Initialize an empty relationship analyzer.
 
 
 <details>
-<summary>View Source (lines 32-39) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/see_also.py#L32-L39">GitHub</a></summary>
+<summary>View Source (lines 32-39) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/see_also.py#L32-L39">GitHub</a></summary>
 
 ```python
 def __init__(self) -> None:
@@ -131,13 +201,13 @@ def analyze_chunks(chunks: list[CodeChunk]) -> None
 Analyze import chunks to build relationship graph.
 
 
-| [Parameter](api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `chunks` | `list[CodeChunk]` | - | List of code chunks (should include IMPORT chunks). |
 
 
 <details>
-<summary>View Source (lines 41-63) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/see_also.py#L41-L63">GitHub</a></summary>
+<summary>View Source (lines 41-63) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/see_also.py#L41-L63">GitHub</a></summary>
 
 ```python
 def analyze_chunks(self, chunks: list[CodeChunk]) -> None:
@@ -176,13 +246,13 @@ def get_relationships(file_path: str) -> FileRelationships
 Get all relationships for a file.
 
 
-| [Parameter](api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `file_path` | `str` | - | Path to the source file. |
 
 
 <details>
-<summary>View Source (lines 121-155) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/see_also.py#L121-L155">GitHub</a></summary>
+<summary>View Source (lines 121-155) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/see_also.py#L121-L155">GitHub</a></summary>
 
 ```python
 def get_relationships(self, file_path: str) -> FileRelationships:
@@ -237,7 +307,7 @@ Get all known file paths.
 
 
 <details>
-<summary>View Source (lines 176-182) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/see_also.py#L176-L182">GitHub</a></summary>
+<summary>View Source (lines 176-182) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/see_also.py#L176-L182">GitHub</a></summary>
 
 ```python
 def get_all_known_files(self) -> set[str]:
@@ -262,7 +332,7 @@ def build_file_to_wiki_map(pages: list[WikiPage]) -> dict[str, str]
 Build a mapping from source file paths to wiki page paths.
 
 
-| [Parameter](api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `pages` | `list[WikiPage]` | - | List of wiki pages. |
 
@@ -271,7 +341,7 @@ Build a mapping from source file paths to wiki page paths.
 
 
 <details>
-<summary>View Source (lines 185-205) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/see_also.py#L185-L205">GitHub</a></summary>
+<summary>View Source (lines 185-205) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/see_also.py#L185-L205">GitHub</a></summary>
 
 ```python
 def build_file_to_wiki_map(pages: list[WikiPage]) -> dict[str, str]:
@@ -308,7 +378,7 @@ def generate_see_also_section(relationships: FileRelationships, file_to_wiki: di
 Generate a See Also section for a wiki page.
 
 
-| [Parameter](api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `relationships` | `FileRelationships` | - | The file relationships. |
 | `file_to_wiki` | `dict[str, str]` | - | Mapping of source files to wiki paths. |
@@ -320,7 +390,7 @@ Generate a See Also section for a wiki page.
 
 
 <details>
-<summary>View Source (lines 208-271) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/see_also.py#L208-L271">GitHub</a></summary>
+<summary>View Source (lines 208-271) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/see_also.py#L208-L271">GitHub</a></summary>
 
 ```python
 def generate_see_also_section(
@@ -400,7 +470,7 @@ def add_see_also_sections(pages: list[WikiPage], analyzer: RelationshipAnalyzer)
 Add See Also sections to wiki pages.
 
 
-| [Parameter](api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `pages` | `list[WikiPage]` | - | List of wiki pages. |
 | `analyzer` | `RelationshipAnalyzer` | - | Relationship analyzer with import data. |
@@ -411,7 +481,7 @@ Add See Also sections to wiki pages.
 
 
 <details>
-<summary>View Source (lines 302-353) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/see_also.py#L302-L353">GitHub</a></summary>
+<summary>View Source (lines 302-353) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/see_also.py#L302-L353">GitHub</a></summary>
 
 ```python
 def add_see_also_sections(
@@ -550,7 +620,7 @@ Functions and methods in this file and their callers:
 
 - **`FileRelationships`**: called by `RelationshipAnalyzer.get_relationships`
 - **`Path`**: called by `RelationshipAnalyzer._module_matches_file`, `_relative_path`, `generate_see_also_section`
-- **[`WikiPage`](../models.md)**: called by `add_see_also_sections`
+- **`WikiPage`**: called by `add_see_also_sections`
 - **`_module_matches_file`**: called by `RelationshipAnalyzer.get_relationships`
 - **`_module_to_file_path`**: called by `RelationshipAnalyzer.get_relationships`
 - **`_parse_import_line`**: called by `RelationshipAnalyzer.analyze_chunks`
@@ -688,19 +758,19 @@ assert relationships.file_path == "src/local_deepwiki/core/indexer.py"
 
 | Entity | Type | Author | Date | Commit |
 |--------|------|--------|------|--------|
-| `RelationshipAnalyzer` | class | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
-| `analyze_chunks` | method | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
-| `_parse_import_line` | method | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
-| `_module_to_file_path` | method | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
-| `_module_matches_file` | method | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
-| `build_file_to_wiki_map` | function | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
-| `generate_see_also_section` | function | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
-| `add_see_also_sections` | function | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
-| `FileRelationships` | class | Brian Breidenbach | 5 days ago | `1315c7f` Add wiki improvements: incr... |
-| `__init__` | method | Brian Breidenbach | 5 days ago | `1315c7f` Add wiki improvements: incr... |
-| `get_relationships` | method | Brian Breidenbach | 5 days ago | `1315c7f` Add wiki improvements: incr... |
-| `get_all_known_files` | method | Brian Breidenbach | 5 days ago | `1315c7f` Add wiki improvements: incr... |
-| `_relative_path` | function | Brian Breidenbach | 5 days ago | `1315c7f` Add wiki improvements: incr... |
+| `RelationshipAnalyzer` | class | Brian Breidenbach | 3 weeks ago | `c568951` Add input validation, type ... |
+| `analyze_chunks` | method | Brian Breidenbach | 3 weeks ago | `c568951` Add input validation, type ... |
+| `_parse_import_line` | method | Brian Breidenbach | 3 weeks ago | `c568951` Add input validation, type ... |
+| `_module_to_file_path` | method | Brian Breidenbach | 3 weeks ago | `c568951` Add input validation, type ... |
+| `_module_matches_file` | method | Brian Breidenbach | 3 weeks ago | `c568951` Add input validation, type ... |
+| `build_file_to_wiki_map` | function | Brian Breidenbach | 3 weeks ago | `c568951` Add input validation, type ... |
+| `generate_see_also_section` | function | Brian Breidenbach | 3 weeks ago | `c568951` Add input validation, type ... |
+| `add_see_also_sections` | function | Brian Breidenbach | 3 weeks ago | `c568951` Add input validation, type ... |
+| `FileRelationships` | class | Brian Breidenbach | 3 weeks ago | `1315c7f` Add wiki improvements: incr... |
+| `__init__` | method | Brian Breidenbach | 3 weeks ago | `1315c7f` Add wiki improvements: incr... |
+| `get_relationships` | method | Brian Breidenbach | 3 weeks ago | `1315c7f` Add wiki improvements: incr... |
+| `get_all_known_files` | method | Brian Breidenbach | 3 weeks ago | `1315c7f` Add wiki improvements: incr... |
+| `_relative_path` | function | Brian Breidenbach | 3 weeks ago | `1315c7f` Add wiki improvements: incr... |
 
 ## Additional Source Code
 
@@ -709,7 +779,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_parse_import_line`
 
 <details>
-<summary>View Source (lines 65-93) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/see_also.py#L65-L93">GitHub</a></summary>
+<summary>View Source (lines 65-93) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/see_also.py#L65-L93">GitHub</a></summary>
 
 ```python
 def _parse_import_line(self, line: str) -> str | None:
@@ -749,7 +819,7 @@ def _parse_import_line(self, line: str) -> str | None:
 #### `_module_to_file_path`
 
 <details>
-<summary>View Source (lines 95-119) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/see_also.py#L95-L119">GitHub</a></summary>
+<summary>View Source (lines 95-119) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/see_also.py#L95-L119">GitHub</a></summary>
 
 ```python
 def _module_to_file_path(self, module: str) -> str | None:
@@ -785,7 +855,7 @@ def _module_to_file_path(self, module: str) -> str | None:
 #### `_module_matches_file`
 
 <details>
-<summary>View Source (lines 157-174) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/see_also.py#L157-L174">GitHub</a></summary>
+<summary>View Source (lines 157-174) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/see_also.py#L157-L174">GitHub</a></summary>
 
 ```python
 def _module_matches_file(self, module: str, file_path: str) -> bool:
@@ -814,7 +884,7 @@ def _module_matches_file(self, module: str, file_path: str) -> bool:
 #### `_relative_path`
 
 <details>
-<summary>View Source (lines 274-299) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/see_also.py#L274-L299">GitHub</a></summary>
+<summary>View Source (lines 274-299) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/see_also.py#L274-L299">GitHub</a></summary>
 
 ```python
 def _relative_path(from_path: str, to_path: str) -> str:
@@ -847,31 +917,3 @@ def _relative_path(from_path: str, to_path: str) -> str:
 
 </details>
 
-## Relevant Source Files
-
-- `src/local_deepwiki/generators/see_also.py:16-22`
-
-## See Also
-
-- [models](../models.md) - dependency
-- [crosslinks](crosslinks.md) - shares 4 dependencies
-- [diagrams](diagrams.md) - shares 4 dependencies
-- [api_docs](api_docs.md) - shares 4 dependencies
-
-## See Also
-
-- [crosslinks](crosslinks.md) - shares 4 dependencies
-- [diagrams](diagrams.md) - shares 4 dependencies
-- [api_docs](api_docs.md) - shares 4 dependencies
-
-## See Also
-
-- [crosslinks](crosslinks.md) - shares 4 dependencies
-- [diagrams](diagrams.md) - shares 4 dependencies
-- [api_docs](api_docs.md) - shares 4 dependencies
-
-## See Also
-
-- [crosslinks](crosslinks.md) - shares 4 dependencies
-- [diagrams](diagrams.md) - shares 4 dependencies
-- [api_docs](api_docs.md) - shares 4 dependencies

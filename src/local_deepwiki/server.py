@@ -104,7 +104,7 @@ async def list_tools() -> list[Tool]:
                     },
                     "max_context": {
                         "type": "integer",
-                        "description": "Maximum number of code chunks for context (default: 5)",
+                        "description": "Maximum number of code chunks for context (default: 10)",
                     },
                 },
                 "required": ["repo_path", "question"],

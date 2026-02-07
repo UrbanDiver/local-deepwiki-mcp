@@ -23,7 +23,9 @@ DEFAULT_DEEP_RESEARCH_CHUNKS = 30
 MAX_WIKI_PAGE_SIZE = 10 * 1024 * 1024  # 10 MB
 
 
-def validate_positive_int(value: Any, name: str, min_val: int, max_val: int, default: int) -> int:
+def validate_positive_int(
+    value: Any, name: str, min_val: int, max_val: int, default: int
+) -> int:
     """Validate and bound an integer parameter.
 
     Args:
@@ -106,11 +108,15 @@ def validate_languages_list(languages: list[str] | None) -> list[str] | None:
 
     invalid = [lang for lang in languages if lang not in VALID_LANGUAGES]
     if invalid:
-        raise ValueError(f"Invalid languages: {invalid}. Valid options: {sorted(VALID_LANGUAGES)}")
+        raise ValueError(
+            f"Invalid languages: {invalid}. Valid options: {sorted(VALID_LANGUAGES)}"
+        )
     return languages
 
 
-def validate_provider(provider: str | None, valid_providers: set[str], name: str) -> str | None:
+def validate_provider(
+    provider: str | None, valid_providers: set[str], name: str
+) -> str | None:
     """Validate a provider value.
 
     Args:
@@ -127,7 +133,9 @@ def validate_provider(provider: str | None, valid_providers: set[str], name: str
     if provider is None:
         return None
     if provider not in valid_providers:
-        raise ValueError(f"Invalid {name}: '{provider}'. Valid options: {sorted(valid_providers)}")
+        raise ValueError(
+            f"Invalid {name}: '{provider}'. Valid options: {sorted(valid_providers)}"
+        )
     return provider
 
 
@@ -286,6 +294,8 @@ def validate_index_parameters(
 
     Scans the repository to ensure it doesn't exceed size limits.
     Checks total repository size, file count, and individual file sizes.
+    Skips directories that the indexer would also skip (hidden dirs,
+    virtual envs, node_modules, etc.) to avoid false rejections.
 
     Args:
         repo_path: Path to the repository to index.
@@ -296,19 +306,39 @@ def validate_index_parameters(
     Raises:
         ValueError: If repository exceeds any resource limits.
     """
+    import os
+
+    from local_deepwiki.config import get_config
+
     repo_path_obj = Path(repo_path)
     total_size = 0
     file_count = 0
 
-    for file_path in repo_path_obj.rglob("*"):
-        if file_path.is_file():
+    config = get_config()
+    skip_dirs = set()
+    for pattern in config.parsing.exclude_patterns:
+        if pattern.endswith("/**"):
+            skip_dirs.add(pattern[:-3])
+
+    for root, dirs, filenames in os.walk(repo_path_obj):
+        root_path = Path(root)
+        rel_root = root_path.relative_to(repo_path_obj)
+
+        dirs[:] = [
+            d
+            for d in dirs
+            if d not in skip_dirs
+            and str(rel_root / d) not in skip_dirs
+            and not d.startswith(".")
+        ]
+
+        for filename in filenames:
+            file_path = root_path / filename
             try:
                 file_size = file_path.stat().st_size
             except OSError:
-                # Skip files that can't be stat'd (permissions, etc.)
                 continue
 
-            # Check individual file size
             if file_size > ResourceLimits.MAX_FILE_SIZE:
                 raise ValueError(
                     f"File too large: {file_path} ({file_size:,} bytes, "
@@ -318,14 +348,12 @@ def validate_index_parameters(
             total_size += file_size
             file_count += 1
 
-            # Check total repository size (early exit)
             if total_size > ResourceLimits.MAX_REPO_SIZE:
                 raise ValueError(
                     f"Repository exceeds maximum size "
                     f"({ResourceLimits.MAX_REPO_SIZE:,} bytes)"
                 )
 
-            # Check file count (early exit)
             if file_count > ResourceLimits.MAX_FILES_PER_REPO:
                 raise ValueError(
                     f"Repository exceeds maximum file count "

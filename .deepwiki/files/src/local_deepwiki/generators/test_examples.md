@@ -1,118 +1,264 @@
-# test_examples.py
+# File Overview
 
-## File Overview
+This file, `src/local_deepwiki/generators/test_examples.py`, provides functionality for extracting code examples from test files and docstrings. It supports identifying test functions that use specific entities (functions or classes) and extracting relevant code snippets from those tests. Additionally, it can extract examples from docstrings for functions and classes.
 
-This module provides functionality for extracting usage examples from test files to include in documentation. It analyzes test code to [find](manifest.md) examples demonstrating how to use specific functions and classes, then formats them for inclusion in generated documentation.
+The module integrates with a vector store for semantic search and uses `tree_sitter` for parsing Python code. It also depends on core components like `CodeParser`, `ChunkType`, `Language`, and `VectorStore`.
 
-## Classes
+---
 
-### UsageExample
+# Classes
+
+## `CodeExample`
+
+A data class representing a code example extracted from either test files or docstrings.
+
+### Fields
+
+- `source`: Source of the example (`"test"` or `"docstring"`)
+- `code`: The actual code snippet
+- `description`: Description or context (optional)
+- `test_file`: Path to the test file (for test examples, optional)
+- `language`: Programming language (default: `"python"`)
+- `expected_output`: Expected output (for doctest examples, optional)
+- `entity_name`: Name of the function/class being demonstrated (optional)
+
+## `UsageExample`
 
 A data class representing a usage example extracted from a test file.
 
-**Attributes:**
-- `entity_name` (str): Name of the function/class being demonstrated
-- `test_name` (str): Name of the test function
-- `test_file` (str): Path to the test file
-- `code` (str): Extracted code snippet
-- `description` (str | None): Description from test docstring
+### Fields
 
-## Functions
+- `entity_name`: Name of the function/class being demonstrated
+- `test_name`: Name of the test function
+- `test_file`: Path to the test file
+- `code`: Extracted code snippet
+- `description`: From test docstring (optional)
 
-### extract_examples_for_entities
+## `CodeExampleExtractor`
 
-```python
-def extract_examples_for_entities(
-    test_file: Path,
-    entity_names: list[str],
-    max_examples_per_entity: int = 2,
-) -> list[UsageExample]:
-```
+A class for finding and extracting code examples from test files and docstrings using a vector store.
 
-Extracts usage examples from a test file for given entities.
+### Methods
+
+#### `__init__(self, vector_store: "VectorStore", repo_path: Path | None = None)`
+
+Initialize the extractor.
 
 **Parameters:**
-- `test_file` (Path): Path to the test file
-- `entity_names` (list[str]): Names of functions/classes to [find](manifest.md) examples for
-- `max_examples_per_entity` (int): Maximum examples per entity (default: 2)
+- `vector_store`: VectorStore instance for semantic search.
+- `repo_path`: Optional repository root path for test file discovery.
 
-**Returns:**
-- `list[UsageExample]`: List of UsageExample objects
+#### `extract_examples_for_function(self, func_name: str, max_examples: int = 3) -> list[CodeExample]`
 
-### get_file_examples
-
-```python
-def get_file_examples(
-    source_file: Path,
-    repo_root: Path,
-    entity_names: list[str],
-    max_examples: int = 5,
-) -> str | None:
-```
-
-Gets formatted usage examples for a source file. This is the [main](../export/pdf.md) entry point for the wiki generator, searching all matching test files for usage examples.
+Find test cases and docstring examples for a function.
 
 **Parameters:**
-- `source_file` (Path): Path to the source file being documented
-- `repo_root` (Path): Root directory of the repository
-- `entity_names` (list[str]): Names of functions/classes in the source file
-- `max_examples` (int): Maximum examples to include (default: 5)
+- `func_name`: Name of the function to find examples for.
+- `max_examples`: Maximum number of examples to return.
 
 **Returns:**
-- `str | None`: Formatted markdown string containing examples, or None if no examples found
+- List of `CodeExample` objects.
 
-## Usage Examples
+#### `extract_examples_for_class(self, class_name: str, max_examples: int = 3) -> list[CodeExample]`
 
-### Creating a UsageExample
+Find test cases and docstring examples for a class.
+
+**Parameters:**
+- `class_name`: Name of the class to find examples for.
+- `max_examples`: Maximum number of examples to return.
+
+**Returns:**
+- List of `CodeExample` objects.
+
+#### `_search_test_examples(self, entity_name: str, max_results: int = 5) -> list[CodeExample]`
+
+Search for test functions that use the given entity.
+
+**Parameters:**
+- `entity_name`: Name of the function/class to search for.
+- `max_results`: Maximum search results.
+
+**Returns:**
+- List of `CodeExample` objects from test files.
+
+#### `_search_docstring_examples(self, entity_name: str, max_results: int = 3) -> list[CodeExample]`
+
+Search for docstring examples for the given entity.
+
+**Parameters:**
+- `entity_name`: Name of the function/class to search for.
+- `max_results`: Maximum results.
+
+**Returns:**
+- List of `CodeExample` objects from docstrings.
+
+#### `_extract_relevant_snippet(self, content: str, entity_name: str, max_lines: int = 20) -> str | None`
+
+Extract the most relevant code snippet from test content.
+
+**Parameters:**
+- `content`: Full test function content.
+- `entity_name`: Entity to find usage of.
+- `max_lines`: Maximum lines to include.
+
+**Returns:**
+- Extracted snippet or `None`.
+
+---
+
+# Functions
+
+## `find_test_files(source_file: Path, repo_root: Path) -> list[Path]`
+
+Find all corresponding test files for a source file.
+
+**Strategies:**
+1. Direct match: `src/.../foo.py` → `tests/test_foo.py`
+2. Coverage tests: `src/.../foo.py` → `tests/test_foo_coverage.py`
+3. Suffix variants: `tests/test_foo_*.py`
+4. Alternative naming: `tests/foo_test.py`
+
+**Parameters:**
+- `source_file`: Path to the source file.
+- `repo_root`: Root directory of the repository.
+
+**Returns:**
+- List of test file paths found (may be empty).
+
+## `find_test_file(source_file: Path, repo_root: Path) -> Path | None`
+
+Find the corresponding test file for a source file.
+
+**Parameters:**
+- `source_file`: Path to the source file.
+- `repo_root`: Root directory of the repository.
+
+**Returns:**
+- Path to the test file if found, `None` otherwise.
+
+## `_get_node_text(node: Node, source: bytes) -> str`
+
+Get the text content of a tree-sitter node.
+
+**Parameters:**
+- `node`: Tree-sitter node.
+- `source`: Source code bytes.
+
+**Returns:**
+- Text content of the node.
+
+## `_find_test_functions(root: Node) -> list[tuple[Node, str | None]]`
+
+Find all test function definitions in the AST.
+
+**Parameters:**
+- `root`: Root node of the parsed test file.
+
+**Returns:**
+- List of `(function_definition_node, class_name)` tuples.
+  - `class_name` is `None` for standalone functions.
+
+---
+
+# Integration
+
+This module integrates with:
+
+- `local_deepwiki.core.parser.CodeParser` for parsing code.
+- `local_deepwiki.core.vectorstore.VectorStore` for semantic search.
+- `local_deepwiki.models.ChunkType`, `local_deepwiki.models.Language` for type definitions.
+- `tree_sitter.Node` for AST traversal.
+
+It is used by:
+
+- `test_test_examples` in `tests/test_plugins.py`
+- `test_code_examples` in `tests/test_plugins.py`
+- `examples_plugin` in `tests/test_plugins.py`
+
+The `CodeExampleExtractor` class is the main interface for extracting examples and relies on a vector store to find relevant test functions and docstrings.
+
+---
+
+# Usage Examples
+
+### Using `CodeExampleExtractor`
 
 ```python
-example = UsageExample()
-example.entity_name = "my_function"
-example.test_name = "test_my_function_basic"
-example.test_file = "/path/to/test_file.py"
-example.code = "result = my_function(input_data)"
-example.description = "Tests basic functionality"
+from local_deepwiki.core.vectorstore import VectorStore
+from local_deepwiki.generators.test_examples import CodeExampleExtractor
+from pathlib import Path
+
+# Assume vector_store is initialized
+extractor = CodeExampleExtractor(vector_store=vector_store, repo_path=Path("/path/to/repo"))
+
+# Extract examples for a function
+examples = await extractor.extract_examples_for_function("my_function", max_examples=5)
+for example in examples:
+    print(example.code)
 ```
 
-### Extracting Examples from Test Files
+### Finding Test Files
 
 ```python
 from pathlib import Path
+from local_deepwiki.generators.test_examples import find_test_files
 
-test_file = Path("tests/test_module.py")
-entities = ["function1", "Class1"]
-examples = extract_examples_for_entities(test_file, entities, max_examples_per_entity=3)
+source_file = Path("src/my_module.py")
+repo_root = Path("/path/to/repo")
+test_files = find_test_files(source_file, repo_root)
+print(test_files)
 ```
 
-### Getting Formatted Examples for Documentation
+### Extracting Code Snippets
 
 ```python
-from pathlib import Path
+from local_deepwiki.generators.test_examples import _extract_relevant_snippet
 
-source_file = Path("src/module.py")
-repo_root = Path("/project/root")
-entity_names = ["my_function", "MyClass"]
-markdown_examples = get_file_examples(source_file, repo_root, entity_names, max_examples=10)
+content = """
+def test_my_function():
+    result = my_function(1, 2)
+    assert result == 3
+"""
+
+snippet = _extract_relevant_snippet(content, "my_function")
+print(snippet)
 ```
-
-## Related Components
-
-This module works with:
-- [CodeParser](../core/parser.md): Used for parsing test file source code
-- Path objects from pathlib for file system operations
-- Logger for warning messages during file processing
 
 ## API Reference
+
+### class `CodeExample`
+
+A code example extracted from tests or docstrings.  This is the unified data class for examples from any source.
+
+
+<details>
+<summary>View Source (lines 29-41) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L29-L41">GitHub</a></summary>
+
+```python
+class CodeExample:
+    """A code example extracted from tests or docstrings.
+
+    This is the unified data class for examples from any source.
+    """
+
+    source: str  # "test" or "docstring"
+    code: str  # The actual code snippet
+    description: str | None = None  # Description or context
+    test_file: str | None = None  # Path to test file (for test examples)
+    language: str = "python"  # Programming language
+    expected_output: str | None = None  # Expected output (for doctest examples)
+    entity_name: str | None = None  # Name of the function/class being demonstrated
+```
+
+</details>
 
 ### class `UsageExample`
 
 A usage example extracted from a test file.
 
----
-
 
 <details>
-<summary>View Source (lines 22-29) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/test_examples.py#L22-L29">GitHub</a></summary>
+<summary>View Source (lines 45-52) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L45-L52">GitHub</a></summary>
 
 ```python
 class UsageExample:
@@ -123,6 +269,189 @@ class UsageExample:
     test_file: str  # Path to the test file
     code: str  # Extracted code snippet
     description: str | None  # From test docstring
+```
+
+</details>
+
+### class `CodeExampleExtractor`
+
+Extract usage examples from tests and docstrings using vector search.  This class provides semantic search capabilities to find relevant test cases and docstring examples for functions and classes in a codebase.
+
+**Methods:**
+
+
+<details>
+<summary>View Source (lines 772-1037) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L772-L1037">GitHub</a></summary>
+
+```python
+class CodeExampleExtractor:
+    # Methods: __init__, extract_examples_for_function, extract_examples_for_class, _search_test_examples, _search_docstring_examples, _extract_relevant_snippet
+```
+
+</details>
+
+#### `__init__`
+
+```python
+def __init__(vector_store: "VectorStore", repo_path: Path | None = None)
+```
+
+Initialize the extractor.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `vector_store` | `"VectorStore"` | - | VectorStore instance for semantic search. |
+| `repo_path` | `Path | None` | `None` | Optional repository root path for test file discovery. |
+
+
+<details>
+<summary>View Source (lines 785-793) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L785-L793">GitHub</a></summary>
+
+```python
+def __init__(self, vector_store: "VectorStore", repo_path: Path | None = None):
+        """Initialize the extractor.
+
+        Args:
+            vector_store: VectorStore instance for semantic search.
+            repo_path: Optional repository root path for test file discovery.
+        """
+        self._store = vector_store
+        self._repo_path = repo_path
+```
+
+</details>
+
+#### `extract_examples_for_function`
+
+```python
+async def extract_examples_for_function(func_name: str, max_examples: int = 3) -> list[CodeExample]
+```
+
+Find test cases and docstring examples for a function.  Searches the vector store for: 1. Test functions that call or reference the target function 2. Docstrings containing examples for the function
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `func_name` | `str` | - | Name of the function to find examples for. |
+| `max_examples` | `int` | `3` | Maximum number of examples to return. |
+
+
+<details>
+<summary>View Source (lines 795-837) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L795-L837">GitHub</a></summary>
+
+```python
+async def extract_examples_for_function(
+        self,
+        func_name: str,
+        max_examples: int = 3,
+    ) -> list[CodeExample]:
+        """Find test cases and docstring examples for a function.
+
+        Searches the vector store for:
+        1. Test functions that call or reference the target function
+        2. Docstrings containing examples for the function
+
+        Args:
+            func_name: Name of the function to find examples for.
+            max_examples: Maximum number of examples to return.
+
+        Returns:
+            List of CodeExample objects.
+        """
+        if len(func_name) <= 2:
+            return []
+
+        examples: list[CodeExample] = []
+
+        # Search for tests that use this function
+        test_examples = await self._search_test_examples(func_name, max_examples)
+        examples.extend(test_examples)
+
+        # Search for docstring examples
+        docstring_examples = await self._search_docstring_examples(func_name, max_examples)
+        examples.extend(docstring_examples)
+
+        # Deduplicate and limit
+        seen_codes: set[str] = set()
+        unique: list[CodeExample] = []
+        for ex in examples:
+            code_key = ex.code.strip()[:100]  # Compare first 100 chars
+            if code_key not in seen_codes:
+                seen_codes.add(code_key)
+                unique.append(ex)
+                if len(unique) >= max_examples:
+                    break
+
+        return unique
+```
+
+</details>
+
+#### `extract_examples_for_class`
+
+```python
+async def extract_examples_for_class(class_name: str, max_examples: int = 3) -> list[CodeExample]
+```
+
+Find test cases and docstring examples for a class.  Searches for tests that instantiate or use the class, as well as docstring examples in the class definition.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `class_name` | `str` | - | Name of the class to find examples for. |
+| `max_examples` | `int` | `3` | Maximum number of examples to return. |
+
+
+---
+
+
+<details>
+<summary>View Source (lines 839-880) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L839-L880">GitHub</a></summary>
+
+```python
+async def extract_examples_for_class(
+        self,
+        class_name: str,
+        max_examples: int = 3,
+    ) -> list[CodeExample]:
+        """Find test cases and docstring examples for a class.
+
+        Searches for tests that instantiate or use the class, as well as
+        docstring examples in the class definition.
+
+        Args:
+            class_name: Name of the class to find examples for.
+            max_examples: Maximum number of examples to return.
+
+        Returns:
+            List of CodeExample objects.
+        """
+        if len(class_name) <= 2:
+            return []
+
+        examples: list[CodeExample] = []
+
+        # Search for tests that use this class
+        test_examples = await self._search_test_examples(class_name, max_examples)
+        examples.extend(test_examples)
+
+        # Search for class docstring examples
+        docstring_examples = await self._search_docstring_examples(class_name, max_examples)
+        examples.extend(docstring_examples)
+
+        # Deduplicate and limit
+        seen_codes: set[str] = set()
+        unique: list[CodeExample] = []
+        for ex in examples:
+            code_key = ex.code.strip()[:100]
+            if code_key not in seen_codes:
+                seen_codes.add(code_key)
+                unique.append(ex)
+                if len(unique) >= max_examples:
+                    break
+
+        return unique
 ```
 
 </details>
@@ -138,7 +467,7 @@ def find_test_files(source_file: Path, repo_root: Path) -> list[Path]
 Find all corresponding test files for a source file.  Tries multiple strategies: 1. Direct match: src/.../foo.py -> tests/test_foo.py 2. Coverage tests: src/.../foo.py -> tests/test_foo_coverage.py 3. Suffix variants: tests/test_foo_*.py 4. Alternative naming: tests/foo_test.py
 
 
-| [Parameter](api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `source_file` | `Path` | - | Path to the source file. |
 | `repo_root` | `Path` | - | Root directory of the repository. |
@@ -148,7 +477,7 @@ Find all corresponding test files for a source file.  Tries multiple strategies:
 
 
 <details>
-<summary>View Source (lines 32-90) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/test_examples.py#L32-L90">GitHub</a></summary>
+<summary>View Source (lines 55-113) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L55-L113">GitHub</a></summary>
 
 ```python
 def find_test_files(source_file: Path, repo_root: Path) -> list[Path]:
@@ -223,7 +552,7 @@ def find_test_file(source_file: Path, repo_root: Path) -> Path | None
 Find the corresponding test file for a source file.  Legacy function for backwards compatibility. Returns the first test file found, or None.
 
 
-| [Parameter](api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `source_file` | `Path` | - | Path to the source file. |
 | `repo_root` | `Path` | - | Root directory of the repository. |
@@ -233,7 +562,7 @@ Find the corresponding test file for a source file.  Legacy function for backwar
 
 
 <details>
-<summary>View Source (lines 93-107) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/test_examples.py#L93-L107">GitHub</a></summary>
+<summary>View Source (lines 116-130) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L116-L130">GitHub</a></summary>
 
 ```python
 def find_test_file(source_file: Path, repo_root: Path) -> Path | None:
@@ -262,7 +591,7 @@ def walk(node: Node, current_class: str | None = None) -> None
 ```
 
 
-| [Parameter](api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `node` | `Node` | - | - |
 | `current_class` | `str | None` | `None` | - |
@@ -272,7 +601,7 @@ def walk(node: Node, current_class: str | None = None) -> None
 
 
 <details>
-<summary>View Source (lines 129-151) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/test_examples.py#L129-L151">GitHub</a></summary>
+<summary>View Source (lines 152-174) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L152-L174">GitHub</a></summary>
 
 ```python
 def walk(node: Node, current_class: str | None = None) -> None:
@@ -311,10 +640,10 @@ def extract_examples_for_entities(test_file: Path, entity_names: list[str], max_
 Extract usage examples from a test file for given entities.
 
 
-| [Parameter](api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `test_file` | `Path` | - | Path to the test file. |
-| `entity_names` | `list[str]` | - | Names of functions/classes to [find](manifest.md) examples for. |
+| `entity_names` | `list[str]` | - | Names of functions/classes to find examples for. |
 | `max_examples_per_entity` | `int` | `2` | Maximum examples per entity. |
 
 **Returns:** `list[UsageExample]`
@@ -322,7 +651,7 @@ Extract usage examples from a test file for given entities.
 
 
 <details>
-<summary>View Source (lines 315-383) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/test_examples.py#L315-L383">GitHub</a></summary>
+<summary>View Source (lines 338-406) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L338-L406">GitHub</a></summary>
 
 ```python
 def extract_examples_for_entities(
@@ -407,7 +736,7 @@ def format_examples_markdown(examples: list[UsageExample], max_examples: int = 5
 Format usage examples as markdown.
 
 
-| [Parameter](api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `examples` | `list[UsageExample]` | - | List of UsageExample objects. |
 | `max_examples` | `int` | `5` | Maximum examples to include. |
@@ -417,7 +746,7 @@ Format usage examples as markdown.
 
 
 <details>
-<summary>View Source (lines 386-420) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/test_examples.py#L386-L420">GitHub</a></summary>
+<summary>View Source (lines 409-443) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L409-L443">GitHub</a></summary>
 
 ```python
 def format_examples_markdown(
@@ -465,10 +794,10 @@ def format_examples_markdown(
 def get_file_examples(source_file: Path, repo_root: Path, entity_names: list[str], max_examples: int = 5) -> str | None
 ```
 
-Get formatted usage examples for a source file.  This is the [main](../export/pdf.md) entry point for the wiki generator. Searches all matching test files for usage examples.
+Get formatted usage examples for a source file.  This is the main entry point for the wiki generator. Searches all matching test files for usage examples.
 
 
-| [Parameter](api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `source_file` | `Path` | - | Path to the source file being documented. |
 | `repo_root` | `Path` | - | Root directory of the repository. |
@@ -479,9 +808,8 @@ Get formatted usage examples for a source file.  This is the [main](../export/pd
 
 
 
-
 <details>
-<summary>View Source (lines 423-484) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/test_examples.py#L423-L484">GitHub</a></summary>
+<summary>View Source (lines 446-507) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L446-L507">GitHub</a></summary>
 
 ```python
 def get_file_examples(
@@ -550,10 +878,455 @@ def get_file_examples(
 
 </details>
 
+#### `parse_doctest_examples`
+
+```python
+def parse_doctest_examples(docstring: str) -> list[CodeExample]
+```
+
+Extract >>> doctest examples from a docstring.  Parses Python doctest-style examples with >>> prompts and expected output.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `docstring` | `str` | - | The docstring to parse. |
+
+**Returns:** `list[CodeExample]`
+
+
+
+<details>
+<summary>View Source (lines 515-610) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L515-L610">GitHub</a></summary>
+
+```python
+def parse_doctest_examples(docstring: str) -> list[CodeExample]:
+    """Extract >>> doctest examples from a docstring.
+
+    Parses Python doctest-style examples with >>> prompts and expected output.
+
+    Args:
+        docstring: The docstring to parse.
+
+    Returns:
+        List of CodeExample objects extracted from doctests.
+
+    Example:
+        >>> parse_doctest_examples('''
+        ... >>> add(1, 2)
+        ... 3
+        ... >>> add(-1, 1)
+        ... 0
+        ... ''')
+        [CodeExample(source='docstring', code='add(1, 2)', expected_output='3', ...)]
+    """
+    if not docstring:
+        return []
+
+    examples: list[CodeExample] = []
+    lines = docstring.split("\n")
+
+    current_code_lines: list[str] = []
+    current_output_lines: list[str] = []
+    in_code = False
+
+    for line in lines:
+        stripped = line.strip()
+
+        # Check for >>> prompt (start of code)
+        if stripped.startswith(">>>"):
+            # If we have accumulated code from before, save it
+            if current_code_lines:
+                code = "\n".join(current_code_lines)
+                output = "\n".join(current_output_lines) if current_output_lines else None
+                examples.append(
+                    CodeExample(
+                        source="docstring",
+                        code=code,
+                        expected_output=output,
+                        language="python",
+                    )
+                )
+                current_code_lines = []
+                current_output_lines = []
+
+            # Start new code block
+            code_part = stripped[3:].strip()  # Remove >>>
+            if code_part:
+                current_code_lines.append(code_part)
+            in_code = True
+
+        # Check for ... continuation
+        elif stripped.startswith("...") and in_code:
+            cont_part = stripped[3:].strip()  # Remove ...
+            current_code_lines.append(cont_part)
+
+        # Expected output (non-empty line after code, not starting with >>> or ...)
+        elif in_code and stripped and not stripped.startswith((">>>", "...")):
+            current_output_lines.append(stripped)
+
+        # Empty line may end the example
+        elif in_code and not stripped and current_code_lines:
+            # Save the accumulated example
+            code = "\n".join(current_code_lines)
+            output = "\n".join(current_output_lines) if current_output_lines else None
+            examples.append(
+                CodeExample(
+                    source="docstring",
+                    code=code,
+                    expected_output=output,
+                    language="python",
+                )
+            )
+            current_code_lines = []
+            current_output_lines = []
+            in_code = False
+
+    # Don't forget the last example
+    if current_code_lines:
+        code = "\n".join(current_code_lines)
+        output = "\n".join(current_output_lines) if current_output_lines else None
+        examples.append(
+            CodeExample(
+                source="docstring",
+                code=code,
+                expected_output=output,
+                language="python",
+            )
+        )
+
+    return examples
+```
+
+</details>
+
+#### `parse_google_style_examples`
+
+```python
+def parse_google_style_examples(docstring: str) -> list[CodeExample]
+```
+
+Extract examples from Google-style docstring Examples section.  Parses the Examples: section of a Google-style docstring, extracting code blocks and their descriptions.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `docstring` | `str` | - | The docstring to parse. |
+
+**Returns:** `list[CodeExample]`
+
+
+
+<details>
+<summary>View Source (lines 613-735) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L613-L735">GitHub</a></summary>
+
+```python
+def parse_google_style_examples(docstring: str) -> list[CodeExample]:
+    """Extract examples from Google-style docstring Examples section.
+
+    Parses the Examples: section of a Google-style docstring, extracting
+    code blocks and their descriptions.
+
+    Args:
+        docstring: The docstring to parse.
+
+    Returns:
+        List of CodeExample objects from the Examples section.
+
+    Example:
+        >>> doc = '''
+        ... Examples:
+        ...     Basic usage:
+        ...         result = process("input")
+        ...         print(result)
+        ...
+        ...     With options:
+        ...         result = process("input", verbose=True)
+        ... '''
+        >>> examples = parse_google_style_examples(doc)
+        >>> len(examples)
+        2
+    """
+    if not docstring:
+        return []
+
+    examples: list[CodeExample] = []
+
+    # Find the Examples: section
+    # Match "Examples:", "Example:", with optional leading whitespace
+    example_pattern = re.compile(
+        r"^\s*(Examples?)\s*:\s*$",
+        re.MULTILINE | re.IGNORECASE,
+    )
+
+    match = example_pattern.search(docstring)
+    if not match:
+        return []
+
+    # Extract from Examples: to end or next section
+    start_idx = match.end()
+
+    # Find the next section (Args:, Returns:, Raises:, etc.)
+    section_pattern = re.compile(
+        r"^\s*(Args?|Returns?|Raises?|Yields?|Attributes?|Note|Notes|Warning|Warnings|See Also|References?)\s*:",
+        re.MULTILINE | re.IGNORECASE,
+    )
+
+    end_match = section_pattern.search(docstring, start_idx)
+    if end_match:
+        examples_text = docstring[start_idx : end_match.start()]
+    else:
+        examples_text = docstring[start_idx:]
+
+    # Parse the examples section
+    lines = examples_text.split("\n")
+    current_description: str | None = None
+    current_code_lines: list[str] = []
+    base_indent: int | None = None
+
+    def save_current_example() -> None:
+        """Save the current accumulated example."""
+        nonlocal current_description, current_code_lines
+        if current_code_lines:
+            code = dedent("\n".join(current_code_lines)).strip()
+            if code:
+                examples.append(
+                    CodeExample(
+                        source="docstring",
+                        code=code,
+                        description=current_description,
+                        language="python",
+                    )
+                )
+        current_description = None
+        current_code_lines = []
+
+    for line in lines:
+        # Skip empty lines at the start
+        if not line.strip() and not current_code_lines:
+            continue
+
+        # Calculate indentation
+        stripped = line.lstrip()
+        indent = len(line) - len(stripped)
+
+        # Detect base indent level
+        if base_indent is None and stripped:
+            base_indent = indent
+
+        if not stripped:
+            # Empty line might separate examples
+            if current_code_lines:
+                current_code_lines.append("")
+            continue
+
+        # Line at base indent level might be a description
+        if base_indent is not None and indent == base_indent:
+            # Check if it looks like a description (ends with :)
+            if stripped.endswith(":") and not stripped.startswith((">>>", "...")):
+                # Save previous example if any
+                save_current_example()
+                current_description = stripped.rstrip(":")
+                continue
+
+        # Code line (more indented than base)
+        if base_indent is not None and indent > base_indent:
+            current_code_lines.append(line)
+        elif stripped:
+            # At base level, could be code if we're already collecting
+            if current_code_lines:
+                current_code_lines.append(line)
+            else:
+                # Could be description or start of code
+                current_code_lines.append(line)
+
+    # Save the last example
+    save_current_example()
+
+    return examples
+```
+
+</details>
+
+#### `save_current_example`
+
+```python
+def save_current_example() -> None
+```
+
+Save the current accumulated example.
+
+**Returns:** `None`
+
+
+
+<details>
+<summary>View Source (lines 676-691) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L676-L691">GitHub</a></summary>
+
+```python
+def save_current_example() -> None:
+        """Save the current accumulated example."""
+        nonlocal current_description, current_code_lines
+        if current_code_lines:
+            code = dedent("\n".join(current_code_lines)).strip()
+            if code:
+                examples.append(
+                    CodeExample(
+                        source="docstring",
+                        code=code,
+                        description=current_description,
+                        language="python",
+                    )
+                )
+        current_description = None
+        current_code_lines = []
+```
+
+</details>
+
+#### `parse_docstring_examples`
+
+```python
+def parse_docstring_examples(docstring: str) -> list[CodeExample]
+```
+
+Extract all examples from a docstring (doctests and Google-style).  Combines doctest-style (>>>) examples and Google-style Examples section into a unified list.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `docstring` | `str` | - | The docstring to parse. |
+
+**Returns:** `list[CodeExample]`
+
+
+
+<details>
+<summary>View Source (lines 738-764) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L738-L764">GitHub</a></summary>
+
+```python
+def parse_docstring_examples(docstring: str) -> list[CodeExample]:
+    """Extract all examples from a docstring (doctests and Google-style).
+
+    Combines doctest-style (>>>) examples and Google-style Examples section
+    into a unified list.
+
+    Args:
+        docstring: The docstring to parse.
+
+    Returns:
+        List of CodeExample objects from all sources.
+    """
+    if not docstring:
+        return []
+
+    examples: list[CodeExample] = []
+
+    # Extract doctest examples
+    doctest_examples = parse_doctest_examples(docstring)
+    examples.extend(doctest_examples)
+
+    # Extract Google-style examples (only if no doctests found, to avoid duplication)
+    if not doctest_examples:
+        google_examples = parse_google_style_examples(docstring)
+        examples.extend(google_examples)
+
+    return examples
+```
+
+</details>
+
+#### `format_code_examples_markdown`
+
+```python
+def format_code_examples_markdown(examples: list[CodeExample], max_examples: int = 5) -> str
+```
+
+Format CodeExample objects as markdown.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `examples` | `list[CodeExample]` | - | List of CodeExample objects. |
+| `max_examples` | `int` | `5` | Maximum examples to include. |
+
+**Returns:** `str`
+
+
+
+
+<details>
+<summary>View Source (lines 1040-1083) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L1040-L1083">GitHub</a></summary>
+
+```python
+def format_code_examples_markdown(
+    examples: list[CodeExample],
+    max_examples: int = 5,
+) -> str:
+    """Format CodeExample objects as markdown.
+
+    Args:
+        examples: List of CodeExample objects.
+        max_examples: Maximum examples to include.
+
+    Returns:
+        Formatted markdown string.
+    """
+    if not examples:
+        return ""
+
+    examples = examples[:max_examples]
+
+    sections = ["## Examples\n"]
+
+    for i, example in enumerate(examples, 1):
+        # Create section header
+        if example.description:
+            sections.append(f"### {example.description}\n")
+        elif example.entity_name:
+            sections.append(f"### Example {i}: `{example.entity_name}`\n")
+        else:
+            sections.append(f"### Example {i}\n")
+
+        # Add source info
+        if example.source == "test" and example.test_file:
+            sections.append(f"*From test file: `{example.test_file}`*\n")
+        elif example.source == "docstring":
+            sections.append("*From docstring*\n")
+
+        # Add code block
+        lang = example.language or "python"
+        sections.append(f"```{lang}\n{example.code}\n```\n")
+
+        # Add expected output if available
+        if example.expected_output:
+            sections.append(f"Output:\n```\n{example.expected_output}\n```\n")
+
+    return "\n".join(sections)
+```
+
+</details>
+
 ## Class Diagram
 
 ```mermaid
 classDiagram
+    class CodeExample {
+        +source: str  # "test" or "docstring"
+        +code: str  # The actual code snippet
+        +description: str | None
+        +test_file: str | None
+        +language: str
+        +expected_output: str | None
+        +entity_name: str | None
+    }
+    class CodeExampleExtractor {
+        -__init__(vector_store: "VectorStore", repo_path: Path | None)
+        +extract_examples_for_function(func_name: str, max_examples: int) list[CodeExample]
+        +extract_examples_for_class(class_name: str, max_examples: int) list[CodeExample]
+        -_search_test_examples(entity_name: str, max_results: int) list[CodeExample]
+        -_search_docstring_examples(entity_name: str, max_results: int) list[CodeExample]
+        -_extract_relevant_snippet(content: str, entity_name: str, max_lines: int) str | None
+    }
     class UsageExample {
         +entity_name: str  # Name of the function/class being demonstrated
         +test_name: str  # Name of the test function
@@ -567,109 +1340,160 @@ classDiagram
 
 ```mermaid
 flowchart TD
-    N0[CodeParser]
-    N1[UsageExample]
-    N2[_extract_usage_snippet]
-    N3[_find_test_functions]
-    N4[_get_docstring]
-    N5[_get_function_body]
-    N6[_get_function_name]
-    N7[_get_node_text]
-    N8[_is_mock_heavy]
-    N9[add]
-    N10[child_by_field_name]
-    N11[decode]
-    N12[dedent]
-    N13[exists]
-    N14[extract_examples_for_entities]
-    N15[find_test_file]
-    N16[find_test_files]
-    N17[format_examples_markdown]
-    N18[get_file_examples]
-    N19[glob]
-    N20[parse_source]
-    N21[read_bytes]
-    N22[walk]
-    N16 --> N13
-    N16 --> N19
-    N15 --> N16
-    N7 --> N11
-    N3 --> N10
-    N3 --> N11
-    N3 --> N22
-    N22 --> N10
-    N22 --> N11
-    N22 --> N22
-    N6 --> N10
-    N6 --> N7
-    N4 --> N10
-    N4 --> N7
-    N5 --> N10
-    N5 --> N7
-    N2 --> N5
-    N2 --> N12
-    N14 --> N0
-    N14 --> N21
-    N14 --> N20
-    N14 --> N3
-    N14 --> N5
-    N14 --> N8
-    N14 --> N2
-    N14 --> N6
-    N14 --> N4
-    N14 --> N1
-    N18 --> N16
-    N18 --> N14
-    N18 --> N9
-    N18 --> N17
+    N0[CodeExample]
+    N1[CodeExampleExtractor._searc...]
+    N2[CodeExampleExtractor._searc...]
+    N3[CodeExampleExtractor.extrac...]
+    N4[CodeExampleExtractor.extrac...]
+    N5[_extract_usage_snippet]
+    N6[_find_test_functions]
+    N7[_get_docstring]
+    N8[_get_function_body]
+    N9[_get_function_name]
+    N10[_get_node_text]
+    N11[_is_mock_heavy]
+    N12[_search_docstring_examples]
+    N13[_search_test_examples]
+    N14[add]
+    N15[child_by_field_name]
+    N16[decode]
+    N17[dedent]
+    N18[exists]
+    N19[extract_examples_for_entities]
+    N20[find_test_file]
+    N21[find_test_files]
+    N22[get_file_examples]
+    N23[glob]
+    N24[parse_docstring_examples]
+    N25[parse_doctest_examples]
+    N26[parse_google_style_examples]
+    N27[save_current_example]
+    N28[search]
+    N29[walk]
+    N21 --> N18
+    N21 --> N23
+    N20 --> N21
+    N10 --> N16
+    N6 --> N15
+    N6 --> N16
+    N6 --> N29
+    N29 --> N15
+    N29 --> N16
+    N29 --> N29
+    N9 --> N15
+    N9 --> N10
+    N7 --> N15
+    N7 --> N10
+    N8 --> N15
+    N8 --> N10
+    N5 --> N8
+    N5 --> N17
+    N19 --> N6
+    N19 --> N8
+    N19 --> N11
+    N19 --> N5
+    N19 --> N9
+    N19 --> N7
+    N22 --> N21
+    N22 --> N19
+    N22 --> N14
+    N25 --> N0
+    N26 --> N28
+    N26 --> N17
+    N26 --> N0
+    N26 --> N27
+    N27 --> N17
+    N27 --> N0
+    N24 --> N25
+    N24 --> N26
+    N4 --> N13
+    N4 --> N12
+    N4 --> N14
+    N3 --> N13
+    N3 --> N12
+    N3 --> N14
+    N2 --> N28
+    N2 --> N11
+    N2 --> N0
+    N1 --> N28
+    N1 --> N24
     classDef func fill:#e1f5fe
-    class N0,N1,N2,N3,N4,N5,N6,N7,N8,N9,N10,N11,N12,N13,N14,N15,N16,N17,N18,N19,N20,N21,N22 func
+    class N0,N5,N6,N7,N8,N9,N10,N11,N12,N13,N14,N15,N16,N17,N18,N19,N20,N21,N22,N23,N24,N25,N26,N27,N28,N29 func
+    classDef method fill:#fff3e0
+    class N1,N2,N3,N4 method
 ```
 
 ## Used By
 
 Functions and methods in this file and their callers:
 
-- **[`CodeParser`](../core/parser.md)**: called by `extract_examples_for_entities`
+- **`CodeExample`**: called by `CodeExampleExtractor._search_test_examples`, `parse_doctest_examples`, `parse_google_style_examples`, `save_current_example`
+- **`CodeParser`**: called by `extract_examples_for_entities`
 - **`UsageExample`**: called by `extract_examples_for_entities`
+- **`_extract_relevant_snippet`**: called by `CodeExampleExtractor._search_test_examples`
 - **`_extract_usage_snippet`**: called by `extract_examples_for_entities`
 - **`_find_test_functions`**: called by `extract_examples_for_entities`
 - **`_get_docstring`**: called by `extract_examples_for_entities`
 - **`_get_function_body`**: called by `_extract_usage_snippet`, `extract_examples_for_entities`
 - **`_get_function_name`**: called by `extract_examples_for_entities`
 - **`_get_node_text`**: called by `_get_docstring`, `_get_function_body`, `_get_function_name`
-- **`_is_mock_heavy`**: called by `extract_examples_for_entities`
-- **`add`**: called by `get_file_examples`
+- **`_is_mock_heavy`**: called by `CodeExampleExtractor._search_test_examples`, `extract_examples_for_entities`
+- **`_search_docstring_examples`**: called by `CodeExampleExtractor.extract_examples_for_class`, `CodeExampleExtractor.extract_examples_for_function`
+- **`_search_test_examples`**: called by `CodeExampleExtractor.extract_examples_for_class`, `CodeExampleExtractor.extract_examples_for_function`
+- **`add`**: called by `CodeExampleExtractor.extract_examples_for_class`, `CodeExampleExtractor.extract_examples_for_function`, `get_file_examples`
 - **`child_by_field_name`**: called by `_find_test_functions`, `_get_docstring`, `_get_function_body`, `_get_function_name`, `walk`
+- **`compile`**: called by `parse_google_style_examples`
 - **`decode`**: called by `_find_test_functions`, `_get_node_text`, `walk`
-- **`dedent`**: called by `_extract_usage_snippet`
+- **`dedent`**: called by `CodeExampleExtractor._extract_relevant_snippet`, `_extract_usage_snippet`, `parse_google_style_examples`, `save_current_example`
+- **`end`**: called by `parse_google_style_examples`
 - **`exists`**: called by `find_test_files`
 - **`extract_examples_for_entities`**: called by `get_file_examples`
 - **`find_test_files`**: called by `find_test_file`, `get_file_examples`
 - **`format_examples_markdown`**: called by `get_file_examples`
 - **`glob`**: called by `find_test_files`
+- **`lstrip`**: called by `parse_google_style_examples`
+- **`parse_docstring_examples`**: called by `CodeExampleExtractor._search_docstring_examples`
+- **`parse_doctest_examples`**: called by `parse_docstring_examples`
+- **`parse_google_style_examples`**: called by `parse_docstring_examples`
 - **`parse_source`**: called by `extract_examples_for_entities`
 - **`read_bytes`**: called by `extract_examples_for_entities`
+- **`rstrip`**: called by `parse_google_style_examples`
+- **`save_current_example`**: called by `parse_google_style_examples`
+- **`search`**: called by `CodeExampleExtractor._search_docstring_examples`, `CodeExampleExtractor._search_test_examples`, `parse_google_style_examples`
+- **`start`**: called by `parse_google_style_examples`
 - **`walk`**: called by `_find_test_functions`, `walk`
 
 ## Last Modified
 
 | Entity | Type | Author | Date | Commit |
 |--------|------|--------|------|--------|
-| `find_test_files` | function | Brian Breidenbach | today | `216880e` Expand test example extract... |
-| `find_test_file` | function | Brian Breidenbach | today | `216880e` Expand test example extract... |
-| `_find_test_functions` | function | Brian Breidenbach | today | `216880e` Expand test example extract... |
-| `walk` | function | Brian Breidenbach | today | `216880e` Expand test example extract... |
-| `_extract_usage_snippet` | function | Brian Breidenbach | today | `216880e` Expand test example extract... |
-| `extract_examples_for_entities` | function | Brian Breidenbach | today | `216880e` Expand test example extract... |
-| `get_file_examples` | function | Brian Breidenbach | today | `216880e` Expand test example extract... |
-| `UsageExample` | class | Brian Breidenbach | 2 days ago | `e579b0a` Add usage examples from tes... |
-| `_get_node_text` | function | Brian Breidenbach | 2 days ago | `e579b0a` Add usage examples from tes... |
-| `_get_function_name` | function | Brian Breidenbach | 2 days ago | `e579b0a` Add usage examples from tes... |
-| `_get_docstring` | function | Brian Breidenbach | 2 days ago | `e579b0a` Add usage examples from tes... |
-| `_get_function_body` | function | Brian Breidenbach | 2 days ago | `e579b0a` Add usage examples from tes... |
-| `_is_mock_heavy` | function | Brian Breidenbach | 2 days ago | `e579b0a` Add usage examples from tes... |
-| `format_examples_markdown` | function | Brian Breidenbach | 2 days ago | `e579b0a` Add usage examples from tes... |
+| `CodeExample` | class | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `CodeExampleExtractor` | class | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `__init__` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `extract_examples_for_function` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `extract_examples_for_class` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `_search_test_examples` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `_search_docstring_examples` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `_extract_relevant_snippet` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `parse_doctest_examples` | function | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `parse_google_style_examples` | function | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `save_current_example` | function | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `parse_docstring_examples` | function | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `format_code_examples_markdown` | function | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `find_test_files` | function | Brian Breidenbach | 3 weeks ago | `216880e` Expand test example extract... |
+| `find_test_file` | function | Brian Breidenbach | 3 weeks ago | `216880e` Expand test example extract... |
+| `_find_test_functions` | function | Brian Breidenbach | 3 weeks ago | `216880e` Expand test example extract... |
+| `walk` | function | Brian Breidenbach | 3 weeks ago | `216880e` Expand test example extract... |
+| `_extract_usage_snippet` | function | Brian Breidenbach | 3 weeks ago | `216880e` Expand test example extract... |
+| `extract_examples_for_entities` | function | Brian Breidenbach | 3 weeks ago | `216880e` Expand test example extract... |
+| `get_file_examples` | function | Brian Breidenbach | 3 weeks ago | `216880e` Expand test example extract... |
+| `UsageExample` | class | Brian Breidenbach | 3 weeks ago | `e579b0a` Add usage examples from tes... |
+| `_get_node_text` | function | Brian Breidenbach | 3 weeks ago | `e579b0a` Add usage examples from tes... |
+| `_get_function_name` | function | Brian Breidenbach | 3 weeks ago | `e579b0a` Add usage examples from tes... |
+| `_get_docstring` | function | Brian Breidenbach | 3 weeks ago | `e579b0a` Add usage examples from tes... |
+| `_get_function_body` | function | Brian Breidenbach | 3 weeks ago | `e579b0a` Add usage examples from tes... |
+| `_is_mock_heavy` | function | Brian Breidenbach | 3 weeks ago | `e579b0a` Add usage examples from tes... |
+| `format_examples_markdown` | function | Brian Breidenbach | 3 weeks ago | `e579b0a` Add usage examples from tes... |
 
 ## Additional Source Code
 
@@ -678,7 +1502,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_get_node_text`
 
 <details>
-<summary>View Source (lines 110-112) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/test_examples.py#L110-L112">GitHub</a></summary>
+<summary>View Source (lines 133-135) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L133-L135">GitHub</a></summary>
 
 ```python
 def _get_node_text(node: Node, source: bytes) -> str:
@@ -692,7 +1516,7 @@ def _get_node_text(node: Node, source: bytes) -> str:
 #### `_find_test_functions`
 
 <details>
-<summary>View Source (lines 115-154) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/test_examples.py#L115-L154">GitHub</a></summary>
+<summary>View Source (lines 138-177) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L138-L177">GitHub</a></summary>
 
 ```python
 def _find_test_functions(root: Node) -> list[tuple[Node, str | None]]:
@@ -743,7 +1567,7 @@ def _find_test_functions(root: Node) -> list[tuple[Node, str | None]]:
 #### `_get_function_name`
 
 <details>
-<summary>View Source (lines 157-162) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/test_examples.py#L157-L162">GitHub</a></summary>
+<summary>View Source (lines 180-185) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L180-L185">GitHub</a></summary>
 
 ```python
 def _get_function_name(func_node: Node, source: bytes) -> str:
@@ -760,7 +1584,7 @@ def _get_function_name(func_node: Node, source: bytes) -> str:
 #### `_get_docstring`
 
 <details>
-<summary>View Source (lines 165-183) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/test_examples.py#L165-L183">GitHub</a></summary>
+<summary>View Source (lines 188-206) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L188-L206">GitHub</a></summary>
 
 ```python
 def _get_docstring(func_node: Node, source: bytes) -> str | None:
@@ -790,7 +1614,7 @@ def _get_docstring(func_node: Node, source: bytes) -> str | None:
 #### `_get_function_body`
 
 <details>
-<summary>View Source (lines 186-191) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/test_examples.py#L186-L191">GitHub</a></summary>
+<summary>View Source (lines 209-214) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L209-L214">GitHub</a></summary>
 
 ```python
 def _get_function_body(func_node: Node, source: bytes) -> str:
@@ -807,7 +1631,7 @@ def _get_function_body(func_node: Node, source: bytes) -> str:
 #### `_is_mock_heavy`
 
 <details>
-<summary>View Source (lines 194-209) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/test_examples.py#L194-L209">GitHub</a></summary>
+<summary>View Source (lines 217-232) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L217-L232">GitHub</a></summary>
 
 ```python
 def _is_mock_heavy(body: str) -> bool:
@@ -834,7 +1658,7 @@ def _is_mock_heavy(body: str) -> bool:
 #### `_extract_usage_snippet`
 
 <details>
-<summary>View Source (lines 212-312) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/test_examples.py#L212-L312">GitHub</a></summary>
+<summary>View Source (lines 235-335) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L235-L335">GitHub</a></summary>
 
 ```python
 def _extract_usage_snippet(
@@ -942,31 +1766,190 @@ def _extract_usage_snippet(
 
 </details>
 
-## Relevant Source Files
 
-- `src/local_deepwiki/generators/test_examples.py:22-29`
+#### `_search_test_examples`
 
-## See Also
+<details>
+<summary>View Source (lines 882-938) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L882-L938">GitHub</a></summary>
 
-- [models](../models.md) - dependency
-- [logging](../logging.md) - dependency
-- [chunker](../core/chunker.md) - shares 5 dependencies
-- [api_docs](api_docs.md) - shares 5 dependencies
+```python
+async def _search_test_examples(
+        self,
+        entity_name: str,
+        max_results: int = 5,
+    ) -> list[CodeExample]:
+        """Search for test functions that use the given entity.
 
-## See Also
+        Args:
+            entity_name: Name of the function/class to search for.
+            max_results: Maximum search results.
 
-- [logging](../logging.md) - dependency
-- [chunker](../core/chunker.md) - shares 5 dependencies
-- [api_docs](api_docs.md) - shares 5 dependencies
+        Returns:
+            List of CodeExample objects from test files.
+        """
+        examples: list[CodeExample] = []
 
-## See Also
+        # Search for test functions mentioning this entity
+        query = f"test {entity_name}"
+        results = await self._store.search(
+            query=query,
+            limit=max_results * 2,  # Get extra to filter
+            chunk_type="function",
+        )
 
-- [logging](../logging.md) - dependency
-- [chunker](../core/chunker.md) - shares 5 dependencies
-- [api_docs](api_docs.md) - shares 5 dependencies
+        for result in results:
+            chunk = result.chunk
 
-## See Also
+            # Only consider test functions
+            if not chunk.name or not chunk.name.startswith("test"):
+                continue
 
-- [logging](../logging.md) - dependency
-- [chunker](../core/chunker.md) - shares 5 dependencies
-- [api_docs](api_docs.md) - shares 5 dependencies
+            # Check if entity is actually used in the code
+            if entity_name not in chunk.content:
+                continue
+
+            # Skip mock-heavy tests
+            if _is_mock_heavy(chunk.content):
+                continue
+
+            # Extract relevant snippet
+            snippet = self._extract_relevant_snippet(chunk.content, entity_name)
+            if snippet and len(snippet) >= 10:
+                examples.append(
+                    CodeExample(
+                        source="test",
+                        code=snippet,
+                        description=chunk.docstring,
+                        test_file=chunk.file_path,
+                        language=chunk.language.value if chunk.language else "python",
+                        entity_name=entity_name,
+                    )
+                )
+
+            if len(examples) >= max_results:
+                break
+
+        return examples
+```
+
+</details>
+
+
+#### `_search_docstring_examples`
+
+<details>
+<summary>View Source (lines 940-979) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L940-L979">GitHub</a></summary>
+
+```python
+async def _search_docstring_examples(
+        self,
+        entity_name: str,
+        max_results: int = 3,
+    ) -> list[CodeExample]:
+        """Search for docstring examples for the given entity.
+
+        Args:
+            entity_name: Name of the function/class to search for.
+            max_results: Maximum results.
+
+        Returns:
+            List of CodeExample objects from docstrings.
+        """
+        examples: list[CodeExample] = []
+
+        # Search for the entity's definition
+        results = await self._store.search(
+            query=entity_name,
+            limit=5,
+        )
+
+        for result in results:
+            chunk = result.chunk
+
+            # Look for the exact entity
+            if chunk.name != entity_name:
+                continue
+
+            # Parse docstring examples
+            if chunk.docstring:
+                docstring_examples = parse_docstring_examples(chunk.docstring)
+                for doc_ex in docstring_examples[:max_results]:
+                    doc_ex.entity_name = entity_name
+                    examples.append(doc_ex)
+
+            if len(examples) >= max_results:
+                break
+
+        return examples
+```
+
+</details>
+
+
+#### `_extract_relevant_snippet`
+
+<details>
+<summary>View Source (lines 981-1037) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L981-L1037">GitHub</a></summary>
+
+```python
+def _extract_relevant_snippet(
+        self,
+        content: str,
+        entity_name: str,
+        max_lines: int = 20,
+    ) -> str | None:
+        """Extract the most relevant code snippet from test content.
+
+        Args:
+            content: Full test function content.
+            entity_name: Entity to find usage of.
+            max_lines: Maximum lines to include.
+
+        Returns:
+            Extracted snippet or None.
+        """
+        lines = content.split("\n")
+        relevant: list[str] = []
+        capturing = False
+        paren_depth = 0
+        assertions_found = 0
+
+        for line in lines:
+            stripped = line.strip()
+
+            # Skip docstrings
+            if stripped.startswith(('"""', "'''")):
+                continue
+
+            # Track parentheses
+            paren_depth += line.count("(") - line.count(")")
+
+            # Start capturing at entity usage
+            if entity_name in line and not capturing:
+                capturing = True
+
+            if capturing:
+                relevant.append(line)
+
+                # Stop after assertions
+                if stripped.startswith("assert") and paren_depth <= 0:
+                    assertions_found += 1
+                    if assertions_found >= 2:
+                        break
+
+                if len(relevant) >= max_lines:
+                    break
+
+        if not relevant:
+            return None
+
+        try:
+            result = dedent("\n".join(relevant)).strip()
+        except Exception:
+            result = "\n".join(relevant).strip()
+
+        return result if len(result) >= 10 else None
+```
+
+</details>
+

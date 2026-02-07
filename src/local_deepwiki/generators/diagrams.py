@@ -106,7 +106,9 @@ def _extract_methods_from_class_content(
     show_types: bool,
 ) -> None:
     """Extract methods from class content for classes without METHOD chunks."""
-    method_pattern = re.compile(r"(?:async\s+)?def\s+(\w+)\s*\([^)]*\)(?:\s*->\s*([^:]+))?:")
+    method_pattern = re.compile(
+        r"(?:async\s+)?def\s+(\w+)\s*\([^)]*\)(?:\s*->\s*([^:]+))?:"
+    )
 
     for class_name in classes:
         if methods_by_class.get(class_name):
@@ -118,7 +120,9 @@ def _extract_methods_from_class_content(
                 for match in method_pattern.finditer(chunk.content):
                     method_name = match.group(1)
                     return_type = match.group(2)
-                    if method_name not in [m[0] for m in methods_by_class.get(class_name, [])]:
+                    if method_name not in [
+                        m[0] for m in methods_by_class.get(class_name, [])
+                    ]:
                         if class_name not in methods_by_class:
                             methods_by_class[class_name] = []
                         sig = (
@@ -173,13 +177,39 @@ def _build_inheritance_lines(classes: dict[str, ClassInfo]) -> list[str]:
     return lines
 
 
+def _package_from_file_path(file_path: str) -> str:
+    """Extract the package name from a file path.
+
+    For 'src/local_deepwiki/core/indexer.py' returns 'core'.
+    For 'src/local_deepwiki/models.py' returns 'top-level'.
+
+    Args:
+        file_path: Source file path.
+
+    Returns:
+        Package name string.
+    """
+    parts = Path(file_path).parts
+    if "src" in parts:
+        idx = parts.index("src")
+        # Skip src/ and the package dir (e.g. local_deepwiki/)
+        remaining = parts[idx + 2 :]
+        if len(remaining) > 1:
+            return remaining[0]
+    return "top-level"
+
+
 def generate_class_diagram(
     chunks: list,
     show_attributes: bool = True,
     show_types: bool = True,
     max_methods: int = 15,
+    max_classes_per_diagram: int = 30,
 ) -> str | None:
-    """Generate an enhanced Mermaid class diagram from code chunks.
+    """Generate enhanced Mermaid class diagrams from code chunks.
+
+    When more than max_classes_per_diagram classes exist, generates separate
+    diagrams per package to keep each diagram renderable.
 
     Features:
     - Shows class attributes/properties (not just methods)
@@ -192,17 +222,22 @@ def generate_class_diagram(
         show_attributes: Whether to show class attributes.
         show_types: Whether to show type annotations.
         max_methods: Maximum methods to show per class.
+        max_classes_per_diagram: Split into per-package diagrams above this threshold.
 
     Returns:
         Mermaid class diagram markdown string, or None if no classes found.
     """
     classes: dict[str, ClassInfo] = {}
     methods_by_class: dict[str, list[tuple[str, str | None]]] = {}
+    class_to_package: dict[str, str] = {}
 
     # Collect class and method info from chunks
     for chunk in chunks:
         chunk = _unwrap_chunk(chunk)
         if chunk.chunk_type == ChunkType.CLASS:
+            class_name = chunk.name or "Unknown"
+            if class_name not in classes:
+                class_to_package[class_name] = _package_from_file_path(chunk.file_path)
             _collect_class_from_chunk(chunk, classes, methods_by_class, show_attributes)
         elif chunk.chunk_type == ChunkType.METHOD:
             _collect_method_from_chunk(chunk, methods_by_class, show_types)
@@ -216,18 +251,48 @@ def generate_class_diagram(
             classes[class_name].methods = [m[0] for m in method_list[:max_methods]]
 
     # Filter to classes with content
-    classes_with_content = {k: v for k, v in classes.items() if v.methods or v.attributes}
+    classes_with_content = {
+        k: v for k, v in classes.items() if v.methods or v.attributes
+    }
     if not classes_with_content:
         return None
 
-    # Build Mermaid diagram
-    lines = ["```mermaid", "classDiagram"]
-    for class_name, class_info in sorted(classes_with_content.items()):
-        lines.extend(_build_class_lines(class_name, class_info, methods_by_class, max_methods, show_types))
-    lines.extend(_build_inheritance_lines(classes_with_content))
-    lines.append("```")
+    # If small enough, build a single diagram
+    if len(classes_with_content) <= max_classes_per_diagram:
+        lines = ["```mermaid", "classDiagram"]
+        for class_name, class_info in sorted(classes_with_content.items()):
+            lines.extend(
+                _build_class_lines(
+                    class_name, class_info, methods_by_class, max_methods, show_types
+                )
+            )
+        lines.extend(_build_inheritance_lines(classes_with_content))
+        lines.append("```")
+        return "\n".join(lines)
 
-    return "\n".join(lines)
+    # Split into per-package diagrams
+    packages: dict[str, dict[str, ClassInfo]] = {}
+    for class_name, class_info in classes_with_content.items():
+        pkg = class_to_package.get(class_name, "top-level")
+        if pkg not in packages:
+            packages[pkg] = {}
+        packages[pkg][class_name] = class_info
+
+    sections: list[str] = []
+    for pkg_name in sorted(packages):
+        pkg_classes = packages[pkg_name]
+        lines = [f"### {pkg_name}", "", "```mermaid", "classDiagram"]
+        for class_name, class_info in sorted(pkg_classes.items()):
+            lines.extend(
+                _build_class_lines(
+                    class_name, class_info, methods_by_class, max_methods, show_types
+                )
+            )
+        lines.extend(_build_inheritance_lines(pkg_classes))
+        lines.append("```")
+        sections.append("\n".join(lines))
+
+    return "\n\n".join(sections)
 
 
 def _extract_class_attributes(content: str, language: str = "python") -> list[str]:
@@ -245,7 +310,9 @@ def _extract_class_attributes(content: str, language: str = "python") -> list[st
     if language in ("python", "py"):
         # Match class-level type annotations: name: Type or self.name: Type
         # Also match __init__ assignments
-        attr_pattern = re.compile(r"^\s{4}(\w+)\s*:\s*([^=\n]+?)(?:\s*=|$)", re.MULTILINE)
+        attr_pattern = re.compile(
+            r"^\s{4}(\w+)\s*:\s*([^=\n]+?)(?:\s*=|$)", re.MULTILINE
+        )
         init_pattern = re.compile(r"self\.(\w+)\s*(?::\s*([^\s=]+))?\s*=")
 
         for match in attr_pattern.finditer(content):
@@ -570,7 +637,9 @@ def _add_circular_styling(
             to_id = node_ids.get(imp)
             if to_id and from_id != to_id:
                 if (module, imp) in circular_edges or (imp, module) in circular_edges:
-                    lines.append(f"    linkStyle {link_idx} stroke:#f00,stroke-width:2px")
+                    lines.append(
+                        f"    linkStyle {link_idx} stroke:#f00,stroke-width:2px"
+                    )
                 link_idx += 1
 
 
@@ -931,7 +1000,9 @@ def generate_sequence_diagram(
     # Find entry point if not specified
     if not entry_point:
         # Find function with most outgoing calls
-        entry_point = max(call_graph.keys(), key=lambda k: len(call_graph.get(k, [])), default=None)
+        entry_point = max(
+            call_graph.keys(), key=lambda k: len(call_graph.get(k, [])), default=None
+        )
 
     if not entry_point or entry_point not in call_graph:
         return None

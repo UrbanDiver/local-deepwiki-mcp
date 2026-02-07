@@ -1,117 +1,138 @@
-# Coverage Analysis Module
+# Documentation for `src/local_deepwiki/generators/coverage.py`
 
 ## File Overview
 
-The `coverage.py` module provides functionality for analyzing documentation coverage across a codebase. It evaluates files to determine which have meaningful docstrings and generates coverage reports in wiki format. The module works with vector stores to identify indexed content and produces both file-level and project-level coverage statistics.
+This file provides functionality for analyzing and generating documentation coverage reports for a codebase. It calculates how much of the codebase is documented by examining docstrings in source files and generates a markdown report summarizing the coverage statistics.
+
+The module depends on:
+- `dataclasses` for defining structured data classes
+- `pathlib.Path` for handling file paths
+- `local_deepwiki.core.vectorstore.VectorStore` for retrieving code chunks
+- `local_deepwiki.models.ChunkType` and `local_deepwiki.models.IndexStatus` for type definitions
 
 ## Classes
 
 ### CoverageStats
 
-A dataclass that stores coverage statistics for documentation analysis.
+Documentation coverage statistics.
 
-**Fields:**
-- Contains coverage metrics and statistics (specific fields not visible in provided code)
+**Attributes:**
+- `total_classes`: Total number of classes in the codebase.
+- `documented_classes`: Number of documented classes.
+- `total_functions`: Total number of functions in the codebase.
+- `documented_functions`: Number of documented functions.
+- `total_methods`: Total number of methods in the codebase.
+- `documented_methods`: Number of documented methods.
+
+**Properties:**
+- `total_entities`: Returns the total number of documentable entities (classes + functions + methods).
+- `documented_entities`: Returns the total number of documented entities (documented classes + functions + methods).
 
 ### FileCoverage
 
-A dataclass that represents coverage information for individual files.
+Coverage statistics for a single file.
 
-**Fields:**
-- Contains file-specific coverage data (specific fields not visible in provided code)
+**Attributes:**
+- `file_path`: Path to the source file.
+- `stats`: `CoverageStats` object with statistics for this file.
+- `undocumented`: List of names of undocumented entities in this file.
 
 ## Functions
 
 ### _has_meaningful_docstring
 
-A private helper function that determines whether a file contains meaningful documentation.
+Check if a docstring is meaningful (not empty or trivial).
 
 **Parameters:**
-- Takes parameters for evaluating docstring quality (specific parameters not visible in provided code)
+- `docstring`: The docstring to check.
 
 **Returns:**
-- Boolean indicating presence of meaningful docstrings
+- `True` if the docstring is meaningful.
 
 ### analyze_file_coverage
 
-Analyzes documentation coverage for a single file.
+Analyze documentation coverage for a single file.
 
 **Parameters:**
-- File-related parameters for coverage analysis (specific parameters not visible in provided code)
+- `file_path`: Path to the source file.
+- `vector_store`: Vector store with code chunks.
 
 **Returns:**
-- FileCoverage object containing the analysis results
+- `FileCoverage` object with statistics.
 
 ### analyze_project_coverage
 
-Performs documentation coverage analysis across an entire project.
+Analyze documentation coverage for the entire project.
 
 **Parameters:**
-- Project-level parameters for comprehensive coverage analysis (specific parameters not visible in provided code)
+- `index_status`: Index status with file information.
+- `vector_store`: Vector store with code chunks.
 
 **Returns:**
-- CoverageStats object with project-wide coverage metrics
+- Tuple of `(overall stats, list of per-file coverage)`.
 
 ### _get_coverage_emoji
 
-A private helper function that returns appropriate emoji indicators for coverage levels.
+Get an emoji indicator for coverage level.
 
 **Parameters:**
-- Coverage-related parameters (specific parameters not visible in provided code)
+- `percent`: Coverage percentage.
 
 **Returns:**
-- String containing emoji representation of coverage status
+- Emoji string representing the coverage level.
 
 ### _get_wiki_link
 
-A private helper function that generates wiki-formatted links.
+Convert a source file path to a wiki link.
 
 **Parameters:**
-- Link generation parameters (specific parameters not visible in provided code)
+- `file_path`: Path to the source file.
 
 **Returns:**
-- String containing formatted wiki link
+- Wiki link in the format `files/<path>.md`.
 
 ### generate_coverage_page
 
-Generates a complete coverage report page in wiki format.
+Generate the documentation coverage report page.
 
 **Parameters:**
-- Parameters for page generation (specific parameters not visible in provided code)
+- `index_status`: Index status with file information.
+- `vector_store`: Vector store with code chunks.
 
 **Returns:**
-- Generated coverage page content
+- Markdown content for the coverage page, or `None` if no entities found.
+
+## Integration
+
+This file is used by:
+- `_get_coverage_emoji`: Called by `test_coverage`
+- `generate_coverage_page`: Called by `test_wiki_coverage`
+
+It integrates with:
+- `local_deepwiki.core.vectorstore.VectorStore` to retrieve code chunks for analysis
+- `local_deepwiki.models.ChunkType` and `local_deepwiki.models.IndexStatus` for type definitions and index information
+
+The file is part of the documentation generation pipeline and works closely with other generators like `source_refs.py` and `wiki.py`.
 
 ## Usage Examples
 
+### Analyze Coverage for a Single File
+
 ```python
-from local_deepwiki.generators.coverage import (
-    analyze_file_coverage, 
-    analyze_project_coverage, 
-    generate_coverage_page
-)
-
-# Analyze coverage for a single file
-file_coverage = analyze_file_coverage(...)
-
-# Analyze coverage for entire project
-project_stats = analyze_project_coverage(...)
-
-# Generate coverage report page
-coverage_page = generate_coverage_page(...)
+file_coverage = await analyze_file_coverage("src/example.py", vector_store)
 ```
 
-## Related Components
+### Analyze Project Coverage
 
-This module integrates with several other components:
+```python
+overall_stats, file_coverages = await analyze_project_coverage(index_status, vector_store)
+```
 
-- **[VectorStore](../core/vectorstore.md)**: Used for accessing indexed content and determining what documentation exists
-- **[ChunkType](../models.md)**: Enumeration for categorizing different types of code chunks
-- **[IndexStatus](../models.md)**: Tracks the indexing status of files and content
-- **Path**: Standard library component for file system path operations
-- **dataclass**: Python [decorator](../providers/base.md) for creating data classes with automatic method generation
+### Generate Coverage Report Page
 
-The module serves as part of the documentation generation pipeline, providing coverage analysis capabilities that help identify gaps in project documentation.
+```python
+coverage_page = await generate_coverage_page(index_status, vector_store)
+```
 
 ## API Reference
 
@@ -123,7 +144,7 @@ Documentation coverage statistics.
 
 
 <details>
-<summary>View Source (lines 11-36) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/coverage.py#L11-L36">GitHub</a></summary>
+<summary>View Source (lines 11-36) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/coverage.py#L11-L36">GitHub</a></summary>
 
 ```python
 class CoverageStats:
@@ -166,7 +187,7 @@ Total number of documentable entities.
 
 
 <details>
-<summary>View Source (lines 11-36) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/coverage.py#L11-L36">GitHub</a></summary>
+<summary>View Source (lines 11-36) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/coverage.py#L11-L36">GitHub</a></summary>
 
 ```python
 class CoverageStats:
@@ -209,7 +230,7 @@ Total number of documented entities.
 
 
 <details>
-<summary>View Source (lines 11-36) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/coverage.py#L11-L36">GitHub</a></summary>
+<summary>View Source (lines 11-36) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/coverage.py#L11-L36">GitHub</a></summary>
 
 ```python
 class CoverageStats:
@@ -253,7 +274,7 @@ Overall documentation coverage percentage.
 
 
 <details>
-<summary>View Source (lines 11-36) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/coverage.py#L11-L36">GitHub</a></summary>
+<summary>View Source (lines 11-36) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/coverage.py#L11-L36">GitHub</a></summary>
 
 ```python
 class CoverageStats:
@@ -294,7 +315,7 @@ Coverage statistics for a single file.
 
 
 <details>
-<summary>View Source (lines 40-45) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/coverage.py#L40-L45">GitHub</a></summary>
+<summary>View Source (lines 40-45) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/coverage.py#L40-L45">GitHub</a></summary>
 
 ```python
 class FileCoverage:
@@ -318,17 +339,17 @@ async def analyze_file_coverage(file_path: str, vector_store: VectorStore) -> Fi
 Analyze documentation coverage for a single file.
 
 
-| [Parameter](api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `file_path` | `str` | - | Path to the source file. |
-| `vector_store` | [`VectorStore`](../core/vectorstore.md) | - | Vector store with code chunks. |
+| `vector_store` | `VectorStore` | - | Vector store with code chunks. |
 
 **Returns:** `FileCoverage`
 
 
 
 <details>
-<summary>View Source (lines 73-115) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/coverage.py#L73-L115">GitHub</a></summary>
+<summary>View Source (lines 73-115) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/coverage.py#L73-L115">GitHub</a></summary>
 
 ```python
 async def analyze_file_coverage(
@@ -387,17 +408,17 @@ async def analyze_project_coverage(index_status: IndexStatus, vector_store: Vect
 Analyze documentation coverage for the entire project.
 
 
-| [Parameter](api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `index_status` | [`IndexStatus`](../models.md) | - | Index status with file information. |
-| `vector_store` | [`VectorStore`](../core/vectorstore.md) | - | Vector store with code chunks. |
+| `index_status` | `IndexStatus` | - | Index status with file information. |
+| `vector_store` | `VectorStore` | - | Vector store with code chunks. |
 
 **Returns:** `tuple[CoverageStats, list[FileCoverage]]`
 
 
 
 <details>
-<summary>View Source (lines 118-149) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/coverage.py#L118-L149">GitHub</a></summary>
+<summary>View Source (lines 118-149) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/coverage.py#L118-L149">GitHub</a></summary>
 
 ```python
 async def analyze_project_coverage(
@@ -445,10 +466,10 @@ async def generate_coverage_page(index_status: IndexStatus, vector_store: Vector
 Generate the documentation coverage report page.
 
 
-| [Parameter](api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `index_status` | [`IndexStatus`](../models.md) | - | Index status with file information. |
-| `vector_store` | [`VectorStore`](../core/vectorstore.md) | - | Vector store with code chunks. |
+| `index_status` | `IndexStatus` | - | Index status with file information. |
+| `vector_store` | `VectorStore` | - | Vector store with code chunks. |
 
 **Returns:** `str | None`
 
@@ -456,7 +477,7 @@ Generate the documentation coverage report page.
 
 
 <details>
-<summary>View Source (lines 177-290) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/coverage.py#L177-L290">GitHub</a></summary>
+<summary>View Source (lines 177-290) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/coverage.py#L177-L290">GitHub</a></summary>
 
 ```python
 async def generate_coverage_page(
@@ -716,14 +737,14 @@ assert fc.undocumented == []
 
 | Entity | Type | Author | Date | Commit |
 |--------|------|--------|------|--------|
-| `CoverageStats` | class | Brian Breidenbach | today | `8d2ab68` Add inheritance trees, glos... |
-| `FileCoverage` | class | Brian Breidenbach | today | `8d2ab68` Add inheritance trees, glos... |
-| `_has_meaningful_docstring` | function | Brian Breidenbach | today | `8d2ab68` Add inheritance trees, glos... |
-| `analyze_file_coverage` | function | Brian Breidenbach | today | `8d2ab68` Add inheritance trees, glos... |
-| `analyze_project_coverage` | function | Brian Breidenbach | today | `8d2ab68` Add inheritance trees, glos... |
-| `_get_coverage_emoji` | function | Brian Breidenbach | today | `8d2ab68` Add inheritance trees, glos... |
-| `_get_wiki_link` | function | Brian Breidenbach | today | `8d2ab68` Add inheritance trees, glos... |
-| `generate_coverage_page` | function | Brian Breidenbach | today | `8d2ab68` Add inheritance trees, glos... |
+| `CoverageStats` | class | Brian Breidenbach | 3 weeks ago | `8d2ab68` Add inheritance trees, glos... |
+| `FileCoverage` | class | Brian Breidenbach | 3 weeks ago | `8d2ab68` Add inheritance trees, glos... |
+| `_has_meaningful_docstring` | function | Brian Breidenbach | 3 weeks ago | `8d2ab68` Add inheritance trees, glos... |
+| `analyze_file_coverage` | function | Brian Breidenbach | 3 weeks ago | `8d2ab68` Add inheritance trees, glos... |
+| `analyze_project_coverage` | function | Brian Breidenbach | 3 weeks ago | `8d2ab68` Add inheritance trees, glos... |
+| `_get_coverage_emoji` | function | Brian Breidenbach | 3 weeks ago | `8d2ab68` Add inheritance trees, glos... |
+| `_get_wiki_link` | function | Brian Breidenbach | 3 weeks ago | `8d2ab68` Add inheritance trees, glos... |
+| `generate_coverage_page` | function | Brian Breidenbach | 3 weeks ago | `8d2ab68` Add inheritance trees, glos... |
 
 ## Additional Source Code
 
@@ -732,7 +753,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_has_meaningful_docstring`
 
 <details>
-<summary>View Source (lines 48-70) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/coverage.py#L48-L70">GitHub</a></summary>
+<summary>View Source (lines 48-70) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/coverage.py#L48-L70">GitHub</a></summary>
 
 ```python
 def _has_meaningful_docstring(docstring: str | None) -> bool:
@@ -766,7 +787,7 @@ def _has_meaningful_docstring(docstring: str | None) -> bool:
 #### `_get_coverage_emoji`
 
 <details>
-<summary>View Source (lines 152-168) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/coverage.py#L152-L168">GitHub</a></summary>
+<summary>View Source (lines 152-168) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/coverage.py#L152-L168">GitHub</a></summary>
 
 ```python
 def _get_coverage_emoji(percent: float) -> str:
@@ -794,7 +815,7 @@ def _get_coverage_emoji(percent: float) -> str:
 #### `_get_wiki_link`
 
 <details>
-<summary>View Source (lines 171-174) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/coverage.py#L171-L174">GitHub</a></summary>
+<summary>View Source (lines 171-174) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/coverage.py#L171-L174">GitHub</a></summary>
 
 ```python
 def _get_wiki_link(file_path: str) -> str:
@@ -805,35 +826,3 @@ def _get_wiki_link(file_path: str) -> str:
 
 </details>
 
-## Relevant Source Files
-
-- `src/local_deepwiki/generators/coverage.py:11-36`
-
-## See Also
-
-- [models](../models.md) - dependency
-- [vectorstore](../core/vectorstore.md) - dependency
-- [glossary](glossary.md) - shares 4 dependencies
-- [inheritance](inheritance.md) - shares 4 dependencies
-- [crosslinks](crosslinks.md) - shares 3 dependencies
-
-## See Also
-
-- [vectorstore](../core/vectorstore.md) - dependency
-- [glossary](glossary.md) - shares 4 dependencies
-- [inheritance](inheritance.md) - shares 4 dependencies
-- [crosslinks](crosslinks.md) - shares 3 dependencies
-
-## See Also
-
-- [vectorstore](../core/vectorstore.md) - dependency
-- [glossary](glossary.md) - shares 4 dependencies
-- [inheritance](inheritance.md) - shares 4 dependencies
-- [crosslinks](crosslinks.md) - shares 3 dependencies
-
-## See Also
-
-- [vectorstore](../core/vectorstore.md) - dependency
-- [glossary](glossary.md) - shares 4 dependencies
-- [inheritance](inheritance.md) - shares 4 dependencies
-- [crosslinks](crosslinks.md) - shares 3 dependencies

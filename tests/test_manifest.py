@@ -607,7 +607,9 @@ class TestEntryPointsSummary:
 
     def test_entry_points_summary_with_scripts(self):
         """Entry points summary shows scripts."""
-        manifest = ProjectManifest(scripts={"build": "npm run build", "test": "pytest tests/"})
+        manifest = ProjectManifest(
+            scripts={"build": "npm run build", "test": "pytest tests/"}
+        )
         result = manifest.get_entry_points_summary()
         assert "### Scripts" in result
         assert "`build`" in result
@@ -1093,9 +1095,10 @@ class TestDirectoryTreeEdgeCases:
 
             tree = get_directory_tree(root, max_depth=1)
 
-            assert "a/" in tree
-            # b should not appear with max_depth=1
-            assert "b/" not in tree
+            lines = tree.splitlines()
+            assert any("a/" in line for line in lines)
+            # b should not appear with max_depth=1 (check per-line to avoid temp dir name matches)
+            assert not any("b/" in line for line in lines[1:])
 
     def test_directory_tree_skips_pycache(self):
         """Directory tree skips __pycache__."""

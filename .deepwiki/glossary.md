@@ -2,139 +2,353 @@
 
 Alphabetical index of all classes, functions, and methods in the codebase.
 
-**Quick Navigation:** [#](##) | [A](#a) | [B](#b) | [C](#c) | [D](#d) | [E](#e) | [F](#f) | [G](#g) | [H](#h) | [I](#i) | [L](#l) | [M](#m) | [N](#n) | [O](#o) | [P](#p) | [Q](#q) | [R](#r) | [S](#s) | [T](#t) | [U](#u) | [V](#v) | [W](#w)
+**Quick Navigation:** [#](##) | [A](#a) | [B](#b) | [C](#c) | [D](#d) | [E](#e) | [F](#f) | [G](#g) | [H](#h) | [I](#i) | [L](#l) | [M](#m) | [N](#n) | [O](#o) | [P](#p) | [Q](#q) | [R](#r) | [S](#s) | [T](#t) | [U](#u) | [V](#v) | [W](#w) | [Y](#y) | [Z](#z)
 
-**Total:** 1508 entities (413 classes, 291 functions, 804 methods)
+**Total:** 4479 entities (1195 classes, 653 functions, 2631 methods)
 
 ---
 
 ## #
 
+- ▪️⚡ **[`RateLimiter.__aenter__`](files/src/local_deepwiki/core/rate_limiter.md)** `(...) → "RateLimiter"` (`rate_limiter.py`) - Enter async context manager, acquiring rate limit permiss...
+- ▪️⚡ **[`RateLimiter.__aexit__`](files/src/local_deepwiki/core/rate_limiter.md)** `(*args: object) → None` (`rate_limiter.py`) - Exit async context manager, releasing burst semaphore.
+- ▪️⚡ **[`ChunkIterator.__aiter__`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → AsyncIterator[CodeChunk]` (`vectorstore.py`) - Async iterate over all chunks in batches.
+- ▪️⚡ **[`WikiPageIterator.__aiter__`](files/src/local_deepwiki/export/streaming.md)** `(...) → AsyncIterator[WikiPage]` (`streaming.py`) - Yield pages one at a time.
+- ▪️ **[`EmbeddingCache.__del__`](files/src/local_deepwiki/providers/embeddings/cache.md)** `(...) → None` (`cache.py`) - Destructor to ensure connections are closed.
+- ▪️ **[`MultiPhaseProgress.__enter__`](files/src/local_deepwiki/cli_progress.md)** `(...) → MultiPhaseProgress` (`cli_progress.py`) - Start progress tracking.
+- ▪️ **[`MultiPhaseProgress.__exit__`](files/src/local_deepwiki/cli_progress.md)** `(*args: object) → None` (`cli_progress.py`) - Stop progress tracking.
 - 🔹 **[`__getattr__`](files/src/local_deepwiki/export/__init__.md)** `(name: str)` ⚠️`AttributeError` (`__init__.py`) - Lazy import PDF-related symbols to avoid WeasyPrint impor...
-- ▪️ **[`DebouncedHandler.__init__`](files/src/local_deepwiki/watcher.md)** `(repo_path: Path, config: Config, debounce_seconds: float, ...+1)` (`watcher.py`) - Initialize the handler.
+- ▪️ **[`TestEmbeddingCacheErrorHandling.__getitem__`](files/tests/test_embedding_cache.md)** `(...)` (`test_embedding_cache.py`)
+- ▪️ **[`TestWikiGeneratorPluginIntegration.__init__`](files/tests/test_plugins.md)** `(name: str, prio: int)` (`test_plugins.py`)
+- ▪️ **[`TestWikiGeneratorPluginIntegration.__init__`](files/tests/test_plugins.md)** `(name: str, run_after: list[str])` (`test_plugins.py`)
+- ▪️ **[`TestWikiGeneratorPluginIntegration.__init__`](files/tests/test_plugins.md)** `(name: str, run_after: list[str])` (`test_plugins.py`)
+- ▪️ **[`TestSearch.__init__`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`)
+- ▪️ **[`TestSearch.__init__`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`)
+- ▪️ **[`MultiPhaseProgress.__init__`](files/src/local_deepwiki/cli_progress.md)** `(disable: bool, console: Console | None)` (`cli_progress.py`) - Initialize multi-phase progress tracker.
+- ▪️ **[`EventEmitter.__init__`](files/src/local_deepwiki/events.md)** `(max_consecutive_errors: int, lifecycle: HandlerLifecycle | None) → None` (`events.py`) - Initialize the event emitter.
+- ▪️ **[`HookRunner.__init__`](files/src/local_deepwiki/events.md)** `(emitter: EventEmitter, scripts_dir: Path | str | None) → None` (`events.py`) - Initialize the hook runner.
+- ▪️ **[`ProgressNotifier.__init__`](files/src/local_deepwiki/handlers.md)** `(progress_manager: ProgressManager, server: Any, progress_token: str | int | None, ...+1)` (`handlers.py`) - Initialize the notifier.
+- ▪️ **[`PromptLoader.__init__`](files/src/local_deepwiki/prompts.md)** `(custom_dir: Path | None, repo_path: Path | None)` (`prompts.py`) - Initialize the prompt loader.
+- ▪️ **[`PromptManager.__init__`](files/src/local_deepwiki/prompts.md)** `(custom_dir: Path | None, repo_path: Path | None)` (`prompts.py`) - Initialize the prompt manager.
+- ▪️ **[`DebouncedHandler.__init__`](files/src/local_deepwiki/watcher.md)** `(repo_path: Path, config: Config, debounce_seconds: float, ...+2)` (`watcher.py`) - Initialize the handler.
+- ▪️ **[`ProgressManager.__init__`](files/src/local_deepwiki/progress.md)** `(operation_id: str, operation_type: OperationType, total: int | None, ...+1)` (`progress.py`) - Initialize the progress manager.
+- ▪️ **[`OperationProgressRegistry.__init__`](files/src/local_deepwiki/progress.md)** `(...)` (`progress.py`) - Initialize the registry.
+- ▪️ **[`AuditLogger.__init__`](files/src/local_deepwiki/core/audit.md)** `(log_dir: Optional[Path]) → None` (`audit.py`) - Initialize the audit logger.
 - ▪️ **[`CodeChunker.__init__`](files/src/local_deepwiki/core/chunker.md)** `(config: ChunkingConfig | None)` (`chunker.py`) - Initialize the chunker.
-- ▪️ **[`VectorStore.__init__`](files/src/local_deepwiki/core/vectorstore.md)** `(db_path: Path, embedding_provider: EmbeddingProvider)` (`vectorstore.py`) - Initialize the vector store.
 - ▪️ **[`LLMCache.__init__`](files/src/local_deepwiki/core/llm_cache.md)** `(cache_path: Path, embedding_provider: EmbeddingProvider, config: LLMCacheConfig)` (`llm_cache.py`) - Initialize the LLM cache.
+- ▪️ **[`AdaptiveSearcher.__init__`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → None` (`vectorstore.py`) - Initialize the adaptive searcher.
+- ▪️ **[`SearchCache.__init__`](files/src/local_deepwiki/core/vectorstore.md)** `(config: SearchCacheConfig)` (`vectorstore.py`) - Initialize the search cache.
+- ▪️ **[`ChunkIterator.__init__`](files/src/local_deepwiki/core/vectorstore.md)** `(table: Table, batch_size: int, columns: list[str] | None, ...+2)` (`vectorstore.py`) - Initialize the chunk iterator.
+- ▪️ **[`LazyChunkLoader.__init__`](files/src/local_deepwiki/core/vectorstore.md)** `(store: "VectorStore", max_memory_mb: int)` (`vectorstore.py`) - Initialize the lazy chunk loader.
+- ▪️ **[`LazyIndexManager.__init__`](files/src/local_deepwiki/core/vectorstore.md)** `(vectorstore: "VectorStore", config: LazyIndexConfig | None)` (`vectorstore.py`) - Initialize the lazy index manager.
+- ▪️ **[`VectorStore.__init__`](files/src/local_deepwiki/core/vectorstore.md)** `(db_path: Path, embedding_provider: EmbeddingProvider, search_cache_config: SearchCacheConfig | None, ...+5)` (`vectorstore.py`) - Initialize the vector store.
+- ▪️ **[`RateLimiter.__init__`](files/src/local_deepwiki/core/rate_limiter.md)** `(config: Optional[RateLimitConfig]) → None` (`rate_limiter.py`) - Initialize the rate limiter.
+- ▪️ **[`ASTCache.__init__`](files/src/local_deepwiki/core/parser.md)** `(max_entries: int, ttl_seconds: int)` (`parser.py`) - Initialize the AST cache.
+- ▪️ **[`CodeParser.__init__`](files/src/local_deepwiki/core/parser.md)** `(cache: ASTCache | None)` (`parser.py`) - Initialize the parser with language support.
+- ▪️ **[`IndexStatusManager.__init__`](files/src/local_deepwiki/core/index_manager.md)** `(status_filename: str)` (`index_manager.py`) - Initialize the index status manager.
 - ▪️ **[`RepositoryIndexer.__init__`](files/src/local_deepwiki/core/indexer.md)** `(repo_path: Path, config: Config | None, embedding_provider_name: str | None)` (`indexer.py`) - Initialize the indexer.
-- ▪️ **[`CodeParser.__init__`](files/src/local_deepwiki/core/parser.md)** `(...)` (`parser.py`) - Initialize the parser with language support.
-- ▪️ **[`DeepResearchPipeline.__init__`](files/src/local_deepwiki/core/deep_research.md)** `(vector_store: VectorStore, llm_provider: LLMProvider, max_sub_questions: int, ...+8)` (`deep_research.py`) - Initialize the deep research pipeline.
+- ▪️ **[`FuzzySearchHelper.__init__`](files/src/local_deepwiki/core/fuzzy_search.md)** `(store: "VectorStore")` (`fuzzy_search.py`) - Initialize the fuzzy search helper.
+- ▪️ **[`CheckpointManager.__init__`](files/src/local_deepwiki/core/deep_research.md)** `(repo_path: Path)` (`deep_research.py`) - Initialize the checkpoint manager.
+- ▪️ **[`DeepResearchPipeline.__init__`](files/src/local_deepwiki/core/deep_research.md)** `(vector_store: VectorStore, llm_provider: LLMProvider, max_sub_questions: int, ...+9)` (`deep_research.py`) - Initialize the deep research pipeline.
+- ▪️ **[`AccessController.__init__`](files/src/local_deepwiki/security/access_control.md)** `(mode: RBACMode)` (`access_control.py`) - Initialize the access controller.
+- ▪️ **[`RoleManager.__init__`](files/src/local_deepwiki/security/role_config.md)** `(config: Optional[RoleConfig])` (`role_config.py`) - Initialize the role manager.
+- ▪️ **[`PluginRegistry.__init__`](files/src/local_deepwiki/plugins/registry.md)** `(...)` (`registry.py`) - Initialize the plugin registry.
 - ▪️ **[`CachingLLMProvider.__init__`](files/src/local_deepwiki/providers/llm/cached.md)** `(provider: LLMProvider, cache: LLMCache)` (`cached.py`) - Initialize the caching provider.
+- ▪️ **[`OpenAILLMProvider.__init__`](files/src/local_deepwiki/providers/llm/openai.md)** `(model: str, api_key: str | None)` ⚠️`ProviderAuthenticationError` (`openai.py`) - Initialize the OpenAI provider.
+- ▪️ **[`AnthropicProvider.__init__`](files/src/local_deepwiki/providers/llm/anthropic.md)** `(model: str, api_key: str | None)` ⚠️`ProviderAuthenticationError` (`anthropic.py`) - Initialize the Anthropic provider.
 - ▪️ **[`OllamaProvider.__init__`](files/src/local_deepwiki/providers/llm/ollama.md)** `(model: str, base_url: str)` (`ollama.py`) - Initialize the Ollama provider.
-- ▪️ **[`AnthropicProvider.__init__`](files/src/local_deepwiki/providers/llm/anthropic.md)** `(model: str, api_key: str | None)` (`anthropic.py`) - Initialize the Anthropic provider.
+- ▪️ **[`LocalEmbeddingProvider.__init__`](files/src/local_deepwiki/providers/embeddings/local.md)** `(model_name: str)` (`local.py`) - Initialize the local embedding provider.
+- ▪️ **[`EmbeddingCache.__init__`](files/src/local_deepwiki/providers/embeddings/cache.md)** `(provider: EmbeddingProvider, config: EmbeddingCacheConfig | None)` (`cache.py`) - Initialize the embedding cache.
+- ▪️ **[`OpenAIEmbeddingProvider.__init__`](files/src/local_deepwiki/providers/embeddings/openai.md)** `(model: str, api_key: str | None)` ⚠️`ProviderAuthenticationError` (`openai.py`) - Initialize the OpenAI embedding provider.
+- ▪️ **[`ConfigValidator.__init__`](files/src/local_deepwiki/cli/config_cli.md)** `(config_path: Path | None)` (`config_cli.py`)
+- ▪️ **[`InteractiveSearch.__init__`](files/src/local_deepwiki/cli/interactive_search.md)** `(vector_store: VectorStore, repo_path: Path)` (`interactive_search.py`) - Initialize the interactive search.
 - ▪️ **[`EntityRegistry.__init__`](files/src/local_deepwiki/generators/crosslinks.md)** `(...) → None` (`crosslinks.py`) - Initialize an empty entity registry.
 - ▪️ **[`CrossLinker.__init__`](files/src/local_deepwiki/generators/crosslinks.md)** `(registry: EntityRegistry) → None` (`crosslinks.py`) - Initialize the cross-linker.
+- ▪️ **[`DependencyGraphGenerator.__init__`](files/src/local_deepwiki/generators/dependency_graph.md)** `(vector_store: "VectorStore")` (`dependency_graph.py`) - Initialize the dependency graph generator.
 - ▪️ **[`WikiStatusManager.__init__`](files/src/local_deepwiki/generators/wiki_status.md)** `(wiki_path: Path)` (`wiki_status.py`) - Initialize the status manager.
-- ▪️ **[`WikiGenerator.__init__`](files/src/local_deepwiki/generators/wiki.md)** `(wiki_path: Path, vector_store: VectorStore, config: Config | None, ...+1)` (`wiki.py`) - Initialize the wiki generator.
 - ▪️ **[`RelationshipAnalyzer.__init__`](files/src/local_deepwiki/generators/see_also.md)** `(...) → None` (`see_also.py`) - Initialize an empty relationship analyzer.
-- ▪️ **[`HtmlExporter.__init__`](files/src/local_deepwiki/export/html.md)** `(wiki_path: Path, output_path: Path)` (`html.py`) - Initialize the exporter.
-- ▪️ **[`PdfExporter.__init__`](files/src/local_deepwiki/export/pdf.md)** `(wiki_path: Path, output_path: Path)` (`pdf.py`) - Initialize the exporter.
+- ▪️ **[`WikiGenerator.__init__`](files/src/local_deepwiki/generators/wiki.md)** `(wiki_path: Path, vector_store: VectorStore, config: Config | None, ...+1)` (`wiki.py`) - Initialize the wiki generator.
+- ▪️ **[`CodeExampleExtractor.__init__`](files/src/local_deepwiki/generators/test_examples.md)** `(vector_store: "VectorStore", repo_path: Path | None)` (`test_examples.py`) - Initialize the extractor.
+- ▪️ **[`StreamingHtmlExporter.__init__`](files/src/local_deepwiki/export/html.md)** `(wiki_path: Path, output_path: Path, config: ExportConfig | None, ...+1)` (`html.py`) - Initialize the streaming HTML exporter.
+- ▪️ **[`HtmlExporter.__init__`](files/src/local_deepwiki/export/html.md)** `(wiki_path: Path, output_path: Path, no_progress: bool)` (`html.py`) - Initialize the exporter.
+- ▪️ **[`StreamingPdfExporter.__init__`](files/src/local_deepwiki/export/pdf.md)** `(wiki_path: Path, output_path: Path, config: ExportConfig | None, ...+1)` (`pdf.py`) - Initialize the streaming PDF exporter.
+- ▪️ **[`PdfExporter.__init__`](files/src/local_deepwiki/export/pdf.md)** `(wiki_path: Path, output_path: Path, no_progress: bool)` (`pdf.py`) - Initialize the exporter.
+- ▪️ **[`WikiPageIterator.__init__`](files/src/local_deepwiki/export/streaming.md)** `(wiki_path: Path, toc_order: list[str] | None)` (`streaming.py`) - Initialize the iterator.
+- ▪️ **[`ChunkIterator.__iter__`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → Iterator[CodeChunk]` (`vectorstore.py`) - Iterate over all chunks in batches.
+- ▪️ **[`ConfigDiff.__post_init__`](files/src/local_deepwiki/config.md)** `(...) → None` (`config.py`) - Compute changes after initialization.
+- ▪️ **[`GenerationProgress.__post_init__`](files/src/local_deepwiki/generators/progress_tracker.md)** `(...) → None` (`progress_tracker.py`) - Initialize log file.
+- 🔹 **[`_add_circular_styling`](files/src/local_deepwiki/generators/diagrams.md)** `(lines: list[str], internal_deps: dict[str, set[str]], node_ids: dict[str, str], ...+1) → None` (`diagrams.py`) - Add styling for circular dependencies.
+- 🔹 **[`_add_edges`](files/src/local_deepwiki/generators/diagrams.md)** `(lines: list[str], internal_deps: dict[str, set[str]], node_ids: dict[str, str], ...+1) → None` (`diagrams.py`) - Add internal dependency edges to the diagram.
+- 🔹 **[`_add_external_subgraph`](files/src/local_deepwiki/generators/diagrams.md)** `(lines: list[str], external_deps: dict[str, int], max_external: int) → dict[str, str]` (`diagrams.py`) - Add external dependencies subgraph.
 - ▪️ **[`CrossLinker._add_links_to_text`](files/src/local_deepwiki/generators/crosslinks.md)** `(text: str, current_page: str, current_page_entities: set[str]) → str` (`crosslinks.py`) - Add links to a text section (not code).
+- ▪️ **[`DebouncedHandler._add_pending_change`](files/src/local_deepwiki/watcher.md)** `(path: str, change_type: ChangeType, dest_path: str | None) → None` (`watcher.py`) - Add a file change to the pending set (thread-safe).
+- 🔹 **[`_add_subgraphs`](files/src/local_deepwiki/generators/diagrams.md)** `(lines: list[str], module_groups: dict[str, list[str]], node_ids: dict[str, str]) → None` (`diagrams.py`) - Add subgraph definitions for module groups.
+- ▪️ **[`StreamingPdfExporter._add_toc_entries_html`](files/src/local_deepwiki/export/pdf.md)** `(entries: list[dict[str, Any]], parts: list[str], depth: int) → None` (`pdf.py`) - Recursively add TOC entries to HTML parts.
 - ▪️⚡ **[`DeepResearchPipeline._analyze_gaps`](files/src/local_deepwiki/core/deep_research.md)** `(question: str, sub_questions: list[SubQuestion], results: list[SearchResult]) → list[str]` (`deep_research.py`) - Analyze retrieved context for gaps.
+- ▪️⚡ **[`WikiGenerator._analyze_imports_for_relationships`](files/src/local_deepwiki/generators/wiki.md)** `(...) → None` (`wiki.py`) - Collect import chunks for relationship analysis (See Also...
+- 🔹 **[`_append_unused_chunks`](files/src/local_deepwiki/generators/wiki_files.md)** `(result_lines: list[str], chunks: list[CodeChunk], all_chunk_ids: set[str], ...+3) → None` (`wiki_files.py`) - Append unused chunks as additional source code section.
+- ▪️⚡ **[`WikiGenerator._apply_cross_linking`](files/src/local_deepwiki/generators/wiki.md)** `(pages: list[WikiPage], progress_callback: ProgressCallback | None) → list[WikiPage]` (`wiki.py`) - Apply cross-links, source refs, and see-also sections to ...
+- 🔹 **[`_apply_nested_updates`](files/src/local_deepwiki/config.md)** `(config: "Config", updates: dict[str, Any]) → "Config"` (`config.py`) - Apply nested updates to a config.
+- ▪️⚡ **[`VectorStore._batch_embed`](files/src/local_deepwiki/core/vectorstore.md)** `(texts: list[str], batch_size: int | None, log_progress: bool) → list[list[float]]` ⚠️`RuntimeError` (`vectorstore.py`) - Generate embeddings in parallel batches.
+- ▪️⚡ **[`VectorStore._batch_embed_sequential`](files/src/local_deepwiki/core/vectorstore.md)** `(texts: list[str], batch_size: int, log_progress: bool) → list[list[float]]` (`vectorstore.py`) - Generate embeddings in sequential batches (legacy method).
+- ▪️ **[`StreamingHtmlExporter._build_breadcrumb`](files/src/local_deepwiki/export/html.md)** `(rel_path: Path, root_path: str) → str` (`html.py`) - Build breadcrumb navigation HTML.
 - ▪️ **[`HtmlExporter._build_breadcrumb`](files/src/local_deepwiki/export/html.md)** `(rel_path: Path, root_path: str) → str` (`html.py`) - Build breadcrumb navigation HTML.
+- 🔹 **[`_build_chunk_maps`](files/src/local_deepwiki/generators/wiki_files.md)** `(chunks: list[CodeChunk]) → _ChunkMaps` (`wiki_files.py`) - Build lookup maps for chunks by name.
+- 🔹 **[`_build_class_lines`](files/src/local_deepwiki/generators/diagrams.md)** `(class_name: str, class_info: ClassInfo, methods_by_class: dict[str, list[tuple[str, str | None]]], ...+2) → list[str]` (`diagrams.py`) - Build Mermaid diagram lines for a single class.
 - ▪️ **[`PdfExporter._build_combined_html`](files/src/local_deepwiki/export/pdf.md)** `(pages: list[Path]) → str` (`pdf.py`) - Build combined HTML from all pages.
 - ▪️ **[`DeepResearchPipeline._build_context_summary`](files/src/local_deepwiki/core/deep_research.md)** `(results: list[SearchResult]) → str` (`deep_research.py`) - Build a summary of retrieved context for gap analysis.
+- ▪️⚡ **[`DependencyGraphGenerator._build_dependency_graph`](files/src/local_deepwiki/generators/dependency_graph.md)** `(index_status: IndexStatus, show_external: bool, exclude_tests: bool) → DependencyGraph` (`dependency_graph.py`) - Build dependency graph from indexed chunks.
+- 🔹 **[`_build_directory_section`](files/src/local_deepwiki/generators/wiki_pages.md)** `(repo_path: Path) → str` (`wiki_pages.py`) - Build directory structure section.
+- ▪️ **[`InteractiveSearch._build_filters_panel`](files/src/local_deepwiki/cli/interactive_search.md)** `(...) → Panel` (`interactive_search.py`) - Build the filters display panel.
 - ▪️ **[`DeepResearchPipeline._build_full_context`](files/src/local_deepwiki/core/deep_research.md)** `(results: list[SearchResult]) → str` (`deep_research.py`) - Build full context string for synthesis.
+- ▪️ **[`InteractiveSearch._build_help_panel`](files/src/local_deepwiki/cli/interactive_search.md)** `(...) → Panel` (`interactive_search.py`) - Build the keyboard help panel.
+- 🔹 **[`_build_inheritance_lines`](files/src/local_deepwiki/generators/diagrams.md)** `(classes: dict[str, ClassInfo]) → list[str]` (`diagrams.py`) - Build Mermaid inheritance relationship lines.
+- ▪️ **[`InteractiveSearch._build_input_prompt`](files/src/local_deepwiki/cli/interactive_search.md)** `(...) → Panel` (`interactive_search.py`) - Build the input prompt panel.
+- 🔹 **[`_build_internal_deps`](files/src/local_deepwiki/generators/diagrams.md)** `(dependencies: dict[str, set[str]], internal_modules: set[str]) → dict[str, set[str]]` (`diagrams.py`) - Filter dependencies to only include internal modules.
 - 🔹 **[`_build_keywords`](files/src/local_deepwiki/generators/search.md)** `(name: str | None, param_types: dict[str, str], return_type: str | None, ...+1) → list[str]` (`search.py`) - Build search keywords from entity metadata.
+- ▪️ **[`AnthropicProvider._build_kwargs`](files/src/local_deepwiki/providers/llm/anthropic.md)** `(prompt: str, system_prompt: str | None, max_tokens: int, ...+1) → dict[str, Any]` (`anthropic.py`) - Build kwargs for Anthropic API calls.
+- ▪️ **[`InteractiveSearch._build_layout`](files/src/local_deepwiki/cli/interactive_search.md)** `(...) → Layout` (`interactive_search.py`) - Build the complete display layout.
+- 🔹 **[`_build_llm_prompt`](files/src/local_deepwiki/generators/wiki_files.md)** `(file_info: FileInfo, context: str, rich_context_text: str) → str` (`wiki_files.py`) - Construct the LLM prompt with all context.
+- 🔹 **[`_build_node_ids`](files/src/local_deepwiki/generators/diagrams.md)** `(modules: set[str]) → dict[str, str]` (`diagrams.py`) - Create unique node IDs for each module.
+- 🔹 **[`_build_overview_prompt`](files/src/local_deepwiki/generators/wiki_pages.md)** `(pre_generated: str, code_samples: str) → str` (`wiki_pages.py`) - Build the LLM prompt for overview generation.
+- ▪️ **[`InteractiveSearch._build_preview_panel`](files/src/local_deepwiki/cli/interactive_search.md)** `(...) → Panel | None` (`interactive_search.py`) - Build the code preview panel for the selected result.
+- 🔹 **[`_build_quick_start_section`](files/src/local_deepwiki/generators/wiki_pages.md)** `(manifest: ProjectManifest) → str` (`wiki_pages.py`) - Build quick start section from entry points.
+- ▪️ **[`InteractiveSearch._build_results_table`](files/src/local_deepwiki/cli/interactive_search.md)** `(...) → Table` (`interactive_search.py`) - Build the results table display.
 - 🔹 **[`_build_section_tree`](files/src/local_deepwiki/generators/toc.md)** `(section_name: str, pages: list[dict[str, str]], base_number: str) → TocEntry | None` (`toc.py`) - Build a hierarchical tree for a section (modules or files).
 - ▪️ **[`DeepResearchPipeline._build_sources`](files/src/local_deepwiki/core/deep_research.md)** `(results: list[SearchResult]) → list[SourceReference]` (`deep_research.py`) - Build source references from search results.
+- ▪️ **[`StreamingPdfExporter._build_streaming_toc_html`](files/src/local_deepwiki/export/pdf.md)** `(...) → str` (`pdf.py`) - Build TOC HTML from loaded TOC entries.
+- 🔹 **[`_build_tech_stack_section`](files/src/local_deepwiki/generators/wiki_pages.md)** `(manifest: ProjectManifest, max_deps: int) → str` (`wiki_pages.py`) - Build technology stack section from manifest.
 - ▪️ **[`PdfExporter._build_toc_html`](files/src/local_deepwiki/export/pdf.md)** `(pages: list[Path]) → str` (`pdf.py`) - Build table of contents HTML.
+- ▪️ **[`WikiGenerator._build_wiki_status`](files/src/local_deepwiki/generators/wiki.md)** `(ctx: _GenerationContext, index_status: IndexStatus) → WikiGenerationStatus` (`wiki.py`) - Build the wiki generation status object.
+- ▪️ **[`SecretDetector._calculate_confidence`](files/src/local_deepwiki/core/secret_detector.md)** `(secret_type: SecretType, match: str) → float` (`secret_detector.py`) - Calculate confidence score for secret detection.
+- ▪️ **[`ProgressManager._calculate_current_rate`](files/src/local_deepwiki/progress.md)** `(...) → float | None` (`progress.py`) - Calculate items per second from recent progress.
+- ▪️ **[`GenerationProgress._calculate_eta_minutes`](files/src/local_deepwiki/generators/progress_tracker.md)** `(...) → float | None` (`progress_tracker.py`) - Calculate estimated time remaining in minutes.
+- ▪️ **[`AdaptiveSearcher._calculate_query_complexity`](files/src/local_deepwiki/core/vectorstore.md)** `(query: str) → float` (`vectorstore.py`) - Calculate a complexity score for a query.
+- ▪️ **[`GenerationProgress._calculate_rate`](files/src/local_deepwiki/generators/progress_tracker.md)** `(...) → float` (`progress_tracker.py`) - Calculate files per minute based on recent completions.
 - ▪️ **[`ProjectManifest._categorize_dependencies`](files/src/local_deepwiki/generators/manifest.md)** `(...) → dict[str, list[str]]` (`manifest.py`) - Categorize dependencies by their purpose.
-- ▪️ **[`DeepResearchPipeline._check_cancelled`](files/src/local_deepwiki/core/deep_research.md)** `(step_name: str) → None` ⚠️[`ResearchCancelledError`](files/src/local_deepwiki/core/deep_research.md) (`deep_research.py`) - Check if research was cancelled and raise if so.
+- ▪️ **[`DeepResearchPipeline._check_cancelled`](files/src/local_deepwiki/core/deep_research.md)** `(step_name: str) → None` ⚠️`ResearchCancelledError` (`deep_research.py`) - Check if research was cancelled and raise if so.
+- ▪️⚡ **[`RateLimiter._check_hour_limit`](files/src/local_deepwiki/core/rate_limiter.md)** `(now: float) → None` ⚠️`RateLimitExceeded` (`rate_limiter.py`) - Check hour limit and raise if exceeded.
+- 🔹 **[`_check_weasyprint`](files/tests/test_streaming_export.md)** `(...) → bool` (`test_streaming_export.py`) - Check if WeasyPrint is real (not mocked) and functional.
+- 🔹 **[`_check_weasyprint_available`](files/tests/test_export_init.md)** `(...) → bool` (`test_export_init.py`) - Check if WeasyPrint is available and functional.
+- 🔹 **[`_check_weasyprint_functional`](files/tests/test_pdf_export.md)** `(...) → bool` (`test_pdf_export.py`) - Check if WeasyPrint can actually create PDFs.
+- ▪️ **[`CheckpointManager._checkpoint_path`](files/src/local_deepwiki/core/deep_research.md)** `(research_id: str) → Path` (`deep_research.py`) - Get the path to a checkpoint file.
+- ▪️ **[`DeepResearchPipeline._checkpoint_to_results`](files/src/local_deepwiki/core/deep_research.md)** `(contexts: dict[str, list[dict]] | None) → list[SearchResult]` (`deep_research.py`) - Convert checkpoint context data back to SearchResults.
 - ▪️ **[`VectorStore._chunk_to_text`](files/src/local_deepwiki/core/vectorstore.md)** `(chunk: CodeChunk) → str` (`vectorstore.py`) - Convert a chunk to text for embedding.
+- 🔷 **[`_ChunkMaps`](files/src/local_deepwiki/generators/wiki_files.md)** (`wiki_files.py`) - Maps for looking up chunks by name.
+- ▪️ **[`EventEmitter._cleanup_dead_handlers`](files/src/local_deepwiki/events.md)** `(...) → None` (`events.py`) - Remove handlers with dead weak references.
+- ▪️ **[`EventEmitter._cleanup_handler_stats`](files/src/local_deepwiki/events.md)** `(handler_id: str, event_type_str: str, reason: str) → None` (`events.py`) - Clean up handler stats and call lifecycle hook.
+- 🔹 **[`_collect_class_from_chunk`](files/src/local_deepwiki/generators/diagrams.md)** `(chunk: Any, classes: dict[str, ClassInfo], methods_by_class: dict[str, list[tuple[str, str | None]]], ...+1) → None` (`diagrams.py`) - Extract class info from a CLASS chunk and add to dictiona...
+- 🔹 **[`_collect_dependencies`](files/src/local_deepwiki/generators/diagrams.md)** `(chunks: list, project_name: str, show_external: bool, ...+1) → _DependencyData` (`diagrams.py`) - Collect module dependencies from import chunks.
+- ▪️ **[`RepositoryIndexer._collect_files_to_process`](files/src/local_deepwiki/core/indexer.md)** `(prev_files_by_path: dict[str, FileInfo], progress_callback: ProgressCallback | None) → tuple[list[Path], list[FileInfo]]` (`indexer.py`) - Gather source files and determine what needs processing.
+- 🔹 **[`_collect_method_from_chunk`](files/src/local_deepwiki/generators/diagrams.md)** `(chunk: Any, methods_by_class: dict[str, list[tuple[str, str | None]]], show_types: bool) → None` (`diagrams.py`) - Extract method info from a METHOD chunk and add to dictio...
 - ▪️ **[`PdfExporter._collect_pages_in_order`](files/src/local_deepwiki/export/pdf.md)** `(...) → list[Path]` (`pdf.py`) - Collect markdown files in TOC order.
 - 🔹 **[`_collect_preceding_comments`](files/src/local_deepwiki/core/parser.md)** `(node: Node, source: bytes, comment_types: set[str], ...+1) → list[str]` (`parser.py`) - Collect all consecutive preceding comment lines.
+- ▪️ **[`ConfigDiff._compare_models`](files/src/local_deepwiki/config.md)** `(base: BaseModel, override: BaseModel, prefix: str, ...+1) → None` (`config.py`) - Recursively compare two Pydantic models.
+- ▪️ **[`EmbeddingCache._compute_cache_key`](files/src/local_deepwiki/providers/embeddings/cache.md)** `(text: str) → str` (`cache.py`) - Compute a cache key for the given text and model.
+- ▪️ **[`ConfigDiff._compute_changes`](files/src/local_deepwiki/config.md)** `(source: str) → None` (`config.py`) - Compute the differences between base and override configs.
 - 🔹 **[`_compute_file_hash`](files/src/local_deepwiki/core/parser.md)** `(file_path: Path) → str` (`parser.py`) - Compute SHA-256 hash of a file using chunked reading.
 - ▪️ **[`LLMCache._compute_hash`](files/src/local_deepwiki/core/llm_cache.md)** `(system_prompt: str | None, prompt: str) → str` (`llm_cache.py`) - Compute exact match hash for fast lookup.
-- ▪️ **[`VectorStore._connect`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → lancedb.DBConnection` (`vectorstore.py`) - Get or create database connection.
+- ▪️ **[`SearchCache._compute_similarity`](files/src/local_deepwiki/core/vectorstore.md)** `(embedding1: list[float], embedding2: list[float]) → float` (`vectorstore.py`) - Compute cosine similarity between two embeddings.
 - ▪️ **[`LLMCache._connect`](files/src/local_deepwiki/core/llm_cache.md)** `(...) → lancedb.DBConnection` (`llm_cache.py`) - Get or create database connection.
+- ▪️ **[`VectorStore._connect`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → lancedb.DBConnection` (`vectorstore.py`) - Get or create database connection.
+- ▪️ **[`DeepResearchPipeline._create_checkpoint`](files/src/local_deepwiki/core/deep_research.md)** `(question: str) → ResearchCheckpoint` (`deep_research.py`) - Create a new checkpoint for a research session.
 - ▪️ **[`CodeChunker._create_class_summary_chunk`](files/src/local_deepwiki/core/chunker.md)** `(class_node: Node, source: bytes, language: Language, ...+4) → CodeChunk` (`chunker.py`) - Create a summary chunk for a large class.
+- ▪️ **[`StreamingPdfExporter._create_empty_pdf`](files/src/local_deepwiki/export/pdf.md)** `(output_path: Path) → None` (`pdf.py`) - Create an empty PDF file.
 - ▪️ **[`CodeChunker._create_file_summary`](files/src/local_deepwiki/core/chunker.md)** `(root: Node, source: bytes, language: Language) → str` (`chunker.py`) - Create a summary of file structure for the module chunk.
+- 🔹 **[`_create_files_index_page`](files/src/local_deepwiki/generators/wiki_files.md)** `(pages: list[WikiPage], significant_files: list[FileInfo], status_manager: "WikiStatusManager") → WikiPage` (`wiki_files.py`) - Create the files index page.
 - ▪️ **[`CodeChunker._create_function_chunk`](files/src/local_deepwiki/core/chunker.md)** `(func_node: Node, source: bytes, language: Language, ...+1) → CodeChunk` (`chunker.py`) - Create a chunk for a top-level function.
 - ▪️ **[`CodeChunker._create_imports_chunk`](files/src/local_deepwiki/core/chunker.md)** `(import_nodes: list[Node], source: bytes, language: Language, ...+1) → CodeChunk` (`chunker.py`) - Create a chunk for import statements.
 - ▪️ **[`VectorStore._create_index_safe`](files/src/local_deepwiki/core/vectorstore.md)** `(column: str) → None` (`vectorstore.py`) - Safely create a scalar index on a column.
+- ▪️ **[`RepositoryIndexer._create_index_status`](files/src/local_deepwiki/core/indexer.md)** `(processed_files: list[FileInfo], files_unchanged: list[FileInfo], total_chunks_processed: int) → IndexStatus` (`indexer.py`) - Create the final index status with statistics.
+- ▪️⚡ **[`LazyIndexManager._create_index_task`](files/src/local_deepwiki/core/vectorstore.md)** `(...)` (`vectorstore.py`)
 - ▪️ **[`CodeChunker._create_method_chunk`](files/src/local_deepwiki/core/chunker.md)** `(method_node: Node, source: bytes, language: Language, ...+2) → CodeChunk` (`chunker.py`) - Create a chunk for a class method.
 - ▪️ **[`CodeChunker._create_module_chunk`](files/src/local_deepwiki/core/chunker.md)** `(root: Node, source: bytes, language: Language, ...+1) → CodeChunk` (`chunker.py`) - Create a chunk for the module/file overview.
+- 🔹 **[`_create_progress_callbacks`](files/src/local_deepwiki/handlers.md)** `(ctx: _DeepResearchContext) → tuple[
+    Callable[[], bool],
+    Callable[["ResearchProgress"], Awaitable[None]],
+    Callable[[str], Awaitable[None]],
+]` (`handlers.py`) - Create cancellation checker and progress callback functions.
+- 🔹 **[`_create_research_pipeline`](files/src/local_deepwiki/handlers.md)** `(ctx: _DeepResearchContext, args: dict[str, Any]) → tuple["DeepResearchPipeline", "VectorStore", Any]` (`handlers.py`) - Create the DeepResearchPipeline instance with providers.
+- ▪️ **[`SecretDetector._create_safe_context`](files/src/local_deepwiki/core/secret_detector.md)** `(line: str, match: re.Match) → str` (`secret_detector.py`) - Create a safe context string that partially masks the sec...
 - ▪️ **[`VectorStore._create_scalar_indexes`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → None` (`vectorstore.py`) - Create scalar indexes for efficient lookups.
 - 🔹 **[`_create_source_details`](files/src/local_deepwiki/generators/wiki_files.md)** `(chunk: CodeChunk, syntax_lang: str, github_url: str | None) → str` (`wiki_files.py`) - Create a collapsible source code block for a chunk.
+- ▪️ **[`VectorStore._create_vector_index`](files/src/local_deepwiki/core/vectorstore.md)** `(num_rows: int) → None` (`vectorstore.py`) - Create a vector index for faster semantic search.
 - ▪️⚡ **[`DeepResearchPipeline._decompose_question`](files/src/local_deepwiki/core/deep_research.md)** `(question: str) → list[SubQuestion]` (`deep_research.py`) - Decompose a complex question into sub-questions.
 - ▪️ **[`DeepResearchPipeline._deduplicate_results`](files/src/local_deepwiki/core/deep_research.md)** `(results: list[SearchResult]) → list[SearchResult]` (`deep_research.py`) - Remove duplicate chunks, keeping highest-scoring ones.
-- ▪️⚡ **[`DebouncedHandler._do_reindex`](files/src/local_deepwiki/watcher.md)** `(changed_files: list[str]) → None` (`watcher.py`) - Perform the reindex operation.
+- 🔹 **[`_deep_merge`](files/src/local_deepwiki/config.md)** `(base: dict[str, Any], override: dict[str, Any]) → None` (`config.py`) - Deep merge override into base dictionary.
+- 🔷 **[`_DeepResearchContext`](files/src/local_deepwiki/handlers.md)** (`handlers.py`) - Context object holding state for deep research execution.
+- ▪️⚡ **[`RepositoryIndexer._delete_old_chunks_for_modified_files`](files/src/local_deepwiki/core/indexer.md)** `(files_to_process: list[Path], prev_files_by_path: dict[str, FileInfo], progress_callback: ProgressCallback | None) → None` (`indexer.py`) - Batch delete old chunks for files being re-processed.
+- 🔷 **[`_DependencyData`](files/src/local_deepwiki/generators/diagrams.md)** (`diagrams.py`) - Internal data structure for dependency graph generation.
+- ▪️ **[`EventEmitter._deregister_handler_by_id`](files/src/local_deepwiki/events.md)** `(handler_id: str, reason: str) → bool` (`events.py`) - Remove a handler by its ID.
+- ▪️ **[`EmbeddingCache._deserialize_embedding`](files/src/local_deepwiki/providers/embeddings/cache.md)** `(data: bytes) → list[float]` (`cache.py`) - Deserialize an embedding vector from bytes.
+- 🔹 **[`_dict_to_search_result`](files/src/local_deepwiki/core/deep_research.md)** `(data: dict[str, Any]) → SearchResult` (`deep_research.py`) - Convert a dictionary back to a SearchResult.
+- ▪️⚡ **[`DebouncedHandler._do_reindex`](files/src/local_deepwiki/watcher.md)** `(changed_files: list[str], changes: dict[str, FileChange] | None) → None` (`watcher.py`) - Perform the reindex operation.
+- ▪️⚡ **[`VectorStore._embed_single_batch_with_retry`](files/src/local_deepwiki/core/vectorstore.md)** `(batch_index: int, texts: list[str], progress: EmbeddingProgress, ...+1) → BatchEmbeddingResult` (`vectorstore.py`) - Embed a single batch with retry logic and rate limiting.
+- ▪️⚡ **[`DeepResearchPipeline._emit_start_event`](files/src/local_deepwiki/core/deep_research.md)** `(question: str, completed_steps: set[str]) → None` (`deep_research.py`) - Emit the research start event and report initial progress.
+- ▪️ **[`CheckpointManager._ensure_dir`](files/src/local_deepwiki/core/deep_research.md)** `(...) → None` (`deep_research.py`) - Ensure the checkpoint directory exists.
 - ▪️⚡ **[`OllamaProvider._ensure_healthy`](files/src/local_deepwiki/providers/llm/ollama.md)** `(...) → None` (`ollama.py`) - Ensure Ollama is healthy before making requests.
-- ▪️ **[`VectorStore._ensure_scalar_indexes`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → None` (`vectorstore.py`) - Ensure scalar indexes exist, creating them if needed.
+- ▪️ **[`VectorStore._ensure_indexes`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → None` (`vectorstore.py`) - Ensure all indexes exist, creating them if needed.
 - ▪️ **[`LLMCache._ensure_table`](files/src/local_deepwiki/core/llm_cache.md)** `(embedding_dim: int) → Table | None` (`llm_cache.py`) - Ensure the cache table exists with proper schema.
+- ▪️ **[`ASTCache._estimate_tree_size`](files/src/local_deepwiki/core/parser.md)** `(tree: Any) → int` (`parser.py`) - Estimate memory size of a tree-sitter Tree.
+- ▪️ **[`ASTCache._evict_lru`](files/src/local_deepwiki/core/parser.md)** `(...) → None` (`parser.py`) - Evict least recently used entries until under max_entries.
+- ▪️⚡ **[`DeepResearchPipeline._execute_decomposition_step`](files/src/local_deepwiki/core/deep_research.md)** `(question: str, completed_steps: set[str]) → tuple[list[SubQuestion], ResearchStep, int]` (`deep_research.py`) - Execute or restore the decomposition step.
+- ▪️⚡ **[`DeepResearchPipeline._execute_follow_up_step`](files/src/local_deepwiki/core/deep_research.md)** `(follow_up_queries: list[str], initial_count: int, completed_steps: set[str]) → tuple[list[SearchResult], ResearchStep | None]` (`deep_research.py`) - Execute or restore the follow-up retrieval step.
+- ▪️⚡ **[`DeepResearchPipeline._execute_gap_analysis_step`](files/src/local_deepwiki/core/deep_research.md)** `(question: str, sub_questions: list[SubQuestion], initial_results: list[SearchResult], ...+1) → tuple[list[str], ResearchStep, int]` (`deep_research.py`) - Execute or restore the gap analysis step.
 - ▪️⚡ **[`DeepResearchPipeline._execute_pipeline`](files/src/local_deepwiki/core/deep_research.md)** `(question: str) → DeepResearchResult` (`deep_research.py`) - Execute the research pipeline steps.
+- 🔹⚡ **[`_execute_research_phases`](files/src/local_deepwiki/handlers.md)** `(ctx: _DeepResearchContext, pipeline: "DeepResearchPipeline", is_cancelled: Callable[[], bool], ...+2) → list[TextContent]` (`handlers.py`) - Execute the research phases with progress tracking.
+- ▪️⚡ **[`DeepResearchPipeline._execute_retrieval_step`](files/src/local_deepwiki/core/deep_research.md)** `(sub_questions: list[SubQuestion], completed_steps: set[str]) → tuple[list[SearchResult], ResearchStep]` (`deep_research.py`) - Execute or restore the initial retrieval step.
+- ▪️⚡ **[`HookRunner._execute_script`](files/src/local_deepwiki/events.md)** `(script_path: Path, event: Event) → None` (`events.py`) - Execute a script with event data as environment variables.
 - ▪️ **[`HtmlExporter._export_page`](files/src/local_deepwiki/export/html.md)** `(md_file: Path, rel_path: Path) → None` (`html.py`) - Export a single markdown page to HTML.
 - ▪️ **[`PdfExporter._export_page`](files/src/local_deepwiki/export/pdf.md)** `(md_file: Path, output_file: Path) → None` (`pdf.py`) - Export a single page to PDF.
+- ▪️ **[`StreamingPdfExporter._export_single_page`](files/src/local_deepwiki/export/pdf.md)** `(page: WikiPage, output_file: Path) → None` (`pdf.py`) - Export a single wiki page to PDF.
+- ▪️ **[`HtmlExporter._export_standard`](files/src/local_deepwiki/export/html.md)** `(...) → int` (`html.py`) - Export using standard mode (loads all pages in memory).
+- ▪️ **[`HtmlExporter._export_streaming`](files/src/local_deepwiki/export/html.md)** `(...) → int` (`html.py`) - Export using streaming mode for large wikis.
+- ▪️ **[`StreamingHtmlExporter._export_wiki_page`](files/src/local_deepwiki/export/html.md)** `(page: WikiPage) → None` (`html.py`) - Export a single wiki page to HTML.
 - 🔹 **[`_extract_class_attributes`](files/src/local_deepwiki/generators/diagrams.md)** `(content: str, language: str) → list[str]` (`diagrams.py`) - Extract class attributes from content.
 - ▪️ **[`CodeChunker._extract_class_chunks`](files/src/local_deepwiki/core/chunker.md)** `(class_node: Node, source: bytes, language: Language, ...+1) → Iterator[CodeChunk]` (`chunker.py`) - Extract chunks from a class definition.
+- 🔹 **[`_extract_entity_from_heading`](files/src/local_deepwiki/generators/wiki_files.md)** `(line: str) → tuple[str | None, bool]` (`wiki_files.py`) - Extract entity name from a markdown heading.
 - 🔹 **[`_extract_method_signature`](files/src/local_deepwiki/generators/diagrams.md)** `(content: str) → str | None` (`diagrams.py`) - Extract method signature with types from content.
+- 🔹 **[`_extract_methods_from_class_content`](files/src/local_deepwiki/generators/diagrams.md)** `(chunks: list, classes: dict[str, ClassInfo], methods_by_class: dict[str, list[tuple[str, str | None]]], ...+1) → None` (`diagrams.py`) - Extract methods from class content for classes without ME...
+- 🔹 **[`_extract_module_name`](files/src/local_deepwiki/generators/dependency_graph.md)** `(file_path: str, project_root: str) → str` (`dependency_graph.py`) - Extract module name from file path.
 - ▪️ **[`PdfExporter._extract_paths_from_toc`](files/src/local_deepwiki/export/pdf.md)** `(entries: list[dict], paths: list[str]) → None` (`pdf.py`) - Recursively extract paths from TOC entries.
+- ▪️ **[`CodeExampleExtractor._extract_relevant_snippet`](files/src/local_deepwiki/generators/test_examples.md)** `(content: str, entity_name: str, max_lines: int) → str | None` (`test_examples.py`) - Extract the most relevant code snippet from test content.
+- ▪️ **[`WikiPageIterator._extract_title`](files/src/local_deepwiki/export/streaming.md)** `(md_file: Path) → str` (`streaming.py`) - Extract title from markdown file without loading full con...
 - 🔹 **[`_extract_usage_snippet`](files/src/local_deepwiki/generators/test_examples.md)** `(func_node: Node, source: bytes, entity_name: str, ...+1) → str | None` (`test_examples.py`) - Extract a clean usage snippet from a test function.
+- ▪️ **[`ChunkIterator._fetch_batch`](files/src/local_deepwiki/core/vectorstore.md)** `(offset: int) → list[dict[str, Any]]` (`vectorstore.py`) - Fetch a batch of rows from the table.
+- ▪️ **[`DependencyGraphGenerator._file_path_to_wiki_path`](files/src/local_deepwiki/generators/dependency_graph.md)** `(file_path: str) → str` (`dependency_graph.py`) - Convert a file path to its wiki page path.
+- 🔹 **[`_filter_significant_files`](files/src/local_deepwiki/generators/wiki_files.md)** `(files: list[FileInfo], max_files: int) → list[FileInfo]` (`wiki_files.py`) - Filter and limit files for documentation generation.
+- ▪️ **[`SearchCache._filters_match`](files/src/local_deepwiki/core/vectorstore.md)** `(cached_filters: dict[str, Any], query_filters: dict[str, Any]) → bool` (`vectorstore.py`) - Check if cached filters match the query filters.
+- ▪️⚡ **[`DeepResearchPipeline._finalize_research`](files/src/local_deepwiki/core/deep_research.md)** `(question: str, answer: str, sub_questions: list[SubQuestion], ...+4) → DeepResearchResult` (`deep_research.py`) - Finalize the research by saving checkpoint and emitting c...
 - 🔹 **[`_find_circular_dependencies`](files/src/local_deepwiki/generators/diagrams.md)** `(deps: dict[str, set[str]]) → set[tuple[str, str]]` (`diagrams.py`) - Find circular dependencies in a dependency graph.
+- 🔹 **[`_find_insertion_point`](files/src/local_deepwiki/generators/wiki_files.md)** `(lines: list[str], start_idx: int, result_lines: list[str], ...+3) → int` (`wiki_files.py`) - Find where to insert source code and add it.
+- 🔹 **[`_find_matching_chunk`](files/src/local_deepwiki/generators/wiki_files.md)** `(entity_name: str, current_class: str | None, maps: _ChunkMaps) → CodeChunk | None` (`wiki_files.py`) - Find the chunk that matches an entity name.
 - ▪️ **[`RepositoryIndexer._find_source_files`](files/src/local_deepwiki/core/indexer.md)** `(...) → list[Path]` (`indexer.py`) - Find all source files in the repository.
 - 🔹 **[`_find_test_functions`](files/src/local_deepwiki/generators/test_examples.md)** `(root: Node) → list[tuple[Node, str | None]]` (`test_examples.py`) - Find all test function definitions in the AST.
+- ▪️ **[`EmbeddingCache._flush_pending_writes`](files/src/local_deepwiki/providers/embeddings/cache.md)** `(...) → None` (`cache.py`) - Flush all pending writes to the database.
+- 🔹 **[`_format_duration`](files/src/local_deepwiki/generators/progress_tracker.md)** `(seconds: float) → str` (`progress_tracker.py`) - Format seconds into human-readable duration.
 - 🔹 **[`_format_file_entry`](files/src/local_deepwiki/generators/source_refs.md)** `(file_path: str, wiki_path: str | None, current_wiki_path: str, ...+1) → str` (`source_refs.py`) - Format a single source file entry with optional line numb...
+- 🔹 **[`_format_research_results`](files/src/local_deepwiki/handlers.md)** `(result: Any) → dict[str, Any]` (`handlers.py`) - Format the research results for return.
 - 🔹 **[`_format_signature`](files/src/local_deepwiki/generators/glossary.md)** `(entity: EntityEntry, max_params: int) → str` (`glossary.py`) - Format a compact function/method signature showing types.
+- 🔹⚡ **[`_gather_code_context`](files/src/local_deepwiki/generators/wiki_pages.md)** `(vector_store: VectorStore) → list[str]` (`wiki_pages.py`) - Search for main entry points and key classes for context.
+- 🔹⚡ **[`_gather_file_context`](files/src/local_deepwiki/generators/wiki_files.md)** `(file_info: FileInfo, index_status: IndexStatus, vector_store: VectorStore) → tuple[list[CodeChunk], str, str] | None` (`wiki_files.py`) - Collect chunks, imports, and related context for the file.
+- 🔹⚡ **[`_generate_and_format_doc`](files/src/local_deepwiki/generators/wiki_files.md)** `(prompt: str, llm: LLMProvider, system_prompt: str) → str` (`wiki_files.py`) - Call LLM and format the response.
 - ▪️⚡ **[`WikiGenerator._generate_architecture`](files/src/local_deepwiki/generators/wiki.md)** `(index_status: IndexStatus) → WikiPage` (`wiki.py`) - Generate architecture documentation with diagrams and gro...
+- ▪️⚡ **[`WikiGenerator._generate_auxiliary_pages`](files/src/local_deepwiki/generators/wiki.md)** `(ctx: _GenerationContext, index_status: IndexStatus, progress_callback: ProgressCallback | None) → None` (`wiki.py`) - Generate auxiliary pages: inheritance, glossary, and cove...
 - 🔹 **[`_generate_blame_section`](files/src/local_deepwiki/generators/wiki_files.md)** `(repo_path: Path, file_path: str, chunks: list[CodeChunk]) → str | None` (`wiki_files.py`) - Generate a "Last Modified" section with git blame info.
 - ▪️⚡ **[`WikiGenerator._generate_changelog`](files/src/local_deepwiki/generators/wiki.md)** `(...) → WikiPage | None` (`wiki.py`) - Generate changelog page from git history.
+- ▪️⚡ **[`WikiGenerator._generate_changelog_page`](files/src/local_deepwiki/generators/wiki.md)** `(ctx: _GenerationContext, progress_callback: ProgressCallback | None) → None` (`wiki.py`) - Generate changelog page from git history.
 - ▪️⚡ **[`WikiGenerator._generate_dependencies`](files/src/local_deepwiki/generators/wiki.md)** `(index_status: IndexStatus) → tuple[WikiPage, list[str]]` (`wiki.py`) - Generate dependencies documentation with grounded facts f...
+- ▪️⚡ **[`WikiGenerator._generate_dependencies_page`](files/src/local_deepwiki/generators/wiki.md)** `(ctx: _GenerationContext, index_status: IndexStatus, progress_callback: ProgressCallback | None) → None` (`wiki.py`) - Generate the dependencies documentation page.
+- ▪️ **[`DependencyGraphGenerator._generate_empty_graph_message`](files/src/local_deepwiki/generators/dependency_graph.md)** `(message: str) → str` (`dependency_graph.py`) - Generate a placeholder for empty graphs.
+- ▪️ **[`ExamplesWikiGenerator._generate_examples_page`](files/src/local_deepwiki/generators/examples_plugin.md)** `(examples_by_entity: dict[str, list[CodeExample]], index_status: IndexStatus) → str` (`examples_plugin.py`) - Generate the examples page content.
+- 🔹 **[`_generate_file_enrichments`](files/src/local_deepwiki/generators/wiki_files.md)** `(content: str, abs_file_path: Path, repo_path: Path, ...+2) → str` (`wiki_files.py`) - Generate diagrams, call graphs, examples, and blame info.
+- ▪️⚡ **[`WikiGenerator._generate_file_pages`](files/src/local_deepwiki/generators/wiki.md)** `(ctx: _GenerationContext, index_status: IndexStatus, progress_callback: ProgressCallback | None) → None` (`wiki.py`) - Generate file-level documentation pages.
 - 🔹 **[`_generate_files_index`](files/src/local_deepwiki/generators/wiki_files.md)** `(file_pages: list[WikiPage]) → str` (`wiki_files.py`) - Generate index page for file documentation.
+- ▪️⚡ **[`WikiGenerator._generate_freshness_and_finalize`](files/src/local_deepwiki/generators/wiki.md)** `(ctx: _GenerationContext, wiki_status: WikiGenerationStatus, progress_callback: ProgressCallback | None) → None` (`wiki.py`) - Generate freshness report and finalize wiki status.
 - ▪️ **[`CodeChunker._generate_id`](files/src/local_deepwiki/core/chunker.md)** `(file_path: str, name: str, line: int) → str` (`chunker.py`) - Generate a unique chunk ID.
+- ▪️⚡ **[`WikiGenerator._generate_module_pages`](files/src/local_deepwiki/generators/wiki.md)** `(ctx: _GenerationContext, index_status: IndexStatus, progress_callback: ProgressCallback | None) → None` (`wiki.py`) - Generate module documentation pages.
 - 🔹 **[`_generate_modules_index`](files/src/local_deepwiki/generators/wiki_modules.md)** `(module_pages: list[WikiPage]) → str` (`wiki_modules.py`) - Generate index page for modules.
-- ▪️⚡ **[`WikiGenerator._generate_overview`](files/src/local_deepwiki/generators/wiki.md)** `(index_status: IndexStatus) → WikiPage` (`wiki.py`) - Generate the [main](files/src/local_deepwiki/export/html.md) overview/index page with grounded facts.
+- ▪️⚡ **[`WikiGenerator._generate_or_load_page`](files/src/local_deepwiki/generators/wiki.md)** `(ctx: _GenerationContext, page_path: str, generator: "Callable[[], Awaitable[WikiPage]]", ...+1) → tuple[WikiPage, bool]` (`wiki.py`) - Generate a page or load from cache if unchanged.
+- ▪️⚡ **[`WikiGenerator._generate_overview`](files/src/local_deepwiki/generators/wiki.md)** `(index_status: IndexStatus) → WikiPage` (`wiki.py`) - Generate the main overview/index page with grounded facts.
+- ▪️⚡ **[`WikiGenerator._generate_search_and_toc`](files/src/local_deepwiki/generators/wiki.md)** `(pages: list[WikiPage], index_status: IndexStatus, progress_callback: ProgressCallback | None) → None` (`wiki.py`) - Generate search index and table of contents.
+- ▪️⚡ **[`WikiGenerator._generate_summary_pages`](files/src/local_deepwiki/generators/wiki.md)** `(ctx: _GenerationContext, index_status: IndexStatus, progress_callback: ProgressCallback | None) → None` (`wiki.py`) - Generate overview and architecture pages.
+- 🔷 **[`_GenerationContext`](files/src/local_deepwiki/generators/wiki.md)** (`wiki.py`) - Internal context for tracking wiki generation state.
+- 🔹 **[`_get_api_key_hint`](files/src/local_deepwiki/errors.md)** `(provider_name: str) → str` (`errors.py`) - Get API key setup hint for a specific provider.
 - 🔹 **[`_get_block_comment`](files/src/local_deepwiki/core/parser.md)** `(node: Node, source: bytes, comment_type: str) → str | None` (`parser.py`) - Extract /** */ block comment of specified type.
 - 🔹 **[`_get_brief_description`](files/src/local_deepwiki/generators/glossary.md)** `(docstring: str | None, max_length: int) → str` (`glossary.py`) - Extract a brief description from a docstring.
+- ▪️ **[`EmbeddingCache._get_cached`](files/src/local_deepwiki/providers/embeddings/cache.md)** `(cache_key: str) → list[float] | None` (`cache.py`) - Try to get a cached embedding.
+- ▪️ **[`DependencyGraphGenerator._get_circular_edges`](files/src/local_deepwiki/generators/dependency_graph.md)** `(cycles: list[list[str]]) → set[tuple[str, str]]` (`dependency_graph.py`) - Extract edges that are part of circular dependencies.
+- ▪️ **[`EmbeddingCache._get_connection`](files/src/local_deepwiki/providers/embeddings/cache.md)** `(...) → sqlite3.Connection` (`cache.py`) - Get a thread-local database connection.
+- 🔹 **[`_get_connection_hint`](files/src/local_deepwiki/errors.md)** `(provider_name: str) → str` (`errors.py`) - Get connection troubleshooting hint for a specific provider.
 - 🔹 **[`_get_coverage_emoji`](files/src/local_deepwiki/generators/coverage.md)** `(percent: float) → str` (`coverage.py`) - Get an emoji indicator for coverage level.
+- 🔹 **[`_get_default_parallel_workers`](files/src/local_deepwiki/config.md)** `(...) → int` (`config.py`) - Get the default number of parallel workers based on CPU c...
+- 🔹 **[`_get_directory_module`](files/src/local_deepwiki/generators/dependency_graph.md)** `(file_path: str) → str` (`dependency_graph.py`) - Get the directory/module containing a file.
 - 🔹 **[`_get_docstring`](files/src/local_deepwiki/generators/test_examples.md)** `(func_node: Node, source: bytes) → str | None` (`test_examples.py`) - Extract docstring from a function node if present.
 - 🔹 **[`_get_function_body`](files/src/local_deepwiki/generators/test_examples.md)** `(func_node: Node, source: bytes) → str` (`test_examples.py`) - Get the body of a function as a string.
 - 🔹 **[`_get_function_name`](files/src/local_deepwiki/generators/test_examples.md)** `(func_node: Node, source: bytes) → str` (`test_examples.py`) - Get the name of a function from its AST node.
+- ▪️⚡ **[`VectorStore._get_fuzzy_helper`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → "FuzzySearchHelper"` (`vectorstore.py`) - Get or create the fuzzy search helper.
+- ▪️ **[`ProgressManager._get_historical_rate`](files/src/local_deepwiki/progress.md)** `(...) → float | None` (`progress.py`) - Get historical rate from past operations.
 - 🔹 **[`_get_javadoc_or_doxygen`](files/src/local_deepwiki/core/parser.md)** `(node: Node, source: bytes) → str | None` (`parser.py`) - Extract Javadoc/Doxygen (/** */) or /// comments.
 - 🔹 **[`_get_jsdoc_or_line_comments`](files/src/local_deepwiki/core/parser.md)** `(node: Node, source: bytes) → str | None` (`parser.py`) - Extract JSDoc (/** */) or multi-line // comments.
 - 🔹 **[`_get_line_comments`](files/src/local_deepwiki/core/parser.md)** `(node: Node, source: bytes, comment_type: str, ...+1) → str | None` (`parser.py`) - Extract multi-line comments with a specific prefix.
-- ▪️ **[`WikiGenerator._get_main_definition_lines`](files/src/local_deepwiki/generators/wiki.md)** `(...) → dict[str, tuple[int, int]]` (`wiki.py`) - Get line range of [main](files/src/local_deepwiki/export/html.md) definition (first class or functio...
+- ▪️ **[`WikiGenerator._get_main_definition_lines`](files/src/local_deepwiki/generators/wiki.md)** `(...) → dict[str, tuple[int, int]]` (`wiki.py`) - Get line range of main definition (first class or functio...
 - 🔹 **[`_get_manifest_mtimes`](files/src/local_deepwiki/generators/manifest.md)** `(repo_path: Path) → dict[str, float]` (`manifest.py`) - Get modification times for all manifest files.
 - 🔹 **[`_get_node_text`](files/src/local_deepwiki/generators/test_examples.md)** `(node: Node, source: bytes) → str` (`test_examples.py`) - Get the text content of a tree-sitter node.
+- ▪️ **[`VectorStore._get_optimal_batch_config`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → tuple[int, int]` (`vectorstore.py`) - Get optimal batch size and concurrency based on provider ...
+- ▪️ **[`WikiPageIterator._get_ordered_paths`](files/src/local_deepwiki/export/streaming.md)** `(...) → list[Path]` (`streaming.py`) - Get page paths in the correct order (TOC order or alphabe...
 - ▪️ **[`CodeParser._get_parser`](files/src/local_deepwiki/core/parser.md)** `(language: LangEnum) → Parser` ⚠️`ValueError` (`parser.py`) - Get or create a parser for the given language.
 - 🔹 **[`_get_python_docstring`](files/src/local_deepwiki/core/parser.md)** `(node: Node, source: bytes) → str | None` (`parser.py`) - Extract Python docstring from function/class body.
+- ▪️ **[`SecretDetector._get_recommendation`](files/src/local_deepwiki/core/secret_detector.md)** `(secret_type: SecretType) → str` (`secret_detector.py`) - Get remediation recommendation for secret type.
+- ▪️ **[`PromptLoader._get_search_paths`](files/src/local_deepwiki/prompts.md)** `(...) → list[Path]` (`prompts.py`) - Get ordered list of directories to search for prompt files.
 - 🔹 **[`_get_swift_docstring`](files/src/local_deepwiki/core/parser.md)** `(node: Node, source: bytes) → str | None` (`parser.py`) - Extract Swift /// comments or /** */ block.
 - 🔹 **[`_get_syntax_lang`](files/src/local_deepwiki/generators/wiki_files.md)** `(language: str | None) → str` (`wiki_files.py`) - Get syntax highlighting language string.
-- ▪️ **[`VectorStore._get_table`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → Table | None` (`vectorstore.py`) - Get the chunks table if it exists.
 - ▪️ **[`LLMCache._get_table`](files/src/local_deepwiki/core/llm_cache.md)** `(...) → Table | None` (`llm_cache.py`) - Get the cache table if it exists.
+- ▪️ **[`VectorStore._get_table`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → Table | None` (`vectorstore.py`) - Get the chunks table if it exists.
 - 🔹 **[`_get_wiki_link`](files/src/local_deepwiki/generators/coverage.md)** `(file_path: str) → str` (`coverage.py`) - Convert a source file path to a wiki link.
 - 🔹 **[`_get_wiki_link`](files/src/local_deepwiki/generators/glossary.md)** `(file_path: str) → str` (`glossary.py`) - Convert a source file path to a wiki link.
-- 🔹⚡ **[`_handle_deep_research_impl`](files/src/local_deepwiki/handlers.md)** `(args: dict[str, Any], server: Any) → list[TextContent]` ⚠️`ValueError` (`handlers.py`) - Internal implementation of deep_research handler.
+- 🔹 **[`_group_modules`](files/src/local_deepwiki/generators/diagrams.md)** `(modules: set[str]) → dict[str, list[str]]` (`diagrams.py`) - Group modules by top-level directory for subgraphs.
+- ▪️ **[`OpenAILLMProvider._handle_api_error`](files/src/local_deepwiki/providers/llm/openai.md)** `(e: Exception) → None` ⚠️`ProviderAuthenticationError, ProviderConnectionError, ProviderModelNotFoundError, +1` (`openai.py`) - Convert OpenAI API errors to standardized provider errors.
+- ▪️ **[`AnthropicProvider._handle_api_error`](files/src/local_deepwiki/providers/llm/anthropic.md)** `(e: Exception) → None` ⚠️`ProviderAuthenticationError, ProviderConnectionError, ProviderModelNotFoundError, +1` (`anthropic.py`) - Convert Anthropic API errors to standardized provider err...
+- ▪️ **[`OpenAIEmbeddingProvider._handle_api_error`](files/src/local_deepwiki/providers/embeddings/openai.md)** `(e: Exception) → None` ⚠️`ProviderAuthenticationError, ProviderConnectionError, ProviderRateLimitError` (`openai.py`) - Convert OpenAI API errors to standardized provider errors.
+- 🔹⚡ **[`_handle_deep_research_impl`](files/src/local_deepwiki/handlers.md)** `(args: dict[str, Any], server: Any) → list[TextContent]` (`handlers.py`) - Internal implementation of deep_research handler.
+- ▪️⚡ **[`InteractiveSearch._handle_filter_mode`](files/src/local_deepwiki/cli/interactive_search.md)** `(key: str) → None` (`interactive_search.py`) - Handle keyboard input in filter mode.
+- 🔹⚡ **[`_handle_index_repository_impl`](files/src/local_deepwiki/handlers.md)** `(args: dict[str, Any], server: Any) → list[TextContent]` ⚠️`ValidationError, ValueError, path_not_found_error` (`handlers.py`) - Internal implementation of index_repository with progress...
+- ▪️⚡ **[`InteractiveSearch._handle_search_mode`](files/src/local_deepwiki/cli/interactive_search.md)** `(key: str) → bool` (`interactive_search.py`) - Handle keyboard input in search mode.
 - 🔹 **[`_has_meaningful_docstring`](files/src/local_deepwiki/generators/coverage.md)** `(docstring: str | None) → bool` (`coverage.py`) - Check if a docstring is meaningful (not empty or trivial).
+- ▪️ **[`EmbeddingCache._init_db`](files/src/local_deepwiki/providers/embeddings/cache.md)** `(...) → None` (`cache.py`) - Initialize the database schema.
+- ▪️⚡ **[`WikiGenerator._init_generation_context`](files/src/local_deepwiki/generators/wiki.md)** `(index_status: IndexStatus, full_rebuild: bool) → _GenerationContext` (`wiki.py`) - Initialize the generation context with tracking state.
+- ▪️ **[`GenerationProgress._init_log_file`](files/src/local_deepwiki/generators/progress_tracker.md)** `(...) → None` (`progress_tracker.py`) - Initialize the log file for appending.
 - 🔹 **[`_inject_inline_source_code`](files/src/local_deepwiki/generators/wiki_files.md)** `(content: str, chunks: list[CodeChunk], language: str | None, ...+1) → str` (`wiki_files.py`) - Inject collapsible source code after each function/class ...
 - 🔹 **[`_is_builtin_or_noise`](files/src/local_deepwiki/generators/callgraph.md)** `(name: str, language: Language) → bool` (`callgraph.py`) - Check if a function name is a built-in or common noise.
 - 🔹 **[`_is_cache_valid`](files/src/local_deepwiki/generators/manifest.md)** `(cache_entry: ManifestCacheEntry, current_mtimes: dict[str, float]) → bool` (`manifest.py`) - Check if cached manifest is still valid.
+- ▪️ **[`ASTCache._is_expired`](files/src/local_deepwiki/core/parser.md)** `(entry: CachedAST) → bool` (`parser.py`) - Check if a cache entry has expired.
+- ▪️ **[`SecretDetector._is_false_positive`](files/src/local_deepwiki/core/secret_detector.md)** `(match: str, full_line: str) → bool` (`secret_detector.py`) - Check if match is a known false positive.
+- 🔹 **[`_is_float`](files/src/local_deepwiki/config.md)** `(s: str) → bool` (`config.py`) - Check if string can be converted to float.
 - ▪️ **[`CodeChunker._is_inside_class`](files/src/local_deepwiki/core/chunker.md)** `(node: Node, class_types: set[str]) → bool` (`chunker.py`) - Check if a node is inside a class definition.
+- ▪️ **[`DependencyGraphGenerator._is_internal_import`](files/src/local_deepwiki/generators/dependency_graph.md)** `(import_name: str, internal_modules: set[str]) → bool` (`dependency_graph.py`) - Check if an import refers to an internal module.
+- ▪️ **[`VectorStore._is_local_provider`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → bool` (`vectorstore.py`) - Check if the embedding provider is local (sentence-transf...
 - 🔹 **[`_is_mock_heavy`](files/src/local_deepwiki/generators/test_examples.md)** `(body: str) → bool` (`test_examples.py`) - Check if a test body uses mocking extensively.
+- 🔹 **[`_is_test_file`](files/src/local_deepwiki/generators/wiki_files.md)** `(path: str) → bool` (`wiki_files.py`) - Check if a file is a test file in tests/ directory.
 - 🔹 **[`_is_test_module`](files/src/local_deepwiki/generators/diagrams.md)** `(module: str, file_path: str) → bool` (`diagrams.py`) - Check if a module is a test module.
+- 🔹 **[`_is_test_path`](files/src/local_deepwiki/generators/dependency_graph.md)** `(file_path: str) → bool` (`dependency_graph.py`) - Check if a file path is a test file.
 - ▪️ **[`LLMCache._is_valid_entry`](files/src/local_deepwiki/core/llm_cache.md)** `(entry: dict[str, Any]) → bool` (`llm_cache.py`) - Check if a cache entry is still valid (not expired).
+- ▪️ **[`SearchCache._is_valid_entry`](files/src/local_deepwiki/core/vectorstore.md)** `(entry: SearchCacheEntry) → bool` (`vectorstore.py`) - Check if a cache entry is still valid (not expired).
+- ▪️ **[`EmbeddingCache._is_valid_entry`](files/src/local_deepwiki/providers/embeddings/cache.md)** `(row: sqlite3.Row) → bool` (`cache.py`) - Check if a cache entry is still valid (not expired).
 - ▪️ **[`CrossLinker._link_backticked_entities`](files/src/local_deepwiki/generators/crosslinks.md)** `(text: str, entity_name: str, rel_path: str, ...+1) → str` (`crosslinks.py`) - Convert backticked entity names to links.
+- ▪️ **[`ConfigValidator._load_config`](files/src/local_deepwiki/cli/config_cli.md)** `(...) → bool` (`config_cli.py`) - Load and parse the config file.
+- ▪️ **[`OperationProgressRegistry._load_historical_data`](files/src/local_deepwiki/progress.md)** `(...) → None` (`progress.py`) - Load historical timing data from disk.
+- 🔹 **[`_load_index_status`](files/src/local_deepwiki/handlers.md)** `(repo_path: Path) → tuple[Any, Path, Any]` ⚠️`not_indexed_error` (`handlers.py`) - Load index status for a repository, raising if not indexed.
 - 🔹 **[`_load_manifest_cache`](files/src/local_deepwiki/generators/manifest.md)** `(cache_path: Path) → ManifestCacheEntry | None` (`manifest.py`) - Load manifest cache from disk.
+- ▪️ **[`LocalEmbeddingProvider._load_model`](files/src/local_deepwiki/providers/embeddings/local.md)** `(...) → SentenceTransformer` ⚠️`ProviderConfigurationError` (`local.py`) - Lazy load the model.
+- ▪️ **[`RepositoryIndexer._load_previous_status`](files/src/local_deepwiki/core/indexer.md)** `(full_rebuild: bool) → tuple[IndexStatus | None, dict[str, FileInfo], bool]` (`indexer.py`) - Load and validate previous index status for incremental u...
 - ▪️ **[`RepositoryIndexer._load_status`](files/src/local_deepwiki/core/indexer.md)** `(...) → tuple[IndexStatus | None, bool]` (`indexer.py`) - Load previous indexing status and check for migration needs.
-- 🔹 **[`_manifest_from_dict`](files/src/local_deepwiki/generators/manifest.md)** `(data: dict[str, Any]) → "ProjectManifest"` (`manifest.py`) - Create [ProjectManifest](files/src/local_deepwiki/generators/manifest.md) from dictionary.
-- 🔹 **[`_manifest_to_dict`](files/src/local_deepwiki/generators/manifest.md)** `(manifest: "ProjectManifest") → dict[str, Any]` (`manifest.py`) - Convert [ProjectManifest](files/src/local_deepwiki/generators/manifest.md) to dictionary for caching.
+- ▪️ **[`GenerationProgress._log`](files/src/local_deepwiki/generators/progress_tracker.md)** `(message: str) → None` (`progress_tracker.py`) - Append a timestamped message to the log file.
+- ▪️ **[`ASTCache._make_key`](files/src/local_deepwiki/core/parser.md)** `(file_path: str, file_hash: str) → str` (`parser.py`) - Create a cache key from file path and hash.
+- 🔹 **[`_manifest_from_dict`](files/src/local_deepwiki/generators/manifest.md)** `(data: dict[str, Any]) → "ProjectManifest"` (`manifest.py`) - Create ProjectManifest from dictionary.
+- 🔹 **[`_manifest_to_dict`](files/src/local_deepwiki/generators/manifest.md)** `(manifest: "ProjectManifest") → dict[str, Any]` (`manifest.py`) - Convert ProjectManifest to dictionary for caching.
 - ▪️⚡ **[`LLMCache._maybe_evict`](files/src/local_deepwiki/core/llm_cache.md)** `(...) → None` (`llm_cache.py`) - Evict old entries if cache exceeds max_entries.
-- 🔹 **[`_migrate_status`](files/src/local_deepwiki/core/indexer.md)** `(status: IndexStatus) → tuple[IndexStatus, bool]` (`indexer.py`) - Migrate an index status to the current schema version.
+- ▪️ **[`SearchCache._maybe_evict`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → None` (`vectorstore.py`) - Evict old entries if cache exceeds max_entries.
+- ▪️ **[`StreamingPdfExporter._merge_pdfs`](files/src/local_deepwiki/export/pdf.md)** `(pdf_files: list[Path], output_path: Path) → None` (`pdf.py`) - Merge multiple PDF files into one.
+- 🔹 **[`_migrate_status`](files/src/local_deepwiki/core/index_manager.md)** `(status: IndexStatus) → tuple[IndexStatus, bool]` (`index_manager.py`) - Migrate an index status to the current schema version.
 - ▪️ **[`RelationshipAnalyzer._module_matches_file`](files/src/local_deepwiki/generators/see_also.md)** `(module: str, file_path: str) → bool` (`see_also.py`) - Check if a module name refers to a file path.
-- ▪️ **[`RelationshipAnalyzer._module_to_file_path`](files/src/local_deepwiki/generators/see_also.md)** `(module: str) → str | None` (`see_also.py`) - Try to [find](files/src/local_deepwiki/generators/manifest.md) a file path that matches a module name.
+- ▪️ **[`RelationshipAnalyzer._module_to_file_path`](files/src/local_deepwiki/generators/see_also.md)** `(module: str) → str | None` (`see_also.py`) - Try to find a file path that matches a module name.
 - 🔹 **[`_module_to_wiki_path`](files/src/local_deepwiki/generators/diagrams.md)** `(module: str, project_name: str) → str` (`diagrams.py`) - Convert module name to wiki file path.
-- 🔹 **[`_needs_migration`](files/src/local_deepwiki/core/indexer.md)** `(status: IndexStatus) → bool` (`indexer.py`) - Check if an index status needs migration to the current s...
+- 🔹 **[`_needs_migration`](files/src/local_deepwiki/core/index_manager.md)** `(status: IndexStatus) → bool` (`index_manager.py`) - Check if an index status needs migration to the current s...
+- ▪️ **[`DependencyGraphGenerator._normalize_cycle`](files/src/local_deepwiki/generators/dependency_graph.md)** `(cycle: list[str]) → list[str]` (`dependency_graph.py`) - Normalize a cycle for consistent comparison.
 - ▪️⚡ **[`DeepResearchPipeline._parallel_retrieve`](files/src/local_deepwiki/core/deep_research.md)** `(sub_questions: list[SubQuestion]) → list[SearchResult]` (`deep_research.py`) - Retrieve code chunks for each sub-question in parallel.
 - 🔹 **[`_parse_all_porcelain_blame`](files/src/local_deepwiki/core/git_utils.md)** `(output: str) → list[BlameInfo]` (`git_utils.py`) - Parse git blame porcelain format output for multiple entr...
 - 🔹 **[`_parse_build_gradle`](files/src/local_deepwiki/generators/manifest.md)** `(filepath: Path, manifest: ProjectManifest) → None` (`manifest.py`) - Parse build.gradle (Java/Kotlin Gradle).
 - 🔹 **[`_parse_cargo_toml`](files/src/local_deepwiki/generators/manifest.md)** `(filepath: Path, manifest: ProjectManifest) → None` (`manifest.py`) - Parse Cargo.toml (Rust).
 - ▪️ **[`DeepResearchPipeline._parse_decomposition_response`](files/src/local_deepwiki/core/deep_research.md)** `(response: str) → list[SubQuestion]` (`deep_research.py`) - Parse the LLM decomposition response.
 - 🔹 **[`_parse_external_import`](files/src/local_deepwiki/generators/diagrams.md)** `(line: str) → str | None` (`diagrams.py`) - Parse an import line to extract external module name.
+- ▪️⚡ **[`RepositoryIndexer._parse_files_parallel`](files/src/local_deepwiki/core/indexer.md)** `(files_to_process: list[Path], full_rebuild: bool, progress_callback: ProgressCallback | None) → tuple[list[FileInfo], int]` (`indexer.py`) - Handle parallel file parsing with ThreadPoolExecutor.
 - ▪️ **[`DeepResearchPipeline._parse_gap_analysis_response`](files/src/local_deepwiki/core/deep_research.md)** `(response: str) → list[str]` (`deep_research.py`) - Parse the LLM gap analysis response.
 - 🔹 **[`_parse_gemfile`](files/src/local_deepwiki/generators/manifest.md)** `(filepath: Path, manifest: ProjectManifest) → None` (`manifest.py`) - Parse Gemfile (Ruby).
 - 🔹 **[`_parse_go_mod`](files/src/local_deepwiki/generators/manifest.md)** `(filepath: Path, manifest: ProjectManifest) → None` (`manifest.py`) - Parse go.mod (Go).
 - 🔹 **[`_parse_import_line`](files/src/local_deepwiki/generators/diagrams.md)** `(line: str, project_name: str) → str | None` (`diagrams.py`) - Parse an import line to extract module name.
 - ▪️ **[`RelationshipAnalyzer._parse_import_line`](files/src/local_deepwiki/generators/see_also.md)** `(line: str) → str | None` (`see_also.py`) - Parse a Python import line to extract the imported module.
 - 🔹 **[`_parse_import_module`](files/src/local_deepwiki/generators/context_builder.md)** `(import_line: str) → str | None` (`context_builder.py`) - Parse an import line to extract the module name.
+- ▪️ **[`DependencyGraphGenerator._parse_imports`](files/src/local_deepwiki/generators/dependency_graph.md)** `(content: str, language: str) → list[str]` (`dependency_graph.py`) - Parse import statements from code content.
 - 🔹 **[`_parse_line_blame_map`](files/src/local_deepwiki/core/git_utils.md)** `(output: str) → dict[int, BlameInfo]` (`git_utils.py`) - Parse git blame porcelain output into a line number -> Bl...
 - 🔹 **[`_parse_package_json`](files/src/local_deepwiki/generators/manifest.md)** `(filepath: Path, manifest: ProjectManifest) → None` (`manifest.py`) - Parse package.json (Node.js).
 - 🔹 **[`_parse_pom_xml`](files/src/local_deepwiki/generators/manifest.md)** `(filepath: Path, manifest: ProjectManifest) → None` (`manifest.py`) - Parse pom.xml (Java/Maven).
@@ -145,7 +359,9 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`_parse_setup_py`](files/src/local_deepwiki/generators/manifest.md)** `(filepath: Path, manifest: ProjectManifest) → None` (`manifest.py`) - Parse setup.py (Python legacy).
 - ▪️ **[`RepositoryIndexer._parse_single_file`](files/src/local_deepwiki/core/indexer.md)** `(file_path: Path) → ParseResult` (`indexer.py`) - Parse and chunk a single file (CPU-bound, runs in thread ...
 - 🔹 **[`_path_to_module`](files/src/local_deepwiki/generators/diagrams.md)** `(file_path: str) → str | None` (`diagrams.py`) - Convert file path to module name.
+- 🔷 **[`_PluginEmbeddingProviderWrapper`](files/src/local_deepwiki/providers/embeddings/__init__.md)** (`__init__.py`) - Wrapper to adapt EmbeddingProviderPlugin to EmbeddingProv...
 - ▪️ **[`DeepResearchPipeline._prepare_results_for_synthesis`](files/src/local_deepwiki/core/deep_research.md)** `(initial_results: list[SearchResult], additional_results: list[SearchResult]) → list[SearchResult]` (`deep_research.py`) - Deduplicate and limit results for synthesis.
+- ▪️⚡ **[`RepositoryIndexer._process_chunk_batch`](files/src/local_deepwiki/core/indexer.md)** `(chunk_batch: list[CodeChunk], full_rebuild: bool, is_first_batch: bool, ...+4) → int` (`indexer.py`) - Process a batch of chunks and store in vector store.
 - ▪️ **[`CrossLinker._process_content`](files/src/local_deepwiki/generators/crosslinks.md)** `(content: str, current_page: str) → str` (`crosslinks.py`) - Process content to add cross-links.
 - 🔹 **[`_read_file_content`](files/src/local_deepwiki/core/parser.md)** `(file_path: Path) → bytes` (`parser.py`) - Read file content, using memory-mapping for large files.
 - ▪️ **[`WikiStatusManager._read_page`](files/src/local_deepwiki/generators/wiki_status.md)** `(...) → WikiPage | None` (`wiki_status.py`)
@@ -154,16 +370,45 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️ **[`CrossLinker._relative_path`](files/src/local_deepwiki/generators/crosslinks.md)** `(from_path: str, to_path: str) → str` (`crosslinks.py`) - Calculate relative path between two wiki pages.
 - 🔹 **[`_relative_path`](files/src/local_deepwiki/generators/source_refs.md)** `(from_path: str, to_path: str) → str` (`source_refs.py`) - Calculate relative path between two wiki pages.
 - 🔹 **[`_relative_path`](files/src/local_deepwiki/generators/see_also.md)** `(from_path: str, to_path: str) → str` (`see_also.py`) - Calculate relative path between two wiki pages.
+- ▪️ **[`StreamingPdfExporter._render_batch_to_pdf`](files/src/local_deepwiki/export/pdf.md)** `(pages: list[WikiPage], output_path: Path, include_toc: bool) → None` (`pdf.py`) - Render a batch of pages to a PDF file.
+- ▪️ **[`DependencyGraphGenerator._render_file_graph`](files/src/local_deepwiki/generators/dependency_graph.md)** `(graph: DependencyGraph, module_path: str) → str` (`dependency_graph.py`) - Render the file dependency graph as Mermaid markdown.
+- ▪️ **[`DependencyGraphGenerator._render_module_graph`](files/src/local_deepwiki/generators/dependency_graph.md)** `(graph: DependencyGraph, show_external: bool, max_external: int, ...+1) → str` (`dependency_graph.py`) - Render the module dependency graph as Mermaid markdown.
+- ▪️ **[`StreamingHtmlExporter._render_toc`](files/src/local_deepwiki/export/html.md)** `(entries: list[dict[str, Any]], current_path: str, root_path: str) → str` (`html.py`) - Render TOC entries as HTML.
 - ▪️ **[`HtmlExporter._render_toc`](files/src/local_deepwiki/export/html.md)** `(entries: list[dict], current_path: str, root_path: str) → str` (`html.py`) - Render TOC entries as HTML.
+- ▪️ **[`StreamingHtmlExporter._render_toc_entry`](files/src/local_deepwiki/export/html.md)** `(entry: dict[str, Any], current_path: str, root_path: str) → str` (`html.py`) - Render a single TOC entry recursively.
 - ▪️ **[`HtmlExporter._render_toc_entry`](files/src/local_deepwiki/export/html.md)** `(entry: dict, current_path: str, root_path: str) → str` (`html.py`) - Render a single TOC entry recursively.
 - ▪️ **[`CrossLinker._replace_entity_mentions`](files/src/local_deepwiki/generators/crosslinks.md)** `(text: str, entity_name: str, link: str, ...+1) → str` (`crosslinks.py`) - Replace entity mentions with links.
 - ▪️⚡ **[`DeepResearchPipeline._report_progress`](files/src/local_deepwiki/core/deep_research.md)** `(step: int, step_type: ResearchProgressType, message: str) → None` (`deep_research.py`) - Report progress to the callback if set.
-- ▪️ **[`VectorStore._row_to_chunk`](files/src/local_deepwiki/core/vectorstore.md)** `(row: dict[str, Any]) → CodeChunk` (`vectorstore.py`) - Convert a LanceDB row to a [CodeChunk](files/src/local_deepwiki/models.md) object.
+- ▪️ **[`RateLimiter._reset_windows_if_expired`](files/src/local_deepwiki/core/rate_limiter.md)** `(now: float) → None` (`rate_limiter.py`) - Reset minute/hour windows if they have expired.
+- ▪️ **[`DependencyGraphGenerator._resolve_internal_import`](files/src/local_deepwiki/generators/dependency_graph.md)** `(import_name: str, internal_modules: set[str]) → str | None` (`dependency_graph.py`) - Resolve an import name to an internal module.
+- ▪️ **[`DeepResearchPipeline._results_to_checkpoint_format`](files/src/local_deepwiki/core/deep_research.md)** `(results: list[SearchResult], key: str) → dict[str, list[dict]]` (`deep_research.py`) - Convert search results to checkpoint-serializable format.
+- ▪️ **[`VectorStore._row_to_chunk`](files/src/local_deepwiki/core/vectorstore.md)** `(row: dict[str, Any]) → CodeChunk` (`vectorstore.py`) - Convert a LanceDB row to a CodeChunk object.
+- 🔹 **[`_row_to_chunk_default`](files/src/local_deepwiki/core/vectorstore.md)** `(row: dict[str, Any]) → CodeChunk` (`vectorstore.py`) - Default conversion from LanceDB row to CodeChunk.
+- ▪️⚡ **[`WikiGenerator._run_plugin_generators`](files/src/local_deepwiki/generators/wiki.md)** `(ctx: _GenerationContext, index_status: IndexStatus, progress_callback: ProgressCallback | None) → None` (`wiki.py`) - Run registered wiki generator plugins.
+- ▪️⚡ **[`HookRunner._run_scripts_for_event`](files/src/local_deepwiki/events.md)** `(event: Event) → None` (`events.py`) - Run all scripts registered for an event.
+- 🔹 **[`_sanitize_mermaid_name`](files/src/local_deepwiki/generators/dependency_graph.md)** `(name: str) → str` (`dependency_graph.py`) - Sanitize a name for use in Mermaid diagrams.
 - 🔹 **[`_sanitize_string_value`](files/src/local_deepwiki/core/vectorstore.md)** `(value: str) → str` (`vectorstore.py`) - Sanitize a string value for use in LanceDB filter express...
+- ▪️ **[`DeepResearchPipeline._save_checkpoint`](files/src/local_deepwiki/core/deep_research.md)** `(step: ResearchCheckpointStep, sub_questions: list[SubQuestion] | None, retrieved_contexts: dict[str, list[dict]] | None, ...+5) → None` (`deep_research.py`) - Save the current research state as a checkpoint.
+- ▪️ **[`OperationProgressRegistry._save_historical_data`](files/src/local_deepwiki/progress.md)** `(...) → None` (`progress.py`) - Save historical timing data to disk.
+- ▪️ **[`RepositoryIndexer._save_index_status`](files/src/local_deepwiki/core/indexer.md)** `(status: IndexStatus) → None` (`indexer.py`) - Save the final index status and log completion.
 - 🔹 **[`_save_manifest_cache`](files/src/local_deepwiki/generators/manifest.md)** `(cache_path: Path, entry: ManifestCacheEntry) → None` (`manifest.py`) - Save manifest cache to disk.
 - ▪️ **[`RepositoryIndexer._save_status`](files/src/local_deepwiki/core/indexer.md)** `(status: IndexStatus) → None` (`indexer.py`) - Save indexing status.
-- ▪️ **[`DebouncedHandler._schedule_reindex`](files/src/local_deepwiki/watcher.md)** `(...) → None` (`watcher.py`) - Schedule a reindex after debounce period.
+- ▪️⚡ **[`RepositoryIndexer._scan_for_secrets`](files/src/local_deepwiki/core/indexer.md)** `(progress_callback: ProgressCallback | None) → None` (`indexer.py`) - Scan repository for hardcoded secrets before indexing.
+- ▪️ **[`WikiPageIterator._scan_pages`](files/src/local_deepwiki/export/streaming.md)** `(...) → None` (`streaming.py`) - Scan wiki directory to count pages and calculate total size.
+- ▪️ **[`DebouncedHandler._schedule_reindex`](files/src/local_deepwiki/watcher.md)** `(...) → None` (`watcher.py`) - Schedule a reindex after debounce period (thread-safe).
+- ▪️⚡ **[`CodeExampleExtractor._search_docstring_examples`](files/src/local_deepwiki/generators/test_examples.md)** `(entity_name: str, max_results: int) → list[CodeExample]` (`test_examples.py`) - Search for docstring examples for the given entity.
+- 🔹 **[`_search_result_to_dict`](files/src/local_deepwiki/core/deep_research.md)** `(result: SearchResult) → dict[str, Any]` (`deep_research.py`) - Convert a SearchResult to a serializable dictionary.
+- ▪️⚡ **[`CodeExampleExtractor._search_test_examples`](files/src/local_deepwiki/generators/test_examples.md)** `(entity_name: str, max_results: int) → list[CodeExample]` (`test_examples.py`) - Search for test functions that use the given entity.
+- ▪️⚡ **[`ProgressNotifier._send_notifications`](files/src/local_deepwiki/handlers.md)** `(updates: list[ProgressUpdate]) → None` (`handlers.py`) - Send MCP progress notifications.
+- ▪️ **[`EmbeddingCache._serialize_embedding`](files/src/local_deepwiki/providers/embeddings/cache.md)** `(embedding: list[float]) → bytes` (`cache.py`) - Serialize an embedding vector to bytes for storage.
+- ▪️ **[`EmbeddingCache._set_cached`](files/src/local_deepwiki/providers/embeddings/cache.md)** `(cache_key: str, embedding: list[float], ttl_seconds: int | None) → None` (`cache.py`) - Store an embedding in the cache.
+- 🔹 **[`_set_nested_value`](files/src/local_deepwiki/config.md)** `(d: dict[str, Any], path: list[str], value: Any) → None` (`config.py`) - Set a nested value in a dictionary using a path.
+- 🔹 **[`_setup_deep_research_config`](files/src/local_deepwiki/handlers.md)** `(args: dict[str, Any], server: Any) → _DeepResearchContext` ⚠️`ValueError, not_indexed_error` (`handlers.py`) - Handle config setup and input validation for deep research.
+- ▪️ **[`AuditLogger._setup_logger`](files/src/local_deepwiki/core/audit.md)** `(...) → logging.Logger` (`audit.py`) - Set up the audit logger with file rotation.
+- ▪️ **[`EventEmitter._should_deregister`](files/src/local_deepwiki/events.md)** `(handler_id: str) → bool` (`events.py`) - Check if handler should be auto-deregistered.
+- 🔹 **[`_should_skip_file`](files/src/local_deepwiki/core/secret_detector.md)** `(file_path: Path) → bool` (`secret_detector.py`) - Check if file should be skipped from secret scanning.
 - ▪️ **[`DebouncedHandler._should_watch_file`](files/src/local_deepwiki/watcher.md)** `(path: str) → bool` (`watcher.py`) - Check if a file should trigger reindexing.
+- ▪️ **[`WikiGenerator._sort_generators_by_dependencies`](files/src/local_deepwiki/generators/wiki.md)** `(generators: list["WikiGeneratorPlugin"]) → list["WikiGeneratorPlugin"]` (`wiki.py`) - Sort generators respecting run_after dependencies with va...
 - ▪️ **[`CrossLinker._split_by_code_blocks`](files/src/local_deepwiki/generators/crosslinks.md)** `(content: str) → list[tuple[str, bool]]` (`crosslinks.py`) - Split content into code and non-code sections.
 - ▪️⚡ **[`DeepResearchPipeline._step_decompose`](files/src/local_deepwiki/core/deep_research.md)** `(question: str) → tuple[list[SubQuestion], ResearchStep, int]` (`deep_research.py`) - Execute the decomposition step.
 - ▪️⚡ **[`DeepResearchPipeline._step_follow_up_retrieve`](files/src/local_deepwiki/core/deep_research.md)** `(queries: list[str], initial_count: int) → tuple[list[SearchResult], ResearchStep]` (`deep_research.py`) - Execute the follow-up retrieval step.
@@ -175,20 +420,47 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️ **[`WikiGenerator._sync_write`](files/src/local_deepwiki/generators/wiki.md)** `(...) → None` (`wiki.py`)
 - ▪️⚡ **[`DeepResearchPipeline._synthesize`](files/src/local_deepwiki/core/deep_research.md)** `(question: str, sub_questions: list[SubQuestion], results: list[SearchResult]) → str` (`deep_research.py`) - Synthesize a comprehensive answer from all context.
 - ▪️⚡ **[`DeepResearchPipeline._targeted_retrieve`](files/src/local_deepwiki/core/deep_research.md)** `(queries: list[str]) → list[SearchResult]` (`deep_research.py`) - Perform targeted retrieval for follow-up queries.
-- 🔹 **[`_tree_to_entries`](files/src/local_deepwiki/generators/toc.md)** `(tree: dict[str, Any], parent_number: str) → list[TocEntry]` (`toc.py`) - Convert a tree structure to [TocEntry](files/src/local_deepwiki/generators/toc.md) list with proper num...
-- ▪️ **[`DebouncedHandler._trigger_reindex`](files/src/local_deepwiki/watcher.md)** `(...) → None` (`watcher.py`) - Trigger the actual reindex operation.
+- ▪️ **[`EventEmitter._track_handler_result`](files/src/local_deepwiki/events.md)** `(handler_id: str, event_type: EventType, success: bool, ...+1) → None` (`events.py`) - Track handler execution result.
+- 🔹 **[`_track_sources`](files/src/local_deepwiki/config.md)** `(config: dict[str, Any], prefix: str, sources: dict[str, str], ...+1) → None` (`config.py`) - Track the source of each config field.
+- 🔹 **[`_tree_to_entries`](files/src/local_deepwiki/generators/toc.md)** `(tree: dict[str, Any], parent_number: str) → list[TocEntry]` (`toc.py`) - Convert a tree structure to TocEntry list with proper num...
+- ▪️ **[`DebouncedHandler._trigger_reindex`](files/src/local_deepwiki/watcher.md)** `(...) → None` (`watcher.py`) - Trigger the actual reindex operation (thread-safe).
+- 🔹 **[`_unwrap_chunk`](files/src/local_deepwiki/generators/diagrams.md)** `(chunk: Any) → Any` (`diagrams.py`) - Unwrap SearchResult to get the underlying chunk.
+- ▪️ **[`ConfigValidator._validate_embedding_provider`](files/src/local_deepwiki/cli/config_cli.md)** `(...) → None` (`config_cli.py`) - Validate embedding provider configuration.
+- 🔹 **[`_validate_export_path`](files/src/local_deepwiki/handlers.md)** `(output_path: Path, wiki_path: Path) → Path` ⚠️`ValidationError` (`handlers.py`) - Validate that export output path is not in a sensitive sy...
+- 🔹 **[`_validate_git_path`](files/src/local_deepwiki/core/git_utils.md)** `(path: str | Path) → Path` ⚠️`GitPathValidationError` (`git_utils.py`) - Validate a path for safe use in git commands.
+- ▪️ **[`ConfigValidator._validate_llm_provider`](files/src/local_deepwiki/cli/config_cli.md)** `(...) → None` (`config_cli.py`) - Validate LLM provider configuration.
+- ▪️ **[`ConfigValidator._validate_paths`](files/src/local_deepwiki/cli/config_cli.md)** `(...) → None` (`config_cli.py`) - Validate path-related settings.
+- ▪️ **[`ConfigValidator._validate_performance_settings`](files/src/local_deepwiki/cli/config_cli.md)** `(...) → None` (`config_cli.py`) - Validate performance-related settings.
+- 🔹 **[`_validate_repo_path`](files/src/local_deepwiki/core/git_utils.md)** `(repo_path: str | Path) → Path` ⚠️`GitPathValidationError` (`git_utils.py`) - Validate a repository path for safe use in git commands.
+- ▪️ **[`ConfigValidator._validate_schema`](files/src/local_deepwiki/cli/config_cli.md)** `(...) → bool` (`config_cli.py`) - Validate config against Pydantic schema.
+- ▪️ **[`HookRunner._validate_script_path`](files/src/local_deepwiki/events.md)** `(script_path: Path) → Path` ⚠️`ValueError` (`events.py`) - Validate that a script path is safe to execute.
+- ▪️ **[`ConfigValidator._validate_wiki_settings`](files/src/local_deepwiki/cli/config_cli.md)** `(...) → None` (`config_cli.py`) - Validate wiki generation settings.
+- ▪️⚡ **[`RateLimiter._wait_for_minute_limit`](files/src/local_deepwiki/core/rate_limiter.md)** `(now: float) → None` ⚠️`RateLimitExceeded` (`rate_limiter.py`) - Wait for minute limit to reset if exceeded.
 - ▪️⚡ **[`WikiGenerator._write_page`](files/src/local_deepwiki/generators/wiki.md)** `(page: WikiPage) → None` (`wiki.py`) - Write a wiki page to disk asynchronously.
+- ▪️ **[`GenerationProgress._write_status`](files/src/local_deepwiki/generators/progress_tracker.md)** `(...) → None` (`progress_tracker.py`) - Write current status to the status file.
 - ▪️ **[`WikiStatusManager._write_status`](files/src/local_deepwiki/generators/wiki_status.md)** `(...) → None` (`wiki_status.py`)
 
 ## A
 
+- 🔷 **[`AccessController`](files/src/local_deepwiki/security/access_control.md)** (`access_control.py`) - Manages access control and authorization.
+- 🔷 **[`AccessDeniedException`](files/src/local_deepwiki/security/access_control.md)** (`access_control.py`) - Raised when access is denied due to insufficient permissi...
+- ▪️⚡ **[`RateLimiter.acquire`](files/src/local_deepwiki/core/rate_limiter.md)** `(...) → None` (`rate_limiter.py`) - Acquire permission to make a request.
+- ▪️⚡ **[`TestRateLimiter.acquire_slot`](files/tests/test_rate_limiter.md)** `(slot_id: int)` (`test_rate_limiter.py`)
+- 🔷 **[`AdaptiveSearcher`](files/src/local_deepwiki/core/vectorstore.md)** (`vectorstore.py`) - Adaptive search depth estimator based on query characteri...
+- ▪️ **[`ProgressManager.add_callback`](files/src/local_deepwiki/progress.md)** `(callback: Callable[[ProgressUpdate], None]) → None` (`progress.py`) - Add progress callback.
 - 🔹 **[`add_calls`](files/src/local_deepwiki/generators/diagrams.md)** `(caller: str, depth: int) → None` (`diagrams.py`)
-- ▪️⚡ **[`VectorStore.add_chunks`](files/src/local_deepwiki/core/vectorstore.md)** `(chunks: list[CodeChunk]) → int` (`vectorstore.py`) - Add chunks to existing table.
+- ▪️⚡ **[`VectorStore.add_chunks`](files/src/local_deepwiki/core/vectorstore.md)** `(chunks: list[CodeChunk], embedding_batch_size: int) → int` (`vectorstore.py`) - Add chunks to existing table.
 - 🔹 **[`add_cross_links`](files/src/local_deepwiki/generators/crosslinks.md)** `(pages: list[WikiPage], registry: EntityRegistry) → list[WikiPage]` (`crosslinks.py`) - Add cross-links to all wiki pages.
+- 🔹 **[`add_external_link_targets`](files/src/local_deepwiki/export/html.md)** `(html_content: str) → str` (`html.py`) - Add target="_blank" to external links for opening in new ...
+- ▪️ **[`EventEmitter.add_handler`](files/src/local_deepwiki/events.md)** `(event_type: EventType | str | None, handler: Handler, priority: int, ...+1) → str` (`events.py`) - Register an event handler.
 - ▪️ **[`CrossLinker.add_links`](files/src/local_deepwiki/generators/crosslinks.md)** `(page: WikiPage) → WikiPage` (`crosslinks.py`) - Add cross-links to a wiki page.
+- ▪️ **[`MultiPhaseProgress.add_phase`](files/src/local_deepwiki/cli_progress.md)** `(name: str, description: str, total: int | None) → TaskID` ⚠️`RuntimeError` (`cli_progress.py`) - Add a new phase to track.
+- 🔹 **[`add_security_headers`](files/src/local_deepwiki/web/app.md)** `(response: Response) → Response` (`app.py`) - Add security headers to all responses.
 - 🔹 **[`add_see_also_sections`](files/src/local_deepwiki/generators/see_also.md)** `(pages: list[WikiPage], analyzer: RelationshipAnalyzer) → list[WikiPage]` (`see_also.py`) - Add See Also sections to wiki pages.
 - 🔹 **[`add_source_refs_sections`](files/src/local_deepwiki/generators/source_refs.md)** `(pages: list[WikiPage], page_statuses: dict[str, WikiPageStatus], wiki_path: Path | None) → list[WikiPage]` (`source_refs.py`) - Add Relevant Source Files sections to wiki pages.
 - 🔹 **[`add_stale_banners`](files/src/local_deepwiki/generators/stale_detection.md)** `(pages: list[WikiPage], repo_path: Path, wiki_status: WikiGenerationStatus, ...+1) → list[WikiPage]` (`stale_detection.py`) - Add stale warning banners to pages with outdated document...
+- 🔹 **[`add_target`](files/src/local_deepwiki/export/html.md)** `(match: re.Match[str]) → str` (`html.py`)
+- 🔹 **[`admin_subject`](files/tests/test_access_control.md)** `(...)` (`test_access_control.py`) - Create an admin subject for testing.
 - ▪️ **[`TestResearchCancellation.always_cancelled`](files/tests/test_deep_research.md)** `(...) → bool` (`test_deep_research.py`)
 - ▪️⚡ **[`TestWithRetry.always_fails`](files/tests/test_retry.md)** `(...)` ⚠️`ConnectionError` (`test_retry.py`)
 - ▪️⚡ **[`TestRetryDecorator.always_fails`](files/tests/test_provider_errors.md)** `(...)` ⚠️`ConnectionError` (`test_provider_errors.py`)
@@ -198,111 +470,429 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹⚡ **[`analyze_file_coverage`](files/src/local_deepwiki/generators/coverage.md)** `(file_path: str, vector_store: VectorStore) → FileCoverage` (`coverage.py`) - Analyze documentation coverage for a single file.
 - 🔹⚡ **[`analyze_project_coverage`](files/src/local_deepwiki/generators/coverage.md)** `(index_status: IndexStatus, vector_store: VectorStore) → tuple[CoverageStats, list[FileCoverage]]` (`coverage.py`) - Analyze documentation coverage for the entire project.
 - 🔹 **[`analyze_staleness`](files/src/local_deepwiki/generators/stale_detection.md)** `(repo_path: Path, wiki_status: WikiGenerationStatus, stale_threshold_days: int) → StaleReport` (`stale_detection.py`) - Analyze all wiki pages for staleness.
+- 🔹 **[`anonymous`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`anonymous`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
 - 🔷 **[`AnthropicConfig`](files/src/local_deepwiki/config.md)** (`config.py`) - Configuration for Anthropic LLM.
 - 🔷 **[`AnthropicProvider`](files/src/local_deepwiki/providers/llm/anthropic.md)** (`anthropic.py`) - LLM provider using Anthropic API.
 - 🔹 **[`api_chat`](files/src/local_deepwiki/web/app.md)** `(...)` (`app.py`) - Handle chat Q&A with streaming response.
 - 🔹 **[`api_research`](files/src/local_deepwiki/web/app.md)** `(...)` (`app.py`) - Handle deep research with streaming progress updates.
 - 🔷 **[`APIDocExtractor`](files/src/local_deepwiki/generators/api_docs.md)** (`api_docs.py`) - Extracts API documentation from source files.
+- ▪️ **[`ConfigDiff.apply`](files/src/local_deepwiki/config.md)** `(config: "Config") → "Config"` (`config.py`) - Apply changes to a config.
+- 🔷 **[`ArgInfo`](files/src/local_deepwiki/generators/api_docs.md)** (`api_docs.py`) - Type for argument info in parsed docstrings.
+- 🔷 **[`AskQuestionArgs`](files/src/local_deepwiki/models.md)** (`models.py`) - Arguments for the ask_question tool.
+- 🔷 **[`ASTCache`](files/src/local_deepwiki/core/parser.md)** (`parser.py`) - Thread-safe LRU cache for parsed ASTs with TTL support.
+- 🔷 **[`ASTCacheConfig`](files/src/local_deepwiki/config.md)** (`config.py`) - AST cache configuration for tree-sitter parser.
+- 🔷 **[`ASTCacheStats`](files/src/local_deepwiki/core/parser.md)** (`parser.py`) - Statistics for AST cache operations.
+- ▪️⚡ **[`ChunkIterator.async_batches`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → AsyncIterator[ChunkBatch]` (`vectorstore.py`) - Async iterate over chunks in batches.
+- ▪️⚡ **[`LazyChunkLoader.async_get_all_chunks`](files/src/local_deepwiki/core/vectorstore.md)** `(batch_size: int | None, language: str | None, chunk_type: str | None) → AsyncIterator[CodeChunk]` ⚠️`ValueError` (`vectorstore.py`) - Async lazily iterate over all chunks.
+- ▪️⚡ **[`LazyChunkLoader.async_get_chunks_by_file`](files/src/local_deepwiki/core/vectorstore.md)** `(file_path: str, batch_size: int | None) → AsyncIterator[CodeChunk]` (`vectorstore.py`) - Async lazily load chunks for a specific file.
+- ▪️⚡ **[`TestEventEmitter.async_handler`](files/tests/test_events.md)** `(event: Event) → None` (`test_events.py`)
+- ▪️⚡ **[`TestEventEmitter.async_handler`](files/tests/test_events.md)** `(event: Event) → None` (`test_events.py`)
+- 🔹⚡ **[`async_wrapper`](files/src/local_deepwiki/security/access_control.md)** `(...)` (`access_control.py`)
+- 🔹⚡ **[`async_wrapper`](files/src/local_deepwiki/security/access_control.md)** `(...)` (`access_control.py`)
+- 🔹⚡ **[`async_wrapper`](files/src/local_deepwiki/security/access_control.md)** `(...)` (`access_control.py`)
+- 🔷 **[`AuditEvent`](files/src/local_deepwiki/core/audit.md)** (`audit.py`) - Represents an audit event for logging.
+- 🔷 **[`AuditEventType`](files/src/local_deepwiki/core/audit.md)** (`audit.py`) - Types of audit events.
+- 🔷 **[`AuditLogger`](files/src/local_deepwiki/core/audit.md)** (`audit.py`) - Manages audit logging for security events.
+- 🔷 **[`AuditSeverity`](files/src/local_deepwiki/core/audit.md)** (`audit.py`) - Severity levels for audit events.
+- 🔷 **[`AuthenticationException`](files/src/local_deepwiki/security/access_control.md)** (`access_control.py`) - Raised when authentication fails.
 
 ## B
 
+- ▪️ **[`TestProgressManager.bad_callback`](files/tests/test_progress.md)** `(...)` ⚠️`ValueError` (`test_progress.py`)
+- ▪️ **[`TestDebouncedHandlerCallback.bad_callback`](files/tests/test_watcher.md)** `(result: ReindexResult) → None` ⚠️`RuntimeError` (`test_watcher.py`)
 - ▪️⚡ **[`TestRetryDecorator.bad_gateway`](files/tests/test_provider_errors.md)** `(...)` ⚠️`Exception` (`test_provider_errors.py`)
+- 🔷 **[`BadList`](files/tests/test_diagrams.md)** (`test_diagrams.py`)
+- 🔹 **[`basic_config`](files/tests/test_role_config.md)** `(...)` (`test_role_config.py`) - Create a basic role configuration for testing.
+- 🔷 **[`BatchEmbeddingResult`](files/src/local_deepwiki/core/vectorstore.md)** (`vectorstore.py`) - Result of a batch embedding operation.
+- ▪️ **[`ChunkIterator.batches`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → Iterator[ChunkBatch]` (`vectorstore.py`) - Iterate over chunks in batches.
 - 🔷 **[`BlameInfo`](files/src/local_deepwiki/core/git_utils.md)** (`git_utils.py`) - Git blame information for a line or range.
 - 🔹 **[`build_breadcrumb`](files/src/local_deepwiki/web/app.md)** `(wiki_path: Path, current_path: str) → str` (`app.py`) - Build breadcrumb navigation HTML with clickable links.
 - 🔹 **[`build_commit_url`](files/src/local_deepwiki/generators/changelog.md)** `(repo_info: GitRepoInfo, commit_hash: str) → str | None` (`changelog.py`) - Build URL to commit on GitHub/GitLab.
 - 🔹⚡ **[`build_file_context`](files/src/local_deepwiki/generators/context_builder.md)** `(file_path: str, chunks: list[CodeChunk], repo_path: Path, ...+1) → FileContext` (`context_builder.py`) - Build comprehensive context for a source file.
 - 🔹 **[`build_file_to_wiki_map`](files/src/local_deepwiki/generators/source_refs.md)** `(pages: list[WikiPage], wiki_path: Path | None) → dict[str, str]` (`source_refs.py`) - Build a mapping from source file paths to wiki page paths.
 - 🔹 **[`build_file_to_wiki_map`](files/src/local_deepwiki/generators/see_also.md)** `(pages: list[WikiPage]) → dict[str, str]` (`see_also.py`) - Build a mapping from source file paths to wiki page paths.
+- ▪️⚡ **[`FuzzySearchHelper.build_name_index`](files/src/local_deepwiki/core/fuzzy_search.md)** `(...) → None` (`fuzzy_search.py`) - Build an index of all function/class/method names for fuz...
 - 🔹 **[`build_prompt_with_history`](files/src/local_deepwiki/web/app.md)** `(question: str, history: list[dict[str, str]], context: str) → str` (`app.py`) - Build a prompt that includes conversation history for fol...
 - 🔹 **[`build_reverse_call_graph`](files/src/local_deepwiki/generators/callgraph.md)** `(call_graph: dict[str, list[str]]) → dict[str, list[str]]` (`callgraph.py`) - Build a reverse call graph mapping callee to callers.
+- ▪️ **[`WikiStatusManager.build_reverse_index`](files/src/local_deepwiki/generators/wiki_status.md)** `(...) → dict[str, set[str]]` (`wiki_status.py`) - Build reverse index mapping source files to dependent wik...
 - 🔹 **[`build_source_url`](files/src/local_deepwiki/core/git_utils.md)** `(repo_info: GitRepoInfo, file_path: str, start_line: int | None, ...+1) → str | None` (`git_utils.py`) - Build a URL to the source file on GitHub/GitLab.
 
 ## C
 
-- ▪️ **[`TestLLMCache.cache`](files/tests/test_llm_cache.md)** `(cache_path: Path, embedding_provider: MockEmbeddingProvider, config: LLMCacheConfig) → LLMCache` (`test_llm_cache.py`) - Create an [LLMCache](files/src/local_deepwiki/core/llm_cache.md) instance.
-- ▪️ **[`TestCachingLLMProvider.cache`](files/tests/test_llm_cache.md)** `(cache_path: Path) → LLMCache` (`test_llm_cache.py`) - Create an [LLMCache](files/src/local_deepwiki/core/llm_cache.md) instance.
-- ▪️ **[`TestLLMCacheEdgeCases.cache`](files/tests/test_llm_cache.md)** `(cache_path: Path, embedding_provider: MockEmbeddingProvider, config: LLMCacheConfig) → LLMCache` (`test_llm_cache.py`) - Create an [LLMCache](files/src/local_deepwiki/core/llm_cache.md) instance.
+- ▪️ **[`TestEmbeddingCache.cache`](files/tests/test_embedding_cache.md)** `(...)` (`test_embedding_cache.py`) - Create an EmbeddingCache instance.
+- ▪️ **[`TestLLMCache.cache`](files/tests/test_llm_cache.md)** `(cache_path: Path, embedding_provider: MockEmbeddingProvider, config: LLMCacheConfig) → LLMCache` (`test_llm_cache.py`) - Create an LLMCache instance.
+- ▪️ **[`TestCachingLLMProvider.cache`](files/tests/test_llm_cache.md)** `(cache_path: Path) → LLMCache` (`test_llm_cache.py`) - Create an LLMCache instance.
+- ▪️ **[`TestLLMCacheEdgeCases.cache`](files/tests/test_llm_cache.md)** `(cache_path: Path, embedding_provider: MockEmbeddingProvider, config: LLMCacheConfig) → LLMCache` (`test_llm_cache.py`) - Create an LLMCache instance.
+- ▪️ **[`CodeParser.cache`](files/src/local_deepwiki/core/parser.md)** `(...) → ASTCache | None` (`parser.py`) - Get the AST cache instance if configured.
+- ▪️ **[`TestSearchCache.cache_config`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Create a search cache config for testing.
+- ▪️ **[`TestEmbeddingCache.cache_dir`](files/tests/test_embedding_cache.md)** `(...)` (`test_embedding_cache.py`) - Create a temporary cache directory.
+- ▪️ **[`TestEmbeddingCacheErrorHandling.cache_dir`](files/tests/test_embedding_cache.md)** `(...)` (`test_embedding_cache.py`) - Create a temporary cache directory.
 - ▪️ **[`TestLLMCache.cache_path`](files/tests/test_llm_cache.md)** `(tmp_path: Path) → Path` (`test_llm_cache.py`) - Create a temporary cache path.
 - ▪️ **[`TestCachingLLMProvider.cache_path`](files/tests/test_llm_cache.md)** `(tmp_path: Path) → Path` (`test_llm_cache.py`) - Create a temporary cache path.
 - ▪️ **[`TestLLMCacheEdgeCases.cache_path`](files/tests/test_llm_cache.md)** `(tmp_path: Path) → Path` (`test_llm_cache.py`) - Create a temporary cache path.
-- ▪️ **[`TestCachingLLMProvider.cached_provider`](files/tests/test_llm_cache.md)** `(mock_llm: MockLLMProvider, cache: LLMCache) → CachingLLMProvider` (`test_llm_cache.py`) - Create a [CachingLLMProvider](files/src/local_deepwiki/providers/llm/cached.md) instance.
-- 🔷 **[`CachingLLMProvider`](files/src/local_deepwiki/providers/llm/cached.md)** (`cached.py`) - LLM provider [wrapper](files/src/local_deepwiki/providers/base.md) that caches responses.
+- ▪️ **[`TestCachingLLMProvider.cached_provider`](files/tests/test_llm_cache.md)** `(mock_llm: MockLLMProvider, cache: LLMCache) → CachingLLMProvider` (`test_llm_cache.py`) - Create a CachingLLMProvider instance.
+- 🔷 **[`CachedAST`](files/src/local_deepwiki/core/parser.md)** (`parser.py`) - A cached AST entry with metadata for validation and evict...
+- 🔷 **[`CachedEmbeddingProvider`](files/src/local_deepwiki/providers/embeddings/cache.md)** (`cache.py`) - Embedding provider wrapper that adds caching.
+- 🔷 **[`CachingLLMProvider`](files/src/local_deepwiki/providers/llm/cached.md)** (`cached.py`) - LLM provider wrapper that caches responses.
+- ▪️ **[`LazyChunkLoader.calculate_optimal_batch_size`](files/src/local_deepwiki/core/vectorstore.md)** `(available_memory_mb: int | None, bytes_per_chunk: int) → int` (`vectorstore.py`) - Calculate optimal batch size based on available memory.
 - 🔹⚡ **[`call_tool`](files/src/local_deepwiki/server.md)** `(name: str, arguments: dict[str, Any]) → list[TextContent]` (`server.py`) - Handle tool calls.
 - 🔷 **[`CallGraphExtractor`](files/src/local_deepwiki/generators/callgraph.md)** (`callgraph.py`) - Extracts call graphs from source files.
 - 🔹 **[`camel_to_spaced`](files/src/local_deepwiki/generators/crosslinks.md)** `(name: str) → str | None` (`crosslinks.py`) - Convert CamelCase to 'Spaced Words'.
 - ▪️ **[`TestResearchCancellation.cancel_after_decomposition`](files/tests/test_deep_research.md)** `(...) → bool` (`test_deep_research.py`)
+- ▪️ **[`TestResearchCheckpointing.cancel_after_decomposition`](files/tests/test_deep_research.md)** `(...) → bool` (`test_deep_research.py`)
 - ▪️ **[`TestResearchCancellation.cancel_after_first_step`](files/tests/test_deep_research.md)** `(...) → bool` (`test_deep_research.py`)
 - ▪️ **[`TestResearchCancellation.cancel_before_gap_analysis`](files/tests/test_deep_research.md)** `(...) → bool` (`test_deep_research.py`)
 - ▪️ **[`TestResearchCancellation.cancel_before_synthesis`](files/tests/test_deep_research.md)** `(...) → bool` (`test_deep_research.py`)
+- 🔹 **[`cancel_research`](files/src/local_deepwiki/core/deep_research.md)** `(repo_path: Path, research_id: str) → ResearchCheckpoint | None` (`deep_research.py`) - Cancel a research operation and save its checkpoint.
+- 🔷 **[`CancelResearchArgs`](files/src/local_deepwiki/models.md)** (`models.py`) - Arguments for cancelling and checkpointing research.
+- ▪️⚡ **[`TestWithRetryFallbackPath.capped_delay_func`](files/tests/test_base_provider.md)** `(...)` ⚠️`ConnectionError` (`test_base_provider.py`)
 - ▪️⚡ **[`TestDeepResearchProgress.capture`](files/tests/test_deep_research.md)** `(p: ResearchProgress) → None` (`test_deep_research.py`)
 - ▪️⚡ **[`TestDeepResearchProgress.capture`](files/tests/test_deep_research.md)** `(p: ResearchProgress) → None` (`test_deep_research.py`)
 - ▪️⚡ **[`TestDeepResearchProgress.capture`](files/tests/test_deep_research.md)** `(p: ResearchProgress) → None` (`test_deep_research.py`)
 - ▪️⚡ **[`TestDeepResearchProgress.capture`](files/tests/test_deep_research.md)** `(p: ResearchProgress) → None` (`test_deep_research.py`)
 - ▪️⚡ **[`TestDeepResearchProgress.capture`](files/tests/test_deep_research.md)** `(p: ResearchProgress) → None` (`test_deep_research.py`)
 - ▪️⚡ **[`TestDeepResearchProgress.capture`](files/tests/test_deep_research.md)** `(p: ResearchProgress) → None` (`test_deep_research.py`)
+- ▪️⚡ **[`TestIndexingPipeline.capture_add`](files/tests/test_integration_pipeline.md)** `(...)` (`test_integration_pipeline.py`)
+- ▪️⚡ **[`TestIndexingPipeline.capture_create`](files/tests/test_integration_pipeline.md)** `(...)` (`test_integration_pipeline.py`)
+- 🔹 **[`cbox`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`cbox`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`cbox`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`cell`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`cell`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`cell`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔷 **[`ChangeType`](files/src/local_deepwiki/watcher.md)** (`watcher.py`) - Type of file change detected.
 - 🔹 **[`chat_page`](files/src/local_deepwiki/web/app.md)** `(...)` (`app.py`) - Render the chat interface.
+- ▪️⚡ **[`TestCancellationAndProgressCallbacks.check_cancelled`](files/tests/test_handlers_coverage.md)** `(...)` (`test_handlers_coverage.py`)
 - ▪️⚡ **[`OllamaProvider.check_health`](files/src/local_deepwiki/providers/llm/ollama.md)** `(...) → bool` ⚠️`OllamaConnectionError, OllamaModelNotFoundError` (`ollama.py`) - Check if Ollama is running and the model is available.
 - 🔹 **[`check_page_staleness`](files/src/local_deepwiki/core/git_utils.md)** `(repo_path: Path, page_path: str, generated_at: float, ...+2) → StaleInfo | None` (`git_utils.py`) - Check if a wiki page is potentially stale.
+- ▪️ **[`TestCheckpointManager.checkpoint_manager`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Create a checkpoint manager with a temp directory.
+- 🔷 **[`CheckpointManager`](files/src/local_deepwiki/core/deep_research.md)** (`deep_research.py`) - Manages saving and loading research checkpoints.
+- 🔹 **[`checkVisible`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`checkVisible`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`checkVisible`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
 - ▪️ **[`CodeChunker.chunk_file`](files/src/local_deepwiki/core/chunker.md)** `(file_path: Path, repo_root: Path) → Iterator[CodeChunk]` (`chunker.py`) - Extract code chunks from a source file.
+- 🔷 **[`ChunkBatch`](files/src/local_deepwiki/core/vectorstore.md)** (`vectorstore.py`) - A batch of chunks loaded from the store.
 - 🔷 **[`ChunkingConfig`](files/src/local_deepwiki/config.md)** (`config.py`) - Chunking configuration.
+- 🔷 **[`ChunkIterator`](files/src/local_deepwiki/core/vectorstore.md)** (`vectorstore.py`) - Memory-efficient iterator over all chunks in a vector sto...
 - 🔷 **[`ChunkType`](files/src/local_deepwiki/models.md)** (`models.py`) - Types of code chunks.
+- 🔷 **[`CircularGenerator`](files/tests/test_plugins.md)** (`test_plugins.py`)
 - 🔷 **[`ClassInfo`](files/src/local_deepwiki/generators/diagrams.md)** (`diagrams.py`) - Information about a class for diagram generation.
 - 🔷 **[`ClassNode`](files/src/local_deepwiki/generators/inheritance.md)** (`inheritance.py`) - A class in the inheritance tree.
 - 🔷 **[`ClassSignature`](files/src/local_deepwiki/generators/api_docs.md)** (`api_docs.py`) - Represents a class signature.
+- 🔹 **[`clean_audit_logger`](files/tests/test_audit.md)** `(...)` (`test_audit.py`) - Clean up the audit logger after each test to prevent hand...
+- ▪️ **[`PluginRegistry.cleanup_all`](files/src/local_deepwiki/plugins/registry.md)** `(...) → None` (`registry.py`) - Clean up all registered plugins.
+- ▪️ **[`ASTCache.cleanup_expired`](files/src/local_deepwiki/core/parser.md)** `(...) → int` (`parser.py`) - Remove all expired entries from the cache.
+- ▪️ **[`EmbeddingCache.cleanup_expired`](files/src/local_deepwiki/providers/embeddings/cache.md)** `(...) → int` (`cache.py`) - Remove expired cache entries.
+- ▪️ **[`EmbeddingCache.cleanup_if_needed`](files/src/local_deepwiki/providers/embeddings/cache.md)** `(...) → int` (`cache.py`) - Clean up cache if it exceeds max_entries.
 - ▪️⚡ **[`LLMCache.clear`](files/src/local_deepwiki/core/llm_cache.md)** `(...) → int` (`llm_cache.py`) - Clear all cache entries.
+- ▪️ **[`ASTCache.clear`](files/src/local_deepwiki/core/parser.md)** `(...) → None` (`parser.py`) - Clear all cached ASTs.
+- ▪️ **[`EmbeddingCache.clear`](files/src/local_deepwiki/providers/embeddings/cache.md)** `(...) → int` (`cache.py`) - Clear all cache entries.
+- ▪️ **[`PromptLoader.clear_cache`](files/src/local_deepwiki/prompts.md)** `(...) → None` (`prompts.py`) - Clear the prompt cache.
+- ▪️ **[`EventEmitter.clear_handlers`](files/src/local_deepwiki/events.md)** `(event_type: EventType | str | None) → None` (`events.py`) - Clear all handlers for an event type or all handlers.
+- ▪️ **[`AccessController.clear_subject`](files/src/local_deepwiki/security/access_control.md)** `(...) → None` (`access_control.py`) - Clear the current subject.
+- ▪️ **[`TestGenerationProgress.close`](files/tests/test_progress_tracker.md)** `(...)` (`test_progress_tracker.py`)
+- ▪️ **[`TestGenerationProgress.close`](files/tests/test_progress_tracker.md)** `(...)` ⚠️`OSError` (`test_progress_tracker.py`)
+- ▪️ **[`EmbeddingCache.close`](files/src/local_deepwiki/providers/embeddings/cache.md)** `(...) → None` (`cache.py`) - Close the database connection.
+- ▪️ **[`TestMainFunction.close_coro`](files/tests/test_interactive_search.md)** `(...)` (`test_interactive_search.py`) - Close coroutine to avoid 'was never awaited' warning.
+- ▪️ **[`TestMainFunction.close_coro`](files/tests/test_interactive_search.md)** `(...)` (`test_interactive_search.py`) - Close coroutine to avoid 'was never awaited' warning.
+- ▪️ **[`TestMainFunction.close_coro`](files/tests/test_interactive_search.md)** `(...)` (`test_interactive_search.py`) - Close coroutine to avoid 'was never awaited' warning.
+- ▪️ **[`TestMain.close_coro`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Close coroutine to avoid 'was never awaited' warning.
+- ▪️ **[`TestMain.close_coro`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Close coroutine to avoid 'was never awaited' warning.
+- ▪️ **[`TestMainFunction.close_coro_and_raise`](files/tests/test_interactive_search.md)** `(...)` ⚠️`Exception` (`test_interactive_search.py`) - Close coroutine then raise exception.
+- 🔹 **[`cmd_show`](files/src/local_deepwiki/cli/config_cli.md)** `(args: argparse.Namespace) → int` (`config_cli.py`) - Show effective configuration command.
+- 🔹 **[`cmd_validate`](files/src/local_deepwiki/cli/config_cli.md)** `(args: argparse.Namespace) → int` (`config_cli.py`) - Validate configuration command.
 - 🔷 **[`CodeChunk`](files/src/local_deepwiki/models.md)** (`models.py`) - A chunk of code extracted from the repository.
 - 🔷 **[`CodeChunker`](files/src/local_deepwiki/core/chunker.md)** (`chunker.py`) - Extract semantic code chunks from source files using AST ...
+- 🔷 **[`CodeExample`](files/src/local_deepwiki/generators/test_examples.md)** (`test_examples.py`) - A code example extracted from tests or docstrings.
+- 🔷 **[`CodeExampleExtractor`](files/src/local_deepwiki/generators/test_examples.md)** (`test_examples.py`) - Extract usage examples from tests and docstrings using ve...
 - 🔷 **[`CodeParser`](files/src/local_deepwiki/core/parser.md)** (`parser.py`) - Multi-language code parser using tree-sitter.
 - 🔹⚡ **[`collect`](files/src/local_deepwiki/web/app.md)** `(...) → None` (`app.py`)
 - 🔹⚡ **[`collect_all_entities`](files/src/local_deepwiki/generators/glossary.md)** `(index_status: IndexStatus, vector_store: VectorStore) → list[EntityEntry]` (`glossary.py`) - Collect all classes, functions, and methods from the code...
 - 🔹⚡ **[`collect_class_hierarchy`](files/src/local_deepwiki/generators/inheritance.md)** `(index_status: IndexStatus, vector_store: VectorStore) → dict[str, ClassNode]` (`inheritance.py`) - Collect all classes and their inheritance relationships.
 - 🔹 **[`collect_participants`](files/src/local_deepwiki/generators/diagrams.md)** `(func: str, depth: int) → None` (`diagrams.py`)
 - 🔷 **[`CommitInfo`](files/src/local_deepwiki/generators/changelog.md)** (`changelog.py`) - Information about a git commit.
+- ▪️ **[`ProgressManager.complete`](files/src/local_deepwiki/progress.md)** `(message: str) → ProgressUpdate` (`progress.py`) - Mark operation as complete.
+- ▪️ **[`GenerationProgress.complete_file`](files/src/local_deepwiki/generators/progress_tracker.md)** `(file_path: str | None) → None` (`progress_tracker.py`) - Mark a file as completed.
+- ▪️ **[`OperationProgressRegistry.complete_operation`](files/src/local_deepwiki/progress.md)** `(operation_id: str, record_timing: bool) → dict[str, Any] | None` (`progress.py`) - Complete and remove an operation.
+- ▪️ **[`MultiPhaseProgress.complete_phase`](files/src/local_deepwiki/cli_progress.md)** `(name: str) → None` (`cli_progress.py`) - Mark a phase as complete.
+- ▪️ **[`GenerationProgress.complete_phase`](files/src/local_deepwiki/generators/progress_tracker.md)** `(...) → None` (`progress_tracker.py`) - Mark the current phase as complete.
 - ▪️ **[`WikiStatusManager.compute_content_hash`](files/src/local_deepwiki/generators/wiki_status.md)** `(content: str) → str` (`wiki_status.py`) - Compute hash of page content.
+- ▪️ **[`IndexStatusManager.compute_status_hash`](files/src/local_deepwiki/core/index_manager.md)** `(status: IndexStatus) → str` (`index_manager.py`) - Compute a hash of the index status for change detection.
+- 🔷 **[`ConcreteEmbeddingProvider`](files/tests/test_base_provider.md)** (`test_base_provider.py`) - Concrete implementation for testing.
 - ▪️ **[`TestLLMCache.config`](files/tests/test_llm_cache.md)** `(...) → LLMCacheConfig` (`test_llm_cache.py`) - Create a cache config with default settings.
 - ▪️ **[`TestLLMCacheEdgeCases.config`](files/tests/test_llm_cache.md)** `(...) → LLMCacheConfig` (`test_llm_cache.py`) - Create a cache config with default settings.
 - 🔷 **[`Config`](files/src/local_deepwiki/config.md)** (`config.py`) - Main configuration.
+- ▪️ **[`RateLimiter.config`](files/src/local_deepwiki/core/rate_limiter.md)** `(...) → RateLimitConfig` (`rate_limiter.py`) - Get the current rate limit configuration.
+- ▪️ **[`RoleManager.config`](files/src/local_deepwiki/security/role_config.md)** `(...) → RoleConfig` (`role_config.py`) - Get the current role configuration.
 - 🔹 **[`config_context`](files/src/local_deepwiki/config.md)** `(config: Config) → Generator[Config, None, None]` (`config.py`) - Context manager for temporary config override.
+- 🔷 **[`ConfigChange`](files/src/local_deepwiki/config.md)** (`config.py`) - Represents a single configuration change.
+- 🔷 **[`ConfigDiff`](files/src/local_deepwiki/config.md)** (`config.py`) - Tracks differences between two configurations.
+- 🔹 **[`configure_rate_limiter`](files/src/local_deepwiki/core/rate_limiter.md)** `(config: RateLimitConfig) → None` (`rate_limiter.py`) - Configure the global rate limiter with custom settings.
+- 🔹 **[`configure_repository_access`](files/src/local_deepwiki/security/repository_access.md)** `(config: RepositoryAccessConfig) → None` (`repository_access.py`) - Configure the global repository access controller.
+- 🔹 **[`configure_roles`](files/src/local_deepwiki/security/role_config.md)** `(config: RoleConfig) → None` (`role_config.py`) - Configure the global role manager with the given configur...
+- 🔷 **[`ConfigValidator`](files/src/local_deepwiki/cli/config_cli.md)** (`config_cli.py`) - Validates local-deepwiki configuration.
+- 🔷 **[`Container`](files/tests/test_events.md)** (`test_events.py`)
+- 🔹 **[`controller`](files/tests/test_access_control.md)** `(...)` (`test_access_control.py`) - Create a fresh AccessController instance.
+- ▪️ **[`ChunkIterator.count`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → int` (`vectorstore.py`) - Return total count of chunks without loading all data.
+- ▪️ **[`LazyChunkLoader.count_chunks`](files/src/local_deepwiki/core/vectorstore.md)** `(language: str | None, chunk_type: str | None) → int` ⚠️`ValueError` (`vectorstore.py`) - Count chunks without loading them into memory.
 - 🔷 **[`CoverageStats`](files/src/local_deepwiki/generators/coverage.md)** (`coverage.py`) - Documentation coverage statistics.
+- ▪️ **[`IndexStatusManager.create`](files/src/local_deepwiki/core/index_manager.md)** `(repo_path: Path, files: list[FileInfo], total_chunks: int, ...+1) → IndexStatus` (`index_manager.py`) - Create a new index status with calculated statistics.
 - 🔹 **[`create_app`](files/src/local_deepwiki/web/app.md)** `(wiki_path: str | Path) → Flask` ⚠️`ValueError` (`app.py`) - Create Flask app with wiki path configured.
-- ▪️⚡ **[`VectorStore.create_or_update_table`](files/src/local_deepwiki/core/vectorstore.md)** `(chunks: list[CodeChunk]) → int` (`vectorstore.py`) - Create or update the vector table with code chunks.
+- 🔹 **[`create_indeterminate_progress`](files/src/local_deepwiki/cli_progress.md)** `(disable: bool, console: Console | None) → Progress` (`cli_progress.py`) - Create a progress bar for operations without known total.
+- ▪️⚡ **[`LazyIndexManager.create_index_now`](files/src/local_deepwiki/core/vectorstore.md)** `(progress_callback: Callable[[str], None] | None) → None` ⚠️`RuntimeError` (`vectorstore.py`) - Force immediate index creation.
+- 🔹 **[`create_mock_request`](files/tests/test_anthropic_provider.md)** `(...)` (`test_anthropic_provider.py`) - Create a mock httpx.Request for APIConnectionError.
+- 🔹 **[`create_mock_vector_store`](files/tests/test_integration_pipeline.md)** `(...)` (`test_integration_pipeline.py`) - Create a fully mocked vector store with all async methods.
+- ▪️⚡ **[`VectorStore.create_or_update_table`](files/src/local_deepwiki/core/vectorstore.md)** `(chunks: list[CodeChunk], embedding_batch_size: int) → int` (`vectorstore.py`) - Create or update the vector table with code chunks.
+- 🔹 **[`create_progress`](files/src/local_deepwiki/cli_progress.md)** `(disable: bool, console: Console | None) → Progress` (`cli_progress.py`) - Create a configured rich Progress instance.
+- 🔹 **[`create_progress_notifier`](files/src/local_deepwiki/handlers.md)** `(operation_type: OperationType, server: Any, total: int | None) → tuple[ProgressNotifier | None, str]` (`handlers.py`) - Create a ProgressNotifier for an MCP operation.
+- ▪️ **[`RoleManager.create_subject`](files/src/local_deepwiki/security/role_config.md)** `(identifier: str) → Subject` (`role_config.py`) - Create a Subject with the appropriate role for the identi...
+- ▪️⚡ **[`VectorStore.create_vector_index_now`](files/src/local_deepwiki/core/vectorstore.md)** `(progress_callback: Callable[[str], None] | None) → None` (`vectorstore.py`) - Force immediate vector index creation.
+- 🔷 **[`CredentialManager`](files/src/local_deepwiki/providers/credentials.md)** (`credentials.py`) - Manages credentials securely without storing in memory.
 - 🔷 **[`CrossLinker`](files/src/local_deepwiki/generators/crosslinks.md)** (`crosslinks.py`) - Adds cross-links to wiki page content.
+- ▪️⚡ **[`TestWithRetryFallbackPath.custom_backoff_func`](files/tests/test_base_provider.md)** `(...)` ⚠️`ConnectionError` (`test_base_provider.py`)
 
 ## D
 
+- 🔹 **[`debounce`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`) - General helpers
+- 🔹 **[`debounce`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`) - General helpers
+- 🔹 **[`debounce`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`) - General helpers
 - 🔷 **[`DebouncedHandler`](files/src/local_deepwiki/watcher.md)** (`watcher.py`) - File system event handler with debouncing.
+- ▪️ **[`EventEmitter.decorator`](files/src/local_deepwiki/events.md)** `(handler: Handler) → Handler` (`events.py`)
+- 🔹 **[`decorator`](files/src/local_deepwiki/security/access_control.md)** `(func: F) → F` (`access_control.py`)
+- 🔹 **[`decorator`](files/src/local_deepwiki/security/access_control.md)** `(func: F) → F` (`access_control.py`)
+- 🔹 **[`decorator`](files/src/local_deepwiki/security/access_control.md)** `(func: F) → F` (`access_control.py`)
 - 🔹 **[`decorator`](files/src/local_deepwiki/providers/base.md)** `(func: Callable[..., Any]) → Callable[..., Any]` (`base.py`)
+- 🔷 **[`DeepResearchArgs`](files/src/local_deepwiki/models.md)** (`models.py`) - Arguments for the deep_research tool.
 - 🔷 **[`DeepResearchConfig`](files/src/local_deepwiki/config.md)** (`config.py`) - Deep research pipeline configuration.
 - 🔷 **[`DeepResearchPipeline`](files/src/local_deepwiki/core/deep_research.md)** (`deep_research.py`) - Multi-step research pipeline for complex codebase questions.
 - 🔷 **[`DeepResearchResult`](files/src/local_deepwiki/models.md)** (`models.py`) - Result from deep research analysis.
+- 🔷 **[`DeepWikiError`](files/src/local_deepwiki/errors.md)** (`errors.py`) - Base exception for all DeepWiki errors.
+- ▪️ **[`CheckpointManager.delete_checkpoint`](files/src/local_deepwiki/core/deep_research.md)** `(research_id: str) → bool` (`deep_research.py`) - Delete a checkpoint.
+- ▪️ **[`DeepResearchPipeline.delete_checkpoint`](files/src/local_deepwiki/core/deep_research.md)** `(research_id: str) → bool` (`deep_research.py`) - Delete a checkpoint.
 - ▪️⚡ **[`VectorStore.delete_chunks_by_file`](files/src/local_deepwiki/core/vectorstore.md)** `(file_path: str) → int` (`vectorstore.py`) - Delete all chunks for a specific file.
+- ▪️⚡ **[`VectorStore.delete_chunks_by_files`](files/src/local_deepwiki/core/vectorstore.md)** `(file_paths: list[str]) → int` (`vectorstore.py`) - Delete all chunks for multiple files in a single batch op...
+- 🔹 **[`delete_research_checkpoint`](files/src/local_deepwiki/core/deep_research.md)** `(repo_path: Path, research_id: str) → bool` (`deep_research.py`) - Delete a research checkpoint.
+- 🔷 **[`DependencyEdge`](files/src/local_deepwiki/generators/dependency_graph.md)** (`dependency_graph.py`) - An edge in the dependency graph.
+- 🔷 **[`DependencyGraph`](files/src/local_deepwiki/generators/dependency_graph.md)** (`dependency_graph.py`) - A complete dependency graph.
+- 🔷 **[`DependencyGraphGenerator`](files/src/local_deepwiki/generators/dependency_graph.md)** (`dependency_graph.py`) - Generator for module and file dependency graphs.
+- 🔷 **[`DependencyNode`](files/src/local_deepwiki/generators/dependency_graph.md)** (`dependency_graph.py`) - A node in the dependency graph.
+- 🔷 **[`DependentGenerator`](files/tests/test_plugins.md)** (`test_plugins.py`)
+- 🔷 **[`DependentGenerator`](files/tests/test_plugins.md)** (`test_plugins.py`)
+- ▪️ **[`DependencyGraphGenerator.detect_circular_dependencies`](files/src/local_deepwiki/generators/dependency_graph.md)** `(graph: dict[str, set[str]]) → list[list[str]]` (`dependency_graph.py`) - Find all circular dependency cycles using DFS.
 - ▪️ **[`CodeParser.detect_language`](files/src/local_deepwiki/core/parser.md)** `(file_path: Path) → LangEnum | None` (`parser.py`) - Detect the programming language from file extension.
+- 🔷 **[`DetectSecretsArgs`](files/src/local_deepwiki/models.md)** (`models.py`) - Arguments for the detect_secrets tool.
+- 🔷 **[`DetectStaleDocsArgs`](files/src/local_deepwiki/models.md)** (`models.py`) - Arguments for the detect_stale_docs tool.
+- ▪️ **[`DependencyGraphGenerator.dfs`](files/src/local_deepwiki/generators/dependency_graph.md)** `(node: str, path: list[str]) → None` (`dependency_graph.py`)
 - 🔹 **[`dfs`](files/src/local_deepwiki/generators/diagrams.md)** `(node: str, path: list[str], visited: set[str]) → None` (`diagrams.py`)
+- 🔷 **[`DiagramType`](files/src/local_deepwiki/models.md)** (`models.py`) - Types of diagrams that can be generated.
+- ▪️ **[`PluginRegistry.discover_plugins`](files/src/local_deepwiki/plugins/registry.md)** `(repo_path: Path | None, custom_dir: Path | None) → int` (`registry.py`) - Discover and load plugins from all sources.
+- 🔹 **[`display_config`](files/src/local_deepwiki/cli/config_cli.md)** `(config: Config, console: Console) → None` (`config_cli.py`) - Display the effective configuration using rich formatting.
+- 🔹 **[`display_issues`](files/src/local_deepwiki/cli/config_cli.md)** `(issues: list[ValidationIssue], console: Console) → None` (`config_cli.py`) - Display validation issues in a formatted table.
+- ▪️ **[`InteractiveSearch.display_preview`](files/src/local_deepwiki/cli/interactive_search.md)** `(result: SearchResult) → None` (`interactive_search.py`) - Display a detailed preview of a search result.
+- ▪️ **[`InteractiveSearch.display_results`](files/src/local_deepwiki/cli/interactive_search.md)** `(...) → None` (`interactive_search.py`) - Display the current search results (non-interactive mode).
 - ▪️⚡ **[`TestWithRetry.documented_func`](files/tests/test_retry.md)** `(...)` (`test_retry.py`) - This is a docstring.
 
 ## E
 
+- 🔹 **[`e`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`e`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`e`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`e`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`e`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`e`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`e`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`e`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`e`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`e`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`e`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`e`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`editor_subject`](files/tests/test_access_control.md)** `(...)` (`test_access_control.py`) - Create an editor subject for testing.
+- ▪️ **[`Config.effective_embedding_batch_size`](files/src/local_deepwiki/config.md)** `(...) → int` (`config.py`) - Compute optimal batch size based on provider and memory.
+- ▪️ **[`Config.effective_llm_concurrency`](files/src/local_deepwiki/config.md)** `(...) → int` (`config.py`) - Compute effective LLM concurrency based on provider.
+- ▪️ **[`Config.effective_max_workers`](files/src/local_deepwiki/config.md)** `(...) → int` (`config.py`) - Compute worker count based on CPU cores.
+- 🔹 **[`element`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`element`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`element`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`element`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`element`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`element`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- ▪️⚡ **[`TestVectorStoreSearchWithFilters.embed`](files/tests/test_fuzzy_search.md)** `(texts: list[str]) → list[list[float]]` (`test_fuzzy_search.py`)
+- ▪️⚡ **[`TestFuzzySearchHelper.embed`](files/tests/test_fuzzy_search.md)** `(texts: list[str]) → list[list[float]]` (`test_fuzzy_search.py`)
+- ▪️⚡ **[`TestFuzzySearchHelperEdgeCases.embed`](files/tests/test_fuzzy_search.md)** `(texts: list[str]) → list[list[float]]` (`test_fuzzy_search.py`)
+- ▪️⚡ **[`TestFuzzySearchHelperEdgeCases.embed`](files/tests/test_fuzzy_search.md)** `(texts: list[str]) → list[list[float]]` (`test_fuzzy_search.py`)
+- ▪️⚡ **[`TestGetFileSuggestions.embed`](files/tests/test_fuzzy_search.md)** `(texts: list[str]) → list[list[float]]` (`test_fuzzy_search.py`)
+- ▪️⚡ **[`TestEmbeddingProviderAbstractMethods.embed`](files/tests/test_base_provider.md)** `(texts: list[str]) → list[list[float]]` (`test_base_provider.py`)
+- ▪️⚡ **[`TestEmbeddingProviderAbstractMethods.embed`](files/tests/test_base_provider.md)** `(texts: list[str]) → list[list[float]]` (`test_base_provider.py`)
+- ▪️⚡ **[`TestEmbeddingProviderAbstractMethods.embed`](files/tests/test_base_provider.md)** `(texts: list[str]) → list[list[float]]` (`test_base_provider.py`)
+- ▪️⚡ **[`TestEmbeddingProviderAbstractMethods.embed`](files/tests/test_base_provider.md)** `(texts: list[str]) → list[list[float]]` (`test_base_provider.py`)
+- ▪️⚡ **[`TestEmbeddingProviderAbstractMethods.embed`](files/tests/test_base_provider.md)** `(texts: list[str]) → list[list[float]]` (`test_base_provider.py`)
+- ▪️⚡ **[`LocalEmbeddingProvider.embed`](files/src/local_deepwiki/providers/embeddings/local.md)** `(texts: list[str]) → list[list[float]]` (`local.py`) - Generate embeddings for a list of texts.
+- ▪️⚡ **[`EmbeddingCache.embed`](files/src/local_deepwiki/providers/embeddings/cache.md)** `(texts: list[str]) → list[list[float]]` (`cache.py`) - Generate embeddings for a list of texts, using cache when...
+- ▪️⚡ **[`OpenAIEmbeddingProvider.embed`](files/src/local_deepwiki/providers/embeddings/openai.md)** `(texts: list[str]) → list[list[float]]` (`openai.py`) - Generate embeddings for a list of texts.
 - ▪️ **[`TestLLMCache.embedding_provider`](files/tests/test_llm_cache.md)** `(...) → MockEmbeddingProvider` (`test_llm_cache.py`) - Create a mock embedding provider.
 - ▪️ **[`TestLLMCacheEdgeCases.embedding_provider`](files/tests/test_llm_cache.md)** `(...) → MockEmbeddingProvider` (`test_llm_cache.py`) - Create a mock embedding provider.
+- ▪️ **[`PluginRegistry.embedding_providers`](files/src/local_deepwiki/plugins/registry.md)** `(...) → dict[str, EmbeddingProviderPlugin]` (`registry.py`) - Get registered embedding provider plugins.
+- 🔷 **[`EmbeddingBatchConfig`](files/src/local_deepwiki/config.md)** (`config.py`) - Embedding batch processing configuration.
+- 🔷 **[`EmbeddingCache`](files/src/local_deepwiki/providers/embeddings/cache.md)** (`cache.py`) - SQLite-based embedding cache with content hashing and TTL...
+- 🔷 **[`EmbeddingCacheConfig`](files/src/local_deepwiki/config.md)** (`config.py`) - Embedding cache configuration.
+- 🔷 **[`EmbeddingCacheConfig`](files/src/local_deepwiki/providers/embeddings/cache.md)** (`cache.py`) - Configuration for the embedding cache.
 - 🔷 **[`EmbeddingConfig`](files/src/local_deepwiki/config.md)** (`config.py`) - Embedding provider configuration.
+- 🔷 **[`EmbeddingProgress`](files/src/local_deepwiki/core/vectorstore.md)** (`vectorstore.py`) - Progress tracker for embedding operations.
 - 🔷 **[`EmbeddingProvider`](files/src/local_deepwiki/providers/base.md)** (`base.py`) - Abstract base class for embedding providers.
+- 🔷 **[`EmbeddingProviderCapabilities`](files/src/local_deepwiki/providers/base.md)** (`base.py`) - Capabilities of an embedding provider.
+- 🔷 **[`EmbeddingProviderPlugin`](files/src/local_deepwiki/plugins/base.md)** (`base.py`) - Plugin for adding custom embedding providers.
+- 🔷 **[`EmbeddingProviderType`](files/src/local_deepwiki/models.md)** (`models.py`) - Supported embedding providers.
+- ▪️⚡ **[`EventEmitter.emit`](files/src/local_deepwiki/events.md)** `(event_type: EventType | str, data: dict[str, Any] | None) → Event` (`events.py`) - Emit an event to all registered handlers.
+- ▪️ **[`EventEmitter.emit_sync`](files/src/local_deepwiki/events.md)** `(event_type: EventType | str, data: dict[str, Any] | None) → Event` (`events.py`) - Emit an event synchronously (only runs sync handlers).
+- ▪️ **[`TestEventEmitter.emitter`](files/tests/test_events.md)** `(...)` (`test_events.py`) - Create a fresh emitter for each test.
+- ▪️ **[`TestHookRunner.emitter`](files/tests/test_events.md)** `(...)` (`test_events.py`) - Create a fresh emitter.
+- ▪️ **[`TestWeakReferences.emitter`](files/tests/test_events.md)** `(...)` (`test_events.py`) - Create a fresh emitter.
+- ▪️ **[`TestLifecycleHooks.emitter`](files/tests/test_events.md)** `(lifecycle: HandlerLifecycle)` (`test_events.py`) - Create emitter with lifecycle hooks.
+- 🔹 **[`empty_config_file`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Create an empty config file.
+- ▪️ **[`TestFuzzySearchHelperEdgeCases.empty_vector_store`](files/tests/test_fuzzy_search.md)** `(...)` (`test_fuzzy_search.py`) - Create an empty vector store.
+- 🔷 **[`EmptyOnCopyList`](files/tests/test_embedding_cache.md)** (`test_embedding_cache.py`) - A list that returns empty when copied.
 - 🔷 **[`EntityBlameInfo`](files/src/local_deepwiki/core/git_utils.md)** (`git_utils.py`) - Blame information for a code entity (function, class, met...
 - 🔷 **[`EntityEntry`](files/src/local_deepwiki/generators/glossary.md)** (`glossary.py`) - An entry in the glossary.
 - 🔷 **[`EntityInfo`](files/src/local_deepwiki/generators/crosslinks.md)** (`crosslinks.py`) - Information about a documented entity.
 - 🔷 **[`EntityRegistry`](files/src/local_deepwiki/generators/crosslinks.md)** (`crosslinks.py`) - Registry of documented entities and their wiki page locat...
+- 🔹 **[`environment_error`](files/src/local_deepwiki/errors.md)** `(missing_component: str, purpose: str, setup_instructions: str, ...+1) → EnvironmentError` (`errors.py`) - Create an environment error with setup instructions.
+- 🔷 **[`EnvironmentError`](files/src/local_deepwiki/errors.md)** (`errors.py`) - Error raised when environment setup is incomplete.
+- ▪️ **[`TestStreamingPdfExporter.error_progress_callback`](files/tests/test_pdf_export.md)** `(current: int, total: int, message: str)` ⚠️`RuntimeError` (`test_pdf_export.py`)
+- ▪️ **[`AdaptiveSearcher.estimate_optimal_depth`](files/src/local_deepwiki/core/vectorstore.md)** `(query: str, base_limit: int) → int` (`vectorstore.py`) - Estimate optimal search depth based on query characterist...
+- 🔹 **[`event`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`event`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`event`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`event`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`event`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`event`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔷 **[`Event`](files/src/local_deepwiki/events.md)** (`events.py`) - An event with type and associated data.
+- 🔷 **[`EventEmitter`](files/src/local_deepwiki/events.md)** (`events.py`) - Event emitter for subscribing to and emitting events.
+- 🔷 **[`EventType`](files/src/local_deepwiki/events.md)** (`events.py`) - Event types emitted during operations.
+- 🔷 **[`ExamplesWikiGenerator`](files/src/local_deepwiki/generators/examples_plugin.md)** (`examples_plugin.py`) - Generate Examples sections for API documentation.
+- ▪️⚡ **[`StreamingHtmlExporter.export`](files/src/local_deepwiki/export/html.md)** `(progress_callback: ProgressCallback | None) → ExportResult` (`html.py`) - Export wiki to HTML with streaming.
 - ▪️ **[`HtmlExporter.export`](files/src/local_deepwiki/export/html.md)** `(...) → int` (`html.py`) - Export all wiki pages to HTML.
+- ▪️⚡ **[`StreamingPdfExporter.export`](files/src/local_deepwiki/export/pdf.md)** `(progress_callback: ProgressCallback | None) → ExportResult` (`pdf.py`) - Export wiki to PDF with streaming/batched processing.
+- 🔹 **[`export_error`](files/src/local_deepwiki/errors.md)** `(message: str, export_format: str, output_path: str | None, ...+1) → ExportError` (`errors.py`) - Create an export error with actionable hints.
+- ▪️⚡ **[`StreamingPdfExporter.export_separate`](files/src/local_deepwiki/export/pdf.md)** `(progress_callback: ProgressCallback | None) → ExportResult` (`pdf.py`) - Export each wiki page as a separate PDF with streaming.
 - ▪️ **[`PdfExporter.export_separate`](files/src/local_deepwiki/export/pdf.md)** `(...) → list[Path]` (`pdf.py`) - Export each wiki page as a separate PDF.
 - ▪️ **[`PdfExporter.export_single`](files/src/local_deepwiki/export/pdf.md)** `(...) → Path` (`pdf.py`) - Export all wiki pages to a single PDF.
-- 🔹 **[`export_to_html`](files/src/local_deepwiki/export/html.md)** `(wiki_path: str | Path, output_path: str | Path | None) → str` (`html.py`) - Export wiki to static HTML files.
-- 🔹 **[`export_to_pdf`](files/src/local_deepwiki/export/pdf.md)** `(wiki_path: Path | str, output_path: Path | str | None, single_file: bool) → str` ⚠️`ValueError` (`pdf.py`) - Export wiki to PDF format.
+- 🔹 **[`export_to_html`](files/src/local_deepwiki/export/html.md)** `(wiki_path: str | Path, output_path: str | Path | None, no_progress: bool) → str` (`html.py`) - Export wiki to static HTML files.
+- 🔹 **[`export_to_pdf`](files/src/local_deepwiki/export/pdf.md)** `(wiki_path: Path | str, output_path: Path | str | None, single_file: bool, ...+1) → str` ⚠️`ValueError` (`pdf.py`) - Export wiki to PDF format.
+- 🔷 **[`ExportBatchConfig`](files/src/local_deepwiki/config.md)** (`config.py`) - Export configuration for HTML and PDF generation.
+- 🔷 **[`ExportConfig`](files/src/local_deepwiki/export/streaming.md)** (`streaming.py`) - Configuration for streaming export operations.
+- 🔷 **[`ExportError`](files/src/local_deepwiki/errors.md)** (`errors.py`) - Error raised when wiki export fails.
+- 🔷 **[`ExportResult`](files/src/local_deepwiki/export/streaming.md)** (`streaming.py`) - Result of an export operation.
+- 🔷 **[`ExportWikiHtmlArgs`](files/src/local_deepwiki/models.md)** (`models.py`) - Arguments for the export_wiki_html tool.
+- 🔷 **[`ExportWikiPdfArgs`](files/src/local_deepwiki/models.md)** (`models.py`) - Arguments for the export_wiki_pdf tool.
 - 🔹 **[`extract_call_name`](files/src/local_deepwiki/generators/callgraph.md)** `(call_node: Node, source: bytes, language: Language) → str | None` (`callgraph.py`) - Extract the function/method name from a call expression.
 - 🔹 **[`extract_calls_from_function`](files/src/local_deepwiki/generators/callgraph.md)** `(func_node: Node, source: bytes, language: Language) → list[str]` (`callgraph.py`) - Extract all function calls from a function body.
 - 🔹 **[`extract_class_signature`](files/src/local_deepwiki/generators/api_docs.md)** `(class_node: Node, source: bytes, language: Language) → ClassSignature | None` (`api_docs.py`) - Extract signature from a class node.
 - 🔹 **[`extract_code_terms`](files/src/local_deepwiki/generators/search.md)** `(content: str) → list[str]` (`search.py`) - Extract code terms (class names, function names) from con...
+- ▪️⚡ **[`CodeExampleExtractor.extract_examples_for_class`](files/src/local_deepwiki/generators/test_examples.md)** `(class_name: str, max_examples: int) → list[CodeExample]` (`test_examples.py`) - Find test cases and docstring examples for a class.
 - 🔹 **[`extract_examples_for_entities`](files/src/local_deepwiki/generators/test_examples.md)** `(test_file: Path, entity_names: list[str], max_examples_per_entity: int) → list[UsageExample]` (`test_examples.py`) - Extract usage examples from a test file for given entities.
+- ▪️⚡ **[`CodeExampleExtractor.extract_examples_for_function`](files/src/local_deepwiki/generators/test_examples.md)** `(func_name: str, max_examples: int) → list[CodeExample]` (`test_examples.py`) - Find test cases and docstring examples for a function.
 - 🔹 **[`extract_function_signature`](files/src/local_deepwiki/generators/api_docs.md)** `(func_node: Node, source: bytes, language: Language, ...+1) → FunctionSignature | None` (`api_docs.py`) - Extract signature from a function node.
 - 🔹 **[`extract_function_type_metadata`](files/src/local_deepwiki/core/chunker.md)** `(func_node: Node, source: bytes, language: Language) → dict[str, Any]` (`chunker.py`) - Extract type annotation metadata from a function node.
 - 🔹 **[`extract_headings`](files/src/local_deepwiki/generators/search.md)** `(content: str) → list[str]` (`search.py`) - Extract all headings from markdown content.
+- 🔹 **[`extract_highlights`](files/src/local_deepwiki/core/fuzzy_search.md)** `(content: str, query: str, context_chars: int) → list[str]` (`fuzzy_search.py`) - Extract highlighted snippets around query matches.
 - 🔹 **[`extract_imports_from_chunks`](files/src/local_deepwiki/generators/context_builder.md)** `(chunks: list[CodeChunk]) → tuple[list[str], list[str]]` (`context_builder.py`) - Extract import statements and module names from code chunks.
 - 🔹 **[`extract_mermaid_blocks`](files/src/local_deepwiki/export/pdf.md)** `(content: str) → list[tuple[str, str]]` (`pdf.py`) - Extract mermaid code blocks from markdown content.
 - 🔹 **[`extract_python_decorators`](files/src/local_deepwiki/core/chunker.md)** `(func_node: Node, source: bytes) → list[str]` (`chunker.py`) - Extract decorators from a Python function.
@@ -318,40 +908,81 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`extract_title`](files/src/local_deepwiki/web/app.md)** `(md_file: Path) → str` (`app.py`) - Extract title from markdown file.
 - 🔹 **[`extract_title`](files/src/local_deepwiki/export/html.md)** `(md_file: Path) → str` (`html.py`) - Extract title from markdown file.
 - 🔹 **[`extract_title`](files/src/local_deepwiki/export/pdf.md)** `(md_file: Path) → str` (`pdf.py`) - Extract title from markdown file.
+- ▪️ **[`TestCodeExampleExtractor.extractor`](files/tests/test_code_examples.md)** `(mock_vector_store: MagicMock) → CodeExampleExtractor` (`test_code_examples.py`) - Create an extractor with mock store.
 
 ## F
 
+- ▪️ **[`TestEventEmitter.failing_handler`](files/tests/test_events.md)** `(_event: Event) → None` ⚠️`ValueError` (`test_events.py`)
+- ▪️ **[`TestLifecycleHooks.failing_handler`](files/tests/test_events.md)** `(_event: Event) → None` ⚠️`ValueError` (`test_events.py`)
+- ▪️ **[`TestLifecycleHooks.failing_handler`](files/tests/test_events.md)** `(_event: Event) → None` ⚠️`ValueError` (`test_events.py`)
+- ▪️⚡ **[`TestApiChatFullFlow.failing_stream`](files/tests/test_web.md)** `(...)` ⚠️`RuntimeError` (`test_web.py`)
+- ▪️⚡ **[`TestAnthropicProviderGenerateStream.failing_stream`](files/tests/test_anthropic_provider.md)** `(...)` ⚠️`APIConnectionError` (`test_anthropic_provider.py`)
+- 🔷 **[`FailingCleanupEmbedding`](files/tests/test_plugin_registry.md)** (`test_plugin_registry.py`) - Embedding provider that fails during cleanup.
+- 🔷 **[`FailingCleanupGenerator`](files/tests/test_plugin_registry.md)** (`test_plugin_registry.py`) - Wiki generator that fails during cleanup.
+- 🔷 **[`FailingCleanupParser`](files/tests/test_plugin_registry.md)** (`test_plugin_registry.py`) - Parser that fails during cleanup.
+- 🔷 **[`FailingClose`](files/tests/test_progress_tracker.md)** (`test_progress_tracker.py`) - Mock file object that raises OSError on close.
+- 🔷 **[`FailingMockEmbeddingProvider`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Mock embedding provider that fails for testing error hand...
+- 🔷 **[`FailingParser`](files/tests/test_plugins.md)** (`test_plugins.py`)
+- 🔷 **[`FailingWikiGenerator`](files/tests/test_plugins.md)** (`test_plugins.py`)
+- 🔷 **[`FailingWrite`](files/tests/test_progress_tracker.md)** (`test_progress_tracker.py`) - Mock file object that raises OSError on write.
 - ▪️ **[`WikiStatusManager.file_hashes`](files/src/local_deepwiki/generators/wiki_status.md)** `(...) → dict[str, str]` (`wiki_status.py`) - Get file hashes map.
 - ▪️ **[`WikiStatusManager.file_hashes`](files/src/local_deepwiki/generators/wiki_status.md)** `(value: dict[str, str]) → None` (`wiki_status.py`) - Set file hashes map.
 - ▪️ **[`WikiStatusManager.file_line_info`](files/src/local_deepwiki/generators/wiki_status.md)** `(...) → dict[str, tuple[int, int]]` (`wiki_status.py`) - Get file line info map.
 - ▪️ **[`WikiStatusManager.file_line_info`](files/src/local_deepwiki/generators/wiki_status.md)** `(value: dict[str, tuple[int, int]]) → None` (`wiki_status.py`) - Set file line info map.
+- 🔹 **[`file_progress`](files/src/local_deepwiki/cli_progress.md)** `(files: Iterable[Path], description: str, disable: bool, ...+1) → Iterator[tuple[Progress, TaskID, list[Path]]]` (`cli_progress.py`) - Context manager for tracking progress over a list of files.
+- 🔷 **[`FileChange`](files/src/local_deepwiki/watcher.md)** (`watcher.py`) - Represents a single file change event.
 - 🔷 **[`FileContext`](files/src/local_deepwiki/generators/context_builder.md)** (`context_builder.py`) - Rich context for a source file.
 - 🔷 **[`FileCoverage`](files/src/local_deepwiki/generators/coverage.md)** (`coverage.py`) - Coverage statistics for a single file.
 - 🔷 **[`FileInfo`](files/src/local_deepwiki/models.md)** (`models.py`) - Information about a source file.
 - 🔷 **[`FileRelationships`](files/src/local_deepwiki/generators/see_also.md)** (`see_also.py`) - Relationships for a single file.
+- 🔹 **[`filter_by_path`](files/src/local_deepwiki/core/fuzzy_search.md)** `(results: list[SearchResult], path_pattern: str | None) → list[SearchResult]` (`fuzzy_search.py`) - Filter search results by file path pattern.
+- ▪️ **[`GenerationProgress.finalize`](files/src/local_deepwiki/generators/progress_tracker.md)** `(success: bool) → str` (`progress_tracker.py`) - Mark generation as complete and write final status.
 - 🔹 **[`find`](files/src/local_deepwiki/generators/manifest.md)** `(path: str) → Any` (`manifest.py`)
 - 🔹 **[`find_nodes_by_type`](files/src/local_deepwiki/core/parser.md)** `(root: Node, node_types: set[str]) → list[Node]` (`parser.py`) - Find all nodes of specified types in the AST.
-- 🔹 **[`find_raise_statements`](files/src/local_deepwiki/core/chunker.md)** `(node: Node) → None` (`chunker.py`) - Recursively [find](files/src/local_deepwiki/generators/manifest.md) raise statements in the AST.
+- 🔹 **[`find_raise_statements`](files/src/local_deepwiki/core/chunker.md)** `(node: Node) → None` (`chunker.py`) - Recursively find raise statements in the AST.
 - 🔹⚡ **[`find_related_files`](files/src/local_deepwiki/generators/context_builder.md)** `(file_path: str, imported_modules: list[str], vector_store: VectorStore, ...+1) → list[str]` (`context_builder.py`) - Find files that are closely related to this one.
 - 🔹 **[`find_root_classes`](files/src/local_deepwiki/generators/inheritance.md)** `(classes: dict[str, ClassNode]) → list[str]` (`inheritance.py`) - Find classes that have no parents (root of inheritance tr...
+- ▪️ **[`FuzzySearchHelper.find_similar_names`](files/src/local_deepwiki/core/fuzzy_search.md)** `(query: str, threshold: float, limit: int, ...+1) → list[tuple[str, float]]` (`fuzzy_search.py`) - Find similar names using Levenshtein distance.
 - 🔹 **[`find_test_file`](files/src/local_deepwiki/generators/test_examples.md)** `(source_file: Path, repo_root: Path) → Path | None` (`test_examples.py`) - Find the corresponding test file for a source file.
 - 🔹 **[`find_test_files`](files/src/local_deepwiki/generators/test_examples.md)** `(source_file: Path, repo_root: Path) → list[Path]` (`test_examples.py`) - Find all corresponding test files for a source file.
+- 🔹 **[`fix_internal_links`](files/src/local_deepwiki/export/html.md)** `(html_content: str) → str` (`html.py`) - Convert internal .md links to .html links in rendered HTML.
 - ▪️⚡ **[`TestWithRetry.flaky_func`](files/tests/test_retry.md)** `(...)` ⚠️`ConnectionError` (`test_retry.py`)
 - ▪️⚡ **[`TestRetryDecorator.flaky_function`](files/tests/test_provider_errors.md)** `(...)` ⚠️`ConnectionError` (`test_provider_errors.py`)
+- ▪️⚡ **[`ProgressNotifier.flush`](files/src/local_deepwiki/handlers.md)** `(...) → None` (`handlers.py`) - Flush any pending notifications.
 - 🔹 **[`format_blame_date`](files/src/local_deepwiki/core/git_utils.md)** `(dt: datetime) → str` (`git_utils.py`) - Format a blame date for display.
+- 🔹 **[`format_code_examples_markdown`](files/src/local_deepwiki/generators/test_examples.md)** `(examples: list[CodeExample], max_examples: int) → str` (`test_examples.py`) - Format CodeExample objects as markdown.
 - 🔹 **[`format_context_for_llm`](files/src/local_deepwiki/generators/context_builder.md)** `(context: FileContext, max_imports: int) → str` (`context_builder.py`) - Format file context as text for the LLM prompt.
+- 🔹 **[`format_error_response`](files/src/local_deepwiki/errors.md)** `(error: DeepWikiError) → str` (`errors.py`) - Format an error for display to users.
 - 🔹 **[`format_examples_markdown`](files/src/local_deepwiki/generators/test_examples.md)** `(examples: list[UsageExample], max_examples: int) → str` (`test_examples.py`) - Format usage examples as markdown.
 - 🔹 **[`format_function_signature_line`](files/src/local_deepwiki/generators/api_docs.md)** `(sig: FunctionSignature) → str` (`api_docs.py`) - Format a function signature as a single line.
 - 🔹 **[`format_parameter`](files/src/local_deepwiki/generators/api_docs.md)** `(param: Parameter) → str` (`api_docs.py`) - Format a parameter for display.
 - 🔹 **[`format_sources`](files/src/local_deepwiki/web/app.md)** `(search_results: list[Any]) → list[dict[str, Any]]` (`app.py`) - Format search results as source citations.
+- ▪️ **[`RoleManager.from_yaml`](files/src/local_deepwiki/security/role_config.md)** `(path: Path) → "RoleManager"` (`role_config.py`) - Load role configuration from YAML file.
 - ▪️⚡ **[`TestWithRetry.func_with_custom_attempts`](files/tests/test_retry.md)** `(...)` ⚠️`ConnectionError` (`test_retry.py`)
 - 🔷 **[`FunctionSignature`](files/src/local_deepwiki/generators/api_docs.md)** (`api_docs.py`) - Represents a function/method signature.
+- ▪️ **[`TestSearchCache.fuzzy_config`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Create a fuzzy search config with auto-fuzzy disabled for...
+- 🔹 **[`fuzzy_match_name`](files/src/local_deepwiki/core/fuzzy_search.md)** `(query: str, name: str | None) → float` (`fuzzy_search.py`) - Calculate fuzzy match score for function/class names.
+- 🔹 **[`fuzzy_score`](files/src/local_deepwiki/core/fuzzy_search.md)** `(query: str, text: str) → float` (`fuzzy_search.py`) - Calculate fuzzy match score between query and text.
+- 🔷 **[`FuzzySearchConfig`](files/src/local_deepwiki/config.md)** (`config.py`) - Fuzzy search configuration for typo-tolerant code search.
+- 🔷 **[`FuzzySearchHelper`](files/src/local_deepwiki/core/fuzzy_search.md)** (`fuzzy_search.py`) - Helper class for fuzzy code search with "Did you mean?" s...
 
 ## G
 
+- ▪️⚡ **[`TestLLMProviderAbstractMethods.generate`](files/tests/test_base_provider.md)** `(prompt: str, system_prompt: str | None, max_tokens: int, ...+1) → str` (`test_base_provider.py`)
+- ▪️⚡ **[`TestLLMProviderAbstractMethods.generate`](files/tests/test_base_provider.md)** `(prompt: str, system_prompt: str | None, max_tokens: int, ...+1) → str` (`test_base_provider.py`)
+- ▪️⚡ **[`TestLLMProviderAbstractMethods.generate`](files/tests/test_base_provider.md)** `(prompt: str, system_prompt: str | None, max_tokens: int, ...+1) → str` (`test_base_provider.py`)
+- ▪️⚡ **[`TestLLMProviderAbstractMethods.generate`](files/tests/test_base_provider.md)** `(prompt: str, system_prompt: str | None, max_tokens: int, ...+1) → str` (`test_base_provider.py`)
+- ▪️⚡ **[`TestWikiGeneratorPluginIntegration.generate`](files/tests/test_plugins.md)** `(index_status: IndexStatus, wiki_path: Path, context: dict[str, Any]) → WikiGeneratorResult` ⚠️`RuntimeError` (`test_plugins.py`)
+- ▪️⚡ **[`TestWikiGeneratorPluginIntegration.generate`](files/tests/test_plugins.md)** `(index_status: IndexStatus, wiki_path: Path, context: dict[str, Any]) → WikiGeneratorResult` (`test_plugins.py`)
+- ▪️⚡ **[`TestWikiGeneratorPluginIntegration.generate`](files/tests/test_plugins.md)** `(index_status: IndexStatus, wiki_path: Path, context: dict[str, Any]) → WikiGeneratorResult` (`test_plugins.py`)
+- ▪️⚡ **[`TestWikiGeneratorPluginIntegration.generate`](files/tests/test_plugins.md)** `(index_status: IndexStatus, wiki_path: Path, context: dict[str, Any]) → WikiGeneratorResult` (`test_plugins.py`)
+- ▪️⚡ **[`TestWikiGeneratorPluginIntegration.generate`](files/tests/test_plugins.md)** `(index_status: IndexStatus, wiki_path: Path, context: dict[str, Any]) → WikiGeneratorResult` (`test_plugins.py`)
+- ▪️⚡ **[`LLMProvider.generate`](files/src/local_deepwiki/providers/base.md)** `(prompt: str, system_prompt: str | None, max_tokens: int, ...+1) → str` (`base.py`) - Generate text from a prompt.
 - ▪️⚡ **[`CachingLLMProvider.generate`](files/src/local_deepwiki/providers/llm/cached.md)** `(prompt: str, system_prompt: str | None, max_tokens: int, ...+1) → str` (`cached.py`) - Generate text with caching.
-- ▪️⚡ **[`OllamaProvider.generate`](files/src/local_deepwiki/providers/llm/ollama.md)** `(prompt: str, system_prompt: str | None, max_tokens: int, ...+1) → str` ⚠️`OllamaConnectionError, OllamaModelNotFoundError` (`ollama.py`) - Generate text from a prompt.
+- ▪️⚡ **[`OpenAILLMProvider.generate`](files/src/local_deepwiki/providers/llm/openai.md)** `(prompt: str, system_prompt: str | None, max_tokens: int, ...+1) → str` (`openai.py`) - Generate text from a prompt.
 - ▪️⚡ **[`AnthropicProvider.generate`](files/src/local_deepwiki/providers/llm/anthropic.md)** `(prompt: str, system_prompt: str | None, max_tokens: int, ...+1) → str` (`anthropic.py`) - Generate text from a prompt.
+- ▪️⚡ **[`OllamaProvider.generate`](files/src/local_deepwiki/providers/llm/ollama.md)** `(prompt: str, system_prompt: str | None, max_tokens: int, ...+1) → str` ⚠️`OllamaConnectionError, OllamaModelNotFoundError` (`ollama.py`) - Generate text from a prompt.
+- ▪️⚡ **[`ExamplesWikiGenerator.generate`](files/src/local_deepwiki/generators/examples_plugin.md)** `(index_status: IndexStatus, wiki_path: Path, context: dict[str, Any]) → WikiGeneratorResult` (`examples_plugin.py`) - Generate wiki pages with code examples.
 - ▪️⚡ **[`WikiGenerator.generate`](files/src/local_deepwiki/generators/wiki.md)** `(index_status: IndexStatus, progress_callback: ProgressCallback | None, full_rebuild: bool) → WikiStructure` (`wiki.py`) - Generate wiki documentation for the indexed repository.
 - 🔹 **[`generate_api_reference_markdown`](files/src/local_deepwiki/generators/api_docs.md)** `(functions: list[FunctionSignature], classes: list[ClassSignature], include_private: bool) → str` (`api_docs.py`) - Generate markdown API reference documentation.
 - 🔹⚡ **[`generate_architecture_page`](files/src/local_deepwiki/generators/wiki_pages.md)** `(index_status: IndexStatus, vector_store: VectorStore, llm: LLMProvider, ...+3) → WikiPage` (`wiki_pages.py`) - Generate architecture documentation with diagrams and gro...
@@ -363,8 +994,10 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`generate_deep_research_sequence`](files/src/local_deepwiki/generators/diagrams.md)** `(...) → str` (`diagrams.py`) - Generate sequence diagram for deep research pipeline.
 - 🔹⚡ **[`generate_dependencies_page`](files/src/local_deepwiki/generators/wiki_pages.md)** `(index_status: IndexStatus, vector_store: VectorStore, llm: LLMProvider, ...+3) → tuple[WikiPage, list[str]]` (`wiki_pages.py`) - Generate dependencies documentation with grounded facts f...
 - 🔹 **[`generate_dependency_graph`](files/src/local_deepwiki/generators/diagrams.md)** `(chunks: list, project_name: str, detect_circular: bool, ...+4) → str | None` (`diagrams.py`) - Generate an enhanced Mermaid flowchart showing module dep...
+- 🔹⚡ **[`generate_dependency_graph_page`](files/src/local_deepwiki/generators/dependency_graph.md)** `(index_status: IndexStatus, vector_store: "VectorStore", show_external: bool, ...+2) → str` (`dependency_graph.py`) - Generate a complete dependency graph wiki page.
 - 🔹⚡ **[`generate_entity_entries`](files/src/local_deepwiki/generators/search.md)** `(index_status: IndexStatus, vector_store: VectorStore) → list[dict]` (`search.py`) - Generate search entries for individual code entities.
-- 🔹⚡ **[`generate_file_docs`](files/src/local_deepwiki/generators/wiki_files.md)** `(index_status: IndexStatus, vector_store: VectorStore, llm: LLMProvider, ...+6) → tuple[list[WikiPage], int, int]` (`wiki_files.py`) - Generate documentation for individual source files.
+- 🔹⚡ **[`generate_file_docs`](files/src/local_deepwiki/generators/wiki_files.md)** `(index_status: IndexStatus, vector_store: VectorStore, llm: LLMProvider, ...+8) → tuple[list[WikiPage], int, int]` (`wiki_files.py`) - Generate documentation for individual source files.
+- ▪️⚡ **[`DependencyGraphGenerator.generate_file_graph`](files/src/local_deepwiki/generators/dependency_graph.md)** `(index_status: IndexStatus, module_path: str, exclude_tests: bool) → str` (`dependency_graph.py`) - Generate Mermaid graph for files within a module.
 - 🔹⚡ **[`generate_full_search_index`](files/src/local_deepwiki/generators/search.md)** `(pages: list[WikiPage], index_status: IndexStatus | None, vector_store: VectorStore | None) → dict` (`search.py`) - Generate a comprehensive search index with pages and enti...
 - 🔹⚡ **[`generate_glossary_page`](files/src/local_deepwiki/generators/glossary.md)** `(index_status: IndexStatus, vector_store: VectorStore) → str | None` (`glossary.py`) - Generate the glossary/index page content.
 - 🔹 **[`generate_indexing_sequence`](files/src/local_deepwiki/generators/diagrams.md)** `(...) → str` (`diagrams.py`) - Generate sequence diagram for the indexing pipeline.
@@ -373,8 +1006,9 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`generate_inheritance_tree_text`](files/src/local_deepwiki/generators/inheritance.md)** `(classes: dict[str, ClassNode], root_class: str, indent: int, ...+1) → list[str]` (`inheritance.py`) - Generate a text-based inheritance tree starting from a ro...
 - 🔹 **[`generate_language_pie_chart`](files/src/local_deepwiki/generators/diagrams.md)** `(index_status: IndexStatus) → str | None` (`diagrams.py`) - Generate a pie chart showing language distribution.
 - 🔹⚡ **[`generate_module_docs`](files/src/local_deepwiki/generators/wiki_modules.md)** `(index_status: IndexStatus, vector_store: VectorStore, llm: LLMProvider, ...+3) → tuple[list[WikiPage], int, int]` (`wiki_modules.py`) - Generate documentation for each module/directory.
+- ▪️⚡ **[`DependencyGraphGenerator.generate_module_graph`](files/src/local_deepwiki/generators/dependency_graph.md)** `(index_status: IndexStatus, show_external: bool, max_external: int, ...+2) → str` (`dependency_graph.py`) - Generate Mermaid graph of module dependencies.
 - 🔹 **[`generate_module_overview`](files/src/local_deepwiki/generators/diagrams.md)** `(index_status: IndexStatus, show_file_counts: bool) → str | None` (`diagrams.py`) - Generate a high-level module overview diagram.
-- 🔹⚡ **[`generate_overview_page`](files/src/local_deepwiki/generators/wiki_pages.md)** `(index_status: IndexStatus, vector_store: VectorStore, llm: LLMProvider, ...+3) → WikiPage` (`wiki_pages.py`) - Generate the [main](files/src/local_deepwiki/export/html.md) overview/index page with grounded facts.
+- 🔹⚡ **[`generate_overview_page`](files/src/local_deepwiki/generators/wiki_pages.md)** `(index_status: IndexStatus, vector_store: VectorStore, llm: LLMProvider, ...+3) → WikiPage` (`wiki_pages.py`) - Generate the main overview/index page with grounded facts.
 - 🔹⚡ **[`generate_response`](files/src/local_deepwiki/web/app.md)** `(...) → AsyncIterator[str]` (`app.py`) - Async generator that streams the chat response.
 - 🔹 **[`generate_search_entry`](files/src/local_deepwiki/generators/search.md)** `(page: WikiPage) → dict` (`search.py`) - Generate a search index entry for a wiki page.
 - 🔹 **[`generate_search_index`](files/src/local_deepwiki/generators/search.md)** `(pages: list[WikiPage]) → list[dict]` (`search.py`) - Generate a search index from wiki pages.
@@ -385,36 +1019,102 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`generate_source_refs_section`](files/src/local_deepwiki/generators/source_refs.md)** `(source_files: list[str], current_wiki_path: str, file_to_wiki: dict[str, str], ...+2) → str | None` (`source_refs.py`) - Generate a Relevant Source Files section for a wiki page.
 - 🔹 **[`generate_stale_banner`](files/src/local_deepwiki/generators/stale_detection.md)** `(stale_info: StaleInfo) → str` (`stale_detection.py`) - Generate a warning banner for a stale page.
 - 🔹 **[`generate_stale_report_page`](files/src/local_deepwiki/generators/stale_detection.md)** `(repo_path: Path, wiki_status: WikiGenerationStatus, stale_threshold_days: int) → WikiPage` (`stale_detection.py`) - Generate a wiki page reporting potentially stale document...
+- ▪️⚡ **[`TestLLMProviderAbstractMethods.generate_stream`](files/tests/test_base_provider.md)** `(prompt: str, system_prompt: str | None, max_tokens: int, ...+1)` (`test_base_provider.py`)
+- ▪️⚡ **[`TestLLMProviderAbstractMethods.generate_stream`](files/tests/test_base_provider.md)** `(prompt: str, system_prompt: str | None, max_tokens: int, ...+1)` (`test_base_provider.py`)
+- ▪️⚡ **[`TestLLMProviderAbstractMethods.generate_stream`](files/tests/test_base_provider.md)** `(prompt: str, system_prompt: str | None, max_tokens: int, ...+1)` (`test_base_provider.py`)
+- ▪️⚡ **[`TestLLMProviderAbstractMethods.generate_stream`](files/tests/test_base_provider.md)** `(prompt: str, system_prompt: str | None, max_tokens: int, ...+1)` (`test_base_provider.py`)
+- ▪️⚡ **[`LLMProvider.generate_stream`](files/src/local_deepwiki/providers/base.md)** `(prompt: str, system_prompt: str | None, max_tokens: int, ...+1) → AsyncIterator[str]` ⚠️`NotImplementedError` (`base.py`) - Generate text from a prompt with streaming.
 - ▪️⚡ **[`CachingLLMProvider.generate_stream`](files/src/local_deepwiki/providers/llm/cached.md)** `(prompt: str, system_prompt: str | None, max_tokens: int, ...+1) → AsyncIterator[str]` (`cached.py`) - Stream generation with caching.
-- ▪️⚡ **[`OllamaProvider.generate_stream`](files/src/local_deepwiki/providers/llm/ollama.md)** `(prompt: str, system_prompt: str | None, max_tokens: int, ...+1) → AsyncIterator[str]` ⚠️`OllamaConnectionError, OllamaModelNotFoundError` (`ollama.py`) - Generate text from a prompt with streaming.
+- ▪️⚡ **[`OpenAILLMProvider.generate_stream`](files/src/local_deepwiki/providers/llm/openai.md)** `(prompt: str, system_prompt: str | None, max_tokens: int, ...+1) → AsyncIterator[str]` (`openai.py`) - Generate text from a prompt with streaming.
 - ▪️⚡ **[`AnthropicProvider.generate_stream`](files/src/local_deepwiki/providers/llm/anthropic.md)** `(prompt: str, system_prompt: str | None, max_tokens: int, ...+1) → AsyncIterator[str]` (`anthropic.py`) - Generate text from a prompt with streaming.
+- ▪️⚡ **[`OllamaProvider.generate_stream`](files/src/local_deepwiki/providers/llm/ollama.md)** `(prompt: str, system_prompt: str | None, max_tokens: int, ...+1) → AsyncIterator[str]` ⚠️`OllamaConnectionError, OllamaModelNotFoundError` (`ollama.py`) - Generate text from a prompt with streaming.
+- ▪️ **[`FuzzySearchHelper.generate_suggestions`](files/src/local_deepwiki/core/fuzzy_search.md)** `(query: str, results: list[SearchResult], threshold: float, ...+1) → list[str]` (`fuzzy_search.py`) - Generate 'Did you mean?' suggestions based on the query.
 - 🔹 **[`generate_toc`](files/src/local_deepwiki/generators/toc.md)** `(pages: list[dict[str, str]]) → TableOfContents` (`toc.py`) - Generate hierarchical numbered table of contents from wik...
 - 🔹⚡ **[`generate_wiki`](files/src/local_deepwiki/generators/wiki.md)** `(repo_path: Path, wiki_path: Path, vector_store: VectorStore, ...+5) → WikiStructure` (`wiki.py`) - Convenience function to generate wiki documentation.
 - 🔹 **[`generate_wiki_generation_sequence`](files/src/local_deepwiki/generators/diagrams.md)** `(...) → str` (`diagrams.py`) - Generate sequence diagram for wiki generation.
-- 🔹⚡ **[`generate_with_semaphore`](files/src/local_deepwiki/generators/wiki_files.md)** `(file_info: FileInfo) → tuple[WikiPage | None, bool]` (`wiki_files.py`)
+- 🔹⚡ **[`generate_with_semaphore`](files/src/local_deepwiki/generators/wiki_files.md)** `(file_info: FileInfo) → tuple[FileInfo, WikiPage | None, bool]` (`wiki_files.py`) - Generate doc for a file, returning file_info for tracking.
 - 🔹 **[`generate_workflow_sequences`](files/src/local_deepwiki/generators/diagrams.md)** `(...) → str` (`diagrams.py`) - Generate all workflow sequence diagrams combined.
+- 🔷 **[`GenerationProgress`](files/src/local_deepwiki/generators/progress_tracker.md)** (`progress_tracker.py`) - Tracks wiki generation progress with timing statistics.
+- ▪️ **[`TestGenerateExamplesPage.generator`](files/tests/test_examples_plugin.md)** `(...) → ExamplesWikiGenerator` (`test_examples_plugin.py`) - Create a generator instance.
+- ▪️ **[`TestWikiGeneratorPluginIntegration.generator_name`](files/tests/test_plugins.md)** `(...) → str` (`test_plugins.py`)
+- ▪️ **[`TestWikiGeneratorPluginIntegration.generator_name`](files/tests/test_plugins.md)** `(...) → str` (`test_plugins.py`)
+- ▪️ **[`TestWikiGeneratorPluginIntegration.generator_name`](files/tests/test_plugins.md)** `(...) → str` (`test_plugins.py`)
+- ▪️ **[`TestWikiGeneratorPluginIntegration.generator_name`](files/tests/test_plugins.md)** `(...) → str` (`test_plugins.py`)
+- ▪️ **[`TestWikiGeneratorPluginIntegration.generator_name`](files/tests/test_plugins.md)** `(...) → str` (`test_plugins.py`)
+- ▪️ **[`ExamplesWikiGenerator.generator_name`](files/src/local_deepwiki/generators/examples_plugin.md)** `(...) → str` (`examples_plugin.py`) - Get the generator name.
 - ▪️⚡ **[`LLMCache.get`](files/src/local_deepwiki/core/llm_cache.md)** `(prompt: str, system_prompt: str | None, temperature: float, ...+1) → str | None` (`llm_cache.py`) - Try to get a cached response.
+- ▪️ **[`SearchCache.get`](files/src/local_deepwiki/core/vectorstore.md)** `(query_embedding: list[float], filters: dict[str, Any] | None) → list[SearchResult] | None` (`vectorstore.py`) - Try to get cached results for a semantically similar query.
+- ▪️ **[`ASTCache.get`](files/src/local_deepwiki/core/parser.md)** `(file_path: str, file_hash: str) → Any | None` (`parser.py`) - Get a cached AST if valid (hash matches and not expired).
+- 🔹 **[`get_access_controller`](files/src/local_deepwiki/security/access_control.md)** `(...) → AccessController` (`access_control.py`) - Get the global access controller instance (thread-safe).
+- ▪️ **[`VectorStore.get_adaptive_search_enabled`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → bool` (`vectorstore.py`) - Check if adaptive search is enabled.
+- ▪️ **[`VectorStore.get_adaptive_search_stats`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → dict[str, Any]` (`vectorstore.py`) - Get statistics about adaptive search performance.
+- ▪️ **[`WikiStatusManager.get_affected_pages`](files/src/local_deepwiki/generators/wiki_status.md)** `(changed_files: set[str] | None) → set[str]` (`wiki_status.py`) - Get set of wiki pages affected by file changes.
 - ▪️ **[`EntityRegistry.get_all_aliases`](files/src/local_deepwiki/generators/crosslinks.md)** `(...) → dict[str, str]` (`crosslinks.py`) - Get all registered aliases.
+- ▪️ **[`LazyChunkLoader.get_all_chunks`](files/src/local_deepwiki/core/vectorstore.md)** `(batch_size: int | None, language: str | None, chunk_type: str | None) → Iterator[CodeChunk]` ⚠️`ValueError` (`vectorstore.py`) - Lazily iterate over all chunks.
 - ▪️ **[`EntityRegistry.get_all_entities`](files/src/local_deepwiki/generators/crosslinks.md)** `(...) → dict[str, EntityInfo]` (`crosslinks.py`) - Get all registered entities.
 - ▪️ **[`RelationshipAnalyzer.get_all_known_files`](files/src/local_deepwiki/generators/see_also.md)** `(...) → set[str]` (`see_also.py`) - Get all known file paths.
+- 🔹 **[`get_audit_logger`](files/src/local_deepwiki/core/audit.md)** `(...) → AuditLogger` (`audit.py`) - Get the global audit logger instance (thread-safe).
+- ▪️ **[`CodeParser.get_cache_stats`](files/src/local_deepwiki/core/parser.md)** `(...) → dict[str, int | float] | None` (`parser.py`) - Get cache statistics if caching is enabled.
 - 🔹 **[`get_cached_llm_provider`](files/src/local_deepwiki/providers/llm/__init__.md)** `(cache_path: Path, embedding_provider: EmbeddingProvider, cache_config: LLMCacheConfig | None, ...+1) → LLMProvider` (`__init__.py`) - Get an LLM provider wrapped with caching.
 - 🔹 **[`get_cached_manifest`](files/src/local_deepwiki/generators/manifest.md)** `(repo_path: Path, cache_dir: Path | None) → ProjectManifest` (`manifest.py`) - Get project manifest, using cache if available and valid.
+- ▪️ **[`MultiPhaseProgress.get_callback`](files/src/local_deepwiki/cli_progress.md)** `(name: str) → ProgressCallback | None` (`cli_progress.py`) - Get a ProgressCallback adapter for a phase.
 - 🔹⚡ **[`get_callers_from_other_files`](files/src/local_deepwiki/generators/context_builder.md)** `(file_path: str, entity_names: list[str], repo_path: Path, ...+2) → dict[str, list[str]]` (`context_builder.py`) - Find which other files call entities defined in this file.
+- ▪️ **[`LLMProvider.get_capabilities`](files/src/local_deepwiki/providers/base.md)** `(...) → LLMProviderCapabilities` (`base.py`) - Return provider capabilities.
+- ▪️ **[`OpenAILLMProvider.get_capabilities`](files/src/local_deepwiki/providers/llm/openai.md)** `(...) → LLMProviderCapabilities` (`openai.py`) - Return OpenAI provider capabilities.
+- ▪️ **[`AnthropicProvider.get_capabilities`](files/src/local_deepwiki/providers/llm/anthropic.md)** `(...) → LLMProviderCapabilities` (`anthropic.py`) - Return Anthropic provider capabilities.
+- ▪️ **[`OllamaProvider.get_capabilities`](files/src/local_deepwiki/providers/llm/ollama.md)** `(...) → LLMProviderCapabilities` (`ollama.py`) - Return Ollama provider capabilities.
+- ▪️ **[`LocalEmbeddingProvider.get_capabilities`](files/src/local_deepwiki/providers/embeddings/local.md)** `(...) → EmbeddingProviderCapabilities` (`local.py`) - Return provider capabilities.
+- ▪️ **[`OpenAIEmbeddingProvider.get_capabilities`](files/src/local_deepwiki/providers/embeddings/openai.md)** `(...) → EmbeddingProviderCapabilities` (`openai.py`) - Return provider capabilities.
+- ▪️ **[`WikiStatusManager.get_changed_files`](files/src/local_deepwiki/generators/wiki_status.md)** `(...) → set[str]` (`wiki_status.py`) - Get set of files that have changed since last generation.
+- ▪️ **[`ConfigDiff.get_changes`](files/src/local_deepwiki/config.md)** `(...) → list[ConfigChange]` (`config.py`) - Return list of changed fields.
+- ▪️ **[`ConfigDiff.get_changes_by_source`](files/src/local_deepwiki/config.md)** `(source: str) → list[ConfigChange]` (`config.py`) - Return changes from a specific source.
 - ▪️⚡ **[`VectorStore.get_chunk_by_id`](files/src/local_deepwiki/core/vectorstore.md)** `(chunk_id: str) → CodeChunk | None` (`vectorstore.py`) - Get a specific chunk by ID.
-- 🔹 **[`get_chunk_url`](files/src/local_deepwiki/generators/wiki_files.md)** `(chunk: CodeChunk) → str | None` (`wiki_files.py`) - Build GitHub URL for a chunk.
+- ▪️ **[`VectorStore.get_chunk_iterator`](files/src/local_deepwiki/core/vectorstore.md)** `(batch_size: int, language: str | None, chunk_type: str | None) → ChunkIterator | None` ⚠️`ValueError` (`vectorstore.py`) - Get a ChunkIterator for batch iteration over chunks.
+- 🔹 **[`get_chunk_url`](files/src/local_deepwiki/generators/wiki_files.md)** `(chunk: CodeChunk) → str | None` (`wiki_files.py`)
+- ▪️⚡ **[`TestAnalyzeProjectCoverage.get_chunks`](files/tests/test_coverage.md)** `(...)` (`test_coverage.py`)
+- ▪️⚡ **[`TestAnalyzeProjectCoverage.get_chunks`](files/tests/test_coverage.md)** `(...)` (`test_coverage.py`)
+- ▪️⚡ **[`TestGenerateCoveragePage.get_chunks`](files/tests/test_coverage.md)** `(...)` (`test_coverage.py`)
+- ▪️⚡ **[`TestCollectClassHierarchy.get_chunks`](files/tests/test_inheritance.md)** `(...)` (`test_inheritance.py`)
+- ▪️⚡ **[`TestCollectClassHierarchy.get_chunks`](files/tests/test_inheritance.md)** `(...)` (`test_inheritance.py`)
+- ▪️⚡ **[`TestGenerateInheritancePage.get_chunks`](files/tests/test_inheritance.md)** `(...)` (`test_inheritance.py`)
+- ▪️⚡ **[`TestGenerateInheritancePage.get_chunks`](files/tests/test_inheritance.md)** `(...)` (`test_inheritance.py`)
+- ▪️⚡ **[`TestGenerateInheritancePage.get_chunks`](files/tests/test_inheritance.md)** `(...)` (`test_inheritance.py`)
+- ▪️⚡ **[`TestGenerateInheritancePage.get_chunks`](files/tests/test_inheritance.md)** `(...)` (`test_inheritance.py`)
+- ▪️ **[`LazyChunkLoader.get_chunks_by_file`](files/src/local_deepwiki/core/vectorstore.md)** `(file_path: str, batch_size: int | None) → Iterator[CodeChunk]` (`vectorstore.py`) - Lazily load chunks for a specific file.
 - ▪️⚡ **[`VectorStore.get_chunks_by_file`](files/src/local_deepwiki/core/vectorstore.md)** `(file_path: str) → list[CodeChunk]` (`vectorstore.py`) - Get all chunks for a specific file.
 - ▪️⚡ **[`TestGenerateFileDocs.get_chunks_side_effect`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`)
 - 🔹 **[`get_commit_history`](files/src/local_deepwiki/generators/changelog.md)** `(repo_path: Path, limit: int) → list[CommitInfo]` (`changelog.py`) - Get recent commit history with file changes.
 - 🔹 **[`get_config`](files/src/local_deepwiki/config.md)** `(...) → Config` (`config.py`) - Get the configuration instance.
+- ▪️ **[`AccessController.get_current_subject`](files/src/local_deepwiki/security/access_control.md)** `(...) → Optional[Subject]` (`access_control.py`) - Get the currently authenticated subject.
 - 🔹 **[`get_default_branch`](files/src/local_deepwiki/core/git_utils.md)** `(repo_path: Path) → str` (`git_utils.py`) - Get the default branch name for the repository.
 - ▪️ **[`ProjectManifest.get_dependency_list`](files/src/local_deepwiki/generators/manifest.md)** `(...) → str` (`manifest.py`) - Get a formatted list of all dependencies.
+- ▪️ **[`TestVectorStoreSearchWithFilters.get_dimension`](files/tests/test_fuzzy_search.md)** `(...) → int` (`test_fuzzy_search.py`)
+- ▪️ **[`TestFuzzySearchHelper.get_dimension`](files/tests/test_fuzzy_search.md)** `(...) → int` (`test_fuzzy_search.py`)
+- ▪️ **[`TestFuzzySearchHelperEdgeCases.get_dimension`](files/tests/test_fuzzy_search.md)** `(...) → int` (`test_fuzzy_search.py`)
+- ▪️ **[`TestFuzzySearchHelperEdgeCases.get_dimension`](files/tests/test_fuzzy_search.md)** `(...) → int` (`test_fuzzy_search.py`)
+- ▪️ **[`TestGetFileSuggestions.get_dimension`](files/tests/test_fuzzy_search.md)** `(...) → int` (`test_fuzzy_search.py`)
+- ▪️ **[`TestEmbeddingProviderAbstractMethods.get_dimension`](files/tests/test_base_provider.md)** `(...) → int` (`test_base_provider.py`)
+- ▪️ **[`TestEmbeddingProviderAbstractMethods.get_dimension`](files/tests/test_base_provider.md)** `(...) → int` (`test_base_provider.py`)
+- ▪️ **[`TestEmbeddingProviderAbstractMethods.get_dimension`](files/tests/test_base_provider.md)** `(...) → int` (`test_base_provider.py`)
+- ▪️ **[`TestEmbeddingProviderAbstractMethods.get_dimension`](files/tests/test_base_provider.md)** `(...) → int` (`test_base_provider.py`)
+- ▪️ **[`TestEmbeddingProviderAbstractMethods.get_dimension`](files/tests/test_base_provider.md)** `(...) → int` (`test_base_provider.py`)
+- ▪️ **[`LocalEmbeddingProvider.get_dimension`](files/src/local_deepwiki/providers/embeddings/local.md)** `(...) → int` (`local.py`) - Get the embedding dimension.
+- ▪️ **[`EmbeddingCache.get_dimension`](files/src/local_deepwiki/providers/embeddings/cache.md)** `(...) → int` (`cache.py`) - Get the embedding dimension.
+- ▪️ **[`OpenAIEmbeddingProvider.get_dimension`](files/src/local_deepwiki/providers/embeddings/openai.md)** `(...) → int` (`openai.py`) - Get the embedding dimension.
 - 🔹 **[`get_directory_tree`](files/src/local_deepwiki/generators/manifest.md)** `(repo_path: Path, max_depth: int, max_items: int) → str` (`manifest.py`) - Generate a directory tree structure for the repository.
 - 🔹 **[`get_docstring`](files/src/local_deepwiki/core/parser.md)** `(node: Node, source: bytes, language: LangEnum) → str | None` (`parser.py`) - Extract docstring from a function/class node.
-- 🔹 **[`get_embedding_provider`](files/src/local_deepwiki/providers/embeddings/__init__.md)** `(config: EmbeddingConfig | None) → EmbeddingProvider` ⚠️`ValueError` (`__init__.py`) - Get the configured embedding provider.
+- ▪️ **[`VectorStore.get_embedding_batch_config`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → dict[str, Any]` (`vectorstore.py`) - Get embedding batch configuration.
+- ▪️ **[`PluginRegistry.get_embedding_provider`](files/src/local_deepwiki/plugins/registry.md)** `(name: str) → EmbeddingProviderPlugin | None` (`registry.py`) - Get an embedding provider plugin by name.
+- 🔹 **[`get_embedding_provider`](files/src/local_deepwiki/providers/embeddings/__init__.md)** `(config: EmbeddingConfig | None, enable_cache: bool | None, cache_dir: Path | None) → EmbeddingProvider` ⚠️`ValueError` (`__init__.py`) - Get the configured embedding provider.
 - ▪️ **[`EntityRegistry.get_entity`](files/src/local_deepwiki/generators/crosslinks.md)** `(name: str) → EntityInfo | None` (`crosslinks.py`) - Get entity info by name.
 - ▪️ **[`EntityRegistry.get_entity_by_alias`](files/src/local_deepwiki/generators/crosslinks.md)** `(alias: str) → tuple[str, EntityInfo] | None` (`crosslinks.py`) - Get entity info by alias (spaced name).
 - ▪️ **[`LLMCache.get_entry_count`](files/src/local_deepwiki/core/llm_cache.md)** `(...) → int` (`llm_cache.py`) - Get the number of entries in the cache.
+- ▪️ **[`EmbeddingCache.get_entry_count`](files/src/local_deepwiki/providers/embeddings/cache.md)** `(...) → int` (`cache.py`) - Get the number of entries in the cache.
 - ▪️ **[`ProjectManifest.get_entry_points_summary`](files/src/local_deepwiki/generators/manifest.md)** `(...) → str` (`manifest.py`) - Get a summary of entry points and scripts.
+- ▪️ **[`ProgressManager.get_eta`](files/src/local_deepwiki/progress.md)** `(...) → float | None` (`progress.py`) - Calculate estimated time remaining.
+- 🔹 **[`get_event_emitter`](files/src/local_deepwiki/events.md)** `(max_consecutive_errors: int, lifecycle: HandlerLifecycle | None) → EventEmitter` (`events.py`) - Get the global event emitter instance.
+- 🔹 **[`get_examples_for_api_page`](files/src/local_deepwiki/generators/examples_plugin.md)** `(entity_name: str, extractor: CodeExampleExtractor, docstring: str | None) → str` (`examples_plugin.py`) - Get formatted examples section for an API documentation p...
+- ▪️ **[`AdaptiveSearcher.get_feedback_stats`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → dict[str, Any]` (`vectorstore.py`) - Get statistics about collected feedback.
 - 🔹 **[`get_file_api_docs`](files/src/local_deepwiki/generators/api_docs.md)** `(file_path: Path) → str | None` (`api_docs.py`) - Get API documentation for a single file.
 - 🔹 **[`get_file_call_graph`](files/src/local_deepwiki/generators/callgraph.md)** `(file_path: Path, repo_root: Path) → str | None` (`callgraph.py`) - Get a call graph diagram for a single file.
 - 🔹 **[`get_file_callers`](files/src/local_deepwiki/generators/callgraph.md)** `(file_path: Path, repo_root: Path) → dict[str, list[str]]` (`callgraph.py`) - Get a mapping of function/method names to their callers w...
@@ -422,40 +1122,153 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`get_file_examples`](files/src/local_deepwiki/generators/test_examples.md)** `(source_file: Path, repo_root: Path, entity_names: list[str], ...+1) → str | None` (`test_examples.py`) - Get formatted usage examples for a source file.
 - ▪️ **[`CodeParser.get_file_info`](files/src/local_deepwiki/core/parser.md)** `(file_path: Path, repo_root: Path) → FileInfo` (`parser.py`) - Get information about a source file.
 - 🔹 **[`get_file_last_modified`](files/src/local_deepwiki/core/git_utils.md)** `(repo_path: Path, file_path: str) → datetime | None` (`git_utils.py`) - Get the last modification date of a file from git history.
+- ▪️ **[`FuzzySearchHelper.get_file_suggestions`](files/src/local_deepwiki/core/fuzzy_search.md)** `(query: str, threshold: float, limit: int) → list[str]` (`fuzzy_search.py`) - Get file path suggestions based on a query.
 - 🔹 **[`get_files_last_modified`](files/src/local_deepwiki/core/git_utils.md)** `(repo_path: Path, file_paths: list[str]) → dict[str, datetime]` (`git_utils.py`) - Get last modification dates for multiple files efficiently.
+- ▪️ **[`IndexStatusManager.get_files_needing_reindex`](files/src/local_deepwiki/core/index_manager.md)** `(status: IndexStatus, current_files: dict[str, str]) → tuple[list[str], list[str], list[str]]` (`index_manager.py`) - Get lists of files that need processing.
 - 🔹 **[`get_git_remote_url`](files/src/local_deepwiki/core/git_utils.md)** `(repo_path: Path) → str | None` (`git_utils.py`) - Get the remote origin URL from git config.
+- ▪️ **[`EventEmitter.get_handler_stats`](files/src/local_deepwiki/events.md)** `(...) → dict[str, HandlerStats]` (`events.py`) - Get statistics for all handlers.
+- ▪️ **[`EventEmitter.get_handler_stats_by_id`](files/src/local_deepwiki/events.md)** `(handler_id: str) → HandlerStats | None` (`events.py`) - Get statistics for a specific handler.
+- ▪️ **[`CheckpointManager.get_incomplete_checkpoints`](files/src/local_deepwiki/core/deep_research.md)** `(...) → list[ResearchCheckpoint]` (`deep_research.py`) - Get all incomplete (non-complete, non-error) checkpoints.
+- ▪️ **[`PluginRegistry.get_language_parser`](files/src/local_deepwiki/plugins/registry.md)** `(name: str) → LanguageParserPlugin | None` (`registry.py`) - Get a language parser plugin by name.
+- ▪️ **[`VectorStore.get_lazy_chunk_loader`](files/src/local_deepwiki/core/vectorstore.md)** `(max_memory_mb: int) → LazyChunkLoader` (`vectorstore.py`) - Get a LazyChunkLoader for memory-efficient chunk iteration.
+- ▪️ **[`VectorStore.get_lazy_index_stats`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → dict[str, Any]` (`vectorstore.py`) - Get statistics about lazy index creation.
 - 🔹 **[`get_line_blame`](files/src/local_deepwiki/core/git_utils.md)** `(repo_path: Path, file_path: str, line_number: int) → BlameInfo | None` (`git_utils.py`) - Get git blame information for a specific line.
 - 🔹 **[`get_llm_provider`](files/src/local_deepwiki/providers/llm/__init__.md)** `(config: LLMConfig | None) → LLMProvider` ⚠️`ValueError` (`__init__.py`) - Get the configured LLM provider.
 - 🔹 **[`get_logger`](files/src/local_deepwiki/logging.md)** `(name: str) → logging.Logger` (`logging.py`) - Get a logger for a specific module.
+- ▪️ **[`VectorStore.get_main_definition_lines`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → dict[str, tuple[int, int]]` (`vectorstore.py`) - Get line range of main definition (first class or functio...
+- ▪️ **[`VectorStore.get_main_definition_lines_lazy`](files/src/local_deepwiki/core/vectorstore.md)** `(batch_size: int) → Iterator[tuple[str, tuple[int, int]]]` (`vectorstore.py`) - Lazily get line range of main definition per file.
+- ▪️ **[`LocalEmbeddingProvider.get_max_batch_size`](files/src/local_deepwiki/providers/embeddings/local.md)** `(...) → int` (`local.py`) - Return maximum number of texts that can be embedded in a ...
+- ▪️ **[`OpenAIEmbeddingProvider.get_max_batch_size`](files/src/local_deepwiki/providers/embeddings/openai.md)** `(...) → int` (`openai.py`) - Return maximum number of texts that can be embedded in a ...
+- ▪️ **[`LocalEmbeddingProvider.get_max_tokens`](files/src/local_deepwiki/providers/embeddings/local.md)** `(...) → int` (`local.py`) - Return maximum tokens per text.
+- ▪️ **[`OpenAIEmbeddingProvider.get_max_tokens`](files/src/local_deepwiki/providers/embeddings/openai.md)** `(...) → int` (`openai.py`) - Return maximum tokens per text.
 - 🔹 **[`get_node_name`](files/src/local_deepwiki/core/parser.md)** `(node: Node, source: bytes, language: LangEnum) → str | None` (`parser.py`) - Extract the name from a function/class/method node.
 - 🔹 **[`get_node_text`](files/src/local_deepwiki/core/parser.md)** `(node: Node, source: bytes) → str` (`parser.py`) - Extract text content from a tree-sitter node.
+- ▪️ **[`OperationProgressRegistry.get_operation`](files/src/local_deepwiki/progress.md)** `(operation_id: str) → ProgressManager | None` (`progress.py`) - Get progress manager for an operation.
+- ▪️ **[`OperationProgressRegistry.get_operation_progress`](files/src/local_deepwiki/progress.md)** `(operation_id: str) → dict[str, Any] | None` (`progress.py`) - Get current progress for an operation.
+- ▪️ **[`WikiPageIterator.get_page_count`](files/src/local_deepwiki/export/streaming.md)** `(...) → int` (`streaming.py`) - Return total page count without loading content.
 - ▪️ **[`EntityRegistry.get_page_entities`](files/src/local_deepwiki/generators/crosslinks.md)** `(wiki_path: str) → list[str]` (`crosslinks.py`) - Get all entities defined in a specific wiki page.
 - 🔹 **[`get_parent_classes`](files/src/local_deepwiki/core/chunker.md)** `(class_node: Node, source: bytes, language: Language) → list[str]` (`chunker.py`) - Extract parent class names from a class definition.
+- ▪️ **[`PluginRegistry.get_parser_for_extension`](files/src/local_deepwiki/plugins/registry.md)** `(extension: str) → LanguageParserPlugin | None` (`registry.py`) - Find a language parser plugin that handles a file extension.
+- 🔹 **[`get_plugin_registry`](files/src/local_deepwiki/plugins/registry.md)** `(...) → PluginRegistry` (`registry.py`) - Get the global plugin registry instance.
+- ▪️ **[`ProgressManager.get_progress_dict`](files/src/local_deepwiki/progress.md)** `(...) → dict[str, Any]` (`progress.py`) - Return progress as dict for serialization.
+- 🔹 **[`get_progress_registry`](files/src/local_deepwiki/progress.md)** `(...) → OperationProgressRegistry` (`progress.py`) - Get the global progress registry.
+- 🔹 **[`get_prompt_manager`](files/src/local_deepwiki/prompts.md)** `(custom_dir: Path | None, repo_path: Path | None) → PromptManager` (`prompts.py`) - Get a prompt manager instance.
+- ▪️ **[`Config.get_prompts`](files/src/local_deepwiki/config.md)** `(...) → ProviderPromptsConfig` (`config.py`) - Get prompts for the currently configured LLM provider.
 - 🔹 **[`get_range_blame`](files/src/local_deepwiki/core/git_utils.md)** `(repo_path: Path, file_path: str, start_line: int, ...+1) → BlameInfo | None` (`git_utils.py`) - Get the most recent blame information for a line range.
+- 🔹 **[`get_rate_limiter`](files/src/local_deepwiki/core/rate_limiter.md)** `(...) → RateLimiter` (`rate_limiter.py`) - Get the global rate limiter instance.
+- ▪️ **[`WikiStatusManager.get_regeneration_summary`](files/src/local_deepwiki/generators/wiki_status.md)** `(...) → dict[str, Any]` (`wiki_status.py`) - Get a summary of what will be regenerated and why.
 - ▪️ **[`RelationshipAnalyzer.get_relationships`](files/src/local_deepwiki/generators/see_also.md)** `(file_path: str) → FileRelationships` (`see_also.py`) - Get all relationships for a file.
 - 🔹 **[`get_repo_info`](files/src/local_deepwiki/core/git_utils.md)** `(repo_path: Path) → GitRepoInfo` (`git_utils.py`) - Get complete git repository information.
+- 🔹 **[`get_repository_access_controller`](files/src/local_deepwiki/security/repository_access.md)** `(...) → RepositoryAccessController` (`repository_access.py`) - Get the global repository access controller instance (thr...
+- 🔹 **[`get_research_checkpoint`](files/src/local_deepwiki/core/deep_research.md)** `(repo_path: Path, research_id: str) → ResearchCheckpoint | None` (`deep_research.py`) - Get a specific research checkpoint.
+- ▪️ **[`PromptManager.get_research_decomposition_prompt`](files/src/local_deepwiki/prompts.md)** `(provider: str, **variables: Any) → str` (`prompts.py`) - Get the research decomposition prompt for a provider.
+- ▪️ **[`PromptManager.get_research_gap_analysis_prompt`](files/src/local_deepwiki/prompts.md)** `(provider: str, **variables: Any) → str` (`prompts.py`) - Get the research gap analysis prompt for a provider.
+- ▪️ **[`PromptManager.get_research_synthesis_prompt`](files/src/local_deepwiki/prompts.md)** `(provider: str, **variables: Any) → str` (`prompts.py`) - Get the research synthesis prompt for a provider.
+- ▪️ **[`RoleManager.get_role_for_identifier`](files/src/local_deepwiki/security/role_config.md)** `(identifier: str) → Role` (`role_config.py`) - Get the role for a given identifier.
+- 🔹 **[`get_role_manager`](files/src/local_deepwiki/security/role_config.md)** `(...) → RoleManager` (`role_config.py`) - Get the global role manager instance.
+- ▪️ **[`VectorStore.get_search_cache_stats`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → dict[str, Any]` (`vectorstore.py`) - Get search cache statistics.
+- ▪️ **[`VectorStore.get_search_profile`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → SearchProfile` (`vectorstore.py`) - Get the current default search profile.
+- ▪️ **[`SearchCache.get_stats`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → dict[str, Any]` (`vectorstore.py`) - Get detailed cache statistics.
+- ▪️ **[`LazyIndexManager.get_stats`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → dict[str, Any]` (`vectorstore.py`) - Get statistics about the lazy index manager.
 - ▪️ **[`VectorStore.get_stats`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → dict[str, Any]` (`vectorstore.py`) - Get statistics about the vector store.
+- ▪️ **[`ASTCache.get_stats`](files/src/local_deepwiki/core/parser.md)** `(...) → dict[str, int | float]` (`parser.py`) - Return cache statistics.
+- ▪️ **[`FuzzySearchHelper.get_stats`](files/src/local_deepwiki/core/fuzzy_search.md)** `(...) → dict[str, int]` (`fuzzy_search.py`) - Get statistics about the name index.
+- ▪️ **[`VectorStore.get_stats_streaming`](files/src/local_deepwiki/core/vectorstore.md)** `(batch_size: int) → dict[str, Any]` (`vectorstore.py`) - Get statistics about the vector store using streaming agg...
+- ▪️ **[`RateLimiter.get_status`](files/src/local_deepwiki/core/rate_limiter.md)** `(...) → dict` (`rate_limiter.py`) - Get current rate limiter status for monitoring.
 - ▪️ **[`RepositoryIndexer.get_status`](files/src/local_deepwiki/core/indexer.md)** `(...) → IndexStatus | None` (`indexer.py`) - Get the current indexing status.
+- ▪️ **[`GenerationProgress.get_summary`](files/src/local_deepwiki/generators/progress_tracker.md)** `(...) → str` (`progress_tracker.py`) - Generate a summary of the generation run.
 - ▪️ **[`ProjectManifest.get_tech_stack_summary`](files/src/local_deepwiki/generators/manifest.md)** `(...) → str` (`manifest.py`) - Generate a factual tech stack summary.
+- ▪️ **[`WikiPageIterator.get_total_size_bytes`](files/src/local_deepwiki/export/streaming.md)** `(...) → int` (`streaming.py`) - Return total size of all pages in bytes.
 - 🔹⚡ **[`get_type_definitions_used`](files/src/local_deepwiki/generators/context_builder.md)** `(chunks: list[CodeChunk], vector_store: VectorStore, max_types: int) → list[str]` (`context_builder.py`) - Extract type definitions used in the file that are define...
+- ▪️ **[`EventEmitter.get_unhealthy_handlers`](files/src/local_deepwiki/events.md)** `(error_threshold: int) → list[str]` (`events.py`) - Get handlers with high error rates.
+- ▪️ **[`Config.get_vector_db_path`](files/src/local_deepwiki/config.md)** `(repo_path: Path) → Path` (`config.py`) - Get the vector database path for a repository.
+- ▪️ **[`PluginRegistry.get_wiki_generator`](files/src/local_deepwiki/plugins/registry.md)** `(name: str) → WikiGeneratorPlugin | None` (`registry.py`) - Get a wiki generator plugin by name.
+- ▪️ **[`Config.get_wiki_path`](files/src/local_deepwiki/config.md)** `(repo_path: Path) → Path` (`config.py`) - Get the wiki output path for a repository.
 - 🔹 **[`get_wiki_structure`](files/src/local_deepwiki/web/app.md)** `(wiki_path: Path) → tuple[list, dict, list | None]` (`app.py`) - Get wiki pages and sections, with optional hierarchical TOC.
+- ▪️ **[`PromptManager.get_wiki_system_prompt`](files/src/local_deepwiki/prompts.md)** `(provider: str, **variables: Any) → str` (`prompts.py`) - Get the wiki system prompt for a provider.
+- 🔷 **[`GetApiDocsArgs`](files/src/local_deepwiki/models.md)** (`models.py`) - Arguments for the get_api_docs tool.
+- 🔷 **[`GetCallGraphArgs`](files/src/local_deepwiki/models.md)** (`models.py`) - Arguments for the get_call_graph tool.
+- 🔹 **[`getCellValue`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`) - Helpers for table sorting
+- 🔹 **[`getCellValue`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`) - Helpers for table sorting
+- 🔹 **[`getCellValue`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`) - Helpers for table sorting
+- 🔷 **[`GetChangelogArgs`](files/src/local_deepwiki/models.md)** (`models.py`) - Arguments for the get_changelog tool.
+- 🔷 **[`GetCoverageArgs`](files/src/local_deepwiki/models.md)** (`models.py`) - Arguments for the get_coverage tool.
+- 🔷 **[`GetDiagramsArgs`](files/src/local_deepwiki/models.md)** (`models.py`) - Arguments for the get_diagrams tool.
+- 🔷 **[`GetGlossaryArgs`](files/src/local_deepwiki/models.md)** (`models.py`) - Arguments for the get_glossary tool.
+- 🔷 **[`GetIndexStatusArgs`](files/src/local_deepwiki/models.md)** (`models.py`) - Arguments for the get_index_status tool.
+- 🔷 **[`GetInheritanceArgs`](files/src/local_deepwiki/models.md)** (`models.py`) - Arguments for the get_inheritance tool.
+- 🔷 **[`GetOperationProgressArgs`](files/src/local_deepwiki/progress.md)** (`progress.py`) - Arguments for the get_operation_progress tool.
+- 🔷 **[`GetTestExamplesArgs`](files/src/local_deepwiki/models.md)** (`models.py`) - Arguments for the get_test_examples tool.
+- 🔷 **[`GitPathValidationError`](files/src/local_deepwiki/core/git_utils.md)** (`git_utils.py`) - Raised when a path fails git-specific validation.
 - 🔷 **[`GitRepoInfo`](files/src/local_deepwiki/core/git_utils.md)** (`git_utils.py`) - Information about a git repository.
+- ▪️ **[`TestEventEmitter.global_handler`](files/tests/test_events.md)** `(event: Event) → None` (`test_events.py`)
 - 🔹 **[`group_entities_by_letter`](files/src/local_deepwiki/generators/glossary.md)** `(entities: list[EntityEntry]) → dict[str, list[EntityEntry]]` (`glossary.py`) - Group entities by their first letter.
+- 🔹 **[`guest_subject`](files/tests/test_access_control.md)** `(...)` (`test_access_control.py`) - Create a guest subject for testing.
 
 ## H
 
-- 🔹⚡ **[`handle_ask_question`](files/src/local_deepwiki/handlers.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError` (`handlers.py`) - Handle ask_question tool call.
+- 🔹⚡ **[`handle_ask_question`](files/src/local_deepwiki/handlers.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, not_indexed_error` (`handlers.py`) - Handle ask_question tool call.
+- 🔹⚡ **[`handle_cancel_research`](files/src/local_deepwiki/handlers.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, path_not_found_error` (`handlers.py`) - Handle cancel_research tool call.
 - 🔹⚡ **[`handle_deep_research`](files/src/local_deepwiki/handlers.md)** `(args: dict[str, Any], server: Any) → list[TextContent]` (`handlers.py`) - Handle deep_research tool call for multi-step reasoning.
-- 🔹⚡ **[`handle_export_wiki_html`](files/src/local_deepwiki/handlers.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError` (`handlers.py`) - Handle export_wiki_html tool call.
-- 🔹⚡ **[`handle_export_wiki_pdf`](files/src/local_deepwiki/handlers.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError` (`handlers.py`) - Handle export_wiki_pdf tool call.
-- 🔹⚡ **[`handle_index_repository`](files/src/local_deepwiki/handlers.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError` (`handlers.py`) - Handle index_repository tool call.
-- 🔹⚡ **[`handle_read_wiki_page`](files/src/local_deepwiki/handlers.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError` (`handlers.py`) - Handle read_wiki_page tool call.
-- 🔹⚡ **[`handle_read_wiki_structure`](files/src/local_deepwiki/handlers.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError` (`handlers.py`) - Handle read_wiki_structure tool call.
-- 🔹⚡ **[`handle_search_code`](files/src/local_deepwiki/handlers.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError` (`handlers.py`) - Handle search_code tool call.
+- 🔹⚡ **[`handle_detect_secrets`](files/src/local_deepwiki/handlers.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValidationError, ValueError, path_not_found_error` (`handlers.py`) - Handle detect_secrets tool call.
+- 🔹⚡ **[`handle_detect_stale_docs`](files/src/local_deepwiki/handlers.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, not_indexed_error, path_not_found_error` (`handlers.py`) - Handle detect_stale_docs tool call.
+- 🔹⚡ **[`handle_export_wiki_html`](files/src/local_deepwiki/handlers.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, path_not_found_error` (`handlers.py`) - Handle export_wiki_html tool call with streaming support ...
+- 🔹⚡ **[`handle_export_wiki_pdf`](files/src/local_deepwiki/handlers.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, path_not_found_error` (`handlers.py`) - Handle export_wiki_pdf tool call with streaming support f...
+- 🔹⚡ **[`handle_get_api_docs`](files/src/local_deepwiki/handlers.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValidationError, ValueError, path_not_found_error` (`handlers.py`) - Handle get_api_docs tool call.
+- 🔹⚡ **[`handle_get_call_graph`](files/src/local_deepwiki/handlers.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValidationError, ValueError, path_not_found_error` (`handlers.py`) - Handle get_call_graph tool call.
+- 🔹⚡ **[`handle_get_changelog`](files/src/local_deepwiki/handlers.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, path_not_found_error` (`handlers.py`) - Handle get_changelog tool call.
+- 🔹⚡ **[`handle_get_coverage`](files/src/local_deepwiki/handlers.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, path_not_found_error` (`handlers.py`) - Handle get_coverage tool call.
+- 🔹⚡ **[`handle_get_diagrams`](files/src/local_deepwiki/handlers.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValidationError, ValueError, path_not_found_error` (`handlers.py`) - Handle get_diagrams tool call.
+- 🔹⚡ **[`handle_get_glossary`](files/src/local_deepwiki/handlers.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, path_not_found_error` (`handlers.py`) - Handle get_glossary tool call.
+- 🔹⚡ **[`handle_get_index_status`](files/src/local_deepwiki/handlers.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, path_not_found_error` (`handlers.py`) - Handle get_index_status tool call.
+- 🔹⚡ **[`handle_get_inheritance`](files/src/local_deepwiki/handlers.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, path_not_found_error` (`handlers.py`) - Handle get_inheritance tool call.
+- 🔹⚡ **[`handle_get_operation_progress`](files/src/local_deepwiki/handlers.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError` (`handlers.py`) - Handle get_operation_progress tool call.
+- 🔹⚡ **[`handle_get_test_examples`](files/src/local_deepwiki/handlers.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, path_not_found_error` (`handlers.py`) - Handle get_test_examples tool call.
+- 🔹⚡ **[`handle_index_repository`](files/src/local_deepwiki/handlers.md)** `(args: dict[str, Any], server: Any) → list[TextContent]` (`handlers.py`) - Handle index_repository tool call with streaming progress.
+- 🔹⚡ **[`handle_list_indexed_repos`](files/src/local_deepwiki/handlers.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, path_not_found_error` (`handlers.py`) - Handle list_indexed_repos tool call.
+- 🔹⚡ **[`handle_list_research_checkpoints`](files/src/local_deepwiki/handlers.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, path_not_found_error` (`handlers.py`) - Handle list_research_checkpoints tool call.
+- 🔹⚡ **[`handle_read_wiki_page`](files/src/local_deepwiki/handlers.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValidationError, ValueError, path_not_found_error` (`handlers.py`) - Handle read_wiki_page tool call.
+- 🔹⚡ **[`handle_read_wiki_structure`](files/src/local_deepwiki/handlers.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, path_not_found_error` (`handlers.py`) - Handle read_wiki_structure tool call.
+- 🔹⚡ **[`handle_resume_research`](files/src/local_deepwiki/handlers.md)** `(args: dict[str, Any], server: Any) → list[TextContent]` ⚠️`ValueError, path_not_found_error` (`handlers.py`) - Handle resume_research tool call.
+- 🔹⚡ **[`handle_search_code`](files/src/local_deepwiki/handlers.md)** `(args: dict[str, Any]) → list[TextContent]` ⚠️`ValueError, not_indexed_error` (`handlers.py`) - Handle search_code tool call.
 - 🔹 **[`handle_tool_errors`](files/src/local_deepwiki/handlers.md)** `(func: ToolHandler) → ToolHandler` (`handlers.py`) - Decorator for consistent error handling in tool handlers.
+- ▪️ **[`TestEventEmitter.handler`](files/tests/test_events.md)** `(event: Event) → None` (`test_events.py`)
+- ▪️ **[`TestEventEmitter.handler`](files/tests/test_events.md)** `(event: Event) → None` (`test_events.py`)
+- ▪️ **[`TestEventEmitter.handler`](files/tests/test_events.md)** `(_event: Event) → None` (`test_events.py`)
+- ▪️ **[`TestEventEmitter.handler`](files/tests/test_events.md)** `(event: Event) → None` (`test_events.py`)
+- ▪️ **[`TestEventEmitter.handler`](files/tests/test_events.md)** `(event: Event) → None` (`test_events.py`)
+- ▪️ **[`TestEventEmitter.handler`](files/tests/test_events.md)** `(event: Event) → None` (`test_events.py`)
+- ▪️ **[`TestEventEmitter.handler`](files/tests/test_events.md)** `(event: Event) → None` (`test_events.py`)
+- ▪️ **[`TestEventEmitter.handler`](files/tests/test_events.md)** `(event: Event) → None` (`test_events.py`)
+- ▪️ **[`TestEventEmitter.handler`](files/tests/test_events.md)** `(event: Event) → None` (`test_events.py`)
+- ▪️ **[`TestEventEmitter.handler`](files/tests/test_events.md)** `(event: Event) → None` (`test_events.py`)
+- ▪️ **[`TestEventEmitter.handler`](files/tests/test_events.md)** `(event: Event) → None` (`test_events.py`)
+- ▪️ **[`TestEventEmitter.handler`](files/tests/test_events.md)** `(event: Event) → None` (`test_events.py`)
+- ▪️ **[`TestEventEmitter.handler`](files/tests/test_events.md)** `(event: Event) → None` (`test_events.py`)
+- ▪️ **[`TestWeakReferences.handler`](files/tests/test_events.md)** `(_event: Event) → None` (`test_events.py`)
+- ▪️ **[`TestWeakReferences.handler`](files/tests/test_events.md)** `(_event: Event) → None` (`test_events.py`)
+- ▪️ **[`TestWeakReferences.handler`](files/tests/test_events.md)** `(_event: Event) → None` (`test_events.py`)
+- ▪️ **[`TestWeakReferences.handler`](files/tests/test_events.md)** `(event: Event) → None` (`test_events.py`)
+- ▪️ **[`TestWeakReferences.handler`](files/tests/test_events.md)** `(_event: Event) → None` (`test_events.py`)
+- ▪️ **[`TestLifecycleHooks.handler`](files/tests/test_events.md)** `(_event: Event) → None` (`test_events.py`)
+- ▪️ **[`TestLifecycleHooks.handler`](files/tests/test_events.md)** `(_event: Event) → None` (`test_events.py`)
 - ▪️ **[`TestDoReindex.handler`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Create a handler for testing.
+- ▪️ **[`TestEventEmitter.handler1`](files/tests/test_events.md)** `(event: Event) → None` (`test_events.py`)
+- ▪️ **[`TestEventEmitter.handler2`](files/tests/test_events.md)** `(event: Event) → None` (`test_events.py`)
+- ▪️ **[`EventEmitter.handler_count`](files/src/local_deepwiki/events.md)** `(event_type: EventType | str | None) → int` (`events.py`) - Get the number of handlers for an event type.
+- ▪️ **[`TestDebouncedHandlerCallback.handler_with_callback`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Create a handler with a callback for testing.
 - ▪️ **[`TestDebouncedHandlerEvents.handler_with_mock`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Create a handler with mocked reindex.
+- 🔷 **[`HandlerEntry`](files/src/local_deepwiki/events.md)** (`events.py`) - A registered event handler with priority.
+- 🔷 **[`HandlerLifecycle`](files/src/local_deepwiki/events.md)** (`events.py`) - Lifecycle hooks for handler events.
+- 🔷 **[`HandlerStats`](files/src/local_deepwiki/events.md)** (`events.py`) - Statistics for a registered handler.
+- ▪️ **[`ConfigDiff.has_changes`](files/src/local_deepwiki/config.md)** `(...) → bool` (`config.py`) - Check if there are any changes.
 - ▪️ **[`ProjectManifest.has_data`](files/src/local_deepwiki/generators/manifest.md)** `(...) → bool` (`manifest.py`) - Check if any meaningful data was extracted.
+- ▪️ **[`AccessController.has_permission`](files/src/local_deepwiki/security/access_control.md)** `(permission: Permission) → bool` (`access_control.py`) - Check if the current subject has the required permission.
+- 🔹 **[`header`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`header`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`header`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔷 **[`HookRunner`](files/src/local_deepwiki/events.md)** (`events.py`) - Runner for external hook scripts.
+- 🔷 **[`HooksConfig`](files/src/local_deepwiki/config.md)** (`config.py`) - Event hooks configuration.
 - 🔷 **[`HtmlExporter`](files/src/local_deepwiki/export/html.md)** (`html.py`) - Export wiki markdown to static HTML files.
 
 ## I
@@ -464,84 +1277,188 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔹 **[`index`](files/src/local_deepwiki/web/app.md)** `(...)` (`app.py`) - Redirect to index.md.
 - ▪️⚡ **[`TestDoReindex.index_with_callback`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`)
 - ▪️⚡ **[`TestInitialIndex.index_with_callback`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`)
+- 🔹 **[`indexing_error`](files/src/local_deepwiki/errors.md)** `(message: str, repo_path: str | None, file_path: str | None, ...+1) → IndexingError` (`errors.py`) - Create an indexing error with actionable hints.
+- 🔹 **[`indexing_progress`](files/src/local_deepwiki/watcher.md)** `(msg: str, current: int, total: int) → None` (`watcher.py`)
+- 🔷 **[`IndexingError`](files/src/local_deepwiki/errors.md)** (`errors.py`) - Error raised when repository indexing fails.
+- 🔷 **[`IndexingProgress`](files/src/local_deepwiki/models.md)** (`models.py`) - Progress update from repository indexing.
+- 🔷 **[`IndexingProgressType`](files/src/local_deepwiki/models.md)** (`models.py`) - Types of indexing progress events.
+- 🔷 **[`IndexRepositoryArgs`](files/src/local_deepwiki/models.md)** (`models.py`) - Arguments for the index_repository tool.
 - 🔷 **[`IndexStatus`](files/src/local_deepwiki/models.md)** (`models.py`) - Status of repository indexing.
-- 🔹⚡ **[`initial_index`](files/src/local_deepwiki/watcher.md)** `(repo_path: Path, config: Config, llm_provider: str | None, ...+1) → None` (`watcher.py`) - Perform initial indexing before starting watch mode.
+- 🔷 **[`IndexStatusManager`](files/src/local_deepwiki/core/index_manager.md)** (`index_manager.py`) - Manages index status operations including load, save, cre...
+- 🔹⚡ **[`initial_index`](files/src/local_deepwiki/watcher.md)** `(repo_path: Path, config: Config, llm_provider: str | None, ...+2) → None` (`watcher.py`) - Perform initial indexing before starting watch mode.
+- 🔷 **[`InteractiveSearch`](files/src/local_deepwiki/cli/interactive_search.md)** (`interactive_search.py`) - Interactive search interface using rich.
+- 🔹 **[`invalid_yaml_content`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Return invalid YAML content.
+- 🔹 **[`invalid_yaml_file`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Create an invalid YAML config file.
+- ▪️ **[`SearchCache.invalidate`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → int` (`vectorstore.py`) - Invalidate all cache entries.
+- ▪️ **[`ASTCache.invalidate`](files/src/local_deepwiki/core/parser.md)** `(file_path: str) → None` (`parser.py`) - Remove all entries for a specific file from cache.
+- ▪️ **[`EmbeddingCache.invalidate_by_model`](files/src/local_deepwiki/providers/embeddings/cache.md)** `(model_name: str) → int` (`cache.py`) - Invalidate all cache entries for a specific model.
+- ▪️ **[`VectorStore.invalidate_search_cache`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → int` (`vectorstore.py`) - Invalidate all search cache entries.
 - 🔹 **[`is_async_function`](files/src/local_deepwiki/core/chunker.md)** `(func_node: Node) → bool` (`chunker.py`) - Check if a function is async.
+- ▪️ **[`FuzzySearchHelper.is_built`](files/src/local_deepwiki/core/fuzzy_search.md)** `(...) → bool` (`fuzzy_search.py`) - Check if the name index has been built.
 - 🔹 **[`is_cancelled`](files/src/local_deepwiki/handlers.md)** `(...) → bool` (`handlers.py`) - Check if the research should be cancelled.
+- ▪️ **[`LazyIndexManager.is_creation_in_progress`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → bool` (`vectorstore.py`) - Check if index creation is currently in progress.
 - 🔹 **[`is_github_repo`](files/src/local_deepwiki/core/git_utils.md)** `(repo_path: Path) → bool` (`git_utils.py`) - Check if a repository is hosted on GitHub.
+- ▪️ **[`LazyIndexManager.is_index_pending`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → bool` (`vectorstore.py`) - Check if vector index creation is pending.
+- ▪️ **[`LazyIndexManager.is_index_ready`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → bool` (`vectorstore.py`) - Check if the vector index is ready.
+- 🔹 **[`is_interactive`](files/src/local_deepwiki/cli_progress.md)** `(...) → bool` (`cli_progress.py`) - Check if the terminal is interactive.
 - 🔹 **[`is_mmdc_available`](files/src/local_deepwiki/export/pdf.md)** `(...) → bool` (`pdf.py`) - Check if mermaid-cli (mmdc) is available on the system.
-- 🔹 **[`is_test_file`](files/src/local_deepwiki/generators/wiki_files.md)** `(path: str) → bool` (`wiki_files.py`) - Check if a file is a test file.
+- 🔹 **[`is_ratio`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`is_ratio`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`is_ratio`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- ▪️ **[`VectorStore.is_vector_index_ready`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → bool` (`vectorstore.py`) - Check if the vector index is ready.
 
 ## L
 
 - 🔷 **[`Language`](files/src/local_deepwiki/models.md)** (`models.py`) - Supported programming languages.
+- ▪️ **[`PluginRegistry.language_parsers`](files/src/local_deepwiki/plugins/registry.md)** `(...) → dict[str, LanguageParserPlugin]` (`registry.py`) - Get registered language parser plugins.
+- 🔷 **[`LanguageParserPlugin`](files/src/local_deepwiki/plugins/base.md)** (`base.py`) - Plugin for adding support for new programming languages.
+- 🔷 **[`LatencyStats`](files/src/local_deepwiki/core/vectorstore.md)** (`vectorstore.py`) - Statistics for tracking search query latency.
+- ▪️ **[`VectorStore.lazy_index_manager`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → LazyIndexManager` (`vectorstore.py`) - Get the lazy index manager.
+- 🔷 **[`LazyChunkLoader`](files/src/local_deepwiki/core/vectorstore.md)** (`vectorstore.py`) - Lazy loader for code chunks with memory-aware batch sizing.
+- 🔷 **[`LazyIndexConfig`](files/src/local_deepwiki/config.md)** (`config.py`) - Lazy vector index configuration for deferred index creation.
+- 🔷 **[`LazyIndexManager`](files/src/local_deepwiki/core/vectorstore.md)** (`vectorstore.py`) - Manages deferred/lazy vector index creation for VectorStore.
+- ▪️ **[`TestLifecycleHooks.lifecycle`](files/tests/test_events.md)** `(lifecycle_events: list)` (`test_events.py`) - Create lifecycle with tracking callbacks.
+- ▪️ **[`TestLifecycleHooks.lifecycle_events`](files/tests/test_events.md)** `(...)` (`test_events.py`) - Track lifecycle events.
+- ▪️ **[`CheckpointManager.list_checkpoints`](files/src/local_deepwiki/core/deep_research.md)** `(...) → list[ResearchCheckpoint]` (`deep_research.py`) - List all checkpoints for this repository.
+- ▪️ **[`DeepResearchPipeline.list_checkpoints`](files/src/local_deepwiki/core/deep_research.md)** `(...) → list[ResearchCheckpoint]` (`deep_research.py`) - List all checkpoints for this repository.
+- ▪️ **[`EventEmitter.list_handlers`](files/src/local_deepwiki/events.md)** `(event_type: EventType | str | None) → list[HandlerEntry]` (`events.py`) - List handlers for an event type.
+- ▪️ **[`OperationProgressRegistry.list_operations`](files/src/local_deepwiki/progress.md)** `(...) → list[dict[str, Any]]` (`progress.py`) - List all active operations with their progress.
+- ▪️ **[`PluginRegistry.list_plugins`](files/src/local_deepwiki/plugins/registry.md)** `(...) → dict[str, list[str]]` (`registry.py`) - List all registered plugins by type.
+- 🔹 **[`list_research_checkpoints`](files/src/local_deepwiki/core/deep_research.md)** `(repo_path: Path) → list[ResearchCheckpoint]` (`deep_research.py`) - List all research checkpoints for a repository.
+- ▪️ **[`HookRunner.list_scripts`](files/src/local_deepwiki/events.md)** `(event_type: EventType | str | None) → dict[EventType, list[Path]]` (`events.py`) - List registered scripts.
 - 🔹⚡ **[`list_tools`](files/src/local_deepwiki/server.md)** `(...) → list[Tool]` (`server.py`) - List available tools.
+- 🔷 **[`ListIndexedReposArgs`](files/src/local_deepwiki/models.md)** (`models.py`) - Arguments for the list_indexed_repos tool.
+- 🔷 **[`ListResearchCheckpointsArgs`](files/src/local_deepwiki/models.md)** (`models.py`) - Arguments for the list_research_checkpoints tool.
 - 🔷 **[`LLMCache`](files/src/local_deepwiki/core/llm_cache.md)** (`llm_cache.py`) - Vector-based cache for LLM responses with exact and simil...
 - 🔷 **[`LLMCacheConfig`](files/src/local_deepwiki/config.md)** (`config.py`) - LLM response caching configuration.
 - 🔷 **[`LLMConfig`](files/src/local_deepwiki/config.md)** (`config.py`) - LLM provider configuration.
 - 🔷 **[`LLMProvider`](files/src/local_deepwiki/providers/base.md)** (`base.py`) - Abstract base class for LLM providers.
+- 🔷 **[`LLMProviderCapabilities`](files/src/local_deepwiki/providers/base.md)** (`base.py`) - Capabilities of an LLM provider.
+- 🔷 **[`LLMProviderType`](files/src/local_deepwiki/models.md)** (`models.py`) - Supported LLM providers.
+- ▪️ **[`Config.load`](files/src/local_deepwiki/config.md)** `(config_path: Path | None) → "Config"` (`config.py`) - Load configuration from file or defaults.
+- ▪️ **[`IndexStatusManager.load`](files/src/local_deepwiki/core/index_manager.md)** `(wiki_path: Path) → IndexStatus | None` (`index_manager.py`) - Load index status from a wiki directory.
+- ▪️ **[`CheckpointManager.load_checkpoint`](files/src/local_deepwiki/core/deep_research.md)** `(research_id: str) → ResearchCheckpoint | None` (`deep_research.py`) - Load a checkpoint from disk.
+- ▪️ **[`DeepResearchPipeline.load_checkpoint`](files/src/local_deepwiki/core/deep_research.md)** `(research_id: str) → ResearchCheckpoint | None` (`deep_research.py`) - Load a checkpoint by ID.
+- 🔹 **[`load_config_from_env`](files/src/local_deepwiki/config.md)** `(...) → dict[str, Any]` (`config.py`) - Load configuration overrides from environment variables.
 - ▪️⚡ **[`WikiStatusManager.load_existing_page`](files/src/local_deepwiki/generators/wiki_status.md)** `(page_path: str) → WikiPage | None` (`wiki_status.py`) - Load an existing wiki page from disk.
+- ▪️ **[`PluginRegistry.load_from_directory`](files/src/local_deepwiki/plugins/registry.md)** `(directory: Path) → int` (`registry.py`) - Load plugins from a directory.
+- ▪️ **[`PluginRegistry.load_from_entry_points`](files/src/local_deepwiki/plugins/registry.md)** `(...) → int` (`registry.py`) - Load plugins from setuptools entry points.
+- ▪️ **[`PromptLoader.load_prompt`](files/src/local_deepwiki/prompts.md)** `(name: str, default: str, provider: str | None) → PromptTemplate` (`prompts.py`) - Load a prompt template by name.
 - ▪️⚡ **[`WikiStatusManager.load_status`](files/src/local_deepwiki/generators/wiki_status.md)** `(...) → WikiGenerationStatus | None` (`wiki_status.py`) - Load previous wiki generation status.
+- ▪️ **[`IndexStatusManager.load_with_migration_info`](files/src/local_deepwiki/core/index_manager.md)** `(wiki_path: Path) → tuple[IndexStatus | None, bool]` (`index_manager.py`) - Load index status and return migration information.
 - 🔷 **[`LocalEmbeddingConfig`](files/src/local_deepwiki/config.md)** (`config.py`) - Configuration for local embedding model.
 - 🔷 **[`LocalEmbeddingProvider`](files/src/local_deepwiki/providers/embeddings/local.md)** (`local.py`) - Embedding provider using local sentence-transformers models.
+- ▪️ **[`AuditLogger.log_access_decision`](files/src/local_deepwiki/core/audit.md)** `(subject_id: Optional[str], subject_role: Optional[str], resource_type: str, ...+4) → None` (`audit.py`) - Log an access control decision.
+- ▪️ **[`AuditLogger.log_event`](files/src/local_deepwiki/core/audit.md)** `(event: AuditEvent) → None` (`audit.py`) - Log an audit event.
+- ▪️ **[`AuditLogger.log_export_operation`](files/src/local_deepwiki/core/audit.md)** `(subject_id: Optional[str], wiki_path: str, output_path: str, ...+6) → None` (`audit.py`) - Log an export operation.
+- ▪️ **[`AuditLogger.log_index_operation`](files/src/local_deepwiki/core/audit.md)** `(subject_id: Optional[str], repo_path: str, operation: str, ...+5) → None` (`audit.py`) - Log an indexing operation.
+- ▪️ **[`AuditLogger.log_query_execution`](files/src/local_deepwiki/core/audit.md)** `(subject_id: Optional[str], repo_path: str, query: str, ...+5) → None` (`audit.py`) - Log a query execution.
 
 ## M
 
 - 🔹 **[`main`](files/src/local_deepwiki/server.md)** `(...)` (`server.py`) - Main entry point for the MCP server.
 - 🔹 **[`main`](files/src/local_deepwiki/watcher.md)** `(...) → None` (`watcher.py`) - Main entry point for the watch command.
 - 🔹 **[`main`](files/src/local_deepwiki/web/app.md)** `(...)` (`app.py`) - CLI entry point.
-- 🔹 **[`main`](files/src/local_deepwiki/export/html.md)** `(...)` (`html.py`) - CLI entry point for HTML export.
+- 🔹 **[`main`](files/src/local_deepwiki/cli/config_cli.md)** `(...) → int` (`config_cli.py`) - Main entry point for the config CLI.
+- 🔹 **[`main`](files/src/local_deepwiki/cli/interactive_search.md)** `(...) → int` (`interactive_search.py`) - Main entry point for the interactive search CLI.
+- 🔹 **[`main`](files/src/local_deepwiki/export/html.md)** `(...) → int` (`html.py`) - CLI entry point for HTML export.
 - 🔹 **[`main`](files/src/local_deepwiki/export/pdf.md)** `(...) → None` (`pdf.py`) - CLI entry point for PDF export.
 - 🔹 **[`make_chunk`](files/tests/test_vectorstore.md)** `(id: str, file_path: str, content: str, ...+2) → CodeChunk` (`test_vectorstore.py`) - Create a test code chunk.
 - ▪️ **[`TestOpenAILLMProvider.make_chunk`](files/tests/test_llm_providers.md)** `(...)` (`test_llm_providers.py`)
 - ▪️ **[`TestOpenAILLMProvider.make_chunk`](files/tests/test_llm_providers.md)** `(...)` (`test_llm_providers.py`)
 - 🔹 **[`make_chunk`](files/tests/test_deep_research.md)** `(id: str, file_path: str, content: str, ...+1) → CodeChunk` (`test_deep_research.py`) - Create a test code chunk.
+- 🔹 **[`make_chunk`](files/tests/test_vectorstore_pagination.md)** `(id: str, file_path: str, content: str, ...+2) → CodeChunk` (`test_vectorstore_pagination.py`) - Create a test code chunk.
 - 🔹 **[`make_chunk`](files/tests/test_context_builder.md)** `(chunk_type: ChunkType, name: str, content: str, ...+1) → CodeChunk` (`test_context_builder.py`) - Create a test code chunk.
-- 🔹 **[`make_code_chunk`](files/tests/test_wiki_pages_coverage.md)** `(file_path: str, name: str, chunk_type: ChunkType, ...+2) → CodeChunk` (`test_wiki_pages_coverage.py`) - Helper to create [CodeChunk](files/src/local_deepwiki/models.md) with sensible defaults.
-- 🔹 **[`make_code_chunk`](files/tests/test_wiki_files_coverage.md)** `(file_path: str, name: str, chunk_type: ChunkType, ...+5) → CodeChunk` (`test_wiki_files_coverage.py`) - Helper to create [CodeChunk](files/src/local_deepwiki/models.md) with sensible defaults.
-- 🔹 **[`make_code_chunk`](files/tests/test_wiki_modules_coverage.md)** `(file_path: str, name: str, chunk_type: ChunkType, ...+2) → CodeChunk` (`test_wiki_modules_coverage.py`) - Helper to create [CodeChunk](files/src/local_deepwiki/models.md) with sensible defaults.
-- 🔹 **[`make_file_info`](files/tests/test_wiki_coverage.md)** `(path: str, hash: str, language: Language | None) → FileInfo` (`test_wiki_coverage.py`) - Helper to create [FileInfo](files/src/local_deepwiki/models.md) with required fields.
-- 🔹 **[`make_file_info`](files/tests/test_wiki_pages_coverage.md)** `(path: str, hash: str, language: Language | None) → FileInfo` (`test_wiki_pages_coverage.py`) - Helper to create [FileInfo](files/src/local_deepwiki/models.md) with required fields.
-- 🔹 **[`make_file_info`](files/tests/test_wiki_files_coverage.md)** `(path: str, hash: str, language: Language | None, ...+1) → FileInfo` (`test_wiki_files_coverage.py`) - Helper to create [FileInfo](files/src/local_deepwiki/models.md) with required fields.
-- 🔹 **[`make_file_info`](files/tests/test_wiki_modules_coverage.md)** `(path: str, hash: str, language: Language | None) → FileInfo` (`test_wiki_modules_coverage.py`) - Helper to create [FileInfo](files/src/local_deepwiki/models.md) with required fields.
-- 🔹 **[`make_index_status`](files/tests/test_wiki_coverage.md)** `(repo_path: str, total_files: int, total_chunks: int, ...+2) → IndexStatus` (`test_wiki_coverage.py`) - Helper to create [IndexStatus](files/src/local_deepwiki/models.md) with required fields.
-- 🔹 **[`make_index_status`](files/tests/test_wiki_pages_coverage.md)** `(repo_path: str, total_files: int, total_chunks: int, ...+2) → IndexStatus` (`test_wiki_pages_coverage.py`) - Helper to create [IndexStatus](files/src/local_deepwiki/models.md) with required fields.
-- 🔹 **[`make_index_status`](files/tests/test_wiki_files_coverage.md)** `(repo_path: str, total_files: int, total_chunks: int, ...+2) → IndexStatus` (`test_wiki_files_coverage.py`) - Helper to create [IndexStatus](files/src/local_deepwiki/models.md) with required fields.
-- 🔹 **[`make_index_status`](files/tests/test_wiki_modules_coverage.md)** `(repo_path: str, total_files: int, total_chunks: int, ...+2) → IndexStatus` (`test_wiki_modules_coverage.py`) - Helper to create [IndexStatus](files/src/local_deepwiki/models.md) with required fields.
+- 🔹 **[`make_code_chunk`](files/tests/test_wiki_pages_coverage.md)** `(file_path: str, name: str, chunk_type: ChunkType, ...+2) → CodeChunk` (`test_wiki_pages_coverage.py`) - Helper to create CodeChunk with sensible defaults.
+- 🔹 **[`make_code_chunk`](files/tests/test_wiki_files_coverage.md)** `(file_path: str, name: str, chunk_type: ChunkType, ...+5) → CodeChunk` (`test_wiki_files_coverage.py`) - Helper to create CodeChunk with sensible defaults.
+- 🔹 **[`make_code_chunk`](files/tests/test_wiki_modules_coverage.md)** `(file_path: str, name: str, chunk_type: ChunkType, ...+2) → CodeChunk` (`test_wiki_modules_coverage.py`) - Helper to create CodeChunk with sensible defaults.
+- 🔹 **[`make_file_info`](files/tests/test_wiki_coverage.md)** `(path: str, hash: str, language: Language | None) → FileInfo` (`test_wiki_coverage.py`) - Helper to create FileInfo with required fields.
+- 🔹 **[`make_file_info`](files/tests/test_wiki_pages_coverage.md)** `(path: str, hash: str, language: Language | None) → FileInfo` (`test_wiki_pages_coverage.py`) - Helper to create FileInfo with required fields.
+- 🔹 **[`make_file_info`](files/tests/test_wiki_files_coverage.md)** `(path: str, hash: str, language: Language | None, ...+1) → FileInfo` (`test_wiki_files_coverage.py`) - Helper to create FileInfo with required fields.
+- 🔹 **[`make_file_info`](files/tests/test_wiki_modules_coverage.md)** `(path: str, hash: str, language: Language | None) → FileInfo` (`test_wiki_modules_coverage.py`) - Helper to create FileInfo with required fields.
+- ▪️ **[`TestEventEmitter.make_handler`](files/tests/test_events.md)** `(priority: int)` (`test_events.py`)
+- 🔹 **[`make_index_status`](files/tests/test_wiki_coverage.md)** `(repo_path: str, total_files: int, total_chunks: int, ...+2) → IndexStatus` (`test_wiki_coverage.py`) - Helper to create IndexStatus with required fields.
+- 🔹 **[`make_index_status`](files/tests/test_wiki_pages_coverage.md)** `(repo_path: str, total_files: int, total_chunks: int, ...+2) → IndexStatus` (`test_wiki_pages_coverage.py`) - Helper to create IndexStatus with required fields.
+- 🔹 **[`make_index_status`](files/tests/test_wiki_files_coverage.md)** `(repo_path: str, total_files: int, total_chunks: int, ...+2) → IndexStatus` (`test_wiki_files_coverage.py`) - Helper to create IndexStatus with required fields.
+- 🔹 **[`make_index_status`](files/tests/test_wiki_modules_coverage.md)** `(repo_path: str, total_files: int, total_chunks: int, ...+2) → IndexStatus` (`test_wiki_modules_coverage.py`) - Helper to create IndexStatus with required fields.
 - 🔹 **[`make_list_response`](files/tests/test_ollama_health.md)** `(model_names: list[str]) → MockListResponse` (`test_ollama_health.py`) - Create a mock list response with the given model names.
 - 🔹 **[`make_list_response`](files/tests/test_provider_errors.md)** `(model_names: list[str]) → MockListResponse` (`test_provider_errors.py`) - Create a mock list response with the given model names.
-- 🔹 **[`make_search_result`](files/tests/test_wiki_pages_coverage.md)** `(chunk: CodeChunk | None, score: float) → SearchResult` (`test_wiki_pages_coverage.py`) - Helper to create [SearchResult](files/src/local_deepwiki/models.md).
-- 🔹 **[`make_search_result`](files/tests/test_wiki_files_coverage.md)** `(chunk: CodeChunk | None, score: float) → SearchResult` (`test_wiki_files_coverage.py`) - Helper to create [SearchResult](files/src/local_deepwiki/models.md).
+- ▪️⚡ **[`TestRateLimiter.make_request`](files/tests/test_rate_limiter.md)** `(...)` (`test_rate_limiter.py`)
+- 🔹 **[`make_search_result`](files/tests/test_wiki_pages_coverage.md)** `(chunk: CodeChunk | None, score: float) → SearchResult` (`test_wiki_pages_coverage.py`) - Helper to create SearchResult.
+- 🔹 **[`make_search_result`](files/tests/test_wiki_files_coverage.md)** `(chunk: CodeChunk | None, score: float) → SearchResult` (`test_wiki_files_coverage.py`) - Helper to create SearchResult.
 - 🔹 **[`make_search_result`](files/tests/test_deep_research.md)** `(chunk: CodeChunk, score: float) → SearchResult` (`test_deep_research.py`) - Create a test search result.
-- 🔹 **[`make_search_result`](files/tests/test_wiki_modules_coverage.md)** `(chunk: CodeChunk | None, score: float) → SearchResult` (`test_wiki_modules_coverage.py`) - Helper to create [SearchResult](files/src/local_deepwiki/models.md).
+- 🔹 **[`make_search_result`](files/tests/test_wiki_modules_coverage.md)** `(chunk: CodeChunk | None, score: float) → SearchResult` (`test_wiki_modules_coverage.py`) - Helper to create SearchResult.
+- 🔹 **[`manager_with_config`](files/tests/test_role_config.md)** `(...)` (`test_role_config.py`) - Create a RoleManager with basic configuration.
 - 🔷 **[`ManifestCacheEntry`](files/src/local_deepwiki/generators/manifest.md)** (`manifest.py`) - Cache entry storing manifest data and file modification t...
+- 🔹 **[`map_exception_to_deepwiki_error`](files/src/local_deepwiki/errors.md)** `(exc: Exception, context: dict[str, Any] | None) → DeepWikiError` (`errors.py`) - Map a standard exception to an appropriate DeepWikiError.
+- ▪️ **[`LazyIndexManager.mark_index_created`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → None` (`vectorstore.py`) - Mark that vector index has been created.
+- ▪️ **[`LazyIndexManager.mark_index_pending`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → None` (`vectorstore.py`) - Mark that vector index creation is pending.
+- 🔹 **[`matches_path_pattern`](files/src/local_deepwiki/core/fuzzy_search.md)** `(file_path: str, pattern: str) → bool` (`fuzzy_search.py`) - Check if a file path matches a glob-like pattern.
+- ▪️ **[`LazyChunkLoader.max_memory_bytes`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → int` (`vectorstore.py`) - Maximum memory budget in bytes.
+- 🔹 **[`merge_configs`](files/src/local_deepwiki/config.md)** `(cli_config: dict[str, Any] | None, env_config: dict[str, Any] | None, file_config: dict[str, Any] | None, ...+1) → tuple[Config, ConfigDiff]` (`config.py`) - Merge configs with CLI > env > file > defaults priority.
+- ▪️ **[`IndexStatusManager.merge_files`](files/src/local_deepwiki/core/index_manager.md)** `(processed_files: list[FileInfo], unchanged_files: list[FileInfo], total_new_chunks: int) → tuple[list[FileInfo], int]` (`index_manager.py`) - Merge processed files with unchanged files for final status.
+- ▪️ **[`ProgressNotifier.messages`](files/src/local_deepwiki/handlers.md)** `(...) → list[str]` (`handlers.py`) - Get accumulated progress messages.
+- ▪️ **[`TestPluginRegistry.metadata`](files/tests/test_plugins.md)** `(...) → PluginMetadata` (`test_plugins.py`)
+- ▪️ **[`TestWikiGeneratorPluginIntegration.metadata`](files/tests/test_plugins.md)** `(...) → PluginMetadata` (`test_plugins.py`)
+- ▪️ **[`TestWikiGeneratorPluginIntegration.metadata`](files/tests/test_plugins.md)** `(...) → PluginMetadata` (`test_plugins.py`)
+- ▪️ **[`TestWikiGeneratorPluginIntegration.metadata`](files/tests/test_plugins.md)** `(...) → PluginMetadata` (`test_plugins.py`)
+- ▪️ **[`TestWikiGeneratorPluginIntegration.metadata`](files/tests/test_plugins.md)** `(...) → PluginMetadata` (`test_plugins.py`)
+- ▪️ **[`TestWikiGeneratorPluginIntegration.metadata`](files/tests/test_plugins.md)** `(...) → PluginMetadata` (`test_plugins.py`)
+- ▪️ **[`ExamplesWikiGenerator.metadata`](files/src/local_deepwiki/generators/examples_plugin.md)** `(...) → PluginMetadata` (`examples_plugin.py`) - Get plugin metadata.
 - ▪️⚡ **[`TestBatchedProcessing.mock_add_chunks`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`)
 - ▪️⚡ **[`TestBatchedProcessing.mock_add_chunks`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`)
 - ▪️ **[`TestAnthropicProvider.mock_anthropic_client`](files/tests/test_llm_providers.md)** `(...)` (`test_llm_providers.py`) - Create a mock Anthropic client.
-- ▪️ **[`TestGenerateSingleFileDoc.mock_config`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Create a mock [Config](files/src/local_deepwiki/config.md).
-- ▪️ **[`TestGenerateFileDocs.mock_config`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Create a mock [Config](files/src/local_deepwiki/config.md).
+- ▪️ **[`TestGenerateSingleFileDoc.mock_config`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Create a mock Config.
+- ▪️ **[`TestGenerateFileDocs.mock_config`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Create a mock Config.
+- ▪️ **[`TestGenerateFileDocsCallbacks.mock_config`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Create a mock Config.
+- 🔹 **[`mock_console`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Create a mock console that captures output.
 - ▪️⚡ **[`TestBatchedProcessing.mock_create_or_update_table`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`)
 - ▪️⚡ **[`TestBatchedProcessing.mock_create_or_update_table`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`)
 - ▪️⚡ **[`TestBatchedProcessing.mock_delete_chunks_by_file`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`)
 - ▪️⚡ **[`TestBatchedProcessing.mock_delete_chunks_by_file`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`)
-- ▪️ **[`TestGenerateSingleFileDoc.mock_entity_registry`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Create a mock [EntityRegistry](files/src/local_deepwiki/generators/crosslinks.md).
-- ▪️ **[`TestGenerateFileDocs.mock_entity_registry`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Create a mock [EntityRegistry](files/src/local_deepwiki/generators/crosslinks.md).
-- ▪️ **[`TestWikiGeneratorGenerate.mock_generator`](files/tests/test_wiki_coverage.md)** `(...)` (`test_wiki_coverage.py`) - Create a mocked [WikiGenerator](files/src/local_deepwiki/generators/wiki.md).
+- ▪️⚡ **[`TestBatchedProcessing.mock_delete_chunks_by_files`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`)
+- ▪️⚡ **[`TestBatchedProcessing.mock_delete_chunks_by_files`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`)
+- 🔹 **[`mock_embedding_provider`](files/tests/test_integration_pipeline.md)** `(...)` (`test_integration_pipeline.py`) - Create a mock embedding provider that returns consistent ...
+- ▪️ **[`TestGenerateSingleFileDoc.mock_entity_registry`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Create a mock EntityRegistry.
+- ▪️ **[`TestGenerateFileDocs.mock_entity_registry`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Create a mock EntityRegistry.
+- ▪️ **[`TestGenerateFileDocsCallbacks.mock_entity_registry`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Create a mock EntityRegistry.
+- ▪️ **[`TestLoadFromEntryPoints.mock_entry_points`](files/tests/test_plugin_registry.md)** `(...)` (`test_plugin_registry.py`)
+- 🔹⚡ **[`mock_generate`](files/tests/test_integration_pipeline.md)** `(prompt: str) → str` (`test_integration_pipeline.py`) - Generate mock responses based on prompt content.
+- ▪️ **[`TestWikiGeneratorGenerate.mock_generator`](files/tests/test_wiki_coverage.md)** `(...)` (`test_wiki_coverage.py`) - Create a mocked WikiGenerator.
+- ▪️⚡ **[`TestIncrementalGeneration.mock_generator_fn`](files/tests/test_wiki_coverage.md)** `(...)` (`test_wiki_coverage.py`)
+- ▪️⚡ **[`TestIncrementalGeneration.mock_generator_fn`](files/tests/test_wiki_coverage.md)** `(...)` (`test_wiki_coverage.py`)
+- ▪️ **[`TestLoadFromEntryPoints.mock_get_entry_points`](files/tests/test_plugin_registry.md)** `(...)` (`test_plugin_registry.py`)
+- ▪️ **[`TestLoadFromEntryPoints.mock_get_entry_points`](files/tests/test_plugin_registry.md)** `(...)` (`test_plugin_registry.py`)
+- ▪️ **[`TestStreamingPdfExporter.mock_import`](files/tests/test_pdf_export.md)** `(...)` ⚠️`ImportError` (`test_pdf_export.py`)
+- ▪️ **[`TestWikiGenerationPipeline.mock_index_status`](files/tests/test_integration_pipeline.md)** `(sample_python_repo: Path) → IndexStatus` (`test_integration_pipeline.py`) - Create a mock index status for wiki generation tests.
 - ▪️ **[`TestGenerateEntityEntries.mock_index_status`](files/tests/test_search.md)** `(...)` (`test_search.py`) - Create a mock index status.
+- ▪️ **[`TestExamplesWikiGenerator.mock_index_status`](files/tests/test_code_examples.md)** `(...) → MagicMock` (`test_code_examples.py`) - Create a mock index status.
+- ▪️ **[`TestExamplesWikiGeneratorGenerate.mock_index_status`](files/tests/test_examples_plugin.md)** `(...) → MagicMock` (`test_examples_plugin.py`) - Create a mock index status.
+- ▪️ **[`TestGenerateExamplesPage.mock_index_status`](files/tests/test_examples_plugin.md)** `(...) → MagicMock` (`test_examples_plugin.py`) - Create a mock index status.
+- ▪️ **[`TestExamplesWikiGeneratorIntegration.mock_index_status`](files/tests/test_examples_plugin.md)** `(...) → IndexStatus` (`test_examples_plugin.py`) - Create a real IndexStatus.
+- ▪️ **[`TestExamplesWikiGeneratorEdgeCases.mock_index_status`](files/tests/test_examples_plugin.md)** `(...) → MagicMock` (`test_examples_plugin.py`) - Create a mock index status.
 - ▪️ **[`TestGenerateOverviewPage.mock_llm`](files/tests/test_wiki_pages_coverage.md)** `(...)` (`test_wiki_pages_coverage.py`) - Create a mock LLM provider.
 - ▪️ **[`TestGenerateArchitecturePage.mock_llm`](files/tests/test_wiki_pages_coverage.md)** `(...)` (`test_wiki_pages_coverage.py`) - Create a mock LLM provider.
 - ▪️ **[`TestGenerateDependenciesPage.mock_llm`](files/tests/test_wiki_pages_coverage.md)** `(...)` (`test_wiki_pages_coverage.py`) - Create a mock LLM provider.
 - ▪️ **[`TestGenerateSingleFileDoc.mock_llm`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Create a mock LLM provider.
 - ▪️ **[`TestGenerateFileDocs.mock_llm`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Create a mock LLM provider.
+- ▪️ **[`TestGenerateFileDocsCallbacks.mock_llm`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Create a mock LLM provider.
 - ▪️ **[`TestCachingLLMProvider.mock_llm`](files/tests/test_llm_cache.md)** `(...) → MockLLMProvider` (`test_llm_cache.py`) - Create a mock LLM provider.
 - ▪️ **[`TestGenerateModuleDocs.mock_llm`](files/tests/test_wiki_modules_coverage.md)** `(...)` (`test_wiki_modules_coverage.py`) - Create a mock LLM provider.
+- 🔹 **[`mock_llm_provider`](files/tests/test_integration_pipeline.md)** `(...)` (`test_integration_pipeline.py`) - Create a mock LLM provider that returns canned responses.
 - ▪️ **[`TestHandleDeepResearchImpl.mock_llm_provider`](files/tests/test_handlers_coverage.md)** `(...)` (`test_handlers_coverage.py`) - Create a mock LLM provider.
+- ▪️ **[`TestParallelParsingPerformance.mock_parse_single_file`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`)
+- ▪️⚡ **[`TestApiResearchFullFlow.mock_research`](files/tests/test_web.md)** `(...)` (`test_web.py`)
 - ▪️⚡ **[`TestHandleDeepResearchImpl.mock_research`](files/tests/test_handlers_coverage.md)** `(...)` (`test_handlers_coverage.py`)
 - ▪️⚡ **[`TestHandleDeepResearchImpl.mock_research`](files/tests/test_handlers_coverage.md)** `(...)` (`test_handlers_coverage.py`)
 - ▪️ **[`TestMain.mock_sleep`](files/tests/test_watcher.md)** `(...)` ⚠️`KeyboardInterrupt` (`test_watcher.py`)
-- ▪️ **[`TestGenerateSingleFileDoc.mock_status_manager`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Create a mock [WikiStatusManager](files/src/local_deepwiki/generators/wiki_status.md).
-- ▪️ **[`TestGenerateFileDocs.mock_status_manager`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Create a mock [WikiStatusManager](files/src/local_deepwiki/generators/wiki_status.md).
-- ▪️ **[`TestGenerateModuleDocs.mock_status_manager`](files/tests/test_wiki_modules_coverage.md)** `(...)` (`test_wiki_modules_coverage.py`) - Create a mock [WikiStatusManager](files/src/local_deepwiki/generators/wiki_status.md).
+- ▪️ **[`TestFindSourceFiles.mock_stat`](files/tests/test_indexer.md)** `(...)` ⚠️`OSError` (`test_indexer.py`)
+- ▪️ **[`TestGenerateSingleFileDoc.mock_status_manager`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Create a mock WikiStatusManager.
+- ▪️ **[`TestGenerateFileDocs.mock_status_manager`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Create a mock WikiStatusManager.
+- ▪️ **[`TestGenerateFileDocsCallbacks.mock_status_manager`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Create a mock WikiStatusManager.
+- ▪️ **[`TestGenerateModuleDocs.mock_status_manager`](files/tests/test_wiki_modules_coverage.md)** `(...)` (`test_wiki_modules_coverage.py`) - Create a mock WikiStatusManager.
+- ▪️⚡ **[`TestApiChatFullFlow.mock_stream`](files/tests/test_web.md)** `(...)` (`test_web.py`)
+- ▪️⚡ **[`TestApiChatFullFlow.mock_stream`](files/tests/test_web.md)** `(...)` (`test_web.py`)
 - ▪️⚡ **[`TestOpenAILLMProvider.mock_stream`](files/tests/test_llm_providers.md)** `(...)` (`test_llm_providers.py`)
 - ▪️⚡ **[`TestOpenAILLMProvider.mock_stream`](files/tests/test_llm_providers.md)** `(...)` (`test_llm_providers.py`)
 - ▪️⚡ **[`TestOllamaProviderGenerateStream.mock_stream`](files/tests/test_provider_errors.md)** `(...)` (`test_provider_errors.py`)
@@ -550,88 +1467,226 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️⚡ **[`TestOllamaProviderGenerateStream.mock_stream`](files/tests/test_provider_errors.md)** `(...)` ⚠️`ResponseError` (`test_provider_errors.py`)
 - ▪️⚡ **[`TestOllamaProviderGenerateStream.mock_stream`](files/tests/test_provider_errors.md)** `(...)` ⚠️`Exception` (`test_provider_errors.py`)
 - ▪️⚡ **[`TestOllamaProviderGenerateStream.mock_stream`](files/tests/test_provider_errors.md)** `(...)` ⚠️`ValueError` (`test_provider_errors.py`)
+- ▪️⚡ **[`TestAnthropicProviderGenerateStream.mock_text_stream`](files/tests/test_anthropic_provider.md)** `(...)` (`test_anthropic_provider.py`)
+- ▪️⚡ **[`TestAnthropicProviderGenerateStream.mock_text_stream`](files/tests/test_anthropic_provider.md)** `(...)` (`test_anthropic_provider.py`)
 - ▪️⚡ **[`TestAnthropicProvider.mock_text_stream`](files/tests/test_llm_providers.md)** `(...)` (`test_llm_providers.py`)
 - ▪️⚡ **[`TestAnthropicProvider.mock_text_stream`](files/tests/test_llm_providers.md)** `(...)` (`test_llm_providers.py`)
+- 🔹 **[`mock_vector_store`](files/tests/test_interactive_search.md)** `(...) → MagicMock` (`test_interactive_search.py`) - Create a mock vector store.
+- ▪️ **[`TestAnalyzeFileCoverage.mock_vector_store`](files/tests/test_coverage.md)** `(...)` (`test_coverage.py`) - Create a mock vector store.
+- ▪️ **[`TestAnalyzeProjectCoverage.mock_vector_store`](files/tests/test_coverage.md)** `(...)` (`test_coverage.py`) - Create a mock vector store.
+- ▪️ **[`TestGenerateCoveragePage.mock_vector_store`](files/tests/test_coverage.md)** `(...)` (`test_coverage.py`) - Create a mock vector store.
 - ▪️ **[`TestGenerateEntityEntries.mock_vector_store`](files/tests/test_search.md)** `(...)` (`test_search.py`) - Create a mock vector store with chunks.
 - ▪️ **[`TestGenerateOverviewPage.mock_vector_store`](files/tests/test_wiki_pages_coverage.md)** `(...)` (`test_wiki_pages_coverage.py`) - Create a mock vector store.
 - ▪️ **[`TestGenerateArchitecturePage.mock_vector_store`](files/tests/test_wiki_pages_coverage.md)** `(...)` (`test_wiki_pages_coverage.py`) - Create a mock vector store.
 - ▪️ **[`TestGenerateDependenciesPage.mock_vector_store`](files/tests/test_wiki_pages_coverage.md)** `(...)` (`test_wiki_pages_coverage.py`) - Create a mock vector store.
 - ▪️ **[`TestGenerateSingleFileDoc.mock_vector_store`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Create a mock vector store.
 - ▪️ **[`TestGenerateFileDocs.mock_vector_store`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Create a mock vector store.
+- ▪️ **[`TestGenerateFileDocsCallbacks.mock_vector_store`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Create a mock vector store.
+- ▪️ **[`TestCodeExampleExtractor.mock_vector_store`](files/tests/test_code_examples.md)** `(...) → MagicMock` (`test_code_examples.py`) - Create a mock vector store.
+- ▪️ **[`TestExamplesWikiGenerator.mock_vector_store`](files/tests/test_code_examples.md)** `(...) → MagicMock` (`test_code_examples.py`) - Create a mock vector store.
+- ▪️ **[`TestExamplesWikiGeneratorGenerate.mock_vector_store`](files/tests/test_examples_plugin.md)** `(...) → MagicMock` (`test_examples_plugin.py`) - Create a mock vector store.
 - ▪️ **[`TestHandleDeepResearchImpl.mock_vector_store`](files/tests/test_handlers_coverage.md)** `(...)` (`test_handlers_coverage.py`) - Create a mock vector store.
+- ▪️ **[`TestDependencyGraphGenerator.mock_vector_store`](files/tests/test_dependency_graph.md)** `(...)` (`test_dependency_graph.py`) - Create a mock vector store.
+- ▪️ **[`TestGenerateFileGraphWithEdges.mock_vector_store`](files/tests/test_dependency_graph.md)** `(...)` (`test_dependency_graph.py`) - Create a mock vector store with file-level imports.
+- ▪️ **[`TestBuildDependencyGraphEdgeCases.mock_vector_store`](files/tests/test_dependency_graph.md)** `(...)` (`test_dependency_graph.py`) - Create a mock vector store.
+- ▪️ **[`TestFileGraphInternalEdges.mock_vector_store`](files/tests/test_dependency_graph.md)** `(...)` (`test_dependency_graph.py`) - Create a mock vector store.
+- ▪️ **[`TestCollectAllEntities.mock_vector_store`](files/tests/test_glossary.md)** `(...)` (`test_glossary.py`) - Create a mock vector store.
+- ▪️ **[`TestGenerateGlossaryPage.mock_vector_store`](files/tests/test_glossary.md)** `(...)` (`test_glossary.py`) - Create a mock vector store.
+- ▪️ **[`TestCollectClassHierarchy.mock_vector_store`](files/tests/test_inheritance.md)** `(...)` (`test_inheritance.py`) - Create a mock vector store.
+- ▪️ **[`TestGenerateInheritancePage.mock_vector_store`](files/tests/test_inheritance.md)** `(...)` (`test_inheritance.py`) - Create a mock vector store.
 - ▪️ **[`TestDeepResearchPipelineDecomposition.mock_vector_store`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Create a mock vector store.
 - ▪️ **[`TestDeepResearchProgress.mock_vector_store`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Create a mock vector store.
 - ▪️ **[`TestResearchCancellation.mock_vector_store`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Create a mock vector store.
+- ▪️ **[`TestDeepResearchEdgeCases.mock_vector_store`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Create a mock vector store.
+- ▪️ **[`TestResearchCheckpointing.mock_vector_store`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Create a mock vector store.
 - ▪️ **[`TestGenerateModuleDocs.mock_vector_store`](files/tests/test_wiki_modules_coverage.md)** `(...)` (`test_wiki_modules_coverage.py`) - Create a mock vector store.
+- 🔷 **[`MockBodyNode`](files/tests/test_test_examples.md)** (`test_test_examples.py`)
+- 🔷 **[`MockEmbeddingProvider`](files/tests/test_fuzzy_search.md)** (`test_fuzzy_search.py`)
+- 🔷 **[`MockEmbeddingProvider`](files/tests/test_fuzzy_search.md)** (`test_fuzzy_search.py`)
+- 🔷 **[`MockEmbeddingProvider`](files/tests/test_fuzzy_search.md)** (`test_fuzzy_search.py`)
+- 🔷 **[`MockEmbeddingProvider`](files/tests/test_fuzzy_search.md)** (`test_fuzzy_search.py`)
+- 🔷 **[`MockEmbeddingProvider`](files/tests/test_fuzzy_search.md)** (`test_fuzzy_search.py`)
 - 🔷 **[`MockEmbeddingProvider`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Mock embedding provider for testing.
+- 🔷 **[`MockEmbeddingProvider`](files/tests/test_plugins.md)** (`test_plugins.py`) - Mock embedding provider for testing.
+- 🔷 **[`MockEmbeddingProvider`](files/tests/test_embedding_cache.md)** (`test_embedding_cache.py`) - Mock embedding provider for testing.
+- 🔷 **[`MockEmbeddingProvider`](files/tests/test_plugin_registry.md)** (`test_plugin_registry.py`) - Mock embedding provider for testing.
 - 🔷 **[`MockEmbeddingProvider`](files/tests/test_deep_research.md)** (`test_deep_research.py`) - Mock embedding provider for testing.
+- 🔷 **[`MockEmbeddingProvider`](files/tests/test_vectorstore_pagination.md)** (`test_vectorstore_pagination.py`) - Mock embedding provider for testing.
 - 🔷 **[`MockEmbeddingProvider`](files/tests/test_llm_cache.md)** (`test_llm_cache.py`) - Mock embedding provider for testing.
+- 🔷 **[`MockFuncNode`](files/tests/test_test_examples.md)** (`test_test_examples.py`)
+- 🔷 **[`MockFuncNode`](files/tests/test_test_examples.md)** (`test_test_examples.py`)
+- 🔷 **[`MockFuncNode`](files/tests/test_test_examples.md)** (`test_test_examples.py`)
+- 🔷 **[`MockLanguageParser`](files/tests/test_plugins.md)** (`test_plugins.py`) - Mock language parser for testing.
+- 🔷 **[`MockLanguageParser`](files/tests/test_plugin_registry.md)** (`test_plugin_registry.py`) - Mock language parser for testing.
 - 🔷 **[`MockListResponse`](files/tests/test_ollama_health.md)** (`test_ollama_health.py`) - Mock ollama ListResponse object.
+- 🔷 **[`MockListResponse`](files/tests/test_providers.md)** (`test_providers.py`) - Mock ollama ListResponse object.
 - 🔷 **[`MockListResponse`](files/tests/test_provider_errors.md)** (`test_provider_errors.py`) - Mock ollama ListResponse object.
 - 🔷 **[`MockLLMProvider`](files/tests/test_deep_research.md)** (`test_deep_research.py`) - Mock LLM provider for testing.
 - 🔷 **[`MockLLMProvider`](files/tests/test_llm_cache.md)** (`test_llm_cache.py`) - Mock LLM provider for testing.
 - 🔷 **[`MockModel`](files/tests/test_ollama_health.md)** (`test_ollama_health.py`) - Mock ollama Model object.
+- 🔷 **[`MockModel`](files/tests/test_providers.md)** (`test_providers.py`) - Mock ollama Model object.
 - 🔷 **[`MockModel`](files/tests/test_provider_errors.md)** (`test_provider_errors.py`) - Mock ollama Model object.
+- 🔷 **[`MockNode`](files/tests/test_test_examples.md)** (`test_test_examples.py`)
+- 🔷 **[`MockPath`](files/tests/test_diagrams.md)** (`test_diagrams.py`)
+- 🔷 **[`MockSearchResult`](files/tests/test_indexer.md)** (`test_indexer.py`)
+- 🔷 **[`MockSearchResult`](files/tests/test_indexer.md)** (`test_indexer.py`)
+- 🔷 **[`MockSearchResult`](files/tests/test_diagrams.md)** (`test_diagrams.py`)
+- 🔷 **[`MockSearchResult`](files/tests/test_diagrams.md)** (`test_diagrams.py`)
+- 🔷 **[`MockWikiGenerator`](files/tests/test_plugins.md)** (`test_plugins.py`) - Mock wiki generator for testing.
+- 🔷 **[`MockWikiGenerator`](files/tests/test_plugin_registry.md)** (`test_plugin_registry.py`) - Mock wiki generator for testing.
+- ▪️ **[`AccessController.mode`](files/src/local_deepwiki/security/access_control.md)** `(...) → RBACMode` (`access_control.py`) - Get the current RBAC mode.
+- 🔹 **[`multi_role_subject`](files/tests/test_access_control.md)** `(...)` (`test_access_control.py`) - Create a subject with multiple roles for testing.
+- 🔷 **[`MultiPhaseProgress`](files/src/local_deepwiki/cli_progress.md)** (`cli_progress.py`) - Progress tracker for multi-phase operations.
+- ▪️ **[`TestLazyIndexManager.my_callback`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`)
+- ▪️ **[`TestLazyIndexIntegration.my_callback`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`)
+- ▪️ **[`TestLazyIndexIntegration.my_callback`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`)
+- 🔷 **[`MyAsyncClass`](files/tests/test_access_control.md)** (`test_access_control.py`)
+- 🔷 **[`MyClass`](files/tests/test_access_control.md)** (`test_access_control.py`)
+- 🔷 **[`MyObj`](files/tests/test_events.md)** (`test_events.py`)
 
 ## N
 
+- ▪️ **[`TestVectorStoreSearchWithFilters.name`](files/tests/test_fuzzy_search.md)** `(...) → str` (`test_fuzzy_search.py`)
+- ▪️ **[`TestFuzzySearchHelper.name`](files/tests/test_fuzzy_search.md)** `(...) → str` (`test_fuzzy_search.py`)
+- ▪️ **[`TestFuzzySearchHelperEdgeCases.name`](files/tests/test_fuzzy_search.md)** `(...) → str` (`test_fuzzy_search.py`)
+- ▪️ **[`TestFuzzySearchHelperEdgeCases.name`](files/tests/test_fuzzy_search.md)** `(...) → str` (`test_fuzzy_search.py`)
+- ▪️ **[`TestGetFileSuggestions.name`](files/tests/test_fuzzy_search.md)** `(...) → str` (`test_fuzzy_search.py`)
+- ▪️ **[`TestEmbeddingProviderAbstractMethods.name`](files/tests/test_base_provider.md)** `(...) → str` (`test_base_provider.py`)
+- ▪️ **[`TestEmbeddingProviderAbstractMethods.name`](files/tests/test_base_provider.md)** `(...) → str` (`test_base_provider.py`)
+- ▪️ **[`TestEmbeddingProviderAbstractMethods.name`](files/tests/test_base_provider.md)** `(...) → str` (`test_base_provider.py`)
+- ▪️ **[`TestEmbeddingProviderAbstractMethods.name`](files/tests/test_base_provider.md)** `(...) → str` (`test_base_provider.py`)
+- ▪️ **[`TestEmbeddingProviderAbstractMethods.name`](files/tests/test_base_provider.md)** `(...) → str` (`test_base_provider.py`)
+- ▪️ **[`TestLLMProviderAbstractMethods.name`](files/tests/test_base_provider.md)** `(...) → str` (`test_base_provider.py`)
+- ▪️ **[`TestLLMProviderAbstractMethods.name`](files/tests/test_base_provider.md)** `(...) → str` (`test_base_provider.py`)
+- ▪️ **[`TestLLMProviderAbstractMethods.name`](files/tests/test_base_provider.md)** `(...) → str` (`test_base_provider.py`)
+- ▪️ **[`TestLLMProviderAbstractMethods.name`](files/tests/test_base_provider.md)** `(...) → str` (`test_base_provider.py`)
+- ▪️ **[`LLMProvider.name`](files/src/local_deepwiki/providers/base.md)** `(...) → str` (`base.py`) - Get the provider name.
 - ▪️ **[`CachingLLMProvider.name`](files/src/local_deepwiki/providers/llm/cached.md)** `(...) → str` (`cached.py`) - Get the provider name with cache prefix.
-- ▪️ **[`OllamaProvider.name`](files/src/local_deepwiki/providers/llm/ollama.md)** `(...) → str` (`ollama.py`) - Get the provider name.
+- ▪️ **[`OpenAILLMProvider.name`](files/src/local_deepwiki/providers/llm/openai.md)** `(...) → str` (`openai.py`) - Get the provider name.
 - ▪️ **[`AnthropicProvider.name`](files/src/local_deepwiki/providers/llm/anthropic.md)** `(...) → str` (`anthropic.py`) - Get the provider name.
+- ▪️ **[`OllamaProvider.name`](files/src/local_deepwiki/providers/llm/ollama.md)** `(...) → str` (`ollama.py`) - Get the provider name.
+- ▪️ **[`LocalEmbeddingProvider.name`](files/src/local_deepwiki/providers/embeddings/local.md)** `(...) → str` (`local.py`) - Get the provider name.
+- ▪️ **[`EmbeddingCache.name`](files/src/local_deepwiki/providers/embeddings/cache.md)** `(...) → str` (`cache.py`) - Get the provider name (includes cache indicator).
+- ▪️ **[`OpenAIEmbeddingProvider.name`](files/src/local_deepwiki/providers/embeddings/openai.md)** `(...) → str` (`openai.py`) - Get the provider name.
+- 🔷 **[`NameEntry`](files/src/local_deepwiki/core/fuzzy_search.md)** (`fuzzy_search.py`) - An indexed name entry for fuzzy matching.
 - ▪️ **[`WikiStatusManager.needs_regeneration`](files/src/local_deepwiki/generators/wiki_status.md)** `(page_path: str, source_files: list[str]) → bool` (`wiki_status.py`) - Check if a page needs regeneration based on source file c...
+- ▪️ **[`IndexStatusManager.needs_reindex`](files/src/local_deepwiki/core/index_manager.md)** `(status: IndexStatus, file_path: str, file_hash: str) → bool` (`index_manager.py`) - Check if a specific file needs reindexing.
+- ▪️⚡ **[`TestWithRetryFallbackPath.negative_attempts_func`](files/tests/test_base_provider.md)** `(...)` (`test_base_provider.py`)
 - ▪️ **[`TestResearchCancellation.never_cancelled`](files/tests/test_deep_research.md)** `(...) → bool` (`test_deep_research.py`)
 - ▪️⚡ **[`TestRetryDecorator.no_jitter_function`](files/tests/test_provider_errors.md)** `(...)` ⚠️`ConnectionError` (`test_provider_errors.py`)
+- 🔹 **[`not_indexed_error`](files/src/local_deepwiki/errors.md)** `(repo_path: str) → ValidationError` (`errors.py`) - Create an error for when a repository hasn't been indexed...
 
 ## O
 
+- ▪️ **[`EventEmitter.off`](files/src/local_deepwiki/events.md)** `(event_type: EventType | str | None, handler_id: str) → bool` (`events.py`) - Remove a handler by its ID.
 - 🔷 **[`OllamaConfig`](files/src/local_deepwiki/config.md)** (`config.py`) - Configuration for Ollama LLM.
 - 🔷 **[`OllamaConnectionError`](files/src/local_deepwiki/providers/llm/ollama.md)** (`ollama.py`) - Raised when Ollama server is not accessible.
 - 🔷 **[`OllamaModelNotFoundError`](files/src/local_deepwiki/providers/llm/ollama.md)** (`ollama.py`) - Raised when the requested model is not available in Ollama.
 - 🔷 **[`OllamaProvider`](files/src/local_deepwiki/providers/llm/ollama.md)** (`ollama.py`) - LLM provider using local Ollama.
+- ▪️ **[`EventEmitter.on`](files/src/local_deepwiki/events.md)** `(event_type: EventType | str | None, priority: int, weak: bool) → Callable[[Handler], Handler]` (`events.py`) - Decorator to register an event handler.
+- 🔹 **[`on_click`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`on_click`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`on_click`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- ▪️ **[`TestDebouncedHandlerCallback.on_complete`](files/tests/test_watcher.md)** `(result: ReindexResult) → None` (`test_watcher.py`)
 - ▪️ **[`DebouncedHandler.on_created`](files/src/local_deepwiki/watcher.md)** `(event: FileSystemEvent) → None` (`watcher.py`) - Handle file creation events.
 - ▪️ **[`DebouncedHandler.on_deleted`](files/src/local_deepwiki/watcher.md)** `(event: FileSystemEvent) → None` (`watcher.py`) - Handle file deletion events.
+- ▪️ **[`TestLifecycleHooks.on_deregister`](files/tests/test_events.md)** `(event: str, hid: str, reason: str) → None` (`test_events.py`)
+- ▪️ **[`TestLifecycleHooks.on_error`](files/tests/test_events.md)** `(event: str, hid: str, exc: Exception) → None` (`test_events.py`)
+- ▪️ **[`LazyIndexManager.on_index_ready`](files/src/local_deepwiki/core/vectorstore.md)** `(callback: Callable[[], None]) → None` (`vectorstore.py`) - Register a callback to be invoked when the index is ready.
 - ▪️ **[`DebouncedHandler.on_modified`](files/src/local_deepwiki/watcher.md)** `(event: FileSystemEvent) → None` (`watcher.py`) - Handle file modification events.
 - ▪️ **[`DebouncedHandler.on_moved`](files/src/local_deepwiki/watcher.md)** `(event: FileSystemEvent) → None` (`watcher.py`) - Handle file move events.
 - 🔹⚡ **[`on_progress`](files/src/local_deepwiki/web/app.md)** `(progress: ResearchProgress) → None` (`app.py`)
+- ▪️ **[`TestLifecycleHooks.on_register`](files/tests/test_events.md)** `(event: str, hid: str) → None` (`test_events.py`)
+- ▪️ **[`TestLifecycleHooks.on_success`](files/tests/test_events.md)** `(event: str, hid: str) → None` (`test_events.py`)
+- ▪️ **[`VectorStore.on_vector_index_ready`](files/src/local_deepwiki/core/vectorstore.md)** `(callback: Callable[[], None]) → None` (`vectorstore.py`) - Register a callback to be invoked when the vector index i...
 - 🔷 **[`OpenAIEmbeddingConfig`](files/src/local_deepwiki/config.md)** (`config.py`) - Configuration for OpenAI embedding model.
 - 🔷 **[`OpenAIEmbeddingProvider`](files/src/local_deepwiki/providers/embeddings/openai.md)** (`openai.py`) - Embedding provider using OpenAI API.
 - 🔷 **[`OpenAILLMConfig`](files/src/local_deepwiki/config.md)** (`config.py`) - Configuration for OpenAI LLM.
 - 🔷 **[`OpenAILLMProvider`](files/src/local_deepwiki/providers/llm/openai.md)** (`openai.py`) - LLM provider using OpenAI API.
+- 🔷 **[`OperationProgressRegistry`](files/src/local_deepwiki/progress.md)** (`progress.py`) - Registry for tracking active operations and their progress.
+- 🔷 **[`OperationProgressResponse`](files/src/local_deepwiki/progress.md)** (`progress.py`) - Response model for get_operation_progress tool.
+- 🔷 **[`OperationType`](files/src/local_deepwiki/progress.md)** (`progress.py`) - Types of operations that can be tracked.
 - ▪️⚡ **[`TestRetryDecorator.os_error_function`](files/tests/test_provider_errors.md)** `(...)` ⚠️`OSError` (`test_provider_errors.py`)
 - 🔷 **[`OutputConfig`](files/src/local_deepwiki/config.md)** (`config.py`) - Output configuration.
 - ▪️⚡ **[`TestWithRetry.overloaded_func`](files/tests/test_retry.md)** `(...)` ⚠️`Exception` (`test_retry.py`)
+- ▪️⚡ **[`TestWithRetryFallbackPath.overloaded_no_jitter`](files/tests/test_base_provider.md)** `(...)` ⚠️`Exception` (`test_base_provider.py`)
 - ▪️⚡ **[`TestRetryDecorator.overloaded_server`](files/tests/test_provider_errors.md)** `(...)` ⚠️`Exception` (`test_provider_errors.py`)
 
 ## P
 
 - ▪️ **[`WikiStatusManager.page_statuses`](files/src/local_deepwiki/generators/wiki_status.md)** `(...) → dict[str, WikiPageStatus]` (`wiki_status.py`) - Get page statuses map.
 - 🔷 **[`Parameter`](files/src/local_deepwiki/generators/api_docs.md)** (`api_docs.py`) - Represents a function parameter.
-- 🔹 **[`parse_docstring`](files/src/local_deepwiki/generators/api_docs.md)** `(docstring: str) → dict` (`api_docs.py`) - Parse a docstring, auto-detecting format.
+- 🔹 **[`parse_docstring`](files/src/local_deepwiki/generators/api_docs.md)** `(docstring: str) → ParsedDocstring` (`api_docs.py`) - Parse a docstring, auto-detecting format.
+- 🔹 **[`parse_docstring_examples`](files/src/local_deepwiki/generators/test_examples.md)** `(docstring: str) → list[CodeExample]` (`test_examples.py`) - Extract all examples from a docstring (doctests and Googl...
+- 🔹 **[`parse_doctest_examples`](files/src/local_deepwiki/generators/test_examples.md)** `(docstring: str) → list[CodeExample]` (`test_examples.py`) - Extract >>> doctest examples from a docstring.
 - ▪️ **[`CodeParser.parse_file`](files/src/local_deepwiki/core/parser.md)** `(file_path: Path) → tuple[Node, LangEnum, bytes] | None` (`parser.py`) - Parse a source file and return the AST root.
-- 🔹 **[`parse_google_docstring`](files/src/local_deepwiki/generators/api_docs.md)** `(docstring: str) → dict` (`api_docs.py`) - Parse a Google-style docstring.
+- 🔹 **[`parse_google_docstring`](files/src/local_deepwiki/generators/api_docs.md)** `(docstring: str) → ParsedDocstring` (`api_docs.py`) - Parse a Google-style docstring.
+- 🔹 **[`parse_google_style_examples`](files/src/local_deepwiki/generators/test_examples.md)** `(docstring: str) → list[CodeExample]` (`test_examples.py`) - Extract examples from Google-style docstring Examples sec...
 - 🔹 **[`parse_manifest`](files/src/local_deepwiki/generators/manifest.md)** `(repo_path: Path) → ProjectManifest` (`manifest.py`) - Parse all recognized package manifests in a repository.
-- 🔹 **[`parse_numpy_docstring`](files/src/local_deepwiki/generators/api_docs.md)** `(docstring: str) → dict` (`api_docs.py`) - Parse a NumPy-style docstring.
+- 🔹 **[`parse_numpy_docstring`](files/src/local_deepwiki/generators/api_docs.md)** `(docstring: str) → ParsedDocstring` (`api_docs.py`) - Parse a NumPy-style docstring.
 - 🔹 **[`parse_python_function`](files/tests/test_type_annotations.md)** `(parser: CodeParser, code: str)` (`test_type_annotations.py`) - Parse Python code and return the first function node.
 - 🔹 **[`parse_remote_url`](files/src/local_deepwiki/core/git_utils.md)** `(url: str) → tuple[str, str, str] | None` (`git_utils.py`) - Parse remote URL to extract host, owner, and repo name.
 - ▪️ **[`CodeParser.parse_source`](files/src/local_deepwiki/core/parser.md)** `(source: str | bytes, language: LangEnum) → Node` (`parser.py`) - Parse source code string and return the AST root.
+- 🔷 **[`ParsedDocstring`](files/src/local_deepwiki/generators/api_docs.md)** (`api_docs.py`) - Type for parsed docstring result.
 - ▪️ **[`TestGetParentClasses.parser`](files/tests/test_chunker.md)** `(...)` (`test_chunker.py`) - Create a code parser.
+- ▪️ **[`TestPythonParameterExtraction.parser`](files/tests/test_chunker.md)** `(...)` (`test_chunker.py`) - Create a code parser.
 - ▪️ **[`TestExtractPythonParameters.parser`](files/tests/test_api_docs.md)** `(...)` (`test_api_docs.py`)
 - 🔹 **[`parser`](files/tests/test_type_annotations.md)** `(...)` (`test_type_annotations.py`) - Create a code parser for testing.
 - ▪️ **[`TestExtractCallsPython.parser`](files/tests/test_callgraph.md)** `(...)` (`test_callgraph.py`)
+- ▪️ **[`TestSwiftCallExtraction.parser`](files/tests/test_callgraph.md)** `(...)` (`test_callgraph.py`)
 - 🔷 **[`ParseResult`](files/src/local_deepwiki/core/indexer.md)** (`indexer.py`) - Result of parsing a single file.
 - 🔷 **[`ParsingConfig`](files/src/local_deepwiki/config.md)** (`config.py`) - Code parsing configuration.
+- 🔹 **[`path_not_found_error`](files/src/local_deepwiki/errors.md)** `(path: str, path_type: str) → ValidationError` (`errors.py`) - Create an error for when a path doesn't exist.
 - 🔷 **[`PdfExporter`](files/src/local_deepwiki/export/pdf.md)** (`pdf.py`) - Export wiki markdown to PDF format.
+- 🔷 **[`Permission`](files/src/local_deepwiki/security/access_control.md)** (`access_control.py`) - Available permissions in the system.
+- 🔷 **[`PhaseStats`](files/src/local_deepwiki/generators/progress_tracker.md)** (`progress_tracker.py`) - Statistics for a single generation phase.
+- 🔷 **[`Plugin`](files/src/local_deepwiki/plugins/base.md)** (`base.py`) - Base class for all plugins.
+- 🔷 **[`PluginMetadata`](files/src/local_deepwiki/plugins/base.md)** (`base.py`) - Metadata for a plugin.
+- 🔷 **[`PluginRegistry`](files/src/local_deepwiki/plugins/registry.md)** (`registry.py`) - Registry for discovering and managing plugins.
+- 🔷 **[`PluginsConfig`](files/src/local_deepwiki/config.md)** (`config.py`) - Plugin system configuration.
+- ▪️⚡ **[`TestVectorStoreSearchWithFilters.populated_store`](files/tests/test_fuzzy_search.md)** `(...)` (`test_fuzzy_search.py`) - Create a vector store with test data.
+- ▪️⚡ **[`TestVectorStoreIndexes.populated_store`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Create a vector store with test data.
+- ▪️⚡ **[`TestSearchCache.populated_store`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Create a vector store with test data.
+- ▪️⚡ **[`TestSearchProfiles.populated_store`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Create a vector store with test data.
+- ▪️⚡ **[`TestSearchPagination.populated_store`](files/tests/test_vectorstore_pagination.md)** `(...)` (`test_vectorstore_pagination.py`) - Create a vector store with more test data for pagination.
+- ▪️⚡ **[`TestChunkIterator.populated_store`](files/tests/test_vectorstore_pagination.md)** `(...)` (`test_vectorstore_pagination.py`) - Create a vector store with test data.
+- ▪️⚡ **[`TestFuzzySearchHelper.populated_store_with_names`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Create a vector store with chunks that have meaningful na...
 - ▪️ **[`WikiStatusManager.previous_status`](files/src/local_deepwiki/generators/wiki_status.md)** `(...) → WikiGenerationStatus | None` (`wiki_status.py`) - Get previous wiki generation status.
+- ▪️ **[`TestWikiGeneratorPluginIntegration.priority`](files/tests/test_plugins.md)** `(...) → int` (`test_plugins.py`)
+- ▪️ **[`ExamplesWikiGenerator.priority`](files/src/local_deepwiki/generators/examples_plugin.md)** `(...) → int` (`examples_plugin.py`) - Run after main generators but before cross-linking.
+- 🔷 **[`PriorityGenerator`](files/tests/test_plugins.md)** (`test_plugins.py`)
 - ▪️ **[`TestWikiGeneratorGenerate.progress_callback`](files/tests/test_wiki_coverage.md)** `(...)` (`test_wiki_coverage.py`)
-- 🔹 **[`progress_callback`](files/src/local_deepwiki/handlers.md)** `(msg: str, current: int, total: int)` (`handlers.py`)
-- 🔹⚡ **[`progress_callback`](files/src/local_deepwiki/handlers.md)** `(progress: ResearchProgress) → None` (`handlers.py`)
+- ▪️ **[`TestStreamingPdfExporter.progress_callback`](files/tests/test_pdf_export.md)** `(current: int, total: int, message: str)` (`test_pdf_export.py`)
+- ▪️ **[`TestStreamingPdfExporter.progress_callback`](files/tests/test_pdf_export.md)** `(current: int, total: int, message: str)` (`test_pdf_export.py`)
+- ▪️ **[`TestFullPipeline.progress_callback`](files/tests/test_integration_pipeline.md)** `(msg: str, current: int, total: int)` (`test_integration_pipeline.py`)
+- ▪️ **[`TestGenerateFileDocsCallbacks.progress_callback`](files/tests/test_wiki_files_coverage.md)** `(message: str, current: int, total: int)` (`test_wiki_files_coverage.py`)
+- 🔹⚡ **[`progress_callback`](files/src/local_deepwiki/handlers.md)** `(progress: ResearchProgress) → None` (`handlers.py`) - Send MCP progress notifications.
 - ▪️ **[`DebouncedHandler.progress_callback`](files/src/local_deepwiki/watcher.md)** `(msg: str, current: int, total: int) → None` (`watcher.py`)
-- 🔹 **[`progress_callback`](files/src/local_deepwiki/watcher.md)** `(msg: str, current: int, total: int) → None` (`watcher.py`)
+- ▪️ **[`HtmlExporter.progress_callback`](files/src/local_deepwiki/export/html.md)** `(current: int, total: int, message: str) → None` (`html.py`)
+- 🔷 **[`ProgressBuffer`](files/src/local_deepwiki/progress.md)** (`progress.py`) - Buffers progress updates for batched notifications.
+- 🔷 **[`ProgressCallback`](files/src/local_deepwiki/cli_progress.md)** (`cli_progress.py`) - Adapter to use rich progress bars with ProgressCallback p...
 - 🔷 **[`ProgressCallback`](files/src/local_deepwiki/models.md)** (`models.py`) - Protocol for progress callback functions.
+- 🔷 **[`ProgressManager`](files/src/local_deepwiki/progress.md)** (`progress.py`) - Manages progress tracking for a single operation.
+- 🔷 **[`ProgressNotifier`](files/src/local_deepwiki/handlers.md)** (`handlers.py`) - Helper class for sending buffered MCP progress notificati...
+- 🔷 **[`ProgressPhase`](files/src/local_deepwiki/progress.md)** (`progress.py`) - Phases within an operation.
+- 🔷 **[`ProgressUpdate`](files/src/local_deepwiki/progress.md)** (`progress.py`) - A single progress update.
 - 🔷 **[`ProjectManifest`](files/src/local_deepwiki/generators/manifest.md)** (`manifest.py`) - Extracted project metadata from package manifests.
+- 🔷 **[`PromptLoader`](files/src/local_deepwiki/prompts.md)** (`prompts.py`) - Load prompt templates from files or config with fallback ...
+- 🔷 **[`PromptManager`](files/src/local_deepwiki/prompts.md)** (`prompts.py`) - Manage prompts for wiki generation with custom template s...
 - 🔷 **[`PromptsConfig`](files/src/local_deepwiki/config.md)** (`config.py`) - Provider-specific prompts configuration.
+- 🔷 **[`PromptTemplate`](files/src/local_deepwiki/prompts.md)** (`prompts.py`) - A prompt template with variable interpolation support.
 - ▪️ **[`CrossLinker.protect`](files/src/local_deepwiki/generators/crosslinks.md)** `(match: re.Match) → str` (`crosslinks.py`)
+- ▪️ **[`TestEmbeddingCache.provider`](files/tests/test_embedding_cache.md)** `(...)` (`test_embedding_cache.py`) - Create a mock embedding provider.
+- ▪️ **[`TestEmbeddingCacheErrorHandling.provider`](files/tests/test_embedding_cache.md)** `(...)` (`test_embedding_cache.py`) - Create a mock embedding provider.
+- 🔹 **[`provider_error`](files/src/local_deepwiki/errors.md)** `(provider_name: str, original_error: Exception, context: dict[str, Any] | None) → ProviderError` (`errors.py`) - Create a provider error from an exception with actionable...
+- 🔷 **[`ProviderAuthenticationError`](files/src/local_deepwiki/providers/base.md)** (`base.py`) - Raised when authentication with the provider fails.
+- 🔷 **[`ProviderConfigurationError`](files/src/local_deepwiki/providers/base.md)** (`base.py`) - Raised when the provider is misconfigured.
+- 🔷 **[`ProviderConnectionError`](files/src/local_deepwiki/providers/base.md)** (`base.py`) - Raised when a provider cannot be reached or connected to.
+- 🔷 **[`ProviderError`](files/src/local_deepwiki/errors.md)** (`errors.py`) - Error raised when an LLM or embedding provider fails.
+- 🔷 **[`ProviderError`](files/src/local_deepwiki/providers/base.md)** (`base.py`) - Base exception for all provider errors.
+- 🔷 **[`ProviderModelNotFoundError`](files/src/local_deepwiki/providers/base.md)** (`base.py`) - Raised when the requested model is not available.
 - 🔷 **[`ProviderPromptsConfig`](files/src/local_deepwiki/config.md)** (`config.py`) - Prompts configuration for a specific provider.
+- 🔷 **[`ProviderRateLimitError`](files/src/local_deepwiki/providers/base.md)** (`base.py`) - Raised when a provider rate limits the request.
 
 ## Q
 
@@ -642,97 +1697,364 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️⚡ **[`TestRetryDecorator.raises_value_error`](files/tests/test_provider_errors.md)** `(...)` ⚠️`ValueError` (`test_provider_errors.py`)
 - ▪️⚡ **[`TestWithRetry.rate_limited_func`](files/tests/test_retry.md)** `(...)` ⚠️`Exception` (`test_retry.py`)
 - ▪️⚡ **[`TestRetryDecorator.rate_limited_function`](files/tests/test_provider_errors.md)** `(...)` ⚠️`Exception` (`test_provider_errors.py`)
+- ▪️⚡ **[`TestWithRetryFallbackPath.rate_limited_no_jitter`](files/tests/test_base_provider.md)** `(...)` ⚠️`Exception` (`test_base_provider.py`)
+- 🔷 **[`RateLimitConfig`](files/src/local_deepwiki/core/rate_limiter.md)** (`rate_limiter.py`) - Rate limit configuration.
+- 🔷 **[`RateLimiter`](files/src/local_deepwiki/core/vectorstore.md)** (`vectorstore.py`) - Token bucket rate limiter for API requests.
+- 🔷 **[`RateLimiter`](files/src/local_deepwiki/core/rate_limiter.md)** (`rate_limiter.py`) - Token bucket rate limiter for API calls.
+- 🔷 **[`RateLimitExceeded`](files/src/local_deepwiki/core/rate_limiter.md)** (`rate_limiter.py`) - Raised when rate limit is exceeded and cannot wait.
+- 🔷 **[`RateLimitMockEmbeddingProvider`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Mock embedding provider that simulates rate limiting.
+- 🔷 **[`RateLimitState`](files/src/local_deepwiki/core/rate_limiter.md)** (`rate_limiter.py`) - Tracks rate limit state.
+- 🔷 **[`RBACMode`](files/src/local_deepwiki/security/access_control.md)** (`access_control.py`) - RBAC enforcement modes.
 - 🔹 **[`read_toc`](files/src/local_deepwiki/generators/toc.md)** `(wiki_path: Path) → TableOfContents | None` (`toc.py`) - Read table of contents from toc.json file.
+- ▪️ **[`TestInteractiveRun.readkey_side_effect`](files/tests/test_interactive_search.md)** `(...)` (`test_interactive_search.py`)
+- 🔷 **[`ReadWikiPageArgs`](files/src/local_deepwiki/models.md)** (`models.py`) - Arguments for the read_wiki_page tool.
+- 🔷 **[`ReadWikiStructureArgs`](files/src/local_deepwiki/models.md)** (`models.py`) - Arguments for the read_wiki_structure tool.
+- ▪️ **[`AdaptiveSearcher.record_feedback`](files/src/local_deepwiki/core/vectorstore.md)** `(feedback: SearchFeedback) → None` (`vectorstore.py`) - Record user feedback to improve future searches.
+- ▪️ **[`VectorStore.record_feedback`](files/src/local_deepwiki/core/vectorstore.md)** `(feedback: SearchFeedback) → None` (`vectorstore.py`) - Record user feedback on a search result.
 - ▪️ **[`WikiStatusManager.record_page_status`](files/src/local_deepwiki/generators/wiki_status.md)** `(page: WikiPage, source_files: list[str]) → None` (`wiki_status.py`) - Record status for a generated/loaded page.
+- ▪️ **[`LazyIndexManager.record_search_latency`](files/src/local_deepwiki/core/vectorstore.md)** `(latency_ms: float) → None` (`vectorstore.py`) - Record a search query latency measurement.
+- ▪️ **[`AdaptiveSearcher.record_search_quality`](files/src/local_deepwiki/core/vectorstore.md)** `(query: str, quality: float, result_count: int, ...+1) → None` (`vectorstore.py`) - Record search quality for future adaptation.
+- ▪️ **[`PluginRegistry.register`](files/src/local_deepwiki/plugins/registry.md)** `(plugin: Plugin) → None` ⚠️`TypeError` (`registry.py`) - Register a plugin based on its type.
+- ▪️ **[`PluginRegistry.register_embedding_provider`](files/src/local_deepwiki/plugins/registry.md)** `(plugin: EmbeddingProviderPlugin) → None` (`registry.py`) - Register an embedding provider plugin.
 - ▪️ **[`EntityRegistry.register_entity`](files/src/local_deepwiki/generators/crosslinks.md)** `(name: str, entity_type: ChunkType, wiki_path: str, ...+2) → None` (`crosslinks.py`) - Register a documented entity.
 - ▪️ **[`EntityRegistry.register_from_chunks`](files/src/local_deepwiki/generators/crosslinks.md)** `(chunks: list[CodeChunk], wiki_path: str) → None` (`crosslinks.py`) - Register entities from a list of code chunks.
+- ▪️ **[`PluginRegistry.register_language_parser`](files/src/local_deepwiki/plugins/registry.md)** `(plugin: LanguageParserPlugin) → None` (`registry.py`) - Register a language parser plugin.
+- ▪️ **[`HookRunner.register_script`](files/src/local_deepwiki/events.md)** `(event_type: EventType | str, script_path: str | Path, priority: int) → None` (`events.py`) - Register a script to run on an event.
+- ▪️ **[`PluginRegistry.register_wiki_generator`](files/src/local_deepwiki/plugins/registry.md)** `(plugin: WikiGeneratorPlugin) → None` (`registry.py`) - Register a wiki generator plugin.
+- ▪️ **[`TestPluginRegistry.registry`](files/tests/test_plugins.md)** `(...)` (`test_plugins.py`) - Create a fresh registry for each test.
+- ▪️ **[`TestLoadFromEntryPoints.registry`](files/tests/test_plugin_registry.md)** `(...)` (`test_plugin_registry.py`) - Create a fresh registry for each test.
+- ▪️ **[`TestDiscoverPlugins.registry`](files/tests/test_plugin_registry.md)** `(...)` (`test_plugin_registry.py`) - Create a fresh registry for each test.
+- ▪️ **[`TestRegistryEdgeCases.registry`](files/tests/test_plugin_registry.md)** `(...)` (`test_plugin_registry.py`) - Create a fresh registry for each test.
+- 🔷 **[`ReindexResult`](files/src/local_deepwiki/watcher.md)** (`watcher.py`) - Result of a reindex operation.
 - 🔷 **[`RelationshipAnalyzer`](files/src/local_deepwiki/generators/see_also.md)** (`see_also.py`) - Analyzes import relationships between source files.
+- ▪️ **[`RateLimiter.release`](files/src/local_deepwiki/core/rate_limiter.md)** `(...) → None` (`rate_limiter.py`) - Release the burst semaphore after request completes.
+- ▪️ **[`ProgressManager.remove_callback`](files/src/local_deepwiki/progress.md)** `(callback: Callable[[ProgressUpdate], None]) → None` (`progress.py`) - Remove progress callback.
+- ▪️ **[`EventEmitter.remove_handler`](files/src/local_deepwiki/events.md)** `(event_type: EventType | str | None, handler: Handler) → bool` (`events.py`) - Remove an event handler.
 - 🔹 **[`render_markdown`](files/src/local_deepwiki/web/app.md)** `(content: str) → str` (`app.py`) - Render markdown to HTML.
 - 🔹 **[`render_markdown`](files/src/local_deepwiki/export/html.md)** `(content: str) → str` (`html.py`) - Render markdown to HTML.
 - 🔹 **[`render_markdown_for_pdf`](files/src/local_deepwiki/export/pdf.md)** `(content: str, render_mermaid: bool) → str` (`pdf.py`) - Render markdown to HTML suitable for PDF.
 - 🔹 **[`render_mermaid_to_png`](files/src/local_deepwiki/export/pdf.md)** `(diagram_code: str, timeout: int) → bytes | None` (`pdf.py`) - Render a mermaid diagram to PNG using mermaid-cli.
 - 🔹 **[`render_mermaid_to_svg`](files/src/local_deepwiki/export/pdf.md)** `(diagram_code: str, timeout: int) → str | None` (`pdf.py`) - Render a mermaid diagram to SVG using mermaid-cli.
+- 🔹 **[`replace_link`](files/src/local_deepwiki/export/html.md)** `(match: re.Match[str]) → str` (`html.py`)
+- 🔷 **[`RepositoryAccessConfig`](files/src/local_deepwiki/security/repository_access.md)** (`repository_access.py`) - Configuration for repository access control.
+- 🔷 **[`RepositoryAccessController`](files/src/local_deepwiki/security/repository_access.md)** (`repository_access.py`) - Controls which repositories can be indexed.
 - 🔷 **[`RepositoryIndexer`](files/src/local_deepwiki/core/indexer.md)** (`indexer.py`) - Orchestrates repository indexing with incremental update ...
 - 🔷 **[`RepositoryWatcher`](files/src/local_deepwiki/watcher.md)** (`watcher.py`) - Watches a repository for file changes and triggers reinde...
-- ▪️⚡ **[`DeepResearchPipeline.research`](files/src/local_deepwiki/core/deep_research.md)** `(question: str, progress_callback: ProgressCallback, cancellation_check: CancellationCallback) → DeepResearchResult` (`deep_research.py`) - Execute the full research pipeline.
+- ▪️ **[`AccessController.require_all_permissions`](files/src/local_deepwiki/security/access_control.md)** `(*permissions: Permission) → None` ⚠️`AccessDeniedException, AuthenticationException` (`access_control.py`) - Check that the current subject has all required permissions.
+- 🔹 **[`require_all_permissions`](files/src/local_deepwiki/security/access_control.md)** `(*permissions: Permission) → Callable[[F], F]` (`access_control.py`) - Decorator to require all of the specified permissions.
+- ▪️ **[`AccessController.require_any_permission`](files/src/local_deepwiki/security/access_control.md)** `(*permissions: Permission) → None` ⚠️`AccessDeniedException, AuthenticationException` (`access_control.py`) - Check that the current subject has any of the required pe...
+- 🔹 **[`require_any_permission`](files/src/local_deepwiki/security/access_control.md)** `(*permissions: Permission) → Callable[[F], F]` (`access_control.py`) - Decorator to require any of the specified permissions.
+- ▪️ **[`AccessController.require_permission`](files/src/local_deepwiki/security/access_control.md)** `(permission: Permission) → None` ⚠️`AccessDeniedException, AuthenticationException` (`access_control.py`) - Check that the current subject has the required permission.
+- 🔹 **[`require_permission`](files/src/local_deepwiki/security/access_control.md)** `(permission: Permission) → Callable[[F], F]` (`access_control.py`) - Decorator to require a specific permission for a function.
+- 🔹 **[`rerank_with_fuzzy`](files/src/local_deepwiki/core/fuzzy_search.md)** `(results: list[SearchResult], query: str, fuzzy_weight: float) → list[SearchResult]` (`fuzzy_search.py`) - Re-rank search results by combining vector similarity wit...
+- ▪️⚡ **[`DeepResearchPipeline.research`](files/src/local_deepwiki/core/deep_research.md)** `(question: str, progress_callback: ProgressCallback, cancellation_check: CancellationCallback, ...+2) → DeepResearchResult` (`deep_research.py`) - Execute the full research pipeline.
+- 🔹 **[`research_error`](files/src/local_deepwiki/errors.md)** `(message: str, step: str | None, question: str | None, ...+1) → ResearchError` (`errors.py`) - Create a research error with actionable hints.
 - 🔷 **[`ResearchCancelledError`](files/src/local_deepwiki/core/deep_research.md)** (`deep_research.py`) - Raised when a deep research operation is cancelled.
+- 🔷 **[`ResearchCheckpoint`](files/src/local_deepwiki/models.md)** (`models.py`) - Checkpoint state for resumable deep research operations.
+- 🔷 **[`ResearchCheckpointStep`](files/src/local_deepwiki/models.md)** (`models.py`) - Current step in a research checkpoint.
+- 🔷 **[`ResearchError`](files/src/local_deepwiki/errors.md)** (`errors.py`) - Error raised when deep research fails.
 - 🔷 **[`ResearchPreset`](files/src/local_deepwiki/config.md)** (`config.py`) - Research mode presets for deep research pipeline.
 - 🔷 **[`ResearchProgress`](files/src/local_deepwiki/models.md)** (`models.py`) - Progress update from deep research pipeline.
 - 🔷 **[`ResearchProgressType`](files/src/local_deepwiki/models.md)** (`models.py`) - Types of deep research progress events.
 - 🔷 **[`ResearchStep`](files/src/local_deepwiki/models.md)** (`models.py`) - A single step in the deep research process.
 - 🔷 **[`ResearchStepType`](files/src/local_deepwiki/models.md)** (`models.py`) - Types of steps in the deep research process.
+- ▪️ **[`ChunkIterator.reset`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → None` (`vectorstore.py`) - Reset the iterator to the beginning.
+- ▪️ **[`LazyIndexManager.reset`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → None` (`vectorstore.py`) - Reset the manager state.
+- 🔹 **[`reset_access_controller`](files/src/local_deepwiki/security/access_control.md)** `(...) → None` (`access_control.py`) - Reset the global access controller (for testing only).
+- 🔹 **[`reset_audit_logger`](files/src/local_deepwiki/core/audit.md)** `(...) → None` (`audit.py`) - Reset the global audit logger (for testing only).
 - 🔹 **[`reset_config`](files/src/local_deepwiki/config.md)** `(...) → None` (`config.py`) - Reset the global configuration to uninitialized state.
+- 🔹 **[`reset_controller`](files/tests/test_access_control.md)** `(...)` (`test_access_control.py`) - Reset the global access controller before and after each ...
+- 🔹 **[`reset_controller`](files/tests/test_repository_access.md)** `(...)` (`test_repository_access.py`) - Reset the global repository access controller before each...
+- 🔹 **[`reset_event_emitter`](files/src/local_deepwiki/events.md)** `(...) → None` (`events.py`) - Reset the global event emitter.
 - 🔹 **[`reset_global_config`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Reset global config before and after each test.
+- 🔹 **[`reset_global_manager`](files/tests/test_role_config.md)** `(...)` (`test_role_config.py`) - Reset the global role manager before and after each test.
+- ▪️ **[`EventEmitter.reset_handler_stats`](files/src/local_deepwiki/events.md)** `(handler_id: str) → bool` (`events.py`) - Reset statistics for a handler.
+- 🔹 **[`reset_plugin_registry`](files/src/local_deepwiki/plugins/registry.md)** `(...) → None` (`registry.py`) - Reset the global plugin registry.
+- 🔹 **[`reset_rate_limiter`](files/src/local_deepwiki/core/rate_limiter.md)** `(...) → None` (`rate_limiter.py`) - Reset the global rate limiter.
+- 🔹 **[`reset_repository_access`](files/src/local_deepwiki/security/repository_access.md)** `(...) → None` (`repository_access.py`) - Reset the global repository access controller (for testin...
+- 🔹 **[`reset_role_manager`](files/src/local_deepwiki/security/role_config.md)** `(...) → None` (`role_config.py`) - Reset the global role manager (for testing only).
+- 🔷 **[`ResourceLimits`](files/src/local_deepwiki/validation.md)** (`validation.py`) - Resource consumption limits for security (CWE-400 prevent...
+- 🔷 **[`ResumeResearchArgs`](files/src/local_deepwiki/models.md)** (`models.py`) - Arguments for resuming research with a checkpoint.
+- 🔷 **[`Role`](files/src/local_deepwiki/security/access_control.md)** (`access_control.py`) - Predefined roles in the system.
+- 🔷 **[`RoleAssignment`](files/src/local_deepwiki/security/role_config.md)** (`role_config.py`) - Maps an identifier pattern to a role.
+- 🔷 **[`RoleConfig`](files/src/local_deepwiki/security/role_config.md)** (`role_config.py`) - Configuration for role assignments.
+- 🔷 **[`RoleManager`](files/src/local_deepwiki/security/role_config.md)** (`role_config.py`) - Manages role assignments for subjects.
+- 🔹 **[`row`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`row`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`row`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`rowComparator`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`rowComparator`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`rowComparator`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
 - 🔹⚡ **[`run`](files/src/local_deepwiki/server.md)** `(...)` (`server.py`)
+- ▪️⚡ **[`InteractiveSearch.run`](files/src/local_deepwiki/cli/interactive_search.md)** `(initial_query: str | None) → None` (`interactive_search.py`) - Run the interactive search session.
+- ▪️ **[`TestWikiGeneratorPluginIntegration.run_after`](files/tests/test_plugins.md)** `(...) → list[str]` (`test_plugins.py`)
+- ▪️ **[`TestWikiGeneratorPluginIntegration.run_after`](files/tests/test_plugins.md)** `(...) → list[str]` (`test_plugins.py`)
+- ▪️ **[`TestWikiGeneratorPluginIntegration.run_after`](files/tests/test_plugins.md)** `(...) → list[str]` (`test_plugins.py`)
+- ▪️ **[`ExamplesWikiGenerator.run_after`](files/src/local_deepwiki/generators/examples_plugin.md)** `(...) → list[str]` (`examples_plugin.py`) - Run after the api_docs generator if present.
 - 🔹 **[`run_async`](files/src/local_deepwiki/web/app.md)** `(...) → None` (`app.py`)
 - 🔹⚡ **[`run_research`](files/src/local_deepwiki/web/app.md)** `(...) → AsyncIterator[str]` (`app.py`) - Async generator that runs deep research with progress upd...
+- ▪️⚡ **[`HookRunner.run_scripts`](files/src/local_deepwiki/events.md)** `(event: Event) → None` (`events.py`)
+- 🔹⚡ **[`run_search`](files/src/local_deepwiki/cli/interactive_search.md)** `(repo_path: Path, query: str | None, language: str | None, ...+6) → None` (`interactive_search.py`) - Run the search command.
 - 🔹 **[`run_server`](files/src/local_deepwiki/web/app.md)** `(wiki_path: str | Path, host: str, port: int, ...+1)` (`app.py`) - Run the wiki web server.
+- ▪️ **[`TestHookRunner.runner`](files/tests/test_events.md)** `(emitter: EventEmitter, scripts_dir: Path)` (`test_events.py`) - Create a hook runner with emitter and scripts_dir.
 
 ## S
 
+- ▪️ **[`TestCheckpointManager.sample_checkpoint`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Create a sample checkpoint for testing.
+- 🔹 **[`sample_chunk`](files/tests/test_interactive_search.md)** `(...) → CodeChunk` (`test_interactive_search.py`) - Create a sample code chunk for testing.
+- ▪️ **[`TestAnalyzeProjectCoverage.sample_index_status`](files/tests/test_coverage.md)** `(...)` (`test_coverage.py`) - Create a sample index status.
+- ▪️ **[`TestGenerateCoveragePage.sample_index_status`](files/tests/test_coverage.md)** `(...)` (`test_coverage.py`) - Create a sample index status.
+- ▪️ **[`TestDependencyGraphGenerator.sample_index_status`](files/tests/test_dependency_graph.md)** `(...)` (`test_dependency_graph.py`) - Create a sample index status.
+- ▪️ **[`TestCollectAllEntities.sample_index_status`](files/tests/test_glossary.md)** `(...)` (`test_glossary.py`) - Create a sample index status.
+- ▪️ **[`TestGenerateGlossaryPage.sample_index_status`](files/tests/test_glossary.md)** `(...)` (`test_glossary.py`) - Create a sample index status.
+- ▪️ **[`TestCollectClassHierarchy.sample_index_status`](files/tests/test_inheritance.md)** `(...)` (`test_inheritance.py`) - Create a sample index status.
+- ▪️ **[`TestGenerateInheritancePage.sample_index_status`](files/tests/test_inheritance.md)** `(...)` (`test_inheritance.py`) - Create a sample index status.
+- 🔹 **[`sample_python_repo`](files/tests/test_integration_pipeline.md)** `(tmp_path: Path) → Path` (`test_integration_pipeline.py`) - Create a sample Python repository with multiple files for...
+- 🔹 **[`sample_results`](files/tests/test_interactive_search.md)** `(sample_chunk: CodeChunk) → list[SearchResult]` (`test_interactive_search.py`) - Create sample search results for testing.
+- ▪️ **[`TestWikiPageIterator.sample_wiki`](files/tests/test_streaming_export.md)** `(tmp_path: Path) → Path` (`test_streaming_export.py`) - Create a sample wiki directory.
 - ▪️ **[`TestPdfExporter.sample_wiki`](files/tests/test_pdf_export.md)** `(tmp_path: Path) → Path` (`test_pdf_export.py`) - Create a sample wiki structure for testing.
+- ▪️ **[`TestStreamingPdfExporter.sample_wiki`](files/tests/test_pdf_export.md)** `(tmp_path: Path) → Path` (`test_pdf_export.py`) - Create a sample wiki structure for testing.
 - ▪️ **[`TestHtmlExporter.sample_wiki`](files/tests/test_html_export.md)** `(tmp_path: Path) → Path` (`test_html_export.py`) - Create a sample wiki structure for testing.
+- 🔹 **[`sanitize_error_message`](files/src/local_deepwiki/errors.md)** `(message: str, sanitize_paths: bool) → str` (`errors.py`) - Remove sensitive information from error messages.
 - 🔹 **[`sanitize_mermaid_name`](files/src/local_deepwiki/generators/diagrams.md)** `(name: str) → str` (`diagrams.py`) - Sanitize a name for use in Mermaid diagrams.
+- ▪️ **[`IndexStatusManager.save`](files/src/local_deepwiki/core/index_manager.md)** `(wiki_path: Path, status: IndexStatus) → None` (`index_manager.py`) - Save index status to a wiki directory.
+- ▪️ **[`CheckpointManager.save_checkpoint`](files/src/local_deepwiki/core/deep_research.md)** `(checkpoint: ResearchCheckpoint) → None` (`deep_research.py`) - Save a checkpoint to disk.
+- 🔹 **[`save_current_example`](files/src/local_deepwiki/generators/test_examples.md)** `(...) → None` (`test_examples.py`) - Save the current accumulated example.
 - ▪️⚡ **[`WikiStatusManager.save_status`](files/src/local_deepwiki/generators/wiki_status.md)** `(status: WikiGenerationStatus) → None` (`wiki_status.py`) - Save wiki generation status.
-- ▪️⚡ **[`VectorStore.search`](files/src/local_deepwiki/core/vectorstore.md)** `(query: str, limit: int, language: str | None, ...+1) → list[SearchResult]` ⚠️`ValueError` (`vectorstore.py`) - Search for similar code chunks.
+- ▪️ **[`SecretDetector.scan_content`](files/src/local_deepwiki/core/secret_detector.md)** `(content: str, file_path: str, start_line: int) → list[SecretFinding]` (`secret_detector.py`) - Scan code content for secrets.
+- 🔹 **[`scan_repository_for_secrets`](files/src/local_deepwiki/core/secret_detector.md)** `(repo_path: Path) → dict[str, list[SecretFinding]]` (`secret_detector.py`) - Scan entire repository for secrets.
+- ▪️⚡ **[`LazyIndexManager.schedule_index_creation`](files/src/local_deepwiki/core/vectorstore.md)** `(progress_callback: Callable[[str], None] | None) → None` (`vectorstore.py`) - Schedule index creation as a background task.
+- ▪️⚡ **[`VectorStore.schedule_lazy_index_creation`](files/src/local_deepwiki/core/vectorstore.md)** `(progress_callback: Callable[[str], None] | None) → None` (`vectorstore.py`) - Schedule vector index creation as a background task.
+- ▪️ **[`EventEmitter.scoped_handler`](files/src/local_deepwiki/events.md)** `(event_type: EventType | str, handler: Handler, priority: int) → Iterator[str]` (`events.py`) - Context manager for automatic handler cleanup.
+- ▪️ **[`TestHookRunner.scripts_dir`](files/tests/test_events.md)** `(tmp_path: Path)` (`test_events.py`) - Create a temporary scripts directory.
+- ▪️⚡ **[`VectorStore.search`](files/src/local_deepwiki/core/vectorstore.md)** `(query: str, limit: int, language: str | None, ...+7) → list[SearchResult]` ⚠️`ValueError` (`vectorstore.py`) - Search for similar code chunks.
 - ▪️⚡ **[`RepositoryIndexer.search`](files/src/local_deepwiki/core/indexer.md)** `(query: str, limit: int, language: str | None) → list[dict]` (`indexer.py`) - Search the indexed repository.
+- ▪️⚡ **[`InteractiveSearch.search`](files/src/local_deepwiki/cli/interactive_search.md)** `(query: str, limit: int) → None` (`interactive_search.py`) - Execute a search query.
 - 🔹 **[`search_json`](files/src/local_deepwiki/web/app.md)** `(...)` (`app.py`) - Serve the search index JSON file.
+- ▪️⚡ **[`VectorStore.search_paginated`](files/src/local_deepwiki/core/vectorstore.md)** `(query: str, limit: int, offset: int, ...+8) → SearchResultPage` ⚠️`ValueError` (`vectorstore.py`) - Search for similar code chunks with pagination support.
 - ▪️⚡ **[`TestGenerateArchitecturePage.search_side_effect`](files/tests/test_wiki_pages_coverage.md)** `(...)` (`test_wiki_pages_coverage.py`)
-- ▪️⚡ **[`TestGenerateSingleFileDoc.search_side_effect`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`)
 - ▪️⚡ **[`TestGenerateFileDocs.search_side_effect`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`)
+- ▪️⚡ **[`TestDeepResearchEdgeCases.search_side_effect`](files/tests/test_deep_research.md)** `(...)` ⚠️`RuntimeError` (`test_deep_research.py`)
+- ▪️⚡ **[`TestDeepResearchEdgeCases.search_side_effect`](files/tests/test_deep_research.md)** `(...)` ⚠️`RuntimeError` (`test_deep_research.py`)
 - ▪️⚡ **[`TestGenerateModuleDocs.search_side_effect`](files/tests/test_wiki_modules_coverage.md)** `(...)` (`test_wiki_modules_coverage.py`)
+- 🔷 **[`SearchCache`](files/src/local_deepwiki/core/vectorstore.md)** (`vectorstore.py`) - In-memory cache for search results with semantic deduplic...
+- 🔷 **[`SearchCacheConfig`](files/src/local_deepwiki/config.md)** (`config.py`) - Search result caching configuration for vector store.
+- 🔷 **[`SearchCacheEntry`](files/src/local_deepwiki/core/vectorstore.md)** (`vectorstore.py`) - A cached search result entry.
+- 🔷 **[`SearchCodeArgs`](files/src/local_deepwiki/models.md)** (`models.py`) - Arguments for the search_code tool.
+- 🔷 **[`SearchConfig`](files/src/local_deepwiki/config.md)** (`config.py`) - Search behavior configuration for precision/recall trade-...
+- 🔷 **[`SearchFeedback`](files/src/local_deepwiki/core/vectorstore.md)** (`vectorstore.py`) - User feedback on search result relevance.
+- 🔷 **[`SearchFilters`](files/src/local_deepwiki/cli/interactive_search.md)** (`interactive_search.py`) - Filters to apply to search results.
+- 🔷 **[`SearchProfile`](files/src/local_deepwiki/core/vectorstore.md)** (`vectorstore.py`) - Search profile for precision/recall trade-off.
+- 🔷 **[`SearchProfileConfig`](files/src/local_deepwiki/core/vectorstore.md)** (`vectorstore.py`) - Configuration for a search profile.
 - 🔷 **[`SearchResult`](files/src/local_deepwiki/models.md)** (`models.py`) - A search result from semantic search.
+- 🔷 **[`SearchResultPage`](files/src/local_deepwiki/core/vectorstore.md)** (`vectorstore.py`) - Paginated search results with metadata.
+- 🔷 **[`SearchState`](files/src/local_deepwiki/cli/interactive_search.md)** (`interactive_search.py`) - Current state of the interactive search session.
+- 🔷 **[`SecretDetector`](files/src/local_deepwiki/core/secret_detector.md)** (`secret_detector.py`) - Detects hardcoded secrets in code content.
+- 🔷 **[`SecretFinding`](files/src/local_deepwiki/core/secret_detector.md)** (`secret_detector.py`) - Represents a detected secret in code.
+- 🔷 **[`SecretType`](files/src/local_deepwiki/core/secret_detector.md)** (`secret_detector.py`) - Types of secrets that can be detected.
+- 🔷 **[`SemanticMockEmbeddingProvider`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Mock embedding provider that generates different embeddin...
 - 🔹⚡ **[`send_cancellation_notification`](files/src/local_deepwiki/handlers.md)** `(step: str) → None` (`handlers.py`) - Send a cancellation progress notification.
 - ▪️⚡ **[`TestRetryDecorator.service_unavailable`](files/tests/test_provider_errors.md)** `(...)` ⚠️`Exception` (`test_provider_errors.py`)
 - ▪️⚡ **[`LLMCache.set`](files/src/local_deepwiki/core/llm_cache.md)** `(prompt: str, response: str, system_prompt: str | None, ...+3) → None` (`llm_cache.py`) - Cache an LLM response.
+- ▪️ **[`SearchCache.set`](files/src/local_deepwiki/core/vectorstore.md)** `(query_text: str, query_embedding: list[float], results: list[SearchResult], ...+1) → None` (`vectorstore.py`) - Cache search results for a query.
+- ▪️ **[`ASTCache.set`](files/src/local_deepwiki/core/parser.md)** `(file_path: str, file_hash: str, tree: Any, ...+1) → None` (`parser.py`) - Cache a parsed AST.
+- ▪️ **[`VectorStore.set_adaptive_search_enabled`](files/src/local_deepwiki/core/vectorstore.md)** `(enabled: bool) → None` (`vectorstore.py`) - Enable or disable adaptive search.
 - 🔹 **[`set_config`](files/src/local_deepwiki/config.md)** `(config: Config) → None` (`config.py`) - Set the global configuration instance.
+- ▪️ **[`OperationProgressRegistry.set_data_path`](files/src/local_deepwiki/progress.md)** `(path: Path) → None` (`progress.py`) - Set the path for persisting historical data.
+- 🔹 **[`set_global_lifecycle`](files/src/local_deepwiki/events.md)** `(lifecycle: HandlerLifecycle) → None` (`events.py`) - Set lifecycle hooks for the global emitter.
+- ▪️ **[`AccessController.set_mode`](files/src/local_deepwiki/security/access_control.md)** `(mode: RBACMode) → None` (`access_control.py`) - Set the RBAC enforcement mode.
+- ▪️ **[`VectorStore.set_search_profile`](files/src/local_deepwiki/core/vectorstore.md)** `(profile: SearchProfile | str) → None` ⚠️`ValueError` (`vectorstore.py`) - Set the default search profile.
+- ▪️ **[`AdaptiveSearcher.set_store`](files/src/local_deepwiki/core/vectorstore.md)** `(store: "VectorStore") → None` (`vectorstore.py`) - Set the vector store reference.
+- ▪️ **[`AccessController.set_subject`](files/src/local_deepwiki/security/access_control.md)** `(subject: Subject) → None` ⚠️`AuthenticationException` (`access_control.py`) - Set the current subject for access checks.
+- ▪️ **[`TestIncrementalGeneration.setup_generator`](files/tests/test_wiki_coverage.md)** `(...)` (`test_wiki_coverage.py`) - Create a WikiGenerator for incremental tests.
+- ▪️ **[`TestModulePageProcessing.setup_generator`](files/tests/test_wiki_coverage.md)** `(...)` (`test_wiki_coverage.py`) - Create a WikiGenerator for module tests.
+- ▪️ **[`TestChangelogPageGeneration.setup_generator`](files/tests/test_wiki_coverage.md)** `(...)` (`test_wiki_coverage.py`) - Create a WikiGenerator for changelog tests.
+- ▪️ **[`TestAuxiliaryPagesGeneration.setup_generator`](files/tests/test_wiki_coverage.md)** `(...)` (`test_wiki_coverage.py`) - Create a WikiGenerator for auxiliary page tests.
+- ▪️ **[`TestDependenciesIncrementalLogic.setup_generator`](files/tests/test_wiki_coverage.md)** `(...)` (`test_wiki_coverage.py`) - Create a WikiGenerator for dependencies tests.
 - 🔹 **[`setup_logging`](files/src/local_deepwiki/logging.md)** `(level: str | int | None, format_style: Literal["simple", "detailed"], stream: bool, ...+1) → logging.Logger` (`logging.py`) - Configure logging for the local-deepwiki package.
 - ▪️ **[`TestDocstringExtraction.setup_method`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Set up test fixtures.
+- ▪️ **[`TestUncoveredCodePaths.setup_method`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Set up test fixtures.
+- ▪️ **[`TestDocstringExtractorHelpers.setup_method`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Set up test fixtures.
 - ▪️ **[`TestCodeChunker.setup_method`](files/tests/test_chunker.md)** `(...)` (`test_chunker.py`) - Set up test fixtures.
+- ▪️ **[`TestWikiGeneratorPluginIntegration.setup_teardown`](files/tests/test_plugins.md)** `(...)` (`test_plugins.py`) - Reset plugin registry before and after each test.
+- 🔷 **[`ShortTTLConfig`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`)
+- 🔹 **[`should_auto_enable_fuzzy`](files/src/local_deepwiki/core/fuzzy_search.md)** `(results: list[SearchResult], threshold: float) → bool` (`fuzzy_search.py`) - Determine if fuzzy matching should be auto-enabled based ...
+- ▪️ **[`LazyIndexManager.should_create_index`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → bool` (`vectorstore.py`) - Check if index should be created based on latency statist...
 - 🔹 **[`should_skip`](files/src/local_deepwiki/generators/manifest.md)** `(name: str) → bool` (`manifest.py`)
+- ▪️ **[`WikiPageIterator.should_use_streaming`](files/src/local_deepwiki/export/streaming.md)** `(memory_limit_mb: int) → bool` (`streaming.py`) - Determine if streaming mode should be used based on wiki ...
+- ▪️⚡ **[`TestWithRetryFallbackPath.single_attempt_func`](files/tests/test_base_provider.md)** `(...)` (`test_base_provider.py`)
+- ▪️ **[`ASTCache.size`](files/src/local_deepwiki/core/parser.md)** `(...) → int` (`parser.py`) - Return current number of entries in cache.
+- ▪️ **[`TestParallelEmbedding.slow_vector_store`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Create a vector store with slow embedding provider.
+- 🔷 **[`SlowMockEmbeddingProvider`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Mock embedding provider with configurable delay for testi...
+- 🔷 **[`SmallCacheConfig`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`)
+- 🔹 **[`sortColumn`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`sortColumn`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`sortColumn`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
 - 🔷 **[`SourceReference`](files/src/local_deepwiki/models.md)** (`models.py`) - A reference to a source code location.
 - 🔷 **[`StaleInfo`](files/src/local_deepwiki/core/git_utils.md)** (`git_utils.py`) - Information about a potentially stale wiki page.
 - 🔷 **[`StaleReport`](files/src/local_deepwiki/generators/stale_detection.md)** (`stale_detection.py`) - Summary of stale documentation analysis.
+- ▪️ **[`GenerationProgress.start_file`](files/src/local_deepwiki/generators/progress_tracker.md)** `(file_path: str) → None` (`progress_tracker.py`) - Mark a file as being processed.
+- ▪️ **[`OperationProgressRegistry.start_operation`](files/src/local_deepwiki/progress.md)** `(operation_id: str, operation_type: OperationType, total: int | None) → ProgressManager` (`progress.py`) - Start tracking a new operation.
+- ▪️ **[`GenerationProgress.start_phase`](files/src/local_deepwiki/generators/progress_tracker.md)** `(phase: str, total: int) → None` (`progress_tracker.py`) - Start a new generation phase.
+- ▪️ **[`RateLimiter.state`](files/src/local_deepwiki/core/rate_limiter.md)** `(...) → RateLimitState` (`rate_limiter.py`) - Get the current rate limit state (for monitoring).
 - ▪️ **[`LLMCache.stats`](files/src/local_deepwiki/core/llm_cache.md)** `(...) → dict[str, int]` (`llm_cache.py`) - Get cache statistics.
+- ▪️ **[`SearchCache.stats`](files/src/local_deepwiki/core/vectorstore.md)** `(...) → dict[str, int]` (`vectorstore.py`) - Get cache statistics.
 - ▪️ **[`CachingLLMProvider.stats`](files/src/local_deepwiki/providers/llm/cached.md)** `(...) → dict[str, int]` (`cached.py`) - Get cache statistics.
-- ▪️ **[`TestWikiStatusManagerHelpers.status_manager`](files/tests/test_incremental_wiki.md)** `(...)` (`test_incremental_wiki.py`) - Create a [WikiStatusManager](files/src/local_deepwiki/generators/wiki_status.md) instance.
+- ▪️ **[`EmbeddingCache.stats`](files/src/local_deepwiki/providers/embeddings/cache.md)** `(...) → dict[str, int]` (`cache.py`) - Get cache statistics.
+- ▪️ **[`TestWikiStatusManagerHelpers.status_manager`](files/tests/test_incremental_wiki.md)** `(...)` (`test_incremental_wiki.py`) - Create a WikiStatusManager instance.
+- ▪️⚡ **[`TestFullPipeline.store_chunks`](files/tests/test_integration_pipeline.md)** `(...)` (`test_integration_pipeline.py`)
+- ▪️⚡ **[`TestFullPipeline.store_chunks`](files/tests/test_integration_pipeline.md)** `(...)` (`test_integration_pipeline.py`)
+- ▪️⚡ **[`TestFuzzySearchHelper.store_with_named_chunks`](files/tests/test_fuzzy_search.md)** `(...)` (`test_fuzzy_search.py`) - Create a store with chunks that have names.
 - 🔹 **[`stream_async_generator`](files/src/local_deepwiki/web/app.md)** `(async_gen_factory: Callable[[], AsyncIterator[str]]) → Iterator[str]` (`app.py`) - Bridge an async generator to a sync generator using a queue.
+- 🔷 **[`StreamingExporter`](files/src/local_deepwiki/export/streaming.md)** (`streaming.py`) - Abstract base class for streaming wiki exporters.
+- 🔷 **[`StreamingHtmlExporter`](files/src/local_deepwiki/export/html.md)** (`html.py`) - Memory-efficient HTML exporter using streaming page itera...
+- 🔷 **[`StreamingPdfExporter`](files/src/local_deepwiki/export/pdf.md)** (`pdf.py`) - Memory-efficient PDF exporter using streaming page iterat...
+- 🔷 **[`Subject`](files/src/local_deepwiki/security/access_control.md)** (`access_control.py`) - Represents a user or service making a request.
 - 🔷 **[`SubQuestion`](files/src/local_deepwiki/models.md)** (`models.py`) - A decomposed sub-question for deep research.
 - ▪️⚡ **[`TestWithRetry.successful_func`](files/tests/test_retry.md)** `(...)` (`test_retry.py`)
+- ▪️ **[`ConfigDiff.summary`](files/src/local_deepwiki/config.md)** `(...) → str` (`config.py`) - Return a human-readable summary of changes.
+- ▪️ **[`TestEventEmitter.sync_handler`](files/tests/test_events.md)** `(event: Event) → None` (`test_events.py`)
+- 🔹 **[`sync_progress_callback`](files/src/local_deepwiki/handlers.md)** `(msg: str, current: int, total: int) → None` (`handlers.py`) - Sync callback for indexer - updates state for next async ...
+- 🔹 **[`sync_wrapper`](files/src/local_deepwiki/security/access_control.md)** `(...)` (`access_control.py`)
+- 🔹 **[`sync_wrapper`](files/src/local_deepwiki/security/access_control.md)** `(...)` (`access_control.py`)
+- 🔹 **[`sync_wrapper`](files/src/local_deepwiki/security/access_control.md)** `(...)` (`access_control.py`)
 
 ## T
 
 - 🔷 **[`TableOfContents`](files/src/local_deepwiki/generators/toc.md)** (`toc.py`) - Hierarchical table of contents with numbered sections.
+- ▪️ **[`TestRepositoryAccessController.test_accepts_path_object`](files/tests/test_repository_access.md)** `(...)` (`test_repository_access.py`) - Test that Path objects are accepted.
+- ▪️ **[`TestRepositoryAccessController.test_accepts_string_path`](files/tests/test_repository_access.md)** `(...)` (`test_repository_access.py`) - Test that string paths are accepted.
+- ▪️⚡ **[`TestRateLimiter.test_acquire_increments_counters`](files/tests/test_rate_limiter.md)** `(...)` (`test_rate_limiter.py`) - Test that acquire increments counters correctly.
+- ▪️ **[`TestEventEmitter.test_add_handler`](files/tests/test_events.md)** `(emitter: EventEmitter)` (`test_events.py`) - Test adding a handler.
+- ▪️ **[`TestProgressBuffer.test_add_no_flush`](files/tests/test_progress.md)** `(...)` (`test_progress.py`) - Test adding updates without triggering flush.
+- ▪️ **[`TestStreamingPdfExporter.test_add_toc_entries_html`](files/tests/test_pdf_export.md)** `(sample_wiki: Path, tmp_path: Path)` (`test_pdf_export.py`) - Test _add_toc_entries_html adds entries recursively.
+- ▪️ **[`TestProgressBuffer.test_add_triggers_size_flush`](files/tests/test_progress.md)** `(...)` (`test_progress.py`) - Test that max buffer size triggers flush.
+- ▪️ **[`TestProgressBuffer.test_add_triggers_time_flush`](files/tests/test_progress.md)** `(...)` (`test_progress.py`) - Test that time interval triggers flush.
 - ▪️⚡ **[`TestGenerateSingleFileDoc.test_adds_api_reference`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test adds API reference section.
+- ▪️ **[`TestAddStaleBanners.test_adds_banner_to_stale_pages`](files/tests/test_stale_detection.md)** `(tmp_path: Path) → None` (`test_stale_detection.py`) - Test adds banners to pages with stale documentation.
+- ▪️ **[`TestGenerateFileEnrichmentsUsedBy.test_adds_blame_section_when_available`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test adds blame section when _generate_blame_section retu...
 - ▪️⚡ **[`TestGenerateSingleFileDoc.test_adds_call_graph`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test adds call graph section.
 - ▪️⚡ **[`TestGenerateSingleFileDoc.test_adds_class_diagram`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test adds class diagram for files with classes.
+- ▪️⚡ **[`TestBuildDependencyGraphEdgeCases.test_adds_internal_edges`](files/tests/test_dependency_graph.md)** `(...)` (`test_dependency_graph.py`) - Test that edges are added for internal imports (lines 496...
 - ▪️ **[`TestCrossLinker.test_adds_links_to_prose`](files/tests/test_crosslinks.md)** `(...)` (`test_crosslinks.py`) - Test that links are added to prose text.
 - ▪️ **[`TestAddSourceRefsSections.test_adds_section_to_architecture_page`](files/tests/test_source_refs.md)** `(...)` (`test_source_refs.py`) - Test that sections are added to architecture page.
 - ▪️ **[`TestAddSourceRefsSections.test_adds_section_to_module_pages`](files/tests/test_source_refs.md)** `(...)` (`test_source_refs.py`) - Test that sections are added to module pages.
+- ▪️ **[`TestAddSeeAlsoSections.test_adds_sections_to_file_pages`](files/tests/test_see_also.md)** `(...)` (`test_see_also.py`) - Test that See Also sections are added to file documentati...
 - ▪️ **[`TestAddSourceRefsSections.test_adds_sections_to_file_pages`](files/tests/test_source_refs.md)** `(...)` (`test_source_refs.py`) - Test that sections are added to file documentation pages.
 - ▪️⚡ **[`TestGenerateSingleFileDoc.test_adds_test_examples`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test adds test examples section.
 - ▪️ **[`TestInjectInlineSourceCode.test_adds_unmatched_chunks_to_additional_section`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test adds unmatched chunks to Additional Source Code sect...
+- ▪️ **[`TestGenerateFileEnrichmentsUsedBy.test_adds_used_by_section_when_callers_exist`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test adds Used By section when file has callers.
+- ▪️⚡ **[`TestAnalyzeProjectCoverage.test_aggregates_stats`](files/tests/test_coverage.md)** `(...)` (`test_coverage.py`) - Test that stats are aggregated across files.
 - ▪️ **[`TestEntityRegistry.test_alias_lookup`](files/tests/test_crosslinks.md)** `(...)` (`test_crosslinks.py`) - Test looking up entities by alias.
+- ▪️⚡ **[`TestAuxiliaryPagesGeneration.test_all_auxiliary_pages_generated`](files/tests/test_wiki_coverage.md)** `(...)` (`test_wiki_coverage.py`) - Test all auxiliary pages are generated when content is re...
 - ▪️ **[`TestCodeChunkToVectorRecord.test_all_chunk_types`](files/tests/test_models.md)** `(...)` (`test_models.py`) - Test conversion works for all chunk types.
 - ▪️ **[`TestCodeChunkToVectorRecord.test_all_languages`](files/tests/test_models.md)** `(...)` (`test_models.py`) - Test conversion works for all supported languages.
+- ▪️⚡ **[`TestListTools.test_all_tools_have_descriptions`](files/tests/test_server.md)** `(...)` (`test_server.py`) - Test that all tools have non-empty descriptions.
+- ▪️⚡ **[`TestListTools.test_all_tools_have_input_schemas`](files/tests/test_server.md)** `(...)` (`test_server.py`) - Test that all tools have input schemas.
+- ▪️ **[`TestHookRunner.test_allowed_extensions`](files/tests/test_events.md)** `(emitter: EventEmitter, scripts_dir: Path)` (`test_events.py`) - Test all allowed extensions can be registered.
+- ▪️⚡ **[`TestDeepResearchEdgeCases.test_analyze_gaps_with_no_results`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test that _analyze_gaps returns original question when no...
 - ▪️ **[`TestRelationshipAnalyzer.test_analyze_python_imports`](files/tests/test_see_also.md)** `(...)` (`test_see_also.py`) - Test analyzing Python import statements.
+- ▪️⚡ **[`TestValidationMethods.test_anthropic_validate_model_known`](files/tests/test_providers.md)** `(...)` (`test_providers.py`) - Test Anthropic validate_model for known model.
+- ▪️⚡ **[`TestValidationMethods.test_anthropic_validate_no_api_key`](files/tests/test_providers.md)** `(...)` (`test_providers.py`) - Test Anthropic initialization fails without API key (earl...
+- ▪️ **[`TestApiChatFullFlow.test_api_chat_llm_error`](files/tests/test_web.md)** `(...)` (`test_web.py`) - Test api_chat handles LLM errors gracefully.
+- ▪️ **[`TestApiChatFullFlow.test_api_chat_no_search_results`](files/tests/test_web.md)** `(...)` (`test_web.py`) - Test api_chat when no search results are found.
+- ▪️ **[`TestApiChatFullFlow.test_api_chat_with_custom_provider`](files/tests/test_web.md)** `(...)` (`test_web.py`) - Test api_chat with non-default chat provider.
+- ▪️ **[`TestApiChatFullFlow.test_api_chat_with_indexed_repo`](files/tests/test_web.md)** `(...)` (`test_web.py`) - Test api_chat with fully mocked providers and vector store.
+- ▪️ **[`TestEdgeCases.test_api_key_with_newline`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Test handling API key with trailing newline.
+- ▪️ **[`TestApiResearchFullFlow.test_api_research_pipeline_error`](files/tests/test_web.md)** `(...)` (`test_web.py`) - Test api_research handles pipeline errors gracefully.
+- ▪️ **[`TestApiResearchFullFlow.test_api_research_progress_callback`](files/tests/test_web.md)** `(...)` (`test_web.py`) - Test api_research sends progress updates.
+- ▪️ **[`TestApiResearchFullFlow.test_api_research_with_custom_provider`](files/tests/test_web.md)** `(...)` (`test_web.py`) - Test api_research with non-default provider.
+- ▪️ **[`TestApiResearchFullFlow.test_api_research_with_indexed_repo`](files/tests/test_web.md)** `(...)` (`test_web.py`) - Test api_research with fully mocked pipeline.
+- ▪️ **[`TestSearchState.test_apply_filters`](files/tests/test_interactive_search.md)** `(sample_results: list[SearchResult]) → None` (`test_interactive_search.py`) - apply_filters should update filtered_results.
+- ▪️ **[`TestSearchState.test_apply_filters_resets_selection`](files/tests/test_interactive_search.md)** `(sample_results: list[SearchResult]) → None` (`test_interactive_search.py`) - apply_filters should reset selection if out of bounds.
+- ▪️⚡ **[`TestListTools.test_ask_question_tool_schema`](files/tests/test_server.md)** `(...)` (`test_server.py`) - Test ask_question tool has correct schema.
+- ▪️ **[`TestConfig.test_ast_cache_config_custom`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test AST cache with custom configuration.
+- ▪️ **[`TestConfig.test_ast_cache_config_defaults`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test AST cache configuration defaults.
+- ▪️ **[`TestConfig.test_ast_cache_config_validation`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test AST cache config validation bounds.
+- ▪️ **[`TestASTCache.test_ast_cache_stats_to_dict`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test ASTCacheStats.to_dict method.
+- ▪️ **[`TestASTCache.test_ast_cache_stats_zero_requests`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test hit rate calculation with zero requests.
+- ▪️⚡ **[`TestWikiPageIterator.test_async_iteration`](files/tests/test_streaming_export.md)** `(sample_wiki: Path)` (`test_streaming_export.py`) - Test async iteration over pages.
 - ▪️ **[`TestCodeChunkToVectorRecord.test_basic_conversion`](files/tests/test_models.md)** `(...)` (`test_models.py`) - Test basic chunk to vector record conversion.
+- ▪️⚡ **[`TestEmbeddingCache.test_batch_write_threshold`](files/tests/test_embedding_cache.md)** `(...)` (`test_embedding_cache.py`) - Test batch write threshold batching.
+- ▪️ **[`TestDocstringExtractorHelpers.test_block_comment_no_prev_sibling`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test _get_block_comment returns None when no prev_sibling.
+- ▪️ **[`TestDocstringExtractorHelpers.test_block_comment_non_jsdoc_style`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test _get_block_comment returns None for /* */ style (not...
+- ▪️ **[`TestDocstringExtractorHelpers.test_block_comment_wrong_type`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test _get_block_comment returns None when prev_sibling is...
+- ▪️ **[`TestExtractUsageSnippetEdgeCases.test_breaks_after_two_assertions`](files/tests/test_test_examples.md)** `(tmp_path: Path) → None` (`test_test_examples.py`) - Test that extraction stops after 2 assertions (line 288).
 - ▪️ **[`TestPdfExporterEdgeCases.test_build_combined_html_with_mermaid`](files/tests/test_pdf_export.md)** `(tmp_path: Path)` (`test_pdf_export.py`) - Test building combined HTML with mermaid diagrams.
+- ▪️⚡ **[`TestDeepResearchEdgeCases.test_build_context_summary_empty_results`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test that _build_context_summary handles empty results.
+- ▪️ **[`TestInteractiveSearch.test_build_filters_panel_empty`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock) → None` (`test_interactive_search.py`) - _build_filters_panel should show 'No filters active' when...
+- ▪️ **[`TestInteractiveSearch.test_build_filters_panel_with_filters`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock) → None` (`test_interactive_search.py`) - _build_filters_panel should show active filters.
+- ▪️ **[`TestLayoutAndDisplay.test_build_help_panel`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock) → None` (`test_interactive_search.py`) - _build_help_panel should create panel with keyboard short...
+- ▪️ **[`TestLayoutAndDisplay.test_build_input_prompt_filter_language_mode`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock) → None` (`test_interactive_search.py`) - Input prompt should show language filter mode.
+- ▪️ **[`TestLayoutAndDisplay.test_build_input_prompt_filter_path_mode`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock) → None` (`test_interactive_search.py`) - Input prompt should show path filter mode.
+- ▪️ **[`TestLayoutAndDisplay.test_build_input_prompt_filter_score_mode`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock) → None` (`test_interactive_search.py`) - Input prompt should show score filter mode.
+- ▪️ **[`TestLayoutAndDisplay.test_build_input_prompt_filter_type_mode`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock) → None` (`test_interactive_search.py`) - Input prompt should show type filter mode.
+- ▪️ **[`TestLayoutAndDisplay.test_build_input_prompt_search_mode`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock) → None` (`test_interactive_search.py`) - Input prompt should show search mode with query.
+- ▪️ **[`TestLayoutAndDisplay.test_build_input_prompt_unknown_mode`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock) → None` (`test_interactive_search.py`) - Input prompt should default to search style for unknown m...
+- ▪️ **[`TestLayoutAndDisplay.test_build_layout_with_error_message`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock) → None` (`test_interactive_search.py`) - _build_layout should handle error messages.
+- ▪️ **[`TestLayoutAndDisplay.test_build_layout_with_preview`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock, sample_results: list[SearchResult]) → None` (`test_interactive_search.py`) - _build_layout should create split layout when preview is on.
+- ▪️ **[`TestLayoutAndDisplay.test_build_layout_without_preview`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock, sample_results: list[SearchResult]) → None` (`test_interactive_search.py`) - _build_layout should create results-only layout when prev...
+- ▪️⚡ **[`TestFuzzySearchHelper.test_build_name_index`](files/tests/test_fuzzy_search.md)** `(...)` (`test_fuzzy_search.py`) - Test building the fuzzy name index.
+- ▪️⚡ **[`TestFuzzySearchHelper.test_build_name_index`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test building the fuzzy name index.
+- ▪️⚡ **[`TestFuzzySearchHelperEdgeCases.test_build_name_index_empty_table`](files/tests/test_fuzzy_search.md)** `(...)` (`test_fuzzy_search.py`) - Test build_name_index with no table (lines 347-348).
+- ▪️⚡ **[`TestFuzzySearchHelperEdgeCases.test_build_name_index_skips_non_name_types`](files/tests/test_fuzzy_search.md)** `(...)` (`test_fuzzy_search.py`) - Test build_name_index skips chunks without meaningful nam...
+- ▪️⚡ **[`TestFuzzySearchHelperEdgeCases.test_build_name_index_with_empty_names`](files/tests/test_fuzzy_search.md)** `(...)` (`test_fuzzy_search.py`) - Test build_name_index skips chunks with empty names (line...
+- ▪️ **[`TestInteractiveSearch.test_build_preview_panel`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock, sample_results: list[SearchResult]) → None` (`test_interactive_search.py`) - _build_preview_panel should create syntax-highlighted pre...
+- ▪️ **[`TestInteractiveSearch.test_build_preview_panel_no_selection`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock) → None` (`test_interactive_search.py`) - _build_preview_panel should return None when no selection.
+- ▪️ **[`TestLayoutAndDisplay.test_build_preview_panel_without_docstring`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock) → None` (`test_interactive_search.py`) - Preview panel should work without docstring.
+- ▪️ **[`TestInteractiveSearch.test_build_results_table`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock, sample_results: list[SearchResult]) → None` (`test_interactive_search.py`) - _build_results_table should create a valid Rich Table.
+- ▪️ **[`TestLayoutAndDisplay.test_build_results_table_long_name_truncation`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock) → None` (`test_interactive_search.py`) - Long names should be truncated with ellipsis.
+- ▪️ **[`TestLayoutAndDisplay.test_build_results_table_long_path_truncation`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock) → None` (`test_interactive_search.py`) - Long file paths should be truncated with leading ellipsis.
+- ▪️ **[`TestStreamingPdfExporter.test_build_streaming_toc_html`](files/tests/test_pdf_export.md)** `(sample_wiki: Path, tmp_path: Path)` (`test_pdf_export.py`) - Test _build_streaming_toc_html creates TOC HTML.
 - ▪️ **[`TestPdfExporter.test_build_toc_html`](files/tests/test_pdf_export.md)** `(sample_wiki: Path, tmp_path: Path)` (`test_pdf_export.py`) - Test building TOC HTML.
+- ▪️⚡ **[`TestCollectClassHierarchy.test_builds_children_relationships`](files/tests/test_inheritance.md)** `(...)` (`test_inheritance.py`) - Test that children relationships are built correctly.
+- ▪️⚡ **[`TestRateLimiter.test_burst_limit_enforced`](files/tests/test_rate_limiter.md)** `(...)` (`test_rate_limiter.py`) - Test that burst limit limits concurrent requests.
+- ▪️ **[`TestUncoveredCodePaths.test_c_doxygen_comment`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test C Doxygen block comment.
+- ▪️ **[`TestASTCache.test_cache_cleanup_expired`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test manual cleanup of expired entries.
+- ▪️ **[`TestASTCache.test_cache_clear`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test clearing all cache entries.
+- ▪️ **[`TestASTCache.test_cache_creation_custom_params`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test creating cache with custom parameters.
+- ▪️ **[`TestASTCache.test_cache_creation_defaults`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test creating cache with default parameters.
 - ▪️ **[`TestManifestCaching.test_cache_entry_serialization`](files/tests/test_manifest.md)** `(...)` (`test_manifest.py`) - Cache entry can be serialized and deserialized.
 - ▪️ **[`TestManifestCaching.test_cache_invalid_when_file_added`](files/tests/test_manifest.md)** `(...)` (`test_manifest.py`) - Cache is invalid when a new manifest file is added.
 - ▪️ **[`TestManifestCaching.test_cache_invalid_when_file_modified`](files/tests/test_manifest.md)** `(...)` (`test_manifest.py`) - Cache is invalid when a file is modified.
 - ▪️ **[`TestManifestCaching.test_cache_invalid_when_file_removed`](files/tests/test_manifest.md)** `(...)` (`test_manifest.py`) - Cache is invalid when a manifest file is removed.
+- ▪️ **[`TestASTCache.test_cache_invalidate_file`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test invalidating a specific file from cache.
+- ▪️ **[`TestASTCache.test_cache_lru_eviction`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test LRU eviction when cache is full.
 - ▪️⚡ **[`TestLLMCache.test_cache_miss_on_empty_cache`](files/tests/test_llm_cache.md)** `(cache: LLMCache)` (`test_llm_cache.py`) - Test that empty cache returns None.
+- ▪️ **[`TestASTCache.test_cache_miss_wrong_hash`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test cache miss when file hash doesn't match.
+- ▪️ **[`TestASTCache.test_cache_set_and_get`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test storing and retrieving an AST from cache.
 - ▪️⚡ **[`TestLLMCache.test_cache_set_and_get_exact_match`](files/tests/test_llm_cache.md)** `(cache: LLMCache)` (`test_llm_cache.py`) - Test that exact same prompt returns cached response.
+- ▪️ **[`TestASTCache.test_cache_stats`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test cache statistics tracking.
 - ▪️⚡ **[`TestLLMCache.test_cache_stats`](files/tests/test_llm_cache.md)** `(cache: LLMCache)` (`test_llm_cache.py`) - Test that cache statistics are tracked correctly.
+- ▪️ **[`TestASTCache.test_cache_ttl_expiration`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test that cache entries expire after TTL.
 - ▪️ **[`TestManifestCaching.test_cache_valid_when_unchanged`](files/tests/test_manifest.md)** `(...)` (`test_manifest.py`) - Cache is valid when files haven't changed.
+- ▪️ **[`TestASTCache.test_cached_ast_dataclass`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test CachedAST dataclass creation.
+- ▪️ **[`TestGenerationProgress.test_calculate_eta_completed`](files/tests/test_progress_tracker.md)** `(...)` (`test_progress_tracker.py`) - Test ETA calculation when all files completed.
+- ▪️ **[`TestGenerationProgress.test_calculate_eta_no_rate`](files/tests/test_progress_tracker.md)** `(...)` (`test_progress_tracker.py`) - Test ETA calculation with no rate established.
+- ▪️ **[`TestGenerationProgress.test_calculate_rate_empty`](files/tests/test_progress_tracker.md)** `(...)` (`test_progress_tracker.py`) - Test rate calculation with no completions.
+- ▪️ **[`TestGenerationProgress.test_calculate_rate_zero_avg_time`](files/tests/test_progress_tracker.md)** `(...)` (`test_progress_tracker.py`) - Test rate calculation when average time is zero (line 194).
+- ▪️ **[`TestGenerateStaleReportPageWithStalePages.test_calculates_freshness_percentage`](files/tests/test_stale_detection.md)** `(tmp_path: Path) → None` (`test_stale_detection.py`) - Test calculates correct freshness percentage.
+- ▪️ **[`TestProgressManager.test_callback_error_handling`](files/tests/test_progress.md)** `(...)` (`test_progress.py`) - Test that callback errors don't crash updates.
+- ▪️⚡ **[`TestDebouncedHandlerCallback.test_callback_exception_handled`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test that exceptions in callback are handled gracefully.
+- ▪️⚡ **[`TestLazyIndexIntegration.test_callback_immediate_if_already_ready`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test that callback is invoked immediately if index is alr...
+- ▪️⚡ **[`TestDebouncedHandlerCallback.test_callback_invoked_on_failure`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test that callback is invoked on failed reindex.
+- ▪️⚡ **[`TestLazyIndexIntegration.test_callback_invoked_on_index_ready`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test that registered callbacks are invoked when index bec...
+- ▪️⚡ **[`TestDebouncedHandlerCallback.test_callback_invoked_on_success`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test that callback is invoked on successful reindex.
+- ▪️⚡ **[`TestGenerateFileDocsCallbacks.test_calls_generation_progress_complete_file_on_error`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test calls generation_progress.complete_file() on error.
+- ▪️⚡ **[`TestGenerateFileDocsCallbacks.test_calls_progress_callback_for_each_file`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test calls progress_callback for each processed file.
+- ▪️⚡ **[`TestGenerateFileDocsCallbacks.test_calls_write_callback_for_each_page`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test calls write_callback for each generated page.
+- ▪️ **[`TestCheckpointHelperFunctions.test_cancel_nonexistent_research`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test cancelling research that doesn't exist.
+- ▪️ **[`TestCheckpointHelperFunctions.test_cancel_research`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test the cancel_research helper function.
 - ▪️⚡ **[`TestResearchCancellation.test_cancellation_after_decomposition`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test cancellation after decomposition completes.
 - ▪️⚡ **[`TestResearchCancellation.test_cancellation_before_decomposition`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test cancellation before decomposition starts.
 - ▪️⚡ **[`TestResearchCancellation.test_cancellation_before_gap_analysis`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test cancellation before gap analysis.
 - ▪️⚡ **[`TestResearchCancellation.test_cancellation_before_synthesis`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test cancellation before synthesis.
 - ▪️⚡ **[`TestResearchCancellation.test_cancellation_stops_llm_calls`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test that cancellation prevents further LLM calls.
 - ▪️⚡ **[`TestResearchCancellation.test_cancelled_progress_type_exists`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test that CANCELLED progress type exists.
+- ▪️⚡ **[`TestChangelogPageGeneration.test_changelog_page_generated`](files/tests/test_wiki_coverage.md)** `(...)` (`test_wiki_coverage.py`) - Test changelog page is added when generated (lines 470-473).
+- ▪️⚡ **[`TestResearchCheckpointing.test_checkpoint_created_during_research`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test that checkpoints are created during research.
+- ▪️⚡ **[`TestResearchCheckpointing.test_checkpoint_not_created_without_repo_path`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test that no checkpoint is created when repo_path is not ...
+- ▪️⚡ **[`TestResearchCheckpointing.test_checkpoint_saved_on_cancellation`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test that checkpoint is saved when research is cancelled.
 - ▪️ **[`TestCodeChunker.test_chunk_class_with_parent_classes`](files/tests/test_chunker.md)** `(...)` (`test_chunker.py`) - Test that parent classes are extracted in metadata.
 - ▪️ **[`TestCodeChunker.test_chunk_empty_file`](files/tests/test_chunker.md)** `(...)` (`test_chunker.py`) - Test chunking an empty Python file.
 - ▪️ **[`TestCodeChunker.test_chunk_extracts_class_names`](files/tests/test_chunker.md)** `(...)` (`test_chunker.py`) - Test that class names are extracted.
@@ -743,6 +2065,12 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️ **[`TestCodeChunker.test_chunk_go_file`](files/tests/test_chunker.md)** `(...)` (`test_chunker.py`) - Test chunking a Go file.
 - ▪️⚡ **[`TestVectorStoreEdgeCases.test_chunk_id_injection_attempt`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test that SQL-like injection in chunk_id is neutralized.
 - ▪️⚡ **[`TestVectorStoreEdgeCases.test_chunk_id_with_quotes`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test chunk ID with single quotes is handled safely.
+- ▪️⚡ **[`TestChunkIterator.test_chunk_iterator_async_iteration`](files/tests/test_vectorstore_pagination.md)** `(...)` (`test_vectorstore_pagination.py`) - Test async iteration over chunks.
+- ▪️⚡ **[`TestChunkIterator.test_chunk_iterator_batches`](files/tests/test_vectorstore_pagination.md)** `(...)` (`test_vectorstore_pagination.py`) - Test batch iteration.
+- ▪️⚡ **[`TestChunkIterator.test_chunk_iterator_count`](files/tests/test_vectorstore_pagination.md)** `(...)` (`test_vectorstore_pagination.py`) - Test ChunkIterator count() method.
+- ▪️⚡ **[`TestChunkIterator.test_chunk_iterator_filter`](files/tests/test_vectorstore_pagination.md)** `(...)` (`test_vectorstore_pagination.py`) - Test ChunkIterator with filter.
+- ▪️⚡ **[`TestChunkIterator.test_chunk_iterator_reset`](files/tests/test_vectorstore_pagination.md)** `(...)` (`test_vectorstore_pagination.py`) - Test iterator reset.
+- ▪️⚡ **[`TestChunkIterator.test_chunk_iterator_sync_iteration`](files/tests/test_vectorstore_pagination.md)** `(...)` (`test_vectorstore_pagination.py`) - Test synchronous iteration over chunks.
 - ▪️ **[`TestCodeChunker.test_chunk_java_file`](files/tests/test_chunker.md)** `(...)` (`test_chunker.py`) - Test chunking a Java file.
 - ▪️ **[`TestCodeChunker.test_chunk_javascript_file`](files/tests/test_chunker.md)** `(...)` (`test_chunker.py`) - Test chunking a JavaScript file.
 - ▪️ **[`TestCodeChunker.test_chunk_large_class_creates_summary_and_methods`](files/tests/test_chunker.md)** `(...)` (`test_chunker.py`) - Test that large classes are split into summary and method...
@@ -750,125 +2078,423 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️ **[`TestCodeChunker.test_chunk_rust_file`](files/tests/test_chunker.md)** `(...)` (`test_chunker.py`) - Test chunking a Rust file.
 - ▪️ **[`TestCodeChunker.test_chunk_sets_line_numbers`](files/tests/test_chunker.md)** `(...)` (`test_chunker.py`) - Test that line numbers are set correctly.
 - ▪️ **[`TestCodeChunker.test_chunk_swift_file`](files/tests/test_chunker.md)** `(...)` (`test_chunker.py`) - Test chunking a Swift file.
+- ▪️ **[`TestSearchFilters.test_chunk_type_filter`](files/tests/test_interactive_search.md)** `(sample_results: list[SearchResult]) → None` (`test_interactive_search.py`) - Chunk type filter should only match specified type.
 - ▪️ **[`TestCodeChunker.test_chunk_typescript_file`](files/tests/test_chunker.md)** `(...)` (`test_chunker.py`) - Test chunking a TypeScript file.
 - ▪️ **[`TestCodeChunker.test_chunk_unsupported_file_returns_empty`](files/tests/test_chunker.md)** `(...)` (`test_chunker.py`) - Test that unsupported files return no chunks.
+- ▪️⚡ **[`TestAnalyzeFileCoverage.test_chunk_without_name`](files/tests/test_coverage.md)** `(...)` (`test_coverage.py`) - Test chunk without name uses Unknown.
 - ▪️ **[`TestConfig.test_chunking_config`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test chunking configuration.
+- ▪️⚡ **[`TestExamplesWikiGeneratorEdgeCases.test_class_with_no_docstring`](files/tests/test_examples_plugin.md)** `(mock_index_status: MagicMock, tmp_path: Path) → None` (`test_examples_plugin.py`) - Test class without docstring but with test examples.
+- ▪️ **[`TestPluginRegistry.test_cleanup_all`](files/tests/test_plugins.md)** `(...)` (`test_plugins.py`) - Test cleaning up all plugins.
+- ▪️⚡ **[`TestEmbeddingCache.test_cleanup_expired`](files/tests/test_embedding_cache.md)** `(...)` (`test_embedding_cache.py`) - Test cleanup of expired entries.
+- ▪️ **[`TestEmbeddingCacheErrorHandling.test_cleanup_expired_sqlite_error`](files/tests/test_embedding_cache.md)** `(...)` (`test_embedding_cache.py`) - Test cleanup_expired handles sqlite3.Error (lines 439-441).
+- ▪️⚡ **[`TestEmbeddingCache.test_cleanup_if_needed`](files/tests/test_embedding_cache.md)** `(...)` (`test_embedding_cache.py`) - Test cleanup when max_entries is exceeded.
+- ▪️ **[`TestEmbeddingCacheErrorHandling.test_cleanup_if_needed_sqlite_error`](files/tests/test_embedding_cache.md)** `(...)` (`test_embedding_cache.py`) - Test cleanup_if_needed handles sqlite3.Error (lines 487-4...
+- ▪️⚡ **[`TestEmbeddingCacheErrorHandling.test_cleanup_if_needed_under_limit`](files/tests/test_embedding_cache.md)** `(...)` (`test_embedding_cache.py`) - Test cleanup_if_needed returns early when under limit (li...
+- ▪️ **[`TestSearchFilters.test_clear`](files/tests/test_interactive_search.md)** `(...) → None` (`test_interactive_search.py`) - Clear should reset all filters.
+- ▪️⚡ **[`TestEmbeddingCache.test_clear`](files/tests/test_embedding_cache.md)** `(...)` (`test_embedding_cache.py`) - Test clearing the cache.
+- ▪️ **[`TestEventEmitter.test_clear_all_handlers`](files/tests/test_events.md)** `(emitter: EventEmitter)` (`test_events.py`) - Test clearing all handlers.
 - ▪️⚡ **[`TestLLMCache.test_clear_cache`](files/tests/test_llm_cache.md)** `(cache: LLMCache)` (`test_llm_cache.py`) - Test clearing the cache.
 - ▪️⚡ **[`TestLLMCacheEdgeCases.test_clear_exception_handling`](files/tests/test_llm_cache.md)** `(cache: LLMCache)` (`test_llm_cache.py`) - Test clear handles exceptions gracefully.
+- ▪️ **[`TestEventEmitter.test_clear_handlers_specific_type`](files/tests/test_events.md)** `(emitter: EventEmitter)` (`test_events.py`) - Test clearing handlers for specific type.
+- ▪️ **[`TestEmbeddingCacheErrorHandling.test_clear_sqlite_error`](files/tests/test_embedding_cache.md)** `(...)` (`test_embedding_cache.py`) - Test clear handles sqlite3.Error (lines 414-416).
+- ▪️ **[`TestAccessController.test_clear_subject`](files/tests/test_access_control.md)** `(...)` (`test_access_control.py`) - Verify clear_subject removes the current subject.
 - ▪️⚡ **[`TestLLMCacheEdgeCases.test_clear_when_table_not_exists`](files/tests/test_llm_cache.md)** `(cache: LLMCache)` (`test_llm_cache.py`) - Test clear returns 0 when table doesn't exist.
 - ▪️ **[`TestEnhancedDependencyGraph.test_clickable_links`](files/tests/test_diagrams.md)** `(...)` (`test_diagrams.py`) - Test click handlers are added when wiki_base_path provided.
-- ▪️ **[`TestModelRepr.test_code_chunk_repr_with_name`](files/tests/test_models.md)** `(...)` (`test_models.py`) - Test [CodeChunk](files/src/local_deepwiki/models.md) repr with a named chunk.
-- ▪️ **[`TestModelRepr.test_code_chunk_repr_without_name`](files/tests/test_models.md)** `(...)` (`test_models.py`) - Test [CodeChunk](files/src/local_deepwiki/models.md) repr without a name.
+- ▪️ **[`TestEmbeddingCache.test_close`](files/tests/test_embedding_cache.md)** `(...)` (`test_embedding_cache.py`) - Test closing the cache.
+- ▪️ **[`TestEmbeddingCacheErrorHandling.test_close_sqlite_error`](files/tests/test_embedding_cache.md)** `(...)` (`test_embedding_cache.py`) - Test close handles sqlite3.Error (lines 531-532).
+- ▪️ **[`TestModelRepr.test_code_chunk_repr_with_name`](files/tests/test_models.md)** `(...)` (`test_models.py`) - Test CodeChunk repr with a named chunk.
+- ▪️ **[`TestModelRepr.test_code_chunk_repr_without_name`](files/tests/test_models.md)** `(...)` (`test_models.py`) - Test CodeChunk repr without a name.
 - ▪️ **[`TestPdfExporter.test_collect_pages_in_order`](files/tests/test_pdf_export.md)** `(sample_wiki: Path, tmp_path: Path)` (`test_pdf_export.py`) - Test that pages are collected in TOC order.
 - ▪️ **[`TestPdfExporterEdgeCases.test_collect_pages_with_no_toc`](files/tests/test_pdf_export.md)** `(tmp_path: Path)` (`test_pdf_export.py`) - Test collecting pages when no TOC exists.
+- ▪️ **[`TestUncoveredCodePaths.test_collect_preceding_comments_stops_at_non_matching`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test that comment collection stops at non-matching prefix.
+- ▪️⚡ **[`TestCollectClassHierarchy.test_collects_class_with_parents`](files/tests/test_inheritance.md)** `(...)` (`test_inheritance.py`) - Test collecting a class with parent classes.
+- ▪️⚡ **[`TestCollectAllEntities.test_collects_classes`](files/tests/test_glossary.md)** `(...)` (`test_glossary.py`) - Test collecting class entities.
+- ▪️⚡ **[`TestCollectAllEntities.test_collects_functions`](files/tests/test_glossary.md)** `(...)` (`test_glossary.py`) - Test collecting function entities.
+- ▪️ **[`TestMethodChunkCollection.test_collects_method_chunks`](files/tests/test_diagrams.md)** `(...)` (`test_diagrams.py`) - Test that METHOD chunks are collected (lines 89-99, 208).
+- ▪️⚡ **[`TestCollectAllEntities.test_collects_methods`](files/tests/test_glossary.md)** `(...)` (`test_glossary.py`) - Test collecting method entities.
+- ▪️ **[`TestSearchFilters.test_combined_filters`](files/tests/test_interactive_search.md)** `(sample_results: list[SearchResult]) → None` (`test_interactive_search.py`) - Multiple filters should all be applied.
+- ▪️ **[`TestProgressManager.test_complete`](files/tests/test_progress.md)** `(...)` (`test_progress.py`) - Test marking operation as complete.
+- ▪️ **[`TestGenerationProgress.test_complete_file`](files/tests/test_progress_tracker.md)** `(...)` (`test_progress_tracker.py`) - Test marking a file as completed.
+- ▪️ **[`TestGenerationProgress.test_complete_file_without_path`](files/tests/test_progress_tracker.md)** `(...)` (`test_progress_tracker.py`) - Test completing a file without specifying path.
+- ▪️ **[`TestOperationProgressRegistry.test_complete_nonexistent_operation`](files/tests/test_progress.md)** `(...)` (`test_progress.py`) - Test completing a non-existent operation.
+- ▪️ **[`TestOperationProgressRegistry.test_complete_operation`](files/tests/test_progress.md)** `(...)` (`test_progress.py`) - Test completing an operation.
+- ▪️ **[`TestGenerationProgress.test_complete_phase`](files/tests/test_progress_tracker.md)** `(...)` (`test_progress_tracker.py`) - Test completing a phase.
+- ▪️ **[`TestProgressBuffer.test_complete_phase_triggers_flush`](files/tests/test_progress.md)** `(...)` (`test_progress.py`) - Test that COMPLETE phase always triggers flush.
+- ▪️ **[`TestGenerationProgress.test_completion_time_tracking`](files/tests/test_progress_tracker.md)** `(...)` (`test_progress_tracker.py`) - Test that completion times are tracked correctly.
+- ▪️ **[`TestEmbeddingCache.test_compute_cache_key`](files/tests/test_embedding_cache.md)** `(...)` (`test_embedding_cache.py`) - Test cache key computation.
 - ▪️ **[`TestWikiStatusManagerHelpers.test_compute_content_hash`](files/tests/test_incremental_wiki.md)** `(...)` (`test_incremental_wiki.py`) - Test content hash computation.
 - ▪️ **[`TestLargeFileHandling.test_compute_hash_empty_file`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test hash computation for empty file.
 - ▪️ **[`TestLargeFileHandling.test_compute_hash_small_file`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test hash computation for small file.
 - ▪️⚡ **[`TestLLMCacheEdgeCases.test_compute_hash_with_none_system_prompt`](files/tests/test_llm_cache.md)** `(cache: LLMCache)` (`test_llm_cache.py`) - Test _compute_hash handles None system_prompt.
-- ▪️ **[`TestProviderPrompts.test_config_get_prompts_changes_with_provider`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test [Config](files/src/local_deepwiki/config.md).get_prompts() changes when provider changes.
-- ▪️ **[`TestProviderPrompts.test_config_get_prompts_uses_current_provider`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test [Config](files/src/local_deepwiki/config.md).get_prompts() returns prompts for current LLM...
+- ▪️⚡ **[`TestRateLimiter.test_concurrent_acquire_is_safe`](files/tests/test_rate_limiter.md)** `(...)` (`test_rate_limiter.py`) - Test that concurrent acquires are handled safely.
+- ▪️ **[`TestEdgeCases.test_concurrent_validation`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Test that validation is safe for concurrent use.
+- 🔹 **[`test_config`](files/tests/test_integration_pipeline.md)** `(...) → Config` (`test_integration_pipeline.py`) - Create a test configuration optimized for integration tests.
+- ▪️ **[`TestProviderPrompts.test_config_get_prompts_changes_with_provider`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test Config.get_prompts() changes when provider changes.
+- ▪️ **[`TestProviderPrompts.test_config_get_prompts_uses_current_provider`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test Config.get_prompts() returns prompts for current LLM...
+- ▪️ **[`TestRepositoryAccessController.test_config_property`](files/tests/test_repository_access.md)** `(...)` (`test_repository_access.py`) - Test config property returns the configuration.
+- ▪️ **[`TestEdgeCases.test_config_with_extra_fields`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Test handling config with unknown/extra fields.
+- ▪️ **[`TestEdgeCases.test_config_with_null_values`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Test handling config with null values.
+- ▪️ **[`TestEdgeCases.test_config_with_special_yaml_types`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Test handling config with special YAML types.
+- ▪️⚡ **[`TestRateLimiter.test_context_manager_releases_on_exit`](files/tests/test_rate_limiter.md)** `(...)` (`test_rate_limiter.py`) - Test that context manager releases burst semaphore.
+- ▪️⚡ **[`TestAnalyzeFileCoverage.test_counts_documented_class`](files/tests/test_coverage.md)** `(...)` (`test_coverage.py`) - Test counting a documented class.
+- ▪️⚡ **[`TestAnalyzeFileCoverage.test_counts_documented_function`](files/tests/test_coverage.md)** `(...)` (`test_coverage.py`) - Test counting a documented function.
+- ▪️⚡ **[`TestAnalyzeFileCoverage.test_counts_documented_method`](files/tests/test_coverage.md)** `(...)` (`test_coverage.py`) - Test counting a documented method.
 - ▪️⚡ **[`TestGenerateFileDocs.test_counts_skipped_files`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test correctly counts skipped files (incremental update).
+- ▪️⚡ **[`TestAnalyzeFileCoverage.test_counts_undocumented_class`](files/tests/test_coverage.md)** `(...)` (`test_coverage.py`) - Test counting an undocumented class.
+- ▪️⚡ **[`TestAnalyzeFileCoverage.test_counts_undocumented_function`](files/tests/test_coverage.md)** `(...)` (`test_coverage.py`) - Test counting an undocumented function.
+- ▪️⚡ **[`TestAnalyzeFileCoverage.test_counts_undocumented_method`](files/tests/test_coverage.md)** `(...)` (`test_coverage.py`) - Test counting an undocumented method.
+- ▪️⚡ **[`TestGenerateCoveragePage.test_coverage_emoji_in_file_table`](files/tests/test_coverage.md)** `(...)` (`test_coverage.py`) - Test correct emoji appears in file coverage table.
+- ▪️⚡ **[`TestAuxiliaryPagesGeneration.test_coverage_page_generated`](files/tests/test_wiki_coverage.md)** `(...)` (`test_wiki_coverage.py`) - Test coverage page is added when content is generated (li...
 - ▪️ **[`TestDocstringExtraction.test_cpp_doxygen_triple_slash`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test C++ Doxygen triple-slash comments.
 - ▪️ **[`TestGetParentClasses.test_cpp_inheritance`](files/tests/test_chunker.md)** `(...)` (`test_chunker.py`) - Test C++ class with inheritance.
+- ▪️ **[`TestStreamingPdfExporter.test_create_empty_pdf`](files/tests/test_pdf_export.md)** `(sample_wiki: Path, tmp_path: Path)` (`test_pdf_export.py`) - Test _create_empty_pdf creates an empty PDF.
+- ▪️⚡ **[`TestLazyIndexManager.test_create_index_now`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test force immediate index creation.
 - ▪️⚡ **[`TestVectorStoreEdgeCases.test_create_or_update_empty_list`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test create_or_update_table with empty list returns 0.
+- ▪️⚡ **[`TestVectorStoreIndexes.test_create_table_creates_indexes`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test that creating a table creates scalar indexes.
+- ▪️ **[`TestGenerationProgress.test_creates_log_file`](files/tests/test_progress_tracker.md)** `(...)` (`test_progress_tracker.py`) - Test that progress tracker creates log file.
 - ▪️⚡ **[`TestGenerateSingleFileDoc.test_creates_nested_wiki_path`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test creates nested wiki path for nested source files.
+- ▪️⚡ **[`TestBuildDependencyGraphEdgeCases.test_creates_node_for_unknown_file`](files/tests/test_dependency_graph.md)** `(...)` (`test_dependency_graph.py`) - Test that nodes are created for files not in the initial ...
+- ▪️ **[`TestGenerationProgress.test_creates_wiki_directory`](files/tests/test_progress_tracker.md)** `(...)` (`test_progress_tracker.py`) - Test that progress tracker creates wiki directory.
+- ▪️ **[`TestGenerationProgress.test_creation`](files/tests/test_progress_tracker.md)** `(...)` (`test_progress_tracker.py`) - Test creating a GenerationProgress instance.
 - ▪️ **[`TestGetParentClasses.test_csharp_inheritance`](files/tests/test_chunker.md)** `(...)` (`test_chunker.py`) - Test C# class with inheritance.
+- ▪️ **[`TestUncoveredCodePaths.test_csharp_triple_slash_comments`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test C# XML documentation comments.
 - ▪️ **[`TestSchemaMigration.test_current_schema_version_exists`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`) - Test that CURRENT_SCHEMA_VERSION is defined.
+- ▪️ **[`TestPromptLoader.test_custom_dir_in_search_paths`](files/tests/test_prompts.md)** `(...)` (`test_prompts.py`) - Test that custom_dir is included in search paths.
 - ▪️⚡ **[`TestWithRetry.test_custom_max_attempts`](files/tests/test_retry.md)** `(...)` (`test_retry.py`) - Test that max_attempts parameter is respected.
+- ▪️⚡ **[`TestDeepResearchEdgeCases.test_custom_prompts_are_used`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test that custom prompts are used when provided.
 - ▪️ **[`TestProviderPrompts.test_custom_prompts_can_override_defaults`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test that custom prompts can be provided via config.
+- ▪️ **[`TestEmbeddingCache.test_database_schema`](files/tests/test_embedding_cache.md)** `(...)` (`test_embedding_cache.py`) - Test database schema is created correctly.
 - ▪️⚡ **[`TestVectorStoreEdgeCases.test_db_path_created_if_not_exists`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test that database directory is created if it doesn't exist.
+- ▪️⚡ **[`TestWeakReferences.test_dead_weakref_cleaned_on_emit`](files/tests/test_events.md)** `(emitter: EventEmitter)` (`test_events.py`) - Test that dead weak references are cleaned up during emit.
 - ▪️⚡ **[`TestDeepResearchPipelineDecomposition.test_decompose_handles_invalid_json`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test graceful handling of invalid JSON response.
 - ▪️⚡ **[`TestDeepResearchPipelineDecomposition.test_decompose_limits_sub_questions`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test that decomposition limits sub-questions to max.
 - ▪️⚡ **[`TestDeepResearchPipelineDecomposition.test_decompose_simple_question`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test decomposition of a simple question.
 - ▪️⚡ **[`TestDeepResearchPipelineDecomposition.test_decompose_validates_categories`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test that invalid categories are replaced with default.
 - ▪️ **[`TestExtractCallsPython.test_deduplicates_calls`](files/tests/test_callgraph.md)** `(...)` (`test_callgraph.py`) - Test that duplicate calls are removed.
 - ▪️⚡ **[`TestGenerateArchitecturePage.test_deduplicates_chunks`](files/tests/test_wiki_pages_coverage.md)** `(...)` (`test_wiki_pages_coverage.py`) - Test deduplicates search results from different queries.
+- ▪️⚡ **[`TestCodeExampleExtractor.test_deduplication`](files/tests/test_code_examples.md)** `(mock_vector_store: MagicMock, extractor: CodeExampleExtractor) → None` (`test_code_examples.py`) - Test that duplicate examples are removed.
 - ▪️ **[`TestConfig.test_deep_research_config`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test deep research configuration.
 - ▪️ **[`TestConfig.test_deep_research_config_validation`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test deep research config validation bounds.
+- ▪️ **[`TestModelRepr.test_deep_research_result_repr`](files/tests/test_models.md)** `(...)` (`test_models.py`) - Test DeepResearchResult repr.
+- ▪️⚡ **[`TestListTools.test_deep_research_tool_schema`](files/tests/test_server.md)** `(...)` (`test_server.py`) - Test deep_research tool has correct schema.
+- ▪️ **[`TestEdgeCases.test_deeply_nested_config`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Test handling valid deeply nested config.
+- ▪️ **[`TestWikiStructureToToc.test_deeply_nested_structure`](files/tests/test_models.md)** `(...)` (`test_models.py`) - Test to_toc with deeply nested paths.
 - ▪️ **[`TestConfig.test_default_config`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test default configuration values.
+- ▪️ **[`TestRepositoryAccessController.test_default_config_allows_all`](files/tests/test_repository_access.md)** `(...)` (`test_repository_access.py`) - Test that default config allows all paths.
+- ▪️ **[`TestAccessController.test_default_mode_is_permissive`](files/tests/test_access_control.md)** `(...)` (`test_access_control.py`) - Verify default RBAC mode is PERMISSIVE.
 - ▪️ **[`TestExtractPythonParameters.test_default_parameters`](files/tests/test_api_docs.md)** `(...)` (`test_api_docs.py`) - Test extracting parameters with default values.
+- ▪️⚡ **[`TestSearchProfiles.test_default_profile_configuration`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test that default profile can be configured at construction.
 - ▪️ **[`TestProviderPrompts.test_default_prompts_are_different_per_provider`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test that default prompts are optimized differently per p...
 - ▪️⚡ **[`TestHandleExportWikiPdf.test_default_single_file_true`](files/tests/test_handlers_coverage.md)** `(...)` (`test_handlers_coverage.py`) - Test that single_file defaults to True.
+- ▪️ **[`TestEmbeddingCacheErrorHandling.test_del_handles_exception`](files/tests/test_embedding_cache.md)** `(...)` (`test_embedding_cache.py`) - Test __del__ handles exceptions (lines 539-540).
+- ▪️ **[`TestCheckpointManager.test_delete_checkpoint`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test deleting a checkpoint.
 - ▪️⚡ **[`TestVectorStoreEdgeCases.test_delete_chunks_by_file_empty_db`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test delete_chunks_by_file on empty database returns 0.
+- ▪️⚡ **[`TestVectorStoreIndexes.test_delete_chunks_by_file_uses_index`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test that delete_chunks_by_file works efficiently.
+- ▪️⚡ **[`TestVectorStoreIndexes.test_delete_chunks_by_files_batch`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test that delete_chunks_by_files deletes multiple files i...
+- ▪️⚡ **[`TestVectorStoreIndexes.test_delete_chunks_by_files_empty_list`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test that delete_chunks_by_files handles empty list.
+- ▪️⚡ **[`TestVectorStoreIndexes.test_delete_chunks_by_files_nonexistent`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test that delete_chunks_by_files handles nonexistent file...
+- ▪️⚡ **[`TestVectorStoreIndexes.test_delete_chunks_by_files_with_quotes`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test batch delete with file paths containing quotes.
 - ▪️⚡ **[`TestVectorStoreEdgeCases.test_delete_file_path_with_quotes`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test deleting file path with quotes is handled safely.
+- ▪️ **[`TestCheckpointManager.test_delete_nonexistent_checkpoint`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test deleting a checkpoint that doesn't exist.
+- ▪️ **[`TestCheckpointHelperFunctions.test_delete_research_checkpoint`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test the delete_research_checkpoint helper function.
+- ▪️ **[`TestRepositoryAccessController.test_denylist_blocks_matching_path`](files/tests/test_repository_access.md)** `(...)` (`test_repository_access.py`) - Test that denylist blocks matching paths.
+- ▪️ **[`TestRepositoryAccessController.test_denylist_exact_match`](files/tests/test_repository_access.md)** `(...)` (`test_repository_access.py`) - Test that denylist can block exact paths.
+- ▪️ **[`TestRepositoryAccessController.test_denylist_precedence_over_allowlist`](files/tests/test_repository_access.md)** `(...)` (`test_repository_access.py`) - Test that denylist takes precedence over allowlist.
+- ▪️⚡ **[`TestDependenciesIncrementalLogic.test_dependencies_cached_incremental`](files/tests/test_wiki_coverage.md)** `(...)` (`test_wiki_coverage.py`) - Test dependencies page is loaded from cache in incrementa...
+- ▪️⚡ **[`TestDependenciesIncrementalLogic.test_dependencies_regenerated_when_file_missing`](files/tests/test_wiki_coverage.md)** `(...)` (`test_wiki_coverage.py`) - Test dependencies page regenerated when cache file is mis...
+- ▪️ **[`TestGoogleDocstringEdgeCases.test_description_with_paragraphs`](files/tests/test_api_docs.md)** `(...)` (`test_api_docs.py`) - Test description truncation at paragraph break.
+- ▪️⚡ **[`TestCollectClassHierarchy.test_detects_abstract_class_from_abc`](files/tests/test_inheritance.md)** `(...)` (`test_inheritance.py`) - Test detecting abstract class from ABC parent.
+- ▪️⚡ **[`TestCollectClassHierarchy.test_detects_abstract_from_abstractmethod`](files/tests/test_inheritance.md)** `(...)` (`test_inheritance.py`) - Test detecting abstract class from @abstractmethod decora...
+- ▪️⚡ **[`TestCollectClassHierarchy.test_detects_abstract_from_keyword`](files/tests/test_inheritance.md)** `(...)` (`test_inheritance.py`) - Test detecting abstract class from 'abstract' keyword in ...
+- ▪️ **[`TestAnalyzeStalenessWithStalePages.test_detects_stale_pages`](files/tests/test_stale_detection.md)** `(tmp_path: Path) → None` (`test_stale_detection.py`) - Test detects and returns stale pages.
 - ▪️⚡ **[`TestCachingLLMProvider.test_different_prompts_different_cache_entries`](files/tests/test_llm_cache.md)** `(cached_provider: CachingLLMProvider, mock_llm: MockLLMProvider)` (`test_llm_cache.py`) - Test that different prompts get different cache entries.
 - ▪️⚡ **[`TestLLMCache.test_different_system_prompts_different_cache_entries`](files/tests/test_llm_cache.md)** `(cache: LLMCache)` (`test_llm_cache.py`) - Test that different system prompts result in different ca...
 - ▪️ **[`TestDebouncedHandlerEvents.test_directory_events_ignored`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test that directory events are ignored.
+- ▪️ **[`TestHookRunner.test_directory_rejected`](files/tests/test_events.md)** `(emitter: EventEmitter, scripts_dir: Path)` (`test_events.py`) - Test that directories cannot be registered as scripts.
+- ▪️ **[`TestDiscoverPlugins.test_discover_plugins_all_sources`](files/tests/test_plugin_registry.md)** `(...)` (`test_plugin_registry.py`) - Test discover_plugins with all sources provided.
+- ▪️ **[`TestDiscoverPlugins.test_discover_plugins_custom_dir`](files/tests/test_plugin_registry.md)** `(...)` (`test_plugin_registry.py`) - Test discover_plugins with custom directory (lines 319-320).
+- ▪️ **[`TestDiscoverPlugins.test_discover_plugins_entry_points`](files/tests/test_plugin_registry.md)** `(...)` (`test_plugin_registry.py`) - Test discover_plugins calls load_from_entry_points (line ...
+- ▪️ **[`TestDiscoverPlugins.test_discover_plugins_logs_summary`](files/tests/test_plugin_registry.md)** `(...)` (`test_plugin_registry.py`) - Test discover_plugins logs summary (lines 334-338).
+- ▪️ **[`TestDiscoverPlugins.test_discover_plugins_repo_path`](files/tests/test_plugin_registry.md)** `(...)` (`test_plugin_registry.py`) - Test discover_plugins with repo path (lines 323-325).
+- ▪️ **[`TestDiscoverPlugins.test_discover_plugins_user_plugins`](files/tests/test_plugin_registry.md)** `(...)` (`test_plugin_registry.py`) - Test discover_plugins loads user plugins (lines 328-329).
+- ▪️ **[`TestLayoutAndDisplay.test_display_preview`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock, sample_results: list[SearchResult]) → None` (`test_interactive_search.py`) - display_preview should show detailed preview of a result.
+- ▪️ **[`TestLayoutAndDisplay.test_display_preview_result_not_in_filtered`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock, sample_results: list[SearchResult]) → None` (`test_interactive_search.py`) - display_preview should handle result not in filtered list.
+- ▪️ **[`TestLayoutAndDisplay.test_display_results_with_filters`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock, sample_results: list[SearchResult]) → None` (`test_interactive_search.py`) - display_results should show results table and filter panel.
+- ▪️ **[`TestLayoutAndDisplay.test_display_results_without_filters`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock, sample_results: list[SearchResult]) → None` (`test_interactive_search.py`) - display_results should show only table when no filters ac...
 - ▪️⚡ **[`TestDoReindex.test_do_reindex_handles_exception`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test that reindex handles exceptions gracefully.
 - ▪️⚡ **[`TestDoReindex.test_do_reindex_progress_callback_with_total`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test progress callback handles total > 0.
 - ▪️⚡ **[`TestDoReindex.test_do_reindex_shows_truncated_file_list`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test that reindex shows only first 10 files when many cha...
 - ▪️⚡ **[`TestDoReindex.test_do_reindex_success`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test successful reindex operation.
 - ▪️⚡ **[`TestDoReindex.test_do_reindex_with_llm_provider`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test reindex passes LLM provider to wiki generation.
+- ▪️ **[`TestAddStaleBanners.test_does_not_add_banner_to_fresh_pages`](files/tests/test_stale_detection.md)** `(tmp_path: Path) → None` (`test_stale_detection.py`) - Test does not add banners to up-to-date pages.
+- ▪️ **[`TestAddStaleBanners.test_does_not_add_banner_to_non_file_pages`](files/tests/test_stale_detection.md)** `(tmp_path: Path) → None` (`test_stale_detection.py`) - Test does not add banners to non-file pages (index, overv...
 - ▪️ **[`TestCrossLinker.test_does_not_link_in_code_blocks`](files/tests/test_crosslinks.md)** `(...)` (`test_crosslinks.py`) - Test that links are not added inside code blocks.
 - ▪️ **[`TestCrossLinker.test_does_not_link_non_entity_inline_code`](files/tests/test_crosslinks.md)** `(...)` (`test_crosslinks.py`) - Test that non-entity inline code is preserved unchanged.
 - ▪️⚡ **[`TestWithRetry.test_does_not_retry_non_retryable_errors`](files/tests/test_retry.md)** `(...)` (`test_retry.py`) - Test that non-retryable errors are raised immediately.
 - ▪️ **[`TestCrossLinker.test_does_not_self_link`](files/tests/test_crosslinks.md)** `(...)` (`test_crosslinks.py`) - Test that entities are not linked on their own page.
+- ▪️⚡ **[`TestLazyIndexManager.test_eager_index_created_immediately`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test that eager indexing attempts to create index immedia...
 - ▪️⚡ **[`TestLocalEmbeddingProvider.test_embed`](files/tests/test_local_embedding_provider.md)** `(...)` (`test_local_embedding_provider.py`) - Test embedding generation.
+- ▪️⚡ **[`TestEmbeddingProviderAbstractMethods.test_embed_abstract_calls_pass`](files/tests/test_base_provider.md)** `(...)` (`test_base_provider.py`) - Test that embed abstract method body is covered.
+- ▪️ **[`TestEmbeddingProviderAbstractMethods.test_embed_abstract_method_body`](files/tests/test_base_provider.md)** `(...)` (`test_base_provider.py`) - Test that calling EmbeddingProvider.embed raises TypeErro...
+- ▪️⚡ **[`TestLocalEmbeddingProvider.test_embed_empty_list`](files/tests/test_local_embedding_provider.md)** `(...)` (`test_local_embedding_provider.py`) - Test embedding an empty list.
+- ▪️⚡ **[`TestEmbeddingCache.test_embed_empty_list`](files/tests/test_embedding_cache.md)** `(...)` (`test_embedding_cache.py`) - Test embedding an empty list.
+- ▪️⚡ **[`TestOpenAIEmbeddingProviderEmbed.test_embed_handles_api_error_via_handler`](files/tests/test_openai_embeddings.md)** `(...)` (`test_openai_embeddings.py`) - Test that other exceptions go through _handle_api_error.
+- ▪️⚡ **[`TestOpenAIEmbeddingProviderEmbed.test_embed_handles_connection_error_via_handler`](files/tests/test_openai_embeddings.md)** `(...)` (`test_openai_embeddings.py`) - Test that APIConnectionError goes through _handle_api_error.
+- ▪️⚡ **[`TestOpenAIEmbeddingProviderEmbed.test_embed_handles_rate_limit_via_handler`](files/tests/test_openai_embeddings.md)** `(...)` (`test_openai_embeddings.py`) - Test that rate limit APIStatusError goes through _handle_...
+- ▪️⚡ **[`TestEmbeddingCache.test_embed_hit_returns_cached`](files/tests/test_embedding_cache.md)** `(...)` (`test_embedding_cache.py`) - Test that cache hit returns cached value without calling ...
+- ▪️⚡ **[`TestEmbeddingCache.test_embed_miss_calls_provider`](files/tests/test_embedding_cache.md)** `(...)` (`test_embedding_cache.py`) - Test that cache miss calls the underlying provider.
+- ▪️⚡ **[`TestEmbeddingCache.test_embed_partial_hit`](files/tests/test_embedding_cache.md)** `(...)` (`test_embedding_cache.py`) - Test cache with partial hit (some texts cached, some not).
+- ▪️⚡ **[`TestOpenAIEmbeddingProviderEmbed.test_embed_reraises_provider_authentication_error`](files/tests/test_openai_embeddings.md)** `(...)` (`test_openai_embeddings.py`) - Test that ProviderAuthenticationError is re-raised directly.
+- ▪️⚡ **[`TestOpenAIEmbeddingProviderEmbed.test_embed_reraises_provider_connection_error`](files/tests/test_openai_embeddings.md)** `(...)` (`test_openai_embeddings.py`) - Test that ProviderConnectionError is re-raised directly.
+- ▪️⚡ **[`TestOpenAIEmbeddingProviderEmbed.test_embed_reraises_provider_rate_limit_error`](files/tests/test_openai_embeddings.md)** `(...)` (`test_openai_embeddings.py`) - Test that ProviderRateLimitError is re-raised directly.
+- ▪️⚡ **[`TestLocalEmbeddingProvider.test_embed_single_text`](files/tests/test_local_embedding_provider.md)** `(...)` (`test_local_embedding_provider.py`) - Test embedding a single text.
+- ▪️⚡ **[`TestOpenAIEmbeddingProviderEmbed.test_embed_success`](files/tests/test_openai_embeddings.md)** `(...)` (`test_openai_embeddings.py`) - Test successful embedding generation.
+- ▪️⚡ **[`TestOpenAIEmbeddingProviderEmbed.test_embed_unknown_error_reraises`](files/tests/test_openai_embeddings.md)** `(...)` (`test_openai_embeddings.py`) - Test that unknown errors are re-raised after going throug...
+- ▪️ **[`TestConfig.test_embedding_cache_config`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test embedding cache configuration.
 - ▪️ **[`TestConfig.test_embedding_config`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test embedding configuration.
+- ▪️⚡ **[`TestEventEmitter.test_emit_async_handler`](files/tests/test_events.md)** `(emitter: EventEmitter)` (`test_events.py`) - Test emit calls async handlers.
+- ▪️⚡ **[`TestEventEmitter.test_emit_calls_handler`](files/tests/test_events.md)** `(emitter: EventEmitter)` (`test_events.py`) - Test emit calls registered handlers.
+- ▪️⚡ **[`TestEventEmitter.test_emit_handler_error_doesnt_stop_others`](files/tests/test_events.md)** `(emitter: EventEmitter)` (`test_events.py`) - Test handler errors don't prevent other handlers from run...
+- ▪️⚡ **[`TestEventEmitter.test_emit_priority_order`](files/tests/test_events.md)** `(emitter: EventEmitter)` (`test_events.py`) - Test handlers are called in priority order (highest first).
+- ▪️⚡ **[`TestEventEmitter.test_emit_string_type`](files/tests/test_events.md)** `(emitter: EventEmitter)` (`test_events.py`) - Test emit with string event type.
+- ▪️ **[`TestEventEmitter.test_emit_sync`](files/tests/test_events.md)** `(emitter: EventEmitter)` (`test_events.py`) - Test synchronous emit.
+- ▪️ **[`TestEventEmitter.test_emit_sync_skips_async_handlers`](files/tests/test_events.md)** `(emitter: EventEmitter)` (`test_events.py`) - Test sync emit skips async handlers.
 - ▪️⚡ **[`TestBatchedProcessing.test_empty_batch_handling`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`) - Test that empty repositories are handled correctly.
 - ▪️⚡ **[`TestVectorStoreEdgeCases.test_empty_content_chunk`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test chunk with empty content.
+- ▪️ **[`TestGoogleDocstringEdgeCases.test_empty_docstring`](files/tests/test_api_docs.md)** `(...)` (`test_api_docs.py`) - Test parsing empty docstring.
+- ▪️ **[`TestEventEmitter.test_empty_emitter`](files/tests/test_events.md)** `(emitter: EventEmitter)` (`test_events.py`) - Test empty emitter has no handlers.
+- ▪️ **[`TestEdgeCases.test_empty_exclude_patterns`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Test handling config with empty exclude patterns.
+- ▪️⚡ **[`TestAnalyzeFileCoverage.test_empty_file`](files/tests/test_coverage.md)** `(...)` (`test_coverage.py`) - Test analyzing file with no chunks.
+- ▪️ **[`TestSearchFilters.test_empty_filters_match_all`](files/tests/test_interactive_search.md)** `(sample_results: list[SearchResult]) → None` (`test_interactive_search.py`) - Empty filters should match all results.
+- ▪️⚡ **[`TestAnalyzeProjectCoverage.test_empty_project`](files/tests/test_coverage.md)** `(...)` (`test_coverage.py`) - Test analyzing project with no documentable entities.
+- ▪️ **[`TestValidateQueryParameters.test_empty_query_raises`](files/tests/test_resource_limits.md)** `(...)` (`test_resource_limits.py`) - Test empty query raises ValueError.
+- ▪️ **[`TestPluginRegistry.test_empty_registry`](files/tests/test_plugins.md)** `(...)` (`test_plugins.py`) - Test empty registry.
+- ▪️ **[`TestPromptLoader.test_empty_search_paths`](files/tests/test_prompts.md)** `(...)` (`test_prompts.py`) - Test loader with no valid search paths.
+- ▪️⚡ **[`TestFuzzySearchHelper.test_empty_store_name_index`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test building name index on empty store.
+- ▪️ **[`TestWikiStructureToToc.test_empty_structure`](files/tests/test_models.md)** `(...)` (`test_models.py`) - Test to_toc with no pages.
+- ▪️ **[`TestRepositoryAccessController.test_enforced_allowlist_allows_matching_paths`](files/tests/test_repository_access.md)** `(...)` (`test_repository_access.py`) - Test that enforced allowlist allows matching paths.
+- ▪️ **[`TestRepositoryAccessController.test_enforced_allowlist_blocks_non_matching`](files/tests/test_repository_access.md)** `(...)` (`test_repository_access.py`) - Test that enforced allowlist blocks non-matching paths.
+- ▪️ **[`TestRepositoryAccessController.test_enforced_empty_allowlist_blocks_all`](files/tests/test_repository_access.md)** `(...)` (`test_repository_access.py`) - Test that enforced empty allowlist blocks all paths.
+- ▪️⚡ **[`TestEnsureIndexesEdgeCases.test_ensure_indexes_creates_missing_file_path_index`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test _ensure_indexes creates file_path_idx when missing.
+- ▪️⚡ **[`TestEnsureIndexesEdgeCases.test_ensure_indexes_creates_missing_id_index`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test _ensure_indexes creates id_idx when missing.
+- ▪️⚡ **[`TestEnsureIndexesEdgeCases.test_ensure_indexes_handles_attribute_error`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test _ensure_indexes handles AttributeError from index ac...
+- ▪️⚡ **[`TestEnsureIndexesEdgeCases.test_ensure_indexes_handles_count_rows_exception`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test _ensure_indexes handles exception when checking row ...
+- ▪️⚡ **[`TestEnsureIndexesEdgeCases.test_ensure_indexes_handles_key_error`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test _ensure_indexes handles KeyError from index access.
+- ▪️⚡ **[`TestEnsureIndexesEdgeCases.test_ensure_indexes_handles_list_indices_exception`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test _ensure_indexes handles exceptions from list_indices.
+- ▪️⚡ **[`TestEnsureIndexesEdgeCases.test_ensure_indexes_handles_type_error`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test _ensure_indexes handles TypeError from list_indices.
+- ▪️⚡ **[`TestVectorStoreIndexes.test_ensure_indexes_on_existing_table`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test that opening an existing table ensures indexes exist.
+- ▪️ **[`TestEnsureIndexesEdgeCases.test_ensure_indexes_when_table_is_none`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test _ensure_indexes returns early when table is None.
 - ▪️⚡ **[`TestLLMCacheEdgeCases.test_ensure_table_returns_existing_table`](files/tests/test_llm_cache.md)** `(cache: LLMCache)` (`test_llm_cache.py`) - Test _ensure_table returns table when it already exists.
 - ▪️⚡ **[`TestLLMCacheEdgeCases.test_ensure_table_returns_none_when_no_table`](files/tests/test_llm_cache.md)** `(cache: LLMCache)` (`test_llm_cache.py`) - Test _ensure_table returns None when table doesn't exist.
 - ▪️⚡ **[`TestLLMCacheEdgeCases.test_ensure_table_uses_cached_table`](files/tests/test_llm_cache.md)** `(cache: LLMCache)` (`test_llm_cache.py`) - Test _ensure_table returns cached _table if already set.
 - ▪️⚡ **[`TestGenerateEntityEntries.test_entries_sorted_by_name`](files/tests/test_search.md)** `(...)` (`test_search.py`) - Test that entries are sorted alphabetically.
+- ▪️ **[`TestRegistryEdgeCases.test_entry_point_groups_constant`](files/tests/test_plugin_registry.md)** `(...)` (`test_plugin_registry.py`) - Test ENTRY_POINT_GROUPS constant is correct.
+- ▪️ **[`TestValidateDeepResearchParameters.test_error_shows_valid_presets`](files/tests/test_resource_limits.md)** `(...)` (`test_resource_limits.py`) - Test error message includes valid preset options.
 - ▪️⚡ **[`TestLLMCacheEdgeCases.test_eviction_delete_individual_failure`](files/tests/test_llm_cache.md)** `(cache_path: Path)` (`test_llm_cache.py`) - Test that eviction continues even if individual deletes f...
 - ▪️⚡ **[`TestLLMCacheEdgeCases.test_eviction_deletes_expired_entries`](files/tests/test_llm_cache.md)** `(cache_path: Path)` (`test_llm_cache.py`) - Test that eviction actually deletes expired entries.
+- ▪️⚡ **[`TestLLMCacheEdgeCases.test_eviction_prefers_expired_over_lru`](files/tests/test_llm_cache.md)** `(cache_path: Path)` (`test_llm_cache.py`) - Test that eviction removes expired entries before LRU ent...
+- ▪️ **[`TestGoogleDocstringEdgeCases.test_example_section`](files/tests/test_api_docs.md)** `(...)` (`test_api_docs.py`) - Test that Example section is handled.
+- ▪️⚡ **[`TestExamplesWikiGeneratorEdgeCases.test_examples_limited_to_three_per_entity`](files/tests/test_examples_plugin.md)** `(mock_index_status: MagicMock, tmp_path: Path) → None` (`test_examples_plugin.py`) - Test that examples are limited to 3 per entity (line 131,...
 - ▪️ **[`TestExtractPythonParameters.test_excludes_cls`](files/tests/test_api_docs.md)** `(...)` (`test_api_docs.py`) - Test that cls is excluded from classmethod parameters.
 - ▪️ **[`TestGenerateFilesIndex.test_excludes_index_page`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test excludes index page from listing.
+- ▪️⚡ **[`TestFindRelatedFiles.test_excludes_same_file`](files/tests/test_context_builder.md)** `(...) → None` (`test_context_builder.py`) - Test that the same file is excluded from related files.
 - ▪️ **[`TestExtractPythonParameters.test_excludes_self`](files/tests/test_api_docs.md)** `(...)` (`test_api_docs.py`) - Test that self is excluded from method parameters.
+- ▪️⚡ **[`TestStreamingPdfExporter.test_export_batching`](files/tests/test_pdf_export.md)** `(tmp_path: Path)` (`test_pdf_export.py`) - Test that export correctly batches pages.
 - ▪️ **[`TestHtmlExporter.test_export_copies_search_json`](files/tests/test_html_export.md)** `(sample_wiki: Path, tmp_path: Path)` (`test_html_export.py`) - Test that export copies search.json.
 - ▪️ **[`TestHtmlExporter.test_export_creates_html_files`](files/tests/test_html_export.md)** `(sample_wiki: Path, tmp_path: Path)` (`test_html_export.py`) - Test that export creates HTML files for each markdown file.
 - ▪️ **[`TestHtmlExporter.test_export_creates_output_directory`](files/tests/test_html_export.md)** `(sample_wiki: Path, tmp_path: Path)` (`test_html_export.py`) - Test that export creates the output directory.
+- ▪️⚡ **[`TestStreamingPdfExporter.test_export_creates_pdf`](files/tests/test_pdf_export.md)** `(sample_wiki: Path, tmp_path: Path)` (`test_pdf_export.py`) - Test that export creates a PDF file.
+- ▪️⚡ **[`TestStreamingPdfExporter.test_export_error_during_page_processing`](files/tests/test_pdf_export.md)** `(sample_wiki: Path, tmp_path: Path)` (`test_pdf_export.py`) - Test that errors during page processing (e.g., progress c...
+- ▪️⚡ **[`TestStreamingPdfExporter.test_export_handles_page_errors`](files/tests/test_pdf_export.md)** `(sample_wiki: Path, tmp_path: Path)` (`test_pdf_export.py`) - Test that export handles page processing errors gracefully.
 - ▪️ **[`TestPdfExporter.test_export_separate_creates_multiple_pdfs`](files/tests/test_pdf_export.md)** `(sample_wiki: Path, tmp_path: Path)` (`test_pdf_export.py`) - Test that export_separate creates multiple PDF files.
+- ▪️ **[`TestPdfExportIntegration.test_export_separate_creates_multiple_pdfs`](files/tests/test_pdf_export.md)** `(wiki_with_content: Path, tmp_path: Path)` (`test_pdf_export.py`) - Test that export_separate creates valid PDF files for eac...
+- ▪️⚡ **[`TestStreamingPdfExporter.test_export_separate_creates_multiple_pdfs`](files/tests/test_pdf_export.md)** `(sample_wiki: Path, tmp_path: Path)` (`test_pdf_export.py`) - Test that export_separate creates separate PDF files.
+- ▪️⚡ **[`TestStreamingPdfExporter.test_export_separate_handles_errors`](files/tests/test_pdf_export.md)** `(sample_wiki: Path, tmp_path: Path)` (`test_pdf_export.py`) - Test that export_separate handles page export errors.
 - ▪️ **[`TestPdfExporter.test_export_separate_preserves_directory_structure`](files/tests/test_pdf_export.md)** `(sample_wiki: Path, tmp_path: Path)` (`test_pdf_export.py`) - Test that export_separate preserves directory structure.
 - ▪️ **[`TestPdfExporterEdgeCases.test_export_separate_with_pdf_suffix_output`](files/tests/test_pdf_export.md)** `(tmp_path: Path)` (`test_pdf_export.py`) - Test export_separate when output path has .pdf suffix.
+- ▪️⚡ **[`TestStreamingPdfExporter.test_export_separate_with_pdf_suffix_output`](files/tests/test_pdf_export.md)** `(sample_wiki: Path, tmp_path: Path)` (`test_pdf_export.py`) - Test export_separate when output path has .pdf suffix.
+- ▪️⚡ **[`TestStreamingPdfExporter.test_export_separate_with_progress_callback`](files/tests/test_pdf_export.md)** `(sample_wiki: Path, tmp_path: Path)` (`test_pdf_export.py`) - Test export_separate with progress callback.
 - ▪️ **[`TestPdfExporter.test_export_single_creates_pdf`](files/tests/test_pdf_export.md)** `(sample_wiki: Path, tmp_path: Path)` (`test_pdf_export.py`) - Test that export_single creates a PDF file.
+- ▪️ **[`TestPdfExportIntegration.test_export_single_creates_valid_pdf`](files/tests/test_pdf_export.md)** `(wiki_with_content: Path, tmp_path: Path)` (`test_pdf_export.py`) - Test that export_single creates a valid PDF file.
+- ▪️ **[`TestStreamingPdfExporter.test_export_single_page`](files/tests/test_pdf_export.md)** `(sample_wiki: Path, tmp_path: Path)` (`test_pdf_export.py`) - Test _export_single_page creates PDF for one page.
 - ▪️ **[`TestPdfExporter.test_export_single_with_directory_output`](files/tests/test_pdf_export.md)** `(sample_wiki: Path, tmp_path: Path)` (`test_pdf_export.py`) - Test export_single with directory as output path.
+- ▪️ **[`TestHtmlExportPipeline.test_export_to_html_convenience_function`](files/tests/test_integration_pipeline.md)** `(wiki_with_content: Path, tmp_path: Path)` (`test_integration_pipeline.py`) - Test the export_to_html convenience function.
+- ▪️ **[`TestPdfExportIntegration.test_export_to_pdf_function_creates_pdf`](files/tests/test_pdf_export.md)** `(wiki_with_content: Path, tmp_path: Path)` (`test_pdf_export.py`) - Test the convenience function creates a valid PDF.
+- ▪️⚡ **[`TestListTools.test_export_wiki_html_tool_schema`](files/tests/test_server.md)** `(...)` (`test_server.py`) - Test export_wiki_html tool has correct schema.
+- ▪️⚡ **[`TestListTools.test_export_wiki_pdf_tool_schema`](files/tests/test_server.md)** `(...)` (`test_server.py`) - Test export_wiki_pdf tool has correct schema.
+- ▪️⚡ **[`TestStreamingPdfExporter.test_export_with_directory_output`](files/tests/test_pdf_export.md)** `(sample_wiki: Path, tmp_path: Path)` (`test_pdf_export.py`) - Test export with directory as output path.
+- ▪️⚡ **[`TestStreamingPdfExporter.test_export_with_empty_wiki`](files/tests/test_pdf_export.md)** `(tmp_path: Path)` (`test_pdf_export.py`) - Test export with a wiki that has no pages.
+- ▪️⚡ **[`TestStreamingPdfExporter.test_export_with_progress_callback`](files/tests/test_pdf_export.md)** `(sample_wiki: Path, tmp_path: Path)` (`test_pdf_export.py`) - Test export with progress callback.
 - ▪️⚡ **[`TestHandleExportWikiPdf.test_exports_multiple_pdfs`](files/tests/test_handlers_coverage.md)** `(...)` (`test_handlers_coverage.py`) - Test exporting wiki to multiple PDF files.
 - ▪️⚡ **[`TestHandleExportWikiPdf.test_exports_single_file_pdf`](files/tests/test_handlers_coverage.md)** `(...)` (`test_handlers_coverage.py`) - Test exporting wiki to single PDF file.
 - ▪️⚡ **[`TestHandleExportWikiPdf.test_exports_with_custom_output_path`](files/tests/test_handlers_coverage.md)** `(...)` (`test_handlers_coverage.py`) - Test exporting wiki to custom output path.
 - ▪️ **[`TestEnhancedDependencyGraph.test_external_dependencies_hidden`](files/tests/test_diagrams.md)** `(...)` (`test_diagrams.py`) - Test external deps hidden when show_external=False.
 - ▪️ **[`TestEnhancedDependencyGraph.test_external_dependencies_shown`](files/tests/test_diagrams.md)** `(...)` (`test_diagrams.py`) - Test external deps shown with different styling when enab...
+- ▪️ **[`TestSwiftCallExtraction.test_extract_call_name_swift_identifier`](files/tests/test_callgraph.md)** `(...)` (`test_callgraph.py`) - Test extract_call_name for Swift with identifier function.
+- ▪️ **[`TestSwiftCallExtraction.test_extract_call_name_swift_identifier_type`](files/tests/test_callgraph.md)** `(...)` (`test_callgraph.py`) - Test Swift call name extraction with identifier function ...
+- ▪️ **[`TestSwiftCallExtraction.test_extract_call_name_swift_member_access`](files/tests/test_callgraph.md)** `(...)` (`test_callgraph.py`) - Test Swift call name extraction with member_access type.
+- ▪️ **[`TestSwiftCallExtraction.test_extract_call_name_swift_navigation`](files/tests/test_callgraph.md)** `(...)` (`test_callgraph.py`) - Test extract_call_name for Swift navigation expressions.
+- ▪️ **[`TestSwiftCallExtraction.test_extract_call_name_swift_no_navigation_suffix`](files/tests/test_callgraph.md)** `(...)` (`test_callgraph.py`) - Test Swift call name extraction when navigation_suffix is...
+- ▪️ **[`TestSwiftCallExtraction.test_extract_call_name_swift_no_simple_identifier`](files/tests/test_callgraph.md)** `(...)` (`test_callgraph.py`) - Test Swift call name extraction when simple_identifier is...
+- ▪️ **[`TestSwiftCallExtraction.test_extract_call_name_swift_with_mocked_navigation`](files/tests/test_callgraph.md)** `(...)` (`test_callgraph.py`) - Test Swift call name extraction with mocked navigation ex...
 - ▪️ **[`TestExtractExamplesForEntities.test_extract_class_instantiation`](files/tests/test_test_examples.md)** `(tmp_path: Path) → None` (`test_test_examples.py`) - Test extracting example that instantiates a class.
+- ▪️⚡ **[`TestCodeExampleExtractor.test_extract_examples_for_class`](files/tests/test_code_examples.md)** `(mock_vector_store: MagicMock, extractor: CodeExampleExtractor) → None` (`test_code_examples.py`) - Test class example extraction.
+- ▪️⚡ **[`TestCodeExampleExtractor.test_extract_examples_for_function_empty`](files/tests/test_code_examples.md)** `(extractor: CodeExampleExtractor) → None` (`test_code_examples.py`) - Test extraction when no results found.
+- ▪️⚡ **[`TestCodeExampleExtractor.test_extract_examples_for_function_short_name`](files/tests/test_code_examples.md)** `(extractor: CodeExampleExtractor) → None` (`test_code_examples.py`) - Test that short names are skipped.
+- ▪️⚡ **[`TestCodeExampleExtractor.test_extract_examples_for_function_skips_mocks`](files/tests/test_code_examples.md)** `(mock_vector_store: MagicMock, extractor: CodeExampleExtractor) → None` (`test_code_examples.py`) - Test that mock-heavy tests are skipped.
+- ▪️⚡ **[`TestCodeExampleExtractor.test_extract_examples_for_function_with_results`](files/tests/test_code_examples.md)** `(mock_vector_store: MagicMock, extractor: CodeExampleExtractor) → None` (`test_code_examples.py`) - Test extraction with mock search results.
+- ▪️⚡ **[`TestCodeExampleExtractor.test_extract_examples_with_docstring`](files/tests/test_code_examples.md)** `(mock_vector_store: MagicMock, extractor: CodeExampleExtractor) → None` (`test_code_examples.py`) - Test extraction includes docstring examples.
+- ▪️ **[`TestPythonParameterExtraction.test_extract_parameter_defaults_no_params_node`](files/tests/test_chunker.md)** `(...)` (`test_chunker.py`) - Test extract_python_parameter_defaults when parameters no...
+- ▪️ **[`TestPythonParameterExtraction.test_extract_parameter_types_no_params_node`](files/tests/test_chunker.md)** `(...)` (`test_chunker.py`) - Test extract_python_parameter_types when parameters node ...
 - ▪️ **[`TestPdfExporter.test_extract_paths_from_toc`](files/tests/test_pdf_export.md)** `(sample_wiki: Path, tmp_path: Path)` (`test_pdf_export.py`) - Test extracting paths from nested TOC.
 - ▪️ **[`TestExtractExamplesForEntities.test_extract_simple_function_call`](files/tests/test_test_examples.md)** `(tmp_path: Path) → None` (`test_test_examples.py`) - Test extracting example that calls a simple function.
+- ▪️ **[`TestWikiPageIterator.test_extract_title_fallback_to_filename`](files/tests/test_streaming_export.md)** `(tmp_path: Path)` (`test_streaming_export.py`) - Test title extraction falls back to filename.
+- ▪️ **[`TestWikiPageIterator.test_extract_title_from_h1`](files/tests/test_streaming_export.md)** `(sample_wiki: Path)` (`test_streaming_export.py`) - Test title extraction from H1 heading.
 - ▪️ **[`TestExtractExamplesForEntities.test_extract_with_dedent_setup`](files/tests/test_test_examples.md)** `(tmp_path: Path) → None` (`test_test_examples.py`) - Test extracting example with dedent pattern captures from...
 - ▪️⚡ **[`TestGenerateArchitecturePage.test_extracts_class_names`](files/tests/test_wiki_pages_coverage.md)** `(...)` (`test_wiki_pages_coverage.py`) - Test extracts class names for reference in prompt.
-- ▪️⚡ **[`TestGenerateSingleFileDoc.test_fallback_search_by_filename`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test falls back to searching by filename when no direct m...
+- ▪️⚡ **[`TestGetTypeDefinitionsUsed.test_extracts_return_type_annotations`](files/tests/test_context_builder.md)** `(...) → None` (`test_context_builder.py`) - Test extracting return type annotations.
+- ▪️⚡ **[`TestGetTypeDefinitionsUsed.test_extracts_type_annotations`](files/tests/test_context_builder.md)** `(...) → None` (`test_context_builder.py`) - Test extracting type annotations from chunks.
 - ▪️ **[`TestInjectInlineSourceCode.test_falls_back_to_class_source_for_unmatched_method`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test uses class source when method chunk doesn't exist.
-- ▪️ **[`TestModelRepr.test_file_info_repr`](files/tests/test_models.md)** `(...)` (`test_models.py`) - Test [FileInfo](files/src/local_deepwiki/models.md) repr.
-- ▪️ **[`TestModelRepr.test_file_info_repr_no_language`](files/tests/test_models.md)** `(...)` (`test_models.py`) - Test [FileInfo](files/src/local_deepwiki/models.md) repr with no detected language.
+- ▪️⚡ **[`TestFileGraphInternalEdges.test_file_graph_adds_edges_between_files`](files/tests/test_dependency_graph.md)** `(...)` (`test_dependency_graph.py`) - Test that edges are added between files in the same modul...
+- ▪️⚡ **[`TestFileGraphInternalEdges.test_file_graph_detects_and_marks_cycles`](files/tests/test_dependency_graph.md)** `(...)` (`test_dependency_graph.py`) - Test that cycles are detected and edges marked (lines 356...
+- ▪️⚡ **[`TestFileGraphInternalEdges.test_file_graph_skips_imports_outside_module`](files/tests/test_dependency_graph.md)** `(...)` (`test_dependency_graph.py`) - Test that imports from outside the module are skipped.
+- ▪️⚡ **[`TestFileGraphInternalEdges.test_file_graph_skips_non_import_chunks`](files/tests/test_dependency_graph.md)** `(...)` (`test_dependency_graph.py`) - Test that non-IMPORT chunks are skipped in file graph (li...
+- ▪️⚡ **[`TestGenerateFileGraphWithEdges.test_file_graph_with_circular_dependencies`](files/tests/test_dependency_graph.md)** `(...)` (`test_dependency_graph.py`) - Test file graph renders circular dependencies (lines 768-...
+- ▪️⚡ **[`TestGenerateFileGraphWithEdges.test_file_graph_with_internal_imports`](files/tests/test_dependency_graph.md)** `(...)` (`test_dependency_graph.py`) - Test file graph with internal file imports (lines 335-350).
+- ▪️ **[`TestModelRepr.test_file_info_repr`](files/tests/test_models.md)** `(...)` (`test_models.py`) - Test FileInfo repr.
+- ▪️ **[`TestModelRepr.test_file_info_repr_no_language`](files/tests/test_models.md)** `(...)` (`test_models.py`) - Test FileInfo repr with no detected language.
 - ▪️⚡ **[`TestVectorStoreEdgeCases.test_file_path_injection_attempt`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test that SQL-like injection in file_path is neutralized.
 - ▪️⚡ **[`TestVectorStoreEdgeCases.test_file_path_with_quotes`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test file path with quotes is handled safely.
+- ▪️ **[`TestSearchFilters.test_file_pattern_filter`](files/tests/test_interactive_search.md)** `(sample_results: list[SearchResult]) → None` (`test_interactive_search.py`) - File pattern filter should match using glob patterns.
 - ▪️ **[`TestExtractCallsPython.test_filters_builtins`](files/tests/test_callgraph.md)** `(...)` (`test_callgraph.py`) - Test that built-ins are filtered out.
 - ▪️⚡ **[`TestGenerateModuleDocs.test_filters_chunks_by_directory`](files/tests/test_wiki_modules_coverage.md)** `(...)` (`test_wiki_modules_coverage.py`) - Test filters search results to chunks from relevant direc...
 - ▪️⚡ **[`TestGenerateFileDocs.test_filters_init_files`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test filters out __init__.py files.
 - ▪️⚡ **[`TestGenerateFileDocs.test_filters_low_chunk_count_files`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test filters out files with low chunk count.
 - ▪️ **[`TestExtractExamplesForEntities.test_filters_mock_heavy_tests`](files/tests/test_test_examples.md)** `(tmp_path: Path) → None` (`test_test_examples.py`) - Test that tests using extensive mocking are filtered out.
 - ▪️⚡ **[`TestGenerateFileDocs.test_filters_test_files`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test filters out test files in tests/ directory.
+- ▪️ **[`TestGenerationProgress.test_finalize_failure`](files/tests/test_progress_tracker.md)** `(...)` (`test_progress_tracker.py`) - Test finalizing with failure.
+- ▪️ **[`TestGenerationProgress.test_finalize_log_close_oserror_handled`](files/tests/test_progress_tracker.md)** `(...)` (`test_progress_tracker.py`) - Test that OSError during log file close is caught (lines ...
+- ▪️ **[`TestGenerationProgress.test_finalize_status_write_oserror_handled`](files/tests/test_progress_tracker.md)** `(...)` (`test_progress_tracker.py`) - Test that OSError during finalize status write is caught ...
+- ▪️ **[`TestGenerationProgress.test_finalize_success`](files/tests/test_progress_tracker.md)** `(...)` (`test_progress_tracker.py`) - Test finalizing with success.
+- ▪️⚡ **[`TestFuzzySearchHelper.test_find_similar_names`](files/tests/test_fuzzy_search.md)** `(...)` (`test_fuzzy_search.py`) - Test finding similar names.
+- ▪️⚡ **[`TestFuzzySearchHelperEdgeCases.test_find_similar_names_by_chunk_type`](files/tests/test_fuzzy_search.md)** `(...)` (`test_fuzzy_search.py`) - Test find_similar_names filtered by chunk type (lines 441...
+- ▪️⚡ **[`TestFuzzySearchHelperEdgeCases.test_find_similar_names_empty_candidates`](files/tests/test_fuzzy_search.md)** `(...)` (`test_fuzzy_search.py`) - Test find_similar_names with empty candidates (line 453).
+- ▪️⚡ **[`TestFuzzySearchHelperEdgeCases.test_find_similar_names_empty_query`](files/tests/test_fuzzy_search.md)** `(...)` (`test_fuzzy_search.py`) - Test find_similar_names with empty query (line 437).
+- ▪️⚡ **[`TestFuzzySearchHelper.test_find_similar_names_exact_match`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test finding similar names with exact match.
+- ▪️⚡ **[`TestFuzzySearchHelper.test_find_similar_names_limit`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test that limit parameter works.
+- ▪️⚡ **[`TestFuzzySearchHelperEdgeCases.test_find_similar_names_skips_duplicates`](files/tests/test_fuzzy_search.md)** `(...)` (`test_fuzzy_search.py`) - Test find_similar_names skips duplicate names (line 483).
+- ▪️⚡ **[`TestFuzzySearchHelper.test_find_similar_names_threshold`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test that threshold filters out low-similarity results.
+- ▪️⚡ **[`TestFuzzySearchHelper.test_find_similar_names_typo`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test finding similar names with typo.
+- ▪️⚡ **[`TestFuzzySearchHelper.test_find_similar_names_with_typo`](files/tests/test_fuzzy_search.md)** `(...)` (`test_fuzzy_search.py`) - Test finding similar names with a typo.
+- ▪️ **[`TestFindSourceFiles.test_find_source_files_excludes_large_files`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`) - Test that files exceeding max_file_size are skipped.
+- ▪️ **[`TestFindSourceFiles.test_find_source_files_excludes_pattern_match`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`) - Test that files matching exclude patterns are skipped.
+- ▪️ **[`TestFindSourceFiles.test_find_source_files_excludes_unsupported_language`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`) - Test that files with unsupported languages are skipped.
+- ▪️ **[`TestFindSourceFiles.test_find_source_files_handles_stat_error`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`) - Test that files that fail stat() are skipped gracefully.
+- ▪️ **[`TestFindSourceFiles.test_find_source_files_skips_unknown_language`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`) - Test that files with undetectable language are skipped.
+- ▪️ **[`TestScanRepositoryForSecrets.test_findings_have_relative_file_path_in_context`](files/tests/test_secret_detector.md)** `(...)` (`test_secret_detector.py`) - Test SecretFinding file_path uses relative path.
+- ▪️⚡ **[`TestGetCallersFromOtherFiles.test_finds_callers`](files/tests/test_context_builder.md)** `(tmp_path: Path) → None` (`test_context_builder.py`) - Test finding callers from other files.
+- ▪️⚡ **[`TestFindRelatedFiles.test_finds_related_files_for_class`](files/tests/test_context_builder.md)** `(...) → None` (`test_context_builder.py`) - Test finding related files for class module.
+- ▪️⚡ **[`TestFindRelatedFiles.test_finds_related_files_for_function`](files/tests/test_context_builder.md)** `(...) → None` (`test_context_builder.py`) - Test finding related files for function module.
 - ▪️⚡ **[`TestCachingLLMProvider.test_first_call_goes_to_provider`](files/tests/test_llm_cache.md)** `(cached_provider: CachingLLMProvider, mock_llm: MockLLMProvider)` (`test_llm_cache.py`) - Test that first call goes to underlying provider.
+- ▪️ **[`TestWikiStructureToToc.test_flat_pages`](files/tests/test_models.md)** `(...)` (`test_models.py`) - Test to_toc with pages in root directory.
+- ▪️ **[`TestProgressBuffer.test_flush_clears_buffer`](files/tests/test_progress.md)** `(...)` (`test_progress.py`) - Test that flush clears the buffer.
+- ▪️ **[`TestProgressBuffer.test_flush_empty_buffer`](files/tests/test_progress.md)** `(...)` (`test_progress.py`) - Test flushing an empty buffer.
+- ▪️ **[`TestEmbeddingCacheErrorHandling.test_flush_pending_writes_empty_after_lock`](files/tests/test_embedding_cache.md)** `(...)` (`test_embedding_cache.py`) - Test _flush_pending_writes handles empty writes after loc...
+- ▪️ **[`TestEmbeddingCacheErrorHandling.test_flush_pending_writes_sqlite_error`](files/tests/test_embedding_cache.md)** `(...)` (`test_embedding_cache.py`) - Test _flush_pending_writes handles sqlite3.Error (lines 3...
+- ▪️⚡ **[`TestGenerateGlossaryPage.test_formats_method_with_parent`](files/tests/test_glossary.md)** `(...)` (`test_glossary.py`) - Test methods display with parent class name.
+- ▪️ **[`TestFromYaml.test_from_yaml_all_role_types`](files/tests/test_role_config.md)** `(...)` (`test_role_config.py`) - Verify from_yaml correctly parses all role types.
+- ▪️ **[`TestFromYaml.test_from_yaml_empty_file`](files/tests/test_role_config.md)** `(...)` (`test_role_config.py`) - Verify from_yaml handles empty YAML file gracefully.
+- ▪️ **[`TestFromYaml.test_from_yaml_file_not_found`](files/tests/test_role_config.md)** `(...)` (`test_role_config.py`) - Verify from_yaml raises FileNotFoundError for missing file.
+- ▪️ **[`TestFromYaml.test_from_yaml_invalid_assignment_role`](files/tests/test_role_config.md)** `(...)` (`test_role_config.py`) - Verify from_yaml raises ValueError for invalid assignment...
+- ▪️ **[`TestFromYaml.test_from_yaml_invalid_role_raises_value_error`](files/tests/test_role_config.md)** `(...)` (`test_role_config.py`) - Verify from_yaml raises ValueError for invalid role names.
+- ▪️ **[`TestFromYaml.test_from_yaml_invalid_yaml_syntax`](files/tests/test_role_config.md)** `(...)` (`test_role_config.py`) - Verify from_yaml raises yaml.YAMLError for invalid YAML.
+- ▪️ **[`TestFromYaml.test_from_yaml_loads_config`](files/tests/test_role_config.md)** `(...)` (`test_role_config.py`) - Verify from_yaml loads configuration from YAML file.
+- ▪️ **[`TestFromYaml.test_from_yaml_minimal_config`](files/tests/test_role_config.md)** `(...)` (`test_role_config.py`) - Verify from_yaml handles minimal YAML configuration.
+- ▪️ **[`TestFromYaml.test_from_yaml_only_admin_identifiers`](files/tests/test_role_config.md)** `(...)` (`test_role_config.py`) - Verify from_yaml handles config with only admin identifiers.
+- ▪️ **[`TestFromYaml.test_from_yaml_only_assignments`](files/tests/test_role_config.md)** `(...)` (`test_role_config.py`) - Verify from_yaml handles config with only assignments.
+- ▪️ **[`TestFromYaml.test_from_yaml_pattern_matching_works`](files/tests/test_role_config.md)** `(...)` (`test_role_config.py`) - Verify loaded config performs pattern matching correctly.
+- ▪️⚡ **[`TestExamplesWikiGeneratorIntegration.test_full_generation_flow_with_mixed_examples`](files/tests/test_examples_plugin.md)** `(tmp_path: Path, mock_index_status: IndexStatus) → None` (`test_examples_plugin.py`) - Test complete generation flow with both test and docstrin...
 - ▪️⚡ **[`TestDeepResearchPipelineIntegration.test_full_pipeline_flow`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test complete pipeline with mocked dependencies.
+- ▪️⚡ **[`TestFullPipeline.test_full_pipeline_index_to_wiki`](files/tests/test_integration_pipeline.md)** `(sample_python_repo: Path, test_config: Config)` (`test_integration_pipeline.py`) - Test the full pipeline from indexing to wiki generation.
+- ▪️⚡ **[`TestFullPipeline.test_full_pipeline_with_html_export`](files/tests/test_integration_pipeline.md)** `(sample_python_repo: Path, test_config: Config, tmp_path: Path)` (`test_integration_pipeline.py`) - Test the complete pipeline including HTML export.
 - ▪️⚡ **[`TestGenerateSingleFileDoc.test_full_rebuild_ignores_cache`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test full rebuild regenerates even for unchanged files.
 - ▪️⚡ **[`TestGenerateModuleDocs.test_full_rebuild_ignores_cache`](files/tests/test_wiki_modules_coverage.md)** `(...)` (`test_wiki_modules_coverage.py`) - Test full rebuild regenerates all pages.
+- ▪️⚡ **[`TestLazyIndexIntegration.test_full_workflow_with_lazy_index`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test complete workflow: create, search, create index, sea...
+- ▪️⚡ **[`TestExamplesWikiGeneratorEdgeCases.test_function_with_no_docstring`](files/tests/test_examples_plugin.md)** `(mock_index_status: MagicMock, tmp_path: Path) → None` (`test_examples_plugin.py`) - Test function without docstring but with test examples.
+- ▪️⚡ **[`TestLLMProviderAbstractMethods.test_generate_abstract_calls_pass`](files/tests/test_base_provider.md)** `(...)` (`test_base_provider.py`) - Test that generate abstract method body is covered.
+- ▪️⚡ **[`TestAnthropicProviderGenerate.test_generate_auth_error`](files/tests/test_anthropic_provider.md)** `(...)` (`test_anthropic_provider.py`) - Test generation with authentication error.
+- ▪️⚡ **[`TestAnthropicProviderGenerate.test_generate_basic`](files/tests/test_anthropic_provider.md)** `(...)` (`test_anthropic_provider.py`) - Test basic text generation.
 - ▪️⚡ **[`TestAnthropicProvider.test_generate_basic`](files/tests/test_llm_providers.md)** `(...)` (`test_llm_providers.py`) - Test basic text generation.
 - ▪️⚡ **[`TestOpenAILLMProvider.test_generate_basic`](files/tests/test_llm_providers.md)** `(...)` (`test_llm_providers.py`) - Test basic text generation.
 - ▪️⚡ **[`TestWikiGeneratorGenerate.test_generate_calls_progress_callback`](files/tests/test_wiki_coverage.md)** `(...)` (`test_wiki_coverage.py`) - Test generate calls progress callback at each step.
+- ▪️⚡ **[`TestAnthropicProviderGenerate.test_generate_connection_error`](files/tests/test_anthropic_provider.md)** `(...)` (`test_anthropic_provider.py`) - Test generation with connection error.
+- ▪️⚡ **[`TestAnthropicProviderGenerate.test_generate_content_without_text_attr`](files/tests/test_anthropic_provider.md)** `(...)` (`test_anthropic_provider.py`) - Test generation when content block lacks text attribute.
 - ▪️⚡ **[`TestWikiGeneratorGenerate.test_generate_creates_overview_page`](files/tests/test_wiki_coverage.md)** `(...)` (`test_wiki_coverage.py`) - Test generate creates overview page.
+- ▪️⚡ **[`TestDependencyGraphGenerator.test_generate_file_graph_basic`](files/tests/test_dependency_graph.md)** `(...)` (`test_dependency_graph.py`) - Test basic file graph generation.
+- ▪️⚡ **[`TestDependencyGraphGenerator.test_generate_file_graph_empty_module`](files/tests/test_dependency_graph.md)** `(...)` (`test_dependency_graph.py`) - Test file graph with non-existent module.
+- ▪️⚡ **[`TestExamplesWikiGeneratorGenerate.test_generate_handles_search_exception`](files/tests/test_examples_plugin.md)** `(mock_vector_store: MagicMock, mock_index_status: MagicMock, tmp_path: Path) → None` (`test_examples_plugin.py`) - Test that exceptions during search are handled (lines 156...
+- ▪️⚡ **[`TestAnthropicProviderGenerate.test_generate_model_not_found_error`](files/tests/test_anthropic_provider.md)** `(...)` (`test_anthropic_provider.py`) - Test generation with model not found error.
+- ▪️⚡ **[`TestDependencyGraphGenerator.test_generate_module_graph_creates_mermaid`](files/tests/test_dependency_graph.md)** `(...)` (`test_dependency_graph.py`) - Test that generate_module_graph produces Mermaid output.
+- ▪️⚡ **[`TestDependencyGraphGenerator.test_generate_module_graph_excludes_tests`](files/tests/test_dependency_graph.md)** `(...)` (`test_dependency_graph.py`) - Test that test files are excluded when exclude_tests=True.
+- ▪️⚡ **[`TestDependencyGraphGenerator.test_generate_module_graph_shows_external`](files/tests/test_dependency_graph.md)** `(...)` (`test_dependency_graph.py`) - Test that external dependencies are shown when enabled.
+- ▪️⚡ **[`TestDependencyGraphGenerator.test_generate_module_graph_shows_nodes`](files/tests/test_dependency_graph.md)** `(...)` (`test_dependency_graph.py`) - Test that generate_module_graph shows nodes.
+- ▪️⚡ **[`TestExamplesWikiGenerator.test_generate_no_examples`](files/tests/test_code_examples.md)** `(mock_vector_store: MagicMock, mock_index_status: MagicMock, tmp_path: Path) → None` (`test_code_examples.py`) - Test generation when no examples found.
+- ▪️⚡ **[`TestExamplesWikiGeneratorGenerate.test_generate_no_examples_found`](files/tests/test_examples_plugin.md)** `(mock_vector_store: MagicMock, mock_index_status: MagicMock, tmp_path: Path) → None` (`test_examples_plugin.py`) - Test generation when no examples found returns empty result.
+- ▪️⚡ **[`TestExamplesWikiGenerator.test_generate_no_vector_store`](files/tests/test_code_examples.md)** `(mock_index_status: MagicMock, tmp_path: Path) → None` (`test_code_examples.py`) - Test generation without vector store.
+- ▪️⚡ **[`TestExamplesWikiGeneratorGenerate.test_generate_no_vector_store`](files/tests/test_examples_plugin.md)** `(mock_index_status: MagicMock, tmp_path: Path) → None` (`test_examples_plugin.py`) - Test generation without vector store returns empty result.
+- ▪️⚡ **[`TestIncrementalGeneration.test_generate_or_load_page_generates_when_cache_missing`](files/tests/test_wiki_coverage.md)** `(...)` (`test_wiki_coverage.py`) - Test _generate_or_load_page generates when cache file mis...
+- ▪️⚡ **[`TestIncrementalGeneration.test_generate_or_load_page_loads_from_cache`](files/tests/test_wiki_coverage.md)** `(...)` (`test_wiki_coverage.py`) - Test _generate_or_load_page loads from cache when availab...
+- ▪️ **[`TestGenerateExamplesPage.test_generate_page_docstring_example_without_output`](files/tests/test_examples_plugin.md)** `(generator: ExamplesWikiGenerator, mock_index_status: MagicMock) → None` (`test_examples_plugin.py`) - Test page generation with docstring example without expec...
+- ▪️ **[`TestGenerateExamplesPage.test_generate_page_limits_examples_per_entity`](files/tests/test_examples_plugin.md)** `(generator: ExamplesWikiGenerator, mock_index_status: MagicMock) → None` (`test_examples_plugin.py`) - Test page generation limits examples per entity to 2.
+- ▪️ **[`TestGenerateExamplesPage.test_generate_page_mixed_examples`](files/tests/test_examples_plugin.md)** `(generator: ExamplesWikiGenerator, mock_index_status: MagicMock) → None` (`test_examples_plugin.py`) - Test page generation with both test and docstring examples.
+- ▪️ **[`TestGenerateExamplesPage.test_generate_page_sorts_entities`](files/tests/test_examples_plugin.md)** `(generator: ExamplesWikiGenerator, mock_index_status: MagicMock) → None` (`test_examples_plugin.py`) - Test that entities are sorted alphabetically in output.
+- ▪️ **[`TestGenerateExamplesPage.test_generate_page_test_example_without_description`](files/tests/test_examples_plugin.md)** `(generator: ExamplesWikiGenerator, mock_index_status: MagicMock) → None` (`test_examples_plugin.py`) - Test page generation with test example without descriptio...
+- ▪️ **[`TestGenerateExamplesPage.test_generate_page_test_example_without_test_file`](files/tests/test_examples_plugin.md)** `(generator: ExamplesWikiGenerator, mock_index_status: MagicMock) → None` (`test_examples_plugin.py`) - Test page generation with test example without test_file ...
+- ▪️ **[`TestGenerateExamplesPage.test_generate_page_with_default_language`](files/tests/test_examples_plugin.md)** `(generator: ExamplesWikiGenerator, mock_index_status: MagicMock) → None` (`test_examples_plugin.py`) - Test page generation uses default python language (lines ...
+- ▪️ **[`TestGenerateExamplesPage.test_generate_page_with_docstring_examples`](files/tests/test_examples_plugin.md)** `(generator: ExamplesWikiGenerator, mock_index_status: MagicMock) → None` (`test_examples_plugin.py`) - Test page generation with docstring examples (line 252).
+- ▪️ **[`TestGenerateExamplesPage.test_generate_page_with_test_examples`](files/tests/test_examples_plugin.md)** `(generator: ExamplesWikiGenerator, mock_index_status: MagicMock) → None` (`test_examples_plugin.py`) - Test page generation with test-sourced examples (lines 21...
+- ▪️⚡ **[`TestAnthropicProviderGenerate.test_generate_reraises_provider_errors`](files/tests/test_anthropic_provider.md)** `(...)` (`test_anthropic_provider.py`) - Test that provider errors are re-raised directly.
+- ▪️⚡ **[`TestExamplesWikiGeneratorGenerate.test_generate_skips_private_classes`](files/tests/test_examples_plugin.md)** `(mock_vector_store: MagicMock, mock_index_status: MagicMock, tmp_path: Path) → None` (`test_examples_plugin.py`) - Test that private classes are skipped (line 141).
+- ▪️⚡ **[`TestExamplesWikiGeneratorGenerate.test_generate_skips_private_functions`](files/tests/test_examples_plugin.md)** `(mock_vector_store: MagicMock, mock_index_status: MagicMock, tmp_path: Path) → None` (`test_examples_plugin.py`) - Test that private functions are skipped (line 116).
+- ▪️⚡ **[`TestExamplesWikiGeneratorGenerate.test_generate_skips_short_class_names`](files/tests/test_examples_plugin.md)** `(mock_vector_store: MagicMock, mock_index_status: MagicMock, tmp_path: Path) → None` (`test_examples_plugin.py`) - Test that classes with short names are skipped (line 137).
+- ▪️⚡ **[`TestExamplesWikiGeneratorGenerate.test_generate_skips_short_function_names`](files/tests/test_examples_plugin.md)** `(mock_vector_store: MagicMock, mock_index_status: MagicMock, tmp_path: Path) → None` (`test_examples_plugin.py`) - Test that functions with short names are skipped (line 112).
+- ▪️⚡ **[`TestExamplesWikiGeneratorGenerate.test_generate_skips_test_functions`](files/tests/test_examples_plugin.md)** `(mock_vector_store: MagicMock, mock_index_status: MagicMock, tmp_path: Path) → None` (`test_examples_plugin.py`) - Test that test functions are skipped (line 116).
 - ▪️⚡ **[`TestAnthropicProvider.test_generate_stream`](files/tests/test_llm_providers.md)** `(...)` (`test_llm_providers.py`) - Test streaming text generation.
 - ▪️⚡ **[`TestOpenAILLMProvider.test_generate_stream`](files/tests/test_llm_providers.md)** `(...)` (`test_llm_providers.py`) - Test streaming text generation.
+- ▪️⚡ **[`TestAnthropicProviderGenerateStream.test_generate_stream_auth_error`](files/tests/test_anthropic_provider.md)** `(...)` (`test_anthropic_provider.py`) - Test streaming with authentication error.
+- ▪️⚡ **[`TestAnthropicProviderGenerateStream.test_generate_stream_basic`](files/tests/test_anthropic_provider.md)** `(...)` (`test_anthropic_provider.py`) - Test basic streaming generation.
 - ▪️⚡ **[`TestOllamaProviderGenerateStream.test_generate_stream_basic`](files/tests/test_provider_errors.md)** `(...)` (`test_provider_errors.py`) - Test basic streaming generation.
-- ▪️⚡ **[`TestOllamaProviderGenerateStream.test_generate_stream_connection_error`](files/tests/test_provider_errors.md)** `(...)` (`test_provider_errors.py`) - Test stream raises [OllamaConnectionError](files/src/local_deepwiki/providers/llm/ollama.md) on connection is...
+- ▪️⚡ **[`TestAnthropicProviderGenerateStream.test_generate_stream_connection_error`](files/tests/test_anthropic_provider.md)** `(...)` (`test_anthropic_provider.py`) - Test streaming with connection error.
+- ▪️⚡ **[`TestOllamaProviderGenerateStream.test_generate_stream_connection_error`](files/tests/test_provider_errors.md)** `(...)` (`test_provider_errors.py`) - Test stream raises OllamaConnectionError on connection is...
+- ▪️⚡ **[`TestAnthropicProviderGenerateStream.test_generate_stream_error_during_iteration`](files/tests/test_anthropic_provider.md)** `(...)` (`test_anthropic_provider.py`) - Test streaming error that occurs during iteration.
 - ▪️⚡ **[`TestOllamaProviderGenerateStream.test_generate_stream_other_exception_reraises`](files/tests/test_provider_errors.md)** `(...)` (`test_provider_errors.py`) - Test stream re-raises non-connection exceptions.
-- ▪️⚡ **[`TestOllamaProviderGenerateStream.test_generate_stream_response_error_model_not_found`](files/tests/test_provider_errors.md)** `(...)` (`test_provider_errors.py`) - Test stream raises [OllamaModelNotFoundError](files/src/local_deepwiki/providers/llm/ollama.md) on ResponseEr...
+- ▪️⚡ **[`TestLLMProviderAbstractMethods.test_generate_stream_raises_not_implemented`](files/tests/test_base_provider.md)** `(...)` (`test_base_provider.py`) - Test that base generate_stream raises NotImplementedError.
+- ▪️⚡ **[`TestAnthropicProviderGenerateStream.test_generate_stream_rate_limit_error`](files/tests/test_anthropic_provider.md)** `(...)` (`test_anthropic_provider.py`) - Test streaming with rate limit error.
+- ▪️⚡ **[`TestAnthropicProviderGenerateStream.test_generate_stream_reraises_provider_errors`](files/tests/test_anthropic_provider.md)** `(...)` (`test_anthropic_provider.py`) - Test that provider errors are re-raised in streaming.
+- ▪️⚡ **[`TestOllamaProviderGenerateStream.test_generate_stream_response_error_model_not_found`](files/tests/test_provider_errors.md)** `(...)` (`test_provider_errors.py`) - Test stream raises OllamaModelNotFoundError on ResponseEr...
 - ▪️⚡ **[`TestOllamaProviderGenerateStream.test_generate_stream_skips_empty_content`](files/tests/test_provider_errors.md)** `(...)` (`test_provider_errors.py`) - Test that empty content chunks are skipped.
+- ▪️⚡ **[`TestAnthropicProviderGenerateStream.test_generate_stream_unknown_error_reraises`](files/tests/test_anthropic_provider.md)** `(...)` (`test_anthropic_provider.py`) - Test streaming re-raises unknown errors.
+- ▪️⚡ **[`TestAnthropicProviderGenerateStream.test_generate_stream_with_system_prompt`](files/tests/test_anthropic_provider.md)** `(...)` (`test_anthropic_provider.py`) - Test streaming with system prompt.
 - ▪️⚡ **[`TestAnthropicProvider.test_generate_stream_with_system_prompt`](files/tests/test_llm_providers.md)** `(...)` (`test_llm_providers.py`) - Test streaming with system prompt.
 - ▪️⚡ **[`TestOpenAILLMProvider.test_generate_stream_with_system_prompt`](files/tests/test_llm_providers.md)** `(...)` (`test_llm_providers.py`) - Test streaming with system prompt.
 - ▪️⚡ **[`TestOllamaProviderGenerateStream.test_generate_stream_with_system_prompt`](files/tests/test_provider_errors.md)** `(...)` (`test_provider_errors.py`) - Test streaming with system prompt.
-- ▪️⚡ **[`TestGenerateWikiFunction.test_generate_wiki_passes_full_rebuild`](files/tests/test_wiki_coverage.md)** `(...)` (`test_wiki_coverage.py`) - Test [generate_wiki](files/src/local_deepwiki/generators/wiki.md) passes full_rebuild flag.
-- ▪️⚡ **[`TestGenerateWikiFunction.test_generate_wiki_respects_explicit_provider`](files/tests/test_wiki_coverage.md)** `(...)` (`test_wiki_coverage.py`) - Test [generate_wiki](files/src/local_deepwiki/generators/wiki.md) uses explicit provider over auto-switc...
-- ▪️⚡ **[`TestGenerateWikiFunction.test_generate_wiki_uses_cloud_for_github`](files/tests/test_wiki_coverage.md)** `(...)` (`test_wiki_coverage.py`) - Test [generate_wiki](files/src/local_deepwiki/generators/wiki.md) switches to cloud provider for GitHub ...
-- ▪️⚡ **[`TestGenerateWikiFunction.test_generate_wiki_uses_default_provider`](files/tests/test_wiki_coverage.md)** `(...)` (`test_wiki_coverage.py`) - Test [generate_wiki](files/src/local_deepwiki/generators/wiki.md) uses default LLM provider.
+- ▪️⚡ **[`TestFuzzySearchHelper.test_generate_suggestions`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test generating suggestions for poor results.
+- ▪️⚡ **[`TestFuzzySearchHelperEdgeCases.test_generate_suggestions_empty_query`](files/tests/test_fuzzy_search.md)** `(...)` (`test_fuzzy_search.py`) - Test generate_suggestions with empty query (line 515).
+- ▪️⚡ **[`TestFuzzySearchHelper.test_generate_suggestions_empty_results`](files/tests/test_fuzzy_search.md)** `(...)` (`test_fuzzy_search.py`) - Test generating suggestions when results are empty.
+- ▪️⚡ **[`TestFuzzySearchHelper.test_generate_suggestions_excludes_existing`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test that suggestions exclude names already in results.
+- ▪️⚡ **[`TestFuzzySearchHelper.test_generate_suggestions_excludes_existing_names`](files/tests/test_fuzzy_search.md)** `(...)` (`test_fuzzy_search.py`) - Test that suggestions exclude names already in results.
+- ▪️⚡ **[`TestFuzzySearchHelperEdgeCases.test_generate_suggestions_full_query_boost`](files/tests/test_fuzzy_search.md)** `(...)` (`test_fuzzy_search.py`) - Test generate_suggestions boosts full query matches (line...
+- ▪️⚡ **[`TestFuzzySearchHelperEdgeCases.test_generate_suggestions_short_query_terms`](files/tests/test_fuzzy_search.md)** `(...)` (`test_fuzzy_search.py`) - Test generate_suggestions with single char query terms (l...
+- ▪️⚡ **[`TestAnthropicProviderGenerate.test_generate_unknown_error_reraises`](files/tests/test_anthropic_provider.md)** `(...)` (`test_anthropic_provider.py`) - Test generation re-raises unknown errors after handling.
+- ▪️⚡ **[`TestGenerateWikiFunction.test_generate_wiki_passes_full_rebuild`](files/tests/test_wiki_coverage.md)** `(...)` (`test_wiki_coverage.py`) - Test generate_wiki passes full_rebuild flag.
+- ▪️⚡ **[`TestGenerateWikiFunction.test_generate_wiki_respects_explicit_provider`](files/tests/test_wiki_coverage.md)** `(...)` (`test_wiki_coverage.py`) - Test generate_wiki uses explicit provider over auto-switc...
+- ▪️⚡ **[`TestGenerateWikiFunction.test_generate_wiki_uses_cloud_for_github`](files/tests/test_wiki_coverage.md)** `(...)` (`test_wiki_coverage.py`) - Test generate_wiki switches to cloud provider for GitHub ...
+- ▪️⚡ **[`TestGenerateWikiFunction.test_generate_wiki_uses_default_provider`](files/tests/test_wiki_coverage.md)** `(...)` (`test_wiki_coverage.py`) - Test generate_wiki uses default LLM provider.
+- ▪️⚡ **[`TestExamplesWikiGeneratorGenerate.test_generate_with_class_docstring_examples`](files/tests/test_examples_plugin.md)** `(mock_vector_store: MagicMock, mock_index_status: MagicMock, tmp_path: Path) → None` (`test_examples_plugin.py`) - Test generation with docstring examples from classes.
+- ▪️⚡ **[`TestExamplesWikiGenerator.test_generate_with_examples`](files/tests/test_code_examples.md)** `(mock_vector_store: MagicMock, mock_index_status: MagicMock, tmp_path: Path) → None` (`test_code_examples.py`) - Test generation with examples.
+- ▪️⚡ **[`TestExamplesWikiGeneratorGenerate.test_generate_with_function_docstring_examples`](files/tests/test_examples_plugin.md)** `(mock_vector_store: MagicMock, mock_index_status: MagicMock, tmp_path: Path) → None` (`test_examples_plugin.py`) - Test generation with docstring examples from functions.
 - ▪️⚡ **[`TestOpenAILLMProvider.test_generate_with_none_content`](files/tests/test_llm_providers.md)** `(...)` (`test_llm_providers.py`) - Test generation when response content is None.
+- ▪️⚡ **[`TestAnthropicProviderGenerate.test_generate_with_system_prompt`](files/tests/test_anthropic_provider.md)** `(...)` (`test_anthropic_provider.py`) - Test generation with system prompt.
 - ▪️⚡ **[`TestAnthropicProvider.test_generate_with_system_prompt`](files/tests/test_llm_providers.md)** `(...)` (`test_llm_providers.py`) - Test generation with system prompt.
 - ▪️⚡ **[`TestOpenAILLMProvider.test_generate_with_system_prompt`](files/tests/test_llm_providers.md)** `(...)` (`test_llm_providers.py`) - Test generation with system prompt.
 - ▪️⚡ **[`TestAnthropicProvider.test_generate_with_zero_temperature`](files/tests/test_llm_providers.md)** `(...)` (`test_llm_providers.py`) - Test generation with zero temperature (deterministic).
@@ -878,6 +2504,7 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️⚡ **[`TestGenerateDependenciesPage.test_generates_basic_dependencies`](files/tests/test_wiki_pages_coverage.md)** `(...)` (`test_wiki_pages_coverage.py`) - Test generates basic dependencies page.
 - ▪️ **[`TestGenerateFilesIndex.test_generates_basic_index`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test generates basic index content.
 - ▪️⚡ **[`TestGenerateOverviewPage.test_generates_basic_overview`](files/tests/test_wiki_pages_coverage.md)** `(...)` (`test_wiki_pages_coverage.py`) - Test generates basic overview page.
+- ▪️ **[`TestGenerateBlameSectionCoverage.test_generates_blame_section_with_entities`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test generates blame section when blame info is available.
 - ▪️⚡ **[`TestGenerateEntityEntries.test_generates_class_entry`](files/tests/test_search.md)** `(...)` (`test_search.py`) - Test that class entries have no signature.
 - ▪️⚡ **[`TestGenerateSingleFileDoc.test_generates_doc_for_file_with_chunks`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test generates documentation for file with chunks.
 - ▪️⚡ **[`TestGenerateEntityEntries.test_generates_entity_entries`](files/tests/test_search.md)** `(...)` (`test_search.py`) - Test that entity entries are generated for functions, cla...
@@ -886,35 +2513,96 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️⚡ **[`TestGenerateEntityEntries.test_generates_method_display_name`](files/tests/test_search.md)** `(...)` (`test_search.py`) - Test that method display name includes parent class.
 - ▪️⚡ **[`TestGenerateModuleDocs.test_generates_modules_index`](files/tests/test_wiki_modules_coverage.md)** `(...)` (`test_wiki_modules_coverage.py`) - Test generates modules index page.
 - ▪️⚡ **[`TestGenerateModuleDocs.test_generates_multiple_modules`](files/tests/test_wiki_modules_coverage.md)** `(...)` (`test_wiki_modules_coverage.py`) - Test generates pages for multiple modules.
+- ▪️⚡ **[`TestGenerateCoveragePage.test_generates_page_header`](files/tests/test_coverage.md)** `(...)` (`test_coverage.py`) - Test generates page with proper header.
+- ▪️⚡ **[`TestGenerateGlossaryPage.test_generates_page_with_entities`](files/tests/test_glossary.md)** `(...)` (`test_glossary.py`) - Test generates a valid markdown page.
+- ▪️⚡ **[`TestGenerateInheritancePage.test_generates_page_with_inheritance`](files/tests/test_inheritance.md)** `(...)` (`test_inheritance.py`) - Test generates page when inheritance exists.
 - ▪️ **[`TestGenerateFilesIndex.test_generates_relative_links`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test generates correct relative links.
-- ▪️ **[`TestManifestCaching.test_get_cached_manifest_creates_cache`](files/tests/test_manifest.md)** `(...)` (`test_manifest.py`) - [get_cached_manifest](files/src/local_deepwiki/generators/manifest.md) creates cache file on first call.
-- ▪️ **[`TestManifestCaching.test_get_cached_manifest_default_cache_dir`](files/tests/test_manifest.md)** `(...)` (`test_manifest.py`) - [get_cached_manifest](files/src/local_deepwiki/generators/manifest.md) uses .deepwiki in repo by default.
-- ▪️ **[`TestManifestCaching.test_get_cached_manifest_invalidates_on_change`](files/tests/test_manifest.md)** `(...)` (`test_manifest.py`) - [get_cached_manifest](files/src/local_deepwiki/generators/manifest.md) re-parses when file changes.
-- ▪️ **[`TestManifestCaching.test_get_cached_manifest_uses_cache`](files/tests/test_manifest.md)** `(...)` (`test_manifest.py`) - [get_cached_manifest](files/src/local_deepwiki/generators/manifest.md) uses cache on subsequent calls.
+- ▪️ **[`TestGenerateStaleReportPageWithStalePages.test_generates_report_with_stale_pages_table`](files/tests/test_stale_detection.md)** `(tmp_path: Path) → None` (`test_stale_detection.py`) - Test generates report with summary and stale pages table.
+- ▪️⚡ **[`TestGenerateFileDocsCallbacks.test_generation_progress_start_and_complete_phase`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test generation_progress start_phase and complete_phase a...
+- ▪️⚡ **[`TestExamplesWikiGeneratorIntegration.test_generation_with_null_name_chunk`](files/tests/test_examples_plugin.md)** `(tmp_path: Path, mock_index_status: IndexStatus) → None` (`test_examples_plugin.py`) - Test that chunks with null names are skipped.
+- ▪️⚡ **[`TestExamplesWikiGenerator.test_generator_metadata`](files/tests/test_code_examples.md)** `(...) → None` (`test_code_examples.py`) - Test plugin metadata.
+- ▪️ **[`TestManifestCaching.test_get_cached_manifest_creates_cache`](files/tests/test_manifest.md)** `(...)` (`test_manifest.py`) - get_cached_manifest creates cache file on first call.
+- ▪️ **[`TestManifestCaching.test_get_cached_manifest_default_cache_dir`](files/tests/test_manifest.md)** `(...)` (`test_manifest.py`) - get_cached_manifest uses .deepwiki in repo by default.
+- ▪️ **[`TestManifestCaching.test_get_cached_manifest_invalidates_on_change`](files/tests/test_manifest.md)** `(...)` (`test_manifest.py`) - get_cached_manifest re-parses when file changes.
+- ▪️ **[`TestManifestCaching.test_get_cached_manifest_uses_cache`](files/tests/test_manifest.md)** `(...)` (`test_manifest.py`) - get_cached_manifest uses cache on subsequent calls.
+- ▪️ **[`TestEmbeddingCacheErrorHandling.test_get_cached_sqlite_error`](files/tests/test_embedding_cache.md)** `(...)` (`test_embedding_cache.py`) - Test _get_cached handles sqlite3.Error (lines 237-240).
+- ▪️ **[`TestLocalEmbeddingProvider.test_get_capabilities`](files/tests/test_local_embedding_provider.md)** `(...)` (`test_local_embedding_provider.py`) - Test get_capabilities returns correct EmbeddingProviderCa...
 - ▪️⚡ **[`TestVectorStoreEdgeCases.test_get_chunk_by_id_empty_db`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test get_chunk_by_id on empty database returns None.
+- ▪️⚡ **[`TestVectorStoreIndexes.test_get_chunk_by_id_uses_index`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test that get_chunk_by_id can find chunks efficiently.
 - ▪️⚡ **[`TestVectorStoreEdgeCases.test_get_chunks_by_file_empty_db`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test get_chunks_by_file on empty database returns empty l...
+- ▪️⚡ **[`TestVectorStoreIndexes.test_get_chunks_by_file_uses_index`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test that get_chunks_by_file can find chunks efficiently.
+- ▪️ **[`TestAccessController.test_get_current_subject_initially_none`](files/tests/test_access_control.md)** `(...)` (`test_access_control.py`) - Verify get_current_subject returns None initially.
 - ▪️ **[`TestLocalEmbeddingProvider.test_get_dimension`](files/tests/test_local_embedding_provider.md)** `(...)` (`test_local_embedding_provider.py`) - Test getting embedding dimension.
+- ▪️ **[`TestEmbeddingCache.test_get_dimension`](files/tests/test_embedding_cache.md)** `(...)` (`test_embedding_cache.py`) - Test get_dimension delegates to provider.
+- ▪️ **[`TestEmbeddingProviderAbstractMethods.test_get_dimension_abstract_calls_pass`](files/tests/test_base_provider.md)** `(...)` (`test_base_provider.py`) - Test that get_dimension abstract method body is covered.
 - ▪️ **[`TestLocalEmbeddingProvider.test_get_dimension_cached`](files/tests/test_local_embedding_provider.md)** `(...)` (`test_local_embedding_provider.py`) - Test that dimension is cached after first load.
+- ▪️ **[`TestUncoveredCodePaths.test_get_docstring_unsupported_language_returns_none`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test get_docstring returns None for language not in extra...
+- ▪️⚡ **[`TestEmbeddingCache.test_get_entry_count`](files/tests/test_embedding_cache.md)** `(...)` (`test_embedding_cache.py`) - Test get_entry_count returns correct count.
 - ▪️ **[`TestLLMCacheEdgeCases.test_get_entry_count_exception_handling`](files/tests/test_llm_cache.md)** `(cache: LLMCache)` (`test_llm_cache.py`) - Test get_entry_count handles exceptions gracefully.
+- ▪️ **[`TestEmbeddingCacheErrorHandling.test_get_entry_count_sqlite_error`](files/tests/test_embedding_cache.md)** `(...)` (`test_embedding_cache.py`) - Test get_entry_count handles sqlite3.Error (lines 395-396).
 - ▪️ **[`TestLLMCacheEdgeCases.test_get_entry_count_when_table_none`](files/tests/test_llm_cache.md)** `(cache: LLMCache)` (`test_llm_cache.py`) - Test get_entry_count returns 0 when table is None.
+- ▪️ **[`TestProgressManager.test_get_eta_no_progress`](files/tests/test_progress.md)** `(...)` (`test_progress.py`) - Test ETA when no progress has been made.
+- ▪️ **[`TestProgressManager.test_get_eta_with_historical_data`](files/tests/test_progress.md)** `(...)` (`test_progress.py`) - Test ETA uses historical data.
+- ▪️ **[`TestProgressManager.test_get_eta_with_progress`](files/tests/test_progress.md)** `(...)` (`test_progress.py`) - Test ETA calculation with progress.
 - ▪️⚡ **[`TestLLMCacheEdgeCases.test_get_exact_hash_exception_handling`](files/tests/test_llm_cache.md)** `(cache: LLMCache)` (`test_llm_cache.py`) - Test that exact hash lookup exceptions are handled gracef...
 - ▪️ **[`TestGetFileExamples.test_get_file_examples_filters_short_names`](files/tests/test_test_examples.md)** `(tmp_path: Path) → None` (`test_test_examples.py`) - Test that very short entity names are filtered.
 - ▪️ **[`TestGetFileExamples.test_get_file_examples_no_matching_tests`](files/tests/test_test_examples.md)** `(tmp_path: Path) → None` (`test_test_examples.py`) - Test returns None when test file has no matching examples.
 - ▪️ **[`TestGetFileExamples.test_get_file_examples_no_test_file`](files/tests/test_test_examples.md)** `(tmp_path: Path) → None` (`test_test_examples.py`) - Test returns None when no test file exists.
 - ▪️ **[`TestGetFileExamples.test_get_file_examples_non_python`](files/tests/test_test_examples.md)** `(tmp_path: Path) → None` (`test_test_examples.py`) - Test returns None for non-Python files.
-- ▪️ **[`TestGetFileExamples.test_get_file_examples_returns_markdown`](files/tests/test_test_examples.md)** `(tmp_path: Path) → None` (`test_test_examples.py`) - Test that [get_file_examples](files/src/local_deepwiki/generators/test_examples.md) returns formatted markdown.
+- ▪️ **[`TestGetFileExamples.test_get_file_examples_returns_markdown`](files/tests/test_test_examples.md)** `(tmp_path: Path) → None` (`test_test_examples.py`) - Test that get_file_examples returns formatted markdown.
 - ▪️ **[`TestLargeFileHandling.test_get_file_info_large_file`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test get_file_info uses chunked hashing for large files.
+- ▪️⚡ **[`TestGetFileSuggestions.test_get_file_suggestions_basic`](files/tests/test_fuzzy_search.md)** `(...)` (`test_fuzzy_search.py`) - Test basic file suggestions.
+- ▪️⚡ **[`TestGetFileSuggestions.test_get_file_suggestions_empty_index`](files/tests/test_fuzzy_search.md)** `(...)` (`test_fuzzy_search.py`) - Test file suggestions with empty index (line 582-583).
+- ▪️⚡ **[`TestGetFileSuggestions.test_get_file_suggestions_limit`](files/tests/test_fuzzy_search.md)** `(...)` (`test_fuzzy_search.py`) - Test file suggestions respects limit parameter.
+- ▪️⚡ **[`TestGetFileSuggestions.test_get_file_suggestions_no_file_paths`](files/tests/test_fuzzy_search.md)** `(...)` (`test_fuzzy_search.py`) - Test file suggestions when chunks have no file paths (lin...
+- ▪️⚡ **[`TestGetFileSuggestions.test_get_file_suggestions_threshold`](files/tests/test_fuzzy_search.md)** `(...)` (`test_fuzzy_search.py`) - Test file suggestions respects threshold parameter.
+- ▪️⚡ **[`TestGetFileSuggestions.test_get_file_suggestions_with_path_query`](files/tests/test_fuzzy_search.md)** `(...)` (`test_fuzzy_search.py`) - Test file suggestions when query looks like a path.
+- ▪️ **[`TestIndexStatusManagerGetFilesNeedingReindex.test_get_files_needing_reindex_handles_mixed_changes`](files/tests/test_index_manager.md)** `(...)` (`test_index_manager.py`) - Test that get_files_needing_reindex handles mixed changes.
+- ▪️ **[`TestIndexStatusManagerGetFilesNeedingReindex.test_get_files_needing_reindex_identifies_deleted_files`](files/tests/test_index_manager.md)** `(...)` (`test_index_manager.py`) - Test that get_files_needing_reindex identifies deleted fi...
+- ▪️ **[`TestIndexStatusManagerGetFilesNeedingReindex.test_get_files_needing_reindex_identifies_modified_files`](files/tests/test_index_manager.md)** `(...)` (`test_index_manager.py`) - Test that get_files_needing_reindex identifies modified f...
+- ▪️ **[`TestIndexStatusManagerGetFilesNeedingReindex.test_get_files_needing_reindex_identifies_new_files`](files/tests/test_index_manager.md)** `(...)` (`test_index_manager.py`) - Test that get_files_needing_reindex identifies new files.
 - ▪️ **[`TestProviderPrompts.test_get_for_provider_anthropic`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test get_for_provider returns anthropic prompts.
 - ▪️ **[`TestProviderPrompts.test_get_for_provider_ollama`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test get_for_provider returns ollama prompts.
 - ▪️ **[`TestProviderPrompts.test_get_for_provider_openai`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test get_for_provider returns openai prompts.
 - ▪️ **[`TestProviderPrompts.test_get_for_provider_unknown_defaults_to_anthropic`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test get_for_provider defaults to anthropic for unknown p...
+- ▪️ **[`TestCheckpointManager.test_get_incomplete_checkpoints`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test getting only incomplete checkpoints.
+- ▪️⚡ **[`TestGetMainDefinitionLines.test_get_main_definition_lines_class_priority`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test that class takes priority over function if it starts...
+- ▪️ **[`TestGetMainDefinitionLines.test_get_main_definition_lines_empty_store`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test get_main_definition_lines on empty store.
+- ▪️⚡ **[`TestGetMainDefinitionLines.test_get_main_definition_lines_function_first_when_earlier`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test that function is kept if it starts earlier than class.
+- ▪️⚡ **[`TestGetMainDefinitionLines.test_get_main_definition_lines_ignores_other_types`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test that get_main_definition_lines ignores module/import...
+- ▪️⚡ **[`TestGetMainDefinitionLines.test_get_main_definition_lines_multiple_files`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test get_main_definition_lines with multiple files.
+- ▪️⚡ **[`TestGetMainDefinitionLines.test_get_main_definition_lines_same_type_keeps_earlier`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test that same type chunks keep the earlier one.
+- ▪️⚡ **[`TestGetMainDefinitionLines.test_get_main_definition_lines_with_classes`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test get_main_definition_lines with class chunks.
+- ▪️⚡ **[`TestGetMainDefinitionLines.test_get_main_definition_lines_with_functions`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test get_main_definition_lines with function chunks.
 - ▪️ **[`TestManifestCaching.test_get_manifest_mtimes_empty_repo`](files/tests/test_manifest.md)** `(...)` (`test_manifest.py`) - Empty repo returns no mtimes.
 - ▪️ **[`TestManifestCaching.test_get_manifest_mtimes_with_files`](files/tests/test_manifest.md)** `(...)` (`test_manifest.py`) - Returns mtimes for existing manifest files.
+- ▪️ **[`TestLocalEmbeddingProvider.test_get_max_batch_size`](files/tests/test_local_embedding_provider.md)** `(...)` (`test_local_embedding_provider.py`) - Test get_max_batch_size returns 1000.
+- ▪️ **[`TestLocalEmbeddingProvider.test_get_max_tokens_known_model`](files/tests/test_local_embedding_provider.md)** `(...)` (`test_local_embedding_provider.py`) - Test get_max_tokens for known models.
+- ▪️ **[`TestLocalEmbeddingProvider.test_get_max_tokens_unknown_model`](files/tests/test_local_embedding_provider.md)** `(...)` (`test_local_embedding_provider.py`) - Test get_max_tokens defaults to 512 for unknown models.
+- ▪️ **[`TestDocstringExtractorHelpers.test_get_node_name_field_access_fallback`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test get_node_name uses field access when no direct ident...
+- ▪️ **[`TestDocstringExtractorHelpers.test_get_node_name_via_field_name`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test get_node_name uses child_by_field_name for languages...
+- ▪️ **[`TestRegistryEdgeCases.test_get_nonexistent_parsers`](files/tests/test_plugin_registry.md)** `(...)` (`test_plugin_registry.py`) - Test getting nonexistent items returns None.
+- ▪️ **[`TestOperationProgressRegistry.test_get_operation`](files/tests/test_progress.md)** `(...)` (`test_progress.py`) - Test getting an operation.
+- ▪️ **[`TestOperationProgressRegistry.test_get_operation_progress`](files/tests/test_progress.md)** `(...)` (`test_progress.py`) - Test getting progress for a specific operation.
+- ▪️ **[`TestWikiPageIterator.test_get_page_count`](files/tests/test_streaming_export.md)** `(sample_wiki: Path)` (`test_streaming_export.py`) - Test counting pages without loading content.
 - ▪️ **[`TestEntityRegistry.test_get_page_entities`](files/tests/test_crosslinks.md)** `(...)` (`test_crosslinks.py`) - Test getting entities defined in a page.
+- ▪️ **[`TestPluginRegistry.test_get_parser_for_extension`](files/tests/test_plugins.md)** `(...)` (`test_plugins.py`) - Test finding parser by extension.
+- ▪️ **[`TestRegistryEdgeCases.test_get_parser_for_extension_case_insensitive`](files/tests/test_plugin_registry.md)** `(...)` (`test_plugin_registry.py`) - Test extension matching is case insensitive.
+- ▪️ **[`TestRegistryEdgeCases.test_get_parser_for_extension_no_match`](files/tests/test_plugin_registry.md)** `(...)` (`test_plugin_registry.py`) - Test get_parser_for_extension returns None when no match.
+- ▪️ **[`TestUncoveredCodePaths.test_get_parser_unsupported_language`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test that _get_parser raises ValueError for unsupported l...
+- ▪️ **[`TestProgressManager.test_get_progress_dict`](files/tests/test_progress.md)** `(...)` (`test_progress.py`) - Test getting progress as dict.
 - ▪️ **[`TestRelationshipAnalyzer.test_get_relationships_imported_by`](files/tests/test_see_also.md)** `(...)` (`test_see_also.py`) - Test finding files that import a given file.
 - ▪️ **[`TestRelationshipAnalyzer.test_get_relationships_imports`](files/tests/test_see_also.md)** `(...)` (`test_see_also.py`) - Test getting import relationships for a file.
+- ▪️ **[`TestCheckpointHelperFunctions.test_get_research_checkpoint`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test the get_research_checkpoint helper function.
+- ▪️ **[`TestSearchState.test_get_selected_result`](files/tests/test_interactive_search.md)** `(sample_results: list[SearchResult]) → None` (`test_interactive_search.py`) - get_selected_result should return the selected result.
+- ▪️ **[`TestSearchState.test_get_selected_result_empty`](files/tests/test_interactive_search.md)** `(...) → None` (`test_interactive_search.py`) - get_selected_result should return None for empty results.
 - ▪️⚡ **[`TestLLMCacheEdgeCases.test_get_similarity_search_exception_handling`](files/tests/test_llm_cache.md)** `(cache: LLMCache)` (`test_llm_cache.py`) - Test that similarity search exceptions are handled gracef...
+- ▪️⚡ **[`TestFuzzySearchHelper.test_get_stats`](files/tests/test_fuzzy_search.md)** `(...)` (`test_fuzzy_search.py`) - Test getting statistics about the name index.
+- ▪️⚡ **[`TestRateLimiter.test_get_status`](files/tests/test_rate_limiter.md)** `(...)` (`test_rate_limiter.py`) - Test that get_status returns correct information.
+- ▪️ **[`TestGenerationProgress.test_get_summary`](files/tests/test_progress_tracker.md)** `(...)` (`test_progress_tracker.py`) - Test generating summary string.
+- ▪️ **[`TestGenerationProgress.test_get_summary_sets_ended_at_for_incomplete_phase`](files/tests/test_progress_tracker.md)** `(...)` (`test_progress_tracker.py`) - Test that get_summary sets ended_at for phases that haven...
 - ▪️⚡ **[`TestLLMCacheEdgeCases.test_get_table_when_table_exists`](files/tests/test_llm_cache.md)** `(cache: LLMCache)` (`test_llm_cache.py`) - Test _get_table when table exists in database.
+- ▪️ **[`TestWikiPageIterator.test_get_total_size_bytes`](files/tests/test_streaming_export.md)** `(sample_wiki: Path)` (`test_streaming_export.py`) - Test calculating total size.
 - ▪️ **[`TestConfig.test_get_vector_db_path`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test vector database path generation.
 - ▪️ **[`TestConfig.test_get_wiki_path`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test wiki path generation.
 - ▪️ **[`TestBuildSourceUrl.test_github_url_with_line_range`](files/tests/test_git_utils.md)** `(...) → None` (`test_git_utils.py`) - Test building GitHub URL with line range.
@@ -926,59 +2614,167 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️ **[`TestBuildSourceUrl.test_gitlab_url_without_lines`](files/tests/test_git_utils.md)** `(...) → None` (`test_git_utils.py`) - Test building GitLab URL without line numbers.
 - ▪️⚡ **[`TestWithRetry.test_gives_up_after_max_attempts`](files/tests/test_retry.md)** `(...)` (`test_retry.py`) - Test that function gives up after max attempts.
 - ▪️ **[`TestConfig.test_global_config`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test global config singleton.
+- ▪️⚡ **[`TestEventEmitter.test_global_handler`](files/tests/test_events.md)** `(emitter: EventEmitter)` (`test_events.py`) - Test global handler receives all events.
+- ▪️⚡ **[`TestAuxiliaryPagesGeneration.test_glossary_page_generated`](files/tests/test_wiki_coverage.md)** `(...)` (`test_wiki_coverage.py`) - Test glossary page is added when content is generated (li...
 - ▪️ **[`TestDocstringExtraction.test_go_multi_line_comments`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test Go multi-line doc comments.
 - ▪️ **[`TestDocstringExtraction.test_go_single_line_comment`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test Go single-line doc comment.
 - ▪️ **[`TestGenerateChangelogContent.test_groups_by_date`](files/tests/test_changelog.md)** `(tmp_path: Path) → None` (`test_changelog.py`) - Test commits are grouped by date.
 - ▪️ **[`TestGenerateFilesIndex.test_groups_by_directory`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test groups files by directory.
 - ▪️⚡ **[`TestGenerateModuleDocs.test_groups_files_by_directory`](files/tests/test_wiki_modules_coverage.md)** `(...)` (`test_wiki_modules_coverage.py`) - Test correctly groups files by top-level directory.
+- ▪️⚡ **[`TestGenerateGlossaryPage.test_groups_non_alpha_under_hash`](files/tests/test_glossary.md)** `(...)` (`test_glossary.py`) - Test non-alphabetic names grouped under #.
+- ▪️ **[`TestOpenAIEmbeddingProviderHandleApiError.test_handle_api_status_error_non_rate_limit`](files/tests/test_openai_embeddings.md)** `(...)` (`test_openai_embeddings.py`) - Test handling of APIStatusError that is not a rate limit.
+- ▪️ **[`TestOpenAIProviderHandleApiError.test_handle_api_status_error_other`](files/tests/test_openai_provider.md)** `(...)` ⚠️`server_error` (`test_openai_provider.py`) - Test handling of APIStatusError that doesn't match rate l...
+- ▪️⚡ **[`TestAnthropicProviderHandleApiError.test_handle_api_status_error_unknown_via_generate`](files/tests/test_anthropic_provider.md)** `(...)` (`test_anthropic_provider.py`) - Test that unknown APIStatusError is re-raised through gen...
+- ▪️ **[`TestOpenAIProviderHandleApiError.test_handle_authentication_error`](files/tests/test_openai_provider.md)** `(...)` (`test_openai_provider.py`) - Test handling of AuthenticationError.
+- ▪️ **[`TestAnthropicProviderHandleApiError.test_handle_authentication_error`](files/tests/test_anthropic_provider.md)** `(...)` (`test_anthropic_provider.py`) - Test handling AuthenticationError.
+- ▪️ **[`TestOpenAIEmbeddingProviderHandleApiError.test_handle_authentication_error`](files/tests/test_openai_embeddings.md)** `(...)` (`test_openai_embeddings.py`) - Test handling of AuthenticationError.
+- ▪️ **[`TestOpenAIProviderHandleApiError.test_handle_connection_error`](files/tests/test_openai_provider.md)** `(...)` (`test_openai_provider.py`) - Test handling of APIConnectionError.
+- ▪️ **[`TestAnthropicProviderHandleApiError.test_handle_connection_error`](files/tests/test_anthropic_provider.md)** `(...)` (`test_anthropic_provider.py`) - Test handling APIConnectionError.
+- ▪️ **[`TestOpenAIEmbeddingProviderHandleApiError.test_handle_connection_error`](files/tests/test_openai_embeddings.md)** `(...)` (`test_openai_embeddings.py`) - Test handling of APIConnectionError.
+- ▪️⚡ **[`TestFilterModeHandling.test_handle_filter_mode_empty_input`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock) → None` (`test_interactive_search.py`) - Empty input in filter mode should not change filter.
+- ▪️⚡ **[`TestFilterModeHandling.test_handle_filter_mode_escape_returns_to_search`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock) → None` (`test_interactive_search.py`) - ESC key should return to search mode.
+- ▪️⚡ **[`TestFilterModeHandling.test_handle_filter_mode_language_invalid`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock) → None` (`test_interactive_search.py`) - Invalid language filter should set error message.
+- ▪️⚡ **[`TestFilterModeHandling.test_handle_filter_mode_language_valid`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock, sample_results: list[SearchResult]) → None` (`test_interactive_search.py`) - Valid language filter should be applied.
+- ▪️⚡ **[`TestFilterModeHandling.test_handle_filter_mode_path`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock, sample_results: list[SearchResult]) → None` (`test_interactive_search.py`) - File path pattern filter should be applied.
+- ▪️⚡ **[`TestFilterModeHandling.test_handle_filter_mode_readchar_import_error`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock) → None` (`test_interactive_search.py`) - _handle_filter_mode should return when readchar is unavai...
+- ▪️⚡ **[`TestFilterModeHandling.test_handle_filter_mode_score_invalid_format`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock) → None` (`test_interactive_search.py`) - Invalid score format should set error message.
+- ▪️⚡ **[`TestFilterModeHandling.test_handle_filter_mode_score_out_of_range`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock) → None` (`test_interactive_search.py`) - Score outside 0.0-1.0 range should set error message.
+- ▪️⚡ **[`TestFilterModeHandling.test_handle_filter_mode_score_valid`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock, sample_results: list[SearchResult]) → None` (`test_interactive_search.py`) - Valid score filter should be applied.
+- ▪️⚡ **[`TestFilterModeHandling.test_handle_filter_mode_type_invalid`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock) → None` (`test_interactive_search.py`) - Invalid chunk type should set error message.
+- ▪️⚡ **[`TestFilterModeHandling.test_handle_filter_mode_type_valid`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock, sample_results: list[SearchResult]) → None` (`test_interactive_search.py`) - Valid chunk type filter should be applied.
+- ▪️ **[`TestOpenAIProviderHandleApiError.test_handle_model_not_found_404`](files/tests/test_openai_provider.md)** `(...)` (`test_openai_provider.py`) - Test handling of model not found error (404 status code).
+- ▪️ **[`TestAnthropicProviderHandleApiError.test_handle_model_not_found_404`](files/tests/test_anthropic_provider.md)** `(...)` (`test_anthropic_provider.py`) - Test handling model not found error with 404 status.
+- ▪️ **[`TestOpenAIProviderHandleApiError.test_handle_model_not_found_by_message`](files/tests/test_openai_provider.md)** `(...)` (`test_openai_provider.py`) - Test handling of model not found detected by message cont...
+- ▪️ **[`TestAnthropicProviderHandleApiError.test_handle_model_not_found_by_message`](files/tests/test_anthropic_provider.md)** `(...)` (`test_anthropic_provider.py`) - Test handling model not found error detected by message.
+- ▪️ **[`TestOpenAIProviderHandleApiError.test_handle_rate_limit_error_429`](files/tests/test_openai_provider.md)** `(...)` (`test_openai_provider.py`) - Test handling of rate limit error (429 status code).
+- ▪️ **[`TestAnthropicProviderHandleApiError.test_handle_rate_limit_error_429`](files/tests/test_anthropic_provider.md)** `(...)` (`test_anthropic_provider.py`) - Test handling rate limit error with 429 status.
+- ▪️ **[`TestOpenAIProviderHandleApiError.test_handle_rate_limit_error_by_message`](files/tests/test_openai_provider.md)** `(...)` (`test_openai_provider.py`) - Test handling of rate limit error detected by message con...
+- ▪️ **[`TestAnthropicProviderHandleApiError.test_handle_rate_limit_error_by_message`](files/tests/test_anthropic_provider.md)** `(...)` (`test_anthropic_provider.py`) - Test handling rate limit error detected by message content.
+- ▪️ **[`TestAnthropicProviderHandleApiError.test_handle_rate_limit_error_invalid_retry_after`](files/tests/test_anthropic_provider.md)** `(...)` (`test_anthropic_provider.py`) - Test handling rate limit error with invalid retry-after h...
+- ▪️ **[`TestAnthropicProviderHandleApiError.test_handle_rate_limit_error_no_response`](files/tests/test_anthropic_provider.md)** `(...)` (`test_anthropic_provider.py`) - Test handling rate limit error without response object.
+- ▪️ **[`TestOpenAIEmbeddingProviderHandleApiError.test_handle_rate_limit_error_status_429`](files/tests/test_openai_embeddings.md)** `(...)` (`test_openai_embeddings.py`) - Test handling of rate limit error with status code 429.
+- ▪️ **[`TestOpenAIEmbeddingProviderHandleApiError.test_handle_rate_limit_error_with_invalid_retry_after`](files/tests/test_openai_embeddings.md)** `(...)` (`test_openai_embeddings.py`) - Test handling of rate limit error with invalid retry-afte...
+- ▪️ **[`TestOpenAIEmbeddingProviderHandleApiError.test_handle_rate_limit_error_with_rate_in_message`](files/tests/test_openai_embeddings.md)** `(...)` (`test_openai_embeddings.py`) - Test handling of rate limit error detected via message co...
+- ▪️ **[`TestOpenAIEmbeddingProviderHandleApiError.test_handle_rate_limit_error_with_retry_after_header`](files/tests/test_openai_embeddings.md)** `(...)` (`test_openai_embeddings.py`) - Test handling of rate limit error with retry-after header.
+- ▪️ **[`TestOpenAIProviderHandleApiError.test_handle_rate_limit_invalid_retry_after`](files/tests/test_openai_provider.md)** `(...)` (`test_openai_provider.py`) - Test handling of rate limit with invalid retry-after header.
+- ▪️ **[`TestOpenAIProviderHandleApiError.test_handle_rate_limit_no_response`](files/tests/test_openai_provider.md)** `(...)` (`test_openai_provider.py`) - Test handling of rate limit error without response object.
+- ▪️⚡ **[`TestKeyboardHandling.test_handle_search_mode_clear_filters`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock, sample_results: list[SearchResult]) → None` (`test_interactive_search.py`) - 'c' key should clear all filters.
+- ▪️⚡ **[`TestKeyboardHandling.test_handle_search_mode_filter_keys`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock) → None` (`test_interactive_search.py`) - Filter keys should switch input mode.
+- ▪️⚡ **[`TestKeyboardHandling.test_handle_search_mode_navigation`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock, sample_results: list[SearchResult]) → None` (`test_interactive_search.py`) - Up/Down keys should navigate results.
+- ▪️⚡ **[`TestKeyboardHandling.test_handle_search_mode_new_search_empty_query`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock) → None` (`test_interactive_search.py`) - '/' key with empty input should not perform search.
+- ▪️⚡ **[`TestKeyboardHandling.test_handle_search_mode_new_search_slash_key`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock, sample_results: list[SearchResult]) → None` (`test_interactive_search.py`) - '/' key should prompt for new search.
+- ▪️⚡ **[`TestKeyboardHandling.test_handle_search_mode_quit`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock) → None` (`test_interactive_search.py`) - 'q' key should signal quit.
+- ▪️⚡ **[`TestKeyboardHandling.test_handle_search_mode_readchar_import_error`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock) → None` (`test_interactive_search.py`) - _handle_search_mode should return False when readchar is ...
+- ▪️⚡ **[`TestKeyboardHandling.test_handle_search_mode_toggle_preview`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock) → None` (`test_interactive_search.py`) - Enter should toggle preview mode.
+- ▪️ **[`TestOpenAIProviderHandleApiError.test_handle_unknown_error_reraises`](files/tests/test_openai_provider.md)** `(...)` ⚠️`unknown_error` (`test_openai_provider.py`) - Test that unknown errors are re-raised when called within...
+- ▪️ **[`TestOpenAIEmbeddingProviderHandleApiError.test_handle_unknown_error_reraises`](files/tests/test_openai_embeddings.md)** `(...)` (`test_openai_embeddings.py`) - Test that unknown errors are re-raised.
+- ▪️⚡ **[`TestAnthropicProviderHandleApiError.test_handle_unknown_error_reraises_via_generate`](files/tests/test_anthropic_provider.md)** `(...)` (`test_anthropic_provider.py`) - Test that unknown errors are re-raised through generate.
+- ▪️⚡ **[`TestCollectAllEntities.test_handles_chunk_without_metadata`](files/tests/test_glossary.md)** `(...)` (`test_glossary.py`) - Test handling chunks without metadata (empty dict).
+- ▪️⚡ **[`TestCollectAllEntities.test_handles_chunk_without_name`](files/tests/test_glossary.md)** `(...)` (`test_glossary.py`) - Test handling chunks without a name.
 - ▪️ **[`TestInjectInlineSourceCode.test_handles_class_headings`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test handles class headings in API Reference.
 - ▪️ **[`TestInjectInlineSourceCode.test_handles_class_prefix_in_heading`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test handles headings with 'class ' prefix.
+- ▪️ **[`TestExtractUsageSnippetEdgeCases.test_handles_dedent_typeerror`](files/tests/test_test_examples.md)** `(tmp_path: Path) → None` (`test_test_examples.py`) - Test handling of TypeError in dedent (lines 309-310).
 - ▪️ **[`TestInjectInlineSourceCode.test_handles_duplicate_method_names_with_qualified_lookup`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test uses qualified names to match methods in different c...
 - ▪️⚡ **[`TestGenerateDependenciesPage.test_handles_empty_dependency_graph`](files/tests/test_wiki_pages_coverage.md)** `(...)` (`test_wiki_pages_coverage.py`) - Test handles empty dependency graph gracefully.
 - ▪️ **[`TestAddSourceRefsSectionsWithLineInfo.test_handles_empty_line_info`](files/tests/test_source_refs.md)** `(...)` (`test_source_refs.py`) - Test that empty line info works (fallback to no line numb...
 - ▪️ **[`TestGenerateFilesIndex.test_handles_empty_pages`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test handles empty pages list.
 - ▪️ **[`TestPdfExporterEdgeCases.test_handles_empty_toc_paths`](files/tests/test_pdf_export.md)** `(wiki_with_empty_paths: Path, tmp_path: Path)` (`test_pdf_export.py`) - Test that empty TOC paths are skipped.
+- ▪️ **[`TestGetExamplesForApiPage.test_handles_exception_in_loop_get`](files/tests/test_examples_plugin.md)** `(...) → None` (`test_examples_plugin.py`) - Test exception handling when getting event loop (line 297...
+- ▪️ **[`TestGetCommitHistory.test_handles_file_not_found_error`](files/tests/test_changelog.md)** `(tmp_path: Path) → None` (`test_changelog.py`) - Test that FileNotFoundError returns empty list.
 - ▪️⚡ **[`TestGenerateFileDocs.test_handles_generation_errors`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test handles errors during file generation.
 - ▪️ **[`TestInjectInlineSourceCode.test_handles_heading_with_signature`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test handles headings with full function signature.
+- ▪️ **[`TestGetCommitHistory.test_handles_invalid_date_format`](files/tests/test_changelog.md)** `(tmp_path: Path) → None` (`test_changelog.py`) - Test that invalid date format falls back to datetime.now().
 - ▪️⚡ **[`TestGenerateOverviewPage.test_handles_many_dependencies`](files/tests/test_wiki_pages_coverage.md)** `(...)` (`test_wiki_pages_coverage.py`) - Test handles many dependencies by truncating list.
 - ▪️⚡ **[`TestGenerateModuleDocs.test_handles_many_files_in_prompt`](files/tests/test_wiki_modules_coverage.md)** `(...)` (`test_wiki_modules_coverage.py`) - Test truncates file list for many files.
 - ▪️ **[`TestAddSourceRefsSections.test_handles_missing_status`](files/tests/test_source_refs.md)** `(...)` (`test_source_refs.py`) - Test that pages without status are passed through.
+- ▪️⚡ **[`TestCacheStatisticsLogging.test_handles_mock_stats_gracefully`](files/tests/test_wiki_coverage.md)** `(...)` (`test_wiki_coverage.py`) - Test that mock stats (non-integer) are handled gracefully.
 - ▪️ **[`TestInjectInlineSourceCode.test_handles_multiple_functions`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test handles multiple functions in API Reference.
+- ▪️ **[`TestGetCommitHistory.test_handles_os_error`](files/tests/test_changelog.md)** `(tmp_path: Path) → None` (`test_changelog.py`) - Test that OSError returns empty list.
 - ▪️⚡ **[`TestGenerateSingleFileDoc.test_handles_root_level_files`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test handles root-level files (no directory).
 - ▪️ **[`TestGenerateFilesIndex.test_handles_root_level_files`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test handles files without directory prefix.
 - ▪️⚡ **[`TestGenerateModuleDocs.test_handles_root_level_files`](files/tests/test_wiki_modules_coverage.md)** `(...)` (`test_wiki_modules_coverage.py`) - Test root-level files grouped under 'root' but no page ge...
+- ▪️⚡ **[`TestGetCallersFromOtherFiles.test_handles_search_exception`](files/tests/test_context_builder.md)** `(tmp_path: Path) → None` (`test_context_builder.py`) - Test that search exceptions are handled gracefully.
+- ▪️⚡ **[`TestFindRelatedFiles.test_handles_search_exception`](files/tests/test_context_builder.md)** `(...) → None` (`test_context_builder.py`) - Test that search exceptions are handled gracefully.
+- ▪️⚡ **[`TestGetTypeDefinitionsUsed.test_handles_search_exception`](files/tests/test_context_builder.md)** `(...) → None` (`test_context_builder.py`) - Test that search exceptions are handled gracefully.
+- ▪️ **[`TestGetCommitHistory.test_handles_timeout`](files/tests/test_changelog.md)** `(tmp_path: Path) → None` (`test_changelog.py`) - Test that TimeoutExpired returns empty list.
+- ▪️ **[`TestAccessController.test_has_permission_not_authenticated`](files/tests/test_access_control.md)** `(...)` (`test_access_control.py`) - Verify has_permission returns False when not authenticated.
+- ▪️ **[`TestAccessController.test_has_permission_returns_false`](files/tests/test_access_control.md)** `(...)` (`test_access_control.py`) - Verify has_permission returns False for missing permission.
+- ▪️ **[`TestAccessController.test_has_permission_returns_true`](files/tests/test_access_control.md)** `(...)` (`test_access_control.py`) - Verify has_permission returns True for valid permission.
 - ▪️ **[`TestLargeFileHandling.test_hash_chunk_size_constant`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test that hash chunk size is set to 64 KB.
 - ▪️ **[`TestLargeFileHandling.test_hash_consistency_small_and_large`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test that hash is consistent regardless of file size.
 - ▪️⚡ **[`TestCachingLLMProvider.test_high_temperature_bypasses_cache`](files/tests/test_llm_cache.md)** `(cached_provider: CachingLLMProvider, mock_llm: MockLLMProvider)` (`test_llm_cache.py`) - Test that high temperature calls don't use cache.
 - ▪️⚡ **[`TestLLMCache.test_high_temperature_get_skipped`](files/tests/test_llm_cache.md)** `(cache: LLMCache)` (`test_llm_cache.py`) - Test that cache lookup is skipped for high temperature re...
 - ▪️⚡ **[`TestLLMCache.test_high_temperature_not_cached`](files/tests/test_llm_cache.md)** `(cache: LLMCache)` (`test_llm_cache.py`) - Test that high temperature responses are not cached.
+- ▪️ **[`TestOperationProgressRegistry.test_historical_data_persistence`](files/tests/test_progress.md)** `(tmp_path: Path)` (`test_progress.py`) - Test that historical data is persisted and loaded.
+- ▪️ **[`TestOperationProgressRegistry.test_historical_rate_used_for_eta`](files/tests/test_progress.md)** `(tmp_path: Path)` (`test_progress.py`) - Test that historical rate is used for ETA prediction.
+- ▪️⚡ **[`TestRateLimiter.test_hour_limit_raises`](files/tests/test_rate_limiter.md)** `(...)` (`test_rate_limiter.py`) - Test that hour limit raises exception.
+- ▪️⚡ **[`TestRateLimiter.test_hour_window_resets`](files/tests/test_rate_limiter.md)** `(...)` (`test_rate_limiter.py`) - Test that hour window resets after expiry.
 - ▪️ **[`TestHtmlExporter.test_html_contains_content`](files/tests/test_html_export.md)** `(sample_wiki: Path, tmp_path: Path)` (`test_html_export.py`) - Test that HTML files contain the converted content.
 - ▪️ **[`TestHtmlExporter.test_html_contains_toc`](files/tests/test_html_export.md)** `(sample_wiki: Path, tmp_path: Path)` (`test_html_export.py`) - Test that HTML files contain the TOC.
+- ▪️ **[`TestHtmlExportPipeline.test_html_export_copies_search_json`](files/tests/test_integration_pipeline.md)** `(wiki_with_content: Path, tmp_path: Path)` (`test_integration_pipeline.py`) - Test that HTML export copies search.json for client-side ...
+- ▪️ **[`TestHtmlExportPipeline.test_html_export_creates_files`](files/tests/test_integration_pipeline.md)** `(wiki_with_content: Path, tmp_path: Path)` (`test_integration_pipeline.py`) - Test that HTML export creates HTML files from markdown.
+- ▪️ **[`TestHtmlExportPipeline.test_html_export_includes_toc`](files/tests/test_integration_pipeline.md)** `(wiki_with_content: Path, tmp_path: Path)` (`test_integration_pipeline.py`) - Test that exported HTML includes table of contents.
+- ▪️ **[`TestHtmlExportPipeline.test_html_export_preserves_structure`](files/tests/test_integration_pipeline.md)** `(wiki_with_content: Path, tmp_path: Path)` (`test_integration_pipeline.py`) - Test that HTML export preserves directory structure.
 - ▪️ **[`TestHtmlExporter.test_html_has_breadcrumb_for_nested_pages`](files/tests/test_html_export.md)** `(sample_wiki: Path, tmp_path: Path)` (`test_html_export.py`) - Test that nested pages have breadcrumb navigation.
 - ▪️ **[`TestHtmlExporter.test_html_has_relative_links`](files/tests/test_html_export.md)** `(sample_wiki: Path, tmp_path: Path)` (`test_html_export.py`) - Test that HTML files use relative links.
 - ▪️ **[`TestHtmlExporter.test_html_has_theme_toggle`](files/tests/test_html_export.md)** `(sample_wiki: Path, tmp_path: Path)` (`test_html_export.py`) - Test that HTML files have theme toggle functionality.
 - ▪️ **[`TestRelationshipAnalyzer.test_ignores_non_import_chunks`](files/tests/test_see_also.md)** `(...)` (`test_see_also.py`) - Test that non-import chunks are ignored.
+- ▪️⚡ **[`TestGenerateInheritancePage.test_includes_all_classes_table`](files/tests/test_inheritance.md)** `(...)` (`test_inheritance.py`) - Test includes all classes table.
+- ▪️⚡ **[`TestGenerateGlossaryPage.test_includes_brief_description`](files/tests/test_glossary.md)** `(...)` (`test_glossary.py`) - Test includes brief description from docstring.
 - ▪️⚡ **[`TestGenerateArchitecturePage.test_includes_dependency_context`](files/tests/test_wiki_pages_coverage.md)** `(...)` (`test_wiki_pages_coverage.py`) - Test includes dependency context from manifest.
 - ▪️⚡ **[`TestGenerateDependenciesPage.test_includes_dependency_graph`](files/tests/test_wiki_pages_coverage.md)** `(...)` (`test_wiki_pages_coverage.py`) - Test includes auto-generated dependency graph.
 - ▪️⚡ **[`TestGenerateDependenciesPage.test_includes_dev_dependencies`](files/tests/test_wiki_pages_coverage.md)** `(...)` (`test_wiki_pages_coverage.py`) - Test includes dev dependencies from manifest.
+- ▪️⚡ **[`TestGenerateInheritancePage.test_includes_diagram_section`](files/tests/test_inheritance.md)** `(...)` (`test_inheritance.py`) - Test includes inheritance diagram section.
 - ▪️⚡ **[`TestGenerateOverviewPage.test_includes_directory_structure`](files/tests/test_wiki_pages_coverage.md)** `(...)` (`test_wiki_pages_coverage.py`) - Test includes directory structure.
+- ▪️⚡ **[`TestCollectClassHierarchy.test_includes_docstring`](files/tests/test_inheritance.md)** `(...)` (`test_inheritance.py`) - Test that docstring is included in class node.
 - ▪️⚡ **[`TestGenerateOverviewPage.test_includes_entry_points`](files/tests/test_wiki_pages_coverage.md)** `(...)` (`test_wiki_pages_coverage.py`) - Test includes entry points from manifest.
 - ▪️⚡ **[`TestGenerateDependenciesPage.test_includes_external_dependencies`](files/tests/test_wiki_pages_coverage.md)** `(...)` (`test_wiki_pages_coverage.py`) - Test includes external dependencies from manifest.
 - ▪️ **[`TestGenerateChangelogContent.test_includes_file_changes`](files/tests/test_changelog.md)** `(tmp_path: Path) → None` (`test_changelog.py`) - Test includes changed files in output.
+- ▪️⚡ **[`TestGenerateCoveragePage.test_includes_file_coverage_table`](files/tests/test_coverage.md)** `(...)` (`test_coverage.py`) - Test includes coverage by file table.
 - ▪️ **[`TestInjectInlineSourceCode.test_includes_github_link_when_repo_info_provided`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test includes GitHub link when repo_info is provided.
 - ▪️⚡ **[`TestGenerateDependenciesPage.test_includes_import_chunks`](files/tests/test_wiki_pages_coverage.md)** `(...)` (`test_wiki_pages_coverage.py`) - Test includes import chunks from code.
+- ▪️⚡ **[`TestGenerateCoveragePage.test_includes_legend`](files/tests/test_coverage.md)** `(...)` (`test_coverage.py`) - Test includes legend at the end.
+- ▪️⚡ **[`TestGenerateGlossaryPage.test_includes_legend`](files/tests/test_glossary.md)** `(...)` (`test_glossary.py`) - Test includes legend at the end.
 - ▪️⚡ **[`TestGenerateOverviewPage.test_includes_manifest_description`](files/tests/test_wiki_pages_coverage.md)** `(...)` (`test_wiki_pages_coverage.py`) - Test includes manifest description in content.
+- ▪️⚡ **[`TestGenerateGlossaryPage.test_includes_navigation`](files/tests/test_glossary.md)** `(...)` (`test_glossary.py`) - Test includes letter navigation.
+- ▪️⚡ **[`TestGenerateCoveragePage.test_includes_summary_section`](files/tests/test_coverage.md)** `(...)` (`test_coverage.py`) - Test includes summary with overall coverage.
+- ▪️⚡ **[`TestGenerateGlossaryPage.test_includes_summary_stats`](files/tests/test_glossary.md)** `(...)` (`test_glossary.py`) - Test includes summary statistics.
 - ▪️⚡ **[`TestGenerateOverviewPage.test_includes_technology_stack`](files/tests/test_wiki_pages_coverage.md)** `(...)` (`test_wiki_pages_coverage.py`) - Test includes technology stack from manifest.
 - ▪️⚡ **[`TestGenerateFileDocs.test_includes_test_files_in_src`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test includes test_*.py files in src/ (e.g., test_example...
+- ▪️⚡ **[`TestGenerateInheritancePage.test_includes_trees_section`](files/tests/test_inheritance.md)** `(...)` (`test_inheritance.py`) - Test includes inheritance trees section.
+- ▪️⚡ **[`TestGenerateCoveragePage.test_includes_type_breakdown`](files/tests/test_coverage.md)** `(...)` (`test_coverage.py`) - Test includes breakdown by entity type.
+- ▪️⚡ **[`TestGenerateGlossaryPage.test_includes_type_signature`](files/tests/test_glossary.md)** `(...)` (`test_glossary.py`) - Test includes type signature for functions.
 - ▪️⚡ **[`TestGenerateArchitecturePage.test_includes_workflow_sequences`](files/tests/test_wiki_pages_coverage.md)** `(...)` (`test_wiki_pages_coverage.py`) - Test includes workflow sequence diagrams.
+- ▪️⚡ **[`TestIndexingPipeline.test_incremental_indexing`](files/tests/test_integration_pipeline.md)** `(sample_python_repo: Path, test_config: Config)` (`test_integration_pipeline.py`) - Test that incremental indexing only processes changed files.
+- ▪️⚡ **[`TestIncrementalGeneration.test_incremental_loads_previous_status`](files/tests/test_wiki_coverage.md)** `(...)` (`test_wiki_coverage.py`) - Test incremental generation loads previous status (line 2...
+- ▪️⚡ **[`TestIncrementalGeneration.test_incremental_skips_unchanged_pages`](files/tests/test_wiki_coverage.md)** `(...)` (`test_wiki_coverage.py`) - Test incremental generation skips unchanged pages (lines ...
 - ▪️⚡ **[`TestBatchedProcessing.test_incremental_update_with_batching`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`) - Test that incremental updates work with batched processing.
-- ▪️⚡ **[`TestSchemaMigration.test_index_status_model_default_schema_version`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`) - Test that [IndexStatus](files/src/local_deepwiki/models.md) defaults to schema_version=1.
-- ▪️ **[`TestModelRepr.test_index_status_repr`](files/tests/test_models.md)** `(...)` (`test_models.py`) - Test [IndexStatus](files/src/local_deepwiki/models.md) repr.
+- ▪️⚡ **[`TestIndexingPipeline.test_index_creates_chunks`](files/tests/test_integration_pipeline.md)** `(sample_python_repo: Path, test_config: Config)` (`test_integration_pipeline.py`) - Test that indexing extracts code chunks from source files.
+- ▪️⚡ **[`TestIndexingPipeline.test_index_creates_status_file`](files/tests/test_integration_pipeline.md)** `(sample_python_repo: Path, test_config: Config)` (`test_integration_pipeline.py`) - Test that indexing creates an index_status.json file.
+- ▪️⚡ **[`TestListTools.test_index_repository_tool_schema`](files/tests/test_server.md)** `(...)` (`test_server.py`) - Test index_repository tool has correct schema.
+- ▪️⚡ **[`TestSchemaMigration.test_index_status_model_default_schema_version`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`) - Test that IndexStatus defaults to schema_version=1.
+- ▪️ **[`TestModelRepr.test_index_status_repr`](files/tests/test_models.md)** `(...)` (`test_models.py`) - Test IndexStatus repr.
+- ▪️⚡ **[`TestASTCacheIntegration.test_indexer_ast_cache_hit_on_unchanged_file`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`) - Test that AST cache provides hits when parsing the same f...
+- ▪️⚡ **[`TestASTCacheIntegration.test_indexer_ast_cache_miss_on_modified_file`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`) - Test that AST cache misses when file content changes.
+- ▪️ **[`TestASTCacheIntegration.test_indexer_ast_cache_uses_config_values`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`) - Test that AST cache uses configuration values.
+- ▪️ **[`TestASTCacheIntegration.test_indexer_creates_ast_cache_when_enabled`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`) - Test that indexer creates AST cache when enabled in config.
+- ▪️⚡ **[`TestASTCacheIntegration.test_indexer_logs_ast_cache_stats_after_indexing`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`) - Test that indexer logs AST cache statistics after indexing.
+- ▪️ **[`TestASTCacheIntegration.test_indexer_no_ast_cache_when_disabled`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`) - Test that indexer does not create AST cache when disabled.
+- ▪️⚡ **[`TestAuxiliaryPagesGeneration.test_inheritance_page_generated`](files/tests/test_wiki_coverage.md)** `(...)` (`test_wiki_coverage.py`) - Test inheritance page is added when content is generated ...
+- ▪️ **[`TestInteractiveSearch.test_init`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock) → None` (`test_interactive_search.py`) - InteractiveSearch should initialize correctly.
+- ▪️ **[`TestProgressManager.test_init`](files/tests/test_progress.md)** `(...)` (`test_progress.py`) - Test initializing a progress manager.
+- ▪️ **[`TestProgressBuffer.test_init`](files/tests/test_progress.md)** `(...)` (`test_progress.py`) - Test initializing a progress buffer.
+- ▪️ **[`TestEmbeddingCacheErrorHandling.test_init_db_sqlite_error`](files/tests/test_embedding_cache.md)** `(...)` (`test_embedding_cache.py`) - Test _init_db handles sqlite3.Error gracefully (lines 151...
+- ▪️ **[`TestStreamingPdfExporter.test_init_sets_attributes`](files/tests/test_pdf_export.md)** `(sample_wiki: Path, tmp_path: Path)` (`test_pdf_export.py`) - Test that initialization sets correct attributes.
+- ▪️ **[`TestStreamingPdfExporter.test_init_with_default_config`](files/tests/test_pdf_export.md)** `(sample_wiki: Path, tmp_path: Path)` (`test_pdf_export.py`) - Test initialization with default config.
+- ▪️ **[`TestAccessController.test_init_with_mode`](files/tests/test_access_control.md)** `(...)` (`test_access_control.py`) - Verify AccessController can be initialized with a specifi...
 - ▪️⚡ **[`TestInitialIndex.test_initial_index_full_rebuild`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test initial indexing with full rebuild.
 - ▪️⚡ **[`TestInitialIndex.test_initial_index_progress_callback`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test initial indexing progress callback paths.
 - ▪️⚡ **[`TestInitialIndex.test_initial_index_success`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test successful initial indexing.
 - ▪️⚡ **[`TestInitialIndex.test_initial_index_with_llm_provider`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test initial indexing with LLM provider override.
+- ▪️ **[`TestSearchState.test_initial_state`](files/tests/test_interactive_search.md)** `(...) → None` (`test_interactive_search.py`) - Initial state should have sensible defaults.
 - ▪️ **[`TestLocalEmbeddingProvider.test_initialization`](files/tests/test_local_embedding_provider.md)** `(...)` (`test_local_embedding_provider.py`) - Test provider initialization.
+- ▪️ **[`TestEmbeddingCache.test_initialization`](files/tests/test_embedding_cache.md)** `(...)` (`test_embedding_cache.py`) - Test cache initialization.
 - ▪️ **[`TestAnthropicProvider.test_initialization`](files/tests/test_llm_providers.md)** `(...)` (`test_llm_providers.py`) - Test provider initialization.
 - ▪️ **[`TestOpenAILLMProvider.test_initialization`](files/tests/test_llm_providers.md)** `(...)` (`test_llm_providers.py`) - Test provider initialization.
 - ▪️ **[`TestLocalEmbeddingProvider.test_initialization_default_model`](files/tests/test_local_embedding_provider.md)** `(...)` (`test_local_embedding_provider.py`) - Test provider initialization with default model.
@@ -987,88 +2783,288 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️ **[`TestInjectInlineSourceCode.test_injects_source_after_api_reference_function`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test injects source code after function in API Reference.
 - ▪️ **[`TestInjectInlineSourceCode.test_injects_source_before_next_heading_no_returns`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test injects source when hitting next heading without Ret...
 - ▪️ **[`TestAddSourceRefsSections.test_inserts_before_see_also`](files/tests/test_source_refs.md)** `(...)` (`test_source_refs.py`) - Test that section is inserted before See Also.
+- ▪️ **[`TestHookRunner.test_invalid_extension_rejected`](files/tests/test_events.md)** `(emitter: EventEmitter, scripts_dir: Path)` (`test_events.py`) - Test that scripts with invalid extensions are rejected.
+- ▪️ **[`TestValidateQueryParameters.test_invalid_path_raises`](files/tests/test_resource_limits.md)** `(...)` (`test_resource_limits.py`) - Test non-existent path raises ValueError.
+- ▪️ **[`TestValidateDeepResearchParameters.test_invalid_preset_raises`](files/tests/test_resource_limits.md)** `(...)` (`test_resource_limits.py`) - Test invalid preset raises ValueError.
+- ▪️⚡ **[`TestEmbeddingCache.test_invalidate_by_model`](files/tests/test_embedding_cache.md)** `(...)` (`test_embedding_cache.py`) - Test invalidating entries by model name.
+- ▪️⚡ **[`TestEmbeddingCache.test_invalidate_by_model_different_model`](files/tests/test_embedding_cache.md)** `(...)` (`test_embedding_cache.py`) - Test invalidating entries for different model doesn't aff...
+- ▪️ **[`TestEmbeddingCacheErrorHandling.test_invalidate_by_model_sqlite_error`](files/tests/test_embedding_cache.md)** `(...)` (`test_embedding_cache.py`) - Test invalidate_by_model handles sqlite3.Error (lines 514...
+- ▪️⚡ **[`TestSearchCache.test_invalidate_search_cache_method`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test the public invalidate_search_cache method.
+- ▪️⚡ **[`TestCancellationAndProgressCallbacks.test_is_cancelled_checks_task_cancelled_state`](files/tests/test_handlers_coverage.md)** `(...)` (`test_handlers_coverage.py`) - Test is_cancelled checks asyncio task cancelled state.
+- ▪️⚡ **[`TestCancellationAndProgressCallbacks.test_is_cancelled_handles_runtime_error`](files/tests/test_handlers_coverage.md)** `(...)` (`test_handlers_coverage.py`) - Test is_cancelled handles RuntimeError from asyncio.curre...
+- ▪️⚡ **[`TestCancellationAndProgressCallbacks.test_is_cancelled_returns_false_when_not_cancelled`](files/tests/test_handlers_coverage.md)** `(...)` (`test_handlers_coverage.py`) - Test is_cancelled returns False when nothing is cancelled.
+- ▪️⚡ **[`TestCancellationAndProgressCallbacks.test_is_cancelled_returns_true_when_event_set`](files/tests/test_handlers_coverage.md)** `(...)` (`test_handlers_coverage.py`) - Test is_cancelled returns True when cancellation_event is...
+- ▪️⚡ **[`TestCancellationAndProgressCallbacks.test_is_cancelled_returns_true_when_task_cancelled`](files/tests/test_handlers_coverage.md)** `(...)` (`test_handlers_coverage.py`) - Test is_cancelled returns True when current task is cance...
 - ▪️⚡ **[`TestLLMCacheEdgeCases.test_is_valid_entry_expired`](files/tests/test_llm_cache.md)** `(cache: LLMCache)` (`test_llm_cache.py`) - Test _is_valid_entry returns False for expired entries.
 - ▪️⚡ **[`TestLLMCacheEdgeCases.test_is_valid_entry_uses_config_ttl_as_default`](files/tests/test_llm_cache.md)** `(cache: LLMCache)` (`test_llm_cache.py`) - Test _is_valid_entry uses config ttl when entry has no tt...
 - ▪️⚡ **[`TestLLMCacheEdgeCases.test_is_valid_entry_valid`](files/tests/test_llm_cache.md)** `(cache: LLMCache)` (`test_llm_cache.py`) - Test _is_valid_entry returns True for valid entries.
+- ▪️⚡ **[`TestLazyIndexManager.test_is_vector_index_ready`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test is_vector_index_ready method.
+- ▪️⚡ **[`TestWikiPageIterator.test_iteration_with_toc_order`](files/tests/test_streaming_export.md)** `(sample_wiki: Path)` (`test_streaming_export.py`) - Test iteration respects TOC order when provided.
 - ▪️ **[`TestGetParentClasses.test_java_extends_and_implements`](files/tests/test_chunker.md)** `(...)` (`test_chunker.py`) - Test Java class with extends and implements.
 - ▪️ **[`TestDocstringExtraction.test_java_javadoc_block`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test Java Javadoc block comment.
+- ▪️ **[`TestUncoveredCodePaths.test_java_javadoc_standard`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test Java with standard Javadoc comments.
+- ▪️ **[`TestDocstringExtractorHelpers.test_javadoc_no_comments`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test _get_javadoc_or_doxygen returns None when no comment...
+- ▪️ **[`TestDocstringExtractorHelpers.test_javadoc_regular_block_comment`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test that regular /* */ is not extracted as Javadoc.
 - ▪️ **[`TestDocstringExtraction.test_javascript_jsdoc_block`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test JavaScript JSDoc block comment.
+- ▪️ **[`TestUncoveredCodePaths.test_javascript_line_comments`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test JavaScript function with // line comments instead of...
+- ▪️ **[`TestDocstringExtractorHelpers.test_jsdoc_no_comments_returns_none`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test _get_jsdoc_or_line_comments returns None when no com...
+- ▪️ **[`TestDocstringExtractorHelpers.test_jsdoc_regular_comment_not_jsdoc`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test that regular /* */ comment is not extracted as JSDoc.
 - ▪️ **[`TestGetParentClasses.test_kotlin_inheritance`](files/tests/test_chunker.md)** `(...)` (`test_chunker.py`) - Test Kotlin class with inheritance.
+- ▪️ **[`TestUncoveredCodePaths.test_kotlin_kdoc_comment`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test Kotlin KDoc /** */ comment.
+- ▪️ **[`TestUncoveredCodePaths.test_kotlin_no_docstring`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test Kotlin function without docstring.
+- ▪️ **[`TestSearchFilters.test_language_filter`](files/tests/test_interactive_search.md)** `(sample_results: list[SearchResult]) → None` (`test_interactive_search.py`) - Language filter should only match specified language.
 - ▪️⚡ **[`TestVectorStoreEdgeCases.test_large_content_chunk`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test chunk with large content.
+- ▪️⚡ **[`TestLazyIndexManager.test_lazy_index_latency_tracking`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test that search latency is tracked for lazy index decisi...
+- ▪️⚡ **[`TestLazyIndexManager.test_lazy_index_manager_initialized`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test that lazy index manager is properly initialized.
+- ▪️⚡ **[`TestLazyIndexManager.test_lazy_index_manager_reset`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test that reset clears all state.
+- ▪️⚡ **[`TestLazyIndexManager.test_lazy_index_not_pending_for_small_tables`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test that lazy indexing doesn't mark pending for small ta...
+- ▪️⚡ **[`TestLazyIndexManager.test_lazy_index_pending_after_create`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test that lazy indexing marks index as pending for large ...
+- ▪️⚡ **[`TestLazyIndexManager.test_lazy_index_stats`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test get_lazy_index_stats returns correct information.
 - ▪️⚡ **[`TestGenerateFileDocs.test_limits_files_by_max_file_docs`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test limits number of files processed.
+- ▪️⚡ **[`TestGetCallersFromOtherFiles.test_limits_max_files`](files/tests/test_context_builder.md)** `(tmp_path: Path) → None` (`test_context_builder.py`) - Test that max_files limit is respected.
+- ▪️⚡ **[`TestFindRelatedFiles.test_limits_max_files`](files/tests/test_context_builder.md)** `(...) → None` (`test_context_builder.py`) - Test that max_files limit is respected.
+- ▪️⚡ **[`TestGetTypeDefinitionsUsed.test_limits_max_types`](files/tests/test_context_builder.md)** `(...) → None` (`test_context_builder.py`) - Test that max_types limit is respected.
+- ▪️⚡ **[`TestGenerateCoveragePage.test_limits_undocumented_list`](files/tests/test_coverage.md)** `(...)` (`test_coverage.py`) - Test limits undocumented items to 20 with overflow message.
+- ▪️ **[`TestScanRepositoryForSecrets.test_line_numbers_are_correct`](files/tests/test_secret_detector.md)** `(...)` (`test_secret_detector.py`) - Test line numbers are accurately reported.
 - ▪️ **[`TestCrossLinker.test_links_backticked_entities`](files/tests/test_crosslinks.md)** `(...)` (`test_crosslinks.py`) - Test that backticked entity names get linked.
 - ▪️ **[`TestCrossLinker.test_links_bold_spaced_aliases`](files/tests/test_crosslinks.md)** `(...)` (`test_crosslinks.py`) - Test that bold spaced aliases get linked.
 - ▪️ **[`TestCrossLinker.test_links_bold_text`](files/tests/test_crosslinks.md)** `(...)` (`test_crosslinks.py`) - Test that bold entity names get linked.
 - ▪️ **[`TestCrossLinker.test_links_qualified_names`](files/tests/test_crosslinks.md)** `(...)` (`test_crosslinks.py`) - Test that qualified names like module.ClassName get linked.
 - ▪️ **[`TestCrossLinker.test_links_simple_qualified_names`](files/tests/test_crosslinks.md)** `(...)` (`test_crosslinks.py`) - Test that simple qualified names like module.Class get li...
-- ▪️ **[`TestCrossLinker.test_links_spaced_aliases`](files/tests/test_crosslinks.md)** `(...)` (`test_crosslinks.py`) - Test that spaced aliases like '[Vector Store](files/src/local_deepwiki/core/vectorstore.md)' get linked.
+- ▪️ **[`TestCrossLinker.test_links_spaced_aliases`](files/tests/test_crosslinks.md)** `(...)` (`test_crosslinks.py`) - Test that spaced aliases like 'Vector Store' get linked.
+- ▪️ **[`TestHookRunner.test_list_all_scripts`](files/tests/test_events.md)** `(runner: HookRunner, scripts_dir: Path)` (`test_events.py`) - Test listing all registered scripts.
+- ▪️ **[`TestCheckpointManager.test_list_checkpoints`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test listing all checkpoints.
+- ▪️ **[`TestEventEmitter.test_list_global_handlers`](files/tests/test_events.md)** `(emitter: EventEmitter)` (`test_events.py`) - Test listing global handlers.
+- ▪️ **[`TestEventEmitter.test_list_handlers`](files/tests/test_events.md)** `(emitter: EventEmitter)` (`test_events.py`) - Test listing handlers for event type.
+- ▪️ **[`TestOperationProgressRegistry.test_list_operations`](files/tests/test_progress.md)** `(...)` (`test_progress.py`) - Test listing all operations.
+- ▪️ **[`TestPluginRegistry.test_list_plugins`](files/tests/test_plugins.md)** `(...)` (`test_plugins.py`) - Test listing all plugins.
+- ▪️ **[`TestRegistryEdgeCases.test_list_plugins_empty`](files/tests/test_plugin_registry.md)** `(...)` (`test_plugin_registry.py`) - Test list_plugins with empty registry.
+- ▪️ **[`TestRegistryEdgeCases.test_list_plugins_populated`](files/tests/test_plugin_registry.md)** `(...)` (`test_plugin_registry.py`) - Test list_plugins with populated registry.
+- ▪️ **[`TestCheckpointHelperFunctions.test_list_research_checkpoints`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test the list_research_checkpoints helper function.
+- ▪️⚡ **[`TestListTools.test_list_tools_returns_all_expected_tools`](files/tests/test_server.md)** `(...)` (`test_server.py`) - Test that all expected tools are returned.
+- ▪️⚡ **[`TestListTools.test_list_tools_returns_list`](files/tests/test_server.md)** `(...)` (`test_server.py`) - Test that list_tools returns a list of Tool objects.
 - ▪️ **[`TestConfig.test_llm_config`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test LLM configuration.
+- ▪️ **[`TestConfigValidatorLoadConfig.test_load_config_empty_file`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Test loading an empty config file (uses defaults).
+- ▪️ **[`TestConfigValidatorLoadConfig.test_load_config_explicit_path`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Test loading config from an explicit path.
+- ▪️ **[`TestConfigValidatorLoadConfig.test_load_config_file_not_found`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Test loading config from a non-existent file.
+- ▪️ **[`TestConfigValidatorLoadConfig.test_load_config_finds_cwd_config_yaml`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Test finding config.yaml in current working directory.
+- ▪️ **[`TestConfigValidatorLoadConfig.test_load_config_finds_local_deepwiki_yaml`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Test finding .local-deepwiki.yaml in current working dire...
+- ▪️ **[`TestConfigValidatorLoadConfig.test_load_config_invalid_yaml`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Test loading a file with invalid YAML syntax.
+- ▪️ **[`TestConfigValidatorLoadConfig.test_load_config_no_file_uses_defaults`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Test that no config file uses defaults.
+- ▪️ **[`TestConfigValidatorLoadConfig.test_load_config_permission_error`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Test loading a file with permission issues.
+- ▪️ **[`TestConfigValidatorLoadConfig.test_load_config_whitespace_file`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Test loading a whitespace-only config file (uses defaults).
+- ▪️ **[`TestPluginRegistry.test_load_from_directory`](files/tests/test_plugins.md)** `(...)` (`test_plugins.py`) - Test loading plugins from directory.
+- ▪️ **[`TestLoadFromEntryPoints.test_load_from_entry_points_empty`](files/tests/test_plugin_registry.md)** `(...)` (`test_plugin_registry.py`) - Test load_from_entry_points when no plugins are found.
+- ▪️ **[`TestLoadFromEntryPoints.test_load_from_entry_points_handles_load_error`](files/tests/test_plugin_registry.md)** `(...)` (`test_plugin_registry.py`) - Test handling entry point load errors (lines 273-274, 288...
+- ▪️ **[`TestLoadFromEntryPoints.test_load_from_entry_points_import_error`](files/tests/test_plugin_registry.md)** `(...)` (`test_plugin_registry.py`) - Test handling ImportError for importlib.metadata (lines 2...
+- ▪️ **[`TestLoadFromEntryPoints.test_load_from_entry_points_python310_success`](files/tests/test_plugin_registry.md)** `(...)` (`test_plugin_registry.py`) - Test loading entry points on Python 3.10+ (lines 262-274).
+- ▪️ **[`TestLoadFromEntryPoints.test_load_from_entry_points_python39_load_error`](files/tests/test_plugin_registry.md)** `(...)` (`test_plugin_registry.py`) - Test Python 3.9 path handles entry point load errors (lin...
+- ▪️ **[`TestLoadFromEntryPoints.test_load_from_entry_points_python39_path`](files/tests/test_plugin_registry.md)** `(...)` (`test_plugin_registry.py`) - Test loading entry points on Python 3.9 (lines 276-289).
+- ▪️ **[`TestPluginRegistry.test_load_from_nonexistent_directory`](files/tests/test_plugins.md)** `(...)` (`test_plugins.py`) - Test loading from non-existent directory.
 - ▪️ **[`TestLocalEmbeddingProvider.test_load_model`](files/tests/test_local_embedding_provider.md)** `(...)` (`test_local_embedding_provider.py`) - Test lazy model loading.
 - ▪️ **[`TestLocalEmbeddingProvider.test_load_model_cached`](files/tests/test_local_embedding_provider.md)** `(...)` (`test_local_embedding_provider.py`) - Test that model is only loaded once.
+- ▪️ **[`TestLocalEmbeddingProvider.test_load_model_failure`](files/tests/test_local_embedding_provider.md)** `(...)` (`test_local_embedding_provider.py`) - Test model loading failure raises ProviderConfigurationEr...
+- ▪️ **[`TestCheckpointManager.test_load_nonexistent_checkpoint`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test loading a checkpoint that doesn't exist.
+- ▪️ **[`TestPromptLoader.test_load_prompt_falls_back_to_default`](files/tests/test_prompts.md)** `(...)` (`test_prompts.py`) - Test fallback to default when no file found.
+- ▪️ **[`TestPromptLoader.test_load_prompt_from_file`](files/tests/test_prompts.md)** `(...)` (`test_prompts.py`) - Test loading a prompt from file.
+- ▪️ **[`TestPromptLoader.test_load_prompt_provider_specific`](files/tests/test_prompts.md)** `(...)` (`test_prompts.py`) - Test loading provider-specific prompt.
+- ▪️ **[`TestPromptLoader.test_load_prompt_txt_extension`](files/tests/test_prompts.md)** `(...)` (`test_prompts.py`) - Test loading prompt from .txt file.
+- ▪️ **[`TestPluginRegistry.test_load_skips_underscore_files`](files/tests/test_plugins.md)** `(...)` (`test_plugins.py`) - Test that files starting with underscore are skipped.
 - ▪️⚡ **[`TestSchemaMigration.test_load_status_handles_legacy_files`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`) - Test that loading status handles legacy files without sch...
-- ▪️ **[`TestMainCli.test_main_custom_wiki_path`](files/tests/test_pdf_export.md)** `(tmp_path: Path)` (`test_pdf_export.py`) - Test [main](files/src/local_deepwiki/export/html.md) with custom wiki path.
-- ▪️ **[`TestMainCli.test_main_default_args`](files/tests/test_pdf_export.md)** `(tmp_path: Path)` (`test_pdf_export.py`) - Test [main](files/src/local_deepwiki/export/html.md) with default arguments.
-- ▪️ **[`TestMain.test_main_default_repo_path`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test [main](files/src/local_deepwiki/export/html.md) uses current directory as default.
-- ▪️ **[`TestMainCli.test_main_handles_export_exception`](files/tests/test_pdf_export.md)** `(tmp_path: Path)` (`test_pdf_export.py`) - Test [main](files/src/local_deepwiki/export/html.md) handles exceptions from [export_to_pdf](files/src/local_deepwiki/export/pdf.md).
-- ▪️ **[`TestMainCli.test_main_nonexistent_wiki_path`](files/tests/test_pdf_export.md)** `(tmp_path: Path)` (`test_pdf_export.py`) - Test [main](files/src/local_deepwiki/export/html.md) with nonexistent wiki path.
-- ▪️ **[`TestMain.test_main_path_does_not_exist`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test [main](files/src/local_deepwiki/export/html.md) exits when path doesn't exist.
-- ▪️ **[`TestMain.test_main_path_is_not_directory`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test [main](files/src/local_deepwiki/export/html.md) exits when path is not a directory.
-- ▪️ **[`TestMain.test_main_runs_initial_index`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test [main](files/src/local_deepwiki/export/html.md) runs initial index by default.
-- ▪️ **[`TestMain.test_main_skip_initial_starts_watcher`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test [main](files/src/local_deepwiki/export/html.md) with --skip-initial starts watcher immediately.
-- ▪️ **[`TestMain.test_main_watcher_stops_on_interrupt`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test [main](files/src/local_deepwiki/export/html.md) handles KeyboardInterrupt gracefully.
-- ▪️ **[`TestMain.test_main_with_full_rebuild`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test [main](files/src/local_deepwiki/export/html.md) with --full-rebuild flag.
-- ▪️ **[`TestMain.test_main_with_options`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test [main](files/src/local_deepwiki/export/html.md) with various CLI options.
-- ▪️ **[`TestMainCli.test_main_with_output_option`](files/tests/test_pdf_export.md)** `(tmp_path: Path)` (`test_pdf_export.py`) - Test [main](files/src/local_deepwiki/export/html.md) with -o/--output option.
-- ▪️ **[`TestMainCli.test_main_with_separate_option`](files/tests/test_pdf_export.md)** `(tmp_path: Path)` (`test_pdf_export.py`) - Test [main](files/src/local_deepwiki/export/html.md) with --separate option.
+- ▪️ **[`TestLocalEmbeddingProvider.test_local_embedding_models_constant`](files/tests/test_local_embedding_provider.md)** `(...)` (`test_local_embedding_provider.py`) - Test LOCAL_EMBEDDING_MODELS has expected structure.
+- ▪️ **[`TestGenerationProgress.test_log_file_init_failure`](files/tests/test_progress_tracker.md)** `(...)` (`test_progress_tracker.py`) - Test handling of log file initialization failure.
+- ▪️ **[`TestGenerationProgress.test_log_file_write_failure_handled`](files/tests/test_progress_tracker.md)** `(...)` (`test_progress_tracker.py`) - Test that log file write failures are handled gracefully.
+- ▪️ **[`TestGenerationProgress.test_log_write_oserror_handled`](files/tests/test_progress_tracker.md)** `(...)` (`test_progress_tracker.py`) - Test that OSError during log write is caught gracefully (...
+- ▪️⚡ **[`TestCacheStatisticsLogging.test_logs_cache_stats_when_available`](files/tests/test_wiki_coverage.md)** `(...)` (`test_wiki_coverage.py`) - Test that cache statistics are logged when LLM provider h...
+- ▪️⚡ **[`TestLLMCacheEdgeCases.test_lru_eviction_when_over_limit`](files/tests/test_llm_cache.md)** `(cache_path: Path)` (`test_llm_cache.py`) - Test that LRU eviction removes oldest entries when over m...
+- ▪️ **[`TestMainCli.test_main_custom_wiki_path`](files/tests/test_pdf_export.md)** `(tmp_path: Path)` (`test_pdf_export.py`) - Test main with custom wiki path.
+- ▪️ **[`TestMainCli.test_main_default_args`](files/tests/test_pdf_export.md)** `(tmp_path: Path)` (`test_pdf_export.py`) - Test main with default arguments.
+- ▪️ **[`TestMain.test_main_default_repo_path`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test main uses current directory as default.
+- ▪️ **[`TestMainFunction.test_main_exception`](files/tests/test_interactive_search.md)** `(tmp_path: Path) → None` (`test_interactive_search.py`) - main should handle exceptions.
+- ▪️ **[`TestMainCli.test_main_handles_export_exception`](files/tests/test_pdf_export.md)** `(tmp_path: Path)` (`test_pdf_export.py`) - Test main handles exceptions from export_to_pdf.
+- ▪️ **[`TestMainFunction.test_main_invalid_min_score`](files/tests/test_interactive_search.md)** `(tmp_path: Path) → None` (`test_interactive_search.py`) - main should error on invalid min_score.
+- ▪️ **[`TestMainFunction.test_main_keyboard_interrupt`](files/tests/test_interactive_search.md)** `(tmp_path: Path) → None` (`test_interactive_search.py`) - main should handle KeyboardInterrupt.
+- ▪️ **[`TestMainCli.test_main_module_execution`](files/tests/test_pdf_export.md)** `(tmp_path: Path)` (`test_pdf_export.py`) - Test that module can be run via python -m or __main__.
+- ▪️ **[`TestMainFunction.test_main_non_interactive_requires_query`](files/tests/test_interactive_search.md)** `(tmp_path: Path) → None` (`test_interactive_search.py`) - main should error when non-interactive mode lacks query.
+- ▪️ **[`TestMainCli.test_main_nonexistent_wiki_path`](files/tests/test_pdf_export.md)** `(tmp_path: Path)` (`test_pdf_export.py`) - Test main with nonexistent wiki path.
+- ▪️ **[`TestMain.test_main_path_does_not_exist`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test main exits when path doesn't exist.
+- ▪️ **[`TestMain.test_main_path_is_not_directory`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test main exits when path is not a directory.
+- ▪️ **[`TestMain.test_main_runs_initial_index`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test main runs initial index by default.
+- ▪️ **[`TestMain.test_main_skip_initial_starts_watcher`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test main with --skip-initial starts watcher immediately.
+- ▪️ **[`TestMain.test_main_watcher_stops_on_interrupt`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test main handles KeyboardInterrupt gracefully.
+- ▪️ **[`TestMainFunction.test_main_with_all_filter_args`](files/tests/test_interactive_search.md)** `(tmp_path: Path) → None` (`test_interactive_search.py`) - main should parse all filter arguments.
+- ▪️ **[`TestMain.test_main_with_full_rebuild`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test main with --full-rebuild flag.
+- ▪️ **[`TestMainCli.test_main_with_no_progress_option`](files/tests/test_pdf_export.md)** `(tmp_path: Path)` (`test_pdf_export.py`) - Test main with --no-progress option.
+- ▪️ **[`TestMain.test_main_with_options`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test main with various CLI options.
+- ▪️ **[`TestMainCli.test_main_with_output_option`](files/tests/test_pdf_export.md)** `(tmp_path: Path)` (`test_pdf_export.py`) - Test main with -o/--output option.
+- ▪️ **[`TestMainFunction.test_main_with_preview_flag`](files/tests/test_interactive_search.md)** `(tmp_path: Path) → None` (`test_interactive_search.py`) - main should pass preview flag correctly.
+- ▪️ **[`TestMainCli.test_main_with_separate_option`](files/tests/test_pdf_export.md)** `(tmp_path: Path)` (`test_pdf_export.py`) - Test main with --separate option.
+- ▪️ **[`TestMainFunction.test_main_with_valid_args`](files/tests/test_interactive_search.md)** `(tmp_path: Path) → None` (`test_interactive_search.py`) - main should parse arguments and run search.
 - ▪️⚡ **[`TestVectorStoreEdgeCases.test_many_chunks_same_file`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test many chunks from same file.
+- ▪️ **[`TestValidateDeepResearchParameters.test_max_chunks_at_limit_passes`](files/tests/test_resource_limits.md)** `(...)` (`test_resource_limits.py`) - Test max_chunks at exactly limit passes.
+- ▪️ **[`TestValidateDeepResearchParameters.test_max_chunks_negative_raises`](files/tests/test_resource_limits.md)** `(...)` (`test_resource_limits.py`) - Test negative max_chunks raises ValueError.
+- ▪️ **[`TestValidateDeepResearchParameters.test_max_chunks_too_high_raises`](files/tests/test_resource_limits.md)** `(...)` (`test_resource_limits.py`) - Test max_chunks above limit raises ValueError.
+- ▪️ **[`TestValidateDeepResearchParameters.test_max_chunks_too_low_raises`](files/tests/test_resource_limits.md)** `(...)` (`test_resource_limits.py`) - Test max_chunks below 1 raises ValueError.
 - ▪️ **[`TestEnhancedDependencyGraph.test_max_external_limit`](files/tests/test_diagrams.md)** `(...)` (`test_diagrams.py`) - Test max_external limits number of external deps shown.
+- ▪️ **[`TestValidateQueryParameters.test_max_results_at_limit_passes`](files/tests/test_resource_limits.md)** `(...)` (`test_resource_limits.py`) - Test max_results at exactly limit passes.
+- ▪️ **[`TestValidateQueryParameters.test_max_results_negative_raises`](files/tests/test_resource_limits.md)** `(...)` (`test_resource_limits.py`) - Test negative max_results raises ValueError.
+- ▪️ **[`TestValidateQueryParameters.test_max_results_too_high_raises`](files/tests/test_resource_limits.md)** `(...)` (`test_resource_limits.py`) - Test max_results above limit raises ValueError.
+- ▪️ **[`TestValidateQueryParameters.test_max_results_too_low_raises`](files/tests/test_resource_limits.md)** `(...)` (`test_resource_limits.py`) - Test max_results below 1 raises ValueError.
 - ▪️⚡ **[`TestLLMCacheEdgeCases.test_maybe_evict_exception_handling`](files/tests/test_llm_cache.md)** `(cache: LLMCache)` (`test_llm_cache.py`) - Test _maybe_evict handles exceptions gracefully.
 - ▪️⚡ **[`TestLLMCacheEdgeCases.test_maybe_evict_removes_expired_entries`](files/tests/test_llm_cache.md)** `(cache_path: Path)` (`test_llm_cache.py`) - Test _maybe_evict removes expired entries.
 - ▪️⚡ **[`TestLLMCacheEdgeCases.test_maybe_evict_under_max_entries`](files/tests/test_llm_cache.md)** `(cache: LLMCache)` (`test_llm_cache.py`) - Test _maybe_evict does nothing when under max_entries.
 - ▪️⚡ **[`TestLLMCacheEdgeCases.test_maybe_evict_when_table_none`](files/tests/test_llm_cache.md)** `(cache: LLMCache)` (`test_llm_cache.py`) - Test _maybe_evict does nothing when table is None.
+- ▪️ **[`TestStreamingPdfExporter.test_merge_pdfs_fallback_without_pypdf`](files/tests/test_pdf_export.md)** `(sample_wiki: Path, tmp_path: Path)` (`test_pdf_export.py`) - Test _merge_pdfs falls back when pypdf not available.
+- ▪️ **[`TestStreamingPdfExporter.test_merge_pdfs_with_pypdf`](files/tests/test_pdf_export.md)** `(sample_wiki: Path, tmp_path: Path)` (`test_pdf_export.py`) - Test _merge_pdfs uses pypdf when available.
+- ▪️⚡ **[`TestCollectClassHierarchy.test_merges_duplicate_classes`](files/tests/test_inheritance.md)** `(...)` (`test_inheritance.py`) - Test that duplicate class definitions are merged.
 - ▪️ **[`TestExtractCallsPython.test_method_call`](files/tests/test_callgraph.md)** `(...)` (`test_callgraph.py`) - Test extracting method calls.
+- ▪️ **[`TestMethodChunkCollection.test_method_with_unknown_parent`](files/tests/test_diagrams.md)** `(...)` (`test_diagrams.py`) - Test method chunk with no parent in classes dict (lines 9...
+- ▪️⚡ **[`TestAnalyzeFileCoverage.test_method_without_parent`](files/tests/test_coverage.md)** `(...)` (`test_coverage.py`) - Test method without parent name uses Unknown.
 - ▪️ **[`TestSchemaMigration.test_migrate_status_preserves_data`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`) - Test that migration preserves existing data.
 - ▪️ **[`TestSchemaMigration.test_migrate_status_updates_version`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`) - Test that migration updates the schema version.
 - ▪️⚡ **[`TestSchemaMigration.test_migration_triggered_on_load`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`) - Test that migration is triggered when loading old schema ...
+- ▪️ **[`TestSearchFilters.test_min_similarity_filter`](files/tests/test_interactive_search.md)** `(sample_results: list[SearchResult]) → None` (`test_interactive_search.py`) - Min similarity filter should exclude low-scoring results.
+- ▪️⚡ **[`TestRateLimiter.test_minute_limit_raises_when_not_waiting`](files/tests/test_rate_limiter.md)** `(...)` (`test_rate_limiter.py`) - Test that minute limit raises exception when wait is disa...
+- ▪️⚡ **[`TestRateLimiter.test_minute_window_resets`](files/tests/test_rate_limiter.md)** `(...)` (`test_rate_limiter.py`) - Test that minute window resets after expiry.
+- ▪️ **[`TestPythonParameterExtraction.test_mixed_args_kwargs_in_function`](files/tests/test_chunker.md)** `(...)` (`test_chunker.py`) - Test function with mixed regular params, *args, and **kwa...
+- ▪️⚡ **[`TestAnalyzeFileCoverage.test_mixed_coverage`](files/tests/test_coverage.md)** `(...)` (`test_coverage.py`) - Test file with mixed documented and undocumented entities.
 - ▪️ **[`TestLargeFileHandling.test_mmap_threshold_constant`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test that MMAP threshold is set to 1 MB.
+- ▪️ **[`TestAccessController.test_mode_property`](files/tests/test_access_control.md)** `(...)` (`test_access_control.py`) - Verify mode property returns the current mode.
+- ▪️⚡ **[`TestModulePageProcessing.test_module_pages_written`](files/tests/test_wiki_coverage.md)** `(...)` (`test_wiki_coverage.py`) - Test module pages are appended and written (lines 373-374).
+- ▪️ **[`TestSearchState.test_move_selection_clamps_at_bounds`](files/tests/test_interactive_search.md)** `(sample_results: list[SearchResult]) → None` (`test_interactive_search.py`) - move_selection should not go out of bounds.
+- ▪️ **[`TestSearchState.test_move_selection_down`](files/tests/test_interactive_search.md)** `(sample_results: list[SearchResult]) → None` (`test_interactive_search.py`) - move_selection should move down when delta is positive.
+- ▪️ **[`TestSearchState.test_move_selection_empty_results`](files/tests/test_interactive_search.md)** `(...) → None` (`test_interactive_search.py`) - move_selection should handle empty results.
+- ▪️ **[`TestSearchState.test_move_selection_up`](files/tests/test_interactive_search.md)** `(sample_results: list[SearchResult]) → None` (`test_interactive_search.py`) - move_selection should move up when delta is negative.
+- ▪️ **[`TestRepositoryAccessController.test_multiple_allowlist_patterns`](files/tests/test_repository_access.md)** `(...)` (`test_repository_access.py`) - Test multiple allowlist patterns.
 - ▪️ **[`TestDebouncedHandlerEvents.test_multiple_changes_debounced`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test that multiple rapid changes are debounced.
+- ▪️ **[`TestRepositoryAccessController.test_multiple_denylist_patterns`](files/tests/test_repository_access.md)** `(...)` (`test_repository_access.py`) - Test multiple denylist patterns.
 - ▪️ **[`TestExtractExamplesForEntities.test_multiple_entities`](files/tests/test_test_examples.md)** `(tmp_path: Path) → None` (`test_test_examples.py`) - Test extracting examples for multiple entities.
+- ▪️ **[`TestGenerationProgress.test_multiple_file_completions`](files/tests/test_progress_tracker.md)** `(...)` (`test_progress_tracker.py`) - Test completing multiple files updates rate calculation.
+- ▪️ **[`TestScanRepositoryForSecrets.test_multiple_findings_in_same_file`](files/tests/test_secret_detector.md)** `(...)` (`test_secret_detector.py`) - Test multiple secrets in same file are all found.
 - ▪️ **[`TestExtractCallsPython.test_multiple_function_calls`](files/tests/test_callgraph.md)** `(...)` (`test_callgraph.py`) - Test extracting multiple function calls.
+- ▪️ **[`TestWikiStructureToToc.test_multiple_pages_same_directory`](files/tests/test_models.md)** `(...)` (`test_models.py`) - Test to_toc with multiple pages in the same directory.
 - ▪️ **[`TestCachingLLMProvider.test_name_includes_cache_prefix`](files/tests/test_llm_cache.md)** `(cached_provider: CachingLLMProvider)` (`test_llm_cache.py`) - Test that provider name includes cache prefix.
+- ▪️ **[`TestEmbeddingCache.test_name_property`](files/tests/test_embedding_cache.md)** `(...)` (`test_embedding_cache.py`) - Test name property includes cache indicator.
+- ▪️ **[`TestEmbeddingProviderAbstractMethods.test_name_property_abstract`](files/tests/test_base_provider.md)** `(...)` (`test_base_provider.py`) - Test that name property abstract body is covered.
+- ▪️ **[`TestEmbeddingProviderAbstractMethods.test_name_property_abstract_fget_coverage`](files/tests/test_base_provider.md)** `(...)` (`test_base_provider.py`) - Test that calling the abstract name property fget covers ...
+- ▪️ **[`TestLLMProviderAbstractMethods.test_name_property_abstract_llm`](files/tests/test_base_provider.md)** `(...)` (`test_base_provider.py`) - Test that LLM name property works.
+- ▪️ **[`TestLLMProviderAbstractMethods.test_name_property_abstract_llm_fget_coverage`](files/tests/test_base_provider.md)** `(...)` (`test_base_provider.py`) - Test that calling the abstract LLM name property fget cov...
+- ▪️ **[`TestLocalEmbeddingProvider.test_name_property_different_models`](files/tests/test_local_embedding_provider.md)** `(...)` (`test_local_embedding_provider.py`) - Test name property for different model names.
 - ▪️ **[`TestSchemaMigration.test_needs_migration_current_version`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`) - Test that current schema version doesn't need migration.
 - ▪️ **[`TestSchemaMigration.test_needs_migration_old_version`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`) - Test that old schema versions need migration.
+- ▪️ **[`TestWikiStatusManagerNeedsRegeneration.test_needs_regeneration_missing_current_hash`](files/tests/test_wiki_status.md)** `(...)` (`test_wiki_status.py`) - Test needs_regeneration returns True when current hash is...
+- ▪️ **[`TestWikiStatusManagerNeedsRegeneration.test_needs_regeneration_no_change`](files/tests/test_wiki_status.md)** `(...)` (`test_wiki_status.py`) - Test needs_regeneration returns False when nothing changed.
 - ▪️ **[`TestWikiStatusManagerHelpers.test_needs_regeneration_no_changes`](files/tests/test_incremental_wiki.md)** `(...)` (`test_incremental_wiki.py`) - Test needs_regeneration when nothing changed.
 - ▪️ **[`TestWikiStatusManagerHelpers.test_needs_regeneration_no_previous_status`](files/tests/test_incremental_wiki.md)** `(...)` (`test_incremental_wiki.py`) - Test needs_regeneration when no previous status exists.
+- ▪️ **[`TestWikiStatusManagerNeedsRegeneration.test_needs_regeneration_no_previous_status`](files/tests/test_wiki_status.md)** `(...)` (`test_wiki_status.py`) - Test needs_regeneration returns True when no previous sta...
+- ▪️ **[`TestWikiStatusManagerNeedsRegeneration.test_needs_regeneration_page_not_in_previous`](files/tests/test_wiki_status.md)** `(...)` (`test_wiki_status.py`) - Test needs_regeneration returns True for new page.
 - ▪️ **[`TestWikiStatusManagerHelpers.test_needs_regeneration_page_not_in_status`](files/tests/test_incremental_wiki.md)** `(...)` (`test_incremental_wiki.py`) - Test needs_regeneration when page not in previous status.
+- ▪️ **[`TestWikiStatusManagerNeedsRegeneration.test_needs_regeneration_source_file_changed`](files/tests/test_wiki_status.md)** `(...)` (`test_wiki_status.py`) - Test needs_regeneration returns True when source file cha...
 - ▪️ **[`TestWikiStatusManagerHelpers.test_needs_regeneration_source_files_changed`](files/tests/test_incremental_wiki.md)** `(...)` (`test_incremental_wiki.py`) - Test needs_regeneration when source files list changed.
+- ▪️ **[`TestWikiStatusManagerNeedsRegeneration.test_needs_regeneration_source_files_changed`](files/tests/test_wiki_status.md)** `(...)` (`test_wiki_status.py`) - Test needs_regeneration returns True when source files li...
 - ▪️ **[`TestWikiStatusManagerHelpers.test_needs_regeneration_source_hash_changed`](files/tests/test_incremental_wiki.md)** `(...)` (`test_incremental_wiki.py`) - Test needs_regeneration when source file hash changed.
 - ▪️ **[`TestExtractCallsPython.test_nested_calls`](files/tests/test_callgraph.md)** `(...)` (`test_callgraph.py`) - Test extracting nested function calls.
+- ▪️ **[`TestWikiStructureToToc.test_nested_structure`](files/tests/test_models.md)** `(...)` (`test_models.py`) - Test to_toc with nested directory structure.
 - ▪️⚡ **[`TestResearchCancellation.test_no_cancellation_when_check_is_none`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test that pipeline completes when cancellation_check is N...
 - ▪️⚡ **[`TestResearchCancellation.test_no_cancellation_when_check_returns_false`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test that pipeline completes when cancellation check retu...
 - ▪️ **[`TestEnhancedDependencyGraph.test_no_clickable_links_without_base_path`](files/tests/test_diagrams.md)** `(...)` (`test_diagrams.py`) - Test click handlers are not added when wiki_base_path is ...
 - ▪️ **[`TestDocstringExtraction.test_no_docstring`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test function without docstring.
+- ▪️ **[`TestGetExamplesForApiPage.test_no_examples_returns_empty_string`](files/tests/test_examples_plugin.md)** `(...) → None` (`test_examples_plugin.py`) - Test returns empty string when no examples found (line 30...
+- ▪️ **[`TestScanRepositoryForSecrets.test_no_findings_for_clean_code`](files/tests/test_secret_detector.md)** `(...)` (`test_secret_detector.py`) - Test no findings for code without secrets.
+- ▪️⚡ **[`TestWikiGeneratorPluginIntegration.test_no_plugins_registered_is_noop`](files/tests/test_plugins.md)** `(...)` (`test_plugins.py`) - Test that no plugins registered means no action taken.
 - ▪️ **[`TestBuildSourceUrl.test_no_remote_returns_none`](files/tests/test_git_utils.md)** `(...) → None` (`test_git_utils.py`) - Test that missing remote info returns None.
 - ▪️⚡ **[`TestRetryDecorator.test_no_retry_on_non_retryable_error`](files/tests/test_provider_errors.md)** `(...)` (`test_provider_errors.py`) - Test that non-retryable errors are not retried.
 - ▪️ **[`TestDebouncedHandlerEvents.test_non_watched_file_ignored`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test that non-watched files are ignored.
+- ▪️ **[`TestWeakReferences.test_non_weak_handler_always_alive`](files/tests/test_events.md)** `(...)` (`test_events.py`) - Test non-weak handlers are always alive.
 - ▪️ **[`TestCodeChunkToVectorRecord.test_none_fields_become_empty_strings`](files/tests/test_models.md)** `(...)` (`test_models.py`) - Test that None fields are converted to empty strings.
+- ▪️ **[`TestHookRunner.test_nonexistent_script_rejected`](files/tests/test_events.md)** `(emitter: EventEmitter, scripts_dir: Path)` (`test_events.py`) - Test that registering a non-existent script raises ValueE...
+- ▪️ **[`TestGoogleDocstringEdgeCases.test_notes_section`](files/tests/test_api_docs.md)** `(...)` (`test_api_docs.py`) - Test that Notes section is handled.
+- ▪️⚡ **[`TestValidationMethods.test_ollama_validate_connectivity_failure`](files/tests/test_providers.md)** `(...)` (`test_providers.py`) - Test Ollama validate_connectivity failure.
+- ▪️⚡ **[`TestValidationMethods.test_ollama_validate_connectivity_success`](files/tests/test_providers.md)** `(...)` (`test_providers.py`) - Test Ollama validate_connectivity success.
+- ▪️⚡ **[`TestValidationMethods.test_ollama_validate_model_not_found`](files/tests/test_providers.md)** `(...)` (`test_providers.py`) - Test Ollama validate_model when model not found.
+- ▪️⚡ **[`TestValidationMethods.test_ollama_validate_model_success`](files/tests/test_providers.md)** `(...)` (`test_providers.py`) - Test Ollama validate_model success.
 - ▪️ **[`TestDebouncedHandlerEvents.test_on_created_schedules_reindex`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test that file creation schedules reindex.
+- ▪️ **[`TestEventEmitter.test_on_decorator`](files/tests/test_events.md)** `(emitter: EventEmitter)` (`test_events.py`) - Test @on decorator for registering handlers.
+- ▪️ **[`TestEventEmitter.test_on_decorator_with_priority`](files/tests/test_events.md)** `(emitter: EventEmitter)` (`test_events.py`) - Test @on decorator with priority.
 - ▪️ **[`TestDebouncedHandlerEvents.test_on_deleted_directory_ignored`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test that directory delete events are ignored.
 - ▪️ **[`TestDebouncedHandlerEvents.test_on_deleted_schedules_reindex`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test that file deletion schedules reindex.
+- ▪️⚡ **[`TestLifecycleHooks.test_on_deregister_called`](files/tests/test_events.md)** `(emitter: EventEmitter, lifecycle_events: list)` (`test_events.py`) - Test on_deregister lifecycle hook is called.
+- ▪️⚡ **[`TestLifecycleHooks.test_on_error_called`](files/tests/test_events.md)** `(emitter: EventEmitter, lifecycle_events: list)` (`test_events.py`) - Test on_error lifecycle hook is called.
 - ▪️ **[`TestDebouncedHandlerEvents.test_on_modified_directory_ignored`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test that directory modify events are ignored.
 - ▪️ **[`TestDebouncedHandlerEvents.test_on_modified_schedules_reindex`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test that file modification schedules reindex.
 - ▪️ **[`TestDebouncedHandlerEvents.test_on_moved_directory_ignored`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test that directory move events are ignored.
 - ▪️ **[`TestDebouncedHandlerEvents.test_on_moved_schedules_reindex_for_dest`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test that file move schedules reindex for destination path.
 - ▪️ **[`TestDebouncedHandlerEvents.test_on_moved_schedules_reindex_for_source`](files/tests/test_watcher.md)** `(...)` (`test_watcher.py`) - Test that file move schedules reindex for source path.
+- ▪️⚡ **[`TestLifecycleHooks.test_on_register_called`](files/tests/test_events.md)** `(emitter: EventEmitter, lifecycle_events: list)` (`test_events.py`) - Test on_register lifecycle hook is called.
+- ▪️⚡ **[`TestLifecycleHooks.test_on_success_called`](files/tests/test_events.md)** `(emitter: EventEmitter, lifecycle_events: list)` (`test_events.py`) - Test on_success lifecycle hook is called.
+- ▪️⚡ **[`TestLazyIndexManager.test_on_vector_index_ready_callback`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test callback registration for index ready event.
+- ▪️⚡ **[`TestValidationMethods.test_openai_embedding_validate_no_api_key`](files/tests/test_providers.md)** `(...)` (`test_providers.py`) - Test OpenAI embedding initialization fails without API ke...
+- ▪️⚡ **[`TestValidationMethods.test_openai_validate_model_known`](files/tests/test_providers.md)** `(...)` (`test_providers.py`) - Test OpenAI validate_model for known model.
+- ▪️⚡ **[`TestValidationMethods.test_openai_validate_no_api_key`](files/tests/test_providers.md)** `(...)` (`test_providers.py`) - Test OpenAI initialization fails without API key (early v...
+- ▪️⚡ **[`TestWithRetryFallbackPath.test_overloaded_without_jitter`](files/tests/test_base_provider.md)** `(...)` (`test_base_provider.py`) - Test server overloaded retry without jitter.
 - ▪️ **[`TestAddSourceRefsSectionsWithLineInfo.test_page_unchanged_when_source_refs_none`](files/tests/test_source_refs.md)** `(...)` (`test_source_refs.py`) - Test that page is unchanged when generate_source_refs_sec...
+- ▪️⚡ **[`TestParallelEmbedding.test_parallel_embedding_basic`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test basic parallel embedding generation.
+- ▪️⚡ **[`TestParallelEmbedding.test_parallel_embedding_concurrency_limited`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test that concurrency is properly limited by semaphore.
+- ▪️⚡ **[`TestParallelEmbedding.test_parallel_embedding_empty_list`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test parallel embedding with empty list.
+- ▪️⚡ **[`TestParallelEmbedding.test_parallel_embedding_faster_than_sequential`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test that parallel embedding is faster than sequential.
+- ▪️⚡ **[`TestParallelEmbedding.test_parallel_embedding_preserves_order`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test that parallel embedding preserves input order.
+- ▪️⚡ **[`TestParallelEmbedding.test_parallel_embedding_single_batch`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test parallel embedding when all texts fit in single batch.
+- ▪️⚡ **[`TestParallelEmbedding.test_parallel_embedding_single_text`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test parallel embedding with single text.
+- ▪️⚡ **[`TestParallelEmbedding.test_parallel_embedding_with_progress_logging`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test parallel embedding with progress logging enabled.
+- ▪️⚡ **[`TestParallelParsingPerformance.test_parallel_parsing_counts_errors`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`) - Test that parallel parsing counts and logs errors.
+- ▪️⚡ **[`TestParallelParsingPerformance.test_parallel_parsing_handles_empty_file_list`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`) - Test that parallel parsing handles empty file list gracef...
+- ▪️⚡ **[`TestParallelParsingPerformance.test_parallel_parsing_logs_performance_metrics`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`) - Test that parallel parsing logs performance metrics.
+- ▪️⚡ **[`TestParallelParsingPerformance.test_parallel_parsing_uses_configured_workers`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`) - Test that parallel parsing uses the configured number of ...
+- ▪️⚡ **[`TestDeepResearchEdgeCases.test_parallel_retrieve_handles_search_exceptions`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test that _parallel_retrieve handles exceptions from search.
+- ▪️⚡ **[`TestDeepResearchEdgeCases.test_parallel_retrieve_with_empty_sub_questions`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test that _parallel_retrieve handles empty sub_questions ...
+- ▪️ **[`TestGoogleDocstringEdgeCases.test_param_continuation`](files/tests/test_api_docs.md)** `(...)` (`test_api_docs.py`) - Test parameter description continuation across lines.
+- ▪️ **[`TestDeepResearchEdgeCases.test_parse_decomposition_default_category`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test that decomposition uses default category when missing.
+- ▪️⚡ **[`TestDeepResearchEdgeCases.test_parse_decomposition_handles_json_decode_error`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test that _parse_decomposition_response handles JSONDecod...
+- ▪️ **[`TestDeepResearchEdgeCases.test_parse_decomposition_missing_question_key`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test parsing decomposition when items are missing questio...
+- ▪️ **[`TestUncoveredCodePaths.test_parse_file_permission_error`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test parse_file handles permission errors gracefully.
+- ▪️ **[`TestUncoveredCodePaths.test_parse_file_read_error`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test parse_file returns None when file cannot be read.
+- ▪️ **[`TestDeepResearchEdgeCases.test_parse_gap_analysis_filters_empty_strings`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test that _parse_gap_analysis_response filters out empty ...
+- ▪️⚡ **[`TestDeepResearchEdgeCases.test_parse_gap_analysis_json_decode_error`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test that _parse_gap_analysis_response handles JSONDecode...
+- ▪️⚡ **[`TestDeepResearchEdgeCases.test_parse_gap_analysis_no_json_match`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test that _parse_gap_analysis_response handles no JSON in...
+- ▪️ **[`TestParseFileErrors.test_parse_single_file_oserror`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`) - Test that OSError in _parse_single_file returns error res...
+- ▪️ **[`TestParseFileErrors.test_parse_single_file_runtime_error`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`) - Test that RuntimeError in _parse_single_file returns erro...
+- ▪️ **[`TestParseFileErrors.test_parse_single_file_unicode_decode_error`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`) - Test that UnicodeDecodeError in _parse_single_file return...
+- ▪️ **[`TestParseFileErrors.test_parse_single_file_value_error`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`) - Test that ValueError in _parse_single_file returns error ...
+- ▪️ **[`TestUncoveredCodePaths.test_parse_source_bytes`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test parse_source works with bytes input.
+- ▪️ **[`TestUncoveredCodePaths.test_parse_tsx_file`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test parsing a TSX file specifically.
 - ▪️ **[`TestLargeFileHandling.test_parser_handles_large_file`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test that parser can handle files above mmap threshold.
 - ▪️ **[`TestConfig.test_parsing_config`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test parsing configuration.
 - ▪️ **[`TestAddSourceRefsSectionsWithLineInfo.test_passes_line_info_to_section_generator`](files/tests/test_source_refs.md)** `(...)` (`test_source_refs.py`) - Test that line info from status is used in generated sect...
+- ▪️ **[`TestValidateQueryParameters.test_path_not_directory_raises`](files/tests/test_resource_limits.md)** `(...)` (`test_resource_limits.py`) - Test path pointing to file raises ValueError.
+- ▪️ **[`TestRepositoryAccessController.test_path_resolution`](files/tests/test_repository_access.md)** `(...)` (`test_repository_access.py`) - Test that paths are resolved before matching.
+- ▪️ **[`TestPdfExportIntegration.test_pdf_contains_expected_content`](files/tests/test_pdf_export.md)** `(wiki_with_content: Path, tmp_path: Path)` (`test_pdf_export.py`) - Test that the PDF contains expected text content.
+- ▪️ **[`TestPdfExportIntegration.test_pdf_with_empty_wiki`](files/tests/test_pdf_export.md)** `(tmp_path: Path)` (`test_pdf_export.py`) - Test PDF generation with minimal content.
+- ▪️ **[`TestPdfExportIntegration.test_pdf_with_long_content`](files/tests/test_pdf_export.md)** `(tmp_path: Path)` (`test_pdf_export.py`) - Test PDF generation with longer content (multiple pages).
+- ▪️ **[`TestPdfExportIntegration.test_pdf_with_special_characters`](files/tests/test_pdf_export.md)** `(tmp_path: Path)` (`test_pdf_export.py`) - Test PDF generation with special characters in content.
+- ▪️ **[`TestGenerationProgress.test_phase_stats_in_final_status`](files/tests/test_progress_tracker.md)** `(...)` (`test_progress_tracker.py`) - Test that phase stats are included in final status.
+- ▪️ **[`TestGenerationProgress.test_phase_transitions`](files/tests/test_progress_tracker.md)** `(...)` (`test_progress_tracker.py`) - Test transitioning between phases.
+- ▪️ **[`TestProgressManager.test_phase_transitions_track_durations`](files/tests/test_progress.md)** `(...)` (`test_progress.py`) - Test that phase transitions track durations.
+- ▪️ **[`TestUncoveredCodePaths.test_php_block_comment`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test PHP /** */ block comment (PHPDoc).
 - ▪️ **[`TestGetParentClasses.test_php_extends_and_implements`](files/tests/test_chunker.md)** `(...)` (`test_chunker.py`) - Test PHP class with extends and implements.
+- ▪️ **[`TestUncoveredCodePaths.test_php_no_docstring`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test PHP function without docstring.
 - ▪️⚡ **[`TestDeepResearchPipelineIntegration.test_pipeline_counts_llm_calls`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test that LLM calls are counted correctly.
+- ▪️⚡ **[`TestFullPipeline.test_pipeline_progress_callback`](files/tests/test_integration_pipeline.md)** `(sample_python_repo: Path, test_config: Config)` (`test_integration_pipeline.py`) - Test that progress callbacks are invoked during pipeline ...
+- ▪️ **[`TestRegistryEdgeCases.test_plugin_cleanup_called_on_unregister`](files/tests/test_plugin_registry.md)** `(...)` (`test_plugin_registry.py`) - Test that cleanup is called when unregistering.
+- ▪️ **[`TestRegistryEdgeCases.test_plugin_initialize_called`](files/tests/test_plugin_registry.md)** `(...)` (`test_plugin_registry.py`) - Test that initialize is called when registering.
+- ▪️⚡ **[`TestDeepResearchEdgeCases.test_prepare_results_truncates_when_exceeds_max`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test that _prepare_results_for_synthesis truncates result...
 - ▪️ **[`TestCrossLinker.test_preserves_existing_links`](files/tests/test_crosslinks.md)** `(...)` (`test_crosslinks.py`) - Test that existing markdown links are preserved.
-- ▪️⚡ **[`TestWithRetry.test_preserves_function_metadata`](files/tests/test_retry.md)** `(...)` (`test_retry.py`) - Test that [decorator](files/src/local_deepwiki/providers/base.md) preserves function name and docstring.
+- ▪️⚡ **[`TestWithRetry.test_preserves_function_metadata`](files/tests/test_retry.md)** `(...)` (`test_retry.py`) - Test that decorator preserves function name and docstring.
+- ▪️ **[`TestAddSeeAlsoSections.test_preserves_page_without_relationships`](files/tests/test_see_also.md)** `(...)` (`test_see_also.py`) - Test that pages without relationships are preserved uncha...
+- ▪️ **[`TestAddStaleBanners.test_preserves_pages_without_status`](files/tests/test_stale_detection.md)** `(tmp_path: Path) → None` (`test_stale_detection.py`) - Test preserves pages that don't have status info.
+- ▪️ **[`TestValidateDeepResearchParameters.test_preset_default_valid`](files/tests/test_resource_limits.md)** `(...)` (`test_resource_limits.py`) - Test 'default' preset is valid.
+- ▪️ **[`TestValidateDeepResearchParameters.test_preset_quick_valid`](files/tests/test_resource_limits.md)** `(...)` (`test_resource_limits.py`) - Test 'quick' preset is valid.
+- ▪️ **[`TestValidateDeepResearchParameters.test_preset_thorough_valid`](files/tests/test_resource_limits.md)** `(...)` (`test_resource_limits.py`) - Test 'thorough' preset is valid.
 - ▪️⚡ **[`TestGenerateFileDocs.test_prioritizes_files_by_chunk_count`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test prioritizes files with more chunks when limiting.
+- ▪️ **[`TestPromptLoader.test_priority_custom_over_repo`](files/tests/test_prompts.md)** `(...)` (`test_prompts.py`) - Test that custom_dir has priority over repo prompts.
 - ▪️⚡ **[`TestBatchedProcessing.test_processes_chunks_in_batches`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`) - Test that chunks are processed in batches to limit memory...
+- ▪️⚡ **[`TestCancellationAndProgressCallbacks.test_progress_callback_handles_attribute_error`](files/tests/test_handlers_coverage.md)** `(...)` (`test_handlers_coverage.py`) - Test progress_callback logs warning on AttributeError.
+- ▪️⚡ **[`TestCancellationAndProgressCallbacks.test_progress_callback_handles_os_error`](files/tests/test_handlers_coverage.md)** `(...)` (`test_handlers_coverage.py`) - Test progress_callback logs warning on OSError.
+- ▪️⚡ **[`TestCancellationAndProgressCallbacks.test_progress_callback_handles_runtime_error`](files/tests/test_handlers_coverage.md)** `(...)` (`test_handlers_coverage.py`) - Test progress_callback logs warning on RuntimeError.
 - ▪️⚡ **[`TestDeepResearchProgress.test_progress_callback_includes_chunk_counts`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test that retrieval progress includes chunk counts.
 - ▪️⚡ **[`TestDeepResearchProgress.test_progress_callback_includes_duration`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test that progress events include duration.
 - ▪️⚡ **[`TestDeepResearchProgress.test_progress_callback_includes_follow_up_queries`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test that gap analysis progress includes follow-up queries.
@@ -1078,42 +3074,103 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️⚡ **[`TestHandleDeepResearchImpl.test_progress_callback_with_server`](files/tests/test_handlers_coverage.md)** `(...)` (`test_handlers_coverage.py`) - Test progress callback sends notifications with server.
 - ▪️⚡ **[`TestHandleDeepResearchImpl.test_progress_callback_without_server`](files/tests/test_handlers_coverage.md)** `(...)` (`test_handlers_coverage.py`) - Test progress callback handles missing server gracefully.
 - ▪️⚡ **[`TestDeepResearchProgress.test_progress_step_numbers_increase`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test that step numbers increase monotonically.
-- ▪️ **[`TestProviderPrompts.test_prompts_config_has_all_providers`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test [PromptsConfig](files/src/local_deepwiki/config.md) has configurations for all providers.
+- ▪️ **[`TestPromptLoader.test_prompt_caching`](files/tests/test_prompts.md)** `(...)` (`test_prompts.py`) - Test that prompts are cached.
+- ▪️ **[`TestProviderPrompts.test_prompts_config_has_all_providers`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test PromptsConfig has configurations for all providers.
 - ▪️ **[`TestProviderPrompts.test_prompts_contain_essential_instructions`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test that prompts contain essential instructions.
-- ▪️ **[`TestProviderPrompts.test_provider_prompts_config_has_all_fields`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test [ProviderPromptsConfig](files/src/local_deepwiki/config.md) has all required prompt fields.
+- ▪️ **[`TestRegistryEdgeCases.test_properties_return_copies`](files/tests/test_plugin_registry.md)** `(...)` (`test_plugin_registry.py`) - Test that property accessors return copies, not references.
+- ▪️ **[`TestProviderPrompts.test_provider_prompts_config_has_all_fields`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test ProviderPromptsConfig has all required prompt fields.
+- ▪️ **[`TestDocstringExtractorHelpers.test_python_class_no_docstring`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test Python class with no docstring.
 - ▪️ **[`TestDocstringExtraction.test_python_docstring`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test extracting Python docstring.
+- ▪️ **[`TestDocstringExtractorHelpers.test_python_docstring_expression_not_statement`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test Python function where first body element is not expr...
+- ▪️ **[`TestDocstringExtractorHelpers.test_python_docstring_no_body`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test _get_python_docstring with function that has no body...
+- ▪️ **[`TestUncoveredCodePaths.test_python_double_quoted_docstring`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test Python function with double-quoted (non-triple) docs...
+- ▪️ **[`TestUncoveredCodePaths.test_python_function_no_body_children`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test Python function with empty body returns None for doc...
+- ▪️ **[`TestUncoveredCodePaths.test_python_function_non_string_first_expr`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test Python function with non-string first expression.
 - ▪️ **[`TestGetParentClasses.test_python_multiple_parents`](files/tests/test_chunker.md)** `(...)` (`test_chunker.py`) - Test Python class with multiple parents (mixins).
 - ▪️ **[`TestGetParentClasses.test_python_no_parents`](files/tests/test_chunker.md)** `(...)` (`test_chunker.py`) - Test Python class with no parents.
 - ▪️ **[`TestGetParentClasses.test_python_single_parent`](files/tests/test_chunker.md)** `(...)` (`test_chunker.py`) - Test Python class with single parent.
+- ▪️ **[`TestUncoveredCodePaths.test_python_single_quoted_docstring`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test Python function with single-quoted docstring.
+- ▪️ **[`TestUncoveredCodePaths.test_python_single_triple_quoted_docstring`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test Python with single triple-quoted docstring.
+- ▪️ **[`TestValidateQueryParameters.test_query_at_max_length_passes`](files/tests/test_resource_limits.md)** `(...)` (`test_resource_limits.py`) - Test query at exactly max length passes.
+- ▪️ **[`TestValidateQueryParameters.test_query_too_long_raises`](files/tests/test_resource_limits.md)** `(...)` (`test_resource_limits.py`) - Test query exceeding max length raises ValueError.
+- ▪️ **[`TestValidateDeepResearchParameters.test_question_at_max_length_passes`](files/tests/test_resource_limits.md)** `(...)` (`test_resource_limits.py`) - Test question at exactly max length passes.
+- ▪️ **[`TestValidateDeepResearchParameters.test_question_empty_raises`](files/tests/test_resource_limits.md)** `(...)` (`test_resource_limits.py`) - Test empty question raises ValueError.
+- ▪️ **[`TestValidateDeepResearchParameters.test_question_too_long_raises`](files/tests/test_resource_limits.md)** `(...)` (`test_resource_limits.py`) - Test question exceeding max length raises ValueError.
 - ▪️ **[`TestResearchPresets.test_quick_preset_values`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test quick preset has fewer resources.
+- ▪️ **[`TestGoogleDocstringEdgeCases.test_raises_section`](files/tests/test_api_docs.md)** `(...)` (`test_api_docs.py`) - Test parsing Raises section.
+- ▪️⚡ **[`TestWithRetryFallbackPath.test_rate_limit_without_jitter`](files/tests/test_base_provider.md)** `(...)` (`test_base_provider.py`) - Test rate limit retry without jitter.
 - ▪️ **[`TestLargeFileHandling.test_read_file_content_preserves_bytes`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test that file content is preserved exactly.
 - ▪️ **[`TestLargeFileHandling.test_read_small_file_directly`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test that small files are read directly.
+- ▪️⚡ **[`TestListTools.test_read_wiki_page_tool_schema`](files/tests/test_server.md)** `(...)` (`test_server.py`) - Test read_wiki_page tool has correct schema.
+- ▪️⚡ **[`TestListTools.test_read_wiki_structure_tool_schema`](files/tests/test_server.md)** `(...)` (`test_server.py`) - Test read_wiki_structure tool has correct schema.
 - ▪️⚡ **[`TestLLMCacheEdgeCases.test_record_hit_exception_handling`](files/tests/test_llm_cache.md)** `(cache: LLMCache)` (`test_llm_cache.py`) - Test _record_hit handles exceptions gracefully.
+- ▪️⚡ **[`TestLLMCacheEdgeCases.test_record_hit_nonexistent_entry`](files/tests/test_llm_cache.md)** `(cache_path: Path, embedding_provider: MockEmbeddingProvider)` (`test_llm_cache.py`) - Test that _record_hit handles nonexistent entries gracefu...
+- ▪️⚡ **[`TestLLMCacheEdgeCases.test_record_hit_updates_entry`](files/tests/test_llm_cache.md)** `(cache_path: Path, embedding_provider: MockEmbeddingProvider)` (`test_llm_cache.py`) - Test that _record_hit properly updates hit_count and last...
 - ▪️⚡ **[`TestLLMCacheEdgeCases.test_record_hit_when_table_none`](files/tests/test_llm_cache.md)** `(cache: LLMCache)` (`test_llm_cache.py`) - Test _record_hit does nothing when table is None.
 - ▪️ **[`TestWikiStatusManagerHelpers.test_record_page_status`](files/tests/test_incremental_wiki.md)** `(...)` (`test_incremental_wiki.py`) - Test recording page status.
 - ▪️⚡ **[`TestGenerateModuleDocs.test_records_page_status`](files/tests/test_wiki_modules_coverage.md)** `(...)` (`test_wiki_modules_coverage.py`) - Test records status for generated pages.
+- ▪️ **[`TestPluginRegistry.test_register_by_type`](files/tests/test_plugins.md)** `(...)` (`test_plugins.py`) - Test registering plugins by type detection.
+- ▪️ **[`TestPluginRegistry.test_register_embedding_provider`](files/tests/test_plugins.md)** `(...)` (`test_plugins.py`) - Test registering an embedding provider.
 - ▪️ **[`TestEntityRegistry.test_register_entity`](files/tests/test_crosslinks.md)** `(...)` (`test_crosslinks.py`) - Test registering an entity.
 - ▪️ **[`TestEntityRegistry.test_register_from_chunks`](files/tests/test_crosslinks.md)** `(...)` (`test_crosslinks.py`) - Test registering entities from code chunks.
+- ▪️ **[`TestPluginRegistry.test_register_language_parser`](files/tests/test_plugins.md)** `(...)` (`test_plugins.py`) - Test registering a language parser.
+- ▪️ **[`TestHookRunner.test_register_multiple_scripts`](files/tests/test_events.md)** `(runner: HookRunner, scripts_dir: Path)` (`test_events.py`) - Test registering multiple scripts for same event.
+- ▪️ **[`TestHookRunner.test_register_script`](files/tests/test_events.md)** `(runner: HookRunner, scripts_dir: Path)` (`test_events.py`) - Test registering a script.
+- ▪️ **[`TestPluginRegistry.test_register_unknown_type`](files/tests/test_plugins.md)** `(...)` (`test_plugins.py`) - Test registering unknown plugin type raises error.
+- ▪️ **[`TestPluginRegistry.test_register_wiki_generator`](files/tests/test_plugins.md)** `(...)` (`test_plugins.py`) - Test registering a wiki generator.
 - ▪️ **[`TestEntityRegistry.test_registers_camelcase_aliases`](files/tests/test_crosslinks.md)** `(...)` (`test_crosslinks.py`) - Test that CamelCase names get spaced aliases registered.
 - ▪️⚡ **[`TestGenerateSingleFileDoc.test_registers_entities_for_crosslinking`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test registers entities for cross-linking.
 - ▪️ **[`TestCrossLinker.test_relative_paths`](files/tests/test_crosslinks.md)** `(...)` (`test_crosslinks.py`) - Test relative path calculation between pages.
+- ▪️ **[`TestProgressManager.test_remove_callback`](files/tests/test_progress.md)** `(...)` (`test_progress.py`) - Test removing a callback.
+- ▪️ **[`TestEventEmitter.test_remove_global_handler`](files/tests/test_events.md)** `(emitter: EventEmitter)` (`test_events.py`) - Test removing global handler.
+- ▪️ **[`TestEventEmitter.test_remove_handler`](files/tests/test_events.md)** `(emitter: EventEmitter)` (`test_events.py`) - Test removing a handler.
+- ▪️ **[`TestEventEmitter.test_remove_handler_not_found`](files/tests/test_events.md)** `(emitter: EventEmitter)` (`test_events.py`) - Test removing non-existent handler returns False.
+- ▪️ **[`TestStreamingPdfExporter.test_render_batch_to_pdf_basic`](files/tests/test_pdf_export.md)** `(sample_wiki: Path, tmp_path: Path)` (`test_pdf_export.py`) - Test _render_batch_to_pdf creates PDF from pages.
+- ▪️ **[`TestStreamingPdfExporter.test_render_batch_to_pdf_with_toc`](files/tests/test_pdf_export.md)** `(sample_wiki: Path, tmp_path: Path)` (`test_pdf_export.py`) - Test _render_batch_to_pdf includes TOC when requested.
 - ▪️⚡ **[`TestVectorStoreEdgeCases.test_reopen_database`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test reopening database preserves data.
 - ▪️⚡ **[`TestVectorStoreEdgeCases.test_replace_existing_table`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test create_or_update_table replaces existing data.
+- ▪️ **[`TestPromptLoader.test_repo_prompts_in_search_paths`](files/tests/test_prompts.md)** `(...)` (`test_prompts.py`) - Test that repo's .deepwiki/prompts is included.
+- ▪️ **[`TestRepositoryAccessController.test_require_access_denied`](files/tests/test_repository_access.md)** `(...)` (`test_repository_access.py`) - Test require_access raises for denied path.
+- ▪️ **[`TestRepositoryAccessController.test_require_access_success`](files/tests/test_repository_access.md)** `(...)` (`test_repository_access.py`) - Test require_access does not raise for allowed path.
+- ▪️ **[`TestAccessController.test_require_all_permissions_disabled_mode`](files/tests/test_access_control.md)** `(...)` (`test_access_control.py`) - Verify require_all_permissions skips all checks in DISABL...
+- ▪️ **[`TestAccessController.test_require_all_permissions_enforced_mode_not_authenticated`](files/tests/test_access_control.md)** `(...)` (`test_access_control.py`) - Verify require_all_permissions raises in ENFORCED mode wh...
+- ▪️ **[`TestAccessController.test_require_all_permissions_failure`](files/tests/test_access_control.md)** `(...)` (`test_access_control.py`) - Verify require_all_permissions fails when subject lacks o...
+- ▪️ **[`TestAccessController.test_require_all_permissions_permissive_mode_allows_unauthenticated`](files/tests/test_access_control.md)** `(...)` (`test_access_control.py`) - Verify require_all_permissions allows access in PERMISSIV...
+- ▪️ **[`TestAccessController.test_require_all_permissions_success`](files/tests/test_access_control.md)** `(...)` (`test_access_control.py`) - Verify require_all_permissions succeeds when subject has ...
+- ▪️ **[`TestAccessController.test_require_any_permission_disabled_mode`](files/tests/test_access_control.md)** `(...)` (`test_access_control.py`) - Verify require_any_permission skips all checks in DISABLE...
+- ▪️ **[`TestAccessController.test_require_any_permission_enforced_mode_not_authenticated`](files/tests/test_access_control.md)** `(...)` (`test_access_control.py`) - Verify require_any_permission raises in ENFORCED mode whe...
+- ▪️ **[`TestAccessController.test_require_any_permission_failure`](files/tests/test_access_control.md)** `(...)` (`test_access_control.py`) - Verify require_any_permission fails when subject lacks al...
+- ▪️ **[`TestAccessController.test_require_any_permission_permissive_mode_allows_unauthenticated`](files/tests/test_access_control.md)** `(...)` (`test_access_control.py`) - Verify require_any_permission allows access in PERMISSIVE...
+- ▪️ **[`TestAccessController.test_require_any_permission_success`](files/tests/test_access_control.md)** `(...)` (`test_access_control.py`) - Verify require_any_permission succeeds when subject has o...
+- ▪️ **[`TestAccessController.test_require_permission_access_denied`](files/tests/test_access_control.md)** `(...)` (`test_access_control.py`) - Verify require_permission raises AccessDeniedException wh...
+- ▪️ **[`TestAccessController.test_require_permission_disabled_mode`](files/tests/test_access_control.md)** `(...)` (`test_access_control.py`) - Verify require_permission skips all checks in DISABLED mode.
+- ▪️ **[`TestAccessController.test_require_permission_enforced_mode_not_authenticated`](files/tests/test_access_control.md)** `(...)` (`test_access_control.py`) - Verify require_permission raises AuthenticationException ...
+- ▪️ **[`TestAccessController.test_require_permission_permissive_mode_allows_unauthenticated`](files/tests/test_access_control.md)** `(...)` (`test_access_control.py`) - Verify require_permission allows access in PERMISSIVE mod...
+- ▪️ **[`TestAccessController.test_require_permission_success`](files/tests/test_access_control.md)** `(...)` (`test_access_control.py`) - Verify require_permission succeeds with valid permission.
 - ▪️⚡ **[`TestHandleDeepResearchImpl.test_research_asyncio_cancelled_error`](files/tests/test_handlers_coverage.md)** `(...)` (`test_handlers_coverage.py`) - Test handling of asyncio.CancelledError.
-- ▪️⚡ **[`TestHandleDeepResearchImpl.test_research_cancelled_error`](files/tests/test_handlers_coverage.md)** `(...)` (`test_handlers_coverage.py`) - Test handling of [ResearchCancelledError](files/src/local_deepwiki/core/deep_research.md).
-- ▪️ **[`TestResearchCancellation.test_research_cancelled_error_creation`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test [ResearchCancelledError](files/src/local_deepwiki/core/deep_research.md) can be created with step info.
-- ▪️ **[`TestResearchCancellation.test_research_cancelled_error_default_step`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test [ResearchCancelledError](files/src/local_deepwiki/core/deep_research.md) with default step.
-- ▪️ **[`TestResearchPresets.test_research_preset_enum_values`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test [ResearchPreset](files/src/local_deepwiki/config.md) enum has expected values.
+- ▪️⚡ **[`TestHandleDeepResearchImpl.test_research_cancelled_error`](files/tests/test_handlers_coverage.md)** `(...)` (`test_handlers_coverage.py`) - Test handling of ResearchCancelledError.
+- ▪️ **[`TestResearchCancellation.test_research_cancelled_error_creation`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test ResearchCancelledError can be created with step info.
+- ▪️ **[`TestResearchCancellation.test_research_cancelled_error_default_step`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test ResearchCancelledError with default step.
+- ▪️ **[`TestResearchPresets.test_research_preset_enum_values`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test ResearchPreset enum has expected values.
 - ▪️ **[`TestResearchPresets.test_research_presets_dict_has_all_presets`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test RESEARCH_PRESETS has all preset configurations.
 - ▪️ **[`TestProviderPrompts.test_research_prompts_dicts_have_all_providers`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test all research prompt dicts have entries for all provi...
+- ▪️ **[`TestModelRepr.test_research_step_repr`](files/tests/test_models.md)** `(...)` (`test_models.py`) - Test ResearchStep repr.
 - ▪️⚡ **[`TestHandleDeepResearchImpl.test_research_with_preset`](files/tests/test_handlers_coverage.md)** `(...)` (`test_handlers_coverage.py`) - Test deep research with preset parameter.
+- ▪️ **[`TestGetCommitHistory.test_respects_limit`](files/tests/test_changelog.md)** `(tmp_path: Path) → None` (`test_changelog.py`) - Test that limit parameter is respected.
 - ▪️ **[`TestGenerateChangelogContent.test_respects_max_commits`](files/tests/test_changelog.md)** `(tmp_path: Path) → None` (`test_changelog.py`) - Test max_commits parameter limits output.
 - ▪️ **[`TestExtractExamplesForEntities.test_respects_max_examples_per_entity`](files/tests/test_test_examples.md)** `(tmp_path: Path) → None` (`test_test_examples.py`) - Test that max_examples_per_entity is respected.
+- ▪️ **[`TestExtractUsageSnippetEdgeCases.test_respects_max_lines_limit`](files/tests/test_test_examples.md)** `(tmp_path: Path) → None` (`test_test_examples.py`) - Test that extraction respects max_lines limit (line 291).
+- ▪️⚡ **[`TestResearchCheckpointing.test_resume_from_checkpoint`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test resuming research from a checkpoint.
+- ▪️⚡ **[`TestResearchCheckpointing.test_resume_with_retrieved_contexts`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test resuming research after retrieval is complete.
 - ▪️⚡ **[`TestWithRetry.test_retries_on_connection_error`](files/tests/test_retry.md)** `(...)` (`test_retry.py`) - Test that connection errors trigger retry.
 - ▪️⚡ **[`TestWithRetry.test_retries_on_rate_limit`](files/tests/test_retry.md)** `(...)` (`test_retry.py`) - Test that rate limit errors trigger retry.
 - ▪️⚡ **[`TestWithRetry.test_retries_on_server_overload`](files/tests/test_retry.md)** `(...)` (`test_retry.py`) - Test that 503 errors trigger retry.
 - ▪️⚡ **[`TestWithRetry.test_retries_on_timeout_error`](files/tests/test_retry.md)** `(...)` (`test_retry.py`) - Test that timeout errors trigger retry.
+- ▪️⚡ **[`TestWithRetryFallbackPath.test_retry_exponential_backoff_calculation`](files/tests/test_base_provider.md)** `(...)` (`test_base_provider.py`) - Test exponential backoff with custom base.
+- ▪️⚡ **[`TestWithRetryFallbackPath.test_retry_fallback_line_105_unreachable`](files/tests/test_base_provider.md)** `(...)` (`test_base_provider.py`) - Document that line 105 is unreachable defensive code.
+- ▪️⚡ **[`TestWithRetryFallbackPath.test_retry_fallback_with_last_exception`](files/tests/test_base_provider.md)** `(...)` (`test_base_provider.py`) - Test the fallback path when last_exception is set.
 - ▪️⚡ **[`TestRetryDecorator.test_retry_gives_up_after_max_attempts`](files/tests/test_provider_errors.md)** `(...)` (`test_provider_errors.py`) - Test that retry gives up after max attempts.
+- ▪️⚡ **[`TestWithRetryFallbackPath.test_retry_max_delay_cap`](files/tests/test_base_provider.md)** `(...)` (`test_base_provider.py`) - Test that delay is capped at max_delay.
 - ▪️⚡ **[`TestRetryDecorator.test_retry_on_502_error`](files/tests/test_provider_errors.md)** `(...)` (`test_provider_errors.py`) - Test that 502 errors trigger retry.
 - ▪️⚡ **[`TestRetryDecorator.test_retry_on_503_error`](files/tests/test_provider_errors.md)** `(...)` (`test_provider_errors.py`) - Test that 503 errors trigger retry.
 - ▪️⚡ **[`TestRetryDecorator.test_retry_on_rate_limit_error`](files/tests/test_provider_errors.md)** `(...)` (`test_provider_errors.py`) - Test that rate limit errors trigger retry.
@@ -1124,54 +3181,141 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️⚡ **[`TestRetryDecorator.test_retry_with_oserror`](files/tests/test_provider_errors.md)** `(...)` (`test_provider_errors.py`) - Test that OSError triggers retry.
 - ▪️⚡ **[`TestRetryDecorator.test_retry_with_timeout_error`](files/tests/test_provider_errors.md)** `(...)` (`test_provider_errors.py`) - Test that TimeoutError triggers retry.
 - ▪️⚡ **[`TestRetryDecorator.test_retry_without_jitter`](files/tests/test_provider_errors.md)** `(...)` (`test_provider_errors.py`) - Test retry without jitter.
-- ▪️ **[`TestGetMainDefinitionLines.test_returns_class_lines`](files/tests/test_wiki_coverage.md)** `(...)` (`test_wiki_coverage.py`) - Test returns lines for class definitions.
+- ▪️⚡ **[`TestWithRetryFallbackPath.test_retry_zero_attempts_raises_runtime_error`](files/tests/test_base_provider.md)** `(...)` (`test_base_provider.py`) - Test that max_attempts=0 raises RuntimeError (line 106).
+- ▪️ **[`TestGetCommitHistory.test_returns_commits_from_real_repo`](files/tests/test_changelog.md)** `(tmp_path: Path) → None` (`test_changelog.py`) - Test getting commit history from a real git repo.
+- ▪️ **[`TestGoogleDocstringEdgeCases.test_returns_continuation`](files/tests/test_api_docs.md)** `(...)` (`test_api_docs.py`) - Test returns description continuation across lines.
+- ▪️ **[`TestScanRepositoryForSecrets.test_returns_dict_with_file_paths`](files/tests/test_secret_detector.md)** `(...)` (`test_secret_detector.py`) - Test return value maps file paths to findings.
+- ▪️ **[`TestScanRepositoryForSecrets.test_returns_empty_dict_for_empty_repo`](files/tests/test_secret_detector.md)** `(...)` (`test_secret_detector.py`) - Test empty repo returns empty dict.
 - ▪️⚡ **[`TestGenerateFileDocs.test_returns_empty_for_no_files`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test returns empty when no files in index.
 - ▪️⚡ **[`TestGenerateModuleDocs.test_returns_empty_for_no_files`](files/tests/test_wiki_modules_coverage.md)** `(...)` (`test_wiki_modules_coverage.py`) - Test returns empty when no files in index.
-- ▪️ **[`TestGetMainDefinitionLines.test_returns_empty_when_no_table`](files/tests/test_wiki_coverage.md)** `(...)` (`test_wiki_coverage.py`) - Test returns empty dict when vector store has no table.
+- ▪️ **[`TestGetCommitHistory.test_returns_empty_for_non_git_dir`](files/tests/test_changelog.md)** `(tmp_path: Path) → None` (`test_changelog.py`) - Test returns empty list for non-git directory.
 - ▪️⚡ **[`TestHandleExportWikiPdf.test_returns_error_for_nonexistent_wiki`](files/tests/test_handlers_coverage.md)** `(...)` (`test_handlers_coverage.py`) - Test error returned for non-existent wiki path.
 - ▪️⚡ **[`TestHandleSearchCodeWithResults.test_returns_formatted_results`](files/tests/test_handlers_coverage.md)** `(...)` (`test_handlers_coverage.py`) - Test returns properly formatted search results.
-- ▪️ **[`TestGetMainDefinitionLines.test_returns_function_lines_when_no_class`](files/tests/test_wiki_coverage.md)** `(...)` (`test_wiki_coverage.py`) - Test returns function lines when no class exists.
 - ▪️⚡ **[`TestHandleSearchCodeWithResults.test_returns_no_results_message`](files/tests/test_handlers_coverage.md)** `(...)` (`test_handlers_coverage.py`) - Test returns no results message when search is empty.
+- ▪️ **[`TestGenerateBlameSectionCoverage.test_returns_none_for_chunks_without_code_entities`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test returns None when chunks have no function/class/meth...
+- ▪️ **[`TestGenerateBlameSectionCoverage.test_returns_none_for_empty_chunks`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test returns None when chunks list is empty.
+- ▪️⚡ **[`TestGenerateCoveragePage.test_returns_none_for_empty_project`](files/tests/test_coverage.md)** `(...)` (`test_coverage.py`) - Test returns None when no documentable entities exist.
+- ▪️ **[`TestCheckPageStaleness.test_returns_none_for_empty_source_files`](files/tests/test_git_utils.md)** `(tmp_path: Path) → None` (`test_git_utils.py`) - Test returns None when source_files is empty.
 - ▪️⚡ **[`TestGenerateSingleFileDoc.test_returns_none_for_no_chunks`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test returns None when no chunks found for file.
+- ▪️⚡ **[`TestGenerateInheritancePage.test_returns_none_for_no_classes`](files/tests/test_inheritance.md)** `(...)` (`test_inheritance.py`) - Test returns None when no classes exist.
+- ▪️⚡ **[`TestGenerateGlossaryPage.test_returns_none_for_no_entities`](files/tests/test_glossary.md)** `(...)` (`test_glossary.py`) - Test returns None when no entities are found.
+- ▪️⚡ **[`TestGenerateInheritancePage.test_returns_none_for_no_inheritance`](files/tests/test_inheritance.md)** `(...)` (`test_inheritance.py`) - Test returns None when no internal inheritance exists.
 - ▪️ **[`TestGenerateChangelogContent.test_returns_none_for_non_git_dir`](files/tests/test_changelog.md)** `(tmp_path: Path) → None` (`test_changelog.py`) - Test returns None for non-git directory.
+- ▪️ **[`TestCheckPageStaleness.test_returns_none_when_below_threshold`](files/tests/test_git_utils.md)** `(tmp_path: Path) → None` (`test_git_utils.py`) - Test returns None when staleness is below threshold.
+- ▪️ **[`TestGenerateBlameSectionCoverage.test_returns_none_when_no_blame_info`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test returns None when get_file_entity_blame returns empt...
+- ▪️ **[`TestCheckPageStaleness.test_returns_none_when_no_mod_dates`](files/tests/test_git_utils.md)** `(tmp_path: Path) → None` (`test_git_utils.py`) - Test returns None when no modification dates can be retri...
+- ▪️ **[`TestExtractUsageSnippetEdgeCases.test_returns_none_when_no_relevant_lines`](files/tests/test_test_examples.md)** `(tmp_path: Path) → None` (`test_test_examples.py`) - Test returns None when entity not found in function body ...
+- ▪️ **[`TestCheckPageStaleness.test_returns_none_when_source_not_newer`](files/tests/test_git_utils.md)** `(tmp_path: Path) → None` (`test_git_utils.py`) - Test returns None when source file is not newer than doc.
+- ▪️ **[`TestCheckPageStaleness.test_returns_stale_info_when_source_newer`](files/tests/test_git_utils.md)** `(tmp_path: Path) → None` (`test_git_utils.py`) - Test returns StaleInfo when source file is newer than doc.
 - ▪️ **[`TestInjectInlineSourceCode.test_returns_unchanged_for_empty_chunks`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test returns unchanged content for empty chunk list.
+- ▪️ **[`TestGenerationProgress.test_rolling_window_limit`](files/tests/test_progress_tracker.md)** `(...)` (`test_progress_tracker.py`) - Test that completion times respect the rolling window limit.
 - ▪️ **[`TestGetParentClasses.test_ruby_inheritance`](files/tests/test_chunker.md)** `(...)` (`test_chunker.py`) - Test Ruby class with inheritance.
 - ▪️ **[`TestDocstringExtraction.test_ruby_multi_line_comments`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test Ruby multi-line doc comments.
 - ▪️ **[`TestDocstringExtraction.test_ruby_single_line_comment`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test Ruby single-line doc comment.
+- ▪️⚡ **[`TestInteractiveRun.test_run_filter_mode_branch`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock) → None` (`test_interactive_search.py`) - run should call _handle_filter_mode when in filter mode.
+- ▪️⚡ **[`TestInteractiveRun.test_run_keyboard_interrupt`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock) → None` (`test_interactive_search.py`) - run should handle KeyboardInterrupt gracefully.
+- ▪️⚡ **[`TestRunSearchFunction.test_run_search_interactive_with_query`](files/tests/test_interactive_search.md)** `(tmp_path: Path) → None` (`test_interactive_search.py`) - run_search should run interactive mode with initial query.
+- ▪️⚡ **[`TestRunSearchFunction.test_run_search_interactive_without_query`](files/tests/test_interactive_search.md)** `(tmp_path: Path) → None` (`test_interactive_search.py`) - run_search should run interactive mode without initial qu...
+- ▪️⚡ **[`TestRunSearchFunction.test_run_search_non_interactive_with_preview`](files/tests/test_interactive_search.md)** `(tmp_path: Path) → None` (`test_interactive_search.py`) - run_search should show preview when requested.
+- ▪️⚡ **[`TestRunSearchFunction.test_run_search_non_interactive_with_query`](files/tests/test_interactive_search.md)** `(tmp_path: Path) → None` (`test_interactive_search.py`) - run_search should execute search and display results.
+- ▪️⚡ **[`TestRunSearchFunction.test_run_search_with_all_filters`](files/tests/test_interactive_search.md)** `(tmp_path: Path) → None` (`test_interactive_search.py`) - run_search should pass all filters to search instance.
+- ▪️⚡ **[`TestInteractiveRun.test_run_with_initial_query`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock, sample_results: list[SearchResult]) → None` (`test_interactive_search.py`) - run should execute initial query if provided.
+- ▪️⚡ **[`TestInteractiveRun.test_run_without_readchar`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock) → None` (`test_interactive_search.py`) - run should print message when readchar is not installed.
 - ▪️ **[`TestDocstringExtraction.test_rust_multi_line_doc_comments`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test Rust multi-line doc comments.
 - ▪️ **[`TestDocstringExtraction.test_rust_single_line_doc_comment`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test Rust single-line doc comment.
 - ▪️ **[`TestBuildSourceUrl.test_same_start_end_line`](files/tests/test_git_utils.md)** `(...) → None` (`test_git_utils.py`) - Test that same start and end line shows single line.
+- ▪️ **[`TestCheckpointManager.test_save_and_load_checkpoint`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test saving and loading a checkpoint.
 - ▪️⚡ **[`TestSchemaMigration.test_save_status_includes_schema_version`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`) - Test that saved status includes the current schema version.
+- ▪️ **[`TestScanRepositoryForSecrets.test_scans_directory_recursively`](files/tests/test_secret_detector.md)** `(...)` (`test_secret_detector.py`) - Test scanning scans all files recursively.
+- ▪️⚡ **[`TestHookRunner.test_script_execution`](files/tests/test_events.md)** `(emitter: EventEmitter, scripts_dir: Path)` (`test_events.py`) - Test script is executed on event.
+- ▪️ **[`TestHookRunner.test_script_outside_scripts_dir_rejected`](files/tests/test_events.md)** `(emitter: EventEmitter, scripts_dir: Path, tmp_path: Path)` (`test_events.py`) - Test that scripts outside the allowed directory are rejec...
+- ▪️⚡ **[`TestHookRunner.test_script_receives_env_vars`](files/tests/test_events.md)** `(emitter: EventEmitter, scripts_dir: Path)` (`test_events.py`) - Test script receives event data as environment variables.
+- ▪️⚡ **[`TestInteractiveSearch.test_search_applies_filters`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock, sample_results: list[SearchResult]) → None` (`test_interactive_search.py`) - search should apply filters to results.
+- ▪️⚡ **[`TestSearchCache.test_search_cache_hit`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test that repeated identical searches return cached results.
+- ▪️⚡ **[`TestSearchCache.test_search_cache_invalidated_on_add_chunks`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test that cache is invalidated when chunks are added.
+- ▪️⚡ **[`TestSearchCache.test_search_cache_invalidated_on_create_or_update`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test that cache is invalidated when table is created/upda...
+- ▪️⚡ **[`TestSearchCache.test_search_cache_invalidated_on_delete_chunks_by_file`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test that cache is invalidated when chunks are deleted by...
+- ▪️⚡ **[`TestSearchCache.test_search_cache_invalidated_on_delete_chunks_by_files`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test that cache is invalidated when chunks are deleted by...
+- ▪️⚡ **[`TestSearchCache.test_search_cache_miss_different_filters`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test that same query with different filters results in ca...
+- ▪️⚡ **[`TestSearchCache.test_search_cache_miss_different_query`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test that different queries with different embeddings res...
+- ▪️⚡ **[`TestSearchCache.test_search_cache_not_used_for_fuzzy`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test that fuzzy searches don't use the cache.
+- ▪️⚡ **[`TestSearchCache.test_search_cache_not_used_for_path_pattern`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test that path pattern searches don't use the cache.
+- ▪️⚡ **[`TestSearchCache.test_search_cache_stats`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test get_search_cache_stats returns correct structure.
+- ▪️⚡ **[`TestListTools.test_search_code_tool_schema`](files/tests/test_server.md)** `(...)` (`test_server.py`) - Test search_code tool has correct schema.
+- ▪️⚡ **[`TestInteractiveSearch.test_search_empty_query`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock) → None` (`test_interactive_search.py`) - search with empty query should clear results.
+- ▪️⚡ **[`TestInteractiveSearch.test_search_executes_query`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock, sample_results: list[SearchResult]) → None` (`test_interactive_search.py`) - search should execute query against vector store.
+- ▪️⚡ **[`TestVectorStoreSearchWithFilters.test_search_fuzzy_adds_highlights`](files/tests/test_fuzzy_search.md)** `(...)` (`test_fuzzy_search.py`) - Test that fuzzy search adds highlights to results.
+- ▪️⚡ **[`TestInteractiveSearch.test_search_handles_errors`](files/tests/test_interactive_search.md)** `(mock_vector_store: MagicMock) → None` (`test_interactive_search.py`) - search should handle and report errors.
+- ▪️⚡ **[`TestSearchProfiles.test_search_high_min_similarity_filters_results`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test that high min_similarity threshold filters out low-s...
 - ▪️⚡ **[`TestVectorStoreEdgeCases.test_search_limit_zero_raises`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test search with limit=0 raises ValueError.
-- ▪️ **[`TestModelRepr.test_search_result_repr`](files/tests/test_models.md)** `(...)` (`test_models.py`) - Test [SearchResult](files/src/local_deepwiki/models.md) repr.
-- ▪️ **[`TestModelRepr.test_search_result_repr_no_name`](files/tests/test_models.md)** `(...)` (`test_models.py`) - Test [SearchResult](files/src/local_deepwiki/models.md) repr when chunk has no name.
+- ▪️⚡ **[`TestSearchPagination.test_search_paginated_basic`](files/tests/test_vectorstore_pagination.md)** `(...)` (`test_vectorstore_pagination.py`) - Test basic paginated search.
+- ▪️⚡ **[`TestSearchPagination.test_search_paginated_cursor`](files/tests/test_vectorstore_pagination.md)** `(...)` (`test_vectorstore_pagination.py`) - Test cursor-based pagination.
+- ▪️⚡ **[`TestSearchPagination.test_search_paginated_empty_results`](files/tests/test_vectorstore_pagination.md)** `(...)` (`test_vectorstore_pagination.py`) - Test paginated search on empty store.
+- ▪️⚡ **[`TestSearchPagination.test_search_paginated_has_more`](files/tests/test_vectorstore_pagination.md)** `(...)` (`test_vectorstore_pagination.py`) - Test has_more flag in pagination.
+- ▪️⚡ **[`TestSearchPagination.test_search_paginated_offset`](files/tests/test_vectorstore_pagination.md)** `(...)` (`test_vectorstore_pagination.py`) - Test paginated search with offset.
+- ▪️⚡ **[`TestSearchPagination.test_search_paginated_with_filters`](files/tests/test_vectorstore_pagination.md)** `(...)` (`test_vectorstore_pagination.py`) - Test paginated search with language filter.
+- ▪️ **[`TestModelRepr.test_search_result_repr`](files/tests/test_models.md)** `(...)` (`test_models.py`) - Test SearchResult repr.
+- ▪️ **[`TestModelRepr.test_search_result_repr_no_name`](files/tests/test_models.md)** `(...)` (`test_models.py`) - Test SearchResult repr when chunk has no name.
+- ▪️⚡ **[`TestSearch.test_search_returns_results`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`) - Test that search returns properly formatted results.
+- ▪️⚡ **[`TestSearch.test_search_truncates_long_content`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`) - Test that search truncates content longer than 500 chars.
 - ▪️⚡ **[`TestVectorStoreEdgeCases.test_search_very_long_query`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test search with very long query string.
+- ▪️⚡ **[`TestSearchProfiles.test_search_with_balanced_profile`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test searching with BALANCED profile (default).
+- ▪️⚡ **[`TestVectorStoreSearchWithFilters.test_search_with_chunk_type_filter`](files/tests/test_fuzzy_search.md)** `(...)` (`test_fuzzy_search.py`) - Test search with chunk type filter.
+- ▪️⚡ **[`TestSearchProfiles.test_search_with_fast_profile`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test searching with FAST profile.
+- ▪️⚡ **[`TestVectorStoreSearchWithFilters.test_search_with_fuzzy`](files/tests/test_fuzzy_search.md)** `(...)` (`test_fuzzy_search.py`) - Test search with fuzzy matching enabled.
+- ▪️⚡ **[`TestSearchProfiles.test_search_with_invalid_profile_string`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test searching with invalid profile string falls back to ...
+- ▪️⚡ **[`TestSearch.test_search_with_language_filter`](files/tests/test_indexer.md)** `(...)` (`test_indexer.py`) - Test that search passes language filter correctly.
+- ▪️⚡ **[`TestSearchProfiles.test_search_with_min_similarity_override`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test that min_similarity parameter overrides profile defa...
+- ▪️⚡ **[`TestVectorStoreSearchWithFilters.test_search_with_multiple_filters`](files/tests/test_fuzzy_search.md)** `(...)` (`test_fuzzy_search.py`) - Test search with multiple filters combined.
+- ▪️⚡ **[`TestVectorStoreSearchWithFilters.test_search_with_path_filter`](files/tests/test_fuzzy_search.md)** `(...)` (`test_fuzzy_search.py`) - Test search with path pattern filter.
+- ▪️⚡ **[`TestSearchProfiles.test_search_with_string_profile`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test searching with profile as string.
+- ▪️⚡ **[`TestSearchProfiles.test_search_with_thorough_profile`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test searching with THOROUGH profile.
+- ▪️⚡ **[`TestLazyIndexIntegration.test_search_works_without_index`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test that search works correctly even without vector inde...
 - ▪️⚡ **[`TestGenerateArchitecturePage.test_searches_multiple_context_types`](files/tests/test_wiki_pages_coverage.md)** `(...)` (`test_wiki_pages_coverage.py`) - Test searches for multiple types of architectural context.
 - ▪️⚡ **[`TestCachingLLMProvider.test_second_call_uses_cache`](files/tests/test_llm_cache.md)** `(cached_provider: CachingLLMProvider, mock_llm: MockLLMProvider)` (`test_llm_cache.py`) - Test that second identical call uses cache.
+- ▪️⚡ **[`TestCancellationAndProgressCallbacks.test_send_cancellation_notification_handles_attribute_error`](files/tests/test_handlers_coverage.md)** `(...)` (`test_handlers_coverage.py`) - Test send_cancellation_notification logs warning on Attri...
+- ▪️⚡ **[`TestCancellationAndProgressCallbacks.test_send_cancellation_notification_handles_os_error`](files/tests/test_handlers_coverage.md)** `(...)` (`test_handlers_coverage.py`) - Test send_cancellation_notification logs warning on OSError.
+- ▪️⚡ **[`TestCancellationAndProgressCallbacks.test_send_cancellation_notification_handles_runtime_error`](files/tests/test_handlers_coverage.md)** `(...)` (`test_handlers_coverage.py`) - Test send_cancellation_notification logs warning on Runti...
+- ▪️⚡ **[`TestCancellationAndProgressCallbacks.test_send_cancellation_notification_sends_notification`](files/tests/test_handlers_coverage.md)** `(...)` (`test_handlers_coverage.py`) - Test send_cancellation_notification sends proper notifica...
+- ▪️⚡ **[`TestCancellationAndProgressCallbacks.test_send_cancellation_notification_skips_without_token`](files/tests/test_handlers_coverage.md)** `(...)` (`test_handlers_coverage.py`) - Test send_cancellation_notification does nothing without ...
 - ▪️⚡ **[`TestGenerateDependenciesPage.test_separates_test_files`](files/tests/test_wiki_pages_coverage.md)** `(...)` (`test_wiki_pages_coverage.py`) - Test separates test files from source files in ordering.
+- ▪️ **[`TestEmbeddingCache.test_serialize_deserialize_embedding`](files/tests/test_embedding_cache.md)** `(...)` (`test_embedding_cache.py`) - Test embedding serialization and deserialization.
 - ▪️⚡ **[`TestHandleDeepResearchImpl.test_server_lookup_error`](files/tests/test_handlers_coverage.md)** `(...)` (`test_handlers_coverage.py`) - Test handling LookupError when accessing request context.
 - ▪️⚡ **[`TestHandleDeepResearchImpl.test_server_without_progress_token`](files/tests/test_handlers_coverage.md)** `(...)` (`test_handlers_coverage.py`) - Test handling server without progress token in request co...
 - ▪️ **[`TestConfig.test_set_config`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test setting global config.
 - ▪️⚡ **[`TestLLMCacheEdgeCases.test_set_exception_handling`](files/tests/test_llm_cache.md)** `(cache: LLMCache)` (`test_llm_cache.py`) - Test that set exceptions are handled gracefully.
 - ▪️⚡ **[`TestLLMCacheEdgeCases.test_set_index_creation_exception`](files/tests/test_llm_cache.md)** `(cache: LLMCache)` (`test_llm_cache.py`) - Test that index creation exceptions are handled.
 - ▪️⚡ **[`TestLLMCacheEdgeCases.test_set_index_creation_failure`](files/tests/test_llm_cache.md)** `(cache_path: Path)` (`test_llm_cache.py`) - Test that index creation failure is handled gracefully.
-- ▪️ **[`TestSetupLogging.test_setup_logging_clears_existing_handlers`](files/tests/test_logging_coverage.md)** `(...)` (`test_logging_coverage.py`) - Test [setup_logging](files/src/local_deepwiki/logging.md) clears existing handlers.
-- ▪️ **[`TestSetupLogging.test_setup_logging_default_level`](files/tests/test_logging_coverage.md)** `(...)` (`test_logging_coverage.py`) - Test [setup_logging](files/src/local_deepwiki/logging.md) uses INFO as default level.
-- ▪️ **[`TestSetupLogging.test_setup_logging_detailed_format`](files/tests/test_logging_coverage.md)** `(...)` (`test_logging_coverage.py`) - Test [setup_logging](files/src/local_deepwiki/logging.md) with detailed format style.
-- ▪️ **[`TestSetupLogging.test_setup_logging_env_var_case_insensitive`](files/tests/test_logging_coverage.md)** `(...)` (`test_logging_coverage.py`) - Test [setup_logging](files/src/local_deepwiki/logging.md) handles env var case insensitively.
-- ▪️ **[`TestSetupLogging.test_setup_logging_file_only`](files/tests/test_logging_coverage.md)** `(...)` (`test_logging_coverage.py`) - Test [setup_logging](files/src/local_deepwiki/logging.md) with file but no stream.
-- ▪️ **[`TestSetupLogging.test_setup_logging_from_env_var`](files/tests/test_logging_coverage.md)** `(...)` (`test_logging_coverage.py`) - Test [setup_logging](files/src/local_deepwiki/logging.md) reads level from environment variable.
-- ▪️ **[`TestSetupLogging.test_setup_logging_no_propagation`](files/tests/test_logging_coverage.md)** `(...)` (`test_logging_coverage.py`) - Test [setup_logging](files/src/local_deepwiki/logging.md) disables propagation.
-- ▪️ **[`TestSetupLogging.test_setup_logging_no_stream`](files/tests/test_logging_coverage.md)** `(...)` (`test_logging_coverage.py`) - Test [setup_logging](files/src/local_deepwiki/logging.md) with stream=False.
-- ▪️ **[`TestSetupLogging.test_setup_logging_returns_logger`](files/tests/test_logging_coverage.md)** `(...)` (`test_logging_coverage.py`) - Test [setup_logging](files/src/local_deepwiki/logging.md) returns the logger instance.
-- ▪️ **[`TestSetupLogging.test_setup_logging_simple_format`](files/tests/test_logging_coverage.md)** `(...)` (`test_logging_coverage.py`) - Test [setup_logging](files/src/local_deepwiki/logging.md) with simple format style (default).
-- ▪️ **[`TestSetupLogging.test_setup_logging_with_file`](files/tests/test_logging_coverage.md)** `(...)` (`test_logging_coverage.py`) - Test [setup_logging](files/src/local_deepwiki/logging.md) with log file.
-- ▪️ **[`TestSetupLogging.test_setup_logging_with_int_level`](files/tests/test_logging_coverage.md)** `(...)` (`test_logging_coverage.py`) - Test [setup_logging](files/src/local_deepwiki/logging.md) accepts integer level.
-- ▪️ **[`TestSetupLogging.test_setup_logging_with_invalid_string_level`](files/tests/test_logging_coverage.md)** `(...)` (`test_logging_coverage.py`) - Test [setup_logging](files/src/local_deepwiki/logging.md) defaults to INFO for invalid string le...
-- ▪️ **[`TestSetupLogging.test_setup_logging_with_lowercase_string_level`](files/tests/test_logging_coverage.md)** `(...)` (`test_logging_coverage.py`) - Test [setup_logging](files/src/local_deepwiki/logging.md) handles lowercase string level.
-- ▪️ **[`TestSetupLogging.test_setup_logging_with_string_level`](files/tests/test_logging_coverage.md)** `(...)` (`test_logging_coverage.py`) - Test [setup_logging](files/src/local_deepwiki/logging.md) accepts string level.
-- ▪️ **[`TestSetupLogging.test_setup_logging_with_uppercase_string_level`](files/tests/test_logging_coverage.md)** `(...)` (`test_logging_coverage.py`) - Test [setup_logging](files/src/local_deepwiki/logging.md) handles uppercase string level.
+- ▪️ **[`TestAccessController.test_set_mode`](files/tests/test_access_control.md)** `(...)` (`test_access_control.py`) - Verify set_mode changes the RBAC mode.
+- ▪️⚡ **[`TestSearchProfiles.test_set_search_profile`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test setting search profile at runtime.
+- ▪️⚡ **[`TestSearchProfiles.test_set_search_profile_invalid_string`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test setting invalid profile string raises ValueError.
+- ▪️ **[`TestAccessController.test_set_subject_with_no_identifier`](files/tests/test_access_control.md)** `(...)` (`test_access_control.py`) - Verify set_subject raises exception for subject without i...
+- ▪️ **[`TestAccessController.test_set_subject_with_no_roles`](files/tests/test_access_control.md)** `(...)` (`test_access_control.py`) - Verify set_subject raises exception for subject without r...
+- ▪️ **[`TestAccessController.test_set_subject_with_none_subject`](files/tests/test_access_control.md)** `(...)` (`test_access_control.py`) - Verify set_subject raises exception for None subject.
+- ▪️ **[`TestAccessController.test_set_subject_with_valid_subject`](files/tests/test_access_control.md)** `(...)` (`test_access_control.py`) - Verify set_subject works with a valid subject.
+- ▪️ **[`TestSetupLogging.test_setup_logging_clears_existing_handlers`](files/tests/test_logging_coverage.md)** `(...)` (`test_logging_coverage.py`) - Test setup_logging clears existing handlers.
+- ▪️ **[`TestSetupLogging.test_setup_logging_default_level`](files/tests/test_logging_coverage.md)** `(...)` (`test_logging_coverage.py`) - Test setup_logging uses INFO as default level.
+- ▪️ **[`TestSetupLogging.test_setup_logging_detailed_format`](files/tests/test_logging_coverage.md)** `(...)` (`test_logging_coverage.py`) - Test setup_logging with detailed format style.
+- ▪️ **[`TestSetupLogging.test_setup_logging_env_var_case_insensitive`](files/tests/test_logging_coverage.md)** `(...)` (`test_logging_coverage.py`) - Test setup_logging handles env var case insensitively.
+- ▪️ **[`TestSetupLogging.test_setup_logging_file_only`](files/tests/test_logging_coverage.md)** `(...)` (`test_logging_coverage.py`) - Test setup_logging with file but no stream.
+- ▪️ **[`TestSetupLogging.test_setup_logging_from_env_var`](files/tests/test_logging_coverage.md)** `(...)` (`test_logging_coverage.py`) - Test setup_logging reads level from environment variable.
+- ▪️ **[`TestSetupLogging.test_setup_logging_no_propagation`](files/tests/test_logging_coverage.md)** `(...)` (`test_logging_coverage.py`) - Test setup_logging disables propagation.
+- ▪️ **[`TestSetupLogging.test_setup_logging_no_stream`](files/tests/test_logging_coverage.md)** `(...)` (`test_logging_coverage.py`) - Test setup_logging with stream=False.
+- ▪️ **[`TestSetupLogging.test_setup_logging_returns_logger`](files/tests/test_logging_coverage.md)** `(...)` (`test_logging_coverage.py`) - Test setup_logging returns the logger instance.
+- ▪️ **[`TestSetupLogging.test_setup_logging_simple_format`](files/tests/test_logging_coverage.md)** `(...)` (`test_logging_coverage.py`) - Test setup_logging with simple format style (default).
+- ▪️ **[`TestSetupLogging.test_setup_logging_with_file`](files/tests/test_logging_coverage.md)** `(...)` (`test_logging_coverage.py`) - Test setup_logging with log file.
+- ▪️ **[`TestSetupLogging.test_setup_logging_with_int_level`](files/tests/test_logging_coverage.md)** `(...)` (`test_logging_coverage.py`) - Test setup_logging accepts integer level.
+- ▪️ **[`TestSetupLogging.test_setup_logging_with_invalid_string_level`](files/tests/test_logging_coverage.md)** `(...)` (`test_logging_coverage.py`) - Test setup_logging defaults to INFO for invalid string le...
+- ▪️ **[`TestSetupLogging.test_setup_logging_with_lowercase_string_level`](files/tests/test_logging_coverage.md)** `(...)` (`test_logging_coverage.py`) - Test setup_logging handles lowercase string level.
+- ▪️ **[`TestSetupLogging.test_setup_logging_with_string_level`](files/tests/test_logging_coverage.md)** `(...)` (`test_logging_coverage.py`) - Test setup_logging accepts string level.
+- ▪️ **[`TestSetupLogging.test_setup_logging_with_uppercase_string_level`](files/tests/test_logging_coverage.md)** `(...)` (`test_logging_coverage.py`) - Test setup_logging handles uppercase string level.
 - ▪️ **[`TestRelationshipAnalyzer.test_shared_dependencies`](files/tests/test_see_also.md)** `(...)` (`test_see_also.py`) - Test finding files with shared dependencies.
+- ▪️ **[`TestWikiPageIterator.test_should_use_streaming_many_pages`](files/tests/test_streaming_export.md)** `(tmp_path: Path)` (`test_streaming_export.py`) - Test streaming detection for wiki with many pages.
+- ▪️ **[`TestWikiPageIterator.test_should_use_streaming_small_wiki`](files/tests/test_streaming_export.md)** `(sample_wiki: Path)` (`test_streaming_export.py`) - Test streaming detection for small wiki.
+- ▪️⚡ **[`TestGenerateGlossaryPage.test_shows_async_marker`](files/tests/test_glossary.md)** `(...)` (`test_glossary.py`) - Test async functions show async marker.
+- ▪️⚡ **[`TestGenerateCoveragePage.test_shows_files_needing_attention`](files/tests/test_coverage.md)** `(...)` (`test_coverage.py`) - Test shows files with low coverage needing attention.
+- ▪️ **[`TestGenerateChangelogContent.test_shows_more_files_indicator`](files/tests/test_changelog.md)** `(tmp_path: Path) → None` (`test_changelog.py`) - Test that '+N more' is shown when commit has more than 5 ...
+- ▪️⚡ **[`TestGenerateGlossaryPage.test_shows_raises_indicator`](files/tests/test_glossary.md)** `(...)` (`test_glossary.py`) - Test functions that raise exceptions show indicator.
 - ▪️ **[`TestGenerateChangelogContent.test_shows_statistics`](files/tests/test_changelog.md)** `(tmp_path: Path) → None` (`test_changelog.py`) - Test includes statistics section.
 - ▪️⚡ **[`TestLLMCacheEdgeCases.test_similarity_search_checks_validity`](files/tests/test_llm_cache.md)** `(cache_path: Path, embedding_provider: MockEmbeddingProvider)` (`test_llm_cache.py`) - Test similarity search only returns valid (non-expired) e...
 - ▪️⚡ **[`TestLLMCacheEdgeCases.test_similarity_search_hit_returns_response`](files/tests/test_llm_cache.md)** `(cache_path: Path, embedding_provider: MockEmbeddingProvider)` (`test_llm_cache.py`) - Test similarity search successfully returns cached response.
@@ -1180,40 +3324,209 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️⚡ **[`TestLLMCacheEdgeCases.test_similarity_search_with_model_matching`](files/tests/test_llm_cache.md)** `(cache_path: Path, config: LLMCacheConfig)` (`test_llm_cache.py`) - Test similarity search only returns matches with same model.
 - ▪️ **[`TestExtractCallsPython.test_simple_function_call`](files/tests/test_callgraph.md)** `(...)` (`test_callgraph.py`) - Test extracting a simple function call.
 - ▪️ **[`TestExtractPythonParameters.test_simple_parameters`](files/tests/test_api_docs.md)** `(...)` (`test_api_docs.py`) - Test extracting simple parameters without types.
+- ▪️ **[`TestSwiftCallExtraction.test_simple_swift_call`](files/tests/test_callgraph.md)** `(...)` (`test_callgraph.py`) - Test extracting simple function calls from Swift.
 - ▪️⚡ **[`TestVectorStoreEdgeCases.test_single_chunk_operations`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test operations with single chunk.
+- ▪️ **[`TestScanRepositoryForSecrets.test_skips_binary_files`](files/tests/test_secret_detector.md)** `(...)` (`test_secret_detector.py`) - Test binary files are skipped.
+- ▪️⚡ **[`TestCollectClassHierarchy.test_skips_chunks_without_name`](files/tests/test_inheritance.md)** `(...)` (`test_inheritance.py`) - Test that chunks without name are skipped.
 - ▪️⚡ **[`TestGenerateModuleDocs.test_skips_directories_without_relevant_chunks`](files/tests/test_wiki_modules_coverage.md)** `(...)` (`test_wiki_modules_coverage.py`) - Test skips directories with no matching chunks from search.
+- ▪️ **[`TestMethodChunkCollection.test_skips_duplicate_methods`](files/tests/test_diagrams.md)** `(...)` (`test_diagrams.py`) - Test that duplicate method names are skipped (lines 97-99).
+- ▪️⚡ **[`TestGenerateCoveragePage.test_skips_empty_files_in_table`](files/tests/test_coverage.md)** `(...)` (`test_coverage.py`) - Test skips files with no documentable entities in table.
 - ▪️ **[`TestEntityRegistry.test_skips_excluded_names`](files/tests/test_crosslinks.md)** `(...)` (`test_crosslinks.py`) - Test that excluded common names are not registered.
+- ▪️ **[`TestAddSeeAlsoSections.test_skips_files_index`](files/tests/test_see_also.md)** `(...)` (`test_see_also.py`) - Test that files/index.md is not modified.
+- ▪️ **[`TestScanRepositoryForSecrets.test_skips_git_directory`](files/tests/test_secret_detector.md)** `(...)` (`test_secret_detector.py`) - Test .git directory is skipped.
+- ▪️⚡ **[`TestGetCallersFromOtherFiles.test_skips_if_entity_not_in_content`](files/tests/test_context_builder.md)** `(tmp_path: Path) → None` (`test_context_builder.py`) - Test that results without the entity name in content are ...
 - ▪️ **[`TestAddSourceRefsSections.test_skips_index_pages`](files/tests/test_source_refs.md)** `(...)` (`test_source_refs.py`) - Test that index pages are not modified.
+- ▪️ **[`TestExtractUsageSnippetEdgeCases.test_skips_multiline_docstring`](files/tests/test_test_examples.md)** `(tmp_path: Path) → None` (`test_test_examples.py`) - Test skipping multi-line docstrings in function body (lin...
+- ▪️⚡ **[`TestCollectClassHierarchy.test_skips_non_class_chunks`](files/tests/test_inheritance.md)** `(...)` (`test_inheritance.py`) - Test that non-class chunks are skipped.
+- ▪️⚡ **[`TestGetTypeDefinitionsUsed.test_skips_non_class_results`](files/tests/test_context_builder.md)** `(...) → None` (`test_context_builder.py`) - Test that non-class results are skipped.
 - ▪️ **[`TestInjectInlineSourceCode.test_skips_non_code_chunks`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test skips import and module chunks.
+- ▪️⚡ **[`TestCollectAllEntities.test_skips_non_entity_chunks`](files/tests/test_glossary.md)** `(...)` (`test_glossary.py`) - Test that non-entity chunk types are skipped.
+- ▪️ **[`TestAddSeeAlsoSections.test_skips_non_file_pages`](files/tests/test_see_also.md)** `(...)` (`test_see_also.py`) - Test that non-file pages are not modified.
+- ▪️⚡ **[`TestBuildDependencyGraphEdgeCases.test_skips_non_import_chunks`](files/tests/test_dependency_graph.md)** `(...)` (`test_dependency_graph.py`) - Test that non-import chunks are skipped (line 471).
 - ▪️ **[`TestEntityRegistry.test_skips_private_names`](files/tests/test_crosslinks.md)** `(...)` (`test_crosslinks.py`) - Test that private names are not registered.
+- ▪️⚡ **[`TestGetCallersFromOtherFiles.test_skips_same_file`](files/tests/test_context_builder.md)** `(tmp_path: Path) → None` (`test_context_builder.py`) - Test that results from the same file are skipped.
+- ▪️⚡ **[`TestGetCallersFromOtherFiles.test_skips_short_entity_names`](files/tests/test_context_builder.md)** `(tmp_path: Path) → None` (`test_context_builder.py`) - Test that short entity names (< 4 chars) are skipped.
 - ▪️ **[`TestEntityRegistry.test_skips_short_names`](files/tests/test_crosslinks.md)** `(...)` (`test_crosslinks.py`) - Test that short names are not registered.
+- ▪️⚡ **[`TestGetTypeDefinitionsUsed.test_skips_short_type_names`](files/tests/test_context_builder.md)** `(...) → None` (`test_context_builder.py`) - Test that short type names (3 chars or less) are skipped.
 - ▪️⚡ **[`TestGenerateModuleDocs.test_skips_single_file_directories`](files/tests/test_wiki_modules_coverage.md)** `(...)` (`test_wiki_modules_coverage.py`) - Test skips directories with less than 2 files.
+- ▪️ **[`TestExtractUsageSnippetEdgeCases.test_skips_single_quote_docstring`](files/tests/test_test_examples.md)** `(tmp_path: Path) → None` (`test_test_examples.py`) - Test skipping single-quoted docstrings (lines 243-251).
+- ▪️⚡ **[`TestBuildDependencyGraphEdgeCases.test_skips_test_file_chunks`](files/tests/test_dependency_graph.md)** `(...)` (`test_dependency_graph.py`) - Test that test file chunks are skipped when exclude_tests...
 - ▪️⚡ **[`TestGenerateSingleFileDoc.test_skips_unchanged_files`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test skips regeneration for unchanged files.
 - ▪️⚡ **[`TestGenerateModuleDocs.test_skips_unchanged_pages`](files/tests/test_wiki_modules_coverage.md)** `(...)` (`test_wiki_modules_coverage.py`) - Test skips regeneration of unchanged pages.
+- ▪️ **[`TestGenerateFileEnrichmentsUsedBy.test_skips_used_by_when_callers_are_empty_lists`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test does not add Used By when all caller lists are empty.
+- ▪️ **[`TestGenerateFileEnrichmentsUsedBy.test_skips_used_by_when_no_callers`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test does not add Used By when callers_map is empty.
+- ▪️⚡ **[`TestCollectAllEntities.test_sorts_alphabetically`](files/tests/test_glossary.md)** `(...)` (`test_glossary.py`) - Test that entities are sorted alphabetically.
+- ▪️⚡ **[`TestAnalyzeProjectCoverage.test_sorts_by_coverage`](files/tests/test_coverage.md)** `(...)` (`test_coverage.py`) - Test that files are sorted by coverage (lowest first).
 - ▪️ **[`TestGenerateFilesIndex.test_sorts_files_alphabetically`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test sorts files alphabetically within directories.
+- ▪️ **[`TestAnalyzeStalenessWithStalePages.test_sorts_stale_pages_by_staleness`](files/tests/test_stale_detection.md)** `(tmp_path: Path) → None` (`test_stale_detection.py`) - Test that stale pages are sorted by days stale (most stal...
+- ▪️ **[`TestModelRepr.test_source_reference_repr_with_name`](files/tests/test_models.md)** `(...)` (`test_models.py`) - Test SourceReference repr with a name.
+- ▪️ **[`TestModelRepr.test_source_reference_repr_without_name`](files/tests/test_models.md)** `(...)` (`test_models.py`) - Test SourceReference repr without a name (uses chunk_type).
+- ▪️ **[`TestGenerationProgress.test_start_file`](files/tests/test_progress_tracker.md)** `(...)` (`test_progress_tracker.py`) - Test marking a file as being processed.
+- ▪️ **[`TestOperationProgressRegistry.test_start_operation`](files/tests/test_progress.md)** `(...)` (`test_progress.py`) - Test starting a new operation.
+- ▪️ **[`TestGenerationProgress.test_start_phase`](files/tests/test_progress_tracker.md)** `(...)` (`test_progress_tracker.py`) - Test starting a new phase.
 - ▪️⚡ **[`TestCachingLLMProvider.test_stats_accessible`](files/tests/test_llm_cache.md)** `(cached_provider: CachingLLMProvider, mock_llm: MockLLMProvider)` (`test_llm_cache.py`) - Test that cache stats are accessible through provider.
+- ▪️ **[`TestEmbeddingCache.test_stats_property`](files/tests/test_embedding_cache.md)** `(...)` (`test_embedding_cache.py`) - Test stats property returns a copy.
+- ▪️ **[`TestGenerationProgress.test_status_write_failure_handled`](files/tests/test_progress_tracker.md)** `(...)` (`test_progress_tracker.py`) - Test that status file write failures are handled gracefully.
 - ▪️⚡ **[`TestCachingLLMProvider.test_stream_first_call_caches`](files/tests/test_llm_cache.md)** `(cached_provider: CachingLLMProvider, mock_llm: MockLLMProvider)` (`test_llm_cache.py`) - Test that streaming call caches the complete response.
+- ▪️⚡ **[`TestOpenAIProviderStreamErrors.test_stream_handles_connection_error`](files/tests/test_openai_provider.md)** `(...)` (`test_openai_provider.py`) - Test that connection errors are handled in stream.
+- ▪️⚡ **[`TestOpenAIProviderStreamErrors.test_stream_model_not_found_error`](files/tests/test_openai_provider.md)** `(...)` (`test_openai_provider.py`) - Test that model not found errors are handled in stream.
+- ▪️⚡ **[`TestOpenAIProviderStreamErrors.test_stream_rate_limit_error`](files/tests/test_openai_provider.md)** `(...)` (`test_openai_provider.py`) - Test that rate limit errors are handled in stream.
+- ▪️⚡ **[`TestOpenAIProviderStreamErrors.test_stream_reraises_provider_errors`](files/tests/test_openai_provider.md)** `(...)` (`test_openai_provider.py`) - Test that provider errors are re-raised directly in stream.
+- ▪️⚡ **[`TestOpenAIProviderStreamErrors.test_stream_unknown_error_calls_handle_api_error`](files/tests/test_openai_provider.md)** `(...)` (`test_openai_provider.py`) - Test that unknown errors in stream go through _handle_api...
 - ▪️⚡ **[`TestGenerateSingleFileDoc.test_strips_llm_generated_diagrams`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test strips LLM-generated class diagrams (we add our own).
+- ▪️ **[`TestModelRepr.test_sub_question_repr`](files/tests/test_models.md)** `(...)` (`test_models.py`) - Test SubQuestion repr.
 - ▪️ **[`TestEnhancedDependencyGraph.test_subgraph_grouping`](files/tests/test_diagrams.md)** `(...)` (`test_diagrams.py`) - Test modules are grouped by directory in subgraphs.
 - ▪️⚡ **[`TestWithRetry.test_succeeds_on_first_attempt`](files/tests/test_retry.md)** `(...)` (`test_retry.py`) - Test that successful calls work normally.
 - ▪️⚡ **[`TestHandleDeepResearchImpl.test_successful_research`](files/tests/test_handlers_coverage.md)** `(...)` (`test_handlers_coverage.py`) - Test successful deep research execution.
+- ▪️ **[`TestUncoveredCodePaths.test_swift_block_comment`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test Swift /** */ block comment.
+- ▪️ **[`TestDocstringExtractorHelpers.test_swift_docstring_no_comments`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test _get_swift_docstring returns None when no comments e...
 - ▪️ **[`TestGetParentClasses.test_swift_inheritance`](files/tests/test_chunker.md)** `(...)` (`test_chunker.py`) - Test Swift class with inheritance.
+- ▪️ **[`TestSwiftCallExtraction.test_swift_method_call`](files/tests/test_callgraph.md)** `(...)` (`test_callgraph.py`) - Test extracting method calls in Swift (obj.method()).
+- ▪️ **[`TestUncoveredCodePaths.test_swift_triple_slash_comments`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test Swift /// doc comments.
+- ▪️⚡ **[`TestDeepResearchEdgeCases.test_targeted_retrieve_async_directly`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test _targeted_retrieve with empty queries directly via a...
+- ▪️⚡ **[`TestDeepResearchEdgeCases.test_targeted_retrieve_empty_queries`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test that _targeted_retrieve handles empty query list.
+- ▪️⚡ **[`TestDeepResearchEdgeCases.test_targeted_retrieve_handles_search_exceptions`](files/tests/test_deep_research.md)** `(...)` (`test_deep_research.py`) - Test that _targeted_retrieve handles exceptions from search.
 - ▪️ **[`TestResearchPresets.test_thorough_preset_values`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test thorough preset uses more resources.
+- ▪️ **[`TestGenerationProgress.test_to_dict`](files/tests/test_progress_tracker.md)** `(...)` (`test_progress_tracker.py`) - Test converting progress to dictionary.
+- ▪️ **[`TestSearchFilters.test_to_dict_empty`](files/tests/test_interactive_search.md)** `(...) → None` (`test_interactive_search.py`) - Empty filters should return empty dict.
+- ▪️ **[`TestGenerationProgress.test_to_dict_empty_total`](files/tests/test_progress_tracker.md)** `(...)` (`test_progress_tracker.py`) - Test to_dict with zero total files.
+- ▪️ **[`TestSearchFilters.test_to_dict_with_filters`](files/tests/test_interactive_search.md)** `(...) → None` (`test_interactive_search.py`) - to_dict should include all active filters.
 - ▪️ **[`TestPdfExporterEdgeCases.test_toc_entries_with_missing_children_key`](files/tests/test_pdf_export.md)** `(tmp_path: Path)` (`test_pdf_export.py`) - Test TOC entries without children key.
+- ▪️ **[`TestGenerateBlameSectionCoverage.test_truncates_long_author_names`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test truncates author names longer than 20 characters.
+- ▪️ **[`TestGenerateBlameSectionCoverage.test_truncates_long_commit_summary`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test truncates commit summaries longer than 30 characters.
 - ▪️⚡ **[`TestHandleSearchCodeWithResults.test_truncates_long_content_preview`](files/tests/test_handlers_coverage.md)** `(...)` (`test_handlers_coverage.py`) - Test truncates long content in preview.
+- ▪️ **[`TestGenerateChangelogContent.test_truncates_long_messages`](files/tests/test_changelog.md)** `(tmp_path: Path) → None` (`test_changelog.py`) - Test that commit messages longer than 80 chars are trunca...
+- ▪️⚡ **[`TestGenerateGlossaryPage.test_truncates_many_raises`](files/tests/test_glossary.md)** `(...)` (`test_glossary.py`) - Test truncates when many exceptions are raised.
+- ▪️⚡ **[`TestEmbeddingCache.test_ttl_expiration`](files/tests/test_embedding_cache.md)** `(...)` (`test_embedding_cache.py`) - Test that expired entries are not returned.
 - ▪️ **[`TestExtractPythonParameters.test_typed_default_parameters`](files/tests/test_api_docs.md)** `(...)` (`test_api_docs.py`) - Test extracting parameters with types and defaults.
+- ▪️ **[`TestPythonParameterExtraction.test_typed_kwargs_in_function`](files/tests/test_chunker.md)** `(...)` (`test_chunker.py`) - Test function with typed **kwargs.
 - ▪️ **[`TestExtractPythonParameters.test_typed_parameters`](files/tests/test_api_docs.md)** `(...)` (`test_api_docs.py`) - Test extracting parameters with type hints.
+- ▪️ **[`TestPythonParameterExtraction.test_typed_splat_args_in_function`](files/tests/test_chunker.md)** `(...)` (`test_chunker.py`) - Test function with typed *args.
 - ▪️ **[`TestGetParentClasses.test_typescript_extends_and_implements`](files/tests/test_chunker.md)** `(...)` (`test_chunker.py`) - Test TypeScript class with extends and implements.
+- ▪️ **[`TestUncoveredCodePaths.test_typescript_parsing`](files/tests/test_parser.md)** `(...)` (`test_parser.py`) - Test TypeScript file parsing specifically.
 - ▪️⚡ **[`TestVectorStoreEdgeCases.test_unicode_content`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Test handling of Unicode content in chunks.
+- ▪️ **[`TestEdgeCases.test_unicode_in_config`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Test handling config with unicode characters.
+- ▪️ **[`TestPluginRegistry.test_unregister_embedding_provider`](files/tests/test_plugins.md)** `(...)` (`test_plugins.py`) - Test unregistering an embedding provider.
+- ▪️ **[`TestPluginRegistry.test_unregister_language_parser`](files/tests/test_plugins.md)** `(...)` (`test_plugins.py`) - Test unregistering a language parser.
+- ▪️ **[`TestHookRunner.test_unregister_nonexistent_script`](files/tests/test_events.md)** `(runner: HookRunner)` (`test_events.py`) - Test unregistering non-existent script returns False.
+- ▪️ **[`TestHookRunner.test_unregister_script`](files/tests/test_events.md)** `(runner: HookRunner, scripts_dir: Path)` (`test_events.py`) - Test unregistering a script.
+- ▪️ **[`TestPluginRegistry.test_unregister_wiki_generator`](files/tests/test_plugins.md)** `(...)` (`test_plugins.py`) - Test unregistering a wiki generator.
+- ▪️ **[`TestPythonParameterExtraction.test_untyped_args_in_function`](files/tests/test_chunker.md)** `(...)` (`test_chunker.py`) - Test function with untyped *args.
+- ▪️ **[`TestPythonParameterExtraction.test_untyped_kwargs_in_function`](files/tests/test_chunker.md)** `(...)` (`test_chunker.py`) - Test function with untyped **kwargs.
+- ▪️ **[`TestProgressManager.test_update_progress`](files/tests/test_progress.md)** `(...)` (`test_progress.py`) - Test updating progress.
+- ▪️ **[`TestProgressManager.test_update_with_callback`](files/tests/test_progress.md)** `(...)` (`test_progress.py`) - Test that callbacks are called on update.
 - ▪️⚡ **[`TestGenerateOverviewPage.test_uses_code_context_from_search`](files/tests/test_wiki_pages_coverage.md)** `(...)` (`test_wiki_pages_coverage.py`) - Test uses code context from vector store search.
+- ▪️⚡ **[`TestGenerateSingleFileDoc.test_uses_direct_lookup_for_file_chunks`](files/tests/test_wiki_files_coverage.md)** `(...)` (`test_wiki_files_coverage.py`) - Test uses get_chunks_by_file for efficient direct lookup ...
+- ▪️ **[`TestValidateQueryParameters.test_valid_inputs`](files/tests/test_resource_limits.md)** `(...)` (`test_resource_limits.py`) - Test valid inputs pass validation without error.
+- ▪️ **[`TestValidateDeepResearchParameters.test_valid_inputs`](files/tests/test_resource_limits.md)** `(...)` (`test_resource_limits.py`) - Test valid inputs pass validation without error.
+- ▪️ **[`TestValidateDeepResearchParameters.test_valid_with_none_preset`](files/tests/test_resource_limits.md)** `(...)` (`test_resource_limits.py`) - Test None preset is valid.
+- ▪️ **[`TestConfigValidatorValidateLLMProvider.test_validate_anthropic_invalid_api_key_format`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Test validation warns when Anthropic API key format is wr...
+- ▪️ **[`TestConfigValidatorValidateLLMProvider.test_validate_anthropic_missing_api_key`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Test validation fails when Anthropic API key is missing.
+- ▪️ **[`TestConfigValidatorValidateLLMProvider.test_validate_anthropic_valid_api_key`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Test validation passes with valid Anthropic API key format.
+- ▪️ **[`TestIndexStatusManagerValidate.test_validate_catches_chunk_count_mismatch`](files/tests/test_index_manager.md)** `(...)` (`test_index_manager.py`) - Test that validate catches total_chunks mismatch.
+- ▪️ **[`TestIndexStatusManagerValidate.test_validate_catches_empty_file_path`](files/tests/test_index_manager.md)** `(...)` (`test_index_manager.py`) - Test that validate catches files with empty path.
+- ▪️ **[`TestIndexStatusManagerValidate.test_validate_catches_empty_repo_path`](files/tests/test_index_manager.md)** `(...)` (`test_index_manager.py`) - Test that validate catches empty repo_path.
+- ▪️ **[`TestIndexStatusManagerValidate.test_validate_catches_file_count_mismatch`](files/tests/test_index_manager.md)** `(...)` (`test_index_manager.py`) - Test that validate catches total_files mismatch.
+- ▪️ **[`TestIndexStatusManagerValidate.test_validate_catches_future_schema_version`](files/tests/test_index_manager.md)** `(...)` (`test_index_manager.py`) - Test that validate catches schema_version newer than curr...
+- ▪️ **[`TestIndexStatusManagerValidate.test_validate_catches_invalid_schema_version`](files/tests/test_index_manager.md)** `(...)` (`test_index_manager.py`) - Test that validate catches invalid schema_version.
+- ▪️ **[`TestIndexStatusManagerValidate.test_validate_catches_invalid_timestamp`](files/tests/test_index_manager.md)** `(...)` (`test_index_manager.py`) - Test that validate catches invalid indexed_at timestamp.
+- ▪️ **[`TestIndexStatusManagerValidate.test_validate_catches_language_mismatch`](files/tests/test_index_manager.md)** `(...)` (`test_index_manager.py`) - Test that validate catches languages statistics mismatch.
+- ▪️ **[`TestIndexStatusManagerValidate.test_validate_catches_missing_hash`](files/tests/test_index_manager.md)** `(...)` (`test_index_manager.py`) - Test that validate catches files with missing hash.
+- ▪️ **[`TestConfigValidatorValidateWikiSettings.test_validate_chat_provider_anthropic_missing_key`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Test validation when chat_llm_provider is anthropic witho...
+- ▪️ **[`TestConfigValidatorValidateWikiSettings.test_validate_chat_provider_openai_missing_key`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Test validation when chat_llm_provider is openai without ...
+- ▪️ **[`TestConfigValidatorValidateWikiSettings.test_validate_cloud_github_anthropic_missing_key`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Test validation when use_cloud_for_github is enabled with...
+- ▪️ **[`TestConfigValidatorValidateWikiSettings.test_validate_cloud_github_openai_missing_key`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Test validation when use_cloud_for_github is enabled with...
+- ▪️⚡ **[`TestOpenAIEmbeddingProviderValidateConnectivityBug.test_validate_connectivity_api_error_handled`](files/tests/test_openai_embeddings.md)** `(...)` (`test_openai_embeddings.py`) - Test validate_connectivity when API call fails.
+- ▪️⚡ **[`TestOpenAIEmbeddingProviderValidateConnectivityBug.test_validate_connectivity_attribute_error`](files/tests/test_openai_embeddings.md)** `(...)` (`test_openai_embeddings.py`) - Test that validate_connectivity raises AttributeError due...
+- ▪️⚡ **[`TestLocalEmbeddingProvider.test_validate_connectivity_config_error`](files/tests/test_local_embedding_provider.md)** `(...)` (`test_local_embedding_provider.py`) - Test connectivity validation with model loading failure.
+- ▪️⚡ **[`TestOpenAIEmbeddingProviderValidateConnectivityBug.test_validate_connectivity_line_163_unreachable`](files/tests/test_openai_embeddings.md)** `(...)` (`test_openai_embeddings.py`) - Document that line 163 is unreachable in the current impl...
+- ▪️⚡ **[`TestOpenAIEmbeddingProviderValidateConnectivityBug.test_validate_connectivity_no_api_key`](files/tests/test_openai_embeddings.md)** `(...)` (`test_openai_embeddings.py`) - Test validate_connectivity when _api_key is falsy.
+- ▪️⚡ **[`TestLocalEmbeddingProvider.test_validate_connectivity_other_error`](files/tests/test_local_embedding_provider.md)** `(...)` (`test_local_embedding_provider.py`) - Test connectivity validation with unexpected error raises...
+- ▪️⚡ **[`TestLocalEmbeddingProvider.test_validate_connectivity_success`](files/tests/test_local_embedding_provider.md)** `(...)` (`test_local_embedding_provider.py`) - Test successful connectivity validation.
+- ▪️⚡ **[`TestOpenAIEmbeddingProviderValidateConnectivityBug.test_validate_connectivity_unknown_error`](files/tests/test_openai_embeddings.md)** `(...)` (`test_openai_embeddings.py`) - Test validate_connectivity with unknown error.
+- ▪️⚡ **[`TestOpenAIEmbeddingProviderValidateConnectivityBug.test_validate_connectivity_with_mock_api_key_attribute`](files/tests/test_openai_embeddings.md)** `(...)` (`test_openai_embeddings.py`) - Test validate_connectivity when _api_key attribute is man...
+- ▪️ **[`TestConfigValidatorValidatePerformanceSettings.test_validate_disabled_embedding_cache_warning`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Test validation warns when embedding cache is disabled.
+- ▪️ **[`TestConfigValidatorValidatePerformanceSettings.test_validate_disabled_llm_cache_warning`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Test validation warns when LLM cache is disabled.
+- ▪️ **[`TestConfigValidatorValidatePerformanceSettings.test_validate_high_chunk_tokens_warning`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Test validation warns about high max_chunk_tokens.
+- ▪️ **[`TestConfigValidatorValidateWikiSettings.test_validate_high_concurrent_llm_calls_warning`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Test validation warns about high max_concurrent_llm_calls.
+- ▪️ **[`TestConfigValidatorValidatePerformanceSettings.test_validate_high_parallel_workers_warning`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Test validation warns about high parallel workers.
+- ▪️ **[`TestValidateKeyFormat.test_validate_key_format_accepts_custom_key_literal`](files/tests/test_credentials.md)** `(...)` (`test_credentials.py`) - Test that 'custom-key' is accepted as valid.
+- ▪️ **[`TestValidateKeyFormat.test_validate_key_format_accepts_test_hyphen_only`](files/tests/test_credentials.md)** `(...)` (`test_credentials.py`) - Test that 'test-' prefix with any suffix is accepted.
+- ▪️ **[`TestValidateKeyFormat.test_validate_key_format_accepts_test_key_literal`](files/tests/test_credentials.md)** `(...)` (`test_credentials.py`) - Test that 'test-key' is accepted as valid.
+- ▪️ **[`TestValidateKeyFormat.test_validate_key_format_accepts_test_literal`](files/tests/test_credentials.md)** `(...)` (`test_credentials.py`) - Test that 'test' is accepted as valid.
+- ▪️ **[`TestValidateKeyFormat.test_validate_key_format_accepts_test_prefix`](files/tests/test_credentials.md)** `(...)` (`test_credentials.py`) - Test that keys starting with 'test-' are accepted.
+- ▪️ **[`TestValidateKeyFormat.test_validate_key_format_anthropic_exactly_20_chars`](files/tests/test_credentials.md)** `(...)` (`test_credentials.py`) - Test Anthropic key with proper prefix but exactly 20 char...
+- ▪️ **[`TestValidateKeyFormat.test_validate_key_format_anthropic_exactly_4_chars`](files/tests/test_credentials.md)** `(...)` (`test_credentials.py`) - Test Anthropic key with exactly 4 chars (boundary).
+- ▪️ **[`TestValidateKeyFormat.test_validate_key_format_anthropic_invalid_prefix`](files/tests/test_credentials.md)** `(...)` (`test_credentials.py`) - Test Anthropic key with wrong prefix but valid length.
+- ▪️ **[`TestValidateKeyFormat.test_validate_key_format_anthropic_proper_key_21_chars`](files/tests/test_credentials.md)** `(...)` (`test_credentials.py`) - Test Anthropic key with proper prefix and >20 chars.
+- ▪️ **[`TestValidateKeyFormat.test_validate_key_format_anthropic_short_but_valid_prefix`](files/tests/test_credentials.md)** `(...)` (`test_credentials.py`) - Test Anthropic key with valid prefix but short length sti...
+- ▪️ **[`TestValidateKeyFormat.test_validate_key_format_anthropic_too_short`](files/tests/test_credentials.md)** `(...)` (`test_credentials.py`) - Test Anthropic key that is too short.
+- ▪️ **[`TestValidateKeyFormat.test_validate_key_format_anthropic_valid_key`](files/tests/test_credentials.md)** `(...)` (`test_credentials.py`) - Test valid Anthropic API key format.
+- ▪️ **[`TestValidateKeyFormat.test_validate_key_format_case_sensitivity_prefix`](files/tests/test_credentials.md)** `(...)` (`test_credentials.py`) - Test that prefix matching is case-sensitive.
+- ▪️ **[`TestValidateKeyFormat.test_validate_key_format_case_sensitivity_provider`](files/tests/test_credentials.md)** `(...)` (`test_credentials.py`) - Test provider name matching is case-sensitive.
+- ▪️ **[`TestValidateKeyFormat.test_validate_key_format_empty_key`](files/tests/test_credentials.md)** `(...)` (`test_credentials.py`) - Test empty key string.
+- ▪️ **[`TestValidateKeyFormat.test_validate_key_format_empty_provider_name`](files/tests/test_credentials.md)** `(...)` (`test_credentials.py`) - Test with empty provider name (falls to generic validation).
+- ▪️ **[`TestValidateKeyFormat.test_validate_key_format_generic_exactly_4_chars`](files/tests/test_credentials.md)** `(...)` (`test_credentials.py`) - Test generic key with exactly 4 chars.
+- ▪️ **[`TestValidateKeyFormat.test_validate_key_format_generic_too_short`](files/tests/test_credentials.md)** `(...)` (`test_credentials.py`) - Test key that is too short for generic provider.
+- ▪️ **[`TestValidateKeyFormat.test_validate_key_format_generic_valid_key`](files/tests/test_credentials.md)** `(...)` (`test_credentials.py`) - Test valid key for generic/unknown provider.
+- ▪️ **[`TestValidateKeyFormat.test_validate_key_format_key_with_newlines`](files/tests/test_credentials.md)** `(...)` (`test_credentials.py`) - Test key with newlines.
+- ▪️ **[`TestValidateKeyFormat.test_validate_key_format_key_with_special_chars`](files/tests/test_credentials.md)** `(...)` (`test_credentials.py`) - Test key with special characters.
+- ▪️ **[`TestValidateKeyFormat.test_validate_key_format_none_like_provider_name`](files/tests/test_credentials.md)** `(...)` (`test_credentials.py`) - Test with unusual provider names.
+- ▪️ **[`TestValidateKeyFormat.test_validate_key_format_openai_exactly_20_chars`](files/tests/test_credentials.md)** `(...)` (`test_credentials.py`) - Test OpenAI key with proper prefix but exactly 20 chars.
+- ▪️ **[`TestValidateKeyFormat.test_validate_key_format_openai_exactly_4_chars`](files/tests/test_credentials.md)** `(...)` (`test_credentials.py`) - Test OpenAI key with exactly 4 chars (boundary).
+- ▪️ **[`TestValidateKeyFormat.test_validate_key_format_openai_invalid_prefix`](files/tests/test_credentials.md)** `(...)` (`test_credentials.py`) - Test OpenAI key with wrong prefix but valid length.
+- ▪️ **[`TestValidateKeyFormat.test_validate_key_format_openai_proper_key_21_chars`](files/tests/test_credentials.md)** `(...)` (`test_credentials.py`) - Test OpenAI key with proper prefix and >20 chars.
+- ▪️ **[`TestValidateKeyFormat.test_validate_key_format_openai_short_but_valid_prefix`](files/tests/test_credentials.md)** `(...)` (`test_credentials.py`) - Test OpenAI key with valid prefix but short length still ...
+- ▪️ **[`TestValidateKeyFormat.test_validate_key_format_openai_too_short`](files/tests/test_credentials.md)** `(...)` (`test_credentials.py`) - Test OpenAI key that is too short.
+- ▪️ **[`TestValidateKeyFormat.test_validate_key_format_openai_valid_key`](files/tests/test_credentials.md)** `(...)` (`test_credentials.py`) - Test valid OpenAI API key format.
+- ▪️ **[`TestValidateKeyFormat.test_validate_key_format_provider_with_whitespace`](files/tests/test_credentials.md)** `(...)` (`test_credentials.py`) - Test provider name with whitespace (doesn't match any spe...
+- ▪️ **[`TestValidateKeyFormat.test_validate_key_format_single_char_key`](files/tests/test_credentials.md)** `(...)` (`test_credentials.py`) - Test single character key.
+- ▪️ **[`TestValidateKeyFormat.test_validate_key_format_sk_alone`](files/tests/test_credentials.md)** `(...)` (`test_credentials.py`) - Test 'sk-' alone for OpenAI (3 chars, not >= 4).
+- ▪️ **[`TestValidateKeyFormat.test_validate_key_format_sk_ant_exactly_prefix`](files/tests/test_credentials.md)** `(...)` (`test_credentials.py`) - Test 'sk-ant-' alone (7 chars, not >20).
+- ▪️ **[`TestValidateKeyFormat.test_validate_key_format_test_key_for_any_provider`](files/tests/test_credentials.md)** `(...)` (`test_credentials.py`) - Test that test keys work for any provider.
+- ▪️ **[`TestValidateKeyFormat.test_validate_key_format_three_char_key`](files/tests/test_credentials.md)** `(...)` (`test_credentials.py`) - Test three character key.
+- ▪️ **[`TestValidateKeyFormat.test_validate_key_format_two_char_key`](files/tests/test_credentials.md)** `(...)` (`test_credentials.py`) - Test two character key.
+- ▪️ **[`TestValidateKeyFormat.test_validate_key_format_unicode_key`](files/tests/test_credentials.md)** `(...)` (`test_credentials.py`) - Test key with unicode characters.
+- ▪️ **[`TestValidateKeyFormat.test_validate_key_format_very_long_key`](files/tests/test_credentials.md)** `(...)` (`test_credentials.py`) - Test very long key.
+- ▪️ **[`TestValidateKeyFormat.test_validate_key_format_whitespace_only`](files/tests/test_credentials.md)** `(...)` (`test_credentials.py`) - Test key with only whitespace.
+- ▪️ **[`TestConfigValidatorValidateLLMProvider.test_validate_llm_provider_none_config`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Test _validate_llm_provider handles None config gracefully.
+- ▪️⚡ **[`TestOpenAIProviderValidateModel.test_validate_model_auth_error`](files/tests/test_openai_provider.md)** `(...)` (`test_openai_provider.py`) - Test validation handles auth error through _handle_api_er...
+- ▪️⚡ **[`TestOpenAIProviderValidateModel.test_validate_model_invalid_message`](files/tests/test_openai_provider.md)** `(...)` (`test_openai_provider.py`) - Test validation with 'invalid' in error message.
+- ▪️⚡ **[`TestOpenAIProviderValidateModel.test_validate_model_known_model`](files/tests/test_openai_provider.md)** `(...)` (`test_openai_provider.py`) - Test validation of known model returns True immediately.
+- ▪️⚡ **[`TestOpenAIProviderValidateModel.test_validate_model_not_found`](files/tests/test_openai_provider.md)** `(...)` (`test_openai_provider.py`) - Test validation of model that doesn't exist.
+- ▪️⚡ **[`TestOpenAIProviderValidateModel.test_validate_model_not_found_message`](files/tests/test_openai_provider.md)** `(...)` (`test_openai_provider.py`) - Test validation with 'not found' in error message.
+- ▪️⚡ **[`TestOpenAIProviderValidateModel.test_validate_model_other_error_reraises`](files/tests/test_openai_provider.md)** `(...)` (`test_openai_provider.py`) - Test validation re-raises errors that aren't model-related.
+- ▪️⚡ **[`TestOpenAIProviderValidateModel.test_validate_model_unknown_model_success`](files/tests/test_openai_provider.md)** `(...)` (`test_openai_provider.py`) - Test validation of unknown model via API call.
+- ▪️ **[`TestConfigValidatorValidateLLMProvider.test_validate_ollama_127_0_0_1_warning`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Test validation warns about 127.0.0.1 Ollama configuration.
+- ▪️ **[`TestConfigValidatorValidateLLMProvider.test_validate_ollama_localhost_warning`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Test validation warns about localhost Ollama configuration.
+- ▪️ **[`TestConfigValidatorValidateLLMProvider.test_validate_openai_invalid_api_key_format`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Test validation warns when OpenAI API key format is wrong.
+- ▪️ **[`TestConfigValidatorValidateLLMProvider.test_validate_openai_missing_api_key`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Test validation fails when OpenAI API key is missing.
+- ▪️ **[`TestConfigValidatorValidateLLMProvider.test_validate_openai_valid_api_key`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Test validation passes with valid OpenAI API key format.
+- ▪️ **[`TestConfigValidatorValidatePerformanceSettings.test_validate_performance_settings_none_config`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Test _validate_performance_settings handles None config g...
+- ▪️ **[`TestIndexStatusManagerValidate.test_validate_returns_empty_for_valid_status`](files/tests/test_index_manager.md)** `(...)` (`test_index_manager.py`) - Test that validate returns empty list for valid status.
+- ▪️ **[`TestConfigValidatorValidateWikiSettings.test_validate_wiki_settings_none_config`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Test _validate_wiki_settings handles None config gracefully.
+- ▪️ **[`TestEdgeCases.test_very_long_config_values`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Test handling config with very long values.
+- ▪️ **[`TestWeakReferences.test_weak_handler_entry_is_alive_direct_weakref`](files/tests/test_events.md)** `(...)` (`test_events.py`) - Test is_alive for weak handler entries with direct weakref.
+- ▪️⚡ **[`TestWeakReferences.test_weak_handler_manual_cleanup`](files/tests/test_events.md)** `(emitter: EventEmitter)` (`test_events.py`) - Test handlers can be manually cleaned up via off().
+- ▪️ **[`TestWeakReferences.test_weak_handler_with_no_weakref_is_alive`](files/tests/test_events.md)** `(...)` (`test_events.py`) - Test weak handler with no weakref set is alive.
 - ▪️ **[`TestConfig.test_wiki_config`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test wiki generation configuration.
-- ▪️ **[`TestModelRepr.test_wiki_generation_status_repr`](files/tests/test_models.md)** `(...)` (`test_models.py`) - Test [WikiGenerationStatus](files/src/local_deepwiki/models.md) repr.
-- ▪️ **[`TestModelRepr.test_wiki_page_repr`](files/tests/test_models.md)** `(...)` (`test_models.py`) - Test [WikiPage](files/src/local_deepwiki/models.md) repr.
-- ▪️ **[`TestModelRepr.test_wiki_page_status_repr`](files/tests/test_models.md)** `(...)` (`test_models.py`) - Test [WikiPageStatus](files/src/local_deepwiki/models.md) repr.
-- ▪️ **[`TestModelRepr.test_wiki_structure_repr`](files/tests/test_models.md)** `(...)` (`test_models.py`) - Test [WikiStructure](files/src/local_deepwiki/models.md) repr.
+- ▪️⚡ **[`TestWikiGenerationPipeline.test_wiki_generates_pages`](files/tests/test_integration_pipeline.md)** `(tmp_path: Path, mock_index_status: IndexStatus)` (`test_integration_pipeline.py`) - Test that wiki generation creates documentation pages.
+- ▪️ **[`TestModelRepr.test_wiki_generation_status_repr`](files/tests/test_models.md)** `(...)` (`test_models.py`) - Test WikiGenerationStatus repr.
+- ▪️⚡ **[`TestWikiGeneratorPluginIntegration.test_wiki_generator_handles_circular_dependencies`](files/tests/test_plugins.md)** `(...)` (`test_plugins.py`) - Test that circular dependencies prevent generators from r...
+- ▪️⚡ **[`TestWikiGeneratorPluginIntegration.test_wiki_generator_handles_missing_dependencies`](files/tests/test_plugins.md)** `(...)` (`test_plugins.py`) - Test that generators with missing dependencies still run ...
+- ▪️⚡ **[`TestWikiGeneratorPluginIntegration.test_wiki_generator_handles_plugin_errors`](files/tests/test_plugins.md)** `(...)` (`test_plugins.py`) - Test that wiki generator handles plugin errors gracefully.
+- ▪️⚡ **[`TestWikiGeneratorPluginIntegration.test_wiki_generator_respects_run_after_dependencies`](files/tests/test_plugins.md)** `(...)` (`test_plugins.py`) - Test that generators run in dependency order.
+- ▪️⚡ **[`TestWikiGeneratorPluginIntegration.test_wiki_generator_runs_plugins`](files/tests/test_plugins.md)** `(...)` (`test_plugins.py`) - Test that wiki generator runs registered plugin generators.
+- ▪️⚡ **[`TestWikiGeneratorPluginIntegration.test_wiki_generator_sorts_by_priority`](files/tests/test_plugins.md)** `(...)` (`test_plugins.py`) - Test that wiki generators are sorted by priority.
+- ▪️ **[`TestModelRepr.test_wiki_page_repr`](files/tests/test_models.md)** `(...)` (`test_models.py`) - Test WikiPage repr.
+- ▪️ **[`TestModelRepr.test_wiki_page_status_repr`](files/tests/test_models.md)** `(...)` (`test_models.py`) - Test WikiPageStatus repr.
+- ▪️ **[`TestModelRepr.test_wiki_structure_repr`](files/tests/test_models.md)** `(...)` (`test_models.py`) - Test WikiStructure repr.
 - ▪️ **[`TestProviderPrompts.test_wiki_system_prompts_dict_has_all_providers`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test WIKI_SYSTEM_PROMPTS has entries for all providers.
+- ▪️⚡ **[`TestWikiGenerationPipeline.test_wiki_writes_files`](files/tests/test_integration_pipeline.md)** `(tmp_path: Path, mock_index_status: IndexStatus)` (`test_integration_pipeline.py`) - Test that wiki generation writes markdown files to disk.
+- ▪️ **[`TestGetExamplesForApiPage.test_with_docstring_only`](files/tests/test_examples_plugin.md)** `(...) → None` (`test_examples_plugin.py`) - Test with docstring examples only (lines 281-310).
+- ▪️⚡ **[`TestGetExamplesForApiPage.test_with_extractor_results`](files/tests/test_examples_plugin.md)** `(...) → None` (`test_examples_plugin.py`) - Test with actual extractor returning results.
 - ▪️ **[`TestCodeChunkToVectorRecord.test_with_optional_fields`](files/tests/test_models.md)** `(...)` (`test_models.py`) - Test conversion with optional fields populated.
-- ▪️ **[`TestResearchPresets.test_with_preset_accepts_enum`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test with_preset accepts [ResearchPreset](files/src/local_deepwiki/config.md) enum.
+- ▪️ **[`TestResearchPresets.test_with_preset_accepts_enum`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test with_preset accepts ResearchPreset enum.
 - ▪️ **[`TestResearchPresets.test_with_preset_case_insensitive`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test with_preset is case-insensitive for string input.
 - ▪️ **[`TestResearchPresets.test_with_preset_default_returns_copy`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test with_preset('default') returns unchanged copy.
 - ▪️ **[`TestResearchPresets.test_with_preset_does_not_modify_original`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test with_preset does not modify the original config.
@@ -1221,55 +3534,166 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - ▪️ **[`TestResearchPresets.test_with_preset_none_returns_copy`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test with_preset(None) returns unchanged copy.
 - ▪️ **[`TestResearchPresets.test_with_preset_quick_applies_values`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test with_preset('quick') applies quick preset values.
 - ▪️ **[`TestResearchPresets.test_with_preset_thorough_applies_values`](files/tests/test_config.md)** `(...)` (`test_config.py`) - Test with_preset('thorough') applies thorough preset values.
+- ▪️ **[`TestGetExamplesForApiPage.test_with_running_event_loop`](files/tests/test_examples_plugin.md)** `(...) → None` (`test_examples_plugin.py`) - Test behavior when event loop is already running (line 28...
 - ▪️ **[`TestCodeChunkToVectorRecord.test_with_vector`](files/tests/test_models.md)** `(...)` (`test_models.py`) - Test conversion with vector embedding.
-- ▪️ **[`TestAddSourceRefsSectionsWithLineInfo.test_with_wiki_path_parameter`](files/tests/test_source_refs.md)** `(...)` (`test_source_refs.py`) - Test [add_source_refs_sections](files/src/local_deepwiki/generators/source_refs.md) with wiki_path to [find](files/src/local_deepwiki/generators/manifest.md) exis...
-- 🔷 **[`TestAddCrossLinks`](files/tests/test_crosslinks.md)** (`test_crosslinks.py`) - Tests for [add_cross_links](files/src/local_deepwiki/generators/crosslinks.md) function.
-- 🔷 **[`TestAddSeeAlsoSections`](files/tests/test_see_also.md)** (`test_see_also.py`) - Tests for [add_see_also_sections](files/src/local_deepwiki/generators/see_also.md) function.
-- 🔷 **[`TestAddSourceRefsSections`](files/tests/test_source_refs.md)** (`test_source_refs.py`) - Tests for [add_source_refs_sections](files/src/local_deepwiki/generators/source_refs.md) function.
-- 🔷 **[`TestAddSourceRefsSectionsWithLineInfo`](files/tests/test_source_refs.md)** (`test_source_refs.py`) - Tests for [add_source_refs_sections](files/src/local_deepwiki/generators/source_refs.md) with line info in status.
-- 🔷 **[`TestAddStaleBanners`](files/tests/test_stale_detection.md)** (`test_stale_detection.py`) - Tests for [add_stale_banners](files/src/local_deepwiki/generators/stale_detection.md) function.
-- 🔷 **[`TestAnalyzeStaleness`](files/tests/test_stale_detection.md)** (`test_stale_detection.py`) - Tests for [analyze_staleness](files/src/local_deepwiki/generators/stale_detection.md) function.
-- 🔷 **[`TestAnthropicProvider`](files/tests/test_llm_providers.md)** (`test_llm_providers.py`) - Tests for [AnthropicProvider](files/src/local_deepwiki/providers/llm/anthropic.md).
-- 🔷 **[`TestApiChatStreaming`](files/tests/test_web.md)** (`test_web.py`) - Tests for [api_chat](files/src/local_deepwiki/web/app.md) streaming functionality.
-- 🔷 **[`TestAPIDocExtractor`](files/tests/test_api_docs.md)** (`test_api_docs.py`) - Test [APIDocExtractor](files/src/local_deepwiki/generators/api_docs.md) class.
-- 🔷 **[`TestApiResearchStreaming`](files/tests/test_web.md)** (`test_web.py`) - Tests for [api_research](files/src/local_deepwiki/web/app.md) streaming functionality.
-- 🔷 **[`TestArchitecturePageEdgeCases`](files/tests/test_wiki_pages_coverage.md)** (`test_wiki_pages_coverage.py`) - Edge case tests for [generate_architecture_page](files/src/local_deepwiki/generators/wiki_pages.md).
+- ▪️ **[`TestAddSourceRefsSectionsWithLineInfo.test_with_wiki_path_parameter`](files/tests/test_source_refs.md)** `(...)` (`test_source_refs.py`) - Test add_source_refs_sections with wiki_path to find exis...
+- ▪️ **[`TestGetExamplesForApiPage.test_without_docstring`](files/tests/test_examples_plugin.md)** `(...) → None` (`test_examples_plugin.py`) - Test without docstring returns empty when loop is running.
+- ▪️ **[`TestGenerationProgress.test_write_status_oserror_handled`](files/tests/test_progress_tracker.md)** `(...)` (`test_progress_tracker.py`) - Test that OSError during status write is caught gracefull...
+- ▪️ **[`TestGenerationProgress.test_writes_status_file`](files/tests/test_progress_tracker.md)** `(...)` (`test_progress_tracker.py`) - Test that status file is written on updates.
+- ▪️ **[`TestGoogleDocstringEdgeCases.test_yields_section`](files/tests/test_api_docs.md)** `(...)` (`test_api_docs.py`) - Test that Yields section is handled.
+- 🔷 **[`TestAccessController`](files/tests/test_access_control.md)** (`test_access_control.py`) - Tests for the AccessController class.
+- 🔷 **[`TestAdaptiveSearch`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Tests for adaptive search depth estimation.
+- 🔷 **[`TestAdaptiveSearcherUnit`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Unit tests for the AdaptiveSearcher class.
+- 🔷 **[`TestAddCrossLinks`](files/tests/test_crosslinks.md)** (`test_crosslinks.py`) - Tests for add_cross_links function.
+- 🔷 **[`TestAddExternalLinkTargets`](files/tests/test_html_export.md)** (`test_html_export.py`) - Tests for adding target="_blank" to external links.
+- 🔷 **[`TestAddSeeAlsoSections`](files/tests/test_see_also.md)** (`test_see_also.py`) - Tests for add_see_also_sections function.
+- 🔷 **[`TestAddSourceRefsSections`](files/tests/test_source_refs.md)** (`test_source_refs.py`) - Tests for add_source_refs_sections function.
+- 🔷 **[`TestAddSourceRefsSectionsWithLineInfo`](files/tests/test_source_refs.md)** (`test_source_refs.py`) - Tests for add_source_refs_sections with line info in status.
+- 🔷 **[`TestAddStaleBanners`](files/tests/test_stale_detection.md)** (`test_stale_detection.py`) - Tests for add_stale_banners function.
+- 🔷 **[`TestAllExportsList`](files/tests/test_export_init.md)** (`test_export_init.py`) - Tests for the __all__ export list.
+- 🔷 **[`TestAnalyzeFileCoverage`](files/tests/test_coverage.md)** (`test_coverage.py`) - Tests for analyze_file_coverage function.
+- 🔷 **[`TestAnalyzeProjectCoverage`](files/tests/test_coverage.md)** (`test_coverage.py`) - Tests for analyze_project_coverage function.
+- 🔷 **[`TestAnalyzeStaleness`](files/tests/test_stale_detection.md)** (`test_stale_detection.py`) - Tests for analyze_staleness function.
+- 🔷 **[`TestAnalyzeStalenessWithStalePages`](files/tests/test_stale_detection.md)** (`test_stale_detection.py`) - Tests for analyze_staleness when stale pages exist.
+- 🔷 **[`TestAnthropicModelsConstant`](files/tests/test_anthropic_provider.md)** (`test_anthropic_provider.py`) - Tests for ANTHROPIC_MODELS constant.
+- 🔷 **[`TestAnthropicProvider`](files/tests/test_llm_providers.md)** (`test_llm_providers.py`) - Tests for AnthropicProvider.
+- 🔷 **[`TestAnthropicProviderBuildKwargs`](files/tests/test_anthropic_provider.md)** (`test_anthropic_provider.py`) - Tests for _build_kwargs method.
+- 🔷 **[`TestAnthropicProviderCapabilities`](files/tests/test_anthropic_provider.md)** (`test_anthropic_provider.py`) - Tests for AnthropicProvider capabilities.
+- 🔷 **[`TestAnthropicProviderGenerate`](files/tests/test_anthropic_provider.md)** (`test_anthropic_provider.py`) - Tests for generate method.
+- 🔷 **[`TestAnthropicProviderGenerateStream`](files/tests/test_anthropic_provider.md)** (`test_anthropic_provider.py`) - Tests for generate_stream method.
+- 🔷 **[`TestAnthropicProviderHandleApiError`](files/tests/test_anthropic_provider.md)** (`test_anthropic_provider.py`) - Tests for _handle_api_error method.
+- 🔷 **[`TestAnthropicProviderInitialization`](files/tests/test_anthropic_provider.md)** (`test_anthropic_provider.py`) - Tests for AnthropicProvider initialization.
+- 🔷 **[`TestAnthropicProviderRetry`](files/tests/test_anthropic_provider.md)** (`test_anthropic_provider.py`) - Tests for retry behavior in generate method.
+- 🔷 **[`TestAnthropicProviderValidateConnectivity`](files/tests/test_anthropic_provider.md)** (`test_anthropic_provider.py`) - Tests for validate_connectivity method.
+- 🔷 **[`TestAnthropicProviderValidateModel`](files/tests/test_anthropic_provider.md)** (`test_anthropic_provider.py`) - Tests for validate_model method.
+- 🔷 **[`TestApiChatFullFlow`](files/tests/test_web.md)** (`test_web.py`) - Tests for api_chat with mocked providers.
+- 🔷 **[`TestApiChatStreaming`](files/tests/test_web.md)** (`test_web.py`) - Tests for api_chat streaming functionality.
+- 🔷 **[`TestAPIDocExtractor`](files/tests/test_api_docs.md)** (`test_api_docs.py`) - Test APIDocExtractor class.
+- 🔷 **[`TestApiResearchFullFlow`](files/tests/test_web.md)** (`test_web.py`) - Tests for api_research with mocked providers.
+- 🔷 **[`TestApiResearchStreaming`](files/tests/test_web.md)** (`test_web.py`) - Tests for api_research streaming functionality.
+- 🔷 **[`TestArchitecturePageEdgeCases`](files/tests/test_wiki_pages_coverage.md)** (`test_wiki_pages_coverage.py`) - Edge case tests for generate_architecture_page.
+- 🔷 **[`TestArgsAndKwargsExtraction`](files/tests/test_api_docs.md)** (`test_api_docs.py`) - Test *args and **kwargs parameter extraction.
+- 🔷 **[`TestASTCache`](files/tests/test_parser.md)** (`test_parser.py`) - Test suite for ASTCache.
+- 🔷 **[`TestASTCacheIntegration`](files/tests/test_indexer.md)** (`test_indexer.py`) - Tests for AST cache integration with RepositoryIndexer.
+- 🔷 **[`TestAttributeExtractionEdgeCases`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for attribute extraction edge cases.
+- 🔷 **[`TestAttributeWithoutTypeDirectly`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Direct test for attribute without type (line 259).
+- 🔷 **[`TestAttributeWithoutTypeHint`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for attribute extraction without type hint (line 259).
+- 🔷 **[`TestAuditEventDataclass`](files/tests/test_audit.md)** (`test_audit.py`) - Tests for AuditEvent dataclass creation.
+- 🔷 **[`TestAuditEventTypeEnum`](files/tests/test_audit.md)** (`test_audit.py`) - Tests for AuditEventType enum values.
+- 🔷 **[`TestAuditLoggerAccessDecision`](files/tests/test_audit.md)** (`test_audit.py`) - Tests for AuditLogger.log_access_decision method.
+- 🔷 **[`TestAuditLoggerExportOperation`](files/tests/test_audit.md)** (`test_audit.py`) - Tests for AuditLogger.log_export_operation method.
+- 🔷 **[`TestAuditLoggerIndexOperation`](files/tests/test_audit.md)** (`test_audit.py`) - Tests for AuditLogger.log_index_operation method.
+- 🔷 **[`TestAuditLoggerInitialization`](files/tests/test_audit.md)** (`test_audit.py`) - Tests for AuditLogger initialization.
+- 🔷 **[`TestAuditLoggerLogEvent`](files/tests/test_audit.md)** (`test_audit.py`) - Tests for AuditLogger.log_event method.
+- 🔷 **[`TestAuditLoggerQueryExecution`](files/tests/test_audit.md)** (`test_audit.py`) - Tests for AuditLogger.log_query_execution method.
+- 🔷 **[`TestAuditSeverityEnum`](files/tests/test_audit.md)** (`test_audit.py`) - Tests for AuditSeverity enum values.
+- 🔷 **[`TestAutoDeregistration`](files/tests/test_events.md)** (`test_events.py`) - Tests for auto-deregistration after consecutive errors.
+- 🔷 **[`TestAutoFuzzySearch`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Tests for automatic fuzzy search fallback.
+- 🔷 **[`TestAuxiliaryPagesGeneration`](files/tests/test_wiki_coverage.md)** (`test_wiki_coverage.py`) - Tests for auxiliary pages (inheritance, glossary, coverag...
+- 🔷 **[`TestBackwardCompatibility`](files/tests/test_streaming_export.md)** (`test_streaming_export.py`) - Test that non-streaming exporters still work.
 - 🔷 **[`TestBatchedProcessing`](files/tests/test_indexer.md)** (`test_indexer.py`) - Tests for batched chunk processing in the indexer.
+- 🔷 **[`TestBatchEmbed`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Tests for _batch_embed functionality.
+- 🔷 **[`TestBatchEmbeddingResult`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Tests for BatchEmbeddingResult dataclass.
 - 🔷 **[`TestBatchSizeConfiguration`](files/tests/test_indexer.md)** (`test_indexer.py`) - Tests for batch size in config.
-- 🔷 **[`TestBuildBreadcrumb`](files/tests/test_web.md)** (`test_web.py`) - Tests for [build_breadcrumb](files/src/local_deepwiki/web/app.md) function.
-- 🔷 **[`TestBuildCommitUrl`](files/tests/test_changelog.md)** (`test_changelog.py`) - Tests for [build_commit_url](files/src/local_deepwiki/generators/changelog.md) function.
-- 🔷 **[`TestBuildFileContext`](files/tests/test_context_builder.md)** (`test_context_builder.py`) - Tests for [build_file_context](files/src/local_deepwiki/generators/context_builder.md) function.
-- 🔷 **[`TestBuildFileToWikiMap`](files/tests/test_see_also.md)** (`test_see_also.py`) - Tests for [build_file_to_wiki_map](files/src/local_deepwiki/generators/see_also.md) function.
-- 🔷 **[`TestBuildFileToWikiMap`](files/tests/test_source_refs.md)** (`test_source_refs.py`) - Tests for [build_file_to_wiki_map](files/src/local_deepwiki/generators/see_also.md) function.
+- 🔷 **[`TestBreadcrumbDeepNesting`](files/tests/test_html_export.md)** (`test_html_export.py`) - Tests for deeply nested breadcrumb navigation.
+- 🔷 **[`TestBuildBreadcrumb`](files/tests/test_web.md)** (`test_web.py`) - Tests for build_breadcrumb function.
+- 🔷 **[`TestBuildCommitUrl`](files/tests/test_changelog.md)** (`test_changelog.py`) - Tests for build_commit_url function.
+- 🔷 **[`TestBuildDependencyGraphEdgeCases`](files/tests/test_dependency_graph.md)** (`test_dependency_graph.py`) - Tests for _build_dependency_graph edge cases (lines 471, ...
+- 🔷 **[`TestBuildFileContext`](files/tests/test_context_builder.md)** (`test_context_builder.py`) - Tests for build_file_context function.
+- 🔷 **[`TestBuildFileToWikiMap`](files/tests/test_see_also.md)** (`test_see_also.py`) - Tests for build_file_to_wiki_map function.
+- 🔷 **[`TestBuildFileToWikiMap`](files/tests/test_source_refs.md)** (`test_source_refs.py`) - Tests for build_file_to_wiki_map function.
 - 🔷 **[`TestBuildGradleParsing`](files/tests/test_manifest.md)** (`test_manifest.py`) - Tests for build.gradle parsing.
+- 🔷 **[`TestBuildGraphInternalEdge`](files/tests/test_dependency_graph.md)** (`test_dependency_graph.py`) - Test for line 498 - adding internal edges.
 - 🔷 **[`TestBuildKeywords`](files/tests/test_search.md)** (`test_search.py`) - Tests for _build_keywords function.
-- 🔷 **[`TestBuildPromptWithHistory`](files/tests/test_web.md)** (`test_web.py`) - Tests for [build_prompt_with_history](files/src/local_deepwiki/web/app.md) function.
-- 🔷 **[`TestBuildSourceUrl`](files/tests/test_git_utils.md)** (`test_git_utils.py`) - Tests for [build_source_url](files/src/local_deepwiki/core/git_utils.md) function.
+- 🔷 **[`TestBuildPromptWithHistory`](files/tests/test_web.md)** (`test_web.py`) - Tests for build_prompt_with_history function.
+- 🔷 **[`TestBuildReverseCallGraph`](files/tests/test_callgraph.md)** (`test_callgraph.py`) - Test reverse call graph building.
+- 🔷 **[`TestBuildSourceUrl`](files/tests/test_git_utils.md)** (`test_git_utils.py`) - Tests for build_source_url function.
+- 🔷 **[`TestCachedEmbeddingProvider`](files/tests/test_embedding_cache.md)** (`test_embedding_cache.py`) - Tests for CachedEmbeddingProvider wrapper.
+- 🔷 **[`TestCachedEmbeddingProviderCleanup`](files/tests/test_embedding_cache.md)** (`test_embedding_cache.py`) - Tests for CachedEmbeddingProvider cleanup methods.
 - 🔷 **[`TestCacheExceptionHandling`](files/tests/test_manifest.md)** (`test_manifest.py`) - Tests for cache-related exception handling.
-- 🔷 **[`TestCachingLLMProvider`](files/tests/test_llm_cache.md)** (`test_llm_cache.py`) - Tests for the [CachingLLMProvider](files/src/local_deepwiki/providers/llm/cached.md) class.
-- 🔷 **[`TestCallGraphExtractor`](files/tests/test_callgraph.md)** (`test_callgraph.py`) - Test the [CallGraphExtractor](files/src/local_deepwiki/generators/callgraph.md) class.
-- 🔷 **[`TestCamelToSpaced`](files/tests/test_crosslinks.md)** (`test_crosslinks.py`) - Tests for [camel_to_spaced](files/src/local_deepwiki/generators/crosslinks.md) function.
+- 🔷 **[`TestCacheStatisticsLogging`](files/tests/test_wiki_coverage.md)** (`test_wiki_coverage.py`) - Tests for LLM cache statistics logging in wiki generation.
+- 🔷 **[`TestCachingLLMProvider`](files/tests/test_llm_cache.md)** (`test_llm_cache.py`) - Tests for the CachingLLMProvider class.
+- 🔷 **[`TestCallGraphExtractor`](files/tests/test_callgraph.md)** (`test_callgraph.py`) - Test the CallGraphExtractor class.
+- 🔷 **[`TestCallTool`](files/tests/test_server.md)** (`test_server.py`) - Tests for the call_tool function.
+- 🔷 **[`TestCallToolDeepResearch`](files/tests/test_server.md)** (`test_server.py`) - Tests for deep_research special handling in call_tool.
+- 🔷 **[`TestCamelToSpaced`](files/tests/test_crosslinks.md)** (`test_crosslinks.py`) - Tests for camel_to_spaced function.
+- 🔷 **[`TestCancellationAndProgressCallbacks`](files/tests/test_handlers_coverage.md)** (`test_handlers_coverage.py`) - Tests for _create_progress_callbacks and cancellation han...
 - 🔷 **[`TestCargoTomlEdgeCases`](files/tests/test_manifest.md)** (`test_manifest.py`) - Tests for Cargo.toml edge cases.
 - 🔷 **[`TestCCallExtraction`](files/tests/test_callgraph.md)** (`test_callgraph.py`) - Test call extraction for C code.
+- 🔷 **[`TestChangelogPageGeneration`](files/tests/test_wiki_coverage.md)** (`test_wiki_coverage.py`) - Tests for changelog page generation (lines 470-473).
+- 🔷 **[`TestChangeTypeEnum`](files/tests/test_watcher.md)** (`test_watcher.py`) - Test ChangeType enum.
+- 🔷 **[`TestChangeTypeTracking`](files/tests/test_watcher.md)** (`test_watcher.py`) - Test that change types are tracked correctly.
 - 🔷 **[`TestChatEndpoints`](files/tests/test_web.md)** (`test_web.py`) - Tests for chat functionality.
-- 🔷 **[`TestCheckPageStaleness`](files/tests/test_stale_detection.md)** (`test_stale_detection.py`) - Tests for [check_page_staleness](files/src/local_deepwiki/core/git_utils.md) function.
-- 🔷 **[`TestChunkerWithConfig`](files/tests/test_chunker.md)** (`test_chunker.py`) - Tests for [CodeChunker](files/src/local_deepwiki/core/chunker.md) with custom config.
+- 🔷 **[`TestCheckPageStaleness`](files/tests/test_git_utils.md)** (`test_git_utils.py`) - Tests for check_page_staleness function.
+- 🔷 **[`TestCheckPageStaleness`](files/tests/test_stale_detection.md)** (`test_stale_detection.py`) - Tests for check_page_staleness function.
+- 🔷 **[`TestCheckpointHelperFunctions`](files/tests/test_deep_research.md)** (`test_deep_research.py`) - Tests for the standalone checkpoint helper functions.
+- 🔷 **[`TestCheckpointManager`](files/tests/test_deep_research.md)** (`test_deep_research.py`) - Tests for the CheckpointManager class.
+- 🔷 **[`TestChunkBatch`](files/tests/test_vectorstore_pagination.md)** (`test_vectorstore_pagination.py`) - Tests for ChunkBatch dataclass.
+- 🔷 **[`TestChunkerPluginIntegration`](files/tests/test_plugins.md)** (`test_plugins.py`) - Tests for chunker plugin integration.
+- 🔷 **[`TestChunkerWithConfig`](files/tests/test_chunker.md)** (`test_chunker.py`) - Tests for CodeChunker with custom config.
 - 🔷 **[`TestChunkingConfigBatchSize`](files/tests/test_indexer.md)** (`test_indexer.py`) - Tests for batch_size configuration.
-- 🔷 **[`TestClassInfo`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for [ClassInfo](files/src/local_deepwiki/generators/diagrams.md) dataclass.
-- 🔷 **[`TestClassNode`](files/tests/test_inheritance.md)** (`test_inheritance.py`) - Tests for [ClassNode](files/src/local_deepwiki/generators/inheritance.md) dataclass.
-- 🔷 **[`TestCodeChunker`](files/tests/test_chunker.md)** (`test_chunker.py`) - Test suite for [CodeChunker](files/src/local_deepwiki/core/chunker.md).
-- 🔷 **[`TestCodeChunkToVectorRecord`](files/tests/test_models.md)** (`test_models.py`) - Tests for [CodeChunk](files/src/local_deepwiki/models.md).to_vector_record method.
-- 🔷 **[`TestCodeParser`](files/tests/test_parser.md)** (`test_parser.py`) - Test suite for [CodeParser](files/src/local_deepwiki/core/parser.md).
+- 🔷 **[`TestChunkIterator`](files/tests/test_vectorstore_pagination.md)** (`test_vectorstore_pagination.py`) - Tests for ChunkIterator class.
+- 🔷 **[`TestChunkToText`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Tests for _chunk_to_text functionality.
+- 🔷 **[`TestCircularDependencyDetection`](files/tests/test_dependency_graph.md)** (`test_dependency_graph.py`) - Tests for circular dependency detection.
+- 🔷 **[`TestCircularDependencyStylingComplete`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Complete tests for circular dependency styling (lines 536...
+- 🔷 **[`TestCircularEdgeExtraction`](files/tests/test_dependency_graph.md)** (`test_dependency_graph.py`) - Tests for circular edge extraction.
+- 🔷 **[`TestClassDiagramAbstract`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for abstract class handling in diagrams.
+- 🔷 **[`TestClassDiagramBaseModel`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for BaseModel detection as dataclass.
+- 🔷 **[`TestClassDiagramDocstring`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for class docstring in diagram.
+- 🔷 **[`TestClassDiagramMethodNotInList`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Test for method extraction when class not in methods_by_c...
+- 🔷 **[`TestClassDiagramWithSearchResults`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for class diagram with SearchResult wrapper.
+- 🔷 **[`TestClassInfo`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for ClassInfo dataclass.
+- 🔷 **[`TestClassNode`](files/tests/test_inheritance.md)** (`test_inheritance.py`) - Tests for ClassNode dataclass.
+- 🔷 **[`TestClassSignatureEdgeCases`](files/tests/test_api_docs.md)** (`test_api_docs.py`) - Test class signature extraction edge cases.
+- 🔷 **[`TestClassWithoutName`](files/tests/test_callgraph.md)** (`test_callgraph.py`) - Test handling of classes without names.
+- 🔷 **[`TestCleanupAllErrors`](files/tests/test_plugin_registry.md)** (`test_plugin_registry.py`) - Tests for cleanup_all handling errors during cleanup.
+- 🔷 **[`TestCmdShow`](files/tests/test_config_cli.md)** (`test_config_cli.py`) - Tests for cmd_show function.
+- 🔷 **[`TestCmdValidate`](files/tests/test_config_cli.md)** (`test_config_cli.py`) - Tests for cmd_validate function.
+- 🔷 **[`TestCodeChunker`](files/tests/test_chunker.md)** (`test_chunker.py`) - Test suite for CodeChunker.
+- 🔷 **[`TestCodeChunkToVectorRecord`](files/tests/test_models.md)** (`test_models.py`) - Tests for CodeChunk.to_vector_record method.
+- 🔷 **[`TestCodeExample`](files/tests/test_code_examples.md)** (`test_code_examples.py`) - Tests for the CodeExample dataclass.
+- 🔷 **[`TestCodeExampleExtractor`](files/tests/test_code_examples.md)** (`test_code_examples.py`) - Tests for the CodeExampleExtractor class.
+- 🔷 **[`TestCodeParser`](files/tests/test_parser.md)** (`test_parser.py`) - Test suite for CodeParser.
+- 🔷 **[`TestCodeParserWithCache`](files/tests/test_parser.md)** (`test_parser.py`) - Test CodeParser integration with ASTCache.
+- 🔷 **[`TestCollectAllEntities`](files/tests/test_glossary.md)** (`test_glossary.py`) - Tests for collect_all_entities function.
+- 🔷 **[`TestCollectClassHierarchy`](files/tests/test_inheritance.md)** (`test_inheritance.py`) - Tests for collect_class_hierarchy function.
+- 🔷 **[`TestCollectFilesToProcess`](files/tests/test_indexer.md)** (`test_indexer.py`) - Tests for _collect_files_to_process with progress callback.
+- 🔷 **[`TestCollectPrecedingComments`](files/tests/test_parser.md)** (`test_parser.py`) - Test _collect_preceding_comments function edge cases.
 - 🔷 **[`TestCommentHelpers`](files/tests/test_parser.md)** (`test_parser.py`) - Tests for comment collection helper functions.
-- 🔷 **[`TestCommitInfo`](files/tests/test_changelog.md)** (`test_changelog.py`) - Tests for [CommitInfo](files/src/local_deepwiki/generators/changelog.md) dataclass.
-- 🔷 **[`TestConfig`](files/tests/test_config.md)** (`test_config.py`) - Test suite for [Config](files/src/local_deepwiki/config.md).
-- 🔷 **[`TestConfigContext`](files/tests/test_config.md)** (`test_config.py`) - Tests for [config_context](files/src/local_deepwiki/config.md) context manager.
-- 🔷 **[`TestCoverageStats`](files/tests/test_coverage.md)** (`test_coverage.py`) - Tests for [CoverageStats](files/src/local_deepwiki/generators/coverage.md) dataclass.
+- 🔷 **[`TestCommitInfo`](files/tests/test_changelog.md)** (`test_changelog.py`) - Tests for CommitInfo dataclass.
+- 🔷 **[`TestComputedFields`](files/tests/test_config.md)** (`test_config.py`) - Tests for Pydantic computed fields.
+- 🔷 **[`TestConfidenceScoring`](files/tests/test_secret_detector.md)** (`test_secret_detector.py`) - Tests for confidence score calculation.
+- 🔷 **[`TestConfig`](files/tests/test_config.md)** (`test_config.py`) - Test suite for Config.
+- 🔷 **[`TestConfigContext`](files/tests/test_config.md)** (`test_config.py`) - Tests for config_context context manager.
+- 🔷 **[`TestConfigDiff`](files/tests/test_config.md)** (`test_config.py`) - Tests for ConfigDiff class.
+- 🔷 **[`TestConfigValidatorInit`](files/tests/test_config_cli.md)** (`test_config_cli.py`) - Tests for ConfigValidator initialization.
+- 🔷 **[`TestConfigValidatorLoadConfig`](files/tests/test_config_cli.md)** (`test_config_cli.py`) - Tests for ConfigValidator._load_config method.
+- 🔷 **[`TestConfigValidatorValidate`](files/tests/test_config_cli.md)** (`test_config_cli.py`) - Tests for ConfigValidator.validate method (full validatio...
+- 🔷 **[`TestConfigValidatorValidateEmbeddingProvider`](files/tests/test_config_cli.md)** (`test_config_cli.py`) - Tests for ConfigValidator._validate_embedding_provider me...
+- 🔷 **[`TestConfigValidatorValidateLLMProvider`](files/tests/test_config_cli.md)** (`test_config_cli.py`) - Tests for ConfigValidator._validate_llm_provider method.
+- 🔷 **[`TestConfigValidatorValidatePaths`](files/tests/test_config_cli.md)** (`test_config_cli.py`) - Tests for ConfigValidator._validate_paths method.
+- 🔷 **[`TestConfigValidatorValidatePerformanceSettings`](files/tests/test_config_cli.md)** (`test_config_cli.py`) - Tests for ConfigValidator._validate_performance_settings ...
+- 🔷 **[`TestConfigValidatorValidateSchema`](files/tests/test_config_cli.md)** (`test_config_cli.py`) - Tests for ConfigValidator._validate_schema method.
+- 🔷 **[`TestConfigValidatorValidateWikiSettings`](files/tests/test_config_cli.md)** (`test_config_cli.py`) - Tests for ConfigValidator._validate_wiki_settings method.
+- 🔷 **[`TestContextCreation`](files/tests/test_secret_detector.md)** (`test_secret_detector.py`) - Tests for safe context creation in findings.
+- 🔷 **[`TestCoverageStats`](files/tests/test_coverage.md)** (`test_coverage.py`) - Tests for CoverageStats dataclass.
 - 🔷 **[`TestCppCallExtraction`](files/tests/test_callgraph.md)** (`test_callgraph.py`) - Test call extraction for C++ code.
+- 🔷 **[`TestCreateIndeterminateProgress`](files/tests/test_cli_progress.md)** (`test_cli_progress.py`) - Tests for create_indeterminate_progress function.
+- 🔷 **[`TestCreateIndexSafeEdgeCases`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Tests for _create_index_safe edge cases.
+- 🔷 **[`TestCreateProgress`](files/tests/test_cli_progress.md)** (`test_cli_progress.py`) - Tests for create_progress function.
 - 🔷 **[`TestCreateSourceDetails`](files/tests/test_wiki_files_coverage.md)** (`test_wiki_files_coverage.py`) - Tests for _create_source_details function.
-- 🔷 **[`TestCrossLinker`](files/tests/test_crosslinks.md)** (`test_crosslinks.py`) - Tests for [CrossLinker](files/src/local_deepwiki/generators/crosslinks.md) class.
-- 🔷 **[`TestDebouncedHandler`](files/tests/test_watcher.md)** (`test_watcher.py`) - Test [DebouncedHandler](files/src/local_deepwiki/watcher.md) functionality.
+- 🔷 **[`TestCreateSubject`](files/tests/test_role_config.md)** (`test_role_config.py`) - Tests for RoleManager.create_subject method.
+- 🔷 **[`TestCreateVectorIndexEdgeCases`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Tests for _create_vector_index edge cases.
+- 🔷 **[`TestCredentialManagerStaticBehavior`](files/tests/test_credentials.md)** (`test_credentials.py`) - Tests verifying CredentialManager's static method behavior.
+- 🔷 **[`TestCriticalEventLogging`](files/tests/test_audit.md)** (`test_audit.py`) - Tests for critical event handling.
+- 🔷 **[`TestCrossLinker`](files/tests/test_crosslinks.md)** (`test_crosslinks.py`) - Tests for CrossLinker class.
+- 🔷 **[`TestCustomStatusFilename`](files/tests/test_index_manager.md)** (`test_index_manager.py`) - Tests for using custom status filename.
+- 🔷 **[`TestCycleNormalization`](files/tests/test_dependency_graph.md)** (`test_dependency_graph.py`) - Tests for cycle normalization.
+- 🔷 **[`TestDebouncedHandler`](files/tests/test_watcher.md)** (`test_watcher.py`) - Test DebouncedHandler functionality.
+- 🔷 **[`TestDebouncedHandlerCallback`](files/tests/test_watcher.md)** (`test_watcher.py`) - Test callback mechanism in DebouncedHandler.
 - 🔷 **[`TestDebouncedHandlerEvents`](files/tests/test_watcher.md)** (`test_watcher.py`) - Test event handling with debouncing.
+- 🔷 **[`TestDecoratorExtraction`](files/tests/test_api_docs.md)** (`test_api_docs.py`) - Test decorator extraction from functions.
+- 🔷 **[`TestDeepResearchEdgeCases`](files/tests/test_deep_research.md)** (`test_deep_research.py`) - Tests for edge cases and error handling to improve coverage.
 - 🔷 **[`TestDeepResearchPipelineDecomposition`](files/tests/test_deep_research.md)** (`test_deep_research.py`) - Tests for query decomposition.
 - 🔷 **[`TestDeepResearchPipelineGapAnalysis`](files/tests/test_deep_research.md)** (`test_deep_research.py`) - Tests for gap analysis.
 - 🔷 **[`TestDeepResearchPipelineIntegration`](files/tests/test_deep_research.md)** (`test_deep_research.py`) - Integration tests for the full pipeline.
@@ -1277,329 +3701,868 @@ Alphabetical index of all classes, functions, and methods in the codebase.
 - 🔷 **[`TestDeepResearchPipelineSynthesis`](files/tests/test_deep_research.md)** (`test_deep_research.py`) - Tests for answer synthesis.
 - 🔷 **[`TestDeepResearchPipelineTracing`](files/tests/test_deep_research.md)** (`test_deep_research.py`) - Tests for reasoning trace.
 - 🔷 **[`TestDeepResearchProgress`](files/tests/test_deep_research.md)** (`test_deep_research.py`) - Tests for progress callback functionality.
-- 🔷 **[`TestDeepResearchResult`](files/tests/test_deep_research.md)** (`test_deep_research.py`) - Tests for [DeepResearchResult](files/src/local_deepwiki/models.md) model.
+- 🔷 **[`TestDeepResearchResult`](files/tests/test_deep_research.md)** (`test_deep_research.py`) - Tests for DeepResearchResult model.
+- 🔷 **[`TestDeepWikiError`](files/tests/test_errors.md)** (`test_errors.py`) - Tests for the base DeepWikiError class.
 - 🔷 **[`TestDeepwikiPathHandling`](files/tests/test_web.md)** (`test_web.py`) - Tests for .deepwiki parent path handling in api endpoints.
-- 🔷 **[`TestDependenciesPageEdgeCases`](files/tests/test_wiki_pages_coverage.md)** (`test_wiki_pages_coverage.py`) - Edge case tests for [generate_dependencies_page](files/src/local_deepwiki/generators/wiki_pages.md).
+- 🔷 **[`TestDeleteChunksByFilesEdgeCases`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Tests for delete_chunks_by_files edge cases.
+- 🔷 **[`TestDeleteOldChunks`](files/tests/test_indexer.md)** (`test_indexer.py`) - Tests for _delete_old_chunks_for_modified_files.
+- 🔷 **[`TestDependenciesIncrementalLogic`](files/tests/test_wiki_coverage.md)** (`test_wiki_coverage.py`) - Tests for dependencies page incremental logic (lines 433-...
+- 🔷 **[`TestDependenciesPageEdgeCases`](files/tests/test_wiki_pages_coverage.md)** (`test_wiki_pages_coverage.py`) - Edge case tests for generate_dependencies_page.
 - 🔷 **[`TestDependencyCategorization`](files/tests/test_manifest.md)** (`test_manifest.py`) - Tests for dependency categorization.
+- 🔷 **[`TestDependencyCollectionEdgeCases`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for dependency collection edge cases.
+- 🔷 **[`TestDependencyEdge`](files/tests/test_dependency_graph.md)** (`test_dependency_graph.py`) - Tests for DependencyEdge dataclass.
+- 🔷 **[`TestDependencyGraph`](files/tests/test_dependency_graph.md)** (`test_dependency_graph.py`) - Tests for DependencyGraph dataclass.
+- 🔷 **[`TestDependencyGraphExternalEdgeSkip`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Test that external edges are properly skipped when from_i...
+- 🔷 **[`TestDependencyGraphGenerator`](files/tests/test_dependency_graph.md)** (`test_dependency_graph.py`) - Tests for DependencyGraphGenerator class.
+- 🔷 **[`TestDependencyNode`](files/tests/test_dependency_graph.md)** (`test_dependency_graph.py`) - Tests for DependencyNode dataclass.
+- 🔷 **[`TestDescriptionParagraphSplit`](files/tests/test_api_docs.md)** (`test_api_docs.py`) - Test description splitting at paragraph breaks.
+- 🔷 **[`TestDescriptionParagraphSplitEdgeCase`](files/tests/test_api_docs.md)** (`test_api_docs.py`) - Test edge case for description paragraph splitting.
 - 🔷 **[`TestDiagramWithTitle`](files/tests/test_callgraph.md)** (`test_callgraph.py`) - Test diagram generation with title parameter.
+- 🔷 **[`TestDirectExtractUsageSnippet`](files/tests/test_test_examples.md)** (`test_test_examples.py`) - Direct tests for _extract_usage_snippet internal function.
+- 🔷 **[`TestDirectImportsFromHtml`](files/tests/test_export_init.md)** (`test_export_init.py`) - Tests for direct imports from the html module.
+- 🔷 **[`TestDirectImportsFromStreaming`](files/tests/test_export_init.md)** (`test_export_init.py`) - Tests for direct imports from the streaming module.
 - 🔷 **[`TestDirectoryTreeEdgeCases`](files/tests/test_manifest.md)** (`test_manifest.py`) - Tests for directory tree edge cases.
+- 🔷 **[`TestDiscoverPlugins`](files/tests/test_plugin_registry.md)** (`test_plugin_registry.py`) - Tests for discover_plugins method.
+- 🔷 **[`TestDisplayConfig`](files/tests/test_config_cli.md)** (`test_config_cli.py`) - Tests for display_config function.
+- 🔷 **[`TestDisplayIssues`](files/tests/test_config_cli.md)** (`test_config_cli.py`) - Tests for display_issues function.
+- 🔷 **[`TestDocstringEdgeCases`](files/tests/test_api_docs.md)** (`test_api_docs.py`) - Test docstring extraction edge cases.
 - 🔷 **[`TestDocstringExtraction`](files/tests/test_parser.md)** (`test_parser.py`) - Tests for docstring extraction from various languages.
+- 🔷 **[`TestDocstringExtractorHelpers`](files/tests/test_parser.md)** (`test_parser.py`) - Direct tests for docstring extractor helper functions to ...
+- 🔷 **[`TestDocstringParsingEdgeCases`](files/tests/test_test_examples.md)** (`test_test_examples.py`) - Additional tests for docstring parsing edge cases.
 - 🔷 **[`TestDoReindex`](files/tests/test_watcher.md)** (`test_watcher.py`) - Test _do_reindex async functionality.
+- 🔷 **[`TestDoReindexWithChanges`](files/tests/test_watcher.md)** (`test_watcher.py`) - Test _do_reindex with FileChange details.
+- 🔷 **[`TestDuplicateClassHandling`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for duplicate class handling in diagram generation.
+- 🔷 **[`TestEdgeCases`](files/tests/test_access_control.md)** (`test_access_control.py`) - Tests for edge cases and integration scenarios.
+- 🔷 **[`TestEdgeCases`](files/tests/test_config_cli.md)** (`test_config_cli.py`) - Tests for edge cases and unusual scenarios.
+- 🔷 **[`TestEdgeCases`](files/tests/test_dependency_graph.md)** (`test_dependency_graph.py`) - Tests for edge cases and error handling.
+- 🔷 **[`TestEdgeCases`](files/tests/test_secret_detector.md)** (`test_secret_detector.py`) - Tests for edge cases in secret detection.
+- 🔷 **[`TestEdgesAndCircularDependencies`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for edge generation and circular dependency handling.
+- 🔷 **[`TestEmbeddingBatchConfig`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Tests for embedding batch configuration.
+- 🔷 **[`TestEmbeddingCache`](files/tests/test_embedding_cache.md)** (`test_embedding_cache.py`) - Tests for EmbeddingCache.
+- 🔷 **[`TestEmbeddingCacheConfig`](files/tests/test_embedding_cache.md)** (`test_embedding_cache.py`) - Tests for EmbeddingCacheConfig.
+- 🔷 **[`TestEmbeddingCacheErrorHandling`](files/tests/test_embedding_cache.md)** (`test_embedding_cache.py`) - Tests for error handling paths in EmbeddingCache.
+- 🔷 **[`TestEmbeddingCacheIntegration`](files/tests/test_embedding_cache.md)** (`test_embedding_cache.py`) - Integration tests for embedding cache with real providers.
+- 🔷 **[`TestEmbeddingProgress`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Tests for EmbeddingProgress tracking.
+- 🔷 **[`TestEmbeddingProvider`](files/tests/test_base_provider.md)** (`test_base_provider.py`) - Test implementation that calls super.
+- 🔷 **[`TestEmbeddingProvider`](files/tests/test_base_provider.md)** (`test_base_provider.py`) - Test implementation that calls super.
+- 🔷 **[`TestEmbeddingProvider`](files/tests/test_base_provider.md)** (`test_base_provider.py`) - Test implementation.
+- 🔷 **[`TestEmbeddingProvider`](files/tests/test_base_provider.md)** (`test_base_provider.py`) - Test implementation.
+- 🔷 **[`TestEmbeddingProviderAbstractMethods`](files/tests/test_base_provider.md)** (`test_base_provider.py`) - Tests for EmbeddingProvider abstract method coverage.
+- 🔷 **[`TestEmbeddingProviderContract`](files/tests/test_providers.md)** (`test_providers.py`) - Tests for embedding provider base class contract.
+- 🔷 **[`TestEmbeddingProviderMethods`](files/tests/test_providers.md)** (`test_providers.py`) - Tests for embedding provider methods.
+- 🔷 **[`TestEmbeddingProviderOverride`](files/tests/test_indexer.md)** (`test_indexer.py`) - Tests for embedding provider override in constructor.
+- 🔷 **[`TestEmbeddingProviderPlugin`](files/tests/test_plugins.md)** (`test_plugins.py`) - Tests for EmbeddingProviderPlugin.
+- 🔷 **[`TestEmbeddingProviderPluginIntegration`](files/tests/test_plugins.md)** (`test_plugins.py`) - Tests for embedding provider plugin integration.
 - 🔷 **[`TestEnhancedDependencyGraph`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for enhanced dependency graph features.
-- 🔷 **[`TestEntityEntry`](files/tests/test_glossary.md)** (`test_glossary.py`) - Tests for [EntityEntry](files/src/local_deepwiki/generators/glossary.md) dataclass.
-- 🔷 **[`TestEntityRegistry`](files/tests/test_crosslinks.md)** (`test_crosslinks.py`) - Tests for [EntityRegistry](files/src/local_deepwiki/generators/crosslinks.md) class.
+- 🔷 **[`TestEnsureIndexesEdgeCases`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Tests for _ensure_indexes edge cases and error handling.
+- 🔷 **[`TestEnsureIndexesVectorIndexDetection`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Tests for vector index detection in _ensure_indexes.
+- 🔷 **[`TestEntityEntry`](files/tests/test_glossary.md)** (`test_glossary.py`) - Tests for EntityEntry dataclass.
+- 🔷 **[`TestEntityRegistry`](files/tests/test_crosslinks.md)** (`test_crosslinks.py`) - Tests for EntityRegistry class.
+- 🔷 **[`TestEntryPointCompatibility`](files/tests/test_plugin_registry.md)** (`test_plugin_registry.py`) - Tests for entry point loading compatibility.
 - 🔷 **[`TestEntryPointsSummary`](files/tests/test_manifest.md)** (`test_manifest.py`) - Tests for entry points summary generation.
-- 🔷 **[`TestExportLazyImports`](files/tests/test_export_init.md)** (`test_export_init.py`) - Tests for lazy import functionality in export/__init__.py.
-- 🔷 **[`TestExportToHtml`](files/tests/test_html_export.md)** (`test_html_export.py`) - Tests for the [export_to_html](files/src/local_deepwiki/export/html.md) convenience function.
-- 🔷 **[`TestExportToPdf`](files/tests/test_pdf_export.md)** (`test_pdf_export.py`) - Tests for the [export_to_pdf](files/src/local_deepwiki/export/pdf.md) convenience function.
-- 🔷 **[`TestExportToPdfEdgeCases`](files/tests/test_pdf_export.md)** (`test_pdf_export.py`) - Additional edge case tests for [export_to_pdf](files/src/local_deepwiki/export/pdf.md).
-- 🔷 **[`TestExtractCallNameEdgeCases`](files/tests/test_callgraph.md)** (`test_callgraph.py`) - Test [extract_call_name](files/src/local_deepwiki/generators/callgraph.md) edge cases.
+- 🔷 **[`TestEnvironmentError`](files/tests/test_errors.md)** (`test_errors.py`) - Tests for EnvironmentError.
+- 🔷 **[`TestEnvironmentErrorFactory`](files/tests/test_errors.md)** (`test_errors.py`) - Tests for the environment_error factory function.
+- 🔷 **[`TestErrorContextManagement`](files/tests/test_errors.md)** (`test_errors.py`) - Tests for error context management.
+- 🔷 **[`TestErrorHierarchy`](files/tests/test_errors.md)** (`test_errors.py`) - Tests for error class hierarchy.
+- 🔷 **[`TestEvent`](files/tests/test_events.md)** (`test_events.py`) - Tests for Event dataclass.
+- 🔷 **[`TestEventEmitter`](files/tests/test_events.md)** (`test_events.py`) - Tests for EventEmitter.
+- 🔷 **[`TestEventType`](files/tests/test_events.md)** (`test_events.py`) - Tests for EventType enum.
+- 🔷 **[`TestExamplesWikiGenerator`](files/tests/test_code_examples.md)** (`test_code_examples.py`) - Tests for the ExamplesWikiGenerator plugin.
+- 🔷 **[`TestExamplesWikiGeneratorEdgeCases`](files/tests/test_examples_plugin.md)** (`test_examples_plugin.py`) - Edge case tests for ExamplesWikiGenerator.
+- 🔷 **[`TestExamplesWikiGeneratorGenerate`](files/tests/test_examples_plugin.md)** (`test_examples_plugin.py`) - Tests for the generate method.
+- 🔷 **[`TestExamplesWikiGeneratorIntegration`](files/tests/test_examples_plugin.md)** (`test_examples_plugin.py`) - Integration tests for ExamplesWikiGenerator.
+- 🔷 **[`TestExamplesWikiGeneratorMetadata`](files/tests/test_examples_plugin.md)** (`test_examples_plugin.py`) - Tests for ExamplesWikiGenerator metadata properties.
+- 🔷 **[`TestExceptionHierarchy`](files/tests/test_providers.md)** (`test_providers.py`) - Tests for exception class hierarchy.
+- 🔷 **[`TestExceptions`](files/tests/test_access_control.md)** (`test_access_control.py`) - Tests for access control exceptions.
+- 🔷 **[`TestExcludeTestImports`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for excluding test module imports (line 396).
+- 🔷 **[`TestExportConfig`](files/tests/test_streaming_export.md)** (`test_streaming_export.py`) - Tests for ExportConfig model.
+- 🔷 **[`TestExportError`](files/tests/test_errors.md)** (`test_errors.py`) - Tests for ExportError.
+- 🔷 **[`TestExportErrorFactory`](files/tests/test_errors.md)** (`test_errors.py`) - Tests for the export_error factory function.
+- 🔷 **[`TestExportResult`](files/tests/test_streaming_export.md)** (`test_streaming_export.py`) - Tests for ExportResult dataclass.
+- 🔷 **[`TestExportToHtml`](files/tests/test_html_export.md)** (`test_html_export.py`) - Tests for the export_to_html convenience function.
+- 🔷 **[`TestExportToPdf`](files/tests/test_pdf_export.md)** (`test_pdf_export.py`) - Tests for the export_to_pdf convenience function.
+- 🔷 **[`TestExportToPdfEdgeCases`](files/tests/test_pdf_export.md)** (`test_pdf_export.py`) - Additional edge case tests for export_to_pdf.
+- 🔷 **[`TestExternalDependencyEdges`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for external dependency edge generation.
+- 🔷 **[`TestExternalDependencyEdgesComplete`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Complete tests for external dependency edges (line 641).
+- 🔷 **[`TestExternalDependencySubgraph`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for external dependency subgraph generation.
+- 🔷 **[`TestExternalEdgeFromIdMissing`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Direct test of external edge logic when from_id is missin...
+- 🔷 **[`TestExternalEdgeMissingFromId`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Test for external dependency edges with missing from_id (...
+- 🔷 **[`TestExtractCallNameEdgeCases`](files/tests/test_callgraph.md)** (`test_callgraph.py`) - Test extract_call_name edge cases.
 - 🔷 **[`TestExtractCallsPython`](files/tests/test_callgraph.md)** (`test_callgraph.py`) - Test call extraction for Python code.
 - 🔷 **[`TestExtractClassAttributes`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for _extract_class_attributes function.
 - 🔷 **[`TestExtractClassSignature`](files/tests/test_api_docs.md)** (`test_api_docs.py`) - Test class signature extraction.
-- 🔷 **[`TestExtractCodeTerms`](files/tests/test_search.md)** (`test_search.py`) - Tests for [extract_code_terms](files/src/local_deepwiki/generators/search.md) function.
-- 🔷 **[`TestExtractExamplesForEntities`](files/tests/test_test_examples.md)** (`test_test_examples.py`) - Tests for [extract_examples_for_entities](files/src/local_deepwiki/generators/test_examples.md) function.
+- 🔷 **[`TestExtractCodeTerms`](files/tests/test_search.md)** (`test_search.py`) - Tests for extract_code_terms function.
+- 🔷 **[`TestExtractEntityFromHeading`](files/tests/test_wiki_files_coverage.md)** (`test_wiki_files_coverage.py`) - Tests for _extract_entity_from_heading function.
+- 🔷 **[`TestExtractExamplesFileErrors`](files/tests/test_test_examples.md)** (`test_test_examples.py`) - Tests for file read error handling.
+- 🔷 **[`TestExtractExamplesForEntities`](files/tests/test_test_examples.md)** (`test_test_examples.py`) - Tests for extract_examples_for_entities function.
 - 🔷 **[`TestExtractFromTestClasses`](files/tests/test_test_examples.md)** (`test_test_examples.py`) - Tests for extracting examples from test classes.
 - 🔷 **[`TestExtractFunctionSignature`](files/tests/test_api_docs.md)** (`test_api_docs.py`) - Test function signature extraction.
-- 🔷 **[`TestExtractFunctionTypeMetadata`](files/tests/test_type_annotations.md)** (`test_type_annotations.py`) - Tests for [extract_function_type_metadata](files/src/local_deepwiki/core/chunker.md) function.
-- 🔷 **[`TestExtractHeadings`](files/tests/test_search.md)** (`test_search.py`) - Tests for [extract_headings](files/src/local_deepwiki/generators/search.md) function.
-- 🔷 **[`TestExtractImportsFromChunks`](files/tests/test_context_builder.md)** (`test_context_builder.py`) - Tests for [extract_imports_from_chunks](files/src/local_deepwiki/generators/context_builder.md) function.
+- 🔷 **[`TestExtractFunctionTypeMetadata`](files/tests/test_type_annotations.md)** (`test_type_annotations.py`) - Tests for extract_function_type_metadata function.
+- 🔷 **[`TestExtractHeadings`](files/tests/test_search.md)** (`test_search.py`) - Tests for extract_headings function.
+- 🔷 **[`TestExtractHighlights`](files/tests/test_fuzzy_search.md)** (`test_fuzzy_search.py`) - Tests for extract_highlights function.
+- 🔷 **[`TestExtractImportsFromChunks`](files/tests/test_context_builder.md)** (`test_context_builder.py`) - Tests for extract_imports_from_chunks function.
 - 🔷 **[`TestExtractMermaidBlocks`](files/tests/test_pdf_export.md)** (`test_pdf_export.py`) - Tests for mermaid block extraction.
+- 🔷 **[`TestExtractMethodsFromContent`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for method extraction from class content.
 - 🔷 **[`TestExtractMethodSignature`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for _extract_method_signature function.
-- 🔷 **[`TestExtractPythonDecorators`](files/tests/test_type_annotations.md)** (`test_type_annotations.py`) - Tests for [extract_python_decorators](files/src/local_deepwiki/generators/api_docs.md) function.
+- 🔷 **[`TestExtractModuleName`](files/tests/test_dependency_graph.md)** (`test_dependency_graph.py`) - Tests for _extract_module_name function.
+- 🔷 **[`TestExtractPythonDecorators`](files/tests/test_type_annotations.md)** (`test_type_annotations.py`) - Tests for extract_python_decorators function.
 - 🔷 **[`TestExtractPythonDocstring`](files/tests/test_api_docs.md)** (`test_api_docs.py`) - Test Python docstring extraction.
-- 🔷 **[`TestExtractPythonParameterDefaults`](files/tests/test_type_annotations.md)** (`test_type_annotations.py`) - Tests for [extract_python_parameter_defaults](files/src/local_deepwiki/core/chunker.md) function.
+- 🔷 **[`TestExtractPythonParameterDefaults`](files/tests/test_type_annotations.md)** (`test_type_annotations.py`) - Tests for extract_python_parameter_defaults function.
 - 🔷 **[`TestExtractPythonParameters`](files/tests/test_api_docs.md)** (`test_api_docs.py`) - Test Python parameter extraction.
-- 🔷 **[`TestExtractPythonParameterTypes`](files/tests/test_type_annotations.md)** (`test_type_annotations.py`) - Tests for [extract_python_parameter_types](files/src/local_deepwiki/core/chunker.md) function.
-- 🔷 **[`TestExtractPythonRaisedExceptions`](files/tests/test_type_annotations.md)** (`test_type_annotations.py`) - Tests for [extract_python_raised_exceptions](files/src/local_deepwiki/core/chunker.md) function.
+- 🔷 **[`TestExtractPythonParameterTypes`](files/tests/test_type_annotations.md)** (`test_type_annotations.py`) - Tests for extract_python_parameter_types function.
+- 🔷 **[`TestExtractPythonRaisedExceptions`](files/tests/test_type_annotations.md)** (`test_type_annotations.py`) - Tests for extract_python_raised_exceptions function.
 - 🔷 **[`TestExtractPythonReturnType`](files/tests/test_api_docs.md)** (`test_api_docs.py`) - Test Python return type extraction.
-- 🔷 **[`TestExtractPythonReturnType`](files/tests/test_type_annotations.md)** (`test_type_annotations.py`) - Tests for [extract_python_return_type](files/src/local_deepwiki/generators/api_docs.md) function.
-- 🔷 **[`TestExtractSnippet`](files/tests/test_search.md)** (`test_search.py`) - Tests for [extract_snippet](files/src/local_deepwiki/generators/search.md) function.
+- 🔷 **[`TestExtractPythonReturnType`](files/tests/test_type_annotations.md)** (`test_type_annotations.py`) - Tests for extract_python_return_type function.
+- 🔷 **[`TestExtractRelevantSnippet`](files/tests/test_code_examples.md)** (`test_code_examples.py`) - Tests for the _extract_relevant_snippet method.
+- 🔷 **[`TestExtractSnippet`](files/tests/test_search.md)** (`test_search.py`) - Tests for extract_snippet function.
 - 🔷 **[`TestExtractTitle`](files/tests/test_pdf_export.md)** (`test_pdf_export.py`) - Tests for title extraction.
-- 🔷 **[`TestExtractTitle`](files/tests/test_web.md)** (`test_web.py`) - Tests for [extract_title](files/src/local_deepwiki/export/html.md) function.
+- 🔷 **[`TestExtractTitle`](files/tests/test_web.md)** (`test_web.py`) - Tests for extract_title function.
 - 🔷 **[`TestExtractTitle`](files/tests/test_html_export.md)** (`test_html_export.py`) - Tests for title extraction.
-- 🔷 **[`TestExtractTitleErrorHandling`](files/tests/test_pdf_export.md)** (`test_pdf_export.py`) - Tests for [extract_title](files/src/local_deepwiki/export/html.md) error handling.
-- 🔷 **[`TestFileContextDataclass`](files/tests/test_context_builder.md)** (`test_context_builder.py`) - Tests for the [FileContext](files/src/local_deepwiki/generators/context_builder.md) dataclass.
-- 🔷 **[`TestFileCoverage`](files/tests/test_coverage.md)** (`test_coverage.py`) - Tests for [FileCoverage](files/src/local_deepwiki/generators/coverage.md) dataclass.
+- 🔷 **[`TestExtractTitleErrorHandling`](files/tests/test_pdf_export.md)** (`test_pdf_export.py`) - Tests for extract_title error handling.
+- 🔷 **[`TestExtractUsageSnippetEdgeCases`](files/tests/test_test_examples.md)** (`test_test_examples.py`) - Tests for _extract_usage_snippet edge cases.
+- 🔷 **[`TestFalsePositiveFiltering`](files/tests/test_secret_detector.md)** (`test_secret_detector.py`) - Tests for false positive filtering.
+- 🔷 **[`TestFileChange`](files/tests/test_watcher.md)** (`test_watcher.py`) - Test FileChange dataclass.
+- 🔷 **[`TestFileContextDataclass`](files/tests/test_context_builder.md)** (`test_context_builder.py`) - Tests for the FileContext dataclass.
+- 🔷 **[`TestFileCoverage`](files/tests/test_coverage.md)** (`test_coverage.py`) - Tests for FileCoverage dataclass.
+- 🔷 **[`TestFileGraphInternalEdges`](files/tests/test_dependency_graph.md)** (`test_dependency_graph.py`) - Tests for generate_file_graph internal edge creation (lin...
+- 🔷 **[`TestFilePathToWikiPath`](files/tests/test_dependency_graph.md)** (`test_dependency_graph.py`) - Tests for file path to wiki path conversion.
+- 🔷 **[`TestFileProgress`](files/tests/test_cli_progress.md)** (`test_cli_progress.py`) - Tests for file_progress context manager.
+- 🔷 **[`TestFilterByPath`](files/tests/test_fuzzy_search.md)** (`test_fuzzy_search.py`) - Tests for filter_by_path function.
+- 🔷 **[`TestFilterModeHandling`](files/tests/test_interactive_search.md)** (`test_interactive_search.py`) - Tests for filter mode keyboard handling.
 - 🔷 **[`TestFindCircularDependencies`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for _find_circular_dependencies function.
-- 🔷 **[`TestFindRootClasses`](files/tests/test_inheritance.md)** (`test_inheritance.py`) - Tests for [find_root_classes](files/src/local_deepwiki/generators/inheritance.md) function.
-- 🔷 **[`TestFindTestFile`](files/tests/test_test_examples.md)** (`test_test_examples.py`) - Tests for [find_test_file](files/src/local_deepwiki/generators/test_examples.md) function.
-- 🔷 **[`TestFindTestFiles`](files/tests/test_test_examples.md)** (`test_test_examples.py`) - Tests for [find_test_files](files/src/local_deepwiki/generators/test_examples.md) function (plural).
+- 🔷 **[`TestFindCircularDependenciesEdgeCases`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for circular dependency detection edge cases.
+- 🔷 **[`TestFindNodesByType`](files/tests/test_parser.md)** (`test_parser.py`) - Test find_nodes_by_type function.
+- 🔷 **[`TestFindRelatedFiles`](files/tests/test_context_builder.md)** (`test_context_builder.py`) - Tests for find_related_files function.
+- 🔷 **[`TestFindRootClasses`](files/tests/test_inheritance.md)** (`test_inheritance.py`) - Tests for find_root_classes function.
+- 🔷 **[`TestFindSourceFiles`](files/tests/test_indexer.md)** (`test_indexer.py`) - Tests for _find_source_files filtering logic.
+- 🔷 **[`TestFindTestFile`](files/tests/test_test_examples.md)** (`test_test_examples.py`) - Tests for find_test_file function.
+- 🔷 **[`TestFindTestFiles`](files/tests/test_test_examples.md)** (`test_test_examples.py`) - Tests for find_test_files function (plural).
+- 🔷 **[`TestFindTestFilesAlternativeNaming`](files/tests/test_test_examples.md)** (`test_test_examples.py`) - Tests for alternative test file naming conventions.
+- 🔷 **[`TestFixInternalLinks`](files/tests/test_html_export.md)** (`test_html_export.py`) - Tests for internal link conversion from .md to .html.
 - 🔷 **[`TestFlaskApp`](files/tests/test_web.md)** (`test_web.py`) - Tests for Flask app functionality.
-- 🔷 **[`TestFormatBlameDate`](files/tests/test_git_utils.md)** (`test_git_utils.py`) - Tests for [format_blame_date](files/src/local_deepwiki/core/git_utils.md) function.
-- 🔷 **[`TestFormatContextForLlm`](files/tests/test_context_builder.md)** (`test_context_builder.py`) - Tests for [format_context_for_llm](files/src/local_deepwiki/generators/context_builder.md) function.
-- 🔷 **[`TestFormatExamplesMarkdown`](files/tests/test_test_examples.md)** (`test_test_examples.py`) - Tests for [format_examples_markdown](files/src/local_deepwiki/generators/test_examples.md) function.
+- 🔷 **[`TestFormatBlameDate`](files/tests/test_git_utils.md)** (`test_git_utils.py`) - Tests for format_blame_date function.
+- 🔷 **[`TestFormatCodeExamplesMarkdown`](files/tests/test_code_examples.md)** (`test_code_examples.py`) - Tests for format_code_examples_markdown function.
+- 🔷 **[`TestFormatContextForLlm`](files/tests/test_context_builder.md)** (`test_context_builder.py`) - Tests for format_context_for_llm function.
+- 🔷 **[`TestFormatContextForLlmAdvanced`](files/tests/test_context_builder.md)** (`test_context_builder.py`) - Additional tests for format_context_for_llm edge cases.
+- 🔷 **[`TestFormatDuration`](files/tests/test_progress_tracker.md)** (`test_progress_tracker.py`) - Tests for _format_duration helper function.
+- 🔷 **[`TestFormatErrorResponse`](files/tests/test_errors.md)** (`test_errors.py`) - Tests for format_error_response function.
+- 🔷 **[`TestFormatExamplesMarkdown`](files/tests/test_test_examples.md)** (`test_test_examples.py`) - Tests for format_examples_markdown function.
 - 🔷 **[`TestFormatFileEntry`](files/tests/test_source_refs.md)** (`test_source_refs.py`) - Tests for _format_file_entry function.
 - 🔷 **[`TestFormatFunctionSignatureLine`](files/tests/test_api_docs.md)** (`test_api_docs.py`) - Test function signature line formatting.
 - 🔷 **[`TestFormatParameter`](files/tests/test_api_docs.md)** (`test_api_docs.py`) - Test parameter formatting.
-- 🔷 **[`TestFormatSources`](files/tests/test_web.md)** (`test_web.py`) - Tests for [format_sources](files/src/local_deepwiki/web/app.md) function.
+- 🔷 **[`TestFormatSignature`](files/tests/test_glossary.md)** (`test_glossary.py`) - Tests for _format_signature function.
+- 🔷 **[`TestFormatSources`](files/tests/test_web.md)** (`test_web.py`) - Tests for format_sources function.
+- 🔷 **[`TestFromYaml`](files/tests/test_role_config.md)** (`test_role_config.py`) - Tests for RoleManager.from_yaml class method.
+- 🔷 **[`TestFullPipeline`](files/tests/test_integration_pipeline.md)** (`test_integration_pipeline.py`) - End-to-end integration tests for the complete pipeline.
+- 🔷 **[`TestFunctionNameExtractionFailure`](files/tests/test_api_docs.md)** (`test_api_docs.py`) - Test function signature extraction when name extraction f...
+- 🔷 **[`TestFunctionSignatureEdgeCases`](files/tests/test_api_docs.md)** (`test_api_docs.py`) - Test function signature extraction edge cases.
+- 🔷 **[`TestFuzzyMatchName`](files/tests/test_fuzzy_search.md)** (`test_fuzzy_search.py`) - Tests for fuzzy_match_name function.
+- 🔷 **[`TestFuzzyMatchNameEdgeCases`](files/tests/test_fuzzy_search.md)** (`test_fuzzy_search.py`) - Additional tests for fuzzy_match_name edge cases (lines 1...
+- 🔷 **[`TestFuzzyScore`](files/tests/test_fuzzy_search.md)** (`test_fuzzy_search.py`) - Tests for fuzzy_score function.
+- 🔷 **[`TestFuzzySearchConfig`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Tests for FuzzySearchConfig.
+- 🔷 **[`TestFuzzySearchHelper`](files/tests/test_fuzzy_search.md)** (`test_fuzzy_search.py`) - Tests for the FuzzySearchHelper class.
+- 🔷 **[`TestFuzzySearchHelper`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Tests for FuzzySearchHelper class.
+- 🔷 **[`TestFuzzySearchHelperEdgeCases`](files/tests/test_fuzzy_search.md)** (`test_fuzzy_search.py`) - Additional tests for FuzzySearchHelper edge cases.
 - 🔷 **[`TestGemfileParsing`](files/tests/test_manifest.md)** (`test_manifest.py`) - Tests for Gemfile (Ruby) parsing.
 - 🔷 **[`TestGenerateApiReferenceMarkdown`](files/tests/test_api_docs.md)** (`test_api_docs.py`) - Test API reference markdown generation.
-- 🔷 **[`TestGenerateArchitecturePage`](files/tests/test_wiki_pages_coverage.md)** (`test_wiki_pages_coverage.py`) - Tests for [generate_architecture_page](files/src/local_deepwiki/generators/wiki_pages.md) function.
+- 🔷 **[`TestGenerateArchitecturePage`](files/tests/test_wiki_pages_coverage.md)** (`test_wiki_pages_coverage.py`) - Tests for generate_architecture_page function.
+- 🔷 **[`TestGenerateBlameSectionCoverage`](files/tests/test_wiki_files_coverage.md)** (`test_wiki_files_coverage.py`) - Tests for _generate_blame_section to cover uncovered lines.
 - 🔷 **[`TestGenerateCallGraphDiagram`](files/tests/test_callgraph.md)** (`test_callgraph.py`) - Test Mermaid diagram generation.
-- 🔷 **[`TestGenerateChangelogContent`](files/tests/test_changelog.md)** (`test_changelog.py`) - Tests for [generate_changelog_content](files/src/local_deepwiki/generators/changelog.md) function.
-- 🔷 **[`TestGenerateChangelogPage`](files/tests/test_wiki_pages_coverage.md)** (`test_wiki_pages_coverage.py`) - Tests for [generate_changelog_page](files/src/local_deepwiki/generators/wiki_pages.md) function.
-- 🔷 **[`TestGenerateClassDiagram`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for [generate_class_diagram](files/src/local_deepwiki/generators/diagrams.md) function.
-- 🔷 **[`TestGenerateDependenciesPage`](files/tests/test_wiki_pages_coverage.md)** (`test_wiki_pages_coverage.py`) - Tests for [generate_dependencies_page](files/src/local_deepwiki/generators/wiki_pages.md) function.
-- 🔷 **[`TestGenerateDependencyGraph`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for [generate_dependency_graph](files/src/local_deepwiki/generators/diagrams.md) function.
-- 🔷 **[`TestGenerateEntityEntries`](files/tests/test_search.md)** (`test_search.py`) - Tests for [generate_entity_entries](files/src/local_deepwiki/generators/search.md) function.
-- 🔷 **[`TestGenerateFileDocs`](files/tests/test_wiki_files_coverage.md)** (`test_wiki_files_coverage.py`) - Tests for [generate_file_docs](files/src/local_deepwiki/generators/wiki_files.md) function.
+- 🔷 **[`TestGenerateChangelogContent`](files/tests/test_changelog.md)** (`test_changelog.py`) - Tests for generate_changelog_content function.
+- 🔷 **[`TestGenerateChangelogPage`](files/tests/test_wiki_pages_coverage.md)** (`test_wiki_pages_coverage.py`) - Tests for generate_changelog_page function.
+- 🔷 **[`TestGenerateClassDiagram`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for generate_class_diagram function.
+- 🔷 **[`TestGenerateCoveragePage`](files/tests/test_coverage.md)** (`test_coverage.py`) - Tests for generate_coverage_page function.
+- 🔷 **[`TestGenerateDependenciesPage`](files/tests/test_wiki_pages_coverage.md)** (`test_wiki_pages_coverage.py`) - Tests for generate_dependencies_page function.
+- 🔷 **[`TestGenerateDependencyGraph`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for generate_dependency_graph function.
+- 🔷 **[`TestGenerateDependencyGraphPage`](files/tests/test_dependency_graph.md)** (`test_dependency_graph.py`) - Tests for the page generation function.
+- 🔷 **[`TestGenerateEntityEntries`](files/tests/test_search.md)** (`test_search.py`) - Tests for generate_entity_entries function.
+- 🔷 **[`TestGenerateExamplesPage`](files/tests/test_examples_plugin.md)** (`test_examples_plugin.py`) - Tests for _generate_examples_page method.
+- 🔷 **[`TestGenerateFileDocs`](files/tests/test_wiki_files_coverage.md)** (`test_wiki_files_coverage.py`) - Tests for generate_file_docs function.
+- 🔷 **[`TestGenerateFileDocsCallbacks`](files/tests/test_wiki_files_coverage.md)** (`test_wiki_files_coverage.py`) - Tests for callback functionality in generate_file_docs.
+- 🔷 **[`TestGenerateFileEnrichmentsUsedBy`](files/tests/test_wiki_files_coverage.md)** (`test_wiki_files_coverage.py`) - Tests for 'Used By' section in _generate_file_enrichments.
+- 🔷 **[`TestGenerateFileGraphWithEdges`](files/tests/test_dependency_graph.md)** (`test_dependency_graph.py`) - Tests for generate_file_graph edge rendering (lines 335-3...
 - 🔷 **[`TestGenerateFilesIndex`](files/tests/test_wiki_files_coverage.md)** (`test_wiki_files_coverage.py`) - Tests for _generate_files_index function.
-- 🔷 **[`TestGenerateFullSearchIndex`](files/tests/test_search.md)** (`test_search.py`) - Tests for [generate_full_search_index](files/src/local_deepwiki/generators/search.md) function.
-- 🔷 **[`TestGenerateInheritanceDiagram`](files/tests/test_inheritance.md)** (`test_inheritance.py`) - Tests for [generate_inheritance_diagram](files/src/local_deepwiki/generators/inheritance.md) function.
-- 🔷 **[`TestGenerateInheritanceTreeText`](files/tests/test_inheritance.md)** (`test_inheritance.py`) - Tests for [generate_inheritance_tree_text](files/src/local_deepwiki/generators/inheritance.md) function.
-- 🔷 **[`TestGenerateLanguagePieChart`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for [generate_language_pie_chart](files/src/local_deepwiki/generators/diagrams.md) function.
-- 🔷 **[`TestGenerateModuleDocs`](files/tests/test_wiki_modules_coverage.md)** (`test_wiki_modules_coverage.py`) - Tests for [generate_module_docs](files/src/local_deepwiki/generators/wiki_modules.md) function.
-- 🔷 **[`TestGenerateModuleOverview`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for [generate_module_overview](files/src/local_deepwiki/generators/diagrams.md) function.
+- 🔷 **[`TestGenerateFullSearchIndex`](files/tests/test_search.md)** (`test_search.py`) - Tests for generate_full_search_index function.
+- 🔷 **[`TestGenerateGlossaryPage`](files/tests/test_glossary.md)** (`test_glossary.py`) - Tests for generate_glossary_page function.
+- 🔷 **[`TestGenerateInheritanceDiagram`](files/tests/test_inheritance.md)** (`test_inheritance.py`) - Tests for generate_inheritance_diagram function.
+- 🔷 **[`TestGenerateInheritanceDiagramAdvanced`](files/tests/test_inheritance.md)** (`test_inheritance.py`) - Advanced tests for generate_inheritance_diagram.
+- 🔷 **[`TestGenerateInheritancePage`](files/tests/test_inheritance.md)** (`test_inheritance.py`) - Tests for generate_inheritance_page function.
+- 🔷 **[`TestGenerateInheritanceTreeText`](files/tests/test_inheritance.md)** (`test_inheritance.py`) - Tests for generate_inheritance_tree_text function.
+- 🔷 **[`TestGenerateLanguagePieChart`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for generate_language_pie_chart function.
+- 🔷 **[`TestGenerateModuleDocs`](files/tests/test_wiki_modules_coverage.md)** (`test_wiki_modules_coverage.py`) - Tests for generate_module_docs function.
+- 🔷 **[`TestGenerateModuleGraphCircularEdges`](files/tests/test_dependency_graph.md)** (`test_dependency_graph.py`) - Tests for circular edge marking in generate_module_graph ...
+- 🔷 **[`TestGenerateModuleOverview`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for generate_module_overview function.
 - 🔷 **[`TestGenerateModulesIndex`](files/tests/test_wiki_modules_coverage.md)** (`test_wiki_modules_coverage.py`) - Tests for _generate_modules_index function.
-- 🔷 **[`TestGenerateOverviewPage`](files/tests/test_wiki_pages_coverage.md)** (`test_wiki_pages_coverage.py`) - Tests for [generate_overview_page](files/src/local_deepwiki/generators/wiki_pages.md) function.
-- 🔷 **[`TestGenerateSearchEntry`](files/tests/test_search.md)** (`test_search.py`) - Tests for [generate_search_entry](files/src/local_deepwiki/generators/search.md) function.
-- 🔷 **[`TestGenerateSearchIndex`](files/tests/test_search.md)** (`test_search.py`) - Tests for [generate_search_index](files/src/local_deepwiki/generators/search.md) function.
-- 🔷 **[`TestGenerateSeeAlsoSection`](files/tests/test_see_also.md)** (`test_see_also.py`) - Tests for [generate_see_also_section](files/src/local_deepwiki/generators/see_also.md) function.
-- 🔷 **[`TestGenerateSequenceDiagram`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for [generate_sequence_diagram](files/src/local_deepwiki/generators/diagrams.md) function.
-- 🔷 **[`TestGenerateSingleFileDoc`](files/tests/test_wiki_files_coverage.md)** (`test_wiki_files_coverage.py`) - Tests for [generate_single_file_doc](files/src/local_deepwiki/generators/wiki_files.md) function.
-- 🔷 **[`TestGenerateSourceRefsSection`](files/tests/test_source_refs.md)** (`test_source_refs.py`) - Tests for [generate_source_refs_section](files/src/local_deepwiki/generators/source_refs.md) function.
-- 🔷 **[`TestGenerateSourceRefsSectionWithLineInfo`](files/tests/test_source_refs.md)** (`test_source_refs.py`) - Tests for [generate_source_refs_section](files/src/local_deepwiki/generators/source_refs.md) with line info.
-- 🔷 **[`TestGenerateStaleBanner`](files/tests/test_stale_detection.md)** (`test_stale_detection.py`) - Tests for [generate_stale_banner](files/src/local_deepwiki/generators/stale_detection.md) function.
-- 🔷 **[`TestGenerateStaleReportPage`](files/tests/test_stale_detection.md)** (`test_stale_detection.py`) - Tests for [generate_stale_report_page](files/src/local_deepwiki/generators/stale_detection.md) function.
-- 🔷 **[`TestGenerateToc`](files/tests/test_toc.md)** (`test_toc.py`) - Tests for [generate_toc](files/src/local_deepwiki/generators/toc.md) function.
-- 🔷 **[`TestGenerateWikiFunction`](files/tests/test_wiki_coverage.md)** (`test_wiki_coverage.py`) - Tests for the [generate_wiki](files/src/local_deepwiki/generators/wiki.md) convenience function.
+- 🔷 **[`TestGenerateOverviewPage`](files/tests/test_wiki_pages_coverage.md)** (`test_wiki_pages_coverage.py`) - Tests for generate_overview_page function.
+- 🔷 **[`TestGenerateSearchEntry`](files/tests/test_search.md)** (`test_search.py`) - Tests for generate_search_entry function.
+- 🔷 **[`TestGenerateSearchIndex`](files/tests/test_search.md)** (`test_search.py`) - Tests for generate_search_index function.
+- 🔷 **[`TestGenerateSeeAlsoSection`](files/tests/test_see_also.md)** (`test_see_also.py`) - Tests for generate_see_also_section function.
+- 🔷 **[`TestGenerateSequenceDiagram`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for generate_sequence_diagram function.
+- 🔷 **[`TestGenerateSingleFileDoc`](files/tests/test_wiki_files_coverage.md)** (`test_wiki_files_coverage.py`) - Tests for generate_single_file_doc function.
+- 🔷 **[`TestGenerateSourceRefsSection`](files/tests/test_source_refs.md)** (`test_source_refs.py`) - Tests for generate_source_refs_section function.
+- 🔷 **[`TestGenerateSourceRefsSectionWithLineInfo`](files/tests/test_source_refs.md)** (`test_source_refs.py`) - Tests for generate_source_refs_section with line info.
+- 🔷 **[`TestGenerateStaleBanner`](files/tests/test_stale_detection.md)** (`test_stale_detection.py`) - Tests for generate_stale_banner function.
+- 🔷 **[`TestGenerateStaleReportPage`](files/tests/test_stale_detection.md)** (`test_stale_detection.py`) - Tests for generate_stale_report_page function.
+- 🔷 **[`TestGenerateStaleReportPageWithStalePages`](files/tests/test_stale_detection.md)** (`test_stale_detection.py`) - Tests for generate_stale_report_page when stale pages exist.
+- 🔷 **[`TestGenerateToc`](files/tests/test_toc.md)** (`test_toc.py`) - Tests for generate_toc function.
+- 🔷 **[`TestGenerateWikiFunction`](files/tests/test_wiki_coverage.md)** (`test_wiki_coverage.py`) - Tests for the generate_wiki convenience function.
+- 🔷 **[`TestGenerationProgress`](files/tests/test_progress_tracker.md)** (`test_progress_tracker.py`) - Tests for GenerationProgress class.
+- 🔷 **[`TestGetApiKey`](files/tests/test_credentials.md)** (`test_credentials.py`) - Tests for CredentialManager.get_api_key method.
+- 🔷 **[`TestGetAttrErrorHandling`](files/tests/test_export_init.md)** (`test_export_init.py`) - Tests for __getattr__ error handling.
+- 🔷 **[`TestGetAuditLoggerSingleton`](files/tests/test_audit.md)** (`test_audit.py`) - Tests for get_audit_logger singleton function.
 - 🔷 **[`TestGetBriefDescription`](files/tests/test_glossary.md)** (`test_glossary.py`) - Tests for _get_brief_description function.
 - 🔷 **[`TestGetCachedLLMProvider`](files/tests/test_provider_factories.md)** (`test_provider_factories.py`) - Tests for get_cached_llm_provider factory function.
-- 🔷 **[`TestGetCommitHistory`](files/tests/test_changelog.md)** (`test_changelog.py`) - Tests for [get_commit_history](files/src/local_deepwiki/generators/changelog.md) function.
+- 🔷 **[`TestGetCallersFromOtherFiles`](files/tests/test_context_builder.md)** (`test_context_builder.py`) - Tests for get_callers_from_other_files function.
+- 🔷 **[`TestGetCommitHistory`](files/tests/test_changelog.md)** (`test_changelog.py`) - Tests for get_commit_history function.
 - 🔷 **[`TestGetCoverageEmoji`](files/tests/test_coverage.md)** (`test_coverage.py`) - Tests for _get_coverage_emoji function.
-- 🔷 **[`TestGetDefaultBranch`](files/tests/test_git_utils.md)** (`test_git_utils.py`) - Tests for [get_default_branch](files/src/local_deepwiki/core/git_utils.md) function.
+- 🔷 **[`TestGetDefaultBranch`](files/tests/test_git_utils.md)** (`test_git_utils.py`) - Tests for get_default_branch function.
+- 🔷 **[`TestGetDirectoryModule`](files/tests/test_dependency_graph.md)** (`test_dependency_graph.py`) - Tests for _get_directory_module function.
+- 🔷 **[`TestGetDirectoryModuleEdgeCases`](files/tests/test_dependency_graph.md)** (`test_dependency_graph.py`) - Additional tests for _get_directory_module edge cases.
 - 🔷 **[`TestGetDirectoryTree`](files/tests/test_manifest.md)** (`test_manifest.py`) - Tests for directory tree generation.
+- 🔷 **[`TestGetDocstringDoubleQuoteEdge`](files/tests/test_test_examples.md)** (`test_test_examples.py`) - Test for the unusual double-quote docstring edge case.
+- 🔷 **[`TestGetDocstringEdgeCases`](files/tests/test_test_examples.md)** (`test_test_examples.py`) - Tests for _get_docstring edge cases.
 - 🔷 **[`TestGetEmbeddingProvider`](files/tests/test_provider_factories.md)** (`test_provider_factories.py`) - Tests for get_embedding_provider factory function.
+- 🔷 **[`TestGetEmbeddingProviderWithCache`](files/tests/test_embedding_cache.md)** (`test_embedding_cache.py`) - Tests for get_embedding_provider with caching.
+- 🔷 **[`TestGetExamplesForApiPage`](files/tests/test_examples_plugin.md)** (`test_examples_plugin.py`) - Tests for the get_examples_for_api_page helper function.
+- 🔷 **[`TestGetExamplesForApiPageWithEventLoop`](files/tests/test_examples_plugin.md)** (`test_examples_plugin.py`) - Tests for get_examples_for_api_page with event loop scena...
 - 🔷 **[`TestGetFileApiDocs`](files/tests/test_api_docs.md)** (`test_api_docs.py`) - Test the convenience function.
+- 🔷 **[`TestGetFileCallers`](files/tests/test_callgraph.md)** (`test_callgraph.py`) - Test the get_file_callers convenience function.
 - 🔷 **[`TestGetFileCallGraph`](files/tests/test_callgraph.md)** (`test_callgraph.py`) - Test the convenience function for getting file call graph.
-- 🔷 **[`TestGetFileEntityBlame`](files/tests/test_git_utils.md)** (`test_git_utils.py`) - Tests for [get_file_entity_blame](files/src/local_deepwiki/core/git_utils.md) function.
-- 🔷 **[`TestGetFileExamples`](files/tests/test_test_examples.md)** (`test_test_examples.py`) - Tests for [get_file_examples](files/src/local_deepwiki/generators/test_examples.md) function.
-- 🔷 **[`TestGetFileLastModified`](files/tests/test_stale_detection.md)** (`test_stale_detection.py`) - Tests for [get_file_last_modified](files/src/local_deepwiki/core/git_utils.md) function.
-- 🔷 **[`TestGetFilesLastModified`](files/tests/test_stale_detection.md)** (`test_stale_detection.py`) - Tests for [get_files_last_modified](files/src/local_deepwiki/core/git_utils.md) function.
-- 🔷 **[`TestGetGitRemoteUrl`](files/tests/test_git_utils.md)** (`test_git_utils.py`) - Tests for [get_git_remote_url](files/src/local_deepwiki/core/git_utils.md) function.
-- 🔷 **[`TestGetLineBlame`](files/tests/test_git_utils.md)** (`test_git_utils.py`) - Tests for [get_line_blame](files/src/local_deepwiki/core/git_utils.md) function.
+- 🔷 **[`TestGetFileEntityBlame`](files/tests/test_git_utils.md)** (`test_git_utils.py`) - Tests for get_file_entity_blame function.
+- 🔷 **[`TestGetFileExamples`](files/tests/test_test_examples.md)** (`test_test_examples.py`) - Tests for get_file_examples function.
+- 🔷 **[`TestGetFileLastModified`](files/tests/test_git_utils.md)** (`test_git_utils.py`) - Tests for get_file_last_modified function.
+- 🔷 **[`TestGetFileLastModified`](files/tests/test_stale_detection.md)** (`test_stale_detection.py`) - Tests for get_file_last_modified function.
+- 🔷 **[`TestGetFilesLastModified`](files/tests/test_git_utils.md)** (`test_git_utils.py`) - Tests for get_files_last_modified function.
+- 🔷 **[`TestGetFilesLastModified`](files/tests/test_stale_detection.md)** (`test_stale_detection.py`) - Tests for get_files_last_modified function.
+- 🔷 **[`TestGetFileSuggestions`](files/tests/test_fuzzy_search.md)** (`test_fuzzy_search.py`) - Tests for the get_file_suggestions method (lines 582-618).
+- 🔷 **[`TestGetFunctionBodyEdgeCases`](files/tests/test_test_examples.md)** (`test_test_examples.py`) - Tests for _get_function_body edge cases.
+- 🔷 **[`TestGetFunctionNameEdgeCases`](files/tests/test_test_examples.md)** (`test_test_examples.py`) - Tests for _get_function_name edge cases.
+- 🔷 **[`TestGetGitRemoteUrl`](files/tests/test_git_utils.md)** (`test_git_utils.py`) - Tests for get_git_remote_url function.
+- 🔷 **[`TestGetLineBlame`](files/tests/test_git_utils.md)** (`test_git_utils.py`) - Tests for get_line_blame function.
+- 🔷 **[`TestGetLineBlameExceptionHandling`](files/tests/test_git_utils.md)** (`test_git_utils.py`) - Additional tests for get_line_blame exception handling.
 - 🔷 **[`TestGetLLMProvider`](files/tests/test_provider_factories.md)** (`test_provider_factories.py`) - Tests for get_llm_provider factory function.
-- 🔷 **[`TestGetLogger`](files/tests/test_logging_coverage.md)** (`test_logging_coverage.py`) - Tests for [get_logger](files/src/local_deepwiki/logging.md) function.
+- 🔷 **[`TestGetLogger`](files/tests/test_logging_coverage.md)** (`test_logging_coverage.py`) - Tests for get_logger function.
+- 🔷 **[`TestGetMainDefinitionLines`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Tests for get_main_definition_lines functionality.
 - 🔷 **[`TestGetMainDefinitionLines`](files/tests/test_wiki_coverage.md)** (`test_wiki_coverage.py`) - Tests for _get_main_definition_lines method.
-- 🔷 **[`TestGetParentClasses`](files/tests/test_chunker.md)** (`test_chunker.py`) - Tests for [get_parent_classes](files/src/local_deepwiki/core/chunker.md) function.
-- 🔷 **[`TestGetRangeBlame`](files/tests/test_git_utils.md)** (`test_git_utils.py`) - Tests for [get_range_blame](files/src/local_deepwiki/core/git_utils.md) function.
-- 🔷 **[`TestGetRepoInfo`](files/tests/test_git_utils.md)** (`test_git_utils.py`) - Tests for [get_repo_info](files/src/local_deepwiki/core/git_utils.md) function.
+- 🔷 **[`TestGetParentClasses`](files/tests/test_chunker.md)** (`test_chunker.py`) - Tests for get_parent_classes function.
+- 🔷 **[`TestGetPendingChanges`](files/tests/test_watcher.md)** (`test_watcher.py`) - Test get_pending_changes method.
+- 🔷 **[`TestGetProgressRegistry`](files/tests/test_progress.md)** (`test_progress.py`) - Tests for the global registry.
+- 🔷 **[`TestGetPromptManager`](files/tests/test_prompts.md)** (`test_prompts.py`) - Tests for get_prompt_manager factory function.
+- 🔷 **[`TestGetRangeBlame`](files/tests/test_git_utils.md)** (`test_git_utils.py`) - Tests for get_range_blame function.
+- 🔷 **[`TestGetRangeBlameExceptionHandling`](files/tests/test_git_utils.md)** (`test_git_utils.py`) - Additional tests for get_range_blame exception handling.
+- 🔷 **[`TestGetRepoInfo`](files/tests/test_git_utils.md)** (`test_git_utils.py`) - Tests for get_repo_info function.
+- 🔷 **[`TestGetRoleForIdentifier`](files/tests/test_role_config.md)** (`test_role_config.py`) - Tests for RoleManager.get_role_for_identifier method.
+- 🔷 **[`TestGetStatus`](files/tests/test_indexer.md)** (`test_indexer.py`) - Tests for get_status method.
+- 🔷 **[`TestGetTypeDefinitionsUsed`](files/tests/test_context_builder.md)** (`test_context_builder.py`) - Tests for get_type_definitions_used function.
+- 🔷 **[`TestGetWikiLink`](files/tests/test_coverage.md)** (`test_coverage.py`) - Tests for _get_wiki_link function.
 - 🔷 **[`TestGetWikiLink`](files/tests/test_glossary.md)** (`test_glossary.py`) - Tests for _get_wiki_link function.
-- 🔷 **[`TestGetWikiStructure`](files/tests/test_web.md)** (`test_web.py`) - Tests for [get_wiki_structure](files/src/local_deepwiki/web/app.md) function.
+- 🔷 **[`TestGetWikiStructure`](files/tests/test_web.md)** (`test_web.py`) - Tests for get_wiki_structure function.
+- 🔷 **[`TestGlobalController`](files/tests/test_repository_access.md)** (`test_repository_access.py`) - Tests for global controller functions.
+- 🔷 **[`TestGlobalEventEmitter`](files/tests/test_events.md)** (`test_events.py`) - Tests for global emitter singleton.
+- 🔷 **[`TestGlobalLifecycle`](files/tests/test_events.md)** (`test_events.py`) - Tests for global lifecycle management.
+- 🔷 **[`TestGlobalRateLimiter`](files/tests/test_rate_limiter.md)** (`test_rate_limiter.py`) - Tests for global rate limiter functions.
+- 🔷 **[`TestGlobalRegistry`](files/tests/test_plugins.md)** (`test_plugins.py`) - Tests for global registry functions.
+- 🔷 **[`TestGlobalRegistryFunctions`](files/tests/test_plugin_registry.md)** (`test_plugin_registry.py`) - Tests for global registry singleton functions.
+- 🔷 **[`TestGlobalSingleton`](files/tests/test_access_control.md)** (`test_access_control.py`) - Tests for the global access controller singleton pattern.
+- 🔷 **[`TestGlobalSingletonFunctions`](files/tests/test_role_config.md)** (`test_role_config.py`) - Tests for global role manager singleton functions.
+- 🔷 **[`TestGlobPatterns`](files/tests/test_repository_access.md)** (`test_repository_access.py`) - Tests for glob pattern matching.
 - 🔷 **[`TestGoCallExtraction`](files/tests/test_callgraph.md)** (`test_callgraph.py`) - Test call extraction for Go code.
-- 🔷 **[`TestGroupEntitiesByLetter`](files/tests/test_glossary.md)** (`test_glossary.py`) - Tests for [group_entities_by_letter](files/src/local_deepwiki/generators/glossary.md) function.
-- 🔷 **[`TestHandleAskQuestion`](files/tests/test_server_handlers.md)** (`test_server_handlers.py`) - Tests for [handle_ask_question](files/src/local_deepwiki/handlers.md) handler.
-- 🔷 **[`TestHandleAskQuestionExtended`](files/tests/test_handlers_coverage.md)** (`test_handlers_coverage.py`) - Extended tests for [handle_ask_question](files/src/local_deepwiki/handlers.md) handler.
-- 🔷 **[`TestHandleDeepResearch`](files/tests/test_handlers_coverage.md)** (`test_handlers_coverage.py`) - Tests for [handle_deep_research](files/src/local_deepwiki/handlers.md) handler.
+- 🔷 **[`TestGoogleDocstringEdgeCases`](files/tests/test_api_docs.md)** (`test_api_docs.py`) - Test Google docstring parsing edge cases.
+- 🔷 **[`TestGroupEntitiesByLetter`](files/tests/test_glossary.md)** (`test_glossary.py`) - Tests for group_entities_by_letter function.
+- 🔷 **[`TestHandleAskQuestion`](files/tests/test_server_handlers.md)** (`test_server_handlers.py`) - Tests for handle_ask_question handler.
+- 🔷 **[`TestHandleAskQuestionExtended`](files/tests/test_handlers_coverage.md)** (`test_handlers_coverage.py`) - Extended tests for handle_ask_question handler.
+- 🔷 **[`TestHandleCancelResearch`](files/tests/test_handlers_coverage.md)** (`test_handlers_coverage.py`) - Tests for handle_cancel_research handler.
+- 🔷 **[`TestHandleDeepResearch`](files/tests/test_handlers_coverage.md)** (`test_handlers_coverage.py`) - Tests for handle_deep_research handler.
 - 🔷 **[`TestHandleDeepResearch`](files/tests/test_deep_research.md)** (`test_deep_research.py`) - Tests for the MCP server handler.
-- 🔷 **[`TestHandleDeepResearchErrorHandling`](files/tests/test_handlers_coverage.md)** (`test_handlers_coverage.py`) - Tests for [handle_deep_research](files/src/local_deepwiki/handlers.md) error handling paths.
+- 🔷 **[`TestHandleDeepResearchErrorHandling`](files/tests/test_handlers_coverage.md)** (`test_handlers_coverage.py`) - Tests for handle_deep_research error handling paths.
 - 🔷 **[`TestHandleDeepResearchImpl`](files/tests/test_handlers_coverage.md)** (`test_handlers_coverage.py`) - Tests for _handle_deep_research_impl implementation.
-- 🔷 **[`TestHandleExportWikiHtml`](files/tests/test_server_handlers.md)** (`test_server_handlers.py`) - Tests for [handle_export_wiki_html](files/src/local_deepwiki/handlers.md) handler.
-- 🔷 **[`TestHandleExportWikiPdf`](files/tests/test_handlers_coverage.md)** (`test_handlers_coverage.py`) - Tests for [handle_export_wiki_pdf](files/src/local_deepwiki/handlers.md) handler.
-- 🔷 **[`TestHandleIndexRepository`](files/tests/test_server_handlers.md)** (`test_server_handlers.py`) - Tests for [handle_index_repository](files/src/local_deepwiki/handlers.md) handler.
-- 🔷 **[`TestHandleIndexRepositoryExtended`](files/tests/test_handlers_coverage.md)** (`test_handlers_coverage.py`) - Extended tests for [handle_index_repository](files/src/local_deepwiki/handlers.md) handler.
-- 🔷 **[`TestHandleIndexRepositoryProgressCallback`](files/tests/test_handlers_coverage.md)** (`test_handlers_coverage.py`) - Tests for [handle_index_repository](files/src/local_deepwiki/handlers.md) progress callback.
-- 🔷 **[`TestHandleReadWikiPage`](files/tests/test_server_handlers.md)** (`test_server_handlers.py`) - Tests for [handle_read_wiki_page](files/src/local_deepwiki/handlers.md) handler.
-- 🔷 **[`TestHandleReadWikiPageContent`](files/tests/test_handlers_coverage.md)** (`test_handlers_coverage.py`) - Tests for [handle_read_wiki_page](files/src/local_deepwiki/handlers.md) content handling.
-- 🔷 **[`TestHandleReadWikiPageExtended`](files/tests/test_handlers_coverage.md)** (`test_handlers_coverage.py`) - Extended tests for [handle_read_wiki_page](files/src/local_deepwiki/handlers.md) handler.
-- 🔷 **[`TestHandleReadWikiStructure`](files/tests/test_server_handlers.md)** (`test_server_handlers.py`) - Tests for [handle_read_wiki_structure](files/src/local_deepwiki/handlers.md) handler.
-- 🔷 **[`TestHandleReadWikiStructureExtended`](files/tests/test_handlers_coverage.md)** (`test_handlers_coverage.py`) - Extended tests for [handle_read_wiki_structure](files/src/local_deepwiki/handlers.md) handler.
-- 🔷 **[`TestHandleReadWikiStructureToc`](files/tests/test_handlers_coverage.md)** (`test_handlers_coverage.py`) - Tests for [handle_read_wiki_structure](files/src/local_deepwiki/handlers.md) with toc.json.
-- 🔷 **[`TestHandleSearchCode`](files/tests/test_server_handlers.md)** (`test_server_handlers.py`) - Tests for [handle_search_code](files/src/local_deepwiki/handlers.md) handler.
-- 🔷 **[`TestHandleSearchCodeExtended`](files/tests/test_handlers_coverage.md)** (`test_handlers_coverage.py`) - Extended tests for [handle_search_code](files/src/local_deepwiki/handlers.md) handler.
-- 🔷 **[`TestHandleSearchCodeWithResults`](files/tests/test_handlers_coverage.md)** (`test_handlers_coverage.py`) - Tests for [handle_search_code](files/src/local_deepwiki/handlers.md) with mocked results.
-- 🔷 **[`TestHandleToolErrorsDecorator`](files/tests/test_handlers_coverage.md)** (`test_handlers_coverage.py`) - Tests for the [handle_tool_errors](files/src/local_deepwiki/handlers.md) [decorator](files/src/local_deepwiki/providers/base.md).
+- 🔷 **[`TestHandleDetectSecrets`](files/tests/test_new_tools.md)** (`test_new_tools.py`) - Tests for handle_detect_secrets handler.
+- 🔷 **[`TestHandleDetectStaleDocs`](files/tests/test_new_tools.md)** (`test_new_tools.py`) - Tests for handle_detect_stale_docs handler.
+- 🔷 **[`TestHandleExportWikiHtml`](files/tests/test_server_handlers.md)** (`test_server_handlers.py`) - Tests for handle_export_wiki_html handler.
+- 🔷 **[`TestHandleExportWikiPdf`](files/tests/test_handlers_coverage.md)** (`test_handlers_coverage.py`) - Tests for handle_export_wiki_pdf handler.
+- 🔷 **[`TestHandleGetApiDocs`](files/tests/test_new_tools.md)** (`test_new_tools.py`) - Tests for handle_get_api_docs handler.
+- 🔷 **[`TestHandleGetCallGraph`](files/tests/test_new_tools.md)** (`test_new_tools.py`) - Tests for handle_get_call_graph handler.
+- 🔷 **[`TestHandleGetChangelog`](files/tests/test_new_tools.md)** (`test_new_tools.py`) - Tests for handle_get_changelog handler.
+- 🔷 **[`TestHandleGetCoverage`](files/tests/test_new_tools.md)** (`test_new_tools.py`) - Tests for handle_get_coverage handler.
+- 🔷 **[`TestHandleGetDiagrams`](files/tests/test_new_tools.md)** (`test_new_tools.py`) - Tests for handle_get_diagrams handler.
+- 🔷 **[`TestHandleGetGlossary`](files/tests/test_new_tools.md)** (`test_new_tools.py`) - Tests for handle_get_glossary handler.
+- 🔷 **[`TestHandleGetIndexStatus`](files/tests/test_new_tools.md)** (`test_new_tools.py`) - Tests for handle_get_index_status handler.
+- 🔷 **[`TestHandleGetInheritance`](files/tests/test_new_tools.md)** (`test_new_tools.py`) - Tests for handle_get_inheritance handler.
+- 🔷 **[`TestHandleGetTestExamples`](files/tests/test_new_tools.md)** (`test_new_tools.py`) - Tests for handle_get_test_examples handler.
+- 🔷 **[`TestHandleIndexRepository`](files/tests/test_server_handlers.md)** (`test_server_handlers.py`) - Tests for handle_index_repository handler.
+- 🔷 **[`TestHandleIndexRepositoryExtended`](files/tests/test_handlers_coverage.md)** (`test_handlers_coverage.py`) - Extended tests for handle_index_repository handler.
+- 🔷 **[`TestHandleIndexRepositoryProgressCallback`](files/tests/test_handlers_coverage.md)** (`test_handlers_coverage.py`) - Tests for handle_index_repository progress callback.
+- 🔷 **[`TestHandleListIndexedRepos`](files/tests/test_new_tools.md)** (`test_new_tools.py`) - Tests for handle_list_indexed_repos handler.
+- 🔷 **[`TestHandleListResearchCheckpoints`](files/tests/test_handlers_coverage.md)** (`test_handlers_coverage.py`) - Tests for handle_list_research_checkpoints handler.
+- 🔷 **[`TestHandleReadWikiPage`](files/tests/test_server_handlers.md)** (`test_server_handlers.py`) - Tests for handle_read_wiki_page handler.
+- 🔷 **[`TestHandleReadWikiPageContent`](files/tests/test_handlers_coverage.md)** (`test_handlers_coverage.py`) - Tests for handle_read_wiki_page content handling.
+- 🔷 **[`TestHandleReadWikiPageExtended`](files/tests/test_handlers_coverage.md)** (`test_handlers_coverage.py`) - Extended tests for handle_read_wiki_page handler.
+- 🔷 **[`TestHandleReadWikiStructure`](files/tests/test_server_handlers.md)** (`test_server_handlers.py`) - Tests for handle_read_wiki_structure handler.
+- 🔷 **[`TestHandleReadWikiStructureExtended`](files/tests/test_handlers_coverage.md)** (`test_handlers_coverage.py`) - Extended tests for handle_read_wiki_structure handler.
+- 🔷 **[`TestHandleReadWikiStructureToc`](files/tests/test_handlers_coverage.md)** (`test_handlers_coverage.py`) - Tests for handle_read_wiki_structure with toc.json.
+- 🔷 **[`TestHandlerEntry`](files/tests/test_events.md)** (`test_events.py`) - Tests for HandlerEntry dataclass.
+- 🔷 **[`TestHandleResumeResearch`](files/tests/test_handlers_coverage.md)** (`test_handlers_coverage.py`) - Tests for handle_resume_research handler.
+- 🔷 **[`TestHandlerIntegration`](files/tests/test_errors.md)** (`test_errors.py`) - Integration tests for error handling in handlers.
+- 🔷 **[`TestHandlerIntegration`](files/tests/test_progress.md)** (`test_progress.py`) - Integration tests for handler progress integration.
+- 🔷 **[`TestHandlerLifecycle`](files/tests/test_events.md)** (`test_events.py`) - Tests for HandlerLifecycle dataclass.
+- 🔷 **[`TestHandlerStatistics`](files/tests/test_events.md)** (`test_events.py`) - Tests for handler statistics and health monitoring.
+- 🔷 **[`TestHandlerStats`](files/tests/test_events.md)** (`test_events.py`) - Tests for HandlerStats dataclass.
+- 🔷 **[`TestHandleSearchCode`](files/tests/test_server_handlers.md)** (`test_server_handlers.py`) - Tests for handle_search_code handler.
+- 🔷 **[`TestHandleSearchCodeExtended`](files/tests/test_handlers_coverage.md)** (`test_handlers_coverage.py`) - Extended tests for handle_search_code handler.
+- 🔷 **[`TestHandleSearchCodeWithResults`](files/tests/test_handlers_coverage.md)** (`test_handlers_coverage.py`) - Tests for handle_search_code with mocked results.
+- 🔷 **[`TestHandleToolErrorsDecorator`](files/tests/test_handlers_coverage.md)** (`test_handlers_coverage.py`) - Tests for the handle_tool_errors decorator.
 - 🔷 **[`TestHasMeaningfulDocstring`](files/tests/test_coverage.md)** (`test_coverage.py`) - Tests for _has_meaningful_docstring function.
-- 🔷 **[`TestHtmlExporter`](files/tests/test_html_export.md)** (`test_html_export.py`) - Tests for [HtmlExporter](files/src/local_deepwiki/export/html.md) class.
-- 🔷 **[`TestInitialIndex`](files/tests/test_watcher.md)** (`test_watcher.py`) - Test [initial_index](files/src/local_deepwiki/watcher.md) function.
+- 🔷 **[`TestHookRunner`](files/tests/test_events.md)** (`test_events.py`) - Tests for HookRunner.
+- 🔷 **[`TestHooksConfig`](files/tests/test_events.md)** (`test_events.py`) - Tests for HooksConfig in config module.
+- 🔷 **[`TestHtmlExporter`](files/tests/test_html_export.md)** (`test_html_export.py`) - Tests for HtmlExporter class.
+- 🔷 **[`TestHtmlExportPipeline`](files/tests/test_integration_pipeline.md)** (`test_integration_pipeline.py`) - Tests for the HTML export phase.
+- 🔷 **[`TestImportParsing`](files/tests/test_see_also.md)** (`test_see_also.py`) - Tests for import statement parsing edge cases.
+- 🔷 **[`TestImportParsing`](files/tests/test_dependency_graph.md)** (`test_dependency_graph.py`) - Tests for import parsing functionality.
+- 🔷 **[`TestImportPathConsistency`](files/tests/test_export_init.md)** (`test_export_init.py`) - Tests to verify import path consistency.
+- 🔷 **[`TestIncrementalGeneration`](files/tests/test_wiki_coverage.md)** (`test_wiki_coverage.py`) - Tests for incremental wiki generation (not full_rebuild).
+- 🔷 **[`TestIndexingError`](files/tests/test_errors.md)** (`test_errors.py`) - Tests for IndexingError.
+- 🔷 **[`TestIndexingErrorFactory`](files/tests/test_errors.md)** (`test_errors.py`) - Tests for the indexing_error factory function.
+- 🔷 **[`TestIndexingPipeline`](files/tests/test_integration_pipeline.md)** (`test_integration_pipeline.py`) - Tests for the repository indexing phase.
+- 🔷 **[`TestIndexStatusManagerComputeStatusHash`](files/tests/test_index_manager.md)** (`test_index_manager.py`) - Tests for IndexStatusManager.compute_status_hash method.
+- 🔷 **[`TestIndexStatusManagerCreate`](files/tests/test_index_manager.md)** (`test_index_manager.py`) - Tests for IndexStatusManager.create method.
+- 🔷 **[`TestIndexStatusManagerGetFilesNeedingReindex`](files/tests/test_index_manager.md)** (`test_index_manager.py`) - Tests for IndexStatusManager.get_files_needing_reindex me...
+- 🔷 **[`TestIndexStatusManagerLoad`](files/tests/test_index_manager.md)** (`test_index_manager.py`) - Tests for IndexStatusManager.load method.
+- 🔷 **[`TestIndexStatusManagerLoadWithMigrationInfo`](files/tests/test_index_manager.md)** (`test_index_manager.py`) - Tests for IndexStatusManager.load_with_migration_info met...
+- 🔷 **[`TestIndexStatusManagerMergeFiles`](files/tests/test_index_manager.md)** (`test_index_manager.py`) - Tests for IndexStatusManager.merge_files method.
+- 🔷 **[`TestIndexStatusManagerNeedsReindex`](files/tests/test_index_manager.md)** (`test_index_manager.py`) - Tests for IndexStatusManager.needs_reindex method.
+- 🔷 **[`TestIndexStatusManagerSave`](files/tests/test_index_manager.md)** (`test_index_manager.py`) - Tests for IndexStatusManager.save method.
+- 🔷 **[`TestIndexStatusManagerValidate`](files/tests/test_index_manager.md)** (`test_index_manager.py`) - Tests for IndexStatusManager.validate method.
+- 🔷 **[`TestIndexWithProgressCallback`](files/tests/test_indexer.md)** (`test_indexer.py`) - Tests for index method with progress callback.
+- 🔷 **[`TestInitialIndex`](files/tests/test_watcher.md)** (`test_watcher.py`) - Test initial_index function.
 - 🔷 **[`TestInjectInlineSourceCode`](files/tests/test_wiki_files_coverage.md)** (`test_wiki_files_coverage.py`) - Tests for _inject_inline_source_code function.
-- 🔷 **[`TestIsAsyncFunction`](files/tests/test_type_annotations.md)** (`test_type_annotations.py`) - Tests for [is_async_function](files/src/local_deepwiki/core/chunker.md) function.
+- 🔷 **[`TestIntegration`](files/tests/test_role_config.md)** (`test_role_config.py`) - Integration tests for role_config module.
+- 🔷 **[`TestIntegrationScenarios`](files/tests/test_credentials.md)** (`test_credentials.py`) - Integration-style tests combining get_api_key and validat...
+- 🔷 **[`TestIntegrationWithHandlers`](files/tests/test_repository_access.md)** (`test_repository_access.py`) - Integration tests for handler behavior.
+- 🔷 **[`TestInteractiveRun`](files/tests/test_interactive_search.md)** (`test_interactive_search.py`) - Tests for the interactive run method.
+- 🔷 **[`TestInteractiveSearch`](files/tests/test_interactive_search.md)** (`test_interactive_search.py`) - Tests for InteractiveSearch class.
+- 🔷 **[`TestInternalFunctionsDirectly`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Direct tests for internal functions to ensure coverage.
+- 🔷 **[`TestInternalImportEdgeCases`](files/tests/test_dependency_graph.md)** (`test_dependency_graph.py`) - Tests for _is_internal_import edge cases (lines 559, 567,...
+- 🔷 **[`TestInternalImportEndsWithModule`](files/tests/test_dependency_graph.md)** (`test_dependency_graph.py`) - Test for line 569 - import ends with module.
+- 🔷 **[`TestInternalImportResolution`](files/tests/test_dependency_graph.md)** (`test_dependency_graph.py`) - Tests for internal import resolution.
+- 🔷 **[`TestIsAsyncFunction`](files/tests/test_type_annotations.md)** (`test_type_annotations.py`) - Tests for is_async_function function.
 - 🔷 **[`TestIsBuiltinOrNoise`](files/tests/test_callgraph.md)** (`test_callgraph.py`) - Test filtering of built-in functions.
-- 🔷 **[`TestIsGithubRepo`](files/tests/test_git_utils.md)** (`test_git_utils.py`) - Tests for [is_github_repo](files/src/local_deepwiki/core/git_utils.md) function.
+- 🔷 **[`TestIsGithubRepo`](files/tests/test_git_utils.md)** (`test_git_utils.py`) - Tests for is_github_repo function.
+- 🔷 **[`TestIsInteractive`](files/tests/test_cli_progress.md)** (`test_cli_progress.py`) - Tests for is_interactive function.
 - 🔷 **[`TestIsMmdcAvailable`](files/tests/test_pdf_export.md)** (`test_pdf_export.py`) - Tests for mermaid CLI availability check.
+- 🔷 **[`TestIsTestModule`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for _is_test_module function.
+- 🔷 **[`TestIsTestPath`](files/tests/test_dependency_graph.md)** (`test_dependency_graph.py`) - Tests for _is_test_path function.
 - 🔷 **[`TestJavaCallExtraction`](files/tests/test_callgraph.md)** (`test_callgraph.py`) - Test call extraction for Java code.
 - 🔷 **[`TestJavaScriptCallExtraction`](files/tests/test_callgraph.md)** (`test_callgraph.py`) - Test call extraction for JavaScript code.
 - 🔷 **[`TestJsBuiltinNoise`](files/tests/test_callgraph.md)** (`test_callgraph.py`) - Test JavaScript/TypeScript built-in noise filtering.
+- 🔷 **[`TestKeyboardHandling`](files/tests/test_interactive_search.md)** (`test_interactive_search.py`) - Tests for keyboard handling (mocked).
+- 🔷 **[`TestLanguageParserPlugin`](files/tests/test_plugins.md)** (`test_plugins.py`) - Tests for LanguageParserPlugin.
+- 🔷 **[`TestLargeClassWithInheritance`](files/tests/test_chunker.md)** (`test_chunker.py`) - Tests for large class with parent classes - covers line 782.
 - 🔷 **[`TestLargeFileHandling`](files/tests/test_parser.md)** (`test_parser.py`) - Tests for memory-efficient large file handling.
-- 🔷 **[`TestLLMCache`](files/tests/test_llm_cache.md)** (`test_llm_cache.py`) - Tests for the [LLMCache](files/src/local_deepwiki/core/llm_cache.md) class.
-- 🔷 **[`TestLLMCacheConfig`](files/tests/test_llm_cache.md)** (`test_llm_cache.py`) - Tests for [LLMCacheConfig](files/src/local_deepwiki/config.md) validation.
-- 🔷 **[`TestLLMCacheEdgeCases`](files/tests/test_llm_cache.md)** (`test_llm_cache.py`) - Tests for [LLMCache](files/src/local_deepwiki/core/llm_cache.md) edge cases and exception handling.
+- 🔷 **[`TestLatencyStats`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Tests for LatencyStats helper class.
+- 🔷 **[`TestLayoutAndDisplay`](files/tests/test_interactive_search.md)** (`test_interactive_search.py`) - Tests for layout building and display methods.
+- 🔷 **[`TestLazyChunkLoader`](files/tests/test_vectorstore_pagination.md)** (`test_vectorstore_pagination.py`) - Tests for LazyChunkLoader class.
+- 🔷 **[`TestLazyImportBehavior`](files/tests/test_export_init.md)** (`test_export_init.py`) - Tests for lazy import behavior characteristics.
+- 🔷 **[`TestLazyImportsPdfWithWeasyPrint`](files/tests/test_export_init.md)** (`test_export_init.py`) - Tests for lazy PDF imports when WeasyPrint is available.
+- 🔷 **[`TestLazyIndexIntegration`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Integration tests for lazy index with full workflow.
+- 🔷 **[`TestLazyIndexLatencyTrigger`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Tests for on-demand index creation triggered by latency.
+- 🔷 **[`TestLazyIndexManager`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Tests for LazyIndexManager and lazy vector index creation.
+- 🔷 **[`TestLazyIndexScheduling`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Tests for background index creation scheduling.
+- 🔷 **[`TestLazyMainDefinitionLines`](files/tests/test_vectorstore_pagination.md)** (`test_vectorstore_pagination.py`) - Tests for lazy main definition lines functionality.
+- 🔷 **[`TestLifecycleHooks`](files/tests/test_events.md)** (`test_events.py`) - Tests for handler lifecycle hooks.
+- 🔷 **[`TestListTools`](files/tests/test_server.md)** (`test_server.py`) - Tests for the list_tools function.
+- 🔷 **[`TestLLMCache`](files/tests/test_llm_cache.md)** (`test_llm_cache.py`) - Tests for the LLMCache class.
+- 🔷 **[`TestLLMCacheConfig`](files/tests/test_llm_cache.md)** (`test_llm_cache.py`) - Tests for LLMCacheConfig validation.
+- 🔷 **[`TestLLMCacheEdgeCases`](files/tests/test_llm_cache.md)** (`test_llm_cache.py`) - Tests for LLMCache edge cases and exception handling.
+- 🔷 **[`TestLLMProvider`](files/tests/test_base_provider.md)** (`test_base_provider.py`) - Test implementation that calls super.
+- 🔷 **[`TestLLMProvider`](files/tests/test_base_provider.md)** (`test_base_provider.py`) - Test implementation.
+- 🔷 **[`TestLLMProvider`](files/tests/test_base_provider.md)** (`test_base_provider.py`) - Test implementation.
+- 🔷 **[`TestLLMProvider`](files/tests/test_base_provider.md)** (`test_base_provider.py`) - Test implementation.
+- 🔷 **[`TestLLMProviderAbstractMethods`](files/tests/test_base_provider.md)** (`test_base_provider.py`) - Tests for LLMProvider abstract method coverage.
+- 🔷 **[`TestLLMProviderContract`](files/tests/test_providers.md)** (`test_providers.py`) - Tests for LLM provider base class contract.
+- 🔷 **[`TestLoadConfigFromEnv`](files/tests/test_config.md)** (`test_config.py`) - Tests for load_config_from_env function.
 - 🔷 **[`TestLoadExistingPage`](files/tests/test_incremental_wiki.md)** (`test_incremental_wiki.py`) - Test loading existing wiki pages.
-- 🔷 **[`TestLocalEmbeddingProvider`](files/tests/test_local_embedding_provider.md)** (`test_local_embedding_provider.py`) - Tests for [LocalEmbeddingProvider](files/src/local_deepwiki/providers/embeddings/local.md).
+- 🔷 **[`TestLoadFromDirectory`](files/tests/test_plugin_registry.md)** (`test_plugin_registry.py`) - Tests for load_from_directory method edge cases.
+- 🔷 **[`TestLoadFromEntryPoints`](files/tests/test_plugin_registry.md)** (`test_plugin_registry.py`) - Tests for load_from_entry_points method.
+- 🔷 **[`TestLoadPreviousStatus`](files/tests/test_indexer.md)** (`test_indexer.py`) - Tests for _load_previous_status method.
+- 🔷 **[`TestLoadStatusErrors`](files/tests/test_indexer.md)** (`test_indexer.py`) - Tests for error handling in _load_status.
+- 🔷 **[`TestLocalEmbeddingProvider`](files/tests/test_local_embedding_provider.md)** (`test_local_embedding_provider.py`) - Tests for LocalEmbeddingProvider.
 - 🔷 **[`TestLoggingConstants`](files/tests/test_logging_coverage.md)** (`test_logging_coverage.py`) - Tests for logging constants.
 - 🔷 **[`TestLoggingIntegration`](files/tests/test_logging_coverage.md)** (`test_logging_coverage.py`) - Integration tests for logging functionality.
-- 🔷 **[`TestMain`](files/tests/test_watcher.md)** (`test_watcher.py`) - Test [main](files/src/local_deepwiki/export/html.md) CLI entry point.
-- 🔷 **[`TestMainAndRunServer`](files/tests/test_web.md)** (`test_web.py`) - Tests for [main](files/src/local_deepwiki/export/html.md)() and [run_server](files/src/local_deepwiki/web/app.md)() functions.
-- 🔷 **[`TestMainCli`](files/tests/test_pdf_export.md)** (`test_pdf_export.py`) - Tests for the [main](files/src/local_deepwiki/export/html.md)() CLI entry point.
+- 🔷 **[`TestLogRotationConfiguration`](files/tests/test_audit.md)** (`test_audit.py`) - Tests for log rotation configuration.
+- 🔷 **[`TestMain`](files/tests/test_config_cli.md)** (`test_config_cli.py`) - Tests for main function.
+- 🔷 **[`TestMain`](files/tests/test_html_export.md)** (`test_html_export.py`) - Tests for the main() CLI entry point.
+- 🔷 **[`TestMain`](files/tests/test_watcher.md)** (`test_watcher.py`) - Test main CLI entry point.
+- 🔷 **[`TestMainAndRunServer`](files/tests/test_web.md)** (`test_web.py`) - Tests for main() and run_server() functions.
+- 🔷 **[`TestMainCli`](files/tests/test_pdf_export.md)** (`test_pdf_export.py`) - Tests for the main() CLI entry point.
+- 🔷 **[`TestMainEntryPoint`](files/tests/test_html_export.md)** (`test_html_export.py`) - Test for the __main__ entry point.
+- 🔷 **[`TestMainEntryPoint`](files/tests/test_server.md)** (`test_server.py`) - Tests for __name__ == '__main__' block (line 273).
+- 🔷 **[`TestMainFunction`](files/tests/test_interactive_search.md)** (`test_interactive_search.py`) - Tests for the main CLI entry point.
+- 🔷 **[`TestMainFunction`](files/tests/test_server.md)** (`test_server.py`) - Tests for the main entry point.
+- 🔷 **[`TestMainFunctionInnerRun`](files/tests/test_server.md)** (`test_server.py`) - Tests for the inner run() coroutine in main().
 - 🔷 **[`TestManifestCaching`](files/tests/test_manifest.md)** (`test_manifest.py`) - Tests for manifest caching functionality.
+- 🔷 **[`TestMapExceptionToDeepWikiError`](files/tests/test_errors.md)** (`test_errors.py`) - Tests for map_exception_to_deepwiki_error function.
+- 🔷 **[`TestMarkdownGenerationEdgeCases`](files/tests/test_api_docs.md)** (`test_api_docs.py`) - Test markdown generation edge cases.
+- 🔷 **[`TestMatchesPathPattern`](files/tests/test_fuzzy_search.md)** (`test_fuzzy_search.py`) - Tests for matches_path_pattern function.
+- 🔷 **[`TestMaxItemsLimit`](files/tests/test_see_also.md)** (`test_see_also.py`) - Tests for max_items limit in See Also generation.
+- 🔷 **[`TestMemoryAwareBatching`](files/tests/test_vectorstore_pagination.md)** (`test_vectorstore_pagination.py`) - Tests for memory-aware batch sizing.
+- 🔷 **[`TestMergeConfigs`](files/tests/test_config.md)** (`test_config.py`) - Tests for merge_configs function.
+- 🔷 **[`TestMermaidCliIntegration`](files/tests/test_pdf_export.md)** (`test_pdf_export.py`) - Integration tests for mermaid diagram rendering.
 - 🔷 **[`TestMermaidCliRendering`](files/tests/test_pdf_export.md)** (`test_pdf_export.py`) - Tests for mermaid rendering with CLI available (uses PNG).
 - 🔷 **[`TestMermaidHandling`](files/tests/test_pdf_export.md)** (`test_pdf_export.py`) - Tests for mermaid diagram handling in PDF export without ...
+- 🔷 **[`TestMermaidRendering`](files/tests/test_dependency_graph.md)** (`test_dependency_graph.py`) - Tests for Mermaid diagram rendering.
+- 🔷 **[`TestMethodChunkCollection`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for METHOD chunk collection in diagrams.
+- 🔷 **[`TestMethodsByClassInitialization`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for methods_by_class initialization during extracti...
+- 🔷 **[`TestMethodSignatureEdgeCases`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for method signature edge cases.
+- 🔷 **[`TestMethodWithoutSignature`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for method display without signature.
+- 🔷 **[`TestMigrationFunctions`](files/tests/test_index_manager.md)** (`test_index_manager.py`) - Tests for migration helper functions.
+- 🔷 **[`TestMockedASTEdgeCases`](files/tests/test_api_docs.md)** (`test_api_docs.py`) - Test edge cases using mocked AST nodes.
 - 🔷 **[`TestModelRepr`](files/tests/test_models.md)** (`test_models.py`) - Tests for model __repr__ methods.
 - 🔷 **[`TestModuleDocstring`](files/tests/test_chunker.md)** (`test_chunker.py`) - Tests for module docstring extraction.
+- 🔷 **[`TestModuleDocstring`](files/tests/test_export_init.md)** (`test_export_init.py`) - Tests for module-level documentation.
+- 🔷 **[`TestModuleEntryPoint`](files/tests/test_interactive_search.md)** (`test_interactive_search.py`) - Tests for __name__ == '__main__' execution.
+- 🔷 **[`TestModuleGraphCircularEdgeMarking`](files/tests/test_dependency_graph.md)** (`test_dependency_graph.py`) - Tests for circular edge marking in module graphs (lines 2...
 - 🔷 **[`TestModuleLevelInit`](files/tests/test_logging_coverage.md)** (`test_logging_coverage.py`) - Tests for module-level initialization.
+- 🔷 **[`TestModuleLoadingDetails`](files/tests/test_plugin_registry.md)** (`test_plugin_registry.py`) - Detailed tests for module loading behavior.
+- 🔷 **[`TestModuleOverviewEdgeCases`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for module overview edge cases.
+- 🔷 **[`TestModuleOverviewLibDirectory`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Test module overview with lib directory prefix.
+- 🔷 **[`TestModuleOverviewPkgDirectory`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Test module overview with pkg directory prefix.
+- 🔷 **[`TestModuleOverviewRootDirectory`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Test for _root counting in module overview (line 854).
+- 🔷 **[`TestModuleOverviewRootFiles`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for module overview with root-level files (line 854).
+- 🔷 **[`TestModulePageProcessing`](files/tests/test_wiki_coverage.md)** (`test_wiki_coverage.py`) - Tests for module page processing (lines 373-374).
+- 🔷 **[`TestModuleToFilePath`](files/tests/test_see_also.md)** (`test_see_also.py`) - Tests for module to file path resolution.
 - 🔷 **[`TestModuleToWikiPath`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for _module_to_wiki_path function.
+- 🔷 **[`TestMultiPhaseProgress`](files/tests/test_cli_progress.md)** (`test_cli_progress.py`) - Tests for MultiPhaseProgress class.
 - 🔷 **[`TestMultipleManifests`](files/tests/test_manifest.md)** (`test_manifest.py`) - Tests for handling multiple manifest files.
+- 🔷 **[`TestNameEntry`](files/tests/test_fuzzy_search.md)** (`test_fuzzy_search.py`) - Tests for the NameEntry dataclass.
 - 🔷 **[`TestNodeHelpers`](files/tests/test_parser.md)** (`test_parser.py`) - Test node helper functions.
-- 🔷 **[`TestOllamaConnectionError`](files/tests/test_ollama_health.md)** (`test_ollama_health.py`) - Tests for [OllamaConnectionError](files/src/local_deepwiki/providers/llm/ollama.md).
-- 🔷 **[`TestOllamaConnectionError`](files/tests/test_provider_errors.md)** (`test_provider_errors.py`) - Tests for [OllamaConnectionError](files/src/local_deepwiki/providers/llm/ollama.md).
-- 🔷 **[`TestOllamaModelNotFoundError`](files/tests/test_ollama_health.md)** (`test_ollama_health.py`) - Tests for [OllamaModelNotFoundError](files/src/local_deepwiki/providers/llm/ollama.md).
-- 🔷 **[`TestOllamaModelNotFoundError`](files/tests/test_provider_errors.md)** (`test_provider_errors.py`) - Tests for [OllamaModelNotFoundError](files/src/local_deepwiki/providers/llm/ollama.md).
-- 🔷 **[`TestOllamaProviderGenerate`](files/tests/test_ollama_health.md)** (`test_ollama_health.py`) - Tests for [OllamaProvider](files/src/local_deepwiki/providers/llm/ollama.md).generate() with health checking.
-- 🔷 **[`TestOllamaProviderGenerate`](files/tests/test_provider_errors.md)** (`test_provider_errors.py`) - Tests for [OllamaProvider](files/src/local_deepwiki/providers/llm/ollama.md) generate method.
-- 🔷 **[`TestOllamaProviderGenerateErrors`](files/tests/test_provider_errors.md)** (`test_provider_errors.py`) - Tests for [OllamaProvider](files/src/local_deepwiki/providers/llm/ollama.md) generate error handling.
-- 🔷 **[`TestOllamaProviderGenerateStream`](files/tests/test_ollama_health.md)** (`test_ollama_health.py`) - Tests for [OllamaProvider](files/src/local_deepwiki/providers/llm/ollama.md).generate_stream() with health ch...
-- 🔷 **[`TestOllamaProviderGenerateStream`](files/tests/test_provider_errors.md)** (`test_provider_errors.py`) - Tests for [OllamaProvider](files/src/local_deepwiki/providers/llm/ollama.md) generate_stream method.
-- 🔷 **[`TestOllamaProviderHealthCheck`](files/tests/test_ollama_health.md)** (`test_ollama_health.py`) - Tests for [OllamaProvider](files/src/local_deepwiki/providers/llm/ollama.md).check_health().
-- 🔷 **[`TestOllamaProviderHealthCheck`](files/tests/test_provider_errors.md)** (`test_provider_errors.py`) - Tests for [OllamaProvider](files/src/local_deepwiki/providers/llm/ollama.md) health check.
-- 🔷 **[`TestOllamaProviderName`](files/tests/test_provider_errors.md)** (`test_provider_errors.py`) - Tests for [OllamaProvider](files/src/local_deepwiki/providers/llm/ollama.md) name property.
-- 🔷 **[`TestOpenAIEmbeddingProvider`](files/tests/test_openai_embedding_provider.md)** (`test_openai_embedding_provider.py`) - Tests for [OpenAIEmbeddingProvider](files/src/local_deepwiki/providers/embeddings/openai.md).
-- 🔷 **[`TestOpenAILLMProvider`](files/tests/test_llm_providers.md)** (`test_llm_providers.py`) - Tests for [OpenAILLMProvider](files/src/local_deepwiki/providers/llm/openai.md).
-- 🔷 **[`TestOverviewPageEdgeCases`](files/tests/test_wiki_pages_coverage.md)** (`test_wiki_pages_coverage.py`) - Edge case tests for [generate_overview_page](files/src/local_deepwiki/generators/wiki_pages.md).
+- 🔷 **[`TestNodeNameEdgeCases`](files/tests/test_parser.md)** (`test_parser.py`) - Test edge cases for get_node_name function.
+- 🔷 **[`TestNoParametersFunction`](files/tests/test_api_docs.md)** (`test_api_docs.py`) - Test function with no parameters at all.
+- 🔷 **[`TestNotIndexedError`](files/tests/test_errors.md)** (`test_errors.py`) - Tests for not_indexed_error factory.
+- 🔷 **[`TestNumpyDocstringEdgeCases`](files/tests/test_api_docs.md)** (`test_api_docs.py`) - Test NumPy docstring parsing edge cases.
+- 🔷 **[`TestOffMethod`](files/tests/test_events.md)** (`test_events.py`) - Tests for the off() method.
+- 🔷 **[`TestOllamaConnectionError`](files/tests/test_ollama_health.md)** (`test_ollama_health.py`) - Tests for OllamaConnectionError.
+- 🔷 **[`TestOllamaConnectionError`](files/tests/test_provider_errors.md)** (`test_provider_errors.py`) - Tests for OllamaConnectionError.
+- 🔷 **[`TestOllamaModelNotFoundError`](files/tests/test_ollama_health.md)** (`test_ollama_health.py`) - Tests for OllamaModelNotFoundError.
+- 🔷 **[`TestOllamaModelNotFoundError`](files/tests/test_provider_errors.md)** (`test_provider_errors.py`) - Tests for OllamaModelNotFoundError.
+- 🔷 **[`TestOllamaProviderGenerate`](files/tests/test_ollama_health.md)** (`test_ollama_health.py`) - Tests for OllamaProvider.generate() with health checking.
+- 🔷 **[`TestOllamaProviderGenerate`](files/tests/test_provider_errors.md)** (`test_provider_errors.py`) - Tests for OllamaProvider generate method.
+- 🔷 **[`TestOllamaProviderGenerateErrors`](files/tests/test_provider_errors.md)** (`test_provider_errors.py`) - Tests for OllamaProvider generate error handling.
+- 🔷 **[`TestOllamaProviderGenerateStream`](files/tests/test_ollama_health.md)** (`test_ollama_health.py`) - Tests for OllamaProvider.generate_stream() with health ch...
+- 🔷 **[`TestOllamaProviderGenerateStream`](files/tests/test_provider_errors.md)** (`test_provider_errors.py`) - Tests for OllamaProvider generate_stream method.
+- 🔷 **[`TestOllamaProviderHealthCheck`](files/tests/test_ollama_health.md)** (`test_ollama_health.py`) - Tests for OllamaProvider.check_health().
+- 🔷 **[`TestOllamaProviderHealthCheck`](files/tests/test_provider_errors.md)** (`test_provider_errors.py`) - Tests for OllamaProvider health check.
+- 🔷 **[`TestOllamaProviderName`](files/tests/test_provider_errors.md)** (`test_provider_errors.py`) - Tests for OllamaProvider name property.
+- 🔷 **[`TestOpenAIEmbeddingModelsDict`](files/tests/test_openai_embeddings.md)** (`test_openai_embeddings.py`) - Tests for OPENAI_EMBEDDING_MODELS dictionary.
+- 🔷 **[`TestOpenAIEmbeddingProvider`](files/tests/test_openai_embedding_provider.md)** (`test_openai_embedding_provider.py`) - Tests for OpenAIEmbeddingProvider.
+- 🔷 **[`TestOpenAIEmbeddingProviderCapabilities`](files/tests/test_openai_embeddings.md)** (`test_openai_embeddings.py`) - Tests for capabilities and metadata methods.
+- 🔷 **[`TestOpenAIEmbeddingProviderEdgeCases`](files/tests/test_openai_embeddings.md)** (`test_openai_embeddings.py`) - Edge case tests for OpenAIEmbeddingProvider.
+- 🔷 **[`TestOpenAIEmbeddingProviderEmbed`](files/tests/test_openai_embeddings.md)** (`test_openai_embeddings.py`) - Tests for embed method - including lines 124-128.
+- 🔷 **[`TestOpenAIEmbeddingProviderHandleApiError`](files/tests/test_openai_embeddings.md)** (`test_openai_embeddings.py`) - Tests for _handle_api_error method - lines 70-102.
+- 🔷 **[`TestOpenAIEmbeddingProviderInitialization`](files/tests/test_openai_embeddings.md)** (`test_openai_embeddings.py`) - Tests for OpenAIEmbeddingProvider initialization.
+- 🔷 **[`TestOpenAIEmbeddingProviderKeyValidation`](files/tests/test_openai_embeddings.md)** (`test_openai_embeddings.py`) - Tests for API key format validation - covering line 49.
+- 🔷 **[`TestOpenAIEmbeddingProviderValidateConnectivity`](files/tests/test_openai_embeddings.md)** (`test_openai_embeddings.py`) - Tests for validate_connectivity method - lines 148-163.
+- 🔷 **[`TestOpenAIEmbeddingProviderValidateConnectivityBug`](files/tests/test_openai_embeddings.md)** (`test_openai_embeddings.py`) - Tests for validate_connectivity method - covering lines 1...
+- 🔷 **[`TestOpenAILLMProvider`](files/tests/test_llm_providers.md)** (`test_llm_providers.py`) - Tests for OpenAILLMProvider.
+- 🔷 **[`TestOpenAIProviderCapabilities`](files/tests/test_openai_provider.md)** (`test_openai_provider.py`) - Tests for get_capabilities method.
+- 🔷 **[`TestOpenAIProviderGenerateErrors`](files/tests/test_openai_provider.md)** (`test_openai_provider.py`) - Tests for error handling in generate method.
+- 🔷 **[`TestOpenAIProviderHandleApiError`](files/tests/test_openai_provider.md)** (`test_openai_provider.py`) - Tests for _handle_api_error method.
+- 🔷 **[`TestOpenAIProviderInitialization`](files/tests/test_openai_provider.md)** (`test_openai_provider.py`) - Tests for OpenAILLMProvider initialization.
+- 🔷 **[`TestOpenAIProviderName`](files/tests/test_openai_provider.md)** (`test_openai_provider.py`) - Tests for name property.
+- 🔷 **[`TestOpenAIProviderStreamErrors`](files/tests/test_openai_provider.md)** (`test_openai_provider.py`) - Tests for error handling in generate_stream method.
+- 🔷 **[`TestOpenAIProviderValidateConnectivity`](files/tests/test_openai_provider.md)** (`test_openai_provider.py`) - Tests for validate_connectivity method.
+- 🔷 **[`TestOpenAIProviderValidateModel`](files/tests/test_openai_provider.md)** (`test_openai_provider.py`) - Tests for validate_model method.
+- 🔷 **[`TestOperationProgressRegistry`](files/tests/test_progress.md)** (`test_progress.py`) - Tests for OperationProgressRegistry class.
+- 🔷 **[`TestOverviewPageEdgeCases`](files/tests/test_wiki_pages_coverage.md)** (`test_wiki_pages_coverage.py`) - Edge case tests for generate_overview_page.
 - 🔷 **[`TestPackageJsonEdgeCases`](files/tests/test_manifest.md)** (`test_manifest.py`) - Tests for package.json edge cases.
-- 🔷 **[`TestParameter`](files/tests/test_api_docs.md)** (`test_api_docs.py`) - Test [Parameter](files/src/local_deepwiki/generators/api_docs.md) dataclass.
+- 🔷 **[`TestParallelEmbedding`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Tests for parallel embedding generation.
+- 🔷 **[`TestParallelEmbeddingIntegration`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Integration tests for parallel embedding with full Vector...
+- 🔷 **[`TestParallelEmbeddingRateLimiting`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Tests for rate limiting in parallel embedding.
+- 🔷 **[`TestParallelEmbeddingRetry`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Tests for parallel embedding retry logic.
+- 🔷 **[`TestParallelParsingPerformance`](files/tests/test_indexer.md)** (`test_indexer.py`) - Tests for parallel parsing performance logging.
+- 🔷 **[`TestParallelWorkersConfig`](files/tests/test_indexer.md)** (`test_indexer.py`) - Tests for parallel_workers configuration.
+- 🔷 **[`TestParameter`](files/tests/test_api_docs.md)** (`test_api_docs.py`) - Test Parameter dataclass.
 - 🔷 **[`TestParseCargoToml`](files/tests/test_manifest.md)** (`test_manifest.py`) - Tests for parsing Cargo.toml files.
+- 🔷 **[`TestParseDocstringAutoDetect`](files/tests/test_api_docs.md)** (`test_api_docs.py`) - Test automatic docstring format detection.
+- 🔷 **[`TestParseDocstringExamples`](files/tests/test_code_examples.md)** (`test_code_examples.py`) - Tests for the combined parse_docstring_examples function.
+- 🔷 **[`TestParseDoctestExamples`](files/tests/test_code_examples.md)** (`test_code_examples.py`) - Tests for parse_doctest_examples function.
 - 🔷 **[`TestParseExternalImport`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for _parse_external_import function.
+- 🔷 **[`TestParseExternalImportEdgeCases`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Additional tests for _parse_external_import.
+- 🔷 **[`TestParseFileErrors`](files/tests/test_indexer.md)** (`test_indexer.py`) - Tests for error handling in _parse_single_file.
+- 🔷 **[`TestParseFilesParallelErrors`](files/tests/test_indexer.md)** (`test_indexer.py`) - Tests for error handling in _parse_files_parallel.
 - 🔷 **[`TestParseGoMod`](files/tests/test_manifest.md)** (`test_manifest.py`) - Tests for parsing go.mod files.
 - 🔷 **[`TestParseGoogleDocstring`](files/tests/test_api_docs.md)** (`test_api_docs.py`) - Test Google-style docstring parsing.
+- 🔷 **[`TestParseGoogleStyleExamples`](files/tests/test_code_examples.md)** (`test_code_examples.py`) - Tests for parse_google_style_examples function.
 - 🔷 **[`TestParseImportLine`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for _parse_import_line function.
+- 🔷 **[`TestParseImportModule`](files/tests/test_context_builder.md)** (`test_context_builder.py`) - Tests for _parse_import_module function.
 - 🔷 **[`TestParseLineBlameMap`](files/tests/test_git_utils.md)** (`test_git_utils.py`) - Tests for _parse_line_blame_map function.
-- 🔷 **[`TestParseManifestExceptionHandling`](files/tests/test_manifest.md)** (`test_manifest.py`) - Tests for [parse_manifest](files/src/local_deepwiki/generators/manifest.md) exception handling.
+- 🔷 **[`TestParseLineBlameMapEdgeCases`](files/tests/test_git_utils.md)** (`test_git_utils.py`) - Tests for edge cases in _parse_line_blame_map.
+- 🔷 **[`TestParseManifestExceptionHandling`](files/tests/test_manifest.md)** (`test_manifest.py`) - Tests for parse_manifest exception handling.
 - 🔷 **[`TestParseNumpyDocstring`](files/tests/test_api_docs.md)** (`test_api_docs.py`) - Test NumPy-style docstring parsing.
 - 🔷 **[`TestParsePackageJson`](files/tests/test_manifest.md)** (`test_manifest.py`) - Tests for parsing package.json files.
 - 🔷 **[`TestParsePorcelainBlame`](files/tests/test_git_utils.md)** (`test_git_utils.py`) - Tests for _parse_all_porcelain_blame function.
+- 🔷 **[`TestParsePorcelainBlameValueError`](files/tests/test_git_utils.md)** (`test_git_utils.py`) - Tests for invalid author-time handling in blame parsing.
 - 🔷 **[`TestParsePyprojectToml`](files/tests/test_manifest.md)** (`test_manifest.py`) - Tests for parsing pyproject.toml files.
-- 🔷 **[`TestParseRemoteUrl`](files/tests/test_git_utils.md)** (`test_git_utils.py`) - Tests for [parse_remote_url](files/src/local_deepwiki/core/git_utils.md) function.
+- 🔷 **[`TestParseRemoteUrl`](files/tests/test_git_utils.md)** (`test_git_utils.py`) - Tests for parse_remote_url function.
 - 🔷 **[`TestParseRequirementsTxt`](files/tests/test_manifest.md)** (`test_manifest.py`) - Tests for parsing requirements.txt files.
+- 🔷 **[`TestPathNotFoundError`](files/tests/test_errors.md)** (`test_errors.py`) - Tests for path_not_found_error factory.
 - 🔷 **[`TestPathToModule`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for _path_to_module function.
-- 🔷 **[`TestPdfExporter`](files/tests/test_pdf_export.md)** (`test_pdf_export.py`) - Tests for [PdfExporter](files/src/local_deepwiki/export/pdf.md) class.
-- 🔷 **[`TestPdfExporterEdgeCases`](files/tests/test_pdf_export.md)** (`test_pdf_export.py`) - Tests for [PdfExporter](files/src/local_deepwiki/export/pdf.md) edge cases.
+- 🔷 **[`TestPathToModuleEdgeCases`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for _path_to_module edge cases.
+- 🔷 **[`TestPathToModuleException`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for _path_to_module exception handling (lines 766-7...
+- 🔷 **[`TestPathToModuleExceptionCoverage`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Test for complete exception coverage in _path_to_module.
+- 🔷 **[`TestPathToModuleIndexError`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Test for _path_to_module IndexError handling (lines 766-7...
+- 🔷 **[`TestPathToModuleValueError`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Test for _path_to_module ValueError handling (lines 766-7...
+- 🔷 **[`TestPathTraversal`](files/tests/test_web.md)** (`test_web.py`) - Tests for path traversal attack prevention.
+- 🔷 **[`TestPdfExporter`](files/tests/test_pdf_export.md)** (`test_pdf_export.py`) - Tests for PdfExporter class.
+- 🔷 **[`TestPdfExporterEdgeCases`](files/tests/test_pdf_export.md)** (`test_pdf_export.py`) - Tests for PdfExporter edge cases.
+- 🔷 **[`TestPdfExportIntegration`](files/tests/test_pdf_export.md)** (`test_pdf_export.py`) - Integration tests that actually create PDF files.
+- 🔷 **[`TestPdfSymbolsSet`](files/tests/test_export_init.md)** (`test_export_init.py`) - Tests for the PDF symbols set in __getattr__.
+- 🔷 **[`TestPermissionEnum`](files/tests/test_access_control.md)** (`test_access_control.py`) - Tests for the Permission enum.
+- 🔷 **[`TestPhaseStats`](files/tests/test_progress_tracker.md)** (`test_progress_tracker.py`) - Tests for PhaseStats dataclass.
+- 🔷 **[`TestPipelineErrorHandling`](files/tests/test_integration_pipeline.md)** (`test_integration_pipeline.py`) - Tests for error handling throughout the pipeline.
+- 🔷 **[`TestPluginMetadata`](files/tests/test_plugins.md)** (`test_plugins.py`) - Tests for PluginMetadata.
+- 🔷 **[`TestPluginOverwriting`](files/tests/test_plugin_registry.md)** (`test_plugin_registry.py`) - Tests for warning when plugins are overwritten.
+- 🔷 **[`TestPluginRegistry`](files/tests/test_plugins.md)** (`test_plugins.py`) - Tests for PluginRegistry.
 - 🔷 **[`TestPoetryParsing`](files/tests/test_manifest.md)** (`test_manifest.py`) - Tests for Poetry-specific pyproject.toml parsing.
 - 🔷 **[`TestPomXmlParsing`](files/tests/test_manifest.md)** (`test_manifest.py`) - Tests for pom.xml (Maven) parsing.
 - 🔷 **[`TestPrintCss`](files/tests/test_pdf_export.md)** (`test_pdf_export.py`) - Tests for print CSS content.
-- 🔷 **[`TestProjectManifest`](files/tests/test_manifest.md)** (`test_manifest.py`) - Tests for [ProjectManifest](files/src/local_deepwiki/generators/manifest.md) dataclass.
+- 🔷 **[`TestProgressBuffer`](files/tests/test_progress.md)** (`test_progress.py`) - Tests for ProgressBuffer class.
+- 🔷 **[`TestProgressCallback`](files/tests/test_cli_progress.md)** (`test_cli_progress.py`) - Tests for ProgressCallback adapter class.
+- 🔷 **[`TestProgressIntegration`](files/tests/test_cli_progress.md)** (`test_cli_progress.py`) - Integration tests for progress functionality.
+- 🔷 **[`TestProgressManager`](files/tests/test_progress.md)** (`test_progress.py`) - Tests for ProgressManager class.
+- 🔷 **[`TestProgressUpdate`](files/tests/test_progress.md)** (`test_progress.py`) - Tests for ProgressUpdate dataclass.
+- 🔷 **[`TestProjectManifest`](files/tests/test_manifest.md)** (`test_manifest.py`) - Tests for ProjectManifest dataclass.
+- 🔷 **[`TestPromptLoader`](files/tests/test_prompts.md)** (`test_prompts.py`) - Tests for PromptLoader class.
+- 🔷 **[`TestPromptManager`](files/tests/test_prompts.md)** (`test_prompts.py`) - Tests for PromptManager class.
+- 🔷 **[`TestPromptTemplate`](files/tests/test_prompts.md)** (`test_prompts.py`) - Tests for PromptTemplate class.
+- 🔷 **[`TestProviderCapabilities`](files/tests/test_providers.md)** (`test_providers.py`) - Tests for provider capability dataclasses.
+- 🔷 **[`TestProviderError`](files/tests/test_errors.md)** (`test_errors.py`) - Tests for ProviderError.
+- 🔷 **[`TestProviderErrorFactory`](files/tests/test_errors.md)** (`test_errors.py`) - Tests for the provider_error factory function.
+- 🔷 **[`TestProviderExceptions`](files/tests/test_providers.md)** (`test_providers.py`) - Tests for standardized provider exceptions.
 - 🔷 **[`TestProviderExports`](files/tests/test_provider_factories.md)** (`test_provider_factories.py`) - Tests for module exports.
+- 🔷 **[`TestProviderNames`](files/tests/test_providers.md)** (`test_providers.py`) - Tests for provider name properties.
 - 🔷 **[`TestProviderPrompts`](files/tests/test_config.md)** (`test_config.py`) - Tests for provider-specific prompts configuration.
+- 🔷 **[`TestProviderSpecificHints`](files/tests/test_errors.md)** (`test_errors.py`) - Tests for provider-specific hint generation.
+- 🔷 **[`TestProviderTypeDetection`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Tests for provider type detection.
+- 🔷 **[`TestPydanticModels`](files/tests/test_progress.md)** (`test_progress.py`) - Tests for Pydantic models.
 - 🔷 **[`TestPythonDepParsing`](files/tests/test_manifest.md)** (`test_manifest.py`) - Tests for Python dependency string parsing.
-- 🔷 **[`TestRelationshipAnalyzer`](files/tests/test_see_also.md)** (`test_see_also.py`) - Tests for [RelationshipAnalyzer](files/src/local_deepwiki/generators/see_also.md) class.
+- 🔷 **[`TestPythonParameterExtraction`](files/tests/test_chunker.md)** (`test_chunker.py`) - Tests for Python parameter type and default extraction.
+- 🔷 **[`TestRateLimitConfig`](files/tests/test_rate_limiter.md)** (`test_rate_limiter.py`) - Tests for RateLimitConfig dataclass.
+- 🔷 **[`TestRateLimiter`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Tests for the RateLimiter class.
+- 🔷 **[`TestRateLimiter`](files/tests/test_rate_limiter.md)** (`test_rate_limiter.py`) - Tests for the RateLimiter class.
+- 🔷 **[`TestRateLimiterWaiting`](files/tests/test_rate_limiter.md)** (`test_rate_limiter.py`) - Tests for rate limiter waiting behavior.
+- 🔷 **[`TestRateLimitExceeded`](files/tests/test_rate_limiter.md)** (`test_rate_limiter.py`) - Tests for RateLimitExceeded exception.
+- 🔷 **[`TestRBACModeEnum`](files/tests/test_access_control.md)** (`test_access_control.py`) - Tests for the RBACMode enum.
+- 🔷 **[`TestRecommendations`](files/tests/test_secret_detector.md)** (`test_secret_detector.py`) - Tests for remediation recommendations.
+- 🔷 **[`TestRegistryEdgeCases`](files/tests/test_plugin_registry.md)** (`test_plugin_registry.py`) - Additional edge case tests for the registry.
+- 🔷 **[`TestReindexResult`](files/tests/test_watcher.md)** (`test_watcher.py`) - Test ReindexResult dataclass.
+- 🔷 **[`TestRelationshipAnalyzer`](files/tests/test_see_also.md)** (`test_see_also.py`) - Tests for RelationshipAnalyzer class.
 - 🔷 **[`TestRelativePath`](files/tests/test_see_also.md)** (`test_see_also.py`) - Tests for _relative_path function.
 - 🔷 **[`TestRelativePath`](files/tests/test_source_refs.md)** (`test_source_refs.py`) - Tests for _relative_path function.
-- 🔷 **[`TestRenderMarkdown`](files/tests/test_web.md)** (`test_web.py`) - Tests for [render_markdown](files/src/local_deepwiki/export/html.md) function.
+- 🔷 **[`TestRenderFileGraphEdges`](files/tests/test_dependency_graph.md)** (`test_dependency_graph.py`) - Tests for _render_file_graph edge rendering (lines 768-77...
+- 🔷 **[`TestRenderMarkdown`](files/tests/test_web.md)** (`test_web.py`) - Tests for render_markdown function.
 - 🔷 **[`TestRenderMarkdown`](files/tests/test_html_export.md)** (`test_html_export.py`) - Tests for markdown rendering.
 - 🔷 **[`TestRenderMarkdownForPdf`](files/tests/test_pdf_export.md)** (`test_pdf_export.py`) - Tests for PDF-specific markdown rendering.
 - 🔷 **[`TestRenderMermaidToPng`](files/tests/test_pdf_export.md)** (`test_pdf_export.py`) - Tests for mermaid to PNG rendering.
 - 🔷 **[`TestRenderMermaidToPngSuccessPath`](files/tests/test_pdf_export.md)** (`test_pdf_export.py`) - Tests for successful mermaid PNG rendering.
 - 🔷 **[`TestRenderMermaidToSvg`](files/tests/test_pdf_export.md)** (`test_pdf_export.py`) - Tests for mermaid to SVG rendering.
 - 🔷 **[`TestRenderMermaidToSvgSuccessPath`](files/tests/test_pdf_export.md)** (`test_pdf_export.py`) - Tests for successful mermaid SVG rendering.
-- 🔷 **[`TestRepositoryWatcher`](files/tests/test_watcher.md)** (`test_watcher.py`) - Test [RepositoryWatcher](files/src/local_deepwiki/watcher.md) functionality.
+- 🔷 **[`TestRenderModuleGraphEdgeCases`](files/tests/test_dependency_graph.md)** (`test_dependency_graph.py`) - Tests for _render_module_graph edge cases (lines 699, 737).
+- 🔷 **[`TestRepositoryAccessConfig`](files/tests/test_repository_access.md)** (`test_repository_access.py`) - Tests for RepositoryAccessConfig dataclass.
+- 🔷 **[`TestRepositoryAccessController`](files/tests/test_repository_access.md)** (`test_repository_access.py`) - Tests for RepositoryAccessController.
+- 🔷 **[`TestRepositoryWatcher`](files/tests/test_watcher.md)** (`test_watcher.py`) - Test RepositoryWatcher functionality.
+- 🔷 **[`TestRepositoryWatcherCallback`](files/tests/test_watcher.md)** (`test_watcher.py`) - Test callback mechanism in RepositoryWatcher.
+- 🔷 **[`TestRequireAllPermissionsDecorator`](files/tests/test_access_control.md)** (`test_access_control.py`) - Tests for the @require_all_permissions decorator.
+- 🔷 **[`TestRequireAnyPermissionDecorator`](files/tests/test_access_control.md)** (`test_access_control.py`) - Tests for the @require_any_permission decorator.
+- 🔷 **[`TestRequirePermissionDecorator`](files/tests/test_access_control.md)** (`test_access_control.py`) - Tests for the @require_permission decorator.
+- 🔷 **[`TestRerankWithFuzzy`](files/tests/test_fuzzy_search.md)** (`test_fuzzy_search.py`) - Tests for rerank_with_fuzzy function.
 - 🔷 **[`TestResearchCancellation`](files/tests/test_deep_research.md)** (`test_deep_research.py`) - Tests for research cancellation functionality.
+- 🔷 **[`TestResearchCancellationWithCheckpoint`](files/tests/test_deep_research.md)** (`test_deep_research.py`) - Tests for cancellation with checkpoint functionality.
+- 🔷 **[`TestResearchCheckpointing`](files/tests/test_deep_research.md)** (`test_deep_research.py`) - Tests for checkpoint save/load during research.
+- 🔷 **[`TestResearchError`](files/tests/test_errors.md)** (`test_errors.py`) - Tests for ResearchError.
+- 🔷 **[`TestResearchErrorFactory`](files/tests/test_errors.md)** (`test_errors.py`) - Tests for the research_error factory function.
 - 🔷 **[`TestResearchPresets`](files/tests/test_config.md)** (`test_config.py`) - Tests for research preset functionality.
+- 🔷 **[`TestResetAuditLogger`](files/tests/test_audit.md)** (`test_audit.py`) - Tests for reset_audit_logger function.
+- 🔷 **[`TestResolveInternalImportEdgeCases`](files/tests/test_dependency_graph.md)** (`test_dependency_graph.py`) - Tests for _resolve_internal_import edge cases (lines 597-...
+- 🔷 **[`TestResourceLimitsConstants`](files/tests/test_resource_limits.md)** (`test_resource_limits.py`) - Tests for ResourceLimits constant values.
 - 🔷 **[`TestRetryableExceptions`](files/tests/test_retry.md)** (`test_retry.py`) - Tests for the RETRYABLE_EXCEPTIONS tuple.
-- 🔷 **[`TestRetryDecorator`](files/tests/test_provider_errors.md)** (`test_provider_errors.py`) - Tests for retry [decorator](files/src/local_deepwiki/providers/base.md) behavior.
+- 🔷 **[`TestRetryDecorator`](files/tests/test_provider_errors.md)** (`test_provider_errors.py`) - Tests for retry decorator behavior.
+- 🔷 **[`TestRetryWithNewExceptions`](files/tests/test_providers.md)** (`test_providers.py`) - Tests for retry behavior with new exception types.
+- 🔷 **[`TestRoleAssignment`](files/tests/test_role_config.md)** (`test_role_config.py`) - Tests for the RoleAssignment dataclass.
+- 🔷 **[`TestRoleConfig`](files/tests/test_role_config.md)** (`test_role_config.py`) - Tests for the RoleConfig dataclass.
+- 🔷 **[`TestRoleEnum`](files/tests/test_access_control.md)** (`test_access_control.py`) - Tests for the Role enum.
+- 🔷 **[`TestRoleManagerInit`](files/tests/test_role_config.md)** (`test_role_config.py`) - Tests for RoleManager initialization.
+- 🔷 **[`TestRolePermissionsMapping`](files/tests/test_access_control.md)** (`test_access_control.py`) - Tests for the ROLE_PERMISSIONS mapping.
+- 🔷 **[`TestRunSearch`](files/tests/test_interactive_search.md)** (`test_interactive_search.py`) - Tests for the run_search function.
+- 🔷 **[`TestRunSearchFunction`](files/tests/test_interactive_search.md)** (`test_interactive_search.py`) - Additional tests for the run_search function.
 - 🔷 **[`TestRustCallExtraction`](files/tests/test_callgraph.md)** (`test_callgraph.py`) - Test call extraction for Rust code.
-- 🔷 **[`TestSanitizeMermaidName`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for [sanitize_mermaid_name](files/src/local_deepwiki/generators/diagrams.md) function.
+- 🔷 **[`TestSanitizeMermaidName`](files/tests/test_dependency_graph.md)** (`test_dependency_graph.py`) - Tests for _sanitize_mermaid_name function.
+- 🔷 **[`TestSanitizeMermaidName`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for sanitize_mermaid_name function.
+- 🔷 **[`TestSanitizeStringValue`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Tests for _sanitize_string_value function.
+- 🔷 **[`TestScanRepositoryForSecrets`](files/tests/test_secret_detector.md)** (`test_secret_detector.py`) - Tests for scan_repository_for_secrets function.
 - 🔷 **[`TestSchemaMigration`](files/tests/test_indexer.md)** (`test_indexer.py`) - Tests for schema version migration.
+- 🔷 **[`TestScopedHandlers`](files/tests/test_events.md)** (`test_events.py`) - Tests for scoped handler context manager.
+- 🔷 **[`TestSearch`](files/tests/test_indexer.md)** (`test_indexer.py`) - Tests for search method.
+- 🔷 **[`TestSearchCache`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Tests for search result caching functionality.
+- 🔷 **[`TestSearchCacheClass`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Direct tests for the SearchCache class.
+- 🔷 **[`TestSearchCacheDisabled`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Tests for search caching when disabled.
+- 🔷 **[`TestSearchCacheEviction`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Tests for search cache eviction.
+- 🔷 **[`TestSearchCacheIntegration`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Integration tests for search cache with VectorStore.
+- 🔷 **[`TestSearchCacheSemanticSimilarity`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Tests for semantic similarity matching in search cache.
+- 🔷 **[`TestSearchCacheTTL`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Tests for search cache TTL expiration.
 - 🔷 **[`TestSearchEndpoint`](files/tests/test_web.md)** (`test_web.py`) - Tests for /search.json endpoint.
+- 🔷 **[`TestSearchFeedback`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Tests for search feedback system.
+- 🔷 **[`TestSearchFilters`](files/tests/test_interactive_search.md)** (`test_interactive_search.py`) - Tests for SearchFilters class.
 - 🔷 **[`TestSearchJsonEndpoint`](files/tests/test_search.md)** (`test_search.py`) - Tests for the Flask /search.json endpoint.
-- 🔷 **[`TestSetupLogging`](files/tests/test_logging_coverage.md)** (`test_logging_coverage.py`) - Tests for [setup_logging](files/src/local_deepwiki/logging.md) function.
+- 🔷 **[`TestSearchPagination`](files/tests/test_vectorstore_pagination.md)** (`test_vectorstore_pagination.py`) - Tests for paginated search functionality.
+- 🔷 **[`TestSearchProfileConfig`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Tests for search profile configuration.
+- 🔷 **[`TestSearchProfiles`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Tests for configurable search profiles (precision/recall ...
+- 🔷 **[`TestSearchProfilesWithPagination`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Tests for search profiles with pagination.
+- 🔷 **[`TestSearchResultPage`](files/tests/test_vectorstore_pagination.md)** (`test_vectorstore_pagination.py`) - Tests for SearchResultPage dataclass.
+- 🔷 **[`TestSearchResultSerialization`](files/tests/test_deep_research.md)** (`test_deep_research.py`) - Tests for SearchResult serialization for checkpoints.
+- 🔷 **[`TestSearchState`](files/tests/test_interactive_search.md)** (`test_interactive_search.py`) - Tests for SearchState class.
+- 🔷 **[`TestSecretDetectorScanContent`](files/tests/test_secret_detector.md)** (`test_secret_detector.py`) - Tests for SecretDetector.scan_content method.
+- 🔷 **[`TestSecretFindingDataclass`](files/tests/test_secret_detector.md)** (`test_secret_detector.py`) - Tests for SecretFinding dataclass creation.
+- 🔷 **[`TestSecretTypeEnum`](files/tests/test_secret_detector.md)** (`test_secret_detector.py`) - Tests for SecretType enum values.
+- 🔷 **[`TestSequenceDiagramEdgeCases`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for sequence diagram edge cases.
+- 🔷 **[`TestServer`](files/tests/test_server.md)** (`test_server.py`) - Tests for the MCP Server instance.
+- 🔷 **[`TestSetupLogging`](files/tests/test_logging_coverage.md)** (`test_logging_coverage.py`) - Tests for setup_logging function.
 - 🔷 **[`TestSetupPyParsing`](files/tests/test_manifest.md)** (`test_manifest.py`) - Tests for setup.py parsing.
-- 🔷 **[`TestStreamAsyncGenerator`](files/tests/test_web.md)** (`test_web.py`) - Tests for [stream_async_generator](files/src/local_deepwiki/web/app.md) function.
+- 🔷 **[`TestSharedDependencies`](files/tests/test_see_also.md)** (`test_see_also.py`) - Tests for shared dependencies in See Also generation.
+- 🔷 **[`TestShouldAutoEnableFuzzy`](files/tests/test_fuzzy_search.md)** (`test_fuzzy_search.py`) - Tests for the should_auto_enable_fuzzy function.
+- 🔷 **[`TestShouldSkipFile`](files/tests/test_secret_detector.md)** (`test_secret_detector.py`) - Tests for _should_skip_file function.
+- 🔷 **[`TestSnippetLengthFilter`](files/tests/test_test_examples.md)** (`test_test_examples.py`) - Tests for snippet length filtering.
+- 🔷 **[`TestStandardizedErrorHandling`](files/tests/test_providers.md)** (`test_providers.py`) - Tests for standardized error handling across providers.
+- 🔷 **[`TestStreamAsyncGenerator`](files/tests/test_web.md)** (`test_web.py`) - Tests for stream_async_generator function.
+- 🔷 **[`TestStreamingHtmlExporter`](files/tests/test_streaming_export.md)** (`test_streaming_export.py`) - Tests for StreamingHtmlExporter.
+- 🔷 **[`TestStreamingIntegration`](files/tests/test_streaming_export.md)** (`test_streaming_export.py`) - Integration tests for streaming export.
+- 🔷 **[`TestStreamingPdfExporter`](files/tests/test_streaming_export.md)** (`test_streaming_export.py`) - Tests for StreamingPdfExporter.
+- 🔷 **[`TestStreamingPdfExporter`](files/tests/test_pdf_export.md)** (`test_pdf_export.py`) - Tests for the StreamingPdfExporter class.
+- 🔷 **[`TestStreamingPdfExporterIntegration`](files/tests/test_pdf_export.md)** (`test_pdf_export.py`) - Integration tests for StreamingPdfExporter (when WeasyPri...
+- 🔷 **[`TestStreamingStats`](files/tests/test_vectorstore_pagination.md)** (`test_vectorstore_pagination.py`) - Tests for streaming stats functionality.
 - 🔷 **[`TestStripExistingSourceRefs`](files/tests/test_source_refs.md)** (`test_source_refs.py`) - Tests for _strip_existing_source_refs function.
-- 🔷 **[`TestSubQuestion`](files/tests/test_deep_research.md)** (`test_deep_research.py`) - Tests for [SubQuestion](files/src/local_deepwiki/models.md) model.
-- 🔷 **[`TestTableOfContents`](files/tests/test_toc.md)** (`test_toc.py`) - Tests for [TableOfContents](files/src/local_deepwiki/generators/toc.md) dataclass.
+- 🔷 **[`TestSubject`](files/tests/test_access_control.md)** (`test_access_control.py`) - Tests for the Subject class.
+- 🔷 **[`TestSubQuestion`](files/tests/test_deep_research.md)** (`test_deep_research.py`) - Tests for SubQuestion model.
+- 🔷 **[`TestSwiftCallExtraction`](files/tests/test_callgraph.md)** (`test_callgraph.py`) - Test call extraction for Swift code.
+- 🔷 **[`TestSwiftInheritance`](files/tests/test_chunker.md)** (`test_chunker.py`) - Tests for Swift inheritance parsing - covers lines 140-145.
+- 🔷 **[`TestTableOfContents`](files/tests/test_toc.md)** (`test_toc.py`) - Tests for TableOfContents dataclass.
 - 🔷 **[`TestTechStackSummary`](files/tests/test_manifest.md)** (`test_manifest.py`) - Tests for tech stack summary generation.
 - 🔷 **[`TestTemplateConfiguration`](files/tests/test_web.md)** (`test_web.py`) - Tests for Jinja2 template configuration.
 - 🔷 **[`TestThreadSafeConfig`](files/tests/test_config.md)** (`test_config.py`) - Tests for thread-safe config access.
-- 🔷 **[`TestTocEntry`](files/tests/test_toc.md)** (`test_toc.py`) - Tests for [TocEntry](files/src/local_deepwiki/generators/toc.md) dataclass.
+- 🔷 **[`TestThreadSafety`](files/tests/test_watcher.md)** (`test_watcher.py`) - Test thread safety of the watcher.
+- 🔷 **[`TestTocEntry`](files/tests/test_toc.md)** (`test_toc.py`) - Tests for TocEntry dataclass.
+- 🔷 **[`TestTocEntryWithoutPath`](files/tests/test_html_export.md)** (`test_html_export.py`) - Tests for TOC entries without paths (grouping labels).
 - 🔷 **[`TestTocIntegration`](files/tests/test_toc.md)** (`test_toc.py`) - Integration tests for TOC generation.
+- 🔷 **[`TestToolDescriptions`](files/tests/test_server.md)** (`test_server.py`) - Tests for tool description quality.
+- 🔷 **[`TestToolHandlersIntegration`](files/tests/test_server.md)** (`test_server.py`) - Integration tests verifying handlers are properly connected.
+- 🔷 **[`TestToolSchemaValidation`](files/tests/test_server.md)** (`test_server.py`) - Tests for tool schema structure validation.
 - 🔷 **[`TestTriggerReindex`](files/tests/test_watcher.md)** (`test_watcher.py`) - Test _trigger_reindex functionality.
+- 🔷 **[`TestUncoveredCodePaths`](files/tests/test_parser.md)** (`test_parser.py`) - Tests targeting specific uncovered lines in parser.py.
+- 🔷 **[`TestUnregisterNotFound`](files/tests/test_plugin_registry.md)** (`test_plugin_registry.py`) - Tests for unregister methods returning False when not found.
+- 🔷 **[`TestUnsupportedFileType`](files/tests/test_parser.md)** (`test_parser.py`) - Test handling of unsupported file types.
 - 🔷 **[`TestUnsupportedLanguage`](files/tests/test_callgraph.md)** (`test_callgraph.py`) - Test behavior with unsupported languages.
-- 🔷 **[`TestValidateLanguage`](files/tests/test_server_validation.md)** (`test_server_validation.py`) - Tests for [validate_language](files/src/local_deepwiki/validation.md) function.
-- 🔷 **[`TestValidateLanguagesList`](files/tests/test_server_validation.md)** (`test_server_validation.py`) - Tests for [validate_languages_list](files/src/local_deepwiki/validation.md) function.
-- 🔷 **[`TestValidateNonEmptyString`](files/tests/test_server_validation.md)** (`test_server_validation.py`) - Tests for [validate_non_empty_string](files/src/local_deepwiki/validation.md) function.
-- 🔷 **[`TestValidatePositiveInt`](files/tests/test_server_validation.md)** (`test_server_validation.py`) - Tests for [validate_positive_int](files/src/local_deepwiki/validation.md) function.
-- 🔷 **[`TestValidateProvider`](files/tests/test_server_validation.md)** (`test_server_validation.py`) - Tests for [validate_provider](files/src/local_deepwiki/validation.md) function.
+- 🔷 **[`TestValidateConfig`](files/tests/test_config.md)** (`test_config.py`) - Tests for validate_config function.
+- 🔷 **[`TestValidateDeepResearchParameters`](files/tests/test_resource_limits.md)** (`test_resource_limits.py`) - Tests for validate_deep_research_parameters function.
+- 🔷 **[`TestValidateGitPath`](files/tests/test_git_utils.md)** (`test_git_utils.py`) - Tests for _validate_git_path function (security validation).
+- 🔷 **[`TestValidateIndexParameters`](files/tests/test_resource_limits.md)** (`test_resource_limits.py`) - Tests for validate_index_parameters function.
+- 🔷 **[`TestValidateKeyFormat`](files/tests/test_credentials.md)** (`test_credentials.py`) - Tests for CredentialManager.validate_key_format method.
+- 🔷 **[`TestValidateLanguage`](files/tests/test_server_validation.md)** (`test_server_validation.py`) - Tests for validate_language function.
+- 🔷 **[`TestValidateLanguagesList`](files/tests/test_server_validation.md)** (`test_server_validation.py`) - Tests for validate_languages_list function.
+- 🔷 **[`TestValidateNonEmptyString`](files/tests/test_server_validation.md)** (`test_server_validation.py`) - Tests for validate_non_empty_string function.
+- 🔷 **[`TestValidatePositiveInt`](files/tests/test_server_validation.md)** (`test_server_validation.py`) - Tests for validate_positive_int function.
+- 🔷 **[`TestValidateProvider`](files/tests/test_server_validation.md)** (`test_server_validation.py`) - Tests for validate_provider function.
+- 🔷 **[`TestValidateQueryParameters`](files/tests/test_resource_limits.md)** (`test_resource_limits.py`) - Tests for validate_query_parameters function.
+- 🔷 **[`TestValidateRepoPath`](files/tests/test_git_utils.md)** (`test_git_utils.py`) - Tests for _validate_repo_path function (repository valida...
+- 🔷 **[`TestValidation`](files/tests/test_fuzzy_search.md)** (`test_fuzzy_search.py`) - Tests for validation functions.
 - 🔷 **[`TestValidationConstants`](files/tests/test_server_validation.md)** (`test_server_validation.py`) - Tests for validation constants.
+- 🔷 **[`TestValidationError`](files/tests/test_errors.md)** (`test_errors.py`) - Tests for ValidationError.
+- 🔷 **[`TestValidationErrorFactory`](files/tests/test_errors.md)** (`test_errors.py`) - Tests for the validation_error factory function.
+- 🔷 **[`TestValidationHooks`](files/tests/test_config.md)** (`test_config.py`) - Tests for Pydantic validation hooks.
+- 🔷 **[`TestValidationIssue`](files/tests/test_config_cli.md)** (`test_config_cli.py`) - Tests for ValidationIssue dataclass.
+- 🔷 **[`TestValidationMethods`](files/tests/test_providers.md)** (`test_providers.py`) - Tests for provider validation methods.
+- 🔷 **[`TestValidResearchPresets`](files/tests/test_resource_limits.md)** (`test_resource_limits.py`) - Tests for VALID_RESEARCH_PRESETS constant.
+- 🔷 **[`TestVectorIndex`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Tests for vector index creation and management.
 - 🔷 **[`TestVectorStoreAddChunks`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Tests for adding chunks to existing table.
 - 🔷 **[`TestVectorStoreEdgeCases`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Tests for vector store edge cases and error handling.
 - 🔷 **[`TestVectorStoreIndexes`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Tests for vector store scalar indexes.
 - 🔷 **[`TestVectorStoreSearch`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Tests for vector store search functionality.
+- 🔷 **[`TestVectorStoreSearchWithFilters`](files/tests/test_fuzzy_search.md)** (`test_fuzzy_search.py`) - Integration tests for VectorStore.search with new filter ...
 - 🔷 **[`TestVectorStoreStats`](files/tests/test_vectorstore.md)** (`test_vectorstore.py`) - Tests for vector store statistics.
-- 🔷 **[`TestViewPageErrorHandling`](files/tests/test_web.md)** (`test_web.py`) - Tests for [view_page](files/src/local_deepwiki/web/app.md) error handling.
-- 🔷 **[`TestViewPageReadError`](files/tests/test_web.md)** (`test_web.py`) - Tests for [view_page](files/src/local_deepwiki/web/app.md) handling of read errors.
+- 🔷 **[`TestViewPageErrorHandling`](files/tests/test_web.md)** (`test_web.py`) - Tests for view_page error handling.
+- 🔷 **[`TestViewPageReadError`](files/tests/test_web.md)** (`test_web.py`) - Tests for view_page handling of read errors.
 - 🔷 **[`TestWatchedExtensions`](files/tests/test_watcher.md)** (`test_watcher.py`) - Test that watched extensions are correct.
-- 🔷 **[`TestWikiGenerationStatus`](files/tests/test_incremental_wiki.md)** (`test_incremental_wiki.py`) - Test [WikiGenerationStatus](files/src/local_deepwiki/models.md) model.
-- 🔷 **[`TestWikiGeneratorGenerate`](files/tests/test_wiki_coverage.md)** (`test_wiki_coverage.py`) - Tests for [WikiGenerator](files/src/local_deepwiki/generators/wiki.md).generate method.
-- 🔷 **[`TestWikiGeneratorInit`](files/tests/test_wiki_coverage.md)** (`test_wiki_coverage.py`) - Tests for [WikiGenerator](files/src/local_deepwiki/generators/wiki.md) initialization.
-- 🔷 **[`TestWikiPageStatus`](files/tests/test_incremental_wiki.md)** (`test_incremental_wiki.py`) - Test [WikiPageStatus](files/src/local_deepwiki/models.md) model.
+- 🔷 **[`TestWeakReferences`](files/tests/test_events.md)** (`test_events.py`) - Tests for weak reference handler support.
+- 🔷 **[`TestWikiGenerationPipeline`](files/tests/test_integration_pipeline.md)** (`test_integration_pipeline.py`) - Tests for the wiki generation phase.
+- 🔷 **[`TestWikiGenerationStatus`](files/tests/test_incremental_wiki.md)** (`test_incremental_wiki.py`) - Test WikiGenerationStatus model.
+- 🔷 **[`TestWikiGeneratorGenerate`](files/tests/test_wiki_coverage.md)** (`test_wiki_coverage.py`) - Tests for WikiGenerator.generate method.
+- 🔷 **[`TestWikiGeneratorInit`](files/tests/test_wiki_coverage.md)** (`test_wiki_coverage.py`) - Tests for WikiGenerator initialization.
+- 🔷 **[`TestWikiGeneratorPlugin`](files/tests/test_plugins.md)** (`test_plugins.py`) - Tests for WikiGeneratorPlugin.
+- 🔷 **[`TestWikiGeneratorPluginIntegration`](files/tests/test_plugins.md)** (`test_plugins.py`) - Tests for wiki generator plugin integration.
+- 🔷 **[`TestWikiPage`](files/tests/test_streaming_export.md)** (`test_streaming_export.py`) - Tests for WikiPage class.
+- 🔷 **[`TestWikiPageIterator`](files/tests/test_streaming_export.md)** (`test_streaming_export.py`) - Tests for WikiPageIterator class.
+- 🔷 **[`TestWikiPageMetadata`](files/tests/test_streaming_export.md)** (`test_streaming_export.py`) - Tests for WikiPageMetadata dataclass.
+- 🔷 **[`TestWikiPageStatus`](files/tests/test_incremental_wiki.md)** (`test_incremental_wiki.py`) - Test WikiPageStatus model.
 - 🔷 **[`TestWikiPathNotConfigured`](files/tests/test_web.md)** (`test_web.py`) - Tests for endpoints when WIKI_PATH is not configured.
-- 🔷 **[`TestWikiStatusManagerHelpers`](files/tests/test_incremental_wiki.md)** (`test_incremental_wiki.py`) - Test [WikiStatusManager](files/src/local_deepwiki/generators/wiki_status.md) helper methods.
+- 🔷 **[`TestWikiStatusManager`](files/tests/test_wiki_status.md)** (`test_wiki_status.py`) - Tests for WikiStatusManager class.
+- 🔷 **[`TestWikiStatusManagerBuildReverseIndex`](files/tests/test_wiki_status.md)** (`test_wiki_status.py`) - Tests for build_reverse_index method.
+- 🔷 **[`TestWikiStatusManagerComputeContentHash`](files/tests/test_wiki_status.md)** (`test_wiki_status.py`) - Tests for compute_content_hash method.
+- 🔷 **[`TestWikiStatusManagerGetAffectedPages`](files/tests/test_wiki_status.md)** (`test_wiki_status.py`) - Tests for get_affected_pages method.
+- 🔷 **[`TestWikiStatusManagerGetChangedFiles`](files/tests/test_wiki_status.md)** (`test_wiki_status.py`) - Tests for get_changed_files method.
+- 🔷 **[`TestWikiStatusManagerGetRegenerationSummary`](files/tests/test_wiki_status.md)** (`test_wiki_status.py`) - Tests for get_regeneration_summary method.
+- 🔷 **[`TestWikiStatusManagerHelpers`](files/tests/test_incremental_wiki.md)** (`test_incremental_wiki.py`) - Test WikiStatusManager helper methods.
+- 🔷 **[`TestWikiStatusManagerLoadExistingPage`](files/tests/test_wiki_status.md)** (`test_wiki_status.py`) - Tests for load_existing_page method.
+- 🔷 **[`TestWikiStatusManagerLoadStatus`](files/tests/test_wiki_status.md)** (`test_wiki_status.py`) - Tests for load_status method.
+- 🔷 **[`TestWikiStatusManagerNeedsRegeneration`](files/tests/test_wiki_status.md)** (`test_wiki_status.py`) - Tests for needs_regeneration method.
+- 🔷 **[`TestWikiStatusManagerRecordPageStatus`](files/tests/test_wiki_status.md)** (`test_wiki_status.py`) - Tests for record_page_status method.
+- 🔷 **[`TestWikiStatusManagerSaveStatus`](files/tests/test_wiki_status.md)** (`test_wiki_status.py`) - Tests for save_status method.
 - 🔷 **[`TestWikiStatusPersistence`](files/tests/test_incremental_wiki.md)** (`test_incremental_wiki.py`) - Test wiki status file persistence.
-- 🔷 **[`TestWithRetry`](files/tests/test_retry.md)** (`test_retry.py`) - Tests for the [with_retry](files/src/local_deepwiki/providers/base.md) [decorator](files/src/local_deepwiki/providers/base.md).
+- 🔷 **[`TestWikiStructureToToc`](files/tests/test_models.md)** (`test_models.py`) - Tests for WikiStructure.to_toc method.
+- 🔷 **[`TestWithRetry`](files/tests/test_retry.md)** (`test_retry.py`) - Tests for the with_retry decorator.
+- 🔷 **[`TestWithRetryFallbackPath`](files/tests/test_base_provider.md)** (`test_base_provider.py`) - Tests to cover the fallback path in with_retry (lines 104...
 - 🔷 **[`TestWorkflowSequenceDiagrams`](files/tests/test_diagrams.md)** (`test_diagrams.py`) - Tests for workflow-specific sequence diagram generators.
-- 🔷 **[`TestWriteFullSearchIndex`](files/tests/test_search.md)** (`test_search.py`) - Tests for [write_full_search_index](files/src/local_deepwiki/generators/search.md) function.
+- 🔷 **[`TestWriteFullSearchIndex`](files/tests/test_search.md)** (`test_search.py`) - Tests for write_full_search_index function.
 - 🔷 **[`TestWritePage`](files/tests/test_wiki_coverage.md)** (`test_wiki_coverage.py`) - Tests for _write_page method.
-- 🔷 **[`TestWriteReadToc`](files/tests/test_toc.md)** (`test_toc.py`) - Tests for [write_toc](files/src/local_deepwiki/generators/toc.md) and [read_toc](files/src/local_deepwiki/generators/toc.md) functions.
-- 🔷 **[`TestWriteSearchIndex`](files/tests/test_search.md)** (`test_search.py`) - Tests for [write_search_index](files/src/local_deepwiki/generators/search.md) function.
+- 🔷 **[`TestWriteReadToc`](files/tests/test_toc.md)** (`test_toc.py`) - Tests for write_toc and read_toc functions.
+- 🔷 **[`TestWriteSearchIndex`](files/tests/test_search.md)** (`test_search.py`) - Tests for write_search_index function.
+- 🔹 **[`th`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`th`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`th`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
 - ▪️⚡ **[`TestWithRetry.timeout_func`](files/tests/test_retry.md)** `(...)` ⚠️`TimeoutError` (`test_retry.py`)
 - ▪️⚡ **[`TestRetryDecorator.timeout_function`](files/tests/test_provider_errors.md)** `(...)` ⚠️`TimeoutError` (`test_provider_errors.py`)
+- ▪️ **[`GenerationProgress.to_dict`](files/src/local_deepwiki/generators/progress_tracker.md)** `(...) → dict[str, Any]` (`progress_tracker.py`) - Convert progress to dictionary for JSON serialization.
 - 🔷 **[`TocEntry`](files/src/local_deepwiki/generators/toc.md)** (`toc.py`) - A single entry in the table of contents.
+- 🔹 **[`tr`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`tr`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`tr`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- ▪️⚡ **[`TestIndexingPipeline.track_add`](files/tests/test_integration_pipeline.md)** `(...)` (`test_integration_pipeline.py`)
+- ▪️⚡ **[`TestIndexingPipeline.track_create`](files/tests/test_integration_pipeline.md)** `(...)` (`test_integration_pipeline.py`)
+- ▪️ **[`TestLLMCacheEdgeCases.track_delete`](files/tests/test_llm_cache.md)** `(...)` (`test_llm_cache.py`)
 - 🔹 **[`traverse`](files/src/local_deepwiki/generators/manifest.md)** `(path: Path, prefix: str, depth: int) → None` (`manifest.py`)
 
 ## U
 
+- 🔷 **[`UnknownPlugin`](files/tests/test_plugins.md)** (`test_plugins.py`)
+- ▪️ **[`PluginRegistry.unregister_embedding_provider`](files/src/local_deepwiki/plugins/registry.md)** `(name: str) → bool` (`registry.py`) - Unregister an embedding provider plugin.
+- ▪️ **[`PluginRegistry.unregister_language_parser`](files/src/local_deepwiki/plugins/registry.md)** `(name: str) → bool` (`registry.py`) - Unregister a language parser plugin.
+- ▪️ **[`HookRunner.unregister_script`](files/src/local_deepwiki/events.md)** `(event_type: EventType | str, script_path: str | Path) → bool` (`events.py`) - Unregister a script from an event.
+- ▪️ **[`PluginRegistry.unregister_wiki_generator`](files/src/local_deepwiki/plugins/registry.md)** `(name: str) → bool` (`registry.py`) - Unregister a wiki generator plugin.
+- ▪️ **[`MultiPhaseProgress.update`](files/src/local_deepwiki/cli_progress.md)** `(name: str, advance: int, completed: int | None, ...+2) → None` (`cli_progress.py`) - Update a phase's progress.
+- ▪️⚡ **[`ProgressNotifier.update`](files/src/local_deepwiki/handlers.md)** `(current: int | None, total: int | None, message: str, ...+3) → None` (`handlers.py`) - Update progress and send buffered notification.
+- ▪️ **[`ProgressManager.update`](files/src/local_deepwiki/progress.md)** `(current: int | None, total: int | None, message: str, ...+2) → ProgressUpdate` (`progress.py`) - Update progress and notify callbacks.
+- 🔹 **[`updateHeader`](files/coverage_html/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`updateHeader`](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
+- 🔹 **[`updateHeader`](files/htmlcov/coverage_html_cb_dd2e7eb5.js)** `(...)` (`coverage_html_cb_dd2e7eb5.js`)
 - 🔷 **[`UsageExample`](files/src/local_deepwiki/generators/test_examples.md)** (`test_examples.py`) - A usage example extracted from a test file.
 
 ## V
 
+- 🔹 **[`valid_config_file`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Create a valid config file.
+- 🔹 **[`valid_config_yaml`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Return valid config YAML content.
+- ▪️ **[`TestEdgeCases.validate`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`)
+- ▪️ **[`IndexStatusManager.validate`](files/src/local_deepwiki/core/index_manager.md)** `(status: IndexStatus) → list[str]` (`index_manager.py`) - Validate an index status and return a list of errors.
+- ▪️ **[`ConfigValidator.validate`](files/src/local_deepwiki/cli/config_cli.md)** `(...) → bool` (`config_cli.py`) - Run all validations and return True if config is valid (n...
+- 🔹 **[`validate_chunk_type`](files/src/local_deepwiki/validation.md)** `(chunk_type: str | None) → str | None` ⚠️`ValueError` (`validation.py`) - Validate a chunk type filter value.
+- 🔹 **[`validate_config`](files/src/local_deepwiki/config.md)** `(config: Config) → list[str]` (`config.py`) - Return list of validation warnings/errors.
+- ▪️ **[`Config.validate_config_consistency`](files/src/local_deepwiki/config.md)** `(...) → "Config"` (`config.py`) - Validate cross-field consistency.
+- ▪️⚡ **[`LLMProvider.validate_connectivity`](files/src/local_deepwiki/providers/base.md)** `(...) → bool` ⚠️`ProviderConnectionError` (`base.py`) - Test that the provider is reachable and configured correc...
+- ▪️⚡ **[`OpenAILLMProvider.validate_connectivity`](files/src/local_deepwiki/providers/llm/openai.md)** `(...) → bool` ⚠️`ProviderAuthenticationError, ProviderConnectionError` (`openai.py`) - Test that the OpenAI API is reachable and configured corr...
+- ▪️⚡ **[`AnthropicProvider.validate_connectivity`](files/src/local_deepwiki/providers/llm/anthropic.md)** `(...) → bool` ⚠️`ProviderConnectionError` (`anthropic.py`) - Test that the Anthropic API is reachable and configured c...
+- ▪️⚡ **[`OllamaProvider.validate_connectivity`](files/src/local_deepwiki/providers/llm/ollama.md)** `(...) → bool` ⚠️`OllamaConnectionError` (`ollama.py`) - Test that Ollama is reachable and configured correctly.
+- ▪️⚡ **[`LocalEmbeddingProvider.validate_connectivity`](files/src/local_deepwiki/providers/embeddings/local.md)** `(...) → bool` ⚠️`ProviderConnectionError` (`local.py`) - Test that the model can be loaded and used.
+- ▪️⚡ **[`OpenAIEmbeddingProvider.validate_connectivity`](files/src/local_deepwiki/providers/embeddings/openai.md)** `(...) → bool` ⚠️`ProviderAuthenticationError, ProviderConnectionError` (`openai.py`) - Test that the OpenAI API is reachable and configured corr...
+- 🔹 **[`validate_deep_research_parameters`](files/src/local_deepwiki/validation.md)** `(question: str, preset: str | None, max_chunks: int) → None` ⚠️`ValueError` (`validation.py`) - Validate deep research parameters.
+- 🔹 **[`validate_fuzzy_weight`](files/src/local_deepwiki/validation.md)** `(weight: float | None) → float` ⚠️`ValueError` (`validation.py`) - Validate fuzzy weight parameter.
+- 🔹 **[`validate_index_parameters`](files/src/local_deepwiki/validation.md)** `(repo_path: str) → tuple[int, int]` ⚠️`ValueError` (`validation.py`) - Validate repository indexing parameters.
 - 🔹 **[`validate_language`](files/src/local_deepwiki/validation.md)** `(language: str | None) → str | None` ⚠️`ValueError` (`validation.py`) - Validate a language filter value.
 - 🔹 **[`validate_languages_list`](files/src/local_deepwiki/validation.md)** `(languages: list[str] | None) → list[str] | None` ⚠️`ValueError` (`validation.py`) - Validate a list of languages.
+- ▪️⚡ **[`LLMProvider.validate_model`](files/src/local_deepwiki/providers/base.md)** `(model_name: str) → bool` ⚠️`ProviderModelNotFoundError` (`base.py`) - Test that a specific model is available.
+- ▪️⚡ **[`OpenAILLMProvider.validate_model`](files/src/local_deepwiki/providers/llm/openai.md)** `(model_name: str) → bool` ⚠️`ProviderModelNotFoundError` (`openai.py`) - Test that a specific model is available.
+- ▪️⚡ **[`AnthropicProvider.validate_model`](files/src/local_deepwiki/providers/llm/anthropic.md)** `(model_name: str) → bool` ⚠️`ProviderModelNotFoundError` (`anthropic.py`) - Test that a specific model is available.
+- ▪️⚡ **[`OllamaProvider.validate_model`](files/src/local_deepwiki/providers/llm/ollama.md)** `(model_name: str) → bool` ⚠️`OllamaConnectionError, OllamaModelNotFoundError` (`ollama.py`) - Test that a specific model is available in Ollama.
 - 🔹 **[`validate_non_empty_string`](files/src/local_deepwiki/validation.md)** `(value: Any, name: str) → str` ⚠️`ValueError` (`validation.py`) - Validate that a string is non-empty.
+- 🔹 **[`validate_path_pattern`](files/src/local_deepwiki/validation.md)** `(path_pattern: str | None) → str | None` ⚠️`ValueError` (`validation.py`) - Validate a file path pattern.
 - 🔹 **[`validate_positive_int`](files/src/local_deepwiki/validation.md)** `(value: Any, name: str, min_val: int, ...+2) → int` ⚠️`ValueError` (`validation.py`) - Validate and bound an integer parameter.
 - 🔹 **[`validate_provider`](files/src/local_deepwiki/validation.md)** `(provider: str | None, valid_providers: set[str], name: str) → str | None` ⚠️`ValueError` (`validation.py`) - Validate a provider value.
+- 🔹 **[`validate_query_parameters`](files/src/local_deepwiki/validation.md)** `(query: str, repo_path: str, max_results: int) → None` ⚠️`ValueError` (`validation.py`) - Validate query parameters against resource limits.
+- 🔹 **[`validation_error`](files/src/local_deepwiki/errors.md)** `(field: str, value: Any, expected: str, ...+1) → ValidationError` (`errors.py`) - Create a validation error with actionable hints.
+- 🔷 **[`ValidationError`](files/src/local_deepwiki/errors.md)** (`errors.py`) - Error raised when input validation fails.
+- 🔷 **[`ValidationIssue`](files/src/local_deepwiki/cli/config_cli.md)** (`config_cli.py`) - Represents a configuration validation issue.
 - ▪️⚡ **[`TestWithRetry.value_error_func`](files/tests/test_retry.md)** `(...)` ⚠️`ValueError` (`test_retry.py`)
+- ▪️ **[`TestConfigValidatorValidatePerformanceSettings.variable_cpu_count`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`)
+- ▪️ **[`TestVectorStoreSearchWithFilters.vector_store`](files/tests/test_fuzzy_search.md)** `(...)` (`test_fuzzy_search.py`) - Create a vector store for testing.
+- ▪️ **[`TestFuzzySearchHelper.vector_store`](files/tests/test_fuzzy_search.md)** `(...)` (`test_fuzzy_search.py`) - Create a vector store for testing.
+- ▪️ **[`TestGetFileSuggestions.vector_store`](files/tests/test_fuzzy_search.md)** `(...)` (`test_fuzzy_search.py`) - Create a vector store with file paths.
+- ▪️ **[`TestVectorStoreIndexes.vector_store`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Create a vector store for testing.
 - ▪️ **[`TestVectorStoreEdgeCases.vector_store`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Create a vector store for testing.
+- ▪️ **[`TestEnsureIndexesEdgeCases.vector_store`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Create a vector store for testing.
+- ▪️ **[`TestGetMainDefinitionLines.vector_store`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Create a vector store for testing.
+- ▪️ **[`TestSearchCache.vector_store`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Create a vector store with caching enabled.
+- ▪️ **[`TestParallelEmbedding.vector_store`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Create a vector store for testing.
+- ▪️ **[`TestLazyIndexIntegration.vector_store`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Create a vector store with lazy indexing.
+- ▪️ **[`TestSearchProfiles.vector_store`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Create a vector store for testing.
+- ▪️ **[`TestFuzzySearchHelper.vector_store`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Create a vector store for testing.
+- ▪️ **[`TestSearchPagination.vector_store`](files/tests/test_vectorstore_pagination.md)** `(...)` (`test_vectorstore_pagination.py`) - Create a vector store for testing.
+- ▪️ **[`TestChunkIterator.vector_store`](files/tests/test_vectorstore_pagination.md)** `(...)` (`test_vectorstore_pagination.py`) - Create a vector store for testing.
+- ▪️ **[`TestLazyIndexManager.vector_store_eager`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Create a vector store with lazy indexing disabled (eager ...
+- ▪️ **[`TestLazyIndexManager.vector_store_lazy`](files/tests/test_vectorstore.md)** `(...)` (`test_vectorstore.py`) - Create a vector store with lazy indexing enabled.
+- ▪️ **[`TestFuzzySearchHelperEdgeCases.vector_store_with_edge_cases`](files/tests/test_fuzzy_search.md)** `(...)` (`test_fuzzy_search.py`) - Create a vector store with edge case data.
 - 🔷 **[`VectorStore`](files/src/local_deepwiki/core/vectorstore.md)** (`vectorstore.py`) - Vector store using LanceDB for code chunk storage and sem...
 - 🔹 **[`view_page`](files/src/local_deepwiki/web/app.md)** `(path: str)` (`app.py`) - View a wiki page.
+- 🔹 **[`viewer_subject`](files/tests/test_access_control.md)** `(...)` (`test_access_control.py`) - Create a viewer subject for testing.
 
 ## W
 
+- ▪️⚡ **[`LazyIndexManager.wait_for_index`](files/src/local_deepwiki/core/vectorstore.md)** `(timeout: float | None) → bool` (`vectorstore.py`) - Wait for the index to be ready.
+- ▪️⚡ **[`VectorStore.wait_for_vector_index`](files/src/local_deepwiki/core/vectorstore.md)** `(timeout: float | None) → bool` (`vectorstore.py`) - Wait for the vector index to be ready.
 - 🔹 **[`walk`](files/src/local_deepwiki/core/parser.md)** `(node: Node)` (`parser.py`)
 - 🔹 **[`walk`](files/src/local_deepwiki/generators/test_examples.md)** `(node: Node, current_class: str | None) → None` (`test_examples.py`)
+- 🔹 **[`weasyprint_functional`](files/tests/test_pdf_export.md)** `(...) → bool` (`test_pdf_export.py`) - Check if WeasyPrint can actually generate PDFs.
+- 🔹 **[`whitespace_config_file`](files/tests/test_config_cli.md)** `(...)` (`test_config_cli.py`) - Create a config file with only whitespace.
 - 🔹 **[`wiki_dir`](files/tests/test_web.md)** `(...)` (`test_web.py`) - Create a temporary wiki directory structure.
+- ▪️ **[`PluginRegistry.wiki_generators`](files/src/local_deepwiki/plugins/registry.md)** `(...) → dict[str, WikiGeneratorPlugin]` (`registry.py`) - Get registered wiki generator plugins.
+- 🔹 **[`wiki_progress`](files/src/local_deepwiki/watcher.md)** `(msg: str, current: int, total: int) → None` (`watcher.py`)
+- ▪️ **[`TestPdfExportIntegration.wiki_with_content`](files/tests/test_pdf_export.md)** `(tmp_path: Path) → Path` (`test_pdf_export.py`) - Create a wiki with various content types for testing.
+- ▪️ **[`TestHtmlExportPipeline.wiki_with_content`](files/tests/test_integration_pipeline.md)** `(tmp_path: Path) → Path` (`test_integration_pipeline.py`) - Create a wiki directory with sample markdown content.
 - ▪️ **[`TestPdfExporterEdgeCases.wiki_with_empty_paths`](files/tests/test_pdf_export.md)** `(tmp_path: Path) → Path` (`test_pdf_export.py`) - Create a wiki with TOC entries that have empty paths.
 - 🔷 **[`WikiConfig`](files/src/local_deepwiki/config.md)** (`config.py`) - Wiki generation configuration.
 - 🔷 **[`WikiGenerationStatus`](files/src/local_deepwiki/models.md)** (`models.py`) - Status of wiki generation for tracking incremental updates.
 - 🔷 **[`WikiGenerator`](files/src/local_deepwiki/generators/wiki.md)** (`wiki.py`) - Generate wiki documentation from indexed code.
+- 🔷 **[`WikiGeneratorPlugin`](files/src/local_deepwiki/plugins/base.md)** (`base.py`) - Plugin for adding custom wiki page generators.
+- 🔷 **[`WikiGeneratorResult`](files/src/local_deepwiki/plugins/base.md)** (`base.py`) - Result from a wiki generator plugin.
 - 🔷 **[`WikiPage`](files/src/local_deepwiki/models.md)** (`models.py`) - A generated wiki page.
+- 🔷 **[`WikiPage`](files/src/local_deepwiki/export/streaming.md)** (`streaming.py`) - A wiki page with content loaded on demand.
+- 🔷 **[`WikiPageIterator`](files/src/local_deepwiki/export/streaming.md)** (`streaming.py`) - Memory-efficient iterator over wiki pages.
+- 🔷 **[`WikiPageMetadata`](files/src/local_deepwiki/export/streaming.md)** (`streaming.py`) - Lightweight metadata for a wiki page without full content.
 - 🔷 **[`WikiPageStatus`](files/src/local_deepwiki/models.md)** (`models.py`) - Status of a generated wiki page for incremental generation.
 - 🔷 **[`WikiStatusManager`](files/src/local_deepwiki/generators/wiki_status.md)** (`wiki_status.py`) - Manage wiki generation status for incremental updates.
 - 🔷 **[`WikiStructure`](files/src/local_deepwiki/models.md)** (`models.py`) - Structure of the generated wiki.
+- ▪️ **[`Config.with_embedding_provider`](files/src/local_deepwiki/config.md)** `(provider: Literal["local", "openai"]) → "Config"` (`config.py`) - Return a new Config with the embedding provider changed.
+- ▪️ **[`Config.with_llm_provider`](files/src/local_deepwiki/config.md)** `(provider: Literal["ollama", "anthropic", "openai"]) → "Config"` (`config.py`) - Return a new Config with the LLM provider changed.
 - 🔹 **[`with_retry`](files/src/local_deepwiki/providers/base.md)** `(max_attempts: int, base_delay: float, max_delay: float, ...+2) → Callable[[Callable[..., Any]], Callable[..., Any]]` (`base.py`) - Decorator for adding retry logic with exponential backoff...
-- 🔹⚡ **[`wrapper`](files/src/local_deepwiki/handlers.md)** `(args: dict[str, Any]) → list[TextContent]` (`handlers.py`)
+- ▪️ **[`TestEventEmitter.working_handler`](files/tests/test_events.md)** `(_event: Event) → None` (`test_events.py`)
+- 🔹⚡ **[`wrapper`](files/src/local_deepwiki/handlers.md)** `(args: dict[str, Any], **kwargs: Any) → list[TextContent]` (`handlers.py`)
 - 🔹⚡ **[`wrapper`](files/src/local_deepwiki/providers/base.md)** `(*args: Any, **kwargs: Any) → Any` ⚠️`RuntimeError, last_exception` (`base.py`)
+- ▪️ **[`TestGenerationProgress.write`](files/tests/test_progress_tracker.md)** `(...)` ⚠️`OSError` (`test_progress_tracker.py`)
+- ▪️ **[`TestGenerationProgress.write`](files/tests/test_progress_tracker.md)** `(...)` (`test_progress_tracker.py`)
+- ▪️⚡ **[`TestGenerateFileDocsCallbacks.write_callback`](files/tests/test_wiki_files_coverage.md)** `(page: WikiPage)` (`test_wiki_files_coverage.py`)
 - 🔹⚡ **[`write_full_search_index`](files/src/local_deepwiki/generators/search.md)** `(wiki_path: Path, pages: list[WikiPage], index_status: IndexStatus, ...+1) → Path` (`search.py`) - Generate and write comprehensive search index to disk.
+- ▪️ **[`TestStreamingPdfExporter.write_pdf_side_effect`](files/tests/test_pdf_export.md)** `(...)` (`test_pdf_export.py`)
+- ▪️ **[`TestStreamingPdfExporter.write_pdf_side_effect`](files/tests/test_pdf_export.md)** `(...)` (`test_pdf_export.py`)
+- ▪️ **[`TestStreamingPdfExporter.write_pdf_side_effect`](files/tests/test_pdf_export.md)** `(...)` (`test_pdf_export.py`)
+- ▪️ **[`TestStreamingPdfExporter.write_pdf_side_effect`](files/tests/test_pdf_export.md)** `(...)` ⚠️`ValueError` (`test_pdf_export.py`)
+- ▪️ **[`TestStreamingPdfExporter.write_pdf_side_effect`](files/tests/test_pdf_export.md)** `(...)` ⚠️`ValueError` (`test_pdf_export.py`)
+- ▪️ **[`TestStreamingPdfExporter.write_pdf_side_effect`](files/tests/test_pdf_export.md)** `(...)` (`test_pdf_export.py`)
+- ▪️ **[`TestStreamingPdfExporter.write_pdf_side_effect`](files/tests/test_pdf_export.md)** `(...)` (`test_pdf_export.py`)
 - 🔹 **[`write_search_index`](files/src/local_deepwiki/generators/search.md)** `(wiki_path: Path, pages: list[WikiPage]) → Path` (`search.py`) - Generate and write search index to disk (legacy page-only...
 - 🔹 **[`write_toc`](files/src/local_deepwiki/generators/toc.md)** `(toc: TableOfContents, wiki_path: Path) → None` (`toc.py`) - Write table of contents to toc.json file.
+
+## Y
+
+- 🔹 **[`yaml_config_path`](files/tests/test_role_config.md)** `(...)` (`test_role_config.py`) - Create a temporary YAML config file for testing.
+
+## Z
+
+- ▪️⚡ **[`TestWithRetryFallbackPath.zero_attempts_func`](files/tests/test_base_provider.md)** `(...)` (`test_base_provider.py`)
 
 ---
 
 **Legend:** 🔷 Class | 🔹 Function | ▪️ Method | ⚡ Async | ⚠️ Raises exceptions
-
-## Relevant Source Files
-
-The following source files were used to generate this documentation:
-
-- `tests/test_parser.py:24-123`
-- `tests/test_provider_factories.py:21-99`
-- `tests/test_retry.py:8-144`
-- `tests/test_ollama_health.py:16-19`
-- `tests/test_chunker.py:13-428`
-- `tests/test_changelog.py:18-96`
-- `tests/test_server_handlers.py:15-75`
-- `tests/test_coverage.py:13-50`
-- `tests/test_vectorstore.py:9-28`
-- `tests/test_wiki_coverage.py:50-120`
-
-
-*Showing 10 of 102 source files.*

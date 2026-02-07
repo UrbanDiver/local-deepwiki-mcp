@@ -4,120 +4,108 @@ Recent changes to this repository.
 
 ## Recent Commits
 
-### January 16, 2026
+### February 06, 2026
 
-- [`06f832d`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/06f832d) Add parallel processing and performance improvements for larger repos
-  - Files: `.deepwiki/index_status.json`, `src/local_deepwiki/config.py`, `src/local_deepwiki/core/indexer.py`, `src/local_deepwiki/core/vectorstore.py`
+- [`21d245e`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/21d245e) feat: Add 12 new MCP tools exposing generator/core capabilities
+  - Files: `src/local_deepwiki/handlers.py`, `src/local_deepwiki/models.py`, `src/local_deepwiki/server.py`, `tests/test_new_tools.py`
 
-- [`2d33e4a`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/2d33e4a) Improve scalability defaults for larger repositories
-  - Files: `.deepwiki/architecture.md`, `.deepwiki/changelog.md`, `.deepwiki/coverage.md`, `.deepwiki/dependencies.md`, `.deepwiki/files/index.md` (+37 more)
+### January 31, 2026
 
-- [`8257db4`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/8257db4) Update generated wiki documentation
-  - Files: `.deepwiki/changelog.md`, `.deepwiki/coverage.md`, `.deepwiki/files/index.md`, `.deepwiki/files/src/local_deepwiki/config.md`, `.deepwiki/files/src/local_deepwiki/core/chunker.md` (+51 more)
+- [`1468d91`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/1468d91) Fix HTML export internal links and add external link handling
+  - Files: `src/local_deepwiki/export/html.py`, `tests/test_html_export.py`
 
-- [`b1a939a`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/b1a939a) Group wiki generation modules into logical subgraphs
-  - Files: `.deepwiki/dependencies.md`
+### January 26, 2026
 
-- [`e2023e3`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/e2023e3) Split module dependency into focused sub-diagrams
-  - Files: `.deepwiki/dependencies.md`
+- [`beb9f45`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/beb9f45) Improve dependency_graph test coverage from 85% to 99%
+  - Files: `tests/test_dependency_graph.py`
 
-- [`641e5d2`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/641e5d2) Simplify module dependency graph for readability
-  - Files: `.deepwiki/dependencies.md`
+- [`c3aec5d`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/c3aec5d) Improve fuzzy_search test coverage from 83% to 96%
+  - Files: `tests/test_fuzzy_search.py`
 
-- [`c4da750`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/c4da750) Improve diagram rendering and fix mermaid syntax errors
-  - Files: `.deepwiki/architecture.md`, `src/local_deepwiki/generators/inheritance.py`, `src/local_deepwiki/web/templates/page.html`
+- [`0fe815e`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/0fe815e) Fix test warnings about unawaited coroutines
+  - Files: `pyproject.toml`, `tests/test_html_export.py`, `tests/test_interactive_search.py`, `tests/test_server.py`, `tests/test_watcher.py`
 
-- [`ce7114d`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/ce7114d) Update WIKI_ENHANCEMENTS.md with completion status
-  - Files: `docs/WIKI_ENHANCEMENTS.md`
+- [`b5b8d50`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/b5b8d50) Add Phase 2 test coverage improvements
+  - Files: `tests/test_credentials.py`, `tests/test_examples_plugin.py`, `tests/test_export_init.py`, `tests/test_local_embedding_provider.py`
 
-- [`63a61ae`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/63a61ae) Update TOC to include glossary, inheritance, changelog, and freshness pages
-  - Files: `.deepwiki/toc.json`
+- [`e6b985c`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/e6b985c) Add comprehensive tests for low coverage modules
+  - Files: `tests/test_anthropic_provider.py`, `tests/test_interactive_search.py`, `tests/test_openai_embeddings.py`, `tests/test_openai_provider.py`, `tests/test_pdf_export.py` (+2 more)
 
-- [`8aaf4bf`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/8aaf4bf) Improve web UI search and add collapsible sidebar navigation
-  - Files: `src/local_deepwiki/generators/toc.py`, `src/local_deepwiki/web/templates/page.html`
+- [`89d3399`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/89d3399) Add code quality improvements: rate limiting, test coverage, error handling r...
+  - Files: `src/local_deepwiki/core/deep_research.py`, `src/local_deepwiki/core/rate_limiter.py`, `src/local_deepwiki/handlers.py`, `src/local_deepwiki/providers/base.py`, `tests/test_config_cli.py` (+1 more)
 
-- [`8ac0de1`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/8ac0de1) Add richer LLM context for wiki documentation generation
-  - Files: `src/local_deepwiki/generators/context_builder.py`, `src/local_deepwiki/generators/wiki_files.py`, `tests/test_context_builder.py`, `tests/test_wiki_files_coverage.py`
+- [`5717c3a`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/5717c3a) Phase 4: RBAC hardening with enforcement modes, role config, and repo access ...
+  - Files: `examples/roles.yaml`, `src/local_deepwiki/handlers.py`, `src/local_deepwiki/security/__init__.py`, `src/local_deepwiki/security/access_control.py`, `src/local_deepwiki/security/repository_access.py` (+3 more)
 
-- [`59bad6c`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/59bad6c) Add stale documentation detection to identify outdated wiki pages
-  - Files: `src/local_deepwiki/core/git_utils.py`, `src/local_deepwiki/generators/stale_detection.py`, `src/local_deepwiki/generators/wiki.py`, `tests/test_stale_detection.py`
+- [`7f23c3c`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/7f23c3c) Security fixes: Git command injection, hook script validation, export path va...
+  - Files: `src/local_deepwiki/core/git_utils.py`, `src/local_deepwiki/events.py`, `src/local_deepwiki/handlers.py`, `tests/test_events.py`, `tests/test_git_utils.py`
 
-- [`216880e`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/216880e) Expand test example extraction with multiple test files and class methods
-  - Files: `src/local_deepwiki/generators/test_examples.py`, `tests/test_test_examples.py`
+- [`9844731`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/9844731) Phase 3: Implement input validation, audit logging, and secret detection
+  - Files: `src/local_deepwiki/core/audit.py`, `src/local_deepwiki/core/indexer.py`, `src/local_deepwiki/core/secret_detector.py`, `src/local_deepwiki/handlers.py`, `src/local_deepwiki/validation.py` (+3 more)
 
-- [`37aec0f`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/37aec0f) Add git blame integration to show last modified info for code entities
-  - Files: `src/local_deepwiki/core/git_utils.py`, `src/local_deepwiki/generators/wiki_files.py`, `tests/test_git_utils.py`
+- [`b416426`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/b416426) Phase 2 completion: Fix RBAC async support, add tests, integrate into handlers
+  - Files: `src/local_deepwiki/handlers.py`, `src/local_deepwiki/security/__init__.py`, `src/local_deepwiki/security/access_control.py`, `tests/test_access_control.py`
 
-- [`32b5840`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/32b5840) Regenerate wiki with entity search index
-  - Files: `.deepwiki/architecture.md`, `.deepwiki/changelog.md`, `.deepwiki/coverage.md`, `.deepwiki/dependencies.md`, `.deepwiki/files/src/local_deepwiki/config.md` (+50 more)
+- [`11bcd8e`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/11bcd8e) Add Phase 3 comprehensive implementation plan
+  - Files: `PHASE_3_IMPLEMENTATION_PLAN.md`
 
-- [`553a2ee`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/553a2ee) Add entity-level search with type filtering and fuzzy matching
-  - Files: `src/local_deepwiki/generators/search.py`, `src/local_deepwiki/generators/wiki.py`, `src/local_deepwiki/web/templates/page.html`, `tests/test_search.py`, `tests/test_wiki_coverage.py`
+- [`4eb4353`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/4eb4353) Phase 2: Implement RBAC, dependency pinning, and YAML safety verification
+  - Files: `.claude-flow/.gitignore`, `.claude-flow/CAPABILITIES.md`, `.claude-flow/config.yaml`, `.claude-flow/daemon-state.json`, `.claude-flow/daemon.pid` (+33 more)
 
-- [`202b96d`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/202b96d) Add exception documentation to glossary
-  - Files: `src/local_deepwiki/core/chunker.py`, `src/local_deepwiki/generators/glossary.py`, `tests/test_type_annotations.py`
+- [`dc57a7b`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/dc57a7b) Add low-priority enhancements: fuzzy search, config validation, event leak pr...
+  - Files: `pyproject.toml`, `src/local_deepwiki/cli/__init__.py`, `src/local_deepwiki/cli/interactive_search.py`, `src/local_deepwiki/config.py`, `src/local_deepwiki/core/fuzzy_search.py` (+9 more)
 
-- [`ce066c4`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/ce066c4) Add type annotation extraction and display in glossary
-  - Files: `src/local_deepwiki/core/chunker.py`, `src/local_deepwiki/generators/glossary.py`, `tests/test_type_annotations.py`
+- [`a64166a`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/a64166a) Add seven medium-priority enhancements for scalability, visualization, and UX
+  - Files: `pyproject.toml`, `src/local_deepwiki/config.py`, `src/local_deepwiki/core/vectorstore.py`, `src/local_deepwiki/export/__init__.py`, `src/local_deepwiki/export/html.py` (+25 more)
 
-- [`6e0cd5d`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/6e0cd5d) Regenerate wiki with inheritance, glossary, and coverage pages
-  - Files: `.deepwiki/architecture.md`, `.deepwiki/changelog.md`, `.deepwiki/coverage.md`, `.deepwiki/dependencies.md`, `.deepwiki/files/index.md` (+52 more)
+### January 25, 2026
 
-- [`8d2ab68`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/8d2ab68) Add inheritance trees, glossary, and coverage report to wiki
-  - Files: `src/local_deepwiki/generators/coverage.py`, `src/local_deepwiki/generators/glossary.py`, `src/local_deepwiki/generators/inheritance.py`, `src/local_deepwiki/generators/wiki.py`, `tests/test_coverage.py` (+3 more)
+- [`e899c6c`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/e899c6c) Add three high-value enhancements: parallel embeddings, research checkpointin...
+  - Files: `src/local_deepwiki/config.py`, `src/local_deepwiki/core/deep_research.py`, `src/local_deepwiki/core/indexer.py`, `src/local_deepwiki/core/parser.py`, `src/local_deepwiki/core/vectorstore.py` (+9 more)
 
-- [`ea0726d`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/ea0726d) Regenerate wiki with GitHub links and Used By sections
-  - Files: `.deepwiki/architecture.md`, `.deepwiki/changelog.md`, `.deepwiki/dependencies.md`, `.deepwiki/files/src/local_deepwiki/config.md`, `.deepwiki/files/src/local_deepwiki/core/chunker.md` (+44 more)
+- [`d7c79d3`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/d7c79d3) Add three quick-win enhancements: IndexStatusManager, structured errors, sear...
+  - Files: `src/local_deepwiki/config.py`, `src/local_deepwiki/core/index_manager.py`, `src/local_deepwiki/core/indexer.py`, `src/local_deepwiki/core/vectorstore.py`, `src/local_deepwiki/errors.py` (+8 more)
 
-- [`62e3290`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/62e3290) Add GitHub source links and Used By sections to wiki pages
-  - Files: `docs/WIKI_ENHANCEMENTS.md`, `src/local_deepwiki/generators/callgraph.py`, `src/local_deepwiki/generators/wiki_files.py`, `tests/test_wiki_files_coverage.py`
+- [`b6594e4`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/b6594e4) Add dependency validation and topological sort for wiki generators
+  - Files: `src/local_deepwiki/generators/wiki.py`, `tests/test_plugins.py`
 
-### January 15, 2026
+- [`ff77f37`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/ff77f37) Add debug logging for progress token extraction failures
+  - Files: `src/local_deepwiki/handlers.py`
 
-- [`d275583`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/d275583) Add inline expandable source code to wiki documentation
-  - Files: `.deepwiki/architecture.md`, `.deepwiki/changelog.md`, `.deepwiki/dependencies.md`, `.deepwiki/files/index.md`, `.deepwiki/files/src/local_deepwiki/config.md` (+49 more)
+- [`5a8c32b`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/5a8c32b) Implement LRU cache eviction for LLM response cache
+  - Files: `src/local_deepwiki/core/llm_cache.py`, `tests/test_llm_cache.py`
 
-- [`0d91a70`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/0d91a70) Apply Python best practices: black, isort, mypy type fixes
-  - Files: `pyproject.toml`, `src/local_deepwiki/core/chunker.py`, `src/local_deepwiki/core/deep_research.py`, `src/local_deepwiki/core/indexer.py`, `src/local_deepwiki/core/llm_cache.py` (+45 more)
+- [`8817f7b`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/8817f7b) Add thread safety to VectorStore lazy initialization
+  - Files: `src/local_deepwiki/core/vectorstore.py`
 
-- [`c43354c`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/c43354c) Improve test coverage for multiple modules to 92% overall
-  - Files: `tests/test_callgraph.py`, `tests/test_export_init.py`, `tests/test_git_utils.py`, `tests/test_llm_providers.py`, `tests/test_local_embedding_provider.py` (+5 more)
+### January 24, 2026
 
-- [`05e5e3e`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/05e5e3e) Improve web/app.py test coverage from 57% to 76%
-  - Files: `tests/test_web.py`
+- [`66ce5c0`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/66ce5c0) Add integration tests for plugin system
+  - Files: `tests/test_plugins.py`
 
-- [`83ff230`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/83ff230) Improve manifest.py test coverage from 67% to 96%
-  - Files: `tests/test_manifest.py`
+- [`4e9d8f5`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/4e9d8f5) Integrate plugin system into code paths
+  - Files: `src/local_deepwiki/core/chunker.py`, `src/local_deepwiki/generators/wiki.py`, `src/local_deepwiki/providers/embeddings/__init__.py`
 
-- [`8eb23f8`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/8eb23f8) Improve llm_cache.py test coverage from 72% to 99%
-  - Files: `tests/test_llm_cache.py`, `tests/test_pdf_export.py`
+- [`a0b2f83`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/a0b2f83) Integrate event system into indexer, wiki generator, and deep research
+  - Files: `src/local_deepwiki/core/deep_research.py`, `src/local_deepwiki/core/indexer.py`, `src/local_deepwiki/generators/wiki.py`
 
-- [`c2c3ab7`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/c2c3ab7) Improve chunker.py test coverage from 56% to 97%
-  - Files: `tests/test_chunker.py`
+- [`ff98964`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/ff98964) Add event/hooks system for lifecycle callbacks
+  - Files: `src/local_deepwiki/config.py`, `src/local_deepwiki/events.py`, `tests/test_events.py`
 
-- [`887852b`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/887852b) Improve handlers.py test coverage from 71% to 94%
-  - Files: `tests/test_handlers_coverage.py`
+- [`f2db999`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/f2db999) Add plugin system for extensibility
+  - Files: `src/local_deepwiki/config.py`, `src/local_deepwiki/plugins/__init__.py`, `src/local_deepwiki/plugins/base.py`, `src/local_deepwiki/plugins/registry.py`, `tests/test_plugins.py`
+
+- [`a142542`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/a142542) Add custom prompt template system
+  - Files: `src/local_deepwiki/config.py`, `src/local_deepwiki/generators/wiki.py`, `src/local_deepwiki/prompts.py`, `tests/test_prompts.py`
+
+- [`f62161e`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/f62161e) Add incremental wiki update enhancements
+  - Files: `src/local_deepwiki/generators/wiki.py`, `src/local_deepwiki/generators/wiki_status.py`, `tests/test_wiki_status.py`
+
+- [`7dfedb5`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/7dfedb5) Add MCP progress streaming to index_repository tool
+  - Files: `src/local_deepwiki/handlers.py`, `src/local_deepwiki/models.py`, `src/local_deepwiki/server.py`, `tests/test_server.py`
 
 ## Statistics
 
 - **Commits shown**: 30
 - **Contributors**: 1
-- **Latest commit**: 2026-01-16
-
-## Relevant Source Files
-
-The following source files were used to generate this documentation:
-
-- `tests/test_parser.py:24-123`
-- `tests/test_provider_factories.py:21-99`
-- `tests/test_retry.py:8-144`
-- `tests/test_ollama_health.py:16-19`
-- `tests/test_chunker.py:13-428`
-- `tests/test_changelog.py:18-96`
-- `tests/test_server_handlers.py:15-75`
-- `tests/test_coverage.py:13-50`
-- `tests/test_vectorstore.py:9-28`
-- `tests/test_wiki_coverage.py:50-120`
-
-
-*Showing 10 of 102 source files.*
+- **Latest commit**: 2026-02-06

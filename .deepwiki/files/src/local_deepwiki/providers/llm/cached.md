@@ -1,59 +1,98 @@
-# cached.py
+# File Overview
 
-## File Overview
+This file defines the `CachingLLMProvider` class, which wraps an existing `LLMProvider` to add caching functionality. It uses an `LLMCache` instance to store and retrieve generated responses, improving performance by avoiding redundant computations.
 
-This module provides a caching [wrapper](../base.md) for LLM (Large [Language](../../models.md) Model) providers. The CachingLLMProvider class acts as a [decorator](../base.md) around other LLM providers, adding caching functionality to reduce redundant API calls and improve performance.
+## Dependencies
 
-## Classes
+- `collections.abc.AsyncIterator`: Used for type hinting the stream generator.
+- `local_deepwiki.core.llm_cache.LLMCache`: Provides the caching mechanism.
+- `local_deepwiki.logging.get_logger`: For logging within the provider.
+- `local_deepwiki.providers.base.LLMProvider`: Base class for LLM providers.
 
-### CachingLLMProvider
+## Integration
 
-A [wrapper](../base.md) class that adds caching capabilities to any LLM provider. This class implements the [decorator](../base.md) pattern, wrapping an existing [LLMProvider](../base.md) instance with caching functionality using the [LLMCache](../../core/llm_cache.md) system.
+This file integrates with:
 
-**Purpose**: Intercepts calls to the underlying LLM provider and caches responses to avoid repeated identical requests, reducing API costs and improving response times.
+- `local_deepwiki.core.llm_cache.LLMCache`: The core caching logic is delegated to this class.
+- `local_deepwiki.providers.base.LLMProvider`: This class wraps another provider to add caching behavior.
 
-**Key Features**:
-- Wraps any existing [LLMProvider](../base.md) implementation
-- Provides transparent caching without changing the provider interface
-- Supports async operations through AsyncIterator return types
-- Integrates with the logging system for debugging and monitoring
+It is likely used by components in the `local_deepwiki.generators` module or CLI tools that require efficient LLM usage with caching.
 
-## Related Components
+---
 
-This module works with several other components in the system:
+# Classes
 
-- **[LLMCache](../../core/llm_cache.md)**: Core caching functionality from `local_deepwiki.core.llm_cache`
-- **[LLMProvider](../base.md)**: Base provider interface from `local_deepwiki.providers.base`
-- **Logging**: System logging from `local_deepwiki.logging`
+## CachingLLMProvider
 
-## Usage Pattern
+A wrapper around an `LLMProvider` that adds caching capabilities. It delegates generation requests to the underlying provider, but caches responses to avoid re-computation.
 
-The CachingLLMProvider follows the [decorator](../base.md) pattern, allowing you to wrap any existing LLM provider with caching capabilities:
+### Methods
 
-```python
-from local_deepwiki.providers.llm.cached import CachingLLMProvider
-from local_deepwiki.core.llm_cache import LLMCache
+#### `__init__(self, provider: LLMProvider, cache: LLMCache)`
 
-# Wrap an existing provider with caching
-cache = LLMCache()
-cached_provider = CachingLLMProvider(original_provider, cache)
-```
+Initialize the caching provider.
 
-The cached provider maintains the same interface as the original provider while adding transparent caching functionality.
+**Parameters:**
+- `provider`: The underlying LLM provider to wrap.
+- `cache`: The LLM cache instance to use.
+
+#### `name(self) -> str`
+
+Get the provider name with cache prefix.
+
+**Returns:**
+- A string in the format `cached:{provider_name}`.
+
+#### `stats(self) -> dict[str, int]`
+
+Get cache statistics.
+
+**Returns:**
+- A dictionary containing cache statistics (e.g., hits, misses).
+
+#### `generate(self, prompt: str, system_prompt: str | None = None, max_tokens: int = 4096, temperature: float = 0.7) -> str`
+
+Generate text with caching.
+
+Checks cache first, generates from provider on miss, and caches the response.
+
+**Parameters:**
+- `prompt`: The user prompt.
+- `system_prompt`: Optional system prompt.
+- `max_tokens`: Maximum tokens to generate.
+- `temperature`: Sampling temperature.
+
+**Returns:**
+- Generated text (from cache or provider).
+
+#### `generate_stream(self, prompt: str, system_prompt: str | None = None, max_tokens: int = 4096, temperature: float = 0.7) -> AsyncIterator[str]`
+
+Stream generation with caching.
+
+For cache hits, simulates streaming by yielding chunks. For cache misses, streams from provider and caches the complete response.
+
+**Parameters:**
+- `prompt`: The user prompt.
+- `system_prompt`: Optional system prompt.
+- `max_tokens`: Maximum tokens to generate.
+- `temperature`: Sampling temperature.
+
+**Returns:**
+- An async iterator of strings representing the generated text chunks.
 
 ## API Reference
 
 ### class `CachingLLMProvider`
 
-**Inherits from:** [`LLMProvider`](../base.md)
+**Inherits from:** `LLMProvider`
 
-LLM provider [wrapper](../base.md) that caches responses.  Wraps any [LLMProvider](../base.md) implementation to add transparent caching. Cache lookups happen before calling the underlying provider, and successful responses are cached for future use.  Only responses generated with temperature <= max_cacheable_temperature are cached, as higher temperatures produce non-deterministic outputs.
+LLM provider wrapper that caches responses.  Wraps any LLMProvider implementation to add transparent caching. Cache lookups happen before calling the underlying provider, and successful responses are cached for future use.  Only responses generated with temperature <= max_cacheable_temperature are cached, as higher temperatures produce non-deterministic outputs.
 
 **Methods:**
 
 
 <details>
-<summary>View Source (lines 12-158) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/llm/cached.py#L12-L158">GitHub</a></summary>
+<summary>View Source (lines 12-158) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/llm/cached.py#L12-L158">GitHub</a></summary>
 
 ```python
 class CachingLLMProvider(LLMProvider):
@@ -71,14 +110,14 @@ def __init__(provider: LLMProvider, cache: LLMCache)
 Initialize the caching provider.
 
 
-| [Parameter](../../generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `provider` | [`LLMProvider`](../base.md) | - | The underlying LLM provider to wrap. |
-| `cache` | [`LLMCache`](../../core/llm_cache.md) | - | The LLM cache instance to use. |
+| `provider` | `LLMProvider` | - | The underlying LLM provider to wrap. |
+| `cache` | `LLMCache` | - | The LLM cache instance to use. |
 
 
 <details>
-<summary>View Source (lines 23-35) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/llm/cached.py#L23-L35">GitHub</a></summary>
+<summary>View Source (lines 23-35) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/llm/cached.py#L23-L35">GitHub</a></summary>
 
 ```python
 def __init__(
@@ -108,7 +147,7 @@ Get the provider name with cache prefix.
 
 
 <details>
-<summary>View Source (lines 38-40) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/llm/cached.py#L38-L40">GitHub</a></summary>
+<summary>View Source (lines 38-40) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/llm/cached.py#L38-L40">GitHub</a></summary>
 
 ```python
 def name(self) -> str:
@@ -128,7 +167,7 @@ Get cache statistics.
 
 
 <details>
-<summary>View Source (lines 43-45) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/llm/cached.py#L43-L45">GitHub</a></summary>
+<summary>View Source (lines 43-45) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/llm/cached.py#L43-L45">GitHub</a></summary>
 
 ```python
 def stats(self) -> dict[str, int]:
@@ -147,7 +186,7 @@ async def generate(prompt: str, system_prompt: str | None = None, max_tokens: in
 Generate text with caching.  Checks cache first, generates from provider on miss, and caches the response.
 
 
-| [Parameter](../../generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `prompt` | `str` | - | The user prompt. |
 | `system_prompt` | `str | None` | `None` | Optional system prompt. |
@@ -156,7 +195,7 @@ Generate text with caching.  Checks cache first, generates from provider on miss
 
 
 <details>
-<summary>View Source (lines 47-98) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/llm/cached.py#L47-L98">GitHub</a></summary>
+<summary>View Source (lines 47-98) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/llm/cached.py#L47-L98">GitHub</a></summary>
 
 ```python
 async def generate(
@@ -224,7 +263,7 @@ async def generate_stream(prompt: str, system_prompt: str | None = None, max_tok
 Stream generation with caching.  For cache hits, simulates streaming by yielding chunks. For cache misses, streams from provider and caches the complete response.
 
 
-| [Parameter](../../generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `prompt` | `str` | - | The user prompt. |
 | `system_prompt` | `str | None` | `None` | Optional system prompt. |
@@ -235,7 +274,7 @@ Stream generation with caching.  For cache hits, simulates streaming by yielding
 
 
 <details>
-<summary>View Source (lines 100-158) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/llm/cached.py#L100-L158">GitHub</a></summary>
+<summary>View Source (lines 100-158) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/llm/cached.py#L100-L158">GitHub</a></summary>
 
 ```python
 async def generate_stream(
@@ -342,13 +381,9 @@ Functions and methods in this file and their callers:
 
 | Entity | Type | Author | Date | Commit |
 |--------|------|--------|------|--------|
-| `CachingLLMProvider` | class | Brian Breidenbach | 2 days ago | `ac906d4` Add LLM response caching wi... |
-| `__init__` | method | Brian Breidenbach | 2 days ago | `ac906d4` Add LLM response caching wi... |
-| `name` | method | Brian Breidenbach | 2 days ago | `ac906d4` Add LLM response caching wi... |
-| `stats` | method | Brian Breidenbach | 2 days ago | `ac906d4` Add LLM response caching wi... |
-| `generate` | method | Brian Breidenbach | 2 days ago | `ac906d4` Add LLM response caching wi... |
-| `generate_stream` | method | Brian Breidenbach | 2 days ago | `ac906d4` Add LLM response caching wi... |
-
-## Relevant Source Files
-
-- `src/local_deepwiki/providers/llm/cached.py:12-158`
+| `CachingLLMProvider` | class | Brian Breidenbach | 3 weeks ago | `ac906d4` Add LLM response caching wi... |
+| `__init__` | method | Brian Breidenbach | 3 weeks ago | `ac906d4` Add LLM response caching wi... |
+| `name` | method | Brian Breidenbach | 3 weeks ago | `ac906d4` Add LLM response caching wi... |
+| `stats` | method | Brian Breidenbach | 3 weeks ago | `ac906d4` Add LLM response caching wi... |
+| `generate` | method | Brian Breidenbach | 3 weeks ago | `ac906d4` Add LLM response caching wi... |
+| `generate_stream` | method | Brian Breidenbach | 3 weeks ago | `ac906d4` Add LLM response caching wi... |

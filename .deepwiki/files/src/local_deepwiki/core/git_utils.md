@@ -1,41 +1,317 @@
-# git_utils.py
+# File Overview
 
-## File Overview
+This file, `src/local_deepwiki/core/git_utils.py`, provides utilities for interacting with Git repositories. It includes functions for validating paths, retrieving repository information, parsing remote URLs, and obtaining blame information for code lines or ranges. The module is designed to support safe and consistent Git operations within the `local_deepwiki` project, particularly for generating documentation and tracking source file changes.
 
-This module provides data structures for representing Git repository information. It contains classes that store metadata about Git repositories, including remote URLs, hosting information, and repository details.
+## Dependencies
 
-## Classes
+This file imports:
+- `re` for regular expression operations
+- `subprocess` for executing Git commands
+- `dataclass` from `dataclasses` for defining structured data classes
+- `datetime` for date and time handling
+- `Path` from `pathlib` for path manipulation
+- `get_logger` from `local_deepwiki.logging` for logging
 
-### GitRepoInfo
+## Related Files
 
-A data class that holds information about a Git repository.
+This file is used by:
+- `tests/test_plugins.py` (via `test_git_utils`)
+- `src/local_deepwiki/cli/__init__.py`
+- `src/local_deepwiki/core/__init__.py`
+- `src/local_deepwiki/generators/source_refs.py`
+- `src/local_deepwiki/generators/wiki.py`
 
-**Purpose**: Stores structured information about a Git repository, including its remote location, hosting service details, and default branch.
+# Classes
 
-**Attributes**:
-- `remote_url` (str | None): The full remote URL of the repository (e.g., "https://github.com/owner/repo")
-- `host` (str | None): The hosting service domain (e.g., "github.com", "gitlab.com")
-- `owner` (str | None): The repository owner or organization name (e.g., "UrbanDiver")
-- `repo` (str | None): The repository name (e.g., "local-deepwiki-mcp")
-- `default_branch` (str): The default branch name (e.g., "[main](../export/pdf.md)")
+## GitPathValidationError
 
-## Usage Examples
+Raised when a path fails Git-specific validation.
+
+## GitRepoInfo
+
+Information about a Git repository.
+
+### Attributes
+- `remote_url`: str | None - e.g., "https://github.com/owner/repo"
+- `host`: str | None - e.g., "github.com", "gitlab.com"
+- `owner`: str | None - e.g., "UrbanDiver"
+- `repo`: str | None - e.g., "local-deepwiki-mcp"
+- `default_branch`: str - e.g., "main"
+
+## BlameInfo
+
+Git blame information for a line or range.
+
+### Attributes
+- `author`: str
+- `author_email`: str | None
+- `date`: datetime
+- `commit_hash`: str
+- `summary`: str | None - Commit message summary
+
+## EntityBlameInfo
+
+Blame information for a code entity (function, class, method).
+
+### Attributes
+- `entity_name`: str
+- `entity_type`: str - 'function', 'class', 'method'
+- `start_line`: int
+- `end_line`: int
+- `last_modified_by`: str
+- `last_modified_date`: datetime
+- `commit_hash`: str
+- `commit_summary`: str | None
+
+## StaleInfo
+
+Information about a potentially stale wiki page.
+
+### Attributes
+- `page_path`: str
+- `generated_at`: datetime
+- `source_files`: list[str]
+- `newest_source_date`: datetime
+- `days_stale`: int
+- `modified_entities`: list[str] | None - Entities modified after doc generation
+
+# Functions
+
+## _validate_git_path
+
+Validate a path for safe use in Git commands.
+
+### Parameters
+- `path`: str | Path - Path to validate.
+
+### Returns
+- `Path` - Validated absolute Path object.
+
+### Raises
+- `GitPathValidationError` - If the path fails validation.
+
+## _validate_repo_path
+
+Validate a repository path for safe use in Git commands.
+
+### Parameters
+- `repo_path`: str | Path - Path to the repository root.
+
+### Returns
+- `Path` - Validated absolute Path object.
+
+### Raises
+- `GitPathValidationError` - If the path fails validation.
+
+## get_git_remote_url
+
+Get the remote origin URL from Git config.
+
+### Parameters
+- `repo_path`: Path - Path to the repository.
+
+### Returns
+- `str | None` - Remote URL string or None if not a Git repo or no remote.
+
+## parse_remote_url
+
+Parse remote URL to extract host, owner, and repo name.
+
+### Parameters
+- `url`: str - Git remote URL.
+
+### Returns
+- `tuple[str, str, str] | None` - Tuple of (host, owner, repo) or None if parsing fails.
+
+## get_default_branch
+
+Get the default branch name for the repository.
+
+### Parameters
+- `repo_path`: Path - Path to the repository.
+
+### Returns
+- `str` - Branch name string.
+
+## get_repo_info
+
+Get complete Git repository information.
+
+### Parameters
+- `repo_path`: Path - Path to the repository.
+
+### Returns
+- `GitRepoInfo` - GitRepoInfo with available information.
+
+## is_github_repo
+
+Check if a repository is hosted on GitHub.
+
+### Parameters
+- `repo_path`: Path - Path to the repository.
+
+### Returns
+- `bool` - True if the repo has a GitHub remote, False otherwise.
+
+## build_source_url
+
+Build a URL to the source file on GitHub/GitLab.
+
+### Parameters
+- `repo_info`: GitRepoInfo - Repository information from `get_repo_info()`.
+- `file_path`: str - Relative path to the source file.
+- `start_line`: int | None - Optional starting line number.
+- `end_line`: int | None - Optional ending line number.
+
+### Returns
+- `str | None` - URL string like `https://github.com/owner/repo/blob/main/path/file.py#L10-L20` or None if repo_info doesn't have remote information.
+
+## get_line_blame
+
+Get blame information for a specific line in a file.
+
+### Parameters
+- `repo_path`: Path - Path to the repository.
+- `file_path`: str - Path to the file.
+- `line_number`: int - Line number to get blame for.
+
+### Returns
+- `BlameInfo` - Blame information for the line.
+
+## get_range_blame
+
+Get blame information for a range of lines in a file.
+
+### Parameters
+- `repo_path`: Path - Path to the repository.
+- `file_path`: str - Path to the file.
+- `start_line`: int - Starting line number.
+- `end_line`: int - Ending line number.
+
+### Returns
+- `list[BlameInfo]` - List of blame information for the lines.
+
+## _parse_porcelain_blame
+
+Parse porcelain format blame output.
+
+### Parameters
+- `output`: str - Raw blame output from Git.
+
+### Returns
+- `list[BlameInfo]` - List of parsed `BlameInfo` objects.
+
+## _parse_all_porcelain_blame
+
+Parse all blame lines from a porcelain output.
+
+### Parameters
+- `output`: str - Raw blame output from Git.
+
+### Returns
+- `list[BlameInfo]` - List of parsed `BlameInfo` objects.
+
+## get_file_entity_blame
+
+Get blame information for all entities in a file.
+
+### Parameters
+- `repo_path`: Path - Path to the repository.
+- `file_path`: str - Path to the file.
+- `entity_type`: str - Type of entity to find ('function', 'class', 'method').
+
+### Returns
+- `list[EntityBlameInfo]` - List of entity blame information.
+
+## _parse_line_blame_map
+
+Parse a blame map for a line.
+
+### Parameters
+- `line`: str - Line from Git blame output.
+
+### Returns
+- `BlameInfo` - Parsed `BlameInfo` object.
+
+## format_blame_date
+
+Format a Git blame date string.
+
+### Parameters
+- `date_str`: str - Date string from Git.
+
+### Returns
+- `datetime` - Formatted datetime object.
+
+## get_file_last_modified
+
+Get the last modified date of a file.
+
+### Parameters
+- `repo_path`: Path - Path to the repository.
+- `file_path`: str - Path to the file.
+
+### Returns
+- `datetime` - Last modified date of the file.
+
+## check_stale_pages
+
+Check if wiki pages are stale.
+
+### Parameters
+- `repo_path`: Path - Path to the repository.
+- `page_path`: str - Path to the wiki page.
+- `source_files`: list[str] - List of source files.
+
+### Returns
+- `StaleInfo` - Information about whether the page is stale.
+
+# Integration
+
+This file integrates with the larger `local_deepwiki` project by providing core Git utilities needed for documentation generation and source tracking. It is used by CLI components, core modules, and documentation generators to fetch repository metadata, blame information, and source URLs. The functions and classes defined here support features such as:
+- Generating source links in documentation
+- Tracking when source files were last modified
+- Identifying stale documentation pages
+- Validating paths before Git operations
+
+# Usage Examples
 
 ```python
-# Create a GitRepoInfo instance
-repo_info = GitRepoInfo()
-repo_info.remote_url = "https://github.com/UrbanDiver/local-deepwiki-mcp"
-repo_info.host = "github.com"
-repo_info.owner = "UrbanDiver"
-repo_info.repo = "local-deepwiki-mcp"
-repo_info.default_branch = "main"
+from local_deepwiki.core.git_utils import get_repo_info, is_github_repo, build_source_url
+
+# Get repository information
+repo_info = get_repo_info("/path/to/repo")
+print(repo_info.host)  # e.g., "github.com"
+
+# Check if repository is on GitHub
+is_github = is_github_repo("/path/to/repo")
+print(is_github)  # True or False
+
+# Build a source URL
+url = build_source_url(repo_info, "src/main.py", start_line=10, end_line=20)
+print(url)  # e.g., "https://github.com/user/repo/blob/main/src/main.py#L10-L20"
 ```
 
-## Related Components
-
-Based on the code provided, this file defines foundational data structures that would typically be used by other components in the system for Git repository operations and metadata management.
-
 ## API Reference
+
+### class `GitPathValidationError`
+
+**Inherits from:** `ValueError`
+
+Raised when a path fails git-specific validation.
+
+
+<details>
+<summary>View Source (lines 19-22) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/git_utils.py#L19-L22">GitHub</a></summary>
+
+```python
+class GitPathValidationError(ValueError):
+    """Raised when a path fails git-specific validation."""
+
+    pass
+```
+
+</details>
 
 ### class `GitRepoInfo`
 
@@ -43,7 +319,7 @@ Information about a git repository.
 
 
 <details>
-<summary>View Source (lines 20-27) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/git_utils.py#L20-L27">GitHub</a></summary>
+<summary>View Source (lines 100-107) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/git_utils.py#L100-L107">GitHub</a></summary>
 
 ```python
 class GitRepoInfo:
@@ -64,7 +340,7 @@ Git blame information for a line or range.
 
 
 <details>
-<summary>View Source (lines 235-242) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/git_utils.py#L235-L242">GitHub</a></summary>
+<summary>View Source (lines 322-329) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/git_utils.py#L322-L329">GitHub</a></summary>
 
 ```python
 class BlameInfo:
@@ -85,7 +361,7 @@ Blame information for a code entity (function, class, method).
 
 
 <details>
-<summary>View Source (lines 246-256) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/git_utils.py#L246-L256">GitHub</a></summary>
+<summary>View Source (lines 333-343) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/git_utils.py#L333-L343">GitHub</a></summary>
 
 ```python
 class EntityBlameInfo:
@@ -111,7 +387,7 @@ Information about a potentially stale wiki page.
 
 
 <details>
-<summary>View Source (lines 645-653) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/git_utils.py#L645-L653">GitHub</a></summary>
+<summary>View Source (lines 756-764) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/git_utils.py#L756-L764">GitHub</a></summary>
 
 ```python
 class StaleInfo:
@@ -138,7 +414,7 @@ def get_git_remote_url(repo_path: Path) -> str | None
 Get the remote origin URL from git config.
 
 
-| [Parameter](../generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `repo_path` | `Path` | - | Path to the repository. |
 
@@ -147,7 +423,7 @@ Get the remote origin URL from git config.
 
 
 <details>
-<summary>View Source (lines 30-51) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/git_utils.py#L30-L51">GitHub</a></summary>
+<summary>View Source (lines 110-132) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/git_utils.py#L110-L132">GitHub</a></summary>
 
 ```python
 def get_git_remote_url(repo_path: Path) -> str | None:
@@ -160,16 +436,17 @@ def get_git_remote_url(repo_path: Path) -> str | None:
         Remote URL string or None if not a git repo or no remote.
     """
     try:
+        validated_repo = _validate_repo_path(repo_path)
         result = subprocess.run(
             ["git", "config", "--get", "remote.origin.url"],
-            cwd=repo_path,
+            cwd=validated_repo,
             capture_output=True,
             text=True,
             timeout=5,
         )
         if result.returncode == 0:
             return result.stdout.strip()
-    except (subprocess.TimeoutExpired, FileNotFoundError, OSError) as e:
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError, GitPathValidationError) as e:
         logger.debug(f"Failed to get git remote URL: {e}")
     return None
 ```
@@ -185,7 +462,7 @@ def parse_remote_url(url: str) -> tuple[str, str, str] | None
 Parse remote URL to extract host, owner, and repo name.  Handles various URL formats: - https://github.com/owner/repo.git - https://github.com/owner/repo - git@github.com:owner/repo.git - git@github.com:owner/repo - ssh://git@github.com/owner/repo.git
 
 
-| [Parameter](../generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `url` | `str` | - | Git remote URL. |
 
@@ -194,7 +471,7 @@ Parse remote URL to extract host, owner, and repo name.  Handles various URL for
 
 
 <details>
-<summary>View Source (lines 54-91) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/git_utils.py#L54-L91">GitHub</a></summary>
+<summary>View Source (lines 135-172) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/git_utils.py#L135-L172">GitHub</a></summary>
 
 ```python
 def parse_remote_url(url: str) -> tuple[str, str, str] | None:
@@ -245,10 +522,10 @@ def parse_remote_url(url: str) -> tuple[str, str, str] | None:
 def get_default_branch(repo_path: Path) -> str
 ```
 
-Get the default branch name for the repository.  Tries to detect the default branch from: 1. Current HEAD if on a branch 2. Remote HEAD reference 3. Falls back to '[main](../export/pdf.md)'
+Get the default branch name for the repository.  Tries to detect the default branch from: 1. Current HEAD if on a branch 2. Remote HEAD reference 3. Falls back to 'main'
 
 
-| [Parameter](../generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `repo_path` | `Path` | - | Path to the repository. |
 
@@ -257,7 +534,7 @@ Get the default branch name for the repository.  Tries to detect the default bra
 
 
 <details>
-<summary>View Source (lines 94-142) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/git_utils.py#L94-L142">GitHub</a></summary>
+<summary>View Source (lines 175-229) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/git_utils.py#L175-L229">GitHub</a></summary>
 
 ```python
 def get_default_branch(repo_path: Path) -> str:
@@ -274,11 +551,17 @@ def get_default_branch(repo_path: Path) -> str:
     Returns:
         Branch name string.
     """
+    # Validate repo path once for both operations
+    try:
+        validated_repo = _validate_repo_path(repo_path)
+    except GitPathValidationError:
+        return "main"
+
     # Try to get current branch
     try:
         result = subprocess.run(
             ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-            cwd=repo_path,
+            cwd=validated_repo,
             capture_output=True,
             text=True,
             timeout=5,
@@ -294,7 +577,7 @@ def get_default_branch(repo_path: Path) -> str:
     try:
         result = subprocess.run(
             ["git", "symbolic-ref", "refs/remotes/origin/HEAD"],
-            cwd=repo_path,
+            cwd=validated_repo,
             capture_output=True,
             text=True,
             timeout=5,
@@ -322,7 +605,7 @@ def get_repo_info(repo_path: Path) -> GitRepoInfo
 Get complete git repository information.
 
 
-| [Parameter](../generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `repo_path` | `Path` | - | Path to the repository. |
 
@@ -331,7 +614,7 @@ Get complete git repository information.
 
 
 <details>
-<summary>View Source (lines 145-172) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/git_utils.py#L145-L172">GitHub</a></summary>
+<summary>View Source (lines 232-259) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/git_utils.py#L232-L259">GitHub</a></summary>
 
 ```python
 def get_repo_info(repo_path: Path) -> GitRepoInfo:
@@ -375,7 +658,7 @@ def is_github_repo(repo_path: Path) -> bool
 Check if a repository is hosted on GitHub.
 
 
-| [Parameter](../generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `repo_path` | `Path` | - | Path to the repository. |
 
@@ -384,7 +667,7 @@ Check if a repository is hosted on GitHub.
 
 
 <details>
-<summary>View Source (lines 175-187) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/git_utils.py#L175-L187">GitHub</a></summary>
+<summary>View Source (lines 262-274) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/git_utils.py#L262-L274">GitHub</a></summary>
 
 ```python
 def is_github_repo(repo_path: Path) -> bool:
@@ -413,7 +696,7 @@ def build_source_url(repo_info: GitRepoInfo, file_path: str, start_line: int | N
 Build a URL to the source file on GitHub/GitLab.
 
 
-| [Parameter](../generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `repo_info` | `GitRepoInfo` | - | Repository information from get_repo_info(). |
 | `file_path` | `str` | - | Relative path to the source file. |
@@ -425,7 +708,7 @@ Build a URL to the source file on GitHub/GitLab.
 
 
 <details>
-<summary>View Source (lines 190-231) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/git_utils.py#L190-L231">GitHub</a></summary>
+<summary>View Source (lines 277-318) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/git_utils.py#L277-L318">GitHub</a></summary>
 
 ```python
 def build_source_url(
@@ -483,7 +766,7 @@ def get_line_blame(repo_path: Path, file_path: str, line_number: int) -> BlameIn
 Get git blame information for a specific line.
 
 
-| [Parameter](../generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `repo_path` | `Path` | - | Path to the repository root. |
 | `file_path` | `str` | - | Relative path to the file. |
@@ -494,7 +777,7 @@ Get git blame information for a specific line.
 
 
 <details>
-<summary>View Source (lines 259-293) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/git_utils.py#L259-L293">GitHub</a></summary>
+<summary>View Source (lines 346-386) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/git_utils.py#L346-L386">GitHub</a></summary>
 
 ```python
 def get_line_blame(
@@ -513,13 +796,19 @@ def get_line_blame(
         BlameInfo or None if blame fails.
     """
     try:
+        validated_repo = _validate_repo_path(repo_path)
+        # Validate file_path relative to repo (construct full path for validation)
+        full_file_path = validated_repo / file_path
+        _validate_git_path(full_file_path)
+
         # Use porcelain format for easy parsing
+        # Use -- separator to prevent option injection from file_path
         result = subprocess.run(
             [
                 "git", "blame", "-L", f"{line_number},{line_number}",
-                "--porcelain", file_path
+                "--porcelain", "--", file_path
             ],
-            cwd=repo_path,
+            cwd=validated_repo,
             capture_output=True,
             text=True,
             timeout=10,
@@ -529,7 +818,7 @@ def get_line_blame(
 
         return _parse_porcelain_blame(result.stdout)
 
-    except (subprocess.TimeoutExpired, FileNotFoundError, OSError) as e:
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError, GitPathValidationError) as e:
         logger.debug(f"Failed to get git blame: {e}")
         return None
 ```
@@ -545,7 +834,7 @@ def get_range_blame(repo_path: Path, file_path: str, start_line: int, end_line: 
 Get the most recent blame information for a line range.  Returns the blame info for the most recently modified line in the range.
 
 
-| [Parameter](../generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `repo_path` | `Path` | - | Path to the repository root. |
 | `file_path` | `str` | - | Relative path to the file. |
@@ -557,7 +846,7 @@ Get the most recent blame information for a line range.  Returns the blame info 
 
 
 <details>
-<summary>View Source (lines 296-339) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/git_utils.py#L296-L339">GitHub</a></summary>
+<summary>View Source (lines 389-438) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/git_utils.py#L389-L438">GitHub</a></summary>
 
 ```python
 def get_range_blame(
@@ -580,12 +869,18 @@ def get_range_blame(
         BlameInfo for the most recently modified line, or None.
     """
     try:
+        validated_repo = _validate_repo_path(repo_path)
+        # Validate file_path relative to repo
+        full_file_path = validated_repo / file_path
+        _validate_git_path(full_file_path)
+
+        # Use -- separator to prevent option injection from file_path
         result = subprocess.run(
             [
                 "git", "blame", "-L", f"{start_line},{end_line}",
-                "--porcelain", file_path
+                "--porcelain", "--", file_path
             ],
-            cwd=repo_path,
+            cwd=validated_repo,
             capture_output=True,
             text=True,
             timeout=30,
@@ -601,7 +896,7 @@ def get_range_blame(
         # Return the most recently modified entry
         return max(entries, key=lambda e: e.date)
 
-    except (subprocess.TimeoutExpired, FileNotFoundError, OSError) as e:
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError, GitPathValidationError) as e:
         logger.debug(f"Failed to get git blame for range: {e}")
         return None
 ```
@@ -617,7 +912,7 @@ def get_file_entity_blame(repo_path: Path, file_path: str, entities: list[tuple[
 Get blame information for multiple code entities in a file.  This is more efficient than calling get_range_blame for each entity, as it runs a single git blame command for the entire file.
 
 
-| [Parameter](../generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `repo_path` | `Path` | - | Path to the repository root. |
 | `file_path` | `str` | - | Relative path to the file. |
@@ -628,7 +923,7 @@ Get blame information for multiple code entities in a file.  This is more effici
 
 
 <details>
-<summary>View Source (lines 418-484) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/git_utils.py#L418-L484">GitHub</a></summary>
+<summary>View Source (lines 517-589) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/git_utils.py#L517-L589">GitHub</a></summary>
 
 ```python
 def get_file_entity_blame(
@@ -653,10 +948,16 @@ def get_file_entity_blame(
         return []
 
     try:
+        validated_repo = _validate_repo_path(repo_path)
+        # Validate file_path relative to repo
+        full_file_path = validated_repo / file_path
+        _validate_git_path(full_file_path)
+
         # Get blame for entire file
+        # Use -- separator to prevent option injection from file_path
         result = subprocess.run(
-            ["git", "blame", "--porcelain", file_path],
-            cwd=repo_path,
+            ["git", "blame", "--porcelain", "--", file_path],
+            cwd=validated_repo,
             capture_output=True,
             text=True,
             timeout=60,
@@ -695,7 +996,7 @@ def get_file_entity_blame(
 
         return entity_blames
 
-    except (subprocess.TimeoutExpired, FileNotFoundError, OSError) as e:
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError, GitPathValidationError) as e:
         logger.debug(f"Failed to get file entity blame: {e}")
         return []
 ```
@@ -711,7 +1012,7 @@ def format_blame_date(dt: datetime) -> str
 Format a blame date for display.
 
 
-| [Parameter](../generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `dt` | `datetime` | - | Datetime object. |
 
@@ -720,7 +1021,7 @@ Format a blame date for display.
 
 
 <details>
-<summary>View Source (lines 562-586) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/git_utils.py#L562-L586">GitHub</a></summary>
+<summary>View Source (lines 667-691) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/git_utils.py#L667-L691">GitHub</a></summary>
 
 ```python
 def format_blame_date(dt: datetime) -> str:
@@ -761,7 +1062,7 @@ def get_file_last_modified(repo_path: Path, file_path: str) -> datetime | None
 Get the last modification date of a file from git history.
 
 
-| [Parameter](../generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `repo_path` | `Path` | - | Path to the repository root. |
 | `file_path` | `str` | - | Relative path to the file. |
@@ -771,7 +1072,7 @@ Get the last modification date of a file from git history.
 
 
 <details>
-<summary>View Source (lines 589-612) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/git_utils.py#L589-L612">GitHub</a></summary>
+<summary>View Source (lines 694-723) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/git_utils.py#L694-L723">GitHub</a></summary>
 
 ```python
 def get_file_last_modified(repo_path: Path, file_path: str) -> datetime | None:
@@ -785,9 +1086,15 @@ def get_file_last_modified(repo_path: Path, file_path: str) -> datetime | None:
         datetime of last modification, or None if not in git or error.
     """
     try:
+        validated_repo = _validate_repo_path(repo_path)
+        # Validate file_path relative to repo
+        full_file_path = validated_repo / file_path
+        _validate_git_path(full_file_path)
+
+        # Use -- separator to prevent option injection from file_path
         result = subprocess.run(
             ["git", "log", "-1", "--format=%ct", "--", file_path],
-            cwd=repo_path,
+            cwd=validated_repo,
             capture_output=True,
             text=True,
             timeout=10,
@@ -795,7 +1102,7 @@ def get_file_last_modified(repo_path: Path, file_path: str) -> datetime | None:
         if result.returncode == 0 and result.stdout.strip():
             timestamp = int(result.stdout.strip())
             return datetime.fromtimestamp(timestamp)
-    except (subprocess.TimeoutExpired, FileNotFoundError, OSError, ValueError) as e:
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError, ValueError, GitPathValidationError) as e:
         logger.debug(f"Failed to get last modified date for {file_path}: {e}")
     return None
 ```
@@ -811,7 +1118,7 @@ def get_files_last_modified(repo_path: Path, file_paths: list[str]) -> dict[str,
 Get last modification dates for multiple files efficiently.  Uses a single git log command to get dates for all files.
 
 
-| [Parameter](../generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `repo_path` | `Path` | - | Path to the repository root. |
 | `file_paths` | `list[str]` | - | List of relative file paths. |
@@ -821,7 +1128,7 @@ Get last modification dates for multiple files efficiently.  Uses a single git l
 
 
 <details>
-<summary>View Source (lines 615-641) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/git_utils.py#L615-L641">GitHub</a></summary>
+<summary>View Source (lines 726-752) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/git_utils.py#L726-L752">GitHub</a></summary>
 
 ```python
 def get_files_last_modified(
@@ -864,7 +1171,7 @@ def check_page_staleness(repo_path: Path, page_path: str, generated_at: float, s
 Check if a wiki page is potentially stale.  A page is considered stale if any of its source files have been modified after the page was generated.
 
 
-| [Parameter](../generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `repo_path` | `Path` | - | Path to the repository root. |
 | `page_path` | `str` | - | Wiki page path. |
@@ -878,7 +1185,7 @@ Check if a wiki page is potentially stale.  A page is considered stale if any of
 
 
 <details>
-<summary>View Source (lines 656-705) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/git_utils.py#L656-L705">GitHub</a></summary>
+<summary>View Source (lines 767-816) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/git_utils.py#L767-L816">GitHub</a></summary>
 
 ```python
 def check_page_staleness(
@@ -978,63 +1285,82 @@ classDiagram
 ```mermaid
 flowchart TD
     N0[BlameInfo]
-    N1[EntityBlameInfo]
+    N1[GitPathValidationError]
     N2[GitRepoInfo]
-    N3[StaleInfo]
+    N3[Path]
     N4[_parse_all_porcelain_blame]
     N5[_parse_line_blame_map]
     N6[_parse_porcelain_blame]
-    N7[check_page_staleness]
-    N8[format_blame_date]
-    N9[fromtimestamp]
-    N10[get_default_branch]
-    N11[get_file_entity_blame]
-    N12[get_file_last_modified]
-    N13[get_files_last_modified]
-    N14[get_git_remote_url]
-    N15[get_line_blame]
-    N16[get_range_blame]
-    N17[get_repo_info]
-    N18[groups]
-    N19[is_github_repo]
-    N20[match]
-    N21[now]
-    N22[parse_remote_url]
-    N23[run]
-    N24[strftime]
-    N25[sub]
-    N14 --> N23
-    N22 --> N25
-    N22 --> N20
-    N22 --> N18
-    N10 --> N23
-    N17 --> N14
-    N17 --> N22
-    N17 --> N10
-    N17 --> N2
-    N19 --> N17
-    N15 --> N23
-    N15 --> N6
-    N16 --> N23
-    N16 --> N4
+    N7[_validate_git_path]
+    N8[_validate_repo_path]
+    N9[check_page_staleness]
+    N10[exists]
+    N11[format_blame_date]
+    N12[fromtimestamp]
+    N13[get_default_branch]
+    N14[get_file_entity_blame]
+    N15[get_file_last_modified]
+    N16[get_files_last_modified]
+    N17[get_git_remote_url]
+    N18[get_line_blame]
+    N19[get_range_blame]
+    N20[get_repo_info]
+    N21[groups]
+    N22[is_dir]
+    N23[is_github_repo]
+    N24[lstrip]
+    N25[match]
+    N26[parse_remote_url]
+    N27[resolve]
+    N28[run]
+    N29[sub]
+    N7 --> N1
+    N7 --> N27
+    N7 --> N3
+    N7 --> N24
+    N7 --> N10
+    N8 --> N7
+    N8 --> N22
+    N8 --> N1
+    N8 --> N10
+    N17 --> N8
+    N17 --> N28
+    N26 --> N29
+    N26 --> N25
+    N26 --> N21
+    N13 --> N8
+    N13 --> N28
+    N20 --> N17
+    N20 --> N26
+    N20 --> N13
+    N20 --> N2
+    N23 --> N20
+    N18 --> N8
+    N18 --> N7
+    N18 --> N28
+    N18 --> N6
+    N19 --> N8
+    N19 --> N7
+    N19 --> N28
+    N19 --> N4
     N6 --> N4
     N4 --> N0
-    N4 --> N9
-    N11 --> N23
-    N11 --> N5
-    N11 --> N1
+    N4 --> N12
+    N14 --> N8
+    N14 --> N7
+    N14 --> N28
+    N14 --> N5
     N5 --> N0
-    N5 --> N9
-    N8 --> N21
-    N8 --> N24
-    N12 --> N23
-    N12 --> N9
-    N13 --> N12
-    N7 --> N9
-    N7 --> N13
-    N7 --> N3
+    N5 --> N12
+    N15 --> N8
+    N15 --> N7
+    N15 --> N28
+    N15 --> N12
+    N16 --> N15
+    N9 --> N12
+    N9 --> N16
     classDef func fill:#e1f5fe
-    class N0,N1,N2,N3,N4,N5,N6,N7,N8,N9,N10,N11,N12,N13,N14,N15,N16,N17,N18,N19,N20,N21,N22,N23,N24,N25 func
+    class N0,N1,N2,N3,N4,N5,N6,N7,N8,N9,N10,N11,N12,N13,N14,N15,N16,N17,N18,N19,N20,N21,N22,N23,N24,N25,N26,N27,N28,N29 func
 ```
 
 ## Used By
@@ -1043,11 +1369,16 @@ Functions and methods in this file and their callers:
 
 - **`BlameInfo`**: called by `_parse_all_porcelain_blame`, `_parse_line_blame_map`
 - **`EntityBlameInfo`**: called by `get_file_entity_blame`
+- **`GitPathValidationError`**: called by `_validate_git_path`, `_validate_repo_path`
 - **`GitRepoInfo`**: called by `get_repo_info`
+- **`Path`**: called by `_validate_git_path`
 - **`StaleInfo`**: called by `check_page_staleness`
 - **`_parse_all_porcelain_blame`**: called by `_parse_porcelain_blame`, `get_range_blame`
 - **`_parse_line_blame_map`**: called by `get_file_entity_blame`
 - **`_parse_porcelain_blame`**: called by `get_line_blame`
+- **`_validate_git_path`**: called by `_validate_repo_path`, `get_file_entity_blame`, `get_file_last_modified`, `get_line_blame`, `get_range_blame`
+- **`_validate_repo_path`**: called by `get_default_branch`, `get_file_entity_blame`, `get_file_last_modified`, `get_git_remote_url`, `get_line_blame`, `get_range_blame`
+- **`exists`**: called by `_validate_git_path`, `_validate_repo_path`
 - **`fromtimestamp`**: called by `_parse_all_porcelain_blame`, `_parse_line_blame_map`, `check_page_staleness`, `get_file_last_modified`
 - **`get_default_branch`**: called by `get_repo_info`
 - **`get_file_last_modified`**: called by `get_files_last_modified`
@@ -1055,9 +1386,12 @@ Functions and methods in this file and their callers:
 - **`get_git_remote_url`**: called by `get_repo_info`
 - **`get_repo_info`**: called by `is_github_repo`
 - **`groups`**: called by `parse_remote_url`
+- **`is_dir`**: called by `_validate_repo_path`
+- **`lstrip`**: called by `_validate_git_path`
 - **`match`**: called by `parse_remote_url`
 - **`now`**: called by `format_blame_date`
 - **`parse_remote_url`**: called by `get_repo_info`
+- **`resolve`**: called by `_validate_git_path`
 - **`run`**: called by `get_default_branch`, `get_file_entity_blame`, `get_file_last_modified`, `get_git_remote_url`, `get_line_blame`, `get_range_blame`
 - **`strftime`**: called by `format_blame_date`
 - **`sub`**: called by `parse_remote_url`
@@ -1066,70 +1400,54 @@ Functions and methods in this file and their callers:
 
 *Examples extracted from test files*
 
-### Test parsing GitHub HTTPS URL
+### Test valid path returns absolute Path object
 
-From `test_git_utils.py::TestParseRemoteUrl::test_github_https`:
+From `test_git_utils.py::TestValidateGitPath::test_valid_path_returns_resolved_path`:
 
 ```python
-result = parse_remote_url("https://github.com/owner/repo")
-assert result == ("github.com", "owner", "repo")
+test_file = tmp_path / "test.txt"
+test_file.write_text("test")
+result = _validate_git_path(test_file)
+assert result.is_absolute()
+assert result.exists()
 ```
 
-### Test parsing GitHub HTTPS URL with .git suffix
+### Test rejects paths starting with dash (option injection prevention)
 
-From `test_git_utils.py::TestParseRemoteUrl::test_github_https_with_git_suffix`:
+From `test_git_utils.py::TestValidateGitPath::test_rejects_path_starting_with_dash`:
 
 ```python
-result = parse_remote_url("https://github.com/owner/repo.git")
-assert result == ("github.com", "owner", "repo")
+with pytest.raises(GitPathValidationError, match="starts with '-'"):
+    _validate_git_path("-malicious")
 ```
 
-### Test building GitHub URL without line numbers
+### Test rejects paths starting with dash (option injection prevention)
 
-From `test_git_utils.py::TestBuildSourceUrl::test_github_url_without_lines`:
+From `test_git_utils.py::TestValidateGitPath::test_rejects_path_starting_with_dash`:
 
 ```python
-repo_info = GitRepoInfo(
-    remote_url="https://github.com/owner/repo",
-    host="github.com",
-    owner="owner",
-    repo="repo",
-    default_branch="main",
-)
-result = build_source_url(repo_info, "src/file.py")
-assert result == "https://github.com/owner/repo/blob/main/src/file.py"
+with pytest.raises(GitPathValidationError, match="starts with '-'"):
+    _validate_git_path("-malicious")
 ```
 
-### Test building GitHub URL without line numbers
+### Test rejects paths containing null bytes
 
-From `test_git_utils.py::TestBuildSourceUrl::test_github_url_without_lines`:
+From `test_git_utils.py::TestValidateGitPath::test_rejects_path_with_null_byte`:
 
 ```python
-repo_info = GitRepoInfo(
-    remote_url="https://github.com/owner/repo",
-    host="github.com",
-    owner="owner",
-    repo="repo",
-    default_branch="main",
-)
-result = build_source_url(repo_info, "src/file.py")
-assert result == "https://github.com/owner/repo/blob/main/src/file.py"
+with pytest.raises(GitPathValidationError, match="null byte"):
+    _validate_git_path("path\x00with_null")
 ```
 
-### Test building GitHub URL with single line number
+### Test valid git repo returns absolute Path object
 
-From `test_git_utils.py::TestBuildSourceUrl::test_github_url_with_single_line`:
+From `test_git_utils.py::TestValidateRepoPath::test_valid_repo_returns_resolved_path`:
 
 ```python
-repo_info = GitRepoInfo(
-    remote_url="https://github.com/owner/repo",
-    host="github.com",
-    owner="owner",
-    repo="repo",
-    default_branch="main",
-)
-result = build_source_url(repo_info, "src/file.py", start_line=42)
-assert result == "https://github.com/owner/repo/blob/main/src/file.py#L42"
+(tmp_path / ".git").mkdir()
+result = _validate_repo_path(tmp_path)
+assert result.is_absolute()
+assert result.exists()
 ```
 
 
@@ -1137,35 +1455,130 @@ assert result == "https://github.com/owner/repo/blob/main/src/file.py#L42"
 
 | Entity | Type | Author | Date | Commit |
 |--------|------|--------|------|--------|
-| `StaleInfo` | class | Not Committed Yet | today | `0000000` Version of src/local_deepwi... |
-| `get_file_last_modified` | function | Not Committed Yet | today | `0000000` Version of src/local_deepwi... |
-| `get_files_last_modified` | function | Not Committed Yet | today | `0000000` Version of src/local_deepwi... |
-| `check_page_staleness` | function | Not Committed Yet | today | `0000000` Version of src/local_deepwi... |
-| `BlameInfo` | class | Brian Breidenbach | today | `37aec0f` Add git blame integration t... |
-| `EntityBlameInfo` | class | Brian Breidenbach | today | `37aec0f` Add git blame integration t... |
-| `get_line_blame` | function | Brian Breidenbach | today | `37aec0f` Add git blame integration t... |
-| `get_range_blame` | function | Brian Breidenbach | today | `37aec0f` Add git blame integration t... |
-| `_parse_porcelain_blame` | function | Brian Breidenbach | today | `37aec0f` Add git blame integration t... |
-| `_parse_all_porcelain_blame` | function | Brian Breidenbach | today | `37aec0f` Add git blame integration t... |
-| `get_file_entity_blame` | function | Brian Breidenbach | today | `37aec0f` Add git blame integration t... |
-| `_parse_line_blame_map` | function | Brian Breidenbach | today | `37aec0f` Add git blame integration t... |
-| `format_blame_date` | function | Brian Breidenbach | today | `37aec0f` Add git blame integration t... |
-| `is_github_repo` | function | Brian Breidenbach | 2 days ago | `52202b9` Add automatic cloud provide... |
-| `GitRepoInfo` | class | Brian Breidenbach | 2 days ago | `2708dc5` Add GitHub/GitLab links to ... |
-| `get_git_remote_url` | function | Brian Breidenbach | 2 days ago | `2708dc5` Add GitHub/GitLab links to ... |
-| `parse_remote_url` | function | Brian Breidenbach | 2 days ago | `2708dc5` Add GitHub/GitLab links to ... |
-| `get_default_branch` | function | Brian Breidenbach | 2 days ago | `2708dc5` Add GitHub/GitLab links to ... |
-| `get_repo_info` | function | Brian Breidenbach | 2 days ago | `2708dc5` Add GitHub/GitLab links to ... |
-| `build_source_url` | function | Brian Breidenbach | 2 days ago | `2708dc5` Add GitHub/GitLab links to ... |
+| `GitPathValidationError` | class | Brian Breidenbach | 1 week ago | `7f23c3c` Security fixes: Git command... |
+| `_validate_git_path` | function | Brian Breidenbach | 1 week ago | `7f23c3c` Security fixes: Git command... |
+| `_validate_repo_path` | function | Brian Breidenbach | 1 week ago | `7f23c3c` Security fixes: Git command... |
+| `get_git_remote_url` | function | Brian Breidenbach | 1 week ago | `7f23c3c` Security fixes: Git command... |
+| `get_default_branch` | function | Brian Breidenbach | 1 week ago | `7f23c3c` Security fixes: Git command... |
+| `get_line_blame` | function | Brian Breidenbach | 1 week ago | `7f23c3c` Security fixes: Git command... |
+| `get_range_blame` | function | Brian Breidenbach | 1 week ago | `7f23c3c` Security fixes: Git command... |
+| `get_file_entity_blame` | function | Brian Breidenbach | 1 week ago | `7f23c3c` Security fixes: Git command... |
+| `get_file_last_modified` | function | Brian Breidenbach | 1 week ago | `7f23c3c` Security fixes: Git command... |
+| `StaleInfo` | class | Brian Breidenbach | 2 weeks ago | `59bad6c` Add stale documentation det... |
+| `get_files_last_modified` | function | Brian Breidenbach | 2 weeks ago | `59bad6c` Add stale documentation det... |
+| `check_page_staleness` | function | Brian Breidenbach | 2 weeks ago | `59bad6c` Add stale documentation det... |
+| `BlameInfo` | class | Brian Breidenbach | 3 weeks ago | `37aec0f` Add git blame integration t... |
+| `EntityBlameInfo` | class | Brian Breidenbach | 3 weeks ago | `37aec0f` Add git blame integration t... |
+| `_parse_porcelain_blame` | function | Brian Breidenbach | 3 weeks ago | `37aec0f` Add git blame integration t... |
+| `_parse_all_porcelain_blame` | function | Brian Breidenbach | 3 weeks ago | `37aec0f` Add git blame integration t... |
+| `_parse_line_blame_map` | function | Brian Breidenbach | 3 weeks ago | `37aec0f` Add git blame integration t... |
+| `format_blame_date` | function | Brian Breidenbach | 3 weeks ago | `37aec0f` Add git blame integration t... |
+| `is_github_repo` | function | Brian Breidenbach | 3 weeks ago | `52202b9` Add automatic cloud provide... |
+| `GitRepoInfo` | class | Brian Breidenbach | 3 weeks ago | `2708dc5` Add GitHub/GitLab links to ... |
+| `parse_remote_url` | function | Brian Breidenbach | 3 weeks ago | `2708dc5` Add GitHub/GitLab links to ... |
+| `get_repo_info` | function | Brian Breidenbach | 3 weeks ago | `2708dc5` Add GitHub/GitLab links to ... |
+| `build_source_url` | function | Brian Breidenbach | 3 weeks ago | `2708dc5` Add GitHub/GitLab links to ... |
 
 ## Additional Source Code
 
 Source code for functions and methods not listed in the API Reference above.
 
+#### `_validate_git_path`
+
+<details>
+<summary>View Source (lines 25-58) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/git_utils.py#L25-L58">GitHub</a></summary>
+
+```python
+def _validate_git_path(path: str | Path) -> Path:
+    """Validate a path for safe use in git commands.
+
+    Prevents git option injection and other path-based attacks.
+
+    Args:
+        path: Path to validate.
+
+    Returns:
+        Validated absolute Path object.
+
+    Raises:
+        GitPathValidationError: If the path fails validation.
+    """
+    # Check for null bytes first (could truncate path in C-based git)
+    # Must check before Path operations since they raise ValueError on null bytes
+    if "\x00" in str(path):
+        raise GitPathValidationError(f"Path contains null byte: {path!r}")
+
+    # Convert to Path and resolve to absolute
+    path_obj = Path(path).resolve()
+
+    # Check for option injection (paths starting with -)
+    # After resolve(), check both the full path and the original input
+    if str(path).lstrip().startswith("-"):
+        raise GitPathValidationError(
+            f"Path starts with '-' which could be interpreted as git option: {path!r}"
+        )
+
+    # Check that the path exists
+    if not path_obj.exists():
+        raise GitPathValidationError(f"Path does not exist: {path_obj}")
+
+    return path_obj
+```
+
+</details>
+
+
+#### `_validate_repo_path`
+
+<details>
+<summary>View Source (lines 61-96) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/git_utils.py#L61-L96">GitHub</a></summary>
+
+```python
+def _validate_repo_path(repo_path: str | Path) -> Path:
+    """Validate a repository path for safe use in git commands.
+
+    Performs all checks from _validate_git_path plus repository-specific checks.
+
+    Args:
+        repo_path: Path to the repository root.
+
+    Returns:
+        Validated absolute Path object.
+
+    Raises:
+        GitPathValidationError: If the path fails validation.
+    """
+    validated = _validate_git_path(repo_path)
+
+    # Must be a directory
+    if not validated.is_dir():
+        raise GitPathValidationError(f"Repository path is not a directory: {validated}")
+
+    # Check if it's a git repository (has .git or is inside one)
+    # Walk up to find .git directory
+    check_path = validated
+    found_git = False
+    while check_path != check_path.parent:
+        if (check_path / ".git").exists():
+            found_git = True
+            break
+        check_path = check_path.parent
+
+    if not found_git:
+        raise GitPathValidationError(
+            f"Path is not inside a git repository: {validated}"
+        )
+
+    return validated
+```
+
+</details>
+
+
 #### `_parse_porcelain_blame`
 
 <details>
-<summary>View Source (lines 342-352) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/git_utils.py#L342-L352">GitHub</a></summary>
+<summary>View Source (lines 441-451) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/git_utils.py#L441-L451">GitHub</a></summary>
 
 ```python
 def _parse_porcelain_blame(output: str) -> BlameInfo | None:
@@ -1187,7 +1600,7 @@ def _parse_porcelain_blame(output: str) -> BlameInfo | None:
 #### `_parse_all_porcelain_blame`
 
 <details>
-<summary>View Source (lines 355-415) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/git_utils.py#L355-L415">GitHub</a></summary>
+<summary>View Source (lines 454-514) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/git_utils.py#L454-L514">GitHub</a></summary>
 
 ```python
 def _parse_all_porcelain_blame(output: str) -> list[BlameInfo]:
@@ -1259,7 +1672,7 @@ def _parse_all_porcelain_blame(output: str) -> list[BlameInfo]:
 #### `_parse_line_blame_map`
 
 <details>
-<summary>View Source (lines 487-559) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/git_utils.py#L487-L559">GitHub</a></summary>
+<summary>View Source (lines 592-664) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/git_utils.py#L592-L664">GitHub</a></summary>
 
 ```python
 def _parse_line_blame_map(output: str) -> dict[int, BlameInfo]:
@@ -1339,6 +1752,3 @@ def _parse_line_blame_map(output: str) -> dict[int, BlameInfo]:
 
 </details>
 
-## Relevant Source Files
-
-- `src/local_deepwiki/core/git_utils.py:20-27`

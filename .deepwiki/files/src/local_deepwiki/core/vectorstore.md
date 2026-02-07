@@ -1,86 +1,2940 @@
-# Documentation for `src/local_deepwiki/core/vectorstore.py`
+# File Overview
 
-## File Overview
-
-The `vectorstore.py` module in the `src/local_deepwiki/core/` directory is responsible for managing vectorized data storage and retrieval. It leverages LanceDB, a database designed for vector similarity search, to store and query embeddings of text chunks efficiently. The module imports necessary libraries and classes from other modules within the project, such as logging utilities, models, and embedding providers.
+This file implements a vector store for semantic search capabilities, primarily using LanceDB as the underlying database. It provides functionality for storing, indexing, and retrieving vector embeddings of text chunks, with support for adaptive search strategies, caching, and rate limiting. The module integrates with the broader project through configuration and logging systems.
 
 ## Classes
 
+### SearchResultPage
+Paginated search results with metadata.
+
+**Attributes:**
+- `results`: List of search results for this page.
+- `total`: Total number of matching results across all pages.
+- `offset`: Starting offset of this page.
+- `limit`: Maximum results per page.
+- `has_more`: Whether there are more results after this page.
+- `cursor`: Optional cursor for cursor-based pagination.
+
+### ChunkBatch
+A batch of chunks loaded from the store.
+
+**Attributes:**
+- `chunks`: List of CodeChunk objects in this batch.
+- `batch_index`: Index of this batch (0-based).
+- `total_batches`: Estimated total number of batches.
+- `has_more`: Whether there are more batches to load.
+
+### SearchProfile
+Search profile for precision/recall trade-off.
+
+**Profiles:**
+- `FAST`: Minimal candidates, fastest response, may miss some relevant results
+- `BALANCED`: Default behavior, good balance of speed and recall
+- `THOROUGH`: Exhaustive search, best recall but slower
+
+### SearchProfileConfig
+Configuration for a search profile.
+
+**Attributes:**
+- `profile`: The search profile this config applies to.
+- `fetch_multiplier`: Multiplier for nprobes/candidates fetched. Higher values fetch more candidates for better recall.
+- `rerank_candidates`: How many candidates to rerank. More candidates = better final ranking but slower.
+- `use_approximate`: Whether to use approximate (ANN) search. False means exact/exhaustive search.
+- `min_similarity`: Minimum similarity threshold. Results below this threshold are filtered out.
+
+### SearchFeedback
+User feedback on search result relevance.
+
+Used to improve future search results by learning which results are actually relevant for specific queries.
+
+**Attributes:**
+- `query`: The original search query.
+- `result_id`: ID of the result being rated.
+- `relevant`: Whether the user marked this result as relevant.
+- `timestamp`: When the feedback was recorded.
+
+### AdaptiveSearcher
+Adaptive search system that adjusts search parameters based on historical performance and user feedback.
+
+**Methods:**
+- `__init__()`: Initialize the adaptive searcher.
+- `set_store(store)`: Set the vector store reference.
+- `_calculate_query_complexity(query)`: Calculate a complexity score for a query.
+- `estimate_optimal_depth(query, base_limit)`: Estimate optimal search depth based on query characteristics.
+- `record_search_quality(query, quality, result_count, depth_used)`: Record search quality for future adaptation.
+- `record_feedback(feedback)`: Record user feedback to improve future searches.
+- `get_feedback_stats()`: Get statistics about collected feedback.
+
+### SearchCacheEntry
+Internal class for caching search results.
+
+### SearchCache
+Cache for search results with time-based expiration.
+
+### BatchEmbeddingResult
+Result of a batch embedding operation.
+
+### EmbeddingProgress
+Progress tracking for embedding operations.
+
+### RateLimiter
+Rate limiter for controlling request frequency.
+
+### ChunkIterator
+Iterator for iterating over chunks in a store.
+
+### LazyChunkLoader
+Lazy loader for chunks from the store.
+
+### LatencyStats
+Statistics for tracking search latency.
+
+### LazyIndexManager
+Manager for lazy index creation and maintenance.
+
 ### VectorStore
-
-**Purpose**:  
-The `VectorStore` class is central to this module. It handles the creation, management, and querying of vectorized data using LanceDB. The class provides methods to add embeddings to the database, search for similar vectors, and manage schema changes.
-
-**Key Methods**:
-
-- **`__init__(self, db_path: str)`**:  
-  Initializes a new instance of the `VectorStore`. It takes a path where the LanceDB will be stored (`db_path`) as a parameter.
-
-- **`add_embeddings(self, embeddings: list[dict], table_name: str) -> None`**:  
-  Adds a list of embeddings to a specified table within the vector store. Each embedding should be provided as a dictionary with appropriate fields.
-
-- **`search(self, query_embedding: dict, table_name: str, limit: int = 10) -> SearchResult`**:  
-  Searches for vectors similar to the `query_embedding` in the specified table. Returns a [`SearchResult`](../models.md) object containing the most similar entries up to the limit specified.
-
-- **`update_schema(self, schema_changes: dict, table_name: str) -> None`**:  
-  Updates the schema of an existing table based on the provided changes. The `schema_changes` should be a dictionary specifying the modifications.
+Main class for managing vector storage and search operations.
 
 ## Functions
 
 ### _sanitize_string_value
+Sanitizes a string value for use in search.
 
-**Purpose**:  
-The `_sanitize_string_value` function is not fully defined in the provided code snippet, but its presence suggests it performs some form of string sanitization or validation.
-
-**Parameters**:  
-- `value`: The string value to sanitize.
-
-**Return Value**:  
-- Returns a sanitized version of the input string.
+### _row_to_chunk_default
+Converts a database row to a CodeChunk object.
 
 ## Integration
 
-The `vectorstore.py` module integrates with other parts of the Local DeepWiki codebase through several imports and dependencies:
+This file integrates with:
+- Configuration system (`local_deepwiki.config`)
+- Logging system (`local_deepwiki.logging`)
+- Other components in `src/local_deepwiki/core/` and related modules
+- External libraries like `lancedb`, `numpy`, `psutil`, and `pyarrow`
 
-1. **Dependencies**:
-   - `lancedb`: Used for vectorized data storage and retrieval.
-   - `pyarrow.compute`: Utilized for efficient computation on Arrow tables.
-   - [`local_deepwiki.logging.get_logger`](../logging.md): For logging purposes.
-   - `local_deepwiki.models`: Contains model definitions like [`ChunkType`](../models.md), [`CodeChunk`](../models.md), etc.
-   - [`local_deepwiki.providers.base.EmbeddingProvider`](../providers/base.md): Provides the interface for embedding providers.
-
-2. **Integration Points**:
-   - The module is likely used by components that require vectorized data storage and retrieval, such as query engines or search modules within the Local DeepWiki system.
-   - It interacts with other parts of the codebase through its methods, allowing other modules to add embeddings, perform searches, and update schemas.
+The `VectorStore` class is the main interface for search operations, while `AdaptiveSearcher` provides intelligent search depth adjustment. `SearchCache` and `RateLimiter` provide caching and rate limiting functionality respectively.
 
 ## Usage Examples
 
-Below are examples demonstrating how to use the `VectorStore` class. Note that these examples assume a complete implementation of the missing `_sanitize_string_value` function.
-
+### Using VectorStore
 ```python
-# Initialize the VectorStore with a database path
-vector_store = VectorStore(db_path="/path/to/lancedb")
+# Initialize vector store
+store = VectorStore(
+    db_path="path/to/database",
+    embedding_model="sentence-transformers/all-MiniLM-L6-v2"
+)
 
-# Example embeddings data (list of dictionaries)
-embeddings_data = [
-    {"id": 1, "embedding": [0.1, 0.2, 0.3], "text": "Example text 1"},
-    {"id": 2, "embedding": [0.4, 0.5, 0.6], "text": "Example text 2"}
-]
-
-# Add embeddings to a table
-vector_store.add_embeddings(embeddings=embeddings_data, table_name="example_table")
-
-# Perform a search query
-query_embedding = {"embedding": [0.3, 0.4, 0.5]}
-search_result = vector_store.search(query_embedding=query_embedding, table_name="example_table", limit=2)
-
-# Print the search results
-print(search_result)
+# Search for chunks
+results = store.search("query text", limit=10)
 ```
 
-This example demonstrates initializing a `VectorStore`, adding embeddings to a table, and performing a similarity search using a query embedding. The actual usage may vary depending on the complete implementation details of missing parts like `_sanitize_string_value`.
+### Using AdaptiveSearcher
+```python
+# Initialize adaptive searcher
+searcher = AdaptiveSearcher()
+searcher.set_store(store)
+
+# Record search quality
+searcher.record_search_quality("query", 0.8, 5, 20)
+
+# Record feedback
+feedback = SearchFeedback("query", "result_id", True)
+searcher.record_feedback(feedback)
+```
 
 ## API Reference
+
+### class `SearchResultPage`
+
+Paginated search results with metadata.  Attributes: results: List of search results for this page. total: Total number of matching results across all pages. offset: Starting offset of this page. limit: Maximum results per page. has_more: Whether there are more results after this page. cursor: Optional cursor for cursor-based pagination.
+
+
+<details>
+<summary>View Source (lines 50-67) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L50-L67">GitHub</a></summary>
+
+```python
+class SearchResultPage:
+    """Paginated search results with metadata.
+
+    Attributes:
+        results: List of search results for this page.
+        total: Total number of matching results across all pages.
+        offset: Starting offset of this page.
+        limit: Maximum results per page.
+        has_more: Whether there are more results after this page.
+        cursor: Optional cursor for cursor-based pagination.
+    """
+
+    results: list[SearchResult]
+    total: int
+    offset: int
+    limit: int
+    has_more: bool
+    cursor: str | None = None
+```
+
+</details>
+
+### class `ChunkBatch`
+
+A batch of chunks loaded from the store.  Attributes: chunks: List of CodeChunk objects in this batch. batch_index: Index of this batch (0-based). total_batches: Estimated total number of batches. has_more: Whether there are more batches to load.
+
+
+<details>
+<summary>View Source (lines 71-84) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L71-L84">GitHub</a></summary>
+
+```python
+class ChunkBatch:
+    """A batch of chunks loaded from the store.
+
+    Attributes:
+        chunks: List of CodeChunk objects in this batch.
+        batch_index: Index of this batch (0-based).
+        total_batches: Estimated total number of batches.
+        has_more: Whether there are more batches to load.
+    """
+
+    chunks: list[CodeChunk]
+    batch_index: int
+    total_batches: int
+    has_more: bool
+```
+
+</details>
+
+### class `SearchProfile`
+
+**Inherits from:** `str`, `Enum`
+
+Search profile for precision/recall trade-off.  Profiles control how exhaustive the search is, trading off speed vs accuracy: - FAST: Minimal candidates, fastest response, may miss some relevant results - BALANCED: Default behavior, good balance of speed and recall - THOROUGH: Exhaustive search, best recall but slower
+
+
+<details>
+<summary>View Source (lines 87-98) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L87-L98">GitHub</a></summary>
+
+```python
+class SearchProfile(str, Enum):
+    """Search profile for precision/recall trade-off.
+
+    Profiles control how exhaustive the search is, trading off speed vs accuracy:
+    - FAST: Minimal candidates, fastest response, may miss some relevant results
+    - BALANCED: Default behavior, good balance of speed and recall
+    - THOROUGH: Exhaustive search, best recall but slower
+    """
+
+    FAST = "fast"
+    BALANCED = "balanced"
+    THOROUGH = "thorough"
+```
+
+</details>
+
+### class `SearchProfileConfig`
+
+Configuration for a search profile.  Attributes: profile: The search profile this config applies to. fetch_multiplier: Multiplier for nprobes/candidates fetched. Higher values fetch more candidates for better recall. rerank_candidates: How many candidates to rerank. More candidates = better final ranking but slower. use_approximate: Whether to use approximate (ANN) search. False means exact/exhaustive search. min_similarity: Minimum similarity threshold. Results below this threshold are filtered out.
+
+
+<details>
+<summary>View Source (lines 102-121) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L102-L121">GitHub</a></summary>
+
+```python
+class SearchProfileConfig:
+    """Configuration for a search profile.
+
+    Attributes:
+        profile: The search profile this config applies to.
+        fetch_multiplier: Multiplier for nprobes/candidates fetched.
+            Higher values fetch more candidates for better recall.
+        rerank_candidates: How many candidates to rerank.
+            More candidates = better final ranking but slower.
+        use_approximate: Whether to use approximate (ANN) search.
+            False means exact/exhaustive search.
+        min_similarity: Minimum similarity threshold.
+            Results below this threshold are filtered out.
+    """
+
+    profile: SearchProfile
+    fetch_multiplier: float
+    rerank_candidates: int
+    use_approximate: bool
+    min_similarity: float
+```
+
+</details>
+
+### class `SearchFeedback`
+
+User feedback on search result relevance.  Used to improve future search results by learning which results are actually relevant for specific queries.  Attributes: query: The original search query. result_id: ID of the result being rated. relevant: Whether the user marked this result as relevant. timestamp: When the feedback was recorded.
+
+
+<details>
+<summary>View Source (lines 151-167) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L151-L167">GitHub</a></summary>
+
+```python
+class SearchFeedback:
+    """User feedback on search result relevance.
+
+    Used to improve future search results by learning which results
+    are actually relevant for specific queries.
+
+    Attributes:
+        query: The original search query.
+        result_id: ID of the result being rated.
+        relevant: Whether the user marked this result as relevant.
+        timestamp: When the feedback was recorded.
+    """
+
+    query: str
+    result_id: str
+    relevant: bool
+    timestamp: float = field(default_factory=time.time)
+```
+
+</details>
+
+### class `AdaptiveSearcher`
+
+Adaptive search depth estimator based on query characteristics and history.  Learns from past searches to estimate optimal search depth for new queries. Uses query characteristics (length, complexity) and historical performance to adapt the search strategy.  Attributes: _store: Reference to the VectorStore (set via property, not constructor). _query_history: Recent query history with quality metrics. _feedback_history: User feedback on search results.
+
+**Methods:**
+
+
+<details>
+<summary>View Source (lines 170-393) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L170-L393">GitHub</a></summary>
+
+```python
+class AdaptiveSearcher:
+    # Methods: __init__, set_store, _calculate_query_complexity, estimate_optimal_depth, record_search_quality, record_feedback, get_feedback_stats
+```
+
+</details>
+
+#### `__init__`
+
+```python
+def __init__() -> None
+```
+
+Initialize the adaptive searcher.
+
+
+<details>
+<summary>View Source (lines 187-198) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L187-L198">GitHub</a></summary>
+
+```python
+def __init__(self) -> None:
+        """Initialize the adaptive searcher."""
+        self._store: "VectorStore | None" = None
+        # History: (query, quality_score, result_count, search_depth)
+        self._query_history: deque[tuple[str, float, int, int]] = deque(
+            maxlen=self.MAX_HISTORY_SIZE
+        )
+        self._feedback_history: deque[SearchFeedback] = deque(
+            maxlen=self.MAX_FEEDBACK_SIZE
+        )
+        # Query complexity cache for performance
+        self._complexity_cache: dict[str, float] = {}
+```
+
+</details>
+
+#### `set_store`
+
+```python
+def set_store(store: "VectorStore") -> None
+```
+
+Set the vector store reference.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `store` | `"VectorStore"` | - | The VectorStore instance this searcher is associated with. |
+
+
+<details>
+<summary>View Source (lines 200-206) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L200-L206">GitHub</a></summary>
+
+```python
+def set_store(self, store: "VectorStore") -> None:
+        """Set the vector store reference.
+
+        Args:
+            store: The VectorStore instance this searcher is associated with.
+        """
+        self._store = store
+```
+
+</details>
+
+#### `estimate_optimal_depth`
+
+```python
+def estimate_optimal_depth(query: str, base_limit: int = 10) -> int
+```
+
+Estimate optimal search depth based on query characteristics.  Uses query complexity and historical performance to determine how many candidates to fetch for the best results.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `query` | `str` | - | The search query text. |
+| `base_limit` | `int` | `10` | The base number of results requested. |
+
+
+<details>
+<summary>View Source (lines 281-327) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L281-L327">GitHub</a></summary>
+
+```python
+def estimate_optimal_depth(self, query: str, base_limit: int = 10) -> int:
+        """Estimate optimal search depth based on query characteristics.
+
+        Uses query complexity and historical performance to determine
+        how many candidates to fetch for the best results.
+
+        Args:
+            query: The search query text.
+            base_limit: The base number of results requested.
+
+        Returns:
+            Recommended search depth (number of candidates to fetch).
+        """
+        complexity = self._calculate_query_complexity(query)
+
+        # Base depth is the requested limit
+        base_depth = base_limit
+
+        # Complexity-based multiplier: more complex queries need deeper search
+        # Range: 1.5x to 4x based on complexity
+        complexity_multiplier = 1.5 + (complexity * 2.5)
+
+        # Historical adjustment: if similar queries had poor quality, increase depth
+        historical_multiplier = 1.0
+        if self._query_history:
+            # Look for similar queries (simple word overlap heuristic)
+            query_words = set(query.lower().split())
+            similar_qualities: list[float] = []
+
+            for hist_query, quality, _, _ in self._query_history:
+                hist_words = set(hist_query.lower().split())
+                overlap = len(query_words & hist_words)
+                if overlap >= min(2, len(query_words)):
+                    similar_qualities.append(quality)
+
+            if similar_qualities:
+                avg_quality = sum(similar_qualities) / len(similar_qualities)
+                # If quality was low, increase depth
+                # Quality 1.0 = multiplier 1.0, quality 0.0 = multiplier 2.0
+                historical_multiplier = 2.0 - avg_quality
+
+        # Combine multipliers
+        total_multiplier = complexity_multiplier * historical_multiplier
+
+        # Calculate final depth, capped at reasonable limits
+        optimal_depth = int(base_depth * total_multiplier)
+        return min(max(optimal_depth, base_limit), base_limit * 10)
+```
+
+</details>
+
+#### `record_search_quality`
+
+```python
+def record_search_quality(query: str, quality: float, result_count: int, depth_used: int) -> None
+```
+
+Record search quality for future adaptation.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `query` | `str` | - | The search query that was executed. |
+| `quality` | `float` | - | Quality score between 0.0 (poor) and 1.0 (excellent). |
+| `result_count` | `int` | - | Number of results returned. |
+| `depth_used` | `int` | - | The search depth that was used. |
+
+
+<details>
+<summary>View Source (lines 329-345) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L329-L345">GitHub</a></summary>
+
+```python
+def record_search_quality(
+        self, query: str, quality: float, result_count: int, depth_used: int
+    ) -> None:
+        """Record search quality for future adaptation.
+
+        Args:
+            query: The search query that was executed.
+            quality: Quality score between 0.0 (poor) and 1.0 (excellent).
+            result_count: Number of results returned.
+            depth_used: The search depth that was used.
+        """
+        quality = max(0.0, min(1.0, quality))  # Clamp to valid range
+        self._query_history.append((query, quality, result_count, depth_used))
+        logger.debug(
+            f"Recorded search quality: query='{query[:50]}...' quality={quality:.2f} "
+            f"results={result_count} depth={depth_used}"
+        )
+```
+
+</details>
+
+#### `record_feedback`
+
+```python
+def record_feedback(feedback: SearchFeedback) -> None
+```
+
+Record user feedback to improve future searches.  Feedback is used to update quality estimates for similar queries.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `feedback` | `SearchFeedback` | - | User feedback on a search result. |
+
+
+<details>
+<summary>View Source (lines 347-369) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L347-L369">GitHub</a></summary>
+
+```python
+def record_feedback(self, feedback: SearchFeedback) -> None:
+        """Record user feedback to improve future searches.
+
+        Feedback is used to update quality estimates for similar queries.
+
+        Args:
+            feedback: User feedback on a search result.
+        """
+        self._feedback_history.append(feedback)
+        logger.debug(
+            f"Recorded feedback: query='{feedback.query[:50]}...' "
+            f"result={feedback.result_id} relevant={feedback.relevant}"
+        )
+
+        # Update quality estimates for matching queries in history
+        # This provides indirect learning from user feedback
+        for i, (hist_query, quality, count, depth) in enumerate(self._query_history):
+            if hist_query == feedback.query:
+                # Adjust quality based on feedback
+                adjustment = 0.1 if feedback.relevant else -0.1
+                new_quality = max(0.0, min(1.0, quality + adjustment))
+                # Replace entry (deque doesn't support direct assignment)
+                self._query_history[i] = (hist_query, new_quality, count, depth)
+```
+
+</details>
+
+#### `get_feedback_stats`
+
+```python
+def get_feedback_stats() -> dict[str, Any]
+```
+
+Get statistics about collected feedback.
+
+
+
+<details>
+<summary>View Source (lines 371-393) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L371-L393">GitHub</a></summary>
+
+```python
+def get_feedback_stats(self) -> dict[str, Any]:
+        """Get statistics about collected feedback.
+
+        Returns:
+            Dictionary with feedback statistics.
+        """
+        if not self._feedback_history:
+            return {
+                "total_feedback": 0,
+                "relevant_count": 0,
+                "irrelevant_count": 0,
+                "relevance_rate": 0.0,
+            }
+
+        relevant = sum(1 for f in self._feedback_history if f.relevant)
+        total = len(self._feedback_history)
+
+        return {
+            "total_feedback": total,
+            "relevant_count": relevant,
+            "irrelevant_count": total - relevant,
+            "relevance_rate": relevant / total if total > 0 else 0.0,
+        }
+```
+
+</details>
+
+### class `SearchCacheEntry`
+
+A cached search result entry.
+
+
+<details>
+<summary>View Source (lines 397-404) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L397-L404">GitHub</a></summary>
+
+```python
+class SearchCacheEntry:
+    """A cached search result entry."""
+
+    query_text: str
+    query_embedding: list[float]
+    results: list[SearchResult]
+    created_at: float
+    filters: dict[str, Any] = field(default_factory=dict)
+```
+
+</details>
+
+### class `SearchCache`
+
+In-memory cache for search results with semantic deduplication.  Uses embedding similarity to find cached results for semantically similar queries. Entries expire based on TTL and are evicted using LRU when max_entries is reached.
+
+**Methods:**
+
+
+<details>
+<summary>View Source (lines 407-662) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L407-L662">GitHub</a></summary>
+
+```python
+class SearchCache:
+    # Methods: __init__, stats, _compute_similarity, _is_valid_entry, _filters_match, get, set, _maybe_evict, invalidate, get_stats
+```
+
+</details>
+
+#### `__init__`
+
+```python
+def __init__(config: SearchCacheConfig)
+```
+
+Initialize the search cache.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `config` | `SearchCacheConfig` | - | Cache configuration. |
+
+
+<details>
+<summary>View Source (lines 414-423) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L414-L423">GitHub</a></summary>
+
+```python
+def __init__(self, config: SearchCacheConfig):
+        """Initialize the search cache.
+
+        Args:
+            config: Cache configuration.
+        """
+        self.config = config
+        self._cache: dict[str, SearchCacheEntry] = {}
+        self._lock = threading.RLock()
+        self._stats = {"hits": 0, "misses": 0, "invalidations": 0}
+```
+
+</details>
+
+#### `stats`
+
+```python
+def stats() -> dict[str, int]
+```
+
+Get cache statistics.
+
+
+<details>
+<summary>View Source (lines 426-428) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L426-L428">GitHub</a></summary>
+
+```python
+def stats(self) -> dict[str, int]:
+        """Get cache statistics."""
+        return self._stats.copy()
+```
+
+</details>
+
+#### `get`
+
+```python
+def get(query_embedding: list[float], filters: dict[str, Any] | None = None) -> list[SearchResult] | None
+```
+
+Try to get cached results for a semantically similar query.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `query_embedding` | `list[float]` | - | Embedding of the search query. |
+| `filters` | `dict[str, Any] | None` | `None` | Optional filters applied to the search (language, chunk_type, etc.) |
+
+
+<details>
+<summary>View Source (lines 482-536) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L482-L536">GitHub</a></summary>
+
+```python
+def get(
+        self,
+        query_embedding: list[float],
+        filters: dict[str, Any] | None = None,
+    ) -> list[SearchResult] | None:
+        """Try to get cached results for a semantically similar query.
+
+        Args:
+            query_embedding: Embedding of the search query.
+            filters: Optional filters applied to the search (language, chunk_type, etc.)
+
+        Returns:
+            Cached search results if found and valid, None otherwise.
+        """
+        if not self.config.enabled:
+            return None
+
+        filters = filters or {}
+
+        with self._lock:
+            best_match: SearchCacheEntry | None = None
+            best_similarity = 0.0
+
+            # Find the most similar valid cached query
+            expired_keys: list[str] = []
+            for key, entry in self._cache.items():
+                if not self._is_valid_entry(entry):
+                    expired_keys.append(key)
+                    continue
+
+                # Check if filters match
+                if not self._filters_match(entry.filters, filters):
+                    continue
+
+                # Compute similarity
+                similarity = self._compute_similarity(query_embedding, entry.query_embedding)
+
+                if similarity >= self.config.similarity_threshold and similarity > best_similarity:
+                    best_similarity = similarity
+                    best_match = entry
+
+            # Clean up expired entries
+            for key in expired_keys:
+                del self._cache[key]
+
+            if best_match is not None:
+                self._stats["hits"] += 1
+                logger.debug(
+                    f"Search cache hit: similarity={best_similarity:.3f}, "
+                    f"query='{best_match.query_text[:50]}...'"
+                )
+                return best_match.results
+
+            self._stats["misses"] += 1
+            return None
+```
+
+</details>
+
+#### `set`
+
+```python
+def set(query_text: str, query_embedding: list[float], results: list[SearchResult], filters: dict[str, Any] | None = None) -> None
+```
+
+Cache search results for a query.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `query_text` | `str` | - | Original query text. |
+| `query_embedding` | `list[float]` | - | Embedding of the query. |
+| `results` | `list[SearchResult]` | - | Search results to cache. |
+| `filters` | `dict[str, Any] | None` | `None` | Optional filters applied to the search. |
+
+
+<details>
+<summary>View Source (lines 538-579) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L538-L579">GitHub</a></summary>
+
+```python
+def set(
+        self,
+        query_text: str,
+        query_embedding: list[float],
+        results: list[SearchResult],
+        filters: dict[str, Any] | None = None,
+    ) -> None:
+        """Cache search results for a query.
+
+        Args:
+            query_text: Original query text.
+            query_embedding: Embedding of the query.
+            results: Search results to cache.
+            filters: Optional filters applied to the search.
+        """
+        if not self.config.enabled:
+            return
+
+        filters = filters or {}
+
+        with self._lock:
+            # Create a unique key based on query text and filters
+            filter_str = json.dumps(filters, sort_keys=True)
+            cache_key = f"{query_text}:{filter_str}"
+
+            entry = SearchCacheEntry(
+                query_text=query_text,
+                query_embedding=query_embedding,
+                results=results,
+                created_at=time.time(),
+                filters=filters,
+            )
+
+            self._cache[cache_key] = entry
+
+            logger.debug(
+                f"Cached search results: query='{query_text[:50]}...', "
+                f"results={len(results)}"
+            )
+
+            # Evict if over capacity
+            self._maybe_evict()
+```
+
+</details>
+
+#### `invalidate`
+
+```python
+def invalidate() -> int
+```
+
+Invalidate all cache entries.  Called when the index is updated (new chunks added/removed).
+
+
+<details>
+<summary>View Source (lines 625-639) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L625-L639">GitHub</a></summary>
+
+```python
+def invalidate(self) -> int:
+        """Invalidate all cache entries.
+
+        Called when the index is updated (new chunks added/removed).
+
+        Returns:
+            Number of entries invalidated.
+        """
+        with self._lock:
+            count = len(self._cache)
+            self._cache.clear()
+            self._stats["invalidations"] += 1
+            if count > 0:
+                logger.debug(f"Invalidated {count} search cache entries")
+            return count
+```
+
+</details>
+
+#### `get_stats`
+
+```python
+def get_stats() -> dict[str, Any]
+```
+
+Get detailed cache statistics.
+
+
+
+<details>
+<summary>View Source (lines 641-662) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L641-L662">GitHub</a></summary>
+
+```python
+def get_stats(self) -> dict[str, Any]:
+        """Get detailed cache statistics.
+
+        Returns:
+            Dictionary with cache statistics.
+        """
+        with self._lock:
+            return {
+                "enabled": self.config.enabled,
+                "entries": len(self._cache),
+                "max_entries": self.config.max_entries,
+                "ttl_seconds": self.config.ttl_seconds,
+                "similarity_threshold": self.config.similarity_threshold,
+                "hits": self._stats["hits"],
+                "misses": self._stats["misses"],
+                "invalidations": self._stats["invalidations"],
+                "hit_rate": (
+                    self._stats["hits"] / (self._stats["hits"] + self._stats["misses"])
+                    if (self._stats["hits"] + self._stats["misses"]) > 0
+                    else 0.0
+                ),
+            }
+```
+
+</details>
+
+### class `BatchEmbeddingResult`
+
+Result of a batch embedding operation.
+
+
+<details>
+<summary>View Source (lines 666-672) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L666-L672">GitHub</a></summary>
+
+```python
+class BatchEmbeddingResult:
+    """Result of a batch embedding operation."""
+
+    batch_index: int
+    embeddings: list[list[float]] | None
+    error: Exception | None = None
+    retry_count: int = 0
+```
+
+</details>
+
+### class `EmbeddingProgress`
+
+Progress tracker for embedding operations.
+
+**Methods:**
+
+
+<details>
+<summary>View Source (lines 676-730) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L676-L730">GitHub</a></summary>
+
+```python
+class EmbeddingProgress:
+    """Progress tracker for embedding operations."""
+
+    total_texts: int
+    total_batches: int
+    completed_batches: int = 0
+    failed_batches: int = 0
+    start_time: float = field(default_factory=time.time)
+    _lock: threading.Lock = field(default_factory=threading.Lock)
+
+    def update(self, success: bool = True) -> None:
+        """Update progress after a batch completes."""
+        with self._lock:
+            if success:
+                self.completed_batches += 1
+            else:
+                self.failed_batches += 1
+
+    @property
+    def elapsed_seconds(self) -> float:
+        """Get elapsed time in seconds."""
+        return time.time() - self.start_time
+
+    @property
+    def estimated_remaining_seconds(self) -> float | None:
+        """Estimate remaining time based on current progress."""
+        with self._lock:
+            if self.completed_batches == 0:
+                return None
+            avg_time_per_batch = self.elapsed_seconds / self.completed_batches
+            remaining_batches = self.total_batches - self.completed_batches - self.failed_batches
+            return avg_time_per_batch * remaining_batches
+
+    def log_progress(self) -> None:
+        """Log current progress."""
+        with self._lock:
+            completed = self.completed_batches
+            failed = self.failed_batches
+            total = self.total_batches
+            elapsed = self.elapsed_seconds
+
+        # Calculate outside lock to avoid deadlock with estimated_remaining_seconds
+        progress_pct = (completed + failed) / total * 100 if total > 0 else 0
+        if completed > 0:
+            avg_time_per_batch = elapsed / completed
+            remaining_batches = total - completed - failed
+            eta = avg_time_per_batch * remaining_batches
+            eta_str = f", ETA: {eta:.1f}s"
+        else:
+            eta_str = ""
+
+        logger.info(
+            f"Embedding progress: {completed}/{total} batches "
+            f"({progress_pct:.1f}%){eta_str}"
+        )
+```
+
+</details>
+
+#### `update`
+
+```python
+def update(success: bool = True) -> None
+```
+
+Update progress after a batch completes.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `success` | `bool` | `True` | - |
+
+
+<details>
+<summary>View Source (lines 676-730) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L676-L730">GitHub</a></summary>
+
+```python
+class EmbeddingProgress:
+    """Progress tracker for embedding operations."""
+
+    total_texts: int
+    total_batches: int
+    completed_batches: int = 0
+    failed_batches: int = 0
+    start_time: float = field(default_factory=time.time)
+    _lock: threading.Lock = field(default_factory=threading.Lock)
+
+    def update(self, success: bool = True) -> None:
+        """Update progress after a batch completes."""
+        with self._lock:
+            if success:
+                self.completed_batches += 1
+            else:
+                self.failed_batches += 1
+
+    @property
+    def elapsed_seconds(self) -> float:
+        """Get elapsed time in seconds."""
+        return time.time() - self.start_time
+
+    @property
+    def estimated_remaining_seconds(self) -> float | None:
+        """Estimate remaining time based on current progress."""
+        with self._lock:
+            if self.completed_batches == 0:
+                return None
+            avg_time_per_batch = self.elapsed_seconds / self.completed_batches
+            remaining_batches = self.total_batches - self.completed_batches - self.failed_batches
+            return avg_time_per_batch * remaining_batches
+
+    def log_progress(self) -> None:
+        """Log current progress."""
+        with self._lock:
+            completed = self.completed_batches
+            failed = self.failed_batches
+            total = self.total_batches
+            elapsed = self.elapsed_seconds
+
+        # Calculate outside lock to avoid deadlock with estimated_remaining_seconds
+        progress_pct = (completed + failed) / total * 100 if total > 0 else 0
+        if completed > 0:
+            avg_time_per_batch = elapsed / completed
+            remaining_batches = total - completed - failed
+            eta = avg_time_per_batch * remaining_batches
+            eta_str = f", ETA: {eta:.1f}s"
+        else:
+            eta_str = ""
+
+        logger.info(
+            f"Embedding progress: {completed}/{total} batches "
+            f"({progress_pct:.1f}%){eta_str}"
+        )
+```
+
+</details>
+
+#### `elapsed_seconds`
+
+```python
+def elapsed_seconds() -> float
+```
+
+Get elapsed time in seconds.
+
+
+<details>
+<summary>View Source (lines 676-730) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L676-L730">GitHub</a></summary>
+
+```python
+class EmbeddingProgress:
+    """Progress tracker for embedding operations."""
+
+    total_texts: int
+    total_batches: int
+    completed_batches: int = 0
+    failed_batches: int = 0
+    start_time: float = field(default_factory=time.time)
+    _lock: threading.Lock = field(default_factory=threading.Lock)
+
+    def update(self, success: bool = True) -> None:
+        """Update progress after a batch completes."""
+        with self._lock:
+            if success:
+                self.completed_batches += 1
+            else:
+                self.failed_batches += 1
+
+    @property
+    def elapsed_seconds(self) -> float:
+        """Get elapsed time in seconds."""
+        return time.time() - self.start_time
+
+    @property
+    def estimated_remaining_seconds(self) -> float | None:
+        """Estimate remaining time based on current progress."""
+        with self._lock:
+            if self.completed_batches == 0:
+                return None
+            avg_time_per_batch = self.elapsed_seconds / self.completed_batches
+            remaining_batches = self.total_batches - self.completed_batches - self.failed_batches
+            return avg_time_per_batch * remaining_batches
+
+    def log_progress(self) -> None:
+        """Log current progress."""
+        with self._lock:
+            completed = self.completed_batches
+            failed = self.failed_batches
+            total = self.total_batches
+            elapsed = self.elapsed_seconds
+
+        # Calculate outside lock to avoid deadlock with estimated_remaining_seconds
+        progress_pct = (completed + failed) / total * 100 if total > 0 else 0
+        if completed > 0:
+            avg_time_per_batch = elapsed / completed
+            remaining_batches = total - completed - failed
+            eta = avg_time_per_batch * remaining_batches
+            eta_str = f", ETA: {eta:.1f}s"
+        else:
+            eta_str = ""
+
+        logger.info(
+            f"Embedding progress: {completed}/{total} batches "
+            f"({progress_pct:.1f}%){eta_str}"
+        )
+```
+
+</details>
+
+#### `estimated_remaining_seconds`
+
+```python
+def estimated_remaining_seconds() -> float | None
+```
+
+Estimate remaining time based on current progress.
+
+
+<details>
+<summary>View Source (lines 676-730) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L676-L730">GitHub</a></summary>
+
+```python
+class EmbeddingProgress:
+    """Progress tracker for embedding operations."""
+
+    total_texts: int
+    total_batches: int
+    completed_batches: int = 0
+    failed_batches: int = 0
+    start_time: float = field(default_factory=time.time)
+    _lock: threading.Lock = field(default_factory=threading.Lock)
+
+    def update(self, success: bool = True) -> None:
+        """Update progress after a batch completes."""
+        with self._lock:
+            if success:
+                self.completed_batches += 1
+            else:
+                self.failed_batches += 1
+
+    @property
+    def elapsed_seconds(self) -> float:
+        """Get elapsed time in seconds."""
+        return time.time() - self.start_time
+
+    @property
+    def estimated_remaining_seconds(self) -> float | None:
+        """Estimate remaining time based on current progress."""
+        with self._lock:
+            if self.completed_batches == 0:
+                return None
+            avg_time_per_batch = self.elapsed_seconds / self.completed_batches
+            remaining_batches = self.total_batches - self.completed_batches - self.failed_batches
+            return avg_time_per_batch * remaining_batches
+
+    def log_progress(self) -> None:
+        """Log current progress."""
+        with self._lock:
+            completed = self.completed_batches
+            failed = self.failed_batches
+            total = self.total_batches
+            elapsed = self.elapsed_seconds
+
+        # Calculate outside lock to avoid deadlock with estimated_remaining_seconds
+        progress_pct = (completed + failed) / total * 100 if total > 0 else 0
+        if completed > 0:
+            avg_time_per_batch = elapsed / completed
+            remaining_batches = total - completed - failed
+            eta = avg_time_per_batch * remaining_batches
+            eta_str = f", ETA: {eta:.1f}s"
+        else:
+            eta_str = ""
+
+        logger.info(
+            f"Embedding progress: {completed}/{total} batches "
+            f"({progress_pct:.1f}%){eta_str}"
+        )
+```
+
+</details>
+
+#### `log_progress`
+
+```python
+def log_progress() -> None
+```
+
+Log current progress.
+
+
+
+<details>
+<summary>View Source (lines 676-730) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L676-L730">GitHub</a></summary>
+
+```python
+class EmbeddingProgress:
+    """Progress tracker for embedding operations."""
+
+    total_texts: int
+    total_batches: int
+    completed_batches: int = 0
+    failed_batches: int = 0
+    start_time: float = field(default_factory=time.time)
+    _lock: threading.Lock = field(default_factory=threading.Lock)
+
+    def update(self, success: bool = True) -> None:
+        """Update progress after a batch completes."""
+        with self._lock:
+            if success:
+                self.completed_batches += 1
+            else:
+                self.failed_batches += 1
+
+    @property
+    def elapsed_seconds(self) -> float:
+        """Get elapsed time in seconds."""
+        return time.time() - self.start_time
+
+    @property
+    def estimated_remaining_seconds(self) -> float | None:
+        """Estimate remaining time based on current progress."""
+        with self._lock:
+            if self.completed_batches == 0:
+                return None
+            avg_time_per_batch = self.elapsed_seconds / self.completed_batches
+            remaining_batches = self.total_batches - self.completed_batches - self.failed_batches
+            return avg_time_per_batch * remaining_batches
+
+    def log_progress(self) -> None:
+        """Log current progress."""
+        with self._lock:
+            completed = self.completed_batches
+            failed = self.failed_batches
+            total = self.total_batches
+            elapsed = self.elapsed_seconds
+
+        # Calculate outside lock to avoid deadlock with estimated_remaining_seconds
+        progress_pct = (completed + failed) / total * 100 if total > 0 else 0
+        if completed > 0:
+            avg_time_per_batch = elapsed / completed
+            remaining_batches = total - completed - failed
+            eta = avg_time_per_batch * remaining_batches
+            eta_str = f", ETA: {eta:.1f}s"
+        else:
+            eta_str = ""
+
+        logger.info(
+            f"Embedding progress: {completed}/{total} batches "
+            f"({progress_pct:.1f}%){eta_str}"
+        )
+```
+
+</details>
+
+### class `RateLimiter`
+
+Token bucket rate limiter for API requests.
+
+**Methods:**
+
+
+<details>
+<summary>View Source (lines 733-764) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L733-L764">GitHub</a></summary>
+
+```python
+class RateLimiter:
+    """Token bucket rate limiter for API requests."""
+
+    def __init__(self, requests_per_minute: int):
+        """Initialize rate limiter.
+
+        Args:
+            requests_per_minute: Maximum requests per minute.
+        """
+        self.rate = requests_per_minute / 60.0  # Requests per second
+        self.tokens = float(requests_per_minute)
+        self.max_tokens = float(requests_per_minute)
+        self.last_update = time.monotonic()
+        self._lock = asyncio.Lock()
+
+    async def acquire(self) -> None:
+        """Acquire a token, waiting if necessary."""
+        async with self._lock:
+            now = time.monotonic()
+            # Refill tokens based on elapsed time
+            elapsed = now - self.last_update
+            self.tokens = min(self.max_tokens, self.tokens + elapsed * self.rate)
+            self.last_update = now
+
+            if self.tokens < 1.0:
+                # Wait for tokens to refill
+                wait_time = (1.0 - self.tokens) / self.rate
+                await asyncio.sleep(wait_time)
+                self.tokens = 0.0
+                self.last_update = time.monotonic()
+            else:
+                self.tokens -= 1.0
+```
+
+</details>
+
+#### `__init__`
+
+```python
+def __init__(requests_per_minute: int)
+```
+
+Initialize rate limiter.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `requests_per_minute` | `int` | - | Maximum requests per minute. |
+
+
+<details>
+<summary>View Source (lines 733-764) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L733-L764">GitHub</a></summary>
+
+```python
+class RateLimiter:
+    """Token bucket rate limiter for API requests."""
+
+    def __init__(self, requests_per_minute: int):
+        """Initialize rate limiter.
+
+        Args:
+            requests_per_minute: Maximum requests per minute.
+        """
+        self.rate = requests_per_minute / 60.0  # Requests per second
+        self.tokens = float(requests_per_minute)
+        self.max_tokens = float(requests_per_minute)
+        self.last_update = time.monotonic()
+        self._lock = asyncio.Lock()
+
+    async def acquire(self) -> None:
+        """Acquire a token, waiting if necessary."""
+        async with self._lock:
+            now = time.monotonic()
+            # Refill tokens based on elapsed time
+            elapsed = now - self.last_update
+            self.tokens = min(self.max_tokens, self.tokens + elapsed * self.rate)
+            self.last_update = now
+
+            if self.tokens < 1.0:
+                # Wait for tokens to refill
+                wait_time = (1.0 - self.tokens) / self.rate
+                await asyncio.sleep(wait_time)
+                self.tokens = 0.0
+                self.last_update = time.monotonic()
+            else:
+                self.tokens -= 1.0
+```
+
+</details>
+
+#### `acquire`
+
+```python
+async def acquire() -> None
+```
+
+Acquire a token, waiting if necessary.
+
+
+
+<details>
+<summary>View Source (lines 733-764) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L733-L764">GitHub</a></summary>
+
+```python
+class RateLimiter:
+    """Token bucket rate limiter for API requests."""
+
+    def __init__(self, requests_per_minute: int):
+        """Initialize rate limiter.
+
+        Args:
+            requests_per_minute: Maximum requests per minute.
+        """
+        self.rate = requests_per_minute / 60.0  # Requests per second
+        self.tokens = float(requests_per_minute)
+        self.max_tokens = float(requests_per_minute)
+        self.last_update = time.monotonic()
+        self._lock = asyncio.Lock()
+
+    async def acquire(self) -> None:
+        """Acquire a token, waiting if necessary."""
+        async with self._lock:
+            now = time.monotonic()
+            # Refill tokens based on elapsed time
+            elapsed = now - self.last_update
+            self.tokens = min(self.max_tokens, self.tokens + elapsed * self.rate)
+            self.last_update = now
+
+            if self.tokens < 1.0:
+                # Wait for tokens to refill
+                wait_time = (1.0 - self.tokens) / self.rate
+                await asyncio.sleep(wait_time)
+                self.tokens = 0.0
+                self.last_update = time.monotonic()
+            else:
+                self.tokens -= 1.0
+```
+
+</details>
+
+### class `ChunkIterator`
+
+Memory-efficient iterator over all chunks in a vector store table.  Loads chunks in batches to avoid OOM when dealing with large datasets (1M+ chunks). Supports both sync and async iteration.
+
+**Methods:**
+
+
+<details>
+<summary>View Source (lines 799-1000) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L799-L1000">GitHub</a></summary>
+
+```python
+class ChunkIterator:
+    # Methods: __init__, count, reset, _fetch_batch, __iter__, __aiter__, batches, async_batches
+```
+
+</details>
+
+#### `__init__`
+
+```python
+def __init__(table: Table, batch_size: int = 1000, columns: list[str] | None = None, filter_expr: str | None = None, row_to_chunk_fn: Callable[[dict[str, Any]], CodeChunk] | None = None)
+```
+
+Initialize the chunk iterator.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `table` | `Table` | - | LanceDB table to iterate over. |
+| `batch_size` | `int` | `1000` | Number of rows to load per batch. |
+| `columns` | `list[str] | None` | `None` | Specific columns to fetch (None = all columns). |
+| `filter_expr` | `str | None` | `None` | Optional filter expression (e.g., "language = 'python'"). |
+| `row_to_chunk_fn` | `Callable[[dict[str, Any]], CodeChunk] | None` | `None` | Function to convert a row dict to CodeChunk. |
+
+
+<details>
+<summary>View Source (lines 826-849) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L826-L849">GitHub</a></summary>
+
+```python
+def __init__(
+        self,
+        table: Table,
+        batch_size: int = 1000,
+        columns: list[str] | None = None,
+        filter_expr: str | None = None,
+        row_to_chunk_fn: Callable[[dict[str, Any]], CodeChunk] | None = None,
+    ):
+        """Initialize the chunk iterator.
+
+        Args:
+            table: LanceDB table to iterate over.
+            batch_size: Number of rows to load per batch.
+            columns: Specific columns to fetch (None = all columns).
+            filter_expr: Optional filter expression (e.g., "language = 'python'").
+            row_to_chunk_fn: Function to convert a row dict to CodeChunk.
+        """
+        self._table = table
+        self._batch_size = batch_size
+        self._columns = columns
+        self._filter_expr = filter_expr
+        self._row_to_chunk_fn = row_to_chunk_fn or _row_to_chunk_default
+        self._offset = 0
+        self._total_count: int | None = None
+```
+
+</details>
+
+#### `count`
+
+```python
+def count() -> int
+```
+
+Return total count of chunks without loading all data.  Uses LanceDB's count_rows() which is O(1) and doesn't load row data.
+
+
+<details>
+<summary>View Source (lines 851-869) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L851-L869">GitHub</a></summary>
+
+```python
+def count(self) -> int:
+        """Return total count of chunks without loading all data.
+
+        Uses LanceDB's count_rows() which is O(1) and doesn't load row data.
+
+        Returns:
+            Total number of chunks in the table.
+        """
+        if self._total_count is None:
+            if self._filter_expr:
+                # For filtered counts, we need to run a query
+                # This is more expensive but still doesn't load full row data
+                query = self._table.search().where(self._filter_expr)
+                query = query.select(["id"])  # Only fetch ID for count
+                results = query.limit(10_000_000).to_list()  # Large limit for count
+                self._total_count = len(results)
+            else:
+                self._total_count = self._table.count_rows()
+        return self._total_count
+```
+
+</details>
+
+#### `reset`
+
+```python
+def reset() -> None
+```
+
+Reset the iterator to the beginning.
+
+
+<details>
+<summary>View Source (lines 871-873) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L871-L873">GitHub</a></summary>
+
+```python
+def reset(self) -> None:
+        """Reset the iterator to the beginning."""
+        self._offset = 0
+```
+
+</details>
+
+#### `batches`
+
+```python
+def batches() -> Iterator[ChunkBatch]
+```
+
+Iterate over chunks in batches.  More efficient for bulk operations as it avoids per-chunk overhead.
+
+
+<details>
+<summary>View Source (lines 943-971) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L943-L971">GitHub</a></summary>
+
+```python
+def batches(self) -> Iterator[ChunkBatch]:
+        """Iterate over chunks in batches.
+
+        More efficient for bulk operations as it avoids per-chunk overhead.
+
+        Yields:
+            ChunkBatch objects containing lists of chunks.
+        """
+        self.reset()
+        total = self.count()
+        total_batches = (total + self._batch_size - 1) // self._batch_size if total > 0 else 0
+        batch_index = 0
+
+        while self._offset < total:
+            rows = self._fetch_batch(self._offset)
+            if not rows:
+                break
+
+            chunks = [self._row_to_chunk_fn(row) for row in rows]
+            self._offset += len(rows)
+            has_more = self._offset < total
+
+            yield ChunkBatch(
+                chunks=chunks,
+                batch_index=batch_index,
+                total_batches=total_batches,
+                has_more=has_more,
+            )
+            batch_index += 1
+```
+
+</details>
+
+#### `async_batches`
+
+```python
+async def async_batches() -> AsyncIterator[ChunkBatch]
+```
+
+Async iterate over chunks in batches.
+
+
+
+<details>
+<summary>View Source (lines 973-1000) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L973-L1000">GitHub</a></summary>
+
+```python
+async def async_batches(self) -> AsyncIterator[ChunkBatch]:
+        """Async iterate over chunks in batches.
+
+        Yields:
+            ChunkBatch objects containing lists of chunks.
+        """
+        self.reset()
+        total = self.count()
+        total_batches = (total + self._batch_size - 1) // self._batch_size if total > 0 else 0
+        batch_index = 0
+
+        while self._offset < total:
+            rows = await asyncio.to_thread(self._fetch_batch, self._offset)
+            if not rows:
+                break
+
+            chunks = [self._row_to_chunk_fn(row) for row in rows]
+            self._offset += len(rows)
+            has_more = self._offset < total
+
+            yield ChunkBatch(
+                chunks=chunks,
+                batch_index=batch_index,
+                total_batches=total_batches,
+                has_more=has_more,
+            )
+            batch_index += 1
+            await asyncio.sleep(0)
+```
+
+</details>
+
+### class `LazyChunkLoader`
+
+Lazy loader for code chunks with memory-aware batch sizing.  Provides memory-efficient access to chunks from a VectorStore without loading all data into memory at once.
+
+**Methods:**
+
+
+<details>
+<summary>View Source (lines 1003-1277) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1003-L1277">GitHub</a></summary>
+
+```python
+class LazyChunkLoader:
+    # Methods: __init__, max_memory_bytes, calculate_optimal_batch_size, get_chunks_by_file, async_get_chunks_by_file, get_all_chunks, async_get_all_chunks, count_chunks
+```
+
+</details>
+
+#### `__init__`
+
+```python
+def __init__(store: "VectorStore", max_memory_mb: int = DEFAULT_MAX_MEMORY_MB)
+```
+
+Initialize the lazy chunk loader.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `store` | `"VectorStore"` | - | VectorStore instance to load chunks from. |
+| `max_memory_mb` | `int` | `DEFAULT_MAX_MEMORY_MB` | Maximum memory budget in MB for batch operations. |
+
+
+<details>
+<summary>View Source (lines 1026-1039) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1026-L1039">GitHub</a></summary>
+
+```python
+def __init__(
+        self,
+        store: "VectorStore",
+        max_memory_mb: int = DEFAULT_MAX_MEMORY_MB,
+    ):
+        """Initialize the lazy chunk loader.
+
+        Args:
+            store: VectorStore instance to load chunks from.
+            max_memory_mb: Maximum memory budget in MB for batch operations.
+        """
+        self._store = store
+        self._max_memory_mb = max_memory_mb
+        self._optimal_batch_size: int | None = None
+```
+
+</details>
+
+#### `max_memory_bytes`
+
+```python
+def max_memory_bytes() -> int
+```
+
+Maximum memory budget in bytes.
+
+
+<details>
+<summary>View Source (lines 1042-1044) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1042-L1044">GitHub</a></summary>
+
+```python
+def max_memory_bytes(self) -> int:
+        """Maximum memory budget in bytes."""
+        return self._max_memory_mb * 1024 * 1024
+```
+
+</details>
+
+#### `calculate_optimal_batch_size`
+
+```python
+def calculate_optimal_batch_size(available_memory_mb: int | None = None, bytes_per_chunk: int = ESTIMATED_BYTES_PER_CHUNK) -> int
+```
+
+Calculate optimal batch size based on available memory.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `available_memory_mb` | `int | None` | `None` | Available memory in MB. If None, auto-detects. |
+| `bytes_per_chunk` | `int` | `ESTIMATED_BYTES_PER_CHUNK` | Estimated bytes per chunk. |
+
+
+<details>
+<summary>View Source (lines 1046-1077) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1046-L1077">GitHub</a></summary>
+
+```python
+def calculate_optimal_batch_size(
+        self,
+        available_memory_mb: int | None = None,
+        bytes_per_chunk: int = ESTIMATED_BYTES_PER_CHUNK,
+    ) -> int:
+        """Calculate optimal batch size based on available memory.
+
+        Args:
+            available_memory_mb: Available memory in MB. If None, auto-detects.
+            bytes_per_chunk: Estimated bytes per chunk.
+
+        Returns:
+            Optimal batch size that fits within memory constraints.
+        """
+        if available_memory_mb is None:
+            # Auto-detect available memory
+            try:
+                mem_info = psutil.virtual_memory()
+                # Use at most 25% of available memory or max_memory_mb, whichever is smaller
+                available_memory_mb = min(
+                    int(mem_info.available / (1024 * 1024) * 0.25),
+                    self._max_memory_mb,
+                )
+            except Exception:
+                # Fallback to configured max
+                available_memory_mb = self._max_memory_mb
+
+        available_bytes = available_memory_mb * 1024 * 1024
+        batch_size = max(100, available_bytes // bytes_per_chunk)
+
+        # Cap at reasonable limits
+        return min(batch_size, 10_000)
+```
+
+</details>
+
+#### `get_chunks_by_file`
+
+```python
+def get_chunks_by_file(file_path: str, batch_size: int | None = None) -> Iterator[CodeChunk]
+```
+
+Lazily load chunks for a specific file.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `file_path` | `str` | - | Path to the file to get chunks for. |
+| `batch_size` | `int | None` | `None` | Batch size for loading. If None, uses optimal size. |
+
+
+<details>
+<summary>View Source (lines 1079-1110) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1079-L1110">GitHub</a></summary>
+
+```python
+def get_chunks_by_file(
+        self,
+        file_path: str,
+        batch_size: int | None = None,
+    ) -> Iterator[CodeChunk]:
+        """Lazily load chunks for a specific file.
+
+        Args:
+            file_path: Path to the file to get chunks for.
+            batch_size: Batch size for loading. If None, uses optimal size.
+
+        Yields:
+            CodeChunk objects for the specified file.
+        """
+        table = self._store._get_table()
+        if table is None:
+            return
+
+        if batch_size is None:
+            batch_size = self.calculate_optimal_batch_size()
+
+        safe_path = _sanitize_string_value(file_path)
+        filter_expr = f"file_path = '{safe_path}'"
+
+        iterator = ChunkIterator(
+            table=table,
+            batch_size=batch_size,
+            filter_expr=filter_expr,
+            row_to_chunk_fn=self._store._row_to_chunk,
+        )
+
+        yield from iterator
+```
+
+</details>
+
+#### `async_get_chunks_by_file`
+
+```python
+async def async_get_chunks_by_file(file_path: str, batch_size: int | None = None) -> AsyncIterator[CodeChunk]
+```
+
+Async lazily load chunks for a specific file.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `file_path` | `str` | - | Path to the file to get chunks for. |
+| `batch_size` | `int | None` | `None` | Batch size for loading. If None, uses optimal size. |
+
+
+<details>
+<summary>View Source (lines 1112-1144) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1112-L1144">GitHub</a></summary>
+
+```python
+async def async_get_chunks_by_file(
+        self,
+        file_path: str,
+        batch_size: int | None = None,
+    ) -> AsyncIterator[CodeChunk]:
+        """Async lazily load chunks for a specific file.
+
+        Args:
+            file_path: Path to the file to get chunks for.
+            batch_size: Batch size for loading. If None, uses optimal size.
+
+        Yields:
+            CodeChunk objects for the specified file.
+        """
+        table = self._store._get_table()
+        if table is None:
+            return
+
+        if batch_size is None:
+            batch_size = self.calculate_optimal_batch_size()
+
+        safe_path = _sanitize_string_value(file_path)
+        filter_expr = f"file_path = '{safe_path}'"
+
+        iterator = ChunkIterator(
+            table=table,
+            batch_size=batch_size,
+            filter_expr=filter_expr,
+            row_to_chunk_fn=self._store._row_to_chunk,
+        )
+
+        async for chunk in iterator:
+            yield chunk
+```
+
+</details>
+
+#### `get_all_chunks`
+
+```python
+def get_all_chunks(batch_size: int | None = None, language: str | None = None, chunk_type: str | None = None) -> Iterator[CodeChunk]
+```
+
+Lazily iterate over all chunks.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `batch_size` | `int | None` | `None` | Batch size for loading. If None, uses optimal size. |
+| `language` | `str | None` | `None` | Optional language filter. |
+| `chunk_type` | `str | None` | `None` | Optional chunk type filter. |
+
+
+<details>
+<summary>View Source (lines 1146-1189) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1146-L1189">GitHub</a></summary>
+
+```python
+def get_all_chunks(
+        self,
+        batch_size: int | None = None,
+        language: str | None = None,
+        chunk_type: str | None = None,
+    ) -> Iterator[CodeChunk]:
+        """Lazily iterate over all chunks.
+
+        Args:
+            batch_size: Batch size for loading. If None, uses optimal size.
+            language: Optional language filter.
+            chunk_type: Optional chunk type filter.
+
+        Yields:
+            CodeChunk objects.
+        """
+        table = self._store._get_table()
+        if table is None:
+            return
+
+        if batch_size is None:
+            batch_size = self.calculate_optimal_batch_size()
+
+        # Build filter expression
+        filters = []
+        if language:
+            if language not in VALID_LANGUAGES:
+                raise ValueError(f"Invalid language filter: {language}")
+            filters.append(f"language = '{language}'")
+        if chunk_type:
+            if chunk_type not in VALID_CHUNK_TYPES:
+                raise ValueError(f"Invalid chunk_type filter: {chunk_type}")
+            filters.append(f"chunk_type = '{chunk_type}'")
+
+        filter_expr = " AND ".join(filters) if filters else None
+
+        iterator = ChunkIterator(
+            table=table,
+            batch_size=batch_size,
+            filter_expr=filter_expr,
+            row_to_chunk_fn=self._store._row_to_chunk,
+        )
+
+        yield from iterator
+```
+
+</details>
+
+#### `async_get_all_chunks`
+
+```python
+async def async_get_all_chunks(batch_size: int | None = None, language: str | None = None, chunk_type: str | None = None) -> AsyncIterator[CodeChunk]
+```
+
+Async lazily iterate over all chunks.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `batch_size` | `int | None` | `None` | Batch size for loading. If None, uses optimal size. |
+| `language` | `str | None` | `None` | Optional language filter. |
+| `chunk_type` | `str | None` | `None` | Optional chunk type filter. |
+
+
+<details>
+<summary>View Source (lines 1191-1235) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1191-L1235">GitHub</a></summary>
+
+```python
+async def async_get_all_chunks(
+        self,
+        batch_size: int | None = None,
+        language: str | None = None,
+        chunk_type: str | None = None,
+    ) -> AsyncIterator[CodeChunk]:
+        """Async lazily iterate over all chunks.
+
+        Args:
+            batch_size: Batch size for loading. If None, uses optimal size.
+            language: Optional language filter.
+            chunk_type: Optional chunk type filter.
+
+        Yields:
+            CodeChunk objects.
+        """
+        table = self._store._get_table()
+        if table is None:
+            return
+
+        if batch_size is None:
+            batch_size = self.calculate_optimal_batch_size()
+
+        # Build filter expression
+        filters = []
+        if language:
+            if language not in VALID_LANGUAGES:
+                raise ValueError(f"Invalid language filter: {language}")
+            filters.append(f"language = '{language}'")
+        if chunk_type:
+            if chunk_type not in VALID_CHUNK_TYPES:
+                raise ValueError(f"Invalid chunk_type filter: {chunk_type}")
+            filters.append(f"chunk_type = '{chunk_type}'")
+
+        filter_expr = " AND ".join(filters) if filters else None
+
+        iterator = ChunkIterator(
+            table=table,
+            batch_size=batch_size,
+            filter_expr=filter_expr,
+            row_to_chunk_fn=self._store._row_to_chunk,
+        )
+
+        async for chunk in iterator:
+            yield chunk
+```
+
+</details>
+
+#### `count_chunks`
+
+```python
+def count_chunks(language: str | None = None, chunk_type: str | None = None) -> int
+```
+
+Count chunks without loading them into memory.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `language` | `str | None` | `None` | Optional language filter. |
+| `chunk_type` | `str | None` | `None` | Optional chunk type filter. |
+
+
+
+<details>
+<summary>View Source (lines 1237-1277) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1237-L1277">GitHub</a></summary>
+
+```python
+def count_chunks(
+        self,
+        language: str | None = None,
+        chunk_type: str | None = None,
+    ) -> int:
+        """Count chunks without loading them into memory.
+
+        Args:
+            language: Optional language filter.
+            chunk_type: Optional chunk type filter.
+
+        Returns:
+            Total count of matching chunks.
+        """
+        table = self._store._get_table()
+        if table is None:
+            return 0
+
+        if not language and not chunk_type:
+            return table.count_rows()
+
+        # Build filter expression
+        filters = []
+        if language:
+            if language not in VALID_LANGUAGES:
+                raise ValueError(f"Invalid language filter: {language}")
+            filters.append(f"language = '{language}'")
+        if chunk_type:
+            if chunk_type not in VALID_CHUNK_TYPES:
+                raise ValueError(f"Invalid chunk_type filter: {chunk_type}")
+            filters.append(f"chunk_type = '{chunk_type}'")
+
+        filter_expr = " AND ".join(filters) if filters else None
+
+        iterator = ChunkIterator(
+            table=table,
+            batch_size=1,
+            filter_expr=filter_expr,
+        )
+
+        return iterator.count()
+```
+
+</details>
+
+### class `LatencyStats`
+
+Statistics for tracking search query latency.
+
+**Methods:**
+
+
+<details>
+<summary>View Source (lines 1281-1323) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1281-L1323">GitHub</a></summary>
+
+```python
+class LatencyStats:
+    """Statistics for tracking search query latency."""
+
+    latencies: list[float] = field(default_factory=list)
+    window_size: int = 10
+    _lock: threading.Lock = field(default_factory=threading.Lock)
+
+    def record(self, latency_ms: float) -> None:
+        """Record a search latency measurement.
+
+        Args:
+            latency_ms: Latency in milliseconds.
+        """
+        with self._lock:
+            self.latencies.append(latency_ms)
+            # Keep only the most recent measurements
+            if len(self.latencies) > self.window_size:
+                self.latencies = self.latencies[-self.window_size :]
+
+    def get_average(self) -> float | None:
+        """Get the average latency over the recent window.
+
+        Returns:
+            Average latency in milliseconds, or None if no data.
+        """
+        with self._lock:
+            if not self.latencies:
+                return None
+            return sum(self.latencies) / len(self.latencies)
+
+    def get_count(self) -> int:
+        """Get the number of recorded latencies.
+
+        Returns:
+            Number of latency measurements recorded.
+        """
+        with self._lock:
+            return len(self.latencies)
+
+    def clear(self) -> None:
+        """Clear all recorded latencies."""
+        with self._lock:
+            self.latencies.clear()
+```
+
+</details>
+
+#### `record`
+
+```python
+def record(latency_ms: float) -> None
+```
+
+Record a search latency measurement.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `latency_ms` | `float` | - | Latency in milliseconds. |
+
+
+<details>
+<summary>View Source (lines 1281-1323) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1281-L1323">GitHub</a></summary>
+
+```python
+class LatencyStats:
+    """Statistics for tracking search query latency."""
+
+    latencies: list[float] = field(default_factory=list)
+    window_size: int = 10
+    _lock: threading.Lock = field(default_factory=threading.Lock)
+
+    def record(self, latency_ms: float) -> None:
+        """Record a search latency measurement.
+
+        Args:
+            latency_ms: Latency in milliseconds.
+        """
+        with self._lock:
+            self.latencies.append(latency_ms)
+            # Keep only the most recent measurements
+            if len(self.latencies) > self.window_size:
+                self.latencies = self.latencies[-self.window_size :]
+
+    def get_average(self) -> float | None:
+        """Get the average latency over the recent window.
+
+        Returns:
+            Average latency in milliseconds, or None if no data.
+        """
+        with self._lock:
+            if not self.latencies:
+                return None
+            return sum(self.latencies) / len(self.latencies)
+
+    def get_count(self) -> int:
+        """Get the number of recorded latencies.
+
+        Returns:
+            Number of latency measurements recorded.
+        """
+        with self._lock:
+            return len(self.latencies)
+
+    def clear(self) -> None:
+        """Clear all recorded latencies."""
+        with self._lock:
+            self.latencies.clear()
+```
+
+</details>
+
+#### `get_average`
+
+```python
+def get_average() -> float | None
+```
+
+Get the average latency over the recent window.
+
+
+<details>
+<summary>View Source (lines 1281-1323) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1281-L1323">GitHub</a></summary>
+
+```python
+class LatencyStats:
+    """Statistics for tracking search query latency."""
+
+    latencies: list[float] = field(default_factory=list)
+    window_size: int = 10
+    _lock: threading.Lock = field(default_factory=threading.Lock)
+
+    def record(self, latency_ms: float) -> None:
+        """Record a search latency measurement.
+
+        Args:
+            latency_ms: Latency in milliseconds.
+        """
+        with self._lock:
+            self.latencies.append(latency_ms)
+            # Keep only the most recent measurements
+            if len(self.latencies) > self.window_size:
+                self.latencies = self.latencies[-self.window_size :]
+
+    def get_average(self) -> float | None:
+        """Get the average latency over the recent window.
+
+        Returns:
+            Average latency in milliseconds, or None if no data.
+        """
+        with self._lock:
+            if not self.latencies:
+                return None
+            return sum(self.latencies) / len(self.latencies)
+
+    def get_count(self) -> int:
+        """Get the number of recorded latencies.
+
+        Returns:
+            Number of latency measurements recorded.
+        """
+        with self._lock:
+            return len(self.latencies)
+
+    def clear(self) -> None:
+        """Clear all recorded latencies."""
+        with self._lock:
+            self.latencies.clear()
+```
+
+</details>
+
+#### `get_count`
+
+```python
+def get_count() -> int
+```
+
+Get the number of recorded latencies.
+
+
+<details>
+<summary>View Source (lines 1281-1323) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1281-L1323">GitHub</a></summary>
+
+```python
+class LatencyStats:
+    """Statistics for tracking search query latency."""
+
+    latencies: list[float] = field(default_factory=list)
+    window_size: int = 10
+    _lock: threading.Lock = field(default_factory=threading.Lock)
+
+    def record(self, latency_ms: float) -> None:
+        """Record a search latency measurement.
+
+        Args:
+            latency_ms: Latency in milliseconds.
+        """
+        with self._lock:
+            self.latencies.append(latency_ms)
+            # Keep only the most recent measurements
+            if len(self.latencies) > self.window_size:
+                self.latencies = self.latencies[-self.window_size :]
+
+    def get_average(self) -> float | None:
+        """Get the average latency over the recent window.
+
+        Returns:
+            Average latency in milliseconds, or None if no data.
+        """
+        with self._lock:
+            if not self.latencies:
+                return None
+            return sum(self.latencies) / len(self.latencies)
+
+    def get_count(self) -> int:
+        """Get the number of recorded latencies.
+
+        Returns:
+            Number of latency measurements recorded.
+        """
+        with self._lock:
+            return len(self.latencies)
+
+    def clear(self) -> None:
+        """Clear all recorded latencies."""
+        with self._lock:
+            self.latencies.clear()
+```
+
+</details>
+
+#### `clear`
+
+```python
+def clear() -> None
+```
+
+Clear all recorded latencies.
+
+
+
+<details>
+<summary>View Source (lines 1281-1323) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1281-L1323">GitHub</a></summary>
+
+```python
+class LatencyStats:
+    """Statistics for tracking search query latency."""
+
+    latencies: list[float] = field(default_factory=list)
+    window_size: int = 10
+    _lock: threading.Lock = field(default_factory=threading.Lock)
+
+    def record(self, latency_ms: float) -> None:
+        """Record a search latency measurement.
+
+        Args:
+            latency_ms: Latency in milliseconds.
+        """
+        with self._lock:
+            self.latencies.append(latency_ms)
+            # Keep only the most recent measurements
+            if len(self.latencies) > self.window_size:
+                self.latencies = self.latencies[-self.window_size :]
+
+    def get_average(self) -> float | None:
+        """Get the average latency over the recent window.
+
+        Returns:
+            Average latency in milliseconds, or None if no data.
+        """
+        with self._lock:
+            if not self.latencies:
+                return None
+            return sum(self.latencies) / len(self.latencies)
+
+    def get_count(self) -> int:
+        """Get the number of recorded latencies.
+
+        Returns:
+            Number of latency measurements recorded.
+        """
+        with self._lock:
+            return len(self.latencies)
+
+    def clear(self) -> None:
+        """Clear all recorded latencies."""
+        with self._lock:
+            self.latencies.clear()
+```
+
+</details>
+
+### class `LazyIndexManager`
+
+Manages deferred/lazy vector index creation for VectorStore.  This class implements lazy index creation to improve initial indexing performance. Instead of creating vector indexes immediately when the table reaches the threshold, index creation is deferred to a background task or triggered on-demand when search latency exceeds a configured threshold.  Attributes: config: Configuration for lazy index behavior.
+
+**Methods:**
+
+
+<details>
+<summary>View Source (lines 1326-1632) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1326-L1632">GitHub</a></summary>
+
+```python
+class LazyIndexManager:
+    # Methods: __init__, mark_index_pending, mark_index_created, is_index_pending, is_index_ready, is_creation_in_progress, record_search_latency, should_create_index, schedule_index_creation, _create_index_task, wait_for_index, create_index_now, on_index_ready, get_stats, reset
+```
+
+</details>
+
+#### `__init__`
+
+```python
+def __init__(vectorstore: "VectorStore", config: LazyIndexConfig | None = None)
+```
+
+Initialize the lazy index manager.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `vectorstore` | `"VectorStore"` | - | The VectorStore instance to manage indexes for. |
+| `config` | `LazyIndexConfig | None` | `None` | Optional configuration. If None, uses default LazyIndexConfig. |
+
+
+<details>
+<summary>View Source (lines 1338-1359) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1338-L1359">GitHub</a></summary>
+
+```python
+def __init__(
+        self,
+        vectorstore: "VectorStore",
+        config: LazyIndexConfig | None = None,
+    ):
+        """Initialize the lazy index manager.
+
+        Args:
+            vectorstore: The VectorStore instance to manage indexes for.
+            config: Optional configuration. If None, uses default LazyIndexConfig.
+        """
+        self._vectorstore = vectorstore
+        self.config = config if config is not None else LazyIndexConfig()
+        self._index_pending = False
+        self._index_task: asyncio.Task | None = None
+        self._index_ready = asyncio.Event()
+        self._latency_stats = LatencyStats(window_size=self.config.latency_window_size)
+        self._lock = threading.RLock()
+        self._creation_in_progress = False
+        self._index_created = False
+        # Callbacks for index ready event
+        self._on_index_ready_callbacks: list[Callable[[], None]] = []
+```
+
+</details>
+
+#### `mark_index_pending`
+
+```python
+def mark_index_pending() -> None
+```
+
+Mark that vector index creation is pending.  Called when the table reaches the minimum row threshold during initial indexing, to indicate that an index should be created in the background.
+
+
+<details>
+<summary>View Source (lines 1361-1370) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1361-L1370">GitHub</a></summary>
+
+```python
+def mark_index_pending(self) -> None:
+        """Mark that vector index creation is pending.
+
+        Called when the table reaches the minimum row threshold during initial
+        indexing, to indicate that an index should be created in the background.
+        """
+        with self._lock:
+            if not self._index_created:
+                self._index_pending = True
+                logger.debug("Vector index creation marked as pending")
+```
+
+</details>
+
+#### `mark_index_created`
+
+```python
+def mark_index_created() -> None
+```
+
+Mark that vector index has been created.  Called after successful index creation to update internal state.
+
+
+<details>
+<summary>View Source (lines 1372-1389) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1372-L1389">GitHub</a></summary>
+
+```python
+def mark_index_created(self) -> None:
+        """Mark that vector index has been created.
+
+        Called after successful index creation to update internal state.
+        """
+        with self._lock:
+            self._index_pending = False
+            self._index_created = True
+            self._creation_in_progress = False
+            self._index_ready.set()
+            logger.debug("Vector index marked as created")
+
+            # Invoke callbacks
+            for callback in self._on_index_ready_callbacks:
+                try:
+                    callback()
+                except Exception as e:
+                    logger.warning(f"Index ready callback failed: {e}")
+```
+
+</details>
+
+#### `is_index_pending`
+
+```python
+def is_index_pending() -> bool
+```
+
+Check if vector index creation is pending.
+
+
+<details>
+<summary>View Source (lines 1391-1398) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1391-L1398">GitHub</a></summary>
+
+```python
+def is_index_pending(self) -> bool:
+        """Check if vector index creation is pending.
+
+        Returns:
+            True if index creation is pending but not yet started/completed.
+        """
+        with self._lock:
+            return self._index_pending and not self._index_created
+```
+
+</details>
+
+#### `is_index_ready`
+
+```python
+def is_index_ready() -> bool
+```
+
+Check if the vector index is ready.
+
+
+<details>
+<summary>View Source (lines 1400-1407) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1400-L1407">GitHub</a></summary>
+
+```python
+def is_index_ready(self) -> bool:
+        """Check if the vector index is ready.
+
+        Returns:
+            True if the index has been created and is ready for use.
+        """
+        with self._lock:
+            return self._index_created
+```
+
+</details>
+
+#### `is_creation_in_progress`
+
+```python
+def is_creation_in_progress() -> bool
+```
+
+Check if index creation is currently in progress.
+
+
+<details>
+<summary>View Source (lines 1409-1416) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1409-L1416">GitHub</a></summary>
+
+```python
+def is_creation_in_progress(self) -> bool:
+        """Check if index creation is currently in progress.
+
+        Returns:
+            True if background index creation is running.
+        """
+        with self._lock:
+            return self._creation_in_progress
+```
+
+</details>
+
+#### `record_search_latency`
+
+```python
+def record_search_latency(latency_ms: float) -> None
+```
+
+Record a search query latency measurement.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `latency_ms` | `float` | - | Search latency in milliseconds. |
+
+
+<details>
+<summary>View Source (lines 1418-1424) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1418-L1424">GitHub</a></summary>
+
+```python
+def record_search_latency(self, latency_ms: float) -> None:
+        """Record a search query latency measurement.
+
+        Args:
+            latency_ms: Search latency in milliseconds.
+        """
+        self._latency_stats.record(latency_ms)
+```
+
+</details>
+
+#### `should_create_index`
+
+```python
+def should_create_index() -> bool
+```
+
+Check if index should be created based on latency statistics.  Returns True if: - Lazy indexing is enabled - Index hasn't been created yet - Index creation isn't already in progress - Either index is marked pending, or average latency exceeds threshold
+
+
+<details>
+<summary>View Source (lines 1426-1456) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1426-L1456">GitHub</a></summary>
+
+```python
+def should_create_index(self) -> bool:
+        """Check if index should be created based on latency statistics.
+
+        Returns True if:
+        - Lazy indexing is enabled
+        - Index hasn't been created yet
+        - Index creation isn't already in progress
+        - Either index is marked pending, or average latency exceeds threshold
+
+        Returns:
+            True if index creation should be triggered.
+        """
+        if not self.config.enabled:
+            return False
+
+        with self._lock:
+            if self._index_created or self._creation_in_progress:
+                return False
+
+            # Check if explicitly pending
+            if self._index_pending:
+                return True
+
+            # Check latency threshold
+            avg_latency = self._latency_stats.get_average()
+            if avg_latency is not None:
+                # Need enough samples to make a decision
+                if self._latency_stats.get_count() >= 3:
+                    return avg_latency > self.config.latency_threshold_ms
+
+            return False
+```
+
+</details>
+
+#### `schedule_index_creation`
+
+```python
+async def schedule_index_creation(progress_callback: Callable[[str], None] | None = None) -> None
+```
+
+Schedule index creation as a background task.  If index creation is already in progress or completed, this is a no-op.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `progress_callback` | `Callable[[str], None] | None` | `None` | Optional callback for progress updates. Called with status messages during index creation. |
+
+
+<details>
+<summary>View Source (lines 1458-1491) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1458-L1491">GitHub</a></summary>
+
+```python
+async def schedule_index_creation(
+        self,
+        progress_callback: Callable[[str], None] | None = None,
+    ) -> None:
+        """Schedule index creation as a background task.
+
+        If index creation is already in progress or completed, this is a no-op.
+
+        Args:
+            progress_callback: Optional callback for progress updates.
+                Called with status messages during index creation.
+        """
+        with self._lock:
+            if self._index_created or self._creation_in_progress:
+                logger.debug("Index already created or in progress, skipping schedule")
+                return
+            if self._index_task is not None and not self._index_task.done():
+                logger.debug("Index creation task already scheduled")
+                return
+
+            self._creation_in_progress = True
+
+        logger.info("Scheduling background vector index creation")
+
+        async def _create_index_task():
+            try:
+                await self.create_index_now(progress_callback=progress_callback)
+            except Exception as e:
+                logger.error(f"Background index creation failed: {e}")
+                with self._lock:
+                    self._creation_in_progress = False
+                raise
+
+        self._index_task = asyncio.create_task(_create_index_task())
+```
+
+</details>
+
+#### `wait_for_index`
+
+```python
+async def wait_for_index(timeout: float | None = None) -> bool
+```
+
+Wait for the index to be ready.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `timeout` | `float | None` | `None` | Maximum time to wait in seconds. None means wait indefinitely. |
+
+
+<details>
+<summary>View Source (lines 1493-1509) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1493-L1509">GitHub</a></summary>
+
+```python
+async def wait_for_index(self, timeout: float | None = None) -> bool:
+        """Wait for the index to be ready.
+
+        Args:
+            timeout: Maximum time to wait in seconds. None means wait indefinitely.
+
+        Returns:
+            True if index is ready, False if timeout occurred.
+        """
+        if self.is_index_ready():
+            return True
+
+        try:
+            await asyncio.wait_for(self._index_ready.wait(), timeout=timeout)
+            return True
+        except asyncio.TimeoutError:
+            return False
+```
+
+</details>
+
+#### `create_index_now`
+
+```python
+async def create_index_now(progress_callback: Callable[[str], None] | None = None) -> None
+```
+
+Force immediate index creation.  Creates the vector index synchronously (within an async context). This is useful when you need the index to be ready before proceeding.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `progress_callback` | `Callable[[str], None] | None` | `None` | Optional callback for progress updates. |
+
+
+<details>
+<summary>View Source (lines 1511-1577) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1511-L1577">GitHub</a></summary>
+
+```python
+async def create_index_now(
+        self,
+        progress_callback: Callable[[str], None] | None = None,
+    ) -> None:
+        """Force immediate index creation.
+
+        Creates the vector index synchronously (within an async context).
+        This is useful when you need the index to be ready before proceeding.
+
+        Args:
+            progress_callback: Optional callback for progress updates.
+
+        Raises:
+            RuntimeError: If table doesn't exist or has insufficient rows.
+        """
+        table = self._vectorstore._get_table()
+        if table is None:
+            raise RuntimeError("Cannot create index: table does not exist")
+
+        with self._lock:
+            if self._index_created:
+                logger.debug("Index already created, skipping")
+                return
+            self._creation_in_progress = True
+
+        try:
+            num_rows = table.count_rows()
+            if num_rows < self.config.min_rows:
+                logger.debug(
+                    f"Skipping index creation: {num_rows} rows < {self.config.min_rows} threshold"
+                )
+                return
+
+            if progress_callback:
+                progress_callback(f"Creating vector index for {num_rows} rows...")
+
+            logger.info(f"Creating vector index for {num_rows} rows")
+
+            # Calculate optimal number of partitions
+            num_partitions = min(max(int(math.sqrt(num_rows)), 16), 256)
+
+            # Run the actual index creation
+            # This is CPU-bound, so we run it in an executor
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(
+                None,
+                lambda: table.create_index(
+                    metric="L2",
+                    num_partitions=num_partitions,
+                    num_sub_vectors=16,
+                ),
+            )
+
+            if progress_callback:
+                progress_callback("Vector index created successfully")
+
+            logger.info(
+                f"Created vector index with {num_partitions} partitions for {num_rows} vectors"
+            )
+
+            self.mark_index_created()
+
+        except (ValueError, RuntimeError, OSError) as e:
+            logger.warning(f"Could not create vector index: {e}")
+            with self._lock:
+                self._creation_in_progress = False
+            raise
+```
+
+</details>
+
+#### `on_index_ready`
+
+```python
+def on_index_ready(callback: Callable[[], None]) -> None
+```
+
+Register a callback to be invoked when the index is ready.  If the index is already ready, the callback is invoked immediately.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `callback` | `Callable[[], None]` | - | Function to call when index is ready. |
+
+
+<details>
+<summary>View Source (lines 1579-1595) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1579-L1595">GitHub</a></summary>
+
+```python
+def on_index_ready(self, callback: Callable[[], None]) -> None:
+        """Register a callback to be invoked when the index is ready.
+
+        If the index is already ready, the callback is invoked immediately.
+
+        Args:
+            callback: Function to call when index is ready.
+        """
+        with self._lock:
+            if self._index_created:
+                # Already ready, invoke immediately
+                try:
+                    callback()
+                except Exception as e:
+                    logger.warning(f"Index ready callback failed: {e}")
+            else:
+                self._on_index_ready_callbacks.append(callback)
+```
+
+</details>
+
+#### `get_stats`
+
+```python
+def get_stats() -> dict[str, Any]
+```
+
+Get statistics about the lazy index manager.
+
+
+<details>
+<summary>View Source (lines 1597-1615) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1597-L1615">GitHub</a></summary>
+
+```python
+def get_stats(self) -> dict[str, Any]:
+        """Get statistics about the lazy index manager.
+
+        Returns:
+            Dictionary with manager statistics.
+        """
+        with self._lock:
+            avg_latency = self._latency_stats.get_average()
+            return {
+                "enabled": self.config.enabled,
+                "index_pending": self._index_pending,
+                "index_created": self._index_created,
+                "creation_in_progress": self._creation_in_progress,
+                "latency_threshold_ms": self.config.latency_threshold_ms,
+                "min_rows": self.config.min_rows,
+                "average_latency_ms": avg_latency,
+                "latency_samples": self._latency_stats.get_count(),
+                "should_create_index": self.should_create_index(),
+            }
+```
+
+</details>
+
+#### `reset`
+
+```python
+def reset() -> None
+```
+
+Reset the manager state.  Clears all state including pending flag, created flag, and latency stats. Useful for testing or when re-indexing from scratch.
+
+
+
+<details>
+<summary>View Source (lines 1617-1632) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1617-L1632">GitHub</a></summary>
+
+```python
+def reset(self) -> None:
+        """Reset the manager state.
+
+        Clears all state including pending flag, created flag, and latency stats.
+        Useful for testing or when re-indexing from scratch.
+        """
+        with self._lock:
+            self._index_pending = False
+            self._index_created = False
+            self._creation_in_progress = False
+            self._index_ready.clear()
+            self._latency_stats.clear()
+            self._on_index_ready_callbacks.clear()
+            if self._index_task is not None and not self._index_task.done():
+                self._index_task.cancel()
+            self._index_task = None
+```
+
+</details>
 
 ### class `VectorStore`
 
@@ -90,11 +2944,11 @@ Vector store using LanceDB for code chunk storage and semantic search.
 
 
 <details>
-<summary>View Source (lines 37-413) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/html.md)/src/local_deepwiki/core/vectorstore.py#L37-L413">GitHub</a></summary>
+<summary>View Source (lines 1635-3319) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1635-L3319">GitHub</a></summary>
 
 ```python
 class VectorStore:
-    # Methods: __init__, _connect, _get_table, _ensure_scalar_indexes, _create_index_safe, _create_scalar_indexes, create_or_update_table, add_chunks, search, get_chunk_by_id, get_chunks_by_file, delete_chunks_by_file, get_stats, _row_to_chunk, _chunk_to_text
+    # Methods: __init__, _connect, _get_table, _get_fuzzy_helper, _ensure_indexes, _create_index_safe, _create_scalar_indexes, _create_vector_index, _is_local_provider, _get_optimal_batch_config, _embed_single_batch_with_retry, _batch_embed, _batch_embed_sequential, create_or_update_table, add_chunks, search, search_paginated, record_feedback, get_search_profile, set_search_profile, get_adaptive_search_enabled, set_adaptive_search_enabled, get_adaptive_search_stats, get_chunk_by_id, get_chunks_by_file, delete_chunks_by_file, delete_chunks_by_files, get_main_definition_lines, get_stats, get_stats_streaming, get_main_definition_lines_lazy, get_lazy_chunk_loader, get_chunk_iterator, _row_to_chunk, _chunk_to_text, invalidate_search_cache, get_search_cache_stats, get_embedding_batch_config, lazy_index_manager, get_lazy_index_stats, schedule_lazy_index_creation, wait_for_vector_index, create_vector_index_now, is_vector_index_ready, on_vector_index_ready
 ```
 
 </details>
@@ -102,33 +2956,96 @@ class VectorStore:
 #### `__init__`
 
 ```python
-def __init__(db_path: Path, embedding_provider: EmbeddingProvider)
+def __init__(db_path: Path, embedding_provider: EmbeddingProvider, search_cache_config: SearchCacheConfig | None = None, embedding_batch_config: EmbeddingBatchConfig | None = None, lazy_index_config: LazyIndexConfig | None = None, fuzzy_search_config: FuzzySearchConfig | None = None, default_search_profile: SearchProfile = SearchProfile.BALANCED, adaptive_search_enabled: bool = True)
 ```
 
 Initialize the vector store.
 
 
-| [Parameter](../generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `db_path` | `Path` | - | Path to the LanceDB database directory. |
-| `embedding_provider` | [`EmbeddingProvider`](../providers/base.md) | - | Provider for generating embeddings. |
+| `embedding_provider` | `EmbeddingProvider` | - | Provider for generating embeddings. |
+| `search_cache_config` | `SearchCacheConfig | None` | `None` | Optional search cache configuration. If None, uses default SearchCacheConfig. |
+| `embedding_batch_config` | `EmbeddingBatchConfig | None` | `None` | Optional embedding batch configuration. If None, uses default EmbeddingBatchConfig. |
+| `lazy_index_config` | `LazyIndexConfig | None` | `None` | Optional lazy index configuration. If None, uses default LazyIndexConfig (lazy indexing enabled). |
+| `fuzzy_search_config` | `FuzzySearchConfig | None` | `None` | Optional fuzzy search configuration. If None, uses default FuzzySearchConfig. |
+| `default_search_profile` | `SearchProfile` | `SearchProfile.BALANCED` | Default search profile for precision/recall trade-off. Defaults to SearchProfile.BALANCED. |
+| `adaptive_search_enabled` | `bool` | `True` | Whether to enable adaptive search depth estimation. When enabled, search depth adjusts based on query complexity and history. |
 
 
 <details>
-<summary>View Source (lines 42-52) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/html.md)/src/local_deepwiki/core/vectorstore.py#L42-L52">GitHub</a></summary>
+<summary>View Source (lines 1640-1707) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1640-L1707">GitHub</a></summary>
 
 ```python
-def __init__(self, db_path: Path, embedding_provider: EmbeddingProvider):
+def __init__(
+        self,
+        db_path: Path,
+        embedding_provider: EmbeddingProvider,
+        search_cache_config: SearchCacheConfig | None = None,
+        embedding_batch_config: EmbeddingBatchConfig | None = None,
+        lazy_index_config: LazyIndexConfig | None = None,
+        fuzzy_search_config: FuzzySearchConfig | None = None,
+        default_search_profile: SearchProfile = SearchProfile.BALANCED,
+        adaptive_search_enabled: bool = True,
+    ):
         """Initialize the vector store.
 
         Args:
             db_path: Path to the LanceDB database directory.
             embedding_provider: Provider for generating embeddings.
+            search_cache_config: Optional search cache configuration.
+                If None, uses default SearchCacheConfig.
+            embedding_batch_config: Optional embedding batch configuration.
+                If None, uses default EmbeddingBatchConfig.
+            lazy_index_config: Optional lazy index configuration.
+                If None, uses default LazyIndexConfig (lazy indexing enabled).
+            fuzzy_search_config: Optional fuzzy search configuration.
+                If None, uses default FuzzySearchConfig.
+            default_search_profile: Default search profile for precision/recall trade-off.
+                Defaults to SearchProfile.BALANCED.
+            adaptive_search_enabled: Whether to enable adaptive search depth estimation.
+                When enabled, search depth adjusts based on query complexity and history.
         """
         self.db_path = db_path
         self.embedding_provider = embedding_provider
         self._db: lancedb.DBConnection | None = None
         self._table: Table | None = None
+        self._lock = threading.RLock()  # Reentrant lock for nested calls
+
+        # Initialize search cache
+        if search_cache_config is None:
+            search_cache_config = SearchCacheConfig()
+        self._search_cache = SearchCache(search_cache_config)
+
+        # Initialize embedding batch config
+        if embedding_batch_config is None:
+            embedding_batch_config = EmbeddingBatchConfig()
+        self._embedding_batch_config = embedding_batch_config
+
+        # Rate limiter (created on-demand if rate limiting is configured)
+        self._rate_limiter: RateLimiter | None = None
+        if embedding_batch_config.rate_limit_rpm is not None:
+            self._rate_limiter = RateLimiter(embedding_batch_config.rate_limit_rpm)
+
+        # Initialize lazy index manager
+        self._lazy_index_manager = LazyIndexManager(self, lazy_index_config)
+
+        # Initialize fuzzy search config
+        if fuzzy_search_config is None:
+            fuzzy_search_config = FuzzySearchConfig()
+        self._fuzzy_search_config = fuzzy_search_config
+
+        # Fuzzy search helper (lazy initialized when first needed)
+        self._fuzzy_search_helper: "FuzzySearchHelper | None" = None
+
+        # Search profile configuration
+        self._default_search_profile = default_search_profile
+        self._adaptive_search_enabled = adaptive_search_enabled
+
+        # Initialize adaptive searcher
+        self._adaptive_searcher = AdaptiveSearcher()
+        self._adaptive_searcher.set_store(self)
 ```
 
 </details>
@@ -136,26 +3053,30 @@ def __init__(self, db_path: Path, embedding_provider: EmbeddingProvider):
 #### `create_or_update_table`
 
 ```python
-async def create_or_update_table(chunks: list[CodeChunk]) -> int
+async def create_or_update_table(chunks: list[CodeChunk], embedding_batch_size: int = 100) -> int
 ```
 
 Create or update the vector table with code chunks.
 
 
-| [Parameter](../generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `chunks` | `list[CodeChunk]` | - | List of code chunks to store. |
+| `embedding_batch_size` | `int` | `100` | Batch size for embedding generation to avoid OOM. |
 
 
 <details>
-<summary>View Source (lines 130-164) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/html.md)/src/local_deepwiki/core/vectorstore.py#L130-L164">GitHub</a></summary>
+<summary>View Source (lines 2149-2207) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L2149-L2207">GitHub</a></summary>
 
 ```python
-async def create_or_update_table(self, chunks: list[CodeChunk]) -> int:
+async def create_or_update_table(
+        self, chunks: list[CodeChunk], embedding_batch_size: int = 100
+    ) -> int:
         """Create or update the vector table with code chunks.
 
         Args:
             chunks: List of code chunks to store.
+            embedding_batch_size: Batch size for embedding generation to avoid OOM.
 
         Returns:
             Number of chunks stored.
@@ -167,23 +3088,44 @@ async def create_or_update_table(self, chunks: list[CodeChunk]) -> int:
         logger.info(f"Creating/updating vector table with {len(chunks)} chunks")
         db = self._connect()
 
-        # Generate embeddings for all chunks
+        # Generate embeddings in batches to avoid OOM and API limits
         texts = [self._chunk_to_text(chunk) for chunk in chunks]
-        embeddings = await self.embedding_provider.embed(texts)
+        embeddings = await self._batch_embed(texts, embedding_batch_size, log_progress=True)
 
         # Prepare data for LanceDB
         data = [
             chunk.to_vector_record(vector=embedding) for chunk, embedding in zip(chunks, embeddings)
         ]
 
-        # Drop existing table and create new one
-        if self.TABLE_NAME in db.list_tables().tables:
-            db.drop_table(self.TABLE_NAME)
+        # Reset lazy index manager state since we're creating a fresh table
+        self._lazy_index_manager.reset()
 
-        self._table = db.create_table(self.TABLE_NAME, data)
+        # Drop existing table and create new one (thread-safe)
+        with self._lock:
+            if self.TABLE_NAME in db.list_tables().tables:
+                db.drop_table(self.TABLE_NAME)
+
+            self._table = db.create_table(self.TABLE_NAME, data)
+
+        # Invalidate search cache since index has changed
+        self._search_cache.invalidate()
 
         # Create scalar indexes for efficient lookups
         self._create_scalar_indexes()
+
+        # Handle vector index creation based on lazy index config
+        num_rows = len(data)
+        if self._lazy_index_manager.config.enabled:
+            # Lazy indexing: mark as pending if table is large enough
+            if num_rows >= self._lazy_index_manager.config.min_rows:
+                self._lazy_index_manager.mark_index_pending()
+                logger.info(
+                    f"Vector index creation deferred (lazy mode): {num_rows} rows. "
+                    "Index will be created in background or on-demand."
+                )
+        else:
+            # Eager indexing: create immediately
+            self._create_vector_index(num_rows)
 
         return len(data)
 ```
@@ -193,26 +3135,30 @@ async def create_or_update_table(self, chunks: list[CodeChunk]) -> int:
 #### `add_chunks`
 
 ```python
-async def add_chunks(chunks: list[CodeChunk]) -> int
+async def add_chunks(chunks: list[CodeChunk], embedding_batch_size: int = 100) -> int
 ```
 
 Add chunks to existing table.
 
 
-| [Parameter](../generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `chunks` | `list[CodeChunk]` | - | List of code chunks to add. |
+| `embedding_batch_size` | `int` | `100` | Batch size for embedding generation to avoid OOM. |
 
 
 <details>
-<summary>View Source (lines 166-193) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/html.md)/src/local_deepwiki/core/vectorstore.py#L166-L193">GitHub</a></summary>
+<summary>View Source (lines 2209-2243) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L2209-L2243">GitHub</a></summary>
 
 ```python
-async def add_chunks(self, chunks: list[CodeChunk]) -> int:
+async def add_chunks(
+        self, chunks: list[CodeChunk], embedding_batch_size: int = 100
+    ) -> int:
         """Add chunks to existing table.
 
         Args:
             chunks: List of code chunks to add.
+            embedding_batch_size: Batch size for embedding generation to avoid OOM.
 
         Returns:
             Number of chunks added.
@@ -223,11 +3169,11 @@ async def add_chunks(self, chunks: list[CodeChunk]) -> int:
         logger.debug(f"Adding {len(chunks)} chunks to existing table")
         table = self._get_table()
         if table is None:
-            return await self.create_or_update_table(chunks)
+            return await self.create_or_update_table(chunks, embedding_batch_size)
 
-        # Generate embeddings
+        # Generate embeddings in batches to avoid OOM and API limits
         texts = [self._chunk_to_text(chunk) for chunk in chunks]
-        embeddings = await self.embedding_provider.embed(texts)
+        embeddings = await self._batch_embed(texts, embedding_batch_size)
 
         # Prepare data
         data = [
@@ -235,6 +3181,10 @@ async def add_chunks(self, chunks: list[CodeChunk]) -> int:
         ]
 
         table.add(data)
+
+        # Invalidate search cache since index has changed
+        self._search_cache.invalidate()
+
         return len(data)
 ```
 
@@ -243,22 +3193,28 @@ async def add_chunks(self, chunks: list[CodeChunk]) -> int:
 #### `search`
 
 ```python
-async def search(query: str, limit: int = 10, language: str | None = None, chunk_type: str | None = None) -> list[SearchResult]
+async def search(query: str, limit: int = 10, language: str | None = None, chunk_type: str | None = None, path_pattern: str | None = None, use_fuzzy: bool = False, fuzzy_weight: float = 0.3, profile: SearchProfile | str | None = None, min_similarity: float | None = None, auto_suggest: bool = True) -> list[SearchResult]
 ```
 
 Search for similar code chunks.
 
 
-| [Parameter](../generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `query` | `str` | - | Search query text. |
 | `limit` | `int` | `10` | Maximum number of results. |
-| `language` | `str | None` | `None` | Optional language filter. |
-| `chunk_type` | `str | None` | `None` | Optional chunk type filter. |
+| `language` | `str | None` | `None` | Optional language filter (e.g., "python", "typescript"). |
+| `chunk_type` | `str | None` | `None` | Optional chunk type filter (e.g., "function", "class", "method"). |
+| `path_pattern` | `str | None` | `None` | Optional file path pattern filter (e.g., "src/**/*.py"). |
+| `use_fuzzy` | `bool` | `False` | Whether to use fuzzy matching to re-rank results. |
+| `fuzzy_weight` | `float` | `0.3` | Weight for fuzzy score when use_fuzzy is True (0.0-1.0). |
+| `profile` | `SearchProfile | str | None` | `None` | Search profile for precision/recall trade-off. Can be SearchProfile enum or string ("fast", "balanced", "thorough"). If None, uses the store's default profile. |
+| `min_similarity` | `float | None` | `None` | Minimum similarity threshold override. Results below this score are filtered out. If None, uses the profile's default threshold. |
+| `auto_suggest` | `bool` | `True` | Whether to generate "Did you mean?" suggestions when results are poor quality. Defaults to True. |
 
 
 <details>
-<summary>View Source (lines 195-255) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/html.md)/src/local_deepwiki/core/vectorstore.py#L195-L255">GitHub</a></summary>
+<summary>View Source (lines 2245-2488) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L2245-L2488">GitHub</a></summary>
 
 ```python
 async def search(
@@ -267,32 +3223,371 @@ async def search(
         limit: int = 10,
         language: str | None = None,
         chunk_type: str | None = None,
+        path_pattern: str | None = None,
+        use_fuzzy: bool = False,
+        fuzzy_weight: float = 0.3,
+        profile: SearchProfile | str | None = None,
+        min_similarity: float | None = None,
+        auto_suggest: bool = True,
     ) -> list[SearchResult]:
         """Search for similar code chunks.
 
         Args:
             query: Search query text.
             limit: Maximum number of results.
-            language: Optional language filter.
-            chunk_type: Optional chunk type filter.
+            language: Optional language filter (e.g., "python", "typescript").
+            chunk_type: Optional chunk type filter (e.g., "function", "class", "method").
+            path_pattern: Optional file path pattern filter (e.g., "src/**/*.py").
+            use_fuzzy: Whether to use fuzzy matching to re-rank results.
+            fuzzy_weight: Weight for fuzzy score when use_fuzzy is True (0.0-1.0).
+            profile: Search profile for precision/recall trade-off.
+                Can be SearchProfile enum or string ("fast", "balanced", "thorough").
+                If None, uses the store's default profile.
+            min_similarity: Minimum similarity threshold override.
+                Results below this score are filtered out.
+                If None, uses the profile's default threshold.
+            auto_suggest: Whether to generate "Did you mean?" suggestions when
+                results are poor quality. Defaults to True.
 
         Returns:
-            List of search results with scores.
+            List of search results with scores. When results are poor quality
+            and auto_suggest is True, the first result will include suggestions
+            in the `suggestions` field.
         """
+        from local_deepwiki.core.fuzzy_search import (
+            extract_highlights,
+            filter_by_path,
+            rerank_with_fuzzy,
+            should_auto_enable_fuzzy,
+        )
+
         table = self._get_table()
         if table is None:
             logger.debug("No table found for search")
             return []
 
-        logger.debug(f"Searching for: '{query[:50]}...' limit={limit}")
+        # Resolve search profile
+        if profile is None:
+            resolved_profile = self._default_search_profile
+        elif isinstance(profile, str):
+            try:
+                resolved_profile = SearchProfile(profile.lower())
+            except ValueError:
+                logger.warning(
+                    f"Invalid search profile '{profile}', using default"
+                )
+                resolved_profile = self._default_search_profile
+        else:
+            resolved_profile = profile
+
+        profile_config = SEARCH_PROFILES[resolved_profile]
+
+        # Resolve minimum similarity threshold
+        effective_min_similarity = (
+            min_similarity if min_similarity is not None else profile_config.min_similarity
+        )
+
+        logger.debug(
+            f"Searching for: '{query[:50]}...' limit={limit} "
+            f"profile={resolved_profile.value} min_sim={effective_min_similarity}"
+        )
 
         # Generate query embedding
         query_embedding = (await self.embedding_provider.embed([query]))[0]
 
+        # Build cache filter key (only cache-relevant filters, not path_pattern/fuzzy)
+        cache_filters: dict[str, Any] = {
+            "limit": limit,
+            "profile": resolved_profile.value,
+            "min_similarity": effective_min_similarity,
+        }
+        if language:
+            if language not in VALID_LANGUAGES:
+                raise ValueError(f"Invalid language filter: {language}")
+            cache_filters["language"] = language
+        if chunk_type:
+            if chunk_type not in VALID_CHUNK_TYPES:
+                raise ValueError(f"Invalid chunk_type filter: {chunk_type}")
+            cache_filters["chunk_type"] = chunk_type
+
+        # Try to get cached results (only for non-fuzzy, non-path-pattern searches)
+        # Fuzzy and path_pattern modify results after retrieval, so we can't cache them directly
+        use_cache = not use_fuzzy and not path_pattern
+        if use_cache:
+            cached_results = self._search_cache.get(query_embedding, cache_filters)
+            if cached_results is not None:
+                return cached_results
+
+        # Calculate fetch limit based on profile and adaptive search
+        base_fetch_multiplier = profile_config.fetch_multiplier
+        if path_pattern or use_fuzzy:
+            # Need more candidates for post-filtering
+            base_fetch_multiplier = max(base_fetch_multiplier, 3.0)
+
+        # Use adaptive search depth if enabled
+        if self._adaptive_search_enabled:
+            adaptive_depth = self._adaptive_searcher.estimate_optimal_depth(query, limit)
+            fetch_limit = max(
+                int(limit * base_fetch_multiplier),
+                adaptive_depth,
+            )
+        else:
+            fetch_limit = int(limit * base_fetch_multiplier)
+
+        # Cap fetch limit based on rerank candidates from profile
+        fetch_limit = min(fetch_limit, profile_config.rerank_candidates)
+
         # Build search query
-        search = table.search(query_embedding).limit(limit)
+        search = table.search(query_embedding).limit(fetch_limit)
 
         # Apply filters with validation to prevent injection
+        filters = []
+        if language:
+            filters.append(f"language = '{language}'")
+        if chunk_type:
+            filters.append(f"chunk_type = '{chunk_type}'")
+
+        if filters:
+            search = search.where(" AND ".join(filters))
+
+        # Execute search with latency tracking for lazy index management
+        search_start = time.monotonic()
+        results = search.to_list()
+        search_latency_ms = (time.monotonic() - search_start) * 1000
+
+        # Record latency for lazy index decision making
+        self._lazy_index_manager.record_search_latency(search_latency_ms)
+
+        # Check if we should trigger lazy index creation based on latency
+        if self._lazy_index_manager.should_create_index():
+            # Schedule background index creation (non-blocking)
+            try:
+                asyncio.create_task(self._lazy_index_manager.schedule_index_creation())
+            except RuntimeError:
+                # No event loop running (e.g., in sync context)
+                logger.debug("Cannot schedule lazy index creation: no event loop")
+
+        # Convert to SearchResult objects and apply similarity threshold
+        search_results = []
+        for row in results:
+            score = 1.0 - row.get("_distance", 0)  # Convert distance to similarity
+            # Apply minimum similarity threshold
+            if score < effective_min_similarity:
+                continue
+            chunk = self._row_to_chunk(row)
+            search_results.append(
+                SearchResult(
+                    chunk=chunk,
+                    score=score,
+                    highlights=[],
+                )
+            )
+
+        # Apply path pattern filter
+        if path_pattern:
+            search_results = filter_by_path(search_results, path_pattern)
+
+        # Check if auto-fuzzy should be enabled due to poor results
+        fuzzy_config = self._fuzzy_search_config
+        auto_fuzzy_enabled = False
+        if (
+            fuzzy_config.enable_auto_fuzzy
+            and not use_fuzzy
+            and should_auto_enable_fuzzy(search_results, fuzzy_config.auto_fuzzy_threshold)
+        ):
+            auto_fuzzy_enabled = True
+            logger.debug(
+                f"Auto-enabling fuzzy search due to poor results "
+                f"(best score below {fuzzy_config.auto_fuzzy_threshold})"
+            )
+
+        # Apply fuzzy re-ranking (either explicit or auto-enabled)
+        if (use_fuzzy or auto_fuzzy_enabled) and search_results:
+            search_results = rerank_with_fuzzy(search_results, query, fuzzy_weight)
+
+            # Add highlights for fuzzy matches
+            for result in search_results:
+                result.highlights = extract_highlights(result.chunk.content, query)
+
+        # Limit results to requested amount
+        search_results = search_results[:limit]
+
+        # Generate "Did you mean?" suggestions if results are poor and auto_suggest is enabled
+        suggestions: list[str] | None = None
+        if (
+            auto_suggest
+            and fuzzy_config.enable_auto_fuzzy
+            and should_auto_enable_fuzzy(search_results, fuzzy_config.auto_fuzzy_threshold)
+        ):
+            try:
+                fuzzy_helper = await self._get_fuzzy_helper()
+                suggestions = fuzzy_helper.generate_suggestions(
+                    query,
+                    search_results,
+                    threshold=fuzzy_config.suggestion_threshold,
+                    max_suggestions=fuzzy_config.max_suggestions,
+                )
+                if suggestions:
+                    logger.debug(f"Generated suggestions: {suggestions}")
+            except Exception as e:
+                logger.warning(f"Failed to generate suggestions: {e}")
+
+        # Attach suggestions to the first result if we have any
+        if suggestions and search_results:
+            # Create a new SearchResult with suggestions attached
+            first_result = search_results[0]
+            search_results[0] = SearchResult(
+                chunk=first_result.chunk,
+                score=first_result.score,
+                highlights=first_result.highlights,
+                suggestions=suggestions,
+            )
+        elif suggestions and not search_results:
+            # Create a placeholder result with suggestions when no results found
+            # This allows the caller to show "Did you mean?" even with empty results
+            # We don't add a fake result, but we can log for now
+            logger.debug(f"No results found, but have suggestions: {suggestions}")
+
+        # Record search for adaptive learning
+        if self._adaptive_search_enabled and search_results:
+            # Estimate quality based on score distribution
+            avg_score = sum(r.score for r in search_results) / len(search_results)
+            self._adaptive_searcher.record_search_quality(
+                query, avg_score, len(search_results), fetch_limit
+            )
+
+        # Cache results (only for non-fuzzy, non-path-pattern, non-auto-fuzzy searches)
+        if use_cache and not auto_fuzzy_enabled:
+            self._search_cache.set(query, query_embedding, search_results, cache_filters)
+
+        return search_results
+```
+
+</details>
+
+#### `search_paginated`
+
+```python
+async def search_paginated(query: str, limit: int = 10, offset: int = 0, language: str | None = None, chunk_type: str | None = None, path_pattern: str | None = None, use_fuzzy: bool = False, fuzzy_weight: float = 0.3, cursor: str | None = None, profile: SearchProfile | str | None = None, min_similarity: float | None = None) -> SearchResultPage
+```
+
+Search for similar code chunks with pagination support.  This method supports both offset-based and cursor-based pagination: - Offset-based: Use `offset` parameter (simpler, but may have stability issues) - Cursor-based: Use `cursor` parameter (more stable for concurrent updates)
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `query` | `str` | - | Search query text. |
+| `limit` | `int` | `10` | Maximum number of results per page. |
+| `offset` | `int` | `0` | Starting offset for pagination (0-based). |
+| `language` | `str | None` | `None` | Optional language filter (e.g., "python", "typescript"). |
+| `chunk_type` | `str | None` | `None` | Optional chunk type filter (e.g., "function", "class", "method"). |
+| `path_pattern` | `str | None` | `None` | Optional file path pattern filter (e.g., "src/**/*.py"). |
+| `use_fuzzy` | `bool` | `False` | Whether to use fuzzy matching to re-rank results. |
+| `fuzzy_weight` | `float` | `0.3` | Weight for fuzzy score when use_fuzzy is True (0.0-1.0). |
+| `cursor` | `str | None` | `None` | Optional cursor for cursor-based pagination (overrides offset). |
+| `profile` | `SearchProfile | str | None` | `None` | Search profile for precision/recall trade-off. Can be SearchProfile enum or string ("fast", "balanced", "thorough"). If None, uses the store's default profile. |
+| `min_similarity` | `float | None` | `None` | Minimum similarity threshold override. Results below this score are filtered out. If None, uses the profile's default threshold. |
+
+
+<details>
+<summary>View Source (lines 2490-2659) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L2490-L2659">GitHub</a></summary>
+
+```python
+async def search_paginated(
+        self,
+        query: str,
+        limit: int = 10,
+        offset: int = 0,
+        language: str | None = None,
+        chunk_type: str | None = None,
+        path_pattern: str | None = None,
+        use_fuzzy: bool = False,
+        fuzzy_weight: float = 0.3,
+        cursor: str | None = None,
+        profile: SearchProfile | str | None = None,
+        min_similarity: float | None = None,
+    ) -> SearchResultPage:
+        """Search for similar code chunks with pagination support.
+
+        This method supports both offset-based and cursor-based pagination:
+        - Offset-based: Use `offset` parameter (simpler, but may have stability issues)
+        - Cursor-based: Use `cursor` parameter (more stable for concurrent updates)
+
+        Args:
+            query: Search query text.
+            limit: Maximum number of results per page.
+            offset: Starting offset for pagination (0-based).
+            language: Optional language filter (e.g., "python", "typescript").
+            chunk_type: Optional chunk type filter (e.g., "function", "class", "method").
+            path_pattern: Optional file path pattern filter (e.g., "src/**/*.py").
+            use_fuzzy: Whether to use fuzzy matching to re-rank results.
+            fuzzy_weight: Weight for fuzzy score when use_fuzzy is True (0.0-1.0).
+            cursor: Optional cursor for cursor-based pagination (overrides offset).
+            profile: Search profile for precision/recall trade-off.
+                Can be SearchProfile enum or string ("fast", "balanced", "thorough").
+                If None, uses the store's default profile.
+            min_similarity: Minimum similarity threshold override.
+                Results below this score are filtered out.
+                If None, uses the profile's default threshold.
+
+        Returns:
+            SearchResultPage with results, total count, and pagination metadata.
+        """
+        from local_deepwiki.core.fuzzy_search import (
+            extract_highlights,
+            filter_by_path,
+            rerank_with_fuzzy,
+        )
+
+        table = self._get_table()
+        if table is None:
+            logger.debug("No table found for search")
+            return SearchResultPage(
+                results=[],
+                total=0,
+                offset=offset,
+                limit=limit,
+                has_more=False,
+            )
+
+        # Resolve search profile
+        if profile is None:
+            resolved_profile = self._default_search_profile
+        elif isinstance(profile, str):
+            try:
+                resolved_profile = SearchProfile(profile.lower())
+            except ValueError:
+                logger.warning(
+                    f"Invalid search profile '{profile}', using default"
+                )
+                resolved_profile = self._default_search_profile
+        else:
+            resolved_profile = profile
+
+        profile_config = SEARCH_PROFILES[resolved_profile]
+
+        # Resolve minimum similarity threshold
+        effective_min_similarity = (
+            min_similarity if min_similarity is not None else profile_config.min_similarity
+        )
+
+        logger.debug(
+            f"Paginated search for: '{query[:50]}...' limit={limit} offset={offset} "
+            f"profile={resolved_profile.value}"
+        )
+
+        # Parse cursor if provided (format: "offset:{number}")
+        if cursor:
+            try:
+                if cursor.startswith("offset:"):
+                    offset = int(cursor[7:])
+            except (ValueError, IndexError):
+                logger.warning(f"Invalid cursor format: {cursor}, using offset={offset}")
+
+        # Generate query embedding
+        query_embedding = (await self.embedding_provider.embed([query]))[0]
+
+        # Build filter expressions
         filters = []
         if language:
             if language not in VALID_LANGUAGES:
@@ -303,25 +3598,253 @@ async def search(
                 raise ValueError(f"Invalid chunk_type filter: {chunk_type}")
             filters.append(f"chunk_type = '{chunk_type}'")
 
-        if filters:
-            search = search.where(" AND ".join(filters))
+        filter_expr = " AND ".join(filters) if filters else None
 
-        # Execute search
-        results = search.to_list()
+        # For total count, we need to fetch more results (expensive but accurate)
+        # In production, you might want to cache this or use approximate counts
+        # Profile affects how many candidates we consider
+        base_count_limit = int(1000 * profile_config.fetch_multiplier)
+        count_limit = offset + limit + base_count_limit
+        count_search = table.search(query_embedding).limit(count_limit)
+        if filter_expr:
+            count_search = count_search.where(filter_expr)
+        all_results = count_search.to_list()
+
+        # Apply similarity threshold filtering
+        all_results = [
+            row
+            for row in all_results
+            if (1.0 - row.get("_distance", 0)) >= effective_min_similarity
+        ]
+        total_estimate = len(all_results)
+
+        # Apply path pattern filter for accurate count
+        if path_pattern:
+            filtered_results = []
+            for row in all_results:
+                chunk = self._row_to_chunk(row)
+                if filter_by_path([SearchResult(chunk=chunk, score=0, highlights=[])], path_pattern):
+                    filtered_results.append(row)
+            all_results = filtered_results
+            total_estimate = len(all_results)
+
+        # Apply pagination
+        paginated_results = all_results[offset : offset + limit]
 
         # Convert to SearchResult objects
         search_results = []
-        for row in results:
+        for row in paginated_results:
             chunk = self._row_to_chunk(row)
             search_results.append(
                 SearchResult(
                     chunk=chunk,
-                    score=1.0 - row.get("_distance", 0),  # Convert distance to similarity
+                    score=1.0 - row.get("_distance", 0),
                     highlights=[],
                 )
             )
 
-        return search_results
+        # Apply fuzzy re-ranking if requested
+        if use_fuzzy and search_results:
+            search_results = rerank_with_fuzzy(search_results, query, fuzzy_weight)
+            for result in search_results:
+                result.highlights = extract_highlights(result.chunk.content, query)
+
+        # Determine if there are more results
+        has_more = offset + limit < total_estimate
+
+        # Generate cursor for next page
+        next_cursor = f"offset:{offset + limit}" if has_more else None
+
+        return SearchResultPage(
+            results=search_results,
+            total=total_estimate,
+            offset=offset,
+            limit=limit,
+            has_more=has_more,
+            cursor=next_cursor,
+        )
+```
+
+</details>
+
+#### `record_feedback`
+
+```python
+def record_feedback(feedback: SearchFeedback) -> None
+```
+
+Record user feedback on a search result.  Feedback is used to improve future search results by learning which results are actually relevant for specific queries.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `feedback` | `SearchFeedback` | - | User feedback on a search result. |
+
+
+<details>
+<summary>View Source (lines 2661-2670) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L2661-L2670">GitHub</a></summary>
+
+```python
+def record_feedback(self, feedback: SearchFeedback) -> None:
+        """Record user feedback on a search result.
+
+        Feedback is used to improve future search results by learning which
+        results are actually relevant for specific queries.
+
+        Args:
+            feedback: User feedback on a search result.
+        """
+        self._adaptive_searcher.record_feedback(feedback)
+```
+
+</details>
+
+#### `get_search_profile`
+
+```python
+def get_search_profile() -> SearchProfile
+```
+
+Get the current default search profile.
+
+
+<details>
+<summary>View Source (lines 2672-2678) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L2672-L2678">GitHub</a></summary>
+
+```python
+def get_search_profile(self) -> SearchProfile:
+        """Get the current default search profile.
+
+        Returns:
+            The default SearchProfile used when none is specified.
+        """
+        return self._default_search_profile
+```
+
+</details>
+
+#### `set_search_profile`
+
+```python
+def set_search_profile(profile: SearchProfile | str) -> None
+```
+
+Set the default search profile.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `profile` | `SearchProfile | str` | - | The search profile to use as default. Can be SearchProfile enum or string ("fast", "balanced", "thorough"). |
+
+
+<details>
+<summary>View Source (lines 2680-2699) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L2680-L2699">GitHub</a></summary>
+
+```python
+def set_search_profile(self, profile: SearchProfile | str) -> None:
+        """Set the default search profile.
+
+        Args:
+            profile: The search profile to use as default.
+                Can be SearchProfile enum or string ("fast", "balanced", "thorough").
+
+        Raises:
+            ValueError: If the profile string is invalid.
+        """
+        if isinstance(profile, str):
+            try:
+                self._default_search_profile = SearchProfile(profile.lower())
+            except ValueError:
+                raise ValueError(
+                    f"Invalid search profile: {profile}. "
+                    f"Valid values: {[p.value for p in SearchProfile]}"
+                )
+        else:
+            self._default_search_profile = profile
+```
+
+</details>
+
+#### `get_adaptive_search_enabled`
+
+```python
+def get_adaptive_search_enabled() -> bool
+```
+
+Check if adaptive search is enabled.
+
+
+<details>
+<summary>View Source (lines 2701-2707) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L2701-L2707">GitHub</a></summary>
+
+```python
+def get_adaptive_search_enabled(self) -> bool:
+        """Check if adaptive search is enabled.
+
+        Returns:
+            True if adaptive search depth estimation is enabled.
+        """
+        return self._adaptive_search_enabled
+```
+
+</details>
+
+#### `set_adaptive_search_enabled`
+
+```python
+def set_adaptive_search_enabled(enabled: bool) -> None
+```
+
+Enable or disable adaptive search.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `enabled` | `bool` | - | Whether to enable adaptive search depth estimation. |
+
+
+<details>
+<summary>View Source (lines 2709-2715) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L2709-L2715">GitHub</a></summary>
+
+```python
+def set_adaptive_search_enabled(self, enabled: bool) -> None:
+        """Enable or disable adaptive search.
+
+        Args:
+            enabled: Whether to enable adaptive search depth estimation.
+        """
+        self._adaptive_search_enabled = enabled
+```
+
+</details>
+
+#### `get_adaptive_search_stats`
+
+```python
+def get_adaptive_search_stats() -> dict[str, Any]
+```
+
+Get statistics about adaptive search performance.
+
+
+<details>
+<summary>View Source (lines 2717-2730) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L2717-L2730">GitHub</a></summary>
+
+```python
+def get_adaptive_search_stats(self) -> dict[str, Any]:
+        """Get statistics about adaptive search performance.
+
+        Returns:
+            Dictionary with adaptive search statistics including:
+            - query_history_size: Number of queries in history
+            - feedback_stats: Feedback collection statistics
+        """
+        return {
+            "query_history_size": len(self._adaptive_searcher._query_history),
+            "feedback_stats": self._adaptive_searcher.get_feedback_stats(),
+            "adaptive_search_enabled": self._adaptive_search_enabled,
+            "default_profile": self._default_search_profile.value,
+        }
 ```
 
 </details>
@@ -335,13 +3858,13 @@ async def get_chunk_by_id(chunk_id: str) -> CodeChunk | None
 Get a specific chunk by ID.
 
 
-| [Parameter](../generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `chunk_id` | `str` | - | The chunk ID. |
 
 
 <details>
-<summary>View Source (lines 257-275) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/html.md)/src/local_deepwiki/core/vectorstore.py#L257-L275">GitHub</a></summary>
+<summary>View Source (lines 2732-2750) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L2732-L2750">GitHub</a></summary>
 
 ```python
 async def get_chunk_by_id(self, chunk_id: str) -> CodeChunk | None:
@@ -376,13 +3899,13 @@ async def get_chunks_by_file(file_path: str) -> list[CodeChunk]
 Get all chunks for a specific file.
 
 
-| [Parameter](../generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `file_path` | `str` | - | The file path. |
 
 
 <details>
-<summary>View Source (lines 277-292) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/html.md)/src/local_deepwiki/core/vectorstore.py#L277-L292">GitHub</a></summary>
+<summary>View Source (lines 2752-2767) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L2752-L2767">GitHub</a></summary>
 
 ```python
 async def get_chunks_by_file(self, file_path: str) -> list[CodeChunk]:
@@ -405,6 +3928,32 @@ async def get_chunks_by_file(self, file_path: str) -> list[CodeChunk]:
 
 </details>
 
+#### `get_all_chunks`
+
+```python
+def get_all_chunks(batch_size: int | None = None, language: str | None = None, chunk_type: str | None = None) -> Iterator[CodeChunk]
+```
+
+Lazily iterate over all chunks in the vector store.  Delegates to LazyChunkLoader for memory-efficient batch iteration.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `batch_size` | `int | None` | `None` | Batch size for loading. If None, uses optimal size. |
+| `language` | `str | None` | `None` | Optional language filter. |
+| `chunk_type` | `str | None` | `None` | Optional chunk type filter. |
+
+
+<details>
+<summary>View Source (lines 1635-3319) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1635-L3319">GitHub</a></summary>
+
+```python
+class VectorStore:
+    # Methods: __init__, _connect, _get_table, _get_fuzzy_helper, _ensure_indexes, _create_index_safe, _create_scalar_indexes, _create_vector_index, _is_local_provider, _get_optimal_batch_config, _embed_single_batch_with_retry, _batch_embed, _batch_embed_sequential, create_or_update_table, add_chunks, search, search_paginated, record_feedback, get_search_profile, set_search_profile, get_adaptive_search_enabled, set_adaptive_search_enabled, get_adaptive_search_stats, get_chunk_by_id, get_chunks_by_file, delete_chunks_by_file, delete_chunks_by_files, get_main_definition_lines, get_stats, get_stats_streaming, get_main_definition_lines_lazy, get_lazy_chunk_loader, get_chunk_iterator, _row_to_chunk, _chunk_to_text, invalidate_search_cache, get_search_cache_stats, get_embedding_batch_config, lazy_index_manager, get_lazy_index_stats, schedule_lazy_index_creation, wait_for_vector_index, create_vector_index_now, is_vector_index_ready, on_vector_index_ready
+```
+
+</details>
+
 #### `delete_chunks_by_file`
 
 ```python
@@ -414,13 +3963,13 @@ async def delete_chunks_by_file(file_path: str) -> int
 Delete all chunks for a specific file.
 
 
-| [Parameter](../generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `file_path` | `str` | - | The file path. |
 
 
 <details>
-<summary>View Source (lines 294-316) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/html.md)/src/local_deepwiki/core/vectorstore.py#L294-L316">GitHub</a></summary>
+<summary>View Source (lines 2769-2794) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L2769-L2794">GitHub</a></summary>
 
 ```python
 async def delete_chunks_by_file(self, file_path: str) -> int:
@@ -430,7 +3979,7 @@ async def delete_chunks_by_file(self, file_path: str) -> int:
             file_path: The file path.
 
         Returns:
-            Number of chunks deleted.
+            Number of chunks deleted (estimated, may be 0 if table doesn't exist).
         """
         table = self._get_table()
         if table is None:
@@ -439,13 +3988,137 @@ async def delete_chunks_by_file(self, file_path: str) -> int:
         # Sanitize path to prevent injection
         safe_path = _sanitize_string_value(file_path)
 
-        # Count before delete
-        before = len(table.search().where(f"file_path = '{safe_path}'").to_list())
-
-        # Delete matching rows
+        # Delete matching rows directly without pre-counting
+        # LanceDB delete is idempotent - no error if no rows match
         table.delete(f"file_path = '{safe_path}'")
 
-        return before
+        # Invalidate search cache since index has changed
+        self._search_cache.invalidate()
+
+        # Return 0 since we don't know exact count without expensive query
+        # Callers that need counts should use get_chunks_by_file first
+        return 0
+```
+
+</details>
+
+#### `delete_chunks_by_files`
+
+```python
+async def delete_chunks_by_files(file_paths: list[str]) -> int
+```
+
+Delete all chunks for multiple files in a single batch operation.  This is more efficient than calling delete_chunks_by_file in a loop as it constructs a single filter expression for all files.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `file_paths` | `list[str]` | - | List of file paths to delete chunks for. |
+
+
+<details>
+<summary>View Source (lines 2796-2831) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L2796-L2831">GitHub</a></summary>
+
+```python
+async def delete_chunks_by_files(self, file_paths: list[str]) -> int:
+        """Delete all chunks for multiple files in a single batch operation.
+
+        This is more efficient than calling delete_chunks_by_file in a loop
+        as it constructs a single filter expression for all files.
+
+        Args:
+            file_paths: List of file paths to delete chunks for.
+
+        Returns:
+            Number of file paths processed (not chunk count).
+        """
+        if not file_paths:
+            return 0
+
+        table = self._get_table()
+        if table is None:
+            return 0
+
+        # Build a single OR filter for all file paths
+        # Sanitize each path to prevent injection
+        safe_paths = [_sanitize_string_value(path) for path in file_paths]
+
+        # Use IN clause for efficiency: file_path IN ('path1', 'path2', ...)
+        # LanceDB supports SQL-like syntax
+        paths_list = ", ".join(f"'{path}'" for path in safe_paths)
+        filter_expr = f"file_path IN ({paths_list})"
+
+        # Single delete operation for all matching files
+        table.delete(filter_expr)
+
+        # Invalidate search cache since index has changed
+        self._search_cache.invalidate()
+
+        logger.debug(f"Batch deleted chunks for {len(file_paths)} files")
+        return len(file_paths)
+```
+
+</details>
+
+#### `get_main_definition_lines`
+
+```python
+def get_main_definition_lines() -> dict[str, tuple[int, int]]
+```
+
+Get line range of main definition (first class or function) per file.  Uses a single LanceDB query for memory-efficient access instead of loading the entire table into a DataFrame.
+
+
+<details>
+<summary>View Source (lines 2833-2878) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L2833-L2878">GitHub</a></summary>
+
+```python
+def get_main_definition_lines(self) -> dict[str, tuple[int, int]]:
+        """Get line range of main definition (first class or function) per file.
+
+        Uses a single LanceDB query for memory-efficient access instead of
+        loading the entire table into a DataFrame.
+
+        Returns:
+            Dict mapping file_path to (start_line, end_line) tuple.
+        """
+        table = self._get_table()
+        if table is None:
+            return {}
+
+        # Single query for both classes and functions
+        rows = (
+            table.search()
+            .where("chunk_type IN ('class', 'function')")
+            .select(["file_path", "start_line", "end_line", "chunk_type"])
+            .limit(10000)
+            .to_list()
+        )
+
+        result: dict[str, tuple[int, int]] = {}
+        result_types: dict[str, str] = {}  # Track chunk type for priority
+
+        for row in rows:
+            file_path = str(row["file_path"])
+            chunk_type = str(row["chunk_type"])
+            start_line = int(row["start_line"])
+            end_line = int(row["end_line"])
+
+            if file_path not in result:
+                # First definition for this file
+                result[file_path] = (start_line, end_line)
+                result_types[file_path] = chunk_type
+            elif chunk_type == "class" and result_types[file_path] == "function":
+                # Class takes priority over function if it starts earlier
+                if start_line < result[file_path][0]:
+                    result[file_path] = (start_line, end_line)
+                    result_types[file_path] = chunk_type
+            elif chunk_type == result_types[file_path]:
+                # Same type - keep the one that starts earlier
+                if start_line < result[file_path][0]:
+                    result[file_path] = (start_line, end_line)
+
+        return result
 ```
 
 </details>
@@ -459,10 +4132,8 @@ def get_stats() -> dict[str, Any]
 Get statistics about the vector store.  Uses PyArrow for memory-efficient aggregation instead of loading the entire table into pandas.
 
 
-
-
 <details>
-<summary>View Source (lines 318-361) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/html.md)/src/local_deepwiki/core/vectorstore.py#L318-L361">GitHub</a></summary>
+<summary>View Source (lines 2880-2923) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L2880-L2923">GitHub</a></summary>
 
 ```python
 def get_stats(self) -> dict[str, Any]:
@@ -513,26 +4184,767 @@ def get_stats(self) -> dict[str, Any]:
 
 </details>
 
+#### `get_stats_streaming`
+
+```python
+def get_stats_streaming(batch_size: int = 10000) -> dict[str, Any]
+```
+
+Get statistics about the vector store using streaming aggregation.  This method processes data in batches to avoid loading all rows into memory. Suitable for very large datasets (1M+ chunks) where get_stats() might OOM.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `batch_size` | `int` | `10000` | Number of rows to process per batch. |
+
+
+<details>
+<summary>View Source (lines 2925-2997) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L2925-L2997">GitHub</a></summary>
+
+```python
+def get_stats_streaming(self, batch_size: int = 10000) -> dict[str, Any]:
+        """Get statistics about the vector store using streaming aggregation.
+
+        This method processes data in batches to avoid loading all rows into memory.
+        Suitable for very large datasets (1M+ chunks) where get_stats() might OOM.
+
+        Args:
+            batch_size: Number of rows to process per batch.
+
+        Returns:
+            Dictionary with store statistics.
+        """
+        import pyarrow.compute as pc
+
+        table = self._get_table()
+        if table is None:
+            return {"total_chunks": 0, "languages": {}, "chunk_types": {}, "files": 0}
+
+        # Use count_rows() for total - doesn't load data
+        total_chunks = table.count_rows()
+
+        if total_chunks == 0:
+            return {"total_chunks": 0, "languages": {}, "chunk_types": {}, "files": 0}
+
+        # For small tables, use the regular method
+        if total_chunks <= batch_size:
+            return self.get_stats()
+
+        # Stream through table in batches
+        languages: dict[str, int] = {}
+        chunk_types: dict[str, int] = {}
+        file_set: set[str] = set()
+
+        # Use columnar projection to only fetch needed columns
+        columns = ["language", "chunk_type", "file_path"]
+        offset = 0
+
+        while offset < total_chunks:
+            # Fetch batch with only needed columns
+            rows = (
+                table.search()
+                .select(columns)
+                .limit(offset + batch_size)
+                .to_list()
+            )
+            # Slice to get just this batch (simulating offset)
+            batch_rows = rows[offset : offset + batch_size]
+
+            if not batch_rows:
+                break
+
+            # Process batch
+            for row in batch_rows:
+                lang = str(row["language"])
+                ctype = str(row["chunk_type"])
+                fpath = str(row["file_path"])
+
+                languages[lang] = languages.get(lang, 0) + 1
+                chunk_types[ctype] = chunk_types.get(ctype, 0) + 1
+                file_set.add(fpath)
+
+            offset += len(batch_rows)
+
+            # Log progress for very large datasets
+            if offset % 100_000 == 0:
+                logger.debug(f"Stats streaming progress: {offset}/{total_chunks} rows processed")
+
+        return {
+            "total_chunks": total_chunks,
+            "languages": languages,
+            "chunk_types": chunk_types,
+            "files": len(file_set),
+        }
+```
+
+</details>
+
+#### `get_main_definition_lines_lazy`
+
+```python
+def get_main_definition_lines_lazy(batch_size: int = 5000) -> Iterator[tuple[str, tuple[int, int]]]
+```
+
+Lazily get line range of main definition per file.  This method returns an iterator instead of a full dict, suitable for very large repositories where loading all definitions might cause memory issues.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `batch_size` | `int` | `5000` | Number of rows to process per batch. |
+
+
+<details>
+<summary>View Source (lines 2999-3067) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L2999-L3067">GitHub</a></summary>
+
+```python
+def get_main_definition_lines_lazy(
+        self,
+        batch_size: int = 5000,
+    ) -> Iterator[tuple[str, tuple[int, int]]]:
+        """Lazily get line range of main definition per file.
+
+        This method returns an iterator instead of a full dict, suitable for
+        very large repositories where loading all definitions might cause memory issues.
+
+        Args:
+            batch_size: Number of rows to process per batch.
+
+        Yields:
+            Tuples of (file_path, (start_line, end_line)).
+        """
+        table = self._get_table()
+        if table is None:
+            return
+
+        # Use columnar projection for efficiency
+        columns = ["file_path", "start_line", "end_line", "chunk_type"]
+
+        # Track results per file as we iterate
+        result: dict[str, tuple[int, int]] = {}
+        result_types: dict[str, str] = {}
+
+        # Process in batches directly instead of using ChunkIterator
+        # (ChunkIterator expects full CodeChunk conversion)
+        offset = 0
+        total_count = table.count_rows()
+
+        while offset < total_count:
+            # Fetch batch with columnar projection
+            rows = (
+                table.search()
+                .where("chunk_type IN ('class', 'function')")
+                .select(columns)
+                .limit(offset + batch_size)
+                .to_list()
+            )
+            # Slice for this batch
+            batch_rows = rows[offset : offset + batch_size]
+
+            if not batch_rows:
+                break
+
+            # Process each row in the batch
+            for row in batch_rows:
+                file_path = str(row["file_path"])
+                chunk_type = str(row["chunk_type"])
+                start_line = int(row["start_line"])
+                end_line = int(row["end_line"])
+
+                if file_path not in result:
+                    result[file_path] = (start_line, end_line)
+                    result_types[file_path] = chunk_type
+                elif chunk_type == "class" and result_types[file_path] == "function":
+                    if start_line < result[file_path][0]:
+                        result[file_path] = (start_line, end_line)
+                        result_types[file_path] = chunk_type
+                elif chunk_type == result_types[file_path]:
+                    if start_line < result[file_path][0]:
+                        result[file_path] = (start_line, end_line)
+
+            offset += len(batch_rows)
+
+        # Yield all results
+        for file_path, lines in result.items():
+            yield file_path, lines
+```
+
+</details>
+
+#### `get_lazy_chunk_loader`
+
+```python
+def get_lazy_chunk_loader(max_memory_mb: int = DEFAULT_MAX_MEMORY_MB) -> LazyChunkLoader
+```
+
+Get a LazyChunkLoader for memory-efficient chunk iteration.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `max_memory_mb` | `int` | `DEFAULT_MAX_MEMORY_MB` | Maximum memory budget in MB for batch operations. |
+
+
+<details>
+<summary>View Source (lines 3069-3081) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L3069-L3081">GitHub</a></summary>
+
+```python
+def get_lazy_chunk_loader(
+        self,
+        max_memory_mb: int = DEFAULT_MAX_MEMORY_MB,
+    ) -> LazyChunkLoader:
+        """Get a LazyChunkLoader for memory-efficient chunk iteration.
+
+        Args:
+            max_memory_mb: Maximum memory budget in MB for batch operations.
+
+        Returns:
+            LazyChunkLoader instance configured for this store.
+        """
+        return LazyChunkLoader(self, max_memory_mb=max_memory_mb)
+```
+
+</details>
+
+#### `get_chunk_iterator`
+
+```python
+def get_chunk_iterator(batch_size: int = 1000, language: str | None = None, chunk_type: str | None = None) -> ChunkIterator | None
+```
+
+Get a ChunkIterator for batch iteration over chunks.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `batch_size` | `int` | `1000` | Number of chunks per batch. |
+| `language` | `str | None` | `None` | Optional language filter. |
+| `chunk_type` | `str | None` | `None` | Optional chunk type filter. |
+
+
+<details>
+<summary>View Source (lines 3083-3121) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L3083-L3121">GitHub</a></summary>
+
+```python
+def get_chunk_iterator(
+        self,
+        batch_size: int = 1000,
+        language: str | None = None,
+        chunk_type: str | None = None,
+    ) -> ChunkIterator | None:
+        """Get a ChunkIterator for batch iteration over chunks.
+
+        Args:
+            batch_size: Number of chunks per batch.
+            language: Optional language filter.
+            chunk_type: Optional chunk type filter.
+
+        Returns:
+            ChunkIterator instance, or None if no table exists.
+        """
+        table = self._get_table()
+        if table is None:
+            return None
+
+        # Build filter expression
+        filters = []
+        if language:
+            if language not in VALID_LANGUAGES:
+                raise ValueError(f"Invalid language filter: {language}")
+            filters.append(f"language = '{language}'")
+        if chunk_type:
+            if chunk_type not in VALID_CHUNK_TYPES:
+                raise ValueError(f"Invalid chunk_type filter: {chunk_type}")
+            filters.append(f"chunk_type = '{chunk_type}'")
+
+        filter_expr = " AND ".join(filters) if filters else None
+
+        return ChunkIterator(
+            table=table,
+            batch_size=batch_size,
+            filter_expr=filter_expr,
+            row_to_chunk_fn=self._row_to_chunk,
+        )
+```
+
+</details>
+
+#### `invalidate_search_cache`
+
+```python
+def invalidate_search_cache() -> int
+```
+
+Invalidate all search cache entries.  Call this when the index is updated externally or when you want to force fresh search results.
+
+
+<details>
+<summary>View Source (lines 3175-3184) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L3175-L3184">GitHub</a></summary>
+
+```python
+def invalidate_search_cache(self) -> int:
+        """Invalidate all search cache entries.
+
+        Call this when the index is updated externally or when you want
+        to force fresh search results.
+
+        Returns:
+            Number of cache entries invalidated.
+        """
+        return self._search_cache.invalidate()
+```
+
+</details>
+
+#### `get_search_cache_stats`
+
+```python
+def get_search_cache_stats() -> dict[str, Any]
+```
+
+Get search cache statistics.
+
+
+<details>
+<summary>View Source (lines 3186-3201) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L3186-L3201">GitHub</a></summary>
+
+```python
+def get_search_cache_stats(self) -> dict[str, Any]:
+        """Get search cache statistics.
+
+        Returns:
+            Dictionary with cache statistics including:
+            - enabled: Whether caching is enabled
+            - entries: Current number of cached entries
+            - max_entries: Maximum allowed entries
+            - ttl_seconds: Cache entry TTL
+            - similarity_threshold: Minimum similarity for cache hit
+            - hits: Number of cache hits
+            - misses: Number of cache misses
+            - invalidations: Number of cache invalidations
+            - hit_rate: Cache hit rate (0.0-1.0)
+        """
+        return self._search_cache.get_stats()
+```
+
+</details>
+
+#### `get_embedding_batch_config`
+
+```python
+def get_embedding_batch_config() -> dict[str, Any]
+```
+
+Get embedding batch configuration.
+
+
+<details>
+<summary>View Source (lines 3203-3227) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L3203-L3227">GitHub</a></summary>
+
+```python
+def get_embedding_batch_config(self) -> dict[str, Any]:
+        """Get embedding batch configuration.
+
+        Returns:
+            Dictionary with batch configuration including:
+            - batch_size: Texts per batch
+            - concurrency: Parallel batch limit
+            - rate_limit_rpm: Rate limit (requests per minute)
+            - retry_max_attempts: Maximum retry attempts
+            - retry_base_delay: Base delay for retries
+            - is_local_provider: Whether using local embeddings
+            - optimal_batch_size: Calculated optimal batch size
+            - optimal_concurrency: Calculated optimal concurrency
+        """
+        optimal_batch_size, optimal_concurrency = self._get_optimal_batch_config()
+        return {
+            "batch_size": self._embedding_batch_config.batch_size,
+            "concurrency": self._embedding_batch_config.concurrency,
+            "rate_limit_rpm": self._embedding_batch_config.rate_limit_rpm,
+            "retry_max_attempts": self._embedding_batch_config.retry_max_attempts,
+            "retry_base_delay": self._embedding_batch_config.retry_base_delay,
+            "is_local_provider": self._is_local_provider(),
+            "optimal_batch_size": optimal_batch_size,
+            "optimal_concurrency": optimal_concurrency,
+        }
+```
+
+</details>
+
+#### `lazy_index_manager`
+
+```python
+def lazy_index_manager() -> LazyIndexManager
+```
+
+Get the lazy index manager.
+
+
+<details>
+<summary>View Source (lines 3232-3238) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L3232-L3238">GitHub</a></summary>
+
+```python
+def lazy_index_manager(self) -> LazyIndexManager:
+        """Get the lazy index manager.
+
+        Returns:
+            The LazyIndexManager instance for this vector store.
+        """
+        return self._lazy_index_manager
+```
+
+</details>
+
+#### `get_lazy_index_stats`
+
+```python
+def get_lazy_index_stats() -> dict[str, Any]
+```
+
+Get statistics about lazy index creation.
+
+
+<details>
+<summary>View Source (lines 3240-3255) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L3240-L3255">GitHub</a></summary>
+
+```python
+def get_lazy_index_stats(self) -> dict[str, Any]:
+        """Get statistics about lazy index creation.
+
+        Returns:
+            Dictionary with lazy index statistics including:
+            - enabled: Whether lazy indexing is enabled
+            - index_pending: Whether index creation is pending
+            - index_created: Whether index has been created
+            - creation_in_progress: Whether creation is currently running
+            - latency_threshold_ms: Latency threshold for triggering creation
+            - min_rows: Minimum rows for index creation
+            - average_latency_ms: Average search latency
+            - latency_samples: Number of latency samples
+            - should_create_index: Whether index should be created now
+        """
+        return self._lazy_index_manager.get_stats()
+```
+
+</details>
+
+#### `schedule_lazy_index_creation`
+
+```python
+async def schedule_lazy_index_creation(progress_callback: Callable[[str], None] | None = None) -> None
+```
+
+Schedule vector index creation as a background task.  This is useful for triggering index creation after initial indexing completes. If index creation is already in progress or completed, this is a no-op.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `progress_callback` | `Callable[[str], None] | None` | `None` | Optional callback for progress updates. |
+
+
+<details>
+<summary>View Source (lines 3257-3270) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L3257-L3270">GitHub</a></summary>
+
+```python
+async def schedule_lazy_index_creation(
+        self,
+        progress_callback: Callable[[str], None] | None = None,
+    ) -> None:
+        """Schedule vector index creation as a background task.
+
+        This is useful for triggering index creation after initial indexing
+        completes. If index creation is already in progress or completed,
+        this is a no-op.
+
+        Args:
+            progress_callback: Optional callback for progress updates.
+        """
+        await self._lazy_index_manager.schedule_index_creation(progress_callback)
+```
+
+</details>
+
+#### `wait_for_vector_index`
+
+```python
+async def wait_for_vector_index(timeout: float | None = None) -> bool
+```
+
+Wait for the vector index to be ready.  Useful when you need to ensure the index is available before performing searches that require it.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `timeout` | `float | None` | `None` | Maximum time to wait in seconds. None means wait indefinitely. |
+
+
+<details>
+<summary>View Source (lines 3272-3284) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L3272-L3284">GitHub</a></summary>
+
+```python
+async def wait_for_vector_index(self, timeout: float | None = None) -> bool:
+        """Wait for the vector index to be ready.
+
+        Useful when you need to ensure the index is available before
+        performing searches that require it.
+
+        Args:
+            timeout: Maximum time to wait in seconds. None means wait indefinitely.
+
+        Returns:
+            True if index is ready, False if timeout occurred.
+        """
+        return await self._lazy_index_manager.wait_for_index(timeout)
+```
+
+</details>
+
+#### `create_vector_index_now`
+
+```python
+async def create_vector_index_now(progress_callback: Callable[[str], None] | None = None) -> None
+```
+
+Force immediate vector index creation.  Creates the vector index synchronously. This is useful when you need the index to be ready before proceeding with searches.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `progress_callback` | `Callable[[str], None] | None` | `None` | Optional callback for progress updates. |
+
+
+<details>
+<summary>View Source (lines 3286-3301) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L3286-L3301">GitHub</a></summary>
+
+```python
+async def create_vector_index_now(
+        self,
+        progress_callback: Callable[[str], None] | None = None,
+    ) -> None:
+        """Force immediate vector index creation.
+
+        Creates the vector index synchronously. This is useful when you
+        need the index to be ready before proceeding with searches.
+
+        Args:
+            progress_callback: Optional callback for progress updates.
+
+        Raises:
+            RuntimeError: If table doesn't exist or has insufficient rows.
+        """
+        await self._lazy_index_manager.create_index_now(progress_callback)
+```
+
+</details>
+
+#### `is_vector_index_ready`
+
+```python
+def is_vector_index_ready() -> bool
+```
+
+Check if the vector index is ready.
+
+
+<details>
+<summary>View Source (lines 3303-3309) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L3303-L3309">GitHub</a></summary>
+
+```python
+def is_vector_index_ready(self) -> bool:
+        """Check if the vector index is ready.
+
+        Returns:
+            True if the index has been created and is ready for use.
+        """
+        return self._lazy_index_manager.is_index_ready()
+```
+
+</details>
+
+#### `on_vector_index_ready`
+
+```python
+def on_vector_index_ready(callback: Callable[[], None]) -> None
+```
+
+Register a callback to be invoked when the vector index is ready.  If the index is already ready, the callback is invoked immediately.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `callback` | `Callable[[], None]` | - | Function to call when index is ready. |
+
+
+
+
+<details>
+<summary>View Source (lines 3311-3319) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L3311-L3319">GitHub</a></summary>
+
+```python
+def on_vector_index_ready(self, callback: Callable[[], None]) -> None:
+        """Register a callback to be invoked when the vector index is ready.
+
+        If the index is already ready, the callback is invoked immediately.
+
+        Args:
+            callback: Function to call when index is ready.
+        """
+        self._lazy_index_manager.on_index_ready(callback)
+```
+
+</details>
+
 ## Class Diagram
 
 ```mermaid
 classDiagram
+    class AdaptiveSearcher {
+        -__init__() None
+        +set_store(store: "VectorStore") None
+        -_calculate_query_complexity(query: str) float
+        +estimate_optimal_depth(query: str, base_limit: int) int
+        +record_search_quality(query: str, quality: float, result_count: int, depth_used: int) None
+        +record_feedback(feedback: SearchFeedback) None
+        +get_feedback_stats() dict[str, Any]
+    }
+    class BatchEmbeddingResult {
+        +batch_index: int
+        +embeddings: list[list[float]] | None
+        +error: Exception | None
+        +retry_count: int
+    }
+    class ChunkBatch {
+        +Attributes: chunks: List of CodeChunk objects in this batch.
+        +chunks: list[CodeChunk]
+        +batch_index: int
+        +total_batches: int
+        +has_more: bool
+    }
+    class ChunkIterator {
+        -__init__(table: Table, batch_size: int, columns: list[str] | None, ...)
+        +count() int
+        +reset() None
+        -_fetch_batch(offset: int) list[dict[str, Any]]
+        -__iter__() Iterator[CodeChunk]
+        -__aiter__() AsyncIterator[CodeChunk]
+        +batches() Iterator[ChunkBatch]
+        +async_batches() AsyncIterator[ChunkBatch]
+    }
+    class EmbeddingProgress {
+        +total_texts: int
+        +total_batches: int
+        +completed_batches: int
+        +failed_batches: int
+        +start_time: float
+        -_lock: threading.Lock
+        +update() -> None
+        +elapsed_seconds() -> float
+        +estimated_remaining_seconds() -> float | None
+        +log_progress() -> None
+    }
+    class LatencyStats {
+        +latencies: list[float]
+        +window_size: int
+        -_lock: threading.Lock
+        +record() -> None
+        +get_average() -> float | None
+        +get_count() -> int
+        +clear() -> None
+    }
+    class LazyChunkLoader {
+        -__init__(store: "VectorStore", max_memory_mb: int)
+        +max_memory_bytes() int
+        +calculate_optimal_batch_size(available_memory_mb: int | None, bytes_per_chunk: int) int
+        +get_chunks_by_file(file_path: str, batch_size: int | None) Iterator[CodeChunk]
+        +async_get_chunks_by_file(file_path: str, batch_size: int | None) AsyncIterator[CodeChunk]
+        +get_all_chunks(batch_size: int | None, language: str | None, chunk_type: str | None) Iterator[CodeChunk]
+        +async_get_all_chunks(batch_size: int | None, language: str | None, chunk_type: str | None) AsyncIterator[CodeChunk]
+        +count_chunks(language: str | None, chunk_type: str | None) int
+    }
+    class LazyIndexManager {
+        -__init__(vectorstore: "VectorStore", config: LazyIndexConfig | None)
+        +mark_index_pending() None
+        +mark_index_created() None
+        +is_index_pending() bool
+        +is_index_ready() bool
+        +is_creation_in_progress() bool
+        +record_search_latency(latency_ms: float) None
+        +should_create_index() bool
+        +schedule_index_creation(progress_callback: Callable[[str], None] | None) None
+        -_create_index_task()
+        +wait_for_index(timeout: float | None) bool
+        +create_index_now(progress_callback: Callable[[str], None] | None) None
+        +on_index_ready(callback: Callable[[], None]) None
+        +get_stats() dict[str, Any]
+        +reset() None
+    }
+    class RateLimiter {
+        +rate
+        +tokens
+        +max_tokens
+        +last_update
+        -_lock
+        -__init__()
+        +acquire() -> None
+    }
+    class SearchCache {
+        -__init__(config: SearchCacheConfig)
+        +stats() dict[str, int]
+        -_compute_similarity(embedding1: list[float], embedding2: list[float]) float
+        -_is_valid_entry(entry: SearchCacheEntry) bool
+        -_filters_match(cached_filters: dict[str, Any], query_filters: dict[str, Any]) bool
+        +get(query_embedding: list[float], filters: dict[str, Any] | None) list[SearchResult] | None
+        +set(query_text: str, query_embedding: list[float], results: list[SearchResult], ...) None
+        -_maybe_evict() None
+        +invalidate() int
+        +get_stats() dict[str, Any]
+    }
+    class SearchCacheEntry {
+        +query_text: str
+        +query_embedding: list[float]
+        +results: list[SearchResult]
+        +created_at: float
+        +filters: dict[str, Any]
+    }
+    class SearchFeedback {
+        +Attributes: query: The original search query.
+        +query: str
+        +result_id: str
+        +relevant: bool
+        +timestamp: float
+    }
+    class SearchProfileConfig {
+        +Attributes: profile: The search profile this config applies to.
+        +profile: SearchProfile
+        +fetch_multiplier: float
+        +rerank_candidates: int
+        +use_approximate: bool
+        +min_similarity: float
+    }
+    class SearchResultPage {
+        +Attributes: results: List of search results for this page.
+        +results: list[SearchResult]
+        +total: int
+        +offset: int
+        +limit: int
+        +has_more: bool
+        +cursor: str | None
+    }
     class VectorStore {
-        -__init__(db_path: Path, embedding_provider: EmbeddingProvider)
+        -__init__(db_path: Path, embedding_provider: EmbeddingProvider, search_cache_config: SearchCacheConfig | None, ...)
         -_connect() lancedb.DBConnection
         -_get_table() Table | None
-        -_ensure_scalar_indexes() None
+        -_get_fuzzy_helper() "FuzzySearchHelper"
+        -_ensure_indexes() None
         -_create_index_safe(column: str) None
         -_create_scalar_indexes() None
-        +create_or_update_table(chunks: list[CodeChunk]) int
-        +add_chunks(chunks: list[CodeChunk]) int
-        +search(query: str, limit: int, language: str | None, chunk_type: str | None) list[SearchResult]
-        +get_chunk_by_id(chunk_id: str) CodeChunk | None
-        +get_chunks_by_file(file_path: str) list[CodeChunk]
-        +delete_chunks_by_file(file_path: str) int
-        +get_stats() dict[str, Any]
-        -_row_to_chunk(row: dict[str, Any]) CodeChunk
-        -_chunk_to_text(chunk: CodeChunk) str
+        -_create_vector_index(num_rows: int) None
+        -_is_local_provider() bool
+        -_get_optimal_batch_config() tuple[int, int]
+        -_embed_single_batch_with_retry(batch_index: int, texts: list[str], progress: EmbeddingProgress, semaphore: asyncio.Semaphore) BatchEmbeddingResult
+        -_batch_embed(texts: list[str], batch_size: int | None, log_progress: bool) list[list[float]]
+        -_batch_embed_sequential(texts: list[str], batch_size: int, log_progress: bool) list[list[float]]
+        +create_or_update_table(chunks: list[CodeChunk], embedding_batch_size: int) int
+        +add_chunks(chunks: list[CodeChunk], embedding_batch_size: int) int
     }
 ```
 
@@ -540,126 +4952,237 @@ classDiagram
 
 ```mermaid
 flowchart TD
-    N0[VectorStore._connect]
-    N1[VectorStore._ensure_scalar_...]
-    N2[VectorStore._get_table]
-    N3[VectorStore._row_to_chunk]
-    N4[VectorStore.add_chunks]
-    N5[VectorStore.create_or_updat...]
-    N6[VectorStore.delete_chunks_b...]
-    N7[VectorStore.get_chunk_by_id]
-    N8[VectorStore.get_chunks_by_file]
-    N9[VectorStore.get_stats]
-    N10[VectorStore.search]
-    N11[_chunk_to_text]
-    N12[_connect]
-    N13[_create_index_safe]
-    N14[_ensure_scalar_indexes]
-    N15[_get_table]
-    N16[_row_to_chunk]
-    N17[_sanitize_string_value]
-    N18[add]
-    N19[connect]
-    N20[embed]
-    N21[limit]
-    N22[list_indices]
-    N23[list_tables]
-    N24[mkdir]
-    N25[open_table]
+    N0[ChunkIterator]
+    N1[ChunkIterator._fetch_batch]
+    N2[ChunkIterator.async_batches]
+    N3[ChunkIterator.count]
+    N4[LazyIndexManager.create_ind...]
+    N5[ValueError]
+    N6[VectorStore.__init__]
+    N7[VectorStore._batch_embed]
+    N8[VectorStore._embed_single_b...]
+    N9[VectorStore._ensure_indexes]
+    N10[VectorStore.add_chunks]
+    N11[VectorStore.create_or_updat...]
+    N12[VectorStore.get_chunk_by_id]
+    N13[VectorStore.get_chunks_by_file]
+    N14[VectorStore.get_main_defini...]
+    N15[VectorStore.get_main_defini...]
+    N16[VectorStore.get_stats]
+    N17[VectorStore.get_stats_strea...]
+    N18[VectorStore.search]
+    N19[VectorStore.search_paginated]
+    N20[_get_table]
+    N21[_sanitize_string_value]
+    N22[count_rows]
+    N23[invalidate]
+    N24[limit]
+    N25[reset]
     N26[search]
-    N27[to_list]
-    N28[to_vector_record]
+    N27[select]
+    N28[to_list]
     N29[where]
-    N0 --> N24
-    N0 --> N19
-    N2 --> N12
-    N2 --> N23
+    N3 --> N29
+    N3 --> N26
+    N3 --> N27
+    N3 --> N28
+    N3 --> N24
+    N3 --> N22
+    N1 --> N26
+    N1 --> N29
+    N1 --> N27
+    N1 --> N28
+    N1 --> N24
     N2 --> N25
-    N2 --> N14
-    N1 --> N22
-    N1 --> N18
-    N1 --> N13
-    N5 --> N12
-    N5 --> N11
-    N5 --> N20
-    N5 --> N28
-    N5 --> N23
-    N4 --> N15
-    N4 --> N11
     N4 --> N20
-    N4 --> N28
-    N4 --> N18
-    N10 --> N15
+    N4 --> N22
+    N9 --> N22
+    N11 --> N25
+    N11 --> N23
     N10 --> N20
-    N10 --> N21
-    N10 --> N26
-    N10 --> N29
-    N10 --> N27
-    N10 --> N16
-    N7 --> N15
-    N7 --> N17
-    N7 --> N27
-    N7 --> N21
-    N7 --> N29
-    N7 --> N26
-    N7 --> N16
-    N8 --> N15
-    N8 --> N17
-    N8 --> N27
-    N8 --> N29
-    N8 --> N26
-    N8 --> N16
-    N6 --> N15
-    N6 --> N17
-    N6 --> N27
-    N6 --> N29
-    N6 --> N26
-    N9 --> N15
+    N10 --> N23
+    N18 --> N20
+    N18 --> N5
+    N18 --> N24
+    N18 --> N26
+    N18 --> N29
+    N18 --> N28
+    N19 --> N20
+    N19 --> N5
+    N19 --> N24
+    N19 --> N26
+    N19 --> N29
+    N19 --> N28
+    N12 --> N20
+    N12 --> N21
+    N12 --> N28
+    N12 --> N24
+    N12 --> N29
+    N12 --> N26
+    N13 --> N20
+    N13 --> N21
+    N13 --> N28
+    N13 --> N29
+    N13 --> N26
+    N14 --> N20
+    N14 --> N28
+    N14 --> N24
+    N14 --> N27
+    N14 --> N29
+    N14 --> N26
+    N16 --> N20
+    N16 --> N22
+    N17 --> N20
+    N17 --> N22
+    N17 --> N28
+    N17 --> N24
+    N17 --> N27
+    N17 --> N26
+    N15 --> N20
+    N15 --> N22
+    N15 --> N28
+    N15 --> N24
+    N15 --> N27
+    N15 --> N29
+    N15 --> N26
     classDef func fill:#e1f5fe
-    class N11,N12,N13,N14,N15,N16,N17,N18,N19,N20,N21,N22,N23,N24,N25,N26,N27,N28,N29 func
+    class N0,N5,N20,N21,N22,N23,N24,N25,N26,N27,N28,N29 func
     classDef method fill:#fff3e0
-    class N0,N1,N2,N3,N4,N5,N6,N7,N8,N9,N10 method
+    class N1,N2,N3,N4,N6,N7,N8,N9,N10,N11,N12,N13,N14,N15,N16,N17,N18,N19 method
 ```
 
 ## Used By
 
 Functions and methods in this file and their callers:
 
-- **[`CodeChunk`](../models.md)**: called by `VectorStore._row_to_chunk`
-- **[`SearchResult`](../models.md)**: called by `VectorStore.search`
-- **`ValueError`**: called by `VectorStore.search`
+- **`AdaptiveSearcher`**: called by `VectorStore.__init__`
+- **`BatchEmbeddingResult`**: called by `VectorStore._embed_single_batch_with_retry`
+- **`ChunkBatch`**: called by `ChunkIterator.async_batches`, `ChunkIterator.batches`
+- **`ChunkIterator`**: called by `LazyChunkLoader.async_get_all_chunks`, `LazyChunkLoader.async_get_chunks_by_file`, `LazyChunkLoader.count_chunks`, `LazyChunkLoader.get_all_chunks`, `LazyChunkLoader.get_chunks_by_file`, `VectorStore.get_chunk_iterator`
+- **`CodeChunk`**: called by `VectorStore._row_to_chunk`, `_row_to_chunk_default`
+- **`EmbeddingBatchConfig`**: called by `VectorStore.__init__`
+- **`EmbeddingProgress`**: called by `VectorStore._batch_embed`
+- **`Event`**: called by `LazyIndexManager.__init__`
+- **`FuzzySearchConfig`**: called by `VectorStore.__init__`
+- **`FuzzySearchHelper`**: called by `VectorStore._get_fuzzy_helper`
+- **`LatencyStats`**: called by `LazyIndexManager.__init__`
+- **`LazyChunkLoader`**: called by `VectorStore.get_all_chunks`, `VectorStore.get_lazy_chunk_loader`
+- **`LazyIndexConfig`**: called by `LazyIndexManager.__init__`
+- **`LazyIndexManager`**: called by `VectorStore.__init__`
+- **`Lock`**: called by `RateLimiter.__init__`
+- **`RLock`**: called by `LazyIndexManager.__init__`, `SearchCache.__init__`, `VectorStore.__init__`
+- **`RateLimiter`**: called by `VectorStore.__init__`
+- **`RuntimeError`**: called by `LazyIndexManager.create_index_now`, `VectorStore._batch_embed`, `VectorStore._embed_single_batch_with_retry`
+- **`SearchCache`**: called by `VectorStore.__init__`
+- **`SearchCacheConfig`**: called by `VectorStore.__init__`
+- **`SearchCacheEntry`**: called by `SearchCache.set`
+- **`SearchProfile`**: called by `VectorStore.search`, `VectorStore.search_paginated`, `VectorStore.set_search_profile`
+- **`SearchResult`**: called by `VectorStore.search`, `VectorStore.search_paginated`
+- **`SearchResultPage`**: called by `VectorStore.search_paginated`
+- **`Semaphore`**: called by `VectorStore._batch_embed`
+- **`ValueError`**: called by `LazyChunkLoader.async_get_all_chunks`, `LazyChunkLoader.count_chunks`, `LazyChunkLoader.get_all_chunks`, `VectorStore.get_chunk_iterator`, `VectorStore.search`, `VectorStore.search_paginated`, `VectorStore.set_search_profile`
+- **`_batch_embed`**: called by `VectorStore.add_chunks`, `VectorStore.create_or_update_table`
+- **`_calculate_query_complexity`**: called by `AdaptiveSearcher.estimate_optimal_depth`
 - **`_chunk_to_text`**: called by `VectorStore.add_chunks`, `VectorStore.create_or_update_table`
+- **`_compute_similarity`**: called by `SearchCache.get`
 - **`_connect`**: called by `VectorStore._get_table`, `VectorStore.create_or_update_table`
-- **`_create_index_safe`**: called by `VectorStore._create_scalar_indexes`, `VectorStore._ensure_scalar_indexes`
+- **`_create_index_safe`**: called by `VectorStore._create_scalar_indexes`, `VectorStore._ensure_indexes`
+- **`_create_index_task`**: called by `LazyIndexManager.schedule_index_creation`
 - **`_create_scalar_indexes`**: called by `VectorStore.create_or_update_table`
-- **`_ensure_scalar_indexes`**: called by `VectorStore._get_table`
-- **`_get_table`**: called by `VectorStore.add_chunks`, `VectorStore.delete_chunks_by_file`, `VectorStore.get_chunk_by_id`, `VectorStore.get_chunks_by_file`, `VectorStore.get_stats`, `VectorStore.search`
-- **`_row_to_chunk`**: called by `VectorStore.get_chunk_by_id`, `VectorStore.get_chunks_by_file`, `VectorStore.search`
-- **`_sanitize_string_value`**: called by `VectorStore.delete_chunks_by_file`, `VectorStore.get_chunk_by_id`, `VectorStore.get_chunks_by_file`
-- **`add`**: called by `VectorStore._ensure_scalar_indexes`, `VectorStore.add_chunks`
+- **`_create_vector_index`**: called by `VectorStore._ensure_indexes`, `VectorStore.create_or_update_table`
+- **`_embed_single_batch_with_retry`**: called by `VectorStore._batch_embed`
+- **`_ensure_indexes`**: called by `VectorStore._get_table`
+- **`_fetch_batch`**: called by `ChunkIterator.__iter__`, `ChunkIterator.batches`
+- **`_filters_match`**: called by `SearchCache.get`
+- **`_get_fuzzy_helper`**: called by `VectorStore.search`
+- **`_get_optimal_batch_config`**: called by `VectorStore._batch_embed`, `VectorStore.get_embedding_batch_config`
+- **`_get_table`**: called by `LazyChunkLoader.async_get_all_chunks`, `LazyChunkLoader.async_get_chunks_by_file`, `LazyChunkLoader.count_chunks`, `LazyChunkLoader.get_all_chunks`, `LazyChunkLoader.get_chunks_by_file`, `LazyIndexManager.create_index_now`, `VectorStore.add_chunks`, `VectorStore.delete_chunks_by_file`, `VectorStore.delete_chunks_by_files`, `VectorStore.get_chunk_by_id`, `VectorStore.get_chunk_iterator`, `VectorStore.get_chunks_by_file`, `VectorStore.get_main_definition_lines`, `VectorStore.get_main_definition_lines_lazy`, `VectorStore.get_stats`, `VectorStore.get_stats_streaming`, `VectorStore.search`, `VectorStore.search_paginated`
+- **`_is_local_provider`**: called by `VectorStore._get_optimal_batch_config`, `VectorStore.get_embedding_batch_config`
+- **`_is_valid_entry`**: called by `SearchCache.get`
+- **`_maybe_evict`**: called by `SearchCache.set`
+- **`_row_to_chunk`**: called by `VectorStore.get_chunk_by_id`, `VectorStore.get_chunks_by_file`, `VectorStore.search`, `VectorStore.search_paginated`
+- **`_row_to_chunk_fn`**: called by `ChunkIterator.__aiter__`, `ChunkIterator.__iter__`, `ChunkIterator.async_batches`, `ChunkIterator.batches`
+- **`_sanitize_string_value`**: called by `LazyChunkLoader.async_get_chunks_by_file`, `LazyChunkLoader.get_chunks_by_file`, `VectorStore.delete_chunks_by_file`, `VectorStore.delete_chunks_by_files`, `VectorStore.get_chunk_by_id`, `VectorStore.get_chunks_by_file`
+- **`acquire`**: called by `VectorStore._embed_single_batch_with_retry`
+- **`add`**: called by `VectorStore._ensure_indexes`, `VectorStore.add_chunks`, `VectorStore.get_stats_streaming`
+- **`array`**: called by `SearchCache._compute_similarity`
+- **`build_name_index`**: called by `VectorStore._get_fuzzy_helper`
+- **`calculate_optimal_batch_size`**: called by `LazyChunkLoader.async_get_all_chunks`, `LazyChunkLoader.async_get_chunks_by_file`, `LazyChunkLoader.get_all_chunks`, `LazyChunkLoader.get_chunks_by_file`
+- **`callback`**: called by `LazyIndexManager.mark_index_created`, `LazyIndexManager.on_index_ready`
+- **`cancel`**: called by `LazyIndexManager.reset`
 - **`column`**: called by `VectorStore.get_stats`
 - **`connect`**: called by `VectorStore._connect`
-- **`count_rows`**: called by `VectorStore.get_stats`
+- **`copy`**: called by `SearchCache.stats`
+- **`count_rows`**: called by `ChunkIterator.count`, `LazyChunkLoader.count_chunks`, `LazyIndexManager.create_index_now`, `VectorStore._ensure_indexes`, `VectorStore.get_main_definition_lines_lazy`, `VectorStore.get_stats`, `VectorStore.get_stats_streaming`
+- **`create_index`**: called by `LazyIndexManager.create_index_now`, `VectorStore._create_vector_index`
+- **`create_index_now`**: called by `LazyIndexManager._create_index_task`, `LazyIndexManager.schedule_index_creation`, `VectorStore.create_vector_index_now`
 - **`create_or_update_table`**: called by `VectorStore.add_chunks`
 - **`create_scalar_index`**: called by `VectorStore._create_index_safe`
 - **`create_table`**: called by `VectorStore.create_or_update_table`
-- **`delete`**: called by `VectorStore.delete_chunks_by_file`
+- **`create_task`**: called by `LazyIndexManager.schedule_index_creation`, `VectorStore.search`
+- **`delete`**: called by `VectorStore.delete_chunks_by_file`, `VectorStore.delete_chunks_by_files`
+- **`deque`**: called by `AdaptiveSearcher.__init__`
+- **`done`**: called by `LazyIndexManager.reset`, `LazyIndexManager.schedule_index_creation`
+- **`dot`**: called by `SearchCache._compute_similarity`
 - **`drop_table`**: called by `VectorStore.create_or_update_table`
-- **`embed`**: called by `VectorStore.add_chunks`, `VectorStore.create_or_update_table`, `VectorStore.search`
+- **`dumps`**: called by `SearchCache.set`
+- **`embed`**: called by `VectorStore._batch_embed_sequential`, `VectorStore._embed_single_batch_with_retry`, `VectorStore.search`, `VectorStore.search_paginated`
+- **`estimate_optimal_depth`**: called by `VectorStore.search`
+- **`extract_highlights`**: called by `VectorStore.search`, `VectorStore.search_paginated`
 - **`field`**: called by `VectorStore.get_stats`
-- **`limit`**: called by `VectorStore.get_chunk_by_id`, `VectorStore.search`
-- **`list_indices`**: called by `VectorStore._ensure_scalar_indexes`
+- **`filter_by_path`**: called by `VectorStore.search`, `VectorStore.search_paginated`
+- **`gather`**: called by `VectorStore._batch_embed`
+- **`generate_suggestions`**: called by `VectorStore.search`
+- **`get_all_chunks`**: called by `VectorStore.get_all_chunks`
+- **`get_average`**: called by `LazyIndexManager.get_stats`, `LazyIndexManager.should_create_index`
+- **`get_count`**: called by `LazyIndexManager.get_stats`, `LazyIndexManager.should_create_index`
+- **`get_event_loop`**: called by `LazyIndexManager.create_index_now`
+- **`get_feedback_stats`**: called by `VectorStore.get_adaptive_search_stats`
+- **`get_stats`**: called by `VectorStore.get_lazy_index_stats`, `VectorStore.get_search_cache_stats`, `VectorStore.get_stats_streaming`
+- **`invalidate`**: called by `VectorStore.add_chunks`, `VectorStore.create_or_update_table`, `VectorStore.delete_chunks_by_file`, `VectorStore.delete_chunks_by_files`, `VectorStore.invalidate_search_cache`
+- **`is_index_ready`**: called by `LazyIndexManager.wait_for_index`, `VectorStore.is_vector_index_ready`
+- **`limit`**: called by `ChunkIterator._fetch_batch`, `ChunkIterator.count`, `VectorStore.get_chunk_by_id`, `VectorStore.get_main_definition_lines`, `VectorStore.get_main_definition_lines_lazy`, `VectorStore.get_stats_streaming`, `VectorStore.search`, `VectorStore.search_paginated`
+- **`list_indices`**: called by `VectorStore._ensure_indexes`
 - **`list_tables`**: called by `VectorStore._get_table`, `VectorStore.create_or_update_table`
-- **`loads`**: called by `VectorStore._row_to_chunk`
+- **`loads`**: called by `VectorStore._row_to_chunk`, `_row_to_chunk_default`
+- **`log_progress`**: called by `VectorStore._batch_embed`
+- **`mark_index_created`**: called by `LazyIndexManager.create_index_now`, `VectorStore._create_vector_index`, `VectorStore._ensure_indexes`
+- **`mark_index_pending`**: called by `VectorStore._ensure_indexes`, `VectorStore.create_or_update_table`
 - **`mkdir`**: called by `VectorStore._connect`
+- **`monotonic`**: called by `RateLimiter.__init__`, `RateLimiter.acquire`, `VectorStore.search`
+- **`norm`**: called by `SearchCache._compute_similarity`
+- **`on_index_ready`**: called by `VectorStore.on_vector_index_ready`
 - **`open_table`**: called by `VectorStore._get_table`
-- **`search`**: called by `VectorStore.delete_chunks_by_file`, `VectorStore.get_chunk_by_id`, `VectorStore.get_chunks_by_file`, `VectorStore.search`
+- **`progress_callback`**: called by `LazyIndexManager.create_index_now`
+- **`random`**: called by `VectorStore._embed_single_batch_with_retry`
+- **`record`**: called by `LazyIndexManager.record_search_latency`
+- **`record_feedback`**: called by `VectorStore.record_feedback`
+- **`record_search_latency`**: called by `VectorStore.search`
+- **`record_search_quality`**: called by `VectorStore.search`
+- **`rerank_with_fuzzy`**: called by `VectorStore.search`, `VectorStore.search_paginated`
+- **`reset`**: called by `ChunkIterator.__aiter__`, `ChunkIterator.__iter__`, `ChunkIterator.async_batches`, `ChunkIterator.batches`, `VectorStore.create_or_update_table`
+- **`run_in_executor`**: called by `LazyIndexManager.create_index_now`
+- **`schedule_index_creation`**: called by `VectorStore.schedule_lazy_index_creation`, `VectorStore.search`
+- **`search`**: called by `ChunkIterator._fetch_batch`, `ChunkIterator.count`, `VectorStore.get_chunk_by_id`, `VectorStore.get_chunks_by_file`, `VectorStore.get_main_definition_lines`, `VectorStore.get_main_definition_lines_lazy`, `VectorStore.get_stats_streaming`, `VectorStore.search`, `VectorStore.search_paginated`
+- **`select`**: called by `ChunkIterator._fetch_batch`, `ChunkIterator.count`, `VectorStore.get_main_definition_lines`, `VectorStore.get_main_definition_lines_lazy`, `VectorStore.get_stats_streaming`
+- **`set_store`**: called by `VectorStore.__init__`
+- **`should_auto_enable_fuzzy`**: called by `VectorStore.search`
+- **`should_create_index`**: called by `LazyIndexManager.get_stats`, `VectorStore.search`
+- **`sleep`**: called by `ChunkIterator.__aiter__`, `ChunkIterator.async_batches`, `RateLimiter.acquire`, `VectorStore._embed_single_batch_with_retry`
+- **`sort`**: called by `VectorStore._batch_embed`
+- **`sqrt`**: called by `LazyIndexManager.create_index_now`, `VectorStore._create_vector_index`
+- **`time`**: called by `EmbeddingProgress.elapsed_seconds`, `SearchCache._is_valid_entry`, `SearchCache._maybe_evict`, `SearchCache.set`
 - **`to_arrow`**: called by `VectorStore.get_stats`
-- **`to_list`**: called by `VectorStore.delete_chunks_by_file`, `VectorStore.get_chunk_by_id`, `VectorStore.get_chunks_by_file`, `VectorStore.search`
+- **`to_list`**: called by `ChunkIterator._fetch_batch`, `ChunkIterator.count`, `VectorStore.get_chunk_by_id`, `VectorStore.get_chunks_by_file`, `VectorStore.get_main_definition_lines`, `VectorStore.get_main_definition_lines_lazy`, `VectorStore.get_stats_streaming`, `VectorStore.search`, `VectorStore.search_paginated`
+- **`to_thread`**: called by `ChunkIterator.__aiter__`, `ChunkIterator.async_batches`
 - **`to_vector_record`**: called by `VectorStore.add_chunks`, `VectorStore.create_or_update_table`
 - **`unique`**: called by `VectorStore.get_stats`
 - **`value_counts`**: called by `VectorStore.get_stats`
-- **`where`**: called by `VectorStore.delete_chunks_by_file`, `VectorStore.get_chunk_by_id`, `VectorStore.get_chunks_by_file`, `VectorStore.search`
+- **`virtual_memory`**: called by `LazyChunkLoader.calculate_optimal_batch_size`
+- **`wait`**: called by `LazyIndexManager.wait_for_index`
+- **`wait_for`**: called by `LazyIndexManager.wait_for_index`
+- **`wait_for_index`**: called by `VectorStore.wait_for_vector_index`
+- **`where`**: called by `ChunkIterator._fetch_batch`, `ChunkIterator.count`, `VectorStore.get_chunk_by_id`, `VectorStore.get_chunks_by_file`, `VectorStore.get_main_definition_lines`, `VectorStore.get_main_definition_lines_lazy`, `VectorStore.search`, `VectorStore.search_paginated`
 
 ## Usage Examples
 
@@ -677,6 +5200,36 @@ assert table is not None
 indexes = {idx["name"] for idx in table.list_indices()}
 # Index names are based on column names
 assert "id_idx" in indexes or any("id" in idx for idx in indexes)
+```
+
+### Test that creating a table creates scalar indexes
+
+From `test_vectorstore.py::TestVectorStoreIndexes::test_create_table_creates_indexes`:
+
+```python
+table = populated_store._get_table()
+assert table is not None
+
+# Check that indexes exist
+indexes = {idx["name"] for idx in table.list_indices()}
+# Index names are based on column names
+assert "id_idx" in indexes or any("id" in idx for idx in indexes)
+```
+
+### Test that get_chunk_by_id can find chunks efficiently
+
+From `test_vectorstore.py::TestVectorStoreIndexes::test_get_chunk_by_id_uses_index`:
+
+```python
+# Should find existing chunk
+chunk = await populated_store.get_chunk_by_id("chunk_1")
+assert chunk is not None
+assert chunk.id == "chunk_1"
+assert chunk.file_path == "src/main.py"
+
+# Should return None for non-existent chunk
+chunk = await populated_store.get_chunk_by_id("nonexistent")
+assert chunk is None
 ```
 
 ### Test that get_chunk_by_id can find chunks efficiently
@@ -715,63 +5268,350 @@ chunks = await populated_store.get_chunks_by_file("nonexistent.py")
 assert chunks == []
 ```
 
-### Test that delete_chunks_by_file works efficiently
-
-From `test_vectorstore.py::TestVectorStoreIndexes::test_delete_chunks_by_file_uses_index`:
-
-```python
-chunks = await populated_store.get_chunks_by_file("src/main.py")
-assert len(chunks) == 0
-
-# Other files unaffected
-chunks = await populated_store.get_chunks_by_file("src/utils.py")
-assert len(chunks) == 1
-```
-
-### Test that delete_chunks_by_file works efficiently
-
-From `test_vectorstore.py::TestVectorStoreIndexes::test_delete_chunks_by_file_uses_index`:
-
-```python
-deleted = await populated_store.delete_chunks_by_file("src/main.py")
-assert deleted == 2
-
-# Verify deletion
-chunks = await populated_store.get_chunks_by_file("src/main.py")
-assert len(chunks) == 0
-```
-
 
 ## Last Modified
 
 | Entity | Type | Author | Date | Commit |
 |--------|------|--------|------|--------|
-| `VectorStore` | class | Brian Breidenbach | today | `06f832d` Add parallel processing and... |
-| `get_stats` | method | Brian Breidenbach | today | `06f832d` Add parallel processing and... |
-| `_ensure_scalar_indexes` | method | Brian Breidenbach | yesterday | `0d91a70` Apply Python best practices... |
-| `_create_index_safe` | method | Brian Breidenbach | 2 days ago | `39e8c73` Replace generic except Exce... |
-| `search` | method | Brian Breidenbach | 2 days ago | `51c0806` Refactor: Extract _row_to_c... |
-| `get_chunk_by_id` | method | Brian Breidenbach | 2 days ago | `51c0806` Refactor: Extract _row_to_c... |
-| `get_chunks_by_file` | method | Brian Breidenbach | 2 days ago | `51c0806` Refactor: Extract _row_to_c... |
-| `_row_to_chunk` | method | Brian Breidenbach | 2 days ago | `51c0806` Refactor: Extract _row_to_c... |
-| `_get_table` | method | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
-| `_create_scalar_indexes` | method | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
-| `create_or_update_table` | method | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
-| `add_chunks` | method | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
-| `delete_chunks_by_file` | method | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
-| `_sanitize_string_value` | function | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
-| `__init__` | method | Brian Breidenbach | 6 days ago | `cdae76f` Initial commit: Local DeepW... |
-| `_connect` | method | Brian Breidenbach | 6 days ago | `cdae76f` Initial commit: Local DeepW... |
-| `_chunk_to_text` | method | Brian Breidenbach | 6 days ago | `cdae76f` Initial commit: Local DeepW... |
+| `SearchCache` | class | Not Committed Yet | today | `0000000` Version of src/local_deepwi... |
+| `get` | method | Not Committed Yet | today | `0000000` Version of src/local_deepwi... |
+| `_maybe_evict` | method | Not Committed Yet | today | `0000000` Version of src/local_deepwi... |
+| `EmbeddingProgress` | class | Not Committed Yet | today | `0000000` Version of src/local_deepwi... |
+| `ChunkIterator` | class | Not Committed Yet | today | `0000000` Version of src/local_deepwi... |
+| `batches` | method | Not Committed Yet | today | `0000000` Version of src/local_deepwi... |
+| `async_batches` | method | Not Committed Yet | today | `0000000` Version of src/local_deepwi... |
+| `VectorStore` | class | Not Committed Yet | today | `0000000` Version of src/local_deepwi... |
+| `_embed_single_batch_with_retry` | method | Not Committed Yet | today | `0000000` Version of src/local_deepwi... |
+| `_batch_embed` | method | Not Committed Yet | today | `0000000` Version of src/local_deepwi... |
+| `_batch_embed_sequential` | method | Not Committed Yet | today | `0000000` Version of src/local_deepwi... |
+| `create_or_update_table` | method | Not Committed Yet | today | `0000000` Version of src/local_deepwi... |
+| `search` | method | Not Committed Yet | today | `0000000` Version of src/local_deepwi... |
+| `search_paginated` | method | Not Committed Yet | today | `0000000` Version of src/local_deepwi... |
+| `delete_chunks_by_files` | method | Not Committed Yet | today | `0000000` Version of src/local_deepwi... |
+| `get_main_definition_lines_lazy` | method | Not Committed Yet | today | `0000000` Version of src/local_deepwi... |
+| `SearchProfile` | class | Brian Breidenbach | 1 week ago | `dc57a7b` Add low-priority enhancemen... |
+| `SearchProfileConfig` | class | Brian Breidenbach | 1 week ago | `dc57a7b` Add low-priority enhancemen... |
+| `SearchFeedback` | class | Brian Breidenbach | 1 week ago | `dc57a7b` Add low-priority enhancemen... |
+| `AdaptiveSearcher` | class | Brian Breidenbach | 1 week ago | `dc57a7b` Add low-priority enhancemen... |
+| `__init__` | method | Brian Breidenbach | 1 week ago | `dc57a7b` Add low-priority enhancemen... |
+| `set_store` | method | Brian Breidenbach | 1 week ago | `dc57a7b` Add low-priority enhancemen... |
+| `_calculate_query_complexity` | method | Brian Breidenbach | 1 week ago | `dc57a7b` Add low-priority enhancemen... |
+| `estimate_optimal_depth` | method | Brian Breidenbach | 1 week ago | `dc57a7b` Add low-priority enhancemen... |
+| `record_search_quality` | method | Brian Breidenbach | 1 week ago | `dc57a7b` Add low-priority enhancemen... |
+| `record_feedback` | method | Brian Breidenbach | 1 week ago | `dc57a7b` Add low-priority enhancemen... |
+| `get_feedback_stats` | method | Brian Breidenbach | 1 week ago | `dc57a7b` Add low-priority enhancemen... |
+| `__init__` | method | Brian Breidenbach | 1 week ago | `dc57a7b` Add low-priority enhancemen... |
+| `_connect` | method | Brian Breidenbach | 1 week ago | `dc57a7b` Add low-priority enhancemen... |
+| `_get_fuzzy_helper` | method | Brian Breidenbach | 1 week ago | `dc57a7b` Add low-priority enhancemen... |
+| `_ensure_indexes` | method | Brian Breidenbach | 1 week ago | `dc57a7b` Add low-priority enhancemen... |
+| `set_search_profile` | method | Brian Breidenbach | 1 week ago | `dc57a7b` Add low-priority enhancemen... |
+| `get_adaptive_search_enabled` | method | Brian Breidenbach | 1 week ago | `dc57a7b` Add low-priority enhancemen... |
+| `set_adaptive_search_enabled` | method | Brian Breidenbach | 1 week ago | `dc57a7b` Add low-priority enhancemen... |
+| `get_adaptive_search_stats` | method | Brian Breidenbach | 1 week ago | `dc57a7b` Add low-priority enhancemen... |
+| `get_chunk_by_id` | method | Brian Breidenbach | 1 week ago | `dc57a7b` Add low-priority enhancemen... |
+| `get_chunks_by_file` | method | Brian Breidenbach | 1 week ago | `dc57a7b` Add low-priority enhancemen... |
+| `SearchResultPage` | class | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `ChunkBatch` | class | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `RateLimiter` | class | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `__init__` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `count` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `reset` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `_fetch_batch` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `__iter__` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `__aiter__` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `LazyChunkLoader` | class | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `__init__` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `max_memory_bytes` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `calculate_optimal_batch_size` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `get_chunks_by_file` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `async_get_chunks_by_file` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `get_all_chunks` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `async_get_all_chunks` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `count_chunks` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `LatencyStats` | class | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `LazyIndexManager` | class | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `__init__` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `mark_index_pending` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `mark_index_created` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `is_index_pending` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `is_index_ready` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `is_creation_in_progress` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `record_search_latency` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `should_create_index` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `schedule_index_creation` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `_create_index_task` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `wait_for_index` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `create_index_now` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `on_index_ready` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `get_stats` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `reset` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `_create_index_safe` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `_create_vector_index` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `_is_local_provider` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `add_chunks` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `record_feedback` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `get_search_profile` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `get_stats_streaming` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `get_lazy_chunk_loader` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `get_chunk_iterator` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `_row_to_chunk` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `_chunk_to_text` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `invalidate_search_cache` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `wait_for_vector_index` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `create_vector_index_now` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `is_vector_index_ready` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `on_vector_index_ready` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `_sanitize_string_value` | function | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `_row_to_chunk_default` | function | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `BatchEmbeddingResult` | class | Brian Breidenbach | 1 week ago | `e899c6c` Add three high-value enhanc... |
+| `_get_optimal_batch_config` | method | Brian Breidenbach | 1 week ago | `e899c6c` Add three high-value enhanc... |
+| `schedule_lazy_index_creation` | method | Brian Breidenbach | 1 week ago | `e899c6c` Add three high-value enhanc... |
+| `SearchCacheEntry` | class | Brian Breidenbach | 1 week ago | `d7c79d3` Add three quick-win enhance... |
+| `__init__` | method | Brian Breidenbach | 1 week ago | `d7c79d3` Add three quick-win enhance... |
+| `stats` | method | Brian Breidenbach | 1 week ago | `d7c79d3` Add three quick-win enhance... |
+| `_compute_similarity` | method | Brian Breidenbach | 1 week ago | `d7c79d3` Add three quick-win enhance... |
+| `_is_valid_entry` | method | Brian Breidenbach | 1 week ago | `d7c79d3` Add three quick-win enhance... |
+| `_filters_match` | method | Brian Breidenbach | 1 week ago | `d7c79d3` Add three quick-win enhance... |
+| `set` | method | Brian Breidenbach | 1 week ago | `d7c79d3` Add three quick-win enhance... |
+| `invalidate` | method | Brian Breidenbach | 1 week ago | `d7c79d3` Add three quick-win enhance... |
+| `get_stats` | method | Brian Breidenbach | 1 week ago | `d7c79d3` Add three quick-win enhance... |
+| `get_main_definition_lines` | method | Brian Breidenbach | 1 week ago | `d7c79d3` Add three quick-win enhance... |
+| `get_stats` | method | Brian Breidenbach | 1 week ago | `d7c79d3` Add three quick-win enhance... |
+| `lazy_index_manager` | method | Brian Breidenbach | 1 week ago | `d7c79d3` Add three quick-win enhance... |
+| `get_lazy_index_stats` | method | Brian Breidenbach | 1 week ago | `d7c79d3` Add three quick-win enhance... |
+| `_get_table` | method | Brian Breidenbach | 1 week ago | `8817f7b` Add thread safety to Vector... |
+| `_create_scalar_indexes` | method | Brian Breidenbach | 3 weeks ago | `39e8c73` Replace generic except Exce... |
+| `delete_chunks_by_file` | method | Brian Breidenbach | 3 weeks ago | `51c0806` Refactor: Extract _row_to_c... |
+| `get_search_cache_stats` | method | Brian Breidenbach | 3 weeks ago | `51c0806` Refactor: Extract _row_to_c... |
+| `get_embedding_batch_config` | method | Brian Breidenbach | 3 weeks ago | `cdae76f` Initial commit: Local DeepW... |
 
 ## Additional Source Code
 
 Source code for functions and methods not listed in the API Reference above.
 
+#### `_calculate_query_complexity`
+
+<details>
+<summary>View Source (lines 208-279) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L208-L279">GitHub</a></summary>
+
+```python
+def _calculate_query_complexity(self, query: str) -> float:
+        """Calculate a complexity score for a query.
+
+        Complexity is based on:
+        - Query length (longer = more complex)
+        - Number of distinct terms
+        - Presence of technical terms/operators
+
+        Args:
+            query: The search query text.
+
+        Returns:
+            Complexity score between 0.0 and 1.0.
+        """
+        if query in self._complexity_cache:
+            return self._complexity_cache[query]
+
+        # Normalize and tokenize
+        words = query.lower().split()
+        if not words:
+            return 0.0
+
+        # Factor 1: Query length (normalized to 0-1, saturates at 20 words)
+        length_score = min(len(words) / 20.0, 1.0)
+
+        # Factor 2: Vocabulary diversity (unique words / total words)
+        unique_words = len(set(words))
+        diversity_score = unique_words / len(words) if words else 0.0
+
+        # Factor 3: Technical term presence (common programming terms)
+        technical_terms = {
+            "function",
+            "class",
+            "method",
+            "async",
+            "await",
+            "import",
+            "export",
+            "interface",
+            "type",
+            "struct",
+            "enum",
+            "error",
+            "exception",
+            "api",
+            "database",
+            "query",
+            "handler",
+            "controller",
+            "service",
+            "repository",
+            "middleware",
+            "authentication",
+            "authorization",
+            "validation",
+            "parse",
+            "serialize",
+            "deserialize",
+        }
+        tech_count = sum(1 for w in words if w in technical_terms)
+        tech_score = min(tech_count / 3.0, 1.0)  # Saturates at 3 technical terms
+
+        # Weighted combination
+        complexity = 0.3 * length_score + 0.3 * diversity_score + 0.4 * tech_score
+
+        # Cache the result (limit cache size)
+        if len(self._complexity_cache) > 10000:
+            # Clear oldest entries (simple approach)
+            self._complexity_cache.clear()
+        self._complexity_cache[query] = complexity
+
+        return complexity
+```
+
+</details>
+
+
+#### `_compute_similarity`
+
+<details>
+<summary>View Source (lines 430-453) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L430-L453">GitHub</a></summary>
+
+```python
+def _compute_similarity(
+        self, embedding1: list[float], embedding2: list[float]
+    ) -> float:
+        """Compute cosine similarity between two embeddings.
+
+        Args:
+            embedding1: First embedding vector.
+            embedding2: Second embedding vector.
+
+        Returns:
+            Cosine similarity score (0.0 to 1.0).
+        """
+        arr1 = np.array(embedding1)
+        arr2 = np.array(embedding2)
+
+        # Compute cosine similarity
+        dot_product = np.dot(arr1, arr2)
+        norm1 = np.linalg.norm(arr1)
+        norm2 = np.linalg.norm(arr2)
+
+        if norm1 == 0 or norm2 == 0:
+            return 0.0
+
+        return float(dot_product / (norm1 * norm2))
+```
+
+</details>
+
+
+#### `_is_valid_entry`
+
+<details>
+<summary>View Source (lines 455-465) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L455-L465">GitHub</a></summary>
+
+```python
+def _is_valid_entry(self, entry: SearchCacheEntry) -> bool:
+        """Check if a cache entry is still valid (not expired).
+
+        Args:
+            entry: Cache entry to check.
+
+        Returns:
+            True if entry is valid, False if expired.
+        """
+        age = time.time() - entry.created_at
+        return age < self.config.ttl_seconds
+```
+
+</details>
+
+
+#### `_filters_match`
+
+<details>
+<summary>View Source (lines 467-480) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L467-L480">GitHub</a></summary>
+
+```python
+def _filters_match(
+        self, cached_filters: dict[str, Any], query_filters: dict[str, Any]
+    ) -> bool:
+        """Check if cached filters match the query filters.
+
+        Args:
+            cached_filters: Filters from cached entry.
+            query_filters: Filters from current query.
+
+        Returns:
+            True if filters match, False otherwise.
+        """
+        # Both must have the same keys and values
+        return cached_filters == query_filters
+```
+
+</details>
+
+
+#### `_maybe_evict`
+
+<details>
+<summary>View Source (lines 581-623) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L581-L623">GitHub</a></summary>
+
+```python
+def _maybe_evict(self) -> None:
+        """Evict old entries if cache exceeds max_entries.
+
+        Uses a two-phase eviction strategy:
+        1. First, remove all expired entries (TTL-based)
+        2. If still over limit, remove oldest entries (LRU)
+        """
+        if len(self._cache) <= self.config.max_entries:
+            return
+
+        logger.debug(
+            f"Search cache has {len(self._cache)} entries "
+            f"(max: {self.config.max_entries}), evicting..."
+        )
+
+        # Phase 1: Remove expired entries
+        now = time.time()
+        expired_keys = [
+            key for key, entry in self._cache.items()
+            if now - entry.created_at >= self.config.ttl_seconds
+        ]
+        for key in expired_keys:
+            del self._cache[key]
+
+        if expired_keys:
+            logger.debug(f"Evicted {len(expired_keys)} expired search cache entries")
+
+        # Phase 2: LRU eviction if still over limit
+        if len(self._cache) > self.config.max_entries:
+            # Sort by created_at (oldest first)
+            sorted_entries = sorted(
+                self._cache.items(),
+                key=lambda x: x[1].created_at
+            )
+
+            # Calculate how many to remove (with 20% buffer)
+            target_count = int(self.config.max_entries * 0.8)
+            to_remove = len(self._cache) - target_count
+
+            for key, _ in sorted_entries[:to_remove]:
+                del self._cache[key]
+
+            logger.debug(f"Evicted {to_remove} LRU search cache entries")
+```
+
+</details>
+
+
 #### `_sanitize_string_value`
 
 <details>
-<summary>View Source (lines 22-34) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/html.md)/src/local_deepwiki/core/vectorstore.py#L22-L34">GitHub</a></summary>
+<summary>View Source (lines 767-779) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L767-L779">GitHub</a></summary>
 
 ```python
 def _sanitize_string_value(value: str) -> str:
@@ -792,17 +5632,166 @@ def _sanitize_string_value(value: str) -> str:
 </details>
 
 
+#### `_row_to_chunk_default`
+
+<details>
+<summary>View Source (lines 782-796) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L782-L796">GitHub</a></summary>
+
+```python
+def _row_to_chunk_default(row: dict[str, Any]) -> CodeChunk:
+    """Default conversion from LanceDB row to CodeChunk."""
+    return CodeChunk(
+        id=row["id"],
+        file_path=row["file_path"],
+        language=row["language"],
+        chunk_type=row["chunk_type"],
+        name=row["name"] or None,
+        content=row["content"],
+        start_line=row["start_line"],
+        end_line=row["end_line"],
+        docstring=row["docstring"] or None,
+        parent_name=row["parent_name"] or None,
+        metadata=json.loads(row["metadata"]) if row["metadata"] else {},
+    )
+```
+
+</details>
+
+
+#### `_fetch_batch`
+
+<details>
+<summary>View Source (lines 875-900) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L875-L900">GitHub</a></summary>
+
+```python
+def _fetch_batch(self, offset: int) -> list[dict[str, Any]]:
+        """Fetch a batch of rows from the table.
+
+        Args:
+            offset: Starting offset for this batch.
+
+        Returns:
+            List of row dictionaries.
+        """
+        query = self._table.search()
+
+        if self._filter_expr:
+            query = query.where(self._filter_expr)
+
+        if self._columns:
+            query = query.select(self._columns)
+
+        # LanceDB uses limit() for batch size
+        # We simulate offset by fetching limit+offset and slicing
+        # For large offsets, this is inefficient - consider cursor-based pagination
+        if offset > 0:
+            # Fetch enough rows to skip past offset
+            rows = query.limit(offset + self._batch_size).to_list()
+            return rows[offset : offset + self._batch_size]
+        else:
+            return query.limit(self._batch_size).to_list()
+```
+
+</details>
+
+
+#### `__iter__`
+
+<details>
+<summary>View Source (lines 902-919) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L902-L919">GitHub</a></summary>
+
+```python
+def __iter__(self) -> Iterator[CodeChunk]:
+        """Iterate over all chunks in batches.
+
+        Yields:
+            CodeChunk objects one at a time.
+        """
+        self.reset()
+        total = self.count()
+
+        while self._offset < total:
+            rows = self._fetch_batch(self._offset)
+            if not rows:
+                break
+
+            for row in rows:
+                yield self._row_to_chunk_fn(row)
+
+            self._offset += len(rows)
+```
+
+</details>
+
+
+#### `__aiter__`
+
+<details>
+<summary>View Source (lines 921-941) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L921-L941">GitHub</a></summary>
+
+```python
+async def __aiter__(self) -> AsyncIterator[CodeChunk]:
+        """Async iterate over all chunks in batches.
+
+        Yields:
+            CodeChunk objects one at a time.
+        """
+        self.reset()
+        total = self.count()
+
+        while self._offset < total:
+            # Run the blocking fetch in a thread pool
+            rows = await asyncio.to_thread(self._fetch_batch, self._offset)
+            if not rows:
+                break
+
+            for row in rows:
+                yield self._row_to_chunk_fn(row)
+
+            self._offset += len(rows)
+            # Yield control to allow other async operations
+            await asyncio.sleep(0)
+```
+
+</details>
+
+
+#### `_create_index_task`
+
+<details>
+<summary>View Source (lines 1482-1489) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1482-L1489">GitHub</a></summary>
+
+```python
+async def _create_index_task():
+            try:
+                await self.create_index_now(progress_callback=progress_callback)
+            except Exception as e:
+                logger.error(f"Background index creation failed: {e}")
+                with self._lock:
+                    self._creation_in_progress = False
+                raise
+```
+
+</details>
+
+
 #### `_connect`
 
 <details>
-<summary>View Source (lines 54-59) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/html.md)/src/local_deepwiki/core/vectorstore.py#L54-L59">GitHub</a></summary>
+<summary>View Source (lines 1709-1720) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1709-L1720">GitHub</a></summary>
 
 ```python
 def _connect(self) -> lancedb.DBConnection:
-        """Get or create database connection."""
+        """Get or create database connection.
+
+        Thread-safe lazy initialization of the database connection.
+        """
         if self._db is None:
-            self.db_path.parent.mkdir(parents=True, exist_ok=True)
-            self._db = lancedb.connect(str(self.db_path))
+            with self._lock:
+                # Double-check after acquiring lock to avoid race condition
+                if self._db is None:
+                    self.db_path.parent.mkdir(parents=True, exist_ok=True)
+                    self._db = lancedb.connect(str(self.db_path))
         return self._db
 ```
 
@@ -812,34 +5801,71 @@ def _connect(self) -> lancedb.DBConnection:
 #### `_get_table`
 
 <details>
-<summary>View Source (lines 61-69) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/html.md)/src/local_deepwiki/core/vectorstore.py#L61-L69">GitHub</a></summary>
+<summary>View Source (lines 1722-1736) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1722-L1736">GitHub</a></summary>
 
 ```python
 def _get_table(self) -> Table | None:
-        """Get the chunks table if it exists."""
+        """Get the chunks table if it exists.
+
+        Thread-safe lazy initialization of the table reference.
+        """
         if self._table is None:
-            db = self._connect()
-            if self.TABLE_NAME in db.list_tables().tables:
-                self._table = db.open_table(self.TABLE_NAME)
-                # Ensure indexes exist (may have been created by older code version)
-                self._ensure_scalar_indexes()
+            with self._lock:
+                # Double-check after acquiring lock to avoid race condition
+                if self._table is None:
+                    db = self._connect()
+                    if self.TABLE_NAME in db.list_tables().tables:
+                        self._table = db.open_table(self.TABLE_NAME)
+                        # Ensure indexes exist (may have been created by older code version)
+                        self._ensure_indexes()
         return self._table
 ```
 
 </details>
 
 
-#### `_ensure_scalar_indexes`
+#### `_get_fuzzy_helper`
 
 <details>
-<summary>View Source (lines 71-101) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/html.md)/src/local_deepwiki/core/vectorstore.py#L71-L101">GitHub</a></summary>
+<summary>View Source (lines 1738-1756) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1738-L1756">GitHub</a></summary>
 
 ```python
-def _ensure_scalar_indexes(self) -> None:
-        """Ensure scalar indexes exist, creating them if needed.
+async def _get_fuzzy_helper(self) -> "FuzzySearchHelper":
+        """Get or create the fuzzy search helper.
+
+        Lazily initializes and builds the fuzzy search helper when first needed.
+        The helper indexes all function/class/method names for fast fuzzy matching.
+
+        Returns:
+            FuzzySearchHelper instance with built name index.
+        """
+        from local_deepwiki.core.fuzzy_search import FuzzySearchHelper
+
+        if self._fuzzy_search_helper is None:
+            self._fuzzy_search_helper = FuzzySearchHelper(self)
+
+        # Build index if not already built
+        if not self._fuzzy_search_helper.is_built:
+            await self._fuzzy_search_helper.build_name_index()
+
+        return self._fuzzy_search_helper
+```
+
+</details>
+
+
+#### `_ensure_indexes`
+
+<details>
+<summary>View Source (lines 1758-1817) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1758-L1817">GitHub</a></summary>
+
+```python
+def _ensure_indexes(self) -> None:
+        """Ensure all indexes exist, creating them if needed.
 
         This is called when opening an existing table to ensure indexes
         are present even if the table was created by an older version.
+        Creates both scalar indexes (for lookups) and vector indexes (for search).
         """
         if self._table is None:
             return
@@ -849,23 +5875,51 @@ def _ensure_scalar_indexes(self) -> None:
             indices = self._table.list_indices()
             # Handle both dict-style and object-style index configs (LanceDB version compat)
             existing_indexes = set()
+            has_vector_index = False
             for idx in indices:
                 name = getattr(idx, "name", None) or (
                     idx.get("name") if isinstance(idx, dict) else None
                 )
                 if name:
                     existing_indexes.add(name)
+                # Check for vector index (name contains "vector" or type is IVF/ANN)
+                idx_type = getattr(idx, "index_type", None) or (
+                    idx.get("index_type") if isinstance(idx, dict) else None
+                )
+                if idx_type and "ivf" in str(idx_type).lower():
+                    has_vector_index = True
         except (KeyError, TypeError, RuntimeError, AttributeError) as e:
             # Index info structure varies between LanceDB versions
             # RuntimeError: Table may not support listing indices
             logger.debug(f"Could not list existing indexes: {e}")
             existing_indexes = set()
+            has_vector_index = False
 
-        # Create missing indexes
+        # Create missing scalar indexes
         if "id_idx" not in existing_indexes:
             self._create_index_safe("id")
         if "file_path_idx" not in existing_indexes:
             self._create_index_safe("file_path")
+
+        # Handle vector index - either create immediately or mark as pending for lazy creation
+        if not has_vector_index:
+            try:
+                num_rows = self._table.count_rows()
+                if self._lazy_index_manager.config.enabled:
+                    # Lazy indexing: mark as pending if table is large enough
+                    if num_rows >= self._lazy_index_manager.config.min_rows:
+                        self._lazy_index_manager.mark_index_pending()
+                        logger.debug(
+                            f"Vector index creation deferred (lazy mode): {num_rows} rows"
+                        )
+                else:
+                    # Eager indexing: create immediately
+                    self._create_vector_index(num_rows)
+            except (RuntimeError, OSError) as e:
+                logger.debug(f"Could not check row count for vector indexing: {e}")
+        else:
+            # Index already exists, mark as created in lazy manager
+            self._lazy_index_manager.mark_index_created()
 ```
 
 </details>
@@ -874,7 +5928,7 @@ def _ensure_scalar_indexes(self) -> None:
 #### `_create_index_safe`
 
 <details>
-<summary>View Source (lines 103-119) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/html.md)/src/local_deepwiki/core/vectorstore.py#L103-L119">GitHub</a></summary>
+<summary>View Source (lines 1819-1835) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1819-L1835">GitHub</a></summary>
 
 ```python
 def _create_index_safe(self, column: str) -> None:
@@ -902,7 +5956,7 @@ def _create_index_safe(self, column: str) -> None:
 #### `_create_scalar_indexes`
 
 <details>
-<summary>View Source (lines 121-128) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/html.md)/src/local_deepwiki/core/vectorstore.py#L121-L128">GitHub</a></summary>
+<summary>View Source (lines 1837-1844) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1837-L1844">GitHub</a></summary>
 
 ```python
 def _create_scalar_indexes(self) -> None:
@@ -918,10 +5972,373 @@ def _create_scalar_indexes(self) -> None:
 </details>
 
 
+#### `_create_vector_index`
+
+<details>
+<summary>View Source (lines 1846-1895) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1846-L1895">GitHub</a></summary>
+
+```python
+def _create_vector_index(self, num_rows: int) -> None:
+        """Create a vector index for faster semantic search.
+
+        Uses IVF-PQ index for approximate nearest neighbor search,
+        which provides 5-10x speedup on large datasets (10k+ vectors).
+
+        Note: This method is used for synchronous/eager index creation.
+        For lazy/deferred index creation, use the LazyIndexManager instead.
+
+        Args:
+            num_rows: Number of rows in the table (used to determine if indexing is beneficial).
+        """
+        if self._table is None:
+            return
+
+        # Use threshold from lazy index config if available
+        min_rows_for_index = self._lazy_index_manager.config.min_rows
+
+        if num_rows < min_rows_for_index:
+            logger.debug(
+                f"Skipping vector index creation: {num_rows} rows < {min_rows_for_index} threshold"
+            )
+            return
+
+        try:
+            # Calculate optimal number of partitions based on table size
+            # Rule of thumb: sqrt(n) partitions, capped at reasonable values
+            num_partitions = min(max(int(math.sqrt(num_rows)), 16), 256)
+
+            # Create IVF-PQ index on the vector column
+            # - metric: L2 (Euclidean distance) matches our similarity scoring
+            # - num_partitions: number of IVF clusters
+            # - num_sub_vectors: for PQ compression (higher = more accurate but slower)
+            self._table.create_index(
+                metric="L2",
+                num_partitions=num_partitions,
+                num_sub_vectors=16,  # Good balance of speed vs accuracy
+            )
+            logger.info(
+                f"Created vector index with {num_partitions} partitions for {num_rows} vectors"
+            )
+
+            # Mark index as created in lazy index manager
+            self._lazy_index_manager.mark_index_created()
+
+        except (ValueError, RuntimeError, OSError) as e:
+            # ValueError: Index already exists or invalid params
+            # RuntimeError: Index creation failed
+            # OSError: Storage issues
+            logger.debug(f"Could not create vector index: {e}")
+```
+
+</details>
+
+
+#### `_is_local_provider`
+
+<details>
+<summary>View Source (lines 1897-1904) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1897-L1904">GitHub</a></summary>
+
+```python
+def _is_local_provider(self) -> bool:
+        """Check if the embedding provider is local (sentence-transformers).
+
+        Returns:
+            True if provider is local, False for API-based providers.
+        """
+        provider_name = self.embedding_provider.name.lower()
+        return provider_name.startswith("local:") or "sentence" in provider_name
+```
+
+</details>
+
+
+#### `_get_optimal_batch_config`
+
+<details>
+<summary>View Source (lines 1906-1930) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1906-L1930">GitHub</a></summary>
+
+```python
+def _get_optimal_batch_config(self) -> tuple[int, int]:
+        """Get optimal batch size and concurrency based on provider type.
+
+        Returns:
+            Tuple of (batch_size, concurrency).
+        """
+        config = self._embedding_batch_config
+        is_local = self._is_local_provider()
+
+        # Use configured values, but adjust defaults based on provider type
+        batch_size = config.batch_size
+        concurrency = config.concurrency
+
+        # For local providers, can use larger batches and higher concurrency
+        if is_local:
+            # Local models benefit from larger batches for GPU/CPU efficiency
+            batch_size = max(batch_size, 100)
+            concurrency = max(concurrency, 4)
+        else:
+            # API providers should use smaller batches to avoid rate limits
+            batch_size = min(batch_size, 50)
+            # Lower concurrency for APIs to avoid overwhelming the service
+            concurrency = min(concurrency, 4)
+
+        return batch_size, concurrency
+```
+
+</details>
+
+
+#### `_embed_single_batch_with_retry`
+
+<details>
+<summary>View Source (lines 1932-2012) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L1932-L2012">GitHub</a></summary>
+
+```python
+async def _embed_single_batch_with_retry(
+        self,
+        batch_index: int,
+        texts: list[str],
+        progress: EmbeddingProgress,
+        semaphore: asyncio.Semaphore,
+    ) -> BatchEmbeddingResult:
+        """Embed a single batch with retry logic and rate limiting.
+
+        Args:
+            batch_index: Index of this batch for ordering results.
+            texts: Texts to embed in this batch.
+            progress: Progress tracker to update.
+            semaphore: Semaphore for concurrency control.
+
+        Returns:
+            BatchEmbeddingResult with embeddings or error.
+        """
+        config = self._embedding_batch_config
+        retry_count = 0
+
+        async with semaphore:
+            while retry_count < config.retry_max_attempts:
+                try:
+                    # Apply rate limiting if configured
+                    if self._rate_limiter is not None:
+                        await self._rate_limiter.acquire()
+
+                    # Generate embeddings
+                    embeddings = await self.embedding_provider.embed(texts)
+                    progress.update(success=True)
+
+                    return BatchEmbeddingResult(
+                        batch_index=batch_index,
+                        embeddings=embeddings,
+                        retry_count=retry_count,
+                    )
+
+                except Exception as e:
+                    retry_count += 1
+                    error_str = str(e).lower()
+
+                    # Check if this is a retryable error
+                    is_retryable = (
+                        isinstance(e, (ConnectionError, TimeoutError, OSError))
+                        or "rate" in error_str and "limit" in error_str
+                        or "overloaded" in error_str
+                        or "503" in error_str
+                        or "502" in error_str
+                        or "timeout" in error_str
+                    )
+
+                    if not is_retryable or retry_count >= config.retry_max_attempts:
+                        logger.warning(
+                            f"Batch {batch_index} failed after {retry_count} attempts: {e}"
+                        )
+                        progress.update(success=False)
+                        return BatchEmbeddingResult(
+                            batch_index=batch_index,
+                            embeddings=None,
+                            error=e,
+                            retry_count=retry_count,
+                        )
+
+                    # Calculate backoff delay with jitter
+                    delay = config.retry_base_delay * (2 ** (retry_count - 1))
+                    delay = delay * (0.5 + random.random())  # Add jitter
+                    logger.warning(
+                        f"Batch {batch_index} failed (attempt {retry_count}): {e}. "
+                        f"Retrying in {delay:.2f}s..."
+                    )
+                    await asyncio.sleep(delay)
+
+        # Should not reach here
+        progress.update(success=False)
+        return BatchEmbeddingResult(
+            batch_index=batch_index,
+            embeddings=None,
+            error=RuntimeError("Unexpected: exhausted retries without returning"),
+            retry_count=retry_count,
+        )
+```
+
+</details>
+
+
+#### `_batch_embed`
+
+<details>
+<summary>View Source (lines 2014-2119) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L2014-L2119">GitHub</a></summary>
+
+```python
+async def _batch_embed(
+        self, texts: list[str], batch_size: int | None = None, log_progress: bool = False
+    ) -> list[list[float]]:
+        """Generate embeddings in parallel batches.
+
+        Uses concurrent batch processing for faster embedding generation.
+        For local providers, uses higher concurrency. For API providers,
+        respects rate limits and uses lower concurrency.
+
+        Args:
+            texts: List of text strings to embed.
+            batch_size: Number of texts to embed per batch. If None, uses config default.
+            log_progress: Whether to log batch progress.
+
+        Returns:
+            List of embedding vectors in the same order as input texts.
+
+        Raises:
+            RuntimeError: If any batches fail after all retry attempts.
+        """
+        if not texts:
+            return []
+
+        # Get optimal config based on provider type
+        optimal_batch_size, optimal_concurrency = self._get_optimal_batch_config()
+        batch_size = batch_size or optimal_batch_size
+
+        # Split texts into batches
+        batches: list[list[str]] = []
+        for i in range(0, len(texts), batch_size):
+            batches.append(texts[i : i + batch_size])
+
+        total_batches = len(batches)
+
+        # For single batch, still use retry logic but without parallel overhead
+        if total_batches == 1:
+            progress = EmbeddingProgress(total_texts=len(texts), total_batches=1)
+            semaphore = asyncio.Semaphore(1)
+            result = await self._embed_single_batch_with_retry(0, batches[0], progress, semaphore)
+            if result.error is not None:
+                raise RuntimeError(f"Failed to embed batch: {result.error}")
+            if log_progress:
+                logger.debug(f"Embedded 1/1 batches ({len(texts)} texts)")
+            return result.embeddings or []
+
+        # Create progress tracker
+        progress = EmbeddingProgress(
+            total_texts=len(texts),
+            total_batches=total_batches,
+        )
+
+        if log_progress:
+            logger.info(
+                f"Starting parallel embedding: {len(texts)} texts in {total_batches} batches "
+                f"(batch_size={batch_size}, concurrency={optimal_concurrency})"
+            )
+
+        # Create semaphore for concurrency control
+        semaphore = asyncio.Semaphore(optimal_concurrency)
+
+        # Create tasks for all batches
+        tasks = [
+            self._embed_single_batch_with_retry(i, batch, progress, semaphore)
+            for i, batch in enumerate(batches)
+        ]
+
+        # Execute all tasks concurrently
+        results: list[BatchEmbeddingResult] = await asyncio.gather(*tasks)
+
+        # Log final progress
+        if log_progress:
+            progress.log_progress()
+
+        # Sort results by batch index to maintain order
+        results.sort(key=lambda r: r.batch_index)
+
+        # Check for failures and collect errors
+        errors: list[tuple[int, Exception]] = []
+        all_embeddings: list[list[float]] = []
+
+        for result in results:
+            if result.error is not None:
+                errors.append((result.batch_index, result.error))
+            elif result.embeddings is not None:
+                all_embeddings.extend(result.embeddings)
+
+        # If there were failures, report them
+        if errors:
+            error_msgs = [f"Batch {idx}: {err}" for idx, err in errors]
+            error_summary = "\n".join(error_msgs)
+            logger.error(f"Embedding failed for {len(errors)} batches:\n{error_summary}")
+
+            # Raise an exception with details about the failures
+            raise RuntimeError(
+                f"Failed to embed {len(errors)} out of {total_batches} batches. "
+                f"First error: {errors[0][1]}"
+            )
+
+        if log_progress:
+            elapsed = progress.elapsed_seconds
+            rate = len(texts) / elapsed if elapsed > 0 else 0
+            logger.info(
+                f"Embedding complete: {len(texts)} texts in {elapsed:.2f}s ({rate:.1f} texts/sec)"
+            )
+
+        return all_embeddings
+```
+
+</details>
+
+
+#### `_batch_embed_sequential`
+
+<details>
+<summary>View Source (lines 2121-2147) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L2121-L2147">GitHub</a></summary>
+
+```python
+async def _batch_embed_sequential(
+        self, texts: list[str], batch_size: int, log_progress: bool = False
+    ) -> list[list[float]]:
+        """Generate embeddings in sequential batches (legacy method).
+
+        This is the original sequential implementation, kept for backward
+        compatibility and testing purposes.
+
+        Args:
+            texts: List of text strings to embed.
+            batch_size: Number of texts to embed per batch.
+            log_progress: Whether to log batch progress.
+
+        Returns:
+            List of embedding vectors.
+        """
+        embeddings: list[list[float]] = []
+        for i in range(0, len(texts), batch_size):
+            batch = texts[i : i + batch_size]
+            batch_embeddings = await self.embedding_provider.embed(batch)
+            embeddings.extend(batch_embeddings)
+            if log_progress and len(texts) > batch_size:
+                logger.debug(
+                    f"Embedded batch {i // batch_size + 1}/"
+                    f"{(len(texts) + batch_size - 1) // batch_size}"
+                )
+        return embeddings
+```
+
+</details>
+
+
 #### `_row_to_chunk`
 
 <details>
-<summary>View Source (lines 363-384) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/html.md)/src/local_deepwiki/core/vectorstore.py#L363-L384">GitHub</a></summary>
+<summary>View Source (lines 3123-3144) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L3123-L3144">GitHub</a></summary>
 
 ```python
 def _row_to_chunk(self, row: dict[str, Any]) -> CodeChunk:
@@ -954,7 +6371,7 @@ def _row_to_chunk(self, row: dict[str, Any]) -> CodeChunk:
 #### `_chunk_to_text`
 
 <details>
-<summary>View Source (lines 386-413) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/html.md)/src/local_deepwiki/core/vectorstore.py#L386-L413">GitHub</a></summary>
+<summary>View Source (lines 3146-3173) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/vectorstore.py#L3146-L3173">GitHub</a></summary>
 
 ```python
 def _chunk_to_text(self, chunk: CodeChunk) -> str:
@@ -989,22 +6406,3 @@ def _chunk_to_text(self, chunk: CodeChunk) -> str:
 
 </details>
 
-## Relevant Source Files
-
-- `src/local_deepwiki/core/vectorstore.py:37-413`
-
-## See Also
-
-- [inheritance](../generators/inheritance.md) - uses this
-- [coverage](../generators/coverage.md) - uses this
-- [search](../generators/search.md) - uses this
-- [glossary](../generators/glossary.md) - uses this
-- [logging](../logging.md) - dependency
-
-## See Also
-
-- [coverage](../generators/coverage.md) - uses this
-- [search](../generators/search.md) - uses this
-- [glossary](../generators/glossary.md) - uses this
-- [inheritance](../generators/inheritance.md) - uses this
-- [logging](../logging.md) - dependency

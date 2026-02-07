@@ -514,9 +514,14 @@ class SearchCache:
                     continue
 
                 # Compute similarity
-                similarity = self._compute_similarity(query_embedding, entry.query_embedding)
+                similarity = self._compute_similarity(
+                    query_embedding, entry.query_embedding
+                )
 
-                if similarity >= self.config.similarity_threshold and similarity > best_similarity:
+                if (
+                    similarity >= self.config.similarity_threshold
+                    and similarity > best_similarity
+                ):
                     best_similarity = similarity
                     best_match = entry
 
@@ -596,7 +601,8 @@ class SearchCache:
         # Phase 1: Remove expired entries
         now = time.time()
         expired_keys = [
-            key for key, entry in self._cache.items()
+            key
+            for key, entry in self._cache.items()
             if now - entry.created_at >= self.config.ttl_seconds
         ]
         for key in expired_keys:
@@ -608,10 +614,7 @@ class SearchCache:
         # Phase 2: LRU eviction if still over limit
         if len(self._cache) > self.config.max_entries:
             # Sort by created_at (oldest first)
-            sorted_entries = sorted(
-                self._cache.items(),
-                key=lambda x: x[1].created_at
-            )
+            sorted_entries = sorted(self._cache.items(), key=lambda x: x[1].created_at)
 
             # Calculate how many to remove (with 20% buffer)
             target_count = int(self.config.max_entries * 0.8)
@@ -703,7 +706,9 @@ class EmbeddingProgress:
             if self.completed_batches == 0:
                 return None
             avg_time_per_batch = self.elapsed_seconds / self.completed_batches
-            remaining_batches = self.total_batches - self.completed_batches - self.failed_batches
+            remaining_batches = (
+                self.total_batches - self.completed_batches - self.failed_batches
+            )
             return avg_time_per_batch * remaining_batches
 
     def log_progress(self) -> None:
@@ -950,7 +955,9 @@ class ChunkIterator:
         """
         self.reset()
         total = self.count()
-        total_batches = (total + self._batch_size - 1) // self._batch_size if total > 0 else 0
+        total_batches = (
+            (total + self._batch_size - 1) // self._batch_size if total > 0 else 0
+        )
         batch_index = 0
 
         while self._offset < total:
@@ -978,7 +985,9 @@ class ChunkIterator:
         """
         self.reset()
         total = self.count()
-        total_batches = (total + self._batch_size - 1) // self._batch_size if total > 0 else 0
+        total_batches = (
+            (total + self._batch_size - 1) // self._batch_size if total > 0 else 0
+        )
         batch_index = 0
 
         while self._offset < total:
@@ -1974,7 +1983,8 @@ class VectorStore:
                     # Check if this is a retryable error
                     is_retryable = (
                         isinstance(e, (ConnectionError, TimeoutError, OSError))
-                        or "rate" in error_str and "limit" in error_str
+                        or "rate" in error_str
+                        and "limit" in error_str
                         or "overloaded" in error_str
                         or "503" in error_str
                         or "502" in error_str
@@ -2012,7 +2022,10 @@ class VectorStore:
         )
 
     async def _batch_embed(
-        self, texts: list[str], batch_size: int | None = None, log_progress: bool = False
+        self,
+        texts: list[str],
+        batch_size: int | None = None,
+        log_progress: bool = False,
     ) -> list[list[float]]:
         """Generate embeddings in parallel batches.
 
@@ -2049,7 +2062,9 @@ class VectorStore:
         if total_batches == 1:
             progress = EmbeddingProgress(total_texts=len(texts), total_batches=1)
             semaphore = asyncio.Semaphore(1)
-            result = await self._embed_single_batch_with_retry(0, batches[0], progress, semaphore)
+            result = await self._embed_single_batch_with_retry(
+                0, batches[0], progress, semaphore
+            )
             if result.error is not None:
                 raise RuntimeError(f"Failed to embed batch: {result.error}")
             if log_progress:
@@ -2101,7 +2116,9 @@ class VectorStore:
         if errors:
             error_msgs = [f"Batch {idx}: {err}" for idx, err in errors]
             error_summary = "\n".join(error_msgs)
-            logger.error(f"Embedding failed for {len(errors)} batches:\n{error_summary}")
+            logger.error(
+                f"Embedding failed for {len(errors)} batches:\n{error_summary}"
+            )
 
             # Raise an exception with details about the failures
             raise RuntimeError(
@@ -2167,11 +2184,14 @@ class VectorStore:
 
         # Generate embeddings in batches to avoid OOM and API limits
         texts = [self._chunk_to_text(chunk) for chunk in chunks]
-        embeddings = await self._batch_embed(texts, embedding_batch_size, log_progress=True)
+        embeddings = await self._batch_embed(
+            texts, embedding_batch_size, log_progress=True
+        )
 
         # Prepare data for LanceDB
         data = [
-            chunk.to_vector_record(vector=embedding) for chunk, embedding in zip(chunks, embeddings)
+            chunk.to_vector_record(vector=embedding)
+            for chunk, embedding in zip(chunks, embeddings)
         ]
 
         # Reset lazy index manager state since we're creating a fresh table
@@ -2232,7 +2252,8 @@ class VectorStore:
 
         # Prepare data
         data = [
-            chunk.to_vector_record(vector=embedding) for chunk, embedding in zip(chunks, embeddings)
+            chunk.to_vector_record(vector=embedding)
+            for chunk, embedding in zip(chunks, embeddings)
         ]
 
         table.add(data)
@@ -2298,9 +2319,7 @@ class VectorStore:
             try:
                 resolved_profile = SearchProfile(profile.lower())
             except ValueError:
-                logger.warning(
-                    f"Invalid search profile '{profile}', using default"
-                )
+                logger.warning(f"Invalid search profile '{profile}', using default")
                 resolved_profile = self._default_search_profile
         else:
             resolved_profile = profile
@@ -2309,7 +2328,9 @@ class VectorStore:
 
         # Resolve minimum similarity threshold
         effective_min_similarity = (
-            min_similarity if min_similarity is not None else profile_config.min_similarity
+            min_similarity
+            if min_similarity is not None
+            else profile_config.min_similarity
         )
 
         logger.debug(
@@ -2351,7 +2372,9 @@ class VectorStore:
 
         # Use adaptive search depth if enabled
         if self._adaptive_search_enabled:
-            adaptive_depth = self._adaptive_searcher.estimate_optimal_depth(query, limit)
+            adaptive_depth = self._adaptive_searcher.estimate_optimal_depth(
+                query, limit
+            )
             fetch_limit = max(
                 int(limit * base_fetch_multiplier),
                 adaptive_depth,
@@ -2418,7 +2441,9 @@ class VectorStore:
         if (
             fuzzy_config.enable_auto_fuzzy
             and not use_fuzzy
-            and should_auto_enable_fuzzy(search_results, fuzzy_config.auto_fuzzy_threshold)
+            and should_auto_enable_fuzzy(
+                search_results, fuzzy_config.auto_fuzzy_threshold
+            )
         ):
             auto_fuzzy_enabled = True
             logger.debug(
@@ -2442,7 +2467,9 @@ class VectorStore:
         if (
             auto_suggest
             and fuzzy_config.enable_auto_fuzzy
-            and should_auto_enable_fuzzy(search_results, fuzzy_config.auto_fuzzy_threshold)
+            and should_auto_enable_fuzzy(
+                search_results, fuzzy_config.auto_fuzzy_threshold
+            )
         ):
             try:
                 fuzzy_helper = await self._get_fuzzy_helper()
@@ -2483,7 +2510,9 @@ class VectorStore:
 
         # Cache results (only for non-fuzzy, non-path-pattern, non-auto-fuzzy searches)
         if use_cache and not auto_fuzzy_enabled:
-            self._search_cache.set(query, query_embedding, search_results, cache_filters)
+            self._search_cache.set(
+                query, query_embedding, search_results, cache_filters
+            )
 
         return search_results
 
@@ -2551,9 +2580,7 @@ class VectorStore:
             try:
                 resolved_profile = SearchProfile(profile.lower())
             except ValueError:
-                logger.warning(
-                    f"Invalid search profile '{profile}', using default"
-                )
+                logger.warning(f"Invalid search profile '{profile}', using default")
                 resolved_profile = self._default_search_profile
         else:
             resolved_profile = profile
@@ -2562,7 +2589,9 @@ class VectorStore:
 
         # Resolve minimum similarity threshold
         effective_min_similarity = (
-            min_similarity if min_similarity is not None else profile_config.min_similarity
+            min_similarity
+            if min_similarity is not None
+            else profile_config.min_similarity
         )
 
         logger.debug(
@@ -2576,7 +2605,9 @@ class VectorStore:
                 if cursor.startswith("offset:"):
                     offset = int(cursor[7:])
             except (ValueError, IndexError):
-                logger.warning(f"Invalid cursor format: {cursor}, using offset={offset}")
+                logger.warning(
+                    f"Invalid cursor format: {cursor}, using offset={offset}"
+                )
 
         # Generate query embedding
         query_embedding = (await self.embedding_provider.embed([query]))[0]
@@ -2617,7 +2648,9 @@ class VectorStore:
             filtered_results = []
             for row in all_results:
                 chunk = self._row_to_chunk(row)
-                if filter_by_path([SearchResult(chunk=chunk, score=0, highlights=[])], path_pattern):
+                if filter_by_path(
+                    [SearchResult(chunk=chunk, score=0, highlights=[])], path_pattern
+                ):
                     filtered_results.append(row)
             all_results = filtered_results
             total_estimate = len(all_results)
@@ -2765,6 +2798,31 @@ class VectorStore:
         safe_path = _sanitize_string_value(file_path)
         results = table.search().where(f"file_path = '{safe_path}'").to_list()
         return [self._row_to_chunk(row) for row in results]
+
+    def get_all_chunks(
+        self,
+        batch_size: int | None = None,
+        language: str | None = None,
+        chunk_type: str | None = None,
+    ) -> Iterator[CodeChunk]:
+        """Lazily iterate over all chunks in the vector store.
+
+        Delegates to LazyChunkLoader for memory-efficient batch iteration.
+
+        Args:
+            batch_size: Batch size for loading. If None, uses optimal size.
+            language: Optional language filter.
+            chunk_type: Optional chunk type filter.
+
+        Yields:
+            CodeChunk objects.
+        """
+        loader = LazyChunkLoader(self)
+        yield from loader.get_all_chunks(
+            batch_size=batch_size,
+            language=language,
+            chunk_type=chunk_type,
+        )
 
     async def delete_chunks_by_file(self, file_path: str) -> int:
         """Delete all chunks for a specific file.
@@ -2961,12 +3019,7 @@ class VectorStore:
 
         while offset < total_chunks:
             # Fetch batch with only needed columns
-            rows = (
-                table.search()
-                .select(columns)
-                .limit(offset + batch_size)
-                .to_list()
-            )
+            rows = table.search().select(columns).limit(offset + batch_size).to_list()
             # Slice to get just this batch (simulating offset)
             batch_rows = rows[offset : offset + batch_size]
 
@@ -2987,7 +3040,9 @@ class VectorStore:
 
             # Log progress for very large datasets
             if offset % 100_000 == 0:
-                logger.debug(f"Stats streaming progress: {offset}/{total_chunks} rows processed")
+                logger.debug(
+                    f"Stats streaming progress: {offset}/{total_chunks} rows processed"
+                )
 
         return {
             "total_chunks": total_chunks,

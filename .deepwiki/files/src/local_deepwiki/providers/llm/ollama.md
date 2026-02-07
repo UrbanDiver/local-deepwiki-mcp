@@ -1,125 +1,230 @@
-# Ollama Provider
+# File Overview
 
-## File Overview
+This file implements the `OllamaProvider` class, which provides an interface to interact with the Ollama LLM server. It allows for generating text and streaming responses using Ollama models. The provider supports health checks, model validation, and integrates with the base `LLMProvider` class to ensure consistent behavior across different LLM providers.
 
-This file implements the OllamaProvider class, which provides integration with the Ollama local LLM server. It handles connection management, health checking, and streaming text generation through Ollama's API. The provider includes custom exception handling for connection and model availability issues.
+Dependencies:
+- `typing.AsyncIterator`, `typing.cast`
+- `ollama.AsyncClient`, `ollama.ResponseError`
+- `local_deepwiki.logging.get_logger`
+- `local_deepwiki.providers.base` components
 
 ## Classes
 
 ### OllamaConnectionError
 
-A custom exception raised when the Ollama server is not accessible.
-
-**Attributes:**
-- `base_url`: The URL that failed to connect
-- `original_error`: The underlying exception that caused the connection failure
+A specialized version of `ProviderConnectionError` for handling cases where the Ollama server is not accessible.
 
 **Constructor Parameters:**
-- `base_url` (str): The Ollama server URL that couldn't be reached
-- `original_error` (Exception | None): Optional underlying exception
+- `base_url` (str): The URL of the Ollama server.
+- `original_error` (Exception | None): The underlying error that caused the connection failure.
 
-The exception provides helpful error messages with setup instructions for Ollama.
+**Message Format:**
+```
+Cannot connect to Ollama at {base_url}. Please ensure Ollama is running:
+  1. Install Ollama: https://ollama.ai/download
+  2. Start Ollama: `ollama serve`
+  3. Verify it's running: `curl {base_url}/api
+```
 
 ### OllamaModelNotFoundError
 
-A custom exception for handling cases when a requested model is not available on the Ollama server.
+A specialized version of `ProviderModelNotFoundError` for handling cases where the requested model is not available in Ollama.
+
+**Constructor Parameters:**
+- `model` (str): The name of the requested model.
+- `available_models` (list[str] | None): List of models currently available in Ollama.
+
+**Message Format:**
+```
+Model '{model}' not found in Ollama. Available models: {models_str}
+```
 
 ### OllamaProvider
 
-The [main](../../export/pdf.md) provider class that implements LLM functionality using Ollama. Inherits from [LLMProvider](../base.md) and provides asynchronous text generation capabilities.
+The main class for interacting with Ollama LLMs. It inherits from `LLMProvider` and implements methods for generating text, validating connectivity and models, and checking health.
 
-**Constructor Parameters:**
-- `model` (str): Ollama model name (default: "llama3.2")
-- `base_url` (str): Ollama API base URL (default: "http://localhost:11434")
+#### Methods
 
-**Key Methods:**
+##### `__init__(self, model: str = "llama3.2", base_url: str = "http://localhost:11434")`
 
-#### `__init__`
-Initializes the provider with the specified model and server configuration. Sets up the AsyncClient for communication with Ollama.
+Initialize the Ollama provider.
 
-#### `check_health`
-Performs health checks to verify the Ollama server is accessible and the specified model is available.
+**Parameters:**
+- `model` (str): Ollama model name.
+- `base_url` (str): Ollama API base URL.
 
-#### `_ensure_healthy`
-Internal method that ensures the provider is in a healthy state before processing requests.
+##### `check_health(self) -> bool`
 
-#### `generate`
-Generates text responses using the specified model (non-streaming).
+Check if Ollama is running and the model is available.
 
-#### `generate_stream`
-Generates streaming text responses, returning an AsyncIterator for real-time text generation.
+**Returns:**
+- `bool`: True if Ollama is healthy and model is available.
 
-#### `name`
-Property that returns the provider's name identifier.
+**Raises:**
+- `OllamaConnectionError`: If Ollama server is not accessible.
+- `OllamaModelNotFoundError`: If the requested model is not available.
+
+##### `_ensure_healthy(self) -> None`
+
+Ensure Ollama is healthy before making requests. Only performs the check once per instance.
+
+##### `validate_connectivity(self) -> bool`
+
+Test that Ollama is reachable and configured correctly.
+
+**Returns:**
+- `bool`: True if Ollama is accessible.
+
+**Raises:**
+- `ProviderConnectionError`: If Ollama cannot be reached.
+
+##### `validate_model(self, model_name: str) -> bool`
+
+Test that a specific model is available in Ollama.
+
+**Parameters:**
+- `model_name` (str): The model name to validate.
+
+**Returns:**
+- `bool`: True if the model is available.
+
+**Raises:**
+- `ProviderModelNotFoundError`: If the model is not available.
+- `ProviderConnectionError`: If Ollama cannot be reached.
+
+##### `get_capabilities(self) -> LLMProviderCapabilities`
+
+Return Ollama provider capabilities.
+
+**Returns:**
+- `LLMProviderCapabilities`: With Ollama-specific information.
+
+##### `generate(self, prompt: str, system_prompt: str | None = None, max_tokens: int = 4096, temperature: float = 0.7) -> str`
+
+Generate text from a prompt.
+
+**Parameters:**
+- `prompt` (str): The user prompt.
+- `system_prompt` (str | None): Optional system prompt.
+- `max_tokens` (int): Maximum tokens to generate.
+- `temperature` (float): Sampling temperature.
+
+**Returns:**
+- `str`: Generated text.
+
+**Raises:**
+- `OllamaConnectionError`: If Ollama server is not accessible.
+- `OllamaModelNotFoundError`: If the requested model is not available.
+
+##### `generate_stream(self, prompt: str, system_prompt: str | None = None, max_tokens: int = 4096, temperature: float = 0.7) -> AsyncIterator[str]`
+
+Generate text from a prompt with streaming.
+
+**Parameters:**
+- `prompt` (str): The user prompt.
+- `system_prompt` (str | None): Optional system prompt.
+- `max_tokens` (int): Maximum tokens to generate.
+- `temperature` (float): Sampling temperature.
+
+**Yields:**
+- `str`: Generated text chunks.
+
+**Raises:**
+- `OllamaConnectionError`: If Ollama server is not accessible.
+- `OllamaModelNotFoundError`: If the requested model is not available.
+
+##### `name(self) -> str`
+
+Get the provider name.
+
+**Returns:**
+- `str`: A string in the format `"ollama:{model_name}"`.
+
+## Integration
+
+This file is part of the `local_deepwiki.providers.llm` module and is used to provide Ollama-specific LLM capabilities. It is called by:
+
+- `test_ollama_health`
+- `test_provider_errors`
+
+It depends on:
+- `local_deepwiki.providers.base` for base provider classes and error handling
+- `ollama.AsyncClient` for asynchronous communication with Ollama
+- `local_deepwiki.logging` for logging
+
+The file integrates with the broader codebase by extending the `LLMProvider` base class, ensuring consistent interfaces for different LLM providers.
 
 ## Usage Examples
 
-### Basic Provider Setup
+### Initialize Ollama Provider
 
 ```python
-from local_deepwiki.providers.llm.ollama import OllamaProvider
+provider = OllamaProvider(model="llama3.2", base_url="http://localhost:11434")
+```
 
-# Initialize with default settings
-provider = OllamaProvider()
+### Generate Text
 
-# Initialize with custom model and URL
-provider = OllamaProvider(
-    model="codellama",
-    base_url="http://localhost:11434"
+```python
+response = await provider.generate(
+    prompt="Explain quantum computing",
+    system_prompt="You are an expert in physics",
+    max_tokens=1024,
+    temperature=0.7
 )
 ```
 
-### Exception Handling
+### Stream Text Generation
 
 ```python
-from local_deepwiki.providers.llm.ollama import (
-    OllamaProvider,
-    OllamaConnectionError,
-    OllamaModelNotFoundError
-)
-
-try:
-    provider = OllamaProvider(model="custom-model")
-    await provider.check_health()
-except OllamaConnectionError as e:
-    print(f"Cannot connect to Ollama at {e.base_url}")
-except OllamaModelNotFoundError:
-    print("Requested model not found")
+async for chunk in provider.generate_stream(
+    prompt="Write a poem about technology",
+    max_tokens=512,
+    temperature=0.8
+):
+    print(chunk)
 ```
 
-## Related Components
+### Validate Connectivity
 
-This provider integrates with several components from the codebase:
+```python
+is_connected = await provider.validate_connectivity()
+```
 
-- **[LLMProvider](../base.md)**: Base class that defines the interface for LLM providers
-- **[with_retry](../base.md)**: Decorator for adding retry logic to provider operations
-- **[get_logger](../../logging.md)**: Logging utility for provider operations
-- **AsyncClient**: Ollama's async client for API communication
-- **ResponseError**: Ollama-specific error type for API responses
+### Validate Model
 
-The provider follows the standard LLM provider interface, making it interchangeable with other LLM implementations in the system.
+```python
+is_model_available = await provider.validate_model("llama3.2")
+```
+
+### Check Health
+
+```python
+is_healthy = await provider.check_health()
+```
 
 ## API Reference
 
 ### class `OllamaConnectionError`
 
-**Inherits from:** `Exception`
+**Inherits from:** `ProviderConnectionError`
 
-Raised when Ollama server is not accessible.
+Raised when Ollama server is not accessible.  This is a specialized version of ProviderConnectionError for Ollama.
 
 **Methods:**
 
 
 <details>
-<summary>View Source (lines 13-26) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/llm/ollama.py#L13-L26">GitHub</a></summary>
+<summary>View Source (lines 20-35) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/llm/ollama.py#L20-L35">GitHub</a></summary>
 
 ```python
-class OllamaConnectionError(Exception):
-    """Raised when Ollama server is not accessible."""
+class OllamaConnectionError(ProviderConnectionError):
+    """Raised when Ollama server is not accessible.
+
+    This is a specialized version of ProviderConnectionError for Ollama.
+    """
 
     def __init__(self, base_url: str, original_error: Exception | None = None):
         self.base_url = base_url
-        self.original_error = original_error
         message = (
             f"Cannot connect to Ollama at {base_url}. "
             "Please ensure Ollama is running:\n"
@@ -127,7 +232,7 @@ class OllamaConnectionError(Exception):
             "  2. Start Ollama: `ollama serve`\n"
             "  3. Verify it's running: `curl {base_url}/api/tags`"
         )
-        super().__init__(message)
+        super().__init__(message, provider_name="ollama", original_error=original_error)
 ```
 
 </details>
@@ -139,7 +244,7 @@ def __init__(base_url: str, original_error: Exception | None = None)
 ```
 
 
-| [Parameter](../../generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `base_url` | `str` | - | - |
 | `original_error` | `Exception | None` | `None` | - |
@@ -147,15 +252,17 @@ def __init__(base_url: str, original_error: Exception | None = None)
 
 
 <details>
-<summary>View Source (lines 13-26) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/llm/ollama.py#L13-L26">GitHub</a></summary>
+<summary>View Source (lines 20-35) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/llm/ollama.py#L20-L35">GitHub</a></summary>
 
 ```python
-class OllamaConnectionError(Exception):
-    """Raised when Ollama server is not accessible."""
+class OllamaConnectionError(ProviderConnectionError):
+    """Raised when Ollama server is not accessible.
+
+    This is a specialized version of ProviderConnectionError for Ollama.
+    """
 
     def __init__(self, base_url: str, original_error: Exception | None = None):
         self.base_url = base_url
-        self.original_error = original_error
         message = (
             f"Cannot connect to Ollama at {base_url}. "
             "Please ensure Ollama is running:\n"
@@ -163,28 +270,32 @@ class OllamaConnectionError(Exception):
             "  2. Start Ollama: `ollama serve`\n"
             "  3. Verify it's running: `curl {base_url}/api/tags`"
         )
-        super().__init__(message)
+        super().__init__(message, provider_name="ollama", original_error=original_error)
 ```
 
 </details>
 
 ### class `OllamaModelNotFoundError`
 
-**Inherits from:** `Exception`
+**Inherits from:** `ProviderModelNotFoundError`
 
-Raised when the requested model is not available in Ollama.
+Raised when the requested model is not available in Ollama.  This is a specialized version of ProviderModelNotFoundError for Ollama.
 
 **Methods:**
 
 
 <details>
-<summary>View Source (lines 29-49) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/llm/ollama.py#L29-L49">GitHub</a></summary>
+<summary>View Source (lines 38-66) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/llm/ollama.py#L38-L66">GitHub</a></summary>
 
 ```python
-class OllamaModelNotFoundError(Exception):
-    """Raised when the requested model is not available in Ollama."""
+class OllamaModelNotFoundError(ProviderModelNotFoundError):
+    """Raised when the requested model is not available in Ollama.
+
+    This is a specialized version of ProviderModelNotFoundError for Ollama.
+    """
 
     def __init__(self, model: str, available_models: list[str] | None = None):
+        # Build a custom message with pull command
         self.model = model
         self.available_models = available_models or []
         if available_models:
@@ -201,7 +312,11 @@ class OllamaModelNotFoundError(Exception):
                 f"Model '{model}' not found in Ollama.\n"
                 f"To download the model, run: `ollama pull {model}`"
             )
-        super().__init__(message)
+        # Call ProviderError.__init__ directly to set message
+        super(ProviderModelNotFoundError, self).__init__(message, provider_name="ollama")
+        # Re-set attributes since parent __init__ may overwrite
+        self.model = model
+        self.available_models = available_models or []
 ```
 
 </details>
@@ -213,7 +328,7 @@ def __init__(model: str, available_models: list[str] | None = None)
 ```
 
 
-| [Parameter](../../generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `model` | `str` | - | - |
 | `available_models` | `list[str] | None` | `None` | - |
@@ -221,13 +336,17 @@ def __init__(model: str, available_models: list[str] | None = None)
 
 
 <details>
-<summary>View Source (lines 29-49) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/llm/ollama.py#L29-L49">GitHub</a></summary>
+<summary>View Source (lines 38-66) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/llm/ollama.py#L38-L66">GitHub</a></summary>
 
 ```python
-class OllamaModelNotFoundError(Exception):
-    """Raised when the requested model is not available in Ollama."""
+class OllamaModelNotFoundError(ProviderModelNotFoundError):
+    """Raised when the requested model is not available in Ollama.
+
+    This is a specialized version of ProviderModelNotFoundError for Ollama.
+    """
 
     def __init__(self, model: str, available_models: list[str] | None = None):
+        # Build a custom message with pull command
         self.model = model
         self.available_models = available_models or []
         if available_models:
@@ -244,14 +363,18 @@ class OllamaModelNotFoundError(Exception):
                 f"Model '{model}' not found in Ollama.\n"
                 f"To download the model, run: `ollama pull {model}`"
             )
-        super().__init__(message)
+        # Call ProviderError.__init__ directly to set message
+        super(ProviderModelNotFoundError, self).__init__(message, provider_name="ollama")
+        # Re-set attributes since parent __init__ may overwrite
+        self.model = model
+        self.available_models = available_models or []
 ```
 
 </details>
 
 ### class `OllamaProvider`
 
-**Inherits from:** [`LLMProvider`](../base.md)
+**Inherits from:** `LLMProvider`
 
 LLM provider using local Ollama.
 
@@ -259,11 +382,11 @@ LLM provider using local Ollama.
 
 
 <details>
-<summary>View Source (lines 52-241) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/llm/ollama.py#L52-L241">GitHub</a></summary>
+<summary>View Source (lines 69-324) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/llm/ollama.py#L69-L324">GitHub</a></summary>
 
 ```python
 class OllamaProvider(LLMProvider):
-    # Methods: __init__, check_health, _ensure_healthy, generate, generate_stream, name
+    # Methods: __init__, check_health, _ensure_healthy, validate_connectivity, validate_model, get_capabilities, generate, generate_stream, name
 ```
 
 </details>
@@ -277,14 +400,14 @@ def __init__(model: str = "llama3.2", base_url: str = "http://localhost:11434")
 Initialize the Ollama provider.
 
 
-| [Parameter](../../generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `model` | `str` | `"llama3.2"` | Ollama model name. |
 | `base_url` | `str` | `"http://localhost:11434"` | Ollama API base URL. |
 
 
 <details>
-<summary>View Source (lines 55-65) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/llm/ollama.py#L55-L65">GitHub</a></summary>
+<summary>View Source (lines 72-83) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/llm/ollama.py#L72-L83">GitHub</a></summary>
 
 ```python
 def __init__(self, model: str = "llama3.2", base_url: str = "http://localhost:11434"):
@@ -298,6 +421,7 @@ def __init__(self, model: str = "llama3.2", base_url: str = "http://localhost:11
         self._base_url = base_url
         self._client = AsyncClient(host=base_url)
         self._health_checked = False
+        self._available_models: list[str] = []
 ```
 
 </details>
@@ -312,7 +436,7 @@ Check if Ollama is running and the model is available.
 
 
 <details>
-<summary>View Source (lines 67-110) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/llm/ollama.py#L67-L110">GitHub</a></summary>
+<summary>View Source (lines 85-128) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/llm/ollama.py#L85-L128">GitHub</a></summary>
 
 ```python
 async def check_health(self) -> bool:
@@ -331,21 +455,21 @@ async def check_health(self) -> bool:
             # Try to list models to verify connection
             models_response = await self._client.list()
             # ollama library returns typed objects with .models list and .model attribute
-            available_models: list[str] = [
+            self._available_models = [
                 m.model for m in models_response.models if m.model is not None
             ]
-            logger.debug(f"Ollama available models: {available_models}")
+            logger.debug(f"Ollama available models: {self._available_models}")
 
             # Check if our model is available (handle both "model" and "model:tag" formats)
             model_base = self._model.split(":")[0]
             model_found = any(
                 m == self._model or m.startswith(f"{self._model}:") or m.split(":")[0] == model_base
-                for m in available_models
+                for m in self._available_models
             )
 
             if not model_found:
                 logger.error(f"Model '{self._model}' not found in Ollama")
-                raise OllamaModelNotFoundError(self._model, available_models)
+                raise OllamaModelNotFoundError(self._model, self._available_models)
 
             logger.info(f"Ollama health check passed: model '{self._model}' available")
             self._health_checked = True
@@ -363,6 +487,124 @@ async def check_health(self) -> bool:
 
 </details>
 
+#### `validate_connectivity`
+
+```python
+async def validate_connectivity() -> bool
+```
+
+Test that Ollama is reachable and configured correctly.
+
+
+<details>
+<summary>View Source (lines 138-151) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/llm/ollama.py#L138-L151">GitHub</a></summary>
+
+```python
+async def validate_connectivity(self) -> bool:
+        """Test that Ollama is reachable and configured correctly.
+
+        Returns:
+            True if Ollama is accessible.
+
+        Raises:
+            ProviderConnectionError: If Ollama cannot be reached.
+        """
+        try:
+            await self._client.list()
+            return True
+        except Exception as e:
+            raise OllamaConnectionError(self._base_url, e) from e
+```
+
+</details>
+
+#### `validate_model`
+
+```python
+async def validate_model(model_name: str) -> bool
+```
+
+Test that a specific model is available in Ollama.
+
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `model_name` | `str` | - | The model name to validate. |
+
+
+<details>
+<summary>View Source (lines 153-185) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/llm/ollama.py#L153-L185">GitHub</a></summary>
+
+```python
+async def validate_model(self, model_name: str) -> bool:
+        """Test that a specific model is available in Ollama.
+
+        Args:
+            model_name: The model name to validate.
+
+        Returns:
+            True if the model is available.
+
+        Raises:
+            ProviderModelNotFoundError: If the model is not available.
+            ProviderConnectionError: If Ollama cannot be reached.
+        """
+        try:
+            models_response = await self._client.list()
+            available_models = [
+                m.model for m in models_response.models if m.model is not None
+            ]
+
+            model_base = model_name.split(":")[0]
+            model_found = any(
+                m == model_name or m.startswith(f"{model_name}:") or m.split(":")[0] == model_base
+                for m in available_models
+            )
+
+            if not model_found:
+                raise OllamaModelNotFoundError(model_name, available_models)
+
+            return True
+        except OllamaModelNotFoundError:
+            raise
+        except Exception as e:
+            raise OllamaConnectionError(self._base_url, e) from e
+```
+
+</details>
+
+#### `get_capabilities`
+
+```python
+def get_capabilities() -> LLMProviderCapabilities
+```
+
+Return Ollama provider capabilities.
+
+
+<details>
+<summary>View Source (lines 187-201) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/llm/ollama.py#L187-L201">GitHub</a></summary>
+
+```python
+def get_capabilities(self) -> LLMProviderCapabilities:
+        """Return Ollama provider capabilities.
+
+        Returns:
+            LLMProviderCapabilities with Ollama-specific information.
+        """
+        return LLMProviderCapabilities(
+            supports_streaming=True,
+            supports_system_prompt=True,
+            max_tokens=4096,  # Depends on model
+            max_context_length=128000,  # Depends on model
+            models=self._available_models,
+            supports_function_calling=False,
+            supports_vision=False,  # Some models support it
+        )
+```
+
+</details>
+
 #### `generate`
 
 ```python
@@ -372,7 +614,7 @@ async def generate(prompt: str, system_prompt: str | None = None, max_tokens: in
 Generate text from a prompt.
 
 
-| [Parameter](../../generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `prompt` | `str` | - | The user prompt. |
 | `system_prompt` | `str | None` | `None` | Optional system prompt. |
@@ -381,7 +623,7 @@ Generate text from a prompt.
 
 
 <details>
-<summary>View Source (lines 121-180) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/llm/ollama.py#L121-L180">GitHub</a></summary>
+<summary>View Source (lines 204-263) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/llm/ollama.py#L204-L263">GitHub</a></summary>
 
 ```python
 async def generate(
@@ -457,7 +699,7 @@ async def generate_stream(prompt: str, system_prompt: str | None = None, max_tok
 Generate text from a prompt with streaming.
 
 
-| [Parameter](../../generators/api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `prompt` | `str` | - | The user prompt. |
 | `system_prompt` | `str | None` | `None` | Optional system prompt. |
@@ -466,7 +708,7 @@ Generate text from a prompt with streaming.
 
 
 <details>
-<summary>View Source (lines 182-236) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/llm/ollama.py#L182-L236">GitHub</a></summary>
+<summary>View Source (lines 265-319) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/llm/ollama.py#L265-L319">GitHub</a></summary>
 
 ```python
 async def generate_stream(
@@ -540,7 +782,7 @@ Get the provider name.
 
 
 <details>
-<summary>View Source (lines 239-241) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/llm/ollama.py#L239-L241">GitHub</a></summary>
+<summary>View Source (lines 322-324) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/llm/ollama.py#L322-L324">GitHub</a></summary>
 
 ```python
 def name(self) -> str:
@@ -556,7 +798,6 @@ def name(self) -> str:
 classDiagram
     class OllamaConnectionError {
         +base_url
-        +original_error
         -__init__()
     }
     class OllamaModelNotFoundError {
@@ -568,12 +809,15 @@ classDiagram
         -__init__(model: str, base_url: str)
         +check_health() bool
         -_ensure_healthy() None
+        +validate_connectivity() bool
+        +validate_model(model_name: str) bool
+        +get_capabilities() LLMProviderCapabilities
         +generate(prompt: str, system_prompt: str | None, max_tokens: int, temperature: float) str
         +generate_stream(prompt: str, system_prompt: str | None, max_tokens: int, temperature: float) AsyncIterator[str]
         +name() str
     }
-    OllamaConnectionError --|> Exception
-    OllamaModelNotFoundError --|> Exception
+    OllamaConnectionError --|> ProviderConnectionError
+    OllamaModelNotFoundError --|> ProviderModelNotFoundError
     OllamaProvider --|> LLMProvider
 ```
 
@@ -582,39 +826,47 @@ classDiagram
 ```mermaid
 flowchart TD
     N0[AsyncClient]
-    N1[OllamaConnectionError]
-    N2[OllamaConnectionError.__init__]
-    N3[OllamaModelNotFoundError]
-    N4[OllamaModelNotFoundError.__...]
-    N5[OllamaProvider.__init__]
-    N6[OllamaProvider._ensure_healthy]
-    N7[OllamaProvider.check_health]
-    N8[OllamaProvider.generate]
-    N9[OllamaProvider.generate_stream]
-    N10[__init__]
-    N11[_ensure_healthy]
-    N12[cast]
-    N13[chat]
-    N14[check_health]
-    N2 --> N10
-    N4 --> N10
-    N5 --> N0
-    N7 --> N3
-    N7 --> N1
-    N6 --> N14
-    N8 --> N11
-    N8 --> N13
-    N8 --> N12
-    N8 --> N3
-    N8 --> N1
-    N9 --> N11
-    N9 --> N13
-    N9 --> N3
-    N9 --> N1
+    N1[LLMProviderCapabilities]
+    N2[OllamaConnectionError]
+    N3[OllamaConnectionError.__init__]
+    N4[OllamaModelNotFoundError]
+    N5[OllamaModelNotFoundError.__...]
+    N6[OllamaProvider.__init__]
+    N7[OllamaProvider._ensure_healthy]
+    N8[OllamaProvider.check_health]
+    N9[OllamaProvider.generate]
+    N10[OllamaProvider.generate_stream]
+    N11[OllamaProvider.get_capabili...]
+    N12[OllamaProvider.validate_con...]
+    N13[OllamaProvider.validate_model]
+    N14[__init__]
+    N15[_ensure_healthy]
+    N16[cast]
+    N17[chat]
+    N18[check_health]
+    N3 --> N14
+    N5 --> N14
+    N6 --> N0
+    N8 --> N4
+    N8 --> N2
+    N7 --> N18
+    N12 --> N2
+    N13 --> N4
+    N13 --> N2
+    N11 --> N1
+    N9 --> N15
+    N9 --> N17
+    N9 --> N16
+    N9 --> N4
+    N9 --> N2
+    N10 --> N15
+    N10 --> N17
+    N10 --> N4
+    N10 --> N2
     classDef func fill:#e1f5fe
-    class N0,N1,N3,N10,N11,N12,N13,N14 func
+    class N0,N1,N2,N4,N14,N15,N16,N17,N18 func
     classDef method fill:#fff3e0
-    class N2,N4,N5,N6,N7,N8,N9 method
+    class N3,N5,N6,N7,N8,N9,N10,N11,N12,N13 method
 ```
 
 ## Used By
@@ -622,8 +874,9 @@ flowchart TD
 Functions and methods in this file and their callers:
 
 - **`AsyncClient`**: called by `OllamaProvider.__init__`
-- **`OllamaConnectionError`**: called by `OllamaProvider.check_health`, `OllamaProvider.generate`, `OllamaProvider.generate_stream`
-- **`OllamaModelNotFoundError`**: called by `OllamaProvider.check_health`, `OllamaProvider.generate`, `OllamaProvider.generate_stream`
+- **`LLMProviderCapabilities`**: called by `OllamaProvider.get_capabilities`
+- **`OllamaConnectionError`**: called by `OllamaProvider.check_health`, `OllamaProvider.generate`, `OllamaProvider.generate_stream`, `OllamaProvider.validate_connectivity`, `OllamaProvider.validate_model`
+- **`OllamaModelNotFoundError`**: called by `OllamaProvider.check_health`, `OllamaProvider.generate`, `OllamaProvider.generate_stream`, `OllamaProvider.validate_model`
 - **`__init__`**: called by `OllamaConnectionError.__init__`, `OllamaModelNotFoundError.__init__`
 - **`_ensure_healthy`**: called by `OllamaProvider.generate`, `OllamaProvider.generate_stream`
 - **`cast`**: called by `OllamaProvider.generate`
@@ -688,15 +941,18 @@ assert "ollama pull llama3.2" in str(error)
 
 | Entity | Type | Author | Date | Commit |
 |--------|------|--------|------|--------|
-| `OllamaProvider` | class | Brian Breidenbach | today | `0d91a70` Apply Python best practices... |
-| `check_health` | method | Brian Breidenbach | today | `0d91a70` Apply Python best practices... |
-| `generate` | method | Brian Breidenbach | today | `0d91a70` Apply Python best practices... |
-| `generate_stream` | method | Brian Breidenbach | yesterday | `815ed5f` Fix remaining generic excep... |
-| `OllamaConnectionError` | class | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
-| `OllamaModelNotFoundError` | class | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
-| `__init__` | method | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
-| `_ensure_healthy` | method | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
-| `name` | method | Brian Breidenbach | 5 days ago | `cdae76f` Initial commit: Local DeepW... |
+| `OllamaConnectionError` | class | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `OllamaModelNotFoundError` | class | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `OllamaProvider` | class | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `__init__` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `check_health` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `validate_connectivity` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `validate_model` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `get_capabilities` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| `generate` | method | Brian Breidenbach | 3 weeks ago | `0d91a70` Apply Python best practices... |
+| `generate_stream` | method | Brian Breidenbach | 3 weeks ago | `815ed5f` Fix remaining generic excep... |
+| `_ensure_healthy` | method | Brian Breidenbach | 3 weeks ago | `c568951` Add input validation, type ... |
+| `name` | method | Brian Breidenbach | 3 weeks ago | `cdae76f` Initial commit: Local DeepW... |
 
 ## Additional Source Code
 
@@ -705,7 +961,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_ensure_healthy`
 
 <details>
-<summary>View Source (lines 112-118) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/llm/ollama.py#L112-L118">GitHub</a></summary>
+<summary>View Source (lines 130-136) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/llm/ollama.py#L130-L136">GitHub</a></summary>
 
 ```python
 async def _ensure_healthy(self) -> None:
@@ -719,6 +975,3 @@ async def _ensure_healthy(self) -> None:
 
 </details>
 
-## Relevant Source Files
-
-- `src/local_deepwiki/providers/llm/ollama.py:13-26`

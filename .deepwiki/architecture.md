@@ -1,138 +1,110 @@
-# Architecture Documentation
+# System Architecture Documentation
 
 ## System Overview
 
-The system is designed to manage and generate various components related to codebase documentation, configuration management, and API testing. The primary functionalities include parsing code files, generating module documentation, handling LLM (Large [Language](files/src/local_deepwiki/models.md) Model) providers, and managing inheritance diagrams.
+Local DeepWiki is a privacy-focused MCP (Model Context Protocol) server that generates comprehensive documentation wikis for code repositories. It combines tree-sitter AST parsing, vector-based semantic search (LanceDB), and LLM-powered content generation to produce browsable, searchable documentation directly from source code. The system runs entirely locally -- no code leaves the user's machine unless an external LLM provider is explicitly configured.
 
 ## Key Components
 
-1. **[LLMConfig](files/src/local_deepwiki/config.md)**
-   - Manages the configuration for different Large [Language](files/src/local_deepwiki/models.md) Models such as Ollama, Anthropic, and OpenAI. It uses Pydantic's BaseModel to enforce type safety and provide default configurations.
+The system is built around a pipeline architecture with pluggable providers:
 
-2. **[OllamaProvider](files/src/local_deepwiki/providers/llm/ollama.md)**
-   - A specific implementation of an LLM provider that interacts with the Ollama model. It includes methods like `check_health`, `generate`, and `generate_stream`.
-
-3. **[ClassNode](files/src/local_deepwiki/generators/inheritance.md)**
-   - Represents a class in the inheritance tree, holding information such as the class name, file path, parents, children, whether it is abstract, and its docstring.
-
-4. **TestMain** and **TestMainCli**
-   - Test classes for the [main](files/src/local_deepwiki/export/html.md) application logic, covering scenarios like non-existent paths, running initial indices, handling full rebuilds, and CLI-specific functionalities like custom wiki paths and export options.
-
-5. **[EmbeddingConfig](files/src/local_deepwiki/config.md)**
-   - Manages configurations for embedding providers, similar to [LLMConfig](files/src/local_deepwiki/config.md), with support for local and OpenAI embeddings.
-
-6. **TestGetLLMProvider** and **TestGetEmbeddingProvider**
-   - Test classes for factory functions that return specific provider instances based on configuration settings.
-
-7. **TestGenerateModuleDocs**
-   - Tests the generation of module documentation, ensuring modules are correctly indexed and documented from the source code.
-
-8. **[ResearchCancelledError](files/src/local_deepwiki/core/deep_research.md)**
-   - An error class indicating that a research operation has been cancelled.
+- **MCP Server** (`server.py`, `handlers.py`): The entry point. Exposes 20+ tools via the FastMCP protocol, including `index_repository`, `ask_question`, `deep_research`, wiki reading, export, and generator tools. Tool dispatch is handled by `handlers.py` which contains all business logic.
+- **Code Parser** (`core/parser.py`): Multi-language AST parsing using tree-sitter grammars. Supports 13 languages (Python, TypeScript, JavaScript, Go, Rust, Java, C, C++, Swift, Ruby, PHP, Kotlin, C#). Extracts functions, classes, methods, and module structure.
+- **Code Chunker** (`core/chunker.py`): AST-aware semantic chunking that splits code at function/class boundaries rather than arbitrary token limits. Produces `CodeChunk` objects with metadata (language, type, name, line range).
+- **Vector Store** (`core/vectorstore.py`): LanceDB-backed vector storage with adaptive search, pagination, and caching. Handles embedding storage, similarity search, and filter-based retrieval.
+- **Repository Indexer** (`core/indexer.py`): Orchestrates the full pipeline: file discovery, secret scanning, parallel parsing, chunking, embedding, vector storage, and wiki generation. Supports incremental indexing via file hash manifests.
+- **Deep Research** (`core/deep_research.py`): Multi-step reasoning pipeline that decomposes complex questions into sub-queries, performs parallel vector retrieval, runs gap analysis, and synthesizes comprehensive answers with checkpointing.
+- **Wiki Generator** (`generators/wiki.py`): LLM-powered markdown generation producing per-file docs, module docs, architecture pages, glossaries, inheritance trees, and more. Orchestrates 15+ specialized generators.
+- **Provider Abstraction** (`providers/`): Pluggable backends for LLM (Ollama, Anthropic, OpenAI) and embeddings (local sentence-transformers, OpenAI). All implement abstract base classes (`LLMProvider`, `EmbeddingProvider`).
+- **Security Layer** (`security/`): RBAC access control, repository allowlist/denylist, secret detection, path traversal prevention, input validation, and audit logging.
+- **Export** (`export/`): Static HTML and PDF export with streaming support for large wikis.
+- **Web UI** (`web/app.py`): Flask-based wiki browser with chat interface and deep research integration.
+- **Plugin System** (`plugins/`): Extensibility via `LanguageParserPlugin`, `WikiGeneratorPlugin`, and `EmbeddingProviderPlugin` interfaces with registry-based discovery.
 
 ## Data Flow
 
-1. **Configuration Management**: The system starts by loading configuration settings using [`LLMConfig`](files/src/local_deepwiki/config.md) and [`EmbeddingConfig`](files/src/local_deepwiki/config.md). These configurations dictate which LLM or embedding provider is used.
+### Indexing (Write Path)
 
-2. **[LLM Provider](files/src/local_deepwiki/providers/base.md) Initialization**: Based on the configuration, the appropriate LLM provider (e.g., [OllamaProvider](files/src/local_deepwiki/providers/llm/ollama.md)) is instantiated through the `get_llm_provider` function.
+1. User calls `index_repository` with a repository path.
+2. **Secret Detection**: `SecretDetector` scans for hardcoded credentials before processing.
+3. **File Discovery**: `RepositoryIndexer._collect_files_to_process()` walks the repo, applies exclude patterns (`.venv`, `node_modules`, `.git`, etc.), filters by supported languages, and checks the manifest for changed files.
+4. **Parallel Parsing**: `ThreadPoolExecutor` runs `CodeParser.parse_file()` concurrently across files, producing tree-sitter ASTs.
+5. **Chunking**: `CodeChunker.chunk_file()` walks each AST and creates semantic `CodeChunk` objects at function/class boundaries.
+6. **Embedding**: `EmbeddingProvider.embed()` generates vector embeddings for each chunk's content.
+7. **Storage**: `VectorStore.add_chunks()` writes chunks and embeddings to LanceDB.
+8. **Wiki Generation**: `WikiGenerator.generate_wiki()` runs a 10-phase pipeline producing markdown pages, diagrams, glossary, inheritance trees, cross-links, and search index.
+9. **Manifest Update**: File hashes are saved for incremental re-indexing.
 
-3. **Code Parsing**: The system parses code files to extract class information and inheritance relationships using classes like [`ClassNode`](files/src/local_deepwiki/generators/inheritance.md).
+### Query (Read Path)
 
-4. **Inheritance Diagram Generation**: Using parsed data, the system generates inheritance diagrams that visualize class hierarchies.
+1. User calls `ask_question` with a question and repository path.
+2. Question is embedded via `EmbeddingProvider.embed()`.
+3. `VectorStore.search()` performs similarity search returning top-k relevant chunks.
+4. Chunks are assembled into context and sent to `LLMProvider.generate()` for synthesis.
+5. Answer is returned with source citations.
 
-5. **Module Documentation Generation**: The system processes modules, generating documentation based on parsed source code. This includes indexing and handling of different file types and directories.
+### Deep Research
 
-6. **Testing**: Various test classes (e.g., `TestMain`, `TestGetParentClasses`) validate the functionality of core components, ensuring that configurations are correctly applied and operations behave as expected.
+1. Question is decomposed into 3-5 sub-questions via LLM.
+2. Sub-questions are searched in parallel against the vector store.
+3. Gap analysis identifies missing information.
+4. Follow-up queries retrieve additional context.
+5. All context is synthesized into a comprehensive answer with checkpointing for resumability.
 
 ## Component Diagram
 
 ```mermaid
-classDiagram
-    class LLMConfig {
-        +provider: Literal["ollama", "anthropic", "openai"]
-        +ollama: OllamaConfig
-        +anthropic: AnthropicConfig
-        +openai: OpenAILLMConfig
-    }
+graph TD
+    U[User / MCP Client] --> S[MCP Server<br/>server.py]
+    S --> H[Tool Handlers<br/>handlers.py]
 
-    class OllamaProvider {
-        +__init__(model: str, base_url: str)
-        +check_health()
-        +_ensure_healthy()
-        +generate(prompt: str)
-        +generate_stream(prompt: str)
-        +name() String
-    }
+    H --> IDX[RepositoryIndexer<br/>core/indexer.py]
+    H --> QA[ask_question]
+    H --> DR[DeepResearchPipeline<br/>core/deep_research.py]
+    H --> WR[Wiki Reader]
+    H --> EX[Export<br/>export/]
 
-    class ClassNode {
-        +name: str
-        +file_path: str
-        +parents: list[str]
-        +children: list[str]
-        +is_abstract: bool
-        +docstring: str | None
-    }
+    IDX --> SD[SecretDetector<br/>core/secret_detector.py]
+    IDX --> CP[CodeParser<br/>core/parser.py]
+    IDX --> CC[CodeChunker<br/>core/chunker.py]
+    IDX --> EP[EmbeddingProvider<br/>providers/embeddings/]
+    IDX --> VS[VectorStore<br/>core/vectorstore.py]
+    IDX --> WG[WikiGenerator<br/>generators/wiki.py]
 
-    class TestMain {
-        +test_main_path_does_not_exist()
-        +test_main_path_is_not_directory()
-        +test_main_skip_initial_starts_watcher()
-        +test_main_with_options()
-        +test_main_runs_initial_index()
-        +test_main_with_full_rebuild()
-        +test_main_default_repo_path()
-        +test_main_watcher_stops_on_interrupt()
-    }
+    QA --> EP
+    QA --> VS
+    QA --> LLM[LLMProvider<br/>providers/llm/]
 
-    class TestMainCli {
-        +test_main_default_args()
-        +test_main_custom_wiki_path()
-        +test_main_with_output_option()
-        +test_main_with_separate_option()
-        +test_main_nonexistent_wiki_path()
-        +test_main_handles_export_exception()
-    }
+    DR --> VS
+    DR --> LLM
 
-    class EmbeddingConfig {
-        +provider: Literal["local", "openai"]
-        +local: LocalEmbeddingConfig
-        +openai: OpenAIEmbeddingConfig
-    }
+    WG --> VS
+    WG --> LLM
+    WG --> GEN[Generators<br/>diagrams, glossary,<br/>inheritance, coverage,<br/>callgraph, changelog, ...]
 
-    class TestGetLLMProvider {
-        +test_returns_ollama_provider()
-        +test_returns_anthropic_provider()
-    }
+    VS --> DB[(LanceDB)]
+    EP --> ST[sentence-transformers<br/>or OpenAI Embeddings]
+    LLM --> OL[Ollama]
+    LLM --> AN[Anthropic]
+    LLM --> OA[OpenAI]
 
-    class TestGetEmbeddingProvider {
-        +test_returns_local_provider()
-        +test_returns_openai_provider()
-    }
-
-    class TestGenerateModuleDocs {
-        +generate_module_docs_from_source()
-        +index_modules()
-    }
-
-    LLMConfig --> OllamaProvider
-    ClassNode -->|parses from| TestMain
-    ClassNode -->|parses from| TestGetParentClasses
-    TestMain -->|uses| EmbeddingConfig
-    TestMainCli -->|uses| EmbeddingConfig
-    TestGetLLMProvider -->|uses| LLMConfig
-    TestGetEmbeddingProvider -->|uses| EmbeddingConfig
-    TestGenerateModuleDocs -->|generates from| ClassNode
+    SEC[Security Layer<br/>RBAC, Path Validation,<br/>Audit Logging] -.-> H
+    PLG[Plugin System<br/>plugins/registry.py] -.-> CP
+    PLG -.-> WG
+    PLG -.-> EP
 ```
 
 ## Key Design Decisions
 
-1. **Configuration Management**: The use of Pydantic's `BaseModel` for configuration classes like [`LLMConfig`](files/src/local_deepwiki/config.md) and [`EmbeddingConfig`](files/src/local_deepwiki/config.md) ensures strong typing and easy management of default values.
-
-2. **Factory Pattern**: The `get_llm_provider` function exemplifies the factory pattern, allowing for dynamic instantiation of LLM providers based on configuration settings. This design promotes flexibility and decouples provider creation from application logic.
-
-3. **Modular Testing**: The system is highly modular with dedicated test classes for each major component (e.g., `TestMain`, `TestGetParentClasses`). This approach ensures that individual components can be tested in isolation, facilitating easier maintenance and development.
-
-4. **Inheritance Diagram Generation**: By parsing code files into [`ClassNode`](files/src/local_deepwiki/generators/inheritance.md) objects, the system efficiently constructs inheritance diagrams, providing a visual representation of class hierarchies within the codebase.
+- **Async throughout**: All core operations use asyncio for concurrent LLM/embedding calls and parallel file processing.
+- **AST-aware chunking**: Code is split at function/class boundaries using tree-sitter, not arbitrary token limits, preserving semantic coherence.
+- **Incremental indexing**: File hashes tracked in a manifest allow re-indexing only changed files, significantly reducing re-index time.
+- **Provider abstraction**: LLM and embedding providers implement abstract base classes, allowing runtime switching between Ollama (local), Anthropic, and OpenAI.
+- **Frozen Pydantic config**: Immutable configuration objects (`model_config = {"frozen": True}`) prevent accidental mutation.
+- **6-layer path security**: Path traversal prevention via `Path.resolve()`, `is_relative_to()`, pattern validation, and dedicated validators in handlers, git_utils, validation, web, vectorstore, and events.
+- **Plugin system**: Extensible architecture for custom parsers, generators, and embedding providers via registry with entry point support.
+- **Event-driven hooks**: Pub-sub event system (`events.py`) decouples components across indexing, generation, and query lifecycles.
+- **LRU caching**: LLM response cache (`core/llm_cache.py`) avoids redundant calls for identical prompts.
 
 ## Workflow Sequences
 
@@ -272,20 +244,7 @@ sequenceDiagram
     D-->>U: DeepResearchResult
 ```
 
-## Relevant Source Files
 
-The following source files were used to generate this documentation:
+## Module Dependencies
 
-- `tests/test_parser.py:24-123`
-- `tests/test_provider_factories.py:21-99`
-- `tests/test_retry.py:8-144`
-- `tests/test_ollama_health.py:16-19`
-- `tests/test_chunker.py:13-428`
-- `tests/test_changelog.py:18-96`
-- `tests/test_server_handlers.py:15-75`
-- `tests/test_coverage.py:13-50`
-- `tests/test_vectorstore.py:9-28`
-- `tests/test_wiki_coverage.py:50-120`
-
-
-*Showing 10 of 102 source files.*
+For a detailed view of module interdependencies including circular dependency detection, see the [Dependency Graph](dependency-graph.md) page.

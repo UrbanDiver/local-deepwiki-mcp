@@ -1,68 +1,222 @@
-# search.py
+# File Overview
 
-## File Overview
+This file, `src/local_deepwiki/generators/search.py`, is responsible for generating search indexes for wiki pages and code entities. It provides functions to extract structured data from markdown content, such as headings, code terms, and snippets, and to assemble them into search-friendly entries. These entries can be used to power search functionality within a local deepwiki setup.
 
-This module provides functionality for generating search indexes from wiki pages. It creates JSON-based search indexes that can be used to enable search functionality within the wiki system.
+The module integrates with:
+- `VectorStore` for accessing code chunks
+- `WikiPage` for representing wiki content
+- `IndexStatus` for tracking indexing state
+- `ChunkType` for categorizing code chunks
 
-## Functions
+It is used by test functions (`test_search`) and likely integrated into CLI or indexing workflows via `src/local_deepwiki/cli/__init__.py` and `src/local_deepwiki/generators/wiki.py`.
 
-### write_search_index
+---
+
+# Functions
+
+## `extract_headings`
+
+```python
+def extract_headings(content: str) -> list[str]
+```
+
+Extracts all headings from markdown content.
+
+**Parameters:**
+- `content`: Markdown content.
+
+**Returns:**
+- List of heading texts (without # prefixes).
+
+## `extract_code_terms`
+
+```python
+def extract_code_terms(content: str) -> list[str]
+```
+
+Extracts code terms (class names, function names) from content.
+
+**Parameters:**
+- `content`: Markdown content.
+
+**Returns:**
+- List of code terms found in backticks.
+
+## `extract_snippet`
+
+```python
+def extract_snippet(content: str, max_length: int = 200) -> str
+```
+
+Extracts a text snippet from markdown content.
+
+**Parameters:**
+- `content`: Markdown content.
+- `max_length`: Maximum snippet length.
+
+**Returns:**
+- Plain text snippet.
+
+## `generate_search_entry`
+
+```python
+def generate_search_entry(page: WikiPage) -> dict
+```
+
+Generates a search index entry for a wiki page.
+
+**Parameters:**
+- `page`: The wiki page.
+
+**Returns:**
+- Dictionary with searchable fields (`path`, `title`, `headings`, `terms`, `snippet`).
+
+## `generate_search_index`
+
+```python
+def generate_search_index(pages: list[WikiPage]) -> list[dict]
+```
+
+Generates a search index from wiki pages.
+
+**Parameters:**
+- `pages`: List of wiki pages.
+
+**Returns:**
+- List of search entries.
+
+## `generate_entity_entries`
+
+```python
+async def generate_entity_entries(index_status: IndexStatus, vector_store: VectorStore) -> list[dict]
+```
+
+Generates search entries for individual code entities (functions, classes, methods) with type information.
+
+**Parameters:**
+- `index_status`: Index status with file information.
+- `vector_store`: Vector store with code chunks.
+
+**Returns:**
+- List of entity search entries.
+
+## `_build_keywords`
+
+```python
+def _build_keywords(name: str | None, param_types: dict[str, str], return_type: str | None, raises: list[str]) -> list[str]
+```
+
+Builds search keywords from entity metadata.
+
+**Parameters:**
+- `name`: Entity name.
+- `param_types`: Parameter types mapping.
+- `return_type`: Return type string.
+- `raises`: List of exception types.
+
+**Returns:**
+- List of searchable keywords.
+
+## `generate_full_search_index`
+
+```python
+async def generate_full_search_index(pages: list[WikiPage], index_status: IndexStatus | None = None, vector_store: VectorStore | None = None) -> dict
+```
+
+Generates a comprehensive search index including both page-level and entity-level entries.
+
+**Parameters:**
+- `pages`: List of wiki pages.
+- `index_status`: Optional index status for entity extraction.
+- `vector_store`: Optional vector store for entity extraction.
+
+**Returns:**
+- Dictionary with `'pages'` and `'entities'` lists.
+
+## `write_search_index`
 
 ```python
 def write_search_index(wiki_path: Path, pages: list[WikiPage]) -> Path
 ```
 
-Generates and writes a search index to disk using a legacy page-only approach.
+Generates and writes a search index to disk (legacy page-only version).
 
 **Parameters:**
-- `wiki_path`: Path to the wiki directory where the search index will be written
-- `pages`: List of [WikiPage](../models.md) objects to include in the search index
+- `wiki_path`: Path to wiki directory.
+- `pages`: List of wiki pages.
 
 **Returns:**
-- Path to the generated `search.json` file
+- Path to the generated `search.json` file.
 
-**Description:**
-This function creates a search index from the provided wiki pages and saves it as a JSON file in the wiki directory. It uses the generate_search_index function internally to build the index data structure.
-
-### Additional Functions
-
-Based on the module structure, this file contains several other functions that work together to build search indexes:
-
-- `extract_headings`: Extracts heading information from content
-- `extract_code_terms`: Extracts code-related terms for indexing
-- `extract_snippet`: Extracts content snippets for search results
-- `generate_search_entry`: Creates individual search entries
-- `generate_search_index`: Builds the [main](../export/pdf.md) search index structure
-- `generate_entity_entries`: Creates entries for entities in the index
-- `_build_keywords`: Internal function for building keyword lists
-- `generate_full_search_index`: Creates a comprehensive search index
-- `write_full_search_index`: Writes the full search index to disk
-
-## Usage Examples
-
-### Basic Search Index Generation
+## `write_full_search_index`
 
 ```python
-from pathlib import Path
-from local_deepwiki.generators.search import write_search_index
-
-# Generate search index for wiki pages
-wiki_directory = Path("./my_wiki")
-wiki_pages = [...]  # List of WikiPage objects
-search_file_path = write_search_index(wiki_directory, wiki_pages)
-print(f"Search index written to: {search_file_path}")
+async def write_full_search_index(wiki_path: Path, pages: list[WikiPage], index_status: IndexStatus, vector_store: VectorStore) -> Path
 ```
 
-## Related Components
+Generates and writes a comprehensive search index to disk (includes both pages and entities).
 
-This module integrates with several other components:
+**Parameters:**
+- `wiki_path`: Path to wiki directory.
+- `pages`: List of wiki pages.
+- `index_status`: Index status with file information.
+- `vector_store`: Vector store with code chunks.
 
-- **[WikiPage](../models.md)**: The primary data model for wiki pages that are indexed
-- **[VectorStore](../core/vectorstore.md)**: Used for vector-based search capabilities
-- **[ChunkType](../models.md)**: Enumeration for different types of content chunks
-- **[IndexStatus](../models.md)**: Status tracking for indexing operations
+**Returns:**
+- Path to the generated `search.json` file.
 
-The module uses standard Python libraries including `json` for serialization, `re` for regular expressions, and `pathlib` for file system operations.
+---
+
+# Integration
+
+This file is part of the `local_deepwiki` package and integrates with:
+
+- **Core components**: It uses `VectorStore` to retrieve code chunks and `WikiPage` to represent wiki content.
+- **CLI and indexing workflows**: The `write_search_index` and `write_full_search_index` functions are likely called by CLI commands in `src/local_deepwiki/cli/__init__.py` to generate and persist search indexes.
+- **Test suite**: The functions `extract_headings`, `extract_code_terms`, and `extract_snippet` are used by `test_search` in `tests/test_plugins.py`.
+
+---
+
+# Usage Examples
+
+### Generate a search index for wiki pages:
+
+```python
+from local_deepwiki.generators.search import generate_search_index
+from local_deepwiki.models import WikiPage
+
+pages = [WikiPage(...), WikiPage(...)]
+index = generate_search_index(pages)
+```
+
+### Write a search index to disk:
+
+```python
+from local_deepwiki.generators.search import write_search_index
+from pathlib import Path
+
+wiki_path = Path("my_wiki")
+index_file = write_search_index(wiki_path, pages)
+```
+
+### Generate a full search index (pages + entities):
+
+```python
+from local_deepwiki.generators.search import generate_full_search_index
+from local_deepwiki.models import IndexStatus
+from local_deepwiki.core.vectorstore import VectorStore
+
+index = await generate_full_search_index(pages, index_status, vector_store)
+```
+
+### Write a full search index to disk:
+
+```python
+from local_deepwiki.generators.search import write_full_search_index
+from pathlib import Path
+
+index_file = await write_full_search_index(wiki_path, pages, index_status, vector_store)
+```
 
 ## API Reference
 
@@ -77,7 +231,7 @@ def extract_headings(content: str) -> list[str]
 Extract all headings from markdown content.
 
 
-| [Parameter](api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `content` | `str` | - | Markdown content. |
 
@@ -86,7 +240,7 @@ Extract all headings from markdown content.
 
 
 <details>
-<summary>View Source (lines 16-35) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/search.py#L16-L35">GitHub</a></summary>
+<summary>View Source (lines 16-35) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/search.py#L16-L35">GitHub</a></summary>
 
 ```python
 def extract_headings(content: str) -> list[str]:
@@ -122,7 +276,7 @@ def extract_code_terms(content: str) -> list[str]
 Extract code terms (class names, function names) from content.
 
 
-| [Parameter](api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `content` | `str` | - | Markdown content. |
 
@@ -131,7 +285,7 @@ Extract code terms (class names, function names) from content.
 
 
 <details>
-<summary>View Source (lines 38-59) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/search.py#L38-L59">GitHub</a></summary>
+<summary>View Source (lines 38-59) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/search.py#L38-L59">GitHub</a></summary>
 
 ```python
 def extract_code_terms(content: str) -> list[str]:
@@ -169,7 +323,7 @@ def extract_snippet(content: str, max_length: int = 200) -> str
 Extract a text snippet from markdown content.
 
 
-| [Parameter](api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `content` | `str` | - | Markdown content. |
 | `max_length` | `int` | `200` | Maximum snippet length. |
@@ -179,7 +333,7 @@ Extract a text snippet from markdown content.
 
 
 <details>
-<summary>View Source (lines 62-86) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/search.py#L62-L86">GitHub</a></summary>
+<summary>View Source (lines 62-86) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/search.py#L62-L86">GitHub</a></summary>
 
 ```python
 def extract_snippet(content: str, max_length: int = 200) -> str:
@@ -220,16 +374,16 @@ def generate_search_entry(page: WikiPage) -> dict
 Generate a search index entry for a wiki page.
 
 
-| [Parameter](api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `page` | [`WikiPage`](../models.md) | - | The wiki page. |
+| `page` | `WikiPage` | - | The wiki page. |
 
 **Returns:** `dict`
 
 
 
 <details>
-<summary>View Source (lines 89-108) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/search.py#L89-L108">GitHub</a></summary>
+<summary>View Source (lines 89-108) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/search.py#L89-L108">GitHub</a></summary>
 
 ```python
 def generate_search_entry(page: WikiPage) -> dict:
@@ -265,7 +419,7 @@ def generate_search_index(pages: list[WikiPage]) -> list[dict]
 Generate a search index from wiki pages.
 
 
-| [Parameter](api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `pages` | `list[WikiPage]` | - | List of wiki pages. |
 
@@ -274,7 +428,7 @@ Generate a search index from wiki pages.
 
 
 <details>
-<summary>View Source (lines 111-120) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/search.py#L111-L120">GitHub</a></summary>
+<summary>View Source (lines 111-120) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/search.py#L111-L120">GitHub</a></summary>
 
 ```python
 def generate_search_index(pages: list[WikiPage]) -> list[dict]:
@@ -300,17 +454,17 @@ async def generate_entity_entries(index_status: IndexStatus, vector_store: Vecto
 Generate search entries for individual code entities.  Creates searchable entries for each function, class, and method with type information for filtering.
 
 
-| [Parameter](api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `index_status` | [`IndexStatus`](../models.md) | - | Index status with file information. |
-| `vector_store` | [`VectorStore`](../core/vectorstore.md) | - | Vector store with code chunks. |
+| `index_status` | `IndexStatus` | - | Index status with file information. |
+| `vector_store` | `VectorStore` | - | Vector store with code chunks. |
 
 **Returns:** `list[dict]`
 
 
 
 <details>
-<summary>View Source (lines 123-204) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/search.py#L123-L204">GitHub</a></summary>
+<summary>View Source (lines 123-204) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/search.py#L123-L204">GitHub</a></summary>
 
 ```python
 async def generate_entity_entries(
@@ -408,7 +562,7 @@ async def generate_full_search_index(pages: list[WikiPage], index_status: IndexS
 Generate a comprehensive search index with pages and entities.
 
 
-| [Parameter](api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `pages` | `list[WikiPage]` | - | List of wiki pages. |
 | `index_status` | `IndexStatus | None` | `None` | Optional index status for entity extraction. |
@@ -419,7 +573,7 @@ Generate a comprehensive search index with pages and entities.
 
 
 <details>
-<summary>View Source (lines 262-290) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/search.py#L262-L290">GitHub</a></summary>
+<summary>View Source (lines 262-290) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/search.py#L262-L290">GitHub</a></summary>
 
 ```python
 async def generate_full_search_index(
@@ -464,7 +618,7 @@ def write_search_index(wiki_path: Path, pages: list[WikiPage]) -> Path
 Generate and write search index to disk (legacy page-only version).
 
 
-| [Parameter](api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `wiki_path` | `Path` | - | Path to wiki directory. |
 | `pages` | `list[WikiPage]` | - | List of wiki pages. |
@@ -474,7 +628,7 @@ Generate and write search index to disk (legacy page-only version).
 
 
 <details>
-<summary>View Source (lines 293-306) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/search.py#L293-L306">GitHub</a></summary>
+<summary>View Source (lines 293-306) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/search.py#L293-L306">GitHub</a></summary>
 
 ```python
 def write_search_index(wiki_path: Path, pages: list[WikiPage]) -> Path:
@@ -504,12 +658,12 @@ async def write_full_search_index(wiki_path: Path, pages: list[WikiPage], index_
 Generate and write comprehensive search index to disk.  Includes both page-level and entity-level search entries.
 
 
-| [Parameter](api_docs.md) | Type | Default | Description |
+| Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `wiki_path` | `Path` | - | Path to wiki directory. |
 | `pages` | `list[WikiPage]` | - | List of wiki pages. |
-| `index_status` | [`IndexStatus`](../models.md) | - | Index status with file information. |
-| `vector_store` | [`VectorStore`](../core/vectorstore.md) | - | Vector store with code chunks. |
+| `index_status` | `IndexStatus` | - | Index status with file information. |
+| `vector_store` | `VectorStore` | - | Vector store with code chunks. |
 
 **Returns:** `Path`
 
@@ -517,7 +671,7 @@ Generate and write comprehensive search index to disk.  Includes both page-level
 
 
 <details>
-<summary>View Source (lines 309-331) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/search.py#L309-L331">GitHub</a></summary>
+<summary>View Source (lines 309-331) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/search.py#L309-L331">GitHub</a></summary>
 
 ```python
 async def write_full_search_index(
@@ -691,16 +845,16 @@ assert "simple paragraph" in snippet
 
 | Entity | Type | Author | Date | Commit |
 |--------|------|--------|------|--------|
-| `generate_entity_entries` | function | Brian Breidenbach | today | `553a2ee` Add entity-level search wit... |
-| `_build_keywords` | function | Brian Breidenbach | today | `553a2ee` Add entity-level search wit... |
-| `generate_full_search_index` | function | Brian Breidenbach | today | `553a2ee` Add entity-level search wit... |
-| `write_search_index` | function | Brian Breidenbach | today | `553a2ee` Add entity-level search wit... |
-| `write_full_search_index` | function | Brian Breidenbach | today | `553a2ee` Add entity-level search wit... |
-| `extract_headings` | function | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
-| `extract_code_terms` | function | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
-| `extract_snippet` | function | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
-| `generate_search_entry` | function | Brian Breidenbach | 3 days ago | `c568951` Add input validation, type ... |
-| `generate_search_index` | function | Brian Breidenbach | 5 days ago | `1315c7f` Add wiki improvements: incr... |
+| `generate_entity_entries` | function | Brian Breidenbach | 3 weeks ago | `553a2ee` Add entity-level search wit... |
+| `_build_keywords` | function | Brian Breidenbach | 3 weeks ago | `553a2ee` Add entity-level search wit... |
+| `generate_full_search_index` | function | Brian Breidenbach | 3 weeks ago | `553a2ee` Add entity-level search wit... |
+| `write_search_index` | function | Brian Breidenbach | 3 weeks ago | `553a2ee` Add entity-level search wit... |
+| `write_full_search_index` | function | Brian Breidenbach | 3 weeks ago | `553a2ee` Add entity-level search wit... |
+| `extract_headings` | function | Brian Breidenbach | 3 weeks ago | `c568951` Add input validation, type ... |
+| `extract_code_terms` | function | Brian Breidenbach | 3 weeks ago | `c568951` Add input validation, type ... |
+| `extract_snippet` | function | Brian Breidenbach | 3 weeks ago | `c568951` Add input validation, type ... |
+| `generate_search_entry` | function | Brian Breidenbach | 3 weeks ago | `c568951` Add input validation, type ... |
+| `generate_search_index` | function | Brian Breidenbach | 3 weeks ago | `1315c7f` Add wiki improvements: incr... |
 
 ## Additional Source Code
 
@@ -709,7 +863,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_build_keywords`
 
 <details>
-<summary>View Source (lines 207-259) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/search.py#L207-L259">GitHub</a></summary>
+<summary>View Source (lines 207-259) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/search.py#L207-L259">GitHub</a></summary>
 
 ```python
 def _build_keywords(
@@ -769,35 +923,3 @@ def _build_keywords(
 
 </details>
 
-## Relevant Source Files
-
-- `src/local_deepwiki/generators/search.py:16-35`
-
-## See Also
-
-- [models](../models.md) - dependency
-- [vectorstore](../core/vectorstore.md) - dependency
-- [crosslinks](crosslinks.md) - shares 3 dependencies
-- [see_also](see_also.md) - shares 3 dependencies
-- [diagrams](diagrams.md) - shares 3 dependencies
-
-## See Also
-
-- [vectorstore](../core/vectorstore.md) - dependency
-- [crosslinks](crosslinks.md) - shares 3 dependencies
-- [see_also](see_also.md) - shares 3 dependencies
-- [diagrams](diagrams.md) - shares 3 dependencies
-
-## See Also
-
-- [vectorstore](../core/vectorstore.md) - dependency
-- [crosslinks](crosslinks.md) - shares 3 dependencies
-- [see_also](see_also.md) - shares 3 dependencies
-- [diagrams](diagrams.md) - shares 3 dependencies
-
-## See Also
-
-- [vectorstore](../core/vectorstore.md) - dependency
-- [crosslinks](crosslinks.md) - shares 3 dependencies
-- [see_also](see_also.md) - shares 3 dependencies
-- [diagrams](diagrams.md) - shares 3 dependencies

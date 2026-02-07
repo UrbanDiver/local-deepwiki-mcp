@@ -458,7 +458,7 @@ class AskQuestionArgs(BaseModel):
     repo_path: str = Field(description="Path to the indexed repository")
     question: str = Field(min_length=1, description="Question about the codebase")
     max_context: int = Field(
-        default=5, ge=1, le=50, description="Maximum code chunks for context (1-50)"
+        default=10, ge=1, le=50, description="Maximum code chunks for context (1-50)"
     )
 
 
