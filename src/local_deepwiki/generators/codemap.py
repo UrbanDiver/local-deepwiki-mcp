@@ -165,6 +165,35 @@ def _is_noise(name: str) -> bool:
     return name.lower() in _BUILTIN_NAMES or len(name) <= 1
 
 
+# Regex to extract parameter names from a function signature line.
+# Matches `def foo(a, b, c):` or `function foo(a, b) {` style signatures.
+_PARAM_RE = re.compile(r"(?:def|function|fn|func)\s+\w+\s*\(([^)]*)\)")
+
+
+def _extract_param_names(content: str) -> list[str]:
+    """Extract parameter names from the first function signature in *content*.
+
+    Returns a list of bare parameter names (no type annotations or defaults).
+    """
+    for line in content.splitlines():
+        m = _PARAM_RE.search(line)
+        if m:
+            raw = m.group(1)
+            params: list[str] = []
+            for part in raw.split(","):
+                part = part.strip()
+                if not part:
+                    continue
+                # Strip type annotations (Python: `name: Type`, TS: `name: Type`)
+                name = part.split(":")[0].split("=")[0].strip()
+                # Strip leading `self`, `cls`, `*`, `**`
+                name = name.lstrip("*")
+                if name and name not in ("self", "cls"):
+                    params.append(name)
+            return params
+    return []
+
+
 # ---------------------------------------------------------------------------
 # 1. discover_entry_points
 # ---------------------------------------------------------------------------
@@ -350,15 +379,26 @@ async def build_cross_file_graph(
             if len(graph.nodes) >= max_nodes:
                 break
 
+            # For DATA_FLOW, compute a descriptive edge type from the
+            # target function's parameter signature.
+            def _edge_type_for(target_node: CodemapNode | None) -> str:
+                if focus != CodemapFocus.DATA_FLOW or target_node is None:
+                    return "calls"
+                params = _extract_param_names(target_node.content_preview)
+                if params:
+                    return f"passes({', '.join(params)})"
+                return "calls"
+
             # Already tracked?
             if callee_name in graph.nodes:
+                target_node = graph.nodes[callee_name]
                 graph.edges.append(
                     CodemapEdge(
                         source=current_node.qualified_name,
                         target=callee_name,
-                        edge_type="calls",
+                        edge_type=_edge_type_for(target_node),
                         source_file=current_node.file_path,
-                        target_file=graph.nodes[callee_name].file_path,
+                        target_file=target_node.file_path,
                     )
                 )
                 continue
@@ -373,7 +413,7 @@ async def build_cross_file_graph(
                     CodemapEdge(
                         source=current_node.qualified_name,
                         target=same_file_node.qualified_name,
-                        edge_type="calls",
+                        edge_type=_edge_type_for(same_file_node),
                         source_file=current_node.file_path,
                         target_file=same_file_node.file_path,
                     )
@@ -391,7 +431,7 @@ async def build_cross_file_graph(
                     CodemapEdge(
                         source=current_node.qualified_name,
                         target=cross_node.qualified_name,
-                        edge_type="calls",
+                        edge_type=_edge_type_for(cross_node),
                         source_file=current_node.file_path,
                         target_file=cross_node.file_path,
                     )
@@ -540,7 +580,11 @@ def generate_codemap_diagram(graph: CodemapGraph, focus: CodemapFocus) -> str:
             continue
         seen_edges.add(pair)
         arrow = "-.->" if edge.source_file != edge.target_file else "-->"
-        lines.append(f"    {src_id} {arrow} {tgt_id}")
+        if focus == CodemapFocus.DATA_FLOW and edge.edge_type != "calls":
+            safe_label = edge.edge_type.replace('"', "'")
+            lines.append(f'    {src_id} {arrow}|"{safe_label}"| {tgt_id}')
+        else:
+            lines.append(f"    {src_id} {arrow} {tgt_id}")
 
     # Class definitions
     lines.append("")
@@ -592,6 +636,26 @@ Numbered steps, each with:
 
 ## Key Observations
 2-3 bullet points about design patterns, error handling, or notable decisions."""
+
+_DATA_FLOW_SYSTEM_PROMPT = """\
+You are a code architecture expert specializing in data flow analysis. Given a \
+code graph with parameter annotations on edges, produce a narrative trace that \
+focuses on how data is transformed and passed between functions. Format your \
+response as:
+
+## Summary
+One paragraph overview of what data flows through this code and how it is transformed.
+
+## Data Flow Trace
+Numbered steps, each with:
+- The function/method name and its file location (e.g., `core/indexer.py:42`)
+- What data it receives (parameter names and their purpose)
+- How it transforms the data (1-2 sentences)
+- What data it passes to the next function and why
+
+## Key Observations
+2-3 bullet points about data transformation patterns, immutability, or notable \
+design decisions around data handling."""
 
 _FALLBACK_NARRATIVE = (
     "Narrative generation failed. See the Mermaid diagram above for the code flow."
@@ -654,10 +718,14 @@ async def generate_codemap_narrative(
     if len(user_prompt) > 8000:
         user_prompt = user_prompt[:8000] + "\n...(truncated)"
 
+    system_prompt = (
+        _DATA_FLOW_SYSTEM_PROMPT if focus == CodemapFocus.DATA_FLOW else _SYSTEM_PROMPT
+    )
+
     try:
         narrative = await llm.generate(
             prompt=user_prompt,
-            system_prompt=_SYSTEM_PROMPT,
+            system_prompt=system_prompt,
             max_tokens=2048,
             temperature=0.3,
         )
@@ -839,12 +907,15 @@ async def suggest_topics(
                 key = f"{chunk.parent_name}.{chunk.name}"
             chunk_by_name[key] = chunk
 
-    # Count connections per function
+    # Count connections per function (skip noise/builtins for accurate ranking)
     connection_count: dict[str, int] = defaultdict(int)
     for caller, callees in combined_cg.items():
+        if _is_noise(caller):
+            continue
         connection_count[caller] += len(callees)
         for callee in callees:
-            connection_count[callee] += 1
+            if not _is_noise(callee):
+                connection_count[callee] += 1
 
     # Also count how many files import each file (core module detection)
     file_import_count: dict[str, int] = defaultdict(int)
@@ -859,6 +930,20 @@ async def suggest_topics(
                         module = match.group(1) or match.group(2)
                         if module:
                             file_import_count[module] += 1
+
+    # Boost score for functions in heavily-imported modules
+    for func_name in list(connection_count):
+        chunk = chunk_by_name.get(func_name)
+        if chunk and chunk.file_path:
+            # Convert file path to dotted module name for matching
+            try:
+                rel = str(Path(chunk.file_path).relative_to(repo))
+            except (ValueError, TypeError):
+                rel = chunk.file_path
+            # Strip extension and convert separators to dots
+            module = rel.rsplit(".", 1)[0].replace("/", ".").replace("\\", ".")
+            if module in file_import_count:
+                connection_count[func_name] += file_import_count[module]
 
     # Build suggestions from hubs and entry patterns
     suggestions: list[dict[str, Any]] = []
@@ -875,7 +960,9 @@ async def suggest_topics(
         seen_names.add(func_name)
 
         chunk = chunk_by_name.get(func_name)
-        file_path = chunk.file_path if chunk else "unknown"
+        if chunk is None:
+            continue  # Skip stdlib/external entities without indexed source
+        file_path = chunk.file_path
         try:
             file_path = str(Path(file_path).relative_to(repo))
         except (ValueError, TypeError):

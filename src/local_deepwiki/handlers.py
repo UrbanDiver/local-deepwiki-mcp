@@ -1786,12 +1786,12 @@ async def handle_get_diagrams(args: dict[str, Any]) -> list[TextContent]:
 
     from local_deepwiki.generators.diagrams import (
         generate_class_diagram,
+        generate_dependency_graph,
         generate_language_pie_chart,
         generate_module_overview,
         generate_sequence_diagram,
     )
     from local_deepwiki.generators.callgraph import CallGraphExtractor
-    from local_deepwiki.generators.dependency_graph import DependencyGraphGenerator
 
     embedding_provider = get_embedding_provider(config.embedding)
     vector_store = VectorStore(config.get_vector_db_path(repo_path), embedding_provider)
@@ -1804,8 +1804,13 @@ async def handle_get_diagrams(args: dict[str, Any]) -> list[TextContent]:
     if diagram_type.value == "class":
         diagram = generate_class_diagram(all_chunks)
     elif diagram_type.value == "dependency":
-        dep_gen = DependencyGraphGenerator(vector_store)
-        diagram = await dep_gen.generate_module_graph(index_status)
+        project_name = Path(repo_path).name.lower().replace("-", "_")
+        diagram = generate_dependency_graph(
+            all_chunks,
+            project_name=project_name,
+            detect_circular=True,
+            exclude_tests=True,
+        )
     elif diagram_type.value == "module":
         diagram = generate_module_overview(index_status)
     elif diagram_type.value == "language_pie":

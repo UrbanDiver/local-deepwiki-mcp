@@ -654,7 +654,9 @@ class TestEnhancedDependencyGraph:
                 end_line=1,
             ),
         ]
-        diagram = generate_dependency_graph(chunks, "myproject", wiki_base_path="files/")
+        diagram = generate_dependency_graph(
+            chunks, "myproject", wiki_base_path="files/"
+        )
         assert diagram is not None
         assert "click" in diagram
         assert "files/" in diagram
@@ -736,7 +738,9 @@ class TestEnhancedDependencyGraph:
                 end_line=5,
             ),
         ]
-        diagram = generate_dependency_graph(chunks, "myproject", show_external=True, max_external=2)
+        diagram = generate_dependency_graph(
+            chunks, "myproject", show_external=True, max_external=2
+        )
         if diagram and "External" in diagram:
             # Count external nodes (E0, E1, etc.)
             import re as regex
@@ -1794,7 +1798,9 @@ class TestInternalFunctionsDirectly:
                 end_line=2,
             ),
         ]
-        data = _collect_dependencies(chunks, "myproject", show_external=False, exclude_tests=True)
+        data = _collect_dependencies(
+            chunks, "myproject", show_external=False, exclude_tests=True
+        )
         # test_utils should be excluded from dependencies
         parser_deps = data.dependencies.get("core.parser", set())
         assert "test_utils" not in parser_deps
@@ -1829,7 +1835,9 @@ class TestClassDiagramMethodNotInList:
         methods_by_class = {}
 
         # Collect the class
-        _collect_class_from_chunk(chunk, classes, methods_by_class, show_attributes=True)
+        _collect_class_from_chunk(
+            chunk, classes, methods_by_class, show_attributes=True
+        )
 
         # methods_by_class["TestClass"] should be an empty list now
         assert "TestClass" in methods_by_class
@@ -1840,7 +1848,9 @@ class TestClassDiagramMethodNotInList:
         del methods_by_class["TestClass"]
 
         # Extract methods from content - this should create the list
-        _extract_methods_from_class_content([chunk], classes, methods_by_class, show_types=True)
+        _extract_methods_from_class_content(
+            [chunk], classes, methods_by_class, show_types=True
+        )
 
         # Now TestClass should be in methods_by_class with the extracted method
         assert "TestClass" in methods_by_class
@@ -1901,7 +1911,10 @@ class TestExternalEdgeMissingFromId:
 
     def test_external_edge_skipped_when_no_from_id(self):
         """Test that external edges are skipped when from_id doesn't exist."""
-        from local_deepwiki.generators.diagrams import _collect_dependencies, _build_node_ids
+        from local_deepwiki.generators.diagrams import (
+            _collect_dependencies,
+            _build_node_ids,
+        )
 
         chunks = [
             CodeChunk(
@@ -1915,7 +1928,9 @@ class TestExternalEdgeMissingFromId:
             ),
         ]
 
-        data = _collect_dependencies(chunks, "myproject", show_external=True, exclude_tests=False)
+        data = _collect_dependencies(
+            chunks, "myproject", show_external=True, exclude_tests=False
+        )
         # Create node_ids that don't include the orphan module
         node_ids = {}  # Empty - from_id won't be found
 
@@ -2095,6 +2110,7 @@ class TestPathToModuleExceptionCoverage:
                     class BadList(list):
                         def index(self, item):
                             raise IndexError("Forced error")
+
                     return BadList(parts)
                 return parts
 
@@ -2102,3 +2118,44 @@ class TestPathToModuleExceptionCoverage:
             result = _path_to_module("forceerror/module.py")
             # Exception should be caught, function continues
             # Result depends on remaining logic
+
+
+class TestDependencyGraphEdges:
+    """Verify dependency graph produces edges with real import chunks."""
+
+    def test_internal_import_produces_edge(self):
+        """An IMPORT chunk referencing another internal module should produce an edge."""
+        chunks = [
+            CodeChunk(
+                id="1",
+                file_path="src/myproject/core/parser.py",
+                content="from myproject.models import Schema",
+                chunk_type=ChunkType.IMPORT,
+                language=Language.PYTHON,
+                start_line=1,
+                end_line=1,
+            ),
+            CodeChunk(
+                id="2",
+                file_path="src/myproject/models.py",
+                content="class Schema: pass",
+                chunk_type=ChunkType.CLASS,
+                language=Language.PYTHON,
+                start_line=1,
+                end_line=1,
+            ),
+            CodeChunk(
+                id="3",
+                file_path="src/myproject/core/parser.py",
+                content="def parse(): pass",
+                chunk_type=ChunkType.FUNCTION,
+                language=Language.PYTHON,
+                start_line=3,
+                end_line=5,
+            ),
+        ]
+        diagram = generate_dependency_graph(chunks, "myproject")
+        assert diagram is not None, "Expected a diagram but got None"
+        assert "flowchart" in diagram
+        # Should have at least one edge arrow
+        assert "-->" in diagram

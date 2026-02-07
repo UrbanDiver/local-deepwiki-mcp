@@ -1352,3 +1352,206 @@ class TestCodemapToolRegistration:
         assert "repo_path" in schema["properties"]
         assert "repo_path" in schema["required"]
         assert "max_suggestions" in schema["properties"]
+
+
+# ── Fix verification tests ───────────────────────────────────────────
+
+
+class TestDataFlowEdgeAnnotation:
+    """Verify data_flow focus mode produces annotated edges."""
+
+    def test_extract_param_names_python(self):
+        from local_deepwiki.generators.codemap import _extract_param_names
+
+        params = _extract_param_names(
+            "def process(config, repo_path, limit=10):\n    pass"
+        )
+        assert params == ["config", "repo_path", "limit"]
+
+    def test_extract_param_names_strips_self(self):
+        from local_deepwiki.generators.codemap import _extract_param_names
+
+        params = _extract_param_names("def run(self, data: str) -> None:\n    pass")
+        assert params == ["data"]
+
+    def test_extract_param_names_empty(self):
+        from local_deepwiki.generators.codemap import _extract_param_names
+
+        params = _extract_param_names("x = 42\ny = 10")
+        assert params == []
+
+    def test_data_flow_diagram_has_edge_labels(self):
+        from local_deepwiki.generators.codemap import (
+            CodemapEdge,
+            CodemapFocus,
+            CodemapGraph,
+            CodemapNode,
+            generate_codemap_diagram,
+        )
+
+        nodes = {
+            "a.caller": CodemapNode(
+                name="caller",
+                qualified_name="a.caller",
+                file_path="src/a.py",
+                start_line=1,
+                end_line=5,
+                chunk_type="function",
+                content_preview="def caller(): pass",
+            ),
+            "b.process": CodemapNode(
+                name="process",
+                qualified_name="b.process",
+                file_path="src/b.py",
+                start_line=1,
+                end_line=10,
+                chunk_type="function",
+                content_preview="def process(config, path): pass",
+            ),
+        }
+        edges = [
+            CodemapEdge(
+                source="a.caller",
+                target="b.process",
+                edge_type="passes(config, path)",
+                source_file="src/a.py",
+                target_file="src/b.py",
+            ),
+        ]
+        graph = CodemapGraph(nodes=nodes, edges=edges, entry_point="a.caller")
+
+        diagram = generate_codemap_diagram(graph, CodemapFocus.DATA_FLOW)
+        assert "passes(config, path)" in diagram
+
+    def test_execution_flow_no_edge_labels(self):
+        from local_deepwiki.generators.codemap import (
+            CodemapEdge,
+            CodemapFocus,
+            CodemapGraph,
+            CodemapNode,
+            generate_codemap_diagram,
+        )
+
+        nodes = {
+            "a.caller": CodemapNode(
+                name="caller",
+                qualified_name="a.caller",
+                file_path="src/a.py",
+                start_line=1,
+                end_line=5,
+                chunk_type="function",
+                content_preview="def caller(): pass",
+            ),
+            "b.process": CodemapNode(
+                name="process",
+                qualified_name="b.process",
+                file_path="src/b.py",
+                start_line=1,
+                end_line=10,
+                chunk_type="function",
+                content_preview="def process(config, path): pass",
+            ),
+        }
+        edges = [
+            CodemapEdge(
+                source="a.caller",
+                target="b.process",
+                edge_type="calls",
+                source_file="src/a.py",
+                target_file="src/b.py",
+            ),
+        ]
+        graph = CodemapGraph(nodes=nodes, edges=edges, entry_point="a.caller")
+
+        diagram = generate_codemap_diagram(graph, CodemapFocus.EXECUTION_FLOW)
+        # Should NOT have edge label syntax
+        assert '|"' not in diagram
+
+
+class TestSuggestTopicsStdlibFiltering:
+    """Verify suggest_topics filters out stdlib/external entities."""
+
+    async def test_filters_stdlib_entities(self, tmp_path):
+        from local_deepwiki.generators.codemap import suggest_topics
+
+        mock_vs = MagicMock()
+        mock_vs.get_all_chunks.return_value = [
+            _make_mock_code_chunk(
+                name="main",
+                file_path=str(tmp_path / "src" / "main.py"),
+                chunk_type="function",
+                content="def main(): Path(); MagicMock(); process()",
+            ),
+            _make_mock_code_chunk(
+                name="process",
+                file_path=str(tmp_path / "src" / "pipeline.py"),
+                chunk_type="function",
+                content="def process(data): pass",
+            ),
+        ]
+
+        with patch("local_deepwiki.generators.callgraph.CallGraphExtractor") as MockCGE:
+            extractor = MagicMock()
+            # Call graph includes stdlib names as callees
+            extractor.extract_from_file.return_value = {
+                "main": ["Path", "MagicMock", "process", "mkdir", "exists"],
+            }
+            MockCGE.return_value = extractor
+
+            suggestions = await suggest_topics(
+                vector_store=mock_vs,
+                repo_path=tmp_path,
+                max_suggestions=10,
+            )
+
+        # Should NOT include stdlib entities that have no indexed chunk
+        entry_points = {s["entry_point"] for s in suggestions}
+        assert "Path" not in entry_points
+        assert "MagicMock" not in entry_points
+        assert "mkdir" not in entry_points
+        assert "exists" not in entry_points
+
+        # file_path should never be "unknown"
+        for s in suggestions:
+            assert s.get("file_path", "") != "unknown"
+
+    async def test_keeps_project_entities(self, tmp_path):
+        from local_deepwiki.generators.codemap import suggest_topics
+
+        mock_vs = MagicMock()
+        mock_vs.get_all_chunks.return_value = [
+            _make_mock_code_chunk(
+                name="handle_request",
+                file_path=str(tmp_path / "src" / "server.py"),
+                chunk_type="function",
+                content="def handle_request(req): validate(req); process(req)",
+            ),
+            _make_mock_code_chunk(
+                name="validate",
+                file_path=str(tmp_path / "src" / "validation.py"),
+                chunk_type="function",
+                content="def validate(req): pass",
+            ),
+            _make_mock_code_chunk(
+                name="process",
+                file_path=str(tmp_path / "src" / "pipeline.py"),
+                chunk_type="function",
+                content="def process(req): pass",
+            ),
+        ]
+
+        with patch("local_deepwiki.generators.callgraph.CallGraphExtractor") as MockCGE:
+            extractor = MagicMock()
+            extractor.extract_from_file.return_value = {
+                "handle_request": ["validate", "process"],
+            }
+            MockCGE.return_value = extractor
+
+            suggestions = await suggest_topics(
+                vector_store=mock_vs,
+                repo_path=tmp_path,
+                max_suggestions=10,
+            )
+
+        entry_points = {s["entry_point"] for s in suggestions}
+        assert "handle_request" in entry_points
