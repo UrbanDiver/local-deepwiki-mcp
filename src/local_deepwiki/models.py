@@ -790,6 +790,57 @@ class FuzzySearchArgs(BaseModel):
     )
 
 
+class ExplainEntityArgs(BaseModel):
+    """Arguments for the explain_entity tool."""
+
+    repo_path: str = Field(description="Path to the indexed repository")
+    entity_name: str = Field(
+        min_length=1, description="Name of function, class, or method to explain"
+    )
+    include_call_graph: bool = Field(
+        default=True, description="Include call graph info (callers and callees)"
+    )
+    include_inheritance: bool = Field(
+        default=True, description="Include inheritance tree (for classes)"
+    )
+    include_test_examples: bool = Field(
+        default=True, description="Include usage examples from tests"
+    )
+    include_api_docs: bool = Field(
+        default=True, description="Include API signature details"
+    )
+    max_test_examples: int = Field(
+        default=3, ge=1, le=10, description="Max test examples to include (1-10)"
+    )
+
+
+class ImpactAnalysisArgs(BaseModel):
+    """Arguments for the impact_analysis tool."""
+
+    repo_path: str = Field(description="Path to the indexed repository")
+    file_path: str = Field(
+        min_length=1,
+        description="File path relative to repo root to analyze impact for",
+    )
+    entity_name: str | None = Field(
+        default=None,
+        description="Optional: specific function/class name to narrow analysis",
+    )
+    include_reverse_calls: bool = Field(
+        default=True, description="Include reverse call graph (who calls this)"
+    )
+    include_dependents: bool = Field(
+        default=True, description="Include files that import from this file"
+    )
+    include_inheritance: bool = Field(
+        default=True,
+        description="Include classes that inherit from classes in this file",
+    )
+    include_wiki_pages: bool = Field(
+        default=True, description="Include wiki pages that document this file"
+    )
+
+
 class GetWikiStatsArgs(BaseModel):
     """Arguments for the get_wiki_stats tool."""
 

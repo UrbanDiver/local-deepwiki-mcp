@@ -14,6 +14,7 @@ from local_deepwiki.handlers import (
     handle_deep_research,
     handle_detect_secrets,
     handle_detect_stale_docs,
+    handle_explain_entity,
     handle_export_wiki_html,
     handle_export_wiki_pdf,
     handle_fuzzy_search,
@@ -30,6 +31,7 @@ from local_deepwiki.handlers import (
     handle_get_project_manifest,
     handle_get_test_examples,
     handle_get_wiki_stats,
+    handle_impact_analysis,
     handle_index_repository,
     handle_list_indexed_repos,
     handle_list_research_checkpoints,
@@ -667,6 +669,82 @@ async def list_tools() -> list[Tool]:
                 "required": ["repo_path"],
             },
         ),
+        Tool(
+            name="explain_entity",
+            description="Get a comprehensive explanation of a function, class, or method by combining glossary info, call graph, inheritance tree, test examples, and API docs into a single response.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "repo_path": {
+                        "type": "string",
+                        "description": "Path to the indexed repository",
+                    },
+                    "entity_name": {
+                        "type": "string",
+                        "description": "Name of function, class, or method to explain",
+                    },
+                    "include_call_graph": {
+                        "type": "boolean",
+                        "description": "Include call graph info - callers and callees (default: true)",
+                    },
+                    "include_inheritance": {
+                        "type": "boolean",
+                        "description": "Include inheritance tree for classes (default: true)",
+                    },
+                    "include_test_examples": {
+                        "type": "boolean",
+                        "description": "Include usage examples from tests (default: true)",
+                    },
+                    "include_api_docs": {
+                        "type": "boolean",
+                        "description": "Include API signature details (default: true)",
+                    },
+                    "max_test_examples": {
+                        "type": "integer",
+                        "description": "Max test examples to include (default: 3, range: 1-10)",
+                    },
+                },
+                "required": ["repo_path", "entity_name"],
+            },
+        ),
+        Tool(
+            name="impact_analysis",
+            description="Analyze the blast radius of changes to a file or entity. Combines reverse call graph, inheritance dependents, file-level imports, and affected wiki pages to help understand impact before making changes.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "repo_path": {
+                        "type": "string",
+                        "description": "Path to the indexed repository",
+                    },
+                    "file_path": {
+                        "type": "string",
+                        "description": "File path relative to repo root to analyze impact for",
+                    },
+                    "entity_name": {
+                        "type": "string",
+                        "description": "Optional: specific function/class name to narrow analysis",
+                    },
+                    "include_reverse_calls": {
+                        "type": "boolean",
+                        "description": "Include reverse call graph - who calls functions in this file (default: true)",
+                    },
+                    "include_dependents": {
+                        "type": "boolean",
+                        "description": "Include files that import from this file (default: true)",
+                    },
+                    "include_inheritance": {
+                        "type": "boolean",
+                        "description": "Include classes that inherit from classes in this file (default: true)",
+                    },
+                    "include_wiki_pages": {
+                        "type": "boolean",
+                        "description": "Include wiki pages that document this file (default: true)",
+                    },
+                },
+                "required": ["repo_path", "file_path"],
+            },
+        ),
     ]
 
 
@@ -700,6 +778,8 @@ TOOL_HANDLERS: dict[str, ToolHandler] = {
     "get_file_context": handle_get_file_context,
     "fuzzy_search": handle_fuzzy_search,
     "get_wiki_stats": handle_get_wiki_stats,
+    "explain_entity": handle_explain_entity,
+    "impact_analysis": handle_impact_analysis,
 }
 
 # Tools that need server context for progress streaming
