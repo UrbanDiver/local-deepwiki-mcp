@@ -73,6 +73,9 @@ uv run deepwiki-config
 │    impact_analysis, get_complexity_metrics, analyze_diff,           │
 │    ask_about_diff, get_project_manifest, get_wiki_stats             │
 │                                                                     │
+│  Codemap Tools (2):                                                 │
+│    generate_codemap, suggest_codemap_topics                         │
+│                                                                     │
 │  Research & Progress Tools (4):                                     │
 │    list_research_checkpoints, cancel_research,                      │
 │    resume_research, get_operation_progress                          │
@@ -134,6 +137,27 @@ uv run deepwiki-config
 | Wiki Status | `generators/wiki_status.py` | Incremental update status management |
 | Progress Tracker | `generators/progress_tracker.py` | Live progress tracking for wiki generation |
 | Examples Plugin | `generators/examples_plugin.py` | Wiki plugin aggregating code examples from tests |
+| Codemap | `generators/codemap.py` | Cross-file execution-flow maps with Mermaid diagrams and LLM narrative |
+| Complexity | `generators/complexity.py` | Cyclomatic complexity and nesting depth via tree-sitter AST |
+
+### Codemap Tools
+
+| Tool | Purpose | Requires Indexing? |
+|------|---------|-------------------|
+| `generate_codemap` | Windsurf-style execution-flow map: Mermaid diagram + narrative trace for "How does X work?" queries | Yes |
+| `suggest_codemap_topics` | Discover interesting entry points from call graph hubs, core modules, and entry patterns | Yes |
+
+Key features:
+- Cross-file BFS traversal resolves calls across file boundaries via vector search
+- Deterministic Mermaid diagrams with subgraphs per file, color-coded nodes (entry/cross-file/leaf)
+- LLM narrative with numbered step-by-step trace and `file:line` references
+- Three focus modes: `execution_flow` (calls), `data_flow` (transformations), `dependency_chain` (imports)
+- Configurable depth (1-10) and node limit (5-60)
+
+Key workflow chains:
+- `suggest_codemap_topics` -> `generate_codemap` (discover flows, then trace them)
+- `generate_codemap` -> `explain_entity` (trace a flow, then deep-dive on a specific entity)
+- `generate_codemap` -> `impact_analysis` (trace a flow, then assess change blast radius)
 
 ### Analysis & Search Tools
 
@@ -173,6 +197,7 @@ Provider selection is config-driven (`~/.config/local-deepwiki/config.yaml`) or 
 1. **Indexing**: Files -> Tree-sitter AST -> Semantic chunks -> Embeddings -> LanceDB + LLM -> Wiki markdown
 2. **Query (ask_question)**: Question -> Embedding -> Vector search -> Top-k chunks -> LLM synthesis
 3. **Deep Research**: Question -> Sub-question decomposition -> Parallel retrieval -> Gap analysis -> Synthesis (supports checkpointing/resume via `list_research_checkpoints`, `resume_research`, `cancel_research`)
+4. **Codemap**: Query -> Vector search entry points -> Cross-file BFS call graph -> Mermaid diagram + LLM narrative
 
 ## Security
 
@@ -218,7 +243,7 @@ The `events.py` module implements a pub-sub event system:
 
 ## Testing Notes
 
-- 4,034 tests across 88 test files with 95% coverage
+- 4,097 tests across 90 test files with 95% coverage
 - Tests use `pytest-asyncio` with `asyncio_mode = "auto"` (no need for `@pytest.mark.asyncio`)
 - Most tests mock LLM/embedding providers to avoid external calls
 - Test files follow pattern `test_<module>.py`
