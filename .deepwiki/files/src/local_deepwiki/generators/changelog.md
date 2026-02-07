@@ -72,8 +72,8 @@ Generate changelog markdown content.
 
 This module is part of the `local_deepwiki` project and integrates with:
 
-- `local_deepwiki.core.git_utils`: Uses `GitRepoInfo` and `get_repo_info` for repository information.
-- `local_deepwiki.logging`: Uses `get_logger` for logging.
+- `local_deepwiki.core.git_utils`: Uses [`GitRepoInfo`](../core/git_utils.md) and [`get_repo_info`](../core/git_utils.md) for repository information.
+- `local_deepwiki.logging`: Uses [`get_logger`](../logging.md) for logging.
 
 It is called by:
 - `build_commit_url`: Used by `test_changelog`
@@ -121,7 +121,7 @@ Information about a git commit.
 
 
 <details>
-<summary>View Source (lines 20-28) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/changelog.py#L20-L28">GitHub</a></summary>
+<summary>View Source (lines 20-28) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/changelog.py#L20-L28">GitHub</a></summary>
 
 ```python
 class CommitInfo:
@@ -148,7 +148,7 @@ def get_commit_history(repo_path: Path, limit: int = 30) -> list[CommitInfo]
 Get recent commit history with file changes.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `repo_path` | `Path` | - | Path to the repository. |
 | `limit` | `int` | `30` | Maximum number of commits to retrieve. |
@@ -158,7 +158,7 @@ Get recent commit history with file changes.
 
 
 <details>
-<summary>View Source (lines 31-106) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/changelog.py#L31-L106">GitHub</a></summary>
+<summary>View Source (lines 31-106) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/changelog.py#L31-L106">GitHub</a></summary>
 
 ```python
 def get_commit_history(repo_path: Path, limit: int = 30) -> list[CommitInfo]:
@@ -250,9 +250,9 @@ def build_commit_url(repo_info: GitRepoInfo, commit_hash: str) -> str | None
 Build URL to commit on GitHub/GitLab.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `repo_info` | `GitRepoInfo` | - | Repository information. |
+| `repo_info` | [`GitRepoInfo`](../core/git_utils.md) | - | Repository information. |
 | `commit_hash` | `str` | - | Full or short commit hash. |
 
 **Returns:** `str | None`
@@ -260,7 +260,7 @@ Build URL to commit on GitHub/GitLab.
 
 
 <details>
-<summary>View Source (lines 109-128) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/changelog.py#L109-L128">GitHub</a></summary>
+<summary>View Source (lines 109-128) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/changelog.py#L109-L128">GitHub</a></summary>
 
 ```python
 def build_commit_url(repo_info: GitRepoInfo, commit_hash: str) -> str | None:
@@ -296,7 +296,7 @@ def generate_changelog_content(repo_path: Path, max_commits: int = 30) -> str | 
 Generate changelog markdown content.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `repo_path` | `Path` | - | Path to the repository. |
 | `max_commits` | `int` | `30` | Maximum commits to include. |
@@ -307,7 +307,7 @@ Generate changelog markdown content.
 
 
 <details>
-<summary>View Source (lines 131-213) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/changelog.py#L131-L213">GitHub</a></summary>
+<summary>View Source (lines 131-213) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/changelog.py#L131-L213">GitHub</a></summary>
 
 ```python
 def generate_changelog_content(
@@ -449,7 +449,7 @@ Functions and methods in this file and their callers:
 - **`build_commit_url`**: called by `generate_changelog_content`
 - **`defaultdict`**: called by `generate_changelog_content`
 - **`get_commit_history`**: called by `generate_changelog_content`
-- **`get_repo_info`**: called by `generate_changelog_content`
+- **[`get_repo_info`](../core/git_utils.md)**: called by `generate_changelog_content`
 - **`now`**: called by `get_commit_history`
 - **`rsplit`**: called by `get_commit_history`
 - **`run`**: called by `get_commit_history`
@@ -532,3 +532,7 @@ assert result == "https://github.com/owner/repo/commit/abc1234"
 | `get_commit_history` | function | Brian Breidenbach | 3 weeks ago | `15e7e64` Add changelog wiki page fro... |
 | `build_commit_url` | function | Brian Breidenbach | 3 weeks ago | `15e7e64` Add changelog wiki page fro... |
 | `generate_changelog_content` | function | Brian Breidenbach | 3 weeks ago | `15e7e64` Add changelog wiki page fro... |
+
+## Relevant Source Files
+
+- `src/local_deepwiki/generators/changelog.py:20-28`

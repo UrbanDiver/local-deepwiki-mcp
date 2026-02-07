@@ -8,8 +8,8 @@ This file imports:
 - `Path` from `pathlib`
 - `Node` from `tree_sitter`
 - `CLASS_NODE_TYPES`, `FUNCTION_NODE_TYPES` from `local_deepwiki.core.chunker`
-- `CodeParser`, `find_nodes_by_type`, `get_node_name`, `get_node_text` from `local_deepwiki.core.parser`
-- `Language` from `local_deepwiki.models`
+- [`CodeParser`](../core/parser.md), [`find_nodes_by_type`](../core/parser.md), [`get_node_name`](../core/parser.md), [`get_node_text`](../core/parser.md) from `local_deepwiki.core.parser`
+- [`Language`](../models.md) from `local_deepwiki.models`
 
 ## Integration
 
@@ -29,7 +29,7 @@ The `CallGraphExtractor` class is responsible for extracting call graphs from so
 ### Methods
 
 #### `__init__`
-Initializes the extractor with a `CodeParser`.
+Initializes the extractor with a [`CodeParser`](../core/parser.md).
 
 #### `extract_from_file`
 Extracts a call graph from a given source file.
@@ -140,7 +140,7 @@ Extracts call graphs from source files.
 
 
 <details>
-<summary>View Source (lines 257-324) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/callgraph.py#L257-L324">GitHub</a></summary>
+<summary>View Source (lines 257-324) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/callgraph.py#L257-L324">GitHub</a></summary>
 
 ```python
 class CallGraphExtractor:
@@ -225,7 +225,7 @@ Initialize the extractor.
 
 
 <details>
-<summary>View Source (lines 257-324) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/callgraph.py#L257-L324">GitHub</a></summary>
+<summary>View Source (lines 257-324) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/callgraph.py#L257-L324">GitHub</a></summary>
 
 ```python
 class CallGraphExtractor:
@@ -309,7 +309,7 @@ def extract_from_file(file_path: Path, repo_root: Path) -> dict[str, list[str]]
 Extract call graph from a source file.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `file_path` | `Path` | - | Path to the source file. |
 | `repo_root` | `Path` | - | Repository root path. |
@@ -319,7 +319,7 @@ Extract call graph from a source file.
 
 
 <details>
-<summary>View Source (lines 257-324) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/callgraph.py#L257-L324">GitHub</a></summary>
+<summary>View Source (lines 257-324) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/callgraph.py#L257-L324">GitHub</a></summary>
 
 ```python
 class CallGraphExtractor:
@@ -405,18 +405,18 @@ def extract_call_name(call_node: Node, source: bytes, language: Language) -> str
 Extract the function/method name from a call expression.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `call_node` | `Node` | - | The call expression AST node. |
 | `source` | `bytes` | - | Source bytes. |
-| `language` | `Language` | - | Programming language. |
+| `language` | [`Language`](../models.md) | - | Programming language. |
 
 **Returns:** `str | None`
 
 
 
 <details>
-<summary>View Source (lines 25-115) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/callgraph.py#L25-L115">GitHub</a></summary>
+<summary>View Source (lines 25-115) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/callgraph.py#L25-L115">GitHub</a></summary>
 
 ```python
 def extract_call_name(call_node: Node, source: bytes, language: Language) -> str | None:
@@ -523,18 +523,18 @@ def extract_calls_from_function(func_node: Node, source: bytes, language: Langua
 Extract all function calls from a function body.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `func_node` | `Node` | - | The function AST node. |
 | `source` | `bytes` | - | Source bytes. |
-| `language` | `Language` | - | Programming language. |
+| `language` | [`Language`](../models.md) | - | Programming language. |
 
 **Returns:** `list[str]`
 
 
 
 <details>
-<summary>View Source (lines 118-147) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/callgraph.py#L118-L147">GitHub</a></summary>
+<summary>View Source (lines 118-147) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/callgraph.py#L118-L147">GitHub</a></summary>
 
 ```python
 def extract_calls_from_function(
@@ -580,7 +580,7 @@ def generate_call_graph_diagram(call_graph: dict[str, list[str]], title: str | N
 Generate a Mermaid flowchart for a call graph.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `call_graph` | `dict[str, list[str]]` | - | Mapping of caller to list of callees. |
 | `title` | `str | None` | `None` | Optional diagram title. |
@@ -591,7 +591,7 @@ Generate a Mermaid flowchart for a call graph.
 
 
 <details>
-<summary>View Source (lines 327-407) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/callgraph.py#L327-L407">GitHub</a></summary>
+<summary>View Source (lines 327-407) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/callgraph.py#L327-L407">GitHub</a></summary>
 
 ```python
 def generate_call_graph_diagram(
@@ -688,7 +688,7 @@ def get_file_call_graph(file_path: Path, repo_root: Path) -> str | None
 Get a call graph diagram for a single file.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `file_path` | `Path` | - | Path to the source file. |
 | `repo_root` | `Path` | - | Repository root path. |
@@ -698,7 +698,7 @@ Get a call graph diagram for a single file.
 
 
 <details>
-<summary>View Source (lines 410-422) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/callgraph.py#L410-L422">GitHub</a></summary>
+<summary>View Source (lines 410-422) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/callgraph.py#L410-L422">GitHub</a></summary>
 
 ```python
 def get_file_call_graph(file_path: Path, repo_root: Path) -> str | None:
@@ -727,7 +727,7 @@ def build_reverse_call_graph(call_graph: dict[str, list[str]]) -> dict[str, list
 Build a reverse call graph mapping callee to callers.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `call_graph` | `dict[str, list[str]]` | - | Mapping of caller -> list of callees. |
 
@@ -736,7 +736,7 @@ Build a reverse call graph mapping callee to callers.
 
 
 <details>
-<summary>View Source (lines 425-441) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/callgraph.py#L425-L441">GitHub</a></summary>
+<summary>View Source (lines 425-441) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/callgraph.py#L425-L441">GitHub</a></summary>
 
 ```python
 def build_reverse_call_graph(call_graph: dict[str, list[str]]) -> dict[str, list[str]]:
@@ -769,7 +769,7 @@ def get_file_callers(file_path: Path, repo_root: Path) -> dict[str, list[str]]
 Get a mapping of function/method names to their callers within a file.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `file_path` | `Path` | - | Path to the source file. |
 | `repo_root` | `Path` | - | Repository root path. |
@@ -780,7 +780,7 @@ Get a mapping of function/method names to their callers within a file.
 
 
 <details>
-<summary>View Source (lines 444-456) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/callgraph.py#L444-L456">GitHub</a></summary>
+<summary>View Source (lines 444-456) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/callgraph.py#L444-L456">GitHub</a></summary>
 
 ```python
 def get_file_callers(file_path: Path, repo_root: Path) -> dict[str, list[str]]:
@@ -864,7 +864,7 @@ flowchart TD
 Functions and methods in this file and their callers:
 
 - **`CallGraphExtractor`**: called by `get_file_call_graph`, `get_file_callers`
-- **`CodeParser`**: called by `CallGraphExtractor.__init__`
+- **[`CodeParser`](../core/parser.md)**: called by `CallGraphExtractor.__init__`
 - **`_is_builtin_or_noise`**: called by `extract_calls_from_function`
 - **`_is_inside_class`**: called by `CallGraphExtractor.extract_from_file`
 - **`add`**: called by `generate_call_graph_diagram`
@@ -873,10 +873,10 @@ Functions and methods in this file and their callers:
 - **`extract_call_name`**: called by `extract_calls_from_function`
 - **`extract_calls_from_function`**: called by `CallGraphExtractor.extract_from_file`
 - **`extract_from_file`**: called by `get_file_call_graph`, `get_file_callers`
-- **`find_nodes_by_type`**: called by `CallGraphExtractor.extract_from_file`, `extract_calls_from_function`
+- **[`find_nodes_by_type`](../core/parser.md)**: called by `CallGraphExtractor.extract_from_file`, `extract_calls_from_function`
 - **`generate_call_graph_diagram`**: called by `get_file_call_graph`
-- **`get_node_name`**: called by `CallGraphExtractor.extract_from_file`
-- **`get_node_text`**: called by `extract_call_name`
+- **[`get_node_name`](../core/parser.md)**: called by `CallGraphExtractor.extract_from_file`
+- **[`get_node_text`](../core/parser.md)**: called by `extract_call_name`
 - **`parse_file`**: called by `CallGraphExtractor.extract_from_file`
 
 ## Usage Examples
@@ -972,7 +972,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_is_builtin_or_noise`
 
 <details>
-<summary>View Source (lines 150-254) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/callgraph.py#L150-L254">GitHub</a></summary>
+<summary>View Source (lines 150-254) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/callgraph.py#L150-L254">GitHub</a></summary>
 
 ```python
 def _is_builtin_or_noise(name: str, language: Language) -> bool:
@@ -1084,3 +1084,6 @@ def _is_builtin_or_noise(name: str, language: Language) -> bool:
 
 </details>
 
+## Relevant Source Files
+
+- `src/local_deepwiki/generators/callgraph.py:257-324`

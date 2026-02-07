@@ -1,101 +1,113 @@
 # File Overview
 
-This file implements a local embedding provider using the `sentence-transformers` library. It defines the `LocalEmbeddingProvider` class, which implements the `EmbeddingProvider` interface to generate embeddings for text using locally available models.
+This file implements a local embedding provider using the `sentence-transformers` library. It defines the `LocalEmbeddingProvider` class that conforms to the [`EmbeddingProvider`](../base.md) interface, enabling local generation of text embeddings with support for asynchronous operations.
 
-The provider supports asynchronous embedding generation, lazy loading of models, and validation of connectivity. It integrates with the base provider classes and handles configuration and connection errors appropriately.
+The provider is initialized with a model name, lazily loads the model, and supports embedding generation, dimension retrieval, connectivity validation, and capability reporting.
 
-## Classes
+## Dependencies
 
-### LocalEmbeddingProvider
-
-The `LocalEmbeddingProvider` class provides embedding services using local sentence-transformers models. It implements the `EmbeddingProvider` interface and supports asynchronous embedding generation, lazy model loading, and connectivity validation.
-
-#### Methods
-
-- **`__init__(self, model_name: str = "all-MiniLM-L6-v2")`**
-  - Initializes the local embedding provider with an optional model name.
-  - **Parameters**:
-    - `model_name`: Name of the sentence-transformers model to use (default: `"all-MiniLM-L6-v2"`).
-  - **Attributes**:
-    - `_model_name`: The name of the model to load.
-    - `_model`: The loaded `SentenceTransformer` model (initially `None`).
-    - `_dimension`: The embedding dimension (initially `None`).
-
-- **`_load_model(self) -> SentenceTransformer`**
-  - Lazy loads the sentence-transformers model.
-  - **Returns**: The loaded `SentenceTransformer` model.
-  - **Raises**:
-    - `ProviderConfigurationError`: If the model cannot be loaded.
-
-- **`embed(self, texts: list[str]) -> list[list[float]]`**
-  - Generates embeddings for a list of texts asynchronously.
-  - **Parameters**:
-    - `texts`: List of text strings to embed.
-  - **Returns**: List of embedding vectors.
-  - **Raises**:
-    - `ProviderConfigurationError`: If the model cannot be loaded.
-
-- **`get_dimension(self) -> int`**
-  - Returns the embedding dimension.
-  - **Returns**: The dimension of the embedding vectors.
-
-- **`validate_connectivity(self) -> bool`**
-  - Tests that the model can be loaded and used.
-  - **Returns**: `True` if the model is accessible and working.
-  - **Raises**:
-    - `ProviderConnectionError`: If the model cannot be loaded.
-
-- **`get_max_batch_size(self) -> int`**
-  - Returns the maximum number of texts that can be embedded in a single call.
-  - **Returns**: Maximum batch size (default: `1000`).
-
-- **`get_max_tokens(self) -> int`**
-  - Returns the maximum number of tokens per text.
-  - **Returns**: Maximum tokens per text for this model (default: `512`).
-
-- **`get_capabilities(self) -> EmbeddingProviderCapabilities`**
-  - Returns the provider capabilities.
-  - **Returns**: `EmbeddingProviderCapabilities` with model-specific information.
-
-- **`name(self) -> str`**
-  - Returns the provider name.
-  - **Returns**: A string in the format `"local:{model_name}"`.
+This file imports:
+- `asyncio`
+- `cast` from `typing`
+- `SentenceTransformer` from `sentence_transformers`
+- [`EmbeddingProvider`](../base.md), [`EmbeddingProviderCapabilities`](../base.md), [`ProviderConfigurationError`](../base.md), [`ProviderConnectionError`](../base.md) from `local_deepwiki.providers.base`
 
 ## Integration
 
-This file is part of the `local_deepwiki` package and integrates with:
+This file is part of the `local_deepwiki.providers.embeddings` module and integrates with:
+- The base [`EmbeddingProvider`](../base.md) interface
+- Other providers in the `local_deepwiki.providers` package
+- Core functionality in `src/local_deepwiki/core/__init__.py`
+- [Plugin](../../plugins/base.md) and generator systems in `src/local_deepwiki/generators/source_refs.py` and `src/local_deepwiki/plugins/base.py`
 
-- The base provider classes in `local_deepwiki.providers.base`, which define the `EmbeddingProvider` interface and related exceptions.
-- The `sentence_transformers` library for generating embeddings.
-- The `asyncio` module for asynchronous operations.
-- The `typing` module for type hints.
+# Classes
 
-It is used by components like `WikiGenerator` and `SourceRefsGenerator` in the `local_deepwiki.generators` module to provide local embeddings for processing.
+## LocalEmbeddingProvider
 
-## Usage Examples
+The `LocalEmbeddingProvider` class provides local embedding generation using the `sentence-transformers` library. It supports asynchronous embedding generation, lazy model loading, and validation of connectivity.
 
-```python
-from local_deepwiki.providers.embeddings.local import LocalEmbeddingProvider
+### Methods
 
-# Initialize the provider
-provider = LocalEmbeddingProvider(model_name="all-MiniLM-L6-v2")
+#### `__init__(self, model_name: str = "all-MiniLM-L6-v2")`
 
-# Generate embeddings
-texts = ["Hello world", "How are you?"]
-embeddings = asyncio.run(provider.embed(texts))
+Initialize the local embedding provider.
 
-# Get embedding dimension
-dimension = provider.get_dimension()
+**Parameters:**
+- `model_name`: Name of the sentence-transformers model to use. Defaults to `"all-MiniLM-L6-v2"`.
 
-# Validate connectivity
-is_connected = asyncio.run(provider.validate_connectivity())
-```
+#### `_load_model(self)`
+
+Lazy load the model.
+
+**Returns:**
+- The loaded `SentenceTransformer` model.
+
+**Raises:**
+- [`ProviderConfigurationError`](../base.md): If the model cannot be loaded.
+
+#### `embed(self, texts: list[str]) -> list[list[float]]`
+
+Generate embeddings for a list of texts.
+
+**Parameters:**
+- `texts`: List of text strings to embed.
+
+**Returns:**
+- List of embedding vectors.
+
+**Raises:**
+- [`ProviderConfigurationError`](../base.md): If the model cannot be loaded.
+
+#### `get_dimension(self) -> int`
+
+Get the embedding dimension.
+
+**Returns:**
+- The dimension of the embedding vectors.
+
+#### `validate_connectivity(self) -> bool`
+
+Test that the model can be loaded and used.
+
+**Returns:**
+- True if the model is accessible and working.
+
+**Raises:**
+- [`ProviderConnectionError`](../base.md): If the model cannot be loaded.
+
+#### `get_max_batch_size(self) -> int`
+
+Return maximum number of texts that can be embedded in a single call.
+
+**Returns:**
+- Maximum batch size. Local models can handle large batches.
+
+#### `get_max_tokens(self) -> int`
+
+Return maximum tokens per text.
+
+**Returns:**
+- Maximum tokens per text for this model.
+
+#### `get_capabilities(self) -> EmbeddingProviderCapabilities`
+
+Return provider capabilities.
+
+**Returns:**
+- [`EmbeddingProviderCapabilities`](../base.md) with model-specific information.
+
+#### `name(self) -> str`
+
+Get the provider name.
+
+**Returns:**
+- A string identifier for the provider in the format `local:{model_name}`.
 
 ## API Reference
 
 ### class `LocalEmbeddingProvider`
 
-**Inherits from:** `EmbeddingProvider`
+**Inherits from:** [`EmbeddingProvider`](../base.md)
 
 Embedding provider using local sentence-transformers models.
 
@@ -103,7 +115,7 @@ Embedding provider using local sentence-transformers models.
 
 
 <details>
-<summary>View Source (lines 28-147) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/embeddings/local.py#L28-L147">GitHub</a></summary>
+<summary>View Source (lines 28-147) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/embeddings/local.py#L28-L147">GitHub</a></summary>
 
 ```python
 class LocalEmbeddingProvider(EmbeddingProvider):
@@ -121,13 +133,13 @@ def __init__(model_name: str = "all-MiniLM-L6-v2")
 Initialize the local embedding provider.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `model_name` | `str` | `"all-MiniLM-L6-v2"` | Name of the sentence-transformers model to use. |
 
 
 <details>
-<summary>View Source (lines 31-39) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/embeddings/local.py#L31-L39">GitHub</a></summary>
+<summary>View Source (lines 31-39) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/embeddings/local.py#L31-L39">GitHub</a></summary>
 
 ```python
 def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
@@ -152,13 +164,13 @@ async def embed(texts: list[str]) -> list[list[float]]
 Generate embeddings for a list of texts.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `texts` | `list[str]` | - | List of text strings to embed. |
 
 
 <details>
-<summary>View Source (lines 61-78) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/embeddings/local.py#L61-L78">GitHub</a></summary>
+<summary>View Source (lines 61-78) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/embeddings/local.py#L61-L78">GitHub</a></summary>
 
 ```python
 async def embed(self, texts: list[str]) -> list[list[float]]:
@@ -193,7 +205,7 @@ Get the embedding dimension.
 
 
 <details>
-<summary>View Source (lines 80-88) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/embeddings/local.py#L80-L88">GitHub</a></summary>
+<summary>View Source (lines 80-88) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/embeddings/local.py#L80-L88">GitHub</a></summary>
 
 ```python
 def get_dimension(self) -> int:
@@ -219,7 +231,7 @@ Test that the model can be loaded and used.
 
 
 <details>
-<summary>View Source (lines 90-111) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/embeddings/local.py#L90-L111">GitHub</a></summary>
+<summary>View Source (lines 90-111) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/embeddings/local.py#L90-L111">GitHub</a></summary>
 
 ```python
 async def validate_connectivity(self) -> bool:
@@ -258,7 +270,7 @@ Return maximum number of texts that can be embedded in a single call.
 
 
 <details>
-<summary>View Source (lines 113-119) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/embeddings/local.py#L113-L119">GitHub</a></summary>
+<summary>View Source (lines 113-119) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/embeddings/local.py#L113-L119">GitHub</a></summary>
 
 ```python
 def get_max_batch_size(self) -> int:
@@ -282,7 +294,7 @@ Return maximum tokens per text.
 
 
 <details>
-<summary>View Source (lines 121-128) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/embeddings/local.py#L121-L128">GitHub</a></summary>
+<summary>View Source (lines 121-128) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/embeddings/local.py#L121-L128">GitHub</a></summary>
 
 ```python
 def get_max_tokens(self) -> int:
@@ -307,7 +319,7 @@ Return provider capabilities.
 
 
 <details>
-<summary>View Source (lines 130-142) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/embeddings/local.py#L130-L142">GitHub</a></summary>
+<summary>View Source (lines 130-142) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/embeddings/local.py#L130-L142">GitHub</a></summary>
 
 ```python
 def get_capabilities(self) -> EmbeddingProviderCapabilities:
@@ -339,7 +351,7 @@ Get the provider name.
 
 
 <details>
-<summary>View Source (lines 145-147) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/embeddings/local.py#L145-L147">GitHub</a></summary>
+<summary>View Source (lines 145-147) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/embeddings/local.py#L145-L147">GitHub</a></summary>
 
 ```python
 def name(self) -> str:
@@ -414,9 +426,9 @@ flowchart TD
 
 Functions and methods in this file and their callers:
 
-- **`EmbeddingProviderCapabilities`**: called by `LocalEmbeddingProvider.get_capabilities`
-- **`ProviderConfigurationError`**: called by `LocalEmbeddingProvider._load_model`
-- **`ProviderConnectionError`**: called by `LocalEmbeddingProvider.validate_connectivity`
+- **[`EmbeddingProviderCapabilities`](../base.md)**: called by `LocalEmbeddingProvider.get_capabilities`
+- **[`ProviderConfigurationError`](../base.md)**: called by `LocalEmbeddingProvider._load_model`
+- **[`ProviderConnectionError`](../base.md)**: called by `LocalEmbeddingProvider.validate_connectivity`
 - **`SentenceTransformer`**: called by `LocalEmbeddingProvider._load_model`
 - **`_load_model`**: called by `LocalEmbeddingProvider.embed`, `LocalEmbeddingProvider.get_dimension`, `LocalEmbeddingProvider.validate_connectivity`
 - **`cast`**: called by `LocalEmbeddingProvider.embed`
@@ -514,7 +526,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_load_model`
 
 <details>
-<summary>View Source (lines 41-59) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/embeddings/local.py#L41-L59">GitHub</a></summary>
+<summary>View Source (lines 41-59) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/embeddings/local.py#L41-L59">GitHub</a></summary>
 
 ```python
 def _load_model(self) -> SentenceTransformer:
@@ -540,3 +552,6 @@ def _load_model(self) -> SentenceTransformer:
 
 </details>
 
+## Relevant Source Files
+
+- `src/local_deepwiki/providers/embeddings/local.py:28-147`

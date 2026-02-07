@@ -4,22 +4,25 @@ This report shows the documentation coverage for the codebase.
 
 ## Summary
 
-🟢 **Overall Coverage: 92.8%**
+🟡 **Overall Coverage: 89.5%**
 
-- **4004** / **4314** entities documented
+- **4012** / **4481** entities documented
 
 ### By Type
 
 | Type | Documented | Total | Coverage |
 |------|------------|-------|----------|
 | Classes | 1166 | 1195 | 97.6% |
-| Functions | 465 | 653 | 71.2% |
-| Methods | 2379 | 2631 | 90.4% |
+| Functions | 466 | 654 | 71.3% |
+| Methods | 2380 | 2632 | 90.4% |
 
 ## Coverage by File
 
 | File | Documented | Total | Coverage |
 |------|------------|-------|----------|
+| 🔴 [coverage_html_cb_dd2e7eb5.js](files/coverage_html/coverage_html_cb_dd2e7eb5.js) | 2 | 55 | 3.6% |
+| 🔴 [coverage_html_cb_dd2e7eb5.js](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.js) | 2 | 55 | 3.6% |
+| 🔴 [coverage_html_cb_dd2e7eb5.js](files/htmlcov/coverage_html_cb_dd2e7eb5.js) | 2 | 55 | 3.6% |
 | 🔴 [test_base_provider.py](files/tests/test_base_provider.md) | 28 | 62 | 45.2% |
 | 🟠 [test_plugins.py](files/tests/test_plugins.md) | 36 | 66 | 54.5% |
 | 🟠 [test_retry.py](files/tests/test_retry.md) | 12 | 20 | 60.0% |
@@ -27,8 +30,8 @@ This report shows the documentation coverage for the codebase.
 | 🟠 [test_events.py](files/tests/test_events.md) | 64 | 101 | 63.4% |
 | 🟡 [test_fuzzy_search.py](files/tests/test_fuzzy_search.md) | 48 | 68 | 70.6% |
 | 🟡 [access_control.py](files/src/local_deepwiki/security/access_control.md) | 22 | 31 | 71.0% |
-| 🟡 [test_llm_providers.py](files/tests/test_llm_providers.md) | 18 | 24 | 75.0% |
 | 🟡 [server.py](files/src/local_deepwiki/server.md) | 3 | 4 | 75.0% |
+| 🟡 [test_llm_providers.py](files/tests/test_llm_providers.md) | 18 | 24 | 75.0% |
 | 🟡 [test_integration_pipeline.py](files/tests/test_integration_pipeline.md) | 26 | 33 | 78.8% |
 | 🟡 [test_indexer.py](files/tests/test_indexer.md) | 52 | 66 | 78.8% |
 | 🟡 [test_inheritance.py](files/tests/test_inheritance.md) | 26 | 32 | 81.2% |
@@ -46,7 +49,7 @@ This report shows the documentation coverage for the codebase.
 | 🟢 [test_progress_tracker.py](files/tests/test_progress_tracker.md) | 36 | 40 | 90.0% |
 | 🟢 [crosslinks.py](files/src/local_deepwiki/generators/crosslinks.md) | 21 | 23 | 91.3% |
 | 🟢 [test_watcher.py](files/tests/test_watcher.md) | 53 | 58 | 91.4% |
-| 🟢 [diagrams.py](files/src/local_deepwiki/generators/diagrams.md) | 34 | 37 | 91.9% |
+| 🟢 [diagrams.py](files/src/local_deepwiki/generators/diagrams.md) | 35 | 38 | 92.1% |
 | 🟢 [test_coverage.py](files/tests/test_coverage.md) | 36 | 39 | 92.3% |
 | 🟢 [test_anthropic_provider.py](files/tests/test_anthropic_provider.md) | 37 | 40 | 92.5% |
 | 🟢 [test_wiki_coverage.py](files/tests/test_wiki_coverage.md) | 39 | 42 | 92.9% |
@@ -69,11 +72,13 @@ This report shows the documentation coverage for the codebase.
 | 🟢 [test_wiki_pages_coverage.py](files/tests/test_wiki_pages_coverage.md) | 37 | 38 | 97.4% |
 | 🟢 [parser.py](files/src/local_deepwiki/core/parser.md) | 38 | 39 | 97.4% |
 | 🟢 [test_api_docs.py](files/tests/test_api_docs.md) | 41 | 42 | 97.6% |
-| 🟢 [test_embedding_cache.py](files/tests/test_embedding_cache.md) | 46 | 47 | 97.9% |
 | 🟢 [handlers.py](files/src/local_deepwiki/handlers.md) | 46 | 47 | 97.9% |
+| 🟢 [test_embedding_cache.py](files/tests/test_embedding_cache.md) | 46 | 47 | 97.9% |
 | 🟢 [test_llm_cache.py](files/tests/test_llm_cache.md) | 66 | 67 | 98.5% |
 | 🟢 [test_interactive_search.py](files/tests/test_interactive_search.md) | 98 | 99 | 99.0% |
-| 🟢 [vectorstore.py](files/src/local_deepwiki/core/vectorstore.md) | 110 | 111 | 99.1% |
+| 🟢 [vectorstore.py](files/src/local_deepwiki/core/vectorstore.md) | 111 | 112 | 99.1% |
+| 🟢 [models.py](files/src/local_deepwiki/models.md) | 48 | 48 | 100.0% |
+| 🟢 [test_manifest.py](files/tests/test_manifest.md) | 34 | 34 | 100.0% |
 | 🟢 [test_provider_factories.py](files/tests/test_provider_factories.md) | 4 | 4 | 100.0% |
 | 🟢 [test_streaming_export.py](files/tests/test_streaming_export.md) | 19 | 19 | 100.0% |
 | 🟢 [test_parser.py](files/tests/test_parser.md) | 85 | 85 | 100.0% |
@@ -92,7 +97,6 @@ This report shows the documentation coverage for the codebase.
 | 🟢 [test_git_utils.py](files/tests/test_git_utils.md) | 35 | 35 | 100.0% |
 | 🟢 [test_openai_embeddings.py](files/tests/test_openai_embeddings.md) | 31 | 31 | 100.0% |
 | 🟢 [test_repository_access.py](files/tests/test_repository_access.md) | 21 | 21 | 100.0% |
-| 🟢 [test_manifest.py](files/tests/test_manifest.md) | 34 | 34 | 100.0% |
 | 🟢 [test_credentials.py](files/tests/test_credentials.md) | 43 | 43 | 100.0% |
 | 🟢 [test_code_examples.py](files/tests/test_code_examples.md) | 23 | 23 | 100.0% |
 | 🟢 [test_export_init.py](files/tests/test_export_init.md) | 10 | 10 | 100.0% |
@@ -124,7 +128,6 @@ This report shows the documentation coverage for the codebase.
 | 🟢 [logging.py](files/src/local_deepwiki/logging.md) | 2 | 2 | 100.0% |
 | 🟢 [cli_progress.py](files/src/local_deepwiki/cli_progress.md) | 13 | 13 | 100.0% |
 | 🟢 [config.py](files/src/local_deepwiki/config.md) | 60 | 60 | 100.0% |
-| 🟢 [models.py](files/src/local_deepwiki/models.md) | 48 | 48 | 100.0% |
 | 🟢 [prompts.py](files/src/local_deepwiki/prompts.md) | 13 | 13 | 100.0% |
 | 🟢 [errors.py](files/src/local_deepwiki/errors.md) | 20 | 20 | 100.0% |
 | 🟢 [progress.py](files/src/local_deepwiki/progress.md) | 27 | 27 | 100.0% |
@@ -178,7 +181,88 @@ This report shows the documentation coverage for the codebase.
 
 Files with less than 50% documentation coverage:
 
-### [test_base_provider.py](files/tests/test_base_provider.md)
+###  PROTECTED156 
+
+Coverage: 3.6%
+
+Undocumented:
+- `function anonymous`
+- `function anonymous`
+- `function checkVisible`
+- `function on_click`
+- `function rowComparator`
+- `function sortColumn`
+- `function header`
+- `function anonymous`
+- `function tr`
+- `function anonymous`
+- `function element`
+- `function event`
+- `function anonymous`
+- `function cell`
+- `function event`
+- `function is_ratio`
+- `function row`
+- `function anonymous`
+- `function th`
+- `function e`
+- ... and 33 more
+
+###  PROTECTED157 
+
+Coverage: 3.6%
+
+Undocumented:
+- `function anonymous`
+- `function anonymous`
+- `function checkVisible`
+- `function on_click`
+- `function rowComparator`
+- `function sortColumn`
+- `function header`
+- `function anonymous`
+- `function tr`
+- `function anonymous`
+- `function element`
+- `function event`
+- `function anonymous`
+- `function cell`
+- `function event`
+- `function is_ratio`
+- `function row`
+- `function anonymous`
+- `function th`
+- `function e`
+- ... and 33 more
+
+###  PROTECTED158 
+
+Coverage: 3.6%
+
+Undocumented:
+- `function anonymous`
+- `function anonymous`
+- `function checkVisible`
+- `function on_click`
+- `function rowComparator`
+- `function sortColumn`
+- `function header`
+- `function anonymous`
+- `function tr`
+- `function anonymous`
+- `function element`
+- `function event`
+- `function anonymous`
+- `function cell`
+- `function event`
+- `function is_ratio`
+- `function row`
+- `function anonymous`
+- `function th`
+- `function e`
+- ... and 33 more
+
+###  PROTECTED159 
 
 Coverage: 45.2%
 
@@ -207,4 +291,22 @@ Undocumented:
 
 ---
 
-**Legend:** 🟢 >=90% | 🟡 >=70% | 🟠 >=50% | 🔴 <50%
+**Legend:** 🟢 ≥90% | 🟡 ≥70% | 🟠 ≥50% | 🔴 <50%
+
+## Relevant Source Files
+
+The following source files were used to generate this documentation:
+
+- [`src/local_deepwiki/models.py:11-26`](files/src/local_deepwiki/models.md)
+- `tests/test_manifest.py:19-61`
+- [`src/local_deepwiki/server.py:47-558`](files/src/local_deepwiki/server.md)
+- [`src/local_deepwiki/generators/diagrams.py:12-21`](files/src/local_deepwiki/generators/diagrams.md)
+- [`src/local_deepwiki/handlers.py:695-715`](files/src/local_deepwiki/handlers.md)
+- `coverage_html/coverage_html_cb_dd2e7eb5.js:11-19`
+- `tests/test_provider_factories.py:21-99`
+- `tests/test_streaming_export.py:48-71`
+- `tests/test_parser.py:28-127`
+- `tests/test_fuzzy_search.py:16-48`
+
+
+*Showing 10 of 166 source files.*

@@ -1,6 +1,10 @@
 # File Overview
 
-This file, `src/local_deepwiki/core/parser.py`, provides functionality for parsing source code files using the Tree-sitter parsing library. It includes caching mechanisms for parsed ASTs (Abstract Syntax Trees) to improve performance, especially when processing multiple files or repeatedly parsing the same files. The module supports various programming languages through Tree-sitter language parsers and includes utilities for extracting comments and docstrings from code nodes.
+This file, `src/local_deepwiki/core/parser.py`, provides functionality for parsing source code files using the Tree-sitter library and caching the resulting Abstract Syntax Trees (ASTs). It includes utilities for reading files, computing file hashes, extracting node text, and managing an in-memory cache of parsed ASTs with support for time-to-live (TTL) and least-recently-used (LRU) eviction policies.
+
+The module imports Tree-sitter language parsers for various programming languages, and uses `threading.RLock` for thread safety in cache operations. It also integrates with `local_deepwiki.logging` for logging purposes.
+
+---
 
 # Classes
 
@@ -8,7 +12,8 @@ This file, `src/local_deepwiki/core/parser.py`, provides functionality for parsi
 
 A cached AST entry with metadata for validation and eviction.
 
-### Attributes:
+### Attributes
+
 - `tree`: The tree-sitter Tree object (stored as weak reference internally).
 - `file_hash`: SHA256 hash of the file content when parsed.
 - `created_at`: Unix timestamp when the entry was created.
@@ -20,7 +25,8 @@ A cached AST entry with metadata for validation and eviction.
 
 Statistics for AST cache operations.
 
-### Attributes:
+### Attributes
+
 - `hits`: Number of cache hits.
 - `misses`: Number of cache misses.
 - `evictions`: Number of entries evicted due to max size.
@@ -31,215 +37,301 @@ Statistics for AST cache operations.
 
 ## ASTCache
 
-A thread-safe cache for storing and retrieving parsed ASTs using file paths and hashes as keys. It supports LRU eviction and TTL-based expiration.
+Manages a cache of parsed Tree-sitter ASTs with TTL and LRU eviction policies.
 
-### Methods:
-- `__init__(self, max_entries: int = 1000, ttl_seconds: int = 3600)`: Initialize the AST cache.
-- `_make_key(self, file_path: str, file_hash: str) -> str`: Create a cache key from file path and hash.
-- `_is_expired(self, entry: CachedAST) -> bool`: Check if a cache entry has expired.
-- `_estimate_tree_size(self, tree: Any) -> int`: Estimate memory size of a tree-sitter Tree.
-- `_evict_lru(self) -> None`: Evict least recently used entries until under max_entries.
-- `get(self, file_path: str, file_hash: str) -> Any | None`: Get a cached AST if valid (hash matches and not expired).
-- `set(self, file_path: str, file_hash: str, tree: Any, language: str) -> None`: Cache a parsed AST.
-- `invalidate(self, file_path: str) -> None`: Remove all entries for a specific file from cache.
-- `clear(self) -> None`: Clear all cached ASTs.
-- `get_stats(self) -> dict[str, int | float]`: Return cache statistics.
+### Methods
+
+#### `__init__(self, max_entries: int = 1000, ttl_seconds: int = 3600)`
+
+Initialize the AST cache.
+
+**Parameters:**
+
+- `max_entries`: Maximum number of entries before LRU eviction.
+- `ttl_seconds`: Time-to-live for cache entries in seconds.
+
+#### `_make_key(self, file_path: str, file_hash: str) -> str`
+
+Create a cache key from file path and hash.
+
+**Parameters:**
+
+- `file_path`: Path to the file.
+- `file_hash`: SHA256 hash of file content.
+
+**Returns:**
+
+- Combined cache key string.
+
+#### `_is_expired(self, entry: CachedAST) -> bool`
+
+Check if a cache entry has expired.
+
+**Parameters:**
+
+- `entry`: The cache entry to check.
+
+**Returns:**
+
+- True if the entry has expired, False otherwise.
+
+#### `_estimate_tree_size(self, tree: Any) -> int`
+
+Estimate memory size of a tree-sitter Tree.
+
+**Parameters:**
+
+- `tree`: The tree-sitter Tree object.
+
+**Returns:**
+
+- Estimated size in bytes.
+
+#### `_evict_lru(self) -> None`
+
+Evict least recently used entries until under max_entries.
+
+**Must be called with lock held.**
+
+#### `get(self, file_path: str, file_hash: str) -> Any | None`
+
+Get a cached AST if valid (hash matches and not expired).
+
+**Parameters:**
+
+- `file_path`: Path to the file (used as part of cache key).
+- `file_hash`: SHA256 hash of the file content.
+
+**Returns:**
+
+- The cached tree-sitter Tree if found and valid, None otherwise.
+
+#### `set(self, file_path: str, file_hash: str, tree: Any, language: str) -> None`
+
+Cache a parsed AST.
+
+**Parameters:**
+
+- `file_path`: Path to the file.
+- `file_hash`: SHA256 hash of the file content.
+- `tree`: The tree-sitter Tree object to cache.
+- `language`: The programming language of the file.
+
+#### `invalidate(self, file_path: str) -> None`
+
+Remove all entries for a specific file from cache.
+
+**Parameters:**
+
+- `file_path`: Path to the file to invalidate.
+
+#### `clear(self) -> None`
+
+Clear all cached ASTs.
+
+#### `get_stats(self) -> dict[str, int | float]`
+
+Return cache statistics.
+
+**Returns:**
+
+- Dictionary with cache statistics including hits, misses, hit rate, evictions, expirations, invalidations, total entries, and estimated memory usage.
+
+---
 
 # Functions
 
-## _read_file_content
+## `_read_file_content(file_path: str) -> str`
 
-Reads the content of a file using memory mapping for efficiency.
+Reads the content of a file and returns it as a string.
 
-### Parameters:
-- `file_path`: Path to the file.
+**Parameters:**
 
-### Returns:
-- File content as bytes.
+- `file_path`: Path to the file to read.
 
-## _compute_file_hash
+**Returns:**
+
+- File content as a string.
+
+## `_compute_file_hash(file_path: str) -> str`
 
 Computes the SHA256 hash of a file's content.
 
-### Parameters:
+**Parameters:**
+
 - `file_path`: Path to the file.
 
-### Returns:
-- SHA256 hash of the file content.
+**Returns:**
 
-## get_node_text
+- SHA256 hash of the file content as a hexadecimal string.
 
-Extracts the text content of a Tree-sitter node.
+## `get_node_text(node: Node, source: str) -> str`
 
-### Parameters:
-- `node`: Tree-sitter Node object.
-- `content`: File content as bytes.
+Extracts the text content of a Tree-sitter node from the source code.
 
-### Returns:
+**Parameters:**
+
+- `node`: The Tree-sitter node.
+- `source`: The source code string.
+
+**Returns:**
+
 - Text content of the node.
 
-## find_nodes_by_type
+## `find_nodes_by_type(node: Node, node_type: str) -> list[Node]`
 
-Finds all nodes in a tree matching a specific type.
+Finds all nodes of a given type within a Tree-sitter tree.
 
-### Parameters:
-- `node`: Tree-sitter Node object.
-- `node_type`: Type of node to find.
-- `results`: List to append found nodes to.
+**Parameters:**
 
-### Returns:
-- None.
+- `node`: The Tree-sitter node to search from.
+- `node_type`: The type of node to [find](../generators/manifest.md).
 
-## walk
+**Returns:**
 
-Traverses a Tree-sitter tree and calls a function on each node.
+- List of matching Tree-sitter nodes.
 
-### Parameters:
-- `node`: Tree-sitter Node object.
-- `func`: Function to call on each node.
-- `depth`: Current depth in traversal.
+## `walk(node: Node) -> list[Node]`
 
-### Returns:
-- None.
+Traverses all nodes in a Tree-sitter tree in a depth-first manner.
 
-## get_node_name
+**Parameters:**
 
-Extracts the name of a node from its children.
+- `node`: The Tree-sitter node to start traversal from.
 
-### Parameters:
-- `node`: Tree-sitter Node object.
+**Returns:**
 
-### Returns:
-- Name of the node as a string.
+- List of all nodes in the tree.
 
-## _collect_preceding_comments
+## `get_node_name(node: Node) -> str`
 
-Collects comments that precede a node.
+Extracts the name of a node (e.g., function name, class name).
 
-### Parameters:
-- `node`: Tree-sitter Node object.
-- `content`: File content as bytes.
+**Parameters:**
 
-### Returns:
+- `node`: The Tree-sitter node.
+
+**Returns:**
+
+- Name of the node.
+
+## `_collect_preceding_comments(node: Node, source: str) -> list[str]`
+
+Collects comments that precede a Tree-sitter node.
+
+**Parameters:**
+
+- `node`: The Tree-sitter node.
+- `source`: The source code string.
+
+**Returns:**
+
 - List of comment strings.
 
-## _strip_line_comment_prefix
+## `_strip_line_comment_prefix(comment: str) -> str`
 
-Strips the comment prefix from a line comment.
+Strips the prefix from a line comment.
 
-### Parameters:
-- `line`: Comment line string.
+**Parameters:**
 
-### Returns:
-- Comment text without prefix.
+- `comment`: The comment string.
 
-## _get_python_docstring
+**Returns:**
 
-Extracts docstring from a Python function or class node.
+- Comment string with prefix stripped.
 
-### Parameters:
-- `node`: Tree-sitter Node object.
-- `content`: File content as bytes.
+## `_get_python_docstring(node: Node, source: str) -> str`
 
-### Returns:
-- Docstring string.
+Extracts the docstring from a Python node.
 
-## _get_jsdoc_or_line_comments
+**Parameters:**
 
-Extracts JSDoc or line comments from a JavaScript node.
+- `node`: The Tree-sitter node.
+- `source`: The source code string.
 
-### Parameters:
-- `node`: Tree-sitter Node object.
-- `content`: File content as bytes.
+**Returns:**
 
-### Returns:
-- List of comment strings.
+- Docstring content as a string.
 
-## _get_line_comments
+## `_get_jsdoc_or_line_comments(node: Node, source: str) -> str`
 
-Extracts line comments from a node.
+Extracts JSDoc or line comments from a JavaScript/TypeScript node.
 
-### Parameters:
-- `node`: Tree-sitter Node object.
-- `content`: File content as bytes.
+**Parameters:**
 
-### Returns:
-- List of comment strings.
+- `node`: The Tree-sitter node.
+- `source`: The source code string.
 
-## _get_javadoc_or_doxygen
+**Returns:**
 
-Extracts Javadoc or Doxygen comments.
+- Comment content as a string.
 
-### Parameters:
-- `node`: Tree-sitter Node object.
-- `content`: File content as bytes.
+## `_get_docstring(node: Node, source: str) -> str`
 
-### Returns:
-- List of comment strings.
+Extracts a docstring from a node, supporting multiple languages.
 
-## _get_swift_docstring
+**Parameters:**
 
-Extracts docstring from a Swift node.
+- `node`: The Tree-sitter node.
+- `source`: The source code string.
 
-### Parameters:
-- `node`: Tree-sitter Node object.
-- `content`: File content as bytes.
+**Returns:**
 
-### Returns:
-- Docstring string.
+- Docstring content as a string.
 
-## _get_block_comment
-
-Extracts a block comment from a node.
-
-### Parameters:
-- `node`: Tree-sitter Node object.
-- `content`: File content as bytes.
-
-### Returns:
-- Comment string.
+---
 
 # Integration
 
-This file integrates with the larger codebase by providing core parsing and caching capabilities used in code analysis and documentation generation. It is used by:
+This file integrates with the `local_deepwiki` codebase by providing core parsing and caching capabilities for source code. It depends on Tree-sitter language parsers for various programming languages, and is called by other modules that need to parse or analyze source code, such as [`WikiGenerator`](../generators/wiki.md) or components that extract documentation.
 
-- `test_parser` tests that call `_compute_file_hash`, `get_node_text`, `_strip_line_comment_prefix`, `_get_python_docstring`, `_get_jsdoc_or_line_comments`, and `get_docstring`.
-- `test_examples` tests that call `get_node_text`.
-- The `CodeParser` class is likely used by `local_deepwiki/core/__init__.py` and potentially by `src/local_deepwiki/cli/__init__.py`.
-- It interacts with `local_deepwiki/logging` for logging purposes.
+The file's cache system (`ASTCache`) is designed to improve performance by avoiding re-parsing the same files, especially when processing multiple files or when the same file is accessed repeatedly.
 
-The module imports Tree-sitter language parsers for various languages and integrates with `tree_sitter` core modules for parsing and node handling.
+---
 
 # Usage Examples
 
-The following examples demonstrate how to use the components of this module:
+### Using `ASTCache`
 
 ```python
-# Initialize the AST cache
-cache = ASTCache(max_entries=500, ttl_seconds=1800)
+from local_deepwiki.core.parser import ASTCache
 
-# Parse a file and cache its AST
-parser = CodeParser()
-tree, language = parser.parse_file("example.py")
+# Initialize cache
+cache = ASTCache(max_entries=1000, ttl_seconds=3600)
 
-# Store the parsed AST in the cache
-cache.set("example.py", "sha256hash", tree, language)
+# Add an AST to the cache
+cache.set("path/to/file.py", "hash123", tree, "python")
 
-# Retrieve the cached AST
-cached_tree = cache.get("example.py", "sha256hash")
+# Retrieve an AST from the cache
+cached_tree = cache.get("path/to/file.py", "hash123")
 
-# Get statistics from the cache
+# Get cache statistics
 stats = cache.get_stats()
 ```
 
-```python
-# Extract a docstring from a Python node
-docstring = _get_python_docstring(node, content)
-```
+### Reading File Content and Computing Hash
 
 ```python
-# Get text content of a node
-text = get_node_text(node, content)
+from local_deepwiki.core.parser import _read_file_content, _compute_file_hash
+
+content = _read_file_content("example.py")
+file_hash = _compute_file_hash("example.py")
+```
+
+### Extracting Node Text
+
+```python
+from local_deepwiki.core.parser import get_node_text
+
+text = get_node_text(node, source)
+```
+
+### Finding Nodes by Type
+
+```python
+from local_deepwiki.core.parser import find_nodes_by_type
+
+nodes = find_nodes_by_type(root_node, "function_definition")
 ```
 
 ## API Reference
@@ -250,7 +342,7 @@ A cached AST entry with metadata for validation and eviction.  Attributes: tree:
 
 
 <details>
-<summary>View Source (lines 42-59) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser.py#L42-L59">GitHub</a></summary>
+<summary>View Source (lines 42-59) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/parser.py#L42-L59">GitHub</a></summary>
 
 ```python
 class CachedAST:
@@ -283,7 +375,7 @@ Statistics for AST cache operations.  Attributes: hits: Number of cache hits. mi
 
 
 <details>
-<summary>View Source (lines 63-101) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser.py#L63-L101">GitHub</a></summary>
+<summary>View Source (lines 63-101) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/parser.py#L63-L101">GitHub</a></summary>
 
 ```python
 class ASTCacheStats:
@@ -340,7 +432,7 @@ Convert stats to a dictionary.
 
 
 <details>
-<summary>View Source (lines 63-101) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser.py#L63-L101">GitHub</a></summary>
+<summary>View Source (lines 63-101) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/parser.py#L63-L101">GitHub</a></summary>
 
 ```python
 class ASTCacheStats:
@@ -394,7 +486,7 @@ Thread-safe LRU cache for parsed ASTs with TTL support.  Caches tree-sitter ASTs
 
 
 <details>
-<summary>View Source (lines 104-351) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser.py#L104-L351">GitHub</a></summary>
+<summary>View Source (lines 104-351) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/parser.py#L104-L351">GitHub</a></summary>
 
 ```python
 class ASTCache:
@@ -412,14 +504,14 @@ def __init__(max_entries: int = 1000, ttl_seconds: int = 3600)
 Initialize the AST cache.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `max_entries` | `int` | `1000` | Maximum number of entries before LRU eviction. |
 | `ttl_seconds` | `int` | `3600` | Time-to-live for cache entries in seconds. |
 
 
 <details>
-<summary>View Source (lines 133-144) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser.py#L133-L144">GitHub</a></summary>
+<summary>View Source (lines 133-144) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/parser.py#L133-L144">GitHub</a></summary>
 
 ```python
 def __init__(self, max_entries: int = 1000, ttl_seconds: int = 3600):
@@ -447,14 +539,14 @@ def get(file_path: str, file_hash: str) -> Any | None
 Get a cached AST if valid (hash matches and not expired).
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `file_path` | `str` | - | Path to the file (used as part of cache key). |
 | `file_hash` | `str` | - | SHA256 hash of the file content. |
 
 
 <details>
-<summary>View Source (lines 223-253) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser.py#L223-L253">GitHub</a></summary>
+<summary>View Source (lines 223-253) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/parser.py#L223-L253">GitHub</a></summary>
 
 ```python
 def get(self, file_path: str, file_hash: str) -> Any | None:
@@ -501,7 +593,7 @@ def set(file_path: str, file_hash: str, tree: Any, language: str) -> None
 Cache a parsed AST.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `file_path` | `str` | - | Path to the file. |
 | `file_hash` | `str` | - | SHA256 hash of the file content. |
@@ -510,7 +602,7 @@ Cache a parsed AST.
 
 
 <details>
-<summary>View Source (lines 255-290) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser.py#L255-L290">GitHub</a></summary>
+<summary>View Source (lines 255-290) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/parser.py#L255-L290">GitHub</a></summary>
 
 ```python
 def set(
@@ -562,13 +654,13 @@ def invalidate(file_path: str) -> None
 Remove all entries for a specific file from cache.  This removes entries regardless of their hash, useful when a file is known to have been modified.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `file_path` | `str` | - | Path to the file to invalidate. |
 
 
 <details>
-<summary>View Source (lines 292-310) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser.py#L292-L310">GitHub</a></summary>
+<summary>View Source (lines 292-310) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/parser.py#L292-L310">GitHub</a></summary>
 
 ```python
 def invalidate(self, file_path: str) -> None:
@@ -604,7 +696,7 @@ Clear all cached ASTs.
 
 
 <details>
-<summary>View Source (lines 312-316) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser.py#L312-L316">GitHub</a></summary>
+<summary>View Source (lines 312-316) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/parser.py#L312-L316">GitHub</a></summary>
 
 ```python
 def clear(self) -> None:
@@ -626,7 +718,7 @@ Return cache statistics.
 
 
 <details>
-<summary>View Source (lines 318-328) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser.py#L318-L328">GitHub</a></summary>
+<summary>View Source (lines 318-328) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/parser.py#L318-L328">GitHub</a></summary>
 
 ```python
 def get_stats(self) -> dict[str, int | float]:
@@ -654,7 +746,7 @@ Remove all expired entries from the cache.
 
 
 <details>
-<summary>View Source (lines 330-345) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser.py#L330-L345">GitHub</a></summary>
+<summary>View Source (lines 330-345) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/parser.py#L330-L345">GitHub</a></summary>
 
 ```python
 def cleanup_expired(self) -> int:
@@ -688,7 +780,7 @@ Return current number of entries in cache.
 
 
 <details>
-<summary>View Source (lines 348-351) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser.py#L348-L351">GitHub</a></summary>
+<summary>View Source (lines 348-351) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/parser.py#L348-L351">GitHub</a></summary>
 
 ```python
 def size(self) -> int:
@@ -707,7 +799,7 @@ Multi-language code parser using tree-sitter.  Supports optional AST caching to 
 
 
 <details>
-<summary>View Source (lines 457-634) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser.py#L457-L634">GitHub</a></summary>
+<summary>View Source (lines 457-634) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/parser.py#L457-L634">GitHub</a></summary>
 
 ```python
 class CodeParser:
@@ -725,13 +817,13 @@ def __init__(cache: ASTCache | None = None)
 Initialize the parser with language support.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `cache` | `ASTCache | None` | `None` | Optional ASTCache instance for caching parsed ASTs. |
 
 
 <details>
-<summary>View Source (lines 480-488) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser.py#L480-L488">GitHub</a></summary>
+<summary>View Source (lines 480-488) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/parser.py#L480-L488">GitHub</a></summary>
 
 ```python
 def __init__(self, cache: ASTCache | None = None):
@@ -756,13 +848,13 @@ def detect_language(file_path: Path) -> LangEnum | None
 Detect the programming language from file extension.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `file_path` | `Path` | - | Path to the source file. |
 
 
 <details>
-<summary>View Source (lines 520-530) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser.py#L520-L530">GitHub</a></summary>
+<summary>View Source (lines 520-530) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/parser.py#L520-L530">GitHub</a></summary>
 
 ```python
 def detect_language(self, file_path: Path) -> LangEnum | None:
@@ -789,13 +881,13 @@ def parse_file(file_path: Path) -> tuple[Node, LangEnum, bytes] | None
 Parse a source file and return the AST root.  If a cache is configured, checks the cache before parsing and stores the result after parsing.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `file_path` | `Path` | - | Path to the source file. |
 
 
 <details>
-<summary>View Source (lines 532-575) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser.py#L532-L575">GitHub</a></summary>
+<summary>View Source (lines 532-575) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/parser.py#L532-L575">GitHub</a></summary>
 
 ```python
 def parse_file(self, file_path: Path) -> tuple[Node, LangEnum, bytes] | None:
@@ -855,14 +947,14 @@ def parse_source(source: str | bytes, language: LangEnum) -> Node
 Parse source code string and return the AST root.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `source` | `str | bytes` | - | The source code. |
 | `language` | `LangEnum` | - | The programming language. |
 
 
 <details>
-<summary>View Source (lines 577-592) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser.py#L577-L592">GitHub</a></summary>
+<summary>View Source (lines 577-592) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/parser.py#L577-L592">GitHub</a></summary>
 
 ```python
 def parse_source(self, source: str | bytes, language: LangEnum) -> Node:
@@ -894,14 +986,14 @@ def get_file_info(file_path: Path, repo_root: Path) -> FileInfo
 Get information about a source file.  Uses chunked reading for large files to avoid loading the entire file into memory just for hash computation.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `file_path` | `Path` | - | Absolute path to the file. |
 | `repo_root` | `Path` | - | Root directory of the repository. |
 
 
 <details>
-<summary>View Source (lines 594-615) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser.py#L594-L615">GitHub</a></summary>
+<summary>View Source (lines 594-615) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/parser.py#L594-L615">GitHub</a></summary>
 
 ```python
 def get_file_info(self, file_path: Path, repo_root: Path) -> FileInfo:
@@ -940,7 +1032,7 @@ Get the AST cache instance if configured.
 
 
 <details>
-<summary>View Source (lines 618-624) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser.py#L618-L624">GitHub</a></summary>
+<summary>View Source (lines 618-624) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/parser.py#L618-L624">GitHub</a></summary>
 
 ```python
 def cache(self) -> ASTCache | None:
@@ -967,7 +1059,7 @@ Get cache statistics if caching is enabled.
 
 
 <details>
-<summary>View Source (lines 626-634) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser.py#L626-L634">GitHub</a></summary>
+<summary>View Source (lines 626-634) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/parser.py#L626-L634">GitHub</a></summary>
 
 ```python
 def get_cache_stats(self) -> dict[str, int | float] | None:
@@ -994,7 +1086,7 @@ def get_node_text(node: Node, source: bytes) -> str
 Extract text content from a tree-sitter node.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `node` | `Node` | - | The tree-sitter node. |
 | `source` | `bytes` | - | The original source bytes. |
@@ -1004,7 +1096,7 @@ Extract text content from a tree-sitter node.
 
 
 <details>
-<summary>View Source (lines 637-647) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser.py#L637-L647">GitHub</a></summary>
+<summary>View Source (lines 637-647) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/parser.py#L637-L647">GitHub</a></summary>
 
 ```python
 def get_node_text(node: Node, source: bytes) -> str:
@@ -1031,17 +1123,17 @@ def find_nodes_by_type(root: Node, node_types: set[str]) -> list[Node]
 Find all nodes of specified types in the AST.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `root` | `Node` | - | The root node to search from. |
-| `node_types` | `set[str]` | - | Set of node type names to find. |
+| `node_types` | `set[str]` | - | Set of node type names to [find](../generators/manifest.md). |
 
 **Returns:** `list[Node]`
 
 
 
 <details>
-<summary>View Source (lines 650-669) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser.py#L650-L669">GitHub</a></summary>
+<summary>View Source (lines 650-669) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/parser.py#L650-L669">GitHub</a></summary>
 
 ```python
 def find_nodes_by_type(root: Node, node_types: set[str]) -> list[Node]:
@@ -1075,14 +1167,14 @@ def walk(node: Node)
 ```
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `node` | `Node` | - | - |
 
 
 
 <details>
-<summary>View Source (lines 662-666) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser.py#L662-L666">GitHub</a></summary>
+<summary>View Source (lines 662-666) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/parser.py#L662-L666">GitHub</a></summary>
 
 ```python
 def walk(node: Node):
@@ -1103,7 +1195,7 @@ def get_node_name(node: Node, source: bytes, language: LangEnum) -> str | None
 Extract the name from a function/class/method node.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `node` | `Node` | - | The tree-sitter node. |
 | `source` | `bytes` | - | The original source bytes. |
@@ -1114,7 +1206,7 @@ Extract the name from a function/class/method node.
 
 
 <details>
-<summary>View Source (lines 672-701) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser.py#L672-L701">GitHub</a></summary>
+<summary>View Source (lines 672-701) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/parser.py#L672-L701">GitHub</a></summary>
 
 ```python
 def get_node_name(node: Node, source: bytes, language: LangEnum) -> str | None:
@@ -1160,7 +1252,7 @@ def get_docstring(node: Node, source: bytes, language: LangEnum) -> str | None
 Extract docstring from a function/class node.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `node` | `Node` | - | The tree-sitter node. |
 | `source` | `bytes` | - | The original source bytes. |
@@ -1172,7 +1264,7 @@ Extract docstring from a function/class node.
 
 
 <details>
-<summary>View Source (lines 857-871) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser.py#L857-L871">GitHub</a></summary>
+<summary>View Source (lines 857-871) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/parser.py#L857-L871">GitHub</a></summary>
 
 ```python
 def get_docstring(node: Node, source: bytes, language: LangEnum) -> str | None:
@@ -1327,8 +1419,8 @@ Functions and methods in this file and their callers:
 
 - **`ASTCacheStats`**: called by `ASTCache.__init__`
 - **`CachedAST`**: called by `ASTCache.set`
-- **`FileInfo`**: called by `CodeParser.get_file_info`
-- **`Language`**: called by `CodeParser._get_parser`
+- **[`FileInfo`](../models.md)**: called by `CodeParser.get_file_info`
+- **[`Language`](../models.md)**: called by `CodeParser._get_parser`
 - **`Parser`**: called by `CodeParser._get_parser`
 - **`RLock`**: called by `ASTCache.__init__`
 - **`ValueError`**: called by `CodeParser._get_parser`
@@ -1474,7 +1566,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_make_key`
 
 <details>
-<summary>View Source (lines 146-156) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser.py#L146-L156">GitHub</a></summary>
+<summary>View Source (lines 146-156) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/parser.py#L146-L156">GitHub</a></summary>
 
 ```python
 def _make_key(self, file_path: str, file_hash: str) -> str:
@@ -1496,7 +1588,7 @@ def _make_key(self, file_path: str, file_hash: str) -> str:
 #### `_is_expired`
 
 <details>
-<summary>View Source (lines 158-167) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser.py#L158-L167">GitHub</a></summary>
+<summary>View Source (lines 158-167) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/parser.py#L158-L167">GitHub</a></summary>
 
 ```python
 def _is_expired(self, entry: CachedAST) -> bool:
@@ -1517,7 +1609,7 @@ def _is_expired(self, entry: CachedAST) -> bool:
 #### `_estimate_tree_size`
 
 <details>
-<summary>View Source (lines 169-206) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser.py#L169-L206">GitHub</a></summary>
+<summary>View Source (lines 169-206) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/parser.py#L169-L206">GitHub</a></summary>
 
 ```python
 def _estimate_tree_size(self, tree: Any) -> int:
@@ -1566,7 +1658,7 @@ def _estimate_tree_size(self, tree: Any) -> int:
 #### `_evict_lru`
 
 <details>
-<summary>View Source (lines 208-221) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser.py#L208-L221">GitHub</a></summary>
+<summary>View Source (lines 208-221) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/parser.py#L208-L221">GitHub</a></summary>
 
 ```python
 def _evict_lru(self) -> None:
@@ -1591,7 +1683,7 @@ def _evict_lru(self) -> None:
 #### `_read_file_content`
 
 <details>
-<summary>View Source (lines 354-378) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser.py#L354-L378">GitHub</a></summary>
+<summary>View Source (lines 354-378) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/parser.py#L354-L378">GitHub</a></summary>
 
 ```python
 def _read_file_content(file_path: Path) -> bytes:
@@ -1627,7 +1719,7 @@ def _read_file_content(file_path: Path) -> bytes:
 #### `_compute_file_hash`
 
 <details>
-<summary>View Source (lines 381-405) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser.py#L381-L405">GitHub</a></summary>
+<summary>View Source (lines 381-405) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/parser.py#L381-L405">GitHub</a></summary>
 
 ```python
 def _compute_file_hash(file_path: Path) -> str:
@@ -1663,7 +1755,7 @@ def _compute_file_hash(file_path: Path) -> str:
 #### `_get_parser`
 
 <details>
-<summary>View Source (lines 490-518) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser.py#L490-L518">GitHub</a></summary>
+<summary>View Source (lines 490-518) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/parser.py#L490-L518">GitHub</a></summary>
 
 ```python
 def _get_parser(self, language: LangEnum) -> Parser:
@@ -1703,7 +1795,7 @@ def _get_parser(self, language: LangEnum) -> Parser:
 #### `_collect_preceding_comments`
 
 <details>
-<summary>View Source (lines 704-733) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser.py#L704-L733">GitHub</a></summary>
+<summary>View Source (lines 704-733) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/parser.py#L704-L733">GitHub</a></summary>
 
 ```python
 def _collect_preceding_comments(
@@ -1744,7 +1836,7 @@ def _collect_preceding_comments(
 #### `_strip_line_comment_prefix`
 
 <details>
-<summary>View Source (lines 736-753) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser.py#L736-L753">GitHub</a></summary>
+<summary>View Source (lines 736-753) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/parser.py#L736-L753">GitHub</a></summary>
 
 ```python
 def _strip_line_comment_prefix(lines: list[str], prefix: str) -> str:
@@ -1773,7 +1865,7 @@ def _strip_line_comment_prefix(lines: list[str], prefix: str) -> str:
 #### `_get_python_docstring`
 
 <details>
-<summary>View Source (lines 756-775) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser.py#L756-L775">GitHub</a></summary>
+<summary>View Source (lines 756-775) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/parser.py#L756-L775">GitHub</a></summary>
 
 ```python
 def _get_python_docstring(node: Node, source: bytes) -> str | None:
@@ -1804,7 +1896,7 @@ def _get_python_docstring(node: Node, source: bytes) -> str | None:
 #### `_get_jsdoc_or_line_comments`
 
 <details>
-<summary>View Source (lines 778-789) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser.py#L778-L789">GitHub</a></summary>
+<summary>View Source (lines 778-789) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/parser.py#L778-L789">GitHub</a></summary>
 
 ```python
 def _get_jsdoc_or_line_comments(node: Node, source: bytes) -> str | None:
@@ -1827,7 +1919,7 @@ def _get_jsdoc_or_line_comments(node: Node, source: bytes) -> str | None:
 #### `_get_line_comments`
 
 <details>
-<summary>View Source (lines 792-797) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser.py#L792-L797">GitHub</a></summary>
+<summary>View Source (lines 792-797) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/parser.py#L792-L797">GitHub</a></summary>
 
 ```python
 def _get_line_comments(node: Node, source: bytes, comment_type: str, prefix: str) -> str | None:
@@ -1844,7 +1936,7 @@ def _get_line_comments(node: Node, source: bytes, comment_type: str, prefix: str
 #### `_get_javadoc_or_doxygen`
 
 <details>
-<summary>View Source (lines 800-811) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser.py#L800-L811">GitHub</a></summary>
+<summary>View Source (lines 800-811) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/parser.py#L800-L811">GitHub</a></summary>
 
 ```python
 def _get_javadoc_or_doxygen(node: Node, source: bytes) -> str | None:
@@ -1867,7 +1959,7 @@ def _get_javadoc_or_doxygen(node: Node, source: bytes) -> str | None:
 #### `_get_swift_docstring`
 
 <details>
-<summary>View Source (lines 814-825) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser.py#L814-L825">GitHub</a></summary>
+<summary>View Source (lines 814-825) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/parser.py#L814-L825">GitHub</a></summary>
 
 ```python
 def _get_swift_docstring(node: Node, source: bytes) -> str | None:
@@ -1890,7 +1982,7 @@ def _get_swift_docstring(node: Node, source: bytes) -> str | None:
 #### `_get_block_comment`
 
 <details>
-<summary>View Source (lines 828-835) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/parser.py#L828-L835">GitHub</a></summary>
+<summary>View Source (lines 828-835) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/parser.py#L828-L835">GitHub</a></summary>
 
 ```python
 def _get_block_comment(node: Node, source: bytes, comment_type: str) -> str | None:
@@ -1905,3 +1997,6 @@ def _get_block_comment(node: Node, source: bytes, comment_type: str) -> str | No
 
 </details>
 
+## Relevant Source Files
+
+- `src/local_deepwiki/core/parser.py:42-59`

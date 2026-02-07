@@ -182,6 +182,7 @@ def _package_from_file_path(file_path: str) -> str:
 
     For 'src/local_deepwiki/core/indexer.py' returns 'core'.
     For 'src/local_deepwiki/models.py' returns 'top-level'.
+    For 'tests/test_parser.py' returns 'tests'.
 
     Args:
         file_path: Source file path.
@@ -196,6 +197,9 @@ def _package_from_file_path(file_path: str) -> str:
         remaining = parts[idx + 2 :]
         if len(remaining) > 1:
             return remaining[0]
+        return "top-level"
+    if "tests" in parts:
+        return "tests"
     return "top-level"
 
 

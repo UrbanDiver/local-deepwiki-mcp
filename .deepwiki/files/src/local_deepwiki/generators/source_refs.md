@@ -2,7 +2,7 @@
 
 This file, `src/local_deepwiki/generators/source_refs.py`, is responsible for generating and managing "Relevant Source Files" sections in wiki pages. It provides functionality to map source files to wiki pages, format file entries with optional line numbers, and insert source references into wiki content.
 
-The module depends on standard Python libraries (`re`, `pathlib`) and imports `WikiPage` and `WikiPageStatus` from `local_deepwiki.models`.
+The module depends on standard Python libraries (`re`, `pathlib`) and imports [`WikiPage`](../export/streaming.md) and [`WikiPageStatus`](../models.md) from `local_deepwiki.models`.
 
 ## Functions
 
@@ -19,7 +19,7 @@ Build a mapping from source file paths to wiki page paths.
 **Returns:**
 
 <details>
-<summary>View Source (lines 14-53) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/source_refs.py#L14-L53">GitHub</a></summary>
+<summary>View Source (lines 14-53) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/source_refs.py#L14-L53">GitHub</a></summary>
 
 ```python
 def build_file_to_wiki_map(pages: list[WikiPage], wiki_path: Path | None = None) -> dict[str, str]:
@@ -83,7 +83,7 @@ Calculate relative path between two wiki pages.
 **Returns:**
 
 <details>
-<summary>View Source (lines 56-81) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/source_refs.py#L56-L81">GitHub</a></summary>
+<summary>View Source (lines 56-81) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/source_refs.py#L56-L81">GitHub</a></summary>
 
 ```python
 def _relative_path(from_path: str, to_path: str) -> str:
@@ -140,7 +140,7 @@ Format a single source file entry with optional line numbers.
 **Returns:**
 
 <details>
-<summary>View Source (lines 84-112) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/source_refs.py#L84-L112">GitHub</a></summary>
+<summary>View Source (lines 84-112) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/source_refs.py#L84-L112">GitHub</a></summary>
 
 ```python
 def _format_file_entry(
@@ -202,7 +202,7 @@ Generate a Relevant Source Files section for a wiki page.
 **Returns:**
 
 <details>
-<summary>View Source (lines 115-169) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/source_refs.py#L115-L169">GitHub</a></summary>
+<summary>View Source (lines 115-169) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/source_refs.py#L115-L169">GitHub</a></summary>
 
 ```python
 def generate_source_refs_section(
@@ -280,7 +280,7 @@ Remove any existing Relevant Source Files section from content.
 **Returns:**
 
 <details>
-<summary>View Source (lines 172-202) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/source_refs.py#L172-L202">GitHub</a></summary>
+<summary>View Source (lines 172-202) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/source_refs.py#L172-L202">GitHub</a></summary>
 
 ```python
 def _strip_existing_source_refs(content: str) -> str:
@@ -335,12 +335,12 @@ Add Relevant Source Files sections to wiki pages.
 **Parameters:**
 - `pages`: List of wiki pages.
 - `page_statuses`: Dictionary mapping page paths to their status (with source_files).
-- `wiki_path`: Optional path to wiki directory to find existing file pages.
+- `wiki_path`: Optional path to wiki directory to [find](manifest.md) existing file pages.
 
 **Returns:**
 
 <details>
-<summary>View Source (lines 205-272) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/source_refs.py#L205-L272">GitHub</a></summary>
+<summary>View Source (lines 205-272) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/source_refs.py#L205-L272">GitHub</a></summary>
 
 ```python
 def add_source_refs_sections(
@@ -424,7 +424,7 @@ This module is used by:
 - `_strip_existing_source_refs`: Called by `test_source_refs`
 
 It integrates with:
-- `local_deepwiki.models.WikiPage` and `WikiPageStatus`
+- [`local_deepwiki.models.WikiPage`](../export/streaming.md) and [`WikiPageStatus`](../models.md)
 - Files like `src/local_deepwiki/cli/__init__.py`, `src/local_deepwiki/core/__init__.py`, `src/local_deepwiki/generators/wiki.py`, and `tests/test_plugins.py`
 
 ## Usage Examples
@@ -465,7 +465,7 @@ def build_file_to_wiki_map(pages: list[WikiPage], wiki_path: Path | None = None)
 Build a mapping from source file paths to wiki page paths.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `pages` | `list[WikiPage]` | - | List of wiki pages. |
 | `wiki_path` | `Path | None` | `None` | Optional path to wiki directory to scan for existing pages. |
@@ -475,7 +475,7 @@ Build a mapping from source file paths to wiki page paths.
 
 
 <details>
-<summary>View Source (lines 14-53) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/source_refs.py#L14-L53">GitHub</a></summary>
+<summary>View Source (lines 14-53) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/source_refs.py#L14-L53">GitHub</a></summary>
 
 ```python
 def build_file_to_wiki_map(pages: list[WikiPage], wiki_path: Path | None = None) -> dict[str, str]:
@@ -531,7 +531,7 @@ def generate_source_refs_section(source_files: list[str], current_wiki_path: str
 Generate a Relevant Source Files section for a wiki page.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `source_files` | `list[str]` | - | List of source file paths that contributed to this page. |
 | `current_wiki_path` | `str` | - | Path of the current wiki page. |
@@ -544,7 +544,7 @@ Generate a Relevant Source Files section for a wiki page.
 
 
 <details>
-<summary>View Source (lines 115-169) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/source_refs.py#L115-L169">GitHub</a></summary>
+<summary>View Source (lines 115-169) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/source_refs.py#L115-L169">GitHub</a></summary>
 
 ```python
 def generate_source_refs_section(
@@ -615,11 +615,11 @@ def add_source_refs_sections(pages: list[WikiPage], page_statuses: dict[str, Wik
 Add Relevant Source Files sections to wiki pages.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `pages` | `list[WikiPage]` | - | List of wiki pages. |
 | `page_statuses` | `dict[str, WikiPageStatus]` | - | Dictionary mapping page paths to their status (with source_files). |
-| `wiki_path` | `Path | None` | `None` | Optional path to wiki directory to find existing file pages. |
+| `wiki_path` | `Path | None` | `None` | Optional path to wiki directory to [find](manifest.md) existing file pages. |
 
 **Returns:** `list[WikiPage]`
 
@@ -627,7 +627,7 @@ Add Relevant Source Files sections to wiki pages.
 
 
 <details>
-<summary>View Source (lines 205-272) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/source_refs.py#L205-L272">GitHub</a></summary>
+<summary>View Source (lines 205-272) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/source_refs.py#L205-L272">GitHub</a></summary>
 
 ```python
 def add_source_refs_sections(
@@ -745,7 +745,7 @@ flowchart TD
 Functions and methods in this file and their callers:
 
 - **`Path`**: called by `_relative_path`
-- **`WikiPage`**: called by `add_source_refs_sections`
+- **[`WikiPage`](../export/streaming.md)**: called by `add_source_refs_sections`
 - **`_format_file_entry`**: called by `generate_source_refs_section`
 - **`_relative_path`**: called by `_format_file_entry`
 - **`_strip_existing_source_refs`**: called by `add_source_refs_sections`
@@ -835,3 +835,7 @@ assert "## Relevant Source Files" in result
 | `add_source_refs_sections` | function | Brian Breidenbach | 3 weeks ago | `5f52f84` Fix source refs to link all... |
 | `_format_file_entry` | function | Brian Breidenbach | 3 weeks ago | `42a9a7b` Fix dependencies page: loca... |
 | `_relative_path` | function | Brian Breidenbach | 3 weeks ago | `21c533a` Add hierarchical TOC, sourc... |
+
+## Relevant Source Files
+
+- `src/local_deepwiki/generators/source_refs.py:14-53`

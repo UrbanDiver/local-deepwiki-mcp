@@ -1,198 +1,151 @@
 # File Overview
 
-This file, `src/local_deepwiki/web/app.py`, implements a Flask web application for serving a local deep wiki. It provides functionality for rendering markdown pages, searching content, and handling asynchronous operations for streaming responses. The application integrates with vector stores and LLM providers to support deep research capabilities.
+This file, `src/local_deepwiki/web/app.py`, implements a Flask web application for serving a local wiki. It provides functionality for rendering markdown pages, handling search, and managing wiki structure navigation. It integrates with the core vector store and LLM providers to support deep research capabilities.
 
-## Dependencies
+## Key Dependencies
 
-The file imports:
-- Standard library modules: `asyncio`, `json`, `queue`, `threading`, `Path`, `Any`, `AsyncIterator`, `Callable`, `Iterator`
-- Third-party libraries: `markdown`, `flask` components
-- Internal modules: `local_deepwiki.logging`, `local_deepwiki.config`, `local_deepwiki.core.vectorstore`, `local_deepwiki.providers.embeddings`, `local_deepwiki.providers.llm`, `local_deepwiki.core.deep_research`
+The file imports standard Python libraries and components from `local_deepwiki`:
+- `Flask` for web framework
+- `markdown` for rendering markdown content
+- [`VectorStore`](../core/vectorstore.md) for vector-based search
+- `get_embedding_provider` and `get_cached_llm_provider` for LLM and embedding services
+- [`DeepResearchPipeline`](../core/deep_research.md) for research workflows
+- Logging and configuration utilities
 
 ## Integration
 
-This file is part of the `local_deepwiki` package and is closely related to:
-- CLI interface (`src/local_deepwiki/cli/__init__.py`)
-- Core components (`src/local_deepwiki/core/__init__.py`)
-- Export modules (`src/local_deepwiki/export/html.py`)
-- Generator modules (`src/local_deepwiki/generators/source_refs.py`, `src/local_deepwiki/generators/wiki.py`)
+This file is part of the `local_deepwiki` web application and integrates with:
+- Core wiki structure and content handling
+- Vector search and LLM-based research
+- Export and generation modules for HTML output
+- [Plugin](../plugins/base.md) system and source reference generation
 
-Functions in this file are called by:
-- `get_wiki_structure`: used by test_web
-- `extract_title`: used by html, pdf, streaming +4 more
-- `render_markdown`: used by html, pdf, test_web
-- `build_breadcrumb`: used by html
-- `search_json`: used by test_web
-- `api_research`: used by test_web
+It is called by test utilities and integrates with the main application flow through Flask routes and core components.
+
+---
 
 # Functions
 
 ## `add_security_headers`
 
-```python
-def add_security_headers(response: Response) -> Response
-```
+Adds security headers to Flask responses to protect against common web vulnerabilities.
 
-Add security headers to all responses to protect against common web vulnerabilities.
+### Parameters
+- `response`: `Response` - The Flask response object to modify.
 
-**Parameters:**
-- `response`: The Flask response object to modify.
-
-**Returns:**
-- The modified Flask response object with security headers added.
+### Returns
+- `Response` - The response object with added headers.
 
 ## `get_wiki_structure`
 
-```python
-def get_wiki_structure(wiki_path: Path) -> tuple[list, dict, list | None]
-```
+Retrieves wiki pages and sections, optionally including a hierarchical table of contents.
 
-Get wiki pages and sections, with optional hierarchical TOC.
+### Parameters
+- `wiki_path`: `Path` - The path to the wiki directory.
 
-**Parameters:**
-- `wiki_path`: Path to the wiki directory.
-
-**Returns:**
-- Tuple of (pages, sections, toc_entries) where toc_entries is the hierarchical numbered TOC if toc.json exists, None otherwise.
+### Returns
+- `tuple[list, dict, list | None]` - A tuple of (pages, sections, toc_entries), where toc_entries is None if no `toc.json` exists.
 
 ## `extract_title`
 
-```python
-def extract_title(md_file: Path) -> str
-```
+Extracts the title from a markdown file.
 
-Extract title from markdown file.
+### Parameters
+- `md_file`: `Path` - Path to the markdown file.
 
-**Parameters:**
-- `md_file`: Path to the markdown file.
-
-**Returns:**
-- The extracted title as a string.
+### Returns
+- `str` - The extracted title, or the file stem if no title is found.
 
 ## `render_markdown`
 
-```python
-def render_markdown(content: str) -> str
-```
+Converts markdown content to HTML.
 
-Render markdown to HTML.
+### Parameters
+- `content`: `str` - The markdown content to render.
 
-**Parameters:**
-- `content`: Markdown content as a string.
-
-**Returns:**
-- HTML-rendered content as a string.
+### Returns
+- `str` - The rendered HTML content.
 
 ## `build_breadcrumb`
 
-```python
-def build_breadcrumb(wiki_path: Path, current_path: str) -> str
-```
+Generates HTML for breadcrumb navigation.
 
-Build breadcrumb navigation HTML with clickable links.
+### Parameters
+- `wiki_path`: `Path` - The path to the wiki directory.
+- `current_path`: `str` - The current page path.
 
-**Parameters:**
-- `wiki_path`: Path to the wiki directory.
-- `current_path`: Current page path.
-
-**Returns:**
-- HTML string for breadcrumb navigation.
+### Returns
+- `str` - HTML for the breadcrumb navigation.
 
 ## `index`
 
-```python
-def index()
-```
+Redirects the root URL (`/`) to the `index.md` page.
 
-Redirect to index.md.
-
-**Returns:**
-- Flask redirect response to the index page.
+### Returns
+- `Response` - A redirect response.
 
 ## `search_json`
 
-```python
-def search_json()
-```
+Serves the search index JSON file.
 
-Serve the search index JSON file.
-
-**Returns:**
-- Flask JSON response containing search index data or empty list if not generated.
+### Returns
+- `Response` - JSON response of search index or empty list if not found.
 
 ## `view_page`
 
-```python
-def view_page(path: str)
-```
+Displays a specific wiki page.
 
-View a wiki page.
+### Parameters
+- `path`: `str` - The path to the page.
 
-**Parameters:**
-- `path`: Path to the markdown file to view.
-
-**Returns:**
-- Flask response rendering the markdown page.
+### Returns
+- `Response` - The rendered page or an error response.
 
 ## `stream_async_generator`
 
-```python
-def stream_async_generator(async_gen_factory: Callable[[], AsyncIterator[str]]) -> Iterator[str]
-```
+Converts an async generator into a synchronous generator using a queue.
 
-Bridge an async generator to a sync generator using a queue.
+### Parameters
+- `async_gen_factory`: `Callable[[], AsyncIterator[str]]` - A callable that returns an async iterator.
 
-**Parameters:**
-- `async_gen_factory`: A callable that returns an async iterator.
-
-**Yields:**
-- Items from the async generator.
+### Returns
+- `Iterator[str]` - A synchronous iterator over the async generator items.
 
 ## `run_async`
 
-```python
-def run_async() -> None
-```
+Runs an async function in a new [event](../../../coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.md) loop.
 
-Execute the async generator in a separate thread.
+### Returns
+- `None` - No return value.
 
 ## `collect`
 
-```python
-async def collect() -> None
-```
+Collects items from an async generator and puts them into a queue.
 
-Collect items from the async generator and put them into a queue.
+### Returns
+- `None` - No return value.
 
 ## `format_sources`
 
-```python
-def format_sources(search_results: list[Any]) -> list[dict[str, Any]]
-```
+Formats search results into source citation dictionaries.
 
-Format search results as source citations.
+### Parameters
+- `search_results`: `list[Any]` - List of search result objects.
 
-**Parameters:**
-- `search_results`: List of SearchResult objects.
-
-**Returns:**
-- List of source dictionaries with file, lines, type, and score.
+### Returns
+- `list[dict[str, Any]]` - List of source dictionaries.
 
 ## `build_prompt_with_history`
 
-```python
-def build_prompt_with_history(question: str, history: list[dict[str, str]], context: str) -> str
-```
+Constructs a prompt that includes conversation history.
 
-Build a prompt that includes conversation history for follow-up questions.
+### Parameters
+- `question`: `str` - The current question.
+- `history`: `list[dict[str, str]]` - Previous Q&A exchanges.
+- `context`: `str` - Context from search results.
 
-**Parameters:**
-- `question`: The current question.
-- `history`: Previous Q&A exchanges.
-- `context`: Code context from search results.
-
-**Returns:**
-- A prompt string with history and context.
+### Returns
+- `str` - The constructed prompt string.
 
 ## API Reference
 
@@ -209,7 +162,7 @@ def add_security_headers(response: Response) -> Response
 Add security headers to all responses.  These headers protect against common web vulnerabilities: - X-Content-Type-Options: Prevents MIME type sniffing - X-Frame-Options: Prevents clickjacking attacks - X-XSS-Protection: Enables browser XSS filtering (legacy but still useful) - Content-Security-Policy: Controls allowed content sources - Referrer-Policy: Controls referrer information leakage
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `response` | `Response` | - | - |
 
@@ -269,7 +222,7 @@ def get_wiki_structure(wiki_path: Path) -> tuple[list, dict, list | None]
 Get wiki pages and sections, with optional hierarchical TOC.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `wiki_path` | `Path` | - | - |
 
@@ -330,7 +283,7 @@ def extract_title(md_file: Path) -> str
 Extract title from markdown file.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `md_file` | `Path` | - | - |
 
@@ -368,7 +321,7 @@ def render_markdown(content: str) -> str
 Render markdown to HTML.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `content` | `str` | - | - |
 
@@ -404,7 +357,7 @@ def build_breadcrumb(wiki_path: Path, current_path: str) -> str
 Build breadcrumb navigation HTML with clickable links.  For a path like 'files/src/local_deepwiki/core/chunker.md', generates: Home > Files > src > local_deepwiki > core > chunker  Each segment links to its index.md if one exists in that folder.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `wiki_path` | `Path` | - | - |
 | `current_path` | `str` | - | - |
@@ -537,7 +490,7 @@ def view_page(path: str)
 View a wiki page.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `path` | `str` | - | - |
 
@@ -598,7 +551,7 @@ def stream_async_generator(async_gen_factory: Callable[[], AsyncIterator[str]]) 
 Bridge an async generator to a sync generator using a queue.  This allows streaming async results through Flask's synchronous response handling.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `async_gen_factory` | `Callable[[], AsyncIterator[str]]` | - | A callable that returns an async iterator. |
 
@@ -729,9 +682,9 @@ def format_sources(search_results: list[Any]) -> list[dict[str, Any]]
 Format search results as source citations.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `search_results` | `list[Any]` | - | List of SearchResult objects. |
+| `search_results` | `list[Any]` | - | List of [SearchResult](../models.md) objects. |
 
 **Returns:** `list[dict[str, Any]]`
 
@@ -776,7 +729,7 @@ def build_prompt_with_history(question: str, history: list[dict[str, str]], cont
 Build a prompt that includes conversation history for follow-up questions.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `question` | `str` | - | The current question. |
 | `history` | `list[dict[str, str]]` | - | Previous Q&A exchanges. |
@@ -1425,9 +1378,9 @@ async def on_progress(progress: ResearchProgress) -> None
 ```
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `progress` | `ResearchProgress` | - | - |
+| `progress` | [`ResearchProgress`](../models.md) | - | - |
 
 **Returns:** `None`
 
@@ -1472,7 +1425,7 @@ def create_app(wiki_path: str | Path) -> Flask
 Create Flask app with wiki path configured.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `wiki_path` | `str | Path` | - | - |
 
@@ -1506,7 +1459,7 @@ def run_server(wiki_path: str | Path, host: str = "127.0.0.1", port: int = 8080,
 Run the wiki web server.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `wiki_path` | `str | Path` | - | - |
 | `host` | `str` | `"127.0.0.1"` | - |
@@ -1682,14 +1635,14 @@ flowchart TD
 Functions and methods in this file and their callers:
 
 - **`ArgumentParser`**: called by `main`
-- **`DeepResearchPipeline`**: called by `api_research`, `run_research`
+- **[`DeepResearchPipeline`](../core/deep_research.md)**: called by `api_research`, `run_research`
 - **`Markdown`**: called by `render_markdown`
 - **`Path`**: called by `create_app`, `main`
 - **`Queue`**: called by `api_research`, `stream_async_generator`
 - **`Response`**: called by `api_chat`, `api_research`
 - **`Thread`**: called by `stream_async_generator`
 - **`ValueError`**: called by `create_app`
-- **`VectorStore`**: called by `api_chat`, `api_research`, `generate_response`, `run_research`
+- **[`VectorStore`](../core/vectorstore.md)**: called by `api_chat`, `api_research`, `generate_response`, `run_research`
 - **`abort`**: called by `chat_page`, `search_json`, `view_page`
 - **`add_argument`**: called by `main`
 - **`async_gen_factory`**: called by `collect`, `run_async`, `stream_async_generator`
@@ -1708,7 +1661,7 @@ Functions and methods in this file and their callers:
 - **`format_sources`**: called by `api_chat`, `generate_response`
 - **`generate_stream`**: called by `api_chat`, `generate_response`
 - **`get_cached_llm_provider`**: called by `api_chat`, `api_research`, `generate_response`, `run_research`
-- **`get_config`**: called by `api_chat`, `api_research`, `generate_response`, `run_research`
+- **[`get_config`](../config.md)**: called by `api_chat`, `api_research`, `generate_response`, `run_research`
 - **`get_embedding_provider`**: called by `api_chat`, `api_research`, `generate_response`, `run_research`
 - **`get_json`**: called by `api_chat`, `api_research`
 - **`get_nowait`**: called by `api_research`, `run_research`
@@ -1747,7 +1700,7 @@ Functions and methods in this file and their callers:
 
 | Entity | Type | Author | Date | Commit |
 |--------|------|--------|------|--------|
-| `add_security_headers` | function | Brian Breidenbach | 1 week ago | `8186005` Fix P1 security issues: Add... |
+| `add_security_headers` | function | Brian Breidenbach | 2 weeks ago | `8186005` Fix P1 security issues: Add... |
 | `create_app` | function | Brian Breidenbach | 2 weeks ago | `947f4e3` Update wiki docs, fix path ... |
 | `view_page` | function | Brian Breidenbach | 2 weeks ago | `b8566a9` Fix security vulnerability,... |
 | `format_sources` | function | Brian Breidenbach | 3 weeks ago | `0d91a70` Apply Python best practices... |
@@ -1769,3 +1722,7 @@ Functions and methods in this file and their callers:
 | `index` | function | Brian Breidenbach | 3 weeks ago | `264555b` Add Jinja2 template system ... |
 | `run_server` | function | Brian Breidenbach | 3 weeks ago | `264555b` Add Jinja2 template system ... |
 | `main` | function | Brian Breidenbach | 3 weeks ago | `264555b` Add Jinja2 template system ... |
+
+## Relevant Source Files
+
+- `src/local_deepwiki/web/app.py:33-67`

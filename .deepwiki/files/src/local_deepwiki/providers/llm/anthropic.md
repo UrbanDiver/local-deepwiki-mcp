@@ -1,146 +1,169 @@
 # File Overview
 
-This file implements the `AnthropicProvider` class, which provides an interface for interacting with the Anthropic API. It handles authentication, model validation, and text generation using the `AsyncAnthropic` client. The class supports both regular and streaming text generation, and includes error handling for common API issues such as authentication failures, rate limits, and model not found errors.
+This file implements the `AnthropicProvider` class, which provides an interface to the Anthropic API for generating text using Claude models. It handles authentication, model validation, and integrates with the base [`LLMProvider`](../base.md) class to support standard LLM operations such as text generation and streaming.
+
+The provider uses the `AsyncAnthropic` client from the `anthropic` package and includes error handling for common API issues like authentication failures, rate limits, and model not found errors.
 
 ## Dependencies
 
-This file imports from:
-- `typing`: For type hints (`Any`, `AsyncIterator`)
-- `anthropic`: For `APIConnectionError`, `APIStatusError`, `AsyncAnthropic`, `AuthenticationError`
-- `local_deepwiki.logging`: For logging via `get_logger`
-- `local_deepwiki.providers.base`: For base classes and exceptions (`LLMProvider`, `LLMProviderCapabilities`, `ProviderAuthenticationError`, `ProviderConnectionError`, `ProviderModelNotFoundError`, `ProviderRateLimitError`, `with_retry`)
-- `local_deepwiki.providers.credentials`: For `CredentialManager` to retrieve API keys
+This file imports:
+- `AsyncIterator` and `Any` from `typing`
+- `APIConnectionError`, `APIStatusError`, `AsyncAnthropic`, and `AuthenticationError` from `anthropic`
+- [`get_logger`](../../logging.md) from `local_deepwiki.logging`
+- Base provider classes and exceptions from `local_deepwiki.providers.base`
+- [`CredentialManager`](../credentials.md) from `local_deepwiki.providers.credentials`
 
-## Integration
+## Related Files
 
-This file is part of the `local_deepwiki.providers.llm` module and integrates with:
-- The `LLMProvider` base class to ensure consistent provider interface
-- `CredentialManager` for secure API key handling
-- `with_retry` for retry logic on API calls
-- Other modules in the `local_deepwiki` package such as `cli`, `core`, `generators`, and `tests` (based on related files)
+This provider is part of the local_deepwiki project and integrates with:
+- `src/local_deepwiki/core/__init__.py`
+- `src/local_deepwiki/generators/source_refs.py`
+- `src/local_deepwiki/plugins/base.py`
+- Tests in `tests/__init__.py` and `tests/test_plugins.py`
 
-# Classes
+# Class: AnthropicProvider
 
-## AnthropicProvider
+The `AnthropicProvider` class implements the [`LLMProvider`](../base.md) interface for the Anthropic API. It supports text generation and streaming, and includes methods for validating connectivity and model availability.
 
-The `AnthropicProvider` class implements the `LLMProvider` interface for the Anthropic API. It handles API communication, model validation, and error conversion.
+## Methods
 
-### Methods
-
-#### `__init__(self, model: str = "claude-sonnet-4-20250514", api_key: str | None = None)`
+### `__init__(self, model: str = "claude-sonnet-4-20250514", api_key: str | None = None)`
 
 Initialize the Anthropic provider.
 
 **Parameters:**
-- `model`: Anthropic model name.
-- `api_key`: Optional API key. Uses `ANTHROPIC_API_KEY` environment variable if not provided.
+- `model` (str): Anthropic model name. Defaults to `"claude-sonnet-4-20250514"`.
+- `api_key` (str | None): Optional API key. Uses `ANTHROPIC_API_KEY` environment variable if not provided.
 
 **Raises:**
-- `ProviderAuthenticationError`: If no API key is configured or format is invalid.
+- [`ProviderAuthenticationError`](../base.md): If no API key is configured or format is invalid.
 
-#### `_build_kwargs(self, prompt: str, system_prompt: str | None, max_tokens: int, temperature: float)`
+### `_build_kwargs(self, prompt: str, system_prompt: str | None, max_tokens: int, temperature: float)`
 
 Build kwargs for Anthropic API calls.
 
 **Parameters:**
-- `prompt`: The user prompt.
-- `system_prompt`: Optional system prompt.
-- `max_tokens`: Maximum tokens to generate.
-- `temperature`: Sampling temperature.
+- `prompt` (str): The user prompt.
+- `system_prompt` (str | None): Optional system prompt.
+- `max_tokens` (int): Maximum tokens to generate.
+- `temperature` (float): Sampling temperature.
 
 **Returns:**
-- Dict of kwargs for messages.create/stream.
+- `dict[str, Any]`: Dict of kwargs for `messages.create`/`stream`.
 
-#### `_handle_api_error(self, e: Exception)`
+### `_handle_api_error(self, e: Exception)`
 
 Convert Anthropic API errors to standardized provider errors.
 
 **Parameters:**
-- `e`: The exception from the Anthropic API.
+- `e` (Exception): The exception from the Anthropic API.
 
 **Raises:**
-- `ProviderAuthenticationError`: If authentication fails.
-- `ProviderRateLimitError`: If rate limited.
-- `ProviderModelNotFoundError`: If model not found.
-- `ProviderConnectionError`: If connection fails.
+- [`ProviderAuthenticationError`](../base.md): If authentication fails.
+- [`ProviderRateLimitError`](../base.md): If rate limited.
+- [`ProviderModelNotFoundError`](../base.md): If model not found.
+- [`ProviderConnectionError`](../base.md): If connection fails.
 
-#### `validate_connectivity(self)`
+### `validate_connectivity(self)`
 
 Test that the Anthropic API is reachable and configured correctly.
 
 **Returns:**
-- `True` if the API is accessible.
+- `bool`: True if the API is accessible.
 
 **Raises:**
-- `ProviderConnectionError`: If the API cannot be reached.
-- `ProviderAuthenticationError`: If authentication fails.
+- [`ProviderConnectionError`](../base.md): If the API cannot be reached.
+- [`ProviderAuthenticationError`](../base.md): If authentication fails.
 
-#### `validate_model(self, model_name: str)`
+### `validate_model(self, model_name: str)`
 
 Test that a specific model is available.
 
 **Parameters:**
-- `model_name`: The model name to validate.
+- `model_name` (str): The model name to validate.
 
 **Returns:**
-- `True` if the model is available.
+- `bool`: True if the model is available.
 
 **Raises:**
-- `ProviderModelNotFoundError`: If the model is not available.
+- [`ProviderModelNotFoundError`](../base.md): If the model is not available.
 
-#### `get_capabilities(self)`
+### `get_capabilities(self)`
 
 Return Anthropic provider capabilities.
 
 **Returns:**
-- `LLMProviderCapabilities` with Anthropic-specific information.
+- [`LLMProviderCapabilities`](../base.md): With Anthropic-specific information.
 
-#### `generate(self, prompt: str, system_prompt: str | None = None, max_tokens: int = 4096, temperature: float = 0.7)`
+### `generate(self, prompt: str, system_prompt: str | None = None, max_tokens: int = 4096, temperature: float = 0.7)`
 
 Generate text from a prompt.
 
 **Parameters:**
-- `prompt`: The user prompt.
-- `system_prompt`: Optional system prompt.
-- `max_tokens`: Maximum tokens to generate.
-- `temperature`: Sampling temperature.
+- `prompt` (str): The user prompt.
+- `system_prompt` (str | None): Optional system prompt.
+- `max_tokens` (int): Maximum tokens to generate. Defaults to `4096`.
+- `temperature` (float): Sampling temperature. Defaults to `0.7`.
 
 **Returns:**
-- Generated text.
+- `str`: Generated text.
 
 **Raises:**
-- `ProviderConnectionError`: If the API cannot be reached.
-- `ProviderAuthenticationError`: If authentication fails.
+- [`ProviderConnectionError`](../base.md): If the API cannot be reached.
+- [`ProviderAuthenticationError`](../base.md): If authentication fails.
 
-#### `generate_stream(self, prompt: str, system_prompt: str | None = None, max_tokens: int = 4096, temperature: float = 0.7)`
+### `generate_stream(self, prompt: str, system_prompt: str | None = None, max_tokens: int = 4096, temperature: float = 0.7)`
 
 Generate text from a prompt with streaming.
 
 **Parameters:**
-- `prompt`: The user prompt.
-- `system_prompt`: Optional system prompt.
-- `max_tokens`: Maximum tokens to generate.
-- `temperature`: Sampling temperature.
+- `prompt` (str): The user prompt.
+- `system_prompt` (str | None): Optional system prompt.
+- `max_tokens` (int): Maximum tokens to generate. Defaults to `4096`.
+- `temperature` (float): Sampling temperature. Defaults to `0.7`.
 
 **Yields:**
-- Generated text chunks.
+- `str`: Generated text chunks.
 
 **Raises:**
-- `ProviderConnectionError`: If the API cannot be reached.
-- `ProviderAuthenticationError`: If authentication fails.
+- [`ProviderConnectionError`](../base.md): If the API cannot be reached.
+- [`ProviderAuthenticationError`](../base.md): If authentication fails.
 
-#### `name(self)`
+### `name(self)`
 
 Get the provider name.
 
 **Returns:**
-- The provider name as a string in the format `anthropic:{model}`.
+- `str`: Provider name in format `"anthropic:{model}"`.
+
+# Integration
+
+This provider integrates with:
+- The [`LLMProvider`](../base.md) base class to provide a consistent interface for LLM operations.
+- The [`CredentialManager`](../credentials.md) for retrieving API keys from environment variables.
+- The [`ProviderAuthenticationError`](../base.md), [`ProviderConnectionError`](../base.md), [`ProviderModelNotFoundError`](../base.md), and [`ProviderRateLimitError`](../base.md) for standardizing error handling.
+
+It is designed to be used within the local_deepwiki framework as part of a larger system for generating and managing knowledge from local documents.
+
+# Usage Examples
+
+```python
+# Initialize the provider
+provider = AnthropicProvider(model="claude-3-5-sonnet-20240620")
+
+# Generate text
+response = await provider.generate("Hello, world!")
+
+# Stream text generation
+async for chunk in provider.generate_stream("Write a story about..."):
+    print(chunk)
+```
 
 ## API Reference
 
 ### class `AnthropicProvider`
 
-**Inherits from:** `LLMProvider`
+**Inherits from:** [`LLMProvider`](../base.md)
 
 LLM provider using Anthropic API.
 
@@ -148,7 +171,7 @@ LLM provider using Anthropic API.
 
 
 <details>
-<summary>View Source (lines 34-311) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/llm/anthropic.py#L34-L311">GitHub</a></summary>
+<summary>View Source (lines 34-311) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/llm/anthropic.py#L34-L311">GitHub</a></summary>
 
 ```python
 class AnthropicProvider(LLMProvider):
@@ -166,14 +189,14 @@ def __init__(model: str = "claude-sonnet-4-20250514", api_key: str | None = None
 Initialize the Anthropic provider.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `model` | `str` | `"claude-sonnet-4-20250514"` | Anthropic model name. |
 | `api_key` | `str | None` | `None` | Optional API key. Uses ANTHROPIC_API_KEY env var if not provided. |
 
 
 <details>
-<summary>View Source (lines 37-66) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/llm/anthropic.py#L37-L66">GitHub</a></summary>
+<summary>View Source (lines 37-66) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/llm/anthropic.py#L37-L66">GitHub</a></summary>
 
 ```python
 def __init__(self, model: str = "claude-sonnet-4-20250514", api_key: str | None = None):
@@ -220,7 +243,7 @@ Test that the Anthropic API is reachable and configured correctly.
 
 
 <details>
-<summary>View Source (lines 150-174) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/llm/anthropic.py#L150-L174">GitHub</a></summary>
+<summary>View Source (lines 150-174) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/llm/anthropic.py#L150-L174">GitHub</a></summary>
 
 ```python
 async def validate_connectivity(self) -> bool:
@@ -261,13 +284,13 @@ async def validate_model(model_name: str) -> bool
 Test that a specific model is available.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `model_name` | `str` | - | The model name to validate. |
 
 
 <details>
-<summary>View Source (lines 176-208) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/llm/anthropic.py#L176-L208">GitHub</a></summary>
+<summary>View Source (lines 176-208) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/llm/anthropic.py#L176-L208">GitHub</a></summary>
 
 ```python
 async def validate_model(self, model_name: str) -> bool:
@@ -317,7 +340,7 @@ Return Anthropic provider capabilities.
 
 
 <details>
-<summary>View Source (lines 210-225) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/llm/anthropic.py#L210-L225">GitHub</a></summary>
+<summary>View Source (lines 210-225) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/llm/anthropic.py#L210-L225">GitHub</a></summary>
 
 ```python
 def get_capabilities(self) -> LLMProviderCapabilities:
@@ -349,7 +372,7 @@ async def generate(prompt: str, system_prompt: str | None = None, max_tokens: in
 Generate text from a prompt.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `prompt` | `str` | - | The user prompt. |
 | `system_prompt` | `str | None` | `None` | Optional system prompt. |
@@ -358,7 +381,7 @@ Generate text from a prompt.
 
 
 <details>
-<summary>View Source (lines 228-270) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/llm/anthropic.py#L228-L270">GitHub</a></summary>
+<summary>View Source (lines 228-270) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/llm/anthropic.py#L228-L270">GitHub</a></summary>
 
 ```python
 async def generate(
@@ -417,7 +440,7 @@ async def generate_stream(prompt: str, system_prompt: str | None = None, max_tok
 Generate text from a prompt with streaming.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `prompt` | `str` | - | The user prompt. |
 | `system_prompt` | `str | None` | `None` | Optional system prompt. |
@@ -426,7 +449,7 @@ Generate text from a prompt with streaming.
 
 
 <details>
-<summary>View Source (lines 272-306) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/llm/anthropic.py#L272-L306">GitHub</a></summary>
+<summary>View Source (lines 272-306) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/llm/anthropic.py#L272-L306">GitHub</a></summary>
 
 ```python
 async def generate_stream(
@@ -480,7 +503,7 @@ Get the provider name.
 
 
 <details>
-<summary>View Source (lines 309-311) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/llm/anthropic.py#L309-L311">GitHub</a></summary>
+<summary>View Source (lines 309-311) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/llm/anthropic.py#L309-L311">GitHub</a></summary>
 
 ```python
 def name(self) -> str:
@@ -563,11 +586,11 @@ flowchart TD
 Functions and methods in this file and their callers:
 
 - **`AsyncAnthropic`**: called by `AnthropicProvider.__init__`
-- **`LLMProviderCapabilities`**: called by `AnthropicProvider.get_capabilities`
-- **`ProviderAuthenticationError`**: called by `AnthropicProvider.__init__`, `AnthropicProvider._handle_api_error`
-- **`ProviderConnectionError`**: called by `AnthropicProvider._handle_api_error`, `AnthropicProvider.validate_connectivity`
-- **`ProviderModelNotFoundError`**: called by `AnthropicProvider._handle_api_error`, `AnthropicProvider.validate_model`
-- **`ProviderRateLimitError`**: called by `AnthropicProvider._handle_api_error`
+- **[`LLMProviderCapabilities`](../base.md)**: called by `AnthropicProvider.get_capabilities`
+- **[`ProviderAuthenticationError`](../base.md)**: called by `AnthropicProvider.__init__`, `AnthropicProvider._handle_api_error`
+- **[`ProviderConnectionError`](../base.md)**: called by `AnthropicProvider._handle_api_error`, `AnthropicProvider.validate_connectivity`
+- **[`ProviderModelNotFoundError`](../base.md)**: called by `AnthropicProvider._handle_api_error`, `AnthropicProvider.validate_model`
+- **[`ProviderRateLimitError`](../base.md)**: called by `AnthropicProvider._handle_api_error`
 - **`_build_kwargs`**: called by `AnthropicProvider.generate`, `AnthropicProvider.generate_stream`
 - **`_handle_api_error`**: called by `AnthropicProvider.generate`, `AnthropicProvider.generate_stream`, `AnthropicProvider.validate_connectivity`, `AnthropicProvider.validate_model`
 - **`create`**: called by `AnthropicProvider.generate`, `AnthropicProvider.validate_connectivity`, `AnthropicProvider.validate_model`
@@ -647,7 +670,7 @@ assert provider.name == "anthropic:claude-3-opus-20240229"
 | `get_capabilities` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
 | `generate` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
 | `generate_stream` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
-| `_build_kwargs` | method | Brian Breidenbach | 1 week ago | `d3cbf90` Fix medium priority issues:... |
+| `_build_kwargs` | method | Brian Breidenbach | 2 weeks ago | `d3cbf90` Fix medium priority issues:... |
 | `name` | method | Brian Breidenbach | 3 weeks ago | `cdae76f` Initial commit: Local DeepW... |
 
 ## Additional Source Code
@@ -657,7 +680,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_build_kwargs`
 
 <details>
-<summary>View Source (lines 68-95) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/llm/anthropic.py#L68-L95">GitHub</a></summary>
+<summary>View Source (lines 68-95) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/llm/anthropic.py#L68-L95">GitHub</a></summary>
 
 ```python
 def _build_kwargs(
@@ -696,7 +719,7 @@ def _build_kwargs(
 #### `_handle_api_error`
 
 <details>
-<summary>View Source (lines 97-148) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/llm/anthropic.py#L97-L148">GitHub</a></summary>
+<summary>View Source (lines 97-148) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/llm/anthropic.py#L97-L148">GitHub</a></summary>
 
 ```python
 def _handle_api_error(self, e: Exception) -> None:
@@ -755,3 +778,6 @@ def _handle_api_error(self, e: Exception) -> None:
 
 </details>
 
+## Relevant Source Files
+
+- `src/local_deepwiki/providers/llm/anthropic.py:34-311`

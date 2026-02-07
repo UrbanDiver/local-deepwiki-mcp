@@ -1,16 +1,16 @@
 # File Overview
 
-This file implements the `OpenAILLMProvider` class, which provides an interface to the OpenAI API for generating text and streaming responses. It handles authentication, model validation, and error conversion to standardized provider errors. The class integrates with the `CredentialManager` for API key handling and uses the `local_deepwiki.providers.base` module for base provider functionality and error types.
+This file implements the `OpenAILLMProvider` class, which provides an interface to the OpenAI API for language model interactions. It handles authentication, connectivity validation, model validation, and text generation with and without streaming support. The class is designed to work with the base [`LLMProvider`](../base.md) framework and integrates with credential management and error handling utilities.
 
-# Classes
+## Classes
 
-## OpenAILLMProvider
+### OpenAILLMProvider
 
-The `OpenAILLMProvider` class implements the `LLMProvider` interface for interacting with OpenAI's language models. It supports text generation and streaming, and handles authentication and model validation.
+The `OpenAILLMProvider` class implements the [`LLMProvider`](../base.md) interface to interact with OpenAI's language models. It supports text generation and streaming, handles authentication and error conversion, and validates model availability.
 
-### Methods
+#### Methods
 
-#### `__init__(self, model: str = "gpt-4o", api_key: str | None = None)`
+##### `__init__(self, model: str = "gpt-4o", api_key: str | None = None)`
 
 Initialize the OpenAI provider.
 
@@ -19,9 +19,9 @@ Initialize the OpenAI provider.
 - `api_key`: Optional API key. Uses `OPENAI_API_KEY` environment variable if not provided.
 
 **Raises:**
-- `ProviderAuthenticationError`: If no API key is configured or format is invalid.
+- [`ProviderAuthenticationError`](../base.md): If no API key is configured or format is invalid.
 
-#### `_handle_api_error(self, e: Exception)`
+##### `_handle_api_error(self, e: Exception)`
 
 Convert OpenAI API errors to standardized provider errors.
 
@@ -29,12 +29,12 @@ Convert OpenAI API errors to standardized provider errors.
 - `e`: The exception from the OpenAI API.
 
 **Raises:**
-- `ProviderAuthenticationError`: If authentication fails.
-- `ProviderRateLimitError`: If rate limited.
-- `ProviderModelNotFoundError`: If model not found.
-- `ProviderConnectionError`: If connection fails.
+- [`ProviderAuthenticationError`](../base.md): If authentication fails.
+- [`ProviderRateLimitError`](../base.md): If rate limited.
+- [`ProviderModelNotFoundError`](../base.md): If model not found.
+- [`ProviderConnectionError`](../base.md): If connection fails.
 
-#### `validate_connectivity(self)`
+##### `validate_connectivity(self)`
 
 Test that the OpenAI API is reachable and configured correctly.
 
@@ -42,10 +42,10 @@ Test that the OpenAI API is reachable and configured correctly.
 - `True` if the API is accessible.
 
 **Raises:**
-- `ProviderConnectionError`: If the API cannot be reached.
-- `ProviderAuthenticationError`: If authentication fails.
+- [`ProviderConnectionError`](../base.md): If the API cannot be reached.
+- [`ProviderAuthenticationError`](../base.md): If authentication fails.
 
-#### `validate_model(self, model_name: str)`
+##### `validate_model(self, model_name: str)`
 
 Test that a specific model is available.
 
@@ -56,16 +56,16 @@ Test that a specific model is available.
 - `True` if the model is available.
 
 **Raises:**
-- `ProviderModelNotFoundError`: If the model is not available.
+- [`ProviderModelNotFoundError`](../base.md): If the model is not available.
 
-#### `get_capabilities(self)`
+##### `get_capabilities(self)`
 
 Return OpenAI provider capabilities.
 
 **Returns:**
-- `LLMProviderCapabilities` with OpenAI-specific information.
+- [`LLMProviderCapabilities`](../base.md) with OpenAI-specific information.
 
-#### `generate(self, prompt: str, system_prompt: str | None = None, max_tokens: int = 4096, temperature: float = 0.7)`
+##### `generate(self, prompt: str, system_prompt: str | None = None, max_tokens: int = 4096, temperature: float = 0.7)`
 
 Generate text from a prompt.
 
@@ -79,10 +79,10 @@ Generate text from a prompt.
 - Generated text.
 
 **Raises:**
-- `ProviderConnectionError`: If the API cannot be reached.
-- `ProviderAuthenticationError`: If authentication fails.
+- [`ProviderConnectionError`](../base.md): If the API cannot be reached.
+- [`ProviderAuthenticationError`](../base.md): If authentication fails.
 
-#### `generate_stream(self, prompt: str, system_prompt: str | None = None, max_tokens: int = 4096, temperature: float = 0.7)`
+##### `generate_stream(self, prompt: str, system_prompt: str | None = None, max_tokens: int = 4096, temperature: float = 0.7)`
 
 Generate text from a prompt with streaming.
 
@@ -96,45 +96,71 @@ Generate text from a prompt with streaming.
 - Generated text chunks.
 
 **Raises:**
-- `ProviderConnectionError`: If the API cannot be reached.
-- `ProviderAuthenticationError`: If authentication fails.
+- [`ProviderConnectionError`](../base.md): If the API cannot be reached.
+- [`ProviderAuthenticationError`](../base.md): If authentication fails.
 
-#### `name(self)`
+##### `name(self)`
 
 Get the provider name.
 
 **Returns:**
-- A string identifier for the provider, formatted as `openai:{model_name}`.
+- A string identifier for the provider, in the format `openai:{model_name}`.
 
-# Integration
+## Integration
 
-This file is part of the `local_deepwiki.providers.llm` module and integrates with:
+This file integrates with:
+- `local_deepwiki.providers.base`: Inherits from [`LLMProvider`](../base.md) and uses base error types.
+- `local_deepwiki.providers.credentials`: Uses [`CredentialManager`](../credentials.md) for API key retrieval.
+- `local_deepwiki.logging`: Uses [`get_logger`](../../logging.md) for logging.
 
-- `local_deepwiki.providers.base` for base provider classes and error handling
-- `local_deepwiki.providers.credentials` for managing API keys
-- `local_deepwiki.logging` for logging
+The `OpenAILLMProvider` is used by components that require LLM interaction, such as the [`WikiGenerator`](../../generators/wiki.md) class or plugins that generate content. It is part of the broader `local_deepwiki` framework for local knowledge base interactions.
 
-It is used by components such as `WikiGenerator` and `SourceRefsGenerator` in the `local_deepwiki.generators` module, as indicated by related files.
+## Usage Examples
 
-# Usage Examples
+### Initialize the Provider
 
 ```python
-# Initialize the OpenAI provider
-provider = OpenAILLMProvider(model="gpt-4o", api_key="your-api-key")
+from local_deepwiki.providers.llm.openai import OpenAILLMProvider
 
-# Generate text
-response = await provider.generate("Hello, world!")
+provider = OpenAILLMProvider(model="gpt-4o", api_key="sk-...")
 
-# Stream text
-async for chunk in provider.generate_stream("Hello, world!"):
-    print(chunk)
+# Or use environment variable OPENAI_API_KEY
+provider = OpenAILLMProvider(model="gpt-4o")
+```
+
+### Validate Connectivity
+
+```python
+await provider.validate_connectivity()
+```
+
+### Generate Text
+
+```python
+response = await provider.generate(
+    prompt="Explain quantum computing.",
+    system_prompt="You are a helpful assistant.",
+    max_tokens=512,
+    temperature=0.5
+)
+print(response)
+```
+
+### Stream Text Generation
+
+```python
+async for chunk in provider.generate_stream(
+    prompt="Write a story about a robot.",
+    max_tokens=1024
+):
+    print(chunk, end="", flush=True)
 ```
 
 ## API Reference
 
 ### class `OpenAILLMProvider`
 
-**Inherits from:** `LLMProvider`
+**Inherits from:** [`LLMProvider`](../base.md)
 
 LLM provider using OpenAI API.
 
@@ -142,7 +168,7 @@ LLM provider using OpenAI API.
 
 
 <details>
-<summary>View Source (lines 38-312) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/llm/openai.py#L38-L312">GitHub</a></summary>
+<summary>View Source (lines 38-312) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/llm/openai.py#L38-L312">GitHub</a></summary>
 
 ```python
 class OpenAILLMProvider(LLMProvider):
@@ -160,14 +186,14 @@ def __init__(model: str = "gpt-4o", api_key: str | None = None)
 Initialize the OpenAI provider.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `model` | `str` | `"gpt-4o"` | OpenAI model name. |
 | `api_key` | `str | None` | `None` | Optional API key. Uses OPENAI_API_KEY env var if not provided. |
 
 
 <details>
-<summary>View Source (lines 41-70) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/llm/openai.py#L41-L70">GitHub</a></summary>
+<summary>View Source (lines 41-70) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/llm/openai.py#L41-L70">GitHub</a></summary>
 
 ```python
 def __init__(self, model: str = "gpt-4o", api_key: str | None = None):
@@ -214,7 +240,7 @@ Test that the OpenAI API is reachable and configured correctly.
 
 
 <details>
-<summary>View Source (lines 125-155) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/llm/openai.py#L125-L155">GitHub</a></summary>
+<summary>View Source (lines 125-155) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/llm/openai.py#L125-L155">GitHub</a></summary>
 
 ```python
 async def validate_connectivity(self) -> bool:
@@ -261,13 +287,13 @@ async def validate_model(model_name: str) -> bool
 Test that a specific model is available.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `model_name` | `str` | - | The model name to validate. |
 
 
 <details>
-<summary>View Source (lines 157-189) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/llm/openai.py#L157-L189">GitHub</a></summary>
+<summary>View Source (lines 157-189) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/llm/openai.py#L157-L189">GitHub</a></summary>
 
 ```python
 async def validate_model(self, model_name: str) -> bool:
@@ -317,7 +343,7 @@ Return OpenAI provider capabilities.
 
 
 <details>
-<summary>View Source (lines 191-208) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/llm/openai.py#L191-L208">GitHub</a></summary>
+<summary>View Source (lines 191-208) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/llm/openai.py#L191-L208">GitHub</a></summary>
 
 ```python
 def get_capabilities(self) -> LLMProviderCapabilities:
@@ -351,7 +377,7 @@ async def generate(prompt: str, system_prompt: str | None = None, max_tokens: in
 Generate text from a prompt.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `prompt` | `str` | - | The user prompt. |
 | `system_prompt` | `str | None` | `None` | Optional system prompt. |
@@ -360,7 +386,7 @@ Generate text from a prompt.
 
 
 <details>
-<summary>View Source (lines 211-259) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/llm/openai.py#L211-L259">GitHub</a></summary>
+<summary>View Source (lines 211-259) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/llm/openai.py#L211-L259">GitHub</a></summary>
 
 ```python
 async def generate(
@@ -425,7 +451,7 @@ async def generate_stream(prompt: str, system_prompt: str | None = None, max_tok
 Generate text from a prompt with streaming.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `prompt` | `str` | - | The user prompt. |
 | `system_prompt` | `str | None` | `None` | Optional system prompt. |
@@ -434,7 +460,7 @@ Generate text from a prompt with streaming.
 
 
 <details>
-<summary>View Source (lines 261-307) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/llm/openai.py#L261-L307">GitHub</a></summary>
+<summary>View Source (lines 261-307) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/llm/openai.py#L261-L307">GitHub</a></summary>
 
 ```python
 async def generate_stream(
@@ -500,7 +526,7 @@ Get the provider name.
 
 
 <details>
-<summary>View Source (lines 310-312) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/llm/openai.py#L310-L312">GitHub</a></summary>
+<summary>View Source (lines 310-312) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/llm/openai.py#L310-L312">GitHub</a></summary>
 
 ```python
 def name(self) -> str:
@@ -579,11 +605,11 @@ flowchart TD
 Functions and methods in this file and their callers:
 
 - **`AsyncOpenAI`**: called by `OpenAILLMProvider.__init__`
-- **`LLMProviderCapabilities`**: called by `OpenAILLMProvider.get_capabilities`
-- **`ProviderAuthenticationError`**: called by `OpenAILLMProvider.__init__`, `OpenAILLMProvider._handle_api_error`, `OpenAILLMProvider.validate_connectivity`
-- **`ProviderConnectionError`**: called by `OpenAILLMProvider._handle_api_error`, `OpenAILLMProvider.validate_connectivity`
-- **`ProviderModelNotFoundError`**: called by `OpenAILLMProvider._handle_api_error`, `OpenAILLMProvider.validate_model`
-- **`ProviderRateLimitError`**: called by `OpenAILLMProvider._handle_api_error`
+- **[`LLMProviderCapabilities`](../base.md)**: called by `OpenAILLMProvider.get_capabilities`
+- **[`ProviderAuthenticationError`](../base.md)**: called by `OpenAILLMProvider.__init__`, `OpenAILLMProvider._handle_api_error`, `OpenAILLMProvider.validate_connectivity`
+- **[`ProviderConnectionError`](../base.md)**: called by `OpenAILLMProvider._handle_api_error`, `OpenAILLMProvider.validate_connectivity`
+- **[`ProviderModelNotFoundError`](../base.md)**: called by `OpenAILLMProvider._handle_api_error`, `OpenAILLMProvider.validate_model`
+- **[`ProviderRateLimitError`](../base.md)**: called by `OpenAILLMProvider._handle_api_error`
 - **`_handle_api_error`**: called by `OpenAILLMProvider.generate`, `OpenAILLMProvider.generate_stream`, `OpenAILLMProvider.validate_connectivity`, `OpenAILLMProvider.validate_model`
 - **`create`**: called by `OpenAILLMProvider.generate`, `OpenAILLMProvider.generate_stream`, `OpenAILLMProvider.validate_connectivity`, `OpenAILLMProvider.validate_model`
 - **`get_api_key`**: called by `OpenAILLMProvider.__init__`
@@ -711,7 +737,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_handle_api_error`
 
 <details>
-<summary>View Source (lines 72-123) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/llm/openai.py#L72-L123">GitHub</a></summary>
+<summary>View Source (lines 72-123) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/llm/openai.py#L72-L123">GitHub</a></summary>
 
 ```python
 def _handle_api_error(self, e: Exception) -> None:
@@ -770,3 +796,6 @@ def _handle_api_error(self, e: Exception) -> None:
 
 </details>
 
+## Relevant Source Files
+
+- `src/local_deepwiki/providers/llm/openai.py:38-312`

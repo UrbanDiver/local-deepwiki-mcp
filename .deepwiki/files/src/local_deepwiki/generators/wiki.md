@@ -1,284 +1,137 @@
-# File: `src/local_deepwiki/generators/wiki.py`
+# File Overview
 
-## File Overview
+This file, `src/local_deepwiki/generators/wiki.py`, defines the core logic for generating wiki documentation from a codebase. It orchestrates the entire wiki generation process, including handling page creation, dependency analysis, cross-linking, and status management. The module integrates with vector stores for code analysis, uses plugins for extensibility, and supports both full and incremental rebuilds.
 
-This file defines the core logic for generating wiki documentation from a codebase using indexing, vector search, and plugin-based generation. It provides the main `WikiGenerator` class responsible for orchestrating the wiki generation process, including module and file documentation, dependency graphs, changelogs, and cross-linking.
+## Dependencies
 
-The module integrates with:
-- `VectorStore` for code indexing and retrieval
-- `Config` and `get_config` for configuration management
-- `WikiGeneratorPlugin` for extensible generation plugins
-- `EntityRegistry` and `add_cross_links` for cross-linking
-- `DependencyGraphGenerator` and related tools for dependency visualization
-- `get_event_emitter` for event handling
-- `generate_coverage_page` and related coverage generation functions
+This file imports from:
+- `hashlib`, `json`, `time`
+- `collections.abc`: `Awaitable`, `Callable`
+- `pathlib`: `Path`
+- `typing`: `TYPE_CHECKING`
+- `local_deepwiki.plugins.base`: [`WikiGeneratorPlugin`](../plugins/base.md)
+- `local_deepwiki.config`: [`Config`](../config.md), [`get_config`](../config.md)
+- `local_deepwiki.core.vectorstore`: [`VectorStore`](../core/vectorstore.md)
+- `local_deepwiki.events`: [`EventType`](../events.md), [`get_event_emitter`](../events.md)
+- `local_deepwiki.generators.coverage`: [`generate_coverage_page`](coverage.md)
+- `local_deepwiki.generators.crosslinks`: [`EntityRegistry`](crosslinks.md), [`add_cross_links`](crosslinks.md)
+- `local_deepwiki.generators.dependency_graph`: [`DependencyGraphGenerator`](dependency_graph.md), [`generate_dependency_graph_page`](dependency_graph.md)
+- `local_deepwiki.generators.file_docs`: [`generate_file_docs`](wiki_files.md)
+- `local_deepwiki.generators.module_docs`: [`generate_module_docs`](wiki_modules.md)
+- `local_deepwiki.generators.overview`: [`generate_overview_page`](wiki_pages.md)
+- `local_deepwiki.generators.architecture`: [`generate_architecture_page`](wiki_pages.md)
+- `local_deepwiki.generators.changelog`: [`generate_changelog_page`](wiki_pages.md)
+- `local_deepwiki.generators.search`: `generate_search_page`, `generate_toc_page`
+- `local_deepwiki.generators.status`: [`WikiStatusManager`](wiki_status.md), [`GenerationProgress`](progress_tracker.md)
+- `local_deepwiki.generators.summary`: `generate_summary_page`
+- `local_deepwiki.generators.vectorstore`: [`VectorStore`](../core/vectorstore.md)
+- `local_deepwiki.generators.wiki_page`: [`WikiPage`](../export/streaming.md)
+- `local_deepwiki.generators.wiki_structure`: [`WikiStructure`](../models.md)
+- `local_deepwiki.generators.index_status`: [`IndexStatus`](../models.md)
+- `local_deepwiki.generators.progress`: [`ProgressCallback`](../cli_progress.md)
 
-## Classes
+## Related Files
 
-### `_GenerationContext`
+- `src/local_deepwiki/core/__init__.py`
+- `src/local_deepwiki/generators/source_refs.py`
+- `src/local_deepwiki/plugins/base.py`
+- `tests/__init__.py`
+- `tests/test_plugins.py`
+
+## Integration
+
+This module is called by the `WikiGenerator` class, which is used by the base and test plugins. It is part of a larger system that indexes code and generates documentation from it.
+
+## Type Definitions Used
+
+- [`ProgressCallback`](../cli_progress.md): A protocol for progress reporting.
+
+# Classes
+
+## _GenerationContext
 
 Internal context for tracking wiki generation state.
 
 This class encapsulates mutable state during generation to avoid passing many parameters between helper methods.
 
-**Attributes:**
-- `pages`: List of generated wiki pages.
+### Attributes
+
+- `pages`: List of generated [`WikiPage`](../export/streaming.md) objects.
 - `pages_generated`: Number of pages generated.
 - `pages_skipped`: Number of pages skipped.
-- `all_source_files`: List of all source files.
-- `full_rebuild`: Whether to perform a full rebuild.
+- `all_source_files`: List of all source files involved in generation.
+- `full_rebuild`: Boolean indicating if a full rebuild is requested.
 
-**Methods:**
-- `__init__(self, pages, pages_generated, pages_skipped, all_source_files, full_rebuild)`: Initializes the context with provided values.
+### Methods
 
+- `__init__(self, pages: list["WikiPage"], pages_generated: int, pages_skipped: int, all_source_files: list[str], full_rebuild: bool)`: Initializes the context with the given parameters.
 
-<details>
-<summary>View Source (lines 57-84) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki.py#L57-L84">GitHub</a></summary>
+## WikiGenerator
 
-```python
-class _GenerationContext:
-    """Internal context for tracking wiki generation state.
+The [main](../export/pdf.md) class responsible for generating the wiki documentation.
 
-    This class encapsulates mutable state during generation to avoid
-    passing many parameters between helper methods.
-    """
+### Methods
 
-    __slots__ = (
-        "pages",
-        "pages_generated",
-        "pages_skipped",
-        "all_source_files",
-        "full_rebuild",
-    )
+- `__init__(self, wiki_path: Path, vector_store: VectorStore, config: Config | None = None, llm_provider_name: str | None = None)`: Initializes the wiki generator with paths, vector store, and optional configuration.
 
-    def __init__(
-        self,
-        pages: list["WikiPage"],
-        pages_generated: int,
-        pages_skipped: int,
-        all_source_files: list[str],
-        full_rebuild: bool,
-    ):
-        self.pages = pages
-        self.pages_generated = pages_generated
-        self.pages_skipped = pages_skipped
-        self.all_source_files = all_source_files
-        self.full_rebuild = full_rebuild
-```
+- `_get_main_definition_lines(self) -> dict[str, tuple[int, int]]`: Retrieves line ranges of [main](../export/pdf.md) definitions (first class or function) per file from the vector store.
 
-</details>
+- `generate(self, index_status: IndexStatus, progress_callback: ProgressCallback | None = None, full_rebuild: bool = False) -> WikiStructure`: Generates wiki documentation for the indexed repository.
 
-### `WikiGenerator`
+- `_init_generation_context(self, index_status: IndexStatus, full_rebuild: bool) -> _GenerationContext`: Initializes the generation context with tracking state.
 
-The main class responsible for generating wiki documentation.
+- `_generate_summary_pages(self, ctx: _GenerationContext, index_status: IndexStatus, progress_callback: ProgressCallback | None) -> None`: Generates overview and architecture pages.
 
-**Methods:**
+- `_generate_or_load_page(self, ctx: _GenerationContext, page_path: str, generator: "Callable[[], Awaitable[WikiPage]]", source_files: list[str]) -> tuple[WikiPage, bool]`: Generates a page or loads from cache if unchanged.
 
+- `_analyze_imports_for_relationships(self) -> None`: Collects import chunks for relationship analysis (See Also sections).
 
-<details>
-<summary>View Source (lines 87-969) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki.py#L87-L969">GitHub</a></summary>
+- `_generate_module_pages(self, ctx: _GenerationContext, index_status: IndexStatus, progress_callback: ProgressCallback | None) -> None`: Generates module documentation pages.
 
-```python
-class WikiGenerator:
-    # Methods: __init__, _get_main_definition_lines, generate, _init_generation_context, _generate_summary_pages, _generate_or_load_page, _analyze_imports_for_relationships, _generate_module_pages, _generate_file_pages, _generate_dependencies_page, _generate_changelog_page, _generate_auxiliary_pages, _sort_generators_by_dependencies, _run_plugin_generators, _apply_cross_linking, _generate_search_and_toc, _build_wiki_status, _generate_freshness_and_finalize, _generate_overview, _generate_architecture, _generate_dependencies, _generate_changelog, _write_page, _sync_write
-```
+- `_generate_file_pages(self, ctx: _GenerationContext, index_status: IndexStatus, progress_callback: ProgressCallback | None) -> None`: Generates file-level documentation pages.
 
-</details>
+- `_generate_dependencies_page(self, ctx: _GenerationContext, index_status: IndexStatus, progress_callback: ProgressCallback | None) -> None`: Generates the dependencies documentation page.
 
-#### `__init__(self, wiki_path, vector_store, config=None, llm_provider_name=None)`
+- `_generate_changelog_page(self, ctx: _GenerationContext, progress_callback: ProgressCallback | None) -> None`: Generates changelog page from git history.
 
-Initialize the wiki generator.
+- `_generate_auxiliary_pages(self, ctx: _GenerationContext, index_status: IndexStatus, progress_callback: ProgressCallback | None) -> None`: Generates auxiliary pages like search and TOC.
 
-**Parameters:**
-- `wiki_path`: Path to wiki output directory.
-- `vector_store`: Vector store with indexed code.
-- `config`: Optional configuration.
-- `llm_provider_name`: Override LLM provider ("ollama", "anthropic", "openai").
+- `_sort_generators_by_dependencies(self, generators: list[Callable[[], Awaitable[WikiPage]]]) -> list[Callable[[], Awaitable[WikiPage]]]`: Sorts generators by their dependencies.
 
-#### `_get_main_definition_lines(self)`
+- `_run_plugin_generators(self, ctx: _GenerationContext, index_status: IndexStatus, progress_callback: ProgressCallback | None) -> None`: Runs plugin-defined generators.
 
-Get line range of main definition (first class or function) per file.
+- `_apply_cross_linking(self, ctx: _GenerationContext) -> None`: Applies cross-linking to generated pages.
 
-**Returns:**
-- Dict mapping file_path to (start_line, end_line) tuple.
+- `_generate_search_and_toc(self, ctx: _GenerationContext) -> None`: Generates search and table of contents pages.
 
-#### `generate(self, index_status, progress_callback=None, full_rebuild=False)`
+- `_build_wiki_status(self, ctx: _GenerationContext) -> None`: Builds the overall wiki status.
 
-Generate wiki documentation for the indexed repository.
+- `_generate_freshness_and_finalize(self, ctx: _GenerationContext) -> None`: Finalizes the generation process by updating freshness and status.
 
-**Parameters:**
-- `index_status`: The index status with file information.
-- `progress_callback`: Optional progress callback.
-- `full_rebuild`: If True, regenerate all pages. Otherwise, only regenerate changed pages.
+- `_generate_overview(self, index_status: IndexStatus) -> WikiPage`: Generates the overview page.
 
-**Returns:**
-- `WikiStructure` with generated pages.
+- `_generate_architecture(self, index_status: IndexStatus) -> WikiPage`: Generates the architecture page.
 
-#### `_init_generation_context(self, index_status, full_rebuild)`
+- `_generate_changelog(self) -> WikiPage | None`: Generates the changelog page from git history.
 
-Initialize the generation context with tracking state.
+- `_write_page(self, page: WikiPage, ctx: _GenerationContext) -> None`: Writes a page to disk.
 
-**Parameters:**
-- `index_status`: The index status with file information.
-- `full_rebuild`: Whether to do a full rebuild.
+# Functions
 
-**Returns:**
-- Initialized generation context.
+## generate
 
-#### `_generate_summary_pages(self, ctx, index_status, progress_callback)`
+This function is not explicitly defined in the provided code snippet, but it is implied to be part of the module's public API based on the usage of other generation functions like [`generate_file_docs`](wiki_files.md), [`generate_module_docs`](wiki_modules.md), etc. It is likely a top-level function that orchestrates the generation process.
 
-Generate overview and architecture pages.
+# Usage Examples
 
-**Parameters:**
-- `ctx`: Generation context for tracking state.
-- `index_status`: The index status.
-- `progress_callback`: Optional progress callback.
-
-#### `_generate_or_load_page(self, ctx, page_path, generator, source_files)`
-
-Generate a page or load from cache if unchanged.
-
-**Parameters:**
-- `ctx`: Generation context.
-- `page_path`: Path for the wiki page.
-- `generator`: Async function to generate the page.
-- `source_files`: Source files this page depends on.
-
-**Returns:**
-- Tuple of (page, was_generated).
-
-#### `_analyze_imports_for_relationships(self)`
-
-Collect import chunks for relationship analysis (See Also sections).
-
-#### `_generate_module_pages(self, ctx, index_status, progress_callback)`
-
-Generate module documentation pages.
-
-**Parameters:**
-- `ctx`: Generation context.
-- `index_status`: Index status.
-- `progress_callback`: Optional progress callback.
-
-#### `_generate_file_pages(self, ctx, index_status, progress_callback)`
-
-Generate file-level documentation pages.
-
-**Parameters:**
-- `ctx`: Generation context.
-- `index_status`: Index status.
-- `progress_callback`: Optional progress callback.
-
-#### `_generate_dependencies_page(self, ctx, index_status, progress_callback)`
-
-Generate the dependencies documentation page.
-
-**Parameters:**
-- `ctx`: Generation context.
-- `index_status`: Index status.
-- `progress_callback`: Optional progress callback.
-
-#### `_generate_changelog_page(self, ctx, progress_callback)`
-
-Generate changelog page from git history.
-
-**Parameters:**
-- `ctx`: Generation context.
-- `progress_callback`: Optional progress callback.
-
-## Functions
-
-### `generate_wiki`
-
-This function is not shown in the provided code snippet but is referenced as being called by `WikiGenerator` and `test_plugins`.
-
-
-<details>
-<summary>View Source (lines 972-1014) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki.py#L972-L1014">GitHub</a></summary>
+Usage examples are inferred from the method signatures and integration points:
 
 ```python
-async def generate_wiki(
-    repo_path: Path,
-    wiki_path: Path,
-    vector_store: VectorStore,
-    index_status: IndexStatus,
-    config: Config | None = None,
-    llm_provider: str | None = None,
-    progress_callback: ProgressCallback | None = None,
-    full_rebuild: bool = False,
-) -> WikiStructure:
-    """Convenience function to generate wiki documentation.
+# Initialize the generator
+generator = WikiGenerator(wiki_path=Path("output"), vector_store=vector_store)
 
-    Args:
-        repo_path: Path to the repository.
-        wiki_path: Path for wiki output.
-        vector_store: Indexed vector store.
-        index_status: Index status.
-        config: Optional configuration.
-        llm_provider: Optional LLM provider override.
-        progress_callback: Optional progress callback.
-        full_rebuild: If True, regenerate all pages. Otherwise, only regenerate changed pages.
-
-    Returns:
-        WikiStructure with generated pages.
-    """
-    from local_deepwiki.core.git_utils import is_github_repo
-
-    config = config or get_config()
-
-    # Auto-switch to cloud provider for GitHub repos if configured
-    effective_provider = llm_provider
-    if effective_provider is None and config.wiki.use_cloud_for_github:
-        if is_github_repo(repo_path):
-            effective_provider = config.wiki.github_llm_provider
-            logger.info(f"GitHub repo detected, using cloud provider: {effective_provider}")
-
-    generator = WikiGenerator(
-        wiki_path=wiki_path,
-        vector_store=vector_store,
-        config=config,
-        llm_provider_name=effective_provider,
-    )
-    return await generator.generate(index_status, progress_callback, full_rebuild)
-```
-
-</details>
-
-## Integration
-
-This file is part of the `local_deepwiki` project and integrates with:
-
-- **CLI Entry Point**: Called from `src/local_deepwiki/cli/__init__.py` to start the generation process.
-- **Core Components**: Depends on `VectorStore` from `local_deepwiki.core.vectorstore` for code indexing and retrieval.
-- **Plugin System**: Uses `WikiGeneratorPlugin` from `local_deepwiki.plugins.base` for extensible generation.
-- **Event System**: Integrates with `get_event_emitter` from `local_deepwiki.events` for event handling.
-- **Generation Tools**: Utilizes `generate_coverage_page`, `add_cross_links`, and `DependencyGraphGenerator` for various documentation tasks.
-- **Tests**: Used by `tests/test_plugins.py` for testing plugin functionality.
-
-## Usage Examples
-
-### Initialize and Generate Wiki
-
-```python
-from pathlib import Path
-from local_deepwiki.generators.wiki import WikiGenerator
-from local_deepwiki.core.vectorstore import VectorStore
-from local_deepwiki.config import get_config
-
-# Initialize vector store and config
-vector_store = VectorStore(...)
-config = get_config()
-
-# Create WikiGenerator instance
-wiki_gen = WikiGenerator(
-    wiki_path=Path("output/wiki"),
-    vector_store=vector_store,
-    config=config,
-)
-
-# Generate wiki
-index_status = ...  # Assume this is provided
-wiki_structure = await wiki_gen.generate(index_status)
+# Generate the wiki
+structure = await generator.generate(index_status=index_status, full_rebuild=True)
 ```
 
 ## API Reference
@@ -291,7 +144,7 @@ Generate wiki documentation from indexed code.
 
 
 <details>
-<summary>View Source (lines 87-969) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki.py#L87-L969">GitHub</a></summary>
+<summary>View Source (lines 87-969) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki.py#L87-L969">GitHub</a></summary>
 
 ```python
 class WikiGenerator:
@@ -309,16 +162,16 @@ def __init__(wiki_path: Path, vector_store: VectorStore, config: Config | None =
 Initialize the wiki generator.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `wiki_path` | `Path` | - | Path to wiki output directory. |
-| `vector_store` | `VectorStore` | - | Vector store with indexed code. |
+| `vector_store` | [`VectorStore`](../core/vectorstore.md) | - | Vector store with indexed code. |
 | `config` | `Config | None` | `None` | Optional configuration. |
 | `llm_provider_name` | `str | None` | `None` | Override LLM provider ("ollama", "anthropic", "openai"). |
 
 
 <details>
-<summary>View Source (lines 90-152) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki.py#L90-L152">GitHub</a></summary>
+<summary>View Source (lines 90-152) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki.py#L90-L152">GitHub</a></summary>
 
 ```python
 def __init__(
@@ -397,10 +250,10 @@ async def generate(index_status: IndexStatus, progress_callback: ProgressCallbac
 Generate wiki documentation for the indexed repository.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `index_status` | `IndexStatus` | - | The index status with file information. |
-| `progress_callback` | `ProgressCallback | None` | `None` | Optional progress callback. |
+| `index_status` | [`IndexStatus`](../models.md) | - | The index status with file information. |
+| [`progress_callback`](../handlers.md) | `ProgressCallback | None` | `None` | Optional progress callback. |
 | `full_rebuild` | `bool` | `False` | If True, regenerate all pages. Otherwise, only regenerate changed pages. |
 
 
@@ -408,7 +261,7 @@ Generate wiki documentation for the indexed repository.
 
 
 <details>
-<summary>View Source (lines 164-268) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki.py#L164-L268">GitHub</a></summary>
+<summary>View Source (lines 164-268) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki.py#L164-L268">GitHub</a></summary>
 
 ```python
 async def generate(
@@ -531,24 +384,24 @@ async def generate_wiki(repo_path: Path, wiki_path: Path, vector_store: VectorSt
 Convenience function to generate wiki documentation.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `repo_path` | `Path` | - | Path to the repository. |
 | `wiki_path` | `Path` | - | Path for wiki output. |
-| `vector_store` | `VectorStore` | - | Indexed vector store. |
-| `index_status` | `IndexStatus` | - | Index status. |
+| `vector_store` | [`VectorStore`](../core/vectorstore.md) | - | Indexed vector store. |
+| `index_status` | [`IndexStatus`](../models.md) | - | Index status. |
 | `config` | `Config | None` | `None` | Optional configuration. |
 | `llm_provider` | `str | None` | `None` | Optional LLM provider override. |
-| `progress_callback` | `ProgressCallback | None` | `None` | Optional progress callback. |
+| [`progress_callback`](../handlers.md) | `ProgressCallback | None` | `None` | Optional progress callback. |
 | `full_rebuild` | `bool` | `False` | If True, regenerate all pages. Otherwise, only regenerate changed pages. |
 
-**Returns:** `WikiStructure`
+**Returns:** [`WikiStructure`](../models.md)
 
 
 
 
 <details>
-<summary>View Source (lines 972-1014) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki.py#L972-L1014">GitHub</a></summary>
+<summary>View Source (lines 972-1014) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki.py#L972-L1014">GitHub</a></summary>
 
 ```python
 async def generate_wiki(
@@ -714,16 +567,16 @@ flowchart TD
 
 Functions and methods in this file and their callers:
 
-- **`EntityRegistry`**: called by `WikiGenerator.__init__`
-- **`GenerationProgress`**: called by `WikiGenerator._init_generation_context`
+- **[`EntityRegistry`](crosslinks.md)**: called by `WikiGenerator.__init__`
+- **[`GenerationProgress`](progress_tracker.md)**: called by `WikiGenerator._init_generation_context`
 - **`Path`**: called by `WikiGenerator.__init__`, `WikiGenerator._init_generation_context`
-- **`PromptManager`**: called by `WikiGenerator.__init__`
-- **`RelationshipAnalyzer`**: called by `WikiGenerator.__init__`
-- **`WikiGenerationStatus`**: called by `WikiGenerator._build_wiki_status`
+- **[`PromptManager`](../prompts.md)**: called by `WikiGenerator.__init__`
+- **[`RelationshipAnalyzer`](see_also.md)**: called by `WikiGenerator.__init__`
+- **[`WikiGenerationStatus`](../models.md)**: called by `WikiGenerator._build_wiki_status`
 - **`WikiGenerator`**: called by `generate_wiki`
-- **`WikiPage`**: called by `WikiGenerator._generate_auxiliary_pages`
-- **`WikiStatusManager`**: called by `WikiGenerator.__init__`
-- **`WikiStructure`**: called by `WikiGenerator.generate`
+- **[`WikiPage`](../export/streaming.md)**: called by `WikiGenerator._generate_auxiliary_pages`
+- **[`WikiStatusManager`](wiki_status.md)**: called by `WikiGenerator.__init__`
+- **[`WikiStructure`](../models.md)**: called by `WikiGenerator.generate`
 - **`_GenerationContext`**: called by `WikiGenerator._init_generation_context`
 - **`_analyze_imports_for_relationships`**: called by `WikiGenerator.generate`
 - **`_apply_cross_linking`**: called by `WikiGenerator.generate`
@@ -746,9 +599,9 @@ Functions and methods in this file and their callers:
 - **`_run_plugin_generators`**: called by `WikiGenerator.generate`
 - **`_sort_generators_by_dependencies`**: called by `WikiGenerator._run_plugin_generators`
 - **`_write_page`**: called by `WikiGenerator._apply_cross_linking`, `WikiGenerator._generate_auxiliary_pages`, `WikiGenerator._generate_changelog_page`, `WikiGenerator._generate_dependencies_page`, `WikiGenerator._generate_freshness_and_finalize`, `WikiGenerator._generate_module_pages`, `WikiGenerator._generate_or_load_page`, `WikiGenerator._run_plugin_generators`
-- **`add_cross_links`**: called by `WikiGenerator._apply_cross_linking`
-- **`add_see_also_sections`**: called by `WikiGenerator._apply_cross_linking`
-- **`add_source_refs_sections`**: called by `WikiGenerator._apply_cross_linking`
+- **[`add_cross_links`](crosslinks.md)**: called by `WikiGenerator._apply_cross_linking`
+- **[`add_see_also_sections`](see_also.md)**: called by `WikiGenerator._apply_cross_linking`
+- **[`add_source_refs_sections`](source_refs.md)**: called by `WikiGenerator._apply_cross_linking`
 - **`analyze_chunks`**: called by `WikiGenerator._analyze_imports_for_relationships`
 - **`clear_cache`**: called by `WikiGenerator._init_generation_context`
 - **`complete_phase`**: called by `WikiGenerator._generate_module_pages`
@@ -757,36 +610,36 @@ Functions and methods in this file and their callers:
 - **`encode`**: called by `WikiGenerator._build_wiki_status`
 - **`finalize`**: called by `WikiGenerator.generate`
 - **`generate`**: called by `WikiGenerator._run_plugin_generators`, `generate_wiki`
-- **`generate_architecture_page`**: called by `WikiGenerator._generate_architecture`
-- **`generate_changelog_page`**: called by `WikiGenerator._generate_changelog`
-- **`generate_coverage_page`**: called by `WikiGenerator._generate_auxiliary_pages`
-- **`generate_dependencies_page`**: called by `WikiGenerator._generate_dependencies`
-- **`generate_dependency_graph_page`**: called by `WikiGenerator._generate_auxiliary_pages`
-- **`generate_file_docs`**: called by `WikiGenerator._generate_file_pages`
-- **`generate_glossary_page`**: called by `WikiGenerator._generate_auxiliary_pages`
-- **`generate_inheritance_page`**: called by `WikiGenerator._generate_auxiliary_pages`
-- **`generate_module_docs`**: called by `WikiGenerator._generate_module_pages`
-- **`generate_overview_page`**: called by `WikiGenerator._generate_overview`
-- **`generate_stale_report_page`**: called by `WikiGenerator._generate_freshness_and_finalize`
-- **`generate_toc`**: called by `WikiGenerator._generate_search_and_toc`
+- **[`generate_architecture_page`](wiki_pages.md)**: called by `WikiGenerator._generate_architecture`
+- **[`generate_changelog_page`](wiki_pages.md)**: called by `WikiGenerator._generate_changelog`
+- **[`generate_coverage_page`](coverage.md)**: called by `WikiGenerator._generate_auxiliary_pages`
+- **[`generate_dependencies_page`](wiki_pages.md)**: called by `WikiGenerator._generate_dependencies`
+- **[`generate_dependency_graph_page`](dependency_graph.md)**: called by `WikiGenerator._generate_auxiliary_pages`
+- **[`generate_file_docs`](wiki_files.md)**: called by `WikiGenerator._generate_file_pages`
+- **[`generate_glossary_page`](glossary.md)**: called by `WikiGenerator._generate_auxiliary_pages`
+- **[`generate_inheritance_page`](inheritance.md)**: called by `WikiGenerator._generate_auxiliary_pages`
+- **[`generate_module_docs`](wiki_modules.md)**: called by `WikiGenerator._generate_module_pages`
+- **[`generate_overview_page`](wiki_pages.md)**: called by `WikiGenerator._generate_overview`
+- **[`generate_stale_report_page`](stale_detection.md)**: called by `WikiGenerator._generate_freshness_and_finalize`
+- **[`generate_toc`](toc.md)**: called by `WikiGenerator._generate_search_and_toc`
 - **`generator`**: called by `WikiGenerator._generate_or_load_page`
 - **`get_cached_llm_provider`**: called by `WikiGenerator.__init__`
-- **`get_cached_manifest`**: called by `WikiGenerator._init_generation_context`
-- **`get_config`**: called by `WikiGenerator.__init__`, `generate_wiki`
-- **`get_event_emitter`**: called by `WikiGenerator._generate_or_load_page`, `WikiGenerator.generate`
+- **[`get_cached_manifest`](manifest.md)**: called by `WikiGenerator._init_generation_context`
+- **[`get_config`](../config.md)**: called by `WikiGenerator.__init__`, `generate_wiki`
+- **[`get_event_emitter`](../events.md)**: called by `WikiGenerator._generate_or_load_page`, `WikiGenerator.generate`
 - **`get_main_definition_lines`**: called by `WikiGenerator._get_main_definition_lines`
-- **`get_plugin_registry`**: called by `WikiGenerator._run_plugin_generators`
+- **[`get_plugin_registry`](../plugins/registry.md)**: called by `WikiGenerator._run_plugin_generators`
 - **`get_regeneration_summary`**: called by `WikiGenerator._init_generation_context`
 - **`get_wiki_system_prompt`**: called by `WikiGenerator.__init__`, `WikiGenerator._init_generation_context`
 - **`hexdigest`**: called by `WikiGenerator._build_wiki_status`
-- **`is_github_repo`**: called by `generate_wiki`
+- **[`is_github_repo`](../core/git_utils.md)**: called by `generate_wiki`
 - **`load_existing_page`**: called by `WikiGenerator._generate_dependencies_page`, `WikiGenerator._generate_or_load_page`
 - **`load_status`**: called by `WikiGenerator._init_generation_context`
 - **`mkdir`**: called by `WikiGenerator._sync_write`, `WikiGenerator._write_page`
 - **`model_copy`**: called by `WikiGenerator.__init__`
 - **`model_dump`**: called by `WikiGenerator._build_wiki_status`
 - **`needs_regeneration`**: called by `WikiGenerator._generate_dependencies_page`, `WikiGenerator._generate_or_load_page`
-- **`progress_callback`**: called by `WikiGenerator._apply_cross_linking`, `WikiGenerator._generate_auxiliary_pages`, `WikiGenerator._generate_changelog_page`, `WikiGenerator._generate_dependencies_page`, `WikiGenerator._generate_file_pages`, `WikiGenerator._generate_freshness_and_finalize`, `WikiGenerator._generate_module_pages`, `WikiGenerator._generate_search_and_toc`, `WikiGenerator._generate_summary_pages`
+- **[`progress_callback`](../handlers.md)**: called by `WikiGenerator._apply_cross_linking`, `WikiGenerator._generate_auxiliary_pages`, `WikiGenerator._generate_changelog_page`, `WikiGenerator._generate_dependencies_page`, `WikiGenerator._generate_file_pages`, `WikiGenerator._generate_freshness_and_finalize`, `WikiGenerator._generate_module_pages`, `WikiGenerator._generate_search_and_toc`, `WikiGenerator._generate_summary_pages`
 - **`record_page_status`**: called by `WikiGenerator._generate_auxiliary_pages`, `WikiGenerator._generate_changelog_page`, `WikiGenerator._generate_dependencies_page`, `WikiGenerator._generate_freshness_and_finalize`, `WikiGenerator._generate_or_load_page`, `WikiGenerator._run_plugin_generators`
 - **`save_status`**: called by `WikiGenerator._generate_freshness_and_finalize`
 - **`search`**: called by `WikiGenerator._analyze_imports_for_relationships`
@@ -796,9 +649,9 @@ Functions and methods in this file and their callers:
 - **`time`**: called by `WikiGenerator._build_wiki_status`, `WikiGenerator._generate_auxiliary_pages`
 - **`to_thread`**: called by `WikiGenerator._write_page`
 - **`with_llm_provider`**: called by `WikiGenerator.__init__`
-- **`write_full_search_index`**: called by `WikiGenerator._generate_search_and_toc`
+- **[`write_full_search_index`](search.md)**: called by `WikiGenerator._generate_search_and_toc`
 - **`write_text`**: called by `WikiGenerator._sync_write`, `WikiGenerator._write_page`
-- **`write_toc`**: called by `WikiGenerator._generate_search_and_toc`
+- **[`write_toc`](toc.md)**: called by `WikiGenerator._generate_search_and_toc`
 
 ## Usage Examples
 
@@ -959,10 +812,10 @@ prev_status = WikiGenerationStatus(
 | `_sort_generators_by_dependencies` | method | Brian Breidenbach | 1 week ago | `b6594e4` Add dependency validation a... |
 | `_run_plugin_generators` | method | Brian Breidenbach | 1 week ago | `b6594e4` Add dependency validation a... |
 | `generate` | method | Brian Breidenbach | 1 week ago | `4e9d8f5` Integrate plugin system int... |
-| `_generate_or_load_page` | method | Brian Breidenbach | 1 week ago | `a0b2f83` Integrate event system into... |
+| `_generate_or_load_page` | method | Brian Breidenbach | 1 week ago | `a0b2f83` Integrate [event](../../../coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.md) system into... |
 | `__init__` | method | Brian Breidenbach | 1 week ago | `a142542` Add custom prompt template ... |
 | `_init_generation_context` | method | Brian Breidenbach | 1 week ago | `a142542` Add custom prompt template ... |
-| `_generate_freshness_and_finalize` | method | Brian Breidenbach | 1 week ago | `31cf97a` Fix mypy type errors across... |
+| `_generate_freshness_and_finalize` | method | Brian Breidenbach | 2 weeks ago | `31cf97a` Fix mypy type errors across... |
 | `_get_main_definition_lines` | method | Brian Breidenbach | 2 weeks ago | `95d6a4c` Refactor async I/O, extract... |
 | `_GenerationContext` | class | Brian Breidenbach | 2 weeks ago | `2f85bf8` Fix critical issues: config... |
 | `_generate_summary_pages` | method | Brian Breidenbach | 2 weeks ago | `2f85bf8` Fix critical issues: config... |
@@ -986,10 +839,49 @@ prev_status = WikiGenerationStatus(
 
 Source code for functions and methods not listed in the API Reference above.
 
+### `_GenerationContext`
+
+<details>
+<summary>View Source (lines 57-84) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki.py#L57-L84">GitHub</a></summary>
+
+```python
+class _GenerationContext:
+    """Internal context for tracking wiki generation state.
+
+    This class encapsulates mutable state during generation to avoid
+    passing many parameters between helper methods.
+    """
+
+    __slots__ = (
+        "pages",
+        "pages_generated",
+        "pages_skipped",
+        "all_source_files",
+        "full_rebuild",
+    )
+
+    def __init__(
+        self,
+        pages: list["WikiPage"],
+        pages_generated: int,
+        pages_skipped: int,
+        all_source_files: list[str],
+        full_rebuild: bool,
+    ):
+        self.pages = pages
+        self.pages_generated = pages_generated
+        self.pages_skipped = pages_skipped
+        self.all_source_files = all_source_files
+        self.full_rebuild = full_rebuild
+```
+
+</details>
+
+
 #### `_get_main_definition_lines`
 
 <details>
-<summary>View Source (lines 154-162) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki.py#L154-L162">GitHub</a></summary>
+<summary>View Source (lines 154-162) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki.py#L154-L162">GitHub</a></summary>
 
 ```python
 def _get_main_definition_lines(self) -> dict[str, tuple[int, int]]:
@@ -1009,7 +901,7 @@ def _get_main_definition_lines(self) -> dict[str, tuple[int, int]]:
 #### `_init_generation_context`
 
 <details>
-<summary>View Source (lines 270-329) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki.py#L270-L329">GitHub</a></summary>
+<summary>View Source (lines 270-329) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki.py#L270-L329">GitHub</a></summary>
 
 ```python
 async def _init_generation_context(
@@ -1080,7 +972,7 @@ async def _init_generation_context(
 #### `_generate_summary_pages`
 
 <details>
-<summary>View Source (lines 331-376) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki.py#L331-L376">GitHub</a></summary>
+<summary>View Source (lines 331-376) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki.py#L331-L376">GitHub</a></summary>
 
 ```python
 async def _generate_summary_pages(
@@ -1137,7 +1029,7 @@ async def _generate_summary_pages(
 #### `_generate_or_load_page`
 
 <details>
-<summary>View Source (lines 378-422) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki.py#L378-L422">GitHub</a></summary>
+<summary>View Source (lines 378-422) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki.py#L378-L422">GitHub</a></summary>
 
 ```python
 async def _generate_or_load_page(
@@ -1193,7 +1085,7 @@ async def _generate_or_load_page(
 #### `_analyze_imports_for_relationships`
 
 <details>
-<summary>View Source (lines 424-431) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki.py#L424-L431">GitHub</a></summary>
+<summary>View Source (lines 424-431) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki.py#L424-L431">GitHub</a></summary>
 
 ```python
 async def _analyze_imports_for_relationships(self) -> None:
@@ -1212,7 +1104,7 @@ async def _analyze_imports_for_relationships(self) -> None:
 #### `_generate_module_pages`
 
 <details>
-<summary>View Source (lines 433-468) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki.py#L433-L468">GitHub</a></summary>
+<summary>View Source (lines 433-468) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki.py#L433-L468">GitHub</a></summary>
 
 ```python
 async def _generate_module_pages(
@@ -1259,7 +1151,7 @@ async def _generate_module_pages(
 #### `_generate_file_pages`
 
 <details>
-<summary>View Source (lines 470-501) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki.py#L470-L501">GitHub</a></summary>
+<summary>View Source (lines 470-501) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki.py#L470-L501">GitHub</a></summary>
 
 ```python
 async def _generate_file_pages(
@@ -1302,7 +1194,7 @@ async def _generate_file_pages(
 #### `_generate_dependencies_page`
 
 <details>
-<summary>View Source (lines 503-546) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki.py#L503-L546">GitHub</a></summary>
+<summary>View Source (lines 503-546) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki.py#L503-L546">GitHub</a></summary>
 
 ```python
 async def _generate_dependencies_page(
@@ -1357,7 +1249,7 @@ async def _generate_dependencies_page(
 #### `_generate_changelog_page`
 
 <details>
-<summary>View Source (lines 548-567) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki.py#L548-L567">GitHub</a></summary>
+<summary>View Source (lines 548-567) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki.py#L548-L567">GitHub</a></summary>
 
 ```python
 async def _generate_changelog_page(
@@ -1388,7 +1280,7 @@ async def _generate_changelog_page(
 #### `_generate_auxiliary_pages`
 
 <details>
-<summary>View Source (lines 569-657) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki.py#L569-L657">GitHub</a></summary>
+<summary>View Source (lines 569-657) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki.py#L569-L657">GitHub</a></summary>
 
 ```python
 async def _generate_auxiliary_pages(
@@ -1488,7 +1380,7 @@ async def _generate_auxiliary_pages(
 #### `_sort_generators_by_dependencies`
 
 <details>
-<summary>View Source (lines 659-736) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki.py#L659-L736">GitHub</a></summary>
+<summary>View Source (lines 659-736) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki.py#L659-L736">GitHub</a></summary>
 
 ```python
 def _sort_generators_by_dependencies(
@@ -1577,7 +1469,7 @@ def _sort_generators_by_dependencies(
 #### `_run_plugin_generators`
 
 <details>
-<summary>View Source (lines 738-796) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki.py#L738-L796">GitHub</a></summary>
+<summary>View Source (lines 738-796) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki.py#L738-L796">GitHub</a></summary>
 
 ```python
 async def _run_plugin_generators(
@@ -1647,7 +1539,7 @@ async def _run_plugin_generators(
 #### `_apply_cross_linking`
 
 <details>
-<summary>View Source (lines 798-831) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki.py#L798-L831">GitHub</a></summary>
+<summary>View Source (lines 798-831) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki.py#L798-L831">GitHub</a></summary>
 
 ```python
 async def _apply_cross_linking(
@@ -1692,7 +1584,7 @@ async def _apply_cross_linking(
 #### `_generate_search_and_toc`
 
 <details>
-<summary>View Source (lines 833-854) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki.py#L833-L854">GitHub</a></summary>
+<summary>View Source (lines 833-854) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki.py#L833-L854">GitHub</a></summary>
 
 ```python
 async def _generate_search_and_toc(
@@ -1725,7 +1617,7 @@ async def _generate_search_and_toc(
 #### `_build_wiki_status`
 
 <details>
-<summary>View Source (lines 856-878) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki.py#L856-L878">GitHub</a></summary>
+<summary>View Source (lines 856-878) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki.py#L856-L878">GitHub</a></summary>
 
 ```python
 def _build_wiki_status(
@@ -1759,7 +1651,7 @@ def _build_wiki_status(
 #### `_generate_freshness_and_finalize`
 
 <details>
-<summary>View Source (lines 880-919) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki.py#L880-L919">GitHub</a></summary>
+<summary>View Source (lines 880-919) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki.py#L880-L919">GitHub</a></summary>
 
 ```python
 async def _generate_freshness_and_finalize(
@@ -1810,7 +1702,7 @@ async def _generate_freshness_and_finalize(
 #### `_generate_overview`
 
 <details>
-<summary>View Source (lines 921-930) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki.py#L921-L930">GitHub</a></summary>
+<summary>View Source (lines 921-930) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki.py#L921-L930">GitHub</a></summary>
 
 ```python
 async def _generate_overview(self, index_status: IndexStatus) -> WikiPage:
@@ -1831,7 +1723,7 @@ async def _generate_overview(self, index_status: IndexStatus) -> WikiPage:
 #### `_generate_architecture`
 
 <details>
-<summary>View Source (lines 932-941) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki.py#L932-L941">GitHub</a></summary>
+<summary>View Source (lines 932-941) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki.py#L932-L941">GitHub</a></summary>
 
 ```python
 async def _generate_architecture(self, index_status: IndexStatus) -> WikiPage:
@@ -1852,7 +1744,7 @@ async def _generate_architecture(self, index_status: IndexStatus) -> WikiPage:
 #### `_generate_dependencies`
 
 <details>
-<summary>View Source (lines 943-952) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki.py#L943-L952">GitHub</a></summary>
+<summary>View Source (lines 943-952) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki.py#L943-L952">GitHub</a></summary>
 
 ```python
 async def _generate_dependencies(self, index_status: IndexStatus) -> tuple[WikiPage, list[str]]:
@@ -1873,7 +1765,7 @@ async def _generate_dependencies(self, index_status: IndexStatus) -> tuple[WikiP
 #### `_generate_changelog`
 
 <details>
-<summary>View Source (lines 954-956) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki.py#L954-L956">GitHub</a></summary>
+<summary>View Source (lines 954-956) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki.py#L954-L956">GitHub</a></summary>
 
 ```python
 async def _generate_changelog(self) -> WikiPage | None:
@@ -1887,7 +1779,7 @@ async def _generate_changelog(self) -> WikiPage | None:
 #### `_write_page`
 
 <details>
-<summary>View Source (lines 958-969) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki.py#L958-L969">GitHub</a></summary>
+<summary>View Source (lines 958-969) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki.py#L958-L969">GitHub</a></summary>
 
 ```python
 async def _write_page(self, page: WikiPage) -> None:
@@ -1910,7 +1802,7 @@ async def _write_page(self, page: WikiPage) -> None:
 #### `_sync_write`
 
 <details>
-<summary>View Source (lines 965-967) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki.py#L965-L967">GitHub</a></summary>
+<summary>View Source (lines 965-967) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki.py#L965-L967">GitHub</a></summary>
 
 ```python
 def _sync_write() -> None:
@@ -1920,3 +1812,6 @@ def _sync_write() -> None:
 
 </details>
 
+## Relevant Source Files
+
+- `src/local_deepwiki/generators/wiki.py:57-84`

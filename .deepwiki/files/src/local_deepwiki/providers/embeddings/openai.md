@@ -1,132 +1,107 @@
 # File Overview
 
-This file defines the `OpenAIEmbeddingProvider` class, which implements the `EmbeddingProvider` interface for generating text embeddings using OpenAI's embedding models. It handles API authentication, error conversion, and integrates with the `CredentialManager` for secure credential handling.
+This file defines the `OpenAIEmbeddingProvider` class, which implements the [`EmbeddingProvider`](../base.md) interface for interacting with OpenAI's embedding models. It provides functionality to generate embeddings for text inputs using the OpenAI API, handle authentication, and manage API errors.
 
-The class supports asynchronous embedding generation and provides methods for validating connectivity, retrieving model capabilities, and determining maximum batch sizes and token limits.
+The file imports necessary dependencies from the `openai` library and local provider modules, including error handling and credential management.
+
+---
 
 # Classes
 
 ## OpenAIEmbeddingProvider
 
-The `OpenAIEmbeddingProvider` class implements the `EmbeddingProvider` interface to generate embeddings using OpenAI's API.
+The `OpenAIEmbeddingProvider` class implements the [`EmbeddingProvider`](../base.md) interface to interact with OpenAI's embedding models. It supports initializing with a specific model, handling API errors, generating embeddings, and validating connectivity.
 
-### Methods
+### Key Methods
 
-#### `__init__(self, model: str = "text-embedding-3-small", api_key: str | None = None)`
+- `__init__(self, model: str = "text-embedding-3-small", api_key: str | None = None)`
+  - Initializes the provider with a model name and optional API key.
+  - If no API key is provided, it retrieves one using [`CredentialManager`](../credentials.md).
 
-Initialize the OpenAI embedding provider.
+- `_handle_api_error(self, e: Exception) -> None`
+  - Converts OpenAI API exceptions into standardized provider errors.
 
-**Parameters:**
-- `model`: OpenAI embedding model name.
-- `api_key`: Optional API key. Uses `OPENAI_API_KEY` environment variable if not provided.
+- `embed(self, texts: list[str]) -> list[list[float]]`
+  - Generates embeddings for a list of text inputs.
 
-**Raises:**
-- `ProviderAuthenticationError`: If no API key is configured or format is invalid.
+- `get_dimension(self) -> int`
+  - Returns the dimension of the embedding vectors.
 
-#### `_handle_api_error(self, e: Exception) -> None`
+- `validate_connectivity(self) -> bool`
+  - Tests connectivity to the OpenAI API.
 
-Convert OpenAI API errors to standardized provider errors.
+- `get_max_batch_size(self) -> int`
+  - Returns the maximum number of texts that can be embedded in a single API call.
 
-**Parameters:**
-- `e`: The exception from the OpenAI API.
+- `get_max_tokens(self) -> int`
+  - Returns the maximum number of tokens allowed per text input.
 
-**Raises:**
-- `ProviderAuthenticationError`: If authentication fails.
-- `ProviderRateLimitError`: If rate limited.
-- `ProviderConnectionError`: If connection fails.
+- `get_capabilities(self) -> EmbeddingProviderCapabilities`
+  - Returns provider capabilities including batch size, token limits, and supported models.
 
-#### `embed(self, texts: list[str]) -> list[list[float]]`
+- `name(self) -> str`
+  - Returns the provider name, including the model identifier.
 
-Generate embeddings for a list of texts.
+---
 
-**Parameters:**
-- `texts`: List of text strings to embed.
+# Functions
 
-**Returns:**
-- List of embedding vectors.
+This file does not define standalone functions; all functionality is encapsulated within the `OpenAIEmbeddingProvider` class.
 
-**Raises:**
-- `ProviderConnectionError`: If the API cannot be reached.
-- `ProviderAuthenticationError`: If authentication fails.
-- `ProviderRateLimitError`: If rate limited.
-
-#### `get_dimension(self) -> int`
-
-Get the embedding dimension.
-
-**Returns:**
-- The dimension of the embedding vectors.
-
-#### `validate_connectivity(self) -> bool`
-
-Test that the OpenAI API is reachable and configured correctly.
-
-**Returns:**
-- True if the API is accessible.
-
-**Raises:**
-- `ProviderConnectionError`: If the API cannot be reached.
-- `ProviderAuthenticationError`: If authentication fails.
-
-#### `get_max_batch_size(self) -> int`
-
-Return maximum number of texts that can be embedded in a single call.
-
-**Returns:**
-- Maximum batch size for OpenAI embeddings.
-
-#### `get_max_tokens(self) -> int`
-
-Return maximum tokens per text.
-
-**Returns:**
-- Maximum tokens per text for this model.
-
-#### `get_capabilities(self) -> EmbeddingProviderCapabilities`
-
-Return provider capabilities.
-
-**Returns:**
-- `EmbeddingProviderCapabilities` with OpenAI-specific information.
-
-#### `name(self) -> str`
-
-Get the provider name.
-
-**Returns:**
-- A string identifier for the provider in the format `openai:{model}`.
+---
 
 # Integration
 
-This file integrates with:
+This file integrates with the local deepwiki project by implementing the [`EmbeddingProvider`](../base.md) interface, which is used by other components such as generators and plugins. It leverages:
 
-- `local_deepwiki.providers.base`: Provides base classes like `EmbeddingProvider` and error types.
-- `local_deepwiki.providers.credentials`: Used for fetching the API key via `CredentialManager`.
+- [`CredentialManager`](../credentials.md) for secure API key handling
+- Standardized provider error types ([`ProviderAuthenticationError`](../base.md), [`ProviderConnectionError`](../base.md), [`ProviderRateLimitError`](../base.md))
+- The `AsyncOpenAI` client from the `openai` library for asynchronous API calls
 
-It is used by components that require embedding generation capabilities, such as the `WikiGenerator` and `SourceRefsGenerator` classes, as indicated by the related files in the project.
+It is closely related to:
+- `src/local_deepwiki/providers/base.py` (for base provider interface)
+- `src/local_deepwiki/providers/credentials.py` (for credential handling)
+
+---
 
 # Usage Examples
 
-```python
-# Initialize the OpenAI embedding provider
-provider = OpenAIEmbeddingProvider(model="text-embedding-3-small")
+### Initialize the Provider
 
-# Generate embeddings for a list of texts
+```python
+provider = OpenAIEmbeddingProvider(model="text-embedding-3-small")
+```
+
+### Generate Embeddings
+
+```python
 texts = ["Hello world", "How are you?"]
 embeddings = await provider.embed(texts)
+```
 
-# Validate API connectivity
+### Validate Connectivity
+
+```python
 is_connected = await provider.validate_connectivity()
+```
 
-# Get provider capabilities
+### Get Provider Capabilities
+
+```python
 capabilities = provider.get_capabilities()
+```
+
+### Get Provider Name
+
+```python
+provider_name = provider.name()
 ```
 
 ## API Reference
 
 ### class `OpenAIEmbeddingProvider`
 
-**Inherits from:** `EmbeddingProvider`
+**Inherits from:** [`EmbeddingProvider`](../base.md)
 
 Embedding provider using OpenAI API.
 
@@ -134,7 +109,7 @@ Embedding provider using OpenAI API.
 
 
 <details>
-<summary>View Source (lines 23-203) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/embeddings/openai.py#L23-L203">GitHub</a></summary>
+<summary>View Source (lines 23-203) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/embeddings/openai.py#L23-L203">GitHub</a></summary>
 
 ```python
 class OpenAIEmbeddingProvider(EmbeddingProvider):
@@ -152,14 +127,14 @@ def __init__(model: str = "text-embedding-3-small", api_key: str | None = None)
 Initialize the OpenAI embedding provider.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `model` | `str` | `"text-embedding-3-small"` | OpenAI embedding model name. |
 | `api_key` | `str | None` | `None` | Optional API key. Uses OPENAI_API_KEY env var if not provided. |
 
 
 <details>
-<summary>View Source (lines 26-57) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/embeddings/openai.py#L26-L57">GitHub</a></summary>
+<summary>View Source (lines 26-57) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/embeddings/openai.py#L26-L57">GitHub</a></summary>
 
 ```python
 def __init__(self, model: str = "text-embedding-3-small", api_key: str | None = None):
@@ -207,13 +182,13 @@ async def embed(texts: list[str]) -> list[list[float]]
 Generate embeddings for a list of texts.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `texts` | `list[str]` | - | List of text strings to embed. |
 
 
 <details>
-<summary>View Source (lines 104-128) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/embeddings/openai.py#L104-L128">GitHub</a></summary>
+<summary>View Source (lines 104-128) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/embeddings/openai.py#L104-L128">GitHub</a></summary>
 
 ```python
 async def embed(self, texts: list[str]) -> list[list[float]]:
@@ -255,7 +230,7 @@ Get the embedding dimension.
 
 
 <details>
-<summary>View Source (lines 130-136) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/embeddings/openai.py#L130-L136">GitHub</a></summary>
+<summary>View Source (lines 130-136) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/embeddings/openai.py#L130-L136">GitHub</a></summary>
 
 ```python
 def get_dimension(self) -> int:
@@ -279,7 +254,7 @@ Test that the OpenAI API is reachable and configured correctly.
 
 
 <details>
-<summary>View Source (lines 138-167) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/embeddings/openai.py#L138-L167">GitHub</a></summary>
+<summary>View Source (lines 138-167) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/embeddings/openai.py#L138-L167">GitHub</a></summary>
 
 ```python
 async def validate_connectivity(self) -> bool:
@@ -326,7 +301,7 @@ Return maximum number of texts that can be embedded in a single call.
 
 
 <details>
-<summary>View Source (lines 169-175) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/embeddings/openai.py#L169-L175">GitHub</a></summary>
+<summary>View Source (lines 169-175) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/embeddings/openai.py#L169-L175">GitHub</a></summary>
 
 ```python
 def get_max_batch_size(self) -> int:
@@ -350,7 +325,7 @@ Return maximum tokens per text.
 
 
 <details>
-<summary>View Source (lines 177-184) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/embeddings/openai.py#L177-L184">GitHub</a></summary>
+<summary>View Source (lines 177-184) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/embeddings/openai.py#L177-L184">GitHub</a></summary>
 
 ```python
 def get_max_tokens(self) -> int:
@@ -375,7 +350,7 @@ Return provider capabilities.
 
 
 <details>
-<summary>View Source (lines 186-198) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/embeddings/openai.py#L186-L198">GitHub</a></summary>
+<summary>View Source (lines 186-198) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/embeddings/openai.py#L186-L198">GitHub</a></summary>
 
 ```python
 def get_capabilities(self) -> EmbeddingProviderCapabilities:
@@ -407,7 +382,7 @@ Get the provider name.
 
 
 <details>
-<summary>View Source (lines 201-203) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/embeddings/openai.py#L201-L203">GitHub</a></summary>
+<summary>View Source (lines 201-203) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/embeddings/openai.py#L201-L203">GitHub</a></summary>
 
 ```python
 def name(self) -> str:
@@ -482,10 +457,10 @@ flowchart TD
 Functions and methods in this file and their callers:
 
 - **`AsyncOpenAI`**: called by `OpenAIEmbeddingProvider.__init__`
-- **`EmbeddingProviderCapabilities`**: called by `OpenAIEmbeddingProvider.get_capabilities`
-- **`ProviderAuthenticationError`**: called by `OpenAIEmbeddingProvider.__init__`, `OpenAIEmbeddingProvider._handle_api_error`, `OpenAIEmbeddingProvider.validate_connectivity`
-- **`ProviderConnectionError`**: called by `OpenAIEmbeddingProvider._handle_api_error`, `OpenAIEmbeddingProvider.validate_connectivity`
-- **`ProviderRateLimitError`**: called by `OpenAIEmbeddingProvider._handle_api_error`
+- **[`EmbeddingProviderCapabilities`](../base.md)**: called by `OpenAIEmbeddingProvider.get_capabilities`
+- **[`ProviderAuthenticationError`](../base.md)**: called by `OpenAIEmbeddingProvider.__init__`, `OpenAIEmbeddingProvider._handle_api_error`, `OpenAIEmbeddingProvider.validate_connectivity`
+- **[`ProviderConnectionError`](../base.md)**: called by `OpenAIEmbeddingProvider._handle_api_error`, `OpenAIEmbeddingProvider.validate_connectivity`
+- **[`ProviderRateLimitError`](../base.md)**: called by `OpenAIEmbeddingProvider._handle_api_error`
 - **`_handle_api_error`**: called by `OpenAIEmbeddingProvider.embed`, `OpenAIEmbeddingProvider.validate_connectivity`
 - **`create`**: called by `OpenAIEmbeddingProvider.embed`, `OpenAIEmbeddingProvider.validate_connectivity`
 - **`get_api_key`**: called by `OpenAIEmbeddingProvider.__init__`
@@ -610,7 +585,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_handle_api_error`
 
 <details>
-<summary>View Source (lines 59-102) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/embeddings/openai.py#L59-L102">GitHub</a></summary>
+<summary>View Source (lines 59-102) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../../export/pdf.md)/src/local_deepwiki/providers/embeddings/openai.py#L59-L102">GitHub</a></summary>
 
 ```python
 def _handle_api_error(self, e: Exception) -> None:
@@ -661,3 +636,6 @@ def _handle_api_error(self, e: Exception) -> None:
 
 </details>
 
+## Relevant Source Files
+
+- `src/local_deepwiki/providers/embeddings/openai.py:23-203`

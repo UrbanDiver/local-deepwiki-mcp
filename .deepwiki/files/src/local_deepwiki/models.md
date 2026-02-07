@@ -1,33 +1,31 @@
 # File Overview
 
-This file, `src/local_deepwiki/models.py`, defines data models and types used throughout the local_deepwiki system. It provides the foundational data structures for representing code chunks, wiki pages, indexing status, research steps, and various arguments for operations like exporting wikis, performing deep research, and managing repository indexing.
-
-The models are built using Pydantic's `BaseModel`, enabling structured data handling, validation, and serialization. The file also defines enums for languages, chunk types, and research step types, as well as protocols for progress callbacks.
+This file defines Pydantic models and data structures used throughout the `local_deepwiki` application for representing various entities like code chunks, wiki pages, indexing status, research steps, and arguments for different operations. It serves as a core data layer for managing and exchanging information between components.
 
 ## Dependencies
 
-- `json`: For JSON serialization/deserialization.
-- `Enum`: For defining enumerated types.
-- `Path`: For handling file system paths.
-- `Any, Protocol`: For type hints and protocol definitions.
-- `BaseModel, Field`: From `pydantic` for data modeling.
+The file imports:
+- `json` for JSON serialization
+- `Enum` from `enum` for defining enumerations
+- `Path` from `pathlib` for handling file paths
+- `Any`, `Protocol` from `typing` for type hints
+- `BaseModel`, `Field` from `pydantic` for data validation and serialization
 
 ## External Usage
 
-The classes and types defined in this file are used by:
-- `ExportWikiHtmlArgs`: Used by handlers.
-- `ExportWikiPdfArgs`: Used by handlers.
+The classes defined in this file are used by:
+- `ExportWikiHtmlArgs`: used by handlers
+- `ExportWikiPdfArgs`: used by handlers
 
 # Classes
 
 ## ProgressCallback
 
-A protocol defining the interface for progress callbacks used during long-running operations like indexing and wiki generation.
+A protocol defining the interface for progress callback functions used during long-running operations like indexing and wiki generation.
 
 ### Methods
-
 - `__call__(self, msg: str, current: int, total: int) -> None`
-  - Reports progress during operations.
+  - Reports progress.
   - **Parameters**:
     - `msg`: Description of current operation.
     - `current`: Current step number.
@@ -38,7 +36,6 @@ A protocol defining the interface for progress callbacks used during long-runnin
 An enumeration of supported programming languages.
 
 ### Values
-
 - `PYTHON`
 - `JAVASCRIPT`
 - `TYPESCRIPT`
@@ -59,7 +56,6 @@ An enumeration of supported programming languages.
 An enumeration of types of code chunks.
 
 ### Values
-
 - `FUNCTION`
 - `CLASS`
 - `METHOD`
@@ -73,124 +69,116 @@ An enumeration of types of code chunks.
 A chunk of code extracted from the repository.
 
 ### Fields
-
-- `id`: Unique identifier for this chunk.
-- `file_path`: Path to the source file.
-- `language`: Programming language.
-- `chunk_type`: Type of code chunk.
-- `name`: Name of function/class/etc.
-- `content`: The actual code content.
-- `start_line`: Starting line number.
-- `end_line`: Ending line number.
+- `id`: Unique identifier for this chunk
+- `file_path`: Path to the source file
+- `language`: Programming language
+- `chunk_type`: Type of code chunk
+- `name`: Name of function/class/etc (optional)
+- `content`: The actual code content
+- `start_line`: Starting line number
+- `end_line`: Ending line number
 
 ## FileInfo
 
 Information about a source file.
 
 ### Fields
-
-- `path`: Relative path from repo root.
-- `language`: Detected language.
-- `size_bytes`: File size in bytes.
-- `last_modified`: Last modification timestamp.
-- `hash`: Content hash for change detection.
-- `chunk_count`: Number of chunks extracted.
+- `path`: Relative path from repo root
+- `language`: Detected language (optional)
+- `size_bytes`: File size in bytes
+- `last_modified`: Last modification timestamp
+- `hash`: Content hash for change detection
+- `chunk_count`: Number of chunks extracted (default: 0)
 
 ### Methods
-
-- `__repr__(self) -> str`: Returns a concise representation for debugging.
+- `__repr__(self) -> str`
+  - Returns a concise representation for debugging.
 
 ## IndexStatus
 
 Status of repository indexing.
 
 ### Fields
-
-- `repo_path`: Path to the repository.
-- `indexed_at`: Timestamp of last indexing.
-- `total_files`: Total files processed.
-- `total_chunks`: Total chunks extracted.
-- `languages`: Files per language.
-- `files`: Indexed file info.
-- `schema_version`: Schema version.
+- `repo_path`: Path to the repository
+- `indexed_at`: Timestamp of last indexing
+- `total_files`: Total files processed
+- `total_chunks`: Total chunks extracted
+- `languages`: Files per language (default: {})
+- `files`: Indexed file info (default: [])
+- `schema_version`: Schema version (default: 1)
 
 ## WikiPage
 
 A generated wiki page.
 
 ### Fields
-
-- `path`: Relative path in wiki directory.
-- `title`: Page title.
-- `content`: Markdown content.
-- `generated_at`: Generation timestamp.
+- `path`: Relative path in wiki directory
+- `title`: Page title
+- `content`: Markdown content
+- `generated_at`: Generation timestamp
 
 ### Methods
-
-- `__repr__(self) -> str`: Returns a concise representation for debugging.
+- `__repr__(self) -> str`
+  - Returns a concise representation for debugging.
 
 ## WikiStructure
 
 Structure of the generated wiki.
 
 ### Fields
-
-- `root`: Wiki root directory.
-- `pages`: All wiki pages.
+- `root`: Wiki root directory
+- `pages`: All wiki pages (default: [])
 
 ### Methods
-
-- `__repr__(self) -> str`: Returns a concise representation for debugging.
-- `to_toc(self) -> dict[str, Any]`: Generates table of contents.
+- `__repr__(self) -> str`
+  - Returns a concise representation for debugging.
+- `to_toc(self) -> dict[str, Any]`
+  - Generates table of contents.
 
 ## SearchResult
 
 A search result from semantic search.
 
 ### Fields
-
-- `chunk`: The matched code chunk.
-- `score`: Similarity score.
-- `highlights`: Relevant snippets.
-- `suggestions`: "Did you mean?" suggestions when results are poor.
+- `chunk`: The matched code chunk
+- `score`: Similarity score
+- `highlights`: Relevant snippets (default: [])
+- `suggestions`: 'Did you mean?' suggestions when results are poor (default: None)
 
 ### Methods
-
-- `__repr__(self) -> str`: Returns a concise representation for debugging.
+- `__repr__(self) -> str`
+  - Returns a concise representation for debugging.
 
 ## WikiPageStatus
 
 Status of a generated wiki page for incremental generation.
 
 ### Fields
-
-- `path`: Wiki page path (e.g., 'files/src/module/file.md').
-- `source_files`: Source files that contributed to this page.
-- `source_hashes`: Mapping of source file path to content hash.
-- `source_line_info`: Mapping of source file path to start/end line info.
+- `path`: Wiki page path (e.g., 'files/src/module/file.md')
+- `source_files`: Source files that contributed to this page (default: [])
+- `source_hashes`: Mapping of source file path to content hash (default: {})
+- `source_line_info`: Mapping of source file path to {start_line, end_line} (default: {})
 
 ## WikiGenerationStatus
 
 Status of wiki generation for tracking incremental updates.
 
 ### Fields
-
-- `repo_path`: Path to the repository.
-- `generated_at`: Timestamp of last generation.
-- `total_pages`: Total pages generated.
-- `index_status_hash`: Hash of index status for detecting changes.
-- `pages`: Mapping of page path to status.
+- `repo_path`: Path to the repository
+- `generated_at`: Timestamp of last generation
+- `total_pages`: Total pages generated
+- `index_status_hash`: Hash of index status for detecting changes (default: "")
+- `pages`: Mapping of page path to status (default: {})
 
 ### Methods
-
-- `__repr__(self) -> str`: Returns a concise representation for debugging.
+- `__repr__(self) -> str`
+  - Returns a concise representation for debugging.
 
 ## ResearchStepType
 
 Types of steps in the deep research process.
 
 ### Values
-
 - `DECOMPOSITION`
 - `RETRIEVAL`
 - `GAP_ANALYSIS`
@@ -201,56 +189,63 @@ Types of steps in the deep research process.
 A single step in the deep research process.
 
 ### Fields
-
-- `step_type`: Type of research step.
-- `description`: Description of what was done.
-- `duration_ms`: Duration of this step in milliseconds.
+- `step_type`: Type of research step
+- `description`: Description of what was done
+- `duration_ms`: Duration of this step in milliseconds
 
 ### Methods
-
-- `__repr__(self) -> str`: Returns a concise representation for debugging.
-
-# Functions
-
-No functions are defined in this file.
+- `__repr__(self) -> str`
+  - Returns a concise representation for debugging.
 
 # Integration
 
-This file provides the core data models for the local_deepwiki system. It is imported and used by various components of the application to define the structure of data passed between modules, such as:
-- Handlers that perform wiki export operations (`ExportWikiHtmlArgs`, `ExportWikiPdfArgs`).
-- Indexing and research logic that rely on `IndexStatus`, `CodeChunk`, `ResearchStep`, etc.
-- Operations that require structured input arguments like `IndexRepositoryArgs`, `DeepResearchArgs`, etc.
+This file provides the foundational data models for the `local_deepwiki` application. It is imported by other modules within the project to define the structure of data exchanged between components. The models are used by handlers for operations like exporting wiki content to HTML or PDF, as indicated by the usage of `ExportWikiHtmlArgs` and `ExportWikiPdfArgs`.
 
 # Usage Examples
 
-The following examples demonstrate how to use the defined models and types:
+The following examples demonstrate how to use the defined models based on their actual signatures:
+
+### CodeChunk Example
 
 ```python
-# Creating a CodeChunk
+from src.local_deepwiki.models import CodeChunk, Language, ChunkType
+
 chunk = CodeChunk(
     id="chunk_123",
     file_path="src/main.py",
     language=Language.PYTHON,
     chunk_type=ChunkType.FUNCTION,
-    name="main",
-    content="def main(): pass",
-    start_line=1,
-    end_line=2
+    name="my_function",
+    content="def my_function():\n    pass",
+    start_line=10,
+    end_line=15
 )
+```
 
-# Creating a WikiPage
+### WikiPage Example
+
+```python
+from src.local_deepwiki.models import WikiPage
+
 page = WikiPage(
-    path="api/intro.md",
-    title="Introduction",
-    content="# Welcome to the API",
+    path="api/users.md",
+    title="User API",
+    content="# User API\n\nThis is the user API documentation.",
     generated_at=1678886400.0
 )
+```
 
-# Creating a ResearchStep
-step = ResearchStep(
-    step_type=ResearchStepType.DECOMPOSITION,
-    description="Breaking down the problem into subtasks",
-    duration_ms=1500
+### SearchResult Example
+
+```python
+from src.local_deepwiki.models import SearchResult, CodeChunk
+
+chunk = CodeChunk(...)
+result = SearchResult(
+    chunk=chunk,
+    score=0.95,
+    highlights=["def my_function", "return True"],
+    suggestions=["Did you mean 'my_function'?"]
 )
 ```
 
@@ -266,7 +261,7 @@ Protocol for progress callback functions.  Progress callbacks are used to report
 
 
 <details>
-<summary>View Source (lines 11-26) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L11-L26">GitHub</a></summary>
+<summary>View Source (lines 11-26) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L11-L26">GitHub</a></summary>
 
 ```python
 class ProgressCallback(Protocol):
@@ -298,7 +293,7 @@ def __call__(msg: str, current: int, total: int) -> None
 Report progress.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `msg` | `str` | - | Description of current operation. |
 | `current` | `int` | - | Current step number. |
@@ -307,7 +302,7 @@ Report progress.
 
 
 <details>
-<summary>View Source (lines 11-26) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L11-L26">GitHub</a></summary>
+<summary>View Source (lines 11-26) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L11-L26">GitHub</a></summary>
 
 ```python
 class ProgressCallback(Protocol):
@@ -338,7 +333,7 @@ Supported programming languages.
 
 
 <details>
-<summary>View Source (lines 29-45) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L29-L45">GitHub</a></summary>
+<summary>View Source (lines 29-45) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L29-L45">GitHub</a></summary>
 
 ```python
 class Language(str, Enum):
@@ -370,7 +365,7 @@ Types of code chunks.
 
 
 <details>
-<summary>View Source (lines 48-57) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L48-L57">GitHub</a></summary>
+<summary>View Source (lines 48-57) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L48-L57">GitHub</a></summary>
 
 ```python
 class ChunkType(str, Enum):
@@ -397,7 +392,7 @@ A chunk of code extracted from the repository.
 
 
 <details>
-<summary>View Source (lines 60-111) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L60-L111">GitHub</a></summary>
+<summary>View Source (lines 60-111) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L60-L111">GitHub</a></summary>
 
 ```python
 class CodeChunk(BaseModel):
@@ -465,14 +460,14 @@ def to_vector_record(vector: list[float] | None = None) -> dict[str, Any]
 Convert chunk to a dict suitable for vector store storage.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `vector` | `list[float] | None` | `None` | Optional embedding vector to include in the record. |
 
 
 
 <details>
-<summary>View Source (lines 60-111) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L60-L111">GitHub</a></summary>
+<summary>View Source (lines 60-111) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L60-L111">GitHub</a></summary>
 
 ```python
 class CodeChunk(BaseModel):
@@ -539,7 +534,7 @@ Information about a source file.
 
 
 <details>
-<summary>View Source (lines 114-127) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L114-L127">GitHub</a></summary>
+<summary>View Source (lines 114-127) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L114-L127">GitHub</a></summary>
 
 ```python
 class FileInfo(BaseModel):
@@ -568,7 +563,7 @@ Status of repository indexing.
 
 
 <details>
-<summary>View Source (lines 130-150) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L130-L150">GitHub</a></summary>
+<summary>View Source (lines 130-150) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L130-L150">GitHub</a></summary>
 
 ```python
 class IndexStatus(BaseModel):
@@ -604,7 +599,7 @@ A generated wiki page.
 
 
 <details>
-<summary>View Source (lines 153-163) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L153-L163">GitHub</a></summary>
+<summary>View Source (lines 153-163) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L153-L163">GitHub</a></summary>
 
 ```python
 class WikiPage(BaseModel):
@@ -632,7 +627,7 @@ Structure of the generated wiki.
 
 
 <details>
-<summary>View Source (lines 166-193) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L166-L193">GitHub</a></summary>
+<summary>View Source (lines 166-193) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L166-L193">GitHub</a></summary>
 
 ```python
 class WikiStructure(BaseModel):
@@ -678,7 +673,7 @@ Generate table of contents.
 
 
 <details>
-<summary>View Source (lines 166-193) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L166-L193">GitHub</a></summary>
+<summary>View Source (lines 166-193) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L166-L193">GitHub</a></summary>
 
 ```python
 class WikiStructure(BaseModel):
@@ -721,7 +716,7 @@ A search result from semantic search.
 
 
 <details>
-<summary>View Source (lines 196-212) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L196-L212">GitHub</a></summary>
+<summary>View Source (lines 196-212) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L196-L212">GitHub</a></summary>
 
 ```python
 class SearchResult(BaseModel):
@@ -753,7 +748,7 @@ Status of a generated wiki page for incremental generation.
 
 
 <details>
-<summary>View Source (lines 215-234) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L215-L234">GitHub</a></summary>
+<summary>View Source (lines 215-234) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L215-L234">GitHub</a></summary>
 
 ```python
 class WikiPageStatus(BaseModel):
@@ -788,7 +783,7 @@ Status of wiki generation for tracking incremental updates.
 
 
 <details>
-<summary>View Source (lines 237-252) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L237-L252">GitHub</a></summary>
+<summary>View Source (lines 237-252) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L237-L252">GitHub</a></summary>
 
 ```python
 class WikiGenerationStatus(BaseModel):
@@ -819,7 +814,7 @@ Types of steps in the deep research process.
 
 
 <details>
-<summary>View Source (lines 258-264) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L258-L264">GitHub</a></summary>
+<summary>View Source (lines 258-264) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L258-L264">GitHub</a></summary>
 
 ```python
 class ResearchStepType(str, Enum):
@@ -841,7 +836,7 @@ A single step in the deep research process.
 
 
 <details>
-<summary>View Source (lines 267-276) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L267-L276">GitHub</a></summary>
+<summary>View Source (lines 267-276) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L267-L276">GitHub</a></summary>
 
 ```python
 class ResearchStep(BaseModel):
@@ -866,7 +861,7 @@ A decomposed sub-question for deep research.
 
 
 <details>
-<summary>View Source (lines 279-289) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L279-L289">GitHub</a></summary>
+<summary>View Source (lines 279-289) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L279-L289">GitHub</a></summary>
 
 ```python
 class SubQuestion(BaseModel):
@@ -892,7 +887,7 @@ A reference to a source code location.
 
 
 <details>
-<summary>View Source (lines 292-305) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L292-L305">GitHub</a></summary>
+<summary>View Source (lines 292-305) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L292-L305">GitHub</a></summary>
 
 ```python
 class SourceReference(BaseModel):
@@ -921,7 +916,7 @@ Result from deep research analysis.
 
 
 <details>
-<summary>View Source (lines 308-330) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L308-L330">GitHub</a></summary>
+<summary>View Source (lines 308-330) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L308-L330">GitHub</a></summary>
 
 ```python
 class DeepResearchResult(BaseModel):
@@ -959,7 +954,7 @@ Types of indexing progress events.
 
 
 <details>
-<summary>View Source (lines 333-343) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L333-L343">GitHub</a></summary>
+<summary>View Source (lines 333-343) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L333-L343">GitHub</a></summary>
 
 ```python
 class IndexingProgressType(str, Enum):
@@ -985,7 +980,7 @@ Progress update from repository indexing.  Sent via MCP progress notifications t
 
 
 <details>
-<summary>View Source (lines 346-369) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L346-L369">GitHub</a></summary>
+<summary>View Source (lines 346-369) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L346-L369">GitHub</a></summary>
 
 ```python
 class IndexingProgress(BaseModel):
@@ -1024,7 +1019,7 @@ Types of deep research progress events.
 
 
 <details>
-<summary>View Source (lines 372-382) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L372-L382">GitHub</a></summary>
+<summary>View Source (lines 372-382) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L372-L382">GitHub</a></summary>
 
 ```python
 class ResearchProgressType(str, Enum):
@@ -1050,7 +1045,7 @@ Progress update from deep research pipeline.  Sent via MCP progress notification
 
 
 <details>
-<summary>View Source (lines 385-407) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L385-L407">GitHub</a></summary>
+<summary>View Source (lines 385-407) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L385-L407">GitHub</a></summary>
 
 ```python
 class ResearchProgress(BaseModel):
@@ -1088,7 +1083,7 @@ Supported LLM providers.
 
 
 <details>
-<summary>View Source (lines 415-420) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L415-L420">GitHub</a></summary>
+<summary>View Source (lines 415-420) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L415-L420">GitHub</a></summary>
 
 ```python
 class LLMProviderType(str, Enum):
@@ -1109,7 +1104,7 @@ Supported embedding providers.
 
 
 <details>
-<summary>View Source (lines 423-427) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L423-L427">GitHub</a></summary>
+<summary>View Source (lines 423-427) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L423-L427">GitHub</a></summary>
 
 ```python
 class EmbeddingProviderType(str, Enum):
@@ -1129,7 +1124,7 @@ Arguments for the index_repository tool.
 
 
 <details>
-<summary>View Source (lines 430-452) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L430-L452">GitHub</a></summary>
+<summary>View Source (lines 430-452) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L430-L452">GitHub</a></summary>
 
 ```python
 class IndexRepositoryArgs(BaseModel):
@@ -1167,7 +1162,7 @@ Arguments for the ask_question tool.
 
 
 <details>
-<summary>View Source (lines 455-462) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L455-L462">GitHub</a></summary>
+<summary>View Source (lines 455-462) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L455-L462">GitHub</a></summary>
 
 ```python
 class AskQuestionArgs(BaseModel):
@@ -1176,7 +1171,7 @@ class AskQuestionArgs(BaseModel):
     repo_path: str = Field(description="Path to the indexed repository")
     question: str = Field(min_length=1, description="Question about the codebase")
     max_context: int = Field(
-        default=5, ge=1, le=50, description="Maximum code chunks for context (1-50)"
+        default=10, ge=1, le=50, description="Maximum code chunks for context (1-50)"
     )
 ```
 
@@ -1190,7 +1185,7 @@ Arguments for the deep_research tool.
 
 
 <details>
-<summary>View Source (lines 465-481) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L465-L481">GitHub</a></summary>
+<summary>View Source (lines 465-481) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L465-L481">GitHub</a></summary>
 
 ```python
 class DeepResearchArgs(BaseModel):
@@ -1222,7 +1217,7 @@ Arguments for the read_wiki_structure tool.
 
 
 <details>
-<summary>View Source (lines 484-487) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L484-L487">GitHub</a></summary>
+<summary>View Source (lines 484-487) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L484-L487">GitHub</a></summary>
 
 ```python
 class ReadWikiStructureArgs(BaseModel):
@@ -1241,7 +1236,7 @@ Arguments for the read_wiki_page tool.
 
 
 <details>
-<summary>View Source (lines 490-496) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L490-L496">GitHub</a></summary>
+<summary>View Source (lines 490-496) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L490-L496">GitHub</a></summary>
 
 ```python
 class ReadWikiPageArgs(BaseModel):
@@ -1263,7 +1258,7 @@ Arguments for the search_code tool.
 
 
 <details>
-<summary>View Source (lines 499-513) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L499-L513">GitHub</a></summary>
+<summary>View Source (lines 499-513) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L499-L513">GitHub</a></summary>
 
 ```python
 class SearchCodeArgs(BaseModel):
@@ -1293,7 +1288,7 @@ Arguments for the export_wiki_html tool.
 
 
 <details>
-<summary>View Source (lines 516-522) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L516-L522">GitHub</a></summary>
+<summary>View Source (lines 516-522) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L516-L522">GitHub</a></summary>
 
 ```python
 class ExportWikiHtmlArgs(BaseModel):
@@ -1315,7 +1310,7 @@ Arguments for the export_wiki_pdf tool.
 
 
 <details>
-<summary>View Source (lines 525-532) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L525-L532">GitHub</a></summary>
+<summary>View Source (lines 525-532) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L525-L532">GitHub</a></summary>
 
 ```python
 class ExportWikiPdfArgs(BaseModel):
@@ -1338,7 +1333,7 @@ Current step in a research checkpoint.
 
 
 <details>
-<summary>View Source (lines 540-550) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L540-L550">GitHub</a></summary>
+<summary>View Source (lines 540-550) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L540-L550">GitHub</a></summary>
 
 ```python
 class ResearchCheckpointStep(str, Enum):
@@ -1364,7 +1359,7 @@ Checkpoint state for resumable deep research operations.  This model captures th
 
 
 <details>
-<summary>View Source (lines 553-594) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L553-L594">GitHub</a></summary>
+<summary>View Source (lines 553-594) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L553-L594">GitHub</a></summary>
 
 ```python
 class ResearchCheckpoint(BaseModel):
@@ -1417,11 +1412,11 @@ class ResearchCheckpoint(BaseModel):
 
 **Inherits from:** `BaseModel`
 
-Arguments for the list_research_checkpoints tool.
+Arguments for the [list_research_checkpoints](core/deep_research.md) tool.
 
 
 <details>
-<summary>View Source (lines 597-600) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L597-L600">GitHub</a></summary>
+<summary>View Source (lines 597-600) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L597-L600">GitHub</a></summary>
 
 ```python
 class ListResearchCheckpointsArgs(BaseModel):
@@ -1440,7 +1435,7 @@ Arguments for resuming research with a checkpoint.
 
 
 <details>
-<summary>View Source (lines 603-607) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L603-L607">GitHub</a></summary>
+<summary>View Source (lines 603-607) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L603-L607">GitHub</a></summary>
 
 ```python
 class ResumeResearchArgs(BaseModel):
@@ -1460,7 +1455,7 @@ Arguments for cancelling and checkpointing research.
 
 
 <details>
-<summary>View Source (lines 610-614) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L610-L614">GitHub</a></summary>
+<summary>View Source (lines 610-614) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L610-L614">GitHub</a></summary>
 
 ```python
 class CancelResearchArgs(BaseModel):
@@ -1480,7 +1475,7 @@ Types of diagrams that can be generated.
 
 
 <details>
-<summary>View Source (lines 622-629) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L622-L629">GitHub</a></summary>
+<summary>View Source (lines 622-629) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L622-L629">GitHub</a></summary>
 
 ```python
 class DiagramType(str, Enum):
@@ -1503,7 +1498,7 @@ Arguments for the get_glossary tool.
 
 
 <details>
-<summary>View Source (lines 632-638) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L632-L638">GitHub</a></summary>
+<summary>View Source (lines 632-638) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L632-L638">GitHub</a></summary>
 
 ```python
 class GetGlossaryArgs(BaseModel):
@@ -1525,7 +1520,7 @@ Arguments for the get_diagrams tool.
 
 
 <details>
-<summary>View Source (lines 641-651) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L641-L651">GitHub</a></summary>
+<summary>View Source (lines 641-651) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L641-L651">GitHub</a></summary>
 
 ```python
 class GetDiagramsArgs(BaseModel):
@@ -1551,7 +1546,7 @@ Arguments for the get_inheritance tool.
 
 
 <details>
-<summary>View Source (lines 654-657) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L654-L657">GitHub</a></summary>
+<summary>View Source (lines 654-657) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L654-L657">GitHub</a></summary>
 
 ```python
 class GetInheritanceArgs(BaseModel):
@@ -1570,7 +1565,7 @@ Arguments for the get_call_graph tool.
 
 
 <details>
-<summary>View Source (lines 660-667) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L660-L667">GitHub</a></summary>
+<summary>View Source (lines 660-667) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L660-L667">GitHub</a></summary>
 
 ```python
 class GetCallGraphArgs(BaseModel):
@@ -1593,7 +1588,7 @@ Arguments for the get_coverage tool.
 
 
 <details>
-<summary>View Source (lines 670-673) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L670-L673">GitHub</a></summary>
+<summary>View Source (lines 670-673) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L670-L673">GitHub</a></summary>
 
 ```python
 class GetCoverageArgs(BaseModel):
@@ -1612,7 +1607,7 @@ Arguments for the detect_stale_docs tool.
 
 
 <details>
-<summary>View Source (lines 676-684) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L676-L684">GitHub</a></summary>
+<summary>View Source (lines 676-684) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L676-L684">GitHub</a></summary>
 
 ```python
 class DetectStaleDocsArgs(BaseModel):
@@ -1636,7 +1631,7 @@ Arguments for the get_changelog tool.
 
 
 <details>
-<summary>View Source (lines 687-693) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L687-L693">GitHub</a></summary>
+<summary>View Source (lines 687-693) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L687-L693">GitHub</a></summary>
 
 ```python
 class GetChangelogArgs(BaseModel):
@@ -1658,7 +1653,7 @@ Arguments for the detect_secrets tool.
 
 
 <details>
-<summary>View Source (lines 696-699) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L696-L699">GitHub</a></summary>
+<summary>View Source (lines 696-699) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L696-L699">GitHub</a></summary>
 
 ```python
 class DetectSecretsArgs(BaseModel):
@@ -1677,7 +1672,7 @@ Arguments for the get_test_examples tool.
 
 
 <details>
-<summary>View Source (lines 702-712) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L702-L712">GitHub</a></summary>
+<summary>View Source (lines 702-712) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L702-L712">GitHub</a></summary>
 
 ```python
 class GetTestExamplesArgs(BaseModel):
@@ -1703,7 +1698,7 @@ Arguments for the get_api_docs tool.
 
 
 <details>
-<summary>View Source (lines 715-722) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L715-L722">GitHub</a></summary>
+<summary>View Source (lines 715-722) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L715-L722">GitHub</a></summary>
 
 ```python
 class GetApiDocsArgs(BaseModel):
@@ -1726,7 +1721,7 @@ Arguments for the list_indexed_repos tool.
 
 
 <details>
-<summary>View Source (lines 725-731) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L725-L731">GitHub</a></summary>
+<summary>View Source (lines 725-731) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L725-L731">GitHub</a></summary>
 
 ```python
 class ListIndexedReposArgs(BaseModel):
@@ -1749,7 +1744,7 @@ Arguments for the get_index_status tool.
 
 
 <details>
-<summary>View Source (lines 734-737) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/models.py#L734-L737">GitHub</a></summary>
+<summary>View Source (lines 734-737) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/models.py#L734-L737">GitHub</a></summary>
 
 ```python
 class GetIndexStatusArgs(BaseModel):
@@ -1761,6 +1756,8 @@ class GetIndexStatusArgs(BaseModel):
 </details>
 
 ## Class Diagram
+
+### top-level
 
 ```mermaid
 classDiagram
@@ -2212,6 +2209,7 @@ assert record["vector"] == [0.1, 0.2, 0.3]
 
 | Entity | Type | Author | Date | Commit |
 |--------|------|--------|------|--------|
+| `AskQuestionArgs` | class | Brian Breidenbach | today | `4dbba1e` fix: Improve wiki accuracy,... |
 | `CodeChunk` | class | Brian Breidenbach | today | `21d245e` feat: Add 12 new MCP tools ... |
 | `IndexStatus` | class | Brian Breidenbach | today | `21d245e` feat: Add 12 new MCP tools ... |
 | `WikiStructure` | class | Brian Breidenbach | today | `21d245e` feat: Add 12 new MCP tools ... |
@@ -2243,7 +2241,6 @@ assert record["vector"] == [0.1, 0.2, 0.3]
 | `IndexingProgressType` | class | Brian Breidenbach | 1 week ago | `7dfedb5` Add MCP progress streaming ... |
 | `LLMProviderType` | class | Brian Breidenbach | 1 week ago | `24904d8` Add Pydantic tool argument ... |
 | `EmbeddingProviderType` | class | Brian Breidenbach | 1 week ago | `24904d8` Add Pydantic tool argument ... |
-| `AskQuestionArgs` | class | Brian Breidenbach | 1 week ago | `24904d8` Add Pydantic tool argument ... |
 | `ReadWikiStructureArgs` | class | Brian Breidenbach | 1 week ago | `24904d8` Add Pydantic tool argument ... |
 | `SearchCodeArgs` | class | Brian Breidenbach | 1 week ago | `24904d8` Add Pydantic tool argument ... |
 | `Language` | class | Brian Breidenbach | 3 weeks ago | `55d665c` Fix TypeScript/TSX parsing ... |
@@ -2260,3 +2257,7 @@ assert record["vector"] == [0.1, 0.2, 0.3]
 | `WikiPageStatus` | class | Brian Breidenbach | 3 weeks ago | `c568951` Add input validation, type ... |
 | `WikiGenerationStatus` | class | Brian Breidenbach | 3 weeks ago | `c568951` Add input validation, type ... |
 | `ChunkType` | class | Brian Breidenbach | 3 weeks ago | `cdae76f` Initial commit: Local DeepW... |
+
+## Relevant Source Files
+
+- `src/local_deepwiki/models.py:11-26`

@@ -1,27 +1,19 @@
-# File: `src/local_deepwiki/export/html.py`
+# File Overview
 
-## File Overview
+This file, `src/local_deepwiki/export/html.py`, provides functionality for exporting wiki content to HTML. It includes both streaming and standard export modes, supporting large wikis efficiently. The file depends on several core modules and utilities, such as `markdown` for rendering, `local_deepwiki.export.streaming` for export logic, and `local_deepwiki.cli_progress` for progress reporting.
 
-This file provides functionality for exporting a wiki to HTML format. It supports both streaming and standard export modes, with the streaming mode being used for large wikis to manage memory usage. It includes utilities for rendering Markdown content, fixing internal links, and generating navigation elements like a table of contents (TOC) and breadcrumbs.
+# Classes
 
-Dependencies:
-- `argparse`, `asyncio`, `json`, `re`, `shutil`, `time`
-- `pathlib.Path`
-- `typing.Any`, `typing.cast`
-- `markdown`
-- `local_deepwiki.cli_progress`
-- `local_deepwiki.export.streaming` (imports `ExportConfig`, `ExportResult`, `ProgressCallback`, `StreamingExporter`, `WikiPage`, `WikiPageIterator`)
-- `local_deepwiki.logging`
+## StreamingHtmlExporter
 
-## Classes
+The `StreamingHtmlExporter` class is responsible for exporting wiki content to HTML in a streaming fashion, which is efficient for large wikis.
 
-### StreamingHtmlExporter
+### Methods
 
-A streaming exporter for wiki pages to HTML, designed for large wikis to avoid loading all pages into memory at once.
+#### `__init__`
 
-#### Methods
+Initializes the streaming HTML exporter.
 
-##### `__init__`
 ```python
 def __init__(
     self,
@@ -32,85 +24,101 @@ def __init__(
     no_progress: bool = False,
 )
 ```
-Initialize the streaming HTML exporter.
 
-- **Parameters**:
-  - `wiki_path`: Path to the `.deepwiki` directory.
-  - `output_path`: Output directory for HTML files.
-  - `config`: Export configuration.
-  - `no_progress`: If `True`, disable progress bars.
+**Parameters:**
+- `wiki_path`: Path to the `.deepwiki` directory.
+- `output_path`: Output directory for HTML files.
+- `config`: Export configuration.
+- `no_progress`: If `True`, disables progress bars.
 
-##### `export`
+#### `export`
+
+Exports wiki to HTML with streaming.
+
 ```python
 async def export(
     self, progress_callback: ProgressCallback | None = None
 ) -> ExportResult:
 ```
-Export wiki to HTML with streaming.
 
-- **Parameters**:
-  - `progress_callback`: Optional callback for progress updates.
-- **Returns**:
-  - `ExportResult` with export statistics.
+**Parameters:**
+- [`progress_callback`](../handlers.md): Optional callback for progress updates.
 
-##### `_export_wiki_page`
+**Returns:**
+- [`ExportResult`](streaming.md) with export statistics.
+
+#### `_export_wiki_page`
+
+Exports a single wiki page to HTML.
+
 ```python
 def _export_wiki_page(self, page: WikiPage) -> None:
 ```
-Export a single wiki page to HTML.
 
-- **Parameters**:
-  - `page`: `WikiPage` object with content loaded on demand.
+**Parameters:**
+- `page`: [`WikiPage`](streaming.md) object with content loaded on demand.
 
-##### `_render_toc`
+#### `_render_toc`
+
+Renders TOC entries as HTML.
+
 ```python
 def _render_toc(
     self, entries: list[dict[str, Any]], current_path: str, root_path: str
 ) -> str:
 ```
-Render TOC entries as HTML.
 
-- **Parameters**:
-  - `entries`: List of TOC entries.
-  - `current_path`: Path of the current page.
-  - `root_path`: Root path for links.
-- **Returns**:
-  - HTML string for the TOC.
+**Parameters:**
+- `entries`: List of TOC entries.
+- `current_path`: Current page path.
+- `root_path`: Root path for links.
 
-##### `_render_toc_entry`
+**Returns:**
+- HTML string of the TOC.
+
+#### `_render_toc_entry`
+
+Renders a single TOC entry recursively.
+
 ```python
 def _render_toc_entry(
     self, entry: dict[str, Any], current_path: str, root_path: str
 ) -> str:
 ```
-Render a single TOC entry recursively.
 
-- **Parameters**:
-  - `entry`: TOC entry dictionary.
-  - `current_path`: Path of the current page.
-  - `root_path`: Root path for links.
-- **Returns**:
-  - HTML string for the TOC entry.
+**Parameters:**
+- `entry`: TOC entry dictionary.
+- `current_path`: Current page path.
+- `root_path`: Root path for links.
 
-##### `_build_breadcrumb`
+**Returns:**
+- HTML string of the TOC entry.
+
+#### `_build_breadcrumb`
+
+Builds breadcrumb navigation HTML.
+
 ```python
 def _build_breadcrumb(self, rel_path: Path, root_path: str) -> str:
 ```
-Build breadcrumb navigation HTML.
 
-- **Parameters**:
-  - `rel_path`: Relative path of the current page.
-  - `root_path`: Root path for links.
-- **Returns**:
-  - HTML string for the breadcrumb.
+**Parameters:**
+- `rel_path`: Relative path of the current page.
+- `root_path`: Root path for links.
 
-### HtmlExporter
+**Returns:**
+- HTML string of the breadcrumb.
 
-A standard HTML exporter that loads all pages into memory before exporting. It falls back to streaming mode for large wikis.
+## HtmlExporter
 
-#### Methods
+The `HtmlExporter` class provides a standard export mode for wiki content to HTML, loading all pages into memory.
 
-##### `__init__`
+### Methods
+
+#### `__init__`
+
+Initializes the HTML exporter.
+
 ```python
 def __init__(
     self,
@@ -120,496 +128,199 @@ def __init__(
     no_progress: bool = False,
 ):
 ```
-Initialize the exporter.
 
-- **Parameters**:
-  - `wiki_path`: Path to the `.deepwiki` directory.
-  - `output_path`: Output directory for HTML files.
-  - `no_progress`: If `True`, disable progress bars.
+**Parameters:**
+- `wiki_path`: Path to the `.deepwiki` directory.
+- `output_path`: Output directory for HTML files.
+- `no_progress`: If `True`, disables progress bars.
 
-##### `export`
+#### `export`
+
+Exports all wiki pages to HTML.
+
 ```python
 def export(self) -> int:
 ```
-Export all wiki pages to HTML.
 
-- **Returns**:
-  - Number of pages exported.
+**Returns:**
+- Number of pages exported.
 
-##### `_export_streaming`
+#### `_export_streaming`
+
+Exports using streaming mode for large wikis.
+
 ```python
 def _export_streaming(self) -> int:
 ```
-Export using streaming mode for large wikis.
 
-- **Returns**:
-  - Number of pages exported.
+#### `progress_callback`
 
-##### `_export_standard`
+Updates the progress bar during streaming export.
+
+```python
+def progress_callback(current: int, total: int, message: str) -> None:
+```
+
+#### `_export_standard`
+
+Exports using standard mode (loads all pages in memory).
+
 ```python
 def _export_standard(self) -> int:
 ```
-Export using standard mode (loads all pages in memory).
 
-- **Returns**:
-  - Number of pages exported.
+# Functions
 
-##### `_export_page`
-```python
-def _export_page(self, page: WikiPage) -> None:
-```
-Export a single page to HTML.
+## `render_markdown`
 
-- **Parameters**:
-  - `page`: `WikiPage` object.
-
-##### `_render_toc`
-```python
-def _render_toc(
-    self, entries: list[dict[str, Any]], current_path: str, root_path: str
-) -> str:
-```
-Render TOC entries as HTML.
-
-- **Parameters**:
-  - `entries`: List of TOC entries.
-  - `current_path`: Path of the current page.
-  - `root_path`: Root path for links.
-- **Returns**:
-  - HTML string for the TOC.
-
-##### `_render_toc_entry`
-```python
-def _render_toc_entry(
-    self, entry: dict[str, Any], current_path: str, root_path: str
-) -> str:
-```
-Render a single TOC entry recursively.
-
-- **Parameters**:
-  - `entry`: TOC entry dictionary.
-  - `current_path`: Path of the current page.
-  - `root_path`: Root path for links.
-- **Returns**:
-  - HTML string for the TOC entry.
-
-##### `_build_breadcrumb`
-```python
-def _build_breadcrumb(self, rel_path: Path, root_path: str) -> str:
-```
-Build breadcrumb navigation HTML.
-
-- **Parameters**:
-  - `rel_path`: Relative path of the current page.
-  - `root_path`: Root path for links.
-- **Returns**:
-  - HTML string for the breadcrumb.
-
-## Functions
-
-### `render_markdown`
-```python
-def render_markdown(md_text: str) -> str:
-```
-Convert Markdown text to HTML.
-
-- **Parameters**:
-  - `md_text`: Markdown string.
-- **Returns**:
-  - HTML string.
-
-
-<details>
-<summary>View Source (lines 646-656) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/html.py#L646-L656">GitHub</a></summary>
+Renders markdown content to HTML.
 
 ```python
 def render_markdown(content: str) -> str:
-    """Render markdown to HTML."""
-    md = markdown.Markdown(
-        extensions=[
-            "fenced_code",
-            "tables",
-            "toc",
-            "nl2br",
-        ]
-    )
-    return cast(str, md.convert(content))
 ```
 
-</details>
+**Parameters:**
+- `content`: Markdown content to render.
 
-### `fix_internal_links`
-```python
-def fix_internal_links(html_text: str) -> str:
-```
-Fix internal links in HTML to point to correct `.html` files.
+**Returns:**
+- HTML string.
 
-- **Parameters**:
-  - `html_text`: HTML string.
-- **Returns**:
-  - HTML string with fixed links.
+## `fix_internal_links`
 
-
-<details>
-<summary>View Source (lines 659-678) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/html.py#L659-L678">GitHub</a></summary>
+Fixes internal links in HTML content.
 
 ```python
 def fix_internal_links(html_content: str) -> str:
-    """Convert internal .md links to .html links in rendered HTML.
-
-    Args:
-        html_content: HTML content with potential .md links.
-
-    Returns:
-        HTML content with .md links converted to .html links.
-    """
-    # Match href attributes pointing to .md files (internal links only)
-    # Excludes http://, https://, and other protocol links
-    pattern = r'href="((?!https?://|mailto:|#)[^"]*\.md)(#[^"]*)?"'
-
-    def replace_link(match: re.Match[str]) -> str:
-        md_path = match.group(1)
-        anchor = match.group(2) or ""
-        html_path = md_path[:-3] + ".html"  # Replace .md with .html
-        return f'href="{html_path}{anchor}"'
-
-    return re.sub(pattern, replace_link, html_content)
 ```
 
-</details>
+**Parameters:**
+- `html_content`: HTML content with internal links.
 
-### `replace_link`
+**Returns:**
+- HTML content with fixed internal links.
+
+## `replace_link`
+
+Replaces a link with a new one.
+
 ```python
 def replace_link(match: re.Match) -> str:
 ```
-Replace a matched link with a fixed version.
 
-- **Parameters**:
-  - `match`: Regular expression match object.
-- **Returns**:
-  - Replacement HTML string.
+**Parameters:**
+- `match`: Regex match object for a link.
 
+**Returns:**
+- Replacement HTML link.
 
-<details>
-<summary>View Source (lines 672-676) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/html.py#L672-L676">GitHub</a></summary>
+## `add_external_link_targets`
 
-```python
-def replace_link(match: re.Match[str]) -> str:
-        md_path = match.group(1)
-        anchor = match.group(2) or ""
-        html_path = md_path[:-3] + ".html"  # Replace .md with .html
-        return f'href="{html_path}{anchor}"'
-```
-
-</details>
-
-### `add_external_link_targets`
-```python
-def add_external_link_targets(html_text: str) -> str:
-```
-Add `target="_blank"` to external links.
-
-- **Parameters**:
-  - `html_text`: HTML string.
-- **Returns**:
-  - HTML string with updated external links.
-
-
-<details>
-<summary>View Source (lines 681-698) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/html.py#L681-L698">GitHub</a></summary>
+Adds target attributes to external links.
 
 ```python
 def add_external_link_targets(html_content: str) -> str:
-    """Add target="_blank" to external links for opening in new tab.
-
-    Args:
-        html_content: HTML content with potential external links.
-
-    Returns:
-        HTML content with external links opening in new tabs.
-    """
-    # Match href attributes pointing to http:// or https:// URLs
-    # that don't already have a target attribute
-    pattern = r'<a\s+href="(https?://[^"]+)"(?![^>]*target=)'
-
-    def add_target(match: re.Match[str]) -> str:
-        url = match.group(1)
-        return f'<a href="{url}" target="_blank" rel="noopener noreferrer"'
-
-    return re.sub(pattern, add_target, html_content)
 ```
 
-</details>
+**Parameters:**
+- `html_content`: HTML content with links.
 
-### `add_target`
+**Returns:**
+- HTML content with external links having `target="_blank"`.
+
+## `add_target`
+
+Adds `target="_blank"` to external links.
+
 ```python
 def add_target(match: re.Match) -> str:
 ```
-Add `target="_blank"` to an external link.
 
-- **Parameters**:
-  - `match`: Regular expression match object.
-- **Returns**:
-  - Replacement HTML string.
+**Parameters:**
+- `match`: Regex match object for an external link.
 
+**Returns:**
+- HTML link with `target="_blank"`.
 
-<details>
-<summary>View Source (lines 694-696) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/html.py#L694-L696">GitHub</a></summary>
+## `extract_title`
 
-```python
-def add_target(match: re.Match[str]) -> str:
-        url = match.group(1)
-        return f'<a href="{url}" target="_blank" rel="noopener noreferrer"'
-```
-
-</details>
-
-### `extract_title`
-```python
-def extract_title(html_text: str) -> str:
-```
-Extract the title from an HTML string.
-
-- **Parameters**:
-  - `html_text`: HTML string.
-- **Returns**:
-  - Title string.
-
-
-<details>
-<summary>View Source (lines 701-715) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/html.py#L701-L715">GitHub</a></summary>
+Extracts the title from a markdown document.
 
 ```python
-def extract_title(md_file: Path) -> str:
-    """Extract title from markdown file."""
-    try:
-        content = md_file.read_text()
-        for line in content.split("\n"):
-            line = line.strip()
-            if line.startswith("# "):
-                return line[2:].strip()
-            if line.startswith("**") and line.endswith("**"):
-                return line[2:-2].strip()
-    except (OSError, UnicodeDecodeError) as e:
-        # OSError: File access issues
-        # UnicodeDecodeError: File encoding issues
-        logger.debug(f"Could not extract title from {md_file}: {e}")
-    return md_file.stem.replace("_", " ").replace("-", " ").title()
+def extract_title(content: str) -> str:
 ```
 
-</details>
+**Parameters:**
+- `content`: Markdown content.
 
-### `extract_description`
+**Returns:**
+- Extracted title.
+
+## `export_to_html`
+
+Exports a wiki to HTML.
+
 ```python
-def extract_description(html_text: str) -> str:
+def export_to_html(
+    wiki_path: Path,
+    output_path: Path,
+    *,
+    no_progress: bool = False,
+) -> int:
 ```
-Extract the description from an HTML string.
 
-- **Parameters**:
-  - `html_text`: HTML string.
-- **Returns**:
-  - Description string.
+**Parameters:**
+- `wiki_path`: Path to the `.deepwiki` directory.
+- `output_path`: Output directory for HTML files.
+- `no_progress`: If `True`, disables progress bars.
 
-### `extract_keywords`
-```python
-def extract_keywords(html_text: str) -> list[str]:
-```
-Extract keywords from an HTML string.
+**Returns:**
+- Number of pages exported.
 
-- **Parameters**:
-  - `html_text`: HTML string.
-- **Returns**:
-  - List of keyword strings.
+## `main`
 
-### `extract_body`
-```python
-def extract_body(html_text: str) -> str:
-```
-Extract the body content from an HTML string.
+Entry point for command-line usage.
 
-- **Parameters**:
-  - `html_text`: HTML string.
-- **Returns**:
-  - Body content string.
-
-### `extract_metadata`
-```python
-def extract_metadata(html_text: str) -> dict[str, str]:
-```
-Extract metadata from an HTML string.
-
-- **Parameters**:
-  - `html_text`: HTML string.
-- **Returns**:
-  - Dictionary of metadata key-value pairs.
-
-### `extract_all`
-```python
-def extract_all(html_text: str) -> dict[str, str | list[str]]:
-```
-Extract all metadata from an HTML string.
-
-- **Parameters**:
-  - `html_text`: HTML string.
-- **Returns**:
-  - Dictionary of metadata including title, description, keywords, and body.
-
-### `extract_page_metadata`
-```python
-def extract_page_metadata(page: WikiPage) -> dict[str, str | list[str]]:
-```
-Extract metadata from a `WikiPage` object.
-
-- **Parameters**:
-  - `page`: `WikiPage` object.
-- **Returns**:
-  - Dictionary of metadata.
-
-### `export_page`
-```python
-def export_page(page: WikiPage, output_path: Path, root_path: str) -> None:
-```
-Export a single page to HTML.
-
-- **Parameters**:
-  - `page`: `WikiPage` object.
-  - `output_path`: Output directory path.
-  - `root_path`: Root path for links.
-
-### `export_pages`
-```python
-def export_pages(pages: list[WikiPage], output_path: Path, root_path: str) -> None:
-```
-Export multiple pages to HTML.
-
-- **Parameters**:
-  - `pages`: List of `WikiPage` objects.
-  - `output_path`: Output directory path.
-  - `root_path`: Root path for links.
-
-### `export_wiki`
-```python
-def export_wiki(wiki_path: Path, output_path: Path, root_path: str) -> None:
-```
-Export a wiki to HTML.
-
-- **Parameters**:
-  - `wiki_path`: Path to the `.deepwiki` directory.
-  - `output_path`: Output directory path.
-  - `root_path`: Root path for links.
-
-### `export_wiki_async`
-```python
-async def export_wiki_async(wiki_path: Path, output_path: Path, root_path: str) -> None:
-```
-Asynchronously export a wiki to HTML.
-
-- **Parameters**:
-  - `wiki_path`: Path to the `.deepwiki` directory.
-  - `output_path`: Output directory path.
-  - `root_path`: Root path for links.
-
-### `main`
 ```python
 def main() -> None:
 ```
-Main function to run the export.
 
+# Integration
 
-<details>
-<summary>View Source (lines 1224-1256) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/html.py#L1224-L1256">GitHub</a></summary>
+This file is part of the `local_deepwiki` package and integrates with core modules such as `local_deepwiki.export.streaming` and `local_deepwiki.cli_progress`. It is used by modules like `pdf`, `app`, `test_web`, `streaming`, and `test_integration_pipeline` through functions such as `render_markdown`, `extract_title`, and `export_to_html`.
+
+# Usage Examples
+
+To export a wiki to HTML using the standard mode:
 
 ```python
-def main() -> int:
-    """CLI entry point for HTML export."""
-    parser = argparse.ArgumentParser(description="Export DeepWiki documentation to static HTML")
-    parser.add_argument(
-        "wiki_path",
-        nargs="?",
-        default=".deepwiki",
-        help="Path to the .deepwiki directory (default: .deepwiki)",
-    )
-    parser.add_argument("--output", "-o", help="Output directory (default: {wiki_path}_html)")
-    parser.add_argument(
-        "--no-progress",
-        action="store_true",
-        help="Disable progress bars (for non-interactive use)",
-    )
-
-    args = parser.parse_args()
-
-    wiki_path = Path(args.wiki_path).resolve()
-    if not wiki_path.exists():
-        print(f"Error: Wiki path does not exist: {wiki_path}")
-        return 1
-
-    output_path = Path(args.output).resolve() if args.output else None
-
-    result = export_to_html(wiki_path, output_path, no_progress=args.no_progress)
-    print(result)
-
-    # Print location hint
-    actual_output = output_path or (wiki_path.parent / f"{wiki_path.name}_html")
-    print(f"\nOpen {actual_output}/index.html in a browser to view the documentation.")
-
-    return 0
+exporter = HtmlExporter(wiki_path=Path("wiki/.deepwiki"), output_path=Path("output"))
+pages_exported = exporter.export()
 ```
 
-</details>
-
-## Integration
-
-This file integrates with the `local_deepwiki.export.streaming` module for shared types and base exporters. It is used by the CLI and potentially other parts of the application that require exporting a wiki to HTML. The functions and classes are designed to be used in conjunction with the core wiki processing and file management modules.
-
-## Usage Examples
-
-### Using `HtmlExporter`
+To export a wiki to HTML using the streaming mode:
 
 ```python
-from local_deepwiki.export.html import HtmlExporter
-
-exporter = HtmlExporter(wiki_path="/path/to/wiki", output_path="/path/to/output")
-num_pages = exporter.export()
-print(f"Exported {num_pages} pages.")
+exporter = StreamingHtmlExporter(wiki_path=Path("wiki/.deepwiki"), output_path=Path("output"))
+result = asyncio.run(exporter.export())
 ```
 
-### Using `StreamingHtmlExporter`
+To render markdown to HTML:
 
 ```python
-import asyncio
-from local_deepwiki.export.html import StreamingHtmlExporter
-
-async def run_export():
-    exporter = StreamingHtmlExporter(wiki_path="/path/to/wiki", output_path="/path/to/output")
-    result = await exporter.export()
-    print(f"Exported {result.count} pages.")
-
-asyncio.run(run_export())
+html = render_markdown("# Hello\n\nWorld")
 ```
 
-### Rendering Markdown
+To extract a title from markdown:
 
 ```python
-from local_deepwiki.export.html import render_markdown
-
-html = render_markdown("# Hello World\n\nThis is a test.")
-print(html)
-```
-
-### Fixing Internal Links
-
-```python
-from local_deepwiki.export.html import fix_internal_links
-
-html = fix_internal_links('<a href="page1.md">Page 1</a>')
-print(html)
+title = extract_title("# Title\n\nContent")
 ```
 
 ## API Reference
 
 ### class `StreamingHtmlExporter`
 
-**Inherits from:** `StreamingExporter`
+**Inherits from:** [`StreamingExporter`](streaming.md)
 
 Memory-efficient HTML exporter using streaming page iteration.  Writes each page to disk as it's processed, avoiding loading all pages into memory at once. Suitable for large wikis.
 
@@ -635,7 +346,7 @@ def __init__(wiki_path: Path, output_path: Path, config: ExportConfig | None = N
 Initialize the streaming HTML exporter.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `wiki_path` | `Path` | - | Path to the .deepwiki directory. |
 | `output_path` | `Path` | - | Output directory for HTML files. |
@@ -678,9 +389,9 @@ async def export(progress_callback: ProgressCallback | None = None) -> ExportRes
 Export wiki to HTML with streaming.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `progress_callback` | `ProgressCallback | None` | `None` | Optional callback for progress updates. |
+| [`progress_callback`](../handlers.md) | `ProgressCallback | None` | `None` | Optional callback for progress updates. |
 
 
 
@@ -755,7 +466,7 @@ async def export(
 
 ### class `HtmlExporter`
 
-Export wiki markdown to static HTML files.  This is the synchronous wrapper class that maintains backwards compatibility. For large wikis, use StreamingHtmlExporter directly for async streaming export.
+Export wiki markdown to static HTML files.  This is the synchronous [wrapper](../providers/base.md) class that maintains backwards compatibility. For large wikis, use StreamingHtmlExporter directly for async streaming export.
 
 **Methods:**
 
@@ -779,7 +490,7 @@ def __init__(wiki_path: Path, output_path: Path, no_progress: bool = False)
 Initialize the exporter.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `wiki_path` | `Path` | - | Path to the .deepwiki directory |
 | `output_path` | `Path` | - | Output directory for HTML files |
@@ -853,7 +564,7 @@ def progress_callback(current: int, total: int, message: str) -> None
 ```
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `current` | `int` | - | - |
 | `total` | `int` | - | - |
@@ -884,7 +595,7 @@ def render_markdown(content: str) -> str
 Render markdown to HTML.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `content` | `str` | - | - |
 
@@ -920,7 +631,7 @@ def fix_internal_links(html_content: str) -> str
 Convert internal .md links to .html links in rendered HTML.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `html_content` | `str` | - | HTML content with potential .md links. |
 
@@ -963,7 +674,7 @@ def replace_link(match: re.Match[str]) -> str
 ```
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `match` | `re.Match[str]` | - | - |
 
@@ -993,7 +704,7 @@ def add_external_link_targets(html_content: str) -> str
 Add target="_blank" to external links for opening in new tab.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `html_content` | `str` | - | HTML content with potential external links. |
 
@@ -1034,7 +745,7 @@ def add_target(match: re.Match[str]) -> str
 ```
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `match` | `re.Match[str]` | - | - |
 
@@ -1062,7 +773,7 @@ def extract_title(md_file: Path) -> str
 Extract title from markdown file.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `md_file` | `Path` | - | - |
 
@@ -1102,7 +813,7 @@ def export_to_html(wiki_path: str | Path, output_path: str | Path | None = None,
 Export wiki to static HTML files.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `wiki_path` | `str | Path` | - | Path to the .deepwiki directory |
 | `output_path` | `str | Path | None` | `None` | Output directory (default: {wiki_path}_html) |
@@ -1318,12 +1029,12 @@ flowchart TD
 Functions and methods in this file and their callers:
 
 - **`ArgumentParser`**: called by `main`
-- **`ExportResult`**: called by `StreamingHtmlExporter.export`
+- **[`ExportResult`](streaming.md)**: called by `StreamingHtmlExporter.export`
 - **`HtmlExporter`**: called by `export_to_html`
 - **`Markdown`**: called by `render_markdown`
 - **`Path`**: called by `HtmlExporter.__init__`, `export_to_html`, `main`
 - **`StreamingHtmlExporter`**: called by `HtmlExporter._export_streaming`
-- **`WikiPageIterator`**: called by `HtmlExporter.export`
+- **[`WikiPageIterator`](streaming.md)**: called by `HtmlExporter.export`
 - **`__init__`**: called by `StreamingHtmlExporter.__init__`
 - **`_build_breadcrumb`**: called by `HtmlExporter._export_page`, `StreamingHtmlExporter._export_wiki_page`
 - **`_export_page`**: called by `HtmlExporter._export_standard`
@@ -1338,7 +1049,7 @@ Functions and methods in this file and their callers:
 - **`cast`**: called by `render_markdown`
 - **`convert`**: called by `render_markdown`
 - **`copy`**: called by `HtmlExporter._export_standard`, `StreamingHtmlExporter.export`
-- **`create_progress`**: called by `HtmlExporter._export_standard`, `HtmlExporter._export_streaming`
+- **[`create_progress`](../cli_progress.md)**: called by `HtmlExporter._export_standard`, `HtmlExporter._export_streaming`
 - **`exists`**: called by `HtmlExporter._build_breadcrumb`, `HtmlExporter._export_standard`, `StreamingHtmlExporter._build_breadcrumb`, `StreamingHtmlExporter.export`, `main`
 - **`export`**: called by `HtmlExporter._export_streaming`, `export_to_html`
 - **`export_to_html`**: called by `main`
@@ -1353,7 +1064,7 @@ Functions and methods in this file and their callers:
 - **`monotonic`**: called by `StreamingHtmlExporter.export`
 - **`new_event_loop`**: called by `HtmlExporter._export_streaming`
 - **`parse_args`**: called by `main`
-- **`progress_callback`**: called by `StreamingHtmlExporter.export`
+- **[`progress_callback`](../handlers.md)**: called by `StreamingHtmlExporter.export`
 - **`read_text`**: called by `HtmlExporter._export_page`, `HtmlExporter._export_standard`, `extract_title`
 - **`relative_to`**: called by `HtmlExporter._export_standard`
 - **`release_content`**: called by `StreamingHtmlExporter.export`
@@ -1447,7 +1158,7 @@ assert 'href="files/database.html"' in result
 | `_build_breadcrumb` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
 | `export` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
 | `_export_streaming` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
-| `progress_callback` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
+| [`progress_callback`](../handlers.md) | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
 | `_export_standard` | method | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
 | `__init__` | method | Brian Breidenbach | 1 week ago | `fa2feb8` Add CLI progress bars and f... |
 | `export_to_html` | function | Brian Breidenbach | 1 week ago | `fa2feb8` Add CLI progress bars and f... |
@@ -1903,3 +1614,6 @@ def _build_breadcrumb(self, rel_path: Path, root_path: str) -> str:
 
 </details>
 
+## Relevant Source Files
+
+- `src/local_deepwiki/export/html.py:718-934`

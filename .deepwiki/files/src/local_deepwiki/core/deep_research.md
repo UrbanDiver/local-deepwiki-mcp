@@ -1,16 +1,13 @@
 # File Overview
 
-This file, `src/local_deepwiki/core/deep_research.py`, implements the core logic for performing deep research using a structured pipeline. It orchestrates multiple steps including question decomposition, retrieval, gap analysis, and synthesis, while managing checkpoints for resumable research sessions. The pipeline integrates with vector stores for retrieval and LLM providers for generating responses.
+This file implements the core deep research pipeline for the `local_deepwiki` project. It provides functionality for managing research workflows, including checkpointing, cancellation handling, and progress reporting. The pipeline supports decomposing questions, retrieving relevant information, analyzing gaps, and synthesizing results.
 
-Dependencies include:
-- `asyncio` for asynchronous operations
-- `json` for checkpoint serialization
-- `uuid` for generating unique IDs
-- `local_deepwiki.core.rate_limiter` for rate limiting
-- `local_deepwiki.core.vectorstore` for vector-based retrieval
-- `local_deepwiki.events` for emitting events
-- `local_deepwiki.logging` for logging
-- `local_deepwiki.models` for data models and types
+The module integrates with:
+- [`VectorStore`](vectorstore.md) for retrieving relevant chunks
+- [`LLMProvider`](../providers/base.md) for generating responses
+- `rate_limiter` for managing API usage
+- `events` for emitting research progress and status
+- `logging` for debugging and operational logging
 
 # Classes
 
@@ -18,141 +15,124 @@ Dependencies include:
 
 Raised when a deep research operation is cancelled.
 
-### Constructor Parameters
-- `step` (str): The step during which the cancellation occurred. Defaults to "unknown".
-- `checkpoint_id` (str | None): ID of the checkpoint, if applicable.
+### Constructor
+
+```python
+def __init__(self, step: str = "unknown", checkpoint_id: str | None = None)
+```
+
+- **step**: The step during which cancellation occurred.
+- **checkpoint_id**: The ID of the checkpoint associated with the research.
 
 ## CheckpointManager
 
-Manages research checkpoints on disk, enabling resumable research sessions.
+Manages research checkpoints by saving, loading, listing, and deleting them to/from disk.
 
-### Constructor Parameters
-- `repo_path` (Path): Path to the repository where checkpoints are stored.
+### Constructor
+
+```python
+def __init__(self, repo_path: Path)
+```
+
+- **repo_path**: Path to the repository where checkpoints are stored.
 
 ### Methods
-- `__init__(self, repo_path: Path)`  
-  Initialize the checkpoint manager.
 
-- `_ensure_dir(self)`  
-  Ensure the checkpoint directory exists.
+#### _ensure_dir
 
-- `_checkpoint_path(self, research_id: str) -> Path`  
-  Get the path to a checkpoint file.
+```python
+def _ensure_dir(self) -> None
+```
 
-- `save_checkpoint(self, checkpoint: ResearchCheckpoint) -> None`  
-  Save a checkpoint to disk.
+Ensures the checkpoint directory exists.
 
-- `load_checkpoint(self, research_id: str) -> ResearchCheckpoint | None`  
-  Load a checkpoint from disk.
+#### _checkpoint_path
 
-- `list_checkpoints(self) -> list[ResearchCheckpoint]`  
-  List all checkpoints for this repository.
+```python
+def _checkpoint_path(self, research_id: str) -> Path
+```
 
-- `delete_checkpoint(self, research_id: str) -> bool`  
-  Delete a checkpoint.
+- **research_id**: The research session ID.
+- **Returns**: Path to the checkpoint JSON file.
 
-- `get_incomplete_checkpoints(self) -> list[ResearchCheckpoint]`  
-  Get all incomplete (non-complete, non-error) checkpoints.
+#### save_checkpoint
+
+```python
+def save_checkpoint(self, checkpoint: ResearchCheckpoint) -> None
+```
+
+- **checkpoint**: The checkpoint to save.
+
+#### load_checkpoint
+
+```python
+def load_checkpoint(self, research_id: str) -> ResearchCheckpoint | None
+```
+
+- **research_id**: The research session ID.
+- **Returns**: The loaded checkpoint, or None if not found.
+
+#### list_checkpoints
+
+```python
+def list_checkpoints(self) -> list[ResearchCheckpoint]
+```
+
+- **Returns**: List of checkpoints, sorted by updated_at descending.
+
+#### delete_checkpoint
+
+```python
+def delete_checkpoint(self, research_id: str) -> bool
+```
+
+- **research_id**: The research session ID.
+- **Returns**: True if deleted, False if not found.
+
+#### get_incomplete_checkpoints
+
+```python
+def get_incomplete_checkpoints(self) -> list[ResearchCheckpoint]
+```
+
+- **Returns**: List of incomplete (non-complete, non-error) checkpoints.
 
 ## DeepResearchPipeline
 
-The main class orchestrating the deep research process, including decomposition, retrieval, gap analysis, and synthesis steps.
+Manages the end-to-end deep research process, including decomposition, retrieval, gap analysis, and synthesis.
 
-### Constructor Parameters
-- `vector_store` (VectorStore): The vector store used for retrieval.
-- `llm_provider` (LLMProvider): The LLM provider for generating responses.
-- `max_sub_questions` (int): Maximum number of sub-questions to generate. Defaults to 4.
-- `chunks_per_subquestion` (int): Number of chunks to retrieve per sub-question. Defaults to 5.
-- `max_total_chunks` (int): Maximum number of chunks to process overall. Defaults to 30.
-- `max_follow_up_queries` (int): Maximum number of follow-up queries. Defaults to 3.
-- `synthesis_temperature` (float): Temperature for synthesis LLM calls. Defaults to 0.5.
-- `synthesis_max_tokens` (int): Maximum tokens for synthesis. Defaults to 4096.
-- `decomposition_prompt` (str | None): Custom prompt for decomposition. Defaults to None.
-- `gap_analysis_prompt` (str | None): Custom prompt for gap analysis. Defaults to None.
-- `synthesis_prompt` (str | None): Custom prompt for synthesis. Defaults to None.
-- `repo_path` (Path | None): Path to the repository for checkpointing. Defaults to None.
+### Constructor
 
-### Methods
-- `__init__(self, vector_store: VectorStore, llm_provider: LLMProvider, max_sub_questions: int = 4, chunks_per_subquestion: int = 5, max_total_chunks: int = 30, max_follow_up_queries: int = 3, synthesis_temperature: float = 0.5, synthesis_max_tokens: int = 4096, decomposition_prompt: str | None = None, gap_analysis_prompt: str | None = None, synthesis_prompt: str | None = None, repo_path: Path | None = None)`  
-  Initialize the deep research pipeline.
+```python
+def __init__(
+        self,
+        vector_store: VectorStore,
+        llm_provider: LLMProvider,
+        max_sub_questions: int = 4,
+        chunks_per_subquestion: int = 5,
+        max_total_chunks: int = 30,
+        max_follow_up_queries: int = 3,
+        synthesis_temperature: float = 0.5,
+        synthesis_max_tokens: int = 4096,
+        decomposition_prompt: str | None = None,
+        gap_analysis_prompt: str | None = None,
+        synthesis_prompt: str | None = None,
+        repo_path: Path | None = None,
+    )
+```
 
-- `_check_cancelled(self, step_name: str) -> None`  
-  Check if research was cancelled and raise if so.
-
-- `_save_checkpoint(self, checkpoint: ResearchCheckpoint) -> None`  
-  Save the current checkpoint.
-
-- `_create_checkpoint(self, research_id: str, step: ResearchCheckpointStep) -> ResearchCheckpoint`  
-  Create a new checkpoint.
-
-- `_results_to_checkpoint_format(self, results: DeepResearchResult) -> dict[str, Any]`  
-  Convert research results to checkpoint format.
-
-- `_checkpoint_to_results(self, checkpoint: ResearchCheckpoint) -> DeepResearchResult`  
-  Convert checkpoint data back to research results.
-
-- `load_checkpoint(self, research_id: str) -> ResearchCheckpoint | None`  
-  Load a checkpoint from disk.
-
-- `list_checkpoints(self) -> list[ResearchCheckpoint]`  
-  List all checkpoints for this repository.
-
-- `delete_checkpoint(self, research_id: str) -> bool`  
-  Delete a checkpoint.
-
-- `_report_progress(self, step: ResearchCheckpointStep, progress: int, total: int) -> None`  
-  Report progress to the event emitter.
-
-- `research(self, question: str, cancellation_event: asyncio.Event | None = None) -> DeepResearchResult`  
-  Execute the deep research pipeline for a given question.
-
-- `_execute_pipeline(self, question: str, cancellation_event: asyncio.Event | None = None) -> DeepResearchResult`  
-  Execute the full research pipeline.
-
-- `_emit_start_event(self, question: str) -> None`  
-  Emit a start event for the research.
-
-- `_execute_decomposition_step(self, question: str) -> list[str]`  
-  Execute the decomposition step.
-
-- `_execute_retrieval_step(self, subquestions: list[str]) -> list[CodeChunk]`  
-  Execute the retrieval step.
-
-- `_execute_gap_analysis_step(self, chunks: list[CodeChunk]) -> list[CodeChunk]`  
-  Execute the gap analysis step.
-
-- `_execute_follow_up_step(self, question: str, chunks: list[CodeChunk]) -> list[CodeChunk]`  
-  Execute the follow-up step.
-
-- `_finalize_research(self, chunks: list[CodeChunk], question: str) -> DeepResearchResult`  
-  Finalize the research and return results.
-
-- `_step_decompose(self, question: str) -> list[str]`  
-  Decompose the question into sub-questions.
-
-- `_step_retrieve(self, subquestions: list[str]) -> list[CodeChunk]`  
-  Retrieve relevant chunks for each sub-question.
-
-- `_step_gap_analysis(self, chunks: list[CodeChunk]) -> list[CodeChunk]`  
-  Perform gap analysis on the retrieved chunks.
-
-- `_step_follow_up_retrieve(self, question: str, chunks: list[CodeChunk]) -> list[CodeChunk]`  
-  Perform follow-up retrieval.
-
-- `_prepare_results_for_synthesis(self, chunks: list[CodeChunk]) -> str`  
-  Prepare chunks for synthesis.
-
-- `_step_synthesize(self, question: str, chunks: list[CodeChunk]) -> str`  
-  Synthesize the final answer.
-
-- `_decompose_question(self, question: str) -> list[str]`  
-  Decompose a question into sub-questions.
-
-- `_parse_decomposition_response(self, response: str) -> list[str]`  
-  Parse the decomposition response.
-
-- `_parallel_retrieve(self, subquestions: list[str]) -> list[CodeChunk]`  
-  Retrieve chunks in parallel.
+- **vector_store**: Vector store for retrieving relevant chunks.
+- **llm_provider**: LLM provider for generating responses.
+- **max_sub_questions**: Maximum number of sub-questions to decompose the [main](../export/pdf.md) question into.
+- **chunks_per_subquestion**: Number of chunks to retrieve per sub-question.
+- **max_total_chunks**: Maximum total chunks to retrieve.
+- **max_follow_up_queries**: Maximum number of follow-up queries.
+- **synthesis_temperature**: Temperature for synthesis LLM.
+- **synthesis_max_tokens**: Maximum tokens for synthesis output.
+- **decomposition_prompt**: Custom prompt for question decomposition.
+- **gap_analysis_prompt**: Custom prompt for gap analysis.
+- **synthesis_prompt**: Custom prompt for synthesis.
+- **repo_path**: Path to the repository for checkpoint storage.
 
 # Functions
 
@@ -162,11 +142,11 @@ Converts a search result to a dictionary.
 
 ## _dict_to_search_result
 
-Converts a dictionary back to a search result.
+Converts a dictionary to a search result.
 
 ## cancel_research
 
-Cancels a research session.
+Cancels a research operation.
 
 ## list_research_checkpoints
 
@@ -182,48 +162,70 @@ Deletes a specific research checkpoint.
 
 # Integration
 
-This file integrates with:
-- `local_deepwiki.core.rate_limiter` for managing rate limits
-- `local_deepwiki.core.vectorstore` for retrieving relevant chunks
-- `local_deepwiki.events` for emitting research-related events
-- `local_deepwiki.logging` for logging research steps and events
-- `local_deepwiki.models` for data models used throughout the pipeline
+This file is part of the `local_deepwiki.core` module and is closely related to:
+- `src/local_deepwiki/core/__init__.py`
+- `src/local_deepwiki/generators/source_refs.py`
+- `src/local_deepwiki/plugins/base.py`
+- `tests/__init__.py`
+- `tests/test_plugins.py`
 
-The functions `cancel_research`, `list_research_checkpoints`, `get_research_checkpoint`, and `delete_research_checkpoint` are called by external components to manage research sessions.
+The module uses:
+- [`VectorStore`](vectorstore.md) for retrieving relevant chunks
+- [`LLMProvider`](../providers/base.md) for generating responses
+- `rate_limiter` for managing API usage
+- `events` for emitting research progress and status
+- `logging` for debugging and operational logging
+
+The `CheckpointManager` class interacts with the file system to persist research state, and the `DeepResearchPipeline` class uses it to manage checkpoints during research execution.
 
 # Usage Examples
 
-## Initialize and Run Research
+## Initializing the DeepResearchPipeline
 
 ```python
 from local_deepwiki.core.deep_research import DeepResearchPipeline
 from local_deepwiki.core.vectorstore import VectorStore
-from local_deepwiki.core.llm_provider import LLMProvider
+from local_deepwiki.models import LLMProvider
 
-# Assume vector_store and llm_provider are initialized
+# Initialize components
+vector_store = VectorStore(...)
+llm_provider = LLMProvider(...)
+
+# Create the pipeline
 pipeline = DeepResearchPipeline(
     vector_store=vector_store,
     llm_provider=llm_provider,
-    max_sub_questions=3,
-    chunks_per_subquestion=4,
-    max_total_chunks=20
+    max_sub_questions=4,
+    chunks_per_subquestion=5,
+    max_total_chunks=30,
+    max_follow_up_queries=3,
+    synthesis_temperature=0.5,
+    synthesis_max_tokens=4096,
 )
-
-# Run research
-result = pipeline.research("What is the impact of climate change?")
 ```
 
-## Manage Checkpoints
+## Running a Research
+
+```python
+# Start research
+result = await pipeline.research(
+    question="What are the implications of quantum computing?",
+    progress_callback=None,
+    cancellation_event=None
+)
+```
+
+## Managing Checkpoints
 
 ```python
 # List checkpoints
 checkpoints = pipeline.list_checkpoints()
 
-# Load a specific checkpoint
-checkpoint = pipeline.load_checkpoint("some-research-id")
+# Load a checkpoint
+checkpoint = pipeline.load_checkpoint("research_id")
 
 # Delete a checkpoint
-deleted = pipeline.delete_checkpoint("some-research-id")
+pipeline.delete_checkpoint("research_id")
 ```
 
 ## API Reference
@@ -238,7 +240,7 @@ Raised when a deep research operation is cancelled.
 
 
 <details>
-<summary>View Source (lines 43-52) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L43-L52">GitHub</a></summary>
+<summary>View Source (lines 43-52) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L43-L52">GitHub</a></summary>
 
 ```python
 class ResearchCancelledError(Exception):
@@ -262,7 +264,7 @@ def __init__(step: str = "unknown", checkpoint_id: str | None = None)
 ```
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `step` | `str` | `"unknown"` | - |
 | `checkpoint_id` | `str | None` | `None` | - |
@@ -270,7 +272,7 @@ def __init__(step: str = "unknown", checkpoint_id: str | None = None)
 
 
 <details>
-<summary>View Source (lines 43-52) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L43-L52">GitHub</a></summary>
+<summary>View Source (lines 43-52) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L43-L52">GitHub</a></summary>
 
 ```python
 class ResearchCancelledError(Exception):
@@ -295,7 +297,7 @@ Manages saving and loading research checkpoints.  Checkpoints are stored as JSON
 
 
 <details>
-<summary>View Source (lines 55-167) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L55-L167">GitHub</a></summary>
+<summary>View Source (lines 55-167) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L55-L167">GitHub</a></summary>
 
 ```python
 class CheckpointManager:
@@ -313,13 +315,13 @@ def __init__(repo_path: Path)
 Initialize the checkpoint manager.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `repo_path` | `Path` | - | Path to the repository. |
 
 
 <details>
-<summary>View Source (lines 62-69) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L62-L69">GitHub</a></summary>
+<summary>View Source (lines 62-69) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L62-L69">GitHub</a></summary>
 
 ```python
 def __init__(self, repo_path: Path):
@@ -343,13 +345,13 @@ def save_checkpoint(checkpoint: ResearchCheckpoint) -> None
 Save a checkpoint to disk.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `checkpoint` | `ResearchCheckpoint` | - | The checkpoint to save. |
+| `checkpoint` | [`ResearchCheckpoint`](../models.md) | - | The checkpoint to save. |
 
 
 <details>
-<summary>View Source (lines 86-95) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L86-L95">GitHub</a></summary>
+<summary>View Source (lines 86-95) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L86-L95">GitHub</a></summary>
 
 ```python
 def save_checkpoint(self, checkpoint: ResearchCheckpoint) -> None:
@@ -375,13 +377,13 @@ def load_checkpoint(research_id: str) -> ResearchCheckpoint | None
 Load a checkpoint from disk.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `research_id` | `str` | - | The research session ID. |
 
 
 <details>
-<summary>View Source (lines 97-115) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L97-L115">GitHub</a></summary>
+<summary>View Source (lines 97-115) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L97-L115">GitHub</a></summary>
 
 ```python
 def load_checkpoint(self, research_id: str) -> ResearchCheckpoint | None:
@@ -417,7 +419,7 @@ List all checkpoints for this repository.
 
 
 <details>
-<summary>View Source (lines 117-137) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L117-L137">GitHub</a></summary>
+<summary>View Source (lines 117-137) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L117-L137">GitHub</a></summary>
 
 ```python
 def list_checkpoints(self) -> list[ResearchCheckpoint]:
@@ -454,13 +456,13 @@ def delete_checkpoint(research_id: str) -> bool
 Delete a checkpoint.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `research_id` | `str` | - | The research session ID. |
 
 
 <details>
-<summary>View Source (lines 139-153) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L139-L153">GitHub</a></summary>
+<summary>View Source (lines 139-153) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L139-L153">GitHub</a></summary>
 
 ```python
 def delete_checkpoint(self, research_id: str) -> bool:
@@ -493,7 +495,7 @@ Get all incomplete (non-complete, non-error) checkpoints.
 
 
 <details>
-<summary>View Source (lines 155-167) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L155-L167">GitHub</a></summary>
+<summary>View Source (lines 155-167) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L155-L167">GitHub</a></summary>
 
 ```python
 def get_incomplete_checkpoints(self) -> list[ResearchCheckpoint]:
@@ -521,7 +523,7 @@ Multi-step research pipeline for complex codebase questions.  This pipeline perf
 
 
 <details>
-<summary>View Source (lines 300-1468) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L300-L1468">GitHub</a></summary>
+<summary>View Source (lines 300-1468) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L300-L1468">GitHub</a></summary>
 
 ```python
 class DeepResearchPipeline:
@@ -539,10 +541,10 @@ def __init__(vector_store: VectorStore, llm_provider: LLMProvider, max_sub_quest
 Initialize the deep research pipeline.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `vector_store` | `VectorStore` | - | Vector store for semantic search. |
-| `llm_provider` | `LLMProvider` | - | LLM provider for reasoning. |
+| `vector_store` | [`VectorStore`](vectorstore.md) | - | Vector store for semantic search. |
+| `llm_provider` | [`LLMProvider`](../providers/base.md) | - | LLM provider for reasoning. |
 | `max_sub_questions` | `int` | `4` | Maximum sub-questions to generate. |
 | `chunks_per_subquestion` | `int` | `5` | Chunks to retrieve per sub-question. |
 | `max_total_chunks` | `int` | `30` | Maximum total chunks to use in synthesis. |
@@ -556,7 +558,7 @@ Initialize the deep research pipeline.
 
 
 <details>
-<summary>View Source (lines 311-366) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L311-L366">GitHub</a></summary>
+<summary>View Source (lines 311-366) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L311-L366">GitHub</a></summary>
 
 ```python
 def __init__(
@@ -628,13 +630,13 @@ def load_checkpoint(research_id: str) -> ResearchCheckpoint | None
 Load a checkpoint by ID.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `research_id` | `str` | - | The research session ID. |
 
 
 <details>
-<summary>View Source (lines 499-510) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L499-L510">GitHub</a></summary>
+<summary>View Source (lines 499-510) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L499-L510">GitHub</a></summary>
 
 ```python
 def load_checkpoint(self, research_id: str) -> ResearchCheckpoint | None:
@@ -663,7 +665,7 @@ List all checkpoints for this repository.
 
 
 <details>
-<summary>View Source (lines 512-520) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L512-L520">GitHub</a></summary>
+<summary>View Source (lines 512-520) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L512-L520">GitHub</a></summary>
 
 ```python
 def list_checkpoints(self) -> list[ResearchCheckpoint]:
@@ -688,13 +690,13 @@ def delete_checkpoint(research_id: str) -> bool
 Delete a checkpoint.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `research_id` | `str` | - | The research session ID. |
 
 
 <details>
-<summary>View Source (lines 522-533) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L522-L533">GitHub</a></summary>
+<summary>View Source (lines 522-533) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L522-L533">GitHub</a></summary>
 
 ```python
 def delete_checkpoint(self, research_id: str) -> bool:
@@ -722,20 +724,20 @@ async def research(question: str, progress_callback: ProgressCallback = None, ca
 Execute the full research pipeline.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `question` | `str` | - | The complex question to research. |
-| `progress_callback` | `ProgressCallback` | `None` | Optional async callback for progress updates. |
+| [`progress_callback`](../handlers.md) | [`ProgressCallback`](../cli_progress.md) | `None` | Optional async callback for progress updates. |
 | `cancellation_check` | `CancellationCallback` | `None` | Optional callback that returns True if cancelled. |
 | `resume_id` | `str | None` | `None` | Optional checkpoint ID to resume from. |
-| `cancellation_event` | `asyncio.Event | None` | `None` | Optional asyncio.Event for cancellation signaling. |
+| `cancellation_event` | `asyncio.Event | None` | `None` | Optional asyncio.[Event](../events.md) for cancellation signaling. |
 
 
 ---
 
 
 <details>
-<summary>View Source (lines 560-634) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L560-L634">GitHub</a></summary>
+<summary>View Source (lines 560-634) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L560-L634">GitHub</a></summary>
 
 ```python
 async def research(
@@ -828,7 +830,7 @@ def cancel_research(repo_path: Path, research_id: str) -> ResearchCheckpoint | N
 Cancel a research operation and save its checkpoint.  This is a synchronous utility function that can be called to mark a research session as cancelled. The checkpoint will be preserved for potential resumption later.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `repo_path` | `Path` | - | Path to the repository. |
 | `research_id` | `str` | - | The research session ID to cancel. |
@@ -838,7 +840,7 @@ Cancel a research operation and save its checkpoint.  This is a synchronous util
 
 
 <details>
-<summary>View Source (lines 1471-1499) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L1471-L1499">GitHub</a></summary>
+<summary>View Source (lines 1471-1499) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L1471-L1499">GitHub</a></summary>
 
 ```python
 def cancel_research(repo_path: Path, research_id: str) -> ResearchCheckpoint | None:
@@ -883,7 +885,7 @@ def list_research_checkpoints(repo_path: Path) -> list[ResearchCheckpoint]
 List all research checkpoints for a repository.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `repo_path` | `Path` | - | Path to the repository. |
 
@@ -892,7 +894,7 @@ List all research checkpoints for a repository.
 
 
 <details>
-<summary>View Source (lines 1502-1512) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L1502-L1512">GitHub</a></summary>
+<summary>View Source (lines 1502-1512) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L1502-L1512">GitHub</a></summary>
 
 ```python
 def list_research_checkpoints(repo_path: Path) -> list[ResearchCheckpoint]:
@@ -919,7 +921,7 @@ def get_research_checkpoint(repo_path: Path, research_id: str) -> ResearchCheckp
 Get a specific research checkpoint.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `repo_path` | `Path` | - | Path to the repository. |
 | `research_id` | `str` | - | The research session ID. |
@@ -929,7 +931,7 @@ Get a specific research checkpoint.
 
 
 <details>
-<summary>View Source (lines 1515-1526) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L1515-L1526">GitHub</a></summary>
+<summary>View Source (lines 1515-1526) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L1515-L1526">GitHub</a></summary>
 
 ```python
 def get_research_checkpoint(repo_path: Path, research_id: str) -> ResearchCheckpoint | None:
@@ -957,7 +959,7 @@ def delete_research_checkpoint(repo_path: Path, research_id: str) -> bool
 Delete a research checkpoint.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `repo_path` | `Path` | - | Path to the repository. |
 | `research_id` | `str` | - | The research session ID. |
@@ -968,7 +970,7 @@ Delete a research checkpoint.
 
 
 <details>
-<summary>View Source (lines 1529-1540) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L1529-L1540">GitHub</a></summary>
+<summary>View Source (lines 1529-1540) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L1529-L1540">GitHub</a></summary>
 
 ```python
 def delete_research_checkpoint(repo_path: Path, research_id: str) -> bool:
@@ -1112,17 +1114,17 @@ flowchart TD
 Functions and methods in this file and their callers:
 
 - **`CheckpointManager`**: called by `DeepResearchPipeline.__init__`, `cancel_research`, `delete_research_checkpoint`, `get_research_checkpoint`, `list_research_checkpoints`
-- **`ChunkType`**: called by `_dict_to_search_result`
-- **`CodeChunk`**: called by `_dict_to_search_result`
-- **`DeepResearchResult`**: called by `DeepResearchPipeline._finalize_research`
-- **`Language`**: called by `_dict_to_search_result`
+- **[`ChunkType`](../models.md)**: called by `_dict_to_search_result`
+- **[`CodeChunk`](../models.md)**: called by `_dict_to_search_result`
+- **[`DeepResearchResult`](../models.md)**: called by `DeepResearchPipeline._finalize_research`
+- **[`Language`](../models.md)**: called by `_dict_to_search_result`
 - **`ResearchCancelledError`**: called by `DeepResearchPipeline._check_cancelled`
-- **`ResearchCheckpoint`**: called by `DeepResearchPipeline._create_checkpoint`
-- **`ResearchProgress`**: called by `DeepResearchPipeline._report_progress`
-- **`ResearchStep`**: called by `DeepResearchPipeline._execute_decomposition_step`, `DeepResearchPipeline._execute_follow_up_step`, `DeepResearchPipeline._execute_gap_analysis_step`, `DeepResearchPipeline._execute_retrieval_step`, `DeepResearchPipeline._step_decompose`, `DeepResearchPipeline._step_follow_up_retrieve`, `DeepResearchPipeline._step_gap_analysis`, `DeepResearchPipeline._step_retrieve`, `DeepResearchPipeline._step_synthesize`
-- **`SearchResult`**: called by `_dict_to_search_result`
-- **`SourceReference`**: called by `DeepResearchPipeline._build_sources`
-- **`SubQuestion`**: called by `DeepResearchPipeline._parse_decomposition_response`
+- **[`ResearchCheckpoint`](../models.md)**: called by `DeepResearchPipeline._create_checkpoint`
+- **[`ResearchProgress`](../models.md)**: called by `DeepResearchPipeline._report_progress`
+- **[`ResearchStep`](../models.md)**: called by `DeepResearchPipeline._execute_decomposition_step`, `DeepResearchPipeline._execute_follow_up_step`, `DeepResearchPipeline._execute_gap_analysis_step`, `DeepResearchPipeline._execute_retrieval_step`, `DeepResearchPipeline._step_decompose`, `DeepResearchPipeline._step_follow_up_retrieve`, `DeepResearchPipeline._step_gap_analysis`, `DeepResearchPipeline._step_retrieve`, `DeepResearchPipeline._step_synthesize`
+- **[`SearchResult`](../models.md)**: called by `_dict_to_search_result`
+- **[`SourceReference`](../models.md)**: called by `DeepResearchPipeline._build_sources`
+- **[`SubQuestion`](../models.md)**: called by `DeepResearchPipeline._parse_decomposition_response`
 - **`__init__`**: called by `ResearchCancelledError.__init__`
 - **`_analyze_gaps`**: called by `DeepResearchPipeline._step_gap_analysis`
 - **`_build_context_summary`**: called by `DeepResearchPipeline._analyze_gaps`
@@ -1165,8 +1167,8 @@ Functions and methods in this file and their callers:
 - **`exists`**: called by `CheckpointManager.delete_checkpoint`, `CheckpointManager.list_checkpoints`, `CheckpointManager.load_checkpoint`
 - **`gather`**: called by `DeepResearchPipeline._parallel_retrieve`, `DeepResearchPipeline._targeted_retrieve`
 - **`generate`**: called by `DeepResearchPipeline._analyze_gaps`, `DeepResearchPipeline._decompose_question`, `DeepResearchPipeline._synthesize`
-- **`get_event_emitter`**: called by `DeepResearchPipeline._emit_start_event`, `DeepResearchPipeline._finalize_research`, `DeepResearchPipeline._step_decompose`
-- **`get_rate_limiter`**: called by `DeepResearchPipeline._analyze_gaps`, `DeepResearchPipeline._decompose_question`, `DeepResearchPipeline._synthesize`
+- **[`get_event_emitter`](../events.md)**: called by `DeepResearchPipeline._emit_start_event`, `DeepResearchPipeline._finalize_research`, `DeepResearchPipeline._step_decompose`
+- **[`get_rate_limiter`](rate_limiter.md)**: called by `DeepResearchPipeline._analyze_gaps`, `DeepResearchPipeline._decompose_question`, `DeepResearchPipeline._synthesize`
 - **`glob`**: called by `CheckpointManager.list_checkpoints`
 - **`group`**: called by `DeepResearchPipeline._parse_decomposition_response`, `DeepResearchPipeline._parse_gap_analysis_response`
 - **`is_set`**: called by `DeepResearchPipeline._check_cancelled`
@@ -1342,7 +1344,7 @@ assert "Error" in result[0].text
 | `list_research_checkpoints` | function | Brian Breidenbach | 1 week ago | `e899c6c` Add three high-value enhanc... |
 | `get_research_checkpoint` | function | Brian Breidenbach | 1 week ago | `e899c6c` Add three high-value enhanc... |
 | `delete_research_checkpoint` | function | Brian Breidenbach | 1 week ago | `e899c6c` Add three high-value enhanc... |
-| `_step_decompose` | method | Brian Breidenbach | 1 week ago | `a0b2f83` Integrate event system into... |
+| `_step_decompose` | method | Brian Breidenbach | 1 week ago | `a0b2f83` Integrate [event](../../../coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.md) system into... |
 | `_parse_decomposition_response` | method | Brian Breidenbach | 3 weeks ago | `0d91a70` Apply Python best practices... |
 | `_parallel_retrieve` | method | Brian Breidenbach | 3 weeks ago | `0d91a70` Apply Python best practices... |
 | `_targeted_retrieve` | method | Brian Breidenbach | 3 weeks ago | `0d91a70` Apply Python best practices... |
@@ -1365,7 +1367,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_ensure_dir`
 
 <details>
-<summary>View Source (lines 71-73) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L71-L73">GitHub</a></summary>
+<summary>View Source (lines 71-73) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L71-L73">GitHub</a></summary>
 
 ```python
 def _ensure_dir(self) -> None:
@@ -1379,7 +1381,7 @@ def _ensure_dir(self) -> None:
 #### `_checkpoint_path`
 
 <details>
-<summary>View Source (lines 75-84) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L75-L84">GitHub</a></summary>
+<summary>View Source (lines 75-84) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L75-L84">GitHub</a></summary>
 
 ```python
 def _checkpoint_path(self, research_id: str) -> Path:
@@ -1400,7 +1402,7 @@ def _checkpoint_path(self, research_id: str) -> Path:
 #### `_search_result_to_dict`
 
 <details>
-<summary>View Source (lines 170-195) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L170-L195">GitHub</a></summary>
+<summary>View Source (lines 170-195) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L170-L195">GitHub</a></summary>
 
 ```python
 def _search_result_to_dict(result: SearchResult) -> dict[str, Any]:
@@ -1437,7 +1439,7 @@ def _search_result_to_dict(result: SearchResult) -> dict[str, Any]:
 #### `_dict_to_search_result`
 
 <details>
-<summary>View Source (lines 198-225) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L198-L225">GitHub</a></summary>
+<summary>View Source (lines 198-225) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L198-L225">GitHub</a></summary>
 
 ```python
 def _dict_to_search_result(data: dict[str, Any]) -> SearchResult:
@@ -1476,7 +1478,7 @@ def _dict_to_search_result(data: dict[str, Any]) -> SearchResult:
 #### `_check_cancelled`
 
 <details>
-<summary>View Source (lines 368-387) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L368-L387">GitHub</a></summary>
+<summary>View Source (lines 368-387) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L368-L387">GitHub</a></summary>
 
 ```python
 def _check_cancelled(self, step_name: str) -> None:
@@ -1507,7 +1509,7 @@ def _check_cancelled(self, step_name: str) -> None:
 #### `_save_checkpoint`
 
 <details>
-<summary>View Source (lines 389-436) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L389-L436">GitHub</a></summary>
+<summary>View Source (lines 389-436) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L389-L436">GitHub</a></summary>
 
 ```python
 def _save_checkpoint(
@@ -1566,7 +1568,7 @@ def _save_checkpoint(
 #### `_create_checkpoint`
 
 <details>
-<summary>View Source (lines 438-456) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L438-L456">GitHub</a></summary>
+<summary>View Source (lines 438-456) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L438-L456">GitHub</a></summary>
 
 ```python
 def _create_checkpoint(self, question: str) -> ResearchCheckpoint:
@@ -1596,7 +1598,7 @@ def _create_checkpoint(self, question: str) -> ResearchCheckpoint:
 #### `_results_to_checkpoint_format`
 
 <details>
-<summary>View Source (lines 458-472) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L458-L472">GitHub</a></summary>
+<summary>View Source (lines 458-472) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L458-L472">GitHub</a></summary>
 
 ```python
 def _results_to_checkpoint_format(
@@ -1622,7 +1624,7 @@ def _results_to_checkpoint_format(
 #### `_checkpoint_to_results`
 
 <details>
-<summary>View Source (lines 474-497) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L474-L497">GitHub</a></summary>
+<summary>View Source (lines 474-497) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L474-L497">GitHub</a></summary>
 
 ```python
 def _checkpoint_to_results(
@@ -1657,7 +1659,7 @@ def _checkpoint_to_results(
 #### `_report_progress`
 
 <details>
-<summary>View Source (lines 535-558) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L535-L558">GitHub</a></summary>
+<summary>View Source (lines 535-558) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L535-L558">GitHub</a></summary>
 
 ```python
 async def _report_progress(
@@ -1692,7 +1694,7 @@ async def _report_progress(
 #### `_execute_pipeline`
 
 <details>
-<summary>View Source (lines 636-696) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L636-L696">GitHub</a></summary>
+<summary>View Source (lines 636-696) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L636-L696">GitHub</a></summary>
 
 ```python
 async def _execute_pipeline(self, question: str) -> DeepResearchResult:
@@ -1764,7 +1766,7 @@ async def _execute_pipeline(self, question: str) -> DeepResearchResult:
 #### `_emit_start_event`
 
 <details>
-<summary>View Source (lines 698-723) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L698-L723">GitHub</a></summary>
+<summary>View Source (lines 698-723) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L698-L723">GitHub</a></summary>
 
 ```python
 async def _emit_start_event(
@@ -1801,7 +1803,7 @@ async def _emit_start_event(
 #### `_execute_decomposition_step`
 
 <details>
-<summary>View Source (lines 725-760) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L725-L760">GitHub</a></summary>
+<summary>View Source (lines 725-760) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L725-L760">GitHub</a></summary>
 
 ```python
 async def _execute_decomposition_step(
@@ -1848,7 +1850,7 @@ async def _execute_decomposition_step(
 #### `_execute_retrieval_step`
 
 <details>
-<summary>View Source (lines 762-797) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L762-L797">GitHub</a></summary>
+<summary>View Source (lines 762-797) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L762-L797">GitHub</a></summary>
 
 ```python
 async def _execute_retrieval_step(
@@ -1895,7 +1897,7 @@ async def _execute_retrieval_step(
 #### `_execute_gap_analysis_step`
 
 <details>
-<summary>View Source (lines 799-840) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L799-L840">GitHub</a></summary>
+<summary>View Source (lines 799-840) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L799-L840">GitHub</a></summary>
 
 ```python
 async def _execute_gap_analysis_step(
@@ -1948,7 +1950,7 @@ async def _execute_gap_analysis_step(
 #### `_execute_follow_up_step`
 
 <details>
-<summary>View Source (lines 842-884) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L842-L884">GitHub</a></summary>
+<summary>View Source (lines 842-884) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L842-L884">GitHub</a></summary>
 
 ```python
 async def _execute_follow_up_step(
@@ -2002,7 +2004,7 @@ async def _execute_follow_up_step(
 #### `_finalize_research`
 
 <details>
-<summary>View Source (lines 886-946) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L886-L946">GitHub</a></summary>
+<summary>View Source (lines 886-946) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L886-L946">GitHub</a></summary>
 
 ```python
 async def _finalize_research(
@@ -2074,7 +2076,7 @@ async def _finalize_research(
 #### `_step_decompose`
 
 <details>
-<summary>View Source (lines 948-987) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L948-L987">GitHub</a></summary>
+<summary>View Source (lines 948-987) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L948-L987">GitHub</a></summary>
 
 ```python
 async def _step_decompose(self, question: str) -> tuple[list[SubQuestion], ResearchStep, int]:
@@ -2125,7 +2127,7 @@ async def _step_decompose(self, question: str) -> tuple[list[SubQuestion], Resea
 #### `_step_retrieve`
 
 <details>
-<summary>View Source (lines 989-1018) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L989-L1018">GitHub</a></summary>
+<summary>View Source (lines 989-1018) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L989-L1018">GitHub</a></summary>
 
 ```python
 async def _step_retrieve(
@@ -2166,7 +2168,7 @@ async def _step_retrieve(
 #### `_step_gap_analysis`
 
 <details>
-<summary>View Source (lines 1020-1052) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L1020-L1052">GitHub</a></summary>
+<summary>View Source (lines 1020-1052) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L1020-L1052">GitHub</a></summary>
 
 ```python
 async def _step_gap_analysis(
@@ -2210,7 +2212,7 @@ async def _step_gap_analysis(
 #### `_step_follow_up_retrieve`
 
 <details>
-<summary>View Source (lines 1054-1083) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L1054-L1083">GitHub</a></summary>
+<summary>View Source (lines 1054-1083) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L1054-L1083">GitHub</a></summary>
 
 ```python
 async def _step_follow_up_retrieve(
@@ -2251,7 +2253,7 @@ async def _step_follow_up_retrieve(
 #### `_prepare_results_for_synthesis`
 
 <details>
-<summary>View Source (lines 1085-1101) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L1085-L1101">GitHub</a></summary>
+<summary>View Source (lines 1085-1101) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L1085-L1101">GitHub</a></summary>
 
 ```python
 def _prepare_results_for_synthesis(
@@ -2279,7 +2281,7 @@ def _prepare_results_for_synthesis(
 #### `_step_synthesize`
 
 <details>
-<summary>View Source (lines 1103-1136) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L1103-L1136">GitHub</a></summary>
+<summary>View Source (lines 1103-1136) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L1103-L1136">GitHub</a></summary>
 
 ```python
 async def _step_synthesize(
@@ -2324,7 +2326,7 @@ async def _step_synthesize(
 #### `_decompose_question`
 
 <details>
-<summary>View Source (lines 1138-1164) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L1138-L1164">GitHub</a></summary>
+<summary>View Source (lines 1138-1164) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L1138-L1164">GitHub</a></summary>
 
 ```python
 async def _decompose_question(self, question: str) -> list[SubQuestion]:
@@ -2362,7 +2364,7 @@ async def _decompose_question(self, question: str) -> list[SubQuestion]:
 #### `_parse_decomposition_response`
 
 <details>
-<summary>View Source (lines 1166-1198) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L1166-L1198">GitHub</a></summary>
+<summary>View Source (lines 1166-1198) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L1166-L1198">GitHub</a></summary>
 
 ```python
 def _parse_decomposition_response(self, response: str) -> list[SubQuestion]:
@@ -2406,7 +2408,7 @@ def _parse_decomposition_response(self, response: str) -> list[SubQuestion]:
 #### `_parallel_retrieve`
 
 <details>
-<summary>View Source (lines 1200-1229) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L1200-L1229">GitHub</a></summary>
+<summary>View Source (lines 1200-1229) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L1200-L1229">GitHub</a></summary>
 
 ```python
 async def _parallel_retrieve(self, sub_questions: list[SubQuestion]) -> list[SearchResult]:
@@ -2447,7 +2449,7 @@ async def _parallel_retrieve(self, sub_questions: list[SubQuestion]) -> list[Sea
 #### `_analyze_gaps`
 
 <details>
-<summary>View Source (lines 1231-1276) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L1231-L1276">GitHub</a></summary>
+<summary>View Source (lines 1231-1276) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L1231-L1276">GitHub</a></summary>
 
 ```python
 async def _analyze_gaps(
@@ -2504,7 +2506,7 @@ async def _analyze_gaps(
 #### `_build_context_summary`
 
 <details>
-<summary>View Source (lines 1278-1306) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L1278-L1306">GitHub</a></summary>
+<summary>View Source (lines 1278-1306) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L1278-L1306">GitHub</a></summary>
 
 ```python
 def _build_context_summary(self, results: list[SearchResult]) -> str:
@@ -2544,7 +2546,7 @@ def _build_context_summary(self, results: list[SearchResult]) -> str:
 #### `_parse_gap_analysis_response`
 
 <details>
-<summary>View Source (lines 1308-1330) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L1308-L1330">GitHub</a></summary>
+<summary>View Source (lines 1308-1330) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L1308-L1330">GitHub</a></summary>
 
 ```python
 def _parse_gap_analysis_response(self, response: str) -> list[str]:
@@ -2578,7 +2580,7 @@ def _parse_gap_analysis_response(self, response: str) -> list[str]:
 #### `_targeted_retrieve`
 
 <details>
-<summary>View Source (lines 1332-1358) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L1332-L1358">GitHub</a></summary>
+<summary>View Source (lines 1332-1358) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L1332-L1358">GitHub</a></summary>
 
 ```python
 async def _targeted_retrieve(self, queries: list[str]) -> list[SearchResult]:
@@ -2616,7 +2618,7 @@ async def _targeted_retrieve(self, queries: list[str]) -> list[SearchResult]:
 #### `_deduplicate_results`
 
 <details>
-<summary>View Source (lines 1360-1377) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L1360-L1377">GitHub</a></summary>
+<summary>View Source (lines 1360-1377) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L1360-L1377">GitHub</a></summary>
 
 ```python
 def _deduplicate_results(self, results: list[SearchResult]) -> list[SearchResult]:
@@ -2645,7 +2647,7 @@ def _deduplicate_results(self, results: list[SearchResult]) -> list[SearchResult
 #### `_synthesize`
 
 <details>
-<summary>View Source (lines 1379-1425) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L1379-L1425">GitHub</a></summary>
+<summary>View Source (lines 1379-1425) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L1379-L1425">GitHub</a></summary>
 
 ```python
 async def _synthesize(
@@ -2703,7 +2705,7 @@ async def _synthesize(
 #### `_build_full_context`
 
 <details>
-<summary>View Source (lines 1427-1447) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L1427-L1447">GitHub</a></summary>
+<summary>View Source (lines 1427-1447) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L1427-L1447">GitHub</a></summary>
 
 ```python
 def _build_full_context(self, results: list[SearchResult]) -> str:
@@ -2735,7 +2737,7 @@ def _build_full_context(self, results: list[SearchResult]) -> str:
 #### `_build_sources`
 
 <details>
-<summary>View Source (lines 1449-1468) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/deep_research.py#L1449-L1468">GitHub</a></summary>
+<summary>View Source (lines 1449-1468) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/deep_research.py#L1449-L1468">GitHub</a></summary>
 
 ```python
 def _build_sources(self, results: list[SearchResult]) -> list[SourceReference]:
@@ -2762,3 +2764,6 @@ def _build_sources(self, results: list[SearchResult]) -> list[SourceReference]:
 
 </details>
 
+## Relevant Source Files
+
+- `src/local_deepwiki/core/deep_research.py:43-52`

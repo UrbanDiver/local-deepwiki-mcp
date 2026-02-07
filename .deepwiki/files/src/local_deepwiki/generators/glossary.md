@@ -2,7 +2,7 @@
 
 ## File Overview
 
-This module provides functionality for generating a glossary/index page from codebase entities. It collects classes, functions, and methods from indexed files and formats them into a structured markdown document. The module depends on `VectorStore` for retrieving code chunks and `IndexStatus` for file information.
+This module provides functionality for generating a glossary/index page from codebase entities. It collects classes, functions, and methods from indexed files and formats them into a structured markdown document. The module depends on [`VectorStore`](../core/vectorstore.md) for retrieving code chunks and [`IndexStatus`](../models.md) for file information.
 
 ## Classes
 
@@ -28,8 +28,8 @@ An entry in the glossary.
 Collect all classes, functions, and methods from the codebase.
 
 **Parameters**:
-- `index_status`: IndexStatus - Index status with file information.
-- `vector_store`: VectorStore - Vector store with code chunks.
+- `index_status`: [IndexStatus](../models.md) - Index status with file information.
+- `vector_store`: [VectorStore](../core/vectorstore.md) - Vector store with code chunks.
 
 **Returns**:
 - List of `EntityEntry` objects sorted alphabetically by name.
@@ -81,15 +81,15 @@ Format a compact function/method signature showing types.
 Generate the glossary/index page content.
 
 **Parameters**:
-- `index_status`: IndexStatus - Index status with file information.
-- `vector_store`: VectorStore - Vector store with code chunks.
+- `index_status`: [IndexStatus](../models.md) - Index status with file information.
+- `vector_store`: [VectorStore](../core/vectorstore.md) - Vector store with code chunks.
 
 **Returns**:
 - Markdown content for the glossary page, or None if no entities found.
 
 ## Integration
 
-This module is used by the `test_wiki_coverage` test suite and integrates with the `VectorStore` and `IndexStatus` components. It is called by the `group_entities_by_letter` function from `test_glossary` and by `_get_wiki_link` from `coverage`. The module forms part of the documentation generation pipeline, working closely with `WikiGenerator` and `SourceRefsGenerator`.
+This module is used by the `test_wiki_coverage` test suite and integrates with the [`VectorStore`](../core/vectorstore.md) and [`IndexStatus`](../models.md) components. It is called by the `group_entities_by_letter` function from `test_glossary` and by `_get_wiki_link` from `coverage`. The module forms part of the documentation generation pipeline, working closely with [`WikiGenerator`](wiki.md) and `SourceRefsGenerator`.
 
 ## Usage Examples
 
@@ -114,7 +114,7 @@ An entry in the glossary.
 
 
 <details>
-<summary>View Source (lines 11-24) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/glossary.py#L11-L24">GitHub</a></summary>
+<summary>View Source (lines 11-24) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/glossary.py#L11-L24">GitHub</a></summary>
 
 ```python
 class EntityEntry:
@@ -146,17 +146,17 @@ async def collect_all_entities(index_status: IndexStatus, vector_store: VectorSt
 Collect all classes, functions, and methods from the codebase.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `index_status` | `IndexStatus` | - | Index status with file information. |
-| `vector_store` | `VectorStore` | - | Vector store with code chunks. |
+| `index_status` | [`IndexStatus`](../models.md) | - | Index status with file information. |
+| `vector_store` | [`VectorStore`](../core/vectorstore.md) | - | Vector store with code chunks. |
 
 **Returns:** `list[EntityEntry]`
 
 
 
 <details>
-<summary>View Source (lines 27-92) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/glossary.py#L27-L92">GitHub</a></summary>
+<summary>View Source (lines 27-92) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/glossary.py#L27-L92">GitHub</a></summary>
 
 ```python
 async def collect_all_entities(
@@ -238,7 +238,7 @@ def group_entities_by_letter(entities: list[EntityEntry]) -> dict[str, list[Enti
 Group entities by their first letter.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `entities` | `list[EntityEntry]` | - | List of entities (should be pre-sorted). |
 
@@ -247,7 +247,7 @@ Group entities by their first letter.
 
 
 <details>
-<summary>View Source (lines 95-115) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/glossary.py#L95-L115">GitHub</a></summary>
+<summary>View Source (lines 95-115) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/glossary.py#L95-L115">GitHub</a></summary>
 
 ```python
 def group_entities_by_letter(entities: list[EntityEntry]) -> dict[str, list[EntityEntry]]:
@@ -284,10 +284,10 @@ async def generate_glossary_page(index_status: IndexStatus, vector_store: Vector
 Generate the glossary/index page content.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `index_status` | `IndexStatus` | - | Index status with file information. |
-| `vector_store` | `VectorStore` | - | Vector store with code chunks. |
+| `index_status` | [`IndexStatus`](../models.md) | - | Index status with file information. |
+| `vector_store` | [`VectorStore`](../core/vectorstore.md) | - | Vector store with code chunks. |
 
 **Returns:** `str | None`
 
@@ -295,7 +295,7 @@ Generate the glossary/index page content.
 
 
 <details>
-<summary>View Source (lines 202-303) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/glossary.py#L202-L303">GitHub</a></summary>
+<summary>View Source (lines 202-303) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/glossary.py#L202-L303">GitHub</a></summary>
 
 ```python
 async def generate_glossary_page(
@@ -559,7 +559,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_get_wiki_link`
 
 <details>
-<summary>View Source (lines 118-129) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/glossary.py#L118-L129">GitHub</a></summary>
+<summary>View Source (lines 118-129) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/glossary.py#L118-L129">GitHub</a></summary>
 
 ```python
 def _get_wiki_link(file_path: str) -> str:
@@ -582,7 +582,7 @@ def _get_wiki_link(file_path: str) -> str:
 #### `_get_brief_description`
 
 <details>
-<summary>View Source (lines 132-157) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/glossary.py#L132-L157">GitHub</a></summary>
+<summary>View Source (lines 132-157) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/glossary.py#L132-L157">GitHub</a></summary>
 
 ```python
 def _get_brief_description(docstring: str | None, max_length: int = 60) -> str:
@@ -619,7 +619,7 @@ def _get_brief_description(docstring: str | None, max_length: int = 60) -> str:
 #### `_format_signature`
 
 <details>
-<summary>View Source (lines 160-199) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/glossary.py#L160-L199">GitHub</a></summary>
+<summary>View Source (lines 160-199) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/glossary.py#L160-L199">GitHub</a></summary>
 
 ```python
 def _format_signature(entity: EntityEntry, max_params: int = 3) -> str:
@@ -666,3 +666,6 @@ def _format_signature(entity: EntityEntry, max_params: int = 3) -> str:
 
 </details>
 
+## Relevant Source Files
+
+- `src/local_deepwiki/generators/glossary.py:11-24`

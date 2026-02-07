@@ -9,7 +9,7 @@ This file imports:
 - `collections.abc.Callable`
 - `dataclasses.dataclass`
 - `pathlib.Path`
-- `local_deepwiki.models.ChunkType`, `CodeChunk`, `WikiPage`
+- [`local_deepwiki.models.ChunkType`](../models.md), [`CodeChunk`](../models.md), [`WikiPage`](../export/streaming.md)
 
 ## External Usage
 
@@ -27,7 +27,7 @@ This file is related to:
 
 ## Type Definitions Used
 
-- `ChunkType`: An enum representing types of code chunks (e.g., class, function).
+- [`ChunkType`](../models.md): An enum representing types of code chunks (e.g., class, function).
 
 ---
 
@@ -60,7 +60,7 @@ Initialize an empty entity registry.
 Register a documented entity.
 
 **Parameters**
-- `name`: The entity name (e.g., "WikiGenerator").
+- `name`: The entity name (e.g., "[WikiGenerator](wiki.md)").
 - `entity_type`: The type of entity (class, function, etc.).
 - `wiki_path`: Path to the wiki page documenting this entity.
 - `file_path`: Path to the source file containing this entity.
@@ -89,7 +89,7 @@ Get entity info by name.
 Get entity info by alias (spaced name).
 
 **Parameters**
-- `alias`: The spaced alias to look up (e.g., "Vector Store").
+- `alias`: The spaced alias to look up (e.g., "[Vector Store](../core/vectorstore.md)").
 
 **Returns**
 - Tuple of `(canonical_name, EntityInfo)` if found, `None` otherwise.
@@ -139,7 +139,7 @@ Add cross-links to a wiki page.
 - `page`: The wiki page to process.
 
 **Returns**
-- A new `WikiPage` with cross-links added.
+- A new [`WikiPage`](../export/streaming.md) with cross-links added.
 
 #### `_process_content`
 
@@ -230,7 +230,7 @@ Information about a documented entity.
 
 
 <details>
-<summary>View Source (lines 16-23) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/crosslinks.py#L16-L23">GitHub</a></summary>
+<summary>View Source (lines 16-23) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/crosslinks.py#L16-L23">GitHub</a></summary>
 
 ```python
 class EntityInfo:
@@ -253,7 +253,7 @@ Registry of documented entities and their wiki page locations.  This class maint
 
 
 <details>
-<summary>View Source (lines 64-260) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/crosslinks.py#L64-L260">GitHub</a></summary>
+<summary>View Source (lines 64-260) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/crosslinks.py#L64-L260">GitHub</a></summary>
 
 ```python
 class EntityRegistry:
@@ -272,7 +272,7 @@ Initialize an empty entity registry.
 
 
 <details>
-<summary>View Source (lines 71-138) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/crosslinks.py#L71-L138">GitHub</a></summary>
+<summary>View Source (lines 71-138) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/crosslinks.py#L71-L138">GitHub</a></summary>
 
 ```python
 def __init__(self) -> None:
@@ -356,17 +356,17 @@ def register_entity(name: str, entity_type: ChunkType, wiki_path: str, file_path
 Register a documented entity.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `name` | `str` | - | The entity name (e.g., "WikiGenerator"). |
-| `entity_type` | `ChunkType` | - | The type of entity (class, function, etc.). |
+| `name` | `str` | - | The entity name (e.g., "[WikiGenerator](wiki.md)"). |
+| `entity_type` | [`ChunkType`](../models.md) | - | The type of entity (class, function, etc.). |
 | `wiki_path` | `str` | - | Path to the wiki page documenting this entity. |
 | `file_path` | `str` | - | Path to the source file containing this entity. |
 | `parent_name` | `str | None` | `None` | Parent entity name (e.g., class name for methods). |
 
 
 <details>
-<summary>View Source (lines 140-182) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/crosslinks.py#L140-L182">GitHub</a></summary>
+<summary>View Source (lines 140-182) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/crosslinks.py#L140-L182">GitHub</a></summary>
 
 ```python
 def register_entity(
@@ -425,14 +425,14 @@ def register_from_chunks(chunks: list[CodeChunk], wiki_path: str) -> None
 Register entities from a list of code chunks.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `chunks` | `list[CodeChunk]` | - | List of code chunks from a file. |
 | `wiki_path` | `str` | - | Path to the wiki page for these chunks. |
 
 
 <details>
-<summary>View Source (lines 184-206) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/crosslinks.py#L184-L206">GitHub</a></summary>
+<summary>View Source (lines 184-206) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/crosslinks.py#L184-L206">GitHub</a></summary>
 
 ```python
 def register_from_chunks(
@@ -471,13 +471,13 @@ def get_entity(name: str) -> EntityInfo | None
 Get entity info by name.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `name` | `str` | - | The entity name to look up. |
 
 
 <details>
-<summary>View Source (lines 208-217) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/crosslinks.py#L208-L217">GitHub</a></summary>
+<summary>View Source (lines 208-217) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/crosslinks.py#L208-L217">GitHub</a></summary>
 
 ```python
 def get_entity(self, name: str) -> EntityInfo | None:
@@ -503,13 +503,13 @@ def get_entity_by_alias(alias: str) -> tuple[str, EntityInfo] | None
 Get entity info by alias (spaced name).
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `alias` | `str` | - | The spaced alias to look up (e.g., "Vector Store"). |
+| `alias` | `str` | - | The spaced alias to look up (e.g., "[Vector Store](../core/vectorstore.md)"). |
 
 
 <details>
-<summary>View Source (lines 219-233) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/crosslinks.py#L219-L233">GitHub</a></summary>
+<summary>View Source (lines 219-233) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/crosslinks.py#L219-L233">GitHub</a></summary>
 
 ```python
 def get_entity_by_alias(self, alias: str) -> tuple[str, EntityInfo] | None:
@@ -541,7 +541,7 @@ Get all registered aliases.
 
 
 <details>
-<summary>View Source (lines 235-241) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/crosslinks.py#L235-L241">GitHub</a></summary>
+<summary>View Source (lines 235-241) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/crosslinks.py#L235-L241">GitHub</a></summary>
 
 ```python
 def get_all_aliases(self) -> dict[str, str]:
@@ -565,7 +565,7 @@ Get all registered entities.
 
 
 <details>
-<summary>View Source (lines 243-249) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/crosslinks.py#L243-L249">GitHub</a></summary>
+<summary>View Source (lines 243-249) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/crosslinks.py#L243-L249">GitHub</a></summary>
 
 ```python
 def get_all_entities(self) -> dict[str, EntityInfo]:
@@ -588,14 +588,14 @@ def get_page_entities(wiki_path: str) -> list[str]
 Get all entities defined in a specific wiki page.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `wiki_path` | `str` | - | The wiki page path. |
 
 
 
 <details>
-<summary>View Source (lines 251-260) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/crosslinks.py#L251-L260">GitHub</a></summary>
+<summary>View Source (lines 251-260) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/crosslinks.py#L251-L260">GitHub</a></summary>
 
 ```python
 def get_page_entities(self, wiki_path: str) -> list[str]:
@@ -620,7 +620,7 @@ Adds cross-links to wiki page content.  This class processes wiki page content a
 
 
 <details>
-<summary>View Source (lines 263-553) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/crosslinks.py#L263-L553">GitHub</a></summary>
+<summary>View Source (lines 263-553) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/crosslinks.py#L263-L553">GitHub</a></summary>
 
 ```python
 class CrossLinker:
@@ -638,13 +638,13 @@ def __init__(registry: EntityRegistry) -> None
 Initialize the cross-linker.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `registry` | `EntityRegistry` | - | The entity registry to use for lookups. |
 
 
 <details>
-<summary>View Source (lines 270-276) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/crosslinks.py#L270-L276">GitHub</a></summary>
+<summary>View Source (lines 270-276) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/crosslinks.py#L270-L276">GitHub</a></summary>
 
 ```python
 def __init__(self, registry: EntityRegistry) -> None:
@@ -667,13 +667,13 @@ def add_links(page: WikiPage) -> WikiPage
 Add cross-links to a wiki page.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `page` | `WikiPage` | - | The wiki page to process. |
+| `page` | [`WikiPage`](../export/streaming.md) | - | The wiki page to process. |
 
 
 <details>
-<summary>View Source (lines 278-294) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/crosslinks.py#L278-L294">GitHub</a></summary>
+<summary>View Source (lines 278-294) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/crosslinks.py#L278-L294">GitHub</a></summary>
 
 ```python
 def add_links(self, page: WikiPage) -> WikiPage:
@@ -704,13 +704,13 @@ def protect(match: re.Match) -> str
 ```
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `match` | `re.Match` | - | - |
 
 
 <details>
-<summary>View Source (lines 448-453) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/crosslinks.py#L448-L453">GitHub</a></summary>
+<summary>View Source (lines 448-453) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/crosslinks.py#L448-L453">GitHub</a></summary>
 
 ```python
 def protect(match: re.Match) -> str:
@@ -730,7 +730,7 @@ def qualified_replacement(match: re.Match) -> str
 ```
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `match` | `re.Match` | - | - |
 
@@ -739,7 +739,7 @@ def qualified_replacement(match: re.Match) -> str
 
 
 <details>
-<summary>View Source (lines 516-519) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/crosslinks.py#L516-L519">GitHub</a></summary>
+<summary>View Source (lines 516-519) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/crosslinks.py#L516-L519">GitHub</a></summary>
 
 ```python
 def qualified_replacement(match: re.Match) -> str:
@@ -761,7 +761,7 @@ def camel_to_spaced(name: str) -> str | None
 Convert CamelCase to 'Spaced Words'.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `name` | `str` | - | The CamelCase name. |
 
@@ -770,7 +770,7 @@ Convert CamelCase to 'Spaced Words'.
 
 
 <details>
-<summary>View Source (lines 26-61) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/crosslinks.py#L26-L61">GitHub</a></summary>
+<summary>View Source (lines 26-61) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/crosslinks.py#L26-L61">GitHub</a></summary>
 
 ```python
 def camel_to_spaced(name: str) -> str | None:
@@ -822,7 +822,7 @@ def add_cross_links(pages: list[WikiPage], registry: EntityRegistry) -> list[Wik
 Add cross-links to all wiki pages.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `pages` | `list[WikiPage]` | - | List of wiki pages to process. |
 | `registry` | `EntityRegistry` | - | Entity registry with documented entities. |
@@ -833,7 +833,7 @@ Add cross-links to all wiki pages.
 
 
 <details>
-<summary>View Source (lines 556-570) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/crosslinks.py#L556-L570">GitHub</a></summary>
+<summary>View Source (lines 556-570) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/crosslinks.py#L556-L570">GitHub</a></summary>
 
 ```python
 def add_cross_links(
@@ -961,7 +961,7 @@ Functions and methods in this file and their callers:
 - **`CrossLinker`**: called by `add_cross_links`
 - **`EntityInfo`**: called by `EntityRegistry.register_entity`
 - **`Path`**: called by `CrossLinker._relative_path`
-- **`WikiPage`**: called by `CrossLinker.add_links`
+- **[`WikiPage`](../export/streaming.md)**: called by `CrossLinker.add_links`
 - **`_add_links_to_text`**: called by `CrossLinker._process_content`
 - **`_link_backticked_entities`**: called by `CrossLinker._replace_entity_mentions`
 - **`_process_content`**: called by `CrossLinker.add_links`
@@ -1089,7 +1089,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_process_content`
 
 <details>
-<summary>View Source (lines 296-324) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/crosslinks.py#L296-L324">GitHub</a></summary>
+<summary>View Source (lines 296-324) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/crosslinks.py#L296-L324">GitHub</a></summary>
 
 ```python
 def _process_content(self, content: str, current_page: str) -> str:
@@ -1129,7 +1129,7 @@ def _process_content(self, content: str, current_page: str) -> str:
 #### `_split_by_code_blocks`
 
 <details>
-<summary>View Source (lines 326-355) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/crosslinks.py#L326-L355">GitHub</a></summary>
+<summary>View Source (lines 326-355) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/crosslinks.py#L326-L355">GitHub</a></summary>
 
 ```python
 def _split_by_code_blocks(self, content: str) -> list[tuple[str, bool]]:
@@ -1216,7 +1216,7 @@ def _add_links_to_text(
             # Also avoid replacing inside existing links or inline code
             text = self._replace_entity_mentions(text, name, link, rel_path)
 
-        # Also try to match aliases (spaced versions like "Vector Store")
+        # Also try to match aliases (spaced versions like "[Vector Store](../core/vectorstore.md)")
         # Sort by length (longest first)
         sorted_aliases = sorted(aliases.keys(), key=len, reverse=True)
 
@@ -1263,7 +1263,7 @@ def _replace_entity_mentions(
 
         Args:
             text: The text to process.
-            entity_name: The entity name to find.
+            entity_name: The entity name to [find](manifest.md).
             link: The markdown link to insert.
             rel_path: The relative path to the entity's wiki page.
 
@@ -1336,7 +1336,7 @@ def _link_backticked_entities(
 
         Args:
             text: The text to process.
-            entity_name: The entity name to find.
+            entity_name: The entity name to [find](manifest.md).
             rel_path: The relative path to the entity's wiki page.
             protect: Function to protect already-processed content.
 
@@ -1404,3 +1404,6 @@ def _relative_path(self, from_path: str, to_path: str) -> str:
 
 </details>
 
+## Relevant Source Files
+
+- `src/local_deepwiki/generators/crosslinks.py:16-23`

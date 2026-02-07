@@ -1,42 +1,40 @@
 # File Overview
 
-This file, `src/local_deepwiki/generators/test_examples.py`, provides functionality for extracting code examples from test files and docstrings. It supports identifying test functions that use specific entities (functions or classes) and extracting relevant code snippets from those tests. Additionally, it can extract examples from docstrings for functions and classes.
+This file, `src/local_deepwiki/generators/test_examples.py`, provides functionality for extracting code examples from test files and docstrings. It supports identifying test functions that reference specific entities (functions or classes) and extracting relevant code snippets and documentation examples.
 
-The module integrates with a vector store for semantic search and uses `tree_sitter` for parsing Python code. It also depends on core components like `CodeParser`, `ChunkType`, `Language`, and `VectorStore`.
-
----
+The module uses a [`VectorStore`](../core/vectorstore.md) for semantic search and [`CodeParser`](../core/parser.md) for parsing source code, integrating with the core DeepWiki infrastructure to extract and format examples for documentation generation.
 
 # Classes
 
-## `CodeExample`
+## CodeExample
 
 A data class representing a code example extracted from either test files or docstrings.
 
-### Fields
+### Attributes
 
-- `source`: Source of the example (`"test"` or `"docstring"`)
-- `code`: The actual code snippet
-- `description`: Description or context (optional)
-- `test_file`: Path to the test file (for test examples, optional)
-- `language`: Programming language (default: `"python"`)
-- `expected_output`: Expected output (for doctest examples, optional)
-- `entity_name`: Name of the function/class being demonstrated (optional)
+- `source`: Either `"test"` or `"docstring"` indicating the origin of the example.
+- `code`: The actual code snippet.
+- `description`: Optional description or context for the example.
+- `test_file`: Path to the test file (only for test examples).
+- `language`: Programming language, defaults to `"python"`.
+- `expected_output`: Expected output for doctest examples.
+- `entity_name`: Name of the function or class being demonstrated.
 
-## `UsageExample`
+## UsageExample
 
 A data class representing a usage example extracted from a test file.
 
-### Fields
+### Attributes
 
-- `entity_name`: Name of the function/class being demonstrated
-- `test_name`: Name of the test function
-- `test_file`: Path to the test file
-- `code`: Extracted code snippet
-- `description`: From test docstring (optional)
+- `entity_name`: Name of the function or class being demonstrated.
+- `test_name`: Name of the test function.
+- `test_file`: Path to the test file.
+- `code`: Extracted code snippet.
+- `description`: From test docstring.
 
-## `CodeExampleExtractor`
+## CodeExampleExtractor
 
-A class for finding and extracting code examples from test files and docstrings using a vector store.
+A class responsible for extracting examples for functions and classes from test files and docstrings using semantic search.
 
 ### Methods
 
@@ -44,67 +42,49 @@ A class for finding and extracting code examples from test files and docstrings 
 
 Initialize the extractor.
 
-**Parameters:**
-- `vector_store`: VectorStore instance for semantic search.
+- `vector_store`: [VectorStore](../core/vectorstore.md) instance for semantic search.
 - `repo_path`: Optional repository root path for test file discovery.
 
 #### `extract_examples_for_function(self, func_name: str, max_examples: int = 3) -> list[CodeExample]`
 
 Find test cases and docstring examples for a function.
 
-**Parameters:**
-- `func_name`: Name of the function to find examples for.
+- `func_name`: Name of the function to [find](manifest.md) examples for.
 - `max_examples`: Maximum number of examples to return.
-
-**Returns:**
-- List of `CodeExample` objects.
+- Returns: List of `CodeExample` objects.
 
 #### `extract_examples_for_class(self, class_name: str, max_examples: int = 3) -> list[CodeExample]`
 
 Find test cases and docstring examples for a class.
 
-**Parameters:**
-- `class_name`: Name of the class to find examples for.
+- `class_name`: Name of the class to [find](manifest.md) examples for.
 - `max_examples`: Maximum number of examples to return.
-
-**Returns:**
-- List of `CodeExample` objects.
+- Returns: List of `CodeExample` objects.
 
 #### `_search_test_examples(self, entity_name: str, max_results: int = 5) -> list[CodeExample]`
 
 Search for test functions that use the given entity.
 
-**Parameters:**
 - `entity_name`: Name of the function/class to search for.
 - `max_results`: Maximum search results.
-
-**Returns:**
-- List of `CodeExample` objects from test files.
+- Returns: List of `CodeExample` objects from test files.
 
 #### `_search_docstring_examples(self, entity_name: str, max_results: int = 3) -> list[CodeExample]`
 
 Search for docstring examples for the given entity.
 
-**Parameters:**
 - `entity_name`: Name of the function/class to search for.
 - `max_results`: Maximum results.
-
-**Returns:**
-- List of `CodeExample` objects from docstrings.
+- Returns: List of `CodeExample` objects from docstrings.
 
 #### `_extract_relevant_snippet(self, content: str, entity_name: str, max_lines: int = 20) -> str | None`
 
 Extract the most relevant code snippet from test content.
 
-**Parameters:**
 - `content`: Full test function content.
-- `entity_name`: Entity to find usage of.
+- `entity_name`: Entity to [find](manifest.md) usage of.
 - `max_lines`: Maximum lines to include.
-
-**Returns:**
-- Extracted snippet or `None`.
-
----
+- Returns: Extracted snippet or `None`.
 
 # Functions
 
@@ -112,84 +92,68 @@ Extract the most relevant code snippet from test content.
 
 Find all corresponding test files for a source file.
 
-**Strategies:**
+Tries multiple strategies:
 1. Direct match: `src/.../foo.py` → `tests/test_foo.py`
 2. Coverage tests: `src/.../foo.py` → `tests/test_foo_coverage.py`
 3. Suffix variants: `tests/test_foo_*.py`
 4. Alternative naming: `tests/foo_test.py`
 
-**Parameters:**
 - `source_file`: Path to the source file.
 - `repo_root`: Root directory of the repository.
-
-**Returns:**
-- List of test file paths found (may be empty).
+- Returns: List of test file paths found (may be empty).
 
 ## `find_test_file(source_file: Path, repo_root: Path) -> Path | None`
 
 Find the corresponding test file for a source file.
 
-**Parameters:**
+Legacy function for backwards compatibility.
+Returns the first test file found, or `None`.
+
 - `source_file`: Path to the source file.
 - `repo_root`: Root directory of the repository.
-
-**Returns:**
-- Path to the test file if found, `None` otherwise.
+- Returns: Path to the test file if found, `None` otherwise.
 
 ## `_get_node_text(node: Node, source: bytes) -> str`
 
 Get the text content of a tree-sitter node.
 
-**Parameters:**
 - `node`: Tree-sitter node.
 - `source`: Source code bytes.
-
-**Returns:**
-- Text content of the node.
+- Returns: Text content of the node.
 
 ## `_find_test_functions(root: Node) -> list[tuple[Node, str | None]]`
 
 Find all test function definitions in the AST.
 
-**Parameters:**
+Finds both standalone test functions and test methods in test classes.
+
 - `root`: Root node of the parsed test file.
-
-**Returns:**
-- List of `(function_definition_node, class_name)` tuples.
-  - `class_name` is `None` for standalone functions.
-
----
+- Returns: List of `(function_definition_node, class_name)` tuples. `class_name` is `None` for standalone functions.
 
 # Integration
 
 This module integrates with:
 
-- `local_deepwiki.core.parser.CodeParser` for parsing code.
-- `local_deepwiki.core.vectorstore.VectorStore` for semantic search.
-- `local_deepwiki.models.ChunkType`, `local_deepwiki.models.Language` for type definitions.
-- `tree_sitter.Node` for AST traversal.
+- [`local_deepwiki.core.parser.CodeParser`](../core/parser.md) for parsing source code.
+- [`local_deepwiki.core.vectorstore.VectorStore`](../core/vectorstore.md) for semantic search.
+- [`local_deepwiki.models.ChunkType`](../models.md) and [`local_deepwiki.models.Language`](../models.md) for type definitions.
+- [`local_deepwiki.logging.get_logger`](../logging.md) for logging.
 
 It is used by:
-
-- `test_test_examples` in `tests/test_plugins.py`
-- `test_code_examples` in `tests/test_plugins.py`
-- `examples_plugin` in `tests/test_plugins.py`
-
-The `CodeExampleExtractor` class is the main interface for extracting examples and relies on a vector store to find relevant test functions and docstrings.
-
----
+- `test_test_examples` test suite.
+- `test_code_examples` test suite.
+- `examples_plugin` (via `parse_docstring_examples`).
 
 # Usage Examples
-
-### Using `CodeExampleExtractor`
 
 ```python
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.generators.test_examples import CodeExampleExtractor
 from pathlib import Path
 
-# Assume vector_store is initialized
-extractor = CodeExampleExtractor(vector_store=vector_store, repo_path=Path("/path/to/repo"))
+# Initialize extractor
+vector_store = VectorStore()
+extractor = CodeExampleExtractor(vector_store, repo_path=Path("/path/to/repo"))
 
 # Extract examples for a function
 examples = await extractor.extract_examples_for_function("my_function", max_examples=5)
@@ -197,31 +161,11 @@ for example in examples:
     print(example.code)
 ```
 
-### Finding Test Files
-
 ```python
-from pathlib import Path
-from local_deepwiki.generators.test_examples import find_test_files
-
-source_file = Path("src/my_module.py")
-repo_root = Path("/path/to/repo")
-test_files = find_test_files(source_file, repo_root)
-print(test_files)
-```
-
-### Extracting Code Snippets
-
-```python
-from local_deepwiki.generators.test_examples import _extract_relevant_snippet
-
-content = """
-def test_my_function():
-    result = my_function(1, 2)
-    assert result == 3
-"""
-
-snippet = _extract_relevant_snippet(content, "my_function")
-print(snippet)
+# Extract examples for a class
+examples = await extractor.extract_examples_for_class("MyClass", max_examples=3)
+for example in examples:
+    print(example.description)
 ```
 
 ## API Reference
@@ -232,7 +176,7 @@ A code example extracted from tests or docstrings.  This is the unified data cla
 
 
 <details>
-<summary>View Source (lines 29-41) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L29-L41">GitHub</a></summary>
+<summary>View Source (lines 29-41) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/test_examples.py#L29-L41">GitHub</a></summary>
 
 ```python
 class CodeExample:
@@ -258,7 +202,7 @@ A usage example extracted from a test file.
 
 
 <details>
-<summary>View Source (lines 45-52) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L45-L52">GitHub</a></summary>
+<summary>View Source (lines 45-52) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/test_examples.py#L45-L52">GitHub</a></summary>
 
 ```python
 class UsageExample:
@@ -275,13 +219,13 @@ class UsageExample:
 
 ### class `CodeExampleExtractor`
 
-Extract usage examples from tests and docstrings using vector search.  This class provides semantic search capabilities to find relevant test cases and docstring examples for functions and classes in a codebase.
+Extract usage examples from tests and docstrings using vector search.  This class provides semantic search capabilities to [find](manifest.md) relevant test cases and docstring examples for functions and classes in a codebase.
 
 **Methods:**
 
 
 <details>
-<summary>View Source (lines 772-1037) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L772-L1037">GitHub</a></summary>
+<summary>View Source (lines 772-1037) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/test_examples.py#L772-L1037">GitHub</a></summary>
 
 ```python
 class CodeExampleExtractor:
@@ -299,14 +243,14 @@ def __init__(vector_store: "VectorStore", repo_path: Path | None = None)
 Initialize the extractor.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `vector_store` | `"VectorStore"` | - | VectorStore instance for semantic search. |
+| `vector_store` | `"VectorStore"` | - | [VectorStore](../core/vectorstore.md) instance for semantic search. |
 | `repo_path` | `Path | None` | `None` | Optional repository root path for test file discovery. |
 
 
 <details>
-<summary>View Source (lines 785-793) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L785-L793">GitHub</a></summary>
+<summary>View Source (lines 785-793) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/test_examples.py#L785-L793">GitHub</a></summary>
 
 ```python
 def __init__(self, vector_store: "VectorStore", repo_path: Path | None = None):
@@ -331,14 +275,14 @@ async def extract_examples_for_function(func_name: str, max_examples: int = 3) -
 Find test cases and docstring examples for a function.  Searches the vector store for: 1. Test functions that call or reference the target function 2. Docstrings containing examples for the function
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `func_name` | `str` | - | Name of the function to find examples for. |
+| `func_name` | `str` | - | Name of the function to [find](manifest.md) examples for. |
 | `max_examples` | `int` | `3` | Maximum number of examples to return. |
 
 
 <details>
-<summary>View Source (lines 795-837) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L795-L837">GitHub</a></summary>
+<summary>View Source (lines 795-837) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/test_examples.py#L795-L837">GitHub</a></summary>
 
 ```python
 async def extract_examples_for_function(
@@ -397,9 +341,9 @@ async def extract_examples_for_class(class_name: str, max_examples: int = 3) -> 
 Find test cases and docstring examples for a class.  Searches for tests that instantiate or use the class, as well as docstring examples in the class definition.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `class_name` | `str` | - | Name of the class to find examples for. |
+| `class_name` | `str` | - | Name of the class to [find](manifest.md) examples for. |
 | `max_examples` | `int` | `3` | Maximum number of examples to return. |
 
 
@@ -407,7 +351,7 @@ Find test cases and docstring examples for a class.  Searches for tests that ins
 
 
 <details>
-<summary>View Source (lines 839-880) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L839-L880">GitHub</a></summary>
+<summary>View Source (lines 839-880) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/test_examples.py#L839-L880">GitHub</a></summary>
 
 ```python
 async def extract_examples_for_class(
@@ -467,7 +411,7 @@ def find_test_files(source_file: Path, repo_root: Path) -> list[Path]
 Find all corresponding test files for a source file.  Tries multiple strategies: 1. Direct match: src/.../foo.py -> tests/test_foo.py 2. Coverage tests: src/.../foo.py -> tests/test_foo_coverage.py 3. Suffix variants: tests/test_foo_*.py 4. Alternative naming: tests/foo_test.py
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `source_file` | `Path` | - | Path to the source file. |
 | `repo_root` | `Path` | - | Root directory of the repository. |
@@ -477,7 +421,7 @@ Find all corresponding test files for a source file.  Tries multiple strategies:
 
 
 <details>
-<summary>View Source (lines 55-113) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L55-L113">GitHub</a></summary>
+<summary>View Source (lines 55-113) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/test_examples.py#L55-L113">GitHub</a></summary>
 
 ```python
 def find_test_files(source_file: Path, repo_root: Path) -> list[Path]:
@@ -552,7 +496,7 @@ def find_test_file(source_file: Path, repo_root: Path) -> Path | None
 Find the corresponding test file for a source file.  Legacy function for backwards compatibility. Returns the first test file found, or None.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `source_file` | `Path` | - | Path to the source file. |
 | `repo_root` | `Path` | - | Root directory of the repository. |
@@ -562,7 +506,7 @@ Find the corresponding test file for a source file.  Legacy function for backwar
 
 
 <details>
-<summary>View Source (lines 116-130) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L116-L130">GitHub</a></summary>
+<summary>View Source (lines 116-130) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/test_examples.py#L116-L130">GitHub</a></summary>
 
 ```python
 def find_test_file(source_file: Path, repo_root: Path) -> Path | None:
@@ -591,7 +535,7 @@ def walk(node: Node, current_class: str | None = None) -> None
 ```
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `node` | `Node` | - | - |
 | `current_class` | `str | None` | `None` | - |
@@ -601,7 +545,7 @@ def walk(node: Node, current_class: str | None = None) -> None
 
 
 <details>
-<summary>View Source (lines 152-174) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L152-L174">GitHub</a></summary>
+<summary>View Source (lines 152-174) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/test_examples.py#L152-L174">GitHub</a></summary>
 
 ```python
 def walk(node: Node, current_class: str | None = None) -> None:
@@ -640,10 +584,10 @@ def extract_examples_for_entities(test_file: Path, entity_names: list[str], max_
 Extract usage examples from a test file for given entities.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `test_file` | `Path` | - | Path to the test file. |
-| `entity_names` | `list[str]` | - | Names of functions/classes to find examples for. |
+| `entity_names` | `list[str]` | - | Names of functions/classes to [find](manifest.md) examples for. |
 | `max_examples_per_entity` | `int` | `2` | Maximum examples per entity. |
 
 **Returns:** `list[UsageExample]`
@@ -651,7 +595,7 @@ Extract usage examples from a test file for given entities.
 
 
 <details>
-<summary>View Source (lines 338-406) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L338-L406">GitHub</a></summary>
+<summary>View Source (lines 338-406) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/test_examples.py#L338-L406">GitHub</a></summary>
 
 ```python
 def extract_examples_for_entities(
@@ -736,7 +680,7 @@ def format_examples_markdown(examples: list[UsageExample], max_examples: int = 5
 Format usage examples as markdown.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `examples` | `list[UsageExample]` | - | List of UsageExample objects. |
 | `max_examples` | `int` | `5` | Maximum examples to include. |
@@ -746,7 +690,7 @@ Format usage examples as markdown.
 
 
 <details>
-<summary>View Source (lines 409-443) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L409-L443">GitHub</a></summary>
+<summary>View Source (lines 409-443) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/test_examples.py#L409-L443">GitHub</a></summary>
 
 ```python
 def format_examples_markdown(
@@ -794,10 +738,10 @@ def format_examples_markdown(
 def get_file_examples(source_file: Path, repo_root: Path, entity_names: list[str], max_examples: int = 5) -> str | None
 ```
 
-Get formatted usage examples for a source file.  This is the main entry point for the wiki generator. Searches all matching test files for usage examples.
+Get formatted usage examples for a source file.  This is the [main](../export/pdf.md) entry point for the wiki generator. Searches all matching test files for usage examples.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `source_file` | `Path` | - | Path to the source file being documented. |
 | `repo_root` | `Path` | - | Root directory of the repository. |
@@ -809,7 +753,7 @@ Get formatted usage examples for a source file.  This is the main entry point fo
 
 
 <details>
-<summary>View Source (lines 446-507) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L446-L507">GitHub</a></summary>
+<summary>View Source (lines 446-507) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/test_examples.py#L446-L507">GitHub</a></summary>
 
 ```python
 def get_file_examples(
@@ -887,7 +831,7 @@ def parse_doctest_examples(docstring: str) -> list[CodeExample]
 Extract >>> doctest examples from a docstring.  Parses Python doctest-style examples with >>> prompts and expected output.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `docstring` | `str` | - | The docstring to parse. |
 
@@ -896,7 +840,7 @@ Extract >>> doctest examples from a docstring.  Parses Python doctest-style exam
 
 
 <details>
-<summary>View Source (lines 515-610) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L515-L610">GitHub</a></summary>
+<summary>View Source (lines 515-610) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/test_examples.py#L515-L610">GitHub</a></summary>
 
 ```python
 def parse_doctest_examples(docstring: str) -> list[CodeExample]:
@@ -1008,7 +952,7 @@ def parse_google_style_examples(docstring: str) -> list[CodeExample]
 Extract examples from Google-style docstring Examples section.  Parses the Examples: section of a Google-style docstring, extracting code blocks and their descriptions.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `docstring` | `str` | - | The docstring to parse. |
 
@@ -1017,7 +961,7 @@ Extract examples from Google-style docstring Examples section.  Parses the Examp
 
 
 <details>
-<summary>View Source (lines 613-735) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L613-L735">GitHub</a></summary>
+<summary>View Source (lines 613-735) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/test_examples.py#L613-L735">GitHub</a></summary>
 
 ```python
 def parse_google_style_examples(docstring: str) -> list[CodeExample]:
@@ -1160,7 +1104,7 @@ Save the current accumulated example.
 
 
 <details>
-<summary>View Source (lines 676-691) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L676-L691">GitHub</a></summary>
+<summary>View Source (lines 676-691) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/test_examples.py#L676-L691">GitHub</a></summary>
 
 ```python
 def save_current_example() -> None:
@@ -1192,7 +1136,7 @@ def parse_docstring_examples(docstring: str) -> list[CodeExample]
 Extract all examples from a docstring (doctests and Google-style).  Combines doctest-style (>>>) examples and Google-style Examples section into a unified list.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `docstring` | `str` | - | The docstring to parse. |
 
@@ -1201,7 +1145,7 @@ Extract all examples from a docstring (doctests and Google-style).  Combines doc
 
 
 <details>
-<summary>View Source (lines 738-764) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L738-L764">GitHub</a></summary>
+<summary>View Source (lines 738-764) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/test_examples.py#L738-L764">GitHub</a></summary>
 
 ```python
 def parse_docstring_examples(docstring: str) -> list[CodeExample]:
@@ -1244,7 +1188,7 @@ def format_code_examples_markdown(examples: list[CodeExample], max_examples: int
 Format CodeExample objects as markdown.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `examples` | `list[CodeExample]` | - | List of CodeExample objects. |
 | `max_examples` | `int` | `5` | Maximum examples to include. |
@@ -1255,7 +1199,7 @@ Format CodeExample objects as markdown.
 
 
 <details>
-<summary>View Source (lines 1040-1083) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L1040-L1083">GitHub</a></summary>
+<summary>View Source (lines 1040-1083) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/test_examples.py#L1040-L1083">GitHub</a></summary>
 
 ```python
 def format_code_examples_markdown(
@@ -1428,7 +1372,7 @@ flowchart TD
 Functions and methods in this file and their callers:
 
 - **`CodeExample`**: called by `CodeExampleExtractor._search_test_examples`, `parse_doctest_examples`, `parse_google_style_examples`, `save_current_example`
-- **`CodeParser`**: called by `extract_examples_for_entities`
+- **[`CodeParser`](../core/parser.md)**: called by `extract_examples_for_entities`
 - **`UsageExample`**: called by `extract_examples_for_entities`
 - **`_extract_relevant_snippet`**: called by `CodeExampleExtractor._search_test_examples`
 - **`_extract_usage_snippet`**: called by `extract_examples_for_entities`
@@ -1502,7 +1446,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_get_node_text`
 
 <details>
-<summary>View Source (lines 133-135) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L133-L135">GitHub</a></summary>
+<summary>View Source (lines 133-135) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/test_examples.py#L133-L135">GitHub</a></summary>
 
 ```python
 def _get_node_text(node: Node, source: bytes) -> str:
@@ -1516,7 +1460,7 @@ def _get_node_text(node: Node, source: bytes) -> str:
 #### `_find_test_functions`
 
 <details>
-<summary>View Source (lines 138-177) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L138-L177">GitHub</a></summary>
+<summary>View Source (lines 138-177) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/test_examples.py#L138-L177">GitHub</a></summary>
 
 ```python
 def _find_test_functions(root: Node) -> list[tuple[Node, str | None]]:
@@ -1567,7 +1511,7 @@ def _find_test_functions(root: Node) -> list[tuple[Node, str | None]]:
 #### `_get_function_name`
 
 <details>
-<summary>View Source (lines 180-185) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L180-L185">GitHub</a></summary>
+<summary>View Source (lines 180-185) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/test_examples.py#L180-L185">GitHub</a></summary>
 
 ```python
 def _get_function_name(func_node: Node, source: bytes) -> str:
@@ -1584,7 +1528,7 @@ def _get_function_name(func_node: Node, source: bytes) -> str:
 #### `_get_docstring`
 
 <details>
-<summary>View Source (lines 188-206) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L188-L206">GitHub</a></summary>
+<summary>View Source (lines 188-206) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/test_examples.py#L188-L206">GitHub</a></summary>
 
 ```python
 def _get_docstring(func_node: Node, source: bytes) -> str | None:
@@ -1614,7 +1558,7 @@ def _get_docstring(func_node: Node, source: bytes) -> str | None:
 #### `_get_function_body`
 
 <details>
-<summary>View Source (lines 209-214) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L209-L214">GitHub</a></summary>
+<summary>View Source (lines 209-214) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/test_examples.py#L209-L214">GitHub</a></summary>
 
 ```python
 def _get_function_body(func_node: Node, source: bytes) -> str:
@@ -1631,7 +1575,7 @@ def _get_function_body(func_node: Node, source: bytes) -> str:
 #### `_is_mock_heavy`
 
 <details>
-<summary>View Source (lines 217-232) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L217-L232">GitHub</a></summary>
+<summary>View Source (lines 217-232) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/test_examples.py#L217-L232">GitHub</a></summary>
 
 ```python
 def _is_mock_heavy(body: str) -> bool:
@@ -1658,7 +1602,7 @@ def _is_mock_heavy(body: str) -> bool:
 #### `_extract_usage_snippet`
 
 <details>
-<summary>View Source (lines 235-335) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L235-L335">GitHub</a></summary>
+<summary>View Source (lines 235-335) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/test_examples.py#L235-L335">GitHub</a></summary>
 
 ```python
 def _extract_usage_snippet(
@@ -1770,7 +1714,7 @@ def _extract_usage_snippet(
 #### `_search_test_examples`
 
 <details>
-<summary>View Source (lines 882-938) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L882-L938">GitHub</a></summary>
+<summary>View Source (lines 882-938) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/test_examples.py#L882-L938">GitHub</a></summary>
 
 ```python
 async def _search_test_examples(
@@ -1838,7 +1782,7 @@ async def _search_test_examples(
 #### `_search_docstring_examples`
 
 <details>
-<summary>View Source (lines 940-979) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L940-L979">GitHub</a></summary>
+<summary>View Source (lines 940-979) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/test_examples.py#L940-L979">GitHub</a></summary>
 
 ```python
 async def _search_docstring_examples(
@@ -1889,7 +1833,7 @@ async def _search_docstring_examples(
 #### `_extract_relevant_snippet`
 
 <details>
-<summary>View Source (lines 981-1037) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/test_examples.py#L981-L1037">GitHub</a></summary>
+<summary>View Source (lines 981-1037) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/test_examples.py#L981-L1037">GitHub</a></summary>
 
 ```python
 def _extract_relevant_snippet(
@@ -1953,3 +1897,6 @@ def _extract_relevant_snippet(
 
 </details>
 
+## Relevant Source Files
+
+- `src/local_deepwiki/generators/test_examples.py:29-41`

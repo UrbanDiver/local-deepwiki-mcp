@@ -9,12 +9,12 @@ This file, `src/local_deepwiki/generators/stale_detection.py`, provides function
 - `datetime.datetime`
 - `pathlib.Path`
 - `local_deepwiki.core.git_utils`:
-  - `StaleInfo`
-  - `check_page_staleness`
-  - `format_blame_date`
-- `local_deepwiki.logging.get_logger`
-- `local_deepwiki.models.WikiGenerationStatus`
-- `local_deepwiki.models.WikiPage`
+  - [`StaleInfo`](../core/git_utils.md)
+  - [`check_page_staleness`](../core/git_utils.md)
+  - [`format_blame_date`](../core/git_utils.md)
+- [`local_deepwiki.logging.get_logger`](../logging.md)
+- [`local_deepwiki.models.WikiGenerationStatus`](../models.md)
+- [`local_deepwiki.models.WikiPage`](../export/streaming.md)
 
 ## External Usage
 
@@ -51,7 +51,7 @@ Analyze all wiki pages for staleness.
 ### Parameters
 
 - `repo_path`: `Path` - Path to the repository root.
-- `wiki_status`: `WikiGenerationStatus` - Wiki generation status with page info.
+- `wiki_status`: [`WikiGenerationStatus`](../models.md) - Wiki generation status with page info.
 - `stale_threshold_days`: `int` - Minimum days to consider a page stale (default: 0).
 
 ### Returns
@@ -65,12 +65,12 @@ Generate a wiki page reporting potentially stale documentation.
 ### Parameters
 
 - `repo_path`: `Path` - Path to the repository root.
-- `wiki_status`: `WikiGenerationStatus` - Wiki generation status with page info.
+- `wiki_status`: [`WikiGenerationStatus`](../models.md) - Wiki generation status with page info.
 - `stale_threshold_days`: `int` - Minimum days to consider a page stale (default: 0).
 
 ### Returns
 
-`WikiPage` with the stale documentation report.
+[`WikiPage`](../export/streaming.md) with the stale documentation report.
 
 ## generate_stale_banner
 
@@ -78,7 +78,7 @@ Generate a warning banner for a stale page.
 
 ### Parameters
 
-- `stale_info`: `StaleInfo` - Staleness information for the page.
+- `stale_info`: [`StaleInfo`](../core/git_utils.md) - Staleness information for the page.
 
 ### Returns
 
@@ -92,7 +92,7 @@ Add stale warning banners to pages with outdated documentation.
 
 - `pages`: `list[WikiPage]` - List of wiki pages to process.
 - `repo_path`: `Path` - Path to the repository root.
-- `wiki_status`: `WikiGenerationStatus` - Wiki generation status with page info.
+- `wiki_status`: [`WikiGenerationStatus`](../models.md) - Wiki generation status with page info.
 - `stale_threshold_days`: `int` - Minimum days to show a banner (default: 1).
 
 ### Returns
@@ -101,7 +101,7 @@ Add stale warning banners to pages with outdated documentation.
 
 # Integration
 
-This module integrates with the core Git utilities and models of the `local_deepwiki` package. It uses `check_page_staleness` from `local_deepwiki.core.git_utils` to determine if a page is stale, and `format_blame_date` to format dates for display. It relies on `WikiGenerationStatus` and `WikiPage` models to understand the structure of the wiki being analyzed.
+This module integrates with the core Git utilities and models of the `local_deepwiki` package. It uses [`check_page_staleness`](../core/git_utils.md) from `local_deepwiki.core.git_utils` to determine if a page is stale, and [`format_blame_date`](../core/git_utils.md) to format dates for display. It relies on [`WikiGenerationStatus`](../models.md) and [`WikiPage`](../export/streaming.md) models to understand the structure of the wiki being analyzed.
 
 The functions `generate_stale_report_page` and `generate_stale_banner` are used in tests (`test_stale_detection`) to validate the staleness detection logic and banner generation.
 
@@ -134,7 +134,7 @@ Summary of stale documentation analysis.
 
 
 <details>
-<summary>View Source (lines 24-30) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/stale_detection.py#L24-L30">GitHub</a></summary>
+<summary>View Source (lines 24-30) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/stale_detection.py#L24-L30">GitHub</a></summary>
 
 ```python
 class StaleReport:
@@ -159,10 +159,10 @@ def analyze_staleness(repo_path: Path, wiki_status: WikiGenerationStatus, stale_
 Analyze all wiki pages for staleness.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `repo_path` | `Path` | - | Path to the repository root. |
-| `wiki_status` | `WikiGenerationStatus` | - | Wiki generation status with page info. |
+| `wiki_status` | [`WikiGenerationStatus`](../models.md) | - | Wiki generation status with page info. |
 | `stale_threshold_days` | `int` | `0` | Minimum days to consider a page stale. |
 
 **Returns:** `StaleReport`
@@ -170,7 +170,7 @@ Analyze all wiki pages for staleness.
 
 
 <details>
-<summary>View Source (lines 33-74) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/stale_detection.py#L33-L74">GitHub</a></summary>
+<summary>View Source (lines 33-74) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/stale_detection.py#L33-L74">GitHub</a></summary>
 
 ```python
 def analyze_staleness(
@@ -228,18 +228,18 @@ def generate_stale_report_page(repo_path: Path, wiki_status: WikiGenerationStatu
 Generate a wiki page reporting potentially stale documentation.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `repo_path` | `Path` | - | Path to the repository root. |
-| `wiki_status` | `WikiGenerationStatus` | - | Wiki generation status with page info. |
+| `wiki_status` | [`WikiGenerationStatus`](../models.md) | - | Wiki generation status with page info. |
 | `stale_threshold_days` | `int` | `0` | Minimum days to consider a page stale. |
 
-**Returns:** `WikiPage`
+**Returns:** [`WikiPage`](../export/streaming.md)
 
 
 
 <details>
-<summary>View Source (lines 77-165) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/stale_detection.py#L77-L165">GitHub</a></summary>
+<summary>View Source (lines 77-165) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/stale_detection.py#L77-L165">GitHub</a></summary>
 
 ```python
 def generate_stale_report_page(
@@ -344,16 +344,16 @@ def generate_stale_banner(stale_info: StaleInfo) -> str
 Generate a warning banner for a stale page.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `stale_info` | `StaleInfo` | - | Staleness information for the page. |
+| `stale_info` | [`StaleInfo`](../core/git_utils.md) | - | Staleness information for the page. |
 
 **Returns:** `str`
 
 
 
 <details>
-<summary>View Source (lines 168-184) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/stale_detection.py#L168-L184">GitHub</a></summary>
+<summary>View Source (lines 168-184) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/stale_detection.py#L168-L184">GitHub</a></summary>
 
 ```python
 def generate_stale_banner(stale_info: StaleInfo) -> str:
@@ -386,11 +386,11 @@ def add_stale_banners(pages: list[WikiPage], repo_path: Path, wiki_status: WikiG
 Add stale warning banners to pages with outdated documentation.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `pages` | `list[WikiPage]` | - | List of wiki pages to process. |
 | `repo_path` | `Path` | - | Path to the repository root. |
-| `wiki_status` | `WikiGenerationStatus` | - | Wiki generation status with page info. |
+| `wiki_status` | [`WikiGenerationStatus`](../models.md) | - | Wiki generation status with page info. |
 | `stale_threshold_days` | `int` | `1` | Minimum days to show a banner (default: 1). |
 
 **Returns:** `list[WikiPage]`
@@ -399,7 +399,7 @@ Add stale warning banners to pages with outdated documentation.
 
 
 <details>
-<summary>View Source (lines 187-230) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/stale_detection.py#L187-L230">GitHub</a></summary>
+<summary>View Source (lines 187-230) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/stale_detection.py#L187-L230">GitHub</a></summary>
 
 ```python
 def add_stale_banners(
@@ -503,10 +503,10 @@ Functions and methods in this file and their callers:
 
 - **`Path`**: called by `generate_stale_report_page`
 - **`StaleReport`**: called by `analyze_staleness`
-- **`WikiPage`**: called by `add_stale_banners`, `generate_stale_report_page`
+- **[`WikiPage`](../export/streaming.md)**: called by `add_stale_banners`, `generate_stale_report_page`
 - **`analyze_staleness`**: called by `generate_stale_report_page`
-- **`check_page_staleness`**: called by `add_stale_banners`, `analyze_staleness`
-- **`format_blame_date`**: called by `generate_stale_banner`, `generate_stale_report_page`
+- **[`check_page_staleness`](../core/git_utils.md)**: called by `add_stale_banners`, `analyze_staleness`
+- **[`format_blame_date`](../core/git_utils.md)**: called by `generate_stale_banner`, `generate_stale_report_page`
 - **`generate_stale_banner`**: called by `add_stale_banners`
 - **`now`**: called by `analyze_staleness`
 - **`sort`**: called by `analyze_staleness`
@@ -612,3 +612,7 @@ assert "5 days" in result
 | `generate_stale_report_page` | function | Brian Breidenbach | 3 weeks ago | `59bad6c` Add stale documentation det... |
 | `generate_stale_banner` | function | Brian Breidenbach | 3 weeks ago | `59bad6c` Add stale documentation det... |
 | `add_stale_banners` | function | Brian Breidenbach | 3 weeks ago | `59bad6c` Add stale documentation det... |
+
+## Relevant Source Files
+
+- `src/local_deepwiki/generators/stale_detection.py:24-30`

@@ -6,7 +6,7 @@ This file, `src/local_deepwiki/logging.py`, provides logging configuration and u
 
 ### AuditLogger
 
-The `AuditLogger` class is referenced in the type definitions but is not defined in the provided code. It is likely a custom logger class used for audit trails or specific logging requirements within the package.
+The [`AuditLogger`](core/audit.md) class is referenced in the type definitions but is not defined in the provided code. It is likely a custom logger class used for audit trails or specific logging requirements within the package.
 
 ## Functions
 
@@ -87,7 +87,7 @@ def setup_logging(level: str | int | None = None, format_style: Literal["simple"
 Configure logging for the local-deepwiki package.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `level` | `str | int | None` | `None` | Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL). Defaults to INFO, or DEEPWIKI_LOG_LEVEL env var. |
 | `format_style` | `Literal["simple", "detailed"]` | `"simple"` | "simple" for basic format, "detailed" for file/line info. |
@@ -99,7 +99,7 @@ Configure logging for the local-deepwiki package.
 
 
 <details>
-<summary>View Source (lines 18-72) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/logging.py#L18-L72">GitHub</a></summary>
+<summary>View Source (lines 18-72) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/logging.py#L18-L72">GitHub</a></summary>
 
 ```python
 def setup_logging(
@@ -170,7 +170,7 @@ def get_logger(name: str) -> logging.Logger
 Get a logger for a specific module.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `name` | `str` | - | Module name (typically __name__). |
 
@@ -180,7 +180,7 @@ Get a logger for a specific module.
 
 
 <details>
-<summary>View Source (lines 75-89) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/logging.py#L75-L89">GitHub</a></summary>
+<summary>View Source (lines 75-89) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/logging.py#L75-L89">GitHub</a></summary>
 
 ```python
 def get_logger(name: str) -> logging.Logger:
@@ -307,3 +307,7 @@ assert logger.name == module_name
 |--------|------|--------|------|--------|
 | `setup_logging` | function | Brian Breidenbach | 3 weeks ago | `8078321` Fix ruff and pyright code q... |
 | `get_logger` | function | Brian Breidenbach | 3 weeks ago | `60f9bc9` Add structured logging module |
+
+## Relevant Source Files
+
+- `src/local_deepwiki/logging.py:18-72`

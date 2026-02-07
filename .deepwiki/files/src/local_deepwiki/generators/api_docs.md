@@ -1,172 +1,249 @@
 # File Overview
 
-This file, `src/local_deepwiki/generators/api_docs.py`, provides functionality for extracting and parsing API documentation from Python source code. It uses the Tree-sitter parser to analyze code structure and extract information such as function signatures, parameters, return types, decorators, and docstrings. The extracted data is structured into typed classes for consistent handling and can be used to generate API reference documentation in Markdown format.
+This file, `src/local_deepwiki/generators/api_docs.py`, provides functionality for extracting and parsing API documentation from Python source code. It uses the Tree-sitter parser to analyze code structure and extract information such as function signatures, parameters, return types, decorators, and docstrings. The extracted information is structured into typed classes for consistent handling and can be used to generate API reference documentation in markdown format.
 
-## Dependencies
+## Key Dependencies
 
-This file imports:
-- `re` for regular expression operations
-- `dataclasses` for defining `Parameter` and `FunctionSignature` classes
-- `pathlib.Path` for handling file paths
-- `typing.TypedDict` for type hints
-- `tree_sitter.Node` for AST node handling
-- `local_deepwiki.core.chunker.CLASS_NODE_TYPES`, `FUNCTION_NODE_TYPES` for identifying node types
-- `local_deepwiki.core.parser.CodeParser`, `find_nodes_by_type`, `get_node_name`, `get_node_text` for parsing code
-- `local_deepwiki.models.Language` for language support
+- `tree_sitter.Node`: For parsing and navigating the AST.
+- `local_deepwiki.core.chunker`: Provides `CLASS_NODE_TYPES` and `FUNCTION_NODE_TYPES` for node type identification.
+- `local_deepwiki.core.parser`: Provides [`CodeParser`](../core/parser.md) and helper functions like [`find_nodes_by_type`](../core/parser.md), [`get_node_name`](../core/parser.md), [`get_node_text`](../core/parser.md).
+- [`local_deepwiki.models.Language`](../models.md): For language-specific handling (though not directly used in this file).
 
 ## Integration
 
-This file is part of the `local_deepwiki` documentation generation system. It is called by:
-- `test_api_docs` (test suite)
-- `chunker` (for extracting API information during code chunking)
-- `test_type_annotations` (for validating type annotations)
+This file is part of the `local_deepwiki` project and integrates with:
+- Core parsing modules (`local_deepwiki.core.parser`, `local_deepwiki.core.chunker`)
+- Test suite (`tests/test_api_docs.py`), which directly calls functions in this file
 
-It is closely related to:
-- `src/local_deepwiki/cli/__init__.py`
-- `src/local_deepwiki/core/__init__.py`
-- `src/local_deepwiki/generators/source_refs.py`
-- `src/local_deepwiki/generators/wiki.py`
-- `tests/test_plugins.py`
+## Usage Examples
+
+The [main](../export/pdf.md) entry point for extracting API documentation is the `APIDocExtractor` class, which uses the helper functions to parse source files and extract structured information about functions and classes.
+
+---
 
 # Classes
 
 ## ArgInfo
 
-A typed dictionary representing information about a function argument.
+Type for argument info in parsed docstrings.
 
-### Fields
-- `type`: Optional string representing the argument's type.
-- `description`: String describing the argument.
+```python
+class ArgInfo(TypedDict):
+    """Type for argument info in parsed docstrings."""
+
+    type: str | None
+    description: str
+```
 
 ## ParsedDocstring
 
-A typed dictionary representing a parsed docstring.
+Type for parsed docstring result.
 
-### Fields
-- `description`: String containing the main description.
-- `args`: Dictionary mapping argument names to `ArgInfo`.
-- `returns`: Optional string describing the return value.
-- `raises`: List of strings describing exceptions.
+```python
+class ParsedDocstring(TypedDict):
+    """Type for parsed docstring result."""
+
+    description: str
+    args: dict[str, ArgInfo]
+    returns: str | None
+    raises: list[str]
+```
 
 ## Parameter
 
 Represents a function parameter.
 
-### Fields
-- `name`: String, the parameter name.
-- `type_hint`: Optional string, the type hint.
-- `default_value`: Optional string, the default value.
-- `description`: Optional string, the parameter description.
+```python
+class Parameter:
+    """Represents a function parameter."""
+
+    name: str
+    type_hint: str | None = None
+    default_value: str | None = None
+    description: str | None = None
+```
 
 ## FunctionSignature
 
-Represents a function or method signature.
+Represents a function/method signature.
 
-### Fields
-- `name`: String, the function name.
-- `parameters`: List of `Parameter` objects.
-- `return_type`: Optional string, the return type.
-- `docstring`: Optional string, the raw docstring.
-- `description`: Optional string, the description.
-- `is_method`: Boolean indicating if it's a method.
-- `is_async`: Boolean indicating if it's an async function.
-- `decorators`: List of decorator strings.
+```python
+class FunctionSignature:
+    """Represents a function/method signature."""
+
+    name: str
+    parameters: list[Parameter] = field(default_factory=list)
+    return_type: str | None = None
+    docstring: str | None = None
+    description: str | None = None
+    is_method: bool = False
+    is_async: bool = False
+    decorators: list[str] = field(default_factory=list)
+```
 
 ## ClassSignature
 
 Represents a class signature.
 
-### Fields
-- `name`: String, the class name.
-- `bases`: List of strings, base class names.
-- `docstring`: Optional string, the raw docstring.
-- `description`: Optional string, the description.
-- `methods`: List of `FunctionSignature` objects.
-- `class_variables`: List of tuples representing class variables (name, type, value).
+```python
+class ClassSignature:
+    """Represents a class signature."""
+
+    name: str
+    bases: list[str] = field(default_factory=list)
+    docstring: str | None = None
+    description: str | None = None
+    methods: list[FunctionSignature] = field(default_factory=list)
+    class_variables: list[tuple[str, str | None, str | None]] = field(default_factory=list)
+```
 
 ## APIDocExtractor
 
-A class for extracting API documentation from source files.
+Extracts API documentation from source files.
 
-### Methods
-- `__init__`: Initializes the extractor with a `CodeParser`.
-- `extract_from_file`: Extracts function and class signatures from a source file.
+```python
+class APIDocExtractor:
+    """Extracts API documentation from source files."""
+
+    def __init__(self):
+        """Initialize the extractor."""
+        self.parser = CodeParser()
+
+    def extract_from_file(
+        self, file_path: Path
+    ) -> tuple[list[FunctionSignature], list[ClassSignature]]:
+        """Extract API documentation from a source file.
+
+        Args:
+            file_path: Path to the source file.
+
+        Returns:
+            Tuple of (functions, classes) signatures.
+        """
+        result = self.parser.parse_file(file_path)
+        if result is None:
+            return
+```
+
+---
 
 # Functions
 
 ## extract_python_parameters
 
-Extracts parameters from a Python function definition.
+Extract parameters from a Python function definition.
 
-### Parameters
-- `func_node`: The `function_definition` AST node.
-- `source`: Source code bytes.
+```python
+def extract_python_parameters(func_node: Node, source: bytes) -> list[Parameter]:
+    """Extract parameters from a Python function definition.
 
-### Returns
-List of `Parameter` objects.
+    Args:
+        func_node: The function_definition AST node.
+        source: Source code bytes.
+
+    Returns:
+        List of Parameter objects.
+    """
+```
 
 ## extract_python_return_type
 
-Extracts return type annotation from a Python function.
+Extract return type annotation from a Python function.
 
-### Parameters
-- `func_node`: The `function_definition` AST node.
-- `source`: Source code bytes.
+```python
+def extract_python_return_type(func_node: Node, source: bytes) -> str | None:
+    """Extract return type annotation from a Python function.
 
-### Returns
-Return type string or `None`.
+    Args:
+        func_node: The function_definition AST node.
+        source: Source code bytes.
+
+    Returns:
+        Return type string or None.
+    """
+```
 
 ## extract_python_decorators
 
-Extracts decorators from a Python function.
+Extract decorators from a Python function.
 
-### Parameters
-- `func_node`: The `function_definition` AST node.
-- `source`: Source code bytes.
+```python
+def extract_python_decorators(func_node: Node, source: bytes) -> list[str]:
+    """Extract decorators from a Python function.
 
-### Returns
-List of decorator strings.
+    Args:
+        func_node: The function_definition AST node.
+        source: Source code bytes.
+
+    Returns:
+        List of decorator strings.
+    """
+```
 
 ## extract_python_docstring
 
-Extracts docstring from a Python function or class.
+Extract docstring from a Python function or class.
 
-### Parameters
-- `node`: The `function_definition` or `class_definition` AST node.
-- `source`: Source code bytes.
+```python
+def extract_python_docstring(node: Node, source: bytes) -> str | None:
+    """Extract docstring from a Python function or class.
 
-### Returns
-Docstring content or `None`.
+    Args:
+        node: The function_definition or class_definition AST node.
+        source: Source code bytes.
+
+    Returns:
+        Docstring content or None.
+    """
+```
 
 ## parse_google_docstring
 
-Parses a Google-style docstring.
+Parse a Google-style docstring.
 
-### Parameters
-- `docstring`: The docstring content.
+```python
+def parse_google_docstring(docstring: str) -> ParsedDocstring:
+    """Parse a Google-style docstring.
 
-### Returns
-Parsed docstring dictionary with keys: `description`, `args`, `returns`, `raises`.
+    Args:
+        docstring: The docstring content.
+
+    Returns:
+        Dictionary with 'description', 'args', 'returns', 'raises' keys.
+    """
+```
 
 ## parse_numpy_docstring
 
-Parses a NumPy-style docstring.
+Parse a NumPy-style docstring.
 
-### Parameters
-- `docstring`: The docstring content.
+```python
+def parse_numpy_docstring(docstring: str) -> ParsedDocstring:
+    """Parse a NumPy-style docstring.
 
-### Returns
-Parsed docstring dictionary with keys: `description`, `args`, `returns`, `raises`.
+    Args:
+        docstring: The docstring content.
+
+    Returns:
+        Dictionary with 'description', 'args', 'returns', 'raises' keys.
+    """
+```
 
 ## parse_docstring
 
-Parses a docstring, auto-detecting format.
+Parse a docstring, auto-detecting format.
 
-### Parameters
-- `docstring`: The docstring content.
+```python
+def parse_docstring(docstring: str) -> ParsedDocstring:
+    """Parse a docstring, auto-detecting format.
 
-### Returns
-Parsed docstring dictionary.
+    Args:
+        docstring: The docstring content.
+
+    Returns:
+        Parsed docstring dictionary.
+    """
+```
 
 ## API Reference
 
@@ -178,7 +255,7 @@ Type for argument info in parsed docstrings.
 
 
 <details>
-<summary>View Source (lines 15-19) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/api_docs.py#L15-L19">GitHub</a></summary>
+<summary>View Source (lines 15-19) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/api_docs.py#L15-L19">GitHub</a></summary>
 
 ```python
 class ArgInfo(TypedDict):
@@ -198,7 +275,7 @@ Type for parsed docstring result.
 
 
 <details>
-<summary>View Source (lines 22-28) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/api_docs.py#L22-L28">GitHub</a></summary>
+<summary>View Source (lines 22-28) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/api_docs.py#L22-L28">GitHub</a></summary>
 
 ```python
 class ParsedDocstring(TypedDict):
@@ -218,7 +295,7 @@ Represents a function parameter.
 
 
 <details>
-<summary>View Source (lines 32-38) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/api_docs.py#L32-L38">GitHub</a></summary>
+<summary>View Source (lines 32-38) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/api_docs.py#L32-L38">GitHub</a></summary>
 
 ```python
 class Parameter:
@@ -238,7 +315,7 @@ Represents a function/method signature.
 
 
 <details>
-<summary>View Source (lines 42-52) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/api_docs.py#L42-L52">GitHub</a></summary>
+<summary>View Source (lines 42-52) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/api_docs.py#L42-L52">GitHub</a></summary>
 
 ```python
 class FunctionSignature:
@@ -262,7 +339,7 @@ Represents a class signature.
 
 
 <details>
-<summary>View Source (lines 56-64) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/api_docs.py#L56-L64">GitHub</a></summary>
+<summary>View Source (lines 56-64) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/api_docs.py#L56-L64">GitHub</a></summary>
 
 ```python
 class ClassSignature:
@@ -286,7 +363,7 @@ Extracts API documentation from source files.
 
 
 <details>
-<summary>View Source (lines 483-537) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/api_docs.py#L483-L537">GitHub</a></summary>
+<summary>View Source (lines 483-537) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/api_docs.py#L483-L537">GitHub</a></summary>
 
 ```python
 class APIDocExtractor:
@@ -358,7 +435,7 @@ Initialize the extractor.
 
 
 <details>
-<summary>View Source (lines 483-537) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/api_docs.py#L483-L537">GitHub</a></summary>
+<summary>View Source (lines 483-537) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/api_docs.py#L483-L537">GitHub</a></summary>
 
 ```python
 class APIDocExtractor:
@@ -438,7 +515,7 @@ Extract API documentation from a source file.
 
 
 <details>
-<summary>View Source (lines 483-537) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/api_docs.py#L483-L537">GitHub</a></summary>
+<summary>View Source (lines 483-537) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/api_docs.py#L483-L537">GitHub</a></summary>
 
 ```python
 class APIDocExtractor:
@@ -521,7 +598,7 @@ Extract parameters from a Python function definition.
 
 
 <details>
-<summary>View Source (lines 67-140) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/api_docs.py#L67-L140">GitHub</a></summary>
+<summary>View Source (lines 67-140) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/api_docs.py#L67-L140">GitHub</a></summary>
 
 ```python
 def extract_python_parameters(func_node: Node, source: bytes) -> list[Parameter]:
@@ -621,7 +698,7 @@ Extract return type annotation from a Python function.
 
 
 <details>
-<summary>View Source (lines 143-156) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/api_docs.py#L143-L156">GitHub</a></summary>
+<summary>View Source (lines 143-156) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/api_docs.py#L143-L156">GitHub</a></summary>
 
 ```python
 def extract_python_return_type(func_node: Node, source: bytes) -> str | None:
@@ -661,7 +738,7 @@ Extract decorators from a Python function.
 
 
 <details>
-<summary>View Source (lines 159-180) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/api_docs.py#L159-L180">GitHub</a></summary>
+<summary>View Source (lines 159-180) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/api_docs.py#L159-L180">GitHub</a></summary>
 
 ```python
 def extract_python_decorators(func_node: Node, source: bytes) -> list[str]:
@@ -709,7 +786,7 @@ Extract docstring from a Python function or class.
 
 
 <details>
-<summary>View Source (lines 183-214) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/api_docs.py#L183-L214">GitHub</a></summary>
+<summary>View Source (lines 183-214) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/api_docs.py#L183-L214">GitHub</a></summary>
 
 ```python
 def extract_python_docstring(node: Node, source: bytes) -> str | None:
@@ -766,7 +843,7 @@ Parse a Google-style docstring.
 
 
 <details>
-<summary>View Source (lines 217-287) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/api_docs.py#L217-L287">GitHub</a></summary>
+<summary>View Source (lines 217-287) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/api_docs.py#L217-L287">GitHub</a></summary>
 
 ```python
 def parse_google_docstring(docstring: str) -> ParsedDocstring:
@@ -862,7 +939,7 @@ Parse a NumPy-style docstring.
 
 
 <details>
-<summary>View Source (lines 290-363) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/api_docs.py#L290-L363">GitHub</a></summary>
+<summary>View Source (lines 290-363) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/api_docs.py#L290-L363">GitHub</a></summary>
 
 ```python
 def parse_numpy_docstring(docstring: str) -> ParsedDocstring:
@@ -961,7 +1038,7 @@ Parse a docstring, auto-detecting format.
 
 
 <details>
-<summary>View Source (lines 366-385) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/api_docs.py#L366-L385">GitHub</a></summary>
+<summary>View Source (lines 366-385) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/api_docs.py#L366-L385">GitHub</a></summary>
 
 ```python
 def parse_docstring(docstring: str) -> ParsedDocstring:
@@ -1001,7 +1078,7 @@ Extract signature from a function node.
 |-----------|------|---------|-------------|
 | `func_node` | `Node` | - | The function AST node. |
 | `source` | `bytes` | - | Source code bytes. |
-| `language` | `Language` | - | Programming language. |
+| `language` | [`Language`](../models.md) | - | Programming language. |
 | `class_name` | `str | None` | `None` | Parent class name if this is a method. |
 
 **Returns:** `FunctionSignature | None`
@@ -1009,7 +1086,7 @@ Extract signature from a function node.
 
 
 <details>
-<summary>View Source (lines 388-432) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/api_docs.py#L388-L432">GitHub</a></summary>
+<summary>View Source (lines 388-432) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/api_docs.py#L388-L432">GitHub</a></summary>
 
 ```python
 def extract_function_signature(
@@ -1074,14 +1151,14 @@ Extract signature from a class node.
 |-----------|------|---------|-------------|
 | `class_node` | `Node` | - | The class AST node. |
 | `source` | `bytes` | - | Source code bytes. |
-| `language` | `Language` | - | Programming language. |
+| `language` | [`Language`](../models.md) | - | Programming language. |
 
 **Returns:** `ClassSignature | None`
 
 
 
 <details>
-<summary>View Source (lines 435-480) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/api_docs.py#L435-L480">GitHub</a></summary>
+<summary>View Source (lines 435-480) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/api_docs.py#L435-L480">GitHub</a></summary>
 
 ```python
 def extract_class_signature(
@@ -1152,7 +1229,7 @@ Format a parameter for display.
 
 
 <details>
-<summary>View Source (lines 540-554) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/api_docs.py#L540-L554">GitHub</a></summary>
+<summary>View Source (lines 540-554) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/api_docs.py#L540-L554">GitHub</a></summary>
 
 ```python
 def format_parameter(param: Parameter) -> str:
@@ -1192,7 +1269,7 @@ Format a function signature as a single line.
 
 
 <details>
-<summary>View Source (lines 557-569) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/api_docs.py#L557-L569">GitHub</a></summary>
+<summary>View Source (lines 557-569) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/api_docs.py#L557-L569">GitHub</a></summary>
 
 ```python
 def format_function_signature_line(sig: FunctionSignature) -> str:
@@ -1232,7 +1309,7 @@ Generate markdown API reference documentation.
 
 
 <details>
-<summary>View Source (lines 572-678) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/api_docs.py#L572-L678">GitHub</a></summary>
+<summary>View Source (lines 572-678) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/api_docs.py#L572-L678">GitHub</a></summary>
 
 ```python
 def generate_api_reference_markdown(
@@ -1365,7 +1442,7 @@ Get API documentation for a single file.
 
 
 <details>
-<summary>View Source (lines 681-696) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/api_docs.py#L681-L696">GitHub</a></summary>
+<summary>View Source (lines 681-696) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/api_docs.py#L681-L696">GitHub</a></summary>
 
 ```python
 def get_file_api_docs(file_path: Path) -> str | None:
@@ -1524,7 +1601,7 @@ Functions and methods in this file and their callers:
 - **`APIDocExtractor`**: called by `get_file_api_docs`
 - **`ArgInfo`**: called by `parse_google_docstring`, `parse_numpy_docstring`
 - **`ClassSignature`**: called by `extract_class_signature`
-- **`CodeParser`**: called by `APIDocExtractor.__init__`
+- **[`CodeParser`](../core/parser.md)**: called by `APIDocExtractor.__init__`
 - **`FunctionSignature`**: called by `extract_function_signature`
 - **`Parameter`**: called by `extract_python_parameters`
 - **`_is_inside_class`**: called by `APIDocExtractor.extract_from_file`
@@ -1536,12 +1613,12 @@ Functions and methods in this file and their callers:
 - **`extract_python_docstring`**: called by `extract_class_signature`, `extract_function_signature`
 - **`extract_python_parameters`**: called by `extract_function_signature`
 - **`extract_python_return_type`**: called by `extract_function_signature`
-- **`find_nodes_by_type`**: called by `APIDocExtractor.extract_from_file`, `extract_class_signature`
+- **[`find_nodes_by_type`](../core/parser.md)**: called by `APIDocExtractor.extract_from_file`, `extract_class_signature`
 - **`format_function_signature_line`**: called by `generate_api_reference_markdown`
 - **`format_parameter`**: called by `format_function_signature_line`
 - **`generate_api_reference_markdown`**: called by `get_file_api_docs`
-- **`get_node_name`**: called by `extract_class_signature`, `extract_function_signature`
-- **`get_node_text`**: called by `extract_class_signature`, `extract_python_decorators`, `extract_python_docstring`, `extract_python_parameters`, `extract_python_return_type`
+- **[`get_node_name`](../core/parser.md)**: called by `extract_class_signature`, `extract_function_signature`
+- **[`get_node_text`](../core/parser.md)**: called by `extract_class_signature`, `extract_python_decorators`, `extract_python_docstring`, `extract_python_parameters`, `extract_python_return_type`
 - **`group`**: called by `parse_google_docstring`, `parse_numpy_docstring`
 - **`lstrip`**: called by `extract_function_signature`
 - **`match`**: called by `parse_google_docstring`, `parse_numpy_docstring`
@@ -1643,14 +1720,14 @@ assert return_type == "str"
 
 | Entity | Type | Author | Date | Commit |
 |--------|------|--------|------|--------|
-| `ArgInfo` | class | Brian Breidenbach | 1 week ago | `31cf97a` Fix mypy type errors across... |
-| `ParsedDocstring` | class | Brian Breidenbach | 1 week ago | `31cf97a` Fix mypy type errors across... |
-| `APIDocExtractor` | class | Brian Breidenbach | 1 week ago | `31cf97a` Fix mypy type errors across... |
-| `extract_python_parameters` | function | Brian Breidenbach | 1 week ago | `31cf97a` Fix mypy type errors across... |
-| `extract_python_decorators` | function | Brian Breidenbach | 1 week ago | `31cf97a` Fix mypy type errors across... |
-| `parse_google_docstring` | function | Brian Breidenbach | 1 week ago | `31cf97a` Fix mypy type errors across... |
-| `parse_numpy_docstring` | function | Brian Breidenbach | 1 week ago | `31cf97a` Fix mypy type errors across... |
-| `parse_docstring` | function | Brian Breidenbach | 1 week ago | `31cf97a` Fix mypy type errors across... |
+| `ArgInfo` | class | Brian Breidenbach | 2 weeks ago | `31cf97a` Fix mypy type errors across... |
+| `ParsedDocstring` | class | Brian Breidenbach | 2 weeks ago | `31cf97a` Fix mypy type errors across... |
+| `APIDocExtractor` | class | Brian Breidenbach | 2 weeks ago | `31cf97a` Fix mypy type errors across... |
+| `extract_python_parameters` | function | Brian Breidenbach | 2 weeks ago | `31cf97a` Fix mypy type errors across... |
+| `extract_python_decorators` | function | Brian Breidenbach | 2 weeks ago | `31cf97a` Fix mypy type errors across... |
+| `parse_google_docstring` | function | Brian Breidenbach | 2 weeks ago | `31cf97a` Fix mypy type errors across... |
+| `parse_numpy_docstring` | function | Brian Breidenbach | 2 weeks ago | `31cf97a` Fix mypy type errors across... |
+| `parse_docstring` | function | Brian Breidenbach | 2 weeks ago | `31cf97a` Fix mypy type errors across... |
 | `Parameter` | class | Brian Breidenbach | 3 weeks ago | `c568951` Add input validation, type ... |
 | `FunctionSignature` | class | Brian Breidenbach | 3 weeks ago | `c568951` Add input validation, type ... |
 | `ClassSignature` | class | Brian Breidenbach | 3 weeks ago | `c568951` Add input validation, type ... |
@@ -1662,3 +1739,7 @@ assert return_type == "str"
 | `format_parameter` | function | Brian Breidenbach | 3 weeks ago | `4aeda22` Add API reference documenta... |
 | `format_function_signature_line` | function | Brian Breidenbach | 3 weeks ago | `4aeda22` Add API reference documenta... |
 | `get_file_api_docs` | function | Brian Breidenbach | 3 weeks ago | `4aeda22` Add API reference documenta... |
+
+## Relevant Source Files
+
+- `src/local_deepwiki/generators/api_docs.py:15-19`

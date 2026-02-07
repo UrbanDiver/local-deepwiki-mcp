@@ -1,93 +1,94 @@
 # File Overview
 
-This file, `src/local_deepwiki/generators/wiki_files.py`, is responsible for generating documentation for individual source code files within a repository. It integrates with Git repository information, code chunking, vector stores, and LLMs to produce rich documentation that includes inline source code blocks and contextual information.
+This module, `wiki_files`, is responsible for generating documentation for source code files by injecting inline source code blocks and building context-aware prompts for LLM-based documentation generation. It integrates with Git repository information, vector stores for code context, and various code analysis utilities to produce rich, source-linked documentation.
 
-The module is primarily used by the `wiki` generator and supports inline source code injection into API reference documentation. It leverages various core utilities for Git integration, vector storage, and API documentation generation.
+Key dependencies include:
+- [`local_deepwiki.config.Config`](../config.md)
+- `local_deepwiki.core.git_utils` for Git repository and blame information
+- [`local_deepwiki.core.vectorstore.VectorStore`](../core/vectorstore.md) for code context retrieval
+- `local_deepwiki.generators.api_docs` for API reference generation
+- `local_deepwiki.generators.callgraph` for call graph and callers information
+- `local_deepwiki.generators.context_builder` for context building
+- `local_deepwiki.generators.source_refs` for source references
+- `local_deepwiki.plugins.base` for plugin base functionality
 
-# Classes
+Functions in this file are called by:
+- `generate_file_docs` (used by wiki)
+- `_inject_inline_source_code` (used by test_wiki_files_coverage)
+- `_generate_blame_section` (used by test_wiki_files_coverage)
 
-## _ChunkMaps
+## Classes
+
+### _ChunkMaps
 
 Maps for looking up chunks by name.
 
-### Attributes
+**Attributes:**
+- `chunk_map: dict[str, CodeChunk]` - Maps chunk names to their corresponding [`CodeChunk`](../models.md) objects.
+- `class_map: dict[str, CodeChunk]` - Maps class names to their corresponding [`CodeChunk`](../models.md) objects.
+- `all_chunk_ids: set[str]` - Set of all chunk IDs for quick lookup.
 
-- `chunk_map: dict[str, CodeChunk]`
-- `class_map: dict[str, CodeChunk]`
-- `all_chunk_ids: set[str]`
+## Functions
 
-# Functions
-
-## _get_syntax_lang
+### _get_syntax_lang
 
 Get syntax highlighting language string.
 
-### Parameters
-
+**Parameters:**
 - `language: str | None` - Programming language name.
 
-### Returns
+**Returns:**
+- `str` - [Language](../models.md) string for markdown code blocks.
 
-- `str` - Language string for markdown code blocks.
-
-## _create_source_details
+### _create_source_details
 
 Create a collapsible source code block for a chunk.
 
-### Parameters
-
+**Parameters:**
 - `chunk: CodeChunk` - The code chunk.
 - `syntax_lang: str` - Syntax highlighting language.
 - `github_url: str | None` - Optional GitHub URL to link to source.
 
-### Returns
-
+**Returns:**
 - `str` - Markdown details block with source code.
 
-## _build_chunk_maps
+### _build_chunk_maps
 
 Build lookup maps for chunks by name.
 
-### Parameters
-
+**Parameters:**
 - `chunks: list[CodeChunk]` - List of code chunks.
 
-### Returns
-
+**Returns:**
 - `_ChunkMaps` - ChunkMaps with name-to-chunk mappings.
 
-## _extract_entity_from_heading
+### _extract_entity_from_heading
 
 Extract entity name from a markdown heading.
 
-### Parameters
-
+**Parameters:**
 - `line: str` - Heading line like "#### `name`" or "### class `name`".
 
-### Returns
-
+**Returns:**
 - `tuple[str | None, bool]` - Tuple of (entity_name, is_class_heading).
 
-## _find_matching_chunk
+### _find_matching_chunk
 
 Find the chunk that matches an entity name.
 
-### Parameters
-
-- `entity_name: str` - Name of the entity to find.
+**Parameters:**
+- `entity_name: str` - Name of the entity to [find](manifest.md).
 - `current_class: str | None` - Current class context, if any.
 - `maps: _ChunkMaps` - Chunk lookup maps.
 
-### Returns
-
+**Returns:**
 - `CodeChunk | None` - Matching chunk or None.
 
-## _find_insertion_point
+### _find_insertion_point
 
 Find where to insert source code and add it.
 
-### Parameters
-
+**Parameters:**
 - `lines: list[str]` - All content lines.
 - `start_idx: int` - Starting line index.
 - `result_lines: list[str]` - Result lines to append to.
@@ -95,16 +96,14 @@ Find where to insert source code and add it.
 - `syntax_lang: str` - Syntax highlighting language.
 - `chunk_url: str | None` - Optional GitHub URL.
 
-### Returns
-
+**Returns:**
 - `int` - New line index to continue from.
 
-## _append_unused_chunks
+### _append_unused_chunks
 
 Append unused chunks as additional source code section.
 
-### Parameters
-
+**Parameters:**
 - `result_lines: list[str]` - Lines to append to.
 - `chunks: list[CodeChunk]` - All chunks.
 - `all_chunk_ids: set[str]` - Set of all chunk IDs.
@@ -112,98 +111,105 @@ Append unused chunks as additional source code section.
 - `syntax_lang: str` - Syntax highlighting language.
 - `get_url: Callable[[CodeChunk], str | None]` - Function to get GitHub URL for a chunk.
 
-## _inject_inline_source_code
+**Returns:**
+- `None`
+
+### _inject_inline_source_code
 
 Inject collapsible source code after each function/class in the API Reference.
 
-### Parameters
-
+**Parameters:**
 - `content: str` - The markdown content to process.
 - `chunks: list[CodeChunk]` - List of code chunks from the file.
 - `language: str | None` - Programming language for syntax highlighting.
 - `repo_info: GitRepoInfo | None` - Optional git repo info for GitHub links.
 
-### Returns
-
+**Returns:**
 - `str` - Content with inline source code blocks injected.
 
-## _gather_file_context
+### get_chunk_url
+
+Generate a GitHub URL for a chunk.
+
+**Parameters:**
+- `chunk: CodeChunk` - The code chunk.
+
+**Returns:**
+- `str | None` - GitHub URL for the chunk or None if no repo info.
+
+### _gather_file_context
 
 Collect chunks, imports, and related context for the file.
 
-### Parameters
-
+**Parameters:**
 - `file_info: FileInfo` - File status information.
 - `index_status: IndexStatus` - Index status with repo information.
 - `vector_store: VectorStore` - Vector store with indexed code.
 
-### Returns
-
+**Returns:**
 - `tuple[list[CodeChunk], str, str] | None` - Tuple of (chunks_list, context_text, rich_context_text) or None if no content.
 
-## _build_llm_prompt
+### _build_llm_prompt
 
 Construct the LLM prompt with all context.
 
-### Parameters
-
+**Parameters:**
 - `file_info: FileInfo` - File status information.
 - `context: str` - Code context text.
 - `rich_context_text: str` - Rich context with imports and callers.
 
-### Returns
-
+**Returns:**
 - `str` - The formatted LLM prompt string.
 
-## _generate_and_format_doc
+### _generate_and_format_doc
 
 Call LLM and format the response.
 
-### Parameters
-
+**Parameters:**
 - `prompt: str` - The LLM prompt.
 - `llm: LLMProvider` - LLM provider for generation.
 - `system_prompt: str` - System prompt for LLM.
 
-### Returns
-
+**Returns:**
 - `str` - The formatted documentation content.
 
-# Integration
+## Integration
 
-This file is part of the `local_deepwiki` documentation generation system. It integrates with:
+This module integrates with the broader codebase by:
+1. Using [`local_deepwiki.config.Config`](../config.md) for configuration management.
+2. Leveraging `local_deepwiki.core.git_utils` to fetch Git repository information and build source URLs.
+3. Accessing [`local_deepwiki.core.vectorstore.VectorStore`](../core/vectorstore.md) for retrieving code context.
+4. Utilizing `local_deepwiki.generators.api_docs`, `local_deepwiki.generators.callgraph`, and `local_deepwiki.generators.context_builder` for gathering and processing code information.
+5. Using `local_deepwiki.plugins.base` for plugin architecture support.
 
-- Core Git utilities (`local_deepwiki.core.git_utils`) for repository information and blame data
-- Vector store (`local_deepwiki.core.vectorstore`) for code context retrieval
-- API documentation generation (`local_deepwiki.generators.api_docs`)
-- Call graph generation (`local_deepwiki.generators.callgraph`)
-- Context building (`local_deepwiki.generators.context_builder`)
+The [main](../export/pdf.md) entry point for documentation generation is `generate_file_docs`, which orchestrates the process of gathering file context, building prompts, and generating documentation using an LLM.
 
-It is used by the `wiki` generator and supports inline source code injection into API references via the `_inject_inline_source_code` function.
+## Usage Examples
 
-# Usage Examples
-
-## Generating Documentation for a File
+### Generating Documentation for a File
 
 ```python
-from local_deepwiki.generators.wiki_files import _gather_file_context, _build_llm_prompt, _generate_and_format_doc
-from local_deepwiki.core.vectorstore import VectorStore
-from local_deepwiki.core.llm import LLMProvider
+from local_deepwiki.generators.wiki_files import generate_file_docs
 
-# Assuming file_info, index_status, and vector_store are available
-chunks, context, rich_context = await _gather_file_context(file_info, index_status, vector_store)
-
-prompt = _build_llm_prompt(file_info, context, rich_context)
-doc_content = await _generate_and_format_doc(prompt, llm_provider, system_prompt)
+# Assuming llm_provider, vector_store, and index_status are properly initialized
+doc_content = await generate_file_docs(file_info, index_status, vector_store, llm_provider)
 ```
 
-## Injecting Inline Source Code
+### Injecting Inline Source Code
 
 ```python
 from local_deepwiki.generators.wiki_files import _inject_inline_source_code
 
-# Assuming content, chunks, language, and repo_info are available
-updated_content = _inject_inline_source_code(content, chunks, language, repo_info)
+# Process markdown content with inline source code blocks
+processed_content = _inject_inline_source_code(content, chunks, language, repo_info)
+```
+
+### Building LLM Prompt
+
+```python
+from local_deepwiki.generators.wiki_files import _build_llm_prompt
+
+prompt = _build_llm_prompt(file_info, context, rich_context_text)
 ```
 
 ## API Reference
@@ -217,16 +223,16 @@ def get_chunk_url(chunk: CodeChunk) -> str | None
 ```
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `chunk` | `CodeChunk` | - | - |
+| `chunk` | [`CodeChunk`](../models.md) | - | - |
 
 **Returns:** `str | None`
 
 
 
 <details>
-<summary>View Source (lines 323-326) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_files.py#L323-L326">GitHub</a></summary>
+<summary>View Source (lines 323-326) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_files.py#L323-L326">GitHub</a></summary>
 
 ```python
 def get_chunk_url(chunk: CodeChunk) -> str | None:
@@ -246,16 +252,16 @@ async def generate_single_file_doc(file_info: FileInfo, index_status: IndexStatu
 Generate documentation for a single source file.  Coordinates the documentation generation pipeline: 1. Check if regeneration is needed 2. Gather file context (chunks, imports, related context) 3. Build LLM prompt with all context 4. Generate and format documentation via LLM 5. Add enrichments (diagrams, call graphs, examples, blame) 6. Inject inline source code and register entities
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `file_info` | `FileInfo` | - | File status information. |
-| `index_status` | `IndexStatus` | - | Index status with repo information. |
-| `vector_store` | `VectorStore` | - | Vector store with indexed code. |
-| `llm` | `LLMProvider` | - | LLM provider for generation. |
+| `file_info` | [`FileInfo`](../models.md) | - | File status information. |
+| `index_status` | [`IndexStatus`](../models.md) | - | Index status with repo information. |
+| `vector_store` | [`VectorStore`](../core/vectorstore.md) | - | Vector store with indexed code. |
+| `llm` | [`LLMProvider`](../providers/base.md) | - | LLM provider for generation. |
 | `system_prompt` | `str` | - | System prompt for LLM. |
 | `status_manager` | `"WikiStatusManager"` | - | Wiki status manager for incremental updates. |
-| `entity_registry` | `EntityRegistry` | - | Entity registry for cross-linking. |
-| `config` | `Config` | - | Configuration. |
+| `entity_registry` | [`EntityRegistry`](crosslinks.md) | - | Entity registry for cross-linking. |
+| `config` | [`Config`](../config.md) | - | Configuration. |
 | `full_rebuild` | `bool` | - | If True, regenerate even if unchanged. |
 
 **Returns:** `tuple[WikiPage | None, bool]`
@@ -263,7 +269,7 @@ Generate documentation for a single source file.  Coordinates the documentation 
 
 
 <details>
-<summary>View Source (lines 561-672) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_files.py#L561-L672">GitHub</a></summary>
+<summary>View Source (lines 561-672) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_files.py#L561-L672">GitHub</a></summary>
 
 ```python
 async def generate_single_file_doc(
@@ -391,16 +397,16 @@ async def generate_file_docs(index_status: IndexStatus, vector_store: VectorStor
 Generate documentation for individual source files.  Uses parallel LLM calls for faster generation, controlled by config.wiki.max_concurrent_llm_calls. Pages are written to disk immediately as they complete if write_callback is provided.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `index_status` | `IndexStatus` | - | Index status with file information. |
-| `vector_store` | `VectorStore` | - | Vector store with indexed code. |
-| `llm` | `LLMProvider` | - | LLM provider for generation. |
+| `index_status` | [`IndexStatus`](../models.md) | - | Index status with file information. |
+| `vector_store` | [`VectorStore`](../core/vectorstore.md) | - | Vector store with indexed code. |
+| `llm` | [`LLMProvider`](../providers/base.md) | - | LLM provider for generation. |
 | `system_prompt` | `str` | - | System prompt for LLM. |
 | `status_manager` | `"WikiStatusManager"` | - | Wiki status manager for incremental updates. |
-| `entity_registry` | `EntityRegistry` | - | Entity registry for cross-linking. |
-| `config` | `Config` | - | Configuration. |
-| `progress_callback` | `ProgressCallback | None` | `None` | Optional progress callback. |
+| `entity_registry` | [`EntityRegistry`](crosslinks.md) | - | Entity registry for cross-linking. |
+| `config` | [`Config`](../config.md) | - | Configuration. |
+| [`progress_callback`](../handlers.md) | `ProgressCallback | None` | `None` | Optional progress callback. |
 | `full_rebuild` | `bool` | `False` | If True, regenerate all pages. |
 | `write_callback` | `WriteCallback | None` | `None` | Optional async callback to write pages immediately as they complete. |
 | `generation_progress` | `"GenerationProgress | None"` | `None` | Optional live progress tracker for status updates. |
@@ -410,7 +416,7 @@ Generate documentation for individual source files.  Uses parallel LLM calls for
 
 
 <details>
-<summary>View Source (lines 746-855) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_files.py#L746-L855">GitHub</a></summary>
+<summary>View Source (lines 746-855) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_files.py#L746-L855">GitHub</a></summary>
 
 ```python
 async def generate_file_docs(
@@ -536,9 +542,9 @@ async def generate_with_semaphore(file_info: FileInfo) -> tuple[FileInfo, WikiPa
 Generate doc for a file, returning file_info for tracking.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `file_info` | `FileInfo` | - | - |
+| `file_info` | [`FileInfo`](../models.md) | - | - |
 
 **Returns:** `tuple[FileInfo, WikiPage | None, bool]`
 
@@ -546,7 +552,7 @@ Generate doc for a file, returning file_info for tracking.
 
 
 <details>
-<summary>View Source (lines 796-813) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_files.py#L796-L813">GitHub</a></summary>
+<summary>View Source (lines 796-813) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_files.py#L796-L813">GitHub</a></summary>
 
 ```python
 async def generate_with_semaphore(
@@ -665,7 +671,7 @@ Functions and methods in this file and their callers:
 
 - **`Path`**: called by `_gather_file_context`, `_generate_files_index`, `generate_single_file_doc`
 - **`Semaphore`**: called by `generate_file_docs`
-- **`WikiPage`**: called by `_create_files_index_page`, `generate_single_file_doc`
+- **[`WikiPage`](../export/streaming.md)**: called by `_create_files_index_page`, `generate_single_file_doc`
 - **`_ChunkMaps`**: called by `_build_chunk_maps`
 - **`_append_unused_chunks`**: called by `_inject_inline_source_code`
 - **`_build_chunk_maps`**: called by `_inject_inline_source_code`
@@ -686,30 +692,30 @@ Functions and methods in this file and their callers:
 - **`_is_test_file`**: called by `_filter_significant_files`
 - **`add`**: called by `_build_chunk_maps`, `_inject_inline_source_code`
 - **`as_completed`**: called by `generate_file_docs`
-- **`build_file_context`**: called by `_gather_file_context`
-- **`build_source_url`**: called by `_inject_inline_source_code`, `get_chunk_url`
+- **[`build_file_context`](context_builder.md)**: called by `_gather_file_context`
+- **[`build_source_url`](../core/git_utils.md)**: called by `_inject_inline_source_code`, `get_chunk_url`
 - **`complete_file`**: called by `generate_file_docs`
 - **`complete_phase`**: called by `generate_file_docs`
 - **`create_task`**: called by `generate_file_docs`
 - **`exists`**: called by `_generate_file_enrichments`
-- **`format_blame_date`**: called by `_generate_blame_section`
-- **`format_context_for_llm`**: called by `_gather_file_context`
+- **[`format_blame_date`](../core/git_utils.md)**: called by `_generate_blame_section`
+- **[`format_context_for_llm`](context_builder.md)**: called by `_gather_file_context`
 - **`generate`**: called by `_generate_and_format_doc`
-- **`generate_class_diagram`**: called by `_generate_file_enrichments`
+- **[`generate_class_diagram`](diagrams.md)**: called by `_generate_file_enrichments`
 - **`generate_single_file_doc`**: called by `generate_file_docs`, `generate_with_semaphore`
 - **`generate_with_semaphore`**: called by `generate_file_docs`
 - **`get_chunk_url`**: called by `_inject_inline_source_code`
 - **`get_chunks_by_file`**: called by `_gather_file_context`, `generate_single_file_doc`
-- **`get_file_api_docs`**: called by `_generate_file_enrichments`
-- **`get_file_call_graph`**: called by `_generate_file_enrichments`
-- **`get_file_callers`**: called by `_generate_file_enrichments`
-- **`get_file_entity_blame`**: called by `_generate_blame_section`
-- **`get_file_examples`**: called by `_generate_file_enrichments`
-- **`get_repo_info`**: called by `generate_single_file_doc`
+- **[`get_file_api_docs`](api_docs.md)**: called by `_generate_file_enrichments`
+- **[`get_file_call_graph`](callgraph.md)**: called by `_generate_file_enrichments`
+- **[`get_file_callers`](callgraph.md)**: called by `_generate_file_enrichments`
+- **[`get_file_entity_blame`](../core/git_utils.md)**: called by `_generate_blame_section`
+- **[`get_file_examples`](test_examples.md)**: called by `_generate_file_enrichments`
+- **[`get_repo_info`](../core/git_utils.md)**: called by `generate_single_file_doc`
 - **`get_url`**: called by `_append_unused_chunks`
 - **`load_existing_page`**: called by `generate_single_file_doc`
 - **`needs_regeneration`**: called by `generate_single_file_doc`
-- **`progress_callback`**: called by `generate_file_docs`
+- **[`progress_callback`](../handlers.md)**: called by `generate_file_docs`
 - **`record_page_status`**: called by `_create_files_index_page`, `generate_single_file_doc`
 - **`register_from_chunks`**: called by `generate_single_file_doc`
 - **`setdefault`**: called by `_generate_files_index`
@@ -833,17 +839,17 @@ assert "def my_func():" in result
 
 | Entity | Type | Author | Date | Commit |
 |--------|------|--------|------|--------|
-| `_is_test_file` | function | Brian Breidenbach | 1 week ago | `1e08705` Refactor generate_file_docs... |
-| `_filter_significant_files` | function | Brian Breidenbach | 1 week ago | `1e08705` Refactor generate_file_docs... |
-| `_create_files_index_page` | function | Brian Breidenbach | 1 week ago | `1e08705` Refactor generate_file_docs... |
-| `generate_file_docs` | function | Brian Breidenbach | 1 week ago | `1e08705` Refactor generate_file_docs... |
-| `_ChunkMaps` | class | Brian Breidenbach | 1 week ago | `8c219ae` Refactor long functions in ... |
-| `_build_chunk_maps` | function | Brian Breidenbach | 1 week ago | `8c219ae` Refactor long functions in ... |
-| `_extract_entity_from_heading` | function | Brian Breidenbach | 1 week ago | `8c219ae` Refactor long functions in ... |
-| `_find_matching_chunk` | function | Brian Breidenbach | 1 week ago | `8c219ae` Refactor long functions in ... |
-| `_find_insertion_point` | function | Brian Breidenbach | 1 week ago | `8c219ae` Refactor long functions in ... |
-| `_append_unused_chunks` | function | Brian Breidenbach | 1 week ago | `8c219ae` Refactor long functions in ... |
-| `_inject_inline_source_code` | function | Brian Breidenbach | 1 week ago | `8c219ae` Refactor long functions in ... |
+| `_is_test_file` | function | Brian Breidenbach | 2 weeks ago | `1e08705` Refactor generate_file_docs... |
+| `_filter_significant_files` | function | Brian Breidenbach | 2 weeks ago | `1e08705` Refactor generate_file_docs... |
+| `_create_files_index_page` | function | Brian Breidenbach | 2 weeks ago | `1e08705` Refactor generate_file_docs... |
+| `generate_file_docs` | function | Brian Breidenbach | 2 weeks ago | `1e08705` Refactor generate_file_docs... |
+| `_ChunkMaps` | class | Brian Breidenbach | 2 weeks ago | `8c219ae` Refactor long functions in ... |
+| `_build_chunk_maps` | function | Brian Breidenbach | 2 weeks ago | `8c219ae` Refactor long functions in ... |
+| `_extract_entity_from_heading` | function | Brian Breidenbach | 2 weeks ago | `8c219ae` Refactor long functions in ... |
+| `_find_matching_chunk` | function | Brian Breidenbach | 2 weeks ago | `8c219ae` Refactor long functions in ... |
+| `_find_insertion_point` | function | Brian Breidenbach | 2 weeks ago | `8c219ae` Refactor long functions in ... |
+| `_append_unused_chunks` | function | Brian Breidenbach | 2 weeks ago | `8c219ae` Refactor long functions in ... |
+| `_inject_inline_source_code` | function | Brian Breidenbach | 2 weeks ago | `8c219ae` Refactor long functions in ... |
 | `_gather_file_context` | function | Brian Breidenbach | 2 weeks ago | `85c8346` Performance optimizations a... |
 | `_build_llm_prompt` | function | Brian Breidenbach | 2 weeks ago | `85c8346` Performance optimizations a... |
 | `_generate_and_format_doc` | function | Brian Breidenbach | 2 weeks ago | `85c8346` Performance optimizations a... |
@@ -873,7 +879,7 @@ def _get_syntax_lang(language: str | None) -> str:
         language: Programming language name.
 
     Returns:
-        Language string for markdown code blocks.
+        [Language](../models.md) string for markdown code blocks.
     """
     lang_map = {
         "python": "python",
@@ -904,7 +910,7 @@ def _get_syntax_lang(language: str | None) -> str:
 
 ```python
 def _create_source_details(
-    chunk: CodeChunk, syntax_lang: str, github_url: str | None = None
+    chunk: [CodeChunk](../models.md), syntax_lang: str, github_url: str | None = None
 ) -> str:
     """Create a collapsible source code block for a chunk.
 
@@ -944,8 +950,8 @@ def _create_source_details(
 class _ChunkMaps:
     """Maps for looking up chunks by name."""
 
-    chunk_map: dict[str, CodeChunk]
-    class_map: dict[str, CodeChunk]
+    chunk_map: dict[str, [CodeChunk](../models.md)]
+    class_map: dict[str, [CodeChunk](../models.md)]
     all_chunk_ids: set[str]
 ```
 
@@ -958,7 +964,7 @@ class _ChunkMaps:
 <summary>View Source (lines 109-136) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_files.py#L109-L136">GitHub</a></summary>
 
 ```python
-def _build_chunk_maps(chunks: list[CodeChunk]) -> _ChunkMaps:
+def _build_chunk_maps(chunks: list[[CodeChunk](../models.md)]) -> _ChunkMaps:
     """Build lookup maps for chunks by name.
 
     Args:
@@ -967,22 +973,22 @@ def _build_chunk_maps(chunks: list[CodeChunk]) -> _ChunkMaps:
     Returns:
         ChunkMaps with name-to-chunk mappings.
     """
-    chunk_map: dict[str, CodeChunk] = {}
-    class_map: dict[str, CodeChunk] = {}
+    chunk_map: dict[str, [CodeChunk](../models.md)] = {}
+    class_map: dict[str, [CodeChunk](../models.md)] = {}
     all_chunk_ids: set[str] = set()
 
     for chunk in chunks:
         if chunk.name and chunk.chunk_type in (
-            ChunkType.CLASS,
-            ChunkType.FUNCTION,
-            ChunkType.METHOD,
+            [ChunkType](../models.md).CLASS,
+            [ChunkType](../models.md).FUNCTION,
+            [ChunkType](../models.md).METHOD,
         ):
             all_chunk_ids.add(chunk.id)
             chunk_map[chunk.name] = chunk
             if chunk.parent_name:
                 qualified_name = f"{chunk.parent_name}.{chunk.name}"
                 chunk_map[qualified_name] = chunk
-            if chunk.chunk_type == ChunkType.CLASS:
+            if chunk.chunk_type == [ChunkType](../models.md).CLASS:
                 class_map[chunk.name] = chunk
 
     return _ChunkMaps(chunk_map, class_map, all_chunk_ids)
@@ -1006,7 +1012,7 @@ def _extract_entity_from_heading(line: str) -> tuple[str | None, bool]:
     Returns:
         Tuple of (entity_name, is_class_heading).
     """
-    start = line.find("`") + 1
+    start = line.[find](manifest.md)("`") + 1
     end = line.find("`", start)
     if start <= 0 or end <= start:
         return None, False
@@ -1038,18 +1044,18 @@ def _find_matching_chunk(
     entity_name: str,
     current_class: str | None,
     maps: _ChunkMaps,
-) -> CodeChunk | None:
+) -> [CodeChunk](../models.md) | None:
     """Find the chunk that matches an entity name.
 
     Args:
-        entity_name: Name of the entity to find.
+        entity_name: Name of the entity to [find](manifest.md).
         current_class: Current class context, if any.
         maps: Chunk lookup maps.
 
     Returns:
         Matching chunk or None.
     """
-    matched_chunk: CodeChunk | None = None
+    matched_chunk: [CodeChunk](../models.md) | None = None
 
     # Try qualified name first for methods
     if current_class and entity_name != current_class:
@@ -1083,7 +1089,7 @@ def _find_insertion_point(
     lines: list[str],
     start_idx: int,
     result_lines: list[str],
-    chunk: CodeChunk,
+    chunk: [CodeChunk](../models.md),
     syntax_lang: str,
     chunk_url: str | None,
 ) -> int:
@@ -1148,11 +1154,11 @@ def _find_insertion_point(
 ```python
 def _append_unused_chunks(
     result_lines: list[str],
-    chunks: list[CodeChunk],
+    chunks: list[[CodeChunk](../models.md)],
     all_chunk_ids: set[str],
     used_chunks: set[str],
     syntax_lang: str,
-    get_url: Callable[[CodeChunk], str | None],
+    get_url: Callable[[[CodeChunk](../models.md)], str | None],
 ) -> None:
     """Append unused chunks as additional source code section.
 
@@ -1177,7 +1183,7 @@ def _append_unused_chunks(
     result_lines.append("")
 
     for chunk in sorted(unused, key=lambda c: c.start_line):
-        heading = "###" if chunk.chunk_type == ChunkType.CLASS else "####"
+        heading = "###" if chunk.chunk_type == [ChunkType](../models.md).CLASS else "####"
         result_lines.append(f"{heading} `{chunk.name}`")
         result_lines.append("")
         result_lines.append(_create_source_details(chunk, syntax_lang, get_url(chunk)))
@@ -1195,9 +1201,9 @@ def _append_unused_chunks(
 ```python
 def _inject_inline_source_code(
     content: str,
-    chunks: list[CodeChunk],
+    chunks: list[[CodeChunk](../models.md)],
     language: str | None,
-    repo_info: GitRepoInfo | None = None,
+    repo_info: [GitRepoInfo](../core/git_utils.md) | None = None,
 ) -> str:
     """Inject collapsible source code after each function/class in the API Reference.
 
@@ -1217,10 +1223,10 @@ def _inject_inline_source_code(
     syntax_lang = _get_syntax_lang(language)
     used_chunks: set[str] = set()
 
-    def get_chunk_url(chunk: CodeChunk) -> str | None:
+    def get_chunk_url(chunk: [CodeChunk](../models.md)) -> str | None:
         if repo_info is None:
             return None
-        return build_source_url(repo_info, chunk.file_path, chunk.start_line, chunk.end_line)
+        return [build_source_url](../core/git_utils.md)(repo_info, chunk.file_path, chunk.start_line, chunk.end_line)
 
     lines = content.split("\n")
     result_lines: list[str] = []
@@ -1272,10 +1278,10 @@ def _inject_inline_source_code(
 
 ```python
 async def _gather_file_context(
-    file_info: FileInfo,
-    index_status: IndexStatus,
-    vector_store: VectorStore,
-) -> tuple[list[CodeChunk], str, str] | None:
+    file_info: [FileInfo](../models.md),
+    index_status: [IndexStatus](../models.md),
+    vector_store: [VectorStore](../core/vectorstore.md),
+) -> tuple[list[[CodeChunk](../models.md)], str, str] | None:
     """Collect chunks, imports, and related context for the file.
 
     Args:
@@ -1305,13 +1311,13 @@ async def _gather_file_context(
     context = "\n\n".join(context_parts)
 
     # Build rich context with imports, callers, and related files
-    rich_context = await build_file_context(
+    rich_context = await [build_file_context](context_builder.md)(
         file_path=file_info.path,
         chunks=file_chunks,
         repo_path=Path(index_status.repo_path),
         vector_store=vector_store,
     )
-    rich_context_text = format_context_for_llm(rich_context)
+    rich_context_text = [format_context_for_llm](context_builder.md)(rich_context)
 
     return file_chunks, context, rich_context_text
 ```
@@ -1326,7 +1332,7 @@ async def _gather_file_context(
 
 ```python
 def _build_llm_prompt(
-    file_info: FileInfo,
+    file_info: [FileInfo](../models.md),
     context: str,
     rich_context_text: str,
 ) -> str:
@@ -1342,7 +1348,7 @@ def _build_llm_prompt(
     """
     return f"""Generate documentation for the file '{file_info.path}' based on the code and context provided.
 
-Language: {file_info.language}
+[Language](../models.md): {file_info.language}
 Total code chunks: {file_info.chunk_count}
 
 {rich_context_text}
@@ -1360,7 +1366,7 @@ CRITICAL CONSTRAINTS:
 - ONLY document classes, methods, and functions that appear in the code above
 - Do NOT invent additional methods or parameters not shown
 - Do NOT fabricate usage examples with APIs not visible in the code
-- Write class names as plain text (e.g., "The WikiGenerator class") for cross-linking
+- Write class names as plain text (e.g., "The [WikiGenerator](wiki.md) class") for cross-linking
 - Use the dependency and caller information to explain integration, but don't fabricate details
 - Only use backticks for actual code snippets
 
@@ -1379,7 +1385,7 @@ Do NOT include mermaid class diagrams - they will be auto-generated."""
 ```python
 async def _generate_and_format_doc(
     prompt: str,
-    llm: LLMProvider,
+    llm: [LLMProvider](../providers/base.md),
     system_prompt: str,
 ) -> str:
     """Call LLM and format the response.
@@ -1419,7 +1425,7 @@ def _generate_file_enrichments(
     abs_file_path: Path,
     repo_path: Path,
     file_path: str,
-    all_file_chunks: list[CodeChunk],
+    all_file_chunks: list[[CodeChunk](../models.md)],
 ) -> str:
     """Generate diagrams, call graphs, examples, and blame info.
 
@@ -1435,23 +1441,23 @@ def _generate_file_enrichments(
     """
     # Generate API reference section with type signatures
     if abs_file_path.exists():
-        api_docs = get_file_api_docs(abs_file_path)
+        api_docs = [get_file_api_docs](api_docs.md)(abs_file_path)
         if api_docs:
             content += "\n\n## API Reference\n\n" + api_docs
 
     # Generate class diagram if file has classes
-    class_diagram = generate_class_diagram(all_file_chunks)
+    class_diagram = [generate_class_diagram](diagrams.md)(all_file_chunks)
     if class_diagram:
         content += "\n\n## Class Diagram\n\n" + class_diagram
 
     # Generate call graph diagram and used-by information
     if abs_file_path.exists():
-        call_graph = get_file_call_graph(abs_file_path, repo_path)
+        call_graph = [get_file_call_graph](callgraph.md)(abs_file_path, repo_path)
         if call_graph:
             content += "\n\n## Call Graph\n\n```mermaid\n" + call_graph + "\n```"
 
         # Add "Used by" section showing callers for each function
-        callers_map = get_file_callers(abs_file_path, repo_path)
+        callers_map = [get_file_callers](callgraph.md)(abs_file_path, repo_path)
         if callers_map:
             used_by_lines = [
                 "## Used By",
@@ -1464,13 +1470,13 @@ def _generate_file_enrichments(
                 if callers:
                     caller_list = ", ".join(f"`{c}`" for c in sorted(callers))
                     used_by_lines.append(f"- **`{callee}`**: called by {caller_list}")
-            if len(used_by_lines) > 4:  # More than just the header
+            if len(used_by_lines) > 4:  # More than just the [header](../../../coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.md)
                 content += "\n\n" + "\n".join(used_by_lines)
 
     # Add usage examples from test files
     entity_names = [chunk.name for chunk in all_file_chunks if chunk.name and len(chunk.name) > 2]
     if entity_names:
-        examples_md = get_file_examples(
+        examples_md = [get_file_examples](test_examples.md)(
             source_file=abs_file_path,
             repo_root=repo_path,
             entity_names=entity_names,
@@ -1524,7 +1530,7 @@ def _is_test_file(path: str) -> bool:
 <summary>View Source (lines 694-717) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_files.py#L694-L717">GitHub</a></summary>
 
 ```python
-def _filter_significant_files(files: list[FileInfo], max_files: int) -> list[FileInfo]:
+def _filter_significant_files(files: list[[FileInfo](../models.md)], max_files: int) -> list[[FileInfo](../models.md)]:
     """Filter and limit files for documentation generation.
 
     Args:
@@ -1560,10 +1566,10 @@ def _filter_significant_files(files: list[FileInfo], max_files: int) -> list[Fil
 
 ```python
 def _create_files_index_page(
-    pages: list[WikiPage],
-    significant_files: list[FileInfo],
-    status_manager: "WikiStatusManager",
-) -> WikiPage:
+    pages: list[[WikiPage](../export/streaming.md)],
+    significant_files: list[[FileInfo](../models.md)],
+    status_manager: "[WikiStatusManager](wiki_status.md)",
+) -> [WikiPage](../export/streaming.md):
     """Create the files index page.
 
     Args:
@@ -1572,10 +1578,10 @@ def _create_files_index_page(
         status_manager: Status manager for recording.
 
     Returns:
-        Files index WikiPage.
+        Files index [WikiPage](../export/streaming.md).
     """
     all_file_paths = [f.path for f in significant_files]
-    files_index = WikiPage(
+    files_index = [WikiPage](../export/streaming.md)(
         path="files/index.md",
         title="Source Files",
         content=_generate_files_index(pages),
@@ -1597,7 +1603,7 @@ def _create_files_index_page(
 def _generate_blame_section(
     repo_path: Path,
     file_path: str,
-    chunks: list[CodeChunk],
+    chunks: list[[CodeChunk](../models.md)],
 ) -> str | None:
     """Generate a "Last Modified" section with git blame info.
 
@@ -1614,9 +1620,9 @@ def _generate_blame_section(
 
     for chunk in chunks:
         if chunk.name and chunk.chunk_type in (
-            ChunkType.CLASS,
-            ChunkType.FUNCTION,
-            ChunkType.METHOD,
+            [ChunkType](../models.md).CLASS,
+            [ChunkType](../models.md).FUNCTION,
+            [ChunkType](../models.md).METHOD,
         ):
             entities.append(
                 (
@@ -1631,7 +1637,7 @@ def _generate_blame_section(
         return None
 
     # Get blame info for all entities
-    blame_infos = get_file_entity_blame(repo_path, file_path, entities)
+    blame_infos = [get_file_entity_blame](../core/git_utils.md)(repo_path, file_path, entities)
 
     if not blame_infos:
         return None
@@ -1651,7 +1657,7 @@ def _generate_blame_section(
         entity_name = blame.entity_name
         entity_type = blame.entity_type
         author = blame.last_modified_by
-        date_str = format_blame_date(blame.last_modified_date)
+        date_str = [format_blame_date](../core/git_utils.md)(blame.last_modified_date)
         commit_short = blame.commit_hash[:7]
 
         # Truncate long author names
@@ -1680,7 +1686,7 @@ def _generate_blame_section(
 <summary>View Source (lines 935-968) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_files.py#L935-L968">GitHub</a></summary>
 
 ```python
-def _generate_files_index(file_pages: list[WikiPage]) -> str:
+def _generate_files_index(file_pages: list[[WikiPage](../export/streaming.md)]) -> str:
     """Generate index page for file documentation.
 
     Args:
@@ -1695,7 +1701,7 @@ def _generate_files_index(file_pages: list[WikiPage]) -> str:
     ]
 
     # Group by directory
-    by_dir: dict[str, list[WikiPage]] = {}
+    by_dir: dict[str, list[[WikiPage](../export/streaming.md)]] = {}
     for page in file_pages:
         if page.path == "files/index.md":
             continue
@@ -1718,3 +1724,6 @@ def _generate_files_index(file_pages: list[WikiPage]) -> str:
 
 </details>
 
+## Relevant Source Files
+
+- `src/local_deepwiki/generators/wiki_files.py:101-106`

@@ -1,103 +1,122 @@
 # File Overview
 
-This file defines the `WikiStatusManager` class, which is responsible for managing the status of wiki generation, including tracking file hashes, page statuses, and handling incremental updates. It provides functionality for loading and saving generation status, computing content hashes, and determining whether pages need regeneration based on changes in source files.
+This file defines the `WikiStatusManager` class, which is responsible for managing the status of wiki generation, including tracking file hashes, page statuses, and handling incremental updates. It provides functionality to load and save generation status, compute content hashes, and determine if regeneration is needed.
 
-The class integrates with the `local_deepwiki.models` module for data models like `WikiGenerationStatus`, `WikiPage`, and `WikiPageStatus`, and uses standard Python libraries for file I/O, hashing, and asynchronous operations.
+## Dependencies
+
+This file imports:
+- `asyncio`
+- `hashlib`
+- `json`
+- `time`
+- `Path` from `pathlib`
+- `Any` from `typing`
+- [`get_logger`](../logging.md) from `local_deepwiki.logging`
+- [`WikiGenerationStatus`](../models.md), [`WikiPage`](../export/streaming.md), [`WikiPageStatus`](../models.md) from `local_deepwiki.models`
+
+## Related Files
+
+- `src/local_deepwiki/core/__init__.py`
+- `src/local_deepwiki/generators/source_refs.py`
+- `src/local_deepwiki/plugins/base.py`
+- `tests/__init__.py`
+- `tests/test_plugins.py`
 
 # Classes
 
 ## WikiStatusManager
 
-The `WikiStatusManager` class manages the status of wiki generation, enabling incremental updates by tracking file hashes, page statuses, and previous generation states.
+The `WikiStatusManager` class manages the status of wiki generation, including tracking file hashes, page statuses, and handling incremental updates.
 
-### Key Methods
+### Methods
 
-- `__init__(self, wiki_path: Path)`  
-  Initializes the status manager with a path to the wiki output directory.
+#### `__init__(self, wiki_path: Path)`
 
-- `file_hashes(self) -> dict[str, str]`  
-  Gets the current file hashes map.
+Initialize the status manager.
 
-- `file_hashes(self, value: dict[str, str]) -> None`  
-  Sets the file hashes map.
+**Parameters:**
+- `wiki_path`: Path to wiki output directory.
 
-- `file_line_info(self) -> dict[str, tuple[int, int]]`  
-  Gets the current file line info map.
+#### `file_hashes(self) -> dict[str, str]`
 
-- `file_line_info(self, value: dict[str, tuple[int, int]]) -> None`  
-  Sets the file line info map.
+Get file hashes map.
 
-- `page_statuses(self) -> dict[str, WikiPageStatus]`  
-  Gets the current page statuses map.
+#### `file_hashes(self, value: dict[str, str]) -> None`
 
-- `previous_status(self) -> WikiGenerationStatus | None`  
-  Gets the previous wiki generation status.
+Set file hashes map.
 
-- `load_status(self) -> WikiGenerationStatus | None`  
-  Loads the previous wiki generation status from disk.  
-  Returns: `WikiGenerationStatus` or `None` if not found.
+#### `file_line_info(self) -> dict[str, tuple[int, int]]`
 
-- `_read_status()`  
-  Internal method to read status from disk.  
-  Returns: `WikiGenerationStatus` or `None` on failure.
+Get file line info map.
 
-- `save_status(self, status: WikiGenerationStatus) -> None`  
-  Saves the current wiki generation status to disk.
+#### `file_line_info(self, value: dict[str, tuple[int, int]]) -> None`
 
-- `_write_status()`  
-  Internal method to write status to disk.
+Set file line info map.
 
-- `compute_content_hash(self, content: str) -> str`  
-  Computes a SHA256 hash (first 16 characters) of the given content.  
-  Returns: The hash as a string.
+#### `page_statuses(self) -> dict[str, WikiPageStatus]`
 
-# Functions
+Get page statuses map.
 
-This file does not define any standalone functions outside of class methods.
+#### `previous_status(self) -> WikiGenerationStatus | None`
+
+Get previous wiki generation status.
+
+#### `load_status(self) -> WikiGenerationStatus | None`
+
+Load previous wiki generation status.
+
+**Returns:**
+- [`WikiGenerationStatus`](../models.md) or `None` if not found.
+
+#### `_read_status()`
+
+Internal method to read status from file.
+
+**Returns:**
+- [`WikiGenerationStatus`](../models.md) or `None` if not found or on error.
+
+#### `save_status(self, status: WikiGenerationStatus) -> None`
+
+Save wiki generation status.
+
+**Parameters:**
+- `status`: The [`WikiGenerationStatus`](../models.md) to save.
+
+#### `_write_status()`
+
+Internal method to write status to file.
+
+#### `compute_content_hash(self, content: str) -> str`
+
+Compute hash of page content.
+
+**Parameters:**
+- `content`: Page content.
+
+**Returns:**
+- SHA256 hash of content (first 16 chars).
 
 # Integration
 
-This file integrates with:
-
-- `local_deepwiki.logging.get_logger` for logging.
-- `local_deepwiki.models.WikiGenerationStatus`, `WikiPage`, and `WikiPageStatus` for data models.
-- `asyncio`, `hashlib`, `json`, `time`, and `pathlib.Path` for core functionality.
-- It is used by other components in the `local_deepwiki.generators` module, such as `wiki.py` and `source_refs.py`, to manage incremental builds.
+This file integrates with the following components:
+- [`local_deepwiki.logging.get_logger`](../logging.md) for logging
+- [`local_deepwiki.models.WikiGenerationStatus`](../models.md), [`WikiPage`](../export/streaming.md), [`WikiPageStatus`](../models.md) for data models
+- It is used in the context of wiki generation, likely by [`WikiGenerator`](wiki.md) and related classes in the project.
 
 # Usage Examples
 
-### Initialize `WikiStatusManager`
-
 ```python
-from pathlib import Path
-from local_deepwiki.generators.wiki_status import WikiStatusManager
+# Initialize the status manager
+status_manager = WikiStatusManager(wiki_path=Path("/path/to/wiki"))
 
-wiki_path = Path("/path/to/wiki")
-status_manager = WikiStatusManager(wiki_path)
-```
-
-### Load Previous Status
-
-```python
+# Load existing status
 status = await status_manager.load_status()
-if status:
-    print("Previous status loaded successfully")
-else:
-    print("No previous status found")
-```
 
-### Save Current Status
+# Compute content hash
+hash_value = status_manager.compute_content_hash("Some content")
 
-```python
-await status_manager.save_status(current_status)
-```
-
-### Compute Content Hash
-
-```python
-content = "Some page content"
-hash_value = status_manager.compute_content_hash(content)
-print(hash_value)
+# Save status
+await status_manager.save_status(status)
 ```
 
 ## API Reference
@@ -110,7 +129,7 @@ Manage wiki generation status for incremental updates.
 
 
 <details>
-<summary>View Source (lines 17-320) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_status.py#L17-L320">GitHub</a></summary>
+<summary>View Source (lines 17-320) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_status.py#L17-L320">GitHub</a></summary>
 
 ```python
 class WikiStatusManager:
@@ -128,13 +147,13 @@ def __init__(wiki_path: Path)
 Initialize the status manager.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `wiki_path` | `Path` | - | Path to wiki output directory. |
 
 
 <details>
-<summary>View Source (lines 22-40) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_status.py#L22-L40">GitHub</a></summary>
+<summary>View Source (lines 22-40) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_status.py#L22-L40">GitHub</a></summary>
 
 ```python
 def __init__(self, wiki_path: Path):
@@ -170,7 +189,7 @@ Get file hashes map.
 
 
 <details>
-<summary>View Source (lines 48-50) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_status.py#L48-L50">GitHub</a></summary>
+<summary>View Source (lines 48-50) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_status.py#L48-L50">GitHub</a></summary>
 
 ```python
 def file_hashes(self, value: dict[str, str]) -> None:
@@ -189,13 +208,13 @@ def file_hashes(value: dict[str, str]) -> None
 Set file hashes map.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `value` | `dict[str, str]` | - | - |
 
 
 <details>
-<summary>View Source (lines 48-50) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_status.py#L48-L50">GitHub</a></summary>
+<summary>View Source (lines 48-50) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_status.py#L48-L50">GitHub</a></summary>
 
 ```python
 def file_hashes(self, value: dict[str, str]) -> None:
@@ -215,7 +234,7 @@ Get file line info map.
 
 
 <details>
-<summary>View Source (lines 58-60) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_status.py#L58-L60">GitHub</a></summary>
+<summary>View Source (lines 58-60) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_status.py#L58-L60">GitHub</a></summary>
 
 ```python
 def file_line_info(self, value: dict[str, tuple[int, int]]) -> None:
@@ -234,13 +253,13 @@ def file_line_info(value: dict[str, tuple[int, int]]) -> None
 Set file line info map.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `value` | `dict[str, tuple[int, int]]` | - | - |
 
 
 <details>
-<summary>View Source (lines 58-60) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_status.py#L58-L60">GitHub</a></summary>
+<summary>View Source (lines 58-60) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_status.py#L58-L60">GitHub</a></summary>
 
 ```python
 def file_line_info(self, value: dict[str, tuple[int, int]]) -> None:
@@ -260,7 +279,7 @@ Get page statuses map.
 
 
 <details>
-<summary>View Source (lines 63-65) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_status.py#L63-L65">GitHub</a></summary>
+<summary>View Source (lines 63-65) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_status.py#L63-L65">GitHub</a></summary>
 
 ```python
 def page_statuses(self) -> dict[str, WikiPageStatus]:
@@ -280,7 +299,7 @@ Get previous wiki generation status.
 
 
 <details>
-<summary>View Source (lines 68-70) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_status.py#L68-L70">GitHub</a></summary>
+<summary>View Source (lines 68-70) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_status.py#L68-L70">GitHub</a></summary>
 
 ```python
 def previous_status(self) -> WikiGenerationStatus | None:
@@ -300,7 +319,7 @@ Load previous wiki generation status.
 
 
 <details>
-<summary>View Source (lines 72-95) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_status.py#L72-L95">GitHub</a></summary>
+<summary>View Source (lines 72-95) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_status.py#L72-L95">GitHub</a></summary>
 
 ```python
 async def load_status(self) -> WikiGenerationStatus | None:
@@ -340,13 +359,13 @@ async def save_status(status: WikiGenerationStatus) -> None
 Save wiki generation status.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `status` | `WikiGenerationStatus` | - | The WikiGenerationStatus to save. |
+| `status` | [`WikiGenerationStatus`](../models.md) | - | The [WikiGenerationStatus](../models.md) to save. |
 
 
 <details>
-<summary>View Source (lines 97-110) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_status.py#L97-L110">GitHub</a></summary>
+<summary>View Source (lines 97-110) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_status.py#L97-L110">GitHub</a></summary>
 
 ```python
 async def save_status(self, status: WikiGenerationStatus) -> None:
@@ -376,13 +395,13 @@ def compute_content_hash(content: str) -> str
 Compute hash of page content.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `content` | `str` | - | Page content. |
 
 
 <details>
-<summary>View Source (lines 112-121) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_status.py#L112-L121">GitHub</a></summary>
+<summary>View Source (lines 112-121) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_status.py#L112-L121">GitHub</a></summary>
 
 ```python
 def compute_content_hash(self, content: str) -> str:
@@ -408,14 +427,14 @@ def needs_regeneration(page_path: str, source_files: list[str]) -> bool
 Check if a page needs regeneration based on source file changes.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `page_path` | `str` | - | Wiki page path. |
 | `source_files` | `list[str]` | - | List of source files that contribute to this page. |
 
 
 <details>
-<summary>View Source (lines 123-158) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_status.py#L123-L158">GitHub</a></summary>
+<summary>View Source (lines 123-158) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_status.py#L123-L158">GitHub</a></summary>
 
 ```python
 def needs_regeneration(
@@ -467,13 +486,13 @@ async def load_existing_page(page_path: str) -> WikiPage | None
 Load an existing wiki page from disk.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `page_path` | `str` | - | Relative path to the page. |
 
 
 <details>
-<summary>View Source (lines 160-193) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_status.py#L160-L193">GitHub</a></summary>
+<summary>View Source (lines 160-193) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_status.py#L160-L193">GitHub</a></summary>
 
 ```python
 async def load_existing_page(self, page_path: str) -> WikiPage | None:
@@ -523,14 +542,14 @@ def record_page_status(page: WikiPage, source_files: list[str]) -> None
 Record status for a generated/loaded page.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `page` | `WikiPage` | - | The wiki page. |
+| `page` | [`WikiPage`](../export/streaming.md) | - | The wiki page. |
 | `source_files` | `list[str]` | - | Source files that contributed to this page. |
 
 
 <details>
-<summary>View Source (lines 195-222) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_status.py#L195-L222">GitHub</a></summary>
+<summary>View Source (lines 195-222) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_status.py#L195-L222">GitHub</a></summary>
 
 ```python
 def record_page_status(
@@ -575,7 +594,7 @@ Get set of files that have changed since last generation.  Compares current file
 
 
 <details>
-<summary>View Source (lines 224-250) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_status.py#L224-L250">GitHub</a></summary>
+<summary>View Source (lines 224-250) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_status.py#L224-L250">GitHub</a></summary>
 
 ```python
 def get_changed_files(self) -> set[str]:
@@ -619,7 +638,7 @@ Build reverse index mapping source files to dependent wiki pages.  Uses previous
 
 
 <details>
-<summary>View Source (lines 252-271) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_status.py#L252-L271">GitHub</a></summary>
+<summary>View Source (lines 252-271) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_status.py#L252-L271">GitHub</a></summary>
 
 ```python
 def build_reverse_index(self) -> dict[str, set[str]]:
@@ -652,16 +671,16 @@ def build_reverse_index(self) -> dict[str, set[str]]:
 def get_affected_pages(changed_files: set[str] | None = None) -> set[str]
 ```
 
-Get set of wiki pages affected by file changes.  Uses reverse index to efficiently find all pages that depend on changed files.
+Get set of wiki pages affected by file changes.  Uses reverse index to efficiently [find](manifest.md) all pages that depend on changed files.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `changed_files` | `set[str] | None` | `None` | Optional set of changed files. If None, computes automatically. |
 
 
 <details>
-<summary>View Source (lines 273-297) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_status.py#L273-L297">GitHub</a></summary>
+<summary>View Source (lines 273-297) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_status.py#L273-L297">GitHub</a></summary>
 
 ```python
 def get_affected_pages(self, changed_files: set[str] | None = None) -> set[str]:
@@ -705,7 +724,7 @@ Get a summary of what will be regenerated and why.
 
 
 <details>
-<summary>View Source (lines 299-320) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_status.py#L299-L320">GitHub</a></summary>
+<summary>View Source (lines 299-320) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_status.py#L299-L320">GitHub</a></summary>
 
 ```python
 def get_regeneration_summary(self) -> dict[str, Any]:
@@ -830,8 +849,8 @@ flowchart TD
 Functions and methods in this file and their callers:
 
 - **`Path`**: called by `WikiStatusManager.load_existing_page`
-- **`WikiPage`**: called by `WikiStatusManager._read_page`, `WikiStatusManager.load_existing_page`
-- **`WikiPageStatus`**: called by `WikiStatusManager.record_page_status`
+- **[`WikiPage`](../export/streaming.md)**: called by `WikiStatusManager._read_page`, `WikiStatusManager.load_existing_page`
+- **[`WikiPageStatus`](../models.md)**: called by `WikiStatusManager.record_page_status`
 - **`add`**: called by `WikiStatusManager.build_reverse_index`, `WikiStatusManager.get_changed_files`
 - **`build_reverse_index`**: called by `WikiStatusManager.get_affected_pages`
 - **`compute_content_hash`**: called by `WikiStatusManager.record_page_status`
@@ -953,7 +972,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `file_hashes`
 
 <details>
-<summary>View Source (lines 43-45) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_status.py#L43-L45">GitHub</a></summary>
+<summary>View Source (lines 43-45) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_status.py#L43-L45">GitHub</a></summary>
 
 ```python
 def file_hashes(self) -> dict[str, str]:
@@ -967,7 +986,7 @@ def file_hashes(self) -> dict[str, str]:
 #### `file_line_info`
 
 <details>
-<summary>View Source (lines 53-55) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_status.py#L53-L55">GitHub</a></summary>
+<summary>View Source (lines 53-55) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_status.py#L53-L55">GitHub</a></summary>
 
 ```python
 def file_line_info(self) -> dict[str, tuple[int, int]]:
@@ -981,7 +1000,7 @@ def file_line_info(self) -> dict[str, tuple[int, int]]:
 #### `_read_status`
 
 <details>
-<summary>View Source (lines 82-92) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_status.py#L82-L92">GitHub</a></summary>
+<summary>View Source (lines 82-92) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_status.py#L82-L92">GitHub</a></summary>
 
 ```python
 def _read_status() -> WikiGenerationStatus | None:
@@ -1003,7 +1022,7 @@ def _read_status() -> WikiGenerationStatus | None:
 #### `_write_status`
 
 <details>
-<summary>View Source (lines 106-108) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_status.py#L106-L108">GitHub</a></summary>
+<summary>View Source (lines 106-108) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_status.py#L106-L108">GitHub</a></summary>
 
 ```python
 def _write_status() -> None:
@@ -1017,7 +1036,7 @@ def _write_status() -> None:
 #### `_read_page`
 
 <details>
-<summary>View Source (lines 178-191) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_status.py#L178-L191">GitHub</a></summary>
+<summary>View Source (lines 178-191) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_status.py#L178-L191">GitHub</a></summary>
 
 ```python
 def _read_page() -> WikiPage | None:
@@ -1038,3 +1057,6 @@ def _read_page() -> WikiPage | None:
 
 </details>
 
+## Relevant Source Files
+
+- `src/local_deepwiki/generators/wiki_status.py:17-320`

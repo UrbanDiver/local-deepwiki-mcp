@@ -1,25 +1,29 @@
 # File Overview
 
-This file defines the base classes and exceptions for embedding and language model (LLM) providers in the local_deepwiki project. It provides abstract base classes (`EmbeddingProvider`, `LLMProvider`) that define the interface for implementing various AI provider integrations, along with a set of custom exception classes for handling provider-specific errors.
+This file defines the base classes and exceptions for embedding and language model (LLM) providers in the `local_deepwiki` project. It provides abstract base classes for implementing custom providers and a set of standardized exceptions for handling provider-specific errors.
+
+The file is part of the core provider infrastructure and is used by various components in the system, including generators, plugins, and test suites.
 
 ## Dependencies
 
 This file imports:
-- `asyncio`, `logging`, `random` from the standard library
+- `asyncio`
+- `logging`
+- `random`
 - `ABC`, `abstractmethod` from `abc`
 - `dataclass`, `field` from `dataclasses`
 - `wraps` from `functools`
 - `Any`, `AsyncIterator`, `Callable` from `typing`
 - `ProviderError` from `local_deepwiki.errors`
 
-## Related Files
+## Integration
 
-This file is related to:
-- `src/local_deepwiki/cli/__init__.py`
-- `src/local_deepwiki/core/__init__.py`
-- `src/local_deepwiki/generators/source_refs.py`
-- `src/local_deepwiki/generators/wiki.py`
-- `src/local_deepwiki/logging.py`
+This file is used by:
+- `ProviderError` is used by `test_providers`
+- `ProviderConnectionError` is used by `test_openai_embeddings` and `test_providers`
+- `EmbeddingProvider` is used by `__init__`
+
+The classes and exceptions defined here are foundational for the `local_deepwiki` provider system and are referenced by other modules in the codebase such as `src/local_deepwiki/core/__init__.py`, `src/local_deepwiki/generators/source_refs.py`, `src/local_deepwiki/logging.py`, and `src/local_deepwiki/plugins/base.py`.
 
 # Classes
 
@@ -27,9 +31,9 @@ This file is related to:
 
 Base exception for all provider errors.
 
-Inherits from `local_deepwiki.errors.ProviderError` (DeepWikiError subclass) to provide consistent error handling with hints and context.
+Inherits from `local_deepwiki.errors.ProviderError` (a [`DeepWikiError`](../errors.md) subclass) to provide consistent error handling with hints and context.
 
-This class maintains backward compatibility with existing code that uses the simpler `(message, provider_name)` signature while also supporting the richer DeepWikiError features (`hint`, `context`, `original_error`).
+This class maintains backward compatibility with existing code that uses the simpler `(message, provider_name)` signature while also supporting the richer [`DeepWikiError`](../errors.md) features (`hint`, `context`, `original_error`).
 
 ### Constructor
 
@@ -45,11 +49,11 @@ def __init__(
 )
 ```
 
-- **message**: Error message
-- **provider_name**: Name of the provider that caused the error
-- **hint**: Suggested action to resolve the error
-- **context**: Additional context about the error
-- **original_error**: The underlying exception that caused this error
+- **message**: The error message.
+- **provider_name**: Optional name of the provider.
+- **hint**: Optional hint for resolving the error.
+- **context**: Optional dictionary with additional context.
+- **original_error**: Optional original exception.
 
 ## ProviderConnectionError
 
@@ -66,9 +70,9 @@ def __init__(
 )
 ```
 
-- **message**: Error message
-- **provider_name**: Name of the provider that caused the error
-- **original_error**: The underlying exception that caused this error
+- **message**: The error message.
+- **provider_name**: Optional name of the provider.
+- **original_error**: Optional original exception.
 
 ## ProviderRateLimitError
 
@@ -85,9 +89,9 @@ def __init__(
 )
 ```
 
-- **message**: Error message
-- **provider_name**: Name of the provider that caused the error
-- **retry_after**: Number of seconds to wait before retrying
+- **message**: The error message.
+- **provider_name**: Optional name of the provider.
+- **retry_after**: Optional seconds to wait before retrying.
 
 ## ProviderModelNotFoundError
 
@@ -104,9 +108,9 @@ def __init__(
 )
 ```
 
-- **model**: The model name that was requested
-- **provider_name**: Name of the provider that caused the error
-- **available_models**: List of models available from the provider
+- **model**: The requested model name.
+- **provider_name**: Optional name of the provider.
+- **available_models**: Optional list of available models.
 
 ## ProviderAuthenticationError
 
@@ -122,13 +126,13 @@ Capabilities of an LLM provider.
 
 ### Attributes
 
-- `supports_streaming`: bool = True
-- `supports_system_prompt`: bool = True
-- `max_tokens`: int = 4096
-- `max_context_length`: int = 128000
-- `models`: list[str] = field(default_factory=list)
-- `supports_function_calling`: bool = False
-- `supports_vision`: bool = False
+- `supports_streaming`: `bool` - Whether the provider supports streaming.
+- `supports_system_prompt`: `bool` - Whether the provider supports system prompts.
+- `max_tokens`: `int` - Maximum tokens to generate.
+- `max_context_length`: `int` - Maximum context length.
+- `models`: `list[str]` - List of supported models.
+- `supports_function_calling`: `bool` - Whether the provider supports function calling.
+- `supports_vision`: `bool` - Whether the provider supports vision.
 
 ## EmbeddingProviderCapabilities
 
@@ -136,11 +140,11 @@ Capabilities of an embedding provider.
 
 ### Attributes
 
-- `max_batch_size`: int = 100
-- `max_tokens_per_text`: int = 8192
-- `dimension`: int = 0
-- `models`: list[str] = field(default_factory=list)
-- `supports_truncation`: bool = True
+- `max_batch_size`: `int` - Maximum batch size for embeddings.
+- `max_tokens_per_text`: `int` - Maximum tokens per text.
+- `dimension`: `int` - Dimension of the embedding vectors.
+- `models`: `list[str]` - List of supported models.
+- `supports_truncation`: `bool` - Whether the provider supports truncation.
 
 ## EmbeddingProvider
 
@@ -161,10 +165,15 @@ Generate embeddings for a list of texts.
 - **texts**: List of text strings to embed.
 - **Returns**: List of embedding vectors, one per input text.
 - **Raises**: `ProviderConnectionError` if the provider cannot be reached.
+- **Raises**: `ProviderRateLimitError` if the request is rate-limited.
+- **Raises**: `ProviderAuthenticationError` if authentication fails.
+- **Raises**: `ProviderConfigurationError` if the provider is misconfigured.
 
 ## LLMProvider
 
 Abstract base class for LLM providers.
+
+All LLM providers must implement the abstract methods defined here. The base class provides default implementations for optional methods.
 
 ### Methods
 
@@ -187,7 +196,11 @@ Generate text from a prompt.
 - **max_tokens**: Maximum tokens to generate.
 - **temperature**: Sampling temperature (0.0 to 1.0+).
 - **Returns**: Generated text.
-- **Raises**: `ProviderConnectionError` if the provider cannot be reached, `ProviderRateLimitError` if rate limited.
+- **Raises**: `ProviderConnectionError` if the provider cannot be reached.
+- **Raises**: `ProviderRateLimitError` if the request is rate-limited.
+- **Raises**: `ProviderAuthenticationError` if authentication fails.
+- **Raises**: `ProviderConfigurationError` if the provider is misconfigured.
+- **Raises**: `ProviderModelNotFoundError` if the requested model is not available.
 
 #### generate_stream
 
@@ -208,7 +221,11 @@ Generate text from a prompt with streaming.
 - **max_tokens**: Maximum tokens to generate.
 - **temperature**: Sampling temperature.
 - **Yields**: Generated text chunks.
-- **Raises**: `ProviderConnectionError` if the provider cannot be reached, `ProviderRateLimitError` if rate limited.
+- **Raises**: `ProviderConnectionError` if the provider cannot be reached.
+- **Raises**: `ProviderRateLimitError` if the request is rate-limited.
+- **Raises**: `ProviderAuthenticationError` if authentication fails.
+- **Raises**: `ProviderConfigurationError` if the provider is misconfigured.
+- **Raises**: `ProviderModelNotFoundError` if the requested model is not available.
 
 #### name
 
@@ -224,81 +241,46 @@ Get the provider name.
 
 ## with_retry
 
-Decorator to retry a function call with exponential backoff.
+Decorator for retrying provider calls with exponential backoff.
+
+### Parameters
+
+- `max_retries`: Maximum number of retries.
+- `backoff_factor`: Factor for exponential backoff.
+- `retryable_exceptions`: Tuple of exceptions to retry on.
+
+### Returns
+
+A decorator that wraps a function with retry logic.
 
 ## decorator
 
-Helper function for `with_retry`.
+Helper function to create a retry decorator.
+
+### Parameters
+
+- `max_retries`: Maximum number of retries.
+- `backoff_factor`: Factor for exponential backoff.
+- `retryable_exceptions`: Tuple of exceptions to retry on.
+
+### Returns
+
+A retry decorator.
 
 ## wrapper
 
-Internal wrapper function used by `with_retry`.
+Internal function used by `with_retry` to wrap the actual function call.
 
-# Integration
+### Parameters
 
-This file is part of the local_deepwiki core infrastructure and provides the foundational abstractions for integrating with various AI providers. It is used by:
+- `func`: The function to wrap.
+- `max_retries`: Maximum number of retries.
+- `backoff_factor`: Factor for exponential backoff.
+- `retryable_exceptions`: Tuple of exceptions to retry on.
 
-- `src/local_deepwiki/providers/__init__.py` (via `EmbeddingProvider` and `LLMProvider`)
-- Test files that validate provider implementations
+### Returns
 
-The classes defined here are used by:
-- `test_providers` (uses `ProviderError`, `ProviderConnectionError`)
-- `test_openai_embeddings` (uses `ProviderConnectionError`, `ProviderError`)
-
-# Usage Examples
-
-## Creating an Embedding Provider
-
-```python
-from local_deepwiki.providers.base import EmbeddingProvider
-
-class MyEmbeddingProvider(EmbeddingProvider):
-    async def embed(self, texts: list[str]) -> list[list[float]]:
-        # Implementation here
-        pass
-```
-
-## Creating an LLM Provider
-
-```python
-from local_deepwiki.providers.base import LLMProvider
-
-class MyLLMProvider(LLMProvider):
-    async def generate(
-        self,
-        prompt: str,
-        system_prompt: str | None = None,
-        max_tokens: int = 4096,
-        temperature: float = 0.7,
-    ) -> str:
-        # Implementation here
-        pass
-
-    async def generate_stream(
-        self,
-        prompt: str,
-        system_prompt: str | None = None,
-        max_tokens: int = 4096,
-        temperature: float = 0.7,
-    ) -> AsyncIterator[str]:
-        # Implementation here
-        pass
-
-    def name(self) -> str:
-        return "my-provider"
-```
-
-## Handling Errors
-
-```python
-from local_deepwiki.providers.base import ProviderConnectionError
-
-try:
-    # Some provider operation
-    pass
-except ProviderConnectionError as e:
-    print(f"Connection failed: {e}")
-```
+A wrapped async function that retries on failure.
 
 ## API Reference
 
@@ -306,13 +288,13 @@ except ProviderConnectionError as e:
 
 **Inherits from:** `BaseProviderError`
 
-Base exception for all provider errors.  Inherits from local_deepwiki.errors.ProviderError (DeepWikiError subclass) to provide consistent error handling with hints and context.  This class maintains backward compatibility with existing code that uses the simpler (message, provider_name) signature while also supporting the richer DeepWikiError features (hint, context, original_error).
+Base exception for all provider errors.  Inherits from local_deepwiki.errors.ProviderError ([DeepWikiError](../errors.md) subclass) to provide consistent error handling with hints and context.  This class maintains backward compatibility with existing code that uses the simpler (message, provider_name) signature while also supporting the richer [DeepWikiError](../errors.md) features (hint, context, original_error).
 
 **Methods:**
 
 
 <details>
-<summary>View Source (lines 21-48) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/base.py#L21-L48">GitHub</a></summary>
+<summary>View Source (lines 21-48) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/providers/base.py#L21-L48">GitHub</a></summary>
 
 ```python
 class ProviderError(BaseProviderError):
@@ -354,7 +336,7 @@ def __init__(message: str, provider_name: str | None = None, hint: str | None = 
 ```
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `message` | `str` | - | - |
 | `provider_name` | `str | None` | `None` | - |
@@ -365,7 +347,7 @@ def __init__(message: str, provider_name: str | None = None, hint: str | None = 
 
 
 <details>
-<summary>View Source (lines 21-48) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/base.py#L21-L48">GitHub</a></summary>
+<summary>View Source (lines 21-48) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/providers/base.py#L21-L48">GitHub</a></summary>
 
 ```python
 class ProviderError(BaseProviderError):
@@ -410,7 +392,7 @@ Raised when a provider cannot be reached or connected to.
 
 
 <details>
-<summary>View Source (lines 51-65) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/base.py#L51-L65">GitHub</a></summary>
+<summary>View Source (lines 51-65) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/providers/base.py#L51-L65">GitHub</a></summary>
 
 ```python
 class ProviderConnectionError(ProviderError):
@@ -439,7 +421,7 @@ def __init__(message: str, provider_name: str | None = None, original_error: Exc
 ```
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `message` | `str` | - | - |
 | `provider_name` | `str | None` | `None` | - |
@@ -448,7 +430,7 @@ def __init__(message: str, provider_name: str | None = None, original_error: Exc
 
 
 <details>
-<summary>View Source (lines 51-65) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/base.py#L51-L65">GitHub</a></summary>
+<summary>View Source (lines 51-65) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/providers/base.py#L51-L65">GitHub</a></summary>
 
 ```python
 class ProviderConnectionError(ProviderError):
@@ -480,7 +462,7 @@ Raised when a provider rate limits the request.
 
 
 <details>
-<summary>View Source (lines 68-81) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/base.py#L68-L81">GitHub</a></summary>
+<summary>View Source (lines 68-81) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/providers/base.py#L68-L81">GitHub</a></summary>
 
 ```python
 class ProviderRateLimitError(ProviderError):
@@ -508,7 +490,7 @@ def __init__(message: str, provider_name: str | None = None, retry_after: float 
 ```
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `message` | `str` | - | - |
 | `provider_name` | `str | None` | `None` | - |
@@ -517,7 +499,7 @@ def __init__(message: str, provider_name: str | None = None, retry_after: float 
 
 
 <details>
-<summary>View Source (lines 68-81) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/base.py#L68-L81">GitHub</a></summary>
+<summary>View Source (lines 68-81) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/providers/base.py#L68-L81">GitHub</a></summary>
 
 ```python
 class ProviderRateLimitError(ProviderError):
@@ -548,7 +530,7 @@ Raised when the requested model is not available.
 
 
 <details>
-<summary>View Source (lines 84-104) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/base.py#L84-L104">GitHub</a></summary>
+<summary>View Source (lines 84-104) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/providers/base.py#L84-L104">GitHub</a></summary>
 
 ```python
 class ProviderModelNotFoundError(ProviderError):
@@ -583,7 +565,7 @@ def __init__(model: str, provider_name: str | None = None, available_models: lis
 ```
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `model` | `str` | - | - |
 | `provider_name` | `str | None` | `None` | - |
@@ -592,7 +574,7 @@ def __init__(model: str, provider_name: str | None = None, available_models: lis
 
 
 <details>
-<summary>View Source (lines 84-104) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/base.py#L84-L104">GitHub</a></summary>
+<summary>View Source (lines 84-104) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/providers/base.py#L84-L104">GitHub</a></summary>
 
 ```python
 class ProviderModelNotFoundError(ProviderError):
@@ -628,7 +610,7 @@ Raised when authentication with the provider fails.
 
 
 <details>
-<summary>View Source (lines 107-110) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/base.py#L107-L110">GitHub</a></summary>
+<summary>View Source (lines 107-110) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/providers/base.py#L107-L110">GitHub</a></summary>
 
 ```python
 class ProviderAuthenticationError(ProviderError):
@@ -647,7 +629,7 @@ Raised when the provider is misconfigured.
 
 
 <details>
-<summary>View Source (lines 113-116) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/base.py#L113-L116">GitHub</a></summary>
+<summary>View Source (lines 113-116) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/providers/base.py#L113-L116">GitHub</a></summary>
 
 ```python
 class ProviderConfigurationError(ProviderError):
@@ -664,7 +646,7 @@ Capabilities of an LLM provider.
 
 
 <details>
-<summary>View Source (lines 125-134) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/base.py#L125-L134">GitHub</a></summary>
+<summary>View Source (lines 125-134) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/providers/base.py#L125-L134">GitHub</a></summary>
 
 ```python
 class LLMProviderCapabilities:
@@ -687,7 +669,7 @@ Capabilities of an embedding provider.
 
 
 <details>
-<summary>View Source (lines 138-145) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/base.py#L138-L145">GitHub</a></summary>
+<summary>View Source (lines 138-145) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/providers/base.py#L138-L145">GitHub</a></summary>
 
 ```python
 class EmbeddingProviderCapabilities:
@@ -712,7 +694,7 @@ Abstract base class for embedding providers.  All embedding providers must imple
 
 
 <details>
-<summary>View Source (lines 260-351) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/base.py#L260-L351">GitHub</a></summary>
+<summary>View Source (lines 260-351) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/providers/base.py#L260-L351">GitHub</a></summary>
 
 ```python
 class EmbeddingProvider(ABC):
@@ -820,13 +802,13 @@ async def embed(texts: list[str]) -> list[list[float]]
 Generate embeddings for a list of texts.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `texts` | `list[str]` | - | List of text strings to embed. |
 
 
 <details>
-<summary>View Source (lines 260-351) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/base.py#L260-L351">GitHub</a></summary>
+<summary>View Source (lines 260-351) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/providers/base.py#L260-L351">GitHub</a></summary>
 
 ```python
 class EmbeddingProvider(ABC):
@@ -935,7 +917,7 @@ Get the embedding dimension.
 
 
 <details>
-<summary>View Source (lines 260-351) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/base.py#L260-L351">GitHub</a></summary>
+<summary>View Source (lines 260-351) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/providers/base.py#L260-L351">GitHub</a></summary>
 
 ```python
 class EmbeddingProvider(ABC):
@@ -1044,7 +1026,7 @@ Get the provider name.
 
 
 <details>
-<summary>View Source (lines 260-351) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/base.py#L260-L351">GitHub</a></summary>
+<summary>View Source (lines 260-351) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/providers/base.py#L260-L351">GitHub</a></summary>
 
 ```python
 class EmbeddingProvider(ABC):
@@ -1153,7 +1135,7 @@ Test that the provider is reachable and configured correctly.
 
 
 <details>
-<summary>View Source (lines 260-351) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/base.py#L260-L351">GitHub</a></summary>
+<summary>View Source (lines 260-351) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/providers/base.py#L260-L351">GitHub</a></summary>
 
 ```python
 class EmbeddingProvider(ABC):
@@ -1262,7 +1244,7 @@ Return maximum number of texts that can be embedded in a single call.
 
 
 <details>
-<summary>View Source (lines 260-351) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/base.py#L260-L351">GitHub</a></summary>
+<summary>View Source (lines 260-351) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/providers/base.py#L260-L351">GitHub</a></summary>
 
 ```python
 class EmbeddingProvider(ABC):
@@ -1371,7 +1353,7 @@ Return maximum tokens per text.
 
 
 <details>
-<summary>View Source (lines 260-351) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/base.py#L260-L351">GitHub</a></summary>
+<summary>View Source (lines 260-351) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/providers/base.py#L260-L351">GitHub</a></summary>
 
 ```python
 class EmbeddingProvider(ABC):
@@ -1481,7 +1463,7 @@ Return provider capabilities.
 
 
 <details>
-<summary>View Source (lines 260-351) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/base.py#L260-L351">GitHub</a></summary>
+<summary>View Source (lines 260-351) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/providers/base.py#L260-L351">GitHub</a></summary>
 
 ```python
 class EmbeddingProvider(ABC):
@@ -1590,7 +1572,7 @@ Abstract base class for LLM providers.  All LLM providers must implement the abs
 
 
 <details>
-<summary>View Source (lines 354-479) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/base.py#L354-L479">GitHub</a></summary>
+<summary>View Source (lines 354-479) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/providers/base.py#L354-L479">GitHub</a></summary>
 
 ```python
 class LLMProvider(ABC):
@@ -1608,7 +1590,7 @@ async def generate(prompt: str, system_prompt: str | None = None, max_tokens: in
 Generate text from a prompt.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `prompt` | `str` | - | The user prompt. |
 | `system_prompt` | `str | None` | `None` | Optional system prompt. |
@@ -1617,7 +1599,7 @@ Generate text from a prompt.
 
 
 <details>
-<summary>View Source (lines 362-386) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/base.py#L362-L386">GitHub</a></summary>
+<summary>View Source (lines 362-386) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/providers/base.py#L362-L386">GitHub</a></summary>
 
 ```python
 async def generate(
@@ -1658,7 +1640,7 @@ async def generate_stream(prompt: str, system_prompt: str | None = None, max_tok
 Generate text from a prompt with streaming.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `prompt` | `str` | - | The user prompt. |
 | `system_prompt` | `str | None` | `None` | Optional system prompt. |
@@ -1667,7 +1649,7 @@ Generate text from a prompt with streaming.
 
 
 <details>
-<summary>View Source (lines 389-416) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/base.py#L389-L416">GitHub</a></summary>
+<summary>View Source (lines 389-416) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/providers/base.py#L389-L416">GitHub</a></summary>
 
 ```python
 async def generate_stream(
@@ -1712,7 +1694,7 @@ Get the provider name.
 
 
 <details>
-<summary>View Source (lines 420-426) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/base.py#L420-L426">GitHub</a></summary>
+<summary>View Source (lines 420-426) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/providers/base.py#L420-L426">GitHub</a></summary>
 
 ```python
 def name(self) -> str:
@@ -1736,7 +1718,7 @@ Test that the provider is reachable and configured correctly.
 
 
 <details>
-<summary>View Source (lines 428-451) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/base.py#L428-L451">GitHub</a></summary>
+<summary>View Source (lines 428-451) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/providers/base.py#L428-L451">GitHub</a></summary>
 
 ```python
 async def validate_connectivity(self) -> bool:
@@ -1776,13 +1758,13 @@ async def validate_model(model_name: str) -> bool
 Test that a specific model is available.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `model_name` | `str` | - | The model name to validate. |
 
 
 <details>
-<summary>View Source (lines 453-471) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/base.py#L453-L471">GitHub</a></summary>
+<summary>View Source (lines 453-471) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/providers/base.py#L453-L471">GitHub</a></summary>
 
 ```python
 async def validate_model(self, model_name: str) -> bool:
@@ -1821,7 +1803,7 @@ Return provider capabilities.
 
 
 <details>
-<summary>View Source (lines 473-479) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/base.py#L473-L479">GitHub</a></summary>
+<summary>View Source (lines 473-479) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/providers/base.py#L473-L479">GitHub</a></summary>
 
 ```python
 def get_capabilities(self) -> LLMProviderCapabilities:
@@ -1846,7 +1828,7 @@ def with_retry(max_attempts: int = 3, base_delay: float = 1.0, max_delay: float 
 Decorator for adding retry logic with exponential backoff to async functions.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `max_attempts` | `int` | `3` | Maximum number of attempts before giving up. |
 | `base_delay` | `float` | `1.0` | Initial delay between retries in seconds. |
@@ -1859,7 +1841,7 @@ Decorator for adding retry logic with exponential backoff to async functions.
 
 
 <details>
-<summary>View Source (lines 163-252) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/base.py#L163-L252">GitHub</a></summary>
+<summary>View Source (lines 163-252) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/providers/base.py#L163-L252">GitHub</a></summary>
 
 ```python
 def with_retry(
@@ -1963,7 +1945,7 @@ def decorator(func: Callable[..., Any]) -> Callable[..., Any]
 ```
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `func` | `Callable[..., Any]` | - | - |
 
@@ -1972,7 +1954,7 @@ def decorator(func: Callable[..., Any]) -> Callable[..., Any]
 
 
 <details>
-<summary>View Source (lines 183-250) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/base.py#L183-L250">GitHub</a></summary>
+<summary>View Source (lines 183-250) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/providers/base.py#L183-L250">GitHub</a></summary>
 
 ```python
 def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -2061,7 +2043,7 @@ async def wrapper() -> Any
 
 
 <details>
-<summary>View Source (lines 185-248) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/providers/base.py#L185-L248">GitHub</a></summary>
+<summary>View Source (lines 185-248) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/providers/base.py#L185-L248">GitHub</a></summary>
 
 ```python
 async def wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -2402,3 +2384,7 @@ assert result == [[0.0] * 768]
 | `with_retry` | function | Brian Breidenbach | 1 week ago | `2424f98` Add comprehensive tests to ... |
 | `decorator` | function | Brian Breidenbach | 1 week ago | `2424f98` Add comprehensive tests to ... |
 | `wrapper` | function | Brian Breidenbach | 1 week ago | `2424f98` Add comprehensive tests to ... |
+
+## Relevant Source Files
+
+- `src/local_deepwiki/providers/base.py:21-48`

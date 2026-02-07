@@ -1,39 +1,16 @@
 # File Overview
 
-This file, `src/local_deepwiki/core/chunker.py`, provides functionality for breaking down source code files into semantic chunks. It uses tree-sitter parsers to analyze code structure and extract meaningful units like modules, classes, methods, and functions. The chunker supports multiple programming languages and integrates with plugins for language-specific parsing.
+This file, `src/local_deepwiki/core/chunker.py`, provides functionality for extracting semantic code chunks from source files. It uses a combination of tree-sitter parsing and language-specific plugins to identify and structure code elements like modules, classes, functions, and imports into [`CodeChunk`](../models.md) objects.
 
-## Dependencies
+The module integrates with the project's configuration system, logging, and plugin architecture to support flexible and extensible code chunking across multiple programming languages.
 
-This file imports:
-- `hashlib` for generating unique IDs
-- `Path` from `pathlib` for handling file paths
-- `Iterator` and `Any` from `typing`
-- `Node` from `tree_sitter`
-- Configuration and parser utilities from `local_deepwiki.config` and `local_deepwiki.core.parser`
-- Logging from `local_deepwiki.logging`
-- Models such as `ChunkType`, `CodeChunk`, and `Language` from `local_deepwiki.models`
-- Plugin registry from `local_deepwiki.plugins.registry`
-
-## Integration
-
-This file is used by:
-- `test_chunker`
-- `test_type_annotations`
-- `api_docs`
-- `test_api_docs`
-
-It is related to:
-- `src/local_deepwiki/cli/__init__.py`
-- `src/local_deepwiki/core/__init__.py`
-- `src/local_deepwiki/generators/source_refs.py`
-- `src/local_deepwiki/generators/wiki.py`
-- `tests/test_plugins.py`
+---
 
 # Classes
 
 ## CodeChunker
 
-The `CodeChunker` class is responsible for extracting semantic code chunks from source files. It handles parsing using either plugin parsers or built-in tree-sitter parsers and generates chunks for modules, imports, classes, methods, and functions.
+The `CodeChunker` class is responsible for extracting semantic units (chunks) from source files. It supports different programming languages through a combination of built-in tree-sitter parsing and registered language plugins.
 
 ### Methods
 
@@ -48,12 +25,14 @@ Initialize the chunker.
 
 Extract code chunks from a source file.
 
+Checks for registered language parser plugins first. If a plugin handles the file extension, uses the plugin's parse_file method. Otherwise falls back to the built-in tree-sitter parser.
+
 **Parameters:**
 - `file_path`: Path to the source file.
 - `repo_root`: Root directory of the repository.
 
 **Yields:**
-- `CodeChunk` objects for each semantic unit found.
+- [`CodeChunk`](../models.md) objects for each semantic unit found.
 
 #### `_create_module_chunk(self, root: Node, source: bytes, language: Language, file_path: str) -> CodeChunk`
 
@@ -66,7 +45,7 @@ Create a chunk for the module/file overview.
 - `file_path`: Relative file path.
 
 **Returns:**
-- A `CodeChunk` for the module.
+- A [`CodeChunk`](../models.md) for the module.
 
 #### `_create_file_summary(self, root: Node, source: bytes, language: Language) -> str`
 
@@ -91,7 +70,7 @@ Create a chunk for import statements.
 - `file_path`: Relative file path.
 
 **Returns:**
-- A `CodeChunk` for imports.
+- A [`CodeChunk`](../models.md) for imports.
 
 #### `_extract_class_chunks(self, class_node: Node, source: bytes, language: Language, file_path: str) -> Iterator[CodeChunk]`
 
@@ -117,10 +96,10 @@ Create a summary chunk for a large class.
 - `file_path`: Relative file path.
 - `class_name`: Name of the class.
 - `docstring`: Class docstring if any.
-- `parent_classes`: List of parent class names.
+- `parent_classes`: Optional list of parent class names.
 
 **Returns:**
-- A `CodeChunk` for the class summary.
+- A [`CodeChunk`](../models.md) for the class summary.
 
 #### `_create_method_chunk(self, method_node: Node, source: bytes, language: Language, file_path: str, class_name: str) -> CodeChunk`
 
@@ -134,7 +113,7 @@ Create a chunk for a class method.
 - `class_name`: Name of the parent class.
 
 **Returns:**
-- A `CodeChunk` for the method.
+- A [`CodeChunk`](../models.md) for the method.
 
 #### `_create_function_chunk(self, func_node: Node, source: bytes, language: Language, file_path: str) -> CodeChunk`
 
@@ -147,7 +126,7 @@ Create a chunk for a top-level function.
 - `file_path`: Relative file path.
 
 **Returns:**
-- A `CodeChunk` for the function.
+- A [`CodeChunk`](../models.md) for the function.
 
 #### `_is_inside_class(self, node: Node, class_types: set[str]) -> bool`
 
@@ -172,6 +151,8 @@ Generate a unique chunk ID.
 **Returns:**
 - A unique ID string.
 
+---
+
 # Functions
 
 ## `get_parent_classes(class_node: Node, source: bytes, language: Language) -> list[str]`
@@ -186,7 +167,7 @@ Extract parent class names from a class definition.
 **Returns:**
 - List of parent class names.
 
-## `extract_python_parameter_types(func_node: Node, source: bytes) -> list[str]`
+## `extract_python_parameter_types(func_node: Node, source: bytes) -> dict[str, str]`
 
 Extract parameter types from a Python function.
 
@@ -195,519 +176,172 @@ Extract parameter types from a Python function.
 - `source`: Source bytes.
 
 **Returns:**
-- List of parameter types.
+- Dictionary mapping parameter names to their types.
 
-## `extract_python_parameter_names(func_node: Node, source: bytes) -> list[str]`
+## `extract_python_parameter_defaults(func_node: Node, source: bytes) -> dict[str, str]`
 
-Extract parameter names from a Python function.
-
-**Parameters:**
-- `func_node`: The function AST node.
-- `source`: Source bytes.
-
-**Returns:**
-- List of parameter names.
-
-## `extract_python_return_type(func_node: Node, source: bytes) -> str`
-
-Extract return type from a Python function.
+Extract default values for parameters in a Python function.
 
 **Parameters:**
 - `func_node`: The function AST node.
 - `source`: Source bytes.
 
 **Returns:**
-- Return type.
+- Dictionary mapping parameter names to their default values.
 
-## `extract_python_function_docstring(func_node: Node, source: bytes) -> str`
+## `extract_python_return_type(func_node: Node, source: bytes) -> str | None`
 
-Extract docstring from a Python function.
+Extract the return type annotation from a Python function.
 
 **Parameters:**
 - `func_node`: The function AST node.
 - `source`: Source bytes.
 
 **Returns:**
-- Function docstring.
+- Return type annotation or `None`.
 
-## `extract_python_class_docstring(class_node: Node, source: bytes) -> str`
+## `extract_python_decorators(func_node: Node, source: bytes) -> list[str]`
 
-Extract docstring from a Python class.
+Extract decorators applied to a Python function.
+
+**Parameters:**
+- `func_node`: The function AST node.
+- `source`: Source bytes.
+
+**Returns:**
+- List of [decorator](../providers/base.md) names.
+
+## `extract_python_docstring(func_node: Node, source: bytes) -> str | None`
+
+Extract the docstring of a Python function.
+
+**Parameters:**
+- `func_node`: The function AST node.
+- `source`: Source bytes.
+
+**Returns:**
+- Docstring or `None`.
+
+## `extract_python_class_docstring(class_node: Node, source: bytes) -> str | None`
+
+Extract the docstring of a Python class.
 
 **Parameters:**
 - `class_node`: The class AST node.
 - `source`: Source bytes.
 
 **Returns:**
-- Class docstring.
+- Docstring or `None`.
 
-## `extract_python_method_docstring(method_node: Node, source: bytes) -> str`
+## `extract_python_class_decorators(class_node: Node, source: bytes) -> list[str]`
 
-Extract docstring from a Python method.
+Extract decorators applied to a Python class.
+
+**Parameters:**
+- `class_node`: The class AST node.
+- `source`: Source bytes.
+
+**Returns:**
+- List of [decorator](../providers/base.md) names.
+
+## `extract_python_method_decorators(method_node: Node, source: bytes) -> list[str]`
+
+Extract decorators applied to a Python method.
 
 **Parameters:**
 - `method_node`: The method AST node.
 - `source`: Source bytes.
 
 **Returns:**
-- Method docstring.
+- List of [decorator](../providers/base.md) names.
 
-## `extract_python_module_docstring(module_node: Node, source: bytes) -> str`
+## `is_python_function(node: Node) -> bool`
 
-Extract docstring from a Python module.
+Check if a node represents a Python function.
 
 **Parameters:**
-- `module_node`: The module AST node.
-- `source`: Source bytes.
+- `node`: The node to check.
 
 **Returns:**
-- Module docstring.
+- True if the node is a Python function.
 
-## `extract_python_imports(source: bytes) -> list[str]`
+## `is_python_class(node: Node) -> bool`
 
-Extract import statements from a Python module.
+Check if a node represents a Python class.
 
 **Parameters:**
-- `source`: Source bytes.
+- `node`: The node to check.
 
 **Returns:**
-- List of import statements.
+- True if the node is a Python class.
 
-## `extract_python_class_attributes(class_node: Node, source: bytes) -> list[str]`
+## `is_python_method(node: Node) -> bool`
 
-Extract class attributes from a Python class.
+Check if a node represents a Python method.
 
 **Parameters:**
-- `class_node`: The class AST node.
-- `source`: Source bytes.
+- `node`: The node to check.
 
 **Returns:**
-- List of class attributes.
+- True if the node is a Python method.
 
-## `extract_python_class_methods(class_node: Node, source: bytes) -> list[str]`
+## `is_python_import(node: Node) -> bool`
 
-Extract class methods from a Python class.
+Check if a node represents an import statement.
 
 **Parameters:**
-- `class_node`: The class AST node.
-- `source`: Source bytes.
+- `node`: The node to check.
 
 **Returns:**
-- List of class methods.
+- True if the node is an import.
 
-## `extract_python_class_inheritance(class_node: Node, source: bytes) -> list[str]`
+---
 
-Extract inheritance information from a Python class.
+# Integration
 
-**Parameters:**
-- `class_node`: The class AST node.
-- `source`: Source bytes.
+This file integrates with the following components of the codebase:
 
-**Returns:**
-- List of inherited classes.
+- **Configuration System**: Uses [`ChunkingConfig`](../config.md) for configuration.
+- **Logging**: Leverages the project's logging infrastructure.
+- **[Plugin](../plugins/base.md) Architecture**: Interacts with registered language plugins for parsing via `get_parser`.
+- **Core Data Models**: Depends on [`CodeChunk`](../models.md) and [`Language`](../models.md) enums from `local_deepwiki.core.models`.
 
-## `extract_python_function_annotations(func_node: Node, source: bytes) -> dict[str, str]`
+The functions `extract_python_*` are used by other parts of the codebase for extracting metadata from Python code, while `CodeChunker` is the [main](../export/pdf.md) entry point for chunking source code into semantic units.
 
-Extract annotations from a Python function.
+---
 
-**Parameters:**
-- `func_node`: The function AST node.
-- `source`: Source bytes.
+# Usage Examples
 
-**Returns:**
-- Dictionary of annotations.
+To use the `CodeChunker` class:
 
-## `extract_python_class_annotations(class_node: Node, source: bytes) -> dict[str, str]`
+```python
+from local_deepwiki.core.chunker import CodeChunker
+from pathlib import Path
 
-Extract annotations from a Python class.
+chunker = CodeChunker()
+chunks = list(chunker.chunk_file(Path("example.py"), Path("/project/root")))
+for chunk in chunks:
+    print(chunk.name, chunk.content)
+```
 
-**Parameters:**
-- `class_node`: The class AST node.
-- `source`: Source bytes.
+To extract parent classes from a class node:
 
-**Returns:**
-- Dictionary of annotations.
+```python
+from local_deepwiki.core.chunker import get_parent_classes
+from local_deepwiki.core.models import Language
 
-## `extract_python_module_annotations(source: bytes) -> dict[str, str]`
+parents = get_parent_classes(class_node, source_bytes, Language.PYTHON)
+print(parents)
+```
 
-Extract annotations from a Python module.
+To extract parameter types from a Python function:
 
-**Parameters:**
-- `source`: Source bytes.
+```python
+from local_deepwiki.core.chunker import extract_python_parameter_types
 
-**Returns:**
-- Dictionary of annotations.
-
-## `extract_python_function_decorators(func_node: Node, source: bytes) -> list[str]`
-
-Extract decorators from a Python function.
-
-**Parameters:**
-- `func_node`: The function AST node.
-- `source`: Source bytes.
-
-**Returns:**
-- List of decorators.
-
-## `extract_python_class_decorators(class_node: Node, source: bytes) -> list[str]`
-
-Extract decorators from a Python class.
-
-**Parameters:**
-- `class_node`: The class AST node.
-- `source`: Source bytes.
-
-**Returns:**
-- List of decorators.
-
-## `extract_python_module_decorators(source: bytes) -> list[str]`
-
-Extract decorators from a Python module.
-
-**Parameters:**
-- `source`: Source bytes.
-
-**Returns:**
-- List of decorators.
-
-## `extract_python_function_signature(func_node: Node, source: bytes) -> str`
-
-Extract function signature from a Python function.
-
-**Parameters:**
-- `func_node`: The function AST node.
-- `source`: Source bytes.
-
-**Returns:**
-- Function signature.
-
-## `extract_python_class_signature(class_node: Node, source: bytes) -> str`
-
-Extract class signature from a Python class.
-
-**Parameters:**
-- `class_node`: The class AST node.
-- `source`: Source bytes.
-
-**Returns:**
-- Class signature.
-
-## `extract_python_module_signature(source: bytes) -> str`
-
-Extract module signature from a Python module.
-
-**Parameters:**
-- `source`: Source bytes.
-
-**Returns:**
-- Module signature.
-
-## `extract_python_function_source(func_node: Node, source: bytes) -> str`
-
-Extract source code of a Python function.
-
-**Parameters:**
-- `func_node`: The function AST node.
-- `source`: Source bytes.
-
-**Returns:**
-- Function source code.
-
-## `extract_python_class_source(class_node: Node, source: bytes) -> str`
-
-Extract source code of a Python class.
-
-**Parameters:**
-- `class_node`: The class AST node.
-- `source`: Source bytes.
-
-**Returns:**
-- Class source code.
-
-## `extract_python_module_source(source: bytes) -> str`
-
-Extract source code of a Python module.
-
-**Parameters:**
-- `source`: Source bytes.
-
-**Returns:**
-- Module source code.
-
-## `extract_python_function_lines(func_node: Node, source: bytes) -> tuple[int, int]`
-
-Extract line numbers of a Python function.
-
-**Parameters:**
-- `func_node`: The function AST node.
-- `source`: Source bytes.
-
-**Returns:**
-- Tuple of start and end line numbers.
-
-## `extract_python_class_lines(class_node: Node, source: bytes) -> tuple[int, int]`
-
-Extract line numbers of a Python class.
-
-**Parameters:**
-- `class_node`: The class AST node.
-- `source`: Source bytes.
-
-**Returns:**
-- Tuple of start and end line numbers.
-
-## `extract_python_module_lines(source: bytes) -> tuple[int, int]`
-
-Extract line numbers of a Python module.
-
-**Parameters:**
-- `source`: Source bytes.
-
-**Returns:**
-- Tuple of start and end line numbers.
-
-## `extract_python_function_name(func_node: Node, source: bytes) -> str`
-
-Extract name of a Python function.
-
-**Parameters:**
-- `func_node`: The function AST node.
-- `source`: Source bytes.
-
-**Returns:**
-- Function name.
-
-## `extract_python_class_name(class_node: Node, source: bytes) -> str`
-
-Extract name of a Python class.
-
-**Parameters:**
-- `class_node`: The class AST node.
-- `source`: Source bytes.
-
-**Returns:**
-- Class name.
-
-## `extract_python_module_name(source: bytes) -> str`
-
-Extract name of a Python module.
-
-**Parameters:**
-- `source`: Source bytes.
-
-**Returns:**
-- Module name.
-
-## `extract_python_function_is_async(func_node: Node, source: bytes) -> bool`
-
-Check if a Python function is async.
-
-**Parameters:**
-- `func_node`: The function AST node.
-- `source`: Source bytes.
-
-**Returns:**
-- True if the function is async.
-
-## `extract_python_class_is_async(class_node: Node, source: bytes) -> bool`
-
-Check if a Python class is async.
-
-**Parameters:**
-- `class_node`: The class AST node.
-- `source`: Source bytes.
-
-**Returns:**
-- True if the class is async.
-
-## `extract_python_module_is_async(source: bytes) -> bool`
-
-Check if a Python module is async.
-
-**Parameters:**
-- `source`: Source bytes.
-
-**Returns:**
-- True if the module is async.
-
-## `extract_python_function_is_generator(func_node: Node, source: bytes) -> bool`
-
-Check if a Python function is a generator.
-
-**Parameters:**
-- `func_node`: The function AST node.
-- `source`: Source bytes.
-
-**Returns:**
-- True if the function is a generator.
-
-## `extract_python_class_is_generator(class_node: Node, source: bytes) -> bool`
-
-Check if a Python class is a generator.
-
-**Parameters:**
-- `class_node`: The class AST node.
-- `source`: Source bytes.
-
-**Returns:**
-- True if the class is a generator.
-
-## `extract_python_module_is_generator(source: bytes) -> bool`
-
-Check if a Python module is a generator.
-
-**Parameters:**
-- `source`: Source bytes.
-
-**Returns:**
-- True if the module is a generator.
-
-## `extract_python_function_is_coroutine(func_node: Node, source: bytes) -> bool`
-
-Check if a Python function is a coroutine.
-
-**Parameters:**
-- `func_node`: The function AST node.
-- `source`: Source bytes.
-
-**Returns:**
-- True if the function is a coroutine.
-
-## `extract_python_class_is_coroutine(class_node: Node, source: bytes) -> bool`
-
-Check if a Python class is a coroutine.
-
-**Parameters:**
-- `class_node`: The class AST node.
-- `source`: Source bytes.
-
-**Returns:**
-- True if the class is a coroutine.
-
-## `extract_python_module_is_coroutine(source: bytes) -> bool`
-
-Check if a Python module is a coroutine.
-
-**Parameters:**
-- `source`: Source bytes.
-
-**Returns:**
-- True if the module is a coroutine.
-
-## `extract_python_function_is_async_generator(func_node: Node, source: bytes) -> bool`
-
-Check if a Python function is an async generator.
-
-**Parameters:**
-- `func_node`: The function AST node.
-- `source`: Source bytes.
-
-**Returns:**
-- True if the function is an async generator.
-
-## `extract_python_class_is_async_generator(class_node: Node, source: bytes) -> bool`
-
-Check if a Python class is an async generator.
-
-**Parameters:**
-- `class_node`: The class AST node.
-- `source`: Source bytes.
-
-**Returns:**
-- True if the class is an async generator.
-
-## `extract_python_module_is_async_generator(source: bytes) -> bool`
-
-Check if a Python module is an async generator.
-
-**Parameters:**
-- `source`: Source bytes.
-
-**Returns:**
-- True if the module is an async generator.
-
-## `extract_python_function_is_async_coroutine(func_node: Node, source: bytes) -> bool`
-
-Check if a Python function is an async coroutine.
-
-**Parameters:**
-- `func_node`: The function AST node.
-- `source`: Source bytes.
-
-**Returns:**
-- True if the function is an async coroutine.
-
-## `extract_python_class_is_async_coroutine(class_node: Node, source: bytes) -> bool`
-
-Check if a Python class is an async coroutine.
-
-**Parameters:**
-- `class_node`: The class AST node.
-- `source`: Source bytes.
-
-**Returns:**
-- True if the class is an async coroutine.
-
-## `extract_python_module_is_async_coroutine(source: bytes) -> bool`
-
-Check if a Python module is an async coroutine.
-
-**Parameters:**
-- `source`: Source bytes.
-
-**Returns:**
-- True if the module is an async coroutine.
-
-## `extract_python_function_is_async_generator_coroutine(func_node: Node, source: bytes) -> bool`
-
-Check if a Python function is an async generator coroutine.
-
-**Parameters:**
-- `func_node`: The function AST node.
-- `source`: Source bytes.
-
-**Returns:**
-- True if the function is an async generator coroutine.
-
-## `extract_python_class_is_async_generator_coroutine(class_node: Node, source: bytes) -> bool`
-
-Check if a Python class is an async generator coroutine.
-
-**Parameters:**
-- `class_node`: The class AST node.
-- `source`: Source bytes.
-
-**Returns:**
-- True if the class is an async generator coroutine.
-
-## `extract_python_module_is_async_generator_coroutine(source: bytes) -> bool`
-
-Check if a Python module is an async generator coroutine.
-
-**Parameters:**
-- `source`: Source bytes.
-
-**Returns:**
-- True if the module is an async generator coroutine.
-
-## `extract_python_function_is_async_generator_coroutine_async(func_node: Node, source: bytes) -> bool`
-
-Check if a Python function is an async generator coroutine async.
-
-**Parameters:**
-- `func_node`: The function AST node.
-- `source`: Source bytes.
-
-**Returns:**
-- True if the function is an async generator coroutine async.
-
-## `extract_python_class_is_async_generator_coroutine_async(class_node: Node, source: bytes) -> bool`
-
-Check if a Python class is an async generator coroutine async.
-
-**Parameters:**
-- `class_node`: The class AST node.
-- `source`: Source bytes.
+param_types = extract_python_parameter_types(func_node, source_bytes)
+print(param_types)
+```
 
 ## API Reference
 
@@ -719,7 +353,7 @@ Extract semantic code chunks from source files using AST analysis.
 
 
 <details>
-<summary>View Source (lines 499-929) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/chunker.py#L499-L929">GitHub</a></summary>
+<summary>View Source (lines 499-929) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/chunker.py#L499-L929">GitHub</a></summary>
 
 ```python
 class CodeChunker:
@@ -737,13 +371,13 @@ def __init__(config: ChunkingConfig | None = None)
 Initialize the chunker.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `config` | `ChunkingConfig | None` | `None` | Optional chunking configuration. |
 
 
 <details>
-<summary>View Source (lines 502-511) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/chunker.py#L502-L511">GitHub</a></summary>
+<summary>View Source (lines 502-511) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/chunker.py#L502-L511">GitHub</a></summary>
 
 ```python
 def __init__(self, config: ChunkingConfig | None = None):
@@ -769,7 +403,7 @@ def chunk_file(file_path: Path, repo_root: Path) -> Iterator[CodeChunk]
 Extract code chunks from a source file.  Checks for registered language parser plugins first. If a plugin handles the file extension, uses the plugin's parse_file method. Otherwise falls back to the built-in tree-sitter parser.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `file_path` | `Path` | - | Path to the source file. |
 | `repo_root` | `Path` | - | Root directory of the repository. |
@@ -779,7 +413,7 @@ Extract code chunks from a source file.  Checks for registered language parser p
 
 
 <details>
-<summary>View Source (lines 513-571) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/chunker.py#L513-L571">GitHub</a></summary>
+<summary>View Source (lines 513-571) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/chunker.py#L513-L571">GitHub</a></summary>
 
 ```python
 def chunk_file(self, file_path: Path, repo_root: Path) -> Iterator[CodeChunk]:
@@ -856,18 +490,18 @@ def get_parent_classes(class_node: Node, source: bytes, language: Language) -> l
 Extract parent class names from a class definition.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `class_node` | `Node` | - | The class AST node. |
 | `source` | `bytes` | - | Source bytes. |
-| `language` | `Language` | - | Programming language. |
+| `language` | [`Language`](../models.md) | - | Programming language. |
 
 **Returns:** `list[str]`
 
 
 
 <details>
-<summary>View Source (lines 95-198) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/chunker.py#L95-L198">GitHub</a></summary>
+<summary>View Source (lines 95-198) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/chunker.py#L95-L198">GitHub</a></summary>
 
 ```python
 def get_parent_classes(class_node: Node, source: bytes, language: Language) -> list[str]:
@@ -987,7 +621,7 @@ def extract_python_parameter_types(func_node: Node, source: bytes) -> dict[str, 
 Extract parameter types from a Python function.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `func_node` | `Node` | - | The function_definition AST node. |
 | `source` | `bytes` | - | Source code bytes. |
@@ -997,7 +631,7 @@ Extract parameter types from a Python function.
 
 
 <details>
-<summary>View Source (lines 201-301) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/chunker.py#L201-L301">GitHub</a></summary>
+<summary>View Source (lines 201-301) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/chunker.py#L201-L301">GitHub</a></summary>
 
 ```python
 def extract_python_parameter_types(func_node: Node, source: bytes) -> dict[str, str | None]:
@@ -1114,7 +748,7 @@ def extract_python_parameter_defaults(func_node: Node, source: bytes) -> dict[st
 Extract parameter default values from a Python function.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `func_node` | `Node` | - | The function_definition AST node. |
 | `source` | `bytes` | - | Source code bytes. |
@@ -1124,7 +758,7 @@ Extract parameter default values from a Python function.
 
 
 <details>
-<summary>View Source (lines 304-336) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/chunker.py#L304-L336">GitHub</a></summary>
+<summary>View Source (lines 304-336) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/chunker.py#L304-L336">GitHub</a></summary>
 
 ```python
 def extract_python_parameter_defaults(func_node: Node, source: bytes) -> dict[str, str]:
@@ -1173,7 +807,7 @@ def extract_python_return_type(func_node: Node, source: bytes) -> str | None
 Extract return type annotation from a Python function.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `func_node` | `Node` | - | The function_definition AST node. |
 | `source` | `bytes` | - | Source code bytes. |
@@ -1183,7 +817,7 @@ Extract return type annotation from a Python function.
 
 
 <details>
-<summary>View Source (lines 339-352) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/chunker.py#L339-L352">GitHub</a></summary>
+<summary>View Source (lines 339-352) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/chunker.py#L339-L352">GitHub</a></summary>
 
 ```python
 def extract_python_return_type(func_node: Node, source: bytes) -> str | None:
@@ -1213,7 +847,7 @@ def extract_python_decorators(func_node: Node, source: bytes) -> list[str]
 Extract decorators from a Python function.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `func_node` | `Node` | - | The function_definition AST node. |
 | `source` | `bytes` | - | Source code bytes. |
@@ -1223,7 +857,7 @@ Extract decorators from a Python function.
 
 
 <details>
-<summary>View Source (lines 355-375) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/chunker.py#L355-L375">GitHub</a></summary>
+<summary>View Source (lines 355-375) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/chunker.py#L355-L375">GitHub</a></summary>
 
 ```python
 def extract_python_decorators(func_node: Node, source: bytes) -> list[str]:
@@ -1260,7 +894,7 @@ def is_async_function(func_node: Node) -> bool
 Check if a function is async.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `func_node` | `Node` | - | The function AST node. |
 
@@ -1269,7 +903,7 @@ Check if a function is async.
 
 
 <details>
-<summary>View Source (lines 378-389) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/chunker.py#L378-L389">GitHub</a></summary>
+<summary>View Source (lines 378-389) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/chunker.py#L378-L389">GitHub</a></summary>
 
 ```python
 def is_async_function(func_node: Node) -> bool:
@@ -1297,7 +931,7 @@ def extract_python_raised_exceptions(func_node: Node, source: bytes) -> list[str
 Extract exception types raised by a Python function.  Finds all `raise` statements within the function and extracts the exception type being raised.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `func_node` | `Node` | - | The function_definition AST node. |
 | `source` | `bytes` | - | Source code bytes. |
@@ -1307,7 +941,7 @@ Extract exception types raised by a Python function.  Finds all `raise` statemen
 
 
 <details>
-<summary>View Source (lines 392-444) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/chunker.py#L392-L444">GitHub</a></summary>
+<summary>View Source (lines 392-444) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/chunker.py#L392-L444">GitHub</a></summary>
 
 ```python
 def extract_python_raised_exceptions(func_node: Node, source: bytes) -> list[str]:
@@ -1373,10 +1007,10 @@ def extract_python_raised_exceptions(func_node: Node, source: bytes) -> list[str
 def find_raise_statements(node: Node) -> None
 ```
 
-Recursively find raise statements in the AST.
+Recursively [find](../generators/manifest.md) raise statements in the AST.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `node` | `Node` | - | - |
 
@@ -1385,7 +1019,7 @@ Recursively find raise statements in the AST.
 
 
 <details>
-<summary>View Source (lines 407-437) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/chunker.py#L407-L437">GitHub</a></summary>
+<summary>View Source (lines 407-437) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/chunker.py#L407-L437">GitHub</a></summary>
 
 ```python
 def find_raise_statements(node: Node) -> None:
@@ -1432,11 +1066,11 @@ def extract_function_type_metadata(func_node: Node, source: bytes, language: Lan
 Extract type annotation metadata from a function node.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `func_node` | `Node` | - | The function AST node. |
 | `source` | `bytes` | - | Source code bytes. |
-| `language` | `Language` | - | Programming language. |
+| `language` | [`Language`](../models.md) | - | Programming language. |
 
 **Returns:** `dict[str, Any]`
 
@@ -1444,7 +1078,7 @@ Extract type annotation metadata from a function node.
 
 
 <details>
-<summary>View Source (lines 447-496) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/chunker.py#L447-L496">GitHub</a></summary>
+<summary>View Source (lines 447-496) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/chunker.py#L447-L496">GitHub</a></summary>
 
 ```python
 def extract_function_type_metadata(
@@ -1622,8 +1256,8 @@ flowchart TD
 
 Functions and methods in this file and their callers:
 
-- **`CodeChunk`**: called by `CodeChunker._create_class_summary_chunk`, `CodeChunker._create_function_chunk`, `CodeChunker._create_imports_chunk`, `CodeChunker._create_method_chunk`, `CodeChunker._create_module_chunk`, `CodeChunker._extract_class_chunks`
-- **`CodeParser`**: called by `CodeChunker.__init__`
+- **[`CodeChunk`](../models.md)**: called by `CodeChunker._create_class_summary_chunk`, `CodeChunker._create_function_chunk`, `CodeChunker._create_imports_chunk`, `CodeChunker._create_method_chunk`, `CodeChunker._create_module_chunk`, `CodeChunker._extract_class_chunks`
+- **[`CodeParser`](parser.md)**: called by `CodeChunker.__init__`
 - **`Path`**: called by `CodeChunker._create_module_chunk`
 - **`_create_class_summary_chunk`**: called by `CodeChunker._extract_class_chunks`
 - **`_create_file_summary`**: called by `CodeChunker._create_module_chunk`
@@ -1644,15 +1278,15 @@ Functions and methods in this file and their callers:
 - **`extract_python_parameter_types`**: called by `extract_function_type_metadata`
 - **`extract_python_raised_exceptions`**: called by `extract_function_type_metadata`
 - **`extract_python_return_type`**: called by `extract_function_type_metadata`
-- **`find_nodes_by_type`**: called by `CodeChunker._create_class_summary_chunk`, `CodeChunker._create_file_summary`, `CodeChunker._extract_class_chunks`, `CodeChunker.chunk_file`, `get_parent_classes`
+- **[`find_nodes_by_type`](parser.md)**: called by `CodeChunker._create_class_summary_chunk`, `CodeChunker._create_file_summary`, `CodeChunker._extract_class_chunks`, `CodeChunker.chunk_file`, `get_parent_classes`
 - **`find_raise_statements`**: called by `extract_python_raised_exceptions`, `find_raise_statements`
-- **`get_config`**: called by `CodeChunker.__init__`
-- **`get_docstring`**: called by `CodeChunker._create_function_chunk`, `CodeChunker._create_method_chunk`, `CodeChunker._extract_class_chunks`
-- **`get_node_name`**: called by `CodeChunker._create_class_summary_chunk`, `CodeChunker._create_file_summary`, `CodeChunker._create_function_chunk`, `CodeChunker._create_method_chunk`, `CodeChunker._extract_class_chunks`
-- **`get_node_text`**: called by `CodeChunker._create_file_summary`, `CodeChunker._create_function_chunk`, `CodeChunker._create_imports_chunk`, `CodeChunker._create_method_chunk`, `CodeChunker._create_module_chunk`, `CodeChunker._extract_class_chunks`, `extract_python_decorators`, `extract_python_parameter_defaults`, `extract_python_parameter_types`, `extract_python_raised_exceptions`, `extract_python_return_type`, `find_raise_statements`, `get_parent_classes`
+- **[`get_config`](../config.md)**: called by `CodeChunker.__init__`
+- **[`get_docstring`](parser.md)**: called by `CodeChunker._create_function_chunk`, `CodeChunker._create_method_chunk`, `CodeChunker._extract_class_chunks`
+- **[`get_node_name`](parser.md)**: called by `CodeChunker._create_class_summary_chunk`, `CodeChunker._create_file_summary`, `CodeChunker._create_function_chunk`, `CodeChunker._create_method_chunk`, `CodeChunker._extract_class_chunks`
+- **[`get_node_text`](parser.md)**: called by `CodeChunker._create_file_summary`, `CodeChunker._create_function_chunk`, `CodeChunker._create_imports_chunk`, `CodeChunker._create_method_chunk`, `CodeChunker._create_module_chunk`, `CodeChunker._extract_class_chunks`, `extract_python_decorators`, `extract_python_parameter_defaults`, `extract_python_parameter_types`, `extract_python_raised_exceptions`, `extract_python_return_type`, `find_raise_statements`, `get_parent_classes`
 - **`get_parent_classes`**: called by `CodeChunker._extract_class_chunks`
 - **`get_parser_for_extension`**: called by `CodeChunker.chunk_file`
-- **`get_plugin_registry`**: called by `CodeChunker.chunk_file`
+- **[`get_plugin_registry`](../plugins/registry.md)**: called by `CodeChunker.chunk_file`
 - **`hexdigest`**: called by `CodeChunker._generate_id`
 - **`is_async_function`**: called by `extract_function_type_metadata`
 - **`model_copy`**: called by `CodeChunker.__init__`
@@ -1753,7 +1387,7 @@ assert "analyze_results" in function_names
 |--------|------|--------|------|--------|
 | `CodeChunker` | class | Brian Breidenbach | 1 week ago | `4e9d8f5` Integrate plugin system int... |
 | `chunk_file` | method | Brian Breidenbach | 1 week ago | `4e9d8f5` Integrate plugin system int... |
-| `extract_python_decorators` | function | Brian Breidenbach | 1 week ago | `31cf97a` Fix mypy type errors across... |
+| `extract_python_decorators` | function | Brian Breidenbach | 2 weeks ago | `31cf97a` Fix mypy type errors across... |
 | `__init__` | method | Brian Breidenbach | 2 weeks ago | `2f85bf8` Fix critical issues: config... |
 | `extract_python_raised_exceptions` | function | Brian Breidenbach | 3 weeks ago | `202b96d` Add exception documentation... |
 | `find_raise_statements` | function | Brian Breidenbach | 3 weeks ago | `202b96d` Add exception documentation... |
@@ -1780,7 +1414,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_create_module_chunk`
 
 <details>
-<summary>View Source (lines 573-617) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/chunker.py#L573-L617">GitHub</a></summary>
+<summary>View Source (lines 573-617) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/chunker.py#L573-L617">GitHub</a></summary>
 
 ```python
 def _create_module_chunk(
@@ -1836,7 +1470,7 @@ def _create_module_chunk(
 #### `_create_file_summary`
 
 <details>
-<summary>View Source (lines 619-659) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/chunker.py#L619-L659">GitHub</a></summary>
+<summary>View Source (lines 619-659) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/chunker.py#L619-L659">GitHub</a></summary>
 
 ```python
 def _create_file_summary(self, root: Node, source: bytes, language: Language) -> str:
@@ -1888,7 +1522,7 @@ def _create_file_summary(self, root: Node, source: bytes, language: Language) ->
 #### `_create_imports_chunk`
 
 <details>
-<summary>View Source (lines 661-694) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/chunker.py#L661-L694">GitHub</a></summary>
+<summary>View Source (lines 661-694) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/chunker.py#L661-L694">GitHub</a></summary>
 
 ```python
 def _create_imports_chunk(
@@ -1933,7 +1567,7 @@ def _create_imports_chunk(
 #### `_extract_class_chunks`
 
 <details>
-<summary>View Source (lines 696-754) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/chunker.py#L696-L754">GitHub</a></summary>
+<summary>View Source (lines 696-754) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/chunker.py#L696-L754">GitHub</a></summary>
 
 ```python
 def _extract_class_chunks(
@@ -2003,7 +1637,7 @@ def _extract_class_chunks(
 #### `_create_class_summary_chunk`
 
 <details>
-<summary>View Source (lines 756-815) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/chunker.py#L756-L815">GitHub</a></summary>
+<summary>View Source (lines 756-815) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/chunker.py#L756-L815">GitHub</a></summary>
 
 ```python
 def _create_class_summary_chunk(
@@ -2074,7 +1708,7 @@ def _create_class_summary_chunk(
 #### `_create_method_chunk`
 
 <details>
-<summary>View Source (lines 817-859) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/chunker.py#L817-L859">GitHub</a></summary>
+<summary>View Source (lines 817-859) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/chunker.py#L817-L859">GitHub</a></summary>
 
 ```python
 def _create_method_chunk(
@@ -2128,7 +1762,7 @@ def _create_method_chunk(
 #### `_create_function_chunk`
 
 <details>
-<summary>View Source (lines 861-898) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/chunker.py#L861-L898">GitHub</a></summary>
+<summary>View Source (lines 861-898) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/chunker.py#L861-L898">GitHub</a></summary>
 
 ```python
 def _create_function_chunk(
@@ -2177,7 +1811,7 @@ def _create_function_chunk(
 #### `_is_inside_class`
 
 <details>
-<summary>View Source (lines 900-915) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/chunker.py#L900-L915">GitHub</a></summary>
+<summary>View Source (lines 900-915) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/chunker.py#L900-L915">GitHub</a></summary>
 
 ```python
 def _is_inside_class(self, node: Node, class_types: set[str]) -> bool:
@@ -2204,7 +1838,7 @@ def _is_inside_class(self, node: Node, class_types: set[str]) -> bool:
 #### `_generate_id`
 
 <details>
-<summary>View Source (lines 917-929) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/core/chunker.py#L917-L929">GitHub</a></summary>
+<summary>View Source (lines 917-929) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/core/chunker.py#L917-L929">GitHub</a></summary>
 
 ```python
 def _generate_id(self, file_path: str, name: str, line: int) -> str:
@@ -2224,3 +1858,6 @@ def _generate_id(self, file_path: str, name: str, line: int) -> str:
 
 </details>
 
+## Relevant Source Files
+
+- `src/local_deepwiki/core/chunker.py:499-929`

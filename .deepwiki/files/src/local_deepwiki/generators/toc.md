@@ -125,7 +125,7 @@ A single entry in the table of contents.
 
 
 <details>
-<summary>View Source (lines 10-27) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/toc.py#L10-L27">GitHub</a></summary>
+<summary>View Source (lines 10-27) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/toc.py#L10-L27">GitHub</a></summary>
 
 ```python
 class TocEntry:
@@ -161,7 +161,7 @@ Convert to dictionary for JSON serialization.
 
 
 <details>
-<summary>View Source (lines 10-27) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/toc.py#L10-L27">GitHub</a></summary>
+<summary>View Source (lines 10-27) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/toc.py#L10-L27">GitHub</a></summary>
 
 ```python
 class TocEntry:
@@ -194,7 +194,7 @@ Hierarchical table of contents with numbered sections.
 
 
 <details>
-<summary>View Source (lines 31-63) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/toc.py#L31-L63">GitHub</a></summary>
+<summary>View Source (lines 31-63) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/toc.py#L31-L63">GitHub</a></summary>
 
 ```python
 class TableOfContents:
@@ -244,7 +244,7 @@ Convert to dictionary for JSON serialization.
 
 
 <details>
-<summary>View Source (lines 31-63) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/toc.py#L31-L63">GitHub</a></summary>
+<summary>View Source (lines 31-63) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/toc.py#L31-L63">GitHub</a></summary>
 
 ```python
 class TableOfContents:
@@ -293,13 +293,13 @@ def to_json(indent: int = 2) -> str
 Convert to JSON string.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `indent` | `int` | `2` | - |
 
 
 <details>
-<summary>View Source (lines 31-63) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/toc.py#L31-L63">GitHub</a></summary>
+<summary>View Source (lines 31-63) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/toc.py#L31-L63">GitHub</a></summary>
 
 ```python
 class TableOfContents:
@@ -348,13 +348,13 @@ def from_dict(data: dict[str, Any]) -> "TableOfContents"
 Create from dictionary.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `data` | `dict[str, Any]` | - | - |
 
 
 <details>
-<summary>View Source (lines 31-63) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/toc.py#L31-L63">GitHub</a></summary>
+<summary>View Source (lines 31-63) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/toc.py#L31-L63">GitHub</a></summary>
 
 ```python
 class TableOfContents:
@@ -401,13 +401,13 @@ def parse_entry(entry_data: dict[str, Any]) -> TocEntry
 ```
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `entry_data` | `dict[str, Any]` | - | - |
 
 
 <details>
-<summary>View Source (lines 31-63) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/toc.py#L31-L63">GitHub</a></summary>
+<summary>View Source (lines 31-63) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/toc.py#L31-L63">GitHub</a></summary>
 
 ```python
 class TableOfContents:
@@ -456,7 +456,7 @@ def from_json(json_str: str) -> "TableOfContents"
 Create from JSON string.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `json_str` | `str` | - | - |
 
@@ -465,7 +465,7 @@ Create from JSON string.
 
 
 <details>
-<summary>View Source (lines 31-63) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/toc.py#L31-L63">GitHub</a></summary>
+<summary>View Source (lines 31-63) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/toc.py#L31-L63">GitHub</a></summary>
 
 ```python
 class TableOfContents:
@@ -516,7 +516,7 @@ def generate_toc(pages: list[dict[str, str]]) -> TableOfContents
 Generate hierarchical numbered table of contents from wiki pages.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `pages` | `list[dict[str, str]]` | - | List of dicts with 'path' and 'title' keys. |
 
@@ -525,7 +525,7 @@ Generate hierarchical numbered table of contents from wiki pages.
 
 
 <details>
-<summary>View Source (lines 66-134) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/toc.py#L66-L134">GitHub</a></summary>
+<summary>View Source (lines 66-134) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/toc.py#L66-L134">GitHub</a></summary>
 
 ```python
 def generate_toc(pages: list[dict[str, str]]) -> TableOfContents:
@@ -610,7 +610,7 @@ def write_toc(toc: TableOfContents, wiki_path: Path) -> None
 Write table of contents to toc.json file.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `toc` | `TableOfContents` | - | The TableOfContents to write. |
 | `wiki_path` | `Path` | - | Path to the wiki directory. |
@@ -620,7 +620,7 @@ Write table of contents to toc.json file.
 
 
 <details>
-<summary>View Source (lines 247-255) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/toc.py#L247-L255">GitHub</a></summary>
+<summary>View Source (lines 247-255) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/toc.py#L247-L255">GitHub</a></summary>
 
 ```python
 def write_toc(toc: TableOfContents, wiki_path: Path) -> None:
@@ -645,7 +645,7 @@ def read_toc(wiki_path: Path) -> TableOfContents | None
 Read table of contents from toc.json file.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `wiki_path` | `Path` | - | Path to the wiki directory. |
 
@@ -655,7 +655,7 @@ Read table of contents from toc.json file.
 
 
 <details>
-<summary>View Source (lines 258-274) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/toc.py#L258-L274">GitHub</a></summary>
+<summary>View Source (lines 258-274) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/toc.py#L258-L274">GitHub</a></summary>
 
 ```python
 def read_toc(wiki_path: Path) -> TableOfContents | None:
@@ -892,7 +892,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_build_section_tree`
 
 <details>
-<summary>View Source (lines 137-190) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/toc.py#L137-L190">GitHub</a></summary>
+<summary>View Source (lines 137-190) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/toc.py#L137-L190">GitHub</a></summary>
 
 ```python
 def _build_section_tree(
@@ -957,7 +957,7 @@ def _build_section_tree(
 #### `_tree_to_entries`
 
 <details>
-<summary>View Source (lines 193-244) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/toc.py#L193-L244">GitHub</a></summary>
+<summary>View Source (lines 193-244) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/toc.py#L193-L244">GitHub</a></summary>
 
 ```python
 def _tree_to_entries(
@@ -1016,3 +1016,6 @@ def _tree_to_entries(
 
 </details>
 
+## Relevant Source Files
+
+- `src/local_deepwiki/generators/toc.py:10-27`

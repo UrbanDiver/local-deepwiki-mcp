@@ -5,74 +5,60 @@ Local DeepWiki-style MCP server for private repository documentation
 
 ## Description
 
-Local DeepWiki MCP server that generates comprehensive wiki documentation for private repositories. Parses source code using tree-sitter ASTs, creates semantic embeddings stored in LanceDB, and provides RAG-based Q&A via the Model Context Protocol. Supports multiple LLM providers (Ollama, Anthropic, OpenAI) and export formats including HTML and PDF.
+Local DeepWiki-MCP is a private documentation solution that enables local development of AI-powered code assistants using the MCP (Model Control Protocol). It provides tools for generating, searching, and serving repository documentation with support for multiple AI providers including OpenAI, Anthropic, and Ollama. The system supports both interactive search and automated documentation generation workflows.
 
 ## Key Features
 
-- **MCP Server** - 20 MCP tools for indexing, querying, and exporting repository documentation
-- **AST-Aware Code Parsing** - Tree-sitter grammars for 13 languages with semantic chunking at function/class boundaries
-- **RAG-Based Q&A** - Vector similarity search over code chunks with LLM-synthesized answers
-- **Deep Research** - Multi-step reasoning pipeline with query decomposition, parallel retrieval, and gap analysis
-- **Wiki Generation** - LLM-powered markdown wiki with diagrams, glossary, call graphs, and coverage reports
-- **Export Capabilities** - Static HTML and PDF export with cross-linked navigation
-- **Repository Watching** - File system monitoring for automatic re-indexing on changes
-- **AI Provider Flexibility** - Pluggable LLM and embedding providers (Ollama, Anthropic, OpenAI, local sentence-transformers)
+- **Multi-Provider AI Support**: Integrates with OpenAI, Anthropic, and Ollama APIs for flexible AI assistant deployment
+- **[Interactive Search](files/src/local_deepwiki/cli/interactive_search.md) Interface**: Provides command-line search functionality for exploring repository documentation
+- **Documentation Export Capabilities**: Supports exporting documentation in HTML and PDF formats
+- **MCP Server Implementation**: Implements Model Control Protocol server for AI assistant communication
+- **Repository Watching**: Includes file watching functionality for automatic documentation updates
 
 ## Technology Stack
 
 - **Python >=3.11**
-- **Dependencies**: anthropic, flask, lancedb, markdown, mcp, ollama, openai, pandas, psutil, pydantic, pyyaml, rapidfuzz, rich, sentence-transformers, tree-sitter (13 grammars), watchdog, weasyprint
+- **Dependencies**: anthropic, flask, lancedb, markdown, mcp, ollama, openai, pandas, psutil, pydantic, pyyaml, rapidfuzz
+  - Plus 18 more...
 
 ## Directory Structure
 
 ```
 local-deepwiki-mcp/
-├── src/
-│   └── local_deepwiki/
-│       ├── server.py          # MCP server entry point
-│       ├── handlers.py        # Tool handler implementations
-│       ├── models.py          # Pydantic data models
-│       ├── config.py          # Configuration management
-│       ├── validation.py      # Input validation (CWE-400)
-│       ├── events.py          # Pub-sub event system
-│       ├── watcher.py         # File system watcher
-│       ├── core/              # Core engine
-│       │   ├── parser.py      # Tree-sitter AST parsing
-│       │   ├── chunker.py     # Semantic code chunking
-│       │   ├── vectorstore.py # LanceDB vector storage
-│       │   ├── indexer.py     # Orchestrates indexing pipeline
-│       │   ├── deep_research.py # Multi-step research engine
-│       │   ├── fuzzy_search.py  # Fuzzy name matching
-│       │   ├── llm_cache.py   # LRU response cache
-│       │   ├── rate_limiter.py # Token bucket rate limiter
-│       │   ├── secret_detector.py # Credential scanning
-│       │   ├── git_utils.py   # Secure git operations
-│       │   └── audit.py       # Operation audit logging
-│       ├── generators/        # Wiki content generators
-│       │   ├── wiki.py        # Main wiki generator
-│       │   ├── diagrams.py    # Mermaid diagram generation
-│       │   ├── callgraph.py   # Function call graphs
-│       │   ├── coverage.py    # Documentation coverage
-│       │   ├── glossary.py    # Code entity glossary
-│       │   ├── inheritance.py # Class hierarchy trees
-│       │   └── ...            # 12 more generators
-│       ├── providers/         # Pluggable backends
-│       │   ├── llm/           # Ollama, Anthropic, OpenAI
-│       │   └── embeddings/    # Local, OpenAI
-│       ├── export/            # HTML and PDF export
-│       ├── security/          # RBAC access control
-│       ├── plugins/           # Plugin registry
-│       ├── cli/               # CLI tools
-│       └── web/               # Flask web UI
-└── tests/                     # 82 test files, 3,956 tests
+├── agents/
+│   ├── architect.yaml
+│   ├── coder.yaml
+│   ├── reviewer.yaml
+│   ├── security-architect.yaml
+│   └── tester.yaml
+├── coverage_html/
+│   ├── class_index.html
+│   ├── coverage_html_cb_dd2e7eb5.js
+│   ├── favicon_32_cb_c827f16f.png
+│   ├── function_index.html
+│   ├── index.html
+│   ├── keybd_closed_cb_900cfef5.png
+│   ├── status.json
+│   ├── style_cb_9ff733b0.css
+│   └── z_dc20ba85d2cbeecd_openai_py.html
+├── coverage_openai_embeddings/
+│   ├── class_index.html
+│   ├── coverage_html_cb_dd2e7eb5.js
+│   ├── favicon_32_cb_c827f16f.png
+│   ├── function_index.html
+│   ├── index.html
+│   ├── keybd_closed_cb_900cfef5.png
+│   ├── status.json
+│   ...
+...
 ```
 
 ## Quick Start
 
-- `local-deepwiki` → `local_deepwiki.server:main` (MCP server)
-- `deepwiki-serve` → `local_deepwiki.web.app:main` (Web UI)
-- `deepwiki-watch` → `local_deepwiki.watcher:main` (File watcher)
-- `deepwiki-export` → `local_deepwiki.export.html:main` (HTML export)
-- `deepwiki-export-pdf` → `local_deepwiki.export.pdf:main` (PDF export)
-- `deepwiki-search` → `local_deepwiki.cli.interactive_search:main` (Interactive search)
-- `deepwiki-config` → `local_deepwiki.cli.config_cli:main` (Configuration)
+- `deepwiki-config` → `local_deepwiki.cli.config_cli:main`
+- `deepwiki-export` → `local_deepwiki.export.html:main`
+- `deepwiki-export-pdf` → `local_deepwiki.export.pdf:main`
+- `deepwiki-search` → `local_deepwiki.cli.interactive_search:main`
+- `deepwiki-serve` → `local_deepwiki.web.app:main`
+- `deepwiki-watch` → `local_deepwiki.watcher:main`
+- `local-deepwiki` → `local_deepwiki.server:main`

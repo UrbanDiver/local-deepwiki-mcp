@@ -5,9 +5,9 @@ This file, `src/local_deepwiki/generators/inheritance.py`, provides functionalit
 The file depends on:
 - `dataclasses` for defining structured data
 - `pathlib.Path` for file path handling
-- `VectorStore` from `local_deepwiki.core.vectorstore` to retrieve code chunks
-- `sanitize_mermaid_name` from `local_deepwiki.generators.diagrams` for Mermaid compatibility
-- `ChunkType` and `IndexStatus` from `local_deepwiki.models` for indexing metadata
+- [`VectorStore`](../core/vectorstore.md) from `local_deepwiki.core.vectorstore` to retrieve code chunks
+- [`sanitize_mermaid_name`](diagrams.md) from `local_deepwiki.generators.diagrams` for Mermaid compatibility
+- [`ChunkType`](../models.md) and [`IndexStatus`](../models.md) from `local_deepwiki.models` for indexing metadata
 
 ## Related Files
 
@@ -47,8 +47,8 @@ Collect all classes and their inheritance relationships.
 
 ### Parameters
 
-- **index_status**: `IndexStatus` - Index status with file information.
-- **vector_store**: `VectorStore` - Vector store with code chunks.
+- **index_status**: [`IndexStatus`](../models.md) - Index status with file information.
+- **vector_store**: [`VectorStore`](../core/vectorstore.md) - Vector store with code chunks.
 
 ### Returns
 
@@ -127,8 +127,8 @@ Generate the inheritance documentation page content.
 
 ### Parameters
 
-- **index_status**: `IndexStatus` - Index status with file information.
-- **vector_store**: `VectorStore` - Vector store with code chunks.
+- **index_status**: [`IndexStatus`](../models.md) - Index status with file information.
+- **vector_store**: [`VectorStore`](../core/vectorstore.md) - Vector store with code chunks.
 
 ### Returns
 
@@ -144,7 +144,7 @@ A class in the inheritance tree.
 
 
 <details>
-<summary>View Source (lines 12-20) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/inheritance.py#L12-L20">GitHub</a></summary>
+<summary>View Source (lines 12-20) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/inheritance.py#L12-L20">GitHub</a></summary>
 
 ```python
 class ClassNode:
@@ -171,17 +171,17 @@ async def collect_class_hierarchy(index_status: IndexStatus, vector_store: Vecto
 Collect all classes and their inheritance relationships.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `index_status` | `IndexStatus` | - | Index status with file information. |
-| `vector_store` | `VectorStore` | - | Vector store with code chunks. |
+| `index_status` | [`IndexStatus`](../models.md) | - | Index status with file information. |
+| `vector_store` | [`VectorStore`](../core/vectorstore.md) | - | Vector store with code chunks. |
 
 **Returns:** `dict[str, ClassNode]`
 
 
 
 <details>
-<summary>View Source (lines 23-81) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/inheritance.py#L23-L81">GitHub</a></summary>
+<summary>View Source (lines 23-81) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/inheritance.py#L23-L81">GitHub</a></summary>
 
 ```python
 async def collect_class_hierarchy(
@@ -256,7 +256,7 @@ def find_root_classes(classes: dict[str, ClassNode]) -> list[str]
 Find classes that have no parents (root of inheritance trees).
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `classes` | `dict[str, ClassNode]` | - | Dictionary of class nodes. |
 
@@ -265,7 +265,7 @@ Find classes that have no parents (root of inheritance trees).
 
 
 <details>
-<summary>View Source (lines 84-99) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/inheritance.py#L84-L99">GitHub</a></summary>
+<summary>View Source (lines 84-99) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/inheritance.py#L84-L99">GitHub</a></summary>
 
 ```python
 def find_root_classes(classes: dict[str, ClassNode]) -> list[str]:
@@ -297,7 +297,7 @@ def generate_inheritance_diagram(classes: dict[str, ClassNode], max_classes: int
 Generate a Mermaid class diagram showing inheritance relationships.  Only shows classes with internal inheritance relationships (excludes classes that only inherit from external bases like BaseModel, Enum, ABC).
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `classes` | `dict[str, ClassNode]` | - | Dictionary of class nodes. |
 | `max_classes` | `int` | `50` | Maximum number of classes to include. |
@@ -307,7 +307,7 @@ Generate a Mermaid class diagram showing inheritance relationships.  Only shows 
 
 
 <details>
-<summary>View Source (lines 102-176) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/inheritance.py#L102-L176">GitHub</a></summary>
+<summary>View Source (lines 102-176) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/inheritance.py#L102-L176">GitHub</a></summary>
 
 ```python
 def generate_inheritance_diagram(
@@ -357,7 +357,7 @@ def generate_inheritance_diagram(
     # Add class definitions
     for class_name in sorted(classes_with_internal_inheritance.keys()):
         node = classes_with_internal_inheritance[class_name]
-        safe_name = sanitize_mermaid_name(class_name)
+        safe_name = [sanitize_mermaid_name](diagrams.md)(class_name)
 
         if node.is_abstract:
             lines.append(f"    class {safe_name} {{")
@@ -368,11 +368,11 @@ def generate_inheritance_diagram(
 
     # Add inheritance relationships (only internal)
     for class_name, node in sorted(classes_with_internal_inheritance.items()):
-        safe_child = sanitize_mermaid_name(class_name)
+        safe_child = [sanitize_mermaid_name](diagrams.md)(class_name)
         for parent in node.parents:
             # Only add if parent is in our codebase
             if parent in classes_with_internal_inheritance:
-                safe_parent = sanitize_mermaid_name(parent)
+                safe_parent = [sanitize_mermaid_name](diagrams.md)(parent)
                 lines.append(f"    {safe_child} --|> {safe_parent}")
 
     lines.append("```")
@@ -398,7 +398,7 @@ def generate_inheritance_tree_text(classes: dict[str, ClassNode], root_class: st
 Generate a text-based inheritance tree starting from a root class.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `classes` | `dict[str, ClassNode]` | - | Dictionary of class nodes. |
 | `root_class` | `str` | - | The root class to start from. |
@@ -410,7 +410,7 @@ Generate a text-based inheritance tree starting from a root class.
 
 
 <details>
-<summary>View Source (lines 179-231) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/inheritance.py#L179-L231">GitHub</a></summary>
+<summary>View Source (lines 179-231) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/inheritance.py#L179-L231">GitHub</a></summary>
 
 ```python
 def generate_inheritance_tree_text(
@@ -479,10 +479,10 @@ async def generate_inheritance_page(index_status: IndexStatus, vector_store: Vec
 Generate the inheritance documentation page content.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `index_status` | `IndexStatus` | - | Index status with file information. |
-| `vector_store` | `VectorStore` | - | Vector store with code chunks. |
+| `index_status` | [`IndexStatus`](../models.md) | - | Index status with file information. |
+| `vector_store` | [`VectorStore`](../core/vectorstore.md) | - | Vector store with code chunks. |
 
 **Returns:** `str | None`
 
@@ -490,7 +490,7 @@ Generate the inheritance documentation page content.
 
 
 <details>
-<summary>View Source (lines 234-305) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/inheritance.py#L234-L305">GitHub</a></summary>
+<summary>View Source (lines 234-305) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/inheritance.py#L234-L305">GitHub</a></summary>
 
 ```python
 async def generate_inheritance_page(
@@ -627,7 +627,7 @@ Functions and methods in this file and their callers:
 - **`generate_inheritance_diagram`**: called by `generate_inheritance_page`
 - **`generate_inheritance_tree_text`**: called by `generate_inheritance_page`, `generate_inheritance_tree_text`
 - **`get_chunks_by_file`**: called by `collect_class_hierarchy`
-- **`sanitize_mermaid_name`**: called by `generate_inheritance_diagram`
+- **[`sanitize_mermaid_name`](diagrams.md)**: called by `generate_inheritance_diagram`
 - **`sort`**: called by `generate_inheritance_diagram`
 
 ## Usage Examples
@@ -710,3 +710,7 @@ assert generate_inheritance_diagram({}) is None
 | `collect_class_hierarchy` | function | Brian Breidenbach | 3 weeks ago | `8d2ab68` Add inheritance trees, glos... |
 | `find_root_classes` | function | Brian Breidenbach | 3 weeks ago | `8d2ab68` Add inheritance trees, glos... |
 | `generate_inheritance_tree_text` | function | Brian Breidenbach | 3 weeks ago | `8d2ab68` Add inheritance trees, glos... |
+
+## Relevant Source Files
+
+- `src/local_deepwiki/generators/inheritance.py:12-20`

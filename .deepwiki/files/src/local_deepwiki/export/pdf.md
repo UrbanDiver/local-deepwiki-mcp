@@ -1,2640 +1,218 @@
-# PDF Export Module
+# File: `src/local_deepwiki/export/pdf.py`
 
 ## File Overview
 
-This module provides functionality for exporting wiki content to PDF format. It includes both streaming and single-export approaches, supporting the generation of combined PDFs or separate PDFs for each wiki page. The module leverages `weasyprint` for HTML-to-PDF rendering and `pypdf` for PDF merging when available.
+This file provides functionality for exporting a wiki (stored in a `.deepwiki` directory) to PDF format. It supports both single-file and separate-file exports, with streaming capabilities for handling large wikis efficiently. The implementation uses `weasyprint` for HTML-to-PDF rendering and `pypdf` for merging PDFs.
 
-Dependencies include:
-- `argparse`, `asyncio`, `base64`, `json`, `re`, `shutil`, `subprocess`, `sys`, `tempfile`, `time`
-- `markdown`, `weasyprint`, `pypdf`
-- Local modules: `local_deepwiki.cli_progress`, `local_deepwiki.export.streaming`, `local_deepwiki.logging`
+### Dependencies
+
+This file imports:
+- Standard library modules: `argparse`, `asyncio`, `base64`, `json`, `re`, `shutil`, `subprocess`, `sys`, `tempfile`, `time`
+- Typing and collections: `AsyncIterator`, `Path`, `Any`, `cast`
+- External libraries: `markdown`, `weasyprint.CSS`, `weasyprint.HTML`, `pypdf.PdfWriter`
+- Internal modules:
+  - [`local_deepwiki.cli_progress.create_progress`](../cli_progress.md)
+  - `local_deepwiki.export.streaming` (for [`ExportConfig`](streaming.md), [`ExportResult`](streaming.md), [`ProgressCallback`](../cli_progress.md), [`StreamingExporter`](streaming.md), [`WikiPage`](streaming.md), [`WikiPageIterator`](streaming.md))
+  - [`local_deepwiki.logging.get_logger`](../logging.md)
 
 ## Classes
 
-### StreamingPdfExporter
+### `StreamingPdfExporter`
 
-A streaming exporter that processes wiki pages in batches for memory-efficient PDF generation.
+A streaming PDF exporter that processes wiki pages in batches to generate a PDF. It supports both combined and separate PDF exports.
+
+
+<details>
+<summary>View Source (lines 508-815) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/pdf.py#L508-L815">GitHub</a></summary>
+
+```python
+class StreamingPdfExporter(StreamingExporter):
+    # Methods: __init__, export, export_separate, _render_batch_to_pdf, _build_streaming_toc_html, _add_toc_entries_html, _export_single_page, _merge_pdfs, _create_empty_pdf
+```
+
+</details>
 
 #### Methods
 
-##### `__init__`
+- **`__init__(self, wiki_path: Path, output_path: Path, config: ExportConfig | None = None, *, no_progress: bool = False)`**
+  - Initializes the streaming PDF exporter.
+  - **Parameters**:
+    - `wiki_path`: Path to the `.deepwiki` directory.
+    - `output_path`: Output path for PDF file(s).
+    - `config`: Optional export configuration.
+    - `no_progress`: If `True`, disables progress bars.
+
+- **`export(self, progress_callback: ProgressCallback | None = None) -> ExportResult`**
+  - Exports the wiki to a single PDF with streaming/batched processing.
+  - **Parameters**:
+    - [`progress_callback`](../handlers.md): Optional callback for progress updates.
+  - **Returns**: [`ExportResult`](streaming.md) with export statistics.
+
+- **`export_separate(self, progress_callback: ProgressCallback | None = None) -> ExportResult`**
+  - Exports each wiki page as a separate PDF with streaming.
+  - **Parameters**:
+    - [`progress_callback`](../handlers.md): Optional callback for progress updates.
+  - **Returns**: [`ExportResult`](streaming.md) with export statistics.
+
+- **`_render_batch_to_pdf(self, pages: list[WikiPage], output_path: Path, include_toc: bool = False) -> None`**
+  - Renders a batch of pages to a PDF file.
+  - **Parameters**:
+    - `pages`: List of [`WikiPage`](streaming.md) objects to render.
+    - `output_path`: Path for the output PDF.
+    - `include_toc`: If `True`, includes a table of contents at the start (first batch only).
+
+- **`_build_streaming_toc_html(self) -> str`**
+  - Builds the HTML representation of the table of contents from loaded TOC entries.
+
+- **`_add_toc_entries_html(self, entries: list[dict[str, Any]], parts: list[str], depth: int) -> None`**
+  - Recursively adds TOC entries to HTML parts.
+
+- **`_export_single_page(self, page: WikiPage, output_file: Path) -> None`**
+  - Exports a single wiki page to a PDF.
+  - **Parameters**:
+    - `page`: [`WikiPage`](streaming.md) object to export.
+    - `output_file`: Output PDF path.
+
+- **`_merge_pdfs(self, pdf_files: list[Path], output_path: Path) -> None`**
+  - Merges multiple PDF files into one using `pypdf` or WeasyPrint.
+  - **Parameters**:
+    - `pdf_files`: List of PDF file paths to merge.
+    - `output_path`: Output path for the merged PDF.
+
+- **`_create_empty_pdf(self, output_path: Path) -> None`**
+  - Creates an empty PDF file.
+  - **Parameters**:
+    - `output_path`: Path for the output PDF.
+
+### `PdfExporter`
+
+A non-streaming PDF exporter that loads all pages into memory before exporting.
+
+
+<details>
+<summary>View Source (lines 818-1029) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/pdf.py#L818-L1029">GitHub</a></summary>
+
 ```python
-def __init__(
-    self,
-    wiki_path: Path,
-    output_path: Path,
-    config: ExportConfig | None = None,
-    *,
-    no_progress: bool = False,
-)
+class PdfExporter:
+    # Methods: __init__, export_single, export_separate, _collect_pages_in_order, _extract_paths_from_toc, _build_combined_html, _build_toc_html, _export_page
 ```
-Initialize the streaming PDF exporter.
 
-**Parameters:**
-- `wiki_path`: Path to the `.deepwiki` directory.
-- `output_path`: Output path for PDF file(s).
-- `config`: Export configuration.
-- `no_progress`: If True, disable progress bars.
-
-##### `export`
-```python
-async def export(
-    self, progress_callback: ProgressCallback | None = None
-) -> ExportResult:
-```
-Export wiki to PDF with streaming/batched processing.
-
-**Parameters:**
-- `progress_callback`: Optional callback for progress updates.
-
-**Returns:**
-- `ExportResult` with export statistics.
-
-##### `export_separate`
-```python
-async def export_separate(
-    self, progress_callback: ProgressCallback | None = None
-) -> ExportResult:
-```
-Export each wiki page as a separate PDF with streaming.
-
-**Parameters:**
-- `progress_callback`: Optional callback for progress updates.
-
-**Returns:**
-- `ExportResult` with export statistics.
-
-##### `_render_batch_to_pdf`
-```python
-def _render_batch_to_pdf(
-    self, pages: list[WikiPage], output_path: Path, include_toc: bool = False
-) -> None:
-```
-Render a batch of pages to a PDF file.
-
-**Parameters:**
-- `pages`: List of `WikiPage` objects to render.
-- `output_path`: Path for the output PDF.
-- `include_toc`: If True, include TOC at the start (first batch only).
-
-##### `_build_streaming_toc_html`
-```python
-def _build_streaming_toc_html(self) -> str:
-```
-Build TOC HTML from loaded TOC entries.
-
-##### `_add_toc_entries_html`
-```python
-def _add_toc_entries_html(
-    self, entries: list[dict[str, Any]], parts: list[str], depth: int
-) -> None:
-```
-Recursively add TOC entries to HTML parts.
-
-**Parameters:**
-- `entries`: List of TOC entries.
-- `parts`: List of HTML strings to append to.
-- `depth`: Current nesting depth.
-
-##### `_export_single_page`
-```python
-def _export_single_page(self, page: WikiPage, output_file: Path) -> None:
-```
-Export a single wiki page to PDF.
-
-**Parameters:**
-- `page`: `WikiPage` object to export.
-- `output_file`: Output PDF path.
-
-##### `_merge_pdfs`
-```python
-def _merge_pdfs(self, pdf_files: list[Path], output_path: Path) -> None:
-```
-Merge multiple PDF files into one.
-
-**Parameters:**
-- `pdf_files`: List of PDF file paths to merge.
-- `output_path`: Output path for merged PDF.
-
-##### `_create_empty_pdf`
-```python
-def _create_empty_pdf(self, output_path: Path) -> None:
-```
-Create an empty PDF file.
-
-**Parameters:**
-- `output_path`: Path for the output PDF.
-
-### PdfExporter
-
-A standard exporter for generating PDFs from wiki content.
+</details>
 
 #### Methods
 
-##### `__init__`
-```python
-def __init__(
-    self,
-    wiki_path: Path,
-    output_path: Path,
-    *,
-    no_progress: bool = False,
-):
-```
-Initialize the exporter.
+- **`__init__(self, wiki_path: Path, output_path: Path, *, no_progress: bool = False)`**
+  - Initializes the exporter.
+  - **Parameters**:
+    - `wiki_path`: Path to the `.deepwiki` directory.
+    - `output_path`: Output path for PDF file(s).
+    - `no_progress`: If `True`, disables progress bars.
 
-**Parameters:**
-- `wiki_path`: Path to the `.deepwiki` directory.
-- `output_path`: Output path for PDF file(s).
-- `no_progress`: If True, disable progress bars.
+- **`export_single(self) -> Path`**
+  - Exports all wiki pages to a single PDF.
+  - **Returns**: Path to the generated PDF file.
 
-##### `export_single`
-```python
-def export_single(self) -> Path:
-```
-Export all wiki pages to a single PDF.
+- **`export_separate(self) -> list[Path]`**
+  - Exports each wiki page as a separate PDF.
+  - **Returns**: List of paths to the generated PDF files.
 
-**Returns:**
-- Path to the generated PDF file.
+- **`_collect_pages_in_order(self) -> list[WikiPage]`**
+  - Collects all pages in the order specified by the TOC.
 
-##### `export_separate`
-```python
-def export_separate(self) -> list[Path]:
-```
-Export each wiki page as a separate PDF.
+- **`_extract_paths_from_toc(self, entries: list[dict]) -> list[Path]`**
+  - Extracts page paths from the TOC entries.
 
-**Returns:**
-- List of paths to generated PDF files.
+- **`_build_combined_html(self, pages: list[WikiPage]) -> str`**
+  - Builds the combined HTML for all pages.
 
-##### `_collect_pages_in_order`
-```python
-def _collect_pages_in_order(self) -> list[WikiPage]:
-```
-Collect all wiki pages in TOC order.
+- **`_build_toc_html(self) -> str`**
+  - Builds the HTML for the table of contents.
 
-**Returns:**
-- List of `WikiPage` objects in order.
-
-##### `_extract_paths_from_toc`
-```python
-def _extract_paths_from_toc(self, entries: list[dict]) -> list[Path]:
-```
-Extract page paths from TOC entries.
-
-**Parameters:**
-- `entries`: List of TOC entries.
-
-**Returns:**
-- List of `Path` objects.
-
-##### `_build_combined_html`
-```python
-def _build_combined_html(self, pages: list[WikiPage]) -> str:
-```
-Build combined HTML for all pages.
-
-**Parameters:**
-- `pages`: List of `WikiPage` objects.
-
-**Returns:**
-- Combined HTML string.
-
-##### `_build_toc_html`
-```python
-def _build_toc_html(self) -> str:
-```
-Build TOC HTML from loaded entries.
-
-**Returns:**
-- HTML string of the table of contents.
-
-##### `_export_page`
-```python
-def _export_page(self, page: WikiPage, output_path: Path) -> None:
-```
-Export a single page to PDF.
-
-**Parameters:**
-- `page`: `WikiPage` object to export.
-- `output_path`: Output PDF path.
+- **`_export_page(self, page: WikiPage, output_path: Path) -> None`**
+  - Exports a single page to a PDF.
+  - **Parameters**:
+    - `page`: [`WikiPage`](streaming.md) object to export.
+    - `output_path`: Output PDF path.
 
 ## Functions
 
-### `is_mmdc_available`
-```python
-def is_mmdc_available() -> bool:
-```
-Check if `mmdc` (Mermaid CLI) is available.
-
-**Returns:**
-
-<details>
-<summary>View Source (lines 37-52) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/pdf.py#L37-L52">GitHub</a></summary>
-
-```python
-def is_mmdc_available() -> bool:
-    """Check if mermaid-cli (mmdc) is available on the system.
-
-    Returns:
-        True if mmdc is available, False otherwise.
-    """
-    global _mmdc_available
-    if _mmdc_available is not None:
-        return _mmdc_available
-
-    _mmdc_available = shutil.which("mmdc") is not None
-    if _mmdc_available:
-        logger.debug("Mermaid CLI (mmdc) is available")
-    else:
-        logger.debug("Mermaid CLI (mmdc) not found - diagrams will use placeholder")
-    return _mmdc_available
-```
-
-</details>
-
-- `True` if `mmdc` is available; otherwise `False`.
-
-### `render_mermaid_to_png`
-```python
-def render_mermaid_to_png(mermaid_code: str, output_path: Path) -> None:
-```
-Render Mermaid diagram to PNG image.
-
-**Parameters:**
-- `mermaid_code`: Mermaid diagram code.
-- `output_path`: Output PNG path.
-
-
-<details>
-<summary>View Source (lines 55-114) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/pdf.py#L55-L114">GitHub</a></summary>
-
-```python
-def render_mermaid_to_png(diagram_code: str, timeout: int = 30) -> bytes | None:
-    """Render a mermaid diagram to PNG using mermaid-cli.
-
-    Args:
-        diagram_code: The mermaid diagram code.
-        timeout: Timeout in seconds for the mmdc command.
-
-    Returns:
-        PNG bytes if successful, None if rendering failed.
-    """
-    if not is_mmdc_available():
-        return None
-
-    try:
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_path = Path(tmp_dir)
-            input_file = tmp_path / "diagram.mmd"
-            output_file = tmp_path / "diagram.png"
-
-            # Write diagram to temp file
-            input_file.write_text(diagram_code)
-
-            # Run mmdc to generate PNG (embeds fonts as pixels)
-            result = subprocess.run(
-                [
-                    "mmdc",
-                    "-i",
-                    str(input_file),
-                    "-o",
-                    str(output_file),
-                    "-b",
-                    "white",  # White background for PDF
-                    "-s",
-                    "2",  # Scale 2x for better quality
-                    "--quiet",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-            )
-
-            if result.returncode != 0:
-                logger.warning(f"Mermaid CLI failed: {result.stderr}")
-                return None
-
-            if not output_file.exists():
-                logger.warning("Mermaid CLI did not produce output file")
-                return None
-
-            return output_file.read_bytes()
-
-    except subprocess.TimeoutExpired:
-        logger.warning(f"Mermaid CLI timed out after {timeout}s")
-        return None
-    except (subprocess.SubprocessError, OSError, ValueError) as e:
-        # SubprocessError: Process execution failures
-        # OSError: File system or process spawning issues
-        # ValueError: Invalid diagram code
-        logger.warning(f"Error rendering mermaid diagram: {e}")
-        return None
-```
-
-</details>
-
-### `render_mermaid_to_svg`
-```python
-def render_mermaid_to_svg(mermaid_code: str, output_path: Path) -> None:
-```
-Render Mermaid diagram to SVG image.
-
-**Parameters:**
-- `mermaid_code`: Mermaid diagram code.
-- `output_path`: Output SVG path.
-
-
-<details>
-<summary>View Source (lines 117-177) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/pdf.py#L117-L177">GitHub</a></summary>
-
-```python
-def render_mermaid_to_svg(diagram_code: str, timeout: int = 30) -> str | None:
-    """Render a mermaid diagram to SVG using mermaid-cli.
-
-    Note: SVG may have font issues in PDF. Use render_mermaid_to_png for PDF export.
-
-    Args:
-        diagram_code: The mermaid diagram code.
-        timeout: Timeout in seconds for the mmdc command.
-
-    Returns:
-        SVG string if successful, None if rendering failed.
-    """
-    if not is_mmdc_available():
-        return None
-
-    try:
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_path = Path(tmp_dir)
-            input_file = tmp_path / "diagram.mmd"
-            output_file = tmp_path / "diagram.svg"
-
-            # Write diagram to temp file
-            input_file.write_text(diagram_code)
-
-            # Run mmdc to generate SVG
-            result = subprocess.run(
-                [
-                    "mmdc",
-                    "-i",
-                    str(input_file),
-                    "-o",
-                    str(output_file),
-                    "-b",
-                    "transparent",  # Transparent background
-                    "--quiet",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-            )
-
-            if result.returncode != 0:
-                logger.warning(f"Mermaid CLI failed: {result.stderr}")
-                return None
-
-            if not output_file.exists():
-                logger.warning("Mermaid CLI did not produce output file")
-                return None
-
-            svg_content = output_file.read_text()
-            return svg_content
-
-    except subprocess.TimeoutExpired:
-        logger.warning(f"Mermaid CLI timed out after {timeout}s")
-        return None
-    except (subprocess.SubprocessError, OSError, ValueError) as e:
-        # SubprocessError: Process execution failures
-        # OSError: File system or process spawning issues
-        # ValueError: Invalid diagram code
-        logger.warning(f"Error rendering mermaid diagram: {e}")
-        return None
-```
-
-</details>
-
-### `render_mermaid_to_svg`
-```python
-def render_mermaid_to_svg(mermaid_code: str, output_path: Path) -> None:
-```
-Render Mermaid diagram to SVG image.
-
-**Parameters:**
-- `mermaid_code`: Mermaid diagram code.
-- `output_path`: Output SVG path.
-
-
-<details>
-<summary>View Source (lines 117-177) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/pdf.py#L117-L177">GitHub</a></summary>
-
-```python
-def render_mermaid_to_svg(diagram_code: str, timeout: int = 30) -> str | None:
-    """Render a mermaid diagram to SVG using mermaid-cli.
-
-    Note: SVG may have font issues in PDF. Use render_mermaid_to_png for PDF export.
-
-    Args:
-        diagram_code: The mermaid diagram code.
-        timeout: Timeout in seconds for the mmdc command.
-
-    Returns:
-        SVG string if successful, None if rendering failed.
-    """
-    if not is_mmdc_available():
-        return None
-
-    try:
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_path = Path(tmp_dir)
-            input_file = tmp_path / "diagram.mmd"
-            output_file = tmp_path / "diagram.svg"
-
-            # Write diagram to temp file
-            input_file.write_text(diagram_code)
-
-            # Run mmdc to generate SVG
-            result = subprocess.run(
-                [
-                    "mmdc",
-                    "-i",
-                    str(input_file),
-                    "-o",
-                    str(output_file),
-                    "-b",
-                    "transparent",  # Transparent background
-                    "--quiet",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-            )
-
-            if result.returncode != 0:
-                logger.warning(f"Mermaid CLI failed: {result.stderr}")
-                return None
-
-            if not output_file.exists():
-                logger.warning("Mermaid CLI did not produce output file")
-                return None
-
-            svg_content = output_file.read_text()
-            return svg_content
-
-    except subprocess.TimeoutExpired:
-        logger.warning(f"Mermaid CLI timed out after {timeout}s")
-        return None
-    except (subprocess.SubprocessError, OSError, ValueError) as e:
-        # SubprocessError: Process execution failures
-        # OSError: File system or process spawning issues
-        # ValueError: Invalid diagram code
-        logger.warning(f"Error rendering mermaid diagram: {e}")
-        return None
-```
-
-</details>
-
-### `extract_paths_from_toc`
-```python
-def extract_paths_from_toc(toc_entries: list[dict]) -> list[Path]:
-```
-Extract page paths from TOC entries.
-
-**Parameters:**
-- `toc_entries`: List of TOC entries.
-
-**Returns:**
-- List of `Path` objects.
-
-### `render_mermaid_to_png`
-```python
-def render_mermaid_to_png(mermaid_code: str, output_path: Path) -> None:
-```
-Render Mermaid diagram to PNG image.
-
-**Parameters:**
-- `mermaid_code`: Mermaid diagram code.
-- `output_path`: Output PNG path.
-
-
-<details>
-<summary>View Source (lines 55-114) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/pdf.py#L55-L114">GitHub</a></summary>
-
-```python
-def render_mermaid_to_png(diagram_code: str, timeout: int = 30) -> bytes | None:
-    """Render a mermaid diagram to PNG using mermaid-cli.
-
-    Args:
-        diagram_code: The mermaid diagram code.
-        timeout: Timeout in seconds for the mmdc command.
-
-    Returns:
-        PNG bytes if successful, None if rendering failed.
-    """
-    if not is_mmdc_available():
-        return None
-
-    try:
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_path = Path(tmp_dir)
-            input_file = tmp_path / "diagram.mmd"
-            output_file = tmp_path / "diagram.png"
-
-            # Write diagram to temp file
-            input_file.write_text(diagram_code)
-
-            # Run mmdc to generate PNG (embeds fonts as pixels)
-            result = subprocess.run(
-                [
-                    "mmdc",
-                    "-i",
-                    str(input_file),
-                    "-o",
-                    str(output_file),
-                    "-b",
-                    "white",  # White background for PDF
-                    "-s",
-                    "2",  # Scale 2x for better quality
-                    "--quiet",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-            )
-
-            if result.returncode != 0:
-                logger.warning(f"Mermaid CLI failed: {result.stderr}")
-                return None
-
-            if not output_file.exists():
-                logger.warning("Mermaid CLI did not produce output file")
-                return None
-
-            return output_file.read_bytes()
-
-    except subprocess.TimeoutExpired:
-        logger.warning(f"Mermaid CLI timed out after {timeout}s")
-        return None
-    except (subprocess.SubprocessError, OSError, ValueError) as e:
-        # SubprocessError: Process execution failures
-        # OSError: File system or process spawning issues
-        # ValueError: Invalid diagram code
-        logger.warning(f"Error rendering mermaid diagram: {e}")
-        return None
-```
-
-</details>
-
-### `render_mermaid_to_svg`
-```python
-def render_mermaid_to_svg(mermaid_code: str, output_path: Path) -> None:
-```
-Render Mermaid diagram to SVG image.
-
-**Parameters:**
-- `mermaid_code`: Mermaid diagram code.
-- `output_path`: Output SVG path.
-
-
-<details>
-<summary>View Source (lines 117-177) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/pdf.py#L117-L177">GitHub</a></summary>
-
-```python
-def render_mermaid_to_svg(diagram_code: str, timeout: int = 30) -> str | None:
-    """Render a mermaid diagram to SVG using mermaid-cli.
-
-    Note: SVG may have font issues in PDF. Use render_mermaid_to_png for PDF export.
-
-    Args:
-        diagram_code: The mermaid diagram code.
-        timeout: Timeout in seconds for the mmdc command.
-
-    Returns:
-        SVG string if successful, None if rendering failed.
-    """
-    if not is_mmdc_available():
-        return None
-
-    try:
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_path = Path(tmp_dir)
-            input_file = tmp_path / "diagram.mmd"
-            output_file = tmp_path / "diagram.svg"
-
-            # Write diagram to temp file
-            input_file.write_text(diagram_code)
-
-            # Run mmdc to generate SVG
-            result = subprocess.run(
-                [
-                    "mmdc",
-                    "-i",
-                    str(input_file),
-                    "-o",
-                    str(output_file),
-                    "-b",
-                    "transparent",  # Transparent background
-                    "--quiet",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-            )
-
-            if result.returncode != 0:
-                logger.warning(f"Mermaid CLI failed: {result.stderr}")
-                return None
-
-            if not output_file.exists():
-                logger.warning("Mermaid CLI did not produce output file")
-                return None
-
-            svg_content = output_file.read_text()
-            return svg_content
-
-    except subprocess.TimeoutExpired:
-        logger.warning(f"Mermaid CLI timed out after {timeout}s")
-        return None
-    except (subprocess.SubprocessError, OSError, ValueError) as e:
-        # SubprocessError: Process execution failures
-        # OSError: File system or process spawning issues
-        # ValueError: Invalid diagram code
-        logger.warning(f"Error rendering mermaid diagram: {e}")
-        return None
-```
-
-</details>
-
-### `extract_paths_from_toc`
-```python
-def extract_paths_from_toc(toc_entries: list[dict]) -> list[Path]:
-```
-Extract page paths from TOC entries.
-
-**Parameters:**
-- `toc_entries`: List of TOC entries.
-
-**Returns:**
-- List of `Path` objects.
-
-### `render_mermaid_to_png`
-```python
-def render_mermaid_to_png(mermaid_code: str, output_path: Path) -> None:
-```
-Render Mermaid diagram to PNG image.
-
-**Parameters:**
-- `mermaid_code`: Mermaid diagram code.
-- `output_path`: Output PNG path.
-
-
-<details>
-<summary>View Source (lines 55-114) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/pdf.py#L55-L114">GitHub</a></summary>
-
-```python
-def render_mermaid_to_png(diagram_code: str, timeout: int = 30) -> bytes | None:
-    """Render a mermaid diagram to PNG using mermaid-cli.
-
-    Args:
-        diagram_code: The mermaid diagram code.
-        timeout: Timeout in seconds for the mmdc command.
-
-    Returns:
-        PNG bytes if successful, None if rendering failed.
-    """
-    if not is_mmdc_available():
-        return None
-
-    try:
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_path = Path(tmp_dir)
-            input_file = tmp_path / "diagram.mmd"
-            output_file = tmp_path / "diagram.png"
-
-            # Write diagram to temp file
-            input_file.write_text(diagram_code)
-
-            # Run mmdc to generate PNG (embeds fonts as pixels)
-            result = subprocess.run(
-                [
-                    "mmdc",
-                    "-i",
-                    str(input_file),
-                    "-o",
-                    str(output_file),
-                    "-b",
-                    "white",  # White background for PDF
-                    "-s",
-                    "2",  # Scale 2x for better quality
-                    "--quiet",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-            )
-
-            if result.returncode != 0:
-                logger.warning(f"Mermaid CLI failed: {result.stderr}")
-                return None
-
-            if not output_file.exists():
-                logger.warning("Mermaid CLI did not produce output file")
-                return None
-
-            return output_file.read_bytes()
-
-    except subprocess.TimeoutExpired:
-        logger.warning(f"Mermaid CLI timed out after {timeout}s")
-        return None
-    except (subprocess.SubprocessError, OSError, ValueError) as e:
-        # SubprocessError: Process execution failures
-        # OSError: File system or process spawning issues
-        # ValueError: Invalid diagram code
-        logger.warning(f"Error rendering mermaid diagram: {e}")
-        return None
-```
-
-</details>
-
-### `render_mermaid_to_svg`
-```python
-def render_mermaid_to_svg(mermaid_code: str, output_path: Path) -> None:
-```
-Render Mermaid diagram to SVG image.
-
-**Parameters:**
-- `mermaid_code`: Mermaid diagram code.
-- `output_path`: Output SVG path.
-
-
-<details>
-<summary>View Source (lines 117-177) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/pdf.py#L117-L177">GitHub</a></summary>
-
-```python
-def render_mermaid_to_svg(diagram_code: str, timeout: int = 30) -> str | None:
-    """Render a mermaid diagram to SVG using mermaid-cli.
-
-    Note: SVG may have font issues in PDF. Use render_mermaid_to_png for PDF export.
-
-    Args:
-        diagram_code: The mermaid diagram code.
-        timeout: Timeout in seconds for the mmdc command.
-
-    Returns:
-        SVG string if successful, None if rendering failed.
-    """
-    if not is_mmdc_available():
-        return None
-
-    try:
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_path = Path(tmp_dir)
-            input_file = tmp_path / "diagram.mmd"
-            output_file = tmp_path / "diagram.svg"
-
-            # Write diagram to temp file
-            input_file.write_text(diagram_code)
-
-            # Run mmdc to generate SVG
-            result = subprocess.run(
-                [
-                    "mmdc",
-                    "-i",
-                    str(input_file),
-                    "-o",
-                    str(output_file),
-                    "-b",
-                    "transparent",  # Transparent background
-                    "--quiet",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-            )
-
-            if result.returncode != 0:
-                logger.warning(f"Mermaid CLI failed: {result.stderr}")
-                return None
-
-            if not output_file.exists():
-                logger.warning("Mermaid CLI did not produce output file")
-                return None
-
-            svg_content = output_file.read_text()
-            return svg_content
-
-    except subprocess.TimeoutExpired:
-        logger.warning(f"Mermaid CLI timed out after {timeout}s")
-        return None
-    except (subprocess.SubprocessError, OSError, ValueError) as e:
-        # SubprocessError: Process execution failures
-        # OSError: File system or process spawning issues
-        # ValueError: Invalid diagram code
-        logger.warning(f"Error rendering mermaid diagram: {e}")
-        return None
-```
-
-</details>
-
-### `extract_paths_from_toc`
-```python
-def extract_paths_from_toc(toc_entries: list[dict]) -> list[Path]:
-```
-Extract page paths from TOC entries.
-
-**Parameters:**
-- `toc_entries`: List of TOC entries.
-
-**Returns:**
-- List of `Path` objects.
-
-### `render_mermaid_to_png`
-```python
-def render_mermaid_to_png(mermaid_code: str, output_path: Path) -> None:
-```
-Render Mermaid diagram to PNG image.
-
-**Parameters:**
-- `mermaid_code`: Mermaid diagram code.
-- `output_path`: Output PNG path.
-
-
-<details>
-<summary>View Source (lines 55-114) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/pdf.py#L55-L114">GitHub</a></summary>
-
-```python
-def render_mermaid_to_png(diagram_code: str, timeout: int = 30) -> bytes | None:
-    """Render a mermaid diagram to PNG using mermaid-cli.
-
-    Args:
-        diagram_code: The mermaid diagram code.
-        timeout: Timeout in seconds for the mmdc command.
-
-    Returns:
-        PNG bytes if successful, None if rendering failed.
-    """
-    if not is_mmdc_available():
-        return None
-
-    try:
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_path = Path(tmp_dir)
-            input_file = tmp_path / "diagram.mmd"
-            output_file = tmp_path / "diagram.png"
-
-            # Write diagram to temp file
-            input_file.write_text(diagram_code)
-
-            # Run mmdc to generate PNG (embeds fonts as pixels)
-            result = subprocess.run(
-                [
-                    "mmdc",
-                    "-i",
-                    str(input_file),
-                    "-o",
-                    str(output_file),
-                    "-b",
-                    "white",  # White background for PDF
-                    "-s",
-                    "2",  # Scale 2x for better quality
-                    "--quiet",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-            )
-
-            if result.returncode != 0:
-                logger.warning(f"Mermaid CLI failed: {result.stderr}")
-                return None
-
-            if not output_file.exists():
-                logger.warning("Mermaid CLI did not produce output file")
-                return None
-
-            return output_file.read_bytes()
-
-    except subprocess.TimeoutExpired:
-        logger.warning(f"Mermaid CLI timed out after {timeout}s")
-        return None
-    except (subprocess.SubprocessError, OSError, ValueError) as e:
-        # SubprocessError: Process execution failures
-        # OSError: File system or process spawning issues
-        # ValueError: Invalid diagram code
-        logger.warning(f"Error rendering mermaid diagram: {e}")
-        return None
-```
-
-</details>
-
-### `render_mermaid_to_svg`
-```python
-def render_mermaid_to_svg(mermaid_code: str, output_path: Path) -> None:
-```
-Render Mermaid diagram to SVG image.
-
-**Parameters:**
-- `mermaid_code`: Mermaid diagram code.
-- `output_path`: Output SVG path.
-
-
-<details>
-<summary>View Source (lines 117-177) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/pdf.py#L117-L177">GitHub</a></summary>
-
-```python
-def render_mermaid_to_svg(diagram_code: str, timeout: int = 30) -> str | None:
-    """Render a mermaid diagram to SVG using mermaid-cli.
-
-    Note: SVG may have font issues in PDF. Use render_mermaid_to_png for PDF export.
-
-    Args:
-        diagram_code: The mermaid diagram code.
-        timeout: Timeout in seconds for the mmdc command.
-
-    Returns:
-        SVG string if successful, None if rendering failed.
-    """
-    if not is_mmdc_available():
-        return None
-
-    try:
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_path = Path(tmp_dir)
-            input_file = tmp_path / "diagram.mmd"
-            output_file = tmp_path / "diagram.svg"
-
-            # Write diagram to temp file
-            input_file.write_text(diagram_code)
-
-            # Run mmdc to generate SVG
-            result = subprocess.run(
-                [
-                    "mmdc",
-                    "-i",
-                    str(input_file),
-                    "-o",
-                    str(output_file),
-                    "-b",
-                    "transparent",  # Transparent background
-                    "--quiet",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-            )
-
-            if result.returncode != 0:
-                logger.warning(f"Mermaid CLI failed: {result.stderr}")
-                return None
-
-            if not output_file.exists():
-                logger.warning("Mermaid CLI did not produce output file")
-                return None
-
-            svg_content = output_file.read_text()
-            return svg_content
-
-    except subprocess.TimeoutExpired:
-        logger.warning(f"Mermaid CLI timed out after {timeout}s")
-        return None
-    except (subprocess.SubprocessError, OSError, ValueError) as e:
-        # SubprocessError: Process execution failures
-        # OSError: File system or process spawning issues
-        # ValueError: Invalid diagram code
-        logger.warning(f"Error rendering mermaid diagram: {e}")
-        return None
-```
-
-</details>
-
-### `extract_paths_from_toc`
-```python
-def extract_paths_from_toc(toc_entries: list[dict]) -> list[Path]:
-```
-Extract page paths from TOC entries.
-
-**Parameters:**
-- `toc_entries`: List of TOC entries.
-
-**Returns:**
-- List of `Path` objects.
-
-### `render_mermaid_to_png`
-```python
-def render_mermaid_to_png(mermaid_code: str, output_path: Path) -> None:
-```
-Render Mermaid diagram to PNG image.
-
-**Parameters:**
-- `mermaid_code`: Mermaid diagram code.
-- `output_path`: Output PNG path.
-
-
-<details>
-<summary>View Source (lines 55-114) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/pdf.py#L55-L114">GitHub</a></summary>
-
-```python
-def render_mermaid_to_png(diagram_code: str, timeout: int = 30) -> bytes | None:
-    """Render a mermaid diagram to PNG using mermaid-cli.
-
-    Args:
-        diagram_code: The mermaid diagram code.
-        timeout: Timeout in seconds for the mmdc command.
-
-    Returns:
-        PNG bytes if successful, None if rendering failed.
-    """
-    if not is_mmdc_available():
-        return None
-
-    try:
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_path = Path(tmp_dir)
-            input_file = tmp_path / "diagram.mmd"
-            output_file = tmp_path / "diagram.png"
-
-            # Write diagram to temp file
-            input_file.write_text(diagram_code)
-
-            # Run mmdc to generate PNG (embeds fonts as pixels)
-            result = subprocess.run(
-                [
-                    "mmdc",
-                    "-i",
-                    str(input_file),
-                    "-o",
-                    str(output_file),
-                    "-b",
-                    "white",  # White background for PDF
-                    "-s",
-                    "2",  # Scale 2x for better quality
-                    "--quiet",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-            )
-
-            if result.returncode != 0:
-                logger.warning(f"Mermaid CLI failed: {result.stderr}")
-                return None
-
-            if not output_file.exists():
-                logger.warning("Mermaid CLI did not produce output file")
-                return None
-
-            return output_file.read_bytes()
-
-    except subprocess.TimeoutExpired:
-        logger.warning(f"Mermaid CLI timed out after {timeout}s")
-        return None
-    except (subprocess.SubprocessError, OSError, ValueError) as e:
-        # SubprocessError: Process execution failures
-        # OSError: File system or process spawning issues
-        # ValueError: Invalid diagram code
-        logger.warning(f"Error rendering mermaid diagram: {e}")
-        return None
-```
-
-</details>
-
-### `render_mermaid_to_svg`
-```python
-def render_mermaid_to_svg(mermaid_code: str, output_path: Path) -> None:
-```
-Render Mermaid diagram to SVG image.
-
-**Parameters:**
-- `mermaid_code`: Mermaid diagram code.
-- `output_path`: Output SVG path.
-
-
-<details>
-<summary>View Source (lines 117-177) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/pdf.py#L117-L177">GitHub</a></summary>
-
-```python
-def render_mermaid_to_svg(diagram_code: str, timeout: int = 30) -> str | None:
-    """Render a mermaid diagram to SVG using mermaid-cli.
-
-    Note: SVG may have font issues in PDF. Use render_mermaid_to_png for PDF export.
-
-    Args:
-        diagram_code: The mermaid diagram code.
-        timeout: Timeout in seconds for the mmdc command.
-
-    Returns:
-        SVG string if successful, None if rendering failed.
-    """
-    if not is_mmdc_available():
-        return None
-
-    try:
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_path = Path(tmp_dir)
-            input_file = tmp_path / "diagram.mmd"
-            output_file = tmp_path / "diagram.svg"
-
-            # Write diagram to temp file
-            input_file.write_text(diagram_code)
-
-            # Run mmdc to generate SVG
-            result = subprocess.run(
-                [
-                    "mmdc",
-                    "-i",
-                    str(input_file),
-                    "-o",
-                    str(output_file),
-                    "-b",
-                    "transparent",  # Transparent background
-                    "--quiet",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-            )
-
-            if result.returncode != 0:
-                logger.warning(f"Mermaid CLI failed: {result.stderr}")
-                return None
-
-            if not output_file.exists():
-                logger.warning("Mermaid CLI did not produce output file")
-                return None
-
-            svg_content = output_file.read_text()
-            return svg_content
-
-    except subprocess.TimeoutExpired:
-        logger.warning(f"Mermaid CLI timed out after {timeout}s")
-        return None
-    except (subprocess.SubprocessError, OSError, ValueError) as e:
-        # SubprocessError: Process execution failures
-        # OSError: File system or process spawning issues
-        # ValueError: Invalid diagram code
-        logger.warning(f"Error rendering mermaid diagram: {e}")
-        return None
-```
-
-</details>
-
-### `extract_paths_from_toc`
-```python
-def extract_paths_from_toc(toc_entries: list[dict]) -> list[Path]:
-```
-Extract page paths from TOC entries.
-
-**Parameters:**
-- `toc_entries`: List of TOC entries.
-
-**Returns:**
-- List of `Path` objects.
-
-### `render_mermaid_to_png`
-```python
-def render_mermaid_to_png(mermaid_code: str, output_path: Path) -> None:
-```
-Render Mermaid diagram to PNG image.
-
-**Parameters:**
-- `mermaid_code`: Mermaid diagram code.
-- `output_path`: Output PNG path.
-
-
-<details>
-<summary>View Source (lines 55-114) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/pdf.py#L55-L114">GitHub</a></summary>
-
-```python
-def render_mermaid_to_png(diagram_code: str, timeout: int = 30) -> bytes | None:
-    """Render a mermaid diagram to PNG using mermaid-cli.
-
-    Args:
-        diagram_code: The mermaid diagram code.
-        timeout: Timeout in seconds for the mmdc command.
-
-    Returns:
-        PNG bytes if successful, None if rendering failed.
-    """
-    if not is_mmdc_available():
-        return None
-
-    try:
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_path = Path(tmp_dir)
-            input_file = tmp_path / "diagram.mmd"
-            output_file = tmp_path / "diagram.png"
-
-            # Write diagram to temp file
-            input_file.write_text(diagram_code)
-
-            # Run mmdc to generate PNG (embeds fonts as pixels)
-            result = subprocess.run(
-                [
-                    "mmdc",
-                    "-i",
-                    str(input_file),
-                    "-o",
-                    str(output_file),
-                    "-b",
-                    "white",  # White background for PDF
-                    "-s",
-                    "2",  # Scale 2x for better quality
-                    "--quiet",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-            )
-
-            if result.returncode != 0:
-                logger.warning(f"Mermaid CLI failed: {result.stderr}")
-                return None
-
-            if not output_file.exists():
-                logger.warning("Mermaid CLI did not produce output file")
-                return None
-
-            return output_file.read_bytes()
-
-    except subprocess.TimeoutExpired:
-        logger.warning(f"Mermaid CLI timed out after {timeout}s")
-        return None
-    except (subprocess.SubprocessError, OSError, ValueError) as e:
-        # SubprocessError: Process execution failures
-        # OSError: File system or process spawning issues
-        # ValueError: Invalid diagram code
-        logger.warning(f"Error rendering mermaid diagram: {e}")
-        return None
-```
-
-</details>
-
-### `render_mermaid_to_svg`
-```python
-def render_mermaid_to_svg(mermaid_code: str, output_path: Path) -> None:
-```
-Render Mermaid diagram to SVG image.
-
-**Parameters:**
-- `mermaid_code`: Mermaid diagram code.
-- `output_path`: Output SVG path.
-
-
-<details>
-<summary>View Source (lines 117-177) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/pdf.py#L117-L177">GitHub</a></summary>
-
-```python
-def render_mermaid_to_svg(diagram_code: str, timeout: int = 30) -> str | None:
-    """Render a mermaid diagram to SVG using mermaid-cli.
-
-    Note: SVG may have font issues in PDF. Use render_mermaid_to_png for PDF export.
-
-    Args:
-        diagram_code: The mermaid diagram code.
-        timeout: Timeout in seconds for the mmdc command.
-
-    Returns:
-        SVG string if successful, None if rendering failed.
-    """
-    if not is_mmdc_available():
-        return None
-
-    try:
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_path = Path(tmp_dir)
-            input_file = tmp_path / "diagram.mmd"
-            output_file = tmp_path / "diagram.svg"
-
-            # Write diagram to temp file
-            input_file.write_text(diagram_code)
-
-            # Run mmdc to generate SVG
-            result = subprocess.run(
-                [
-                    "mmdc",
-                    "-i",
-                    str(input_file),
-                    "-o",
-                    str(output_file),
-                    "-b",
-                    "transparent",  # Transparent background
-                    "--quiet",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-            )
-
-            if result.returncode != 0:
-                logger.warning(f"Mermaid CLI failed: {result.stderr}")
-                return None
-
-            if not output_file.exists():
-                logger.warning("Mermaid CLI did not produce output file")
-                return None
-
-            svg_content = output_file.read_text()
-            return svg_content
-
-    except subprocess.TimeoutExpired:
-        logger.warning(f"Mermaid CLI timed out after {timeout}s")
-        return None
-    except (subprocess.SubprocessError, OSError, ValueError) as e:
-        # SubprocessError: Process execution failures
-        # OSError: File system or process spawning issues
-        # ValueError: Invalid diagram code
-        logger.warning(f"Error rendering mermaid diagram: {e}")
-        return None
-```
-
-</details>
-
-### `extract_paths_from_toc`
-```python
-def extract_paths_from_toc(toc_entries: list[dict]) -> list[Path]:
-```
-Extract page paths from TOC entries.
-
-**Parameters:**
-- `toc_entries`: List of TOC entries.
-
-**Returns:**
-- List of `Path` objects.
-
-### `render_mermaid_to_png`
-```python
-def render_mermaid_to_png(mermaid_code: str, output_path: Path) -> None:
-```
-Render Mermaid diagram to PNG image.
-
-**Parameters:**
-- `mermaid_code`: Mermaid diagram code.
-- `output_path`: Output PNG path.
-
-
-<details>
-<summary>View Source (lines 55-114) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/pdf.py#L55-L114">GitHub</a></summary>
-
-```python
-def render_mermaid_to_png(diagram_code: str, timeout: int = 30) -> bytes | None:
-    """Render a mermaid diagram to PNG using mermaid-cli.
-
-    Args:
-        diagram_code: The mermaid diagram code.
-        timeout: Timeout in seconds for the mmdc command.
-
-    Returns:
-        PNG bytes if successful, None if rendering failed.
-    """
-    if not is_mmdc_available():
-        return None
-
-    try:
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_path = Path(tmp_dir)
-            input_file = tmp_path / "diagram.mmd"
-            output_file = tmp_path / "diagram.png"
-
-            # Write diagram to temp file
-            input_file.write_text(diagram_code)
-
-            # Run mmdc to generate PNG (embeds fonts as pixels)
-            result = subprocess.run(
-                [
-                    "mmdc",
-                    "-i",
-                    str(input_file),
-                    "-o",
-                    str(output_file),
-                    "-b",
-                    "white",  # White background for PDF
-                    "-s",
-                    "2",  # Scale 2x for better quality
-                    "--quiet",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-            )
-
-            if result.returncode != 0:
-                logger.warning(f"Mermaid CLI failed: {result.stderr}")
-                return None
-
-            if not output_file.exists():
-                logger.warning("Mermaid CLI did not produce output file")
-                return None
-
-            return output_file.read_bytes()
-
-    except subprocess.TimeoutExpired:
-        logger.warning(f"Mermaid CLI timed out after {timeout}s")
-        return None
-    except (subprocess.SubprocessError, OSError, ValueError) as e:
-        # SubprocessError: Process execution failures
-        # OSError: File system or process spawning issues
-        # ValueError: Invalid diagram code
-        logger.warning(f"Error rendering mermaid diagram: {e}")
-        return None
-```
-
-</details>
-
-### `render_mermaid_to_svg`
-```python
-def render_mermaid_to_svg(mermaid_code: str, output_path: Path) -> None:
-```
-Render Mermaid diagram to SVG image.
-
-**Parameters:**
-- `mermaid_code`: Mermaid diagram code.
-- `output_path`: Output SVG path.
-
-
-<details>
-<summary>View Source (lines 117-177) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/pdf.py#L117-L177">GitHub</a></summary>
-
-```python
-def render_mermaid_to_svg(diagram_code: str, timeout: int = 30) -> str | None:
-    """Render a mermaid diagram to SVG using mermaid-cli.
-
-    Note: SVG may have font issues in PDF. Use render_mermaid_to_png for PDF export.
-
-    Args:
-        diagram_code: The mermaid diagram code.
-        timeout: Timeout in seconds for the mmdc command.
-
-    Returns:
-        SVG string if successful, None if rendering failed.
-    """
-    if not is_mmdc_available():
-        return None
-
-    try:
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_path = Path(tmp_dir)
-            input_file = tmp_path / "diagram.mmd"
-            output_file = tmp_path / "diagram.svg"
-
-            # Write diagram to temp file
-            input_file.write_text(diagram_code)
-
-            # Run mmdc to generate SVG
-            result = subprocess.run(
-                [
-                    "mmdc",
-                    "-i",
-                    str(input_file),
-                    "-o",
-                    str(output_file),
-                    "-b",
-                    "transparent",  # Transparent background
-                    "--quiet",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-            )
-
-            if result.returncode != 0:
-                logger.warning(f"Mermaid CLI failed: {result.stderr}")
-                return None
-
-            if not output_file.exists():
-                logger.warning("Mermaid CLI did not produce output file")
-                return None
-
-            svg_content = output_file.read_text()
-            return svg_content
-
-    except subprocess.TimeoutExpired:
-        logger.warning(f"Mermaid CLI timed out after {timeout}s")
-        return None
-    except (subprocess.SubprocessError, OSError, ValueError) as e:
-        # SubprocessError: Process execution failures
-        # OSError: File system or process spawning issues
-        # ValueError: Invalid diagram code
-        logger.warning(f"Error rendering mermaid diagram: {e}")
-        return None
-```
-
-</details>
-
-### `extract_paths_from_toc`
-```python
-def extract_paths_from_toc(toc_entries: list[dict]) -> list[Path]:
-```
-Extract page paths from TOC entries.
-
-**Parameters:**
-- `toc_entries`: List of TOC entries.
-
-**Returns:**
-- List of `Path` objects.
+- **`is_mmdc_available()`**
+  - Checks if the `mmdc` (Mermaid CLI) tool is available for rendering Mermaid diagrams.
+  - **Returns**: `bool` indicating availability.
 
-### `render_mermaid_to_png`
-```python
-def render_mermaid_to_png(mermaid_code: str, output_path: Path) -> None:
-```
-Render Mermaid diagram to PNG image.
-
-**Parameters:**
-- `mermaid_code`: Mermaid diagram code.
-- `output_path`: Output PNG path.
-
-
-<details>
-<summary>View Source (lines 55-114) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/pdf.py#L55-L114">GitHub</a></summary>
-
-```python
-def render_mermaid_to_png(diagram_code: str, timeout: int = 30) -> bytes | None:
-    """Render a mermaid diagram to PNG using mermaid-cli.
-
-    Args:
-        diagram_code: The mermaid diagram code.
-        timeout: Timeout in seconds for the mmdc command.
-
-    Returns:
-        PNG bytes if successful, None if rendering failed.
-    """
-    if not is_mmdc_available():
-        return None
-
-    try:
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_path = Path(tmp_dir)
-            input_file = tmp_path / "diagram.mmd"
-            output_file = tmp_path / "diagram.png"
-
-            # Write diagram to temp file
-            input_file.write_text(diagram_code)
-
-            # Run mmdc to generate PNG (embeds fonts as pixels)
-            result = subprocess.run(
-                [
-                    "mmdc",
-                    "-i",
-                    str(input_file),
-                    "-o",
-                    str(output_file),
-                    "-b",
-                    "white",  # White background for PDF
-                    "-s",
-                    "2",  # Scale 2x for better quality
-                    "--quiet",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-            )
-
-            if result.returncode != 0:
-                logger.warning(f"Mermaid CLI failed: {result.stderr}")
-                return None
-
-            if not output_file.exists():
-                logger.warning("Mermaid CLI did not produce output file")
-                return None
-
-            return output_file.read_bytes()
-
-    except subprocess.TimeoutExpired:
-        logger.warning(f"Mermaid CLI timed out after {timeout}s")
-        return None
-    except (subprocess.SubprocessError, OSError, ValueError) as e:
-        # SubprocessError: Process execution failures
-        # OSError: File system or process spawning issues
-        # ValueError: Invalid diagram code
-        logger.warning(f"Error rendering mermaid diagram: {e}")
-        return None
-```
-
-</details>
-
-### `render_mermaid_to_svg`
-```python
-def render_mermaid_to_svg(mermaid_code: str, output_path: Path) -> None:
-```
-Render Mermaid diagram to SVG image.
-
-**Parameters:**
-- `mermaid_code`: Mermaid diagram code.
-- `output_path`: Output SVG path.
-
-
-<details>
-<summary>View Source (lines 117-177) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/pdf.py#L117-L177">GitHub</a></summary>
-
-```python
-def render_mermaid_to_svg(diagram_code: str, timeout: int = 30) -> str | None:
-    """Render a mermaid diagram to SVG using mermaid-cli.
-
-    Note: SVG may have font issues in PDF. Use render_mermaid_to_png for PDF export.
-
-    Args:
-        diagram_code: The mermaid diagram code.
-        timeout: Timeout in seconds for the mmdc command.
-
-    Returns:
-        SVG string if successful, None if rendering failed.
-    """
-    if not is_mmdc_available():
-        return None
-
-    try:
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_path = Path(tmp_dir)
-            input_file = tmp_path / "diagram.mmd"
-            output_file = tmp_path / "diagram.svg"
-
-            # Write diagram to temp file
-            input_file.write_text(diagram_code)
-
-            # Run mmdc to generate SVG
-            result = subprocess.run(
-                [
-                    "mmdc",
-                    "-i",
-                    str(input_file),
-                    "-o",
-                    str(output_file),
-                    "-b",
-                    "transparent",  # Transparent background
-                    "--quiet",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-            )
-
-            if result.returncode != 0:
-                logger.warning(f"Mermaid CLI failed: {result.stderr}")
-                return None
-
-            if not output_file.exists():
-                logger.warning("Mermaid CLI did not produce output file")
-                return None
-
-            svg_content = output_file.read_text()
-            return svg_content
-
-    except subprocess.TimeoutExpired:
-        logger.warning(f"Mermaid CLI timed out after {timeout}s")
-        return None
-    except (subprocess.SubprocessError, OSError, ValueError) as e:
-        # SubprocessError: Process execution failures
-        # OSError: File system or process spawning issues
-        # ValueError: Invalid diagram code
-        logger.warning(f"Error rendering mermaid diagram: {e}")
-        return None
-```
-
-</details>
-
-### `extract_paths_from_toc`
-```python
-def extract_paths_from_toc(toc_entries: list[dict]) -> list[Path]:
-```
-Extract page paths from TOC entries.
-
-**Parameters:**
-- `toc_entries`: List of TOC entries.
-
-**Returns:**
-- List of `Path` objects.
-
-### `render_mermaid_to_png`
-```python
-def render_mermaid_to_png(mermaid_code: str, output_path: Path) -> None:
-```
-Render Mermaid diagram to PNG image.
-
-**Parameters:**
-- `mermaid_code`: Mermaid diagram code.
-- `output_path`: Output PNG path.
-
-
-<details>
-<summary>View Source (lines 55-114) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/pdf.py#L55-L114">GitHub</a></summary>
-
-```python
-def render_mermaid_to_png(diagram_code: str, timeout: int = 30) -> bytes | None:
-    """Render a mermaid diagram to PNG using mermaid-cli.
-
-    Args:
-        diagram_code: The mermaid diagram code.
-        timeout: Timeout in seconds for the mmdc command.
-
-    Returns:
-        PNG bytes if successful, None if rendering failed.
-    """
-    if not is_mmdc_available():
-        return None
-
-    try:
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_path = Path(tmp_dir)
-            input_file = tmp_path / "diagram.mmd"
-            output_file = tmp_path / "diagram.png"
-
-            # Write diagram to temp file
-            input_file.write_text(diagram_code)
-
-            # Run mmdc to generate PNG (embeds fonts as pixels)
-            result = subprocess.run(
-                [
-                    "mmdc",
-                    "-i",
-                    str(input_file),
-                    "-o",
-                    str(output_file),
-                    "-b",
-                    "white",  # White background for PDF
-                    "-s",
-                    "2",  # Scale 2x for better quality
-                    "--quiet",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-            )
-
-            if result.returncode != 0:
-                logger.warning(f"Mermaid CLI failed: {result.stderr}")
-                return None
-
-            if not output_file.exists():
-                logger.warning("Mermaid CLI did not produce output file")
-                return None
-
-            return output_file.read_bytes()
-
-    except subprocess.TimeoutExpired:
-        logger.warning(f"Mermaid CLI timed out after {timeout}s")
-        return None
-    except (subprocess.SubprocessError, OSError, ValueError) as e:
-        # SubprocessError: Process execution failures
-        # OSError: File system or process spawning issues
-        # ValueError: Invalid diagram code
-        logger.warning(f"Error rendering mermaid diagram: {e}")
-        return None
-```
-
-</details>
-
-### `render_mermaid_to_svg`
-```python
-def render_mermaid_to_svg(mermaid_code: str, output_path: Path) -> None:
-```
-Render Mermaid diagram to SVG image.
-
-**Parameters:**
-- `mermaid_code`: Mermaid diagram code.
-- `output_path`: Output SVG path.
-
-
-<details>
-<summary>View Source (lines 117-177) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/pdf.py#L117-L177">GitHub</a></summary>
-
-```python
-def render_mermaid_to_svg(diagram_code: str, timeout: int = 30) -> str | None:
-    """Render a mermaid diagram to SVG using mermaid-cli.
-
-    Note: SVG may have font issues in PDF. Use render_mermaid_to_png for PDF export.
-
-    Args:
-        diagram_code: The mermaid diagram code.
-        timeout: Timeout in seconds for the mmdc command.
-
-    Returns:
-        SVG string if successful, None if rendering failed.
-    """
-    if not is_mmdc_available():
-        return None
-
-    try:
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_path = Path(tmp_dir)
-            input_file = tmp_path / "diagram.mmd"
-            output_file = tmp_path / "diagram.svg"
-
-            # Write diagram to temp file
-            input_file.write_text(diagram_code)
-
-            # Run mmdc to generate SVG
-            result = subprocess.run(
-                [
-                    "mmdc",
-                    "-i",
-                    str(input_file),
-                    "-o",
-                    str(output_file),
-                    "-b",
-                    "transparent",  # Transparent background
-                    "--quiet",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-            )
-
-            if result.returncode != 0:
-                logger.warning(f"Mermaid CLI failed: {result.stderr}")
-                return None
-
-            if not output_file.exists():
-                logger.warning("Mermaid CLI did not produce output file")
-                return None
-
-            svg_content = output_file.read_text()
-            return svg_content
-
-    except subprocess.TimeoutExpired:
-        logger.warning(f"Mermaid CLI timed out after {timeout}s")
-        return None
-    except (subprocess.SubprocessError, OSError, ValueError) as e:
-        # SubprocessError: Process execution failures
-        # OSError: File system or process spawning issues
-        # ValueError: Invalid diagram code
-        logger.warning(f"Error rendering mermaid diagram: {e}")
-        return None
-```
-
-</details>
-
-### `extract_paths_from_toc`
-```python
-def extract_paths_from_toc(toc_entries: list[dict]) -> list[Path]:
-```
-Extract page paths from TOC entries.
-
-**Parameters:**
-- `toc_entries`: List of TOC entries.
-
-**Returns:**
-- List of `Path` objects.
-
-### `render_mermaid_to_png`
-```python
-def render_mermaid_to_png(mermaid_code: str, output_path: Path) -> None:
-```
-Render Mermaid diagram to PNG image.
-
-**Parameters:**
-- `mermaid_code`: Mermaid diagram code.
-- `output_path`: Output PNG path.
-
-
-<details>
-<summary>View Source (lines 55-114) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/pdf.py#L55-L114">GitHub</a></summary>
-
-```python
-def render_mermaid_to_png(diagram_code: str, timeout: int = 30) -> bytes | None:
-    """Render a mermaid diagram to PNG using mermaid-cli.
-
-    Args:
-        diagram_code: The mermaid diagram code.
-        timeout: Timeout in seconds for the mmdc command.
-
-    Returns:
-        PNG bytes if successful, None if rendering failed.
-    """
-    if not is_mmdc_available():
-        return None
-
-    try:
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_path = Path(tmp_dir)
-            input_file = tmp_path / "diagram.mmd"
-            output_file = tmp_path / "diagram.png"
-
-            # Write diagram to temp file
-            input_file.write_text(diagram_code)
-
-            # Run mmdc to generate PNG (embeds fonts as pixels)
-            result = subprocess.run(
-                [
-                    "mmdc",
-                    "-i",
-                    str(input_file),
-                    "-o",
-                    str(output_file),
-                    "-b",
-                    "white",  # White background for PDF
-                    "-s",
-                    "2",  # Scale 2x for better quality
-                    "--quiet",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-            )
-
-            if result.returncode != 0:
-                logger.warning(f"Mermaid CLI failed: {result.stderr}")
-                return None
-
-            if not output_file.exists():
-                logger.warning("Mermaid CLI did not produce output file")
-                return None
-
-            return output_file.read_bytes()
-
-    except subprocess.TimeoutExpired:
-        logger.warning(f"Mermaid CLI timed out after {timeout}s")
-        return None
-    except (subprocess.SubprocessError, OSError, ValueError) as e:
-        # SubprocessError: Process execution failures
-        # OSError: File system or process spawning issues
-        # ValueError: Invalid diagram code
-        logger.warning(f"Error rendering mermaid diagram: {e}")
-        return None
-```
-
-</details>
-
-### `render_mermaid_to_svg`
-```python
-def render_mermaid_to_svg(mermaid_code: str, output_path: Path) -> None:
-```
-Render Mermaid diagram to SVG image.
-
-**Parameters:**
-- `mermaid_code`: Mermaid diagram code.
-- `output_path`: Output SVG path.
-
-
-<details>
-<summary>View Source (lines 117-177) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/pdf.py#L117-L177">GitHub</a></summary>
-
-```python
-def render_mermaid_to_svg(diagram_code: str, timeout: int = 30) -> str | None:
-    """Render a mermaid diagram to SVG using mermaid-cli.
-
-    Note: SVG may have font issues in PDF. Use render_mermaid_to_png for PDF export.
-
-    Args:
-        diagram_code: The mermaid diagram code.
-        timeout: Timeout in seconds for the mmdc command.
-
-    Returns:
-        SVG string if successful, None if rendering failed.
-    """
-    if not is_mmdc_available():
-        return None
-
-    try:
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_path = Path(tmp_dir)
-            input_file = tmp_path / "diagram.mmd"
-            output_file = tmp_path / "diagram.svg"
-
-            # Write diagram to temp file
-            input_file.write_text(diagram_code)
-
-            # Run mmdc to generate SVG
-            result = subprocess.run(
-                [
-                    "mmdc",
-                    "-i",
-                    str(input_file),
-                    "-o",
-                    str(output_file),
-                    "-b",
-                    "transparent",  # Transparent background
-                    "--quiet",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-            )
-
-            if result.returncode != 0:
-                logger.warning(f"Mermaid CLI failed: {result.stderr}")
-                return None
-
-            if not output_file.exists():
-                logger.warning("Mermaid CLI did not produce output file")
-                return None
-
-            svg_content = output_file.read_text()
-            return svg_content
-
-    except subprocess.TimeoutExpired:
-        logger.warning(f"Mermaid CLI timed out after {timeout}s")
-        return None
-    except (subprocess.SubprocessError, OSError, ValueError) as e:
-        # SubprocessError: Process execution failures
-        # OSError: File system or process spawning issues
-        # ValueError: Invalid diagram code
-        logger.warning(f"Error rendering mermaid diagram: {e}")
-        return None
-```
-
-</details>
-
-### `extract_paths_from_toc`
-```python
-def extract_paths_from_toc(toc_entries: list[dict]) -> list[Path]:
-```
-Extract page paths from TOC entries.
-
-**Parameters:**
-- `toc_entries`: List of TOC entries.
-
-**Returns:**
-- List of `Path` objects.
-
-### `render_mermaid_to_png`
-```python
-def render_mermaid_to_png(mermaid_code: str, output_path: Path) -> None:
-```
-Render Mermaid diagram to PNG image.
-
-**Parameters:**
-- `mermaid_code`: Mermaid diagram code.
-- `output_path`: Output PNG path.
-
-
-<details>
-<summary>View Source (lines 55-114) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/pdf.py#L55-L114">GitHub</a></summary>
-
-```python
-def render_mermaid_to_png(diagram_code: str, timeout: int = 30) -> bytes | None:
-    """Render a mermaid diagram to PNG using mermaid-cli.
-
-    Args:
-        diagram_code: The mermaid diagram code.
-        timeout: Timeout in seconds for the mmdc command.
-
-    Returns:
-        PNG bytes if successful, None if rendering failed.
-    """
-    if not is_mmdc_available():
-        return None
-
-    try:
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_path = Path(tmp_dir)
-            input_file = tmp_path / "diagram.mmd"
-            output_file = tmp_path / "diagram.png"
-
-            # Write diagram to temp file
-            input_file.write_text(diagram_code)
-
-            # Run mmdc to generate PNG (embeds fonts as pixels)
-            result = subprocess.run(
-                [
-                    "mmdc",
-                    "-i",
-                    str(input_file),
-                    "-o",
-                    str(output_file),
-                    "-b",
-                    "white",  # White background for PDF
-                    "-s",
-                    "2",  # Scale 2x for better quality
-                    "--quiet",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-            )
-
-            if result.returncode != 0:
-                logger.warning(f"Mermaid CLI failed: {result.stderr}")
-                return None
-
-            if not output_file.exists():
-                logger.warning("Mermaid CLI did not produce output file")
-                return None
-
-            return output_file.read_bytes()
-
-    except subprocess.TimeoutExpired:
-        logger.warning(f"Mermaid CLI timed out after {timeout}s")
-        return None
-    except (subprocess.SubprocessError, OSError, ValueError) as e:
-        # SubprocessError: Process execution failures
-        # OSError: File system or process spawning issues
-        # ValueError: Invalid diagram code
-        logger.warning(f"Error rendering mermaid diagram: {e}")
-        return None
-```
-
-</details>
-
-### `render_mermaid_to_svg`
-```python
-def render_mermaid_to_svg(mermaid_code: str, output_path: Path) -> None:
-```
-Render Mermaid diagram to SVG image.
-
-**Parameters:**
-- `mermaid_code`: Mermaid diagram code.
-- `output_path`: Output SVG path.
-
-
-<details>
-<summary>View Source (lines 117-177) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/pdf.py#L117-L177">GitHub</a></summary>
-
-```python
-def render_mermaid_to_svg(diagram_code: str, timeout: int = 30) -> str | None:
-    """Render a mermaid diagram to SVG using mermaid-cli.
-
-    Note: SVG may have font issues in PDF. Use render_mermaid_to_png for PDF export.
-
-    Args:
-        diagram_code: The mermaid diagram code.
-        timeout: Timeout in seconds for the mmdc command.
-
-    Returns:
-        SVG string if successful, None if rendering failed.
-    """
-    if not is_mmdc_available():
-        return None
-
-    try:
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_path = Path(tmp_dir)
-            input_file = tmp_path / "diagram.mmd"
-            output_file = tmp_path / "diagram.svg"
-
-            # Write diagram to temp file
-            input_file.write_text(diagram_code)
-
-            # Run mmdc to generate SVG
-            result = subprocess.run(
-                [
-                    "mmdc",
-                    "-i",
-                    str(input_file),
-                    "-o",
-                    str(output_file),
-                    "-b",
-                    "transparent",  # Transparent background
-                    "--quiet",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-            )
-
-            if result.returncode != 0:
-                logger.warning(f"Mermaid CLI failed: {result.stderr}")
-                return None
-
-            if not output_file.exists():
-                logger.warning("Mermaid CLI did not produce output file")
-                return None
-
-            svg_content = output_file.read_text()
-            return svg_content
-
-    except subprocess.TimeoutExpired:
-        logger.warning(f"Mermaid CLI timed out after {timeout}s")
-        return None
-    except (subprocess.SubprocessError, OSError, ValueError) as e:
-        # SubprocessError: Process execution failures
-        # OSError: File system or process spawning issues
-        # ValueError: Invalid diagram code
-        logger.warning(f"Error rendering mermaid diagram: {e}")
-        return None
-```
-
-</details>
-
-### `extract_paths_from_toc`
-```python
-def extract_paths_from_toc(toc_entries: list[dict]) -> list[Path]:
-```
-Extract page paths from TOC entries.
-
-**Parameters:**
-- `toc_entries`: List of TOC entries.
-
-**Returns:**
-- List of `Path` objects.
-
-### `render_mermaid_to_png`
-```python
-def render_mermaid_to_png(mermaid_code: str, output_path: Path) -> None:
-```
-Render Mermaid diagram to PNG image.
-
-**Parameters:**
-- `mermaid_code`: Mermaid diagram code.
-- `output_path`: Output PNG path.
-
-
-<details>
-<summary>View Source (lines 55-114) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/pdf.py#L55-L114">GitHub</a></summary>
-
-```python
-def render_mermaid_to_png(diagram_code: str, timeout: int = 30) -> bytes | None:
-    """Render a mermaid diagram to PNG using mermaid-cli.
-
-    Args:
-        diagram_code: The mermaid diagram code.
-        timeout: Timeout in seconds for the mmdc command.
-
-    Returns:
-        PNG bytes if successful, None if rendering failed.
-    """
-    if not is_mmdc_available():
-        return None
-
-    try:
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_path = Path(tmp_dir)
-            input_file = tmp_path / "diagram.mmd"
-            output_file = tmp_path / "diagram.png"
-
-            # Write diagram to temp file
-            input_file.write_text(diagram_code)
-
-            # Run mmdc to generate PNG (embeds fonts as pixels)
-            result = subprocess.run(
-                [
-                    "mmdc",
-                    "-i",
-                    str(input_file),
-                    "-o",
-                    str(output_file),
-                    "-b",
-                    "white",  # White background for PDF
-                    "-s",
-                    "2",  # Scale 2x for better quality
-                    "--quiet",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-            )
-
-            if result.returncode != 0:
-                logger.warning(f"Mermaid CLI failed: {result.stderr}")
-                return None
-
-            if not output_file.exists():
-                logger.warning("Mermaid CLI did not produce output file")
-                return None
-
-            return output_file.read_bytes()
-
-    except subprocess.TimeoutExpired:
-        logger.warning(f"Mermaid CLI timed out after {timeout}s")
-        return None
-    except (subprocess.SubprocessError, OSError, ValueError) as e:
-        # SubprocessError: Process execution failures
-        # OSError: File system or process spawning issues
-        # ValueError: Invalid diagram code
-        logger.warning(f"Error rendering mermaid diagram: {e}")
-        return None
-```
-
-</details>
-
-### `render_mermaid_to_svg`
-```python
-def render_mermaid_to_svg(mermaid_code: str, output_path: Path) -> None:
-```
-Render Mermaid diagram to SVG image.
-
-**Parameters:**
-- `mermaid_code`: Mermaid diagram code.
-- `output_path`: Output SVG path.
-
-
-<details>
-<summary>View Source (lines 117-177) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/pdf.py#L117-L177">GitHub</a></summary>
-
-```python
-def render_mermaid_to_svg(diagram_code: str, timeout: int = 30) -> str | None:
-    """Render a mermaid diagram to SVG using mermaid-cli.
-
-    Note: SVG may have font issues in PDF. Use render_mermaid_to_png for PDF export.
-
-    Args:
-        diagram_code: The mermaid diagram code.
-        timeout: Timeout in seconds for the mmdc command.
-
-    Returns:
-        SVG string if successful, None if rendering failed.
-    """
-    if not is_mmdc_available():
-        return None
-
-    try:
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_path = Path(tmp_dir)
-            input_file = tmp_path / "diagram.mmd"
-            output_file = tmp_path / "diagram.svg"
-
-            # Write diagram to temp file
-            input_file.write_text(diagram_code)
-
-            # Run mmdc to generate SVG
-            result = subprocess.run(
-                [
-                    "mmdc",
-                    "-i",
-                    str(input_file),
-                    "-o",
-                    str(output_file),
-                    "-b",
-                    "transparent",  # Transparent background
-                    "--quiet",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-            )
+- **`render_mermaid_to_png(mermaid_code: str, output_path: Path) -> None`**
+  - Renders Mermaid code to a PNG image.
+  - **Parameters**:
+    - `mermaid_code`: String containing Mermaid diagram code.
+    - `output_path`: Output path for the PNG file.
 
-            if result.returncode != 0:
-                logger.warning(f"Mermaid CLI failed: {result.stderr}")
-                return None
+- **`render_mermaid_to_svg(mermaid_code: str, output_path: Path) -> None`**
+  - Renders Mermaid code to an SVG image.
+  - **Parameters**:
+    - `mermaid_code`: String containing Mermaid diagram code.
+    - `output_path`: Output path for the SVG file.
 
-            if not output_file.exists():
-                logger.warning("Mermaid CLI did not produce output file")
-                return None
+- **`extract_mermaid_blocks(markdown_content: str) -> list[str]`**
+  - Extracts Mermaid code blocks from markdown content.
+  - **Parameters**:
+    - `markdown_content`: Markdown text.
+  - **Returns**: List of Mermaid code strings.
 
-            svg_content = output_file.read_text()
-            return svg_content
+- **`export_to_pdf(wiki_path: Path, output_path: Path, single_file: bool = True, no_progress: bool = False) -> Path | list[Path]`**
+  - Main function to export the wiki to PDF.
+  - **Parameters**:
+    - `wiki_path`: Path to the `.deepwiki` directory.
+    - `output_path`: Output path for PDF file(s).
+    - `single_file`: If `True`, exports to a single file; otherwise, separate files.
+    - `no_progress`: If `True`, disables progress bars.
+  - **Returns**: Path or list of paths to generated PDF files.
 
-    except subprocess.TimeoutExpired:
-        logger.warning(f"Mermaid CLI timed out after {timeout}s")
-        return None
-    except (subprocess.SubprocessError, OSError, ValueError) as e:
-        # SubprocessError: Process execution failures
-        # OSError: File system or process spawning issues
-        # ValueError: Invalid diagram code
-        logger.warning(f"Error rendering mermaid diagram: {e}")
-        return None
-```
-
-</details>
-
-### `extract_paths_from_toc`
-```python
-def extract_paths_from_toc(toc_entries: list[dict]) -> list[Path]:
-```
-Extract page paths from TOC entries.
-
-**Parameters:**
-- `toc_entries`: List of TOC entries.
+## Integration
 
-**Returns:**
-- List of `Path` objects.
-
-### `render_mermaid_to_png`
-```python
-def render_mermaid_to_png(mermaid_code: str, output_path: Path) -> None:
-```
-Render Mermaid diagram to PNG image.
+This file integrates with:
+- The `local_deepwiki.export.streaming` module for streaming export logic.
+- The `local_deepwiki.cli_progress` module for progress reporting.
+- The `local_deepwiki.logging` module for logging.
 
-**Parameters:**
-- `mermaid_code`: Mermaid diagram code.
-- `output_path`: Output PNG path.
+It is used by the main CLI or other modules that require PDF export functionality from a `.deepwiki` directory.
 
+## Usage Examples
 
-<details>
-<summary>View Source (lines 55-114) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/pdf.py#L55-L114">GitHub</a></summary>
+### Using `StreamingPdfExporter`
 
 ```python
-def render_mermaid_to_png(diagram_code: str, timeout: int = 30) -> bytes | None:
-    """Render a mermaid diagram to PNG using mermaid-cli.
-
-    Args:
-        diagram_code: The mermaid diagram code.
-        timeout: Timeout in seconds for the mmdc command.
-
-    Returns:
-        PNG bytes if successful, None if rendering failed.
-    """
-    if not is_mmdc_available():
-        return None
-
-    try:
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_path = Path(tmp_dir)
-            input_file = tmp_path / "diagram.mmd"
-            output_file = tmp_path / "diagram.png"
-
-            # Write diagram to temp file
-            input_file.write_text(diagram_code)
-
-            # Run mmdc to generate PNG (embeds fonts as pixels)
-            result = subprocess.run(
-                [
-                    "mmdc",
-                    "-i",
-                    str(input_file),
-                    "-o",
-                    str(output_file),
-                    "-b",
-                    "white",  # White background for PDF
-                    "-s",
-                    "2",  # Scale 2x for better quality
-                    "--quiet",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-            )
-
-            if result.returncode != 0:
-                logger.warning(f"Mermaid CLI failed: {result.stderr}")
-                return None
-
-            if not output_file.exists():
-                logger.warning("Mermaid CLI did not produce output file")
-                return None
+from local_deepwiki.export.pdf import StreamingPdfExporter
 
-            return output_file.read_bytes()
-
-    except subprocess.TimeoutExpired:
-        logger.warning(f"Mermaid CLI timed out after {timeout}s")
-        return None
-    except (subprocess.SubprocessError, OSError, ValueError) as e:
-        # SubprocessError: Process execution failures
-        # OSError: File system or process spawning issues
-        # ValueError: Invalid diagram code
-        logger.warning(f"Error rendering mermaid diagram: {e}")
-        return None
-```
-
-</details>
-
-### `render_mermaid_to_svg`
-```python
-def render_mermaid_to_svg(mermaid_code: str, output_path: Path) -> None:
+exporter = StreamingPdfExporter(wiki_path="/path/to/wiki", output_path="/path/to/output.pdf")
+result = exporter.export()
 ```
-Render Mermaid diagram to SVG image.
-
-**Parameters:**
-- `mermaid_code`: Mermaid diagram code.
-- `output_path`: Output SVG path.
 
+### Using `PdfExporter`
 
-<details>
-<summary>View Source (lines 117-177) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/pdf.py#L117-L177">GitHub</a></summary>
-
 ```python
-def render_mermaid_to_svg(diagram_code: str, timeout: int = 30) -> str | None:
-    """Render a mermaid diagram to SVG using mermaid-cli.
-
-    Note: SVG may have font issues in PDF. Use render_mermaid_to_png for PDF export.
-
-    Args:
-        diagram_code: The mermaid diagram code.
-        timeout: Timeout in seconds for the mmdc command.
-
-    Returns:
-        SVG string if successful, None if rendering failed.
-    """
-    if not is_mmdc_available():
-        return None
-
-    try:
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_path = Path(tmp_dir)
-            input_file = tmp_path / "diagram.mmd"
-            output_file = tmp_path / "diagram.svg"
-
-            # Write diagram to temp file
-            input_file.write_text(diagram_code)
-
-            # Run mmdc to generate SVG
-            result = subprocess.run(
-                [
-                    "mmdc",
-                    "-i",
-                    str(input_file),
-                    "-o",
-                    str(output_file),
-                    "-b",
-                    "transparent",  # Transparent background
-                    "--quiet",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-            )
-
-            if result.returncode != 0:
-                logger.warning(f"Mermaid CLI failed: {result.stderr}")
-                return None
-
-            if not output_file.exists():
-                logger.warning("Mermaid CLI did not produce output file")
-                return None
-
-            svg_content = output_file.read_text()
-            return svg_content
+from local_deepwiki.export.pdf import PdfExporter
 
-    except subprocess.TimeoutExpired:
-        logger.warning(f"Mermaid CLI timed out after {timeout}s")
-        return None
-    except (subprocess.SubprocessError, OSError, ValueError) as e:
-        # SubprocessError: Process execution failures
-        # OSError: File system or process spawning issues
-        # ValueError: Invalid diagram code
-        logger.warning(f"Error rendering mermaid diagram: {e}")
-        return None
+exporter = PdfExporter(wiki_path="/path/to/wiki", output_path="/path/to/output.pdf")
+pdf_path = exporter.export_single()
 ```
 
-</details>
+### Using `export_to_pdf` function
 
-### `extract_paths_from_toc`
 ```python
-def extract_paths_from_toc(toc_entries: list[dict]) -> list[Path]:
-```
-Extract page paths from TOC entries.
-
-**Parameters:**
-- `toc_entries`: List of TOC entries.
-
-**Returns:**
-- List of `Path` objects.
-
-### `render_mermaid_to_png`
-```python
-def render_mermaid_to
-
-
-<details>
-<summary>View Source (lines 55-114) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/export/pdf.py#L55-L114">GitHub</a></summary>
-
-```python
-def render_mermaid_to_png(diagram_code: str, timeout: int = 30) -> bytes | None:
-    """Render a mermaid diagram to PNG using mermaid-cli.
-
-    Args:
-        diagram_code: The mermaid diagram code.
-        timeout: Timeout in seconds for the mmdc command.
-
-    Returns:
-        PNG bytes if successful, None if rendering failed.
-    """
-    if not is_mmdc_available():
-        return None
-
-    try:
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            tmp_path = Path(tmp_dir)
-            input_file = tmp_path / "diagram.mmd"
-            output_file = tmp_path / "diagram.png"
+from local_deepwiki.export.pdf import export_to_pdf
 
-            # Write diagram to temp file
-            input_file.write_text(diagram_code)
+# Export to a single PDF
+pdf_path = export_to_pdf(wiki_path="/path/to/wiki", output_path="/path/to/output.pdf")
 
-            # Run mmdc to generate PNG (embeds fonts as pixels)
-            result = subprocess.run(
-                [
-                    "mmdc",
-                    "-i",
-                    str(input_file),
-                    "-o",
-                    str(output_file),
-                    "-b",
-                    "white",  # White background for PDF
-                    "-s",
-                    "2",  # Scale 2x for better quality
-                    "--quiet",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-            )
-
-            if result.returncode != 0:
-                logger.warning(f"Mermaid CLI failed: {result.stderr}")
-                return None
-
-            if not output_file.exists():
-                logger.warning("Mermaid CLI did not produce output file")
-                return None
-
-            return output_file.read_bytes()
-
-    except subprocess.TimeoutExpired:
-        logger.warning(f"Mermaid CLI timed out after {timeout}s")
-        return None
-    except (subprocess.SubprocessError, OSError, ValueError) as e:
-        # SubprocessError: Process execution failures
-        # OSError: File system or process spawning issues
-        # ValueError: Invalid diagram code
-        logger.warning(f"Error rendering mermaid diagram: {e}")
-        return None
+# Export to separate PDFs
+pdf_paths = export_to_pdf(wiki_path="/path/to/wiki", output_path="/path/to/output", single_file=False)
 ```
-
-</details>
 
 ## API Reference
 
 ### class `StreamingPdfExporter`
 
-**Inherits from:** `StreamingExporter`
+**Inherits from:** [`StreamingExporter`](streaming.md)
 
 Memory-efficient PDF exporter using streaming page iteration.  Processes pages in batches, writes intermediate PDFs to temp files, then merges them at the end. Suitable for large wikis to avoid OOM.
 
@@ -2660,7 +238,7 @@ def __init__(wiki_path: Path, output_path: Path, config: ExportConfig | None = N
 Initialize the streaming PDF exporter.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `wiki_path` | `Path` | - | Path to the .deepwiki directory. |
 | `output_path` | `Path` | - | Output path for PDF file(s). |
@@ -2703,9 +281,9 @@ async def export(progress_callback: ProgressCallback | None = None) -> ExportRes
 Export wiki to PDF with streaming/batched processing.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `progress_callback` | `ProgressCallback | None` | `None` | Optional callback for progress updates. |
+| [`progress_callback`](../handlers.md) | `ProgressCallback | None` | `None` | Optional callback for progress updates. |
 
 
 <details>
@@ -2830,9 +408,9 @@ async def export_separate(progress_callback: ProgressCallback | None = None) -> 
 Export each wiki page as a separate PDF with streaming.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `progress_callback` | `ProgressCallback | None` | `None` | Optional callback for progress updates. |
+| [`progress_callback`](../handlers.md) | `ProgressCallback | None` | `None` | Optional callback for progress updates. |
 
 
 
@@ -2902,7 +480,7 @@ async def export_separate(
 
 ### class `PdfExporter`
 
-Export wiki markdown to PDF format.  This is the synchronous wrapper class that maintains backwards compatibility. For large wikis, use StreamingPdfExporter directly for async streaming export.
+Export wiki markdown to PDF format.  This is the synchronous [wrapper](../providers/base.md) class that maintains backwards compatibility. For large wikis, use StreamingPdfExporter directly for async streaming export.
 
 **Methods:**
 
@@ -2926,7 +504,7 @@ def __init__(wiki_path: Path, output_path: Path, no_progress: bool = False)
 Initialize the exporter.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `wiki_path` | `Path` | - | Path to the .deepwiki directory. |
 | `output_path` | `Path` | - | Output path for PDF file(s). |
@@ -3114,7 +692,7 @@ def render_mermaid_to_png(diagram_code: str, timeout: int = 30) -> bytes | None
 Render a mermaid diagram to PNG using mermaid-cli.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `diagram_code` | `str` | - | The mermaid diagram code. |
 | `timeout` | `int` | `30` | Timeout in seconds for the mmdc command. |
@@ -3200,7 +778,7 @@ def render_mermaid_to_svg(diagram_code: str, timeout: int = 30) -> str | None
 Render a mermaid diagram to SVG using mermaid-cli.  Note: SVG may have font issues in PDF. Use render_mermaid_to_png for PDF export.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `diagram_code` | `str` | - | The mermaid diagram code. |
 | `timeout` | `int` | `30` | Timeout in seconds for the mmdc command. |
@@ -3287,7 +865,7 @@ def extract_mermaid_blocks(content: str) -> list[tuple[str, str]]
 Extract mermaid code blocks from markdown content.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `content` | `str` | - | Markdown content. |
 
@@ -3332,7 +910,7 @@ def render_markdown_for_pdf(content: str, render_mermaid: bool = True) -> str
 Render markdown to HTML suitable for PDF.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `content` | `str` | - | Markdown content. |
 | `render_mermaid` | `bool` | `True` | If True, attempt to render mermaid diagrams using CLI. Falls back to placeholder if CLI is not available. |
@@ -3420,7 +998,7 @@ def extract_title(md_file: Path) -> str
 Extract title from markdown file.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `md_file` | `Path` | - | Path to markdown file. |
 
@@ -3467,7 +1045,7 @@ def export_to_pdf(wiki_path: Path | str, output_path: Path | str | None = None, 
 Export wiki to PDF format.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](../generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `wiki_path` | `Path | str` | - | Path to the .deepwiki directory. |
 | `output_path` | `Path | str | None` | `None` | Output path (default: wiki.pdf or wiki_pdfs/). |
@@ -3725,7 +1303,7 @@ Functions and methods in this file and their callers:
 
 - **`ArgumentParser`**: called by `main`
 - **`CSS`**: called by `PdfExporter._export_page`, `PdfExporter.export_single`, `StreamingPdfExporter._create_empty_pdf`, `StreamingPdfExporter._export_single_page`, `StreamingPdfExporter._render_batch_to_pdf`
-- **`ExportResult`**: called by `StreamingPdfExporter.export`, `StreamingPdfExporter.export_separate`
+- **[`ExportResult`](streaming.md)**: called by `StreamingPdfExporter.export`, `StreamingPdfExporter.export_separate`
 - **`HTML`**: called by `PdfExporter._export_page`, `PdfExporter.export_single`, `StreamingPdfExporter._create_empty_pdf`, `StreamingPdfExporter._export_single_page`, `StreamingPdfExporter._render_batch_to_pdf`
 - **`Markdown`**: called by `render_markdown_for_pdf`
 - **`Path`**: called by `PdfExporter.__init__`, `StreamingPdfExporter.export`, `export_to_pdf`, `main`, `render_mermaid_to_png`, `render_mermaid_to_svg`
@@ -3751,7 +1329,7 @@ Functions and methods in this file and their callers:
 - **`cast`**: called by `render_markdown_for_pdf`
 - **`convert`**: called by `render_markdown_for_pdf`
 - **`copy`**: called by `StreamingPdfExporter._merge_pdfs`, `StreamingPdfExporter.export`
-- **`create_progress`**: called by `PdfExporter._build_combined_html`, `PdfExporter.export_separate`, `PdfExporter.export_single`
+- **[`create_progress`](../cli_progress.md)**: called by `PdfExporter._build_combined_html`, `PdfExporter.export_separate`, `PdfExporter.export_single`
 - **`decode`**: called by `render_markdown_for_pdf`
 - **`exists`**: called by `PdfExporter._collect_pages_in_order`, `PdfExporter.export_single`, `export_to_pdf`, `main`, `render_mermaid_to_png`, `render_mermaid_to_svg`
 - **`exit`**: called by `main`
@@ -3770,7 +1348,7 @@ Functions and methods in this file and their callers:
 - **`mkdir`**: called by `PdfExporter.export_separate`, `PdfExporter.export_single`, `StreamingPdfExporter.export`, `StreamingPdfExporter.export_separate`
 - **`monotonic`**: called by `StreamingPdfExporter.export`, `StreamingPdfExporter.export_separate`
 - **`parse_args`**: called by `main`
-- **`progress_callback`**: called by `StreamingPdfExporter.export`, `StreamingPdfExporter.export_separate`
+- **[`progress_callback`](../handlers.md)**: called by `StreamingPdfExporter.export`, `StreamingPdfExporter.export_separate`
 - **`read_bytes`**: called by `render_mermaid_to_png`
 - **`read_text`**: called by `PdfExporter._build_combined_html`, `PdfExporter._export_page`, `PdfExporter.export_single`, `extract_title`, `render_mermaid_to_svg`
 - **`relative_to`**: called by `PdfExporter._build_toc_html`, `PdfExporter.export_separate`
@@ -4226,3 +1804,6 @@ def _export_page(self, md_file: Path, output_file: Path) -> None:
 
 </details>
 
+## Relevant Source Files
+
+- `src/local_deepwiki/export/pdf.py:508-815`

@@ -1,32 +1,21 @@
 # File Overview
 
-This file, `src/local_deepwiki/validation.py`, provides validation functions and a `ResourceLimits` class for ensuring parameter values and resource usage are within acceptable bounds. It is used to prevent resource exhaustion and enforce valid input for various operations in the local_deepwiki system.
+This file, `src/local_deepwiki/validation.py`, provides validation functions and a `ResourceLimits` class for ensuring input parameters and resource usage remain within safe bounds. It is used to prevent resource exhaustion attacks and enforce valid parameter values in various parts of the application, including query processing, repository indexing, and deep research operations.
 
-## Dependencies
-
+The module imports from:
 - `typing.Any`
-- `local_deepwiki.models.ChunkType`
-- `local_deepwiki.models.Language`
+- [`local_deepwiki.models.ChunkType`](models.md), [`Language`](models.md)
 - `pathlib.Path`
+- `os`
+- [`local_deepwiki.config.get_config`](config.md)
 
-## External Usage
+It is used by:
+- `test_server_validation`
+- `test_fuzzy_search`
+- `handlers`
+- `test_resource_limits`
 
-The functions and classes in this file are called from:
-- `validate_non_empty_string`: used by `test_server_validation`
-- `validate_language`: used by `test_server_validation`
-- `validate_languages_list`: used by `test_server_validation`
-- `validate_provider`: used by `test_server_validation`
-- `validate_chunk_type`: used by `test_fuzzy_search`
-- `validate_query_parameters`: used by `test_resource_limits`
-- `validate_deep_research_parameters`: used by `handlers`, `test_resource_limits`
-
-## Related Files
-
-- `src/local_deepwiki/cli/__init__.py`
-- `src/local_deepwiki/core/__init__.py`
-- `src/local_deepwiki/generators/source_refs.py`
-- `src/local_deepwiki/generators/wiki.py`
-- `tests/test_plugins.py`
+---
 
 # Classes
 
@@ -41,73 +30,81 @@ class ResourceLimits:
     """
 ```
 
-A class defining resource limits for various operations to prevent resource exhaustion attacks. It includes constants for maximum query length, question length, repository size, file count, file size, sub-questions, research depth, and context size.
+**Purpose**: Defines maximum resource limits to prevent denial-of-service attacks by constraining input parameters and system resource usage.
 
 ### Constants
 
-- `MAX_QUERY_LENGTH`: 5000 characters
-- `MAX_QUESTION_LENGTH`: 2000 characters
-- `MAX_REPO_SIZE`: 1,000,000,000 bytes (1GB)
-- `MAX_FILES_PER_REPO`: 50,000 files
-- `MAX_FILE_SIZE`: 50,000,000 bytes (50MB)
-- `MAX_SUB_QUESTIONS`: 20
-- `MAX_RESEARCH_DEPTH`: 5
-- `MAX_CONTEXT_SIZE`: 1000000 characters
+- `MAX_QUERY_LENGTH`: Maximum allowed query string length (5000 characters)
+- `MAX_QUESTION_LENGTH`: Maximum allowed question string length (2000 characters)
+- `MAX_REPO_SIZE`: Maximum repository size (1 GB)
+- `MAX_FILES_PER_REPO`: Maximum number of files per repository (50,000)
+- `MAX_FILE_SIZE`: Maximum file size (50 MB)
+- `MAX_SUB_QUESTIONS`: Maximum number of sub-questions during deep research (20)
+- `MAX_RESEARCH_DEPTH`: Maximum depth of research (5)
+- `MAX_CONTEXT_SIZE`: Maximum context size (5000 characters)
+
+---
 
 # Functions
 
 ## validate_positive_int
 
 ```python
-def validate_positive_int(value: Any, name: str, min_val: int, max_val: int, default: int) -> int
+def validate_positive_int(
+    value: Any, name: str, min_val: int, max_val: int, default: int
+) -> int:
 ```
 
-Validate and bound an integer parameter.
+**Purpose**: Validates and bounds an integer parameter.
 
 ### Parameters
 
 - `value`: The value to validate.
-- `name`: Parameter name for error messages.
+- `name`: [Parameter](generators/api_docs.md) name for error messages.
 - `min_val`: Minimum allowed value.
 - `max_val`: Maximum allowed value.
-- `default`: Default value if None.
+- `default`: Default value if `None`.
 
 ### Returns
 
-Validated and bounded integer.
+- Validated and bounded integer.
 
 ### Raises
 
 - `ValueError`: If value is not a valid integer.
 
+---
+
 ## validate_non_empty_string
 
 ```python
-def validate_non_empty_string(value: Any, name: str) -> str
+def validate_non_empty_string(value: Any, name: str) -> str:
 ```
 
-Validate that a string is non-empty.
+**Purpose**: Validates that a string is non-empty.
 
 ### Parameters
 
 - `value`: The value to validate.
-- `name`: Parameter name for error messages.
+- `name`: [Parameter](generators/api_docs.md) name for error messages.
 
 ### Returns
 
-The validated string.
+- The validated string.
 
 ### Raises
 
 - `ValueError`: If value is not a non-empty string.
 
+---
+
 ## validate_language
 
 ```python
-def validate_language(language: str | None) -> str | None
+def validate_language(language: str | None) -> str | None:
 ```
 
-Validate a language filter value.
+**Purpose**: Validates a language filter value.
 
 ### Parameters
 
@@ -115,19 +112,21 @@ Validate a language filter value.
 
 ### Returns
 
-The validated language or None.
+- The validated language or `None`.
 
 ### Raises
 
 - `ValueError`: If language is invalid.
 
+---
+
 ## validate_languages_list
 
 ```python
-def validate_languages_list(languages: list[str] | None) -> list[str] | None
+def validate_languages_list(languages: list[str] | None) -> list[str] | None:
 ```
 
-Validate a list of languages.
+**Purpose**: Validates a list of languages.
 
 ### Parameters
 
@@ -135,41 +134,47 @@ Validate a list of languages.
 
 ### Returns
 
-The validated list or None.
+- The validated list or `None`.
 
 ### Raises
 
 - `ValueError`: If any language is invalid.
 
+---
+
 ## validate_provider
 
 ```python
-def validate_provider(provider: str | None, valid_providers: set[str], name: str) -> str | None
+def validate_provider(
+    provider: str | None, valid_providers: set[str], name: str
+) -> str | None:
 ```
 
-Validate a provider value.
+**Purpose**: Validates a provider value.
 
 ### Parameters
 
 - `provider`: The provider to validate.
 - `valid_providers`: Set of valid provider names.
-- `name`: Parameter name for error messages.
+- `name`: [Parameter](generators/api_docs.md) name for error messages.
 
 ### Returns
 
-The validated provider or None.
+- The validated provider or `None`.
 
 ### Raises
 
 - `ValueError`: If provider is invalid.
 
+---
+
 ## validate_chunk_type
 
 ```python
-def validate_chunk_type(chunk_type: str | None) -> str | None
+def validate_chunk_type(chunk_type: str | None) -> str | None:
 ```
 
-Validate a chunk type filter value.
+**Purpose**: Validates a chunk type filter value.
 
 ### Parameters
 
@@ -177,21 +182,21 @@ Validate a chunk type filter value.
 
 ### Returns
 
-The validated chunk type or None.
+- The validated chunk type or `None`.
 
 ### Raises
 
 - `ValueError`: If chunk type is invalid.
 
+---
+
 ## validate_path_pattern
 
 ```python
-def validate_path_pattern(path_pattern: str | None) -> str | None
+def validate_path_pattern(path_pattern: str | None) -> str | None:
 ```
 
-Validate a file path pattern.
-
-Accepts glob-like patterns for file path filtering.
+**Purpose**: Validates a file path pattern.
 
 ### Parameters
 
@@ -199,19 +204,21 @@ Accepts glob-like patterns for file path filtering.
 
 ### Returns
 
-The validated path pattern or None.
+- The validated path pattern or `None`.
 
 ### Raises
 
 - `ValueError`: If path pattern is invalid.
 
+---
+
 ## validate_fuzzy_weight
 
 ```python
-def validate_fuzzy_weight(weight: float | None) -> float
+def validate_fuzzy_weight(weight: float | None) -> float:
 ```
 
-Validate fuzzy weight parameter.
+**Purpose**: Validates fuzzy weight parameter.
 
 ### Parameters
 
@@ -219,11 +226,13 @@ Validate fuzzy weight parameter.
 
 ### Returns
 
-Validated weight, default 0.3.
+- Validated weight, default `0.3`.
 
 ### Raises
 
 - `ValueError`: If weight is out of range.
+
+---
 
 ## validate_query_parameters
 
@@ -232,12 +241,10 @@ def validate_query_parameters(
     query: str,
     repo_path: str,
     max_results: int,
-) -> None
+) -> None:
 ```
 
-Validate query parameters against resource limits.
-
-Ensures query string length, repository path validity, and result count are within acceptable bounds to prevent resource exhaustion.
+**Purpose**: Validates query parameters against resource limits.
 
 ### Parameters
 
@@ -249,17 +256,17 @@ Ensures query string length, repository path validity, and result count are with
 
 - `ValueError`: If any parameter violates resource limits.
 
+---
+
 ## validate_index_parameters
 
 ```python
 def validate_index_parameters(
     repo_path: str,
-) -> tuple[int, int]
+) -> tuple[int, int]:
 ```
 
-Validate repository indexing parameters.
-
-Scans the repository to ensure it doesn't exceed size limits. Checks total repository size, file count, and individual file sizes.
+**Purpose**: Validates repository indexing parameters.
 
 ### Parameters
 
@@ -267,11 +274,13 @@ Scans the repository to ensure it doesn't exceed size limits. Checks total repos
 
 ### Returns
 
-Tuple of (total_size, file_count) for the repository.
+- Tuple of `(total_size, file_count)` for the repository.
 
 ### Raises
 
 - `ValueError`: If repository exceeds any resource limits.
+
+---
 
 ## validate_deep_research_parameters
 
@@ -280,22 +289,72 @@ def validate_deep_research_parameters(
     question: str,
     preset: str | None,
     max_chunks: int,
-) -> None
+) -> None:
 ```
 
-Validate deep research parameters.
-
-Ensures question length, preset validity, and chunk count are within acceptable bounds for deep research operations.
+**Purpose**: Validates deep research parameters.
 
 ### Parameters
 
 - `question`: The research question.
-- `preset`: Research preset (quick/default/thorough) or None.
+- `preset`: Research preset (`quick`, `default`, `thorough`) or `None`.
 - `max_chunks`: Maximum number of context chunks to use.
 
 ### Raises
 
 - `ValueError`: If any parameter violates resource limits.
+
+---
+
+# Integration
+
+This module integrates with the broader codebase by providing validation utilities used in:
+- `test_server_validation` (via `validate_non_empty_string`, `validate_language`, `validate_languages_list`, `validate_provider`, `validate_chunk_type`)
+- `test_fuzzy_search` (via `validate_chunk_type`)
+- `handlers` (via `validate_deep_research_parameters`)
+- `test_resource_limits` (via `validate_query_parameters`, `validate_index_parameters`, `validate_deep_research_parameters`)
+
+It leverages [`local_deepwiki.config.get_config`](config.md) for configuration access and depends on [`local_deepwiki.models.ChunkType`](models.md) and [`Language`](models.md) for type validation.
+
+---
+
+# Usage Examples
+
+## validate_positive_int
+
+```python
+validated_value = validate_positive_int(5, "max_attempts", 1, 100, 10)
+```
+
+## validate_non_empty_string
+
+```python
+query = validate_non_empty_string("hello world", "query")
+```
+
+## validate_language
+
+```python
+lang = validate_language("en")
+```
+
+## validate_provider
+
+```python
+provider = validate_provider("openai", {"openai", "anthropic"}, "model_provider")
+```
+
+## validate_query_parameters
+
+```python
+validate_query_parameters("search query", "/path/to/repo", 10)
+```
+
+## validate_deep_research_parameters
+
+```python
+validate_deep_research_parameters("What is AI?", "default", 50)
+```
 
 ## API Reference
 
@@ -307,7 +366,7 @@ Resource consumption limits for security (CWE-400 prevention).  These limits pre
 
 
 <details>
-<summary>View Source (lines 210-233) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/validation.py#L210-L233">GitHub</a></summary>
+<summary>View Source (lines 218-241) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/validation.py#L218-L241">GitHub</a></summary>
 
 ```python
 class ResourceLimits:
@@ -349,10 +408,10 @@ def validate_positive_int(value: Any, name: str, min_val: int, max_val: int, def
 Validate and bound an integer parameter.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `value` | `Any` | - | The value to validate. |
-| `name` | `str` | - | Parameter name for error messages. |
+| `name` | `str` | - | [Parameter](generators/api_docs.md) name for error messages. |
 | `min_val` | `int` | - | Minimum allowed value. |
 | `max_val` | `int` | - | Maximum allowed value. |
 | `default` | `int` | - | Default value if None. |
@@ -362,10 +421,12 @@ Validate and bound an integer parameter.
 
 
 <details>
-<summary>View Source (lines 26-46) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/validation.py#L26-L46">GitHub</a></summary>
+<summary>View Source (lines 26-48) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/validation.py#L26-L48">GitHub</a></summary>
 
 ```python
-def validate_positive_int(value: Any, name: str, min_val: int, max_val: int, default: int) -> int:
+def validate_positive_int(
+    value: Any, name: str, min_val: int, max_val: int, default: int
+) -> int:
     """Validate and bound an integer parameter.
 
     Args:
@@ -399,17 +460,17 @@ def validate_non_empty_string(value: Any, name: str) -> str
 Validate that a string is non-empty.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `value` | `Any` | - | The value to validate. |
-| `name` | `str` | - | Parameter name for error messages. |
+| `name` | `str` | - | [Parameter](generators/api_docs.md) name for error messages. |
 
 **Returns:** `str`
 
 
 
 <details>
-<summary>View Source (lines 49-66) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/validation.py#L49-L66">GitHub</a></summary>
+<summary>View Source (lines 51-68) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/validation.py#L51-L68">GitHub</a></summary>
 
 ```python
 def validate_non_empty_string(value: Any, name: str) -> str:
@@ -443,7 +504,7 @@ def validate_language(language: str | None) -> str | None
 Validate a language filter value.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `language` | `str | None` | - | The language to validate. |
 
@@ -452,7 +513,7 @@ Validate a language filter value.
 
 
 <details>
-<summary>View Source (lines 69-87) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/validation.py#L69-L87">GitHub</a></summary>
+<summary>View Source (lines 71-89) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/validation.py#L71-L89">GitHub</a></summary>
 
 ```python
 def validate_language(language: str | None) -> str | None:
@@ -487,7 +548,7 @@ def validate_languages_list(languages: list[str] | None) -> list[str] | None
 Validate a list of languages.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `languages` | `list[str] | None` | - | List of languages to validate. |
 
@@ -496,7 +557,7 @@ Validate a list of languages.
 
 
 <details>
-<summary>View Source (lines 90-110) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/validation.py#L90-L110">GitHub</a></summary>
+<summary>View Source (lines 92-114) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/validation.py#L92-L114">GitHub</a></summary>
 
 ```python
 def validate_languages_list(languages: list[str] | None) -> list[str] | None:
@@ -518,7 +579,9 @@ def validate_languages_list(languages: list[str] | None) -> list[str] | None:
 
     invalid = [lang for lang in languages if lang not in VALID_LANGUAGES]
     if invalid:
-        raise ValueError(f"Invalid languages: {invalid}. Valid options: {sorted(VALID_LANGUAGES)}")
+        raise ValueError(
+            f"Invalid languages: {invalid}. Valid options: {sorted(VALID_LANGUAGES)}"
+        )
     return languages
 ```
 
@@ -533,21 +596,23 @@ def validate_provider(provider: str | None, valid_providers: set[str], name: str
 Validate a provider value.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `provider` | `str | None` | - | The provider to validate. |
 | `valid_providers` | `set[str]` | - | Set of valid provider names. |
-| `name` | `str` | - | Parameter name for error messages. |
+| `name` | `str` | - | [Parameter](generators/api_docs.md) name for error messages. |
 
 **Returns:** `str | None`
 
 
 
 <details>
-<summary>View Source (lines 113-131) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/validation.py#L113-L131">GitHub</a></summary>
+<summary>View Source (lines 117-139) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/validation.py#L117-L139">GitHub</a></summary>
 
 ```python
-def validate_provider(provider: str | None, valid_providers: set[str], name: str) -> str | None:
+def validate_provider(
+    provider: str | None, valid_providers: set[str], name: str
+) -> str | None:
     """Validate a provider value.
 
     Args:
@@ -564,7 +629,9 @@ def validate_provider(provider: str | None, valid_providers: set[str], name: str
     if provider is None:
         return None
     if provider not in valid_providers:
-        raise ValueError(f"Invalid {name}: '{provider}'. Valid options: {sorted(valid_providers)}")
+        raise ValueError(
+            f"Invalid {name}: '{provider}'. Valid options: {sorted(valid_providers)}"
+        )
     return provider
 ```
 
@@ -579,7 +646,7 @@ def validate_chunk_type(chunk_type: str | None) -> str | None
 Validate a chunk type filter value.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `chunk_type` | `str | None` | - | The chunk type to validate. |
 
@@ -588,7 +655,7 @@ Validate a chunk type filter value.
 
 
 <details>
-<summary>View Source (lines 134-152) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/validation.py#L134-L152">GitHub</a></summary>
+<summary>View Source (lines 142-160) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/validation.py#L142-L160">GitHub</a></summary>
 
 ```python
 def validate_chunk_type(chunk_type: str | None) -> str | None:
@@ -623,7 +690,7 @@ def validate_path_pattern(path_pattern: str | None) -> str | None
 Validate a file path pattern.  Accepts glob-like patterns for file path filtering.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `path_pattern` | `str | None` | - | The path pattern to validate. |
 
@@ -632,7 +699,7 @@ Validate a file path pattern.  Accepts glob-like patterns for file path filterin
 
 
 <details>
-<summary>View Source (lines 155-179) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/validation.py#L155-L179">GitHub</a></summary>
+<summary>View Source (lines 163-187) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/validation.py#L163-L187">GitHub</a></summary>
 
 ```python
 def validate_path_pattern(path_pattern: str | None) -> str | None:
@@ -673,7 +740,7 @@ def validate_fuzzy_weight(weight: float | None) -> float
 Validate fuzzy weight parameter.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `weight` | `float | None` | - | The fuzzy weight (0.0-1.0). |
 
@@ -682,7 +749,7 @@ Validate fuzzy weight parameter.
 
 
 <details>
-<summary>View Source (lines 182-200) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/validation.py#L182-L200">GitHub</a></summary>
+<summary>View Source (lines 190-208) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/validation.py#L190-L208">GitHub</a></summary>
 
 ```python
 def validate_fuzzy_weight(weight: float | None) -> float:
@@ -717,7 +784,7 @@ def validate_query_parameters(query: str, repo_path: str, max_results: int) -> N
 Validate query parameters against resource limits.  Ensures query string length, repository path validity, and result count are within acceptable bounds to prevent resource exhaustion.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `query` | `str` | - | The search query string. |
 | `repo_path` | `str` | - | Path to the repository. |
@@ -728,7 +795,7 @@ Validate query parameters against resource limits.  Ensures query string length,
 
 
 <details>
-<summary>View Source (lines 240-279) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/validation.py#L240-L279">GitHub</a></summary>
+<summary>View Source (lines 248-287) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/validation.py#L248-L287">GitHub</a></summary>
 
 ```python
 def validate_query_parameters(
@@ -781,10 +848,10 @@ def validate_query_parameters(
 def validate_index_parameters(repo_path: str) -> tuple[int, int]
 ```
 
-Validate repository indexing parameters.  Scans the repository to ensure it doesn't exceed size limits. Checks total repository size, file count, and individual file sizes.
+Validate repository indexing parameters.  Scans the repository to ensure it doesn't exceed size limits. Checks total repository size, file count, and individual file sizes. Skips directories that the indexer would also skip (hidden dirs, virtual envs, node_modules, etc.) to avoid false rejections.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `repo_path` | `str` | - | Path to the repository to index. |
 
@@ -793,7 +860,7 @@ Validate repository indexing parameters.  Scans the repository to ensure it does
 
 
 <details>
-<summary>View Source (lines 282-335) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/validation.py#L282-L335">GitHub</a></summary>
+<summary>View Source (lines 290-363) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/validation.py#L290-L363">GitHub</a></summary>
 
 ```python
 def validate_index_parameters(
@@ -803,6 +870,8 @@ def validate_index_parameters(
 
     Scans the repository to ensure it doesn't exceed size limits.
     Checks total repository size, file count, and individual file sizes.
+    Skips directories that the indexer would also skip (hidden dirs,
+    virtual envs, node_modules, etc.) to avoid false rejections.
 
     Args:
         repo_path: Path to the repository to index.
@@ -813,19 +882,39 @@ def validate_index_parameters(
     Raises:
         ValueError: If repository exceeds any resource limits.
     """
+    import os
+
+    from local_deepwiki.config import get_config
+
     repo_path_obj = Path(repo_path)
     total_size = 0
     file_count = 0
 
-    for file_path in repo_path_obj.rglob("*"):
-        if file_path.is_file():
+    config = get_config()
+    skip_dirs = set()
+    for pattern in config.parsing.exclude_patterns:
+        if pattern.endswith("/**"):
+            skip_dirs.add(pattern[:-3])
+
+    for root, dirs, filenames in os.walk(repo_path_obj):
+        root_path = Path(root)
+        rel_root = root_path.relative_to(repo_path_obj)
+
+        dirs[:] = [
+            d
+            for d in dirs
+            if d not in skip_dirs
+            and str(rel_root / d) not in skip_dirs
+            and not d.startswith(".")
+        ]
+
+        for filename in filenames:
+            file_path = root_path / filename
             try:
                 file_size = file_path.stat().st_size
             except OSError:
-                # Skip files that can't be stat'd (permissions, etc.)
                 continue
 
-            # Check individual file size
             if file_size > ResourceLimits.MAX_FILE_SIZE:
                 raise ValueError(
                     f"File too large: {file_path} ({file_size:,} bytes, "
@@ -835,14 +924,12 @@ def validate_index_parameters(
             total_size += file_size
             file_count += 1
 
-            # Check total repository size (early exit)
             if total_size > ResourceLimits.MAX_REPO_SIZE:
                 raise ValueError(
                     f"Repository exceeds maximum size "
                     f"({ResourceLimits.MAX_REPO_SIZE:,} bytes)"
                 )
 
-            # Check file count (early exit)
             if file_count > ResourceLimits.MAX_FILES_PER_REPO:
                 raise ValueError(
                     f"Repository exceeds maximum file count "
@@ -863,7 +950,7 @@ def validate_deep_research_parameters(question: str, preset: str | None, max_chu
 Validate deep research parameters.  Ensures question length, preset validity, and chunk count are within acceptable bounds for deep research operations.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `question` | `str` | - | The research question. |
 | `preset` | `str | None` | - | Research preset (quick/default/thorough) or None. |
@@ -875,7 +962,7 @@ Validate deep research parameters.  Ensures question length, preset validity, an
 
 
 <details>
-<summary>View Source (lines 338-377) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/validation.py#L338-L377">GitHub</a></summary>
+<summary>View Source (lines 366-405) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/validation.py#L366-L405">GitHub</a></summary>
 
 ```python
 def validate_deep_research_parameters(
@@ -928,42 +1015,46 @@ def validate_deep_research_parameters(
 flowchart TD
     N0[Path]
     N1[ValueError]
-    N2[exists]
-    N3[is_dir]
-    N4[is_file]
-    N5[rglob]
-    N6[stat]
-    N7[validate_chunk_type]
-    N8[validate_deep_research_para...]
-    N9[validate_fuzzy_weight]
-    N10[validate_index_parameters]
-    N11[validate_language]
-    N12[validate_languages_list]
-    N13[validate_non_empty_string]
-    N14[validate_path_pattern]
-    N15[validate_positive_int]
-    N16[validate_provider]
-    N17[validate_query_parameters]
-    N15 --> N1
-    N13 --> N1
-    N11 --> N1
-    N12 --> N1
+    N2[add]
+    N3[exists]
+    N4[get_config]
+    N5[is_dir]
+    N6[relative_to]
+    N7[stat]
+    N8[validate_chunk_type]
+    N9[validate_deep_research_para...]
+    N10[validate_fuzzy_weight]
+    N11[validate_index_parameters]
+    N12[validate_language]
+    N13[validate_languages_list]
+    N14[validate_non_empty_string]
+    N15[validate_path_pattern]
+    N16[validate_positive_int]
+    N17[validate_provider]
+    N18[validate_query_parameters]
+    N19[walk]
     N16 --> N1
-    N7 --> N1
     N14 --> N1
-    N9 --> N1
+    N12 --> N1
+    N13 --> N1
     N17 --> N1
-    N17 --> N0
-    N17 --> N2
-    N17 --> N3
-    N10 --> N0
-    N10 --> N5
-    N10 --> N4
-    N10 --> N6
-    N10 --> N1
     N8 --> N1
+    N15 --> N1
+    N10 --> N1
+    N18 --> N1
+    N18 --> N0
+    N18 --> N3
+    N18 --> N5
+    N11 --> N0
+    N11 --> N4
+    N11 --> N2
+    N11 --> N19
+    N11 --> N6
+    N11 --> N7
+    N11 --> N1
+    N9 --> N1
     classDef func fill:#e1f5fe
-    class N0,N1,N2,N3,N4,N5,N6,N7,N8,N9,N10,N11,N12,N13,N14,N15,N16,N17 func
+    class N0,N1,N2,N3,N4,N5,N6,N7,N8,N9,N10,N11,N12,N13,N14,N15,N16,N17,N18,N19 func
 ```
 
 ## Used By
@@ -972,25 +1063,31 @@ Functions and methods in this file and their callers:
 
 - **`Path`**: called by `validate_index_parameters`, `validate_query_parameters`
 - **`ValueError`**: called by `validate_chunk_type`, `validate_deep_research_parameters`, `validate_fuzzy_weight`, `validate_index_parameters`, `validate_language`, `validate_languages_list`, `validate_non_empty_string`, `validate_path_pattern`, `validate_positive_int`, `validate_provider`, `validate_query_parameters`
+- **`add`**: called by `validate_index_parameters`
 - **`exists`**: called by `validate_query_parameters`
+- **[`get_config`](config.md)**: called by `validate_index_parameters`
 - **`is_dir`**: called by `validate_query_parameters`
-- **`is_file`**: called by `validate_index_parameters`
-- **`rglob`**: called by `validate_index_parameters`
+- **`relative_to`**: called by `validate_index_parameters`
 - **`stat`**: called by `validate_index_parameters`
+- **[`walk`](generators/test_examples.md)**: called by `validate_index_parameters`
 
 ## Last Modified
 
 | Entity | Type | Author | Date | Commit |
 |--------|------|--------|------|--------|
+| `validate_positive_int` | function | Brian Breidenbach | today | `4dbba1e` fix: Improve wiki accuracy,... |
+| `validate_languages_list` | function | Brian Breidenbach | today | `4dbba1e` fix: Improve wiki accuracy,... |
+| `validate_provider` | function | Brian Breidenbach | today | `4dbba1e` fix: Improve wiki accuracy,... |
+| `validate_index_parameters` | function | Brian Breidenbach | today | `4dbba1e` fix: Improve wiki accuracy,... |
 | `ResourceLimits` | class | Brian Breidenbach | 1 week ago | `9844731` Phase 3: Implement input va... |
 | `validate_query_parameters` | function | Brian Breidenbach | 1 week ago | `9844731` Phase 3: Implement input va... |
-| `validate_index_parameters` | function | Brian Breidenbach | 1 week ago | `9844731` Phase 3: Implement input va... |
 | `validate_deep_research_parameters` | function | Brian Breidenbach | 1 week ago | `9844731` Phase 3: Implement input va... |
 | `validate_chunk_type` | function | Brian Breidenbach | 1 week ago | `fa2feb8` Add CLI progress bars and f... |
 | `validate_path_pattern` | function | Brian Breidenbach | 1 week ago | `fa2feb8` Add CLI progress bars and f... |
 | `validate_fuzzy_weight` | function | Brian Breidenbach | 1 week ago | `fa2feb8` Add CLI progress bars and f... |
-| `validate_positive_int` | function | Brian Breidenbach | 3 weeks ago | `3defaaa` Refactor: Extract validatio... |
 | `validate_non_empty_string` | function | Brian Breidenbach | 3 weeks ago | `3defaaa` Refactor: Extract validatio... |
 | `validate_language` | function | Brian Breidenbach | 3 weeks ago | `3defaaa` Refactor: Extract validatio... |
-| `validate_languages_list` | function | Brian Breidenbach | 3 weeks ago | `3defaaa` Refactor: Extract validatio... |
-| `validate_provider` | function | Brian Breidenbach | 3 weeks ago | `3defaaa` Refactor: Extract validatio... |
+
+## Relevant Source Files
+
+- `src/local_deepwiki/validation.py:218-241`

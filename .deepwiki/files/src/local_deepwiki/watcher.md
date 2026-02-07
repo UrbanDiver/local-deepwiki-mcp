@@ -1,181 +1,413 @@
-# File Overview
+Not# File: `src/local_deepwiki/watcher.py`
 
-This file, `src/local_deepwiki/watcher.py`, implements a file system watcher for a local deepwiki application. It monitors file changes in a repository and triggers reindexing operations with debouncing to avoid excessive processing. The watcher integrates with `watchdog` for file system events and supports configuration-driven behavior.
+## File Overview
 
-## Dependencies
+This module provides functionality for watching file system changes in a repository and triggering reindexing operations when relevant files are modified. It uses the `watchdog` library to monitor file system events and implements debouncing to avoid excessive reindexing. The module is designed to work with the `local_deepwiki` indexing system.
 
-This file imports:
-- Standard library modules: `argparse`, `asyncio`, `fnmatch`, `sys`, `time`, `dataclasses`, `enum`, `pathlib`, `threading`, `typing`
-- External libraries: `rich.console`, `watchdog.events`, `watchdog.observers`, `watchdog.observers.api`
-- Internal modules: `local_deepwiki.cli_progress`, `local_deepwiki.config`, `local_deepwiki.core.indexer`
+## Classes
 
-## Integration
-
-This file is part of the local_deepwiki project and integrates with:
-- CLI components (`local_deepwiki.cli_progress`)
-- Configuration management (`local_deepwiki.config`)
-- Core indexing functionality (`local_deepwiki.core.indexer`)
-
-It is used by test cases via `DebouncedHandler` and `initial_index`.
-
-# Classes
-
-## ChangeType
+### `ChangeType`
 
 An enumeration representing the types of file changes that can be detected.
 
-### Values
+**Values**:
 - `CREATED`: A file was created.
 - `MODIFIED`: A file was modified.
 - `DELETED`: A file was deleted.
 - `MOVED`: A file was moved.
 
-## FileChange
 
-Represents a single file change event.
+<details>
+<summary>View Source (lines 39-45) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/watcher.py#L39-L45">GitHub</a></summary>
 
-### Attributes
-- `path`: `str` - The path to the file.
-- `change_type`: `ChangeType` - The type of change.
-- `timestamp`: `float` - Timestamp of the event (default: current time).
-- `dest_path`: `str | None` - The destination path for moved files.
+```python
+class ChangeType(Enum):
+    """Type of file change detected."""
 
-## ReindexResult
+    CREATED = "created"
+    MODIFIED = "modified"
+    DELETED = "deleted"
+    MOVED = "moved"
+```
 
-Represents the result of a reindex operation.
+</details>
 
-### Attributes
-- `success`: `bool` - Whether the reindex succeeded.
-- `files_processed`: `int` - Number of files processed.
-- `pages_generated`: `int` - Number of pages generated.
-- `duration_seconds`: `float` - Duration of the operation in seconds.
-- `error`: `str | None` - Error message if the operation failed.
-- `changed_files`: `list[str]` - List of files that were changed.
+### `FileChange`
 
-## DebouncedHandler
+Represents a single file change [event](../../coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.md).
 
-A file system event handler that debounces reindexing operations.
+**Attributes**:
+- `path` (`str`): Path to the file that changed.
+- `change_type` (`ChangeType`): Type of change (created, modified, deleted, moved).
+- `timestamp` (`float`): Timestamp when the change occurred (defaults to current time).
+- `dest_path` (`str | None`): Destination path for moved files (only used for `MOVED` changes).
 
-### Methods
 
-#### `__init__`
-Initialize the handler.
+<details>
+<summary>View Source (lines 49-55) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/watcher.py#L49-L55">GitHub</a></summary>
 
-**Parameters**
-- `repo_path`: `Path` - Path to the repository root.
-- `config`: `Config` - Configuration instance.
-- `debounce_seconds`: `float` - Seconds to wait after last change before triggering (default: 2.0).
-- `llm_provider`: `str | None` - Optional LLM provider override.
-- `on_reindex_complete`: `ReindexCallback | None` - Optional callback invoked when reindexing completes.
+```python
+class FileChange:
+    """Represents a single file change event."""
 
-#### `_should_watch_file`
-Check if a file should trigger reindexing.
+    path: str
+    change_type: ChangeType
+    timestamp: float = field(default_factory=time.time)
+    dest_path: str | None = None  # For moved files
+```
 
-**Parameters**
-- `path`: `str` - Absolute path to the file.
+</details>
 
-**Returns**
-- `bool` - True if the file should be watched.
+### `ReindexResult`
 
-#### `_add_pending_change`
-Add a file change to the pending set (thread-safe).
+Holds the result of a reindexing operation.
 
-**Parameters**
-- `path`: `str` - Path to the changed file.
-- `change_type`: `ChangeType` - Type of change (created, modified, deleted, moved).
-- `dest_path`: `str | None` - Destination path for moved files.
+**Attributes**:
+- `success` (`bool`): Indicates if the reindexing was successful.
+- `files_processed` (`int`): Number of files processed.
+- `pages_generated` (`int`): Number of pages generated.
+- `duration_seconds` (`float`): Duration of the reindexing in seconds.
+- `error` (`str | None`): Error message if reindexing failed.
+- `changed_files` (`list[str]`): List of file paths that were changed.
 
-#### `_schedule_reindex`
-Schedule a reindex after debounce period (thread-safe).
 
-#### `_trigger_reindex`
-Trigger the actual reindex operation (thread-safe).
+<details>
+<summary>View Source (lines 59-67) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/watcher.py#L59-L67">GitHub</a></summary>
 
-#### `_do_reindex`
-Perform the reindex operation.
+```python
+class ReindexResult:
+    """Result of a reindex operation."""
 
-**Parameters**
-- `changed_files`: `list[str]` - List of changed file paths.
-- `changes`: `dict[str, FileChange] | None` - Optional dict mapping paths to FileChange details.
+    success: bool
+    files_processed: int
+    pages_generated: int
+    duration_seconds: float
+    error: str | None = None
+    changed_files: list[str] = field(default_factory=list)
+```
 
-#### `progress_callback`
-Callback function for progress reporting.
+</details>
 
-**Parameters**
-- `msg`: `str` - Progress message.
-- `current`: `int` - Current progress.
-- `total`: `int` - Total progress.
+### `DebouncedHandler`
 
-#### `on_modified`
-Handle file modification events.
+A file system [event](../../coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.md) handler that debounces reindexing operations.
 
-**Parameters**
-- `event`: `FileSystemEvent` - The file system event.
+**Purpose**:
+This handler listens for file system events and delays triggering a reindex until a specified [debounce](../../coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.md) period has passed, to avoid unnecessary reindexing due to rapid changes.
 
-#### `on_created`
-Handle file creation events.
+**Key Methods**:
+- `__init__`: Initializes the handler with configuration and settings.
+- `_should_watch_file`: Determines if a file change should trigger a reindex.
+- `_add_pending_change`: Adds a file change to the pending set (thread-safe).
+- `_schedule_reindex`: Schedules a reindex after the [debounce](../../coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.md) period.
+- `_trigger_reindex`: Triggers the actual reindex operation (thread-safe).
+- `_do_reindex`: Performs the reindexing asynchronously.
+- `on_modified`: Handles file modification events.
+- `on_created`: Handles file creation events.
+- `on_deleted`: Handles file deletion events.
+- `on_moved`: Handles file move events.
+- [`progress_callback`](handlers.md): Callback for progress updates during reindexing.
 
-**Parameters**
-- `event`: `FileSystemEvent` - The file system event.
 
-#### `on_deleted`
-Handle file deletion events.
+<details>
+<summary>View Source (lines 74-359) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/watcher.py#L74-L359">GitHub</a></summary>
 
-**Parameters**
-- `event`: `FileSystemEvent` - The file system event.
+```python
+class DebouncedHandler(FileSystemEventHandler):
+    # Methods: __init__, _should_watch_file, _add_pending_change, _schedule_reindex, _trigger_reindex, _do_reindex, progress_callback, on_modified, on_created, on_deleted, on_moved
+```
 
-#### `on_moved`
-Handle file move events.
+</details>
 
-**Parameters**
-- `event`: `FileSystemEvent` - The file system event.
+## Functions
 
-# Functions
+### `initial_index`
 
-## initial_index
+```python
+def initial_index(repo_path: Path, config: Config, progress_callback: ProgressCallback | None = None) -> ReindexResult
+```
 
-**Signature**: `initial_index(config: Config, repo_path: Path, console: Console) -> None`
+Performs an initial index of the repository.
 
-Perform an initial indexing of the repository.
+**Parameters**:
+- `repo_path` (`Path`): Path to the repository root.
+- `config` ([`Config`](config.md)): Configuration instance.
+- [`progress_callback`](handlers.md) (`ProgressCallback | None`): Optional callback for progress updates.
 
-**Parameters**
-- `config`: `Config` - Configuration instance.
-- `repo_path`: `Path` - Path to the repository root.
-- `console`: `Console` - Rich console for output.
+**Returns**:
+- `ReindexResult`: Result of the initial indexing operation.
 
-## indexing_progress
 
-**Signature**: `indexing_progress(progress: MultiPhaseProgress, phase: str, current: int, total: int) -> None`
+<details>
+<summary>View Source (lines 456-532) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/watcher.py#L456-L532">GitHub</a></summary>
 
-Callback function for indexing progress reporting.
+```python
+async def initial_index(
+    repo_path: Path,
+    config: Config,
+    llm_provider: str | None = None,
+    full_rebuild: bool = False,
+    *,
+    no_progress: bool = False,
+) -> None:
+    """Perform initial indexing before starting watch mode.
 
-**Parameters**
-- `progress`: `MultiPhaseProgress` - Progress tracking object.
-- `phase`: `str` - Current phase of indexing.
-- `current`: `int` - Current progress.
-- `total`: `int` - Total progress.
+    Args:
+        repo_path: Path to the repository.
+        config: Configuration instance.
+        llm_provider: Optional LLM provider override.
+        full_rebuild: Whether to do a full rebuild.
+        no_progress: If True, disable progress bars.
+    """
+    console.print("[yellow]Running initial index...[/yellow]")
 
-## wiki_progress
+    indexer = RepositoryIndexer(repo_path=repo_path, config=config)
+    start_time = time.time()
 
-**Signature**: `wiki_progress(progress: MultiPhaseProgress, phase: str, current: int, total: int) -> None`
+    with MultiPhaseProgress(disable=no_progress) as progress:
+        # Add phases
+        progress.add_phase("indexing", "Indexing repository", total=0)
+        progress.add_phase("wiki", "Generating wiki", total=0)
 
-Callback function for wiki generation progress reporting.
+        # Create callback adapter for indexing phase
+        index_callback = progress.get_callback("indexing")
 
-**Parameters**
-- `progress`: `MultiPhaseProgress` - Progress tracking object.
-- `phase`: `str` - Current phase of wiki generation.
-- `current`: `int` - Current progress.
-- `total`: `int` - Total progress.
+        def indexing_progress(msg: str, current: int, total: int) -> None:
+            if index_callback:
+                index_callback(msg, current, total)
+            else:
+                if total > 0:
+                    console.print(f"  [{current}/{total}] {msg}")
+                else:
+                    console.print(f"  {msg}")
 
-## main
+        status = await indexer.index(
+            full_rebuild=full_rebuild,
+            progress_callback=indexing_progress,
+        )
 
-**Signature**: `main() -> None`
+        progress.complete_phase("indexing")
+        console.print(
+            f"[green]Indexed {status.total_files} files, {status.total_chunks} chunks[/green]"
+        )
+
+        # Create callback adapter for wiki phase
+        wiki_callback = progress.get_callback("wiki")
+
+        def wiki_progress(msg: str, current: int, total: int) -> None:
+            if wiki_callback:
+                wiki_callback(msg, current, total)
+            else:
+                if total > 0:
+                    console.print(f"  [{current}/{total}] {msg}")
+                else:
+                    console.print(f"  {msg}")
+
+        wiki_structure = await generate_wiki(
+            repo_path=repo_path,
+            wiki_path=indexer.wiki_path,
+            vector_store=indexer.vector_store,
+            index_status=status,
+            config=config,
+            llm_provider=llm_provider,
+            progress_callback=wiki_progress,
+            full_rebuild=full_rebuild,
+        )
+
+        progress.complete_phase("wiki")
+
+    total_time = time.time() - start_time
+    console.print(f"[green]Generated {len(wiki_structure.pages)} wiki pages[/green]")
+    console.print(f"[bold green]Initial index complete in {total_time:.1f}s[/bold green]")
+```
+
+</details>
+
+### `indexing_progress`
+
+```python
+def indexing_progress() -> MultiPhaseProgress
+```
+
+Creates a progress tracker for indexing operations.
+
+**Returns**:
+- [`MultiPhaseProgress`](cli_progress.md): Progress tracker for indexing.
+
+
+<details>
+<summary>View Source (lines 486-493) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/watcher.py#L486-L493">GitHub</a></summary>
+
+```python
+def indexing_progress(msg: str, current: int, total: int) -> None:
+            if index_callback:
+                index_callback(msg, current, total)
+            else:
+                if total > 0:
+                    console.print(f"  [{current}/{total}] {msg}")
+                else:
+                    console.print(f"  {msg}")
+```
+
+</details>
+
+### `wiki_progress`
+
+```python
+def wiki_progress() -> MultiPhaseProgress
+```
+
+Creates a progress tracker for wiki generation.
+
+**Returns**:
+- [`MultiPhaseProgress`](cli_progress.md): Progress tracker for wiki generation.
+
+
+<details>
+<summary>View Source (lines 508-515) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/watcher.py#L508-L515">GitHub</a></summary>
+
+```python
+def wiki_progress(msg: str, current: int, total: int) -> None:
+            if wiki_callback:
+                wiki_callback(msg, current, total)
+            else:
+                if total > 0:
+                    console.print(f"  [{current}/{total}] {msg}")
+                else:
+                    console.print(f"  {msg}")
+```
+
+</details>
+
+### `main`
+
+```python
+def main() -> None
+```
 
 Main entry point for the watcher CLI.
 
-# Usage Examples
+**Returns**:
+- `None`
 
-The `DebouncedHandler` class is used to monitor file changes and trigger reindexing:
+
+<details>
+<summary>View Source (lines 535-628) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/watcher.py#L535-L628">GitHub</a></summary>
+
+```python
+def main() -> None:
+    """Main entry point for the watch command."""
+    parser = argparse.ArgumentParser(
+        description="Watch a repository for changes and auto-regenerate wiki documentation."
+    )
+    parser.add_argument(
+        "repo_path",
+        type=str,
+        nargs="?",
+        default=".",
+        help="Path to the repository to watch (default: current directory)",
+    )
+    parser.add_argument(
+        "--debounce",
+        type=float,
+        default=2.0,
+        help="Seconds to wait after changes before reindexing (default: 2.0)",
+    )
+    parser.add_argument(
+        "--llm",
+        type=str,
+        choices=["ollama", "anthropic", "openai"],
+        help="LLM provider for wiki generation",
+    )
+    parser.add_argument(
+        "--full-rebuild",
+        action="store_true",
+        help="Perform a full rebuild on startup instead of incremental",
+    )
+    parser.add_argument(
+        "--skip-initial",
+        action="store_true",
+        help="Skip initial indexing, just start watching",
+    )
+    parser.add_argument(
+        "--no-progress",
+        action="store_true",
+        help="Disable progress bars (for non-interactive use)",
+    )
+
+    args = parser.parse_args()
+
+    repo_path = Path(args.repo_path).resolve()
+    if not repo_path.exists():
+        console.print(f"[red]Error: Path does not exist: {repo_path}[/red]")
+        sys.exit(1)
+
+    if not repo_path.is_dir():
+        console.print(f"[red]Error: Path is not a directory: {repo_path}[/red]")
+        sys.exit(1)
+
+    config = get_config()
+
+    console.print()
+    console.print("[bold]DeepWiki Watch Mode[/bold]")
+    console.print(f"Repository: [cyan]{repo_path}[/cyan]")
+    console.print(f"Debounce: [cyan]{args.debounce}s[/cyan]")
+    console.print(f"LLM Provider: [cyan]{args.llm or config.llm.provider}[/cyan]")
+    console.print()
+
+    # Run initial index unless skipped
+    if not args.skip_initial:
+        asyncio.run(
+            initial_index(
+                repo_path=repo_path,
+                config=config,
+                llm_provider=args.llm,
+                full_rebuild=args.full_rebuild,
+                no_progress=args.no_progress,
+            )
+        )
+
+    # Start watching
+    console.print()
+    console.rule("[bold blue]Starting Watch Mode[/bold blue]")
+    console.print("[dim]Watching for changes... (Ctrl+C to stop)[/dim]")
+    console.print()
+
+    watcher = RepositoryWatcher(
+        repo_path=repo_path,
+        config=config,
+        debounce_seconds=args.debounce,
+        llm_provider=args.llm,
+    )
+
+    try:
+        watcher.start()
+        while watcher.is_running():
+            time.sleep(1)
+    except KeyboardInterrupt:
+        console.print()
+        console.print("[yellow]Stopping watcher...[/yellow]")
+        watcher.stop()
+        console.print("[green]Done.[/green]")
+```
+
+</details>
+
+## Integration
+
+This module integrates with the `local_deepwiki` codebase by:
+
+- Using [`Config`](config.md) and [`get_config`](config.md) from `local_deepwiki.config` for configuration management.
+- Using `Reposit` from `local_deepwiki.core.indexer` for indexing operations.
+- Using [`MultiPhaseProgress`](cli_progress.md) and [`ProgressCallback`](cli_progress.md) from `local_deepwiki.cli_progress` for progress reporting.
+- Using `watchdog` library for file system monitoring.
+- Using `rich.console.Console` for console output.
+
+It is used by test cases in `tests/test_watcher.py` through the `DebouncedHandler` and `initial_index` functions.
+
+## Usage Examples
+
+### Initializing a `DebouncedHandler`
 
 ```python
 from pathlib import Path
@@ -190,10 +422,18 @@ handler = DebouncedHandler(
 )
 ```
 
-The `main` function is the CLI entry point for the watcher:
+### Triggering an Initial Index
 
-```bash
-python -m local_deepwiki.watcher
+```python
+from pathlib import Path
+from local_deepwiki.config import Config
+from local_deepwiki.watcher import initial_index
+
+config = Config()
+result = initial_index(
+    repo_path=Path("/path/to/repo"),
+    config=config
+)
 ```
 
 ## API Reference
@@ -222,7 +462,7 @@ class ChangeType(Enum):
 
 ### class `FileChange`
 
-Represents a single file change event.
+Represents a single file change [event](../../coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.md).
 
 
 <details>
@@ -266,7 +506,7 @@ class ReindexResult:
 
 **Inherits from:** `FileSystemEventHandler`
 
-File system event handler with debouncing.  This handler collects file change events and debounces them to avoid triggering reindexing on every keystroke. It tracks the type of change (create, modify, delete, move) for selective reindexing.  Thread Safety: All state mutations are protected by a lock to ensure thread safety since watchdog calls handlers from multiple threads.
+File system [event](../../coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.md) handler with debouncing.  This handler collects file change events and debounces them to avoid triggering reindexing on every keystroke. It tracks the type of change (create, modify, delete, move) for selective reindexing.  Thread Safety: All state mutations are protected by a lock to ensure thread safety since watchdog calls handlers from multiple threads.
 
 **Methods:**
 
@@ -290,10 +530,10 @@ def __init__(repo_path: Path, config: Config, debounce_seconds: float = 2.0, llm
 Initialize the handler.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `repo_path` | `Path` | - | Path to the repository root. |
-| `config` | `Config` | - | Configuration instance. |
+| `config` | [`Config`](config.md) | - | Configuration instance. |
 | `debounce_seconds` | `float` | `2.0` | Seconds to wait after last change before triggering. |
 | `llm_provider` | `str | None` | `None` | Optional LLM provider override. |
 | `on_reindex_complete` | `ReindexCallback | None` | `None` | Optional callback invoked when reindexing completes. |
@@ -345,7 +585,7 @@ def progress_callback(msg: str, current: int, total: int) -> None
 ```
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `msg` | `str` | - | - |
 | `current` | `int` | - | - |
@@ -374,9 +614,9 @@ def on_modified(event: FileSystemEvent) -> None
 Handle file modification events.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `event` | `FileSystemEvent` | - | - |
+| [`event`](../../coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.md) | `FileSystemEvent` | - | - |
 
 
 <details>
@@ -405,9 +645,9 @@ def on_created(event: FileSystemEvent) -> None
 Handle file creation events.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `event` | `FileSystemEvent` | - | - |
+| [`event`](../../coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.md) | `FileSystemEvent` | - | - |
 
 
 <details>
@@ -436,9 +676,9 @@ def on_deleted(event: FileSystemEvent) -> None
 Handle file deletion events.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `event` | `FileSystemEvent` | - | - |
+| [`event`](../../coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.md) | `FileSystemEvent` | - | - |
 
 
 <details>
@@ -467,9 +707,9 @@ def on_moved(event: FileSystemEvent) -> None
 Handle file move events.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `event` | `FileSystemEvent` | - | - |
+| [`event`](../../coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.md) | `FileSystemEvent` | - | - |
 
 
 
@@ -613,7 +853,7 @@ def __init__(repo_path: Path, config: Config | None = None, debounce_seconds: fl
 Initialize the watcher.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `repo_path` | `Path` | - | Path to the repository to watch. |
 | `config` | `Config | None` | `None` | Optional configuration. |
@@ -1172,10 +1412,10 @@ async def initial_index(repo_path: Path, config: Config, llm_provider: str | Non
 Perform initial indexing before starting watch mode.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `repo_path` | `Path` | - | Path to the repository. |
-| `config` | `Config` | - | Configuration instance. |
+| `config` | [`Config`](config.md) | - | Configuration instance. |
 | `llm_provider` | `str | None` | `None` | Optional LLM provider override. |
 | `full_rebuild` | `bool` | `False` | Whether to do a full rebuild. |
 | `no_progress` | `bool` | `False` | If True, disable progress bars. |
@@ -1276,7 +1516,7 @@ def indexing_progress(msg: str, current: int, total: int) -> None
 ```
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `msg` | `str` | - | - |
 | `current` | `int` | - | - |
@@ -1309,7 +1549,7 @@ def wiki_progress(msg: str, current: int, total: int) -> None
 ```
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `msg` | `str` | - | - |
 | `current` | `int` | - | - |
@@ -1588,11 +1828,11 @@ Functions and methods in this file and their callers:
 - **`DebouncedHandler`**: called by `RepositoryWatcher.start`
 - **`FileChange`**: called by `DebouncedHandler._add_pending_change`
 - **`Lock`**: called by `DebouncedHandler.__init__`
-- **`MultiPhaseProgress`**: called by `initial_index`
+- **[`MultiPhaseProgress`](cli_progress.md)**: called by `initial_index`
 - **`Observer`**: called by `RepositoryWatcher.start`
 - **`Path`**: called by `DebouncedHandler._do_reindex`, `DebouncedHandler._should_watch_file`, `main`
 - **`ReindexResult`**: called by `DebouncedHandler._do_reindex`
-- **`RepositoryIndexer`**: called by `DebouncedHandler._do_reindex`, `initial_index`
+- **[`RepositoryIndexer`](core/indexer.md)**: called by `DebouncedHandler._do_reindex`, `initial_index`
 - **`RepositoryWatcher`**: called by `main`
 - **`Timer`**: called by `DebouncedHandler._schedule_reindex`
 - **`_add_pending_change`**: called by `DebouncedHandler.on_created`, `DebouncedHandler.on_deleted`, `DebouncedHandler.on_modified`, `DebouncedHandler.on_moved`
@@ -1608,9 +1848,9 @@ Functions and methods in this file and their callers:
 - **`exists`**: called by `main`
 - **`exit`**: called by `main`
 - **`fnmatch`**: called by `DebouncedHandler._should_watch_file`
-- **`generate_wiki`**: called by `DebouncedHandler._do_reindex`, `initial_index`
+- **[`generate_wiki`](generators/wiki.md)**: called by `DebouncedHandler._do_reindex`, `initial_index`
 - **`get_callback`**: called by `initial_index`
-- **`get_config`**: called by `RepositoryWatcher.__init__`, `main`
+- **[`get_config`](config.md)**: called by `RepositoryWatcher.__init__`, `main`
 - **`index_callback`**: called by `indexing_progress`, `initial_index`
 - **`initial_index`**: called by `main`
 - **`is_alive`**: called by `RepositoryWatcher.is_running`
@@ -1715,7 +1955,7 @@ assert watcher.llm_provider == "anthropic"
 | `on_moved` | method | Brian Breidenbach | 1 week ago | `a51a32f` Add high-impact performance... |
 | `RepositoryWatcher` | class | Brian Breidenbach | 1 week ago | `a51a32f` Add high-impact performance... |
 | `_should_watch_file` | method | Brian Breidenbach | 3 weeks ago | `c568951` Add input validation, type ... |
-| `progress_callback` | method | Brian Breidenbach | 3 weeks ago | `ce31583` Add watch mode for auto-rei... |
+| [`progress_callback`](handlers.md) | method | Brian Breidenbach | 3 weeks ago | `ce31583` Add watch mode for auto-rei... |
 
 ## Additional Source Code
 
@@ -1966,3 +2206,6 @@ async def _do_reindex(
 
 </details>
 
+## Relevant Source Files
+
+- `src/local_deepwiki/watcher.py:39-45`

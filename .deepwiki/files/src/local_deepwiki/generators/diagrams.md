@@ -1,8 +1,30 @@
 # File Overview
 
-This file, `src/local_deepwiki/generators/diagrams.py`, provides functionality for generating Mermaid diagrams from code chunks. It includes utilities for parsing class and method information, extracting type annotations, and building class diagrams with inheritance relationships. It also supports dependency graph generation for modules and external libraries.
+This file, `src/local_deepwiki/generators/diagrams.py`, provides functionality for generating Mermaid diagrams from code chunks, particularly class diagrams and dependency graphs. It includes utilities for parsing class and method information, extracting type annotations, and building diagrams with inheritance and attribute information.
 
-The module depends on standard Python libraries (`re`, `dataclasses`, `pathlib`, `typing`) and imports `ChunkType` and `IndexStatus` from `local_deepwiki.models`.
+## Dependencies
+
+The file imports:
+- `re` for regular expressions
+- `dataclasses.dataclass` for defining data structures
+- `pathlib.Path` for file path manipulation
+- `typing.Any` for type hints
+- [`local_deepwiki.models.ChunkType`](../models.md) and [`IndexStatus`](../models.md) for chunk handling
+
+## Integration
+
+This module is used by:
+- `dependency_graph` (via `sanitize_mermaid_name`)
+- `test_diagrams` (via multiple internal functions)
+- `test_dependency_graph` (via `generate_dependency_graph`)
+- `test_diagrams` (via `generate_dependency_graph`, `generate_language_pie_chart`, and other internal functions)
+
+It is closely related to:
+- `src/local_deepwiki/core/__init__.py`
+- `src/local_deepwiki/generators/source_refs.py`
+- `src/local_deepwiki/plugins/base.py`
+- `tests/__init__.py`
+- `tests/test_plugins.py`
 
 # Classes
 
@@ -12,13 +34,13 @@ Information about a class for diagram generation.
 
 ### Attributes
 
-- `name`: str
-- `methods`: list[str]
-- `attributes`: list[str]
-- `parents`: list[str]
-- `is_abstract`: bool = False
-- `is_dataclass`: bool = False
-- `docstring`: str | None = None
+- `name`: str - The class name
+- `methods`: list[str] - List of method names
+- `attributes`: list[str] - List of attribute strings
+- `parents`: list[str] - List of parent class names
+- `is_abstract`: bool = False - Indicates if the class is abstract
+- `is_dataclass`: bool = False - Indicates if the class is a dataclass
+- `docstring`: str | None = None - The class docstring
 
 ## _DependencyData
 
@@ -26,10 +48,10 @@ Internal data structure for dependency graph generation.
 
 ### Attributes
 
-- `dependencies`: dict[str, set[str]]
-- `external_deps`: dict[str, int]
-- `module_external_deps`: dict[str, set[str]]
-- `all_internal_modules`: set[str]
+- `dependencies`: dict[str, set[str]] - Mapping of modules to their dependencies
+- `external_deps`: dict[str, int] - External dependencies and their counts
+- `module_external_deps`: dict[str, set[str]] - Mapping of modules to their external dependencies
+- `all_internal_modules`: set[str] - Set of all internal modules
 
 # Functions
 
@@ -47,7 +69,7 @@ Sanitize a name for use in Mermaid diagrams.
 
 ## _unwrap_chunk
 
-Unwrap SearchResult to get the underlying chunk.
+Unwrap [SearchResult](../models.md) to get the underlying chunk.
 
 ### Parameters
 
@@ -55,7 +77,7 @@ Unwrap SearchResult to get the underlying chunk.
 
 ### Returns
 
-- `Any` - The unwrapped chunk.
+- `Any` - The underlying chunk.
 
 ## _collect_class_from_chunk
 
@@ -63,10 +85,10 @@ Extract class info from a CLASS chunk and add to dictionaries.
 
 ### Parameters
 
-- `chunk`: Any - The chunk to process.
-- `classes`: dict[str, ClassInfo] - Dictionary of class information.
-- `methods_by_class`: dict[str, list[tuple[str, str | None]]] - Methods grouped by class.
-- `show_attributes`: bool - Whether to show class attributes.
+- `chunk`: Any - The chunk containing class information
+- `classes`: dict[str, ClassInfo] - Dictionary of class information
+- `methods_by_class`: dict[str, list[tuple[str, str | None]]] - Dictionary mapping classes to methods
+- `show_attributes`: bool - Whether to show class attributes
 
 ### Returns
 
@@ -78,9 +100,9 @@ Extract method info from a METHOD chunk and add to dictionary.
 
 ### Parameters
 
-- `chunk`: Any - The chunk to process.
-- `methods_by_class`: dict[str, list[tuple[str, str | None]]] - Methods grouped by class.
-- `show_types`: bool - Whether to show type annotations.
+- `chunk`: Any - The chunk containing method information
+- `methods_by_class`: dict[str, list[tuple[str, str | None]]] - Dictionary mapping classes to methods
+- `show_types`: bool - Whether to show type annotations
 
 ### Returns
 
@@ -92,10 +114,10 @@ Extract methods from class content for classes without METHOD chunks.
 
 ### Parameters
 
-- `chunks`: list - List of chunks.
-- `classes`: dict[str, ClassInfo] - Dictionary of class information.
-- `methods_by_class`: dict[str, list[tuple[str, str | None]]] - Methods grouped by class.
-- `show_types`: bool - Whether to show type annotations.
+- `chunks`: list - List of chunks to process
+- `classes`: dict[str, ClassInfo] - Dictionary of class information
+- `methods_by_class`: dict[str, list[tuple[str, str | None]]] - Dictionary mapping classes to methods
+- `show_types`: bool - Whether to show type annotations
 
 ### Returns
 
@@ -107,15 +129,15 @@ Build Mermaid diagram lines for a single class.
 
 ### Parameters
 
-- `class_name`: str - The name of the class.
-- `class_info`: ClassInfo - Information about the class.
-- `methods_by_class`: dict[str, list[tuple[str, str | None]]] - Methods grouped by class.
-- `max_methods`: int - Maximum number of methods to show.
-- `show_types`: bool - Whether to show type annotations.
+- `class_name`: str - The class name
+- `class_info`: ClassInfo - Information about the class
+- `methods_by_class`: dict[str, list[tuple[str, str | None]]] - Dictionary mapping classes to methods
+- `max_methods`: int - Maximum number of methods to show
+- `show_types`: bool - Whether to show type annotations
 
 ### Returns
 
-- `list[str]` - Lines of Mermaid diagram code.
+- `list[str]` - List of Mermaid diagram lines for the class
 
 ## _build_inheritance_lines
 
@@ -123,26 +145,39 @@ Build Mermaid inheritance relationship lines.
 
 ### Parameters
 
-- `classes`: dict[str, ClassInfo] - Dictionary of class information.
+- `classes`: dict[str, ClassInfo] - Dictionary of class information
 
 ### Returns
 
-- `list[str]` - Lines of Mermaid diagram code for inheritance.
+- `list[str]` - List of Mermaid diagram lines for inheritance
 
-## generate_class_diagram
+## _package_from_file_path
 
-Generate an enhanced Mermaid class diagram from code chunks.
+Extract the package name from a file path.
 
 ### Parameters
 
-- `chunks`: list - List of CodeChunk or SearchResult objects.
-- `show_attributes`: bool = True - Whether to show class attributes.
-- `show_types`: bool = True - Whether to show type annotations.
-- `max_methods`: int = 15 - Maximum number of methods to show.
+- `file_path`: str - Source file path
 
 ### Returns
 
-- `str | None` - Mermaid diagram code or None if no classes found.
+- `str` - Package name string
+
+## generate_class_diagram
+
+Generate enhanced Mermaid class diagrams from code chunks.
+
+### Parameters
+
+- `chunks`: list - List of code chunks
+- `show_attributes`: bool = True - Whether to show class attributes
+- `show_types`: bool = True - Whether to show type annotations
+- `max_methods`: int = 15 - Maximum number of methods to show per class
+- `max_classes_per_diagram`: int = 30 - Maximum number of classes per diagram
+
+### Returns
+
+- `str | None` - The generated Mermaid diagram string or None if no classes found
 
 ## _extract_class_attributes
 
@@ -150,12 +185,12 @@ Extract class attributes from content.
 
 ### Parameters
 
-- `content`: str - Class source code.
-- `language`: str = "python" - Programming language.
+- `content`: str - Class source code
+- `language`: str = "python" - Programming language
 
 ### Returns
 
-- `list[str]` - List of attribute strings like "+name: str" or "-_count: int".
+- `list[str]` - List of attribute strings like "+name: str" or "-_count: int"
 
 ## _extract_method_signature
 
@@ -163,11 +198,11 @@ Extract method signature with types from content.
 
 ### Parameters
 
-- `content`: str - Method source code.
+- `content`: str - Method source code
 
 ### Returns
 
-- `str | None` - Signature string like "(x: int, y: str) -> bool" or None.
+- `str | None` - Signature string like "(x: int, y: str) -> bool" or None
 
 ## _is_test_module
 
@@ -175,72 +210,100 @@ Check if a module is a test module.
 
 ### Parameters
 
-- `module`: str - Module name like 'test_parser' or 'core.indexer'.
-- `file_path`: str - File path like 'tests/test_parser.py'.
+- `module`: str - Module name
 
 ### Returns
 
-- `bool` - True if this is a test module.
+- `bool` - True if the module is a test module
 
 ## _collect_dependencies
 
-[Undocumented function]
+Collect dependencies from a list of chunks.
 
-## _build_internal_deps
+### Parameters
 
-[Undocumented function]
+- `chunks`: list - List of chunks
+- `module`: str - Module name
 
-## _group_modules
+### Returns
 
-[Undocumented function]
+- `dict[str, set[str]]` - Dictionary of dependencies
 
-## _build_node_ids
+## _group_classes_by_package
 
-[Undocumented function]
+Group classes by package for diagram generation.
 
-## _add_subgraphs
+### Parameters
 
-[Undocumented function]
+- `classes`: dict[str, ClassInfo] - Dictionary of class information
 
-## _add_external_subgraph
+### Returns
 
-[Undocumented function]
+- `dict[str, list[str]]` - Dictionary mapping packages to class names
 
-# Integration
+## _generate_package_diagram
 
-This file is part of the `local_deepwiki` project and integrates with other modules in the codebase through:
+Generate a Mermaid diagram for a package.
 
-- Imports from `local_deepwiki.models` (ChunkType, IndexStatus)
-- Used by functions in `src/local_deepwiki/cli/__init__.py`, `src/local_deepwiki/core/__init__.py`, and `tests/test_plugins.py`
-- Called by functions in `dependency_graph`, `test_dependency_graph`, `test_diagrams`, and other test-related modules
+### Parameters
 
-The diagram generation functions are used to visualize code structure and dependencies, supporting documentation and code understanding tasks within the project.
+- `package`: str - Package name
+- `class_names`: list[str] - List of class names in the package
+- `classes`: dict[str, ClassInfo] - Dictionary of class information
+- `methods_by_class`: dict[str, list[tuple[str, str | None]]] - Dictionary mapping classes to methods
+
+### Returns
+
+- `str` - The generated Mermaid diagram string for the package
+
+## generate_dependency_graph
+
+Generate a Mermaid dependency graph from code chunks.
+
+### Parameters
+
+- `chunks`: list - List of code chunks
+
+### Returns
+
+- `str` - The generated Mermaid dependency graph string
+
+## generate_language_pie_chart
+
+Generate a Mermaid pie chart showing language distribution.
+
+### Parameters
+
+- `chunks`: list - List of code chunks
+
+### Returns
+
+- `str` - The generated Mermaid pie chart string
 
 # Usage Examples
 
 ## Generate a Class Diagram
 
 ```python
-from diagrams import generate_class_diagram
-
-chunks = [...]  # List of CodeChunk or SearchResult objects
-diagram = generate_class_diagram(chunks, show_attributes=True, show_types=True)
+diagram = generate_class_diagram(chunks)
 ```
 
-## Sanitize a Mermaid Name
+## Generate a Dependency Graph
 
 ```python
-from diagrams import sanitize_mermaid_name
-
-safe_name = sanitize_mermaid_name("My<Module>")
+graph = generate_dependency_graph(chunks)
 ```
 
-## Check if a Module is a Test Module
+## Extract Class Attributes
 
 ```python
-from diagrams import _is_test_module
+attributes = _extract_class_attributes(source_code)
+```
 
-is_test = _is_test_module("test_parser", "tests/test_parser.py")
+## Extract Method Signature
+
+```python
+signature = _extract_method_signature(method_code)
 ```
 
 ## API Reference
@@ -253,7 +316,7 @@ Information about a class for diagram generation.
 
 
 <details>
-<summary>View Source (lines 12-21) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/diagrams.py#L12-L21">GitHub</a></summary>
+<summary>View Source (lines 12-21) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/diagrams.py#L12-L21">GitHub</a></summary>
 
 ```python
 class ClassInfo:
@@ -281,7 +344,7 @@ def sanitize_mermaid_name(name: str) -> str
 Sanitize a name for use in Mermaid diagrams.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `name` | `str` | - | Original name. |
 
@@ -290,7 +353,7 @@ Sanitize a name for use in Mermaid diagrams.
 
 
 <details>
-<summary>View Source (lines 24-40) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/diagrams.py#L24-L40">GitHub</a></summary>
+<summary>View Source (lines 24-40) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/diagrams.py#L24-L40">GitHub</a></summary>
 
 ```python
 def sanitize_mermaid_name(name: str) -> str:
@@ -317,25 +380,26 @@ def sanitize_mermaid_name(name: str) -> str:
 #### `generate_class_diagram`
 
 ```python
-def generate_class_diagram(chunks: list, show_attributes: bool = True, show_types: bool = True, max_methods: int = 15) -> str | None
+def generate_class_diagram(chunks: list, show_attributes: bool = True, show_types: bool = True, max_methods: int = 15, max_classes_per_diagram: int = 30) -> str | None
 ```
 
-Generate an enhanced Mermaid class diagram from code chunks.  Features: - Shows class attributes/properties (not just methods) - Shows type annotations for parameters and return types - Distinguishes abstract classes, dataclasses, protocols - Shows inheritance relationships
+Generate enhanced Mermaid class diagrams from code chunks.  When more than max_classes_per_diagram classes exist, generates separate diagrams per package to keep each diagram renderable.  Features: - Shows class attributes/properties (not just methods) - Shows type annotations for parameters and return types - Distinguishes abstract classes, dataclasses, protocols - Shows inheritance relationships
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `chunks` | `list` | - | List of CodeChunk or SearchResult objects. |
+| `chunks` | `list` | - | List of [CodeChunk](../models.md) or [SearchResult](../models.md) objects. |
 | `show_attributes` | `bool` | `True` | Whether to show class attributes. |
 | `show_types` | `bool` | `True` | Whether to show type annotations. |
 | `max_methods` | `int` | `15` | Maximum methods to show per class. |
+| `max_classes_per_diagram` | `int` | `30` | Split into per-package diagrams above this threshold. |
 
 **Returns:** `str | None`
 
 
 
 <details>
-<summary>View Source (lines 176-230) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/diagrams.py#L176-L230">GitHub</a></summary>
+<summary>View Source (lines 206-299) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/diagrams.py#L206-L299">GitHub</a></summary>
 
 ```python
 def generate_class_diagram(
@@ -343,8 +407,12 @@ def generate_class_diagram(
     show_attributes: bool = True,
     show_types: bool = True,
     max_methods: int = 15,
+    max_classes_per_diagram: int = 30,
 ) -> str | None:
-    """Generate an enhanced Mermaid class diagram from code chunks.
+    """Generate enhanced Mermaid class diagrams from code chunks.
+
+    When more than max_classes_per_diagram classes exist, generates separate
+    diagrams per package to keep each diagram renderable.
 
     Features:
     - Shows class attributes/properties (not just methods)
@@ -357,17 +425,22 @@ def generate_class_diagram(
         show_attributes: Whether to show class attributes.
         show_types: Whether to show type annotations.
         max_methods: Maximum methods to show per class.
+        max_classes_per_diagram: Split into per-package diagrams above this threshold.
 
     Returns:
         Mermaid class diagram markdown string, or None if no classes found.
     """
     classes: dict[str, ClassInfo] = {}
     methods_by_class: dict[str, list[tuple[str, str | None]]] = {}
+    class_to_package: dict[str, str] = {}
 
     # Collect class and method info from chunks
     for chunk in chunks:
         chunk = _unwrap_chunk(chunk)
         if chunk.chunk_type == ChunkType.CLASS:
+            class_name = chunk.name or "Unknown"
+            if class_name not in classes:
+                class_to_package[class_name] = _package_from_file_path(chunk.file_path)
             _collect_class_from_chunk(chunk, classes, methods_by_class, show_attributes)
         elif chunk.chunk_type == ChunkType.METHOD:
             _collect_method_from_chunk(chunk, methods_by_class, show_types)
@@ -381,18 +454,48 @@ def generate_class_diagram(
             classes[class_name].methods = [m[0] for m in method_list[:max_methods]]
 
     # Filter to classes with content
-    classes_with_content = {k: v for k, v in classes.items() if v.methods or v.attributes}
+    classes_with_content = {
+        k: v for k, v in classes.items() if v.methods or v.attributes
+    }
     if not classes_with_content:
         return None
 
-    # Build Mermaid diagram
-    lines = ["```mermaid", "classDiagram"]
-    for class_name, class_info in sorted(classes_with_content.items()):
-        lines.extend(_build_class_lines(class_name, class_info, methods_by_class, max_methods, show_types))
-    lines.extend(_build_inheritance_lines(classes_with_content))
-    lines.append("```")
+    # If small enough, build a single diagram
+    if len(classes_with_content) <= max_classes_per_diagram:
+        lines = ["```mermaid", "classDiagram"]
+        for class_name, class_info in sorted(classes_with_content.items()):
+            lines.extend(
+                _build_class_lines(
+                    class_name, class_info, methods_by_class, max_methods, show_types
+                )
+            )
+        lines.extend(_build_inheritance_lines(classes_with_content))
+        lines.append("```")
+        return "\n".join(lines)
 
-    return "\n".join(lines)
+    # Split into per-package diagrams
+    packages: dict[str, dict[str, ClassInfo]] = {}
+    for class_name, class_info in classes_with_content.items():
+        pkg = class_to_package.get(class_name, "top-level")
+        if pkg not in packages:
+            packages[pkg] = {}
+        packages[pkg][class_name] = class_info
+
+    sections: list[str] = []
+    for pkg_name in sorted(packages):
+        pkg_classes = packages[pkg_name]
+        lines = [f"### {pkg_name}", "", "```mermaid", "classDiagram"]
+        for class_name, class_info in sorted(pkg_classes.items()):
+            lines.extend(
+                _build_class_lines(
+                    class_name, class_info, methods_by_class, max_methods, show_types
+                )
+            )
+        lines.extend(_build_inheritance_lines(pkg_classes))
+        lines.append("```")
+        sections.append("\n".join(lines))
+
+    return "\n\n".join(sections)
 ```
 
 </details>
@@ -406,9 +509,9 @@ def generate_dependency_graph(chunks: list, project_name: str = "project", detec
 Generate an enhanced Mermaid flowchart showing module dependencies.  Features: - Subgraphs grouping modules by top-level directory - Clickable nodes linking to wiki pages (when wiki_base_path provided) - Optional external dependency display with different styling - Circular dependency detection and highlighting
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `chunks` | `list` | - | List of CodeChunk objects (should include IMPORT chunks). |
+| `chunks` | `list` | - | List of [CodeChunk](../models.md) objects (should include IMPORT chunks). |
 | `project_name` | `str` | `"project"` | Name of the project for filtering internal imports. |
 | `detect_circular` | `bool` | `True` | Whether to highlight circular dependencies. |
 | `show_external` | `bool` | `False` | Whether to show external (third-party) dependencies. |
@@ -421,7 +524,7 @@ Generate an enhanced Mermaid flowchart showing module dependencies.  Features: -
 
 
 <details>
-<summary>View Source (lines 577-659) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/diagrams.py#L577-L659">GitHub</a></summary>
+<summary>View Source (lines 650-732) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/diagrams.py#L650-L732">GitHub</a></summary>
 
 ```python
 def generate_dependency_graph(
@@ -518,7 +621,7 @@ def dfs(node: str, path: list[str], visited: set[str]) -> None
 ```
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `node` | `str` | - | - |
 | `path` | `list[str]` | - | - |
@@ -529,7 +632,7 @@ def dfs(node: str, path: list[str], visited: set[str]) -> None
 
 
 <details>
-<summary>View Source (lines 717-733) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/diagrams.py#L717-L733">GitHub</a></summary>
+<summary>View Source (lines 790-806) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/diagrams.py#L790-L806">GitHub</a></summary>
 
 ```python
 def dfs(node: str, path: list[str], visited: set[str]) -> None:
@@ -562,9 +665,9 @@ def generate_module_overview(index_status: IndexStatus, show_file_counts: bool =
 Generate a high-level module overview diagram.  Shows package structure with subgraphs for major directories.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `index_status` | `IndexStatus` | - | Index status with file information. |
+| `index_status` | [`IndexStatus`](../models.md) | - | Index status with file information. |
 | `show_file_counts` | `bool` | `True` | Whether to show file counts in nodes. |
 
 **Returns:** `str | None`
@@ -572,7 +675,7 @@ Generate a high-level module overview diagram.  Shows package structure with sub
 
 
 <details>
-<summary>View Source (lines 815-886) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/diagrams.py#L815-L886">GitHub</a></summary>
+<summary>View Source (lines 888-959) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/diagrams.py#L888-L959">GitHub</a></summary>
 
 ```python
 def generate_module_overview(
@@ -660,16 +763,16 @@ def generate_language_pie_chart(index_status: IndexStatus) -> str | None
 Generate a pie chart showing language distribution.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `index_status` | `IndexStatus` | - | Index status with language counts. |
+| `index_status` | [`IndexStatus`](../models.md) | - | Index status with language counts. |
 
 **Returns:** `str | None`
 
 
 
 <details>
-<summary>View Source (lines 889-908) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/diagrams.py#L889-L908">GitHub</a></summary>
+<summary>View Source (lines 962-981) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/diagrams.py#L962-L981">GitHub</a></summary>
 
 ```python
 def generate_language_pie_chart(index_status: IndexStatus) -> str | None:
@@ -684,7 +787,7 @@ def generate_language_pie_chart(index_status: IndexStatus) -> str | None:
     if not index_status.languages:
         return None
 
-    lines = ["```mermaid", "pie title Language Distribution"]
+    lines = ["```mermaid", "pie title [Language](../models.md) Distribution"]
 
     for lang, count in sorted(index_status.languages.items(), key=lambda x: -x[1]):
         lines.append(f'    "{lang}" : {count}')
@@ -705,7 +808,7 @@ def generate_sequence_diagram(call_graph: dict[str, list[str]], entry_point: str
 Generate a sequence diagram from a call graph.  Shows the sequence of calls starting from an entry point.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `call_graph` | `dict[str, list[str]]` | - | Mapping of caller to list of callees. |
 | `entry_point` | `str | None` | `None` | Starting function (if None, uses most-called function). |
@@ -716,7 +819,7 @@ Generate a sequence diagram from a call graph.  Shows the sequence of calls star
 
 
 <details>
-<summary>View Source (lines 911-988) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/diagrams.py#L911-L988">GitHub</a></summary>
+<summary>View Source (lines 984-1063) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/diagrams.py#L984-L1063">GitHub</a></summary>
 
 ```python
 def generate_sequence_diagram(
@@ -742,7 +845,9 @@ def generate_sequence_diagram(
     # Find entry point if not specified
     if not entry_point:
         # Find function with most outgoing calls
-        entry_point = max(call_graph.keys(), key=lambda k: len(call_graph.get(k, [])), default=None)
+        entry_point = max(
+            call_graph.keys(), key=lambda k: len(call_graph.get(k, [])), default=None
+        )
 
     if not entry_point or entry_point not in call_graph:
         return None
@@ -791,7 +896,7 @@ def generate_sequence_diagram(
 
     add_calls(entry_point, 0)
 
-    if len(lines) <= 3:  # Only header and participants
+    if len(lines) <= 3:  # Only [header](../../../coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.md) and participants
         return None
 
     lines.append("```")
@@ -808,7 +913,7 @@ def collect_participants(func: str, depth: int) -> None
 ```
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `func` | `str` | - | - |
 | `depth` | `int` | - | - |
@@ -818,7 +923,7 @@ def collect_participants(func: str, depth: int) -> None
 
 
 <details>
-<summary>View Source (lines 945-950) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/diagrams.py#L945-L950">GitHub</a></summary>
+<summary>View Source (lines 1020-1025) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/diagrams.py#L1020-L1025">GitHub</a></summary>
 
 ```python
 def collect_participants(func: str, depth: int) -> None:
@@ -838,7 +943,7 @@ def add_calls(caller: str, depth: int) -> None
 ```
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `caller` | `str` | - | - |
 | `depth` | `int` | - | - |
@@ -848,7 +953,7 @@ def add_calls(caller: str, depth: int) -> None
 
 
 <details>
-<summary>View Source (lines 963-979) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/diagrams.py#L963-L979">GitHub</a></summary>
+<summary>View Source (lines 1038-1054) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/diagrams.py#L1038-L1054">GitHub</a></summary>
 
 ```python
 def add_calls(caller: str, depth: int) -> None:
@@ -885,7 +990,7 @@ Generate sequence diagram for the indexing pipeline.  Shows how files are discov
 
 
 <details>
-<summary>View Source (lines 991-1029) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/diagrams.py#L991-L1029">GitHub</a></summary>
+<summary>View Source (lines 1066-1104) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/diagrams.py#L1066-L1104">GitHub</a></summary>
 
 ```python
 def generate_indexing_sequence() -> str:
@@ -900,11 +1005,11 @@ def generate_indexing_sequence() -> str:
     return """```mermaid
 sequenceDiagram
     participant U as User
-    participant I as RepositoryIndexer
-    participant P as CodeParser
-    participant C as CodeChunker
-    participant E as EmbeddingProvider
-    participant V as VectorStore
+    participant I as [RepositoryIndexer](../core/indexer.md)
+    participant P as [CodeParser](../core/parser.md)
+    participant C as [CodeChunker](../core/chunker.md)
+    participant E as [EmbeddingProvider](../providers/base.md)
+    participant V as [VectorStore](../core/vectorstore.md)
     participant F as FileSystem
 
     U->>I: index(repo_path, full_rebuild)
@@ -917,7 +1022,7 @@ sequenceDiagram
         I->>P: parse_file(path)
         P-->>I: tree, source
         I->>C: chunk_file(tree, source)
-        C-->>I: CodeChunk[]
+        C-->>I: [CodeChunk](../models.md)[]
         I->>E: embed(chunk_contents)
         E-->>I: embeddings[]
         I->>V: add_chunks(chunks, embeddings)
@@ -925,7 +1030,7 @@ sequenceDiagram
     end
 
     I->>F: save_index_status()
-    I-->>U: IndexStatus
+    I-->>U: [IndexStatus](../models.md)
 ```"""
 ```
 
@@ -944,7 +1049,7 @@ Generate sequence diagram for wiki generation.  Shows how the wiki generator sea
 
 
 <details>
-<summary>View Source (lines 1032-1088) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/diagrams.py#L1032-L1088">GitHub</a></summary>
+<summary>View Source (lines 1107-1163) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/diagrams.py#L1107-L1163">GitHub</a></summary>
 
 ```python
 def generate_wiki_generation_sequence() -> str:
@@ -959,16 +1064,16 @@ def generate_wiki_generation_sequence() -> str:
     return """```mermaid
 sequenceDiagram
     participant U as User
-    participant W as WikiGenerator
-    participant V as VectorStore
-    participant L as LLMProvider
+    participant W as [WikiGenerator](wiki.md)
+    participant V as [VectorStore](../core/vectorstore.md)
+    participant L as [LLMProvider](../providers/base.md)
     participant F as FileSystem
 
-    U->>W: generate_wiki(index_status)
+    U->>W: [generate_wiki](wiki.md)(index_status)
 
     rect rgb(40, 40, 60)
         note right of W: Generate Overview
-        W->>V: search("main entry point")
+        W->>V: search("[main](../export/pdf.md) entry point")
         V-->>W: context_chunks
         W->>L: generate(overview_prompt)
         L-->>W: overview_markdown
@@ -999,10 +1104,10 @@ sequenceDiagram
         end
     end
 
-    W->>W: add_cross_links()
-    W->>W: add_see_also_sections()
+    W->>W: [add_cross_links](crosslinks.md)()
+    W->>W: [add_see_also_sections](see_also.md)()
     W->>F: write(search.json, toc.json)
-    W-->>U: WikiStructure
+    W-->>U: [WikiStructure](../models.md)
 ```"""
 ```
 
@@ -1021,7 +1126,7 @@ Generate sequence diagram for deep research pipeline.  Shows the 5-step deep res
 
 
 <details>
-<summary>View Source (lines 1091-1146) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/diagrams.py#L1091-L1146">GitHub</a></summary>
+<summary>View Source (lines 1166-1221) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/diagrams.py#L1166-L1221">GitHub</a></summary>
 
 ```python
 def generate_deep_research_sequence() -> str:
@@ -1036,16 +1141,16 @@ def generate_deep_research_sequence() -> str:
     return """```mermaid
 sequenceDiagram
     participant U as User
-    participant D as DeepResearchPipeline
-    participant L as LLMProvider
-    participant V as VectorStore
+    participant D as [DeepResearchPipeline](../core/deep_research.md)
+    participant L as [LLMProvider](../providers/base.md)
+    participant V as [VectorStore](../core/vectorstore.md)
 
     U->>D: research(question)
 
     rect rgb(50, 40, 40)
         note right of D: Step 1: Decomposition
         D->>L: decompose_question(question)
-        L-->>D: SubQuestion[]
+        L-->>D: [SubQuestion](../models.md)[]
     end
 
     rect rgb(40, 50, 40)
@@ -1055,7 +1160,7 @@ sequenceDiagram
             D->>V: search(sub_q2)
             D->>V: search(sub_q3)
         end
-        V-->>D: SearchResult[][]
+        V-->>D: [SearchResult](../models.md)[][]
     end
 
     rect rgb(40, 40, 50)
@@ -1078,7 +1183,7 @@ sequenceDiagram
         L-->>D: comprehensive_answer
     end
 
-    D-->>U: DeepResearchResult
+    D-->>U: [DeepResearchResult](../models.md)
 ```"""
 ```
 
@@ -1098,7 +1203,7 @@ Generate all workflow sequence diagrams combined.  Returns a markdown string wit
 
 
 <details>
-<summary>View Source (lines 1149-1169) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/diagrams.py#L1149-L1169">GitHub</a></summary>
+<summary>View Source (lines 1224-1244) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/diagrams.py#L1224-L1244">GitHub</a></summary>
 
 ```python
 def generate_workflow_sequences() -> str:
@@ -1163,20 +1268,20 @@ flowchart TD
     N8[_extract_method_signature]
     N9[_extract_methods_from_class...]
     N10[_find_circular_dependencies]
-    N11[_parse_external_import]
-    N12[_parse_import_line]
-    N13[_path_to_module]
-    N14[_unwrap_chunk]
-    N15[add]
-    N16[add_calls]
-    N17[collect_participants]
-    N18[compile]
-    N19[copy]
-    N20[dfs]
-    N21[finditer]
-    N22[generate_class_diagram]
-    N23[generate_dependency_graph]
-    N24[generate_module_overview]
+    N11[_package_from_file_path]
+    N12[_parse_external_import]
+    N13[_parse_import_line]
+    N14[_path_to_module]
+    N15[_unwrap_chunk]
+    N16[add]
+    N17[add_calls]
+    N18[collect_participants]
+    N19[compile]
+    N20[copy]
+    N21[dfs]
+    N22[finditer]
+    N23[generate_class_diagram]
+    N24[generate_dependency_graph]
     N25[generate_sequence_diagram]
     N26[generate_workflow_sequences]
     N27[group]
@@ -1184,52 +1289,52 @@ flowchart TD
     N29[sanitize_mermaid_name]
     N4 --> N7
     N6 --> N8
-    N9 --> N18
-    N9 --> N14
-    N9 --> N21
+    N9 --> N19
+    N9 --> N15
+    N9 --> N22
     N9 --> N27
     N2 --> N29
     N3 --> N29
-    N22 --> N14
-    N22 --> N4
-    N22 --> N6
-    N22 --> N9
-    N22 --> N2
-    N22 --> N3
-    N7 --> N18
-    N7 --> N21
-    N8 --> N18
+    N11 --> N0
+    N23 --> N15
+    N23 --> N11
+    N23 --> N4
+    N23 --> N6
+    N23 --> N9
+    N23 --> N2
+    N23 --> N3
+    N7 --> N19
+    N7 --> N22
+    N8 --> N19
     N8 --> N27
+    N5 --> N14
+    N5 --> N16
     N5 --> N13
-    N5 --> N15
     N5 --> N12
-    N5 --> N11
     N1 --> N29
-    N23 --> N5
-    N23 --> N10
-    N23 --> N1
-    N11 --> N28
-    N11 --> N27
-    N10 --> N15
-    N10 --> N20
-    N10 --> N19
-    N20 --> N15
-    N20 --> N20
-    N20 --> N19
-    N13 --> N0
+    N24 --> N5
+    N24 --> N10
+    N24 --> N1
     N12 --> N28
     N12 --> N27
-    N24 --> N0
-    N24 --> N29
-    N25 --> N15
-    N25 --> N17
-    N25 --> N29
+    N10 --> N16
+    N10 --> N21
+    N10 --> N20
+    N21 --> N16
+    N21 --> N21
+    N21 --> N20
+    N14 --> N0
+    N13 --> N28
+    N13 --> N27
     N25 --> N16
-    N17 --> N15
+    N25 --> N18
+    N25 --> N29
+    N25 --> N17
+    N18 --> N16
+    N18 --> N18
+    N17 --> N29
+    N17 --> N16
     N17 --> N17
-    N16 --> N29
-    N16 --> N15
-    N16 --> N16
     classDef func fill:#e1f5fe
     class N0,N1,N2,N3,N4,N5,N6,N7,N8,N9,N10,N11,N12,N13,N14,N15,N16,N17,N18,N19,N20,N21,N22,N23,N24,N25,N26,N27,N28,N29 func
 ```
@@ -1239,7 +1344,7 @@ flowchart TD
 Functions and methods in this file and their callers:
 
 - **`ClassInfo`**: called by `_collect_class_from_chunk`
-- **`Path`**: called by `_path_to_module`, `generate_module_overview`
+- **`Path`**: called by `_package_from_file_path`, `_path_to_module`, `generate_module_overview`
 - **`_DependencyData`**: called by `_collect_dependencies`
 - **`_add_circular_styling`**: called by `generate_dependency_graph`
 - **`_add_edges`**: called by `generate_dependency_graph`
@@ -1259,6 +1364,7 @@ Functions and methods in this file and their callers:
 - **`_group_modules`**: called by `generate_dependency_graph`
 - **`_is_test_module`**: called by `_collect_dependencies`
 - **`_module_to_wiki_path`**: called by `generate_dependency_graph`
+- **`_package_from_file_path`**: called by `generate_class_diagram`
 - **`_parse_external_import`**: called by `_collect_dependencies`
 - **`_parse_import_line`**: called by `_collect_dependencies`
 - **`_path_to_module`**: called by `_collect_dependencies`
@@ -1345,23 +1451,26 @@ assert "bool" in sig
 
 | Entity | Type | Author | Date | Commit |
 |--------|------|--------|------|--------|
-| `_unwrap_chunk` | function | Brian Breidenbach | 1 week ago | `1e08705` Refactor generate_file_docs... |
-| `_collect_class_from_chunk` | function | Brian Breidenbach | 1 week ago | `1e08705` Refactor generate_file_docs... |
-| `_collect_method_from_chunk` | function | Brian Breidenbach | 1 week ago | `1e08705` Refactor generate_file_docs... |
-| `_extract_methods_from_class_content` | function | Brian Breidenbach | 1 week ago | `1e08705` Refactor generate_file_docs... |
-| `_build_class_lines` | function | Brian Breidenbach | 1 week ago | `1e08705` Refactor generate_file_docs... |
-| `_build_inheritance_lines` | function | Brian Breidenbach | 1 week ago | `1e08705` Refactor generate_file_docs... |
-| `generate_class_diagram` | function | Brian Breidenbach | 1 week ago | `1e08705` Refactor generate_file_docs... |
-| `_DependencyData` | class | Brian Breidenbach | 1 week ago | `8c219ae` Refactor long functions in ... |
-| `_collect_dependencies` | function | Brian Breidenbach | 1 week ago | `8c219ae` Refactor long functions in ... |
-| `_build_internal_deps` | function | Brian Breidenbach | 1 week ago | `8c219ae` Refactor long functions in ... |
-| `_group_modules` | function | Brian Breidenbach | 1 week ago | `8c219ae` Refactor long functions in ... |
-| `_build_node_ids` | function | Brian Breidenbach | 1 week ago | `8c219ae` Refactor long functions in ... |
-| `_add_subgraphs` | function | Brian Breidenbach | 1 week ago | `8c219ae` Refactor long functions in ... |
-| `_add_external_subgraph` | function | Brian Breidenbach | 1 week ago | `8c219ae` Refactor long functions in ... |
-| `_add_edges` | function | Brian Breidenbach | 1 week ago | `8c219ae` Refactor long functions in ... |
-| `_add_circular_styling` | function | Brian Breidenbach | 1 week ago | `8c219ae` Refactor long functions in ... |
-| `generate_dependency_graph` | function | Brian Breidenbach | 1 week ago | `8c219ae` Refactor long functions in ... |
+| `_package_from_file_path` | function | Not Committed Yet | today | `0000000` Version of src/local_deepwi... |
+| `_extract_methods_from_class_content` | function | Brian Breidenbach | today | `4dbba1e` fix: Improve wiki accuracy,... |
+| `generate_class_diagram` | function | Brian Breidenbach | today | `4dbba1e` fix: Improve wiki accuracy,... |
+| `_extract_class_attributes` | function | Brian Breidenbach | today | `4dbba1e` fix: Improve wiki accuracy,... |
+| `_add_circular_styling` | function | Brian Breidenbach | today | `4dbba1e` fix: Improve wiki accuracy,... |
+| `generate_sequence_diagram` | function | Brian Breidenbach | today | `4dbba1e` fix: Improve wiki accuracy,... |
+| `_unwrap_chunk` | function | Brian Breidenbach | 2 weeks ago | `1e08705` Refactor [generate_file_docs](wiki_files.md)... |
+| `_collect_class_from_chunk` | function | Brian Breidenbach | 2 weeks ago | `1e08705` Refactor [generate_file_docs](wiki_files.md)... |
+| `_collect_method_from_chunk` | function | Brian Breidenbach | 2 weeks ago | `1e08705` Refactor [generate_file_docs](wiki_files.md)... |
+| `_build_class_lines` | function | Brian Breidenbach | 2 weeks ago | `1e08705` Refactor [generate_file_docs](wiki_files.md)... |
+| `_build_inheritance_lines` | function | Brian Breidenbach | 2 weeks ago | `1e08705` Refactor [generate_file_docs](wiki_files.md)... |
+| `_DependencyData` | class | Brian Breidenbach | 2 weeks ago | `8c219ae` Refactor long functions in ... |
+| `_collect_dependencies` | function | Brian Breidenbach | 2 weeks ago | `8c219ae` Refactor long functions in ... |
+| `_build_internal_deps` | function | Brian Breidenbach | 2 weeks ago | `8c219ae` Refactor long functions in ... |
+| `_group_modules` | function | Brian Breidenbach | 2 weeks ago | `8c219ae` Refactor long functions in ... |
+| `_build_node_ids` | function | Brian Breidenbach | 2 weeks ago | `8c219ae` Refactor long functions in ... |
+| `_add_subgraphs` | function | Brian Breidenbach | 2 weeks ago | `8c219ae` Refactor long functions in ... |
+| `_add_external_subgraph` | function | Brian Breidenbach | 2 weeks ago | `8c219ae` Refactor long functions in ... |
+| `_add_edges` | function | Brian Breidenbach | 2 weeks ago | `8c219ae` Refactor long functions in ... |
+| `generate_dependency_graph` | function | Brian Breidenbach | 2 weeks ago | `8c219ae` Refactor long functions in ... |
 | `generate_indexing_sequence` | function | Brian Breidenbach | 3 weeks ago | `0d91a70` Apply Python best practices... |
 | `generate_wiki_generation_sequence` | function | Brian Breidenbach | 3 weeks ago | `0d91a70` Apply Python best practices... |
 | `generate_deep_research_sequence` | function | Brian Breidenbach | 3 weeks ago | `0d91a70` Apply Python best practices... |
@@ -1372,14 +1481,12 @@ assert "bool" in sig
 | `generate_module_overview` | function | Brian Breidenbach | 3 weeks ago | `c568951` Add input validation, type ... |
 | `ClassInfo` | class | Brian Breidenbach | 3 weeks ago | `cfae86f` Enhance diagram generation ... |
 | `sanitize_mermaid_name` | function | Brian Breidenbach | 3 weeks ago | `cfae86f` Enhance diagram generation ... |
-| `_extract_class_attributes` | function | Brian Breidenbach | 3 weeks ago | `cfae86f` Enhance diagram generation ... |
 | `_extract_method_signature` | function | Brian Breidenbach | 3 weeks ago | `cfae86f` Enhance diagram generation ... |
 | `_find_circular_dependencies` | function | Brian Breidenbach | 3 weeks ago | `cfae86f` Enhance diagram generation ... |
 | `dfs` | function | Brian Breidenbach | 3 weeks ago | `cfae86f` Enhance diagram generation ... |
 | `_path_to_module` | function | Brian Breidenbach | 3 weeks ago | `cfae86f` Enhance diagram generation ... |
 | `_parse_import_line` | function | Brian Breidenbach | 3 weeks ago | `cfae86f` Enhance diagram generation ... |
 | `generate_language_pie_chart` | function | Brian Breidenbach | 3 weeks ago | `cfae86f` Enhance diagram generation ... |
-| `generate_sequence_diagram` | function | Brian Breidenbach | 3 weeks ago | `cfae86f` Enhance diagram generation ... |
 | `collect_participants` | function | Brian Breidenbach | 3 weeks ago | `cfae86f` Enhance diagram generation ... |
 | `add_calls` | function | Brian Breidenbach | 3 weeks ago | `cfae86f` Enhance diagram generation ... |
 
@@ -1390,7 +1497,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_unwrap_chunk`
 
 <details>
-<summary>View Source (lines 43-45) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/diagrams.py#L43-L45">GitHub</a></summary>
+<summary>View Source (lines 43-45) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/diagrams.py#L43-L45">GitHub</a></summary>
 
 ```python
 def _unwrap_chunk(chunk: Any) -> Any:
@@ -1404,7 +1511,7 @@ def _unwrap_chunk(chunk: Any) -> Any:
 #### `_collect_class_from_chunk`
 
 <details>
-<summary>View Source (lines 48-80) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/diagrams.py#L48-L80">GitHub</a></summary>
+<summary>View Source (lines 48-80) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/diagrams.py#L48-L80">GitHub</a></summary>
 
 ```python
 def _collect_class_from_chunk(
@@ -1448,7 +1555,7 @@ def _collect_class_from_chunk(
 #### `_collect_method_from_chunk`
 
 <details>
-<summary>View Source (lines 83-99) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/diagrams.py#L83-L99">GitHub</a></summary>
+<summary>View Source (lines 83-99) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/diagrams.py#L83-L99">GitHub</a></summary>
 
 ```python
 def _collect_method_from_chunk(
@@ -1476,7 +1583,7 @@ def _collect_method_from_chunk(
 #### `_extract_methods_from_class_content`
 
 <details>
-<summary>View Source (lines 102-129) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/diagrams.py#L102-L129">GitHub</a></summary>
+<summary>View Source (lines 102-133) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/diagrams.py#L102-L133">GitHub</a></summary>
 
 ```python
 def _extract_methods_from_class_content(
@@ -1486,7 +1593,9 @@ def _extract_methods_from_class_content(
     show_types: bool,
 ) -> None:
     """Extract methods from class content for classes without METHOD chunks."""
-    method_pattern = re.compile(r"(?:async\s+)?def\s+(\w+)\s*\([^)]*\)(?:\s*->\s*([^:]+))?:")
+    method_pattern = re.compile(
+        r"(?:async\s+)?def\s+(\w+)\s*\([^)]*\)(?:\s*->\s*([^:]+))?:"
+    )
 
     for class_name in classes:
         if methods_by_class.get(class_name):
@@ -1498,7 +1607,9 @@ def _extract_methods_from_class_content(
                 for match in method_pattern.finditer(chunk.content):
                     method_name = match.group(1)
                     return_type = match.group(2)
-                    if method_name not in [m[0] for m in methods_by_class.get(class_name, [])]:
+                    if method_name not in [
+                        m[0] for m in methods_by_class.get(class_name, [])
+                    ]:
                         if class_name not in methods_by_class:
                             methods_by_class[class_name] = []
                         sig = (
@@ -1515,7 +1626,7 @@ def _extract_methods_from_class_content(
 #### `_build_class_lines`
 
 <details>
-<summary>View Source (lines 132-162) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/diagrams.py#L132-L162">GitHub</a></summary>
+<summary>View Source (lines 136-166) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/diagrams.py#L136-L166">GitHub</a></summary>
 
 ```python
 def _build_class_lines(
@@ -1557,7 +1668,7 @@ def _build_class_lines(
 #### `_build_inheritance_lines`
 
 <details>
-<summary>View Source (lines 165-173) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/diagrams.py#L165-L173">GitHub</a></summary>
+<summary>View Source (lines 169-177) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/diagrams.py#L169-L177">GitHub</a></summary>
 
 ```python
 def _build_inheritance_lines(classes: dict[str, ClassInfo]) -> list[str]:
@@ -1574,10 +1685,45 @@ def _build_inheritance_lines(classes: dict[str, ClassInfo]) -> list[str]:
 </details>
 
 
+#### `_package_from_file_path`
+
+<details>
+<summary>View Source (lines 180-203) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/diagrams.py#L180-L203">GitHub</a></summary>
+
+```python
+def _package_from_file_path(file_path: str) -> str:
+    """Extract the package name from a file path.
+
+    For 'src/local_deepwiki/core/indexer.py' returns 'core'.
+    For 'src/local_deepwiki/models.py' returns 'top-level'.
+    For 'tests/test_parser.py' returns 'tests'.
+
+    Args:
+        file_path: Source file path.
+
+    Returns:
+        Package name string.
+    """
+    parts = Path(file_path).parts
+    if "src" in parts:
+        idx = parts.index("src")
+        # Skip src/ and the package dir (e.g. local_deepwiki/)
+        remaining = parts[idx + 2 :]
+        if len(remaining) > 1:
+            return remaining[0]
+        return "top-level"
+    if "tests" in parts:
+        return "tests"
+    return "top-level"
+```
+
+</details>
+
+
 #### `_extract_class_attributes`
 
 <details>
-<summary>View Source (lines 233-271) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/diagrams.py#L233-L271">GitHub</a></summary>
+<summary>View Source (lines 302-342) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/diagrams.py#L302-L342">GitHub</a></summary>
 
 ```python
 def _extract_class_attributes(content: str, language: str = "python") -> list[str]:
@@ -1595,7 +1741,9 @@ def _extract_class_attributes(content: str, language: str = "python") -> list[st
     if language in ("python", "py"):
         # Match class-level type annotations: name: Type or self.name: Type
         # Also match __init__ assignments
-        attr_pattern = re.compile(r"^\s{4}(\w+)\s*:\s*([^=\n]+?)(?:\s*=|$)", re.MULTILINE)
+        attr_pattern = re.compile(
+            r"^\s{4}(\w+)\s*:\s*([^=\n]+?)(?:\s*=|$)", re.MULTILINE
+        )
         init_pattern = re.compile(r"self\.(\w+)\s*(?::\s*([^\s=]+))?\s*=")
 
         for match in attr_pattern.finditer(content):
@@ -1627,7 +1775,7 @@ def _extract_class_attributes(content: str, language: str = "python") -> list[st
 #### `_extract_method_signature`
 
 <details>
-<summary>View Source (lines 274-314) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/diagrams.py#L274-L314">GitHub</a></summary>
+<summary>View Source (lines 345-385) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/diagrams.py#L345-L385">GitHub</a></summary>
 
 ```python
 def _extract_method_signature(content: str) -> str | None:
@@ -1679,7 +1827,7 @@ def _extract_method_signature(content: str) -> str | None:
 #### `_is_test_module`
 
 <details>
-<summary>View Source (lines 317-333) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/diagrams.py#L317-L333">GitHub</a></summary>
+<summary>View Source (lines 388-404) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/diagrams.py#L388-L404">GitHub</a></summary>
 
 ```python
 def _is_test_module(module: str, file_path: str) -> bool:
@@ -1707,7 +1855,7 @@ def _is_test_module(module: str, file_path: str) -> bool:
 ### `_DependencyData`
 
 <details>
-<summary>View Source (lines 337-343) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/diagrams.py#L337-L343">GitHub</a></summary>
+<summary>View Source (lines 408-414) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/diagrams.py#L408-L414">GitHub</a></summary>
 
 ```python
 class _DependencyData:
@@ -1725,7 +1873,7 @@ class _DependencyData:
 #### `_collect_dependencies`
 
 <details>
-<summary>View Source (lines 346-410) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/diagrams.py#L346-L410">GitHub</a></summary>
+<summary>View Source (lines 417-481) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/diagrams.py#L417-L481">GitHub</a></summary>
 
 ```python
 def _collect_dependencies(
@@ -1801,7 +1949,7 @@ def _collect_dependencies(
 #### `_build_internal_deps`
 
 <details>
-<summary>View Source (lines 413-431) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/diagrams.py#L413-L431">GitHub</a></summary>
+<summary>View Source (lines 484-502) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/diagrams.py#L484-L502">GitHub</a></summary>
 
 ```python
 def _build_internal_deps(
@@ -1831,7 +1979,7 @@ def _build_internal_deps(
 #### `_group_modules`
 
 <details>
-<summary>View Source (lines 434-450) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/diagrams.py#L434-L450">GitHub</a></summary>
+<summary>View Source (lines 505-521) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/diagrams.py#L505-L521">GitHub</a></summary>
 
 ```python
 def _group_modules(modules: set[str]) -> dict[str, list[str]]:
@@ -1859,7 +2007,7 @@ def _group_modules(modules: set[str]) -> dict[str, list[str]]:
 #### `_build_node_ids`
 
 <details>
-<summary>View Source (lines 453-462) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/diagrams.py#L453-L462">GitHub</a></summary>
+<summary>View Source (lines 524-533) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/diagrams.py#L524-L533">GitHub</a></summary>
 
 ```python
 def _build_node_ids(modules: set[str]) -> dict[str, str]:
@@ -1880,7 +2028,7 @@ def _build_node_ids(modules: set[str]) -> dict[str, str]:
 #### `_add_subgraphs`
 
 <details>
-<summary>View Source (lines 465-486) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/diagrams.py#L465-L486">GitHub</a></summary>
+<summary>View Source (lines 536-557) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/diagrams.py#L536-L557">GitHub</a></summary>
 
 ```python
 def _add_subgraphs(
@@ -1913,7 +2061,7 @@ def _add_subgraphs(
 #### `_add_external_subgraph`
 
 <details>
-<summary>View Source (lines 489-516) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/diagrams.py#L489-L516">GitHub</a></summary>
+<summary>View Source (lines 560-587) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/diagrams.py#L560-L587">GitHub</a></summary>
 
 ```python
 def _add_external_subgraph(
@@ -1952,7 +2100,7 @@ def _add_external_subgraph(
 #### `_add_edges`
 
 <details>
-<summary>View Source (lines 519-543) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/diagrams.py#L519-L543">GitHub</a></summary>
+<summary>View Source (lines 590-614) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/diagrams.py#L590-L614">GitHub</a></summary>
 
 ```python
 def _add_edges(
@@ -1988,7 +2136,7 @@ def _add_edges(
 #### `_add_circular_styling`
 
 <details>
-<summary>View Source (lines 546-574) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/diagrams.py#L546-L574">GitHub</a></summary>
+<summary>View Source (lines 617-647) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/diagrams.py#L617-L647">GitHub</a></summary>
 
 ```python
 def _add_circular_styling(
@@ -2018,7 +2166,9 @@ def _add_circular_styling(
             to_id = node_ids.get(imp)
             if to_id and from_id != to_id:
                 if (module, imp) in circular_edges or (imp, module) in circular_edges:
-                    lines.append(f"    linkStyle {link_idx} stroke:#f00,stroke-width:2px")
+                    lines.append(
+                        f"    linkStyle {link_idx} stroke:#f00,stroke-width:2px"
+                    )
                 link_idx += 1
 ```
 
@@ -2028,7 +2178,7 @@ def _add_circular_styling(
 #### `_parse_external_import`
 
 <details>
-<summary>View Source (lines 662-690) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/diagrams.py#L662-L690">GitHub</a></summary>
+<summary>View Source (lines 735-763) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/diagrams.py#L735-L763">GitHub</a></summary>
 
 ```python
 def _parse_external_import(line: str) -> str | None:
@@ -2068,7 +2218,7 @@ def _parse_external_import(line: str) -> str | None:
 #### `_module_to_wiki_path`
 
 <details>
-<summary>View Source (lines 693-703) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/diagrams.py#L693-L703">GitHub</a></summary>
+<summary>View Source (lines 766-776) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/diagrams.py#L766-L776">GitHub</a></summary>
 
 ```python
 def _module_to_wiki_path(module: str, project_name: str) -> str:
@@ -2090,7 +2240,7 @@ def _module_to_wiki_path(module: str, project_name: str) -> str:
 #### `_find_circular_dependencies`
 
 <details>
-<summary>View Source (lines 706-738) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/diagrams.py#L706-L738">GitHub</a></summary>
+<summary>View Source (lines 779-811) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/diagrams.py#L779-L811">GitHub</a></summary>
 
 ```python
 def _find_circular_dependencies(deps: dict[str, set[str]]) -> set[tuple[str, str]]:
@@ -2134,7 +2284,7 @@ def _find_circular_dependencies(deps: dict[str, set[str]]) -> set[tuple[str, str
 #### `_path_to_module`
 
 <details>
-<summary>View Source (lines 741-773) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/diagrams.py#L741-L773">GitHub</a></summary>
+<summary>View Source (lines 814-846) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/diagrams.py#L814-L846">GitHub</a></summary>
 
 ```python
 def _path_to_module(file_path: str) -> str | None:
@@ -2178,7 +2328,7 @@ def _path_to_module(file_path: str) -> str | None:
 #### `_parse_import_line`
 
 <details>
-<summary>View Source (lines 776-812) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/diagrams.py#L776-L812">GitHub</a></summary>
+<summary>View Source (lines 849-885) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/diagrams.py#L849-L885">GitHub</a></summary>
 
 ```python
 def _parse_import_line(line: str, project_name: str) -> str | None:
@@ -2222,3 +2372,6 @@ def _parse_import_line(line: str, project_name: str) -> str | None:
 
 </details>
 
+## Relevant Source Files
+
+- `src/local_deepwiki/generators/diagrams.py:12-21`

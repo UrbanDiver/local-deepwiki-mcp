@@ -30,13 +30,13 @@ Generates documentation for each module/directory based on code indexing and LLM
 
 **Returns**:
 - A tuple containing:
-  - List of generated `WikiPage` objects.
+  - List of generated [`WikiPage`](../export/streaming.md) objects.
   - An integer representing the number of processed items.
   - An integer representing the number of skipped items.
 
 
 <details>
-<summary>View Source (lines 15-132) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_modules.py#L15-L132">GitHub</a></summary>
+<summary>View Source (lines 15-132) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_modules.py#L15-L132">GitHub</a></summary>
 
 ```python
 async def generate_module_docs(
@@ -178,7 +178,7 @@ Generates an index page for modules, listing each module's documentation.
 
 
 <details>
-<summary>View Source (lines 135-151) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_modules.py#L135-L151">GitHub</a></summary>
+<summary>View Source (lines 135-151) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_modules.py#L135-L151">GitHub</a></summary>
 
 ```python
 def _generate_modules_index(module_pages: list[WikiPage]) -> str:
@@ -206,10 +206,10 @@ def _generate_modules_index(module_pages: list[WikiPage]) -> str:
 
 This module is used by the `generate_module_docs` function, which is called during the wiki generation process. It integrates with:
 
-- `local_deepwiki.core.vectorstore.VectorStore` for code indexing.
-- `local_deepwiki.models.IndexStatus` and `local_deepwiki.models.WikiPage` for data structures.
-- `local_deepwiki.providers.base.LLMProvider` for content generation.
-- `local_deepwiki.generators.wiki_status.WikiStatusManager` for managing incremental updates.
+- [`local_deepwiki.core.vectorstore.VectorStore`](../core/vectorstore.md) for code indexing.
+- [`local_deepwiki.models.IndexStatus`](../models.md) and [`local_deepwiki.models.WikiPage`](../export/streaming.md) for data structures.
+- [`local_deepwiki.providers.base.LLMProvider`](../providers/base.md) for content generation.
+- [`local_deepwiki.generators.wiki_status.WikiStatusManager`](wiki_status.md) for managing incremental updates.
 
 It is part of the larger `local_deepwiki` project and is related to other modules such as `wiki.py`, `source_refs.py`, and CLI components.
 
@@ -243,11 +243,11 @@ async def generate_module_docs(index_status: IndexStatus, vector_store: VectorSt
 Generate documentation for each module/directory.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `index_status` | `IndexStatus` | - | Index status with file information. |
-| `vector_store` | `VectorStore` | - | Vector store with indexed code. |
-| `llm` | `LLMProvider` | - | LLM provider for generation. |
+| `index_status` | [`IndexStatus`](../models.md) | - | Index status with file information. |
+| `vector_store` | [`VectorStore`](../core/vectorstore.md) | - | Vector store with indexed code. |
+| `llm` | [`LLMProvider`](../providers/base.md) | - | LLM provider for generation. |
 | `system_prompt` | `str` | - | System prompt for LLM. |
 | `status_manager` | `"WikiStatusManager"` | - | Wiki status manager for incremental updates. |
 | `full_rebuild` | `bool` | `False` | If True, regenerate all pages. |
@@ -258,7 +258,7 @@ Generate documentation for each module/directory.
 
 
 <details>
-<summary>View Source (lines 15-132) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/wiki_modules.py#L15-L132">GitHub</a></summary>
+<summary>View Source (lines 15-132) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/wiki_modules.py#L15-L132">GitHub</a></summary>
 
 ```python
 async def generate_module_docs(
@@ -418,7 +418,7 @@ flowchart TD
 Functions and methods in this file and their callers:
 
 - **`Path`**: called by `_generate_modules_index`, `generate_module_docs`
-- **`WikiPage`**: called by `generate_module_docs`
+- **[`WikiPage`](../export/streaming.md)**: called by `generate_module_docs`
 - **`_generate_modules_index`**: called by `generate_module_docs`
 - **`generate`**: called by `generate_module_docs`
 - **`load_existing_page`**: called by `generate_module_docs`
@@ -490,3 +490,7 @@ assert "index.md" not in result
 |--------|------|--------|------|--------|
 | `generate_module_docs` | function | Brian Breidenbach | 3 weeks ago | `3defaaa` Refactor: Extract validatio... |
 | `_generate_modules_index` | function | Brian Breidenbach | 3 weeks ago | `3defaaa` Refactor: Extract validatio... |
+
+## Relevant Source Files
+
+- `src/local_deepwiki/generators/wiki_modules.py:15-132`

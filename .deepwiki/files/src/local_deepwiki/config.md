@@ -1,192 +1,195 @@
 # File Overview
 
-This file defines configuration classes for the `local_deepwiki` project, primarily used to manage settings for embedding models, LLMs, parsing, chunking, and wiki generation. It leverages Pydantic for validation and includes dataclasses and enums for structured configuration management.
+This file defines configuration classes for the `local_deepwiki` project, used to manage settings for embedding models, language model providers, parsing, chunking, and wiki generation. It uses Pydantic for validation and dataclasses for additional structures.
+
+## Key Features
+- Configuration for local and cloud-based embedding models (e.g., sentence-transformers, OpenAI)
+- Configuration for various LLM providers (Ollama, Anthropic, OpenAI)
+- Settings for code parsing, chunking, and wiki generation
+- Support for caching configurations
+- Context-aware configuration management using `ContextVar`
 
 ## Dependencies
-
 This file imports:
 - `os`, `threading`, `contextlib`, `contextvars`, `dataclasses`, `enum`, `pathlib`, `typing`
-- `yaml` for YAML parsing
-- `pydantic` for configuration validation and model definition
+- `yaml` for configuration file parsing
+- `pydantic` for model validation and configuration
 
 ## Integration
-
-This file is used by several components in the codebase:
-- `ChunkingConfig` is used by the `chunker`
-- `EmbeddingCacheConfig` is used by the `cache`
-- `LLMCacheConfig` is used by `test_llm_cache`
-- `SearchCacheConfig` is used by `vectorstore` and `test_vectorstore`
-- `FuzzySearchConfig` is used by `test_vectorstore`
-- `reset_config` is used by `test_config`
-- `validate_config` is used by `test_config`
+This file is used by:
+- `ChunkingConfig`: used by chunker
+- `EmbeddingCacheConfig`: used by cache
+- `LLMCacheConfig`: used by test_llm_cache
+- `SearchCacheConfig`: used by vectorstore, test_vectorstore
+- `FuzzySearchConfig`: used by test_vectorstore
+- `reset_config`: used by test_config
+- `validate_config`: used by test_config
 
 # Classes
 
 ## ResearchPreset
+An enumeration representing research mode presets for the deep research pipeline.
 
-An enumeration of research mode presets for the deep research pipeline.
-
-### Values
-
-- `QUICK`
-- `DEFAULT`
-- `THOROUGH`
+**Values**:
+- `QUICK`: Fast research mode
+- `DEFAULT`: Standard research mode
+- `THOROUGH`: Detailed research mode
 
 ## LocalEmbeddingConfig
-
 Configuration for local embedding models using sentence-transformers.
 
-### Fields
-
-- `model` (str): Model name for sentence-transformers, default is `"all-MiniLM-L6-v2"`
+**Fields**:
+- `model` (str): Model name for sentence-transformers. Default: `"all-MiniLM-L6-v2"`
 
 ## OpenAIEmbeddingConfig
-
 Configuration for OpenAI embedding models.
 
-### Fields
-
-- `model` (str): OpenAI embedding model, default is `"text-embedding-3-small"`
+**Fields**:
+- `model` (str): OpenAI embedding model. Default: `"text-embedding-3-small"`
 
 ## EmbeddingConfig
+Configuration for embedding providers, supporting local and OpenAI.
 
-Configuration for embedding providers, supporting both local and OpenAI models.
-
-### Fields
-
-- `provider` (Literal["local", "openai"]): Embedding provider, default is `"local"`
-- `local` (LocalEmbeddingConfig): Configuration for local embedding, default is `LocalEmbeddingConfig()`
-- `openai` (OpenAIEmbeddingConfig): Configuration for OpenAI embedding, default is `OpenAIEmbeddingConfig()`
+**Fields**:
+- `provider` (Literal["local", "openai"]): Embedding provider. Default: `"local"`
+- `local` (LocalEmbeddingConfig): Configuration for local embedding. Default: `LocalEmbeddingConfig()`
+- `openai` (OpenAIEmbeddingConfig): Configuration for OpenAI embedding. Default: `OpenAIEmbeddingConfig()`
 
 ## OllamaConfig
+Configuration for Ollama LLM providers.
 
-Configuration for Ollama LLM.
-
-### Fields
-
-- `model` (str): Ollama model name, default is `"qwen3-c30b"`
-- `base_url` (str): Ollama API URL, default is `"http://localhost:11434"`
+**Fields**:
+- `model` (str): Ollama model name. Default: `"qwen3-coder:30b"`
+- `base_url` (str): Ollama API URL. Default: `"http://localhost:11434"`
 
 ## AnthropicConfig
+Configuration for Anthropic LLM providers.
 
-Configuration for Anthropic LLM.
-
-### Fields
-
-- `model` (str): Anthropic model name, default is `"claude-sonnet-4-20250514"`
+**Fields**:
+- `model` (str): Anthropic model name. Default: `"claude-sonnet-4-20250514"`
 
 ## OpenAILLMConfig
+Configuration for OpenAI LLM providers.
 
-Configuration for OpenAI LLM.
-
-### Fields
-
-- `model` (str): OpenAI model name, default is `"gpt-4o"`
+**Fields**:
+- `model` (str): OpenAI model name. Default: `"gpt-4o"`
 
 ## LLMConfig
-
 Configuration for LLM providers, supporting Ollama, Anthropic, and OpenAI.
 
-### Fields
-
-- `provider` (Literal["ollama", "anthropic", "openai"]): LLM provider, default is `"ollama"`
-- `ollama` (OllamaConfig): Configuration for Ollama, default is `OllamaConfig()`
-- `anthropic` (AnthropicConfig): Configuration for Anthropic, default is `AnthropicConfig()`
-- `openai` (OpenAILLMConfig): Configuration for OpenAI, default is `OpenAILLMConfig()`
+**Fields**:
+- `provider` (Literal["ollama", "anthropic", "openai"]): LLM provider. Default: `"ollama"`
+- `ollama` (OllamaConfig): Configuration for Ollama. Default: `OllamaConfig()`
+- `anthropic` (AnthropicConfig): Configuration for Anthropic. Default: `AnthropicConfig()`
+- `openai` (OpenAILLMConfig): Configuration for OpenAI. Default: `OpenAILLMConfig()`
 
 ## ParsingConfig
+Configuration for code parsing, including supported languages and file size limits.
 
-Configuration for code parsing using tree-sitter.
-
-### Fields
-
-- `languages` (list[str]): Languages to parse, default includes Python, TypeScript, JavaScript, Go, Rust, Java, C, C++, Swift, Ruby, PHP, Kotlin, C#
-- `max_file_size` (int): Max file size in bytes, default is 1048576 (1MB)
-- `exclude_patterns` (list[str]): File patterns to exclude from parsing, default is `[]`
+**Fields**:
+- `languages` (list[str]): Languages to parse. Default: Python, TypeScript, JavaScript, Go, Rust, Java, C, C++, Swift, Ruby, PHP, Kotlin, C#
+- `max_file_size` (int): Max file size in bytes (1MB). Default: `1048576`
+- `exclude_patterns` (list[str]): File patterns to exclude from parsing. Default: `[".git/", "__pycache__/", ".pytest_cache/", ".venv/", "node_modules/", "build/", "dist/"]`
 
 ## EmbeddingBatchConfig
-
 Configuration for batch processing of embeddings.
 
-### Fields
-
-- `batch_size` (int): Number of texts to embed per batch, default is 100, range 1–500
-- `concurrency` (int): Number of batches to process in parallel, default is 4, range 1–16
+**Fields**:
+- `batch_size` (int): Number of texts to embed per batch. Range: 1-500. Default: `100`
+- `concurrency` (int): Number of batches to process in parallel. Range: 1-16. Default: `4`
 
 ## ASTCacheConfig
+Configuration for AST caching in tree-sitter parser.
 
-Configuration for AST caching to speed up incremental indexing.
-
-### Fields
-
-- `enabled` (bool): Enable AST caching for incremental indexing, default is `True`
-- `max_entries` (int): Maximum number of cached ASTs before LRU eviction, default is 1000, range 100–10000
-- `ttl_seconds` (int): Time-to-live for cached entries in seconds, default is 3600, range 60–86400 (24 hours)
+**Fields**:
+- `enabled` (bool): Enable AST caching for incremental indexing. Default: `True`
+- `max_entries` (int): Maximum number of cached ASTs before LRU eviction. Range: 100-10000. Default: `1000`
+- `ttl_seconds` (int): Time-to-live for cached entries in seconds. Range: 60-86400 (24 hours). Default: `3600`
 
 ## ChunkingConfig
+Configuration for text chunking.
 
-Configuration for chunking documents into smaller parts.
-
-### Fields
-
-- `max_chunk_tokens` (int): Max tokens per chunk, default is 512
-- `overlap_tokens` (int): Overlap between chunks, default is 50
-- `batch_size` (int): Number of chunks to process in each batch, default is 500
-- `class_split_threshold` (int): Line count threshold for splitting classes, default is 100
-- `parallel_workers` (int): Number of parallel workers for chunking, default is 4
+**Fields**:
+- `max_chunk_tokens` (int): Max tokens per chunk. Default: `512`
+- `overlap_tokens` (int): Overlap between chunks. Default: `50`
+- `batch_size` (int): Number of chunks to process in each batch for memory efficiency. Default: `500`
+- `class_split_threshold` (int): Line count threshold above which classes are split into summary + method chunks. Default: `100`
+- `parallel_workers` (int): Number of parallel workers for chunking. Default: `4`
 
 ## WikiConfig
+Configuration for wiki generation.
 
-Configuration for generating wiki documentation.
+**Fields**:
+- `max_file_docs` (int): Maximum number of file-level documentation pages to generate. Set to 0 for unlimited. Default: `500`
+- `max_concurrent_llm_calls` (int): Maximum concurrent LLM calls for file documentation generation. Range: 1-20. Default: `8`
+- `use_cloud_for_github` (bool): Use cloud for GitHub repo processing. Default: `True`
+- `max_concurrent_github_calls` (int): Max concurrent GitHub API calls. Range: 1-20. Default: `5`
+- `max_concurrent_wiki_calls` (int): Max concurrent wiki generation calls. Range: 1-20. Default: `4`
+- `github_token` (str): GitHub token for API access. Default: `""`
+- `preset` (ResearchPreset): Research mode preset. Default: `ResearchPreset.DEFAULT`
+- `chunking` (ChunkingConfig): Chunking configuration. Default: `ChunkingConfig()`
+- `embedding_batch` (EmbeddingBatchConfig): Embedding batch configuration. Default: `EmbeddingBatchConfig()`
 
-### Fields
+## Config
+Main configuration class that holds all configuration components.
 
-- `max_file_docs` (int): Maximum number of file-level documentation pages, default is 500, 0 for unlimited
-- `max_concurrent_llm_calls` (int): Maximum concurrent LLM calls, default is 8, range 1–20
-- `use_cloud_for_github` (bool): Use cloud for GitHub integration, default is `False`
-- `github_token` (str): GitHub token for authentication, default is `None`
-- `max_concurrent_wiki_calls` (int): Maximum concurrent wiki calls, default is 4, range 1–10
-- `wiki_output_dir` (str): Output directory for wiki files, default is `"wiki_output"`
-- `wiki_title` (str): Title for the wiki, default is `"DeepWiki"`
-- `wiki_description` (str): Description for the wiki, default is `"Documentation generated by DeepWiki"`
-- `wiki_template` (str): Template for wiki pages, default is `"default"`
+**Fields**:
+- `embedding` (EmbeddingConfig): Embedding configuration. Default: `EmbeddingConfig()`
+- `llm` (LLMConfig): LLM configuration. Default: `LLMConfig()`
+- `parsing` (ParsingConfig): Parsing configuration. Default: `ParsingConfig()`
+- `embedding_batch` (EmbeddingBatchConfig): Embedding batch configuration. Default: `EmbeddingBatchConfig()`
+- `ast_cache` (ASTCacheConfig): AST cache configuration. Default: `ASTCacheConfig()`
+- `chunking` (ChunkingConfig): Chunking configuration. Default: `ChunkingConfig()`
+- `wiki` (WikiConfig): Wiki generation configuration. Default: `WikiConfig()`
 
 # Functions
 
-No functions are defined in this file.
+## reset_config
+Resets the global configuration to default values.
+
+## validate_config
+Validates the current configuration for correctness.
+
+## get_config
+Retrieves the current configuration in a thread-safe manner.
+
+## set_config
+Sets the global configuration in a thread-safe manner.
 
 # Usage Examples
 
-## EmbeddingConfig
+## Basic Configuration Usage
 
 ```python
-from local_deepwiki.config import EmbeddingConfig
+from local_deepwiki.config import Config, EmbeddingConfig, LLMConfig
 
-config = EmbeddingConfig(provider="local", local=LocalEmbeddingConfig(model="all-MiniLM-L6-v2"))
+# Create a custom configuration
+config = Config(
+    embedding=EmbeddingConfig(provider="openai", openai=OpenAIEmbeddingConfig(model="text-embedding-3-large")),
+    llm=LLMConfig(provider="ollama", ollama=OllamaConfig(model="llama3.2:1b"))
+)
+
+# Set the global configuration
+set_config(config)
 ```
 
-## LLMConfig
+## Reading Configuration
 
 ```python
-from local_deepwiki.config import LLMConfig
+from local_deepwiki.config import get_config
 
-config = LLMConfig(provider="openai", openai=OpenAILLMConfig(model="gpt-4o"))
+# Get current configuration
+config = get_config()
+print(config.embedding.provider)
 ```
 
-## ChunkingConfig
+## Validation
 
 ```python
-from local_deepwiki.config import ChunkingConfig
+from local_deepwiki.config import validate_config
 
-config = ChunkingConfig(max_chunk_tokens=512, overlap_tokens=50)
-```
-
-## WikiConfig
-
-```python
-from local_deepwiki.config import WikiConfig
-
-config = WikiConfig(max_file_docs=1000, max_concurrent_llm_calls=10)
+# Validate current configuration
+validate_config()
 ```
 
 ## API Reference
@@ -199,7 +202,7 @@ Research mode presets for deep research pipeline.
 
 
 <details>
-<summary>View Source (lines 16-21) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L16-L21">GitHub</a></summary>
+<summary>View Source (lines 16-21) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L16-L21">GitHub</a></summary>
 
 ```python
 class ResearchPreset(str, Enum):
@@ -220,7 +223,7 @@ Configuration for local embedding model.
 
 
 <details>
-<summary>View Source (lines 53-60) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L53-L60">GitHub</a></summary>
+<summary>View Source (lines 53-60) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L53-L60">GitHub</a></summary>
 
 ```python
 class LocalEmbeddingConfig(BaseModel):
@@ -243,7 +246,7 @@ Configuration for OpenAI embedding model.
 
 
 <details>
-<summary>View Source (lines 63-68) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L63-L68">GitHub</a></summary>
+<summary>View Source (lines 63-68) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L63-L68">GitHub</a></summary>
 
 ```python
 class OpenAIEmbeddingConfig(BaseModel):
@@ -264,7 +267,7 @@ Embedding provider configuration.
 
 
 <details>
-<summary>View Source (lines 71-78) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L71-L78">GitHub</a></summary>
+<summary>View Source (lines 71-78) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L71-L78">GitHub</a></summary>
 
 ```python
 class EmbeddingConfig(BaseModel):
@@ -287,7 +290,7 @@ Configuration for Ollama LLM.
 
 
 <details>
-<summary>View Source (lines 81-87) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L81-L87">GitHub</a></summary>
+<summary>View Source (lines 81-87) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L81-L87">GitHub</a></summary>
 
 ```python
 class OllamaConfig(BaseModel):
@@ -309,7 +312,7 @@ Configuration for Anthropic LLM.
 
 
 <details>
-<summary>View Source (lines 90-95) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L90-L95">GitHub</a></summary>
+<summary>View Source (lines 90-95) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L90-L95">GitHub</a></summary>
 
 ```python
 class AnthropicConfig(BaseModel):
@@ -330,7 +333,7 @@ Configuration for OpenAI LLM.
 
 
 <details>
-<summary>View Source (lines 98-103) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L98-L103">GitHub</a></summary>
+<summary>View Source (lines 98-103) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L98-L103">GitHub</a></summary>
 
 ```python
 class OpenAILLMConfig(BaseModel):
@@ -351,7 +354,7 @@ LLM provider configuration.
 
 
 <details>
-<summary>View Source (lines 106-116) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L106-L116">GitHub</a></summary>
+<summary>View Source (lines 106-116) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L106-L116">GitHub</a></summary>
 
 ```python
 class LLMConfig(BaseModel):
@@ -377,7 +380,7 @@ Code parsing configuration.
 
 
 <details>
-<summary>View Source (lines 119-159) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L119-L159">GitHub</a></summary>
+<summary>View Source (lines 119-159) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L119-L159">GitHub</a></summary>
 
 ```python
 class ParsingConfig(BaseModel):
@@ -435,7 +438,7 @@ Embedding batch processing configuration.
 
 
 <details>
-<summary>View Source (lines 180-232) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L180-L232">GitHub</a></summary>
+<summary>View Source (lines 180-232) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L180-L232">GitHub</a></summary>
 
 ```python
 class EmbeddingBatchConfig(BaseModel):
@@ -504,13 +507,13 @@ def validate_batch_size(v: int) -> int
 Validate batch_size is reasonable.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `v` | `int` | - | - |
 
 
 <details>
-<summary>View Source (lines 180-232) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L180-L232">GitHub</a></summary>
+<summary>View Source (lines 180-232) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L180-L232">GitHub</a></summary>
 
 ```python
 class EmbeddingBatchConfig(BaseModel):
@@ -579,14 +582,14 @@ def validate_concurrency(v: int) -> int
 Validate concurrency doesn't exceed reasonable limits.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `v` | `int` | - | - |
 
 
 
 <details>
-<summary>View Source (lines 180-232) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L180-L232">GitHub</a></summary>
+<summary>View Source (lines 180-232) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L180-L232">GitHub</a></summary>
 
 ```python
 class EmbeddingBatchConfig(BaseModel):
@@ -654,7 +657,7 @@ AST cache configuration for tree-sitter parser.  Caches parsed ASTs to speed up 
 
 
 <details>
-<summary>View Source (lines 235-256) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L235-L256">GitHub</a></summary>
+<summary>View Source (lines 235-256) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L235-L256">GitHub</a></summary>
 
 ```python
 class ASTCacheConfig(BaseModel):
@@ -693,7 +696,7 @@ Chunking configuration.
 
 
 <details>
-<summary>View Source (lines 259-298) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L259-L298">GitHub</a></summary>
+<summary>View Source (lines 259-298) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L259-L298">GitHub</a></summary>
 
 ```python
 class ChunkingConfig(BaseModel):
@@ -749,13 +752,13 @@ def validate_parallel_workers(v: int) -> int
 Validate parallel_workers doesn't exceed CPU count.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `v` | `int` | - | - |
 
 
 <details>
-<summary>View Source (lines 259-298) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L259-L298">GitHub</a></summary>
+<summary>View Source (lines 259-298) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L259-L298">GitHub</a></summary>
 
 ```python
 class ChunkingConfig(BaseModel):
@@ -813,7 +816,7 @@ Validate overlap_tokens is less than max_chunk_tokens.
 
 
 <details>
-<summary>View Source (lines 259-298) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L259-L298">GitHub</a></summary>
+<summary>View Source (lines 259-298) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L259-L298">GitHub</a></summary>
 
 ```python
 class ChunkingConfig(BaseModel):
@@ -870,7 +873,7 @@ Wiki generation configuration.
 
 
 <details>
-<summary>View Source (lines 301-359) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L301-L359">GitHub</a></summary>
+<summary>View Source (lines 301-359) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L301-L359">GitHub</a></summary>
 
 ```python
 class WikiConfig(BaseModel):
@@ -945,13 +948,13 @@ def validate_max_concurrent_llm_calls(v: int) -> int
 Validate max_concurrent_llm_calls is reasonable.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `v` | `int` | - | - |
 
 
 <details>
-<summary>View Source (lines 301-359) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L301-L359">GitHub</a></summary>
+<summary>View Source (lines 301-359) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L301-L359">GitHub</a></summary>
 
 ```python
 class WikiConfig(BaseModel):
@@ -1028,7 +1031,7 @@ Validate search limits are consistent.
 
 
 <details>
-<summary>View Source (lines 301-359) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L301-L359">GitHub</a></summary>
+<summary>View Source (lines 301-359) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L301-L359">GitHub</a></summary>
 
 ```python
 class WikiConfig(BaseModel):
@@ -1104,7 +1107,7 @@ Deep research pipeline configuration.
 
 
 <details>
-<summary>View Source (lines 362-432) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L362-L432">GitHub</a></summary>
+<summary>View Source (lines 362-432) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L362-L432">GitHub</a></summary>
 
 ```python
 class DeepResearchConfig(BaseModel):
@@ -1191,14 +1194,14 @@ def with_preset(preset: ResearchPreset | str | None) -> "DeepResearchConfig"
 Return a new config with preset values applied.  The preset values override the current config values. If preset is None or "default", returns a copy of the current config unchanged.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `preset` | `ResearchPreset | str | None` | - | The research preset to apply ("quick", "default", "thorough"). |
 
 
 
 <details>
-<summary>View Source (lines 362-432) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L362-L432">GitHub</a></summary>
+<summary>View Source (lines 362-432) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L362-L432">GitHub</a></summary>
 
 ```python
 class DeepResearchConfig(BaseModel):
@@ -1280,11 +1283,11 @@ class DeepResearchConfig(BaseModel):
 
 **Inherits from:** `BaseModel`
 
-Plugin system configuration.
+[Plugin](plugins/base.md) system configuration.
 
 
 <details>
-<summary>View Source (lines 435-449) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L435-L449">GitHub</a></summary>
+<summary>View Source (lines 435-449) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L435-L449">GitHub</a></summary>
 
 ```python
 class PluginsConfig(BaseModel):
@@ -1310,11 +1313,11 @@ class PluginsConfig(BaseModel):
 
 **Inherits from:** `BaseModel`
 
-Event hooks configuration.
+[Event](events.md) hooks configuration.
 
 
 <details>
-<summary>View Source (lines 452-468) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L452-L468">GitHub</a></summary>
+<summary>View Source (lines 452-468) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L452-L468">GitHub</a></summary>
 
 ```python
 class HooksConfig(BaseModel):
@@ -1346,7 +1349,7 @@ Export configuration for HTML and PDF generation.
 
 
 <details>
-<summary>View Source (lines 471-493) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L471-L493">GitHub</a></summary>
+<summary>View Source (lines 471-493) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L471-L493">GitHub</a></summary>
 
 ```python
 class ExportBatchConfig(BaseModel):
@@ -1384,7 +1387,7 @@ Output configuration.
 
 
 <details>
-<summary>View Source (lines 496-502) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L496-L502">GitHub</a></summary>
+<summary>View Source (lines 496-502) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L496-L502">GitHub</a></summary>
 
 ```python
 class OutputConfig(BaseModel):
@@ -1406,7 +1409,7 @@ Embedding cache configuration.
 
 
 <details>
-<summary>View Source (lines 505-522) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L505-L522">GitHub</a></summary>
+<summary>View Source (lines 505-522) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L505-L522">GitHub</a></summary>
 
 ```python
 class EmbeddingCacheConfig(BaseModel):
@@ -1439,7 +1442,7 @@ LLM response caching configuration.
 
 
 <details>
-<summary>View Source (lines 525-554) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L525-L554">GitHub</a></summary>
+<summary>View Source (lines 525-554) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L525-L554">GitHub</a></summary>
 
 ```python
 class LLMCacheConfig(BaseModel):
@@ -1484,7 +1487,7 @@ Search result caching configuration for vector store.
 
 
 <details>
-<summary>View Source (lines 557-580) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L557-L580">GitHub</a></summary>
+<summary>View Source (lines 557-580) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L557-L580">GitHub</a></summary>
 
 ```python
 class SearchCacheConfig(BaseModel):
@@ -1523,7 +1526,7 @@ Search behavior configuration for precision/recall trade-offs.  Controls search 
 
 
 <details>
-<summary>View Source (lines 583-620) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L583-L620">GitHub</a></summary>
+<summary>View Source (lines 583-620) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L583-L620">GitHub</a></summary>
 
 ```python
 class SearchConfig(BaseModel):
@@ -1576,7 +1579,7 @@ Lazy vector index configuration for deferred index creation.  When enabled, vect
 
 
 <details>
-<summary>View Source (lines 623-658) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L623-L658">GitHub</a></summary>
+<summary>View Source (lines 623-658) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L623-L658">GitHub</a></summary>
 
 ```python
 class LazyIndexConfig(BaseModel):
@@ -1627,7 +1630,7 @@ Fuzzy search configuration for typo-tolerant code search.  When semantic search 
 
 
 <details>
-<summary>View Source (lines 661-695) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L661-L695">GitHub</a></summary>
+<summary>View Source (lines 661-695) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L661-L695">GitHub</a></summary>
 
 ```python
 class FuzzySearchConfig(BaseModel):
@@ -1677,7 +1680,7 @@ Prompts configuration for a specific provider.
 
 
 <details>
-<summary>View Source (lines 785-793) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L785-L793">GitHub</a></summary>
+<summary>View Source (lines 785-793) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L785-L793">GitHub</a></summary>
 
 ```python
 class ProviderPromptsConfig(BaseModel):
@@ -1703,7 +1706,7 @@ Provider-specific prompts configuration.
 
 
 <details>
-<summary>View Source (lines 796-849) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L796-L849">GitHub</a></summary>
+<summary>View Source (lines 796-849) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L796-L849">GitHub</a></summary>
 
 ```python
 class PromptsConfig(BaseModel):
@@ -1773,14 +1776,14 @@ def get_for_provider(provider: str) -> ProviderPromptsConfig
 Get prompts for a specific provider.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `provider` | `str` | - | Provider name ("ollama", "anthropic", "openai"). |
 
 
 
 <details>
-<summary>View Source (lines 796-849) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L796-L849">GitHub</a></summary>
+<summary>View Source (lines 796-849) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L796-L849">GitHub</a></summary>
 
 ```python
 class PromptsConfig(BaseModel):
@@ -1851,7 +1854,7 @@ Main configuration.  This class and all nested config classes are frozen (immuta
 
 
 <details>
-<summary>View Source (lines 852-1029) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L852-L1029">GitHub</a></summary>
+<summary>View Source (lines 852-1029) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L852-L1029">GitHub</a></summary>
 
 ```python
 class Config(BaseModel):
@@ -1870,7 +1873,7 @@ Compute optimal batch size based on provider and memory.  Local providers can ha
 
 
 <details>
-<summary>View Source (lines 884-901) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L884-L901">GitHub</a></summary>
+<summary>View Source (lines 884-901) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L884-L901">GitHub</a></summary>
 
 ```python
 def effective_embedding_batch_size(self) -> int:
@@ -1905,7 +1908,7 @@ Compute worker count based on CPU cores.  Ensures we do not exceed available CPU
 
 
 <details>
-<summary>View Source (lines 905-918) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L905-L918">GitHub</a></summary>
+<summary>View Source (lines 905-918) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L905-L918">GitHub</a></summary>
 
 ```python
 def effective_max_workers(self) -> int:
@@ -1936,7 +1939,7 @@ Compute effective LLM concurrency based on provider.  Cloud providers may have r
 
 
 <details>
-<summary>View Source (lines 922-938) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L922-L938">GitHub</a></summary>
+<summary>View Source (lines 922-938) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L922-L938">GitHub</a></summary>
 
 ```python
 def effective_llm_concurrency(self) -> int:
@@ -1970,7 +1973,7 @@ Validate cross-field consistency.  Ensures configuration values are consistent a
 
 
 <details>
-<summary>View Source (lines 941-966) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L941-L966">GitHub</a></summary>
+<summary>View Source (lines 941-966) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L941-L966">GitHub</a></summary>
 
 ```python
 def validate_config_consistency(self) -> "Config":
@@ -2012,13 +2015,13 @@ def with_embedding_provider(provider: Literal["local", "openai"]) -> "Config"
 Return a new Config with the embedding provider changed.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `provider` | `Literal["local", "openai"]` | - | The embedding provider to use. |
 
 
 <details>
-<summary>View Source (lines 968-978) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L968-L978">GitHub</a></summary>
+<summary>View Source (lines 968-978) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L968-L978">GitHub</a></summary>
 
 ```python
 def with_embedding_provider(self, provider: Literal["local", "openai"]) -> "Config":
@@ -2045,13 +2048,13 @@ def with_llm_provider(provider: Literal["ollama", "anthropic", "openai"]) -> "Co
 Return a new Config with the LLM provider changed.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `provider` | `Literal["ollama", "anthropic", "openai"]` | - | The LLM provider to use. |
 
 
 <details>
-<summary>View Source (lines 980-992) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L980-L992">GitHub</a></summary>
+<summary>View Source (lines 980-992) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L980-L992">GitHub</a></summary>
 
 ```python
 def with_llm_provider(
@@ -2081,7 +2084,7 @@ Get prompts for the currently configured LLM provider.
 
 
 <details>
-<summary>View Source (lines 994-1000) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L994-L1000">GitHub</a></summary>
+<summary>View Source (lines 994-1000) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L994-L1000">GitHub</a></summary>
 
 ```python
 def get_prompts(self) -> ProviderPromptsConfig:
@@ -2104,13 +2107,13 @@ def load(config_path: Path | None = None) -> "Config"
 Load configuration from file or defaults.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `config_path` | `Path | None` | `None` | - |
 
 
 <details>
-<summary>View Source (lines 1003-1021) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L1003-L1021">GitHub</a></summary>
+<summary>View Source (lines 1003-1021) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L1003-L1021">GitHub</a></summary>
 
 ```python
 def load(cls, config_path: Path | None = None) -> "Config":
@@ -2145,13 +2148,13 @@ def get_wiki_path(repo_path: Path) -> Path
 Get the wiki output path for a repository.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `repo_path` | `Path` | - | - |
 
 
 <details>
-<summary>View Source (lines 1023-1025) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L1023-L1025">GitHub</a></summary>
+<summary>View Source (lines 1023-1025) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L1023-L1025">GitHub</a></summary>
 
 ```python
 def get_wiki_path(self, repo_path: Path) -> Path:
@@ -2170,14 +2173,14 @@ def get_vector_db_path(repo_path: Path) -> Path
 Get the vector database path for a repository.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `repo_path` | `Path` | - | - |
 
 
 
 <details>
-<summary>View Source (lines 1027-1029) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L1027-L1029">GitHub</a></summary>
+<summary>View Source (lines 1027-1029) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L1027-L1029">GitHub</a></summary>
 
 ```python
 def get_vector_db_path(self, repo_path: Path) -> Path:
@@ -2193,7 +2196,7 @@ Represents a single configuration change.  Attributes: field: The dot-separated 
 
 
 <details>
-<summary>View Source (lines 1120-1137) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L1120-L1137">GitHub</a></summary>
+<summary>View Source (lines 1120-1137) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L1120-L1137">GitHub</a></summary>
 
 ```python
 class ConfigChange:
@@ -2226,7 +2229,7 @@ Tracks differences between two configurations.  Useful for understanding what ch
 
 
 <details>
-<summary>View Source (lines 1141-1273) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L1141-L1273">GitHub</a></summary>
+<summary>View Source (lines 1141-1273) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L1141-L1273">GitHub</a></summary>
 
 ```python
 class ConfigDiff:
@@ -2245,7 +2248,7 @@ Return list of changed fields.
 
 
 <details>
-<summary>View Source (lines 1211-1217) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L1211-L1217">GitHub</a></summary>
+<summary>View Source (lines 1211-1217) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L1211-L1217">GitHub</a></summary>
 
 ```python
 def get_changes(self) -> list[ConfigChange]:
@@ -2268,13 +2271,13 @@ def get_changes_by_source(source: str) -> list[ConfigChange]
 Return changes from a specific source.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `source` | `str` | - | The source to filter by ("cli", "env", "file", "default"). |
 
 
 <details>
-<summary>View Source (lines 1219-1228) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L1219-L1228">GitHub</a></summary>
+<summary>View Source (lines 1219-1228) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L1219-L1228">GitHub</a></summary>
 
 ```python
 def get_changes_by_source(self, source: str) -> list[ConfigChange]:
@@ -2301,7 +2304,7 @@ Check if there are any changes.
 
 
 <details>
-<summary>View Source (lines 1230-1236) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L1230-L1236">GitHub</a></summary>
+<summary>View Source (lines 1230-1236) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L1230-L1236">GitHub</a></summary>
 
 ```python
 def has_changes(self) -> bool:
@@ -2325,7 +2328,7 @@ Return a human-readable summary of changes.
 
 
 <details>
-<summary>View Source (lines 1238-1250) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L1238-L1250">GitHub</a></summary>
+<summary>View Source (lines 1238-1250) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L1238-L1250">GitHub</a></summary>
 
 ```python
 def summary(self) -> str:
@@ -2354,7 +2357,7 @@ def apply(config: "Config") -> "Config"
 Apply changes to a config.  Creates a new config with the changes applied. This is useful for applying a diff to a different base config.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `config` | `"Config"` | - | The config to apply changes to. |
 
@@ -2363,7 +2366,7 @@ Apply changes to a config.  Creates a new config with the changes applied. This 
 
 
 <details>
-<summary>View Source (lines 1252-1273) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L1252-L1273">GitHub</a></summary>
+<summary>View Source (lines 1252-1273) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L1252-L1273">GitHub</a></summary>
 
 ```python
 def apply(self, config: "Config") -> "Config":
@@ -2407,7 +2410,7 @@ Get the configuration instance.  Returns the context-local config if set, otherw
 
 
 <details>
-<summary>View Source (lines 1040-1059) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L1040-L1059">GitHub</a></summary>
+<summary>View Source (lines 1040-1059) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L1040-L1059">GitHub</a></summary>
 
 ```python
 def get_config() -> Config:
@@ -2443,7 +2446,7 @@ def set_config(config: Config) -> None
 Set the global configuration instance.  Thread-safe. Note: This sets the global config, not a context-local one. Use config_context() for temporary context-local overrides.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `config` | `Config` | - | The configuration to set globally. |
 
@@ -2452,7 +2455,7 @@ Set the global configuration instance.  Thread-safe. Note: This sets the global 
 
 
 <details>
-<summary>View Source (lines 1062-1073) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L1062-L1073">GitHub</a></summary>
+<summary>View Source (lines 1062-1073) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L1062-L1073">GitHub</a></summary>
 
 ```python
 def set_config(config: Config) -> None:
@@ -2484,7 +2487,7 @@ Reset the global configuration to uninitialized state.  Useful for testing to en
 
 
 <details>
-<summary>View Source (lines 1076-1085) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L1076-L1085">GitHub</a></summary>
+<summary>View Source (lines 1076-1085) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L1076-L1085">GitHub</a></summary>
 
 ```python
 def reset_config() -> None:
@@ -2512,7 +2515,7 @@ def config_context(config: Config) -> Generator[Config, None, None]
 Context manager for temporary config override.  Sets a context-local configuration that takes precedence over the global config within the context. Useful for testing or per-request config.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `config` | `Config` | - | The configuration to use within the context. |
 
@@ -2521,7 +2524,7 @@ Context manager for temporary config override.  Sets a context-local configurati
 
 
 <details>
-<summary>View Source (lines 1089-1111) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L1089-L1111">GitHub</a></summary>
+<summary>View Source (lines 1089-1111) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L1089-L1111">GitHub</a></summary>
 
 ```python
 def config_context(config: Config) -> Generator[Config, None, None]:
@@ -2560,7 +2563,7 @@ def merge_configs(cli_config: dict[str, Any] | None = None, env_config: dict[str
 Merge configs with CLI > env > file > defaults priority.  Creates a merged configuration by layering config sources in priority order, where CLI arguments have the highest priority and defaults have the lowest.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `cli_config` | `dict[str, Any] | None` | `None` | Configuration from command-line arguments. |
 | `env_config` | `dict[str, Any] | None` | `None` | Configuration from environment variables. |
@@ -2572,7 +2575,7 @@ Merge configs with CLI > env > file > defaults priority.  Creates a merged confi
 
 
 <details>
-<summary>View Source (lines 1337-1402) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L1337-L1402">GitHub</a></summary>
+<summary>View Source (lines 1337-1402) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L1337-L1402">GitHub</a></summary>
 
 ```python
 def merge_configs(
@@ -2654,7 +2657,7 @@ def validate_config(config: Config) -> list[str]
 Return list of validation warnings/errors.  Performs comprehensive validation of a configuration and returns a list of any warnings or potential issues found.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](generators/api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `config` | `Config` | - | The configuration to validate. |
 
@@ -2663,7 +2666,7 @@ Return list of validation warnings/errors.  Performs comprehensive validation of
 
 
 <details>
-<summary>View Source (lines 1446-1542) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L1446-L1542">GitHub</a></summary>
+<summary>View Source (lines 1446-1542) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L1446-L1542">GitHub</a></summary>
 
 ```python
 def validate_config(config: Config) -> list[str]:
@@ -2781,7 +2784,7 @@ Load configuration overrides from environment variables.  Environment variables 
 
 
 <details>
-<summary>View Source (lines 1545-1589) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L1545-L1589">GitHub</a></summary>
+<summary>View Source (lines 1545-1589) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L1545-L1589">GitHub</a></summary>
 
 ```python
 def load_config_from_env() -> dict[str, Any]:
@@ -3266,11 +3269,11 @@ assert wiki_path == tmp_path / ".deepwiki"
 | `LazyIndexConfig` | class | Brian Breidenbach | 1 week ago | `a64166a` Add seven medium-priority e... |
 | `ASTCacheConfig` | class | Brian Breidenbach | 1 week ago | `e899c6c` Add three high-value enhanc... |
 | `SearchCacheConfig` | class | Brian Breidenbach | 1 week ago | `d7c79d3` Add three quick-win enhance... |
-| `HooksConfig` | class | Brian Breidenbach | 1 week ago | `ff98964` Add event/hooks system for ... |
+| `HooksConfig` | class | Brian Breidenbach | 1 week ago | `ff98964` Add [event](../../coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.md)/hooks system for ... |
 | `PluginsConfig` | class | Brian Breidenbach | 1 week ago | `f2db999` Add plugin system for exten... |
 | `PromptsConfig` | class | Brian Breidenbach | 1 week ago | `a142542` Add custom prompt template ... |
 | `_get_default_parallel_workers` | function | Brian Breidenbach | 1 week ago | `a51a32f` Add high-impact performance... |
-| `EmbeddingCacheConfig` | class | Brian Breidenbach | 1 week ago | `d3cbf90` Fix medium priority issues:... |
+| `EmbeddingCacheConfig` | class | Brian Breidenbach | 2 weeks ago | `d3cbf90` Fix medium priority issues:... |
 | `LocalEmbeddingConfig` | class | Brian Breidenbach | 2 weeks ago | `2f85bf8` Fix critical issues: config... |
 | `OpenAIEmbeddingConfig` | class | Brian Breidenbach | 2 weeks ago | `2f85bf8` Fix critical issues: config... |
 | `EmbeddingConfig` | class | Brian Breidenbach | 2 weeks ago | `2f85bf8` Fix critical issues: config... |
@@ -3302,7 +3305,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_get_default_parallel_workers`
 
 <details>
-<summary>View Source (lines 162-177) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L162-L177">GitHub</a></summary>
+<summary>View Source (lines 162-177) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L162-L177">GitHub</a></summary>
 
 ```python
 def _get_default_parallel_workers() -> int:
@@ -3329,7 +3332,7 @@ def _get_default_parallel_workers() -> int:
 #### `__post_init__`
 
 <details>
-<summary>View Source (lines 1160-1164) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L1160-L1164">GitHub</a></summary>
+<summary>View Source (lines 1160-1164) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L1160-L1164">GitHub</a></summary>
 
 ```python
 def __post_init__(self) -> None:
@@ -3345,7 +3348,7 @@ def __post_init__(self) -> None:
 #### `_compute_changes`
 
 <details>
-<summary>View Source (lines 1166-1172) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L1166-L1172">GitHub</a></summary>
+<summary>View Source (lines 1166-1172) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L1166-L1172">GitHub</a></summary>
 
 ```python
 def _compute_changes(self, source: str = "override") -> None:
@@ -3363,7 +3366,7 @@ def _compute_changes(self, source: str = "override") -> None:
 #### `_compare_models`
 
 <details>
-<summary>View Source (lines 1174-1209) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L1174-L1209">GitHub</a></summary>
+<summary>View Source (lines 1174-1209) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L1174-L1209">GitHub</a></summary>
 
 ```python
 def _compare_models(
@@ -3410,7 +3413,7 @@ def _compare_models(
 #### `_set_nested_value`
 
 <details>
-<summary>View Source (lines 1276-1288) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L1276-L1288">GitHub</a></summary>
+<summary>View Source (lines 1276-1288) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L1276-L1288">GitHub</a></summary>
 
 ```python
 def _set_nested_value(d: dict[str, Any], path: list[str], value: Any) -> None:
@@ -3434,7 +3437,7 @@ def _set_nested_value(d: dict[str, Any], path: list[str], value: Any) -> None:
 #### `_apply_nested_updates`
 
 <details>
-<summary>View Source (lines 1291-1329) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L1291-L1329">GitHub</a></summary>
+<summary>View Source (lines 1291-1329) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L1291-L1329">GitHub</a></summary>
 
 ```python
 def _apply_nested_updates(config: "Config", updates: dict[str, Any]) -> "Config":
@@ -3484,7 +3487,7 @@ def _apply_nested_updates(config: "Config", updates: dict[str, Any]) -> "Config"
 #### `_deep_merge`
 
 <details>
-<summary>View Source (lines 1405-1416) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L1405-L1416">GitHub</a></summary>
+<summary>View Source (lines 1405-1416) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L1405-L1416">GitHub</a></summary>
 
 ```python
 def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> None:
@@ -3507,7 +3510,7 @@ def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> None:
 #### `_track_sources`
 
 <details>
-<summary>View Source (lines 1419-1438) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L1419-L1438">GitHub</a></summary>
+<summary>View Source (lines 1419-1438) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L1419-L1438">GitHub</a></summary>
 
 ```python
 def _track_sources(
@@ -3538,7 +3541,7 @@ def _track_sources(
 #### `_is_float`
 
 <details>
-<summary>View Source (lines 1592-1605) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/config.py#L1592-L1605">GitHub</a></summary>
+<summary>View Source (lines 1592-1605) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](export/pdf.md)/src/local_deepwiki/config.py#L1592-L1605">GitHub</a></summary>
 
 ```python
 def _is_float(s: str) -> bool:
@@ -3559,3 +3562,6 @@ def _is_float(s: str) -> bool:
 
 </details>
 
+## Relevant Source Files
+
+- `src/local_deepwiki/config.py:16-21`

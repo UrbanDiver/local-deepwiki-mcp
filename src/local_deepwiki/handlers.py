@@ -1773,12 +1773,12 @@ async def handle_get_diagrams(args: dict[str, Any]) -> list[TextContent]:
 
     from local_deepwiki.generators.diagrams import (
         generate_class_diagram,
-        generate_dependency_graph,
         generate_language_pie_chart,
         generate_module_overview,
         generate_sequence_diagram,
     )
     from local_deepwiki.generators.callgraph import CallGraphExtractor
+    from local_deepwiki.generators.dependency_graph import DependencyGraphGenerator
 
     embedding_provider = get_embedding_provider(config.embedding)
     vector_store = VectorStore(config.get_vector_db_path(repo_path), embedding_provider)
@@ -1786,22 +1786,13 @@ async def handle_get_diagrams(args: dict[str, Any]) -> list[TextContent]:
     # Collect chunks from vector store for diagram generation
     all_chunks = list(vector_store.get_all_chunks())
 
-    # Detect Python package name from indexed file paths (e.g. "local_deepwiki")
-    project_name = "project"
-    for file_info in index_status.files:
-        parts = Path(file_info.path).parts
-        if "src" in parts:
-            idx = parts.index("src")
-            if idx + 1 < len(parts):
-                project_name = parts[idx + 1]
-                break
-
     diagram: str | None = None
 
     if diagram_type.value == "class":
         diagram = generate_class_diagram(all_chunks)
     elif diagram_type.value == "dependency":
-        diagram = generate_dependency_graph(all_chunks, project_name=project_name)
+        dep_gen = DependencyGraphGenerator(vector_store)
+        diagram = await dep_gen.generate_module_graph(index_status)
     elif diagram_type.value == "module":
         diagram = generate_module_overview(index_status)
     elif diagram_type.value == "language_pie":

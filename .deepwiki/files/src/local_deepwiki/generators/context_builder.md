@@ -1,63 +1,63 @@
 # File Overview
 
-This file, `src/local_deepwiki/generators/context_builder.py`, provides functionality for building rich contextual information about source files in a codebase. It extracts import statements, identifies callers of entities defined in a file, finds related files, and gathers type definitions used in a file. This context is then formatted for use in LLM prompts.
+This file, `src/local_deepwiki/generators/context_builder.py`, provides functionality for building rich contextual information about source files in a codebase. It extracts and organizes import statements, identifies related files, determines which other files call entities defined in a file, and collects type definitions used in the file. This context is essential for generating accurate and informative documentation or code summaries.
 
-The module integrates with:
-- `VectorStore` for searching code
-- `CallGraphExtractor` and `build_reverse_call_graph` for call graph analysis
-- `CodeChunk` and `ChunkType` for parsing code
-- `FileContext` for structuring the extracted information
+The module integrates with [`VectorStore`](../core/vectorstore.md) for searching code, uses [`CallGraphExtractor`](callgraph.md) for analyzing function calls, and relies on [`CodeChunk`](../models.md) and [`ChunkType`](../models.md) models for processing code content.
 
-# Classes
+## Classes
 
-## FileContext
+### FileContext
 
-`FileContext` is a dataclass that encapsulates rich contextual information for a source file.
+`FileContext` is a dataclass that encapsulates rich contextual information about a source file.
 
-### Fields
+#### Fields
 
 - `file_path`: The path to the source file.
 - `imports`: A list of import statements found in the file.
-- `imported_modules`: A list of module names imported by the file.
+- `imported_modules`: A list of top-level module names imported by the file.
 - `callers`: A dictionary mapping entity names to lists of files that call them.
-- `related_files`: A list of file paths that are related to this file.
-- `type_definitions`: A list of type definition snippets used in the file.
+- `related_files`: A list of file paths that are related to this file (e.g., imported or importing this file).
+- `type_definitions`: A list of type hint snippets used in the file that are defined elsewhere.
 
-# Functions
+## Functions
 
-## extract_imports_from_chunks
+### extract_imports_from_chunks
 
 ```python
 def extract_imports_from_chunks(chunks: list[CodeChunk]) -> tuple[list[str], list[str]]
 ```
 
-Extract import statements and module names from code chunks.
+Extracts import statements and module names from a list of code chunks.
 
-### Parameters
+#### Parameters
 
-- `chunks`: List of code chunks for a file.
+- `chunks`: List of [`CodeChunk`](../models.md) objects representing the file's content.
 
-### Returns
+#### Returns
 
 A tuple of `(import_statements, module_names)`.
 
-## _parse_import_module
+---
+
+### _parse_import_module
 
 ```python
 def _parse_import_module(import_line: str) -> str | None
 ```
 
-Parse an import line to extract the module name.
+Parses an import line to extract the top-level module name.
 
-### Parameters
+#### Parameters
 
 - `import_line`: An import statement like `"from foo import bar"` or `"import baz"`.
 
-### Returns
+#### Returns
 
 The top-level module name, or `None` if parsing fails.
 
-## get_callers_from_other_files
+---
+
+### get_callers_from_other_files
 
 ```python
 async def get_callers_from_other_files(
@@ -69,9 +69,9 @@ async def get_callers_from_other_files(
 ) -> dict[str, list[str]]
 ```
 
-Find which other files call entities defined in this file.
+Finds which other files call entities defined in this file.
 
-### Parameters
+#### Parameters
 
 - `file_path`: Path to the source file.
 - `entity_names`: Names of functions/classes defined in the file.
@@ -79,11 +79,13 @@ Find which other files call entities defined in this file.
 - `vector_store`: Vector store for searching code.
 - `max_files`: Maximum number of caller files to return per entity.
 
-### Returns
+#### Returns
 
-A mapping of entity name to list of caller file paths.
+A mapping of entity name to a list of caller file paths.
 
-## find_related_files
+---
+
+### find_related_files
 
 ```python
 async def find_related_files(
@@ -94,20 +96,22 @@ async def find_related_files(
 ) -> list[str]
 ```
 
-Find files that are closely related to this one.
+Finds files that are closely related to this one.
 
-### Parameters
+#### Parameters
 
 - `file_path`: Path to the source file.
 - `imported_modules`: Modules imported by this file.
 - `vector_store`: Vector store for searching.
 - `max_files`: Maximum number of related files to return.
 
-### Returns
+#### Returns
 
 A list of related file paths.
 
-## get_type_definitions_used
+---
+
+### get_type_definitions_used
 
 ```python
 async def get_type_definitions_used(
@@ -117,19 +121,21 @@ async def get_type_definitions_used(
 ) -> list[str]
 ```
 
-Extract type definitions used in the file that are defined elsewhere.
+Extracts type definitions used in the file that are defined elsewhere.
 
-### Parameters
+#### Parameters
 
 - `chunks`: Code chunks for the file.
 - `vector_store`: Vector store for searching.
 - `max_types`: Maximum number of type definitions to return.
 
-### Returns
+#### Returns
 
 A list of type definition snippets.
 
-## build_file_context
+---
+
+### build_file_context
 
 ```python
 async def build_file_context(
@@ -140,35 +146,75 @@ async def build_file_context(
 ) -> FileContext
 ```
 
-Build comprehensive context for a source file.
+Builds comprehensive context for a source file.
 
-### Parameters
+#### Parameters
 
 - `file_path`: Path to the source file.
 - `chunks`: Code chunks for the file.
 - `repo_path`: Repository root path.
 - `vector_store`: Vector store for searching.
 
-### Returns
+#### Returns
 
-A `FileContext` with all extracted information.
+A `FileContext` object with all extracted information.
 
-## format_context_for_llm
+---
+
+### format_context_for_llm
 
 ```python
 def format_context_for_llm(context: FileContext, max_imports: int = 15) -> str
 ```
 
-Format file context as text for the LLM prompt.
+Formats file context as text for the LLM prompt.
 
-### Parameters
+#### Parameters
 
-- `context`: The file context to format.
+- `context`: The `FileContext` to format.
 - `max_imports`: Maximum number of imports to include.
 
-### Returns
+#### Returns
 
 A formatted context string.
+
+---
+
+## Integration
+
+This module integrates with:
+
+- [`local_deepwiki.core.vectorstore.VectorStore`](../core/vectorstore.md): For searching code and related files.
+- [`local_deepwiki.generators.callgraph.CallGraphExtractor`](callgraph.md): For building reverse call graphs.
+- [`local_deepwiki.models.CodeChunk`](../models.md) and [`ChunkType`](../models.md): For processing code content.
+- [`local_deepwiki.logging.get_logger`](../logging.md): For logging purposes.
+
+It is used by `test_context_builder` via the functions `extract_imports_from_chunks` and `_parse_import_module`.
+
+## Usage Examples
+
+### Building File Context
+
+```python
+context = await build_file_context(
+    file_path="path/to/file.py",
+    chunks=code_chunks,
+    repo_path=Path("/repo/root"),
+    vector_store=vector_store_instance
+)
+```
+
+### Formatting Context for LLM
+
+```python
+formatted_context = format_context_for_llm(context)
+```
+
+### Extracting Imports
+
+```python
+imports, modules = extract_imports_from_chunks(chunks)
+```
 
 ## API Reference
 
@@ -180,7 +226,7 @@ Rich context for a source file.
 
 
 <details>
-<summary>View Source (lines 25-33) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/context_builder.py#L25-L33">GitHub</a></summary>
+<summary>View Source (lines 25-33) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/context_builder.py#L25-L33">GitHub</a></summary>
 
 ```python
 class FileContext:
@@ -207,7 +253,7 @@ def extract_imports_from_chunks(chunks: list[CodeChunk]) -> tuple[list[str], lis
 Extract import statements and module names from code chunks.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `chunks` | `list[CodeChunk]` | - | List of code chunks for a file. |
 
@@ -216,7 +262,7 @@ Extract import statements and module names from code chunks.
 
 
 <details>
-<summary>View Source (lines 36-62) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/context_builder.py#L36-L62">GitHub</a></summary>
+<summary>View Source (lines 36-62) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/context_builder.py#L36-L62">GitHub</a></summary>
 
 ```python
 def extract_imports_from_chunks(chunks: list[CodeChunk]) -> tuple[list[str], list[str]]:
@@ -259,12 +305,12 @@ async def get_callers_from_other_files(file_path: str, entity_names: list[str], 
 Find which other files call entities defined in this file.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `file_path` | `str` | - | Path to the source file. |
 | `entity_names` | `list[str]` | - | Names of functions/classes defined in the file. |
 | `repo_path` | `Path` | - | Repository root path. |
-| `vector_store` | `VectorStore` | - | Vector store for searching code. |
+| `vector_store` | [`VectorStore`](../core/vectorstore.md) | - | Vector store for searching code. |
 | `max_files` | `int` | `10` | Maximum number of caller files to return per entity. |
 
 **Returns:** `dict[str, list[str]]`
@@ -272,7 +318,7 @@ Find which other files call entities defined in this file.
 
 
 <details>
-<summary>View Source (lines 90-142) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/context_builder.py#L90-L142">GitHub</a></summary>
+<summary>View Source (lines 90-142) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/context_builder.py#L90-L142">GitHub</a></summary>
 
 ```python
 async def get_callers_from_other_files(
@@ -341,11 +387,11 @@ async def find_related_files(file_path: str, imported_modules: list[str], vector
 Find files that are closely related to this one.  Related files are those that: - Are imported by this file (same package) - Import this file
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `file_path` | `str` | - | Path to the source file. |
 | `imported_modules` | `list[str]` | - | Modules imported by this file. |
-| `vector_store` | `VectorStore` | - | Vector store for searching. |
+| `vector_store` | [`VectorStore`](../core/vectorstore.md) | - | Vector store for searching. |
 | `max_files` | `int` | `5` | Maximum number of related files to return. |
 
 **Returns:** `list[str]`
@@ -353,7 +399,7 @@ Find files that are closely related to this one.  Related files are those that: 
 
 
 <details>
-<summary>View Source (lines 145-181) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/context_builder.py#L145-L181">GitHub</a></summary>
+<summary>View Source (lines 145-181) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/context_builder.py#L145-L181">GitHub</a></summary>
 
 ```python
 async def find_related_files(
@@ -406,10 +452,10 @@ async def get_type_definitions_used(chunks: list[CodeChunk], vector_store: Vecto
 Extract type definitions used in the file that are defined elsewhere.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `chunks` | `list[CodeChunk]` | - | Code chunks for the file. |
-| `vector_store` | `VectorStore` | - | Vector store for searching. |
+| `vector_store` | [`VectorStore`](../core/vectorstore.md) | - | Vector store for searching. |
 | `max_types` | `int` | `10` | Maximum number of type definitions to return. |
 
 **Returns:** `list[str]`
@@ -417,7 +463,7 @@ Extract type definitions used in the file that are defined elsewhere.
 
 
 <details>
-<summary>View Source (lines 184-235) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/context_builder.py#L184-L235">GitHub</a></summary>
+<summary>View Source (lines 184-235) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/context_builder.py#L184-L235">GitHub</a></summary>
 
 ```python
 async def get_type_definitions_used(
@@ -485,19 +531,19 @@ async def build_file_context(file_path: str, chunks: list[CodeChunk], repo_path:
 Build comprehensive context for a source file.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `file_path` | `str` | - | Path to the source file. |
 | `chunks` | `list[CodeChunk]` | - | Code chunks for the file. |
 | `repo_path` | `Path` | - | Repository root path. |
-| `vector_store` | `VectorStore` | - | Vector store for searching. |
+| `vector_store` | [`VectorStore`](../core/vectorstore.md) | - | Vector store for searching. |
 
 **Returns:** `FileContext`
 
 
 
 <details>
-<summary>View Source (lines 238-289) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/context_builder.py#L238-L289">GitHub</a></summary>
+<summary>View Source (lines 238-289) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/context_builder.py#L238-L289">GitHub</a></summary>
 
 ```python
 async def build_file_context(
@@ -565,7 +611,7 @@ def format_context_for_llm(context: FileContext, max_imports: int = 15) -> str
 Format file context as text for the LLM prompt.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `context` | `FileContext` | - | The file context to format. |
 | `max_imports` | `int` | `15` | Maximum number of imports to include. |
@@ -576,7 +622,7 @@ Format file context as text for the LLM prompt.
 
 
 <details>
-<summary>View Source (lines 292-341) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/context_builder.py#L292-L341">GitHub</a></summary>
+<summary>View Source (lines 292-341) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/context_builder.py#L292-L341">GitHub</a></summary>
 
 ```python
 def format_context_for_llm(context: FileContext, max_imports: int = 15) -> str:
@@ -809,14 +855,14 @@ assert "from pathlib import Path" in result
 
 | Entity | Type | Author | Date | Commit |
 |--------|------|--------|------|--------|
-| `find_related_files` | function | Brian Breidenbach | 1 week ago | `8186005` Fix P1 security issues: Add... |
-| `get_type_definitions_used` | function | Brian Breidenbach | 1 week ago | `8186005` Fix P1 security issues: Add... |
-| `FileContext` | class | Brian Breidenbach | 2 weeks ago | `8ac0de1` Add richer LLM context for ... |
-| `extract_imports_from_chunks` | function | Brian Breidenbach | 2 weeks ago | `8ac0de1` Add richer LLM context for ... |
-| `_parse_import_module` | function | Brian Breidenbach | 2 weeks ago | `8ac0de1` Add richer LLM context for ... |
-| `get_callers_from_other_files` | function | Brian Breidenbach | 2 weeks ago | `8ac0de1` Add richer LLM context for ... |
-| `build_file_context` | function | Brian Breidenbach | 2 weeks ago | `8ac0de1` Add richer LLM context for ... |
-| `format_context_for_llm` | function | Brian Breidenbach | 2 weeks ago | `8ac0de1` Add richer LLM context for ... |
+| `find_related_files` | function | Brian Breidenbach | 2 weeks ago | `8186005` Fix P1 security issues: Add... |
+| `get_type_definitions_used` | function | Brian Breidenbach | 2 weeks ago | `8186005` Fix P1 security issues: Add... |
+| `FileContext` | class | Brian Breidenbach | 3 weeks ago | `8ac0de1` Add richer LLM context for ... |
+| `extract_imports_from_chunks` | function | Brian Breidenbach | 3 weeks ago | `8ac0de1` Add richer LLM context for ... |
+| `_parse_import_module` | function | Brian Breidenbach | 3 weeks ago | `8ac0de1` Add richer LLM context for ... |
+| `get_callers_from_other_files` | function | Brian Breidenbach | 3 weeks ago | `8ac0de1` Add richer LLM context for ... |
+| `build_file_context` | function | Brian Breidenbach | 3 weeks ago | `8ac0de1` Add richer LLM context for ... |
+| `format_context_for_llm` | function | Brian Breidenbach | 3 weeks ago | `8ac0de1` Add richer LLM context for ... |
 
 ## Additional Source Code
 
@@ -825,7 +871,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_parse_import_module`
 
 <details>
-<summary>View Source (lines 65-87) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/context_builder.py#L65-L87">GitHub</a></summary>
+<summary>View Source (lines 65-87) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/context_builder.py#L65-L87">GitHub</a></summary>
 
 ```python
 def _parse_import_module(import_line: str) -> str | None:
@@ -855,3 +901,6 @@ def _parse_import_module(import_line: str) -> str | None:
 
 </details>
 
+## Relevant Source Files
+
+- `src/local_deepwiki/generators/context_builder.py:25-33`

@@ -12,7 +12,7 @@ This file imports:
 - `dataclasses.dataclass`, `field`
 - `pathlib.Path`
 - `typing.Any`
-- `local_deepwiki.logging.get_logger`
+- [`local_deepwiki.logging.get_logger`](../logging.md)
 - `tomllib` and `tomli as tomllib` (for TOML parsing)
 - `xml.etree.ElementTree` (for XML parsing)
 
@@ -294,7 +294,7 @@ Get a directory tree representation of the repository.
 
 # Integration
 
-This module is used by `test_manifest` to parse and cache project manifest data. It integrates with the rest of the codebase by providing parsed manifest information to other components that need to understand project structure and dependencies. It also uses `get_logger` for logging cache operations.
+This module is used by `test_manifest` to parse and cache project manifest data. It integrates with the rest of the codebase by providing parsed manifest information to other components that need to understand project structure and dependencies. It also uses [`get_logger`](../logging.md) for logging cache operations.
 
 # Usage Examples
 
@@ -324,7 +324,7 @@ Cache entry storing manifest data and file modification times.
 
 
 <details>
-<summary>View Source (lines 33-52) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/manifest.py#L33-L52">GitHub</a></summary>
+<summary>View Source (lines 33-52) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L33-L52">GitHub</a></summary>
 
 ```python
 class ManifestCacheEntry:
@@ -361,7 +361,7 @@ Convert to dictionary for JSON serialization.
 
 
 <details>
-<summary>View Source (lines 33-52) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/manifest.py#L33-L52">GitHub</a></summary>
+<summary>View Source (lines 33-52) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L33-L52">GitHub</a></summary>
 
 ```python
 class ManifestCacheEntry:
@@ -397,14 +397,14 @@ def from_dict(data: dict[str, Any]) -> "ManifestCacheEntry"
 Create from dictionary.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `data` | `dict[str, Any]` | - | - |
 
 
 
 <details>
-<summary>View Source (lines 33-52) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/manifest.py#L33-L52">GitHub</a></summary>
+<summary>View Source (lines 33-52) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L33-L52">GitHub</a></summary>
 
 ```python
 class ManifestCacheEntry:
@@ -439,7 +439,7 @@ Extracted project metadata from package manifests.
 
 
 <details>
-<summary>View Source (lines 56-205) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/manifest.py#L56-L205">GitHub</a></summary>
+<summary>View Source (lines 56-205) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L56-L205">GitHub</a></summary>
 
 ```python
 class ProjectManifest:
@@ -458,7 +458,7 @@ Check if any meaningful data was extracted.
 
 
 <details>
-<summary>View Source (lines 81-83) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/manifest.py#L81-L83">GitHub</a></summary>
+<summary>View Source (lines 81-83) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L81-L83">GitHub</a></summary>
 
 ```python
 def has_data(self) -> bool:
@@ -478,7 +478,7 @@ Generate a factual tech stack summary.
 
 
 <details>
-<summary>View Source (lines 85-102) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/manifest.py#L85-L102">GitHub</a></summary>
+<summary>View Source (lines 85-102) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L85-L102">GitHub</a></summary>
 
 ```python
 def get_tech_stack_summary(self) -> str:
@@ -513,7 +513,7 @@ Get a formatted list of all dependencies.
 
 
 <details>
-<summary>View Source (lines 171-187) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/manifest.py#L171-L187">GitHub</a></summary>
+<summary>View Source (lines 171-187) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L171-L187">GitHub</a></summary>
 
 ```python
 def get_dependency_list(self) -> str:
@@ -550,7 +550,7 @@ Get a summary of entry points and scripts.
 
 
 <details>
-<summary>View Source (lines 189-205) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/manifest.py#L189-L205">GitHub</a></summary>
+<summary>View Source (lines 189-205) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L189-L205">GitHub</a></summary>
 
 ```python
 def get_entry_points_summary(self) -> str:
@@ -585,7 +585,7 @@ def get_cached_manifest(repo_path: Path, cache_dir: Path | None = None) -> Proje
 Get project manifest, using cache if available and valid.  This function checks if a cached manifest exists and is still valid (no manifest files have been modified). If valid, returns cached data. Otherwise, parses fresh and updates the cache.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `repo_path` | `Path` | - | Path to the repository root. |
 | `cache_dir` | `Path | None` | `None` | Directory for cache storage (defaults to repo_path/.deepwiki). |
@@ -595,7 +595,7 @@ Get project manifest, using cache if available and valid.  This function checks 
 
 
 <details>
-<summary>View Source (lines 339-378) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/manifest.py#L339-L378">GitHub</a></summary>
+<summary>View Source (lines 339-378) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L339-L378">GitHub</a></summary>
 
 ```python
 def get_cached_manifest(repo_path: Path, cache_dir: Path | None = None) -> ProjectManifest:
@@ -651,7 +651,7 @@ def parse_manifest(repo_path: Path) -> ProjectManifest
 Parse all recognized package manifests in a repository.  Note: For incremental updates, prefer get_cached_manifest() which avoids re-parsing when manifest files haven't changed.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `repo_path` | `Path` | - | Path to the repository root. |
 
@@ -660,7 +660,7 @@ Parse all recognized package manifests in a repository.  Note: For incremental u
 
 
 <details>
-<summary>View Source (lines 381-421) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/manifest.py#L381-L421">GitHub</a></summary>
+<summary>View Source (lines 381-421) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L381-L421">GitHub</a></summary>
 
 ```python
 def parse_manifest(repo_path: Path) -> ProjectManifest:
@@ -715,7 +715,7 @@ def find(path: str) -> Any
 ```
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `path` | `str` | - | - |
 
@@ -724,7 +724,7 @@ def find(path: str) -> Any
 
 
 <details>
-<summary>View Source (lines 674-678) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/manifest.py#L674-L678">GitHub</a></summary>
+<summary>View Source (lines 674-678) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L674-L678">GitHub</a></summary>
 
 ```python
 def find(path: str) -> Any:
@@ -745,7 +745,7 @@ def get_directory_tree(repo_path: Path, max_depth: int = 3, max_items: int = 50)
 Generate a directory tree structure for the repository.
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `repo_path` | `Path` | - | Path to repository root. |
 | `max_depth` | `int` | `3` | Maximum depth to traverse. |
@@ -756,7 +756,7 @@ Generate a directory tree structure for the repository.
 
 
 <details>
-<summary>View Source (lines 758-838) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/manifest.py#L758-L838">GitHub</a></summary>
+<summary>View Source (lines 758-838) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L758-L838">GitHub</a></summary>
 
 ```python
 def get_directory_tree(repo_path: Path, max_depth: int = 3, max_items: int = 50) -> str:
@@ -851,7 +851,7 @@ def should_skip(name: str) -> bool
 ```
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `name` | `str` | - | - |
 
@@ -860,7 +860,7 @@ def should_skip(name: str) -> bool
 
 
 <details>
-<summary>View Source (lines 796-801) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/manifest.py#L796-L801">GitHub</a></summary>
+<summary>View Source (lines 796-801) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L796-L801">GitHub</a></summary>
 
 ```python
 def should_skip(name: str) -> bool:
@@ -880,7 +880,7 @@ def traverse(path: Path, prefix: str, depth: int) -> None
 ```
 
 
-| Parameter | Type | Default | Description |
+| [Parameter](api_docs.md) | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `path` | `Path` | - | - |
 | `prefix` | `str` | - | - |
@@ -892,7 +892,7 @@ def traverse(path: Path, prefix: str, depth: int) -> None
 
 
 <details>
-<summary>View Source (lines 803-832) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/manifest.py#L803-L832">GitHub</a></summary>
+<summary>View Source (lines 803-832) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L803-L832">GitHub</a></summary>
 
 ```python
 def traverse(path: Path, prefix: str, depth: int) -> None:
@@ -1164,7 +1164,7 @@ Source code for functions and methods not listed in the API Reference above.
 #### `_categorize_dependencies`
 
 <details>
-<summary>View Source (lines 104-169) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/manifest.py#L104-L169">GitHub</a></summary>
+<summary>View Source (lines 104-169) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L104-L169">GitHub</a></summary>
 
 ```python
 def _categorize_dependencies(self) -> dict[str, list[str]]:
@@ -1241,7 +1241,7 @@ def _categorize_dependencies(self) -> dict[str, list[str]]:
 #### `_get_manifest_mtimes`
 
 <details>
-<summary>View Source (lines 208-226) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/manifest.py#L208-L226">GitHub</a></summary>
+<summary>View Source (lines 208-226) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L208-L226">GitHub</a></summary>
 
 ```python
 def _get_manifest_mtimes(repo_path: Path) -> dict[str, float]:
@@ -1271,7 +1271,7 @@ def _get_manifest_mtimes(repo_path: Path) -> dict[str, float]:
 #### `_is_cache_valid`
 
 <details>
-<summary>View Source (lines 229-256) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/manifest.py#L229-L256">GitHub</a></summary>
+<summary>View Source (lines 229-256) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L229-L256">GitHub</a></summary>
 
 ```python
 def _is_cache_valid(cache_entry: ManifestCacheEntry, current_mtimes: dict[str, float]) -> bool:
@@ -1310,7 +1310,7 @@ def _is_cache_valid(cache_entry: ManifestCacheEntry, current_mtimes: dict[str, f
 #### `_load_manifest_cache`
 
 <details>
-<summary>View Source (lines 259-280) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/manifest.py#L259-L280">GitHub</a></summary>
+<summary>View Source (lines 259-280) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L259-L280">GitHub</a></summary>
 
 ```python
 def _load_manifest_cache(cache_path: Path) -> ManifestCacheEntry | None:
@@ -1343,7 +1343,7 @@ def _load_manifest_cache(cache_path: Path) -> ManifestCacheEntry | None:
 #### `_save_manifest_cache`
 
 <details>
-<summary>View Source (lines 283-298) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/manifest.py#L283-L298">GitHub</a></summary>
+<summary>View Source (lines 283-298) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L283-L298">GitHub</a></summary>
 
 ```python
 def _save_manifest_cache(cache_path: Path, entry: ManifestCacheEntry) -> None:
@@ -1370,7 +1370,7 @@ def _save_manifest_cache(cache_path: Path, entry: ManifestCacheEntry) -> None:
 #### `_manifest_to_dict`
 
 <details>
-<summary>View Source (lines 301-317) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/manifest.py#L301-L317">GitHub</a></summary>
+<summary>View Source (lines 301-317) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L301-L317">GitHub</a></summary>
 
 ```python
 def _manifest_to_dict(manifest: "ProjectManifest") -> dict[str, Any]:
@@ -1398,7 +1398,7 @@ def _manifest_to_dict(manifest: "ProjectManifest") -> dict[str, Any]:
 #### `_manifest_from_dict`
 
 <details>
-<summary>View Source (lines 320-336) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/manifest.py#L320-L336">GitHub</a></summary>
+<summary>View Source (lines 320-336) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L320-L336">GitHub</a></summary>
 
 ```python
 def _manifest_from_dict(data: dict[str, Any]) -> "ProjectManifest":
@@ -1426,7 +1426,7 @@ def _manifest_from_dict(data: dict[str, Any]) -> "ProjectManifest":
 #### `_parse_pyproject_toml`
 
 <details>
-<summary>View Source (lines 424-490) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/manifest.py#L424-L490">GitHub</a></summary>
+<summary>View Source (lines 424-490) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L424-L490">GitHub</a></summary>
 
 ```python
 def _parse_pyproject_toml(filepath: Path, manifest: ProjectManifest) -> None:
@@ -1504,7 +1504,7 @@ def _parse_pyproject_toml(filepath: Path, manifest: ProjectManifest) -> None:
 #### `_parse_python_dep`
 
 <details>
-<summary>View Source (lines 493-499) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/manifest.py#L493-L499">GitHub</a></summary>
+<summary>View Source (lines 493-499) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L493-L499">GitHub</a></summary>
 
 ```python
 def _parse_python_dep(dep: str) -> tuple[str, str]:
@@ -1522,7 +1522,7 @@ def _parse_python_dep(dep: str) -> tuple[str, str]:
 #### `_parse_setup_py`
 
 <details>
-<summary>View Source (lines 502-524) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/manifest.py#L502-L524">GitHub</a></summary>
+<summary>View Source (lines 502-524) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L502-L524">GitHub</a></summary>
 
 ```python
 def _parse_setup_py(filepath: Path, manifest: ProjectManifest) -> None:
@@ -1556,7 +1556,7 @@ def _parse_setup_py(filepath: Path, manifest: ProjectManifest) -> None:
 #### `_parse_requirements_txt`
 
 <details>
-<summary>View Source (lines 527-540) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/manifest.py#L527-L540">GitHub</a></summary>
+<summary>View Source (lines 527-540) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L527-L540">GitHub</a></summary>
 
 ```python
 def _parse_requirements_txt(filepath: Path, manifest: ProjectManifest) -> None:
@@ -1581,7 +1581,7 @@ def _parse_requirements_txt(filepath: Path, manifest: ProjectManifest) -> None:
 #### `_parse_package_json`
 
 <details>
-<summary>View Source (lines 543-591) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/manifest.py#L543-L591">GitHub</a></summary>
+<summary>View Source (lines 543-591) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L543-L591">GitHub</a></summary>
 
 ```python
 def _parse_package_json(filepath: Path, manifest: ProjectManifest) -> None:
@@ -1641,7 +1641,7 @@ def _parse_package_json(filepath: Path, manifest: ProjectManifest) -> None:
 #### `_parse_cargo_toml`
 
 <details>
-<summary>View Source (lines 594-632) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/manifest.py#L594-L632">GitHub</a></summary>
+<summary>View Source (lines 594-632) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L594-L632">GitHub</a></summary>
 
 ```python
 def _parse_cargo_toml(filepath: Path, manifest: ProjectManifest) -> None:
@@ -1691,7 +1691,7 @@ def _parse_cargo_toml(filepath: Path, manifest: ProjectManifest) -> None:
 #### `_parse_go_mod`
 
 <details>
-<summary>View Source (lines 635-660) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/manifest.py#L635-L660">GitHub</a></summary>
+<summary>View Source (lines 635-660) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L635-L660">GitHub</a></summary>
 
 ```python
 def _parse_go_mod(filepath: Path, manifest: ProjectManifest) -> None:
@@ -1728,7 +1728,7 @@ def _parse_go_mod(filepath: Path, manifest: ProjectManifest) -> None:
 #### `_parse_pom_xml`
 
 <details>
-<summary>View Source (lines 663-713) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/manifest.py#L663-L713">GitHub</a></summary>
+<summary>View Source (lines 663-713) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L663-L713">GitHub</a></summary>
 
 ```python
 def _parse_pom_xml(filepath: Path, manifest: ProjectManifest) -> None:
@@ -1790,7 +1790,7 @@ def _parse_pom_xml(filepath: Path, manifest: ProjectManifest) -> None:
 #### `_parse_build_gradle`
 
 <details>
-<summary>View Source (lines 716-741) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/manifest.py#L716-L741">GitHub</a></summary>
+<summary>View Source (lines 716-741) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L716-L741">GitHub</a></summary>
 
 ```python
 def _parse_build_gradle(filepath: Path, manifest: ProjectManifest) -> None:
@@ -1827,7 +1827,7 @@ def _parse_build_gradle(filepath: Path, manifest: ProjectManifest) -> None:
 #### `_parse_gemfile`
 
 <details>
-<summary>View Source (lines 744-755) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/main/src/local_deepwiki/generators/manifest.py#L744-L755">GitHub</a></summary>
+<summary>View Source (lines 744-755) | <a href="https://github.com/UrbanDiver/local-deepwiki-mcp/blob/[main](../export/pdf.md)/src/local_deepwiki/generators/manifest.py#L744-L755">GitHub</a></summary>
 
 ```python
 def _parse_gemfile(filepath: Path, manifest: ProjectManifest) -> None:
@@ -1846,3 +1846,6 @@ def _parse_gemfile(filepath: Path, manifest: ProjectManifest) -> None:
 
 </details>
 
+## Relevant Source Files
+
+- `src/local_deepwiki/generators/manifest.py:33-52`

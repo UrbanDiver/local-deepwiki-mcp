@@ -6,6 +6,9 @@ Recent changes to this repository.
 
 ### February 06, 2026
 
+- [`4dbba1e`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/4dbba1e) fix: Improve wiki accuracy, fix indexing bugs, and resolve flaky test
+  - Files: `.deepwiki/architecture.md`, `.deepwiki/changelog.md`, `.deepwiki/coverage.md`, `.deepwiki/dependencies.md`, `.deepwiki/files/src/local_deepwiki/config.md` (+61 more)
+
 - [`21d245e`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/21d245e) feat: Add 12 new MCP tools exposing generator/core capabilities
   - Files: `src/local_deepwiki/handlers.py`, `src/local_deepwiki/models.py`, `src/local_deepwiki/server.py`, `tests/test_new_tools.py`
 
@@ -52,7 +55,7 @@ Recent changes to this repository.
 - [`4eb4353`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/4eb4353) Phase 2: Implement RBAC, dependency pinning, and YAML safety verification
   - Files: `.claude-flow/.gitignore`, `.claude-flow/CAPABILITIES.md`, `.claude-flow/config.yaml`, `.claude-flow/daemon-state.json`, `.claude-flow/daemon.pid` (+33 more)
 
-- [`dc57a7b`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/dc57a7b) Add low-priority enhancements: fuzzy search, config validation, event leak pr...
+- [`dc57a7b`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/dc57a7b) Add low-priority enhancements: fuzzy search, config validation, [event](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.md) leak pr...
   - Files: `pyproject.toml`, `src/local_deepwiki/cli/__init__.py`, `src/local_deepwiki/cli/interactive_search.py`, `src/local_deepwiki/config.py`, `src/local_deepwiki/core/fuzzy_search.py` (+9 more)
 
 - [`a64166a`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/a64166a) Add seven medium-priority enhancements for scalability, visualization, and UX
@@ -63,7 +66,7 @@ Recent changes to this repository.
 - [`e899c6c`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/e899c6c) Add three high-value enhancements: parallel embeddings, research checkpointin...
   - Files: `src/local_deepwiki/config.py`, `src/local_deepwiki/core/deep_research.py`, `src/local_deepwiki/core/indexer.py`, `src/local_deepwiki/core/parser.py`, `src/local_deepwiki/core/vectorstore.py` (+9 more)
 
-- [`d7c79d3`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/d7c79d3) Add three quick-win enhancements: IndexStatusManager, structured errors, sear...
+- [`d7c79d3`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/d7c79d3) Add three quick-win enhancements: [IndexStatusManager](files/src/local_deepwiki/core/index_manager.md), structured errors, sear...
   - Files: `src/local_deepwiki/config.py`, `src/local_deepwiki/core/index_manager.py`, `src/local_deepwiki/core/indexer.py`, `src/local_deepwiki/core/vectorstore.py`, `src/local_deepwiki/errors.py` (+8 more)
 
 - [`b6594e4`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/b6594e4) Add dependency validation and topological sort for wiki generators
@@ -75,7 +78,7 @@ Recent changes to this repository.
 - [`5a8c32b`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/5a8c32b) Implement LRU cache eviction for LLM response cache
   - Files: `src/local_deepwiki/core/llm_cache.py`, `tests/test_llm_cache.py`
 
-- [`8817f7b`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/8817f7b) Add thread safety to VectorStore lazy initialization
+- [`8817f7b`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/8817f7b) Add thread safety to [VectorStore](files/src/local_deepwiki/core/vectorstore.md) lazy initialization
   - Files: `src/local_deepwiki/core/vectorstore.py`
 
 ### January 24, 2026
@@ -86,10 +89,10 @@ Recent changes to this repository.
 - [`4e9d8f5`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/4e9d8f5) Integrate plugin system into code paths
   - Files: `src/local_deepwiki/core/chunker.py`, `src/local_deepwiki/generators/wiki.py`, `src/local_deepwiki/providers/embeddings/__init__.py`
 
-- [`a0b2f83`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/a0b2f83) Integrate event system into indexer, wiki generator, and deep research
+- [`a0b2f83`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/a0b2f83) Integrate [event](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.md) system into indexer, wiki generator, and deep research
   - Files: `src/local_deepwiki/core/deep_research.py`, `src/local_deepwiki/core/indexer.py`, `src/local_deepwiki/generators/wiki.py`
 
-- [`ff98964`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/ff98964) Add event/hooks system for lifecycle callbacks
+- [`ff98964`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/ff98964) Add [event](files/coverage_openai_embeddings/coverage_html_cb_dd2e7eb5.md)/hooks system for lifecycle callbacks
   - Files: `src/local_deepwiki/config.py`, `src/local_deepwiki/events.py`, `tests/test_events.py`
 
 - [`f2db999`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/f2db999) Add plugin system for extensibility
@@ -101,11 +104,26 @@ Recent changes to this repository.
 - [`f62161e`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/f62161e) Add incremental wiki update enhancements
   - Files: `src/local_deepwiki/generators/wiki.py`, `src/local_deepwiki/generators/wiki_status.py`, `tests/test_wiki_status.py`
 
-- [`7dfedb5`](https://github.com/UrbanDiver/local-deepwiki-mcp/commit/7dfedb5) Add MCP progress streaming to index_repository tool
-  - Files: `src/local_deepwiki/handlers.py`, `src/local_deepwiki/models.py`, `src/local_deepwiki/server.py`, `tests/test_server.py`
-
 ## Statistics
 
 - **Commits shown**: 30
 - **Contributors**: 1
 - **Latest commit**: 2026-02-06
+
+## Relevant Source Files
+
+The following source files were used to generate this documentation:
+
+- [`src/local_deepwiki/models.py:11-26`](files/src/local_deepwiki/models.md)
+- `tests/test_manifest.py:19-61`
+- [`src/local_deepwiki/server.py:47-558`](files/src/local_deepwiki/server.md)
+- [`src/local_deepwiki/generators/diagrams.py:12-21`](files/src/local_deepwiki/generators/diagrams.md)
+- [`src/local_deepwiki/handlers.py:695-715`](files/src/local_deepwiki/handlers.md)
+- `coverage_html/coverage_html_cb_dd2e7eb5.js:11-19`
+- `tests/test_provider_factories.py:21-99`
+- `tests/test_streaming_export.py:48-71`
+- `tests/test_parser.py:28-127`
+- `tests/test_fuzzy_search.py:16-48`
+
+
+*Showing 10 of 166 source files.*
