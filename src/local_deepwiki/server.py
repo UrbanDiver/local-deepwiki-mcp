@@ -20,6 +20,7 @@ from local_deepwiki.handlers import (
     handle_export_wiki_html,
     handle_export_wiki_pdf,
     handle_fuzzy_search,
+    handle_generate_codemap,
     handle_get_api_docs,
     handle_get_call_graph,
     handle_get_changelog,
@@ -43,6 +44,7 @@ from local_deepwiki.handlers import (
     handle_resume_research,
     handle_search_code,
     handle_search_wiki,
+    handle_suggest_codemap_topics,
 )
 from local_deepwiki.logging import get_logger
 
@@ -822,6 +824,74 @@ async def list_tools() -> list[Tool]:
                 "required": ["repo_path", "question"],
             },
         ),
+        Tool(
+            name="generate_codemap",
+            description=(
+                "Generate a Windsurf-style codemap: a focused execution-flow map with "
+                "Mermaid diagram and narrative trace for a question or topic. Shows how "
+                "code flows across files with file paths and line numbers. Best for "
+                "understanding 'How does X work?' questions."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "repo_path": {
+                        "type": "string",
+                        "description": "Path to the indexed repository",
+                    },
+                    "query": {
+                        "type": "string",
+                        "description": (
+                            "Question or topic to map (e.g., 'How does authentication work?', "
+                            "'Trace the request handling pipeline')"
+                        ),
+                    },
+                    "entry_point": {
+                        "type": "string",
+                        "description": (
+                            "Optional function/class to start from (e.g., 'handle_ask_question'). "
+                            "Auto-discovered if not provided."
+                        ),
+                    },
+                    "focus": {
+                        "type": "string",
+                        "enum": ["execution_flow", "data_flow", "dependency_chain"],
+                        "description": "Focus mode: execution_flow (calls), data_flow (transformations), dependency_chain (imports). Default: execution_flow",
+                    },
+                    "max_depth": {
+                        "type": "integer",
+                        "description": "Max call graph traversal depth (default: 5, range: 1-10)",
+                    },
+                    "max_nodes": {
+                        "type": "integer",
+                        "description": "Max nodes in the codemap (default: 30, range: 5-60)",
+                    },
+                },
+                "required": ["repo_path", "query"],
+            },
+        ),
+        Tool(
+            name="suggest_codemap_topics",
+            description=(
+                "Suggest interesting codemap topics for a repository based on call graph hubs, "
+                "core modules, and common entry patterns. Use before generate_codemap to discover "
+                "what flows are worth exploring."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "repo_path": {
+                        "type": "string",
+                        "description": "Path to the indexed repository",
+                    },
+                    "max_suggestions": {
+                        "type": "integer",
+                        "description": "Maximum topic suggestions to return (default: 10, range: 1-30)",
+                    },
+                },
+                "required": ["repo_path"],
+            },
+        ),
     ]
 
 
@@ -860,6 +930,8 @@ TOOL_HANDLERS: dict[str, ToolHandler] = {
     "get_complexity_metrics": handle_get_complexity_metrics,
     "analyze_diff": handle_analyze_diff,
     "ask_about_diff": handle_ask_about_diff,
+    "generate_codemap": handle_generate_codemap,
+    "suggest_codemap_topics": handle_suggest_codemap_topics,
 }
 
 # Tools that need server context for progress streaming

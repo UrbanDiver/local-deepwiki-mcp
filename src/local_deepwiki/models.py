@@ -923,3 +923,60 @@ class GetWikiStatsArgs(BaseModel):
     repo_path: str = Field(
         max_length=4096, description="Path to the indexed repository"
     )
+
+
+class CodemapFocusType(str, Enum):
+    """Focus modes for codemap generation."""
+
+    EXECUTION_FLOW = "execution_flow"
+    DATA_FLOW = "data_flow"
+    DEPENDENCY_CHAIN = "dependency_chain"
+
+
+class GenerateCodemapArgs(BaseModel):
+    """Arguments for the generate_codemap tool."""
+
+    repo_path: str = Field(
+        max_length=4096, description="Path to the indexed repository"
+    )
+    query: str = Field(
+        min_length=1,
+        max_length=2000,
+        description=(
+            "Question or topic to map (e.g., 'How does authentication work?', "
+            "'Trace the request handling pipeline', 'What happens during indexing?')"
+        ),
+    )
+    entry_point: str | None = Field(
+        default=None,
+        max_length=500,
+        description=(
+            "Optional specific function or class name to start from "
+            "(e.g., 'handle_ask_question', 'RepositoryIndexer.index'). "
+            "If not provided, the best entry point is auto-discovered."
+        ),
+    )
+    focus: CodemapFocusType = Field(
+        default=CodemapFocusType.EXECUTION_FLOW,
+        description="Focus mode: execution_flow (calls), data_flow (transformations), dependency_chain (imports)",
+    )
+    max_depth: int = Field(
+        default=5, ge=1, le=10, description="Maximum call graph traversal depth (1-10)"
+    )
+    max_nodes: int = Field(
+        default=30, ge=5, le=60, description="Maximum nodes in the codemap (5-60)"
+    )
+
+
+class SuggestCodemapTopicsArgs(BaseModel):
+    """Arguments for the suggest_codemap_topics tool."""
+
+    repo_path: str = Field(
+        max_length=4096, description="Path to the indexed repository"
+    )
+    max_suggestions: int = Field(
+        default=10,
+        ge=1,
+        le=30,
+        description="Maximum topic suggestions to return (1-30)",
+    )
