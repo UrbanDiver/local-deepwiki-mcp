@@ -68,6 +68,11 @@ uv run deepwiki-config
 │    detect_stale_docs, detect_secrets, get_index_status,             │
 │    list_indexed_repos                                               │
 │                                                                     │
+│  Analysis & Search Tools (10):                                      │
+│    search_wiki, fuzzy_search, get_file_context, explain_entity,     │
+│    impact_analysis, get_complexity_metrics, analyze_diff,           │
+│    ask_about_diff, get_project_manifest, get_wiki_stats             │
+│                                                                     │
 │  Research & Progress Tools (4):                                     │
 │    list_research_checkpoints, cancel_research,                      │
 │    resume_research, get_operation_progress                          │
@@ -129,6 +134,27 @@ uv run deepwiki-config
 | Wiki Status | `generators/wiki_status.py` | Incremental update status management |
 | Progress Tracker | `generators/progress_tracker.py` | Live progress tracking for wiki generation |
 | Examples Plugin | `generators/examples_plugin.py` | Wiki plugin aggregating code examples from tests |
+
+### Analysis & Search Tools
+
+| Tool | Purpose | Requires Indexing? |
+|------|---------|-------------------|
+| `search_wiki` | Full-text search across wiki pages and code entities | Yes |
+| `fuzzy_search` | Levenshtein-based name matching ("Did you mean?") | Yes |
+| `get_file_context` | Imports, callers, related files for a source file | Yes |
+| `explain_entity` | Composite: glossary + call graph + inheritance + tests + API docs | Yes |
+| `impact_analysis` | Blast radius analysis with reverse call graph and risk level | Yes |
+| `get_complexity_metrics` | Cyclomatic complexity, nesting depth via tree-sitter AST | No |
+| `analyze_diff` | Map git diff to affected wiki pages and entities | No (degrades gracefully) |
+| `ask_about_diff` | RAG-based Q&A about code changes (git diff + vector search + LLM) | No (degrades gracefully) |
+| `get_project_manifest` | Parsed metadata from pyproject.toml, package.json, etc. | No |
+| `get_wiki_stats` | Wiki health dashboard: index, pages, coverage, status | Yes |
+
+Key workflow chains:
+- `fuzzy_search` -> `explain_entity` (find entity, then get full explanation)
+- `analyze_diff` -> `impact_analysis` (see what changed, then assess blast radius)
+- `analyze_diff` -> `ask_about_diff` (structural view, then natural-language Q&A)
+- `search_wiki` -> `get_file_context` (find a file, then explore its role)
 
 ### Provider Abstraction
 
@@ -192,7 +218,7 @@ The `events.py` module implements a pub-sub event system:
 
 ## Testing Notes
 
-- 3,956 tests across 82 test files with 95% coverage
+- 4,034 tests across 88 test files with 95% coverage
 - Tests use `pytest-asyncio` with `asyncio_mode = "auto"` (no need for `@pytest.mark.asyncio`)
 - Most tests mock LLM/embedding providers to avoid external calls
 - Test files follow pattern `test_<module>.py`
