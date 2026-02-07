@@ -522,7 +522,9 @@ async def _search_cross_file(
 # ---------------------------------------------------------------------------
 
 
-def generate_codemap_diagram(graph: CodemapGraph, focus: CodemapFocus) -> str:
+def generate_codemap_diagram(
+    graph: CodemapGraph, focus: CodemapFocus, repo_path: Path | None = None
+) -> str:
     """Generate a deterministic Mermaid flowchart from *graph*."""
     try:
         from local_deepwiki.generators.diagrams import sanitize_mermaid_name
@@ -613,6 +615,16 @@ def generate_codemap_diagram(graph: CodemapGraph, focus: CodemapFocus) -> str:
     ]
     if leaf_ids:
         lines.append(f"    class {','.join(sorted(leaf_ids))} leaf")
+
+    # Click handlers for source navigation
+    if repo_path is not None:
+        for node in sorted_nodes:
+            nid = node_ids[node.qualified_name]
+            try:
+                rel = str(Path(node.file_path).relative_to(repo_path))
+            except (ValueError, TypeError):
+                rel = node.file_path
+            lines.append(f'    click {nid} "files/{rel}" _blank')
 
     return "\n".join(lines)
 
@@ -813,7 +825,7 @@ async def generate_codemap(
         focus=focus,
     )
 
-    diagram = generate_codemap_diagram(graph, focus)
+    diagram = generate_codemap_diagram(graph, focus, repo_path=repo)
     narrative = await generate_codemap_narrative(graph, query, focus, llm)
 
     return CodemapResult(

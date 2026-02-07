@@ -636,6 +636,21 @@ class GetGlossaryArgs(BaseModel):
     search: str | None = Field(
         default=None, description="Optional search term to filter entities"
     )
+    file_path: str | None = Field(
+        default=None,
+        description="Filter to entities from a specific file (relative path)",
+    )
+    limit: int = Field(
+        default=100,
+        ge=1,
+        le=5000,
+        description="Maximum entities to return (1-5000, default 100)",
+    )
+    offset: int = Field(
+        default=0,
+        ge=0,
+        description="Number of entities to skip for pagination (default 0)",
+    )
 
 
 class GetDiagramsArgs(BaseModel):
@@ -655,6 +670,21 @@ class GetInheritanceArgs(BaseModel):
     """Arguments for the get_inheritance tool."""
 
     repo_path: str = Field(description="Path to the indexed repository")
+    search: str | None = Field(
+        default=None,
+        description="Filter classes by name (case-insensitive substring)",
+    )
+    limit: int = Field(
+        default=100,
+        ge=1,
+        le=5000,
+        description="Maximum classes to return (1-5000, default 100)",
+    )
+    offset: int = Field(
+        default=0,
+        ge=0,
+        description="Number of classes to skip for pagination (default 0)",
+    )
 
 
 class GetCallGraphArgs(BaseModel):
@@ -697,6 +727,10 @@ class DetectSecretsArgs(BaseModel):
     """Arguments for the detect_secrets tool."""
 
     repo_path: str = Field(description="Path to the repository to scan")
+    exclude_tests: bool = Field(
+        default=False,
+        description="Exclude test files from scan results (files matching test_*, *_test.*, tests/, etc.)",
+    )
 
 
 class GetTestExamplesArgs(BaseModel):

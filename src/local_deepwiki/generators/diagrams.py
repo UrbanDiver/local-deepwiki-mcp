@@ -903,12 +903,30 @@ def generate_module_overview(
     if not index_status.files:
         return None
 
+    # Known artifact directories to exclude even if they slipped into the index
+    _ARTIFACT_DIRS = frozenset(
+        {
+            "htmlcov",
+            "coverage",
+            ".pytest_cache",
+            ".mypy_cache",
+            ".ruff_cache",
+            ".tox",
+            ".nox",
+            ".eggs",
+        }
+    )
+
     # Group files by top-level directory
     directories: dict[str, dict[str, int]] = {}  # dir -> {subdir: count}
 
     for file_info in index_status.files:
         parts = list(Path(file_info.path).parts)
         if len(parts) < 2:
+            continue
+
+        # Skip artifact directories
+        if any(p in _ARTIFACT_DIRS for p in parts):
             continue
 
         top_dir = parts[0]

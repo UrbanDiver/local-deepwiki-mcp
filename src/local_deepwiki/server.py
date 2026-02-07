@@ -370,6 +370,20 @@ async def list_tools() -> list[Tool]:
                         "type": "string",
                         "description": "Optional search term to filter entities by name or docstring",
                     },
+                    "file_path": {
+                        "type": "string",
+                        "description": "Filter to entities from a specific file (relative path)",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Maximum entities to return (default: 100, max: 5000)",
+                        "default": 100,
+                    },
+                    "offset": {
+                        "type": "integer",
+                        "description": "Number of entities to skip for pagination (default: 0)",
+                        "default": 0,
+                    },
                 },
                 "required": ["repo_path"],
             },
@@ -412,6 +426,20 @@ async def list_tools() -> list[Tool]:
                     "repo_path": {
                         "type": "string",
                         "description": "Path to the indexed repository",
+                    },
+                    "search": {
+                        "type": "string",
+                        "description": "Filter classes by name (case-insensitive substring)",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Maximum classes to return (default: 100, max: 5000)",
+                        "default": 100,
+                    },
+                    "offset": {
+                        "type": "integer",
+                        "description": "Number of classes to skip for pagination (default: 0)",
+                        "default": 0,
                     },
                 },
                 "required": ["repo_path"],
@@ -494,6 +522,10 @@ async def list_tools() -> list[Tool]:
                     "repo_path": {
                         "type": "string",
                         "description": "Path to the repository to scan",
+                    },
+                    "exclude_tests": {
+                        "type": "boolean",
+                        "description": "Exclude test files from scan results (files matching test_*, *_test.*, tests/, etc.). Default: false",
                     },
                 },
                 "required": ["repo_path"],

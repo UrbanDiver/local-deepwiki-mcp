@@ -65,7 +65,9 @@ class OpenAIEmbeddingConfig(BaseModel):
 
     model_config = {"frozen": True}
 
-    model: str = Field(default="text-embedding-3-small", description="OpenAI embedding model")
+    model: str = Field(
+        default="text-embedding-3-small", description="OpenAI embedding model"
+    )
 
 
 class EmbeddingConfig(BaseModel):
@@ -73,7 +75,9 @@ class EmbeddingConfig(BaseModel):
 
     model_config = {"frozen": True}
 
-    provider: Literal["local", "openai"] = Field(default="local", description="Embedding provider")
+    provider: Literal["local", "openai"] = Field(
+        default="local", description="Embedding provider"
+    )
     local: LocalEmbeddingConfig = Field(default_factory=LocalEmbeddingConfig)
     openai: OpenAIEmbeddingConfig = Field(default_factory=OpenAIEmbeddingConfig)
 
@@ -84,7 +88,9 @@ class OllamaConfig(BaseModel):
     model_config = {"frozen": True}
 
     model: str = Field(default="qwen3-coder:30b", description="Ollama model name")
-    base_url: str = Field(default="http://localhost:11434", description="Ollama API URL")
+    base_url: str = Field(
+        default="http://localhost:11434", description="Ollama API URL"
+    )
 
 
 class AnthropicConfig(BaseModel):
@@ -92,7 +98,9 @@ class AnthropicConfig(BaseModel):
 
     model_config = {"frozen": True}
 
-    model: str = Field(default="claude-sonnet-4-20250514", description="Anthropic model name")
+    model: str = Field(
+        default="claude-sonnet-4-20250514", description="Anthropic model name"
+    )
 
 
 class OpenAILLMConfig(BaseModel):
@@ -139,7 +147,9 @@ class ParsingConfig(BaseModel):
         ],
         description="Languages to parse",
     )
-    max_file_size: int = Field(default=1048576, description="Max file size in bytes (1MB)")
+    max_file_size: int = Field(
+        default=1048576, description="Max file size in bytes (1MB)"
+    )
     exclude_patterns: list[str] = Field(
         default=[
             "node_modules/**",
@@ -154,6 +164,14 @@ class ParsingConfig(BaseModel):
             ".next/**",
             "target/**",
             "vendor/**",
+            "htmlcov/**",
+            ".pytest_cache/**",
+            ".mypy_cache/**",
+            ".ruff_cache/**",
+            ".tox/**",
+            ".nox/**",
+            "coverage/**",
+            ".coverage",
         ],
         description="Glob patterns to exclude",
     )
@@ -241,7 +259,9 @@ class ASTCacheConfig(BaseModel):
 
     model_config = {"frozen": True}
 
-    enabled: bool = Field(default=True, description="Enable AST caching for incremental indexing")
+    enabled: bool = Field(
+        default=True, description="Enable AST caching for incremental indexing"
+    )
     max_entries: int = Field(
         default=1000,
         ge=100,
@@ -264,7 +284,8 @@ class ChunkingConfig(BaseModel):
     max_chunk_tokens: int = Field(default=512, description="Max tokens per chunk")
     overlap_tokens: int = Field(default=50, description="Overlap between chunks")
     batch_size: int = Field(
-        default=500, description="Number of chunks to process in each batch for memory efficiency"
+        default=500,
+        description="Number of chunks to process in each batch for memory efficiency",
     )
     class_split_threshold: int = Field(
         default=100,
@@ -330,10 +351,12 @@ class WikiConfig(BaseModel):
         "Set to 'anthropic' or 'openai' for higher-quality chat responses.",
     )
     import_search_limit: int = Field(
-        default=200, description="Maximum chunks to search for import/relationship analysis"
+        default=200,
+        description="Maximum chunks to search for import/relationship analysis",
     )
     context_search_limit: int = Field(
-        default=50, description="Maximum chunks to search for context when generating documentation"
+        default=50,
+        description="Maximum chunks to search for context when generating documentation",
     )
     fallback_search_limit: int = Field(
         default=30, description="Maximum chunks to search in fallback queries"
@@ -499,7 +522,9 @@ class OutputConfig(BaseModel):
     model_config = {"frozen": True}
 
     wiki_dir: str = Field(default=".deepwiki", description="Wiki output directory name")
-    vector_db_name: str = Field(default="vectors.lance", description="Vector DB filename")
+    vector_db_name: str = Field(
+        default="vectors.lance", description="Vector DB filename"
+    )
 
 
 class EmbeddingCacheConfig(BaseModel):
@@ -787,8 +812,12 @@ class ProviderPromptsConfig(BaseModel):
 
     model_config = {"frozen": True}
 
-    wiki_system: str = Field(description="System prompt for wiki documentation generation")
-    research_decomposition: str = Field(description="System prompt for question decomposition")
+    wiki_system: str = Field(
+        description="System prompt for wiki documentation generation"
+    )
+    research_decomposition: str = Field(
+        description="System prompt for question decomposition"
+    )
     research_gap_analysis: str = Field(description="System prompt for gap analysis")
     research_synthesis: str = Field(description="System prompt for answer synthesis")
 
@@ -1488,10 +1517,7 @@ def validate_config(config: Config) -> list[str]:
             f"CPU count ({os.cpu_count() or 4}), may cause contention"
         )
 
-    if (
-        config.embedding_batch.batch_size > 100
-        and config.embedding.provider != "local"
-    ):
+    if config.embedding_batch.batch_size > 100 and config.embedding.provider != "local":
         warnings.append(
             f"Large embedding batch_size ({config.embedding_batch.batch_size}) "
             "with API provider may cause rate limiting"
@@ -1505,10 +1531,7 @@ def validate_config(config: Config) -> list[str]:
         )
 
     # Check cache configurations
-    if (
-        config.embedding_cache.enabled
-        and config.embedding_cache.max_entries > 500000
-    ):
+    if config.embedding_cache.enabled and config.embedding_cache.max_entries > 500000:
         warnings.append(
             f"Very large embedding cache max_entries "
             f"({config.embedding_cache.max_entries}) may cause high memory usage"

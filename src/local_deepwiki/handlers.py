@@ -144,6 +144,23 @@ FORBIDDEN_VAR_SUBDIRS = frozenset(
 )
 
 
+def _is_test_file(file_path: str) -> bool:
+    """Check if a file path looks like a test file."""
+    parts = Path(file_path).parts
+    name = Path(file_path).name
+    # Common test directory names
+    if any(p in ("tests", "test", "testing", "spec", "specs") for p in parts):
+        return True
+    # Common test file patterns
+    if (
+        name.startswith("test_")
+        or name.endswith("_test.py")
+        or name.startswith("conftest")
+    ):
+        return True
+    return False
+
+
 def _validate_export_path(output_path: Path, wiki_path: Path) -> Path:
     """Validate that export output path is not in a sensitive system directory.
 
@@ -1746,9 +1763,20 @@ async def handle_get_glossary(args: dict[str, Any]) -> list[TextContent]:
             or (e.docstring and search_lower in e.docstring.lower())
         ]
 
+    if validated.file_path:
+        filter_path = validated.file_path
+        entities = [e for e in entities if e.file_path.endswith(filter_path)]
+
+    total_entities = len(entities)
+    entities = entities[validated.offset : validated.offset + validated.limit]
+
     result = {
         "status": "success",
-        "total_entities": len(entities),
+        "total_entities": total_entities,
+        "returned": len(entities),
+        "offset": validated.offset,
+        "limit": validated.limit,
+        "has_more": validated.offset + validated.limit < total_entities,
         "entities": [
             {
                 "name": e.name,
@@ -1760,7 +1788,7 @@ async def handle_get_glossary(args: dict[str, Any]) -> list[TextContent]:
         ],
     }
 
-    logger.info(f"Glossary: {len(entities)} entities for {repo_path}")
+    logger.info(f"Glossary: {len(entities)}/{total_entities} entities for {repo_path}")
     return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
 
@@ -1903,9 +1931,22 @@ async def handle_get_inheritance(args: dict[str, Any]) -> list[TextContent]:
 
     diagram = generate_inheritance_diagram(classes)
 
+    class_list = list(classes.values())
+
+    if validated.search:
+        search_lower = validated.search.lower()
+        class_list = [c for c in class_list if search_lower in c.name.lower()]
+
+    total_classes = len(class_list)
+    class_list = class_list[validated.offset : validated.offset + validated.limit]
+
     result = {
         "status": "success",
-        "total_classes": len(classes),
+        "total_classes": total_classes,
+        "returned": len(class_list),
+        "offset": validated.offset,
+        "limit": validated.limit,
+        "has_more": validated.offset + validated.limit < total_classes,
         "classes": [
             {
                 "name": node.name,
@@ -1915,12 +1956,14 @@ async def handle_get_inheritance(args: dict[str, Any]) -> list[TextContent]:
                 "is_abstract": node.is_abstract,
                 "docstring": node.docstring,
             }
-            for node in classes.values()
+            for node in class_list
         ],
         "mermaid_diagram": diagram,
     }
 
-    logger.info(f"Inheritance: {len(classes)} classes for {repo_path}")
+    logger.info(
+        f"Inheritance: {len(class_list)}/{total_classes} classes for {repo_path}"
+    )
     return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
 
@@ -2189,15 +2232,24 @@ async def handle_detect_secrets(args: dict[str, Any]) -> list[TextContent]:
 
     findings_by_file = await asyncio.to_thread(scan_repository_for_secrets, repo_path)
 
+    if validated.exclude_tests:
+        findings_by_file = {
+            path: findings
+            for path, findings in findings_by_file.items()
+            if not _is_test_file(path)
+        }
+
     total_findings = sum(len(findings) for findings in findings_by_file.values())
 
     result = {
         "status": "success",
         "files_with_secrets": len(findings_by_file),
         "total_findings": total_findings,
+        "exclude_tests": validated.exclude_tests,
         "findings": [
             {
                 "file_path": file_path,
+                "is_test_file": _is_test_file(file_path),
                 "secrets": [
                     {
                         "type": f.secret_type.value,
