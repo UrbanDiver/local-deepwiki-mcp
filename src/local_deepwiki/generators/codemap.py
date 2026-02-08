@@ -844,6 +844,8 @@ async def generate_codemap(
                 "start_line": n.start_line,
                 "end_line": n.end_line,
                 "chunk_type": n.chunk_type,
+                "docstring": n.docstring or "",
+                "content_preview": n.content_preview or "",
             }
             for n in sorted(graph.nodes.values(), key=lambda n: n.qualified_name)
         ],

@@ -311,6 +311,8 @@ class TestApiCodemapWithMockedGenerator:
                     "start_line": 1,
                     "end_line": 10,
                     "chunk_type": "function",
+                    "docstring": "Main entry point for the module.",
+                    "content_preview": "def main():\n    helper()",
                 },
                 {
                     "name": "helper",
@@ -319,6 +321,8 @@ class TestApiCodemapWithMockedGenerator:
                     "start_line": 12,
                     "end_line": 20,
                     "chunk_type": "function",
+                    "docstring": "",
+                    "content_preview": "def helper():\n    pass",
                 },
             ],
             edges=[
@@ -378,3 +382,215 @@ class TestApiCodemapWithMockedGenerator:
             # Should contain progress and result events
             assert "progress" in data
             assert "result" in data or "error" in data
+
+
+class TestCodemapPhase2Features:
+    """Tests for Phase 2 codemap features."""
+
+    def test_template_has_export_png_button(self):
+        """Test that the template has an Export PNG button."""
+        template_path = _MODULE_DIR / "templates" / "codemap.html"
+        content = template_path.read_text()
+        assert 'id="export-png-btn"' in content
+        assert "Export PNG" in content
+
+    def test_template_has_node_tooltip(self):
+        """Test that the template has a node tooltip element."""
+        template_path = _MODULE_DIR / "templates" / "codemap.html"
+        content = template_path.read_text()
+        assert 'id="node-tooltip"' in content
+        assert "node-tooltip" in content
+        assert "tooltip-name" in content
+        assert "tooltip-meta" in content
+        assert "tooltip-docstring" in content
+
+    def test_template_has_zoom_controls(self):
+        """Test that the template has floating zoom controls."""
+        template_path = _MODULE_DIR / "templates" / "codemap.html"
+        content = template_path.read_text()
+        assert 'id="zoom-controls"' in content
+        assert 'id="zoom-in-btn"' in content
+        assert 'id="zoom-out-btn"' in content
+        assert 'id="fit-btn"' in content
+
+    def test_template_has_shortcuts_hint(self):
+        """Test that the template has keyboard shortcuts hint."""
+        template_path = _MODULE_DIR / "templates" / "codemap.html"
+        content = template_path.read_text()
+        assert 'id="shortcuts-hint"' in content
+        assert "<kbd>" in content
+        assert "Esc" in content
+
+    def test_template_has_path_highlighting_styles(self):
+        """Test that the template has dimmed/highlighted CSS classes."""
+        template_path = _MODULE_DIR / "templates" / "codemap.html"
+        content = template_path.read_text()
+        assert "node.dimmed" in content
+        assert "edge.dimmed" in content
+        assert "node.highlighted" in content
+        assert "edge.highlighted" in content
+
+    def test_template_has_edge_label_style(self):
+        """Test that the template has edge label Cytoscape style."""
+        template_path = _MODULE_DIR / "templates" / "codemap.html"
+        content = template_path.read_text()
+        assert "edge[label]" in content
+        assert "autorotate" in content
+
+    def test_template_has_bfs_path_finding(self):
+        """Test that the template has BFS path finding function."""
+        template_path = _MODULE_DIR / "templates" / "codemap.html"
+        content = template_path.read_text()
+        assert "findPathFromEntry" in content
+        assert "highlightPath" in content
+        assert "clearHighlighting" in content
+
+    def test_template_has_url_state_functions(self):
+        """Test that the template has URL state preservation functions."""
+        template_path = _MODULE_DIR / "templates" / "codemap.html"
+        content = template_path.read_text()
+        assert "readUrlState" in content
+        assert "updateUrlState" in content
+        assert "history.replaceState" in content
+
+    def test_template_has_legend_collapsibility(self):
+        """Test that the template has collapsible legend."""
+        template_path = _MODULE_DIR / "templates" / "codemap.html"
+        content = template_path.read_text()
+        assert "legend.collapsed" in content
+        assert "legend-items" in content
+
+    def test_template_has_highlighted_path_legend_item(self):
+        """Test that the legend includes a highlighted path entry."""
+        template_path = _MODULE_DIR / "templates" / "codemap.html"
+        content = template_path.read_text()
+        assert "Highlighted path" in content
+        assert "#f0883e" in content
+
+    def test_template_has_export_function(self):
+        """Test that the template has PNG export function."""
+        template_path = _MODULE_DIR / "templates" / "codemap.html"
+        content = template_path.read_text()
+        assert "exportPng" in content
+        assert "cy.png" in content
+
+    def test_template_has_double_click_navigation(self):
+        """Test that double-click navigates to wiki page."""
+        template_path = _MODULE_DIR / "templates" / "codemap.html"
+        content = template_path.read_text()
+        assert "dbltap" in content
+
+    def test_template_has_data_flow_edge_labels(self):
+        """Test that edge labels are shown in data_flow mode."""
+        template_path = _MODULE_DIR / "templates" / "codemap.html"
+        content = template_path.read_text()
+        assert "showEdgeLabels" in content or "data_flow" in content
+        assert "edgeData.label" in content
+
+    def test_template_has_tooltip_show_hide(self):
+        """Test that template has tooltip show/hide functions."""
+        template_path = _MODULE_DIR / "templates" / "codemap.html"
+        content = template_path.read_text()
+        assert "showTooltip" in content
+        assert "hideTooltip" in content
+        assert "mouseover" in content
+        assert "mouseout" in content
+
+    def test_template_has_keyboard_shortcut_handler(self):
+        """Test that template handles keyboard shortcuts."""
+        template_path = _MODULE_DIR / "templates" / "codemap.html"
+        content = template_path.read_text()
+        # Check for keyboard event handling
+        assert "keydown" in content
+        # Check for the specific shortcuts
+        assert "e.key === 'f'" in content or "e.key === 'F'" in content
+        assert "e.key === 'Escape'" in content
+        assert "e.key === 'l'" in content or "e.key === 'L'" in content
+
+    def test_codemap_page_has_export_button(self, wiki_dir):
+        """Test that the rendered codemap page has the export button."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+
+        response = client.get("/codemap")
+        assert response.status_code == 200
+        assert b"export-png-btn" in response.data
+        assert b"Export PNG" in response.data
+
+    def test_codemap_page_has_zoom_controls(self, wiki_dir):
+        """Test that the rendered codemap page has zoom controls."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+
+        response = client.get("/codemap")
+        assert response.status_code == 200
+        assert b"zoom-controls" in response.data
+        assert b"zoom-in-btn" in response.data
+        assert b"fit-btn" in response.data
+
+    def test_codemap_page_has_tooltip_element(self, wiki_dir):
+        """Test that the rendered codemap page has the tooltip div."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+
+        response = client.get("/codemap")
+        assert response.status_code == 200
+        assert b"node-tooltip" in response.data
+
+    def test_codemap_page_has_shortcuts_hint(self, wiki_dir):
+        """Test that the rendered codemap page has shortcuts hint."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+
+        response = client.get("/codemap")
+        assert response.status_code == 200
+        assert b"shortcuts-hint" in response.data
+
+
+class TestCodemapNodeSerialization:
+    """Tests for codemap node serialization with docstring/content_preview."""
+
+    def test_codemap_node_has_docstring_field(self):
+        """Test that CodemapNode model has docstring field."""
+        from local_deepwiki.generators.codemap import CodemapNode
+
+        node = CodemapNode(
+            name="test",
+            qualified_name="mod.test",
+            file_path="test.py",
+            start_line=1,
+            end_line=10,
+            chunk_type="function",
+            docstring="A test function.",
+        )
+        assert node.docstring == "A test function."
+
+    def test_codemap_node_has_content_preview_field(self):
+        """Test that CodemapNode model has content_preview field."""
+        from local_deepwiki.generators.codemap import CodemapNode
+
+        node = CodemapNode(
+            name="test",
+            qualified_name="mod.test",
+            file_path="test.py",
+            start_line=1,
+            end_line=10,
+            chunk_type="function",
+            content_preview="def test():\n    pass",
+        )
+        assert node.content_preview == "def test():\n    pass"
+
+    def test_codemap_node_defaults(self):
+        """Test that CodemapNode defaults docstring to None and content_preview to empty."""
+        from local_deepwiki.generators.codemap import CodemapNode
+
+        node = CodemapNode(
+            name="test",
+            qualified_name="mod.test",
+            file_path="test.py",
+            start_line=1,
+            end_line=10,
+            chunk_type="function",
+        )
+        assert node.docstring is None
+        assert node.content_preview == ""

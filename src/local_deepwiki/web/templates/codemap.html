@@ -64,7 +64,7 @@
             align-items: center;
             gap: 12px;
         }
-        .theme-toggle {
+        .theme-toggle, .export-btn {
             background: transparent;
             border: 1px solid var(--border-color);
             border-radius: 6px;
@@ -74,7 +74,8 @@
             color: var(--text-color);
             transition: background 0.2s;
         }
-        .theme-toggle:hover { background: var(--border-color); }
+        .theme-toggle:hover, .export-btn:hover { background: var(--border-color); }
+        .export-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
         /* Query bar */
         .query-bar {
@@ -201,6 +202,91 @@
         }
         @keyframes spin { to { transform: rotate(360deg); } }
 
+        /* Node tooltip */
+        .node-tooltip {
+            position: absolute;
+            background: var(--sidebar-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 10px 14px;
+            font-size: 12px;
+            max-width: 320px;
+            z-index: 20;
+            pointer-events: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            display: none;
+            line-height: 1.5;
+        }
+        .node-tooltip.visible { display: block; }
+        .tooltip-name {
+            font-weight: 600;
+            color: var(--heading-color);
+            margin-bottom: 4px;
+            word-break: break-all;
+        }
+        .tooltip-meta {
+            color: var(--muted-color);
+            font-size: 11px;
+            margin-bottom: 4px;
+        }
+        .tooltip-docstring {
+            color: var(--text-color);
+            font-size: 11px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 6px;
+            margin-top: 4px;
+            white-space: pre-wrap;
+            max-height: 80px;
+            overflow: hidden;
+        }
+
+        /* Zoom controls */
+        .zoom-controls {
+            position: absolute;
+            bottom: 16px;
+            right: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            z-index: 15;
+        }
+        .zoom-btn {
+            width: 32px;
+            height: 32px;
+            background: var(--sidebar-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-color);
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+            line-height: 1;
+        }
+        .zoom-btn:hover { background: var(--border-color); }
+        .zoom-btn.fit-btn { font-size: 12px; }
+
+        /* Keyboard shortcuts hint */
+        .shortcuts-hint {
+            position: absolute;
+            bottom: 16px;
+            left: 16px;
+            font-size: 10px;
+            color: var(--muted-color);
+            z-index: 15;
+            opacity: 0.7;
+        }
+        .shortcuts-hint kbd {
+            background: var(--sidebar-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 3px;
+            padding: 1px 4px;
+            font-family: inherit;
+            font-size: 10px;
+        }
+
         /* Narrative panel */
         .narrative-panel {
             flex: 2;
@@ -250,7 +336,15 @@
             padding-top: 12px;
             border-top: 1px solid var(--border-color);
         }
-        .legend h4 { font-size: 0.85em; color: var(--muted-color); margin-bottom: 8px; }
+        .legend h4 {
+            font-size: 0.85em;
+            color: var(--muted-color);
+            margin-bottom: 8px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .legend h4:hover { color: var(--text-color); }
+        .legend.collapsed .legend-items { display: none; }
         .legend-item {
             display: flex;
             align-items: center;
@@ -304,6 +398,7 @@
             <a href="/chat">Chat</a>
         </div>
         <div class="header-controls">
+            <button id="export-png-btn" class="export-btn" title="Export graph as PNG" disabled>Export PNG</button>
             <button id="theme-toggle" class="theme-toggle" title="Toggle theme">&#127769;</button>
         </div>
     </header>
@@ -340,6 +435,15 @@
                 <div class="progress-spinner"></div>
                 <div id="progress-message">Generating codemap...</div>
             </div>
+            <div class="node-tooltip" id="node-tooltip"></div>
+            <div class="zoom-controls" id="zoom-controls" style="display:none;">
+                <button class="zoom-btn" id="zoom-in-btn" title="Zoom in (+)">+</button>
+                <button class="zoom-btn" id="zoom-out-btn" title="Zoom out (-)">-</button>
+                <button class="zoom-btn fit-btn" id="fit-btn" title="Fit to viewport (F)">Fit</button>
+            </div>
+            <div class="shortcuts-hint" id="shortcuts-hint" style="display:none;">
+                <kbd>F</kbd> fit &nbsp; <kbd>+</kbd><kbd>-</kbd> zoom &nbsp; <kbd>Esc</kbd> reset &nbsp; <kbd>L</kbd> legend
+            </div>
         </div>
 
         <div class="narrative-panel" id="narrative-panel">
@@ -354,6 +458,9 @@
         // --- State ---
         var cy = null;
         var isGenerating = false;
+        var currentFocus = 'execution_flow';
+        var currentEntryPoint = null;
+        var pathHighlightActive = false;
 
         // --- DOM ---
         var queryInput = document.getElementById('query-input');
@@ -369,6 +476,10 @@
         var progressMessage = document.getElementById('progress-message');
         var narrativePanel = document.getElementById('narrative-panel');
         var themeToggle = document.getElementById('theme-toggle');
+        var exportPngBtn = document.getElementById('export-png-btn');
+        var nodeTooltip = document.getElementById('node-tooltip');
+        var zoomControls = document.getElementById('zoom-controls');
+        var shortcutsHint = document.getElementById('shortcuts-hint');
 
         // --- Cytoscape Styles ---
         var cytoscapeStyles = [
@@ -387,6 +498,8 @@
                 'background-color': '#21262d',
                 'border-width': 1,
                 'border-color': '#30363d',
+                'transition-property': 'opacity, border-color, border-width',
+                'transition-duration': '0.2s',
             }},
             { selector: 'node.entry', style: {
                 'background-color': '#2d6a4f',
@@ -423,6 +536,8 @@
                 'target-arrow-shape': 'triangle',
                 'curve-style': 'bezier',
                 'arrow-scale': 0.8,
+                'transition-property': 'opacity, line-color, width',
+                'transition-duration': '0.2s',
             }},
             { selector: 'edge.cross-file-edge', style: {
                 'line-color': '#58a6ff',
@@ -430,10 +545,39 @@
                 'line-style': 'dashed',
                 'width': 2,
             }},
+            { selector: 'edge[label]', style: {
+                'label': 'data(label)',
+                'font-size': '9px',
+                'color': '#8b949e',
+                'text-rotation': 'autorotate',
+                'text-margin-y': -8,
+                'text-background-color': '#0d1117',
+                'text-background-opacity': 0.8,
+                'text-background-padding': '2px',
+            }},
             { selector: 'node:selected', style: {
                 'border-color': '#f0f6fc',
                 'border-width': 2,
                 'overlay-opacity': 0.1,
+            }},
+            // Path highlighting: dimmed elements
+            { selector: 'node.dimmed', style: {
+                'opacity': 0.25,
+            }},
+            { selector: 'edge.dimmed', style: {
+                'opacity': 0.15,
+            }},
+            // Path highlighting: highlighted elements
+            { selector: 'node.highlighted', style: {
+                'border-color': '#f0f6fc',
+                'border-width': 3,
+                'z-index': 10,
+            }},
+            { selector: 'edge.highlighted', style: {
+                'width': 3,
+                'line-color': '#f0883e',
+                'target-arrow-color': '#f0883e',
+                'z-index': 10,
             }},
         ];
 
@@ -508,6 +652,8 @@
                         endLine: node.end_line,
                         chunkType: node.chunk_type,
                         qualifiedName: qn,
+                        docstring: node.docstring || '',
+                        contentPreview: node.content_preview || '',
                     },
                     classes: nodeClass,
                 });
@@ -515,23 +661,147 @@
             }
 
             // Create edges
+            var showEdgeLabels = (currentFocus === 'data_flow');
             for (var i = 0; i < result.edges.length; i++) {
                 var edge = result.edges[i];
                 if (nodeIds[edge.source] && nodeIds[edge.target]) {
                     var isCrossFile = edge.source_file !== edge.target_file;
+                    var edgeData = {
+                        source: edge.source,
+                        target: edge.target,
+                        edgeType: edge.edge_type,
+                    };
+                    // Show edge labels in data_flow mode
+                    if (showEdgeLabels && edge.edge_type) {
+                        edgeData.label = edge.edge_type;
+                    }
                     elements.push({
                         group: 'edges',
-                        data: {
-                            source: edge.source,
-                            target: edge.target,
-                            edgeType: edge.edge_type,
-                        },
+                        data: edgeData,
                         classes: isCrossFile ? 'cross-file-edge' : 'same-file-edge',
                     });
                 }
             }
 
             return elements;
+        }
+
+        // --- Tooltip ---
+        function showTooltip(node, renderedPos) {
+            var name = node.data('qualifiedName') || node.data('label');
+            var chunkType = node.data('chunkType') || '';
+            var filePath = node.data('filePath') || '';
+            var startLine = node.data('startLine');
+            var endLine = node.data('endLine');
+            var docstring = node.data('docstring') || '';
+
+            var html = '<div class="tooltip-name">' + escapeHtml(name) + '</div>';
+            html += '<div class="tooltip-meta">';
+            html += escapeHtml(chunkType);
+            if (filePath) {
+                html += ' &middot; ' + escapeHtml(filePath);
+            }
+            if (startLine && endLine) {
+                html += ':' + startLine + '-' + endLine;
+            }
+            html += '</div>';
+            if (docstring) {
+                var truncated = docstring.length > 200 ? docstring.substring(0, 200) + '...' : docstring;
+                html += '<div class="tooltip-docstring">' + escapeHtml(truncated) + '</div>';
+            }
+
+            nodeTooltip.innerHTML = html;
+            nodeTooltip.classList.add('visible');
+
+            // Position relative to graph-panel
+            var panelRect = document.getElementById('graph-panel').getBoundingClientRect();
+            var x = renderedPos.x + 15;
+            var y = renderedPos.y - 10;
+
+            // Keep tooltip within panel bounds
+            if (x + 320 > panelRect.width) {
+                x = renderedPos.x - 330;
+            }
+            if (y + 120 > panelRect.height) {
+                y = panelRect.height - 130;
+            }
+            if (y < 0) { y = 10; }
+
+            nodeTooltip.style.left = x + 'px';
+            nodeTooltip.style.top = y + 'px';
+        }
+
+        function hideTooltip() {
+            nodeTooltip.classList.remove('visible');
+        }
+
+        // --- Path Highlighting (BFS) ---
+        function findPathFromEntry(targetId) {
+            if (!cy || !currentEntryPoint) return null;
+
+            // BFS from entry to target
+            var queue = [[currentEntryPoint]];
+            var visited = {};
+            visited[currentEntryPoint] = true;
+
+            while (queue.length > 0) {
+                var path = queue.shift();
+                var current = path[path.length - 1];
+
+                if (current === targetId) {
+                    return path;
+                }
+
+                var outEdges = cy.getElementById(current).outgoers('edge');
+                outEdges.forEach(function(edge) {
+                    var nextId = edge.target().id();
+                    if (!visited[nextId] && !edge.target().isParent()) {
+                        visited[nextId] = true;
+                        queue.push(path.concat([nextId]));
+                    }
+                });
+            }
+
+            return null;
+        }
+
+        function highlightPath(targetId) {
+            if (!cy) return;
+
+            var path = findPathFromEntry(targetId);
+            if (!path || path.length < 2) {
+                // No path found, just highlight the clicked node
+                clearHighlighting();
+                return;
+            }
+
+            pathHighlightActive = true;
+
+            // Dim everything
+            cy.elements().addClass('dimmed');
+
+            // Build set of path nodes and edges
+            for (var i = 0; i < path.length; i++) {
+                var nodeEle = cy.getElementById(path[i]);
+                nodeEle.removeClass('dimmed').addClass('highlighted');
+                // Also un-dim the parent compound node
+                var parent = nodeEle.parent();
+                if (parent.length > 0) {
+                    parent.removeClass('dimmed');
+                }
+            }
+
+            // Highlight edges between consecutive path nodes
+            for (var i = 0; i < path.length - 1; i++) {
+                var edges = cy.getElementById(path[i]).edgesTo(cy.getElementById(path[i + 1]));
+                edges.removeClass('dimmed').addClass('highlighted');
+            }
+        }
+
+        function clearHighlighting() {
+            if (!cy) return;
+            pathHighlightActive = false;
+            cy.elements().removeClass('dimmed highlighted');
         }
 
         // --- Render Graph ---
@@ -542,11 +812,19 @@
                 graphPlaceholder.textContent = 'No nodes found for this query.';
                 graphPlaceholder.style.display = 'flex';
                 cyContainer.style.display = 'none';
+                zoomControls.style.display = 'none';
+                shortcutsHint.style.display = 'none';
+                exportPngBtn.disabled = true;
                 return;
             }
 
             graphPlaceholder.style.display = 'none';
             cyContainer.style.display = 'block';
+            zoomControls.style.display = 'flex';
+            shortcutsHint.style.display = 'block';
+            exportPngBtn.disabled = false;
+            currentEntryPoint = result.entry_point;
+            currentFocus = result.focus || focusSelect.value;
 
             if (cy) {
                 cy.destroy();
@@ -569,25 +847,42 @@
                     wheelSensitivity: 0.3,
                 });
 
-                // Click handler - navigate to wiki file page
+                // Click handler - path highlighting + navigate
                 cy.on('tap', 'node:childless', function(evt) {
+                    var node = evt.target;
+                    var nodeId = node.id();
+
+                    // Path highlighting
+                    highlightPath(nodeId);
+                });
+
+                // Double-click to navigate to wiki page
+                cy.on('dbltap', 'node:childless', function(evt) {
                     var node = evt.target;
                     var filePath = node.data('filePath');
                     if (filePath) {
-                        // Strip source file extension before appending .md
-                        // Wiki pages use e.g. parser.md not parser.py.md
                         var wikiPath = filePath.replace(/\.[^/.]+$/, '');
                         window.open('/wiki/files/' + wikiPath + '.md', '_blank');
                     }
                 });
 
-                // Cursor pointer on hover
-                cy.on('mouseover', 'node:childless', function() {
+                // Click on background to clear highlighting
+                cy.on('tap', function(evt) {
+                    if (evt.target === cy) {
+                        clearHighlighting();
+                    }
+                });
+
+                // Tooltip on hover
+                cy.on('mouseover', 'node:childless', function(evt) {
                     cyContainer.style.cursor = 'pointer';
+                    showTooltip(evt.target, evt.target.renderedPosition());
                 });
                 cy.on('mouseout', 'node:childless', function() {
                     cyContainer.style.cursor = 'default';
+                    hideTooltip();
                 });
+
             } catch (err) {
                 // Fallback to mermaid
                 renderMermaidFallback(result.mermaid_diagram);
@@ -599,6 +894,8 @@
             cyContainer.style.display = 'none';
             graphPlaceholder.style.display = 'none';
             mermaidFallback.style.display = 'block';
+            zoomControls.style.display = 'none';
+            shortcutsHint.style.display = 'none';
             mermaidFallback.textContent = '';
             var pre = document.createElement('pre');
             pre.className = 'mermaid';
@@ -654,9 +951,16 @@
             // Legend
             var legendDiv = document.createElement('div');
             legendDiv.className = 'legend';
+            legendDiv.id = 'codemap-legend';
             var legendTitle = document.createElement('h4');
             legendTitle.textContent = 'Legend';
+            legendTitle.addEventListener('click', function() {
+                legendDiv.classList.toggle('collapsed');
+            });
             legendDiv.appendChild(legendTitle);
+
+            var legendItemsContainer = document.createElement('div');
+            legendItemsContainer.className = 'legend-items';
 
             var legendItems = [
                 { color: '#2d6a4f', label: 'Entry point', type: 'dot' },
@@ -665,6 +969,7 @@
                 { color: '#21262d', label: 'Internal', type: 'dot', border: '#30363d' },
                 { color: '#8b949e', label: 'Same-file edge', type: 'line' },
                 { color: '#58a6ff', label: 'Cross-file edge', type: 'dashed' },
+                { color: '#f0883e', label: 'Highlighted path', type: 'line' },
             ];
             legendItems.forEach(function(item) {
                 var row = document.createElement('div');
@@ -691,9 +996,55 @@
                 var labelSpan = document.createElement('span');
                 labelSpan.textContent = item.label;
                 row.appendChild(labelSpan);
-                legendDiv.appendChild(row);
+                legendItemsContainer.appendChild(row);
             });
+            legendDiv.appendChild(legendItemsContainer);
             narrativePanel.appendChild(legendDiv);
+        }
+
+        // --- Export PNG ---
+        function exportPng() {
+            if (!cy) return;
+            var pngData = cy.png({ full: true, scale: 2, bg: getComputedStyle(document.documentElement).getPropertyValue('--bg-color').trim() });
+            var link = document.createElement('a');
+            var slug = queryInput.value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').substring(0, 40);
+            link.download = 'codemap-' + (slug || 'graph') + '.png';
+            link.href = pngData;
+            link.click();
+        }
+
+        // --- URL State ---
+        function readUrlState() {
+            var params = new URLSearchParams(window.location.search);
+            if (params.has('query')) {
+                queryInput.value = params.get('query');
+            }
+            if (params.has('focus')) {
+                var focus = params.get('focus');
+                if (['execution_flow', 'data_flow', 'dependency_chain'].indexOf(focus) !== -1) {
+                    focusSelect.value = focus;
+                }
+            }
+            if (params.has('max_depth')) {
+                var d = parseInt(params.get('max_depth'), 10);
+                if (d >= 1 && d <= 10) depthInput.value = d;
+            }
+            if (params.has('max_nodes')) {
+                var n = parseInt(params.get('max_nodes'), 10);
+                if (n >= 5 && n <= 60) nodesInput.value = n;
+            }
+            return params.has('query') && params.get('query').trim().length > 0;
+        }
+
+        function updateUrlState() {
+            var query = queryInput.value.trim();
+            if (!query) return;
+            var params = new URLSearchParams();
+            params.set('query', query);
+            params.set('focus', focusSelect.value);
+            params.set('max_depth', depthInput.value);
+            params.set('max_nodes', nodesInput.value);
+            history.replaceState(null, '', '/codemap?' + params.toString());
         }
 
         // --- Generate Codemap ---
@@ -707,6 +1058,10 @@
             progressMessage.textContent = 'Generating codemap...';
             graphPlaceholder.style.display = 'none';
             mermaidFallback.style.display = 'none';
+            pathHighlightActive = false;
+
+            // Update URL state
+            updateUrlState();
 
             try {
                 var response = await fetch('/api/codemap', {
@@ -794,7 +1149,6 @@
                     topicsRow.style.display = 'none';
                 }
             } catch (err) {
-                console.error('Failed to load topics:', err);
                 topicsRow.style.display = 'none';
             }
         }
@@ -838,11 +1192,55 @@
             setTheme(current === 'dark' ? 'light' : 'dark');
         });
 
+        // Export PNG
+        exportPngBtn.addEventListener('click', exportPng);
+
+        // Zoom controls
+        document.getElementById('zoom-in-btn').addEventListener('click', function() {
+            if (cy) cy.zoom({ level: cy.zoom() * 1.3, renderedPosition: { x: cyContainer.clientWidth / 2, y: cyContainer.clientHeight / 2 } });
+        });
+        document.getElementById('zoom-out-btn').addEventListener('click', function() {
+            if (cy) cy.zoom({ level: cy.zoom() / 1.3, renderedPosition: { x: cyContainer.clientWidth / 2, y: cyContainer.clientHeight / 2 } });
+        });
+        document.getElementById('fit-btn').addEventListener('click', function() {
+            if (cy) cy.fit(undefined, 20);
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            // Skip if typing in input fields
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+
+            if (e.key === 'f' || e.key === 'F') {
+                e.preventDefault();
+                if (cy) cy.fit(undefined, 20);
+            } else if (e.key === '+' || e.key === '=') {
+                e.preventDefault();
+                if (cy) cy.zoom({ level: cy.zoom() * 1.3, renderedPosition: { x: cyContainer.clientWidth / 2, y: cyContainer.clientHeight / 2 } });
+            } else if (e.key === '-') {
+                e.preventDefault();
+                if (cy) cy.zoom({ level: cy.zoom() / 1.3, renderedPosition: { x: cyContainer.clientWidth / 2, y: cyContainer.clientHeight / 2 } });
+            } else if (e.key === 'Escape') {
+                clearHighlighting();
+                if (cy) cy.elements().unselect();
+            } else if (e.key === 'l' || e.key === 'L') {
+                var legend = document.getElementById('codemap-legend');
+                if (legend) legend.classList.toggle('collapsed');
+            }
+        });
+
         // --- Init ---
         var savedTheme = localStorage.getItem('deepwiki-theme') || 'dark';
         setTheme(savedTheme);
         loadTopics();
-        queryInput.focus();
+
+        // Read URL state and auto-generate if query present
+        var hasUrlQuery = readUrlState();
+        if (hasUrlQuery) {
+            generateCodemap();
+        } else {
+            queryInput.focus();
+        }
     </script>
 </body>
 </html>
