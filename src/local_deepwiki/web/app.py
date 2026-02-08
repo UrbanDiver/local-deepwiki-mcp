@@ -5,13 +5,11 @@ Templates are loaded from the 'templates' subdirectory relative to this module.
 """
 
 import asyncio
-import hashlib
 import json
 import queue
 import re
 import subprocess
 import threading
-import time
 from pathlib import Path
 from typing import Any, AsyncIterator, Callable, Iterator
 
@@ -27,6 +25,12 @@ from flask import (
     url_for,
 )
 
+from local_deepwiki.generators.codemap_cache import (
+    cache_key,
+    list_cached_codemaps,
+    read_cache,
+    write_cache,
+)
 from local_deepwiki.logging import get_logger
 
 logger = get_logger(__name__)
@@ -766,12 +770,12 @@ def api_codemap():
         repo_path = WIKI_PATH.parent
 
     # Check cache first
-    cache_k = _cache_key(query, focus, max_depth, max_nodes)
+    cache_k = cache_key(query, focus, max_depth, max_nodes)
 
     async def generate_codemap_stream() -> AsyncIterator[str]:
         """Async generator that streams codemap generation progress and result."""
         # Try cache hit
-        cached = _read_cache(cache_k)
+        cached = read_cache(WIKI_PATH, cache_k)
         if cached is not None:
             yield f"data: {json.dumps({'type': 'progress', 'message': 'Loading from cache...'})}\n\n"
             response = {
@@ -858,7 +862,7 @@ def api_codemap():
             yield f"data: {json.dumps(response)}\n\n"
 
             # Write to cache
-            _write_cache(cache_k, response)
+            write_cache(WIKI_PATH, cache_k, response)
 
         except Exception as e:  # noqa: BLE001 - Report codemap errors to user via SSE
             logger.exception(f"Error generating codemap: {e}")
@@ -874,94 +878,6 @@ def api_codemap():
             "X-Accel-Buffering": "no",
         },
     )
-
-
-# --- Codemap Cache ---
-# TTL in seconds (1 hour default)
-CODEMAP_CACHE_TTL = 3600
-
-
-def _get_cache_dir() -> Path | None:
-    """Get the codemap cache directory, creating it if needed."""
-    if WIKI_PATH is None:
-        return None
-    cache_dir = WIKI_PATH / "codemaps"
-    cache_dir.mkdir(exist_ok=True)
-    return cache_dir
-
-
-def _cache_key(query: str, focus: str, max_depth: int, max_nodes: int) -> str:
-    """Generate a cache key from codemap parameters."""
-    raw = f"{query}|{focus}|{max_depth}|{max_nodes}"
-    return hashlib.sha256(raw.encode()).hexdigest()[:16]
-
-
-def _read_cache(key: str) -> dict | None:
-    """Read a cached codemap result if it exists and hasn't expired."""
-    cache_dir = _get_cache_dir()
-    if cache_dir is None:
-        return None
-
-    cache_file = cache_dir / f"{key}.json"
-    if not cache_file.exists():
-        return None
-
-    try:
-        data = json.loads(cache_file.read_text())
-        cached_at = data.get("cached_at", 0)
-        if time.time() - cached_at > CODEMAP_CACHE_TTL:
-            cache_file.unlink(missing_ok=True)
-            return None
-        return data
-    except (json.JSONDecodeError, OSError):
-        return None
-
-
-def _write_cache(key: str, result: dict) -> None:
-    """Write a codemap result to the cache."""
-    cache_dir = _get_cache_dir()
-    if cache_dir is None:
-        return
-
-    cache_data = {**result, "cached_at": time.time(), "cache_key": key}
-    cache_file = cache_dir / f"{key}.json"
-    try:
-        cache_file.write_text(json.dumps(cache_data))
-    except OSError:
-        logger.debug(f"Failed to write codemap cache: {key}")
-
-
-def _list_cached_codemaps() -> list[dict]:
-    """List all cached codemaps with metadata."""
-    cache_dir = _get_cache_dir()
-    if cache_dir is None:
-        return []
-
-    results = []
-    now = time.time()
-    for f in sorted(
-        cache_dir.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True
-    ):
-        try:
-            data = json.loads(f.read_text())
-            cached_at = data.get("cached_at", 0)
-            if now - cached_at > CODEMAP_CACHE_TTL:
-                f.unlink(missing_ok=True)
-                continue
-            results.append(
-                {
-                    "cache_key": data.get("cache_key", f.stem),
-                    "query": data.get("query", ""),
-                    "focus": data.get("focus", ""),
-                    "total_nodes": data.get("total_nodes", 0),
-                    "total_edges": data.get("total_edges", 0),
-                    "cached_at": cached_at,
-                }
-            )
-        except (json.JSONDecodeError, OSError):
-            continue
-
-    return results[:20]  # Return at most 20 recent
 
 
 @app.route("/api/codemap/cache")
@@ -982,12 +898,12 @@ def api_codemap_cache():
         # Validate key format (hex chars only)
         if not re.match(r"^[a-f0-9]{1,16}$", key):
             return jsonify({"error": "Invalid cache key"}), 400
-        cached = _read_cache(key)
+        cached = read_cache(WIKI_PATH, key)
         if cached is None:
             return jsonify({"error": "Cache entry not found or expired"}), 404
         return jsonify(cached)
 
-    return jsonify(_list_cached_codemaps())
+    return jsonify(list_cached_codemaps(WIKI_PATH))
 
 
 @app.route("/api/codemap/diff")

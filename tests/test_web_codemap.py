@@ -765,43 +765,40 @@ class TestCodemapPhase3Cache:
 
     def test_cache_write_and_read(self, wiki_dir):
         """Test cache write and read round-trip."""
-        from local_deepwiki.web.app import _cache_key, _read_cache, _write_cache
+        from local_deepwiki.generators.codemap_cache import (
+            cache_key,
+            read_cache,
+            write_cache,
+        )
 
-        import local_deepwiki.web.app as web_app
-
-        old_wiki = web_app.WIKI_PATH
-        try:
-            web_app.WIKI_PATH = wiki_dir
-            key = _cache_key("test query", "execution_flow", 5, 30)
-            result = {
-                "query": "test query",
-                "focus": "execution_flow",
-                "total_nodes": 3,
-                "total_edges": 2,
-            }
-            _write_cache(key, result)
-            cached = _read_cache(key)
-            assert cached is not None
-            assert cached["query"] == "test query"
-            assert cached["total_nodes"] == 3
-        finally:
-            web_app.WIKI_PATH = old_wiki
+        key = cache_key("test query", "execution_flow", 5, 30)
+        result = {
+            "query": "test query",
+            "focus": "execution_flow",
+            "total_nodes": 3,
+            "total_edges": 2,
+        }
+        write_cache(wiki_dir, key, result)
+        cached = read_cache(wiki_dir, key)
+        assert cached is not None
+        assert cached["query"] == "test query"
+        assert cached["total_nodes"] == 3
 
     def test_cache_key_deterministic(self):
         """Test that cache key is deterministic."""
-        from local_deepwiki.web.app import _cache_key
+        from local_deepwiki.generators.codemap_cache import cache_key
 
-        k1 = _cache_key("test", "execution_flow", 5, 30)
-        k2 = _cache_key("test", "execution_flow", 5, 30)
+        k1 = cache_key("test", "execution_flow", 5, 30)
+        k2 = cache_key("test", "execution_flow", 5, 30)
         assert k1 == k2
 
     def test_cache_key_varies_with_params(self):
         """Test that cache key changes with different params."""
-        from local_deepwiki.web.app import _cache_key
+        from local_deepwiki.generators.codemap_cache import cache_key
 
-        k1 = _cache_key("test", "execution_flow", 5, 30)
-        k2 = _cache_key("test", "data_flow", 5, 30)
-        k3 = _cache_key("different", "execution_flow", 5, 30)
+        k1 = cache_key("test", "execution_flow", 5, 30)
+        k2 = cache_key("test", "data_flow", 5, 30)
+        k3 = cache_key("different", "execution_flow", 5, 30)
         assert k1 != k2
         assert k1 != k3
 
