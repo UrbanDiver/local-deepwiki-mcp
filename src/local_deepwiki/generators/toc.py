@@ -84,7 +84,7 @@ def generate_toc(pages: list[dict[str, str]]) -> TableOfContents:
     ]
 
     # Define the fixed order for sections
-    SECTION_ORDER = ["modules", "files"]
+    SECTION_ORDER = ["modules", "files", "codemaps"]
 
     entries: list[TocEntry] = []
     current_number = 1
@@ -224,7 +224,9 @@ def _tree_to_entries(
         number = f"{parent_number}.{child_num}"
 
         # Check if this directory has an index page
-        dir_index = next((p for p in subtree["_pages"] if Path(p["path"]).stem == "index"), None)
+        dir_index = next(
+            (p for p in subtree["_pages"] if Path(p["path"]).stem == "index"), None
+        )
 
         # Get children for this directory
         children = _tree_to_entries(subtree, number)

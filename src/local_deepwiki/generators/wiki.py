@@ -27,9 +27,13 @@ from local_deepwiki.generators.inheritance import generate_inheritance_page
 from local_deepwiki.generators.manifest import ProjectManifest, get_cached_manifest
 from local_deepwiki.generators.progress_tracker import GenerationProgress
 from local_deepwiki.generators.search import write_full_search_index
-from local_deepwiki.generators.see_also import RelationshipAnalyzer, add_see_also_sections
+from local_deepwiki.generators.see_also import (
+    RelationshipAnalyzer,
+    add_see_also_sections,
+)
 from local_deepwiki.generators.source_refs import add_source_refs_sections
 from local_deepwiki.generators.toc import generate_toc, write_toc
+from local_deepwiki.generators.wiki_codemaps import generate_codemap_pages
 from local_deepwiki.generators.wiki_files import generate_file_docs
 from local_deepwiki.generators.wiki_modules import generate_module_docs
 from local_deepwiki.generators.wiki_pages import (
@@ -178,7 +182,9 @@ class WikiGenerator:
             WikiStructure with generated pages.
         """
         logger.info(f"Starting wiki generation for {index_status.repo_path}")
-        logger.debug(f"Full rebuild: {full_rebuild}, Total files: {index_status.total_files}")
+        logger.debug(
+            f"Full rebuild: {full_rebuild}, Total files: {index_status.total_files}"
+        )
 
         # Emit WIKI_START event
         emitter = get_event_emitter()
@@ -217,6 +223,9 @@ class WikiGenerator:
 
         # Phase 7b: Run wiki generator plugins
         await self._run_plugin_generators(ctx, index_status, progress_callback)
+
+        # Phase 7c: Generate codemap pages
+        await self._generate_codemap_pages(ctx, index_status, progress_callback)
 
         # Phase 8: Apply cross-links and see-also sections
         ctx.pages = await self._apply_cross_linking(ctx.pages, progress_callback)
@@ -341,7 +350,7 @@ class WikiGenerator:
             index_status: The index status.
             progress_callback: Optional progress callback.
         """
-        total_steps = 13
+        total_steps = 14
 
         # Generate overview page
         if progress_callback:
@@ -393,7 +402,9 @@ class WikiGenerator:
         Returns:
             Tuple of (page, was_generated).
         """
-        if ctx.full_rebuild or self.status_manager.needs_regeneration(page_path, source_files):
+        if ctx.full_rebuild or self.status_manager.needs_regeneration(
+            page_path, source_files
+        ):
             page = await generator()
             was_generated = True
         else:
@@ -427,7 +438,9 @@ class WikiGenerator:
             "import require include",
             limit=self.config.wiki.import_search_limit,
         )
-        import_chunks = [r.chunk for r in import_results if r.chunk.chunk_type.value == "import"]
+        import_chunks = [
+            r.chunk for r in import_results if r.chunk.chunk_type.value == "import"
+        ]
         self.relationship_analyzer.analyze_chunks(import_chunks)
 
     async def _generate_module_pages(
@@ -444,7 +457,7 @@ class WikiGenerator:
             progress_callback: Optional progress callback.
         """
         if progress_callback:
-            progress_callback("Generating module documentation", 2, 13)
+            progress_callback("Generating module documentation", 2, 14)
 
         self._progress.start_phase("modules", total=0)
 
@@ -481,7 +494,7 @@ class WikiGenerator:
             progress_callback: Optional progress callback.
         """
         if progress_callback:
-            progress_callback("Generating file documentation", 3, 13)
+            progress_callback("Generating file documentation", 3, 14)
 
         file_pages, gen_count, skip_count = await generate_file_docs(
             index_status=index_status,
@@ -514,19 +527,23 @@ class WikiGenerator:
             progress_callback: Optional progress callback.
         """
         if progress_callback:
-            progress_callback("Generating dependencies", 4, 13)
+            progress_callback("Generating dependencies", 4, 14)
 
         deps_path = "dependencies.md"
 
         if ctx.full_rebuild or self.status_manager.needs_regeneration(
             deps_path, ctx.all_source_files
         ):
-            deps_page, deps_source_files = await self._generate_dependencies(index_status)
+            deps_page, deps_source_files = await self._generate_dependencies(
+                index_status
+            )
             ctx.pages_generated += 1
         else:
             existing_deps_page = await self.status_manager.load_existing_page(deps_path)
             if existing_deps_page is None:
-                deps_page, deps_source_files = await self._generate_dependencies(index_status)
+                deps_page, deps_source_files = await self._generate_dependencies(
+                    index_status
+                )
                 ctx.pages_generated += 1
             else:
                 deps_page = existing_deps_page
@@ -557,7 +574,7 @@ class WikiGenerator:
             progress_callback: Optional progress callback.
         """
         if progress_callback:
-            progress_callback("Generating changelog", 5, 13)
+            progress_callback("Generating changelog", 5, 14)
 
         changelog_page = await self._generate_changelog()
         if changelog_page:
@@ -581,9 +598,11 @@ class WikiGenerator:
         """
         # Inheritance page
         if progress_callback:
-            progress_callback("Generating inheritance tree", 6, 13)
+            progress_callback("Generating inheritance tree", 6, 14)
 
-        inheritance_content = await generate_inheritance_page(index_status, self.vector_store)
+        inheritance_content = await generate_inheritance_page(
+            index_status, self.vector_store
+        )
         if inheritance_content:
             inheritance_page = WikiPage(
                 path="inheritance.md",
@@ -592,13 +611,15 @@ class WikiGenerator:
                 generated_at=time.time(),
             )
             ctx.pages.append(inheritance_page)
-            self.status_manager.record_page_status(inheritance_page, ctx.all_source_files)
+            self.status_manager.record_page_status(
+                inheritance_page, ctx.all_source_files
+            )
             await self._write_page(inheritance_page)
             ctx.pages_generated += 1
 
         # Glossary page
         if progress_callback:
-            progress_callback("Generating glossary", 7, 13)
+            progress_callback("Generating glossary", 7, 14)
 
         glossary_content = await generate_glossary_page(index_status, self.vector_store)
         if glossary_content:
@@ -615,7 +636,7 @@ class WikiGenerator:
 
         # Coverage report page
         if progress_callback:
-            progress_callback("Generating coverage report", 8, 13)
+            progress_callback("Generating coverage report", 8, 14)
 
         coverage_content = await generate_coverage_page(index_status, self.vector_store)
         if coverage_content:
@@ -632,7 +653,7 @@ class WikiGenerator:
 
         # Dependency graph page
         if progress_callback:
-            progress_callback("Generating dependency graph", 9, 13)
+            progress_callback("Generating dependency graph", 9, 14)
 
         try:
             dependency_content = await generate_dependency_graph_page(
@@ -650,7 +671,9 @@ class WikiGenerator:
                     generated_at=time.time(),
                 )
                 ctx.pages.append(dependency_page)
-                self.status_manager.record_page_status(dependency_page, ctx.all_source_files)
+                self.status_manager.record_page_status(
+                    dependency_page, ctx.all_source_files
+                )
                 await self._write_page(dependency_page)
                 ctx.pages_generated += 1
         except Exception as e:
@@ -675,7 +698,9 @@ class WikiGenerator:
             return generators
 
         # Build name -> generator mapping
-        by_name: dict[str, "WikiGeneratorPlugin"] = {g.generator_name: g for g in generators}
+        by_name: dict[str, "WikiGeneratorPlugin"] = {
+            g.generator_name: g for g in generators
+        }
         available_names = set(by_name.keys())
 
         # Validate dependencies exist and warn about missing ones
@@ -727,7 +752,9 @@ class WikiGenerator:
 
         # Check for cycles (some generators still have unresolved dependencies)
         if len(sorted_generators) != len(generators):
-            unresolved = [g.generator_name for g in generators if g not in sorted_generators]
+            unresolved = [
+                g.generator_name for g in generators if g not in sorted_generators
+            ]
             logger.error(
                 f"Circular dependency detected in wiki generators: {unresolved}. "
                 f"These generators will not run."
@@ -749,7 +776,9 @@ class WikiGenerator:
             progress_callback: Optional progress callback.
         """
         registry = get_plugin_registry()
-        generators: list["WikiGeneratorPlugin"] = list(registry.wiki_generators.values())
+        generators: list["WikiGeneratorPlugin"] = list(
+            registry.wiki_generators.values()
+        )
 
         if not generators:
             return
@@ -769,7 +798,9 @@ class WikiGenerator:
 
         for generator in generators:
             try:
-                logger.debug(f"Running wiki generator plugin: {generator.generator_name}")
+                logger.debug(
+                    f"Running wiki generator plugin: {generator.generator_name}"
+                )
                 result = await generator.generate(
                     index_status=index_status,
                     wiki_path=self.wiki_path,
@@ -795,6 +826,51 @@ class WikiGenerator:
                     f"Wiki generator plugin '{generator.generator_name}' failed: {e}"
                 )
 
+    async def _generate_codemap_pages(
+        self,
+        ctx: _GenerationContext,
+        index_status: IndexStatus,
+        progress_callback: ProgressCallback | None,
+    ) -> None:
+        """Generate codemap pages for auto-discovered entry points.
+
+        Args:
+            ctx: Generation context.
+            index_status: Index status.
+            progress_callback: Optional progress callback.
+        """
+        codemap_enabled = getattr(self.config.wiki, "codemap_enabled", None)
+        if not isinstance(codemap_enabled, bool) or not codemap_enabled:
+            return
+
+        if progress_callback:
+            progress_callback("Generating codemaps", 10, 14)
+
+        assert self._repo_path is not None, (
+            "Repository path must be set before generating codemaps"
+        )
+
+        self._progress.start_phase("codemaps", total=0)
+
+        codemap_pages, gen_count, skip_count = await generate_codemap_pages(
+            vector_store=self.vector_store,
+            llm=self.llm,
+            repo_path=self._repo_path,
+            wiki_path=self.wiki_path,
+            status_manager=self.status_manager,
+            config=self.config.wiki,
+            full_rebuild=ctx.full_rebuild,
+        )
+        ctx.pages_generated += gen_count
+        ctx.pages_skipped += skip_count
+
+        self._progress._phase_stats["codemaps"].items_completed = len(codemap_pages)
+        self._progress.complete_phase()
+
+        for page in codemap_pages:
+            ctx.pages.append(page)
+            await self._write_page(page)
+
     async def _apply_cross_linking(
         self,
         pages: list[WikiPage],
@@ -810,7 +886,7 @@ class WikiGenerator:
             Updated list of pages with cross-linking applied.
         """
         if progress_callback:
-            progress_callback("Adding cross-links", 9, 13)
+            progress_callback("Adding cross-links", 10, 14)
 
         pages = add_cross_links(pages, self.entity_registry)
 
@@ -820,7 +896,7 @@ class WikiGenerator:
         )
 
         if progress_callback:
-            progress_callback("Adding See Also sections", 10, 13)
+            progress_callback("Adding See Also sections", 11, 14)
 
         pages = add_see_also_sections(pages, self.relationship_analyzer)
 
@@ -844,9 +920,11 @@ class WikiGenerator:
             progress_callback: Optional progress callback.
         """
         if progress_callback:
-            progress_callback("Generating search index", 11, 13)
+            progress_callback("Generating search index", 12, 14)
 
-        await write_full_search_index(self.wiki_path, pages, index_status, self.vector_store)
+        await write_full_search_index(
+            self.wiki_path, pages, index_status, self.vector_store
+        )
 
         # Generate table of contents with hierarchical numbering
         page_list = [{"path": p.path, "title": p.title} for p in pages]
@@ -890,9 +968,11 @@ class WikiGenerator:
             wiki_status: Wiki generation status to update.
             progress_callback: Optional progress callback.
         """
-        total_steps = 13
+        total_steps = 14
 
-        assert self._repo_path is not None, "Repository path must be set before generating wiki"
+        assert self._repo_path is not None, (
+            "Repository path must be set before generating wiki"
+        )
         freshness_page = generate_stale_report_page(
             repo_path=self._repo_path,
             wiki_status=wiki_status,
@@ -940,7 +1020,9 @@ class WikiGenerator:
             repo_path=self._repo_path,
         )
 
-    async def _generate_dependencies(self, index_status: IndexStatus) -> tuple[WikiPage, list[str]]:
+    async def _generate_dependencies(
+        self, index_status: IndexStatus
+    ) -> tuple[WikiPage, list[str]]:
         """Generate dependencies documentation with grounded facts from manifest."""
         return await generate_dependencies_page(
             index_status=index_status,
@@ -1003,7 +1085,9 @@ async def generate_wiki(
     if effective_provider is None and config.wiki.use_cloud_for_github:
         if is_github_repo(repo_path):
             effective_provider = config.wiki.github_llm_provider
-            logger.info(f"GitHub repo detected, using cloud provider: {effective_provider}")
+            logger.info(
+                f"GitHub repo detected, using cloud provider: {effective_provider}"
+            )
 
     generator = WikiGenerator(
         wiki_path=wiki_path,

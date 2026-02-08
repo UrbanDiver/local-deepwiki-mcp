@@ -361,6 +361,29 @@ class WikiConfig(BaseModel):
     fallback_search_limit: int = Field(
         default=30, description="Maximum chunks to search in fallback queries"
     )
+    codemap_enabled: bool = Field(
+        default=True,
+        description="Enable automatic codemap generation during wiki build. "
+        "Generates execution-flow diagrams for high-value entry points.",
+    )
+    codemap_max_topics: int = Field(
+        default=5,
+        ge=0,
+        le=20,
+        description="Maximum number of codemap topics to auto-generate (0 to disable).",
+    )
+    codemap_max_depth: int = Field(
+        default=4,
+        ge=1,
+        le=10,
+        description="BFS traversal depth for codemap generation.",
+    )
+    codemap_max_nodes: int = Field(
+        default=30,
+        ge=5,
+        le=60,
+        description="Maximum nodes per codemap graph.",
+    )
 
     @field_validator("max_concurrent_llm_calls")
     @classmethod
