@@ -2418,7 +2418,11 @@ class VectorStore:
         # Convert to SearchResult objects and apply similarity threshold
         search_results = []
         for row in results:
-            score = 1.0 - row.get("_distance", 0)  # Convert distance to similarity
+            # LanceDB returns L2 distance. For normalized vectors (norm=1),
+            # L2 distance d relates to cosine similarity s by: s = 1 - d^2/2.
+            # L2 range [0, 2] maps to cosine similarity [1, -1].
+            dist = row.get("_distance", 0)
+            score = 1.0 - dist * dist / 2.0
             # Apply minimum similarity threshold
             if score < effective_min_similarity:
                 continue
@@ -2636,10 +2640,11 @@ class VectorStore:
         all_results = count_search.to_list()
 
         # Apply similarity threshold filtering
+        # Use same L2-to-cosine conversion as search(): s = 1 - d^2/2
         all_results = [
             row
             for row in all_results
-            if (1.0 - row.get("_distance", 0)) >= effective_min_similarity
+            if (1.0 - row.get("_distance", 0) ** 2 / 2.0) >= effective_min_similarity
         ]
         total_estimate = len(all_results)
 
@@ -2662,10 +2667,11 @@ class VectorStore:
         search_results = []
         for row in paginated_results:
             chunk = self._row_to_chunk(row)
+            dist = row.get("_distance", 0)
             search_results.append(
                 SearchResult(
                     chunk=chunk,
-                    score=1.0 - row.get("_distance", 0),
+                    score=1.0 - dist * dist / 2.0,
                     highlights=[],
                 )
             )

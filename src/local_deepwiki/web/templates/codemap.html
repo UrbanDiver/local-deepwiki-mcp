@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Codemap - DeepWiki</title>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --text-color: #c9d1d9;
+            --link-color: #58a6ff;
+            --border-color: #30363d;
+            --sidebar-bg: #161b22;
+            --code-bg: #1f2428;
+            --heading-color: #f0f6fc;
+            --muted-color: #8b949e;
+            --entry-color: #2d6a4f;
+            --crossfile-color: #1d3557;
+            --leaf-color: #6c757d;
+            --parent-bg: #161b22;
+        }
+        [data-theme="light"] {
+            --bg-color: #ffffff;
+            --text-color: #24292f;
+            --link-color: #0969da;
+            --border-color: #d0d7de;
+            --sidebar-bg: #f6f8fa;
+            --code-bg: #f6f8fa;
+            --heading-color: #1f2328;
+            --muted-color: #656d76;
+            --entry-color: #2d6a4f;
+            --crossfile-color: #1d3557;
+            --leaf-color: #6c757d;
+            --parent-bg: #f0f0f0;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            background: var(--sidebar-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .header h1 { font-size: 1.2em; color: var(--heading-color); }
+        .header a { color: var(--link-color); text-decoration: none; font-size: 0.9em; }
+        .header a:hover { text-decoration: underline; }
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .theme-toggle {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 14px;
+            color: var(--text-color);
+            transition: background 0.2s;
+        }
+        .theme-toggle:hover { background: var(--border-color); }
+
+        /* Query bar */
+        .query-bar {
+            background: var(--sidebar-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 20px;
+        }
+        .query-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .query-input {
+            flex: 1;
+            min-width: 200px;
+            padding: 8px 12px;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-color);
+            font-size: 14px;
+            outline: none;
+        }
+        .query-input:focus { border-color: var(--link-color); }
+        .query-select, .query-number {
+            padding: 8px 10px;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-color);
+            font-size: 13px;
+        }
+        .query-number { width: 70px; }
+        .query-label { font-size: 12px; color: var(--muted-color); }
+        .generate-btn {
+            padding: 8px 18px;
+            background: var(--link-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .generate-btn:hover:not(:disabled) { opacity: 0.9; }
+        .generate-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Topic chips */
+        .topics-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .topics-label { font-size: 12px; color: var(--muted-color); }
+        .topic-chip {
+            padding: 4px 10px;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            font-size: 12px;
+            color: var(--text-color);
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .topic-chip:hover {
+            border-color: var(--link-color);
+            background: var(--sidebar-bg);
+        }
+
+        /* Main content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+        .graph-panel {
+            flex: 3;
+            position: relative;
+            border-right: 1px solid var(--border-color);
+        }
+        #cy {
+            width: 100%;
+            height: 100%;
+        }
+        .graph-placeholder {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--muted-color);
+            font-size: 1.1em;
+            text-align: center;
+            padding: 40px;
+        }
+        .graph-placeholder p { max-width: 400px; }
+
+        /* Progress overlay */
+        .progress-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--sidebar-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px 30px;
+            text-align: center;
+            z-index: 10;
+            display: none;
+        }
+        .progress-overlay.active { display: block; }
+        .progress-spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--link-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Narrative panel */
+        .narrative-panel {
+            flex: 2;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        .narrative-panel h3 {
+            color: var(--heading-color);
+            margin-bottom: 12px;
+            font-size: 1em;
+        }
+        .narrative-content {
+            font-size: 0.9em;
+            line-height: 1.7;
+        }
+        .narrative-content code {
+            background: var(--code-bg);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        .narrative-content pre {
+            background: var(--code-bg);
+            padding: 12px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 8px 0;
+        }
+        .narrative-content a { color: var(--link-color); }
+
+        /* Stats */
+        .stats-bar {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+            flex-wrap: wrap;
+        }
+        .stat { font-size: 0.85em; }
+        .stat-value { font-weight: 600; color: var(--heading-color); }
+        .stat-label { color: var(--muted-color); }
+
+        /* Legend */
+        .legend {
+            margin-top: 20px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border-color);
+        }
+        .legend h4 { font-size: 0.85em; color: var(--muted-color); margin-bottom: 8px; }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8em;
+            margin-bottom: 4px;
+        }
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+        .legend-line {
+            width: 20px;
+            height: 2px;
+            flex-shrink: 0;
+        }
+
+        /* Mermaid fallback */
+        .mermaid-fallback {
+            padding: 20px;
+            overflow: auto;
+            display: none;
+        }
+
+        /* Welcome state */
+        .narrative-welcome {
+            color: var(--muted-color);
+            text-align: center;
+            padding: 40px 20px;
+        }
+        .narrative-welcome h3 { color: var(--heading-color); margin-bottom: 8px; }
+
+        @media (max-width: 900px) {
+            .main-content { flex-direction: column; }
+            .graph-panel { border-right: none; border-bottom: 1px solid var(--border-color); min-height: 300px; }
+            .narrative-panel { flex: 1; }
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/cytoscape@3/dist/cytoscape.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dagre@0.8/dist/dagre.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/cytoscape-dagre@2/cytoscape-dagre.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+    <header class="header">
+        <div class="header-left">
+            <h1>DeepWiki Codemap</h1>
+            <a href="/">Back to Wiki</a>
+            <a href="/chat">Chat</a>
+        </div>
+        <div class="header-controls">
+            <button id="theme-toggle" class="theme-toggle" title="Toggle theme">&#127769;</button>
+        </div>
+    </header>
+
+    <div class="query-bar">
+        <div class="query-row">
+            <input type="text" id="query-input" class="query-input"
+                   placeholder="How does indexing work? / Trace the request handling pipeline...">
+            <label class="query-label">Focus</label>
+            <select id="focus-select" class="query-select">
+                <option value="execution_flow">Execution Flow</option>
+                <option value="data_flow">Data Flow</option>
+                <option value="dependency_chain">Dependency Chain</option>
+            </select>
+            <label class="query-label">Depth</label>
+            <input type="number" id="depth-input" class="query-number" value="5" min="1" max="10">
+            <label class="query-label">Nodes</label>
+            <input type="number" id="nodes-input" class="query-number" value="30" min="5" max="60">
+            <button id="generate-btn" class="generate-btn">Generate</button>
+        </div>
+        <div class="topics-row" id="topics-row">
+            <span class="topics-label">Suggested:</span>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="graph-panel" id="graph-panel">
+            <div class="graph-placeholder" id="graph-placeholder">
+                <p>Enter a query above or click a suggested topic to generate an interactive codemap.</p>
+            </div>
+            <div id="cy" style="display:none;"></div>
+            <div class="mermaid-fallback" id="mermaid-fallback"></div>
+            <div class="progress-overlay" id="progress-overlay">
+                <div class="progress-spinner"></div>
+                <div id="progress-message">Generating codemap...</div>
+            </div>
+        </div>
+
+        <div class="narrative-panel" id="narrative-panel">
+            <div class="narrative-welcome">
+                <h3>Narrative Trace</h3>
+                <p>The step-by-step execution trace will appear here after generating a codemap.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- State ---
+        var cy = null;
+        var isGenerating = false;
+
+        // --- DOM ---
+        var queryInput = document.getElementById('query-input');
+        var focusSelect = document.getElementById('focus-select');
+        var depthInput = document.getElementById('depth-input');
+        var nodesInput = document.getElementById('nodes-input');
+        var generateBtn = document.getElementById('generate-btn');
+        var topicsRow = document.getElementById('topics-row');
+        var graphPlaceholder = document.getElementById('graph-placeholder');
+        var cyContainer = document.getElementById('cy');
+        var mermaidFallback = document.getElementById('mermaid-fallback');
+        var progressOverlay = document.getElementById('progress-overlay');
+        var progressMessage = document.getElementById('progress-message');
+        var narrativePanel = document.getElementById('narrative-panel');
+        var themeToggle = document.getElementById('theme-toggle');
+
+        // --- Cytoscape Styles ---
+        var cytoscapeStyles = [
+            { selector: 'node', style: {
+                'label': 'data(label)',
+                'text-valign': 'center',
+                'text-halign': 'center',
+                'font-size': '11px',
+                'color': '#c9d1d9',
+                'text-wrap': 'ellipsis',
+                'text-max-width': '120px',
+                'width': 'label',
+                'height': 30,
+                'padding': '8px',
+                'shape': 'round-rectangle',
+                'background-color': '#21262d',
+                'border-width': 1,
+                'border-color': '#30363d',
+            }},
+            { selector: 'node.entry', style: {
+                'background-color': '#2d6a4f',
+                'border-color': '#40916c',
+                'color': '#ffffff',
+                'font-weight': 'bold',
+            }},
+            { selector: 'node.crossfile', style: {
+                'background-color': '#1d3557',
+                'border-color': '#457b9d',
+                'color': '#ffffff',
+            }},
+            { selector: 'node.leaf', style: {
+                'background-color': '#6c757d',
+                'border-color': '#8b949e',
+                'color': '#ffffff',
+            }},
+            { selector: ':parent', style: {
+                'background-color': '#161b22',
+                'background-opacity': 0.6,
+                'border-color': '#30363d',
+                'border-width': 1,
+                'text-valign': 'top',
+                'text-halign': 'center',
+                'font-size': '10px',
+                'color': '#8b949e',
+                'padding': '12px',
+                'shape': 'round-rectangle',
+            }},
+            { selector: 'edge', style: {
+                'width': 1.5,
+                'line-color': '#8b949e',
+                'target-arrow-color': '#8b949e',
+                'target-arrow-shape': 'triangle',
+                'curve-style': 'bezier',
+                'arrow-scale': 0.8,
+            }},
+            { selector: 'edge.cross-file-edge', style: {
+                'line-color': '#58a6ff',
+                'target-arrow-color': '#58a6ff',
+                'line-style': 'dashed',
+                'width': 2,
+            }},
+            { selector: 'node:selected', style: {
+                'border-color': '#f0f6fc',
+                'border-width': 2,
+                'overlay-opacity': 0.1,
+            }},
+        ];
+
+        // --- Build Cytoscape Elements ---
+        function buildCytoscapeElements(result) {
+            var elements = [];
+            var nodeIds = {};
+            var sourceNodes = {};
+            var targetNodes = {};
+
+            // Classify nodes by edge participation
+            for (var i = 0; i < result.edges.length; i++) {
+                var edge = result.edges[i];
+                sourceNodes[edge.source] = true;
+                targetNodes[edge.target] = true;
+            }
+
+            // Create compound parent nodes per file
+            var fileParents = {};
+            for (var i = 0; i < result.nodes.length; i++) {
+                var node = result.nodes[i];
+                var fileId = 'file:' + node.file_path;
+                if (!fileParents[fileId]) {
+                    fileParents[fileId] = true;
+                    var parts = node.file_path.split('/');
+                    var shortPath = parts.slice(-2).join('/');
+                    elements.push({
+                        group: 'nodes',
+                        data: { id: fileId, label: shortPath },
+                    });
+                }
+            }
+
+            // Create child nodes
+            for (var i = 0; i < result.nodes.length; i++) {
+                var node = result.nodes[i];
+                var fileId = 'file:' + node.file_path;
+                var qn = node.qualified_name;
+
+                // Classify: entry / crossfile / leaf / internal
+                var nodeClass = 'internal';
+                var isSource = sourceNodes[qn];
+                var isTarget = targetNodes[qn];
+
+                if (qn === result.entry_point || (isSource && !isTarget)) {
+                    nodeClass = 'entry';
+                } else if (!isSource && isTarget) {
+                    nodeClass = 'leaf';
+                }
+
+                // Check cross-file participation
+                var hasCrossFile = false;
+                for (var j = 0; j < result.edges.length; j++) {
+                    var e = result.edges[j];
+                    if ((e.source === qn || e.target === qn) && e.source_file !== e.target_file) {
+                        hasCrossFile = true;
+                        break;
+                    }
+                }
+                if (hasCrossFile && nodeClass !== 'entry') {
+                    nodeClass = 'crossfile';
+                }
+
+                elements.push({
+                    group: 'nodes',
+                    data: {
+                        id: qn,
+                        label: node.name,
+                        parent: fileId,
+                        filePath: node.file_path,
+                        startLine: node.start_line,
+                        endLine: node.end_line,
+                        chunkType: node.chunk_type,
+                        qualifiedName: qn,
+                    },
+                    classes: nodeClass,
+                });
+                nodeIds[qn] = true;
+            }
+
+            // Create edges
+            for (var i = 0; i < result.edges.length; i++) {
+                var edge = result.edges[i];
+                if (nodeIds[edge.source] && nodeIds[edge.target]) {
+                    var isCrossFile = edge.source_file !== edge.target_file;
+                    elements.push({
+                        group: 'edges',
+                        data: {
+                            source: edge.source,
+                            target: edge.target,
+                            edgeType: edge.edge_type,
+                        },
+                        classes: isCrossFile ? 'cross-file-edge' : 'same-file-edge',
+                    });
+                }
+            }
+
+            return elements;
+        }
+
+        // --- Render Graph ---
+        function renderGraph(result) {
+            var elements = buildCytoscapeElements(result);
+
+            if (elements.length === 0) {
+                graphPlaceholder.textContent = 'No nodes found for this query.';
+                graphPlaceholder.style.display = 'flex';
+                cyContainer.style.display = 'none';
+                return;
+            }
+
+            graphPlaceholder.style.display = 'none';
+            cyContainer.style.display = 'block';
+
+            if (cy) {
+                cy.destroy();
+            }
+
+            try {
+                cy = cytoscape({
+                    container: cyContainer,
+                    elements: elements,
+                    style: cytoscapeStyles,
+                    layout: {
+                        name: 'dagre',
+                        rankDir: 'TB',
+                        nodeSep: 50,
+                        rankSep: 80,
+                        padding: 20,
+                    },
+                    minZoom: 0.2,
+                    maxZoom: 3,
+                    wheelSensitivity: 0.3,
+                });
+
+                // Click handler - navigate to wiki file page
+                cy.on('tap', 'node:childless', function(evt) {
+                    var node = evt.target;
+                    var filePath = node.data('filePath');
+                    if (filePath) {
+                        // Strip source file extension before appending .md
+                        // Wiki pages use e.g. parser.md not parser.py.md
+                        var wikiPath = filePath.replace(/\.[^/.]+$/, '');
+                        window.open('/wiki/files/' + wikiPath + '.md', '_blank');
+                    }
+                });
+
+                // Cursor pointer on hover
+                cy.on('mouseover', 'node:childless', function() {
+                    cyContainer.style.cursor = 'pointer';
+                });
+                cy.on('mouseout', 'node:childless', function() {
+                    cyContainer.style.cursor = 'default';
+                });
+            } catch (err) {
+                // Fallback to mermaid
+                renderMermaidFallback(result.mermaid_diagram);
+            }
+        }
+
+        // --- Mermaid Fallback ---
+        function renderMermaidFallback(mermaidDiagram) {
+            cyContainer.style.display = 'none';
+            graphPlaceholder.style.display = 'none';
+            mermaidFallback.style.display = 'block';
+            mermaidFallback.textContent = '';
+            var pre = document.createElement('pre');
+            pre.className = 'mermaid';
+            pre.textContent = mermaidDiagram;
+            mermaidFallback.appendChild(pre);
+
+            // Try to render with mermaid if loaded
+            if (typeof mermaid !== 'undefined') {
+                mermaid.run({ nodes: mermaidFallback.querySelectorAll('.mermaid') });
+            }
+        }
+
+        // --- Render Narrative ---
+        function renderNarrative(result) {
+            // Clear panel safely
+            narrativePanel.textContent = '';
+
+            // Stats bar
+            var statsBar = document.createElement('div');
+            statsBar.className = 'stats-bar';
+            var stats = [
+                { value: result.total_nodes, label: 'nodes' },
+                { value: result.total_edges, label: 'edges' },
+                { value: result.cross_file_edges, label: 'cross-file' },
+                { value: result.files_involved ? result.files_involved.length : 0, label: 'files' },
+            ];
+            stats.forEach(function(s) {
+                var stat = document.createElement('div');
+                stat.className = 'stat';
+                var valSpan = document.createElement('span');
+                valSpan.className = 'stat-value';
+                valSpan.textContent = s.value;
+                var labelSpan = document.createElement('span');
+                labelSpan.className = 'stat-label';
+                labelSpan.textContent = ' ' + s.label;
+                stat.appendChild(valSpan);
+                stat.appendChild(labelSpan);
+                statsBar.appendChild(stat);
+            });
+            narrativePanel.appendChild(statsBar);
+
+            // Heading
+            var heading = document.createElement('h3');
+            heading.textContent = 'Execution Trace';
+            narrativePanel.appendChild(heading);
+
+            // Narrative content - rendered markdown (same pattern as chat.html)
+            var narrativeDiv = document.createElement('div');
+            narrativeDiv.className = 'narrative-content';
+            narrativeDiv.innerHTML = renderMarkdown(result.narrative);
+            narrativePanel.appendChild(narrativeDiv);
+
+            // Legend
+            var legendDiv = document.createElement('div');
+            legendDiv.className = 'legend';
+            var legendTitle = document.createElement('h4');
+            legendTitle.textContent = 'Legend';
+            legendDiv.appendChild(legendTitle);
+
+            var legendItems = [
+                { color: '#2d6a4f', label: 'Entry point', type: 'dot' },
+                { color: '#1d3557', label: 'Cross-file call', type: 'dot' },
+                { color: '#6c757d', label: 'Leaf node', type: 'dot' },
+                { color: '#21262d', label: 'Internal', type: 'dot', border: '#30363d' },
+                { color: '#8b949e', label: 'Same-file edge', type: 'line' },
+                { color: '#58a6ff', label: 'Cross-file edge', type: 'dashed' },
+            ];
+            legendItems.forEach(function(item) {
+                var row = document.createElement('div');
+                row.className = 'legend-item';
+                if (item.type === 'dot') {
+                    var dot = document.createElement('div');
+                    dot.className = 'legend-dot';
+                    dot.style.background = item.color;
+                    if (item.border) {
+                        dot.style.border = '1px solid ' + item.border;
+                    }
+                    row.appendChild(dot);
+                } else {
+                    var line = document.createElement('div');
+                    line.className = 'legend-line';
+                    if (item.type === 'dashed') {
+                        line.style.borderTop = '2px dashed ' + item.color;
+                        line.style.height = '0';
+                    } else {
+                        line.style.background = item.color;
+                    }
+                    row.appendChild(line);
+                }
+                var labelSpan = document.createElement('span');
+                labelSpan.textContent = item.label;
+                row.appendChild(labelSpan);
+                legendDiv.appendChild(row);
+            });
+            narrativePanel.appendChild(legendDiv);
+        }
+
+        // --- Generate Codemap ---
+        async function generateCodemap() {
+            var query = queryInput.value.trim();
+            if (!query || isGenerating) return;
+
+            isGenerating = true;
+            generateBtn.disabled = true;
+            progressOverlay.classList.add('active');
+            progressMessage.textContent = 'Generating codemap...';
+            graphPlaceholder.style.display = 'none';
+            mermaidFallback.style.display = 'none';
+
+            try {
+                var response = await fetch('/api/codemap', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query: query,
+                        focus: focusSelect.value,
+                        max_depth: parseInt(depthInput.value, 10),
+                        max_nodes: parseInt(nodesInput.value, 10),
+                    }),
+                });
+
+                var reader = response.body.getReader();
+                var decoder = new TextDecoder();
+                var buffer = '';
+
+                while (true) {
+                    var chunk = await reader.read();
+                    if (chunk.done) break;
+
+                    buffer += decoder.decode(chunk.value, { stream: true });
+                    var lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+
+                    for (var li = 0; li < lines.length; li++) {
+                        var line = lines[li];
+                        if (!line.startsWith('data: ')) continue;
+
+                        try {
+                            var data = JSON.parse(line.slice(6));
+
+                            if (data.type === 'progress') {
+                                progressMessage.textContent = data.message;
+                            } else if (data.type === 'result') {
+                                progressOverlay.classList.remove('active');
+                                renderGraph(data);
+                                renderNarrative(data);
+                            } else if (data.type === 'error') {
+                                throw new Error(data.message);
+                            } else if (data.type === 'done') {
+                                break;
+                            }
+                        } catch (parseErr) {
+                            if (parseErr.message && parseErr.message.indexOf('JSON') === -1) {
+                                throw parseErr;
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                progressOverlay.classList.remove('active');
+                graphPlaceholder.textContent = 'Error: ' + err.message;
+                graphPlaceholder.style.display = 'flex';
+            }
+
+            isGenerating = false;
+            generateBtn.disabled = false;
+            progressOverlay.classList.remove('active');
+        }
+
+        // --- Load Topics ---
+        async function loadTopics() {
+            try {
+                var response = await fetch('/api/codemap/topics');
+                if (!response.ok) {
+                    topicsRow.style.display = 'none';
+                    return;
+                }
+                var topics = await response.json();
+
+                if (Array.isArray(topics) && topics.length > 0) {
+                    topics.slice(0, 6).forEach(function(topic) {
+                        var chip = document.createElement('span');
+                        chip.className = 'topic-chip';
+                        chip.textContent = topic.topic || topic.suggested_query || 'Topic';
+                        chip.title = topic.reason || '';
+                        chip.addEventListener('click', function() {
+                            queryInput.value = topic.suggested_query || topic.topic;
+                            generateCodemap();
+                        });
+                        topicsRow.appendChild(chip);
+                    });
+                } else {
+                    topicsRow.style.display = 'none';
+                }
+            } catch (err) {
+                console.error('Failed to load topics:', err);
+                topicsRow.style.display = 'none';
+            }
+        }
+
+        // --- Utilities ---
+        function renderMarkdown(text) {
+            if (!text) return '';
+            try {
+                return marked.parse(text);
+            } catch (e) {
+                return escapeHtml(text);
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            var div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // --- Theme ---
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('deepwiki-theme', theme);
+            themeToggle.textContent = theme === 'dark' ? '\uD83C\uDF19' : '\u2600';
+        }
+
+        // --- Event Listeners ---
+        generateBtn.addEventListener('click', generateCodemap);
+
+        queryInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                generateCodemap();
+            }
+        });
+
+        themeToggle.addEventListener('click', function() {
+            var current = document.documentElement.getAttribute('data-theme') || 'dark';
+            setTheme(current === 'dark' ? 'light' : 'dark');
+        });
+
+        // --- Init ---
+        var savedTheme = localStorage.getItem('deepwiki-theme') || 'dark';
+        setTheme(savedTheme);
+        loadTopics();
+        queryInput.focus();
+    </script>
+</body>
+</html>

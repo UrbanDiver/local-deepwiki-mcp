@@ -220,7 +220,7 @@ async def discover_entry_points(
 
     search_query = entry_point_hint if entry_point_hint else query
     try:
-        results = await vector_store.search(search_query, limit=20)
+        results = await vector_store.search(search_query, limit=20, min_similarity=0.0)
     except Exception:
         logger.exception("Vector search failed for entry point discovery")
         return []
@@ -502,7 +502,9 @@ async def _search_cross_file(
 ) -> CodemapNode | None:
     """Search the vector store for *callee_name* in a different file."""
     try:
-        results = await vector_store.search(f"def {callee_name}", limit=5)
+        results = await vector_store.search(
+            f"def {callee_name}", limit=5, min_similarity=0.0
+        )
     except Exception:
         return None
 

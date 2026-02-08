@@ -12,7 +12,16 @@ from pathlib import Path
 from typing import Any, AsyncIterator, Callable, Iterator
 
 import markdown
-from flask import Flask, Response, abort, jsonify, redirect, render_template, request, url_for
+from flask import (
+    Flask,
+    Response,
+    abort,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    url_for,
+)
 
 from local_deepwiki.logging import get_logger
 
@@ -98,7 +107,9 @@ def get_wiki_structure(wiki_path: Path) -> tuple[list, dict, list | None]:
             section_pages = []
             for md_file in sorted(section_dir.glob("*.md")):
                 title = extract_title(md_file)
-                section_pages.append({"path": f"{section_dir.name}/{md_file.name}", "title": title})
+                section_pages.append(
+                    {"path": f"{section_dir.name}/{md_file.name}", "title": title}
+                )
             if section_pages:
                 sections[section_dir.name.replace("_", " ").title()] = section_pages
 
@@ -247,7 +258,9 @@ def view_page(path: str):
     )
 
 
-def stream_async_generator(async_gen_factory: Callable[[], AsyncIterator[str]]) -> Iterator[str]:
+def stream_async_generator(
+    async_gen_factory: Callable[[], AsyncIterator[str]],
+) -> Iterator[str]:
     """Bridge an async generator to a sync generator using a queue.
 
     This allows streaming async results through Flask's synchronous response handling.
@@ -318,7 +331,9 @@ def format_sources(search_results: list[Any]) -> list[dict[str, Any]]:
     return sources
 
 
-def build_prompt_with_history(question: str, history: list[dict[str, str]], context: str) -> str:
+def build_prompt_with_history(
+    question: str, history: list[dict[str, str]], context: str
+) -> str:
     """Build a prompt that includes conversation history for follow-up questions.
 
     Args:
@@ -645,6 +660,188 @@ def api_research():
     )
 
 
+@app.route("/codemap")
+def codemap_page():
+    """Render the interactive codemap visualization page."""
+    if WIKI_PATH is None:
+        abort(500, "Wiki path not configured")
+    return render_template("codemap.html", wiki_path=str(WIKI_PATH))
+
+
+@app.route("/api/codemap/topics")
+def api_codemap_topics():
+    """Return suggested codemap topics as JSON.
+
+    Calls suggest_topics() from the codemap generator using the indexed
+    repository's call graph hubs.
+
+    Returns:
+        JSON array of topic suggestions, or empty array on error.
+    """
+    if WIKI_PATH is None:
+        return jsonify({"error": "Wiki path not configured"}), 500
+
+    repo_path = WIKI_PATH.parent
+    if WIKI_PATH.name == ".deepwiki":
+        repo_path = WIKI_PATH.parent
+
+    async def _fetch_topics() -> list[dict]:
+        from local_deepwiki.config import get_config
+        from local_deepwiki.core.vectorstore import VectorStore
+        from local_deepwiki.generators.codemap import suggest_topics
+        from local_deepwiki.providers.embeddings import get_embedding_provider
+
+        config = get_config()
+        vector_db_path = config.get_vector_db_path(repo_path)
+
+        if not vector_db_path.exists():
+            return []
+
+        embedding_provider = get_embedding_provider(config.embedding)
+        vector_store = VectorStore(vector_db_path, embedding_provider)
+
+        try:
+            return await suggest_topics(vector_store, repo_path)
+        except Exception:  # noqa: BLE001 - Graceful degradation for topic suggestions
+            logger.exception("Failed to generate codemap topics")
+            return []
+
+    loop = asyncio.new_event_loop()
+    try:
+        topics = loop.run_until_complete(_fetch_topics())
+    finally:
+        loop.close()
+
+    return jsonify(topics)
+
+
+@app.route("/api/codemap", methods=["POST"])
+def api_codemap():
+    """Handle codemap generation with streaming response.
+
+    Expects JSON body with:
+        - query: The codemap query (required)
+        - focus: Focus mode - execution_flow, data_flow, dependency_chain (default: execution_flow)
+        - entry_point: Optional specific entry point function name
+        - max_depth: Max traversal depth 1-10 (default: 5)
+        - max_nodes: Max nodes 5-60 (default: 30)
+
+    Returns:
+        Server-Sent Events stream with progress, result, and done events.
+    """
+    if WIKI_PATH is None:
+        return jsonify({"error": "Wiki path not configured"}), 500
+
+    data = request.get_json() or {}
+    query = data.get("query", "").strip()
+
+    if not query:
+        return jsonify({"error": "Query is required"}), 400
+
+    focus = data.get("focus", "execution_flow")
+    valid_focus = {"execution_flow", "data_flow", "dependency_chain"}
+    if focus not in valid_focus:
+        return jsonify(
+            {
+                "error": f"Invalid focus mode. Must be one of: {', '.join(sorted(valid_focus))}"
+            }
+        ), 400
+
+    max_depth = data.get("max_depth", 5)
+    if not isinstance(max_depth, int) or max_depth < 1 or max_depth > 10:
+        return jsonify({"error": "max_depth must be an integer between 1 and 10"}), 400
+
+    max_nodes = data.get("max_nodes", 30)
+    if not isinstance(max_nodes, int) or max_nodes < 5 or max_nodes > 60:
+        return jsonify({"error": "max_nodes must be an integer between 5 and 60"}), 400
+
+    entry_point = data.get("entry_point")
+
+    repo_path = WIKI_PATH.parent
+    if WIKI_PATH.name == ".deepwiki":
+        repo_path = WIKI_PATH.parent
+
+    async def generate_codemap_stream() -> AsyncIterator[str]:
+        """Async generator that streams codemap generation progress and result."""
+        from local_deepwiki.config import get_config
+        from local_deepwiki.core.vectorstore import VectorStore
+        from local_deepwiki.generators.codemap import CodemapFocus, generate_codemap
+        from local_deepwiki.providers.embeddings import get_embedding_provider
+        from local_deepwiki.providers.llm import get_cached_llm_provider
+
+        config = get_config()
+        vector_db_path = config.get_vector_db_path(repo_path)
+
+        if not vector_db_path.exists():
+            yield f"data: {json.dumps({'type': 'error', 'message': 'Repository not indexed. Please run index_repository first.'})}\n\n"
+            return
+
+        yield f"data: {json.dumps({'type': 'progress', 'message': 'Initializing providers...'})}\n\n"
+
+        embedding_provider = get_embedding_provider(config.embedding)
+        vector_store = VectorStore(vector_db_path, embedding_provider)
+        cache_path = config.get_wiki_path(repo_path) / "llm_cache.lance"
+
+        llm_config = config.llm
+        chat_provider = config.wiki.chat_llm_provider
+        if chat_provider != "default":
+            llm_config = llm_config.model_copy(update={"provider": chat_provider})
+
+        llm = get_cached_llm_provider(
+            cache_path=cache_path,
+            embedding_provider=embedding_provider,
+            cache_config=config.llm_cache,
+            llm_config=llm_config,
+        )
+
+        yield f"data: {json.dumps({'type': 'progress', 'message': 'Building codemap graph...'})}\n\n"
+
+        try:
+            focus_enum = CodemapFocus(focus)
+            result = await generate_codemap(
+                query=query,
+                vector_store=vector_store,
+                llm=llm,
+                repo_path=repo_path,
+                focus=focus_enum,
+                entry_point=entry_point,
+                max_depth=max_depth,
+                max_nodes=max_nodes,
+            )
+
+            yield f"data: {json.dumps({'type': 'progress', 'message': 'Codemap ready.'})}\n\n"
+
+            response = {
+                "type": "result",
+                "query": result.query,
+                "focus": result.focus,
+                "entry_point": result.entry_point,
+                "mermaid_diagram": result.mermaid_diagram,
+                "narrative": result.narrative,
+                "nodes": result.nodes,
+                "edges": result.edges,
+                "files_involved": result.files_involved,
+                "total_nodes": result.total_nodes,
+                "total_edges": result.total_edges,
+                "cross_file_edges": result.cross_file_edges,
+            }
+            yield f"data: {json.dumps(response)}\n\n"
+        except Exception as e:  # noqa: BLE001 - Report codemap errors to user via SSE
+            logger.exception(f"Error generating codemap: {e}")
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+
+        yield f"data: {json.dumps({'type': 'done'})}\n\n"
+
+    return Response(
+        stream_async_generator(generate_codemap_stream),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
 def create_app(wiki_path: str | Path) -> Flask:
     """Create Flask app with wiki path configured."""
     global WIKI_PATH
@@ -657,7 +854,10 @@ def create_app(wiki_path: str | Path) -> Flask:
 
 
 def run_server(
-    wiki_path: str | Path, host: str = "127.0.0.1", port: int = 8080, debug: bool = False
+    wiki_path: str | Path,
+    host: str = "127.0.0.1",
+    port: int = 8080,
+    debug: bool = False,
 ):
     """Run the wiki web server."""
     app = create_app(wiki_path)
@@ -674,7 +874,10 @@ def main():
 
     parser = argparse.ArgumentParser(description="Serve DeepWiki documentation")
     parser.add_argument(
-        "wiki_path", nargs="?", default=".deepwiki", help="Path to the .deepwiki directory"
+        "wiki_path",
+        nargs="?",
+        default=".deepwiki",
+        help="Path to the .deepwiki directory",
     )
     parser.add_argument("--host", default="127.0.0.1", help="Host to bind to")
     parser.add_argument("--port", "-p", type=int, default=8080, help="Port to bind to")
