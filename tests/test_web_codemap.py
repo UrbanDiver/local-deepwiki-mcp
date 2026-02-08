@@ -625,6 +625,32 @@ class TestCodemapPhase3AnimatedTrace:
         content = template_path.read_text()
         assert "node.trace-active" in content
         assert "node.trace-visited" in content
+        assert "edge.trace-bridge" in content
+
+    def test_template_has_cross_file_bridge_animation(self):
+        """Test that animated trace pauses on cross-file transitions."""
+        template_path = _MODULE_DIR / "templates" / "codemap.html"
+        content = template_path.read_text()
+        assert "scheduleNextStep" in content
+        # Variable delay: 2400ms for cross-file, 1200ms for same-file
+        assert "2400" in content
+        assert "1200" in content
+        # Uses setTimeout (not setInterval) for variable timing
+        assert "setTimeout" in content
+        # Detects cross-file transitions by comparing filePath
+        assert "isCrossFile" in content
+
+    def test_template_bridge_edge_has_glow_style(self):
+        """Test that trace-bridge edge style includes overlay glow."""
+        template_path = _MODULE_DIR / "templates" / "codemap.html"
+        content = template_path.read_text()
+        # The trace-bridge style block should have overlay properties for glow
+        bridge_idx = content.index("edge.trace-bridge")
+        next_bracket = content.index("}}", bridge_idx)
+        bridge_style = content[bridge_idx:next_bracket]
+        assert "overlay-color" in bridge_style
+        assert "overlay-opacity" in bridge_style
+        assert "#f0883e" in bridge_style
 
     def test_template_has_play_keyboard_shortcut(self):
         """Test that P key triggers play/pause."""
@@ -658,6 +684,18 @@ class TestCodemapPhase3DiffOverlay:
         content = template_path.read_text()
         assert "node.diff-changed" in content
         assert "#f85149" in content
+
+    def test_template_diff_overlay_has_glow(self):
+        """Test that diff-changed nodes have overlay glow effect."""
+        template_path = _MODULE_DIR / "templates" / "codemap.html"
+        content = template_path.read_text()
+        # Find the diff-changed style block
+        diff_idx = content.index("node.diff-changed")
+        next_bracket = content.index("}}", diff_idx)
+        diff_style = content[diff_idx:next_bracket]
+        assert "overlay-color" in diff_style
+        assert "overlay-opacity" in diff_style
+        assert "#f85149" in diff_style
 
     def test_template_has_diff_overlay_functions(self):
         """Test that the template has diff overlay functions."""

@@ -713,16 +713,22 @@
                 'target-arrow-color': '#f0883e',
                 'z-index': 10,
             }},
-            // Diff overlay: changed file nodes
+            // Diff overlay: changed file nodes (with glow via overlay)
             { selector: 'node.diff-changed', style: {
                 'border-color': '#f85149',
                 'border-width': 3,
                 'z-index': 11,
+                'overlay-color': '#f85149',
+                'overlay-opacity': 0.15,
+                'overlay-padding': 8,
             }},
             { selector: ':parent.diff-changed', style: {
                 'border-color': '#f85149',
                 'border-width': 2,
                 'background-opacity': 0.8,
+                'overlay-color': '#f85149',
+                'overlay-opacity': 0.1,
+                'overlay-padding': 6,
             }},
             // Animated trace: current step
             { selector: 'node.trace-active', style: {
@@ -733,6 +739,17 @@
             { selector: 'node.trace-visited', style: {
                 'border-color': '#3fb950',
                 'border-width': 2,
+            }},
+            // Cross-file bridge edge during animated trace
+            { selector: 'edge.trace-bridge', style: {
+                'line-color': '#f0883e',
+                'target-arrow-color': '#f0883e',
+                'width': 4,
+                'line-style': 'solid',
+                'z-index': 20,
+                'overlay-color': '#f0883e',
+                'overlay-opacity': 0.2,
+                'overlay-padding': 4,
             }},
         ];
 
@@ -981,17 +998,39 @@
             tracePlaying = true;
             traceStep = -1;
             clearHighlighting();
-            cy.elements().removeClass('trace-active trace-visited');
+            cy.elements().removeClass('trace-active trace-visited trace-bridge');
             playStepLabel.textContent = 'Step 0/' + traceNodes.length;
             playBtn.classList.add('active');
             stepTrace();
-            traceTimer = setInterval(stepTrace, 1200);
+            scheduleNextStep();
+        }
+
+        function scheduleNextStep() {
+            if (!tracePlaying || !cy || traceStep >= traceNodes.length - 1) return;
+
+            // Check if next step crosses a file boundary
+            var currentNodeId = traceNodes[traceStep];
+            var nextNodeId = traceNodes[traceStep + 1];
+            var currentFile = cy.getElementById(currentNodeId).data('filePath') || '';
+            var nextFile = cy.getElementById(nextNodeId).data('filePath') || '';
+            var isCrossFile = currentFile !== nextFile && currentFile !== '' && nextFile !== '';
+
+            // Pause longer on cross-file transitions for visual bridge effect
+            var delay = isCrossFile ? 2400 : 1200;
+            traceTimer = setTimeout(function() {
+                stepTrace();
+                scheduleNextStep();
+            }, delay);
         }
 
         function stepTrace() {
             if (!cy || traceNodes.length === 0) return;
 
+            // Remove previous bridge highlighting
+            cy.elements().removeClass('trace-bridge');
+
             // Un-highlight previous
+            var prevStep = traceStep;
             if (traceStep >= 0 && traceStep < traceNodes.length) {
                 var prev = cy.getElementById(traceNodes[traceStep]);
                 prev.removeClass('trace-active').addClass('trace-visited');
@@ -1007,6 +1046,20 @@
             var node = cy.getElementById(nodeId);
             node.addClass('trace-active');
 
+            // Cross-file bridge: highlight the connecting edge with glow
+            if (prevStep >= 0 && prevStep < traceNodes.length) {
+                var prevNodeId = traceNodes[prevStep];
+                var prevFile = cy.getElementById(prevNodeId).data('filePath') || '';
+                var curFile = node.data('filePath') || '';
+                if (prevFile !== curFile && prevFile !== '' && curFile !== '') {
+                    var bridgeEdges = cy.getElementById(prevNodeId).edgesTo(cy.getElementById(nodeId));
+                    if (bridgeEdges.length === 0) {
+                        bridgeEdges = cy.getElementById(nodeId).edgesTo(cy.getElementById(prevNodeId));
+                    }
+                    bridgeEdges.addClass('trace-bridge');
+                }
+            }
+
             // Pan to the node
             cy.animate({ center: { eles: node }, duration: 300 });
 
@@ -1014,7 +1067,7 @@
         }
 
         function pauseTrace() {
-            if (traceTimer) clearInterval(traceTimer);
+            if (traceTimer) clearTimeout(traceTimer);
             traceTimer = null;
             tracePlaying = false;
             playBtn.classList.remove('active');
@@ -1023,7 +1076,7 @@
         function stopTrace() {
             pauseTrace();
             traceStep = -1;
-            if (cy) cy.elements().removeClass('trace-active trace-visited');
+            if (cy) cy.elements().removeClass('trace-active trace-visited trace-bridge');
             playStepLabel.textContent = 'Step 0/' + traceNodes.length;
         }
 
