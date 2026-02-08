@@ -594,3 +594,274 @@ class TestCodemapNodeSerialization:
         )
         assert node.docstring is None
         assert node.content_preview == ""
+
+
+class TestCodemapPhase3AnimatedTrace:
+    """Tests for Phase 3 animated execution trace feature."""
+
+    def test_template_has_play_controls(self):
+        """Test that the template has play/pause/step controls."""
+        template_path = _MODULE_DIR / "templates" / "codemap.html"
+        content = template_path.read_text()
+        assert 'id="play-controls"' in content
+        assert 'id="play-btn"' in content
+        assert 'id="pause-btn"' in content
+        assert 'id="step-btn"' in content
+        assert 'id="stop-trace-btn"' in content
+
+    def test_template_has_trace_functions(self):
+        """Test that the template has trace animation functions."""
+        template_path = _MODULE_DIR / "templates" / "codemap.html"
+        content = template_path.read_text()
+        assert "startTrace" in content
+        assert "pauseTrace" in content
+        assert "stopTrace" in content
+        assert "stepTrace" in content
+        assert "buildTraceSequence" in content
+
+    def test_template_has_trace_styles(self):
+        """Test that the template has Cytoscape styles for trace."""
+        template_path = _MODULE_DIR / "templates" / "codemap.html"
+        content = template_path.read_text()
+        assert "node.trace-active" in content
+        assert "node.trace-visited" in content
+
+    def test_template_has_play_keyboard_shortcut(self):
+        """Test that P key triggers play/pause."""
+        template_path = _MODULE_DIR / "templates" / "codemap.html"
+        content = template_path.read_text()
+        assert "e.key === 'p'" in content or "e.key === 'P'" in content
+
+    def test_codemap_page_has_play_controls(self, wiki_dir):
+        """Test that rendered page has play controls."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+        response = client.get("/codemap")
+        assert response.status_code == 200
+        assert b"play-controls" in response.data
+        assert b"play-btn" in response.data
+
+
+class TestCodemapPhase3DiffOverlay:
+    """Tests for Phase 3 git diff overlay feature."""
+
+    def test_template_has_diff_toggle(self):
+        """Test that the template has diff toggle checkbox."""
+        template_path = _MODULE_DIR / "templates" / "codemap.html"
+        content = template_path.read_text()
+        assert 'id="diff-toggle-cb"' in content
+        assert "Show Changes" in content
+
+    def test_template_has_diff_overlay_styles(self):
+        """Test that the template has diff-changed Cytoscape styles."""
+        template_path = _MODULE_DIR / "templates" / "codemap.html"
+        content = template_path.read_text()
+        assert "node.diff-changed" in content
+        assert "#f85149" in content
+
+    def test_template_has_diff_overlay_functions(self):
+        """Test that the template has diff overlay functions."""
+        template_path = _MODULE_DIR / "templates" / "codemap.html"
+        content = template_path.read_text()
+        assert "loadDiffFiles" in content
+        assert "applyDiffOverlay" in content
+        assert "removeDiffOverlay" in content
+
+    def test_api_diff_returns_json(self, wiki_dir):
+        """Test that /api/codemap/diff returns JSON."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+        response = client.get("/api/codemap/diff")
+        assert response.status_code == 200
+        assert response.content_type.startswith("application/json")
+        data = response.get_json()
+        assert "changed_files" in data
+
+    def test_api_diff_validates_refs(self, wiki_dir):
+        """Test that /api/codemap/diff validates git refs."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+        response = client.get("/api/codemap/diff?base_ref=;rm+-rf")
+        assert response.status_code == 400
+
+    def test_api_diff_accepts_valid_refs(self, wiki_dir):
+        """Test that /api/codemap/diff accepts valid git refs."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+        response = client.get("/api/codemap/diff?base_ref=HEAD~3&head_ref=HEAD")
+        assert response.status_code == 200
+
+
+class TestCodemapPhase3Minimap:
+    """Tests for Phase 3 minimap feature."""
+
+    def test_template_has_minimap_container(self):
+        """Test that the template has a minimap container."""
+        template_path = _MODULE_DIR / "templates" / "codemap.html"
+        content = template_path.read_text()
+        assert 'id="cy-minimap"' in content
+
+    def test_template_has_minimap_function(self):
+        """Test that the template has minimap initialization function."""
+        template_path = _MODULE_DIR / "templates" / "codemap.html"
+        content = template_path.read_text()
+        assert "initMinimap" in content
+        assert "navigator" in content
+
+    def test_template_loads_navigator_extension(self):
+        """Test that the template loads cytoscape-navigator CDN."""
+        template_path = _MODULE_DIR / "templates" / "codemap.html"
+        content = template_path.read_text()
+        assert "cytoscape-navigator" in content
+
+    def test_codemap_page_has_minimap_element(self, wiki_dir):
+        """Test that rendered page has minimap div."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+        response = client.get("/codemap")
+        assert response.status_code == 200
+        assert b"cy-minimap" in response.data
+
+
+class TestCodemapPhase3Cache:
+    """Tests for Phase 3 persistent codemap cache feature."""
+
+    def test_api_cache_returns_json(self, wiki_dir):
+        """Test that /api/codemap/cache returns JSON array."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+        response = client.get("/api/codemap/cache")
+        assert response.status_code == 200
+        data = response.get_json()
+        assert isinstance(data, list)
+
+    def test_api_cache_validates_key(self, wiki_dir):
+        """Test that /api/codemap/cache validates cache key format."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+        # Invalid key (injection attempt)
+        response = client.get("/api/codemap/cache?key=../../../etc/passwd")
+        assert response.status_code == 400
+
+    def test_api_cache_returns_404_for_missing(self, wiki_dir):
+        """Test that /api/codemap/cache returns 404 for nonexistent key."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+        response = client.get("/api/codemap/cache?key=deadbeef12345678")
+        assert response.status_code == 404
+
+    def test_template_has_recent_codemaps(self):
+        """Test that the template has recent codemaps section."""
+        template_path = _MODULE_DIR / "templates" / "codemap.html"
+        content = template_path.read_text()
+        assert 'id="recent-codemaps"' in content
+        assert "loadRecentCodemaps" in content
+
+    def test_template_has_cache_load_function(self):
+        """Test that the template has cache loading function."""
+        template_path = _MODULE_DIR / "templates" / "codemap.html"
+        content = template_path.read_text()
+        assert "loadCachedCodemap" in content
+
+    def test_cache_write_and_read(self, wiki_dir):
+        """Test cache write and read round-trip."""
+        from local_deepwiki.web.app import _cache_key, _read_cache, _write_cache
+
+        import local_deepwiki.web.app as web_app
+
+        old_wiki = web_app.WIKI_PATH
+        try:
+            web_app.WIKI_PATH = wiki_dir
+            key = _cache_key("test query", "execution_flow", 5, 30)
+            result = {
+                "query": "test query",
+                "focus": "execution_flow",
+                "total_nodes": 3,
+                "total_edges": 2,
+            }
+            _write_cache(key, result)
+            cached = _read_cache(key)
+            assert cached is not None
+            assert cached["query"] == "test query"
+            assert cached["total_nodes"] == 3
+        finally:
+            web_app.WIKI_PATH = old_wiki
+
+    def test_cache_key_deterministic(self):
+        """Test that cache key is deterministic."""
+        from local_deepwiki.web.app import _cache_key
+
+        k1 = _cache_key("test", "execution_flow", 5, 30)
+        k2 = _cache_key("test", "execution_flow", 5, 30)
+        assert k1 == k2
+
+    def test_cache_key_varies_with_params(self):
+        """Test that cache key changes with different params."""
+        from local_deepwiki.web.app import _cache_key
+
+        k1 = _cache_key("test", "execution_flow", 5, 30)
+        k2 = _cache_key("test", "data_flow", 5, 30)
+        k3 = _cache_key("different", "execution_flow", 5, 30)
+        assert k1 != k2
+        assert k1 != k3
+
+
+class TestCodemapPhase3Compare:
+    """Tests for Phase 3 multi-codemap comparison feature."""
+
+    def test_compare_page_renders(self, wiki_dir):
+        """Test that /codemap/compare renders successfully."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+        response = client.get("/codemap/compare")
+        assert response.status_code == 200
+        assert b"Codemap Compare" in response.data
+
+    def test_compare_page_has_two_panes(self, wiki_dir):
+        """Test that comparison page has two pane containers."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+        response = client.get("/codemap/compare")
+        assert response.status_code == 200
+        assert b'id="pane-left"' in response.data
+        assert b'id="pane-right"' in response.data
+
+    def test_compare_page_has_query_inputs(self, wiki_dir):
+        """Test that comparison page has query inputs for both panes."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+        response = client.get("/codemap/compare")
+        assert response.status_code == 200
+        assert b'id="query-left"' in response.data
+        assert b'id="query-right"' in response.data
+
+    def test_compare_page_has_generate_buttons(self, wiki_dir):
+        """Test that comparison page has generate buttons for both panes."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+        response = client.get("/codemap/compare")
+        assert response.status_code == 200
+        assert b'id="gen-left"' in response.data
+        assert b'id="gen-right"' in response.data
+
+    def test_compare_page_has_cytoscape(self, wiki_dir):
+        """Test that comparison page loads Cytoscape.js."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+        response = client.get("/codemap/compare")
+        assert response.status_code == 200
+        assert b"cytoscape" in response.data
+        assert b"dagre" in response.data
+
+    def test_compare_template_exists(self):
+        """Test that codemap_compare.html template exists."""
+        template_path = _MODULE_DIR / "templates" / "codemap_compare.html"
+        assert template_path.exists()
+
+    def test_codemap_page_has_compare_link(self, wiki_dir):
+        """Test that codemap page links to comparison view."""
+        app = create_app(wiki_dir)
+        client = app.test_client()
+        response = client.get("/codemap")
+        assert response.status_code == 200
+        assert b"/codemap/compare" in response.data

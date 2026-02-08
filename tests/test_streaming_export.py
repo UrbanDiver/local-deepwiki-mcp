@@ -17,6 +17,7 @@ from local_deepwiki.export.streaming import (
     WikiPageMetadata,
 )
 
+
 # Check if WeasyPrint is functional (not just importable or mocked)
 def _check_weasyprint() -> bool:
     """Check if WeasyPrint is real (not mocked) and functional."""
@@ -353,7 +354,9 @@ class TestStreamingHtmlExporter:
         assert (output_path / "index.html").exists()
         assert (output_path / "page.html").exists()
 
-    async def test_streaming_export_with_progress(self, sample_wiki: Path, tmp_path: Path):
+    async def test_streaming_export_with_progress(
+        self, sample_wiki: Path, tmp_path: Path
+    ):
         """Test streaming export with progress callback."""
         from local_deepwiki.export.html import StreamingHtmlExporter
 
@@ -375,7 +378,9 @@ class TestStreamingHtmlExporter:
         assert final_update[0] == 2  # current
         assert final_update[1] == 2  # total
 
-    async def test_streaming_export_releases_memory(self, sample_wiki: Path, tmp_path: Path):
+    async def test_streaming_export_releases_memory(
+        self, sample_wiki: Path, tmp_path: Path
+    ):
         """Test that pages release memory after processing."""
         from local_deepwiki.export.html import StreamingHtmlExporter
 
@@ -432,7 +437,12 @@ class TestStreamingPdfExporter:
         """Test streaming PDF export."""
         from local_deepwiki.export.pdf import StreamingPdfExporter
 
+        # write_pdf must create a real file so shutil.copy / _merge_pdfs can read it
+        def _fake_write_pdf(path, **kwargs):
+            Path(path).write_bytes(b"%PDF-1.4 fake")
+
         mock_html_instance = MagicMock()
+        mock_html_instance.write_pdf.side_effect = _fake_write_pdf
         mock_html_class.return_value = mock_html_instance
 
         output_path = tmp_path / "output.pdf"
@@ -444,10 +454,10 @@ class TestStreamingPdfExporter:
         mock_html_class.assert_called()
 
     @patch("local_deepwiki.export.pdf.HTML")
-    async def test_streaming_pdf_with_batching(
-        self, mock_html_class, tmp_path: Path
-    ):
+    async def test_streaming_pdf_with_batching(self, mock_html_class, tmp_path: Path):
         """Test PDF export with batch processing."""
+        from pypdf import PdfWriter as _PdfWriter
+
         from local_deepwiki.export.pdf import StreamingPdfExporter
         from local_deepwiki.export.streaming import ExportConfig
 
@@ -460,7 +470,15 @@ class TestStreamingPdfExporter:
 
         (wiki_path / "toc.json").write_text('{"entries": []}')
 
+        # write_pdf must create a valid PDF so pypdf can parse it during merge
+        def _fake_write_pdf(path, **kwargs):
+            w = _PdfWriter()
+            w.add_blank_page(width=72, height=72)
+            with open(path, "wb") as f:
+                w.write(f)
+
         mock_html_instance = MagicMock()
+        mock_html_instance.write_pdf.side_effect = _fake_write_pdf
         mock_html_class.return_value = mock_html_instance
 
         # Use small batch size to test batching

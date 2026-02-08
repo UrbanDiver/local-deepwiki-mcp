@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Codemap Compare - DeepWiki</title>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --text-color: #c9d1d9;
+            --link-color: #58a6ff;
+            --border-color: #30363d;
+            --sidebar-bg: #161b22;
+            --code-bg: #1f2428;
+            --heading-color: #f0f6fc;
+            --muted-color: #8b949e;
+            --entry-color: #2d6a4f;
+            --crossfile-color: #1d3557;
+            --leaf-color: #6c757d;
+            --parent-bg: #161b22;
+        }
+        [data-theme="light"] {
+            --bg-color: #ffffff;
+            --text-color: #24292f;
+            --link-color: #0969da;
+            --border-color: #d0d7de;
+            --sidebar-bg: #f6f8fa;
+            --code-bg: #f6f8fa;
+            --heading-color: #1f2328;
+            --muted-color: #656d76;
+            --entry-color: #2d6a4f;
+            --crossfile-color: #1d3557;
+            --leaf-color: #6c757d;
+            --parent-bg: #f0f0f0;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            background: var(--sidebar-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .header-left { display: flex; align-items: center; gap: 16px; }
+        .header h1 { font-size: 1.2em; color: var(--heading-color); }
+        .header a { color: var(--link-color); text-decoration: none; font-size: 0.9em; }
+        .header a:hover { text-decoration: underline; }
+        .theme-toggle {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 14px;
+            color: var(--text-color);
+        }
+        .theme-toggle:hover { background: var(--border-color); }
+
+        .compare-container {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+        .compare-pane {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border-color);
+        }
+        .compare-pane:last-child { border-right: none; }
+        .pane-header {
+            padding: 8px 12px;
+            background: var(--sidebar-bg);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .pane-input {
+            flex: 1;
+            min-width: 120px;
+            padding: 6px 10px;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-color);
+            font-size: 13px;
+        }
+        .pane-input:focus { border-color: var(--link-color); outline: none; }
+        .pane-select {
+            padding: 6px 8px;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-color);
+            font-size: 12px;
+        }
+        .pane-btn {
+            padding: 6px 14px;
+            background: var(--link-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .pane-btn:hover { opacity: 0.9; }
+        .pane-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .pane-graph {
+            flex: 1;
+            position: relative;
+        }
+        .pane-cy {
+            width: 100%;
+            height: 100%;
+        }
+        .pane-placeholder {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--muted-color);
+            font-size: 0.95em;
+            text-align: center;
+            padding: 30px;
+        }
+        .pane-label {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            background: var(--sidebar-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 2px 8px;
+            font-size: 11px;
+            color: var(--muted-color);
+            z-index: 5;
+        }
+        .pane-stats {
+            padding: 6px 12px;
+            background: var(--sidebar-bg);
+            border-top: 1px solid var(--border-color);
+            font-size: 12px;
+            color: var(--muted-color);
+            display: none;
+        }
+        .pane-stats.visible { display: flex; gap: 16px; }
+        .pane-progress {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            display: none;
+            z-index: 10;
+        }
+        .pane-progress.active { display: block; }
+        .pane-spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border-color);
+            border-top-color: var(--link-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 8px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        @media (max-width: 800px) {
+            .compare-container { flex-direction: column; }
+            .compare-pane { border-right: none; border-bottom: 1px solid var(--border-color); min-height: 300px; }
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/cytoscape@3/dist/cytoscape.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dagre@0.8/dist/dagre.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/cytoscape-dagre@2/cytoscape-dagre.js"></script>
+</head>
+<body>
+    <header class="header">
+        <div class="header-left">
+            <h1>Codemap Compare</h1>
+            <a href="/codemap">Back to Codemap</a>
+            <a href="/">Wiki</a>
+        </div>
+        <button id="theme-toggle" class="theme-toggle" title="Toggle theme">&#127769;</button>
+    </header>
+
+    <div class="compare-container">
+        <div class="compare-pane" id="pane-left">
+            <div class="pane-header">
+                <input type="text" class="pane-input" id="query-left" placeholder="Query A...">
+                <select class="pane-select" id="focus-left">
+                    <option value="execution_flow">Execution Flow</option>
+                    <option value="data_flow">Data Flow</option>
+                    <option value="dependency_chain">Dependency Chain</option>
+                </select>
+                <button class="pane-btn" id="gen-left">Generate</button>
+            </div>
+            <div class="pane-graph">
+                <span class="pane-label">A</span>
+                <div class="pane-placeholder" id="placeholder-left">Enter a query and click Generate</div>
+                <div class="pane-cy" id="cy-left" style="display:none;"></div>
+                <div class="pane-progress" id="progress-left">
+                    <div class="pane-spinner"></div>
+                    <div id="progress-msg-left">Generating...</div>
+                </div>
+            </div>
+            <div class="pane-stats" id="stats-left"></div>
+        </div>
+
+        <div class="compare-pane" id="pane-right">
+            <div class="pane-header">
+                <input type="text" class="pane-input" id="query-right" placeholder="Query B...">
+                <select class="pane-select" id="focus-right">
+                    <option value="execution_flow">Execution Flow</option>
+                    <option value="data_flow">Data Flow</option>
+                    <option value="dependency_chain">Dependency Chain</option>
+                </select>
+                <button class="pane-btn" id="gen-right">Generate</button>
+            </div>
+            <div class="pane-graph">
+                <span class="pane-label">B</span>
+                <div class="pane-placeholder" id="placeholder-right">Enter a query and click Generate</div>
+                <div class="pane-cy" id="cy-right" style="display:none;"></div>
+                <div class="pane-progress" id="progress-right">
+                    <div class="pane-spinner"></div>
+                    <div id="progress-msg-right">Generating...</div>
+                </div>
+            </div>
+            <div class="pane-stats" id="stats-right"></div>
+        </div>
+    </div>
+
+    <script>
+        var cytoscapeStyles = [
+            { selector: 'node', style: {
+                'label': 'data(label)', 'text-valign': 'center', 'text-halign': 'center',
+                'font-size': '10px', 'color': '#c9d1d9', 'text-wrap': 'ellipsis',
+                'text-max-width': '100px', 'width': 'label', 'height': 26, 'padding': '6px',
+                'shape': 'round-rectangle', 'background-color': '#21262d',
+                'border-width': 1, 'border-color': '#30363d',
+            }},
+            { selector: 'node.entry', style: { 'background-color': '#2d6a4f', 'border-color': '#40916c', 'color': '#fff', 'font-weight': 'bold' }},
+            { selector: 'node.crossfile', style: { 'background-color': '#1d3557', 'border-color': '#457b9d', 'color': '#fff' }},
+            { selector: 'node.leaf', style: { 'background-color': '#6c757d', 'border-color': '#8b949e', 'color': '#fff' }},
+            { selector: ':parent', style: {
+                'background-color': '#161b22', 'background-opacity': 0.6,
+                'border-color': '#30363d', 'border-width': 1, 'text-valign': 'top',
+                'font-size': '9px', 'color': '#8b949e', 'padding': '10px',
+            }},
+            { selector: 'edge', style: {
+                'width': 1.5, 'line-color': '#8b949e', 'target-arrow-color': '#8b949e',
+                'target-arrow-shape': 'triangle', 'curve-style': 'bezier', 'arrow-scale': 0.7,
+            }},
+            { selector: 'edge.cross-file-edge', style: {
+                'line-color': '#58a6ff', 'target-arrow-color': '#58a6ff', 'line-style': 'dashed', 'width': 2,
+            }},
+        ];
+
+        var cyInstances = { left: null, right: null };
+
+        function buildElements(result) {
+            var elements = [];
+            var nodeIds = {};
+            var sourceNodes = {};
+            var targetNodes = {};
+
+            for (var i = 0; i < result.edges.length; i++) {
+                sourceNodes[result.edges[i].source] = true;
+                targetNodes[result.edges[i].target] = true;
+            }
+
+            var fileParents = {};
+            for (var i = 0; i < result.nodes.length; i++) {
+                var node = result.nodes[i];
+                var fileId = 'file:' + node.file_path;
+                if (!fileParents[fileId]) {
+                    fileParents[fileId] = true;
+                    var parts = node.file_path.split('/');
+                    elements.push({ group: 'nodes', data: { id: fileId, label: parts.slice(-2).join('/') } });
+                }
+            }
+
+            for (var i = 0; i < result.nodes.length; i++) {
+                var node = result.nodes[i];
+                var qn = node.qualified_name;
+                var cls = 'internal';
+                if (qn === result.entry_point || (sourceNodes[qn] && !targetNodes[qn])) cls = 'entry';
+                else if (!sourceNodes[qn] && targetNodes[qn]) cls = 'leaf';
+
+                var hasCross = false;
+                for (var j = 0; j < result.edges.length; j++) {
+                    var e = result.edges[j];
+                    if ((e.source === qn || e.target === qn) && e.source_file !== e.target_file) { hasCross = true; break; }
+                }
+                if (hasCross && cls !== 'entry') cls = 'crossfile';
+
+                elements.push({
+                    group: 'nodes',
+                    data: { id: qn, label: node.name, parent: 'file:' + node.file_path },
+                    classes: cls,
+                });
+                nodeIds[qn] = true;
+            }
+
+            for (var i = 0; i < result.edges.length; i++) {
+                var edge = result.edges[i];
+                if (nodeIds[edge.source] && nodeIds[edge.target]) {
+                    elements.push({
+                        group: 'edges',
+                        data: { source: edge.source, target: edge.target },
+                        classes: edge.source_file !== edge.target_file ? 'cross-file-edge' : 'same-file-edge',
+                    });
+                }
+            }
+            return elements;
+        }
+
+        function renderPane(side, result) {
+            var cyEl = document.getElementById('cy-' + side);
+            var placeholder = document.getElementById('placeholder-' + side);
+            var statsEl = document.getElementById('stats-' + side);
+
+            var elements = buildElements(result);
+            if (elements.length === 0) {
+                placeholder.textContent = 'No nodes found.';
+                placeholder.style.display = 'flex';
+                return;
+            }
+
+            placeholder.style.display = 'none';
+            cyEl.style.display = 'block';
+
+            if (cyInstances[side]) cyInstances[side].destroy();
+
+            cyInstances[side] = cytoscape({
+                container: cyEl,
+                elements: elements,
+                style: cytoscapeStyles,
+                layout: { name: 'dagre', rankDir: 'TB', nodeSep: 40, rankSep: 60, padding: 15 },
+                minZoom: 0.2, maxZoom: 3, wheelSensitivity: 0.3,
+            });
+
+            statsEl.textContent = '';
+            statsEl.classList.add('visible');
+            var stats = [
+                result.total_nodes + ' nodes',
+                result.total_edges + ' edges',
+                result.cross_file_edges + ' cross-file',
+                (result.files_involved ? result.files_involved.length : 0) + ' files',
+            ];
+            statsEl.textContent = stats.join('  |  ');
+        }
+
+        async function generateForPane(side) {
+            var query = document.getElementById('query-' + side).value.trim();
+            if (!query) return;
+
+            var focus = document.getElementById('focus-' + side).value;
+            var btn = document.getElementById('gen-' + side);
+            var progress = document.getElementById('progress-' + side);
+            var progressMsg = document.getElementById('progress-msg-' + side);
+
+            btn.disabled = true;
+            progress.classList.add('active');
+            progressMsg.textContent = 'Generating...';
+
+            try {
+                var response = await fetch('/api/codemap', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: query, focus: focus, max_depth: 5, max_nodes: 30 }),
+                });
+
+                var reader = response.body.getReader();
+                var decoder = new TextDecoder();
+                var buffer = '';
+
+                while (true) {
+                    var chunk = await reader.read();
+                    if (chunk.done) break;
+                    buffer += decoder.decode(chunk.value, { stream: true });
+                    var lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+
+                    for (var li = 0; li < lines.length; li++) {
+                        if (!lines[li].startsWith('data: ')) continue;
+                        try {
+                            var data = JSON.parse(lines[li].slice(6));
+                            if (data.type === 'progress') {
+                                progressMsg.textContent = data.message;
+                            } else if (data.type === 'result') {
+                                progress.classList.remove('active');
+                                renderPane(side, data);
+                            } else if (data.type === 'error') {
+                                throw new Error(data.message);
+                            }
+                        } catch (pe) {
+                            if (pe.message && pe.message.indexOf('JSON') === -1) throw pe;
+                        }
+                    }
+                }
+            } catch (err) {
+                progress.classList.remove('active');
+                document.getElementById('placeholder-' + side).textContent = 'Error: ' + err.message;
+                document.getElementById('placeholder-' + side).style.display = 'flex';
+            }
+
+            btn.disabled = false;
+            progress.classList.remove('active');
+        }
+
+        document.getElementById('gen-left').addEventListener('click', function() { generateForPane('left'); });
+        document.getElementById('gen-right').addEventListener('click', function() { generateForPane('right'); });
+        document.getElementById('query-left').addEventListener('keydown', function(e) { if (e.key === 'Enter') generateForPane('left'); });
+        document.getElementById('query-right').addEventListener('keydown', function(e) { if (e.key === 'Enter') generateForPane('right'); });
+
+        // Theme
+        var themeToggle = document.getElementById('theme-toggle');
+        function setTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('deepwiki-theme', theme);
+            themeToggle.textContent = theme === 'dark' ? '\uD83C\uDF19' : '\u2600';
+        }
+        themeToggle.addEventListener('click', function() {
+            var current = document.documentElement.getAttribute('data-theme') || 'dark';
+            setTheme(current === 'dark' ? 'light' : 'dark');
+        });
+        setTheme(localStorage.getItem('deepwiki-theme') || 'dark');
+    </script>
+</body>
+</html>

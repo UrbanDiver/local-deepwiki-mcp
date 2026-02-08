@@ -364,6 +364,102 @@
             flex-shrink: 0;
         }
 
+        /* Play controls (animated trace) */
+        .play-controls {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            display: none;
+            gap: 4px;
+            z-index: 15;
+            background: var(--sidebar-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 4px;
+        }
+        .play-controls.visible { display: flex; }
+        .play-btn {
+            width: 28px;
+            height: 28px;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            color: var(--text-color);
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .play-btn:hover { background: var(--border-color); }
+        .play-btn.active { background: var(--link-color); color: white; border-color: var(--link-color); }
+        .play-step-label {
+            font-size: 11px;
+            color: var(--muted-color);
+            padding: 0 6px;
+            align-self: center;
+            white-space: nowrap;
+        }
+
+        /* Animated trace: pulsing node */
+        @keyframes trace-pulse {
+            0%, 100% { border-width: 3px; }
+            50% { border-width: 5px; }
+        }
+
+        /* Diff overlay toggle */
+        .diff-toggle {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .diff-toggle label {
+            font-size: 12px;
+            color: var(--muted-color);
+            cursor: pointer;
+        }
+        .diff-toggle input[type="checkbox"] { cursor: pointer; }
+
+        /* Diff overlay: changed node style */
+        /* (Cytoscape styles added dynamically) */
+
+        /* Minimap */
+        .cy-minimap {
+            position: absolute;
+            bottom: 56px;
+            right: 16px;
+            width: 150px;
+            height: 120px;
+            background: var(--sidebar-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            overflow: hidden;
+            z-index: 14;
+            display: none;
+        }
+        .cy-minimap.visible { display: block; }
+
+        /* Recent codemaps */
+        .recent-codemaps {
+            margin-top: 8px;
+            display: none;
+        }
+        .recent-codemaps.visible { display: block; }
+        .recent-label { font-size: 12px; color: var(--muted-color); }
+        .recent-item {
+            display: inline-block;
+            padding: 3px 8px;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 11px;
+            color: var(--text-color);
+            cursor: pointer;
+            margin: 2px;
+            text-decoration: none;
+        }
+        .recent-item:hover { border-color: var(--link-color); }
+
         /* Mermaid fallback */
         .mermaid-fallback {
             padding: 20px;
@@ -389,6 +485,8 @@
     <script src="https://cdn.jsdelivr.net/npm/dagre@0.8/dist/dagre.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/cytoscape-dagre@2/cytoscape-dagre.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/cytoscape-navigator@2/cytoscape-navigator.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cytoscape-navigator@2/cytoscape.js-navigator.css">
 </head>
 <body>
     <header class="header">
@@ -398,6 +496,11 @@
             <a href="/chat">Chat</a>
         </div>
         <div class="header-controls">
+            <div class="diff-toggle">
+                <input type="checkbox" id="diff-toggle-cb" title="Show git changes overlay">
+                <label for="diff-toggle-cb">Show Changes</label>
+            </div>
+            <a href="/codemap/compare" class="export-btn" title="Compare two codemaps side by side" style="text-decoration:none;">Compare</a>
             <button id="export-png-btn" class="export-btn" title="Export graph as PNG" disabled>Export PNG</button>
             <button id="theme-toggle" class="theme-toggle" title="Toggle theme">&#127769;</button>
         </div>
@@ -422,6 +525,9 @@
         <div class="topics-row" id="topics-row">
             <span class="topics-label">Suggested:</span>
         </div>
+        <div class="recent-codemaps" id="recent-codemaps">
+            <span class="recent-label">Recent:</span>
+        </div>
     </div>
 
     <div class="main-content">
@@ -436,13 +542,21 @@
                 <div id="progress-message">Generating codemap...</div>
             </div>
             <div class="node-tooltip" id="node-tooltip"></div>
+            <div class="play-controls" id="play-controls">
+                <button class="play-btn" id="play-btn" title="Play animated trace">&#9654;</button>
+                <button class="play-btn" id="pause-btn" title="Pause">&#10074;&#10074;</button>
+                <button class="play-btn" id="step-btn" title="Step forward">&#9655;|</button>
+                <button class="play-btn" id="stop-trace-btn" title="Stop trace">&#9632;</button>
+                <span class="play-step-label" id="play-step-label">Step 0/0</span>
+            </div>
+            <div class="cy-minimap" id="cy-minimap"></div>
             <div class="zoom-controls" id="zoom-controls" style="display:none;">
                 <button class="zoom-btn" id="zoom-in-btn" title="Zoom in (+)">+</button>
                 <button class="zoom-btn" id="zoom-out-btn" title="Zoom out (-)">-</button>
                 <button class="zoom-btn fit-btn" id="fit-btn" title="Fit to viewport (F)">Fit</button>
             </div>
             <div class="shortcuts-hint" id="shortcuts-hint" style="display:none;">
-                <kbd>F</kbd> fit &nbsp; <kbd>+</kbd><kbd>-</kbd> zoom &nbsp; <kbd>Esc</kbd> reset &nbsp; <kbd>L</kbd> legend
+                <kbd>F</kbd> fit &nbsp; <kbd>+</kbd><kbd>-</kbd> zoom &nbsp; <kbd>Esc</kbd> reset &nbsp; <kbd>L</kbd> legend &nbsp; <kbd>P</kbd> play
             </div>
         </div>
 
@@ -461,6 +575,17 @@
         var currentFocus = 'execution_flow';
         var currentEntryPoint = null;
         var pathHighlightActive = false;
+        var currentResult = null;
+
+        // Animated trace state
+        var traceNodes = [];
+        var traceStep = -1;
+        var traceTimer = null;
+        var tracePlaying = false;
+
+        // Diff overlay state
+        var diffFiles = [];
+        var diffOverlayActive = false;
 
         // --- DOM ---
         var queryInput = document.getElementById('query-input');
@@ -480,6 +605,15 @@
         var nodeTooltip = document.getElementById('node-tooltip');
         var zoomControls = document.getElementById('zoom-controls');
         var shortcutsHint = document.getElementById('shortcuts-hint');
+        var playControls = document.getElementById('play-controls');
+        var playBtn = document.getElementById('play-btn');
+        var pauseBtn = document.getElementById('pause-btn');
+        var stepBtn = document.getElementById('step-btn');
+        var stopTraceBtn = document.getElementById('stop-trace-btn');
+        var playStepLabel = document.getElementById('play-step-label');
+        var diffToggleCb = document.getElementById('diff-toggle-cb');
+        var cyMinimap = document.getElementById('cy-minimap');
+        var recentCodemaps = document.getElementById('recent-codemaps');
 
         // --- Cytoscape Styles ---
         var cytoscapeStyles = [
@@ -578,6 +712,27 @@
                 'line-color': '#f0883e',
                 'target-arrow-color': '#f0883e',
                 'z-index': 10,
+            }},
+            // Diff overlay: changed file nodes
+            { selector: 'node.diff-changed', style: {
+                'border-color': '#f85149',
+                'border-width': 3,
+                'z-index': 11,
+            }},
+            { selector: ':parent.diff-changed', style: {
+                'border-color': '#f85149',
+                'border-width': 2,
+                'background-opacity': 0.8,
+            }},
+            // Animated trace: current step
+            { selector: 'node.trace-active', style: {
+                'border-color': '#f0883e',
+                'border-width': 4,
+                'z-index': 20,
+            }},
+            { selector: 'node.trace-visited', style: {
+                'border-color': '#3fb950',
+                'border-width': 2,
             }},
         ];
 
@@ -804,6 +959,193 @@
             cy.elements().removeClass('dimmed highlighted');
         }
 
+        // --- Animated Execution Trace ---
+        function buildTraceSequence() {
+            // Parse narrative for step references to node names
+            if (!currentResult || !currentResult.nodes || !cy) return [];
+            var nodes = currentResult.nodes;
+            var ordered = [];
+            // Use node order from the result (matches narrative flow)
+            for (var i = 0; i < nodes.length; i++) {
+                var qn = nodes[i].qualified_name;
+                if (cy.getElementById(qn).length > 0 && !cy.getElementById(qn).isParent()) {
+                    ordered.push(qn);
+                }
+            }
+            return ordered;
+        }
+
+        function startTrace() {
+            traceNodes = buildTraceSequence();
+            if (traceNodes.length === 0) return;
+            tracePlaying = true;
+            traceStep = -1;
+            clearHighlighting();
+            cy.elements().removeClass('trace-active trace-visited');
+            playStepLabel.textContent = 'Step 0/' + traceNodes.length;
+            playBtn.classList.add('active');
+            stepTrace();
+            traceTimer = setInterval(stepTrace, 1200);
+        }
+
+        function stepTrace() {
+            if (!cy || traceNodes.length === 0) return;
+
+            // Un-highlight previous
+            if (traceStep >= 0 && traceStep < traceNodes.length) {
+                var prev = cy.getElementById(traceNodes[traceStep]);
+                prev.removeClass('trace-active').addClass('trace-visited');
+            }
+
+            traceStep++;
+            if (traceStep >= traceNodes.length) {
+                stopTrace();
+                return;
+            }
+
+            var nodeId = traceNodes[traceStep];
+            var node = cy.getElementById(nodeId);
+            node.addClass('trace-active');
+
+            // Pan to the node
+            cy.animate({ center: { eles: node }, duration: 300 });
+
+            playStepLabel.textContent = 'Step ' + (traceStep + 1) + '/' + traceNodes.length;
+        }
+
+        function pauseTrace() {
+            if (traceTimer) clearInterval(traceTimer);
+            traceTimer = null;
+            tracePlaying = false;
+            playBtn.classList.remove('active');
+        }
+
+        function stopTrace() {
+            pauseTrace();
+            traceStep = -1;
+            if (cy) cy.elements().removeClass('trace-active trace-visited');
+            playStepLabel.textContent = 'Step 0/' + traceNodes.length;
+        }
+
+        // --- Git Diff Overlay ---
+        async function loadDiffFiles() {
+            try {
+                var response = await fetch('/api/codemap/diff');
+                if (!response.ok) return [];
+                var data = await response.json();
+                return data.changed_files || [];
+            } catch (err) {
+                return [];
+            }
+        }
+
+        function applyDiffOverlay() {
+            if (!cy || diffFiles.length === 0) return;
+            // Mark nodes whose file_path matches any changed file
+            var changedSet = {};
+            for (var i = 0; i < diffFiles.length; i++) {
+                changedSet[diffFiles[i].file] = diffFiles[i].status;
+            }
+
+            cy.nodes().forEach(function(node) {
+                var filePath = node.data('filePath');
+                var nodeId = node.id();
+
+                // Check compound parent nodes (id = 'file:path')
+                if (nodeId.startsWith('file:')) {
+                    var fp = nodeId.substring(5);
+                    if (changedSet[fp]) {
+                        node.addClass('diff-changed');
+                    }
+                }
+                // Check child nodes
+                if (filePath && changedSet[filePath]) {
+                    node.addClass('diff-changed');
+                }
+            });
+            diffOverlayActive = true;
+        }
+
+        function removeDiffOverlay() {
+            if (!cy) return;
+            cy.elements().removeClass('diff-changed');
+            diffOverlayActive = false;
+        }
+
+        // --- Minimap ---
+        function initMinimap() {
+            if (!cy) return;
+            // Only show for graphs with many nodes
+            var childNodes = cy.nodes(':childless');
+            if (childNodes.length < 15) {
+                cyMinimap.classList.remove('visible');
+                return;
+            }
+
+            try {
+                if (typeof cy.navigator === 'function') {
+                    cy.navigator({
+                        container: cyMinimap,
+                        viewLiveFramerate: 0,
+                        thumbnailLiveFramerate: 0,
+                        dblClickDelay: 200,
+                    });
+                    cyMinimap.classList.add('visible');
+                }
+            } catch (err) {
+                // Navigator plugin not available
+                cyMinimap.classList.remove('visible');
+            }
+        }
+
+        // --- Recent Codemaps (Cache) ---
+        async function loadRecentCodemaps() {
+            try {
+                var response = await fetch('/api/codemap/cache');
+                if (!response.ok) return;
+                var items = await response.json();
+                if (!Array.isArray(items) || items.length === 0) return;
+
+                recentCodemaps.classList.add('visible');
+                items.slice(0, 8).forEach(function(item) {
+                    var chip = document.createElement('a');
+                    chip.className = 'recent-item';
+                    chip.textContent = (item.query || 'Untitled').substring(0, 30);
+                    chip.title = item.query + ' (' + item.total_nodes + ' nodes)';
+                    chip.href = '#';
+                    chip.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        // Load from cache
+                        loadCachedCodemap(item.cache_key);
+                    });
+                    recentCodemaps.appendChild(chip);
+                });
+            } catch (err) {
+                // Ignore cache load errors
+            }
+        }
+
+        async function loadCachedCodemap(cacheKey) {
+            try {
+                var response = await fetch('/api/codemap/cache?key=' + encodeURIComponent(cacheKey));
+                if (!response.ok) return;
+                var data = await response.json();
+
+                // Render as if it were a live result
+                data.type = 'result';
+                data.from_cache = true;
+                currentResult = data;
+                renderGraph(data);
+                renderNarrative(data);
+                // Update input fields
+                if (data.query) queryInput.value = data.query;
+                if (data.focus) focusSelect.value = data.focus;
+                updateUrlState();
+            } catch (err) {
+                // Fall back to normal generation
+            }
+        }
+
         // --- Render Graph ---
         function renderGraph(result) {
             var elements = buildCytoscapeElements(result);
@@ -825,6 +1167,7 @@
             exportPngBtn.disabled = false;
             currentEntryPoint = result.entry_point;
             currentFocus = result.focus || focusSelect.value;
+            currentResult = result;
 
             if (cy) {
                 cy.destroy();
@@ -883,6 +1226,15 @@
                     hideTooltip();
                 });
 
+                // Show play controls and init minimap
+                playControls.classList.add('visible');
+                stopTrace();
+                initMinimap();
+
+                // Apply diff overlay if toggle is checked
+                if (diffToggleCb.checked && diffFiles.length > 0) {
+                    applyDiffOverlay();
+                }
             } catch (err) {
                 // Fallback to mermaid
                 renderMermaidFallback(result.mermaid_diagram);
@@ -970,6 +1322,8 @@
                 { color: '#8b949e', label: 'Same-file edge', type: 'line' },
                 { color: '#58a6ff', label: 'Cross-file edge', type: 'dashed' },
                 { color: '#f0883e', label: 'Highlighted path', type: 'line' },
+                { color: '#f85149', label: 'Changed (git diff)', type: 'dot', border: '#f85149' },
+                { color: '#3fb950', label: 'Trace visited', type: 'dot', border: '#3fb950' },
             ];
             legendItems.forEach(function(item) {
                 var row = document.createElement('div');
@@ -1206,6 +1560,30 @@
             if (cy) cy.fit(undefined, 20);
         });
 
+        // Play controls
+        playBtn.addEventListener('click', function() {
+            if (tracePlaying) { pauseTrace(); } else { startTrace(); }
+        });
+        pauseBtn.addEventListener('click', pauseTrace);
+        stepBtn.addEventListener('click', function() {
+            if (traceTimer) pauseTrace();
+            if (traceNodes.length === 0) traceNodes = buildTraceSequence();
+            if (traceNodes.length > 0) stepTrace();
+        });
+        stopTraceBtn.addEventListener('click', stopTrace);
+
+        // Diff toggle
+        diffToggleCb.addEventListener('change', async function() {
+            if (this.checked) {
+                if (diffFiles.length === 0) {
+                    diffFiles = await loadDiffFiles();
+                }
+                applyDiffOverlay();
+            } else {
+                removeDiffOverlay();
+            }
+        });
+
         // Keyboard shortcuts
         document.addEventListener('keydown', function(e) {
             // Skip if typing in input fields
@@ -1226,6 +1604,9 @@
             } else if (e.key === 'l' || e.key === 'L') {
                 var legend = document.getElementById('codemap-legend');
                 if (legend) legend.classList.toggle('collapsed');
+            } else if (e.key === 'p' || e.key === 'P') {
+                e.preventDefault();
+                if (tracePlaying) { pauseTrace(); } else { startTrace(); }
             }
         });
 
@@ -1233,6 +1614,7 @@
         var savedTheme = localStorage.getItem('deepwiki-theme') || 'dark';
         setTheme(savedTheme);
         loadTopics();
+        loadRecentCodemaps();
 
         // Read URL state and auto-generate if query present
         var hasUrlQuery = readUrlState();

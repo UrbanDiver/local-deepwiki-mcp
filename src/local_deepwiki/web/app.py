@@ -5,9 +5,13 @@ Templates are loaded from the 'templates' subdirectory relative to this module.
 """
 
 import asyncio
+import hashlib
 import json
 import queue
+import re
+import subprocess
 import threading
+import time
 from pathlib import Path
 from typing import Any, AsyncIterator, Callable, Iterator
 
@@ -761,8 +765,34 @@ def api_codemap():
     if WIKI_PATH.name == ".deepwiki":
         repo_path = WIKI_PATH.parent
 
+    # Check cache first
+    cache_k = _cache_key(query, focus, max_depth, max_nodes)
+
     async def generate_codemap_stream() -> AsyncIterator[str]:
         """Async generator that streams codemap generation progress and result."""
+        # Try cache hit
+        cached = _read_cache(cache_k)
+        if cached is not None:
+            yield f"data: {json.dumps({'type': 'progress', 'message': 'Loading from cache...'})}\n\n"
+            response = {
+                "type": "result",
+                "query": cached.get("query", query),
+                "focus": cached.get("focus", focus),
+                "entry_point": cached.get("entry_point"),
+                "mermaid_diagram": cached.get("mermaid_diagram", ""),
+                "narrative": cached.get("narrative", ""),
+                "nodes": cached.get("nodes", []),
+                "edges": cached.get("edges", []),
+                "files_involved": cached.get("files_involved", []),
+                "total_nodes": cached.get("total_nodes", 0),
+                "total_edges": cached.get("total_edges", 0),
+                "cross_file_edges": cached.get("cross_file_edges", 0),
+                "from_cache": True,
+            }
+            yield f"data: {json.dumps(response)}\n\n"
+            yield f"data: {json.dumps({'type': 'done'})}\n\n"
+            return
+
         from local_deepwiki.config import get_config
         from local_deepwiki.core.vectorstore import VectorStore
         from local_deepwiki.generators.codemap import CodemapFocus, generate_codemap
@@ -826,6 +856,10 @@ def api_codemap():
                 "cross_file_edges": result.cross_file_edges,
             }
             yield f"data: {json.dumps(response)}\n\n"
+
+            # Write to cache
+            _write_cache(cache_k, response)
+
         except Exception as e:  # noqa: BLE001 - Report codemap errors to user via SSE
             logger.exception(f"Error generating codemap: {e}")
             yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
@@ -840,6 +874,182 @@ def api_codemap():
             "X-Accel-Buffering": "no",
         },
     )
+
+
+# --- Codemap Cache ---
+# TTL in seconds (1 hour default)
+CODEMAP_CACHE_TTL = 3600
+
+
+def _get_cache_dir() -> Path | None:
+    """Get the codemap cache directory, creating it if needed."""
+    if WIKI_PATH is None:
+        return None
+    cache_dir = WIKI_PATH / "codemaps"
+    cache_dir.mkdir(exist_ok=True)
+    return cache_dir
+
+
+def _cache_key(query: str, focus: str, max_depth: int, max_nodes: int) -> str:
+    """Generate a cache key from codemap parameters."""
+    raw = f"{query}|{focus}|{max_depth}|{max_nodes}"
+    return hashlib.sha256(raw.encode()).hexdigest()[:16]
+
+
+def _read_cache(key: str) -> dict | None:
+    """Read a cached codemap result if it exists and hasn't expired."""
+    cache_dir = _get_cache_dir()
+    if cache_dir is None:
+        return None
+
+    cache_file = cache_dir / f"{key}.json"
+    if not cache_file.exists():
+        return None
+
+    try:
+        data = json.loads(cache_file.read_text())
+        cached_at = data.get("cached_at", 0)
+        if time.time() - cached_at > CODEMAP_CACHE_TTL:
+            cache_file.unlink(missing_ok=True)
+            return None
+        return data
+    except (json.JSONDecodeError, OSError):
+        return None
+
+
+def _write_cache(key: str, result: dict) -> None:
+    """Write a codemap result to the cache."""
+    cache_dir = _get_cache_dir()
+    if cache_dir is None:
+        return
+
+    cache_data = {**result, "cached_at": time.time(), "cache_key": key}
+    cache_file = cache_dir / f"{key}.json"
+    try:
+        cache_file.write_text(json.dumps(cache_data))
+    except OSError:
+        logger.debug(f"Failed to write codemap cache: {key}")
+
+
+def _list_cached_codemaps() -> list[dict]:
+    """List all cached codemaps with metadata."""
+    cache_dir = _get_cache_dir()
+    if cache_dir is None:
+        return []
+
+    results = []
+    now = time.time()
+    for f in sorted(
+        cache_dir.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True
+    ):
+        try:
+            data = json.loads(f.read_text())
+            cached_at = data.get("cached_at", 0)
+            if now - cached_at > CODEMAP_CACHE_TTL:
+                f.unlink(missing_ok=True)
+                continue
+            results.append(
+                {
+                    "cache_key": data.get("cache_key", f.stem),
+                    "query": data.get("query", ""),
+                    "focus": data.get("focus", ""),
+                    "total_nodes": data.get("total_nodes", 0),
+                    "total_edges": data.get("total_edges", 0),
+                    "cached_at": cached_at,
+                }
+            )
+        except (json.JSONDecodeError, OSError):
+            continue
+
+    return results[:20]  # Return at most 20 recent
+
+
+@app.route("/api/codemap/cache")
+def api_codemap_cache():
+    """List cached codemaps or retrieve a specific cached result.
+
+    Query params:
+        - key: If provided, return the full cached result for that key.
+
+    Returns:
+        JSON list of cached codemaps, or a single cached result.
+    """
+    if WIKI_PATH is None:
+        return jsonify({"error": "Wiki path not configured"}), 500
+
+    key = request.args.get("key")
+    if key:
+        # Validate key format (hex chars only)
+        if not re.match(r"^[a-f0-9]{1,16}$", key):
+            return jsonify({"error": "Invalid cache key"}), 400
+        cached = _read_cache(key)
+        if cached is None:
+            return jsonify({"error": "Cache entry not found or expired"}), 404
+        return jsonify(cached)
+
+    return jsonify(_list_cached_codemaps())
+
+
+@app.route("/api/codemap/diff")
+def api_codemap_diff():
+    """Return list of files changed in recent git commits.
+
+    Query params:
+        - base_ref: Git ref to diff from (default: HEAD~1)
+        - head_ref: Git ref to diff to (default: HEAD)
+
+    Returns:
+        JSON with changed_files list of {file, status}.
+    """
+    if WIKI_PATH is None:
+        return jsonify({"error": "Wiki path not configured"}), 500
+
+    repo_path = WIKI_PATH.parent
+    if WIKI_PATH.name == ".deepwiki":
+        repo_path = WIKI_PATH.parent
+
+    base_ref = request.args.get("base_ref", "HEAD~1")
+    head_ref = request.args.get("head_ref", "HEAD")
+
+    # Validate git refs to prevent injection
+    ref_pattern = re.compile(r"^[a-zA-Z0-9_.\/\-~^]+$")
+    for ref_value in [base_ref, head_ref]:
+        if not ref_pattern.match(ref_value):
+            return jsonify({"error": f"Invalid git ref: {ref_value}"}), 400
+
+    try:
+        diff_result = subprocess.run(
+            ["git", "diff", "--name-status", base_ref, head_ref],
+            cwd=str(repo_path),
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+        if diff_result.returncode != 0:
+            return jsonify({"error": "git diff failed", "changed_files": []}), 200
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return jsonify({"error": "git not available", "changed_files": []}), 200
+
+    status_map = {"A": "added", "M": "modified", "D": "deleted", "R": "renamed"}
+    changed_files = []
+    for line in diff_result.stdout.strip().splitlines():
+        if not line.strip():
+            continue
+        parts = line.split("\t", 1)
+        if len(parts) == 2:
+            status_code, file_name = parts
+            status = status_map.get(status_code[0], "modified")
+            changed_files.append({"file": file_name, "status": status})
+
+    return jsonify({"changed_files": changed_files})
+
+
+@app.route("/codemap/compare")
+def codemap_compare_page():
+    """Render the side-by-side codemap comparison page."""
+    if WIKI_PATH is None:
+        abort(500, "Wiki path not configured")
+    return render_template("codemap_compare.html", wiki_path=str(WIKI_PATH))
 
 
 def create_app(wiki_path: str | Path) -> Flask:
