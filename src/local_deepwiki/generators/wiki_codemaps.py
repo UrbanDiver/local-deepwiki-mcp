@@ -30,7 +30,25 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
+_CLICK_RE = re.compile(r'(\s+click\s+\S+\s+)"files/([^"]+)"(\s+_blank)')
 _MIN_NODES = 3
+
+
+def _fix_mermaid_click_paths(diagram: str) -> str:
+    """Rewrite Mermaid click handlers for wiki context.
+
+    The codemap generator produces ``click N0 "files/src/foo.py" _blank``
+    but wiki codemap pages live under ``codemaps/``, so relative links must
+    go up one level and use ``.md`` extensions.
+    """
+
+    def _repl(m: re.Match) -> str:
+        prefix, rel_path, suffix = m.group(1), m.group(2), m.group(3)
+        # Strip source extension, add .md
+        md_path = str(Path(rel_path).with_suffix(".md"))
+        return f'{prefix}"../files/{md_path}"{suffix}'
+
+    return _CLICK_RE.sub(_repl, diagram)
 
 
 def _topic_slug(entry_point: str) -> str:
@@ -51,15 +69,25 @@ def _format_codemap_page(topic: dict, result: CodemapResult) -> str:
     entry_point = topic.get("entry_point", "unknown")
     file_path = topic.get("file_path", "")
 
+    diagram = _fix_mermaid_click_paths(result.mermaid_diagram)
+
+    # Build a wiki-relative link for the entry point file
+    entry_link = str(Path(file_path).with_suffix(".md")) if file_path else ""
+    entry_ref = (
+        f"> Entry point: [`{entry_point}`](../files/{entry_link}) in `{file_path}`"
+        if entry_link
+        else f"> Entry point: `{entry_point}` in `{file_path}`"
+    )
+
     lines = [
         f"# Codemap: How {entry_point} Works",
         "",
-        f"> Entry point: `{entry_point}` in `{file_path}`",
+        entry_ref,
         "",
         "## Execution Flow",
         "",
         "```mermaid",
-        result.mermaid_diagram,
+        diagram,
         "```",
         "",
         "## Trace",
@@ -79,8 +107,8 @@ def _format_codemap_page(topic: dict, result: CodemapResult) -> str:
         "",
     ]
     for fp in sorted(result.files_involved):
-        stem = Path(fp).stem
-        lines.append(f"- [`{fp}`](../files/{stem}.md)")
+        md_rel = str(Path(fp).with_suffix(".md"))
+        lines.append(f"- [`{fp}`](../files/{md_rel})")
 
     return "\n".join(lines) + "\n"
 

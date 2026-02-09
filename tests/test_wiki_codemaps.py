@@ -7,6 +7,7 @@ import pytest
 
 from local_deepwiki.generators.codemap import CodemapResult
 from local_deepwiki.generators.wiki_codemaps import (
+    _fix_mermaid_click_paths,
     _format_codemap_index,
     _format_codemap_page,
     _topic_slug,
@@ -44,6 +45,42 @@ class TestTopicSlug:
 
     def test_all_special_chars(self):
         assert _topic_slug("@#$%") == "unnamed"
+
+
+# ---------------------------------------------------------------------------
+# _fix_mermaid_click_paths
+# ---------------------------------------------------------------------------
+
+
+class TestFixMermaidClickPaths:
+    def test_rewrites_click_handler(self):
+        diagram = '    click N0 "files/src/handler.py" _blank'
+        fixed = _fix_mermaid_click_paths(diagram)
+        assert fixed == '    click N0 "../files/src/handler.md" _blank'
+
+    def test_rewrites_multiple_handlers(self):
+        diagram = (
+            '    click N0 "files/src/handler.py" _blank\n'
+            '    click N1 "files/src/utils.py" _blank'
+        )
+        fixed = _fix_mermaid_click_paths(diagram)
+        assert '"../files/src/handler.md"' in fixed
+        assert '"../files/src/utils.md"' in fixed
+
+    def test_preserves_non_click_lines(self):
+        diagram = "flowchart TD\n    A --> B\n    class A entry"
+        fixed = _fix_mermaid_click_paths(diagram)
+        assert fixed == diagram
+
+    def test_nested_path(self):
+        diagram = '    click N5 "files/src/local_deepwiki/config.py" _blank'
+        fixed = _fix_mermaid_click_paths(diagram)
+        assert fixed == '    click N5 "../files/src/local_deepwiki/config.md" _blank'
+
+    def test_ts_extension(self):
+        diagram = '    click N0 "files/src/app.ts" _blank'
+        fixed = _fix_mermaid_click_paths(diagram)
+        assert fixed == '    click N0 "../files/src/app.md" _blank'
 
 
 # ---------------------------------------------------------------------------
@@ -101,14 +138,23 @@ class TestFormatCodemapPage:
         topic = {"entry_point": "handle_request", "file_path": "src/handler.py"}
         result = self._make_result()
         page = _format_codemap_page(topic, result)
-        assert "[`src/handler.py`](../files/handler.md)" in page
-        assert "[`src/utils.py`](../files/utils.md)" in page
+        assert "[`src/handler.py`](../files/src/handler.md)" in page
+        assert "[`src/utils.py`](../files/src/utils.md)" in page
 
     def test_entry_point_in_blockquote(self):
         topic = {"entry_point": "handle_request", "file_path": "src/handler.py"}
         result = self._make_result()
         page = _format_codemap_page(topic, result)
-        assert "> Entry point: `handle_request` in `src/handler.py`" in page
+        assert (
+            "> Entry point: [`handle_request`](../files/src/handler.md) in `src/handler.py`"
+            in page
+        )
+
+    def test_entry_point_blockquote_no_file_path(self):
+        topic = {"entry_point": "handle_request", "file_path": ""}
+        result = self._make_result()
+        page = _format_codemap_page(topic, result)
+        assert "> Entry point: `handle_request` in ``" in page
 
 
 # ---------------------------------------------------------------------------
