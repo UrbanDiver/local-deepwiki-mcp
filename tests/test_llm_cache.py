@@ -699,7 +699,7 @@ class TestLLMCacheEdgeCases:
         # Never created table
         cache._table = None
         # Should not raise
-        await cache._record_hit("some-id")
+        await cache._record_hit("some-id", {"id": "some-id"})
 
     @pytest.mark.asyncio
     async def test_record_hit_exception_handling(self, cache: LLMCache):
@@ -709,8 +709,8 @@ class TestLLMCacheEdgeCases:
             prompt="test", response="response", temperature=0.1, model_name="m"
         )
 
-        # _record_hit currently does nothing (pass) so this just tests it doesn't raise
-        await cache._record_hit("non-existent-id")
+        # _record_hit should handle missing fields gracefully
+        await cache._record_hit("non-existent-id", {"id": "non-existent-id"})
 
     @pytest.mark.asyncio
     async def test_maybe_evict_when_table_none(self, cache: LLMCache):
@@ -1161,8 +1161,8 @@ class TestLLMCacheEdgeCases:
         entry_id = entries[0]["id"]
         original_hit_count = entries[0].get("hit_count", 0)
 
-        # Record a hit
-        await cache._record_hit(entry_id)
+        # Record a hit (pass the fetched entry to avoid re-query)
+        await cache._record_hit(entry_id, entries[0])
 
         # Verify the entry was updated
         updated_entries = table.search().where(f"id = '{entry_id}'").limit(1).to_list()
@@ -1192,8 +1192,8 @@ class TestLLMCacheEdgeCases:
             model_name="m",
         )
 
-        # Try to record hit for nonexistent entry - should not raise
-        await cache._record_hit("nonexistent-id-12345")
+        # Try to record hit with incomplete entry dict - should not raise
+        await cache._record_hit("nonexistent-id-12345", {"id": "nonexistent-id-12345"})
 
     @pytest.mark.asyncio
     async def test_lru_eviction_when_over_limit(self, cache_path: Path):

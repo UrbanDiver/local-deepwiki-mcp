@@ -1,7 +1,6 @@
 """Repository indexing orchestration with incremental update support."""
 
 import asyncio
-import fnmatch
 import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
@@ -100,6 +99,22 @@ class RepositoryIndexer:
         # Use IndexStatusManager for all status operations
         self._status_manager = IndexStatusManager()
 
+        # Pre-compile exclude patterns (config is frozen, so these never change)
+        self._exclude_skip_dirs: set[str] = set()
+        self._exclude_compiled: list = []
+        self._compile_exclude_patterns()
+
+    def _compile_exclude_patterns(self) -> None:
+        """Pre-compile exclude patterns from config into skip_dirs and regexes."""
+        import fnmatch
+        import re
+
+        for pattern in self.config.parsing.exclude_patterns:
+            if pattern.endswith("/**"):
+                self._exclude_skip_dirs.add(pattern[:-3])
+            else:
+                self._exclude_compiled.append(re.compile(fnmatch.translate(pattern)))
+
     async def _scan_for_secrets(
         self,
         progress_callback: ProgressCallback | None,
@@ -196,15 +211,17 @@ class RepositoryIndexer:
         if full_rebuild:
             return None, {}, full_rebuild
 
-        previous_status, requires_rebuild = self._status_manager.load_with_migration_info(
-            self.wiki_path
+        previous_status, requires_rebuild = (
+            self._status_manager.load_with_migration_info(self.wiki_path)
         )
         if requires_rebuild:
             logger.info("Schema migration requires full rebuild")
             return None, {}, True
 
         if previous_status:
-            logger.debug(f"Loaded previous index status: {previous_status.total_files} files")
+            logger.debug(
+                f"Loaded previous index status: {previous_status.total_files} files"
+            )
             # Pre-build hash map for O(1) lookups instead of O(N) linear scan per file
             # This reduces O(N*M) to O(N+M) for file comparison
             prev_files_by_path = {f.path: f for f in previous_status.files}
@@ -230,7 +247,9 @@ class RepositoryIndexer:
         logger.info(f"Found {len(source_files)} source files to consider")
 
         if progress_callback:
-            progress_callback("Found source files", len(source_files), len(source_files))
+            progress_callback(
+                "Found source files", len(source_files), len(source_files)
+            )
 
         files_to_process: list[Path] = []
         files_unchanged: list[FileInfo] = []
@@ -287,7 +306,9 @@ class RepositoryIndexer:
                     len(files_to_process),
                 )
             await self.vector_store.delete_chunks_by_files(files_to_delete)
-            logger.debug(f"Batch deleted chunks for {len(files_to_delete)} modified files")
+            logger.debug(
+                f"Batch deleted chunks for {len(files_to_delete)} modified files"
+            )
 
     async def _parse_files_parallel(
         self,
@@ -345,7 +366,9 @@ class RepositoryIndexer:
 
                 if result.error:
                     error_count += 1
-                    logger.warning(f"Error processing {result.file_path}: {result.error}")
+                    logger.warning(
+                        f"Error processing {result.file_path}: {result.error}"
+                    )
                     if progress_callback:
                         progress_callback(
                             f"Error processing {result.file_path}: {result.error}",
@@ -372,7 +395,9 @@ class RepositoryIndexer:
                     EventType.INDEX_FILE,
                     {
                         "file_path": str(result.file_path),
-                        "language": result.file_info.language.value if result.file_info.language else None,
+                        "language": result.file_info.language.value
+                        if result.file_info.language
+                        else None,
                         "chunk_count": len(result.chunks),
                     },
                 )
@@ -408,7 +433,9 @@ class RepositoryIndexer:
         parse_duration = time.time() - parse_start_time
         files_parsed = len(processed_files)
         files_per_second = files_parsed / parse_duration if parse_duration > 0 else 0
-        chunks_per_second = total_chunks_processed / parse_duration if parse_duration > 0 else 0
+        chunks_per_second = (
+            total_chunks_processed / parse_duration if parse_duration > 0 else 0
+        )
 
         logger.info(
             f"Parallel parsing complete: {files_parsed} files, "
@@ -595,24 +622,11 @@ class RepositoryIndexer:
             List of paths to source files.
         """
         import os
-        import re
 
         files = []
-        exclude_patterns = self.config.parsing.exclude_patterns
         max_size = self.config.parsing.max_file_size
-
-        # Extract directory names to skip entirely (patterns like "node_modules/**")
-        skip_dirs = set()
-        file_patterns = []
-        for pattern in exclude_patterns:
-            # Patterns like "node_modules/**" or ".git/**" -> skip the directory
-            if pattern.endswith("/**"):
-                skip_dirs.add(pattern[:-3])
-            else:
-                file_patterns.append(pattern)
-
-        # Compile patterns for faster matching
-        compiled_patterns = [re.compile(fnmatch.translate(p)) for p in file_patterns]
+        skip_dirs = self._exclude_skip_dirs
+        compiled_patterns = self._exclude_compiled
 
         for root, dirs, filenames in os.walk(self.repo_path):
             root_path = Path(root)
@@ -620,7 +634,8 @@ class RepositoryIndexer:
 
             # Early directory filtering - modify dirs in-place to skip subdirs
             dirs[:] = [
-                d for d in dirs
+                d
+                for d in dirs
                 if d not in skip_dirs
                 and str(rel_root / d) not in skip_dirs
                 and not d.startswith(".")  # Skip hidden directories
@@ -630,7 +645,7 @@ class RepositoryIndexer:
                 file_path = root_path / filename
                 rel_path = str(file_path.relative_to(self.repo_path))
 
-                # Check against compiled file patterns
+                # Check against pre-compiled file patterns
                 if any(p.match(rel_path) for p in compiled_patterns):
                     continue
 
@@ -705,7 +720,9 @@ class RepositoryIndexer:
                 "lines": f"{r.chunk.start_line}-{r.chunk.end_line}",
                 "score": r.score,
                 "content": (
-                    r.chunk.content[:500] + "..." if len(r.chunk.content) > 500 else r.chunk.content
+                    r.chunk.content[:500] + "..."
+                    if len(r.chunk.content) > 500
+                    else r.chunk.content
                 ),
                 "docstring": r.chunk.docstring,
             }

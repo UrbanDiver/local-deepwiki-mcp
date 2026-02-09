@@ -169,8 +169,8 @@ class LLMCache:
                 if self._is_valid_entry(entry):
                     self._stats["hits"] += 1
                     logger.debug(f"Cache exact hit: hash={exact_hash[:12]}...")
-                    # Update hit tracking
-                    await self._record_hit(entry["id"])
+                    # Update hit tracking (pass entry to avoid re-fetch)
+                    await self._record_hit(entry["id"], entry)
                     return cast(str, entry["response"])
         except (KeyError, ValueError, RuntimeError, OSError) as e:
             # KeyError: Missing field in result
@@ -200,7 +200,7 @@ class LLMCache:
                             f"Cache similarity hit: similarity={similarity:.3f}, "
                             f"entry={result['id'][:8]}..."
                         )
-                        await self._record_hit(result["id"])
+                        await self._record_hit(result["id"], result)
                         return cast(str, result["response"])
         except (KeyError, ValueError, RuntimeError, OSError) as e:
             # KeyError: Missing field in search result
@@ -288,28 +288,23 @@ class LLMCache:
             # OSError: File system or storage issues
             logger.warning(f"Failed to cache response: {e}")
 
-    async def _record_hit(self, entry_id: str) -> None:
+    async def _record_hit(self, entry_id: str, entry: dict[str, Any]) -> None:
         """Record a cache hit for an entry.
 
         Updates hit_count and last_hit_at for LRU tracking.
         Since LanceDB doesn't support UPDATE, we delete and re-add the entry.
+        The caller passes the already-fetched entry to avoid a redundant query.
 
         Args:
             entry_id: ID of the cache entry.
+            entry: The full cache entry dict (already fetched by get()).
         """
         try:
             table = self._get_table()
             if table is None:
                 return
 
-            # Find the entry
-            results = table.search().where(f"id = '{entry_id}'").limit(1).to_list()
-            if not results:
-                return
-
-            entry = results[0]
-
-            # Create updated record
+            # Create updated record from the already-fetched entry
             updated_record = {
                 "id": entry["id"],
                 "exact_hash": entry["exact_hash"],

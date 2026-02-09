@@ -5,6 +5,7 @@ Templates are loaded from the 'templates' subdirectory relative to this module.
 """
 
 import asyncio
+import hashlib
 import json
 import queue
 import re
@@ -244,6 +245,13 @@ def view_page(path: str):
         abort(404, f"Page not found: {path}")
 
     try:
+        # ETag based on file mtime + size for conditional requests
+        stat = file_path.stat()
+        etag = hashlib.md5(f"{stat.st_mtime_ns}:{stat.st_size}".encode()).hexdigest()
+
+        if request.if_none_match and etag in request.if_none_match:
+            return Response(status=304)
+
         content = file_path.read_text()
         html_content = render_markdown(content)
     except (OSError, UnicodeDecodeError) as e:
@@ -255,16 +263,21 @@ def view_page(path: str):
     # Build breadcrumb navigation
     breadcrumb = build_breadcrumb(WIKI_PATH, path)
 
-    return render_template(
-        "page.html",
-        content=html_content,
-        title=title,
-        pages=pages,
-        sections=sections,
-        toc_entries=toc_entries,
-        current_path=path,
-        breadcrumb=breadcrumb,
+    response = Response(
+        render_template(
+            "page.html",
+            content=html_content,
+            title=title,
+            pages=pages,
+            sections=sections,
+            toc_entries=toc_entries,
+            current_path=path,
+            breadcrumb=breadcrumb,
+        )
     )
+    response.headers["ETag"] = etag
+    response.headers["Cache-Control"] = "private, max-age=60"
+    return response
 
 
 def stream_async_generator(
