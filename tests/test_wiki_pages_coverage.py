@@ -5,6 +5,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from conftest import (
+    make_code_chunk,
+    make_file_info,
+    make_index_status,
+    make_search_result,
+)
 from local_deepwiki.generators.manifest import ProjectManifest
 from local_deepwiki.generators.wiki_pages import (
     generate_architecture_page,
@@ -20,73 +26,6 @@ from local_deepwiki.models import (
     Language,
     SearchResult,
 )
-
-
-def make_index_status(
-    repo_path: str,
-    total_files: int = 0,
-    total_chunks: int = 0,
-    languages: dict | None = None,
-    files: list | None = None,
-) -> IndexStatus:
-    """Helper to create IndexStatus with required fields."""
-    return IndexStatus(
-        repo_path=repo_path,
-        indexed_at=time.time(),
-        total_files=total_files,
-        total_chunks=total_chunks,
-        languages=languages or {},
-        files=files or [],
-    )
-
-
-def make_file_info(
-    path: str,
-    hash: str = "abc123",
-    language: Language | None = Language.PYTHON,
-) -> FileInfo:
-    """Helper to create FileInfo with required fields."""
-    return FileInfo(
-        path=path,
-        hash=hash,
-        language=language,
-        size_bytes=100,
-        last_modified=time.time(),
-    )
-
-
-def make_code_chunk(
-    file_path: str = "src/test.py",
-    name: str = "TestClass",
-    chunk_type: ChunkType = ChunkType.CLASS,
-    content: str = "class TestClass:\n    pass",
-    language: Language = Language.PYTHON,
-) -> CodeChunk:
-    """Helper to create CodeChunk with sensible defaults."""
-    return CodeChunk(
-        id=f"{file_path}:{name}",
-        file_path=file_path,
-        language=language,
-        chunk_type=chunk_type,
-        name=name,
-        content=content,
-        start_line=1,
-        end_line=10,
-    )
-
-
-def make_search_result(
-    chunk: CodeChunk | None = None,
-    score: float = 0.9,
-) -> SearchResult:
-    """Helper to create SearchResult."""
-    if chunk is None:
-        chunk = make_code_chunk()
-    return SearchResult(
-        chunk=chunk,
-        score=score,
-        highlights=[],
-    )
 
 
 class TestGenerateOverviewPage:
@@ -108,7 +47,9 @@ class TestGenerateOverviewPage:
         mock.search = AsyncMock(return_value=[])
         return mock
 
-    async def test_generates_basic_overview(self, mock_llm, mock_vector_store, tmp_path):
+    async def test_generates_basic_overview(
+        self, mock_llm, mock_vector_store, tmp_path
+    ):
         """Test generates basic overview page."""
         repo_path = tmp_path / "test-repo"
         repo_path.mkdir()
@@ -128,7 +69,9 @@ class TestGenerateOverviewPage:
         assert "test-repo" in result.content
         assert result.generated_at > 0
 
-    async def test_includes_manifest_description(self, mock_llm, mock_vector_store, tmp_path):
+    async def test_includes_manifest_description(
+        self, mock_llm, mock_vector_store, tmp_path
+    ):
         """Test includes manifest description in content."""
         manifest = ProjectManifest(
             name="my-project",
@@ -151,7 +94,9 @@ class TestGenerateOverviewPage:
 
         assert "A great project for testing." in result.content
 
-    async def test_includes_technology_stack(self, mock_llm, mock_vector_store, tmp_path):
+    async def test_includes_technology_stack(
+        self, mock_llm, mock_vector_store, tmp_path
+    ):
         """Test includes technology stack from manifest."""
         manifest = ProjectManifest(
             name="my-project",
@@ -180,7 +125,10 @@ class TestGenerateOverviewPage:
         """Test includes entry points from manifest."""
         manifest = ProjectManifest(
             name="my-cli",
-            entry_points={"my-cli": "my_cli.main:run", "my-serve": "my_cli.server:serve"},
+            entry_points={
+                "my-cli": "my_cli.main:run",
+                "my-serve": "my_cli.server:serve",
+            },
         )
         repo_path = tmp_path / "my-cli"
         repo_path.mkdir()
@@ -199,7 +147,9 @@ class TestGenerateOverviewPage:
         assert "my-cli" in result.content
         assert "my_cli.main:run" in result.content
 
-    async def test_includes_directory_structure(self, mock_llm, mock_vector_store, tmp_path):
+    async def test_includes_directory_structure(
+        self, mock_llm, mock_vector_store, tmp_path
+    ):
         """Test includes directory structure."""
         # Create some directories
         (tmp_path / "src").mkdir()
@@ -219,7 +169,9 @@ class TestGenerateOverviewPage:
 
         assert "Directory Structure" in result.content
 
-    async def test_uses_code_context_from_search(self, mock_llm, mock_vector_store, tmp_path):
+    async def test_uses_code_context_from_search(
+        self, mock_llm, mock_vector_store, tmp_path
+    ):
         """Test uses code context from vector store search."""
         # Set up mock to return search results
         chunk1 = make_code_chunk(name="main", chunk_type=ChunkType.FUNCTION)
@@ -244,10 +196,14 @@ class TestGenerateOverviewPage:
         # LLM should have been called with code context
         mock_llm.generate.assert_called_once()
         call_args = mock_llm.generate.call_args
-        prompt = call_args.args[0] if call_args.args else call_args.kwargs.get("prompt", "")
+        prompt = (
+            call_args.args[0] if call_args.args else call_args.kwargs.get("prompt", "")
+        )
         assert "CODE SAMPLES" in prompt
 
-    async def test_handles_many_dependencies(self, mock_llm, mock_vector_store, tmp_path):
+    async def test_handles_many_dependencies(
+        self, mock_llm, mock_vector_store, tmp_path
+    ):
         """Test handles many dependencies by truncating list."""
         manifest = ProjectManifest(
             name="big-project",
@@ -289,7 +245,9 @@ class TestGenerateArchitecturePage:
         mock.search = AsyncMock(return_value=[])
         return mock
 
-    async def test_generates_basic_architecture(self, mock_llm, mock_vector_store, tmp_path):
+    async def test_generates_basic_architecture(
+        self, mock_llm, mock_vector_store, tmp_path
+    ):
         """Test generates basic architecture page."""
         repo_path = tmp_path / "project"
         repo_path.mkdir()
@@ -308,7 +266,9 @@ class TestGenerateArchitecturePage:
         assert result.title == "Architecture"
         assert "System Overview" in result.content or "Architecture" in result.content
 
-    async def test_includes_workflow_sequences(self, mock_llm, mock_vector_store, tmp_path):
+    async def test_includes_workflow_sequences(
+        self, mock_llm, mock_vector_store, tmp_path
+    ):
         """Test includes workflow sequence diagrams."""
         repo_path = tmp_path / "project"
         repo_path.mkdir()
@@ -331,7 +291,9 @@ class TestGenerateArchitecturePage:
             assert "Workflow Sequences" in result.content
             mock_workflows.assert_called_once()
 
-    async def test_searches_multiple_context_types(self, mock_llm, mock_vector_store, tmp_path):
+    async def test_searches_multiple_context_types(
+        self, mock_llm, mock_vector_store, tmp_path
+    ):
         """Test searches for multiple types of architectural context."""
         repo_path = tmp_path / "project"
         repo_path.mkdir()
@@ -373,7 +335,9 @@ class TestGenerateArchitecturePage:
         # LLM should be called with deduplicated context
         mock_llm.generate.assert_called_once()
 
-    async def test_includes_dependency_context(self, mock_llm, mock_vector_store, tmp_path):
+    async def test_includes_dependency_context(
+        self, mock_llm, mock_vector_store, tmp_path
+    ):
         """Test includes dependency context from manifest."""
         manifest = ProjectManifest(
             name="project",
@@ -393,7 +357,9 @@ class TestGenerateArchitecturePage:
         )
 
         call_args = mock_llm.generate.call_args
-        prompt = call_args.args[0] if call_args.args else call_args.kwargs.get("prompt", "")
+        prompt = (
+            call_args.args[0] if call_args.args else call_args.kwargs.get("prompt", "")
+        )
         assert "dependencies" in prompt.lower()
 
     async def test_extracts_class_names(self, mock_llm, mock_vector_store, tmp_path):
@@ -423,7 +389,9 @@ class TestGenerateArchitecturePage:
         )
 
         call_args = mock_llm.generate.call_args
-        prompt = call_args.args[0] if call_args.args else call_args.kwargs.get("prompt", "")
+        prompt = (
+            call_args.args[0] if call_args.args else call_args.kwargs.get("prompt", "")
+        )
         assert "MyService" in prompt
 
 
@@ -434,7 +402,9 @@ class TestGenerateDependenciesPage:
     def mock_llm(self):
         """Create a mock LLM provider."""
         mock = MagicMock()
-        mock.generate = AsyncMock(return_value="## External Dependencies\n\n- flask: Web framework")
+        mock.generate = AsyncMock(
+            return_value="## External Dependencies\n\n- flask: Web framework"
+        )
         return mock
 
     @pytest.fixture
@@ -444,11 +414,15 @@ class TestGenerateDependenciesPage:
         mock.search = AsyncMock(return_value=[])
         return mock
 
-    async def test_generates_basic_dependencies(self, mock_llm, mock_vector_store, tmp_path):
+    async def test_generates_basic_dependencies(
+        self, mock_llm, mock_vector_store, tmp_path
+    ):
         """Test generates basic dependencies page."""
         index_status = make_index_status(repo_path=str(tmp_path / "project"))
 
-        with patch("local_deepwiki.generators.diagrams.generate_dependency_graph") as mock_graph:
+        with patch(
+            "local_deepwiki.generators.diagrams.generate_dependency_graph"
+        ) as mock_graph:
             mock_graph.return_value = ""
 
             page, source_files = await generate_dependencies_page(
@@ -464,7 +438,9 @@ class TestGenerateDependenciesPage:
             assert page.title == "Dependencies"
             assert isinstance(source_files, list)
 
-    async def test_includes_external_dependencies(self, mock_llm, mock_vector_store, tmp_path):
+    async def test_includes_external_dependencies(
+        self, mock_llm, mock_vector_store, tmp_path
+    ):
         """Test includes external dependencies from manifest."""
         manifest = ProjectManifest(
             name="project",
@@ -472,7 +448,9 @@ class TestGenerateDependenciesPage:
         )
         index_status = make_index_status(repo_path=str(tmp_path / "project"))
 
-        with patch("local_deepwiki.generators.diagrams.generate_dependency_graph") as mock_graph:
+        with patch(
+            "local_deepwiki.generators.diagrams.generate_dependency_graph"
+        ) as mock_graph:
             mock_graph.return_value = ""
 
             await generate_dependencies_page(
@@ -485,11 +463,17 @@ class TestGenerateDependenciesPage:
             )
 
             call_args = mock_llm.generate.call_args
-            prompt = call_args.args[0] if call_args.args else call_args.kwargs.get("prompt", "")
+            prompt = (
+                call_args.args[0]
+                if call_args.args
+                else call_args.kwargs.get("prompt", "")
+            )
             assert "requests" in prompt
             assert "pydantic" in prompt
 
-    async def test_includes_dev_dependencies(self, mock_llm, mock_vector_store, tmp_path):
+    async def test_includes_dev_dependencies(
+        self, mock_llm, mock_vector_store, tmp_path
+    ):
         """Test includes dev dependencies from manifest."""
         manifest = ProjectManifest(
             name="project",
@@ -497,7 +481,9 @@ class TestGenerateDependenciesPage:
         )
         index_status = make_index_status(repo_path=str(tmp_path / "project"))
 
-        with patch("local_deepwiki.generators.diagrams.generate_dependency_graph") as mock_graph:
+        with patch(
+            "local_deepwiki.generators.diagrams.generate_dependency_graph"
+        ) as mock_graph:
             mock_graph.return_value = ""
 
             await generate_dependencies_page(
@@ -510,7 +496,11 @@ class TestGenerateDependenciesPage:
             )
 
             call_args = mock_llm.generate.call_args
-            prompt = call_args.args[0] if call_args.args else call_args.kwargs.get("prompt", "")
+            prompt = (
+                call_args.args[0]
+                if call_args.args
+                else call_args.kwargs.get("prompt", "")
+            )
             assert "pytest" in prompt
             assert "DEV DEPENDENCIES" in prompt
 
@@ -522,11 +512,15 @@ class TestGenerateDependenciesPage:
             content="import os\nimport sys",
             file_path="src/main.py",
         )
-        mock_vector_store.search = AsyncMock(return_value=[make_search_result(import_chunk)])
+        mock_vector_store.search = AsyncMock(
+            return_value=[make_search_result(import_chunk)]
+        )
 
         index_status = make_index_status(repo_path=str(tmp_path / "project"))
 
-        with patch("local_deepwiki.generators.diagrams.generate_dependency_graph") as mock_graph:
+        with patch(
+            "local_deepwiki.generators.diagrams.generate_dependency_graph"
+        ) as mock_graph:
             mock_graph.return_value = ""
 
             page, source_files = await generate_dependencies_page(
@@ -549,12 +543,17 @@ class TestGenerateDependenciesPage:
             name="imports", chunk_type=ChunkType.IMPORT, file_path="tests/test_main.py"
         )
         mock_vector_store.search = AsyncMock(
-            return_value=[make_search_result(import_chunk1), make_search_result(import_chunk2)]
+            return_value=[
+                make_search_result(import_chunk1),
+                make_search_result(import_chunk2),
+            ]
         )
 
         index_status = make_index_status(repo_path=str(tmp_path / "project"))
 
-        with patch("local_deepwiki.generators.diagrams.generate_dependency_graph") as mock_graph:
+        with patch(
+            "local_deepwiki.generators.diagrams.generate_dependency_graph"
+        ) as mock_graph:
             mock_graph.return_value = ""
 
             page, source_files = await generate_dependencies_page(
@@ -571,16 +570,22 @@ class TestGenerateDependenciesPage:
             test_idx = source_files.index("tests/test_main.py")
             assert src_idx < test_idx
 
-    async def test_includes_dependency_graph(self, mock_llm, mock_vector_store, tmp_path):
+    async def test_includes_dependency_graph(
+        self, mock_llm, mock_vector_store, tmp_path
+    ):
         """Test includes auto-generated dependency graph."""
         import_chunk = make_code_chunk(
             name="imports", chunk_type=ChunkType.IMPORT, file_path="src/main.py"
         )
-        mock_vector_store.search = AsyncMock(return_value=[make_search_result(import_chunk)])
+        mock_vector_store.search = AsyncMock(
+            return_value=[make_search_result(import_chunk)]
+        )
 
         index_status = make_index_status(repo_path=str(tmp_path / "project"))
 
-        with patch("local_deepwiki.generators.diagrams.generate_dependency_graph") as mock_graph:
+        with patch(
+            "local_deepwiki.generators.diagrams.generate_dependency_graph"
+        ) as mock_graph:
             mock_graph.return_value = "```mermaid\ngraph TD\n  A --> B\n```"
 
             page, _ = await generate_dependencies_page(
@@ -595,11 +600,15 @@ class TestGenerateDependenciesPage:
             assert "Module Dependency Graph" in page.content
             assert "mermaid" in page.content
 
-    async def test_handles_empty_dependency_graph(self, mock_llm, mock_vector_store, tmp_path):
+    async def test_handles_empty_dependency_graph(
+        self, mock_llm, mock_vector_store, tmp_path
+    ):
         """Test handles empty dependency graph gracefully."""
         index_status = make_index_status(repo_path=str(tmp_path / "project"))
 
-        with patch("local_deepwiki.generators.diagrams.generate_dependency_graph") as mock_graph:
+        with patch(
+            "local_deepwiki.generators.diagrams.generate_dependency_graph"
+        ) as mock_graph:
             mock_graph.return_value = ""  # Empty graph
 
             page, _ = await generate_dependencies_page(
@@ -628,7 +637,9 @@ class TestGenerateChangelogPage:
         with patch(
             "local_deepwiki.generators.changelog.generate_changelog_content"
         ) as mock_changelog:
-            mock_changelog.return_value = "# Changelog\n\n## v1.0.0\n\n- Initial release"
+            mock_changelog.return_value = (
+                "# Changelog\n\n## v1.0.0\n\n- Initial release"
+            )
 
             result = await generate_changelog_page(repo_path=tmp_path)
 
@@ -723,7 +734,9 @@ class TestOverviewPageEdgeCases:
         assert "Python" in result.content
         # Should not have version number
 
-    async def test_handles_wildcard_version(self, mock_llm, mock_vector_store, tmp_path):
+    async def test_handles_wildcard_version(
+        self, mock_llm, mock_vector_store, tmp_path
+    ):
         """Test handles wildcard version in dependencies."""
         manifest = ProjectManifest(
             name="project",
@@ -779,13 +792,17 @@ class TestArchitecturePageEdgeCases:
         assert result is not None
         assert result.path == "architecture.md"
 
-    async def test_handles_no_classes_found(self, mock_llm, mock_vector_store, tmp_path):
+    async def test_handles_no_classes_found(
+        self, mock_llm, mock_vector_store, tmp_path
+    ):
         """Test handles case where no classes are found."""
         # Only return function chunks, no classes
         func_chunk = make_code_chunk(
             name="main", chunk_type=ChunkType.FUNCTION, file_path="src/main.py"
         )
-        mock_vector_store.search = AsyncMock(return_value=[make_search_result(func_chunk)])
+        mock_vector_store.search = AsyncMock(
+            return_value=[make_search_result(func_chunk)]
+        )
 
         repo_path = tmp_path / "project"
         repo_path.mkdir()
@@ -801,7 +818,9 @@ class TestArchitecturePageEdgeCases:
         )
 
         call_args = mock_llm.generate.call_args
-        prompt = call_args.args[0] if call_args.args else call_args.kwargs.get("prompt", "")
+        prompt = (
+            call_args.args[0] if call_args.args else call_args.kwargs.get("prompt", "")
+        )
         assert "No classes found" in prompt
 
 
@@ -827,7 +846,9 @@ class TestDependenciesPageEdgeCases:
         manifest = ProjectManifest(name="minimal-project")  # No dependencies
         index_status = make_index_status(repo_path=str(tmp_path / "project"))
 
-        with patch("local_deepwiki.generators.diagrams.generate_dependency_graph") as mock_graph:
+        with patch(
+            "local_deepwiki.generators.diagrams.generate_dependency_graph"
+        ) as mock_graph:
             mock_graph.return_value = ""
 
             page, _ = await generate_dependencies_page(
@@ -841,7 +862,9 @@ class TestDependenciesPageEdgeCases:
 
             assert page is not None
 
-    async def test_handles_large_dependency_lists(self, mock_llm, mock_vector_store, tmp_path):
+    async def test_handles_large_dependency_lists(
+        self, mock_llm, mock_vector_store, tmp_path
+    ):
         """Test handles large dependency lists by truncating."""
         manifest = ProjectManifest(
             name="big-project",
@@ -850,7 +873,9 @@ class TestDependenciesPageEdgeCases:
         )
         index_status = make_index_status(repo_path=str(tmp_path / "project"))
 
-        with patch("local_deepwiki.generators.diagrams.generate_dependency_graph") as mock_graph:
+        with patch(
+            "local_deepwiki.generators.diagrams.generate_dependency_graph"
+        ) as mock_graph:
             mock_graph.return_value = ""
 
             await generate_dependencies_page(
@@ -865,7 +890,9 @@ class TestDependenciesPageEdgeCases:
             # Should have been called - truncation handled internally
             mock_llm.generate.assert_called_once()
 
-    async def test_filters_non_import_chunks(self, mock_llm, mock_vector_store, tmp_path):
+    async def test_filters_non_import_chunks(
+        self, mock_llm, mock_vector_store, tmp_path
+    ):
         """Test filters out non-import chunks from import search."""
         import_chunk = make_code_chunk(
             name="imports", chunk_type=ChunkType.IMPORT, file_path="src/main.py"
@@ -875,12 +902,17 @@ class TestDependenciesPageEdgeCases:
         )
 
         mock_vector_store.search = AsyncMock(
-            return_value=[make_search_result(import_chunk), make_search_result(func_chunk)]
+            return_value=[
+                make_search_result(import_chunk),
+                make_search_result(func_chunk),
+            ]
         )
 
         index_status = make_index_status(repo_path=str(tmp_path / "project"))
 
-        with patch("local_deepwiki.generators.diagrams.generate_dependency_graph") as mock_graph:
+        with patch(
+            "local_deepwiki.generators.diagrams.generate_dependency_graph"
+        ) as mock_graph:
             mock_graph.return_value = ""
 
             page, source_files = await generate_dependencies_page(

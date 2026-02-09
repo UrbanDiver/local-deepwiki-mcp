@@ -399,7 +399,9 @@ class TestLargeFileHandling:
         parser = CodeParser()
         with tempfile.NamedTemporaryFile(mode="wb", suffix=".py", delete=False) as f:
             # Create a valid Python file with content above threshold
-            content = b"# Large file\n" + b"x = 1\n" * (MMAP_THRESHOLD_BYTES // 6 + 1000)
+            content = b"# Large file\n" + b"x = 1\n" * (
+                MMAP_THRESHOLD_BYTES // 6 + 1000
+            )
             f.write(content)
             f.flush()
 
@@ -420,7 +422,9 @@ class TestLargeFileHandling:
             large_file = root / "large.py"
 
             # Create file above threshold
-            content = b"# Large file\n" + b"y = 2\n" * (MMAP_THRESHOLD_BYTES // 6 + 1000)
+            content = b"# Large file\n" + b"y = 2\n" * (
+                MMAP_THRESHOLD_BYTES // 6 + 1000
+            )
             large_file.write_bytes(content)
 
             file_info = parser.get_file_info(large_file, root)
@@ -573,9 +577,9 @@ fn example() {}"""
     # Line 386: Non-string expression in Python docstring position
     def test_python_function_non_string_first_expr(self):
         """Test Python function with non-string first expression."""
-        code = b'''def func_with_call():
+        code = b"""def func_with_call():
     print("not a docstring")
-    return 1'''
+    return 1"""
         root = self.parser.parse_source(code, Language.PYTHON)
         func_node = root.children[0]
 
@@ -596,9 +600,9 @@ fn example() {}"""
 
     def test_python_double_quoted_docstring(self):
         """Test Python function with double-quoted (non-triple) docstring."""
-        code = b'''def hello():
+        code = b"""def hello():
     "Double quoted docstring."
-    pass'''
+    pass"""
         root = self.parser.parse_source(code, Language.PYTHON)
         func_node = root.children[0]
 
@@ -759,7 +763,9 @@ fun hello() {}"""
 }"""
         root = self.parser.parse_source(code, Language.CSHARP)
         # In C#, methods in a class are method_declaration
-        func_nodes = find_nodes_by_type(root, {"method_declaration", "local_function_statement"})
+        func_nodes = find_nodes_by_type(
+            root, {"method_declaration", "local_function_statement"}
+        )
         assert len(func_nodes) >= 1
 
         # Try to get docstring
@@ -1196,6 +1202,7 @@ class TestASTCache:
 
         # Create a tree for caching (need to re-parse to get the Tree object)
         import hashlib
+
         file_hash = hashlib.sha256(source).hexdigest()
 
         # Parse again to get the tree object
@@ -1222,6 +1229,7 @@ class TestASTCache:
         root, lang, source = result
 
         import hashlib
+
         file_hash = hashlib.sha256(source).hexdigest()
         tree = parser._get_parser(lang).parse(source)
 
@@ -1239,6 +1247,8 @@ class TestASTCache:
 
     def test_cache_ttl_expiration(self, tmp_path):
         """Test that cache entries expire after TTL."""
+        from unittest.mock import patch
+
         # Create cache with very short TTL
         cache = ASTCache(max_entries=10, ttl_seconds=1)
         parser = CodeParser()
@@ -1251,21 +1261,28 @@ class TestASTCache:
         root, lang, source = result
 
         import hashlib
+
         file_hash = hashlib.sha256(source).hexdigest()
         tree = parser._get_parser(lang).parse(source)
 
-        cache.set(str(test_file), file_hash, tree, lang.value)
+        base_time = time.time()
 
-        # Should hit initially
-        cached = cache.get(str(test_file), file_hash)
-        assert cached is not None
+        # Set the entry at base_time
+        with patch("local_deepwiki.core.parser.ast_cache.time") as mock_time:
+            mock_time.time.return_value = base_time
+            cache.set(str(test_file), file_hash, tree, lang.value)
 
-        # Wait for TTL to expire
-        time.sleep(1.1)
+        # Should hit initially (still at base_time)
+        with patch("local_deepwiki.core.parser.ast_cache.time") as mock_time:
+            mock_time.time.return_value = base_time + 0.5
+            cached = cache.get(str(test_file), file_hash)
+            assert cached is not None
 
-        # Should miss after expiration
-        cached = cache.get(str(test_file), file_hash)
-        assert cached is None
+        # Advance past TTL (1s) -- simulate 2s later
+        with patch("local_deepwiki.core.parser.ast_cache.time") as mock_time:
+            mock_time.time.return_value = base_time + 2.0
+            cached = cache.get(str(test_file), file_hash)
+            assert cached is None
 
         stats = cache.get_stats()
         assert stats["expirations"] == 1
@@ -1286,6 +1303,7 @@ class TestASTCache:
             root, lang, source = result
 
             import hashlib
+
             file_hash = hashlib.sha256(source).hexdigest()
             tree = parser._get_parser(lang).parse(source)
             trees.append((str(test_file), file_hash, tree, lang.value))
@@ -1312,6 +1330,7 @@ class TestASTCache:
         root, lang, source = result
 
         import hashlib
+
         file_hash = hashlib.sha256(source).hexdigest()
         tree = parser._get_parser(lang).parse(source)
 
@@ -1340,6 +1359,7 @@ class TestASTCache:
             root, lang, source = result
 
             import hashlib
+
             file_hash = hashlib.sha256(source).hexdigest()
             tree = parser._get_parser(lang).parse(source)
             cache.set(str(test_file), file_hash, tree, lang.value)
@@ -1362,6 +1382,7 @@ class TestASTCache:
         root, lang, source = result
 
         import hashlib
+
         file_hash = hashlib.sha256(source).hexdigest()
         tree = parser._get_parser(lang).parse(source)
 
@@ -1384,30 +1405,37 @@ class TestASTCache:
 
     def test_cache_cleanup_expired(self, tmp_path):
         """Test manual cleanup of expired entries."""
+        from unittest.mock import patch
+
         cache = ASTCache(max_entries=10, ttl_seconds=1)
         parser = CodeParser()
 
-        # Add entries
-        for i in range(3):
-            test_file = tmp_path / f"test_{i}.py"
-            test_file.write_text(f"def func_{i}(): pass")
+        base_time = time.time()
 
-            result = parser.parse_file(test_file)
-            assert result is not None
-            root, lang, source = result
+        # Add entries at base_time
+        with patch("local_deepwiki.core.parser.ast_cache.time") as mock_time:
+            mock_time.time.return_value = base_time
+            for i in range(3):
+                test_file = tmp_path / f"test_{i}.py"
+                test_file.write_text(f"def func_{i}(): pass")
 
-            import hashlib
-            file_hash = hashlib.sha256(source).hexdigest()
-            tree = parser._get_parser(lang).parse(source)
-            cache.set(str(test_file), file_hash, tree, lang.value)
+                result = parser.parse_file(test_file)
+                assert result is not None
+                root, lang, source = result
+
+                import hashlib
+
+                file_hash = hashlib.sha256(source).hexdigest()
+                tree = parser._get_parser(lang).parse(source)
+                cache.set(str(test_file), file_hash, tree, lang.value)
 
         assert cache.size == 3
 
-        # Wait for expiration
-        time.sleep(1.1)
+        # Advance past TTL (1s) -- simulate 2s later
+        with patch("local_deepwiki.core.parser.ast_cache.time") as mock_time:
+            mock_time.time.return_value = base_time + 2.0
+            removed = cache.cleanup_expired()
 
-        # Manual cleanup
-        removed = cache.cleanup_expired()
         assert removed == 3
         assert cache.size == 0
 

@@ -69,6 +69,10 @@ packages = ["src/local_deepwiki"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+pythonpath = ["tests"]
+markers = [
+    "slow: marks tests with timing-sensitive assertions (deselect with '-m \"not slow\"')",
+]
 filterwarnings = [
     # Suppress warnings from mock cleanup when coroutines are properly closed
     # but mock infrastructure creates new coroutine refs during teardown

@@ -5,6 +5,12 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from conftest import (
+    make_code_chunk,
+    make_file_info,
+    make_index_status,
+    make_search_result,
+)
 from local_deepwiki.generators.wiki_modules import (
     _generate_modules_index,
     generate_module_docs,
@@ -18,73 +24,6 @@ from local_deepwiki.models import (
     SearchResult,
     WikiPage,
 )
-
-
-def make_index_status(
-    repo_path: str,
-    total_files: int = 0,
-    total_chunks: int = 0,
-    languages: dict | None = None,
-    files: list | None = None,
-) -> IndexStatus:
-    """Helper to create IndexStatus with required fields."""
-    return IndexStatus(
-        repo_path=repo_path,
-        indexed_at=time.time(),
-        total_files=total_files,
-        total_chunks=total_chunks,
-        languages=languages or {},
-        files=files or [],
-    )
-
-
-def make_file_info(
-    path: str,
-    hash: str = "abc123",
-    language: Language | None = Language.PYTHON,
-) -> FileInfo:
-    """Helper to create FileInfo with required fields."""
-    return FileInfo(
-        path=path,
-        hash=hash,
-        language=language,
-        size_bytes=100,
-        last_modified=time.time(),
-    )
-
-
-def make_code_chunk(
-    file_path: str = "src/test.py",
-    name: str = "TestClass",
-    chunk_type: ChunkType = ChunkType.CLASS,
-    content: str = "class TestClass:\n    pass",
-    language: Language = Language.PYTHON,
-) -> CodeChunk:
-    """Helper to create CodeChunk with sensible defaults."""
-    return CodeChunk(
-        id=f"{file_path}:{name}",
-        file_path=file_path,
-        language=language,
-        chunk_type=chunk_type,
-        name=name,
-        content=content,
-        start_line=1,
-        end_line=10,
-    )
-
-
-def make_search_result(
-    chunk: CodeChunk | None = None,
-    score: float = 0.9,
-) -> SearchResult:
-    """Helper to create SearchResult."""
-    if chunk is None:
-        chunk = make_code_chunk()
-    return SearchResult(
-        chunk=chunk,
-        score=score,
-        highlights=[],
-    )
 
 
 class TestGenerateModuleDocs:
@@ -325,7 +264,10 @@ class TestGenerateModuleDocs:
         src_chunk = make_code_chunk(file_path="src/main.py", name="main")
         other_chunk = make_code_chunk(file_path="other/util.py", name="util")
         mock_vector_store.search = AsyncMock(
-            return_value=[make_search_result(src_chunk), make_search_result(other_chunk)]
+            return_value=[
+                make_search_result(src_chunk),
+                make_search_result(other_chunk),
+            ]
         )
 
         index_status = make_index_status(
@@ -347,7 +289,9 @@ class TestGenerateModuleDocs:
 
         # LLM should have been called with only src directory chunks
         call_args = mock_llm.generate.call_args
-        prompt = call_args.args[0] if call_args.args else call_args.kwargs.get("prompt", "")
+        prompt = (
+            call_args.args[0] if call_args.args else call_args.kwargs.get("prompt", "")
+        )
         assert "src/main.py" in prompt
 
     async def test_skips_directories_without_relevant_chunks(
@@ -470,7 +414,9 @@ class TestGenerateModuleDocs:
 
         # Prompt should have ellipsis for truncated file list
         call_args = mock_llm.generate.call_args
-        prompt = call_args.args[0] if call_args.args else call_args.kwargs.get("prompt", "")
+        prompt = (
+            call_args.args[0] if call_args.args else call_args.kwargs.get("prompt", "")
+        )
         assert "..." in prompt
 
 
@@ -481,10 +427,16 @@ class TestGenerateModulesIndex:
         """Test generates basic index content."""
         pages = [
             WikiPage(
-                path="modules/src.md", title="Module: src", content="", generated_at=time.time()
+                path="modules/src.md",
+                title="Module: src",
+                content="",
+                generated_at=time.time(),
             ),
             WikiPage(
-                path="modules/tests.md", title="Module: tests", content="", generated_at=time.time()
+                path="modules/tests.md",
+                title="Module: tests",
+                content="",
+                generated_at=time.time(),
             ),
         ]
 
@@ -498,10 +450,16 @@ class TestGenerateModulesIndex:
         """Test excludes the index page itself from listings."""
         pages = [
             WikiPage(
-                path="modules/index.md", title="Modules", content="", generated_at=time.time()
+                path="modules/index.md",
+                title="Modules",
+                content="",
+                generated_at=time.time(),
             ),
             WikiPage(
-                path="modules/src.md", title="Module: src", content="", generated_at=time.time()
+                path="modules/src.md",
+                title="Module: src",
+                content="",
+                generated_at=time.time(),
             ),
         ]
 

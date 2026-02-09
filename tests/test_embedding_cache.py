@@ -234,8 +234,8 @@ class TestEmbeddingCache:
         await cache.embed(["hello"])
         assert provider.embed_calls == [["hello"]]
 
-        # Wait for expiration
-        time.sleep(1.5)
+        # Wait for expiration with generous margin to avoid flakiness
+        time.sleep(2.5)
 
         # Should call provider again due to expiration
         await cache.embed(["hello"])
@@ -254,7 +254,7 @@ class TestEmbeddingCache:
         await cache.embed(["text1", "text2"])
         assert cache.get_entry_count() == 2
 
-        time.sleep(1.5)
+        time.sleep(2.5)
 
         cleaned = cache.cleanup_expired()
 
@@ -806,8 +806,8 @@ class TestCachedEmbeddingProviderCleanup:
         await cached_provider.embed(["text1", "text2"])
         assert cached_provider.get_entry_count() == 2
 
-        # Wait for expiration
-        time.sleep(1.5)
+        # Wait for expiration with generous margin to avoid flakiness
+        time.sleep(2.5)
 
         # cleanup_cache should remove expired entries
         result = cached_provider.cleanup_cache()

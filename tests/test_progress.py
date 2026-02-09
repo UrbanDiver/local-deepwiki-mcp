@@ -180,13 +180,13 @@ class TestProgressManager:
 
         # Simulate progress over time
         manager.update(current=10)
-        time.sleep(0.1)
+        time.sleep(0.3)
         manager.update(current=20)
 
         eta = manager.get_eta()
 
         # Should have an ETA estimate now
-        # With 20% done in 0.1s, ETA should be around 0.4s for remaining 80%
+        # With 20% done in ~0.3s, ETA should be around 1.2s for remaining 80%
         assert eta is not None
         assert eta > 0
 
@@ -218,7 +218,9 @@ class TestProgressManager:
             total=100,
         )
 
-        manager.update(current=50, phase=ProgressPhase.EMBEDDING, message="Embedding chunks")
+        manager.update(
+            current=50, phase=ProgressPhase.EMBEDDING, message="Embedding chunks"
+        )
 
         progress = manager.get_progress_dict()
 
@@ -256,16 +258,16 @@ class TestProgressManager:
         )
 
         manager.update(current=10, phase=ProgressPhase.SCANNING)
-        time.sleep(0.05)
+        time.sleep(0.15)
         manager.update(current=50, phase=ProgressPhase.PARSING)
-        time.sleep(0.05)
+        time.sleep(0.15)
         manager.update(current=100, phase=ProgressPhase.COMPLETE)
 
         progress = manager.get_progress_dict()
 
         # Should have duration for scanning phase
         assert "scanning" in progress["phase_durations"]
-        assert progress["phase_durations"]["scanning"] > 0.04
+        assert progress["phase_durations"]["scanning"] > 0.1
 
     def test_callback_error_handling(self):
         """Test that callback errors don't crash updates."""
@@ -315,7 +317,7 @@ class TestProgressBuffer:
 
     def test_add_triggers_time_flush(self):
         """Test that time interval triggers flush."""
-        buffer = ProgressBuffer(flush_interval=0.05)
+        buffer = ProgressBuffer(flush_interval=0.1)
 
         update1 = ProgressUpdate(
             operation_id="test-123",
@@ -327,7 +329,7 @@ class TestProgressBuffer:
         )
         buffer.add(update1)
 
-        time.sleep(0.06)
+        time.sleep(0.2)
 
         update2 = ProgressUpdate(
             operation_id="test-123",
@@ -558,11 +560,15 @@ class TestOperationProgressRegistry:
         data_path = tmp_path / "progress_history.json"
 
         # Seed with historical data
-        data_path.write_text(json.dumps({
-            "index_repository": {
-                "index_repository_rate": 10.0,  # 10 items/sec
-            }
-        }))
+        data_path.write_text(
+            json.dumps(
+                {
+                    "index_repository": {
+                        "index_repository_rate": 10.0,  # 10 items/sec
+                    }
+                }
+            )
+        )
 
         registry = OperationProgressRegistry()
         registry.set_data_path(data_path)
@@ -637,7 +643,9 @@ class TestHandlerIntegration:
         except ImportError as e:
             pytest.skip(f"Could not import handlers: {e}")
 
-    async def test_handle_get_operation_progress_no_operations(self, skip_if_no_handlers):
+    async def test_handle_get_operation_progress_no_operations(
+        self, skip_if_no_handlers
+    ):
         """Test get_operation_progress when no operations are active."""
         from local_deepwiki.handlers import handle_get_operation_progress
 
@@ -653,7 +661,9 @@ class TestHandlerIntegration:
         assert response["active_operations"] == 0
         assert response["operations"] == []
 
-    async def test_handle_get_operation_progress_with_operation(self, skip_if_no_handlers):
+    async def test_handle_get_operation_progress_with_operation(
+        self, skip_if_no_handlers
+    ):
         """Test get_operation_progress with an active operation."""
         from local_deepwiki.handlers import handle_get_operation_progress
 

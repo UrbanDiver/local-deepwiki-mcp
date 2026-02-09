@@ -175,7 +175,7 @@ class TestRepositoryWatcher:
 
         watcher.stop()
         # Give it a moment to stop
-        time.sleep(0.2)
+        time.sleep(0.5)
         assert not watcher.is_running()
 
     def test_stop_without_start(self, tmp_path):
@@ -391,7 +391,9 @@ class TestTriggerReindex:
         test_file.touch()
         handler._pending_files.add(str(test_file))
 
-        with patch.object(handler, "_do_reindex", new_callable=AsyncMock) as mock_reindex:
+        with patch.object(
+            handler, "_do_reindex", new_callable=AsyncMock
+        ) as mock_reindex:
             handler._trigger_reindex()
 
         # Files should be cleared
@@ -400,7 +402,9 @@ class TestTriggerReindex:
 
     def test_trigger_reindex_empty_files(self, handler):
         """Test _trigger_reindex does nothing when no files pending."""
-        with patch.object(handler, "_do_reindex", new_callable=AsyncMock) as mock_reindex:
+        with patch.object(
+            handler, "_do_reindex", new_callable=AsyncMock
+        ) as mock_reindex:
             handler._trigger_reindex()
 
         mock_reindex.assert_not_called()
@@ -865,7 +869,9 @@ class TestMain:
         with (
             patch("sys.argv", ["deepwiki-watch", str(tmp_path)]),
             patch("local_deepwiki.watcher.console"),
-            patch("local_deepwiki.watcher.asyncio.run", side_effect=close_coro) as mock_asyncio_run,
+            patch(
+                "local_deepwiki.watcher.asyncio.run", side_effect=close_coro
+            ) as mock_asyncio_run,
             patch("local_deepwiki.watcher.RepositoryWatcher") as mock_watcher_class,
             patch("local_deepwiki.watcher.get_config") as mock_get_config,
             patch("time.sleep", side_effect=KeyboardInterrupt),
@@ -893,7 +899,9 @@ class TestMain:
         with (
             patch("sys.argv", ["deepwiki-watch", str(tmp_path), "--full-rebuild"]),
             patch("local_deepwiki.watcher.console"),
-            patch("local_deepwiki.watcher.asyncio.run", side_effect=close_coro) as mock_asyncio_run,
+            patch(
+                "local_deepwiki.watcher.asyncio.run", side_effect=close_coro
+            ) as mock_asyncio_run,
             patch("local_deepwiki.watcher.RepositoryWatcher") as mock_watcher_class,
             patch("local_deepwiki.watcher.get_config") as mock_get_config,
             patch("time.sleep", side_effect=KeyboardInterrupt),
@@ -1202,7 +1210,9 @@ class TestChangeTypeTracking:
         handler.on_modified(event)
 
         assert str(test_file) in handler._pending_changes
-        assert handler._pending_changes[str(test_file)].change_type == ChangeType.MODIFIED
+        assert (
+            handler._pending_changes[str(test_file)].change_type == ChangeType.MODIFIED
+        )
 
         # Cancel timer
         if handler._timer:
@@ -1220,7 +1230,9 @@ class TestChangeTypeTracking:
         handler.on_created(event)
 
         assert str(test_file) in handler._pending_changes
-        assert handler._pending_changes[str(test_file)].change_type == ChangeType.CREATED
+        assert (
+            handler._pending_changes[str(test_file)].change_type == ChangeType.CREATED
+        )
 
         if handler._timer:
             handler._timer.cancel()
@@ -1236,7 +1248,9 @@ class TestChangeTypeTracking:
         handler.on_deleted(event)
 
         assert str(test_file) in handler._pending_changes
-        assert handler._pending_changes[str(test_file)].change_type == ChangeType.DELETED
+        assert (
+            handler._pending_changes[str(test_file)].change_type == ChangeType.DELETED
+        )
 
         if handler._timer:
             handler._timer.cancel()
@@ -1263,7 +1277,9 @@ class TestChangeTypeTracking:
 
         # Dest should be tracked as CREATED
         assert str(dest_file) in handler._pending_changes
-        assert handler._pending_changes[str(dest_file)].change_type == ChangeType.CREATED
+        assert (
+            handler._pending_changes[str(dest_file)].change_type == ChangeType.CREATED
+        )
 
         if handler._timer:
             handler._timer.cancel()
