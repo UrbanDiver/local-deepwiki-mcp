@@ -14,10 +14,7 @@ from local_deepwiki.core.git_utils import (
     check_page_staleness,
     format_blame_date,
 )
-from local_deepwiki.logging import get_logger
 from local_deepwiki.models import WikiGenerationStatus, WikiPage
-
-logger = get_logger(__name__)
 
 
 @dataclass
@@ -101,35 +98,45 @@ def generate_stale_report_page(
 
     # Summary section
     if report.stale_pages == 0:
-        lines.extend([
-            "## ✅ All Documentation Up to Date",
-            "",
-            f"All {report.total_pages} file documentation pages are current with their source code.",
-            "",
-        ])
+        lines.extend(
+            [
+                "## ✅ All Documentation Up to Date",
+                "",
+                f"All {report.total_pages} file documentation pages are current with their source code.",
+                "",
+            ]
+        )
     else:
-        freshness_pct = ((report.total_pages - report.stale_pages) / report.total_pages * 100) if report.total_pages > 0 else 100
-        lines.extend([
-            "## Summary",
-            "",
-            f"| Metric | Value |",
-            f"|--------|-------|",
-            f"| Total file pages | {report.total_pages} |",
-            f"| Potentially stale | {report.stale_pages} |",
-            f"| Up to date | {report.total_pages - report.stale_pages} |",
-            f"| Freshness | {freshness_pct:.0f}% |",
-            "",
-        ])
+        freshness_pct = (
+            ((report.total_pages - report.stale_pages) / report.total_pages * 100)
+            if report.total_pages > 0
+            else 100
+        )
+        lines.extend(
+            [
+                "## Summary",
+                "",
+                f"| Metric | Value |",
+                f"|--------|-------|",
+                f"| Total file pages | {report.total_pages} |",
+                f"| Potentially stale | {report.stale_pages} |",
+                f"| Up to date | {report.total_pages - report.stale_pages} |",
+                f"| Freshness | {freshness_pct:.0f}% |",
+                "",
+            ]
+        )
 
         # Stale pages list
-        lines.extend([
-            "## ⚠️ Potentially Stale Documentation",
-            "",
-            "The following pages may need review. Source files were modified after documentation was generated.",
-            "",
-            "| Page | Days Stale | Last Doc Update | Source Modified |",
-            "|------|------------|-----------------|-----------------|",
-        ])
+        lines.extend(
+            [
+                "## ⚠️ Potentially Stale Documentation",
+                "",
+                "The following pages may need review. Source files were modified after documentation was generated.",
+                "",
+                "| Page | Days Stale | Last Doc Update | Source Modified |",
+                "|------|------------|-----------------|-----------------|",
+            ]
+        )
 
         for info in report.stale_info:
             # Create relative link to the page
@@ -144,18 +151,20 @@ def generate_stale_report_page(
         lines.append("")
 
     # Recommendations section
-    lines.extend([
-        "## Recommendations",
-        "",
-        "To refresh stale documentation:",
-        "",
-        "1. **Re-index the repository** with `force=True` to regenerate all pages",
-        "2. **Incremental update** will automatically regenerate pages when source files change",
-        "3. **Manual review** may be needed for pages where only comments or docstrings changed",
-        "",
-        "---",
-        f"*Report generated: {report.generated_at.strftime('%Y-%m-%d %H:%M:%S')}*",
-    ])
+    lines.extend(
+        [
+            "## Recommendations",
+            "",
+            "To refresh stale documentation:",
+            "",
+            "1. **Re-index the repository** with `force=True` to regenerate all pages",
+            "2. **Incremental update** will automatically regenerate pages when source files change",
+            "3. **Manual review** may be needed for pages where only comments or docstrings changed",
+            "",
+            "---",
+            f"*Report generated: {report.generated_at.strftime('%Y-%m-%d %H:%M:%S')}*",
+        ]
+    )
 
     return WikiPage(
         path="freshness.md",
@@ -217,12 +226,14 @@ def add_stale_banners(
 
             if stale_info:
                 banner = generate_stale_banner(stale_info)
-                updated_pages.append(WikiPage(
-                    path=page.path,
-                    title=page.title,
-                    content=banner + page.content,
-                    generated_at=page.generated_at,
-                ))
+                updated_pages.append(
+                    WikiPage(
+                        path=page.path,
+                        title=page.title,
+                        content=banner + page.content,
+                        generated_at=page.generated_at,
+                    )
+                )
                 continue
 
         updated_pages.append(page)

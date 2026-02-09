@@ -7,16 +7,20 @@ from typing import Any, Callable, TYPE_CHECKING
 import psutil
 from lancedb.table import Table
 
-from local_deepwiki.logging import get_logger
 from local_deepwiki.models import CodeChunk
 
-from .schema import ChunkBatch, VALID_LANGUAGES, VALID_CHUNK_TYPES, DEFAULT_MAX_MEMORY_MB, ESTIMATED_BYTES_PER_CHUNK
+from .schema import (
+    ChunkBatch,
+    VALID_LANGUAGES,
+    VALID_CHUNK_TYPES,
+    DEFAULT_MAX_MEMORY_MB,
+    ESTIMATED_BYTES_PER_CHUNK,
+)
 from .utils import _row_to_chunk_default, _sanitize_string_value
 
 if TYPE_CHECKING:
     from .store import VectorStore
 
-logger = get_logger(__name__)
 
 class ChunkIterator:
     """Memory-efficient iterator over all chunks in a vector store table.
@@ -515,4 +519,3 @@ class LazyChunkLoader:
         )
 
         return iterator.count()
-
