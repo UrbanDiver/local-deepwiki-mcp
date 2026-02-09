@@ -369,7 +369,7 @@ class TestGenerateCodemapPages:
         ]
         mock_codemap.side_effect = [
             _make_codemap_result(),
-            Exception("LLM timeout"),
+            RuntimeError("LLM timeout"),
         ]
 
         config = _make_wiki_config()

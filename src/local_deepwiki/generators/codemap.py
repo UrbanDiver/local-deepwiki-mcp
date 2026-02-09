@@ -214,7 +214,7 @@ async def discover_entry_points(
     """
     try:
         from local_deepwiki.generators.callgraph import CallGraphExtractor
-    except Exception:  # pragma: no cover
+    except ImportError:  # pragma: no cover
         logger.warning("Could not import CallGraphExtractor")
         CallGraphExtractor = None  # type: ignore[assignment,misc]
 
@@ -316,7 +316,7 @@ async def build_cross_file_graph(
     """
     try:
         from local_deepwiki.generators.callgraph import CallGraphExtractor
-    except Exception:  # pragma: no cover
+    except ImportError:  # pragma: no cover
         logger.warning("Could not import CallGraphExtractor")
         CallGraphExtractor = None  # type: ignore[assignment,misc]
 
@@ -453,7 +453,7 @@ async def _import_based_callees(
         from local_deepwiki.generators.context_builder import (
             extract_imports_from_chunks,
         )
-    except Exception:
+    except ImportError:
         return existing
 
     try:
@@ -468,7 +468,10 @@ async def _import_based_callees(
             if mod not in combined:
                 combined.append(mod)
         return combined
-    except Exception:
+    except (AttributeError, ValueError, RuntimeError, OSError):
+        # AttributeError: vector_store missing get_all_chunks method
+        # ValueError/RuntimeError: chunk processing or import extraction failures
+        # OSError: underlying storage I/O errors
         return existing
 
 
@@ -532,7 +535,7 @@ def generate_codemap_diagram(
     """Generate a deterministic Mermaid flowchart from *graph*."""
     try:
         from local_deepwiki.generators.diagrams import sanitize_mermaid_name
-    except Exception:  # pragma: no cover
+    except ImportError:  # pragma: no cover
         sanitize_mermaid_name = lambda n: re.sub(r"[^a-zA-Z0-9_]", "_", n)  # noqa: E731
 
     if not graph.nodes:
@@ -746,7 +749,10 @@ async def generate_codemap_narrative(
             temperature=0.3,
         )
         return narrative
-    except Exception:
+    except (ValueError, RuntimeError, OSError, TypeError):
+        # LLM provider calls may raise ValueError (bad params),
+        # RuntimeError (provider errors), OSError (network/IO),
+        # or TypeError (unexpected response shape)
         logger.exception("LLM narrative generation failed")
         return _FALLBACK_NARRATIVE
 
@@ -884,7 +890,7 @@ async def suggest_topics(
     """
     try:
         from local_deepwiki.generators.callgraph import CallGraphExtractor
-    except Exception:  # pragma: no cover
+    except ImportError:  # pragma: no cover
         logger.warning("Could not import CallGraphExtractor")
         return []
 

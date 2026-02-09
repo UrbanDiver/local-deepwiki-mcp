@@ -174,7 +174,9 @@ async def generate_codemap_pages(
             repo_path=repo_path,
             max_suggestions=config.codemap_max_topics,
         )
-    except Exception:
+    except (ValueError, RuntimeError, OSError):
+        # ValueError/RuntimeError: vector store or call graph extraction failures
+        # OSError: file I/O errors during topic discovery
         logger.exception("Failed to discover codemap topics")
         return [], 0, 0
 
@@ -219,7 +221,10 @@ async def generate_codemap_pages(
                 max_depth=config.codemap_max_depth,
                 max_nodes=config.codemap_max_nodes,
             )
-        except Exception:
+        except (ValueError, RuntimeError, OSError, TypeError):
+            # ValueError/RuntimeError: vector store or LLM provider failures
+            # OSError: file I/O or network errors
+            # TypeError: unexpected data shapes from LLM or vector store
             logger.exception(f"Failed to generate codemap for {entry_point}")
             continue
 

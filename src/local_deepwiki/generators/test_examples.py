@@ -200,7 +200,9 @@ def _get_docstring(func_node: Node, source: bytes) -> str | None:
             # Clean up the docstring
             docstring = docstring.strip("\"'")
             if docstring.startswith('""'):
-                docstring = docstring[2:-2] if docstring.endswith('""') else docstring[2:]
+                docstring = (
+                    docstring[2:-2] if docstring.endswith('""') else docstring[2:]
+                )
             return docstring.strip()
 
     return None
@@ -502,7 +504,9 @@ def get_file_examples(
             unique_examples.append(ex)
 
     test_names = [tf.name for tf in test_files]
-    logger.info(f"Found {len(unique_examples)} usage examples from {', '.join(test_names)}")
+    logger.info(
+        f"Found {len(unique_examples)} usage examples from {', '.join(test_names)}"
+    )
 
     return format_examples_markdown(unique_examples, max_examples=max_examples)
 
@@ -550,7 +554,9 @@ def parse_doctest_examples(docstring: str) -> list[CodeExample]:
             # If we have accumulated code from before, save it
             if current_code_lines:
                 code = "\n".join(current_code_lines)
-                output = "\n".join(current_output_lines) if current_output_lines else None
+                output = (
+                    "\n".join(current_output_lines) if current_output_lines else None
+                )
                 examples.append(
                     CodeExample(
                         source="docstring",
@@ -820,7 +826,9 @@ class CodeExampleExtractor:
         examples.extend(test_examples)
 
         # Search for docstring examples
-        docstring_examples = await self._search_docstring_examples(func_name, max_examples)
+        docstring_examples = await self._search_docstring_examples(
+            func_name, max_examples
+        )
         examples.extend(docstring_examples)
 
         # Deduplicate and limit
@@ -863,7 +871,9 @@ class CodeExampleExtractor:
         examples.extend(test_examples)
 
         # Search for class docstring examples
-        docstring_examples = await self._search_docstring_examples(class_name, max_examples)
+        docstring_examples = await self._search_docstring_examples(
+            class_name, max_examples
+        )
         examples.extend(docstring_examples)
 
         # Deduplicate and limit
@@ -1031,7 +1041,9 @@ class CodeExampleExtractor:
 
         try:
             result = dedent("\n".join(relevant)).strip()
-        except Exception:
+        except (TypeError, ValueError):
+            # TypeError: dedent received non-string input
+            # ValueError: unexpected indentation issues
             result = "\n".join(relevant).strip()
 
         return result if len(result) >= 10 else None
