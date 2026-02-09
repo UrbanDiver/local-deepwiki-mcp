@@ -32,6 +32,10 @@ from local_deepwiki.logging import get_logger
 
 logger = get_logger(__name__)
 
+# Sliding window durations for rate limiting
+MINUTE_WINDOW_SECONDS = 60
+HOUR_WINDOW_SECONDS = 3600
+
 
 class RateLimitExceeded(Exception):
     """Raised when rate limit is exceeded and cannot wait.
@@ -149,13 +153,13 @@ class RateLimiter:
             now: Current timestamp.
         """
         # Reset minute window if expired
-        if now - self._state.minute_reset >= 60:
+        if now - self._state.minute_reset >= MINUTE_WINDOW_SECONDS:
             self._state.minute_count = 0
             self._state.minute_reset = now
             logger.debug("Rate limiter: minute window reset")
 
         # Reset hour window if expired
-        if now - self._state.hour_reset >= 3600:
+        if now - self._state.hour_reset >= HOUR_WINDOW_SECONDS:
             self._state.hour_count = 0
             self._state.hour_reset = now
             logger.debug("Rate limiter: hour window reset")
@@ -170,7 +174,7 @@ class RateLimiter:
             RateLimitExceeded: If minute limit exceeded and not configured to wait.
         """
         if self._state.minute_count >= self._config.requests_per_minute:
-            wait_time = 60 - (now - self._state.minute_reset)
+            wait_time = MINUTE_WINDOW_SECONDS - (now - self._state.minute_reset)
             if wait_time > 0:
                 if self._config.wait_for_minute_limit:
                     logger.info(
@@ -202,7 +206,7 @@ class RateLimiter:
             RateLimitExceeded: If hour limit is exceeded.
         """
         if self._state.hour_count >= self._config.requests_per_hour:
-            wait_time = 3600 - (now - self._state.hour_reset)
+            wait_time = HOUR_WINDOW_SECONDS - (now - self._state.hour_reset)
             if wait_time > 0:
                 if self._config.wait_for_hour_limit:
                     logger.warning(
@@ -293,13 +297,17 @@ class RateLimiter:
             "minute_remaining": max(
                 0, self._config.requests_per_minute - self._state.minute_count
             ),
-            "minute_reset_in": max(0, 60 - (now - self._state.minute_reset)),
+            "minute_reset_in": max(
+                0, MINUTE_WINDOW_SECONDS - (now - self._state.minute_reset)
+            ),
             "hour_count": self._state.hour_count,
             "hour_limit": self._config.requests_per_hour,
             "hour_remaining": max(
                 0, self._config.requests_per_hour - self._state.hour_count
             ),
-            "hour_reset_in": max(0, 3600 - (now - self._state.hour_reset)),
+            "hour_reset_in": max(
+                0, HOUR_WINDOW_SECONDS - (now - self._state.hour_reset)
+            ),
             "current_concurrent": self._state.current_concurrent,
             "burst_limit": self._config.burst_limit,
         }

@@ -31,6 +31,9 @@ from local_deepwiki.logging import get_logger
 
 logger = get_logger(__name__)
 
+# Default timeout for mermaid CLI rendering (seconds)
+MERMAID_RENDER_TIMEOUT = 30
+
 # Cache for mermaid CLI availability check
 _mmdc_available: bool | None = None
 
@@ -53,7 +56,9 @@ def is_mmdc_available() -> bool:
     return _mmdc_available
 
 
-def render_mermaid_to_png(diagram_code: str, timeout: int = 30) -> bytes | None:
+def render_mermaid_to_png(
+    diagram_code: str, timeout: int = MERMAID_RENDER_TIMEOUT
+) -> bytes | None:
     """Render a mermaid diagram to PNG using mermaid-cli.
 
     Args:
@@ -115,7 +120,9 @@ def render_mermaid_to_png(diagram_code: str, timeout: int = 30) -> bytes | None:
         return None
 
 
-def render_mermaid_to_svg(diagram_code: str, timeout: int = 30) -> str | None:
+def render_mermaid_to_svg(
+    diagram_code: str, timeout: int = MERMAID_RENDER_TIMEOUT
+) -> str | None:
     """Render a mermaid diagram to SVG using mermaid-cli.
 
     Note: SVG may have font issues in PDF. Use render_mermaid_to_png for PDF export.

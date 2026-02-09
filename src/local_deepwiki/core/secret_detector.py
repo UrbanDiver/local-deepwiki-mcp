@@ -16,6 +16,12 @@ from local_deepwiki.logging import get_logger
 
 logger = get_logger(__name__)
 
+# Minimum length for a secret match to be partially masked
+MIN_SECRET_MASK_LENGTH = 10
+
+# Maximum length for the safe context snippet around a secret
+MAX_SECRET_CONTEXT_LENGTH = 100
+
 
 class SecretType(str, Enum):
     """Types of secrets that can be detected."""
@@ -182,7 +188,9 @@ class SecretDetector:
                             file_path=file_path,
                             line_number=line_num,
                             context=context,
-                            confidence=self._calculate_confidence(secret_type, matched_text),
+                            confidence=self._calculate_confidence(
+                                secret_type, matched_text
+                            ),
                             recommendation=self._get_recommendation(secret_type),
                         )
                     )
@@ -238,7 +246,11 @@ class SecretDetector:
             return 0.92
 
         # Private keys are very distinctive - very high confidence
-        if secret_type in (SecretType.PRIVATE_KEY, SecretType.SSH_KEY, SecretType.PGP_KEY):
+        if secret_type in (
+            SecretType.PRIVATE_KEY,
+            SecretType.SSH_KEY,
+            SecretType.PGP_KEY,
+        ):
             return 0.98
 
         # Database URLs with credentials - high confidence
@@ -357,7 +369,7 @@ class SecretDetector:
             return matched_text[:50] + "..."
 
         # For other secrets, show first few and last few characters
-        if len(matched_text) > 10:
+        if len(matched_text) > MIN_SECRET_MASK_LENGTH:
             visible_start = min(6, len(matched_text) // 4)
             visible_end = min(4, len(matched_text) // 4)
             masked = matched_text[:visible_start] + "****" + matched_text[-visible_end:]
@@ -373,8 +385,8 @@ class SecretDetector:
         context = context.replace(matched_text, masked)
 
         # Truncate if too long
-        if len(context) > 100:
-            context = context[:100] + "..."
+        if len(context) > MAX_SECRET_CONTEXT_LENGTH:
+            context = context[:MAX_SECRET_CONTEXT_LENGTH] + "..."
 
         return context
 

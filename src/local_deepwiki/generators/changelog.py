@@ -15,6 +15,16 @@ from local_deepwiki.logging import get_logger
 
 logger = get_logger(__name__)
 
+# Git subprocess timeout for fetching commit history
+GIT_LOG_TIMEOUT = 30
+
+# Maximum display length for commit messages in changelog
+COMMIT_MESSAGE_MAX_LENGTH = 80
+COMMIT_MESSAGE_TRUNCATED_LENGTH = 77  # Leaves room for "..."
+
+# Maximum number of changed files shown per commit
+MAX_CHANGED_FILES_PER_COMMIT = 5
+
 
 @dataclass
 class CommitInfo:
@@ -53,7 +63,7 @@ def get_commit_history(repo_path: Path, limit: int = 30) -> list[CommitInfo]:
             cwd=repo_path,
             capture_output=True,
             text=True,
-            timeout=30,
+            timeout=GIT_LOG_TIMEOUT,
         )
 
         if result.returncode != 0:
@@ -185,17 +195,19 @@ def generate_changelog_content(
 
             # Truncate long messages
             message = commit.message
-            if len(message) > 80:
-                message = message[:77] + "..."
+            if len(message) > COMMIT_MESSAGE_MAX_LENGTH:
+                message = message[:COMMIT_MESSAGE_TRUNCATED_LENGTH] + "..."
 
             lines.append(f"- {commit_ref} {message}")
 
             # Show changed files (limit to 5)
             if commit.files:
-                files_to_show = commit.files[:5]
+                files_to_show = commit.files[:MAX_CHANGED_FILES_PER_COMMIT]
                 files_str = ", ".join(f"`{f}`" for f in files_to_show)
-                if len(commit.files) > 5:
-                    files_str += f" (+{len(commit.files) - 5} more)"
+                if len(commit.files) > MAX_CHANGED_FILES_PER_COMMIT:
+                    files_str += (
+                        f" (+{len(commit.files) - MAX_CHANGED_FILES_PER_COMMIT} more)"
+                    )
                 lines.append(f"  - Files: {files_str}")
 
             lines.append("")

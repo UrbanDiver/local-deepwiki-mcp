@@ -6,6 +6,18 @@ from pathlib import Path
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.models import ChunkType, IndexStatus
 
+# Minimum characters for a docstring to be considered meaningful
+MIN_DOCSTRING_LENGTH = 10
+
+# Coverage level thresholds (percentages)
+COVERAGE_EXCELLENT_THRESHOLD = 90
+COVERAGE_GOOD_THRESHOLD = 70
+COVERAGE_FAIR_THRESHOLD = 50
+
+# Maximum items shown in the "needs attention" section
+MAX_LOW_COVERAGE_FILES = 10
+MAX_UNDOCUMENTED_ITEMS = 20
+
 
 @dataclass
 class CoverageStats:
@@ -26,7 +38,11 @@ class CoverageStats:
     @property
     def documented_entities(self) -> int:
         """Total number of documented entities."""
-        return self.documented_classes + self.documented_functions + self.documented_methods
+        return (
+            self.documented_classes
+            + self.documented_functions
+            + self.documented_methods
+        )
 
     @property
     def coverage_percent(self) -> float:
@@ -42,7 +58,9 @@ class FileCoverage:
 
     file_path: str
     stats: CoverageStats = field(default_factory=CoverageStats)
-    undocumented: list[str] = field(default_factory=list)  # List of undocumented entity names
+    undocumented: list[str] = field(
+        default_factory=list
+    )  # List of undocumented entity names
 
 
 def _has_meaningful_docstring(docstring: str | None) -> bool:
@@ -59,7 +77,7 @@ def _has_meaningful_docstring(docstring: str | None) -> bool:
 
     # Strip and check for minimal content
     cleaned = docstring.strip()
-    if len(cleaned) < 10:  # Too short to be meaningful
+    if len(cleaned) < MIN_DOCSTRING_LENGTH:  # Too short to be meaningful
         return False
 
     # Check for placeholder docstrings
@@ -158,11 +176,11 @@ def _get_coverage_emoji(percent: float) -> str:
     Returns:
         Emoji string.
     """
-    if percent >= 90:
+    if percent >= COVERAGE_EXCELLENT_THRESHOLD:
         return "🟢"
-    elif percent >= 70:
+    elif percent >= COVERAGE_GOOD_THRESHOLD:
         return "🟡"
-    elif percent >= 50:
+    elif percent >= COVERAGE_FAIR_THRESHOLD:
         return "🟠"
     else:
         return "🔴"
@@ -205,7 +223,9 @@ async def generate_coverage_page(
     lines.append("")
     lines.append(f"{emoji} **Overall Coverage: {overall.coverage_percent:.1f}%**")
     lines.append("")
-    lines.append(f"- **{overall.documented_entities}** / **{overall.total_entities}** entities documented")
+    lines.append(
+        f"- **{overall.documented_entities}** / **{overall.total_entities}** entities documented"
+    )
     lines.append("")
 
     # Breakdown by type
@@ -257,7 +277,12 @@ async def generate_coverage_page(
     lines.append("")
 
     # Files needing attention (lowest coverage)
-    low_coverage_files = [fc for fc in file_coverages if fc.stats.coverage_percent < 50 and fc.stats.total_entities > 0]
+    low_coverage_files = [
+        fc
+        for fc in file_coverages
+        if fc.stats.coverage_percent < COVERAGE_FAIR_THRESHOLD
+        and fc.stats.total_entities > 0
+    ]
 
     if low_coverage_files:
         lines.append("## Files Needing Attention")
@@ -265,7 +290,7 @@ async def generate_coverage_page(
         lines.append("Files with less than 50% documentation coverage:")
         lines.append("")
 
-        for fc in low_coverage_files[:10]:  # Top 10 worst
+        for fc in low_coverage_files[:MAX_LOW_COVERAGE_FILES]:  # Top worst
             file_name = Path(fc.file_path).name
             wiki_link = _get_wiki_link(fc.file_path)
             lines.append(f"### [{file_name}]({wiki_link})")
@@ -275,10 +300,12 @@ async def generate_coverage_page(
 
             if fc.undocumented:
                 lines.append("Undocumented:")
-                for item in fc.undocumented[:20]:  # Limit to 20
+                for item in fc.undocumented[:MAX_UNDOCUMENTED_ITEMS]:
                     lines.append(f"- `{item}`")
-                if len(fc.undocumented) > 20:
-                    lines.append(f"- ... and {len(fc.undocumented) - 20} more")
+                if len(fc.undocumented) > MAX_UNDOCUMENTED_ITEMS:
+                    lines.append(
+                        f"- ... and {len(fc.undocumented) - MAX_UNDOCUMENTED_ITEMS} more"
+                    )
             lines.append("")
 
     # Legend

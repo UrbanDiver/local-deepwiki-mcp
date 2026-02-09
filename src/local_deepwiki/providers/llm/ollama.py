@@ -15,6 +15,11 @@ from local_deepwiki.providers.base import (
 
 logger = get_logger(__name__)
 
+# Retry configuration for API calls
+MAX_RETRY_ATTEMPTS = 3
+RETRY_BASE_DELAY = 1.0
+RETRY_MAX_DELAY = 30.0
+
 
 # Keep legacy exception classes for backward compatibility
 class OllamaConnectionError(ProviderConnectionError):
@@ -60,7 +65,9 @@ class OllamaModelNotFoundError(ProviderModelNotFoundError):
                 f"To download the model, run: `ollama pull {model}`"
             )
         # Call ProviderError.__init__ directly to set message
-        super(ProviderModelNotFoundError, self).__init__(message, provider_name="ollama")
+        super(ProviderModelNotFoundError, self).__init__(
+            message, provider_name="ollama"
+        )
         # Re-set attributes since parent __init__ may overwrite
         self.model = model
         self.available_models = available_models or []
@@ -69,7 +76,9 @@ class OllamaModelNotFoundError(ProviderModelNotFoundError):
 class OllamaProvider(LLMProvider):
     """LLM provider using local Ollama."""
 
-    def __init__(self, model: str = "llama3.2", base_url: str = "http://localhost:11434"):
+    def __init__(
+        self, model: str = "llama3.2", base_url: str = "http://localhost:11434"
+    ):
         """Initialize the Ollama provider.
 
         Args:
@@ -106,7 +115,9 @@ class OllamaProvider(LLMProvider):
             # Check if our model is available (handle both "model" and "model:tag" formats)
             model_base = self._model.split(":")[0]
             model_found = any(
-                m == self._model or m.startswith(f"{self._model}:") or m.split(":")[0] == model_base
+                m == self._model
+                or m.startswith(f"{self._model}:")
+                or m.split(":")[0] == model_base
                 for m in self._available_models
             )
 
@@ -120,9 +131,7 @@ class OllamaProvider(LLMProvider):
 
         except OllamaModelNotFoundError:
             raise
-        except (
-            Exception
-        ) as e:  # noqa: BLE001 - Wrap any connection/library error in OllamaConnectionError
+        except Exception as e:  # noqa: BLE001 - Wrap any connection/library error in OllamaConnectionError
             # Connection errors, timeouts, etc.
             logger.error(f"Failed to connect to Ollama at {self._base_url}: {e}")
             raise OllamaConnectionError(self._base_url, e) from e
@@ -171,7 +180,9 @@ class OllamaProvider(LLMProvider):
 
             model_base = model_name.split(":")[0]
             model_found = any(
-                m == model_name or m.startswith(f"{model_name}:") or m.split(":")[0] == model_base
+                m == model_name
+                or m.startswith(f"{model_name}:")
+                or m.split(":")[0] == model_base
                 for m in available_models
             )
 
@@ -200,7 +211,11 @@ class OllamaProvider(LLMProvider):
             supports_vision=False,  # Some models support it
         )
 
-    @with_retry(max_attempts=3, base_delay=1.0, max_delay=30.0)
+    @with_retry(
+        max_attempts=MAX_RETRY_ATTEMPTS,
+        base_delay=RETRY_BASE_DELAY,
+        max_delay=RETRY_MAX_DELAY,
+    )
     async def generate(
         self,
         prompt: str,
@@ -231,7 +246,9 @@ class OllamaProvider(LLMProvider):
             messages.append({"role": "system", "content": system_prompt})
         messages.append({"role": "user", "content": prompt})
 
-        logger.debug(f"Generating with Ollama model {self._model}, prompt length: {len(prompt)}")
+        logger.debug(
+            f"Generating with Ollama model {self._model}, prompt length: {len(prompt)}"
+        )
 
         try:
             response = await self._client.chat(
@@ -256,7 +273,10 @@ class OllamaProvider(LLMProvider):
         except Exception as e:  # noqa: BLE001 - Wrap connection errors, re-raise others
             # Check if it's a connection error
             error_str = str(e).lower()
-            if any(x in error_str for x in ["connection", "refused", "timeout", "unreachable"]):
+            if any(
+                x in error_str
+                for x in ["connection", "refused", "timeout", "unreachable"]
+            ):
                 logger.error(f"Lost connection to Ollama: {e}")
                 self._health_checked = False  # Reset health check
                 raise OllamaConnectionError(self._base_url, e) from e
@@ -312,7 +332,10 @@ class OllamaProvider(LLMProvider):
             raise
         except Exception as e:  # noqa: BLE001 - Wrap connection errors, re-raise others
             error_str = str(e).lower()
-            if any(x in error_str for x in ["connection", "refused", "timeout", "unreachable"]):
+            if any(
+                x in error_str
+                for x in ["connection", "refused", "timeout", "unreachable"]
+            ):
                 logger.error(f"Lost connection to Ollama during streaming: {e}")
                 self._health_checked = False
                 raise OllamaConnectionError(self._base_url, e) from e

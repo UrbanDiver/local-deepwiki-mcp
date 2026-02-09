@@ -15,6 +15,13 @@ from local_deepwiki.logging import get_logger
 
 logger = get_logger(__name__)
 
+# Subprocess timeout values (seconds) for git operations
+GIT_CONFIG_TIMEOUT = 5
+GIT_BLAME_LINE_TIMEOUT = 10
+GIT_BLAME_RANGE_TIMEOUT = 30
+GIT_BLAME_FILE_TIMEOUT = 60
+GIT_LOG_TIMEOUT = 10
+
 
 class GitPathValidationError(ValueError):
     """Raised when a path fails git-specific validation."""
@@ -123,11 +130,16 @@ def get_git_remote_url(repo_path: Path) -> str | None:
             cwd=validated_repo,
             capture_output=True,
             text=True,
-            timeout=5,
+            timeout=GIT_CONFIG_TIMEOUT,
         )
         if result.returncode == 0:
             return result.stdout.strip()
-    except (subprocess.TimeoutExpired, FileNotFoundError, OSError, GitPathValidationError) as e:
+    except (
+        subprocess.TimeoutExpired,
+        FileNotFoundError,
+        OSError,
+        GitPathValidationError,
+    ) as e:
         logger.debug(f"Failed to get git remote URL: {e}")
     return None
 
@@ -199,7 +211,7 @@ def get_default_branch(repo_path: Path) -> str:
             cwd=validated_repo,
             capture_output=True,
             text=True,
-            timeout=5,
+            timeout=GIT_CONFIG_TIMEOUT,
         )
         if result.returncode == 0:
             branch = result.stdout.strip()
@@ -215,7 +227,7 @@ def get_default_branch(repo_path: Path) -> str:
             cwd=validated_repo,
             capture_output=True,
             text=True,
-            timeout=5,
+            timeout=GIT_CONFIG_TIMEOUT,
         )
         if result.returncode == 0:
             # Output like: refs/remotes/origin/main
@@ -368,20 +380,30 @@ def get_line_blame(
         # Use -- separator to prevent option injection from file_path
         result = subprocess.run(
             [
-                "git", "blame", "-L", f"{line_number},{line_number}",
-                "--porcelain", "--", file_path
+                "git",
+                "blame",
+                "-L",
+                f"{line_number},{line_number}",
+                "--porcelain",
+                "--",
+                file_path,
             ],
             cwd=validated_repo,
             capture_output=True,
             text=True,
-            timeout=10,
+            timeout=GIT_BLAME_LINE_TIMEOUT,
         )
         if result.returncode != 0:
             return None
 
         return _parse_porcelain_blame(result.stdout)
 
-    except (subprocess.TimeoutExpired, FileNotFoundError, OSError, GitPathValidationError) as e:
+    except (
+        subprocess.TimeoutExpired,
+        FileNotFoundError,
+        OSError,
+        GitPathValidationError,
+    ) as e:
         logger.debug(f"Failed to get git blame: {e}")
         return None
 
@@ -414,13 +436,18 @@ def get_range_blame(
         # Use -- separator to prevent option injection from file_path
         result = subprocess.run(
             [
-                "git", "blame", "-L", f"{start_line},{end_line}",
-                "--porcelain", "--", file_path
+                "git",
+                "blame",
+                "-L",
+                f"{start_line},{end_line}",
+                "--porcelain",
+                "--",
+                file_path,
             ],
             cwd=validated_repo,
             capture_output=True,
             text=True,
-            timeout=30,
+            timeout=GIT_BLAME_RANGE_TIMEOUT,
         )
         if result.returncode != 0:
             return None
@@ -433,7 +460,12 @@ def get_range_blame(
         # Return the most recently modified entry
         return max(entries, key=lambda e: e.date)
 
-    except (subprocess.TimeoutExpired, FileNotFoundError, OSError, GitPathValidationError) as e:
+    except (
+        subprocess.TimeoutExpired,
+        FileNotFoundError,
+        OSError,
+        GitPathValidationError,
+    ) as e:
         logger.debug(f"Failed to get git blame for range: {e}")
         return None
 
@@ -501,13 +533,15 @@ def _parse_all_porcelain_blame(output: str) -> list[BlameInfo]:
                 i += 1
 
             if author and author_time:
-                entries.append(BlameInfo(
-                    author=author,
-                    author_email=author_email,
-                    date=datetime.fromtimestamp(author_time),
-                    commit_hash=commit_hash,
-                    summary=summary,
-                ))
+                entries.append(
+                    BlameInfo(
+                        author=author,
+                        author_email=author_email,
+                        date=datetime.fromtimestamp(author_time),
+                        commit_hash=commit_hash,
+                        summary=summary,
+                    )
+                )
         else:
             i += 1
 
@@ -548,7 +582,7 @@ def get_file_entity_blame(
             cwd=validated_repo,
             capture_output=True,
             text=True,
-            timeout=60,
+            timeout=GIT_BLAME_FILE_TIMEOUT,
         )
         if result.returncode != 0:
             return []
@@ -571,20 +605,27 @@ def get_file_entity_blame(
             if range_blames:
                 # Find most recently modified
                 most_recent = max(range_blames, key=lambda b: b.date)
-                entity_blames.append(EntityBlameInfo(
-                    entity_name=name,
-                    entity_type=entity_type,
-                    start_line=start,
-                    end_line=end,
-                    last_modified_by=most_recent.author,
-                    last_modified_date=most_recent.date,
-                    commit_hash=most_recent.commit_hash,
-                    commit_summary=most_recent.summary,
-                ))
+                entity_blames.append(
+                    EntityBlameInfo(
+                        entity_name=name,
+                        entity_type=entity_type,
+                        start_line=start,
+                        end_line=end,
+                        last_modified_by=most_recent.author,
+                        last_modified_date=most_recent.date,
+                        commit_hash=most_recent.commit_hash,
+                        commit_summary=most_recent.summary,
+                    )
+                )
 
         return entity_blames
 
-    except (subprocess.TimeoutExpired, FileNotFoundError, OSError, GitPathValidationError) as e:
+    except (
+        subprocess.TimeoutExpired,
+        FileNotFoundError,
+        OSError,
+        GitPathValidationError,
+    ) as e:
         logger.debug(f"Failed to get file entity blame: {e}")
         return []
 
@@ -713,12 +754,18 @@ def get_file_last_modified(repo_path: Path, file_path: str) -> datetime | None:
             cwd=validated_repo,
             capture_output=True,
             text=True,
-            timeout=10,
+            timeout=GIT_LOG_TIMEOUT,
         )
         if result.returncode == 0 and result.stdout.strip():
             timestamp = int(result.stdout.strip())
             return datetime.fromtimestamp(timestamp)
-    except (subprocess.TimeoutExpired, FileNotFoundError, OSError, ValueError, GitPathValidationError) as e:
+    except (
+        subprocess.TimeoutExpired,
+        FileNotFoundError,
+        OSError,
+        ValueError,
+        GitPathValidationError,
+    ) as e:
         logger.debug(f"Failed to get last modified date for {file_path}: {e}")
     return None
 

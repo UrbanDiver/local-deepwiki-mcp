@@ -8,6 +8,23 @@ from typing import Any
 from mcp.types import TextContent
 from pydantic import ValidationError as PydanticValidationError
 
+# Threshold for considering wiki pages as stale (30 days in seconds)
+STALE_DOCS_THRESHOLD_SECONDS = 30 * 24 * 60 * 60
+
+# Git subprocess timeout values (seconds)
+GIT_DIFF_TIMEOUT = 30
+GIT_FILE_DIFF_TIMEOUT = 10
+
+# Size limits for diff content
+MAX_DIFF_CONTENT_LENGTH = 5000
+MAX_DIFF_TEXT_LENGTH = 10000
+
+# Maximum affected entities to return in diff analysis
+MAX_AFFECTED_ENTITIES = 100
+
+# Maximum file suggestions in fuzzy search
+FILE_SUGGESTIONS_LIMIT = 3
+
 from local_deepwiki.handlers._shared import (
     AnalyzeDiffArgs,
     AskAboutDiffArgs,
@@ -380,7 +397,9 @@ async def handle_fuzzy_search(args: dict[str, Any]) -> list[TextContent]:
         )
 
     # Also get file suggestions
-    file_suggestions = helper.get_file_suggestions(validated.query, limit=3)
+    file_suggestions = helper.get_file_suggestions(
+        validated.query, limit=FILE_SUGGESTIONS_LIMIT
+    )
 
     hint = None
     if not match_results:
@@ -491,7 +510,7 @@ async def handle_get_wiki_stats(args: dict[str, Any]) -> list[TextContent]:
 
             now = time.time()
             # Consider pages older than 30 days as potentially stale
-            stale_threshold = 30 * 24 * 60 * 60
+            stale_threshold = STALE_DOCS_THRESHOLD_SECONDS
             stale_count = sum(
                 1
                 for p in pages_dict.values()
@@ -1132,7 +1151,7 @@ async def handle_analyze_diff(args: dict[str, Any]) -> list[TextContent]:
             cwd=str(repo_path),
             capture_output=True,
             text=True,
-            timeout=30,
+            timeout=GIT_DIFF_TIMEOUT,
         )
         if diff_result.returncode != 0:
             return [
@@ -1154,7 +1173,7 @@ async def handle_analyze_diff(args: dict[str, Any]) -> list[TextContent]:
                 text=json.dumps(
                     {
                         "status": "error",
-                        "error": "git diff timed out after 30 seconds",
+                        "error": f"git diff timed out after {GIT_DIFF_TIMEOUT} seconds",
                     },
                     indent=2,
                 ),
@@ -1213,9 +1232,9 @@ async def handle_analyze_diff(args: dict[str, Any]) -> list[TextContent]:
                     cwd=str(repo_path),
                     capture_output=True,
                     text=True,
-                    timeout=10,
+                    timeout=GIT_FILE_DIFF_TIMEOUT,
                 )
-                cf["diff_content"] = file_diff.stdout[:5000]  # Limit size
+                cf["diff_content"] = file_diff.stdout[:MAX_DIFF_CONTENT_LENGTH]
             except (subprocess.TimeoutExpired, OSError):
                 cf["diff_content"] = "(diff content unavailable)"
 
@@ -1290,7 +1309,7 @@ async def handle_analyze_diff(args: dict[str, Any]) -> list[TextContent]:
         "summary": summary,
         "changed_files": changed_files,
         "affected_wiki_pages": affected_wiki_pages,
-        "affected_entities": affected_entities[:100],  # Limit size
+        "affected_entities": affected_entities[:MAX_AFFECTED_ENTITIES],
     }
 
     logger.info(
@@ -1345,7 +1364,7 @@ async def handle_ask_about_diff(args: dict[str, Any]) -> list[TextContent]:
             cwd=str(repo_path),
             capture_output=True,
             text=True,
-            timeout=30,
+            timeout=GIT_DIFF_TIMEOUT,
         )
         if diff_result.returncode != 0:
             return [
@@ -1367,7 +1386,7 @@ async def handle_ask_about_diff(args: dict[str, Any]) -> list[TextContent]:
                 text=json.dumps(
                     {
                         "status": "error",
-                        "error": "git diff timed out after 30 seconds",
+                        "error": f"git diff timed out after {GIT_DIFF_TIMEOUT} seconds",
                     },
                     indent=2,
                 ),
@@ -1391,10 +1410,11 @@ async def handle_ask_about_diff(args: dict[str, Any]) -> list[TextContent]:
             )
         ]
 
-    # Truncate diff if very large (keep first 10000 chars)
-    if len(diff_text) > 10000:
+    # Truncate diff if very large
+    if len(diff_text) > MAX_DIFF_TEXT_LENGTH:
         diff_text = (
-            diff_text[:10000] + "\n... (diff truncated, showing first 10000 chars)"
+            diff_text[:MAX_DIFF_TEXT_LENGTH]
+            + f"\n... (diff truncated, showing first {MAX_DIFF_TEXT_LENGTH} chars)"
         )
 
     # Get additional context from vector store
@@ -1472,7 +1492,7 @@ async def handle_ask_about_diff(args: dict[str, Any]) -> list[TextContent]:
         "answer": answer,
         "diff_stats": {
             "diff_length": len(diff_result.stdout),
-            "truncated": len(diff_result.stdout) > 10000,
+            "truncated": len(diff_result.stdout) > MAX_DIFF_TEXT_LENGTH,
         },
         "sources": sources,
     }
