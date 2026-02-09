@@ -115,7 +115,10 @@ class TestLLMCache:
 
     @pytest.fixture
     def cache(
-        self, cache_path: Path, embedding_provider: MockEmbeddingProvider, config: LLMCacheConfig
+        self,
+        cache_path: Path,
+        embedding_provider: MockEmbeddingProvider,
+        config: LLMCacheConfig,
     ) -> LLMCache:
         """Create an LLMCache instance."""
         return LLMCache(cache_path, embedding_provider, config)
@@ -205,7 +208,9 @@ class TestLLMCache:
         assert cache.stats["skipped"] == 1
 
     @pytest.mark.asyncio
-    async def test_different_system_prompts_different_cache_entries(self, cache: LLMCache):
+    async def test_different_system_prompts_different_cache_entries(
+        self, cache: LLMCache
+    ):
         """Test that different system prompts result in different cache entries."""
         prompt = "Hello"
 
@@ -302,7 +307,9 @@ class TestCachingLLMProvider:
         return LLMCache(cache_path, embedding_provider, config)
 
     @pytest.fixture
-    def cached_provider(self, mock_llm: MockLLMProvider, cache: LLMCache) -> CachingLLMProvider:
+    def cached_provider(
+        self, mock_llm: MockLLMProvider, cache: LLMCache
+    ) -> CachingLLMProvider:
         """Create a CachingLLMProvider instance."""
         return CachingLLMProvider(mock_llm, cache)
 
@@ -417,8 +424,12 @@ class TestCachingLLMProvider:
         """Test that different prompts get different cache entries."""
         await cached_provider.generate(prompt="Question 1", temperature=0.1)
         await cached_provider.generate(prompt="Question 2", temperature=0.1)
-        await cached_provider.generate(prompt="Question 1", temperature=0.1)  # Cache hit
-        await cached_provider.generate(prompt="Question 2", temperature=0.1)  # Cache hit
+        await cached_provider.generate(
+            prompt="Question 1", temperature=0.1
+        )  # Cache hit
+        await cached_provider.generate(
+            prompt="Question 2", temperature=0.1
+        )  # Cache hit
 
         # Only 2 calls to provider (first two)
         assert len(mock_llm.calls) == 2
@@ -494,7 +505,10 @@ class TestLLMCacheEdgeCases:
 
     @pytest.fixture
     def cache(
-        self, cache_path: Path, embedding_provider: MockEmbeddingProvider, config: LLMCacheConfig
+        self,
+        cache_path: Path,
+        embedding_provider: MockEmbeddingProvider,
+        config: LLMCacheConfig,
     ) -> LLMCache:
         """Create an LLMCache instance."""
         return LLMCache(cache_path, embedding_provider, config)
@@ -503,7 +517,9 @@ class TestLLMCacheEdgeCases:
     async def test_ensure_table_returns_existing_table(self, cache: LLMCache):
         """Test _ensure_table returns table when it already exists."""
         # First, create an entry to create the table
-        await cache.set(prompt="test", response="response", temperature=0.1, model_name="m")
+        await cache.set(
+            prompt="test", response="response", temperature=0.1, model_name="m"
+        )
 
         # Reset _table reference to force lookup
         cache._table = None
@@ -523,7 +539,9 @@ class TestLLMCacheEdgeCases:
     async def test_ensure_table_uses_cached_table(self, cache: LLMCache):
         """Test _ensure_table returns cached _table if already set."""
         # Create entry to create table
-        await cache.set(prompt="test", response="response", temperature=0.1, model_name="m")
+        await cache.set(
+            prompt="test", response="response", temperature=0.1, model_name="m"
+        )
 
         # _table should be set now
         cached_table = cache._table
@@ -536,7 +554,9 @@ class TestLLMCacheEdgeCases:
     async def test_get_table_when_table_exists(self, cache: LLMCache):
         """Test _get_table when table exists in database."""
         # Create entry to create table
-        await cache.set(prompt="test", response="response", temperature=0.1, model_name="m")
+        await cache.set(
+            prompt="test", response="response", temperature=0.1, model_name="m"
+        )
 
         # Reset _table to force lookup
         cache._table = None
@@ -549,14 +569,16 @@ class TestLLMCacheEdgeCases:
     async def test_get_exact_hash_exception_handling(self, cache: LLMCache):
         """Test that exact hash lookup exceptions are handled gracefully."""
         # Create an entry first
-        await cache.set(prompt="test", response="response", temperature=0.1, model_name="m")
+        await cache.set(
+            prompt="test", response="response", temperature=0.1, model_name="m"
+        )
 
         # Mock the table's search to raise an exception
         with patch.object(cache, "_get_table") as mock_get_table:
             mock_table = MagicMock()
             mock_search = MagicMock()
-            mock_search.where.return_value.limit.return_value.to_list.side_effect = RuntimeError(
-                "Database error"
+            mock_search.where.return_value.limit.return_value.to_list.side_effect = (
+                RuntimeError("Database error")
             )
             mock_table.search.return_value = mock_search
             mock_get_table.return_value = mock_table
@@ -570,7 +592,9 @@ class TestLLMCacheEdgeCases:
     async def test_get_similarity_search_exception_handling(self, cache: LLMCache):
         """Test that similarity search exceptions are handled gracefully."""
         # Create an entry first
-        await cache.set(prompt="test", response="response", temperature=0.1, model_name="m")
+        await cache.set(
+            prompt="test", response="response", temperature=0.1, model_name="m"
+        )
 
         # Mock to simulate exact match miss then similarity search failure
         with patch.object(cache, "_get_table") as mock_get_table:
@@ -579,7 +603,9 @@ class TestLLMCacheEdgeCases:
             # Exact match returns empty
             mock_search.where.return_value.limit.return_value.to_list.return_value = []
             # Similarity search raises
-            mock_search.limit.return_value.to_list.side_effect = ValueError("Embedding error")
+            mock_search.limit.return_value.to_list.side_effect = ValueError(
+                "Embedding error"
+            )
             mock_table.search.return_value = mock_search
             mock_get_table.return_value = mock_table
 
@@ -645,9 +671,13 @@ class TestLLMCacheEdgeCases:
     async def test_set_exception_handling(self, cache: LLMCache):
         """Test that set exceptions are handled gracefully."""
         # Mock embedding provider to raise
-        with patch.object(cache.embedding_provider, "embed", side_effect=ValueError("Bad input")):
+        with patch.object(
+            cache.embedding_provider, "embed", side_effect=ValueError("Bad input")
+        ):
             # Should not raise, just log warning
-            await cache.set(prompt="test", response="response", temperature=0.1, model_name="m")
+            await cache.set(
+                prompt="test", response="response", temperature=0.1, model_name="m"
+            )
 
         # Cache should still be functional
         assert cache.get_entry_count() == 0
@@ -656,7 +686,9 @@ class TestLLMCacheEdgeCases:
     async def test_set_index_creation_exception(self, cache: LLMCache):
         """Test that index creation exceptions are handled."""
         # Create first entry which creates table
-        await cache.set(prompt="test", response="response", temperature=0.1, model_name="m")
+        await cache.set(
+            prompt="test", response="response", temperature=0.1, model_name="m"
+        )
 
         # Verify entry was created
         assert cache.get_entry_count() == 1
@@ -673,7 +705,9 @@ class TestLLMCacheEdgeCases:
     async def test_record_hit_exception_handling(self, cache: LLMCache):
         """Test _record_hit handles exceptions gracefully."""
         # Create an entry
-        await cache.set(prompt="test", response="response", temperature=0.1, model_name="m")
+        await cache.set(
+            prompt="test", response="response", temperature=0.1, model_name="m"
+        )
 
         # _record_hit currently does nothing (pass) so this just tests it doesn't raise
         await cache._record_hit("non-existent-id")
@@ -949,10 +983,18 @@ class TestLLMCacheEdgeCases:
             mock_table.count_rows.return_value = 150  # Over limit
 
             # Return mix of expired and valid entries
-            mock_table.search.return_value.limit.return_value.to_list.return_value = [
-                {"id": "expired-1", "created_at": time.time() - 10000, "ttl_seconds": 60},
+            mock_table.search.return_value.select.return_value.limit.return_value.to_list.return_value = [
+                {
+                    "id": "expired-1",
+                    "created_at": time.time() - 10000,
+                    "ttl_seconds": 60,
+                },
                 {"id": "valid-1", "created_at": time.time(), "ttl_seconds": 3600},
-                {"id": "expired-2", "created_at": time.time() - 5000, "ttl_seconds": 60},
+                {
+                    "id": "expired-2",
+                    "created_at": time.time() - 5000,
+                    "ttl_seconds": 60,
+                },
             ]
             mock_get_table.return_value = mock_table
 
@@ -978,9 +1020,17 @@ class TestLLMCacheEdgeCases:
             mock_table = MagicMock()
             mock_table.count_rows.return_value = 150
 
-            mock_table.search.return_value.limit.return_value.to_list.return_value = [
-                {"id": "expired-1", "created_at": time.time() - 10000, "ttl_seconds": 60},
-                {"id": "expired-2", "created_at": time.time() - 5000, "ttl_seconds": 60},
+            mock_table.search.return_value.select.return_value.limit.return_value.to_list.return_value = [
+                {
+                    "id": "expired-1",
+                    "created_at": time.time() - 10000,
+                    "ttl_seconds": 60,
+                },
+                {
+                    "id": "expired-2",
+                    "created_at": time.time() - 5000,
+                    "ttl_seconds": 60,
+                },
             ]
 
             # First delete succeeds, second fails
@@ -1061,7 +1111,9 @@ class TestLLMCacheEdgeCases:
             mock_db.create_table.return_value = mock_table
 
             # Index creation fails
-            mock_table.create_scalar_index.side_effect = ValueError("Index creation failed")
+            mock_table.create_scalar_index.side_effect = ValueError(
+                "Index creation failed"
+            )
 
             # For _maybe_evict
             mock_table.count_rows.return_value = 1
@@ -1167,14 +1219,17 @@ class TestLLMCacheEdgeCases:
                 {
                     "id": f"entry-{i}",
                     "created_at": now - 1000,
-                    "last_hit_at": now - (100 - i),  # entry-0 is oldest, entry-99 is newest
+                    "last_hit_at": now
+                    - (100 - i),  # entry-0 is oldest, entry-99 is newest
                     "ttl_seconds": 3600,
                 }
                 for i in range(150)
             ]
 
             mock_search = MagicMock()
-            mock_search.limit.return_value.to_list.return_value = entries
+            mock_search.select.return_value.limit.return_value.to_list.return_value = (
+                entries
+            )
             mock_table.search.return_value = mock_search
 
             # Track deleted entries
@@ -1202,7 +1257,9 @@ class TestLLMCacheEdgeCases:
             for deleted_id in deleted_ids:
                 entry_num = int(deleted_id.split("-")[1])
                 # Should be from the oldest entries
-                assert entry_num < 70, f"Entry {deleted_id} should not have been evicted (not old enough)"
+                assert entry_num < 70, (
+                    f"Entry {deleted_id} should not have been evicted (not old enough)"
+                )
 
     @pytest.mark.asyncio
     async def test_eviction_prefers_expired_over_lru(self, cache_path: Path):
@@ -1247,7 +1304,9 @@ class TestLLMCacheEdgeCases:
             ]
 
             mock_search = MagicMock()
-            mock_search.limit.return_value.to_list.return_value = entries
+            mock_search.select.return_value.limit.return_value.to_list.return_value = (
+                entries
+            )
             mock_table.search.return_value = mock_search
 
             deleted_ids = []

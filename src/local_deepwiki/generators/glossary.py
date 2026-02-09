@@ -39,60 +39,48 @@ async def collect_all_entities(
     """
     entities: list[EntityEntry] = []
 
-    for file_info in index_status.files:
-        chunks = await vector_store.get_chunks_by_file(file_info.path)
+    # Use bulk chunk-type queries (3 queries) instead of N per-file queries
+    type_to_entity = {
+        "class": ChunkType.CLASS,
+        "function": ChunkType.FUNCTION,
+        "method": ChunkType.METHOD,
+    }
 
-        for chunk in chunks:
-            # Extract type annotation metadata if available
+    for entity_type_str, chunk_type_enum in type_to_entity.items():
+        for chunk in vector_store.get_all_chunks(chunk_type=entity_type_str):
             metadata = chunk.metadata or {}
             param_types = metadata.get("parameter_types")
             return_type = metadata.get("return_type")
             is_async = metadata.get("is_async", False)
             raises = metadata.get("raises")
 
-            if chunk.chunk_type == ChunkType.CLASS:
-                entities.append(
-                    EntityEntry(
-                        name=chunk.name or "Unknown",
-                        entity_type="class",
-                        file_path=file_info.path,
-                        docstring=chunk.docstring,
-                    )
+            entry_kwargs: dict = {
+                "name": chunk.name or "Unknown",
+                "entity_type": entity_type_str,
+                "file_path": chunk.file_path,
+                "docstring": chunk.docstring,
+            }
+
+            if entity_type_str in ("function", "method"):
+                entry_kwargs.update(
+                    parameter_types=param_types,
+                    return_type=return_type,
+                    is_async=is_async,
+                    raises=raises,
                 )
-            elif chunk.chunk_type == ChunkType.FUNCTION:
-                entities.append(
-                    EntityEntry(
-                        name=chunk.name or "Unknown",
-                        entity_type="function",
-                        file_path=file_info.path,
-                        docstring=chunk.docstring,
-                        parameter_types=param_types,
-                        return_type=return_type,
-                        is_async=is_async,
-                        raises=raises,
-                    )
-                )
-            elif chunk.chunk_type == ChunkType.METHOD:
-                entities.append(
-                    EntityEntry(
-                        name=chunk.name or "Unknown",
-                        entity_type="method",
-                        file_path=file_info.path,
-                        parent_name=chunk.parent_name,
-                        docstring=chunk.docstring,
-                        parameter_types=param_types,
-                        return_type=return_type,
-                        is_async=is_async,
-                        raises=raises,
-                    )
-                )
+            if entity_type_str == "method":
+                entry_kwargs["parent_name"] = chunk.parent_name
+
+            entities.append(EntityEntry(**entry_kwargs))
 
     # Sort alphabetically by name (case-insensitive)
     entities.sort(key=lambda e: e.name.lower())
     return entities
 
 
-def group_entities_by_letter(entities: list[EntityEntry]) -> dict[str, list[EntityEntry]]:
+def group_entities_by_letter(
+    entities: list[EntityEntry],
+) -> dict[str, list[EntityEntry]]:
     """Group entities by their first letter.
 
     Args:
@@ -297,7 +285,9 @@ async def generate_glossary_page(
     # Add legend
     lines.append("---")
     lines.append("")
-    lines.append("**Legend:** 🔷 Class | 🔹 Function | ▪️ Method | ⚡ Async | ⚠️ Raises exceptions")
+    lines.append(
+        "**Legend:** 🔷 Class | 🔹 Function | ▪️ Method | ⚡ Async | ⚠️ Raises exceptions"
+    )
     lines.append("")
 
     return "\n".join(lines)

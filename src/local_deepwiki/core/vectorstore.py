@@ -2063,20 +2063,35 @@ class VectorStore:
         if not texts:
             return []
 
+        # Deduplicate texts to avoid redundant embedding API calls
+        unique_texts: list[str] = []
+        text_to_index: dict[str, int] = {}
+        for text in texts:
+            if text not in text_to_index:
+                text_to_index[text] = len(unique_texts)
+                unique_texts.append(text)
+
+        duplicates_saved = len(texts) - len(unique_texts)
+        if duplicates_saved > 0:
+            logger.debug(
+                f"Embedding dedup: {len(texts)} texts -> {len(unique_texts)} unique "
+                f"({duplicates_saved} duplicates skipped)"
+            )
+
         # Get optimal config based on provider type
         optimal_batch_size, optimal_concurrency = self._get_optimal_batch_config()
         batch_size = batch_size or optimal_batch_size
 
-        # Split texts into batches
+        # Split unique texts into batches
         batches: list[list[str]] = []
-        for i in range(0, len(texts), batch_size):
-            batches.append(texts[i : i + batch_size])
+        for i in range(0, len(unique_texts), batch_size):
+            batches.append(unique_texts[i : i + batch_size])
 
         total_batches = len(batches)
 
         # For single batch, still use retry logic but without parallel overhead
         if total_batches == 1:
-            progress = EmbeddingProgress(total_texts=len(texts), total_batches=1)
+            progress = EmbeddingProgress(total_texts=len(unique_texts), total_batches=1)
             semaphore = asyncio.Semaphore(1)
             result = await self._embed_single_batch_with_retry(
                 0, batches[0], progress, semaphore
@@ -2084,18 +2099,20 @@ class VectorStore:
             if result.error is not None:
                 raise RuntimeError(f"Failed to embed batch: {result.error}")
             if log_progress:
-                logger.debug(f"Embedded 1/1 batches ({len(texts)} texts)")
-            return result.embeddings or []
+                logger.debug(f"Embedded 1/1 batches ({len(unique_texts)} unique texts)")
+            unique_embeddings = result.embeddings or []
+            return [unique_embeddings[text_to_index[t]] for t in texts]
 
         # Create progress tracker
         progress = EmbeddingProgress(
-            total_texts=len(texts),
+            total_texts=len(unique_texts),
             total_batches=total_batches,
         )
 
         if log_progress:
             logger.info(
-                f"Starting parallel embedding: {len(texts)} texts in {total_batches} batches "
+                f"Starting parallel embedding: {len(unique_texts)} unique texts "
+                f"in {total_batches} batches "
                 f"(batch_size={batch_size}, concurrency={optimal_concurrency})"
             )
 
@@ -2144,12 +2161,14 @@ class VectorStore:
 
         if log_progress:
             elapsed = progress.elapsed_seconds
-            rate = len(texts) / elapsed if elapsed > 0 else 0
+            rate = len(unique_texts) / elapsed if elapsed > 0 else 0
             logger.info(
-                f"Embedding complete: {len(texts)} texts in {elapsed:.2f}s ({rate:.1f} texts/sec)"
+                f"Embedding complete: {len(unique_texts)} unique texts "
+                f"in {elapsed:.2f}s ({rate:.1f} texts/sec)"
             )
 
-        return all_embeddings
+        # Remap unique embeddings back to original text order
+        return [all_embeddings[text_to_index[t]] for t in texts]
 
     async def _batch_embed_sequential(
         self, texts: list[str], batch_size: int, log_progress: bool = False

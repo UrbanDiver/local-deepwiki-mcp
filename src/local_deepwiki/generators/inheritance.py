@@ -5,7 +5,7 @@ from pathlib import Path
 
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.generators.diagrams import sanitize_mermaid_name
-from local_deepwiki.models import ChunkType, IndexStatus
+from local_deepwiki.models import IndexStatus
 
 
 @dataclass
@@ -35,41 +35,35 @@ async def collect_class_hierarchy(
     """
     classes: dict[str, ClassNode] = {}
 
-    # Iterate through all indexed files
-    for file_info in index_status.files:
-        chunks = await vector_store.get_chunks_by_file(file_info.path)
+    # Single filtered query for all CLASS chunks (instead of N per-file queries)
+    for chunk in vector_store.get_all_chunks(chunk_type="class"):
+        class_name = chunk.name
+        if not class_name:
+            continue
 
-        for chunk in chunks:
-            if chunk.chunk_type != ChunkType.CLASS:
-                continue
+        # Extract parent classes from metadata
+        parent_classes = chunk.metadata.get("parent_classes", [])
 
-            class_name = chunk.name
-            if not class_name:
-                continue
+        # Check if abstract
+        is_abstract = (
+            "ABC" in str(parent_classes)
+            or "@abstractmethod" in chunk.content
+            or "abstract" in chunk.content.lower()[:100]
+        )
 
-            # Extract parent classes from metadata
-            parent_classes = chunk.metadata.get("parent_classes", [])
-
-            # Check if abstract
-            is_abstract = (
-                "ABC" in str(parent_classes)
-                or "@abstractmethod" in chunk.content
-                or "abstract" in chunk.content.lower()[:100]
+        # Create or update class node
+        if class_name not in classes:
+            classes[class_name] = ClassNode(
+                name=class_name,
+                file_path=chunk.file_path,
+                parents=parent_classes,
+                is_abstract=is_abstract,
+                docstring=chunk.docstring,
             )
-
-            # Create or update class node
-            if class_name not in classes:
-                classes[class_name] = ClassNode(
-                    name=class_name,
-                    file_path=file_info.path,
-                    parents=parent_classes,
-                    is_abstract=is_abstract,
-                    docstring=chunk.docstring,
-                )
-            else:
-                # Merge if same class appears in multiple files (shouldn't happen often)
-                existing = classes[class_name]
-                existing.parents = list(set(existing.parents + parent_classes))
+        else:
+            # Merge if same class appears in multiple files (shouldn't happen often)
+            existing = classes[class_name]
+            existing.parents = list(set(existing.parents + parent_classes))
 
     # Build children relationships (reverse of parents)
     for class_name, class_node in classes.items():
@@ -167,9 +161,7 @@ def generate_inheritance_diagram(
     lines.append("```")
 
     # Check if we actually have any relationships
-    has_relationships = any(
-        "-->" in line or "--|>" in line for line in lines
-    )
+    has_relationships = any("-->" in line or "--|>" in line for line in lines)
     if not has_relationships:
         return None
 
@@ -219,7 +211,9 @@ def generate_inheritance_tree_text(
         desc = f" - {first_line}"
 
     abstract_marker = " (abstract)" if node.is_abstract else ""
-    lines.append(f"{prefix}{marker}**{root_class}**{abstract_marker} `{file_name}`{desc}")
+    lines.append(
+        f"{prefix}{marker}**{root_class}**{abstract_marker} `{file_name}`{desc}"
+    )
 
     # Recursively add children
     for child in sorted(node.children):

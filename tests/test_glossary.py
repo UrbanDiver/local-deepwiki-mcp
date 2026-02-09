@@ -15,6 +15,27 @@ from local_deepwiki.generators.glossary import (
 )
 from local_deepwiki.models import ChunkType, CodeChunk, FileInfo, IndexStatus, Language
 
+# Map string chunk_type names to ChunkType enum values for filtering
+_CHUNK_TYPE_MAP = {
+    "class": ChunkType.CLASS,
+    "function": ChunkType.FUNCTION,
+    "method": ChunkType.METHOD,
+}
+
+
+def _make_get_all_chunks(chunks: list[CodeChunk]):
+    """Create a mock get_all_chunks that filters chunks by chunk_type."""
+
+    def get_all_chunks(*, batch_size=None, language=None, chunk_type=None):
+        for c in chunks:
+            if chunk_type is not None:
+                expected = _CHUNK_TYPE_MAP.get(chunk_type)
+                if expected is not None and c.chunk_type != expected:
+                    continue
+            yield c
+
+    return get_all_chunks
+
 
 class TestEntityEntry:
     """Tests for EntityEntry dataclass."""
@@ -115,7 +136,9 @@ class TestGetBriefDescription:
 
     def test_truncates_long_description(self):
         """Test truncates descriptions longer than max_length."""
-        docstring = "This is a very long description that should be truncated for display."
+        docstring = (
+            "This is a very long description that should be truncated for display."
+        )
         result = _get_brief_description(docstring, max_length=30)
         assert len(result) == 30
         assert result.endswith("...")
@@ -226,7 +249,13 @@ class TestFormatSignature:
             name="my_func",
             entity_type="function",
             file_path="src/module.py",
-            parameter_types={"a": "int", "b": "str", "c": "bool", "d": "float", "e": "list"},
+            parameter_types={
+                "a": "int",
+                "b": "str",
+                "c": "bool",
+                "d": "float",
+                "e": "list",
+            },
         )
         result = _format_signature(entry, max_params=3)
         assert "...+2" in result
@@ -265,7 +294,7 @@ class TestCollectAllEntities:
     def mock_vector_store(self):
         """Create a mock vector store."""
         store = MagicMock()
-        store.get_chunks_by_file = AsyncMock(return_value=[])
+        store.get_all_chunks = _make_get_all_chunks([])
         return store
 
     @pytest.fixture
@@ -294,8 +323,8 @@ class TestCollectAllEntities:
 
     async def test_collects_classes(self, mock_vector_store, sample_index_status):
         """Test collecting class entities."""
-        mock_vector_store.get_chunks_by_file = AsyncMock(
-            return_value=[
+        mock_vector_store.get_all_chunks = _make_get_all_chunks(
+            [
                 CodeChunk(
                     id="chunk1",
                     content="class MyClass: pass",
@@ -320,8 +349,8 @@ class TestCollectAllEntities:
 
     async def test_collects_functions(self, mock_vector_store, sample_index_status):
         """Test collecting function entities."""
-        mock_vector_store.get_chunks_by_file = AsyncMock(
-            return_value=[
+        mock_vector_store.get_all_chunks = _make_get_all_chunks(
+            [
                 CodeChunk(
                     id="chunk1",
                     content="def my_func(): pass",
@@ -353,8 +382,8 @@ class TestCollectAllEntities:
 
     async def test_collects_methods(self, mock_vector_store, sample_index_status):
         """Test collecting method entities."""
-        mock_vector_store.get_chunks_by_file = AsyncMock(
-            return_value=[
+        mock_vector_store.get_all_chunks = _make_get_all_chunks(
+            [
                 CodeChunk(
                     id="chunk1",
                     content="def my_method(self): pass",
@@ -378,8 +407,8 @@ class TestCollectAllEntities:
 
     async def test_sorts_alphabetically(self, mock_vector_store, sample_index_status):
         """Test that entities are sorted alphabetically."""
-        mock_vector_store.get_chunks_by_file = AsyncMock(
-            return_value=[
+        mock_vector_store.get_all_chunks = _make_get_all_chunks(
+            [
                 CodeChunk(
                     id="chunk1",
                     content="def zebra(): pass",
@@ -411,10 +440,12 @@ class TestCollectAllEntities:
         zebra_idx = next(i for i, n in enumerate(names) if n == "zebra")
         assert apple_idx < zebra_idx
 
-    async def test_handles_chunk_without_name(self, mock_vector_store, sample_index_status):
+    async def test_handles_chunk_without_name(
+        self, mock_vector_store, sample_index_status
+    ):
         """Test handling chunks without a name."""
-        mock_vector_store.get_chunks_by_file = AsyncMock(
-            return_value=[
+        mock_vector_store.get_all_chunks = _make_get_all_chunks(
+            [
                 CodeChunk(
                     id="chunk1",
                     content="class: pass",
@@ -434,10 +465,12 @@ class TestCollectAllEntities:
         unknown_entity = next((e for e in entities if e.name == "Unknown"), None)
         assert unknown_entity is not None
 
-    async def test_handles_chunk_without_metadata(self, mock_vector_store, sample_index_status):
+    async def test_handles_chunk_without_metadata(
+        self, mock_vector_store, sample_index_status
+    ):
         """Test handling chunks without metadata (empty dict)."""
-        mock_vector_store.get_chunks_by_file = AsyncMock(
-            return_value=[
+        mock_vector_store.get_all_chunks = _make_get_all_chunks(
+            [
                 CodeChunk(
                     id="chunk1",
                     content="def func(): pass",
@@ -460,10 +493,12 @@ class TestCollectAllEntities:
         assert func_entity.return_type is None
         assert func_entity.is_async is False
 
-    async def test_skips_non_entity_chunks(self, mock_vector_store, sample_index_status):
+    async def test_skips_non_entity_chunks(
+        self, mock_vector_store, sample_index_status
+    ):
         """Test that non-entity chunk types are skipped."""
-        mock_vector_store.get_chunks_by_file = AsyncMock(
-            return_value=[
+        mock_vector_store.get_all_chunks = _make_get_all_chunks(
+            [
                 CodeChunk(
                     id="chunk1",
                     content="import os",
@@ -502,7 +537,7 @@ class TestGenerateGlossaryPage:
     def mock_vector_store(self):
         """Create a mock vector store."""
         store = MagicMock()
-        store.get_chunks_by_file = AsyncMock(return_value=[])
+        store.get_all_chunks = _make_get_all_chunks([])
         return store
 
     @pytest.fixture
@@ -523,15 +558,19 @@ class TestGenerateGlossaryPage:
             ],
         )
 
-    async def test_returns_none_for_no_entities(self, mock_vector_store, sample_index_status):
+    async def test_returns_none_for_no_entities(
+        self, mock_vector_store, sample_index_status
+    ):
         """Test returns None when no entities are found."""
         result = await generate_glossary_page(sample_index_status, mock_vector_store)
         assert result is None
 
-    async def test_generates_page_with_entities(self, mock_vector_store, sample_index_status):
+    async def test_generates_page_with_entities(
+        self, mock_vector_store, sample_index_status
+    ):
         """Test generates a valid markdown page."""
-        mock_vector_store.get_chunks_by_file = AsyncMock(
-            return_value=[
+        mock_vector_store.get_all_chunks = _make_get_all_chunks(
+            [
                 CodeChunk(
                     id="chunk1",
                     content="class MyClass: pass",
@@ -565,8 +604,8 @@ class TestGenerateGlossaryPage:
 
     async def test_includes_navigation(self, mock_vector_store, sample_index_status):
         """Test includes letter navigation."""
-        mock_vector_store.get_chunks_by_file = AsyncMock(
-            return_value=[
+        mock_vector_store.get_all_chunks = _make_get_all_chunks(
+            [
                 CodeChunk(
                     id="chunk1",
                     content="def apple(): pass",
@@ -598,8 +637,8 @@ class TestGenerateGlossaryPage:
 
     async def test_includes_summary_stats(self, mock_vector_store, sample_index_status):
         """Test includes summary statistics."""
-        mock_vector_store.get_chunks_by_file = AsyncMock(
-            return_value=[
+        mock_vector_store.get_all_chunks = _make_get_all_chunks(
+            [
                 CodeChunk(
                     id="chunk1",
                     content="class MyClass: pass",
@@ -632,8 +671,8 @@ class TestGenerateGlossaryPage:
 
     async def test_includes_legend(self, mock_vector_store, sample_index_status):
         """Test includes legend at the end."""
-        mock_vector_store.get_chunks_by_file = AsyncMock(
-            return_value=[
+        mock_vector_store.get_all_chunks = _make_get_all_chunks(
+            [
                 CodeChunk(
                     id="chunk1",
                     content="def func(): pass",
@@ -653,10 +692,12 @@ class TestGenerateGlossaryPage:
         assert "🔷 Class" in result
         assert "🔹 Function" in result
 
-    async def test_formats_method_with_parent(self, mock_vector_store, sample_index_status):
+    async def test_formats_method_with_parent(
+        self, mock_vector_store, sample_index_status
+    ):
         """Test methods display with parent class name."""
-        mock_vector_store.get_chunks_by_file = AsyncMock(
-            return_value=[
+        mock_vector_store.get_all_chunks = _make_get_all_chunks(
+            [
                 CodeChunk(
                     id="chunk1",
                     content="def my_method(self): pass",
@@ -677,8 +718,8 @@ class TestGenerateGlossaryPage:
 
     async def test_shows_async_marker(self, mock_vector_store, sample_index_status):
         """Test async functions show async marker."""
-        mock_vector_store.get_chunks_by_file = AsyncMock(
-            return_value=[
+        mock_vector_store.get_all_chunks = _make_get_all_chunks(
+            [
                 CodeChunk(
                     id="chunk1",
                     content="async def async_func(): pass",
@@ -699,8 +740,8 @@ class TestGenerateGlossaryPage:
 
     async def test_shows_raises_indicator(self, mock_vector_store, sample_index_status):
         """Test functions that raise exceptions show indicator."""
-        mock_vector_store.get_chunks_by_file = AsyncMock(
-            return_value=[
+        mock_vector_store.get_all_chunks = _make_get_all_chunks(
+            [
                 CodeChunk(
                     id="chunk1",
                     content="def risky_func(): raise ValueError",
@@ -722,8 +763,8 @@ class TestGenerateGlossaryPage:
 
     async def test_truncates_many_raises(self, mock_vector_store, sample_index_status):
         """Test truncates when many exceptions are raised."""
-        mock_vector_store.get_chunks_by_file = AsyncMock(
-            return_value=[
+        mock_vector_store.get_all_chunks = _make_get_all_chunks(
+            [
                 CodeChunk(
                     id="chunk1",
                     content="def risky(): pass",
@@ -734,7 +775,13 @@ class TestGenerateGlossaryPage:
                     end_line=1,
                     name="risky",
                     metadata={
-                        "raises": ["ValueError", "TypeError", "KeyError", "IndexError", "RuntimeError"]
+                        "raises": [
+                            "ValueError",
+                            "TypeError",
+                            "KeyError",
+                            "IndexError",
+                            "RuntimeError",
+                        ]
                     },
                 ),
             ]
@@ -744,10 +791,12 @@ class TestGenerateGlossaryPage:
 
         assert "+2" in result  # 5 exceptions, shows 3 + "+2"
 
-    async def test_includes_type_signature(self, mock_vector_store, sample_index_status):
+    async def test_includes_type_signature(
+        self, mock_vector_store, sample_index_status
+    ):
         """Test includes type signature for functions."""
-        mock_vector_store.get_chunks_by_file = AsyncMock(
-            return_value=[
+        mock_vector_store.get_all_chunks = _make_get_all_chunks(
+            [
                 CodeChunk(
                     id="chunk1",
                     content="def typed_func(x: int) -> str: pass",
@@ -770,10 +819,12 @@ class TestGenerateGlossaryPage:
         assert "x: int" in result
         assert "→ str" in result
 
-    async def test_includes_brief_description(self, mock_vector_store, sample_index_status):
+    async def test_includes_brief_description(
+        self, mock_vector_store, sample_index_status
+    ):
         """Test includes brief description from docstring."""
-        mock_vector_store.get_chunks_by_file = AsyncMock(
-            return_value=[
+        mock_vector_store.get_all_chunks = _make_get_all_chunks(
+            [
                 CodeChunk(
                     id="chunk1",
                     content="def documented(): pass",
@@ -792,10 +843,12 @@ class TestGenerateGlossaryPage:
 
         assert "This function does something useful." in result
 
-    async def test_groups_non_alpha_under_hash(self, mock_vector_store, sample_index_status):
+    async def test_groups_non_alpha_under_hash(
+        self, mock_vector_store, sample_index_status
+    ):
         """Test non-alphabetic names grouped under #."""
-        mock_vector_store.get_chunks_by_file = AsyncMock(
-            return_value=[
+        mock_vector_store.get_all_chunks = _make_get_all_chunks(
+            [
                 CodeChunk(
                     id="chunk1",
                     content="def __init__(self): pass",

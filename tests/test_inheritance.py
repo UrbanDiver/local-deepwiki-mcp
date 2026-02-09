@@ -1,6 +1,6 @@
 """Tests for inheritance tree generation."""
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -13,6 +13,26 @@ from local_deepwiki.generators.inheritance import (
     generate_inheritance_tree_text,
 )
 from local_deepwiki.models import ChunkType, CodeChunk, FileInfo, IndexStatus, Language
+
+
+def _make_get_all_chunks(chunks: list[CodeChunk]):
+    """Create a mock get_all_chunks that filters chunks by chunk_type."""
+
+    _type_map = {
+        "class": ChunkType.CLASS,
+        "function": ChunkType.FUNCTION,
+        "method": ChunkType.METHOD,
+    }
+
+    def get_all_chunks(*, batch_size=None, language=None, chunk_type=None):
+        for c in chunks:
+            if chunk_type is not None:
+                expected = _type_map.get(chunk_type)
+                if expected is not None and c.chunk_type != expected:
+                    continue
+            yield c
+
+    return get_all_chunks
 
 
 class TestClassNode:
@@ -114,7 +134,9 @@ class TestGenerateInheritanceDiagram:
     def test_marks_abstract_classes(self):
         """Test that abstract classes are marked."""
         classes = {
-            "AbstractBase": ClassNode("AbstractBase", "base.py", [], ["Impl"], is_abstract=True),
+            "AbstractBase": ClassNode(
+                "AbstractBase", "base.py", [], ["Impl"], is_abstract=True
+            ),
             "Impl": ClassNode("Impl", "impl.py", ["AbstractBase"], []),
         }
         diagram = generate_inheritance_diagram(classes)
@@ -180,7 +202,9 @@ class TestGenerateInheritanceTreeText:
     def test_marks_abstract_classes(self):
         """Test that abstract classes are marked in text tree."""
         classes = {
-            "AbstractBase": ClassNode("AbstractBase", "base.py", [], [], is_abstract=True),
+            "AbstractBase": ClassNode(
+                "AbstractBase", "base.py", [], [], is_abstract=True
+            ),
         }
         lines = generate_inheritance_tree_text(classes, "AbstractBase")
         assert "(abstract)" in lines[0]
@@ -198,7 +222,10 @@ class TestGenerateInheritanceTreeText:
         long_docstring = "A" * 100  # Very long docstring
         classes = {
             "MyClass": ClassNode(
-                "MyClass", "myclass.py", [], [],
+                "MyClass",
+                "myclass.py",
+                [],
+                [],
                 docstring=long_docstring,
             ),
         }
@@ -211,7 +238,10 @@ class TestGenerateInheritanceTreeText:
         """Test that short docstrings are included fully."""
         classes = {
             "MyClass": ClassNode(
-                "MyClass", "myclass.py", [], [],
+                "MyClass",
+                "myclass.py",
+                [],
+                [],
                 docstring="A short description.",
             ),
         }
@@ -228,12 +258,15 @@ class TestGenerateInheritanceDiagramAdvanced:
         classes = {}
         for i in range(60):
             classes[f"Class{i}"] = ClassNode(
-                f"Class{i}", f"class{i}.py",
+                f"Class{i}",
+                f"class{i}.py",
                 parents=["BaseClass"] if i > 0 else [],
-                children=[f"Class{i+1}"] if i < 59 else [],
+                children=[f"Class{i + 1}"] if i < 59 else [],
             )
         classes["BaseClass"] = ClassNode(
-            "BaseClass", "base.py", [],
+            "BaseClass",
+            "base.py",
+            [],
             children=[f"Class{i}" for i in range(1, 60)],
         )
 
@@ -278,7 +311,7 @@ class TestCollectClassHierarchy:
     def mock_vector_store(self):
         """Create a mock vector store."""
         store = MagicMock()
-        store.get_chunks_by_file = AsyncMock(return_value=[])
+        store.get_all_chunks = _make_get_all_chunks([])
         return store
 
     @pytest.fixture
@@ -303,8 +336,8 @@ class TestCollectClassHierarchy:
         self, mock_vector_store, sample_index_status
     ):
         """Test collecting a class with parent classes."""
-        mock_vector_store.get_chunks_by_file = AsyncMock(
-            return_value=[
+        mock_vector_store.get_all_chunks = _make_get_all_chunks(
+            [
                 CodeChunk(
                     id="chunk1",
                     content="class Child(Parent): pass",
@@ -328,8 +361,8 @@ class TestCollectClassHierarchy:
         self, mock_vector_store, sample_index_status
     ):
         """Test detecting abstract class from ABC parent."""
-        mock_vector_store.get_chunks_by_file = AsyncMock(
-            return_value=[
+        mock_vector_store.get_all_chunks = _make_get_all_chunks(
+            [
                 CodeChunk(
                     id="chunk1",
                     content="class MyABC(ABC): pass",
@@ -352,8 +385,8 @@ class TestCollectClassHierarchy:
         self, mock_vector_store, sample_index_status
     ):
         """Test detecting abstract class from @abstractmethod decorator."""
-        mock_vector_store.get_chunks_by_file = AsyncMock(
-            return_value=[
+        mock_vector_store.get_all_chunks = _make_get_all_chunks(
+            [
                 CodeChunk(
                     id="chunk1",
                     content="class Base:\n    @abstractmethod\n    def method(self): pass",
@@ -376,8 +409,8 @@ class TestCollectClassHierarchy:
         self, mock_vector_store, sample_index_status
     ):
         """Test detecting abstract class from 'abstract' keyword in content."""
-        mock_vector_store.get_chunks_by_file = AsyncMock(
-            return_value=[
+        mock_vector_store.get_all_chunks = _make_get_all_chunks(
+            [
                 CodeChunk(
                     id="chunk1",
                     content='"""An abstract base class."""\nclass Base: pass',
@@ -396,12 +429,10 @@ class TestCollectClassHierarchy:
 
         assert classes["Base"].is_abstract is True
 
-    async def test_skips_non_class_chunks(
-        self, mock_vector_store, sample_index_status
-    ):
+    async def test_skips_non_class_chunks(self, mock_vector_store, sample_index_status):
         """Test that non-class chunks are skipped."""
-        mock_vector_store.get_chunks_by_file = AsyncMock(
-            return_value=[
+        mock_vector_store.get_all_chunks = _make_get_all_chunks(
+            [
                 CodeChunk(
                     id="chunk1",
                     content="def func(): pass",
@@ -435,8 +466,8 @@ class TestCollectClassHierarchy:
         self, mock_vector_store, sample_index_status
     ):
         """Test that chunks without name are skipped."""
-        mock_vector_store.get_chunks_by_file = AsyncMock(
-            return_value=[
+        mock_vector_store.get_all_chunks = _make_get_all_chunks(
+            [
                 CodeChunk(
                     id="chunk1",
                     content="class: pass",
@@ -478,37 +509,32 @@ class TestCollectClassHierarchy:
             ],
         )
 
-        async def get_chunks(file_path):
-            if file_path == "src/base.py":
-                return [
-                    CodeChunk(
-                        id="chunk1",
-                        content="class Base: pass",
-                        chunk_type=ChunkType.CLASS,
-                        language=Language.PYTHON,
-                        file_path=file_path,
-                        start_line=1,
-                        end_line=5,
-                        name="Base",
-                        metadata={"parent_classes": []},
-                    )
-                ]
-            else:
-                return [
-                    CodeChunk(
-                        id="chunk2",
-                        content="class Child(Base): pass",
-                        chunk_type=ChunkType.CLASS,
-                        language=Language.PYTHON,
-                        file_path=file_path,
-                        start_line=1,
-                        end_line=5,
-                        name="Child",
-                        metadata={"parent_classes": ["Base"]},
-                    )
-                ]
-
-        mock_vector_store.get_chunks_by_file = AsyncMock(side_effect=get_chunks)
+        mock_vector_store.get_all_chunks = _make_get_all_chunks(
+            [
+                CodeChunk(
+                    id="chunk1",
+                    content="class Base: pass",
+                    chunk_type=ChunkType.CLASS,
+                    language=Language.PYTHON,
+                    file_path="src/base.py",
+                    start_line=1,
+                    end_line=5,
+                    name="Base",
+                    metadata={"parent_classes": []},
+                ),
+                CodeChunk(
+                    id="chunk2",
+                    content="class Child(Base): pass",
+                    chunk_type=ChunkType.CLASS,
+                    language=Language.PYTHON,
+                    file_path="src/child.py",
+                    start_line=1,
+                    end_line=5,
+                    name="Child",
+                    metadata={"parent_classes": ["Base"]},
+                ),
+            ]
+        )
 
         classes = await collect_class_hierarchy(index_status, mock_vector_store)
 
@@ -540,37 +566,32 @@ class TestCollectClassHierarchy:
             ],
         )
 
-        async def get_chunks(file_path):
-            if file_path == "src/file1.py":
-                return [
-                    CodeChunk(
-                        id="chunk1",
-                        content="class MyClass(Parent1): pass",
-                        chunk_type=ChunkType.CLASS,
-                        language=Language.PYTHON,
-                        file_path=file_path,
-                        start_line=1,
-                        end_line=5,
-                        name="MyClass",
-                        metadata={"parent_classes": ["Parent1"]},
-                    )
-                ]
-            else:
-                return [
-                    CodeChunk(
-                        id="chunk2",
-                        content="class MyClass(Parent2): pass",
-                        chunk_type=ChunkType.CLASS,
-                        language=Language.PYTHON,
-                        file_path=file_path,
-                        start_line=1,
-                        end_line=5,
-                        name="MyClass",
-                        metadata={"parent_classes": ["Parent2"]},
-                    )
-                ]
-
-        mock_vector_store.get_chunks_by_file = AsyncMock(side_effect=get_chunks)
+        mock_vector_store.get_all_chunks = _make_get_all_chunks(
+            [
+                CodeChunk(
+                    id="chunk1",
+                    content="class MyClass(Parent1): pass",
+                    chunk_type=ChunkType.CLASS,
+                    language=Language.PYTHON,
+                    file_path="src/file1.py",
+                    start_line=1,
+                    end_line=5,
+                    name="MyClass",
+                    metadata={"parent_classes": ["Parent1"]},
+                ),
+                CodeChunk(
+                    id="chunk2",
+                    content="class MyClass(Parent2): pass",
+                    chunk_type=ChunkType.CLASS,
+                    language=Language.PYTHON,
+                    file_path="src/file2.py",
+                    start_line=1,
+                    end_line=5,
+                    name="MyClass",
+                    metadata={"parent_classes": ["Parent2"]},
+                ),
+            ]
+        )
 
         classes = await collect_class_hierarchy(index_status, mock_vector_store)
 
@@ -581,8 +602,8 @@ class TestCollectClassHierarchy:
 
     async def test_includes_docstring(self, mock_vector_store, sample_index_status):
         """Test that docstring is included in class node."""
-        mock_vector_store.get_chunks_by_file = AsyncMock(
-            return_value=[
+        mock_vector_store.get_all_chunks = _make_get_all_chunks(
+            [
                 CodeChunk(
                     id="chunk1",
                     content="class MyClass: pass",
@@ -610,7 +631,7 @@ class TestGenerateInheritancePage:
     def mock_vector_store(self):
         """Create a mock vector store."""
         store = MagicMock()
-        store.get_chunks_by_file = AsyncMock(return_value=[])
+        store.get_all_chunks = _make_get_all_chunks([])
         return store
 
     @pytest.fixture
@@ -635,17 +656,15 @@ class TestGenerateInheritancePage:
         self, mock_vector_store, sample_index_status
     ):
         """Test returns None when no classes exist."""
-        result = await generate_inheritance_page(
-            sample_index_status, mock_vector_store
-        )
+        result = await generate_inheritance_page(sample_index_status, mock_vector_store)
         assert result is None
 
     async def test_returns_none_for_no_inheritance(
         self, mock_vector_store, sample_index_status
     ):
         """Test returns None when no internal inheritance exists."""
-        mock_vector_store.get_chunks_by_file = AsyncMock(
-            return_value=[
+        mock_vector_store.get_all_chunks = _make_get_all_chunks(
+            [
                 CodeChunk(
                     id="chunk1",
                     content="class Standalone: pass",
@@ -660,9 +679,7 @@ class TestGenerateInheritancePage:
             ]
         )
 
-        result = await generate_inheritance_page(
-            sample_index_status, mock_vector_store
-        )
+        result = await generate_inheritance_page(sample_index_status, mock_vector_store)
         assert result is None
 
     async def test_generates_page_with_inheritance(self, mock_vector_store):
@@ -688,37 +705,32 @@ class TestGenerateInheritancePage:
             ],
         )
 
-        async def get_chunks(file_path):
-            if file_path == "src/base.py":
-                return [
-                    CodeChunk(
-                        id="chunk1",
-                        content="class Base: pass",
-                        chunk_type=ChunkType.CLASS,
-                        language=Language.PYTHON,
-                        file_path=file_path,
-                        start_line=1,
-                        end_line=5,
-                        name="Base",
-                        metadata={"parent_classes": []},
-                    )
-                ]
-            else:
-                return [
-                    CodeChunk(
-                        id="chunk2",
-                        content="class Child(Base): pass",
-                        chunk_type=ChunkType.CLASS,
-                        language=Language.PYTHON,
-                        file_path=file_path,
-                        start_line=1,
-                        end_line=5,
-                        name="Child",
-                        metadata={"parent_classes": ["Base"]},
-                    )
-                ]
-
-        mock_vector_store.get_chunks_by_file = AsyncMock(side_effect=get_chunks)
+        mock_vector_store.get_all_chunks = _make_get_all_chunks(
+            [
+                CodeChunk(
+                    id="chunk1",
+                    content="class Base: pass",
+                    chunk_type=ChunkType.CLASS,
+                    language=Language.PYTHON,
+                    file_path="src/base.py",
+                    start_line=1,
+                    end_line=5,
+                    name="Base",
+                    metadata={"parent_classes": []},
+                ),
+                CodeChunk(
+                    id="chunk2",
+                    content="class Child(Base): pass",
+                    chunk_type=ChunkType.CLASS,
+                    language=Language.PYTHON,
+                    file_path="src/child.py",
+                    start_line=1,
+                    end_line=5,
+                    name="Child",
+                    metadata={"parent_classes": ["Base"]},
+                ),
+            ]
+        )
 
         result = await generate_inheritance_page(index_status, mock_vector_store)
 
@@ -748,37 +760,32 @@ class TestGenerateInheritancePage:
             ],
         )
 
-        async def get_chunks(file_path):
-            if file_path == "src/base.py":
-                return [
-                    CodeChunk(
-                        id="chunk1",
-                        content="class Base: pass",
-                        chunk_type=ChunkType.CLASS,
-                        language=Language.PYTHON,
-                        file_path=file_path,
-                        start_line=1,
-                        end_line=5,
-                        name="Base",
-                        metadata={"parent_classes": []},
-                    )
-                ]
-            else:
-                return [
-                    CodeChunk(
-                        id="chunk2",
-                        content="class Child(Base): pass",
-                        chunk_type=ChunkType.CLASS,
-                        language=Language.PYTHON,
-                        file_path=file_path,
-                        start_line=1,
-                        end_line=5,
-                        name="Child",
-                        metadata={"parent_classes": ["Base"]},
-                    )
-                ]
-
-        mock_vector_store.get_chunks_by_file = AsyncMock(side_effect=get_chunks)
+        mock_vector_store.get_all_chunks = _make_get_all_chunks(
+            [
+                CodeChunk(
+                    id="chunk1",
+                    content="class Base: pass",
+                    chunk_type=ChunkType.CLASS,
+                    language=Language.PYTHON,
+                    file_path="src/base.py",
+                    start_line=1,
+                    end_line=5,
+                    name="Base",
+                    metadata={"parent_classes": []},
+                ),
+                CodeChunk(
+                    id="chunk2",
+                    content="class Child(Base): pass",
+                    chunk_type=ChunkType.CLASS,
+                    language=Language.PYTHON,
+                    file_path="src/child.py",
+                    start_line=1,
+                    end_line=5,
+                    name="Child",
+                    metadata={"parent_classes": ["Base"]},
+                ),
+            ]
+        )
 
         result = await generate_inheritance_page(index_status, mock_vector_store)
 
@@ -808,37 +815,32 @@ class TestGenerateInheritancePage:
             ],
         )
 
-        async def get_chunks(file_path):
-            if file_path == "src/base.py":
-                return [
-                    CodeChunk(
-                        id="chunk1",
-                        content="class Base: pass",
-                        chunk_type=ChunkType.CLASS,
-                        language=Language.PYTHON,
-                        file_path=file_path,
-                        start_line=1,
-                        end_line=5,
-                        name="Base",
-                        metadata={"parent_classes": []},
-                    )
-                ]
-            else:
-                return [
-                    CodeChunk(
-                        id="chunk2",
-                        content="class Child(Base): pass",
-                        chunk_type=ChunkType.CLASS,
-                        language=Language.PYTHON,
-                        file_path=file_path,
-                        start_line=1,
-                        end_line=5,
-                        name="Child",
-                        metadata={"parent_classes": ["Base"]},
-                    )
-                ]
-
-        mock_vector_store.get_chunks_by_file = AsyncMock(side_effect=get_chunks)
+        mock_vector_store.get_all_chunks = _make_get_all_chunks(
+            [
+                CodeChunk(
+                    id="chunk1",
+                    content="class Base: pass",
+                    chunk_type=ChunkType.CLASS,
+                    language=Language.PYTHON,
+                    file_path="src/base.py",
+                    start_line=1,
+                    end_line=5,
+                    name="Base",
+                    metadata={"parent_classes": []},
+                ),
+                CodeChunk(
+                    id="chunk2",
+                    content="class Child(Base): pass",
+                    chunk_type=ChunkType.CLASS,
+                    language=Language.PYTHON,
+                    file_path="src/child.py",
+                    start_line=1,
+                    end_line=5,
+                    name="Child",
+                    metadata={"parent_classes": ["Base"]},
+                ),
+            ]
+        )
 
         result = await generate_inheritance_page(index_status, mock_vector_store)
 
@@ -867,37 +869,32 @@ class TestGenerateInheritancePage:
             ],
         )
 
-        async def get_chunks(file_path):
-            if file_path == "src/base.py":
-                return [
-                    CodeChunk(
-                        id="chunk1",
-                        content="class Base: pass",
-                        chunk_type=ChunkType.CLASS,
-                        language=Language.PYTHON,
-                        file_path=file_path,
-                        start_line=1,
-                        end_line=5,
-                        name="Base",
-                        metadata={"parent_classes": []},
-                    )
-                ]
-            else:
-                return [
-                    CodeChunk(
-                        id="chunk2",
-                        content="class Child(Base): pass",
-                        chunk_type=ChunkType.CLASS,
-                        language=Language.PYTHON,
-                        file_path=file_path,
-                        start_line=1,
-                        end_line=5,
-                        name="Child",
-                        metadata={"parent_classes": ["Base"]},
-                    )
-                ]
-
-        mock_vector_store.get_chunks_by_file = AsyncMock(side_effect=get_chunks)
+        mock_vector_store.get_all_chunks = _make_get_all_chunks(
+            [
+                CodeChunk(
+                    id="chunk1",
+                    content="class Base: pass",
+                    chunk_type=ChunkType.CLASS,
+                    language=Language.PYTHON,
+                    file_path="src/base.py",
+                    start_line=1,
+                    end_line=5,
+                    name="Base",
+                    metadata={"parent_classes": []},
+                ),
+                CodeChunk(
+                    id="chunk2",
+                    content="class Child(Base): pass",
+                    chunk_type=ChunkType.CLASS,
+                    language=Language.PYTHON,
+                    file_path="src/child.py",
+                    start_line=1,
+                    end_line=5,
+                    name="Child",
+                    metadata={"parent_classes": ["Base"]},
+                ),
+            ]
+        )
 
         result = await generate_inheritance_page(index_status, mock_vector_store)
 

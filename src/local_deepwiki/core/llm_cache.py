@@ -359,10 +359,12 @@ class LLMCache:
                 f"Cache has {count} entries (max: {self.config.max_entries}), evicting..."
             )
 
-            # Fetch all entries for eviction analysis
-            # Limit to 2x max_entries to avoid memory issues on very large caches
+            # Fetch only eviction-relevant columns (skip large vector/response fields)
+            eviction_columns = ["id", "created_at", "ttl_seconds", "last_hit_at"]
             fetch_limit = min(count, self.config.max_entries * 2)
-            all_entries = table.search().limit(fetch_limit).to_list()
+            all_entries = (
+                table.search().select(eviction_columns).limit(fetch_limit).to_list()
+            )
 
             # Phase 1: Identify and delete expired entries
             expired_ids = []
