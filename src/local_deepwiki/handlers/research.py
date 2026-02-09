@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Awaitable, Callable
 
+from mcp.server import Server
 from mcp.types import TextContent
 from pydantic import ValidationError as PydanticValidationError
 
@@ -42,7 +43,7 @@ class _DeepResearchContext:
         question: str,
         max_chunks: int,
         preset: str | None,
-        server: Any,
+        server: Server | None,
         resume_research_id: str | None = None,
     ):
         self.repo_path = repo_path
@@ -58,7 +59,7 @@ class _DeepResearchContext:
 
 def _setup_deep_research_config(
     args: dict[str, Any],
-    server: Any = None,
+    server: Server | None = None,
 ) -> _DeepResearchContext:
     """Handle config setup and input validation for deep research.
 
@@ -320,7 +321,7 @@ async def _execute_research_phases(
 
 async def _handle_deep_research_impl(
     args: dict[str, Any],
-    server: Any = None,
+    server: Server | None = None,
 ) -> list[TextContent]:
     """Internal implementation of deep_research handler.
 
@@ -365,7 +366,7 @@ async def _handle_deep_research_impl(
 @handle_tool_errors
 async def handle_deep_research(
     args: dict[str, Any],
-    server: Any = None,
+    server: Server | None = None,
 ) -> list[TextContent]:
     """Handle deep_research tool call for multi-step reasoning.
 
@@ -497,7 +498,7 @@ async def handle_cancel_research(args: dict[str, Any]) -> list[TextContent]:
 @handle_tool_errors
 async def handle_resume_research(
     args: dict[str, Any],
-    server: Any = None,
+    server: Server | None = None,
 ) -> list[TextContent]:
     """Handle resume_research tool call.
 

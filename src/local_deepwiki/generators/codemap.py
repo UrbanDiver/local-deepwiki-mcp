@@ -12,7 +12,11 @@ from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from local_deepwiki.core.vectorstore import VectorStore
+    from local_deepwiki.providers.base import LLMProvider
 
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import ChunkType, CodeChunk
@@ -201,7 +205,7 @@ def _extract_param_names(content: str) -> list[str]:
 
 async def discover_entry_points(
     query: str,
-    vector_store: Any,
+    vector_store: "VectorStore",
     repo_path: Path,
     entry_point_hint: str | None = None,
     max_candidates: int = 5,
@@ -216,7 +220,7 @@ async def discover_entry_points(
         from local_deepwiki.generators.callgraph import CallGraphExtractor
     except ImportError:  # pragma: no cover
         logger.warning("Could not import CallGraphExtractor")
-        CallGraphExtractor = None  # type: ignore[assignment,misc]
+        CallGraphExtractor = None  # type: ignore[assignment]  # fallback if callgraph module unavailable
 
     search_query = entry_point_hint if entry_point_hint else query
     try:
@@ -303,7 +307,7 @@ async def discover_entry_points(
 
 async def build_cross_file_graph(
     entry_nodes: list[CodemapNode],
-    vector_store: Any,
+    vector_store: "VectorStore",
     repo_path: Path,
     max_depth: int = 4,
     max_nodes: int = 40,
@@ -318,7 +322,7 @@ async def build_cross_file_graph(
         from local_deepwiki.generators.callgraph import CallGraphExtractor
     except ImportError:  # pragma: no cover
         logger.warning("Could not import CallGraphExtractor")
-        CallGraphExtractor = None  # type: ignore[assignment,misc]
+        CallGraphExtractor = None  # type: ignore[assignment]  # fallback if callgraph module unavailable
 
     graph = CodemapGraph()
 
@@ -444,7 +448,7 @@ async def build_cross_file_graph(
 
 async def _import_based_callees(
     node: CodemapNode,
-    vector_store: Any,
+    vector_store: "VectorStore",
     repo_path: Path,
     existing: list[str],
 ) -> list[str]:
@@ -500,7 +504,7 @@ def _find_in_same_file(
 
 async def _search_cross_file(
     callee_name: str,
-    vector_store: Any,
+    vector_store: "VectorStore",
     repo_path: Path,
     source_file: str,
 ) -> CodemapNode | None:
@@ -685,7 +689,7 @@ async def generate_codemap_narrative(
     graph: CodemapGraph,
     query: str,
     focus: CodemapFocus,
-    llm: Any,
+    llm: "LLMProvider",
 ) -> str:
     """Use *llm* to synthesise a narrative trace for the codemap."""
     if not graph.nodes:
@@ -795,9 +799,9 @@ def _bfs_ordered_nodes(graph: CodemapGraph) -> list[CodemapNode]:
 
 async def generate_codemap(
     query: str,
-    vector_store: Any,
+    vector_store: "VectorStore",
     repo_path: Path,
-    llm: Any,
+    llm: "LLMProvider",
     entry_point: str | None = None,
     focus: CodemapFocus = CodemapFocus.EXECUTION_FLOW,
     max_depth: int = 4,
@@ -880,7 +884,7 @@ async def generate_codemap(
 
 
 async def suggest_topics(
-    vector_store: Any,
+    vector_store: "VectorStore",
     repo_path: Path,
     max_suggestions: int = 8,
 ) -> list[dict[str, Any]]:

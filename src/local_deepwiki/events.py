@@ -85,8 +85,12 @@ class HandlerLifecycle:
 
     on_register: Callable[[str, str], None] | None = None  # event_type, handler_id
     on_success: Callable[[str, str], None] | None = None  # event_type, handler_id
-    on_error: Callable[[str, str, Exception], None] | None = None  # event_type, handler_id, exception
-    on_deregister: Callable[[str, str, str], None] | None = None  # event_type, handler_id, reason
+    on_error: Callable[[str, str, Exception], None] | None = (
+        None  # event_type, handler_id, exception
+    )
+    on_deregister: Callable[[str, str, str], None] | None = (
+        None  # event_type, handler_id, reason
+    )
 
 
 @dataclass
@@ -171,7 +175,9 @@ class EventEmitter:
         self._global_handlers: list[HandlerEntry] = []
         self._max_consecutive_errors = max_consecutive_errors
         self._handler_stats: dict[str, HandlerStats] = {}
-        self._handler_event_map: dict[str, EventType | None] = {}  # handler_id -> event_type
+        self._handler_event_map: dict[
+            str, EventType | None
+        ] = {}  # handler_id -> event_type
         self._lifecycle = lifecycle or HandlerLifecycle()
 
     def on(
@@ -241,7 +247,9 @@ class EventEmitter:
                 )
 
         # Initialize stats for this handler
-        self._handler_stats[entry.handler_id] = HandlerStats(handler_id=entry.handler_id)
+        self._handler_stats[entry.handler_id] = HandlerStats(
+            handler_id=entry.handler_id
+        )
 
         if event_type is None:
             self._global_handlers.append(entry)
@@ -266,7 +274,11 @@ class EventEmitter:
         # Call lifecycle hook
         if self._lifecycle.on_register:
             try:
-                event_str = event_type.value if isinstance(event_type, EventType) else str(event_type)
+                event_str = (
+                    event_type.value
+                    if isinstance(event_type, EventType)
+                    else str(event_type)
+                )
                 self._lifecycle.on_register(event_str, entry.handler_id)
             except Exception as e:
                 logger.error(f"Error in on_register lifecycle hook: {e}")
@@ -351,7 +363,9 @@ class EventEmitter:
                 for i, entry in enumerate(self._handlers[event_type]):
                     if entry.handler_id == handler_id:
                         self._handlers[event_type].pop(i)
-                        self._cleanup_handler_stats(handler_id, event_type.value, reason)
+                        self._cleanup_handler_stats(
+                            handler_id, event_type.value, reason
+                        )
                         return True
 
         return False
@@ -497,17 +511,19 @@ class EventEmitter:
             try:
                 if entry.is_async:
                     # Cast to async handler for type checker
-                    async_handler: AsyncHandler = handler  # type: ignore[assignment]
+                    async_handler: AsyncHandler = handler  # type: ignore[assignment]  # narrowed by iscoroutinefunction
                     await async_handler(event)
                 else:
-                    sync_handler: SyncHandler = handler  # type: ignore[assignment]
+                    sync_handler: SyncHandler = handler  # type: ignore[assignment]  # narrowed by is_async check
                     sync_handler(event)
 
                 # Track success
                 self._track_handler_result(entry.handler_id, event_type, success=True)
 
             except Exception as e:
-                logger.error(f"Error in event handler {entry.handler_id} for {event_type}: {e}")
+                logger.error(
+                    f"Error in event handler {entry.handler_id} for {event_type}: {e}"
+                )
                 # Track error
                 self._track_handler_result(
                     entry.handler_id, event_type, success=False, error=str(e)
@@ -530,7 +546,11 @@ class EventEmitter:
 
         # Deregister handlers marked for removal
         for handler_id in handlers_to_deregister:
-            reason = "consecutive_errors" if self._should_deregister(handler_id) else "weak_ref_collected"
+            reason = (
+                "consecutive_errors"
+                if self._should_deregister(handler_id)
+                else "weak_ref_collected"
+            )
             self._deregister_handler_by_id(handler_id, reason=reason)
 
         return event
@@ -607,14 +627,16 @@ class EventEmitter:
                     )
                     continue
 
-                sync_handler: SyncHandler = handler  # type: ignore[assignment]
+                sync_handler: SyncHandler = handler  # type: ignore[assignment]  # narrowed by is_async check
                 sync_handler(event)
 
                 # Track success
                 self._track_handler_result(entry.handler_id, event_type, success=True)
 
             except Exception as e:
-                logger.error(f"Error in event handler {entry.handler_id} for {event_type}: {e}")
+                logger.error(
+                    f"Error in event handler {entry.handler_id} for {event_type}: {e}"
+                )
                 # Track error
                 self._track_handler_result(
                     entry.handler_id, event_type, success=False, error=str(e)
@@ -637,7 +659,11 @@ class EventEmitter:
 
         # Deregister handlers marked for removal
         for handler_id in handlers_to_deregister:
-            reason = "consecutive_errors" if self._should_deregister(handler_id) else "weak_ref_collected"
+            reason = (
+                "consecutive_errors"
+                if self._should_deregister(handler_id)
+                else "weak_ref_collected"
+            )
             self._deregister_handler_by_id(handler_id, reason=reason)
 
         return event
@@ -835,8 +861,7 @@ class HookRunner:
                 target.relative_to(self._scripts_dir)
             except ValueError:
                 raise ValueError(
-                    f"Symlink target must be within {self._scripts_dir}, "
-                    f"got {target}"
+                    f"Symlink target must be within {self._scripts_dir}, got {target}"
                 )
 
         # Check extension

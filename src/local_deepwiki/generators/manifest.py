@@ -80,7 +80,9 @@ class ProjectManifest:
 
     def has_data(self) -> bool:
         """Check if any meaningful data was extracted."""
-        return bool(self.name or self.dependencies or self.dev_dependencies or self.entry_points)
+        return bool(
+            self.name or self.dependencies or self.dev_dependencies or self.entry_points
+        )
 
     def get_tech_stack_summary(self) -> str:
         """Generate a factual tech stack summary."""
@@ -226,7 +228,9 @@ def _get_manifest_mtimes(repo_path: Path) -> dict[str, float]:
     return mtimes
 
 
-def _is_cache_valid(cache_entry: ManifestCacheEntry, current_mtimes: dict[str, float]) -> bool:
+def _is_cache_valid(
+    cache_entry: ManifestCacheEntry, current_mtimes: dict[str, float]
+) -> bool:
     """Check if cached manifest is still valid.
 
     Args:
@@ -336,7 +340,9 @@ def _manifest_from_dict(data: dict[str, Any]) -> "ProjectManifest":
     )
 
 
-def get_cached_manifest(repo_path: Path, cache_dir: Path | None = None) -> ProjectManifest:
+def get_cached_manifest(
+    repo_path: Path, cache_dir: Path | None = None
+) -> ProjectManifest:
     """Get project manifest, using cache if available and valid.
 
     This function checks if a cached manifest exists and is still valid
@@ -426,7 +432,7 @@ def _parse_pyproject_toml(filepath: Path, manifest: ProjectManifest) -> None:
     try:
         import tomllib
     except ImportError:
-        import tomli as tomllib  # type: ignore
+        import tomli as tomllib  # type: ignore[import-untyped]  # fallback for Python <3.11
 
     content = filepath.read_text()
     data = tomllib.loads(content)
@@ -452,7 +458,9 @@ def _parse_pyproject_toml(filepath: Path, manifest: ProjectManifest) -> None:
     # Authors
     authors = project.get("authors", [])
     manifest.authors = [
-        str(a.get("name") or a.get("email") or "") for a in authors if isinstance(a, dict)
+        str(a.get("name") or a.get("email") or "")
+        for a in authors
+        if isinstance(a, dict)
     ]
 
     # Dependencies
@@ -596,7 +604,7 @@ def _parse_cargo_toml(filepath: Path, manifest: ProjectManifest) -> None:
     try:
         import tomllib
     except ImportError:
-        import tomli as tomllib  # type: ignore
+        import tomli as tomllib  # type: ignore[import-untyped]  # fallback for Python <3.11
 
     content = filepath.read_text()
     data = tomllib.loads(content)
@@ -748,7 +756,9 @@ def _parse_gemfile(filepath: Path, manifest: ProjectManifest) -> None:
 
     # Extract gem dependencies
     # Match: gem 'name' or gem "name", "version"
-    gem_pattern = re.compile(r'gem\s+["\']([^"\']+)["\'](?:\s*,\s*["\']([^"\']+)["\'])?')
+    gem_pattern = re.compile(
+        r'gem\s+["\']([^"\']+)["\'](?:\s*,\s*["\']([^"\']+)["\'])?'
+    )
     for match in gem_pattern.finditer(content):
         name = match.group(1)
         version = match.group(2) or "*"

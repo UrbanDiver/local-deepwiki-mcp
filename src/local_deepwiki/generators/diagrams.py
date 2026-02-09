@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from local_deepwiki.models import ChunkType, IndexStatus
+from local_deepwiki.models import ChunkType, CodeChunk, IndexStatus
 
 
 @dataclass
@@ -40,13 +40,13 @@ def sanitize_mermaid_name(name: str) -> str:
     return result
 
 
-def _unwrap_chunk(chunk: Any) -> Any:
+def _unwrap_chunk(chunk: CodeChunk | Any) -> CodeChunk:
     """Unwrap SearchResult to get the underlying chunk."""
     return chunk.chunk if hasattr(chunk, "chunk") else chunk
 
 
 def _collect_class_from_chunk(
-    chunk: Any,
+    chunk: CodeChunk,
     classes: dict[str, ClassInfo],
     methods_by_class: dict[str, list[tuple[str, str | None]]],
     show_attributes: bool,
@@ -81,7 +81,7 @@ def _collect_class_from_chunk(
 
 
 def _collect_method_from_chunk(
-    chunk: Any,
+    chunk: CodeChunk,
     methods_by_class: dict[str, list[tuple[str, str | None]]],
     show_types: bool,
 ) -> None:

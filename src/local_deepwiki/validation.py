@@ -24,7 +24,7 @@ MAX_WIKI_PAGE_SIZE = 10 * 1024 * 1024  # 10 MB
 
 
 def validate_positive_int(
-    value: Any, name: str, min_val: int, max_val: int, default: int
+    value: int | None, name: str, min_val: int, max_val: int, default: int
 ) -> int:
     """Validate and bound an integer parameter.
 
@@ -48,7 +48,7 @@ def validate_positive_int(
     return max(min_val, min(max_val, value))
 
 
-def validate_non_empty_string(value: Any, name: str) -> str:
+def validate_non_empty_string(value: str | None, name: str) -> str:
     """Validate that a string is non-empty.
 
     Args:

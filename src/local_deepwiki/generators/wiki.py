@@ -112,7 +112,7 @@ class WikiGenerator:
 
         # Create a copy with overridden LLM provider if specified
         if llm_provider_name:
-            self.config = base_config.with_llm_provider(llm_provider_name)  # type: ignore
+            self.config = base_config.with_llm_provider(llm_provider_name)
         else:
             # Store a defensive copy to prevent external mutation
             self.config = base_config.model_copy(deep=True)

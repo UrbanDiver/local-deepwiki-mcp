@@ -184,7 +184,9 @@ class AccessController:
         if not subject or not subject.identifier:
             raise AuthenticationException("Invalid subject: identifier is required")
         if not subject.roles:
-            raise AuthenticationException("Invalid subject: at least one role is required")
+            raise AuthenticationException(
+                "Invalid subject: at least one role is required"
+            )
         self._current_subject = subject
 
     def clear_subject(self) -> None:
@@ -367,21 +369,23 @@ def require_permission(permission: Permission) -> Callable[[F], F]:
 
     def decorator(func: F) -> F:
         if asyncio.iscoroutinefunction(func):
+
             @wraps(func)
             async def async_wrapper(*args, **kwargs):
                 controller = get_access_controller()
                 controller.require_permission(permission)
                 return await func(*args, **kwargs)
 
-            return async_wrapper  # type: ignore
+            return async_wrapper  # type: ignore[return-value]
         else:
+
             @wraps(func)
             def sync_wrapper(*args, **kwargs):
                 controller = get_access_controller()
                 controller.require_permission(permission)
                 return func(*args, **kwargs)
 
-            return sync_wrapper  # type: ignore
+            return sync_wrapper  # type: ignore[return-value]
 
     return decorator
 
@@ -404,21 +408,23 @@ def require_any_permission(*permissions: Permission) -> Callable[[F], F]:
 
     def decorator(func: F) -> F:
         if asyncio.iscoroutinefunction(func):
+
             @wraps(func)
             async def async_wrapper(*args, **kwargs):
                 controller = get_access_controller()
                 controller.require_any_permission(*permissions)
                 return await func(*args, **kwargs)
 
-            return async_wrapper  # type: ignore
+            return async_wrapper  # type: ignore[return-value]
         else:
+
             @wraps(func)
             def sync_wrapper(*args, **kwargs):
                 controller = get_access_controller()
                 controller.require_any_permission(*permissions)
                 return func(*args, **kwargs)
 
-            return sync_wrapper  # type: ignore
+            return sync_wrapper  # type: ignore[return-value]
 
     return decorator
 
@@ -441,20 +447,22 @@ def require_all_permissions(*permissions: Permission) -> Callable[[F], F]:
 
     def decorator(func: F) -> F:
         if asyncio.iscoroutinefunction(func):
+
             @wraps(func)
             async def async_wrapper(*args, **kwargs):
                 controller = get_access_controller()
                 controller.require_all_permissions(*permissions)
                 return await func(*args, **kwargs)
 
-            return async_wrapper  # type: ignore
+            return async_wrapper  # type: ignore[return-value]
         else:
+
             @wraps(func)
             def sync_wrapper(*args, **kwargs):
                 controller = get_access_controller()
                 controller.require_all_permissions(*permissions)
                 return func(*args, **kwargs)
 
-            return sync_wrapper  # type: ignore
+            return sync_wrapper  # type: ignore[return-value]
 
     return decorator

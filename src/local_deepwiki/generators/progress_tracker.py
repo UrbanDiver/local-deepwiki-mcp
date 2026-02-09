@@ -5,7 +5,7 @@ import time
 from collections import deque
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, TextIO
 
 
 def _format_duration(seconds: float) -> str:
@@ -73,7 +73,7 @@ class GenerationProgress:
     _phase_stats: dict[str, PhaseStats] = field(default_factory=dict)
 
     # Log file handle
-    _log_file: Any = field(default=None, repr=False)
+    _log_file: TextIO | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
         """Initialize log file."""
@@ -180,7 +180,9 @@ class GenerationProgress:
             duration = _format_duration(stats.duration_seconds)
             rate = stats.rate_per_minute
             rate_str = f", {rate:.1f}/min" if rate else ""
-            self._log(f"[{self.phase}] Complete ({stats.items_completed} items, {duration}{rate_str})")
+            self._log(
+                f"[{self.phase}] Complete ({stats.items_completed} items, {duration}{rate_str})"
+            )
 
         self.current_file = None
         self._write_status()
@@ -218,13 +220,17 @@ class GenerationProgress:
             "phase": self.phase,
             "completed": self.completed_files,
             "total": self.total_files,
-            "percent": round(100 * self.completed_files / self.total_files, 1) if self.total_files > 0 else 0,
+            "percent": round(100 * self.completed_files / self.total_files, 1)
+            if self.total_files > 0
+            else 0,
             "current_file": self.current_file,
             "rate_per_minute": round(rate, 2) if rate > 0 else None,
             "eta_minutes": round(eta, 1) if eta is not None else None,
             "elapsed_phase_seconds": round(elapsed_phase, 1),
             "elapsed_total_seconds": round(elapsed_total, 1),
-            "started_at_iso": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(self.started_at)),
+            "started_at_iso": time.strftime(
+                "%Y-%m-%dT%H:%M:%S", time.localtime(self.started_at)
+            ),
         }
 
     def _write_status(self) -> None:
@@ -263,16 +269,22 @@ class GenerationProgress:
             duration = _format_duration(stats.duration_seconds)
             rate = stats.rate_per_minute
             rate_str = f", {rate:.1f}/min" if rate and rate < 1000 else ""
-            items_str = f" ({stats.items_completed} pages{rate_str})" if stats.items_completed > 0 else ""
+            items_str = (
+                f" ({stats.items_completed} pages{rate_str})"
+                if stats.items_completed > 0
+                else ""
+            )
             lines.append(f"  - {phase_name}: {duration}{items_str}")
             total_items += stats.items_completed
 
-        lines.extend([
-            "",
-            f"  Total pages: {total_items}",
-            "=" * 50,
-            "",
-        ])
+        lines.extend(
+            [
+                "",
+                f"  Total pages: {total_items}",
+                "=" * 50,
+                "",
+            ]
+        )
 
         return "\n".join(lines)
 
@@ -302,14 +314,18 @@ class GenerationProgress:
         # Write final status
         status = self.to_dict()
         status["success"] = success
-        status["completed_at_iso"] = time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime())
+        status["completed_at_iso"] = time.strftime(
+            "%Y-%m-%dT%H:%M:%S", time.localtime()
+        )
 
         # Add phase stats to final status
         status["phases"] = {
             name: {
                 "duration_seconds": round(stats.duration_seconds, 1),
                 "items_completed": stats.items_completed,
-                "rate_per_minute": round(stats.rate_per_minute, 2) if stats.rate_per_minute else None,
+                "rate_per_minute": round(stats.rate_per_minute, 2)
+                if stats.rate_per_minute
+                else None,
             }
             for name, stats in self._phase_stats.items()
         }

@@ -72,9 +72,7 @@ class LocalEmbeddingProvider(EmbeddingProvider):
         """
         model = self._load_model()
         # Run CPU-bound encoding in thread pool to avoid blocking async event loop
-        embeddings = await asyncio.to_thread(
-            model.encode, texts, convert_to_numpy=True
-        )
+        embeddings = await asyncio.to_thread(model.encode, texts, convert_to_numpy=True)
         return cast(list[list[float]], embeddings.tolist())
 
     def get_dimension(self) -> int:
@@ -85,7 +83,7 @@ class LocalEmbeddingProvider(EmbeddingProvider):
         """
         if self._dimension is None:
             self._load_model()
-        return self._dimension  # type: ignore
+        return self._dimension  # type: ignore[return-value]  # _dimension set in __init__ but type checker doesn't track it
 
     async def validate_connectivity(self) -> bool:
         """Test that the model can be loaded and used.

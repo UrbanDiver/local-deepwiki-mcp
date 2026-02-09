@@ -9,9 +9,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Awaitable, Callable
 
 if TYPE_CHECKING:
-    from local_deepwiki.core.deep_research import DeepResearchPipeline
+    from local_deepwiki.core.deep_research import DeepResearchPipeline, ResearchResult
     from local_deepwiki.models import IndexingProgress, ResearchProgress
 
+from mcp.server import Server
 from mcp.types import TextContent
 from pydantic import ValidationError as PydanticValidationError
 
@@ -254,7 +255,9 @@ def handle_tool_errors(func: ToolHandler) -> ToolHandler:
     """
 
     @wraps(func)
-    async def wrapper(args: dict[str, Any], **kwargs: Any) -> list[TextContent]:
+    async def wrapper(
+        args: dict[str, Any], **kwargs: dict[str, Any]
+    ) -> list[TextContent]:
         try:
             return await func(args, **kwargs)
         except AccessDeniedException as e:
@@ -350,7 +353,7 @@ def _load_index_status(repo_path: Path) -> tuple[Any, Path, Any]:
     return index_status, wiki_path, config
 
 
-def _format_research_results(result: Any) -> dict[str, Any]:
+def _format_research_results(result: "ResearchResult") -> dict[str, Any]:
     """Format the research results for return.
 
     Args:
@@ -401,7 +404,7 @@ class ProgressNotifier:
     def __init__(
         self,
         progress_manager: ProgressManager,
-        server: Any,
+        server: Server | None,
         progress_token: str | int | None,
         buffer_interval: float = 0.5,
     ):
@@ -506,7 +509,7 @@ class ProgressNotifier:
 
 def create_progress_notifier(
     operation_type: OperationType,
-    server: Any,
+    server: Server | None,
     total: int | None = None,
 ) -> tuple[ProgressNotifier | None, str]:
     """Create a ProgressNotifier for an MCP operation.
