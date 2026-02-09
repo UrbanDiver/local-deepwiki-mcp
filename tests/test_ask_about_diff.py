@@ -14,7 +14,7 @@ from local_deepwiki.models import AskAboutDiffArgs
 @pytest.fixture
 def mock_access_control():
     """Mock the RBAC access controller."""
-    with patch("local_deepwiki.handlers.get_access_controller") as mock:
+    with patch("local_deepwiki.handlers.analysis.get_access_controller") as mock:
         controller = MagicMock()
         mock.return_value = controller
         yield controller
@@ -105,15 +105,17 @@ async def test_ask_about_diff_basic(mock_access_control, git_repo):
     mocks = _build_mock_context(git_repo)
 
     with (
-        patch("local_deepwiki.handlers.get_config", return_value=mocks["config"]),
-        patch("local_deepwiki.handlers.get_embedding_provider") as mock_embed,
-        patch("local_deepwiki.handlers.VectorStore"),
+        patch(
+            "local_deepwiki.handlers.analysis.get_config", return_value=mocks["config"]
+        ),
+        patch("local_deepwiki.handlers.analysis.get_embedding_provider") as mock_embed,
+        patch("local_deepwiki.handlers.analysis.VectorStore"),
         patch(
             "local_deepwiki.providers.llm.get_cached_llm_provider",
             return_value=mocks["llm"],
         ),
         patch(
-            "local_deepwiki.handlers.get_rate_limiter",
+            "local_deepwiki.handlers.analysis.get_rate_limiter",
             return_value=mocks["rate_limiter"],
         ),
     ):
@@ -140,15 +142,17 @@ async def test_ask_about_diff_no_changes(mock_access_control, git_repo):
     mocks = _build_mock_context(git_repo)
 
     with (
-        patch("local_deepwiki.handlers.get_config", return_value=mocks["config"]),
-        patch("local_deepwiki.handlers.get_embedding_provider"),
-        patch("local_deepwiki.handlers.VectorStore"),
+        patch(
+            "local_deepwiki.handlers.analysis.get_config", return_value=mocks["config"]
+        ),
+        patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
+        patch("local_deepwiki.handlers.analysis.VectorStore"),
         patch(
             "local_deepwiki.providers.llm.get_cached_llm_provider",
             return_value=mocks["llm"],
         ),
         patch(
-            "local_deepwiki.handlers.get_rate_limiter",
+            "local_deepwiki.handlers.analysis.get_rate_limiter",
             return_value=mocks["rate_limiter"],
         ),
     ):
@@ -205,10 +209,10 @@ async def test_ask_about_diff_with_vector_context(mock_access_control, git_repo)
     mock_vector_store.search = AsyncMock(return_value=[mock_search_result])
 
     with (
-        patch("local_deepwiki.handlers.get_config", return_value=mock_config),
-        patch("local_deepwiki.handlers.get_embedding_provider"),
+        patch("local_deepwiki.handlers.analysis.get_config", return_value=mock_config),
+        patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
         patch(
-            "local_deepwiki.handlers.VectorStore",
+            "local_deepwiki.handlers.analysis.VectorStore",
             return_value=mock_vector_store,
         ),
         patch(
@@ -216,7 +220,7 @@ async def test_ask_about_diff_with_vector_context(mock_access_control, git_repo)
             return_value=mock_llm,
         ),
         patch(
-            "local_deepwiki.handlers.get_rate_limiter",
+            "local_deepwiki.handlers.analysis.get_rate_limiter",
             return_value=mock_rate_limiter,
         ),
     ):
@@ -239,15 +243,17 @@ async def test_ask_about_diff_no_vector_store(mock_access_control, git_repo):
     mocks = _build_mock_context(git_repo)
 
     with (
-        patch("local_deepwiki.handlers.get_config", return_value=mocks["config"]),
-        patch("local_deepwiki.handlers.get_embedding_provider"),
-        patch("local_deepwiki.handlers.VectorStore"),
+        patch(
+            "local_deepwiki.handlers.analysis.get_config", return_value=mocks["config"]
+        ),
+        patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
+        patch("local_deepwiki.handlers.analysis.VectorStore"),
         patch(
             "local_deepwiki.providers.llm.get_cached_llm_provider",
             return_value=mocks["llm"],
         ),
         patch(
-            "local_deepwiki.handlers.get_rate_limiter",
+            "local_deepwiki.handlers.analysis.get_rate_limiter",
             return_value=mocks["rate_limiter"],
         ),
     ):
@@ -362,15 +368,17 @@ async def test_ask_about_diff_truncates_large_diff(mock_access_control, git_repo
     )
 
     with (
-        patch("local_deepwiki.handlers.get_config", return_value=mocks["config"]),
-        patch("local_deepwiki.handlers.get_embedding_provider"),
-        patch("local_deepwiki.handlers.VectorStore"),
+        patch(
+            "local_deepwiki.handlers.analysis.get_config", return_value=mocks["config"]
+        ),
+        patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
+        patch("local_deepwiki.handlers.analysis.VectorStore"),
         patch(
             "local_deepwiki.providers.llm.get_cached_llm_provider",
             return_value=mocks["llm"],
         ),
         patch(
-            "local_deepwiki.handlers.get_rate_limiter",
+            "local_deepwiki.handlers.analysis.get_rate_limiter",
             return_value=mocks["rate_limiter"],
         ),
     ):
@@ -390,3 +398,619 @@ async def test_ask_about_diff_truncates_large_diff(mock_access_control, git_repo
     call_args = mocks["llm"].generate.call_args
     prompt_sent = call_args[0][0]
     assert "diff truncated" in prompt_sent
+
+
+async def test_ask_about_diff_custom_refs(mock_access_control, git_repo):
+    """Custom base_ref and head_ref should be passed through correctly."""
+    mocks = _build_mock_context(git_repo)
+
+    with (
+        patch(
+            "local_deepwiki.handlers.analysis.get_config", return_value=mocks["config"]
+        ),
+        patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
+        patch("local_deepwiki.handlers.analysis.VectorStore"),
+        patch(
+            "local_deepwiki.providers.llm.get_cached_llm_provider",
+            return_value=mocks["llm"],
+        ),
+        patch(
+            "local_deepwiki.handlers.analysis.get_rate_limiter",
+            return_value=mocks["rate_limiter"],
+        ),
+    ):
+        result = await handle_ask_about_diff(
+            {
+                "repo_path": str(git_repo),
+                "question": "What changed?",
+                "base_ref": "HEAD~1",
+                "head_ref": "HEAD",
+            }
+        )
+
+    data = json.loads(result[0].text)
+    assert data["status"] == "success"
+    assert data["base_ref"] == "HEAD~1"
+    assert data["head_ref"] == "HEAD"
+
+
+async def test_ask_about_diff_invalid_head_ref(mock_access_control, git_repo):
+    """Shell injection attempt in head_ref should also be rejected."""
+    result = await handle_ask_about_diff(
+        {
+            "repo_path": str(git_repo),
+            "question": "What changed?",
+            "head_ref": "HEAD && echo pwned",
+        }
+    )
+
+    text = result[0].text
+    assert "Invalid git ref" in text
+
+
+async def test_ask_about_diff_non_git_repo(mock_access_control, tmp_path):
+    """A directory that is not a git repo should produce an error from git diff."""
+    mocks = _build_mock_context(tmp_path)
+
+    with (
+        patch(
+            "local_deepwiki.handlers.analysis.get_config", return_value=mocks["config"]
+        ),
+        patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
+        patch("local_deepwiki.handlers.analysis.VectorStore"),
+        patch(
+            "local_deepwiki.providers.llm.get_cached_llm_provider",
+            return_value=mocks["llm"],
+        ),
+        patch(
+            "local_deepwiki.handlers.analysis.get_rate_limiter",
+            return_value=mocks["rate_limiter"],
+        ),
+    ):
+        result = await handle_ask_about_diff(
+            {
+                "repo_path": str(tmp_path),
+                "question": "What changed?",
+            }
+        )
+
+    data = json.loads(result[0].text)
+    assert data["status"] == "error"
+    assert "git diff failed" in data["error"]
+
+
+async def test_ask_about_diff_git_timeout(mock_access_control, git_repo):
+    """When git diff times out, a timeout error should be returned."""
+    import subprocess as sp
+
+    with patch(
+        "subprocess.run",
+        side_effect=sp.TimeoutExpired(cmd="git diff", timeout=30),
+    ):
+        result = await handle_ask_about_diff(
+            {
+                "repo_path": str(git_repo),
+                "question": "What changed?",
+            }
+        )
+
+    data = json.loads(result[0].text)
+    assert data["status"] == "error"
+    assert "timed out" in data["error"]
+
+
+async def test_ask_about_diff_llm_failure(mock_access_control, git_repo):
+    """When the LLM provider raises, the error should propagate."""
+    mocks = _build_mock_context(git_repo)
+    mocks["llm"].generate = AsyncMock(side_effect=RuntimeError("LLM unavailable"))
+
+    with (
+        patch(
+            "local_deepwiki.handlers.analysis.get_config", return_value=mocks["config"]
+        ),
+        patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
+        patch("local_deepwiki.handlers.analysis.VectorStore"),
+        patch(
+            "local_deepwiki.providers.llm.get_cached_llm_provider",
+            return_value=mocks["llm"],
+        ),
+        patch(
+            "local_deepwiki.handlers.analysis.get_rate_limiter",
+            return_value=mocks["rate_limiter"],
+        ),
+    ):
+        result = await handle_ask_about_diff(
+            {
+                "repo_path": str(git_repo),
+                "question": "What changed?",
+            }
+        )
+
+    text = result[0].text
+    assert "Error" in text or "error" in text.lower()
+
+
+async def test_ask_about_diff_vector_search_empty(mock_access_control, git_repo):
+    """Vector store exists but returns no results -- should still answer."""
+    vector_db_dir = git_repo / "vectordb_empty"
+    vector_db_dir.mkdir()
+
+    mock_config = MagicMock()
+    mock_config.get_vector_db_path.return_value = vector_db_dir
+    mock_config.get_wiki_path.return_value = git_repo / ".deepwiki"
+    mock_config.llm_cache = MagicMock()
+    mock_config.llm = MagicMock()
+    mock_config.embedding = MagicMock()
+
+    mock_llm = AsyncMock()
+    mock_llm.generate = AsyncMock(return_value="Answer without context.")
+
+    mock_rate_limiter = AsyncMock()
+    mock_rate_limiter.__aenter__ = AsyncMock(return_value=None)
+    mock_rate_limiter.__aexit__ = AsyncMock(return_value=None)
+
+    mock_vector_store = AsyncMock()
+    mock_vector_store.search = AsyncMock(return_value=[])
+
+    with (
+        patch("local_deepwiki.handlers.analysis.get_config", return_value=mock_config),
+        patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
+        patch(
+            "local_deepwiki.handlers.analysis.VectorStore",
+            return_value=mock_vector_store,
+        ),
+        patch(
+            "local_deepwiki.providers.llm.get_cached_llm_provider",
+            return_value=mock_llm,
+        ),
+        patch(
+            "local_deepwiki.handlers.analysis.get_rate_limiter",
+            return_value=mock_rate_limiter,
+        ),
+    ):
+        result = await handle_ask_about_diff(
+            {
+                "repo_path": str(git_repo),
+                "question": "What is the purpose of this change?",
+            }
+        )
+
+    data = json.loads(result[0].text)
+    assert data["status"] == "success"
+    assert data["sources"] == []
+    assert data["answer"] == "Answer without context."
+
+
+async def test_ask_about_diff_multiple_files(mock_access_control, git_repo):
+    """Diff spanning multiple files should still work."""
+    # Add a second file
+    (git_repo / "utils.py").write_text("def helper(): pass\n")
+    subprocess.run(
+        ["git", "add", "."],
+        cwd=str(git_repo),
+        capture_output=True,
+        check=True,
+    )
+    subprocess.run(
+        ["git", "commit", "-m", "add utils"],
+        cwd=str(git_repo),
+        capture_output=True,
+        check=True,
+    )
+    # Modify both files
+    (git_repo / "main.py").write_text("x = 99\n")
+    (git_repo / "utils.py").write_text("def helper(): return 42\n")
+    subprocess.run(
+        ["git", "add", "."],
+        cwd=str(git_repo),
+        capture_output=True,
+        check=True,
+    )
+    subprocess.run(
+        ["git", "commit", "-m", "modify both"],
+        cwd=str(git_repo),
+        capture_output=True,
+        check=True,
+    )
+
+    mocks = _build_mock_context(git_repo)
+
+    with (
+        patch(
+            "local_deepwiki.handlers.analysis.get_config", return_value=mocks["config"]
+        ),
+        patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
+        patch("local_deepwiki.handlers.analysis.VectorStore"),
+        patch(
+            "local_deepwiki.providers.llm.get_cached_llm_provider",
+            return_value=mocks["llm"],
+        ),
+        patch(
+            "local_deepwiki.handlers.analysis.get_rate_limiter",
+            return_value=mocks["rate_limiter"],
+        ),
+    ):
+        result = await handle_ask_about_diff(
+            {
+                "repo_path": str(git_repo),
+                "question": "What files were changed?",
+            }
+        )
+
+    data = json.loads(result[0].text)
+    assert data["status"] == "success"
+    # LLM was called with the diff containing both files
+    call_args = mocks["llm"].generate.call_args
+    prompt_sent = call_args[0][0]
+    assert "main.py" in prompt_sent
+    assert "utils.py" in prompt_sent
+
+
+async def test_ask_about_diff_binary_file(mock_access_control, git_repo):
+    """Binary files in the diff should not break the handler."""
+    # Write a binary file
+    (git_repo / "image.bin").write_bytes(b"\x89PNG\r\n\x1a\n\x00\x00\x00")
+    subprocess.run(
+        ["git", "add", "."],
+        cwd=str(git_repo),
+        capture_output=True,
+        check=True,
+    )
+    subprocess.run(
+        ["git", "commit", "-m", "add binary"],
+        cwd=str(git_repo),
+        capture_output=True,
+        check=True,
+    )
+
+    mocks = _build_mock_context(git_repo)
+
+    with (
+        patch(
+            "local_deepwiki.handlers.analysis.get_config", return_value=mocks["config"]
+        ),
+        patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
+        patch("local_deepwiki.handlers.analysis.VectorStore"),
+        patch(
+            "local_deepwiki.providers.llm.get_cached_llm_provider",
+            return_value=mocks["llm"],
+        ),
+        patch(
+            "local_deepwiki.handlers.analysis.get_rate_limiter",
+            return_value=mocks["rate_limiter"],
+        ),
+    ):
+        result = await handle_ask_about_diff(
+            {
+                "repo_path": str(git_repo),
+                "question": "What binary files were added?",
+            }
+        )
+
+    data = json.loads(result[0].text)
+    assert data["status"] == "success"
+    assert data["answer"] is not None
+
+
+async def test_ask_about_diff_git_diff_returncode_nonzero(
+    mock_access_control, git_repo
+):
+    """When git diff exits with nonzero code, an error status is returned."""
+    mock_completed = MagicMock()
+    mock_completed.returncode = 128
+    mock_completed.stderr = "fatal: bad revision 'nonexistent'"
+    mock_completed.stdout = ""
+
+    with patch(
+        "subprocess.run",
+        return_value=mock_completed,
+    ):
+        result = await handle_ask_about_diff(
+            {
+                "repo_path": str(git_repo),
+                "question": "What changed?",
+                "base_ref": "nonexistent",
+            }
+        )
+
+    data = json.loads(result[0].text)
+    assert data["status"] == "error"
+    assert "git diff failed" in data["error"]
+
+
+async def test_ask_about_diff_diff_stats_not_truncated(mock_access_control, git_repo):
+    """Small diff should have truncated=False in diff_stats."""
+    mocks = _build_mock_context(git_repo)
+
+    with (
+        patch(
+            "local_deepwiki.handlers.analysis.get_config", return_value=mocks["config"]
+        ),
+        patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
+        patch("local_deepwiki.handlers.analysis.VectorStore"),
+        patch(
+            "local_deepwiki.providers.llm.get_cached_llm_provider",
+            return_value=mocks["llm"],
+        ),
+        patch(
+            "local_deepwiki.handlers.analysis.get_rate_limiter",
+            return_value=mocks["rate_limiter"],
+        ),
+    ):
+        result = await handle_ask_about_diff(
+            {
+                "repo_path": str(git_repo),
+                "question": "What changed?",
+            }
+        )
+
+    data = json.loads(result[0].text)
+    assert data["diff_stats"]["truncated"] is False
+    assert data["diff_stats"]["diff_length"] < 10000
+
+
+async def test_ask_about_diff_prompt_contains_question(mock_access_control, git_repo):
+    """The question should appear verbatim in the prompt sent to the LLM."""
+    mocks = _build_mock_context(git_repo)
+
+    with (
+        patch(
+            "local_deepwiki.handlers.analysis.get_config", return_value=mocks["config"]
+        ),
+        patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
+        patch("local_deepwiki.handlers.analysis.VectorStore"),
+        patch(
+            "local_deepwiki.providers.llm.get_cached_llm_provider",
+            return_value=mocks["llm"],
+        ),
+        patch(
+            "local_deepwiki.handlers.analysis.get_rate_limiter",
+            return_value=mocks["rate_limiter"],
+        ),
+    ):
+        result = await handle_ask_about_diff(
+            {
+                "repo_path": str(git_repo),
+                "question": "Are there any security vulnerabilities?",
+            }
+        )
+
+    call_args = mocks["llm"].generate.call_args
+    prompt_sent = call_args[0][0]
+    assert "Are there any security vulnerabilities?" in prompt_sent
+
+
+async def test_ask_about_diff_multiple_vector_results(mock_access_control, git_repo):
+    """Multiple vector search results should all appear as sources."""
+    vector_db_dir = git_repo / "vectordb_multi"
+    vector_db_dir.mkdir()
+
+    mock_config = MagicMock()
+    mock_config.get_vector_db_path.return_value = vector_db_dir
+    mock_config.get_wiki_path.return_value = git_repo / ".deepwiki"
+    mock_config.llm_cache = MagicMock()
+    mock_config.llm = MagicMock()
+    mock_config.embedding = MagicMock()
+
+    mock_llm = AsyncMock()
+    mock_llm.generate = AsyncMock(return_value="Answer with multiple contexts.")
+
+    mock_rate_limiter = AsyncMock()
+    mock_rate_limiter.__aenter__ = AsyncMock(return_value=None)
+    mock_rate_limiter.__aexit__ = AsyncMock(return_value=None)
+
+    def _make_search_result(file_path, score):
+        chunk = MagicMock()
+        chunk.file_path = file_path
+        chunk.start_line = 1
+        chunk.end_line = 10
+        chunk.chunk_type.value = "function"
+        chunk.content = "def foo(): pass"
+        sr = MagicMock()
+        sr.chunk = chunk
+        sr.score = score
+        return sr
+
+    mock_vector_store = AsyncMock()
+    mock_vector_store.search = AsyncMock(
+        return_value=[
+            _make_search_result("main.py", 0.95),
+            _make_search_result("utils.py", 0.88),
+            _make_search_result("config.py", 0.72),
+        ]
+    )
+
+    with (
+        patch("local_deepwiki.handlers.analysis.get_config", return_value=mock_config),
+        patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
+        patch(
+            "local_deepwiki.handlers.analysis.VectorStore",
+            return_value=mock_vector_store,
+        ),
+        patch(
+            "local_deepwiki.providers.llm.get_cached_llm_provider",
+            return_value=mock_llm,
+        ),
+        patch(
+            "local_deepwiki.handlers.analysis.get_rate_limiter",
+            return_value=mock_rate_limiter,
+        ),
+    ):
+        result = await handle_ask_about_diff(
+            {
+                "repo_path": str(git_repo),
+                "question": "Explain the changes.",
+            }
+        )
+
+    data = json.loads(result[0].text)
+    assert data["status"] == "success"
+    assert len(data["sources"]) == 3
+    assert data["sources"][0]["file"] == "main.py"
+    assert data["sources"][1]["file"] == "utils.py"
+    assert data["sources"][2]["file"] == "config.py"
+
+
+async def test_ask_about_diff_max_context_respected(mock_access_control, git_repo):
+    """max_context should be passed to vector_store.search as the limit."""
+    vector_db_dir = git_repo / "vectordb_ctx"
+    vector_db_dir.mkdir()
+
+    mock_config = MagicMock()
+    mock_config.get_vector_db_path.return_value = vector_db_dir
+    mock_config.get_wiki_path.return_value = git_repo / ".deepwiki"
+    mock_config.llm_cache = MagicMock()
+    mock_config.llm = MagicMock()
+    mock_config.embedding = MagicMock()
+
+    mock_llm = AsyncMock()
+    mock_llm.generate = AsyncMock(return_value="OK")
+
+    mock_rate_limiter = AsyncMock()
+    mock_rate_limiter.__aenter__ = AsyncMock(return_value=None)
+    mock_rate_limiter.__aexit__ = AsyncMock(return_value=None)
+
+    mock_vector_store = AsyncMock()
+    mock_vector_store.search = AsyncMock(return_value=[])
+
+    with (
+        patch("local_deepwiki.handlers.analysis.get_config", return_value=mock_config),
+        patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
+        patch(
+            "local_deepwiki.handlers.analysis.VectorStore",
+            return_value=mock_vector_store,
+        ),
+        patch(
+            "local_deepwiki.providers.llm.get_cached_llm_provider",
+            return_value=mock_llm,
+        ),
+        patch(
+            "local_deepwiki.handlers.analysis.get_rate_limiter",
+            return_value=mock_rate_limiter,
+        ),
+    ):
+        result = await handle_ask_about_diff(
+            {
+                "repo_path": str(git_repo),
+                "question": "Test",
+                "max_context": 5,
+            }
+        )
+
+    mock_vector_store.search.assert_called_once()
+    call_kwargs = mock_vector_store.search.call_args
+    assert call_kwargs[1]["limit"] == 5 or call_kwargs[0][1] == 5
+
+
+def test_ask_about_diff_args_max_context_default():
+    """max_context should default to 10."""
+    args = AskAboutDiffArgs(
+        repo_path="/tmp/repo",
+        question="Test",
+    )
+    assert args.max_context == 10
+
+
+def test_ask_about_diff_args_ref_defaults():
+    """base_ref defaults to HEAD~1, head_ref defaults to HEAD."""
+    args = AskAboutDiffArgs(
+        repo_path="/tmp/repo",
+        question="Test",
+    )
+    assert args.base_ref == "HEAD~1"
+    assert args.head_ref == "HEAD"
+
+
+def test_ask_about_diff_args_long_question_rejected():
+    """Question exceeding max_length=2000 should fail validation."""
+    with pytest.raises(Exception):
+        AskAboutDiffArgs(
+            repo_path="/tmp/repo",
+            question="x" * 2001,
+        )
+
+
+def test_ask_about_diff_args_valid_long_question():
+    """Question at exactly max_length=2000 should be accepted."""
+    args = AskAboutDiffArgs(
+        repo_path="/tmp/repo",
+        question="x" * 2000,
+    )
+    assert len(args.question) == 2000
+
+
+async def test_ask_about_diff_only_whitespace_diff(mock_access_control, git_repo):
+    """If the diff is only whitespace changes, it should still be processed."""
+    # Add trailing whitespace
+    (git_repo / "main.py").write_text("x = 2\ny = 3  \n")
+    subprocess.run(
+        ["git", "add", "."],
+        cwd=str(git_repo),
+        capture_output=True,
+        check=True,
+    )
+    subprocess.run(
+        ["git", "commit", "-m", "whitespace"],
+        cwd=str(git_repo),
+        capture_output=True,
+        check=True,
+    )
+
+    mocks = _build_mock_context(git_repo)
+
+    with (
+        patch(
+            "local_deepwiki.handlers.analysis.get_config", return_value=mocks["config"]
+        ),
+        patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
+        patch("local_deepwiki.handlers.analysis.VectorStore"),
+        patch(
+            "local_deepwiki.providers.llm.get_cached_llm_provider",
+            return_value=mocks["llm"],
+        ),
+        patch(
+            "local_deepwiki.handlers.analysis.get_rate_limiter",
+            return_value=mocks["rate_limiter"],
+        ),
+    ):
+        result = await handle_ask_about_diff(
+            {
+                "repo_path": str(git_repo),
+                "question": "What whitespace changes were made?",
+            }
+        )
+
+    data = json.loads(result[0].text)
+    # Could be "success" with an answer or "No changes found" depending on git diff
+    assert data["status"] == "success"
+
+
+async def test_ask_about_diff_special_chars_in_question(mock_access_control, git_repo):
+    """Special characters in the question should not break processing."""
+    mocks = _build_mock_context(git_repo)
+
+    with (
+        patch(
+            "local_deepwiki.handlers.analysis.get_config", return_value=mocks["config"]
+        ),
+        patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
+        patch("local_deepwiki.handlers.analysis.VectorStore"),
+        patch(
+            "local_deepwiki.providers.llm.get_cached_llm_provider",
+            return_value=mocks["llm"],
+        ),
+        patch(
+            "local_deepwiki.handlers.analysis.get_rate_limiter",
+            return_value=mocks["rate_limiter"],
+        ),
+    ):
+        result = await handle_ask_about_diff(
+            {
+                "repo_path": str(git_repo),
+                "question": 'Does this diff contain "SQL injection" or <script> tags?',
+            }
+        )
+
+    data = json.loads(result[0].text)
+    assert data["status"] == "success"
+    assert data["answer"] is not None

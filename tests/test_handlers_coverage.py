@@ -85,7 +85,10 @@ class TestHandleDeepResearch:
         assert len(result) == 1
         assert "Error" in result[0].text
         # Pydantic validates min_length=1
-        assert "at least 1 character" in result[0].text or "string_too_short" in result[0].text
+        assert (
+            "at least 1 character" in result[0].text
+            or "string_too_short" in result[0].text
+        )
 
     async def test_returns_error_for_unindexed_repo(self, tmp_path):
         """Test error returned when repository is not indexed."""
@@ -121,7 +124,7 @@ class TestHandleDeepResearch:
             raise asyncio.CancelledError()
 
         with patch(
-            "local_deepwiki.handlers._handle_deep_research_impl",
+            "local_deepwiki.handlers.research._handle_deep_research_impl",
             side_effect=asyncio.CancelledError(),
         ):
             with pytest.raises(asyncio.CancelledError):
@@ -243,7 +246,7 @@ class TestHandleIndexRepositoryExtended:
 
         # This will still fail because no actual indexing infrastructure,
         # but it tests the validation path
-        with patch("local_deepwiki.handlers.RepositoryIndexer") as mock_indexer:
+        with patch("local_deepwiki.handlers.core.RepositoryIndexer") as mock_indexer:
             mock_instance = MagicMock()
             mock_instance.index = AsyncMock(
                 return_value=MagicMock(
@@ -256,7 +259,7 @@ class TestHandleIndexRepositoryExtended:
             mock_instance.vector_store = MagicMock()
             mock_indexer.return_value = mock_instance
 
-            with patch("local_deepwiki.handlers.generate_wiki") as mock_wiki:
+            with patch("local_deepwiki.handlers.core.generate_wiki") as mock_wiki:
                 mock_wiki.return_value = MagicMock(pages=[])
 
                 result = await handle_index_repository(
@@ -275,7 +278,7 @@ class TestHandleIndexRepositoryExtended:
         """Test handles use_cloud_for_github flag."""
         (tmp_path / "test.py").write_text("print('hello')")
 
-        with patch("local_deepwiki.handlers.RepositoryIndexer") as mock_indexer:
+        with patch("local_deepwiki.handlers.core.RepositoryIndexer") as mock_indexer:
             mock_instance = MagicMock()
             mock_instance.index = AsyncMock(
                 return_value=MagicMock(
@@ -288,7 +291,7 @@ class TestHandleIndexRepositoryExtended:
             mock_instance.vector_store = MagicMock()
             mock_indexer.return_value = mock_instance
 
-            with patch("local_deepwiki.handlers.generate_wiki") as mock_wiki:
+            with patch("local_deepwiki.handlers.core.generate_wiki") as mock_wiki:
                 mock_wiki.return_value = MagicMock(pages=[])
 
                 result = await handle_index_repository(
@@ -309,7 +312,7 @@ class TestHandleAskQuestionExtended:
     async def test_returns_no_results_message(self, tmp_path):
         """Test returns appropriate message when no results found."""
         # Create mock vector store that returns empty results
-        with patch("local_deepwiki.handlers.get_config") as mock_config:
+        with patch("local_deepwiki.handlers.core.get_config") as mock_config:
             config = MagicMock()
             config.get_wiki_path.return_value = tmp_path / ".deepwiki"
             config.get_vector_db_path.return_value = tmp_path / ".deepwiki" / "vectors"
@@ -320,8 +323,8 @@ class TestHandleAskQuestionExtended:
             vector_path = tmp_path / ".deepwiki" / "vectors"
             vector_path.mkdir(parents=True)
 
-            with patch("local_deepwiki.handlers.get_embedding_provider"):
-                with patch("local_deepwiki.handlers.VectorStore") as mock_vs:
+            with patch("local_deepwiki.handlers.core.get_embedding_provider"):
+                with patch("local_deepwiki.handlers.core.VectorStore") as mock_vs:
                     mock_store = MagicMock()
                     mock_store.search = AsyncMock(return_value=[])
                     mock_vs.return_value = mock_store
@@ -338,7 +341,7 @@ class TestHandleAskQuestionExtended:
 
     async def test_returns_answer_with_sources(self, tmp_path):
         """Test returns answer with sources when results are found."""
-        with patch("local_deepwiki.handlers.get_config") as mock_config:
+        with patch("local_deepwiki.handlers.core.get_config") as mock_config:
             config = MagicMock()
             config.get_wiki_path.return_value = tmp_path / ".deepwiki"
             config.get_vector_db_path.return_value = tmp_path / ".deepwiki" / "vectors"
@@ -362,15 +365,19 @@ class TestHandleAskQuestionExtended:
             mock_result.chunk = mock_chunk
             mock_result.score = 0.9
 
-            with patch("local_deepwiki.handlers.get_embedding_provider"):
-                with patch("local_deepwiki.handlers.VectorStore") as mock_vs:
+            with patch("local_deepwiki.handlers.core.get_embedding_provider"):
+                with patch("local_deepwiki.handlers.core.VectorStore") as mock_vs:
                     mock_store = MagicMock()
                     mock_store.search = AsyncMock(return_value=[mock_result])
                     mock_vs.return_value = mock_store
 
-                    with patch("local_deepwiki.providers.llm.get_cached_llm_provider") as mock_llm:
+                    with patch(
+                        "local_deepwiki.providers.llm.get_cached_llm_provider"
+                    ) as mock_llm:
                         mock_provider = MagicMock()
-                        mock_provider.generate = AsyncMock(return_value="This is a test function.")
+                        mock_provider.generate = AsyncMock(
+                            return_value="This is a test function."
+                        )
                         mock_llm.return_value = mock_provider
 
                         result = await handle_ask_question(
@@ -455,7 +462,7 @@ class TestHandleSearchCodeWithResults:
 
     async def test_returns_formatted_results(self, tmp_path):
         """Test returns properly formatted search results."""
-        with patch("local_deepwiki.handlers.get_config") as mock_config:
+        with patch("local_deepwiki.handlers.core.get_config") as mock_config:
             config = MagicMock()
             config.get_vector_db_path.return_value = tmp_path / ".deepwiki" / "vectors"
             config.embedding = MagicMock()
@@ -465,8 +472,8 @@ class TestHandleSearchCodeWithResults:
             vector_path = tmp_path / ".deepwiki" / "vectors"
             vector_path.mkdir(parents=True)
 
-            with patch("local_deepwiki.handlers.get_embedding_provider"):
-                with patch("local_deepwiki.handlers.VectorStore") as mock_vs:
+            with patch("local_deepwiki.handlers.core.get_embedding_provider"):
+                with patch("local_deepwiki.handlers.core.VectorStore") as mock_vs:
                     # Create mock search result
                     mock_chunk = MagicMock()
                     mock_chunk.file_path = "test.py"
@@ -503,7 +510,7 @@ class TestHandleSearchCodeWithResults:
 
     async def test_returns_no_results_message(self, tmp_path):
         """Test returns no results message when search is empty."""
-        with patch("local_deepwiki.handlers.get_config") as mock_config:
+        with patch("local_deepwiki.handlers.core.get_config") as mock_config:
             config = MagicMock()
             config.get_vector_db_path.return_value = tmp_path / ".deepwiki" / "vectors"
             config.embedding = MagicMock()
@@ -512,8 +519,8 @@ class TestHandleSearchCodeWithResults:
             vector_path = tmp_path / ".deepwiki" / "vectors"
             vector_path.mkdir(parents=True)
 
-            with patch("local_deepwiki.handlers.get_embedding_provider"):
-                with patch("local_deepwiki.handlers.VectorStore") as mock_vs:
+            with patch("local_deepwiki.handlers.core.get_embedding_provider"):
+                with patch("local_deepwiki.handlers.core.VectorStore") as mock_vs:
                     mock_store = MagicMock()
                     mock_store.search = AsyncMock(return_value=[])
                     mock_vs.return_value = mock_store
@@ -530,7 +537,7 @@ class TestHandleSearchCodeWithResults:
 
     async def test_truncates_long_content_preview(self, tmp_path):
         """Test truncates long content in preview."""
-        with patch("local_deepwiki.handlers.get_config") as mock_config:
+        with patch("local_deepwiki.handlers.core.get_config") as mock_config:
             config = MagicMock()
             config.get_vector_db_path.return_value = tmp_path / ".deepwiki" / "vectors"
             config.embedding = MagicMock()
@@ -555,8 +562,8 @@ class TestHandleSearchCodeWithResults:
             mock_result.score = 0.8
             mock_result.highlights = []
 
-            with patch("local_deepwiki.handlers.get_embedding_provider"):
-                with patch("local_deepwiki.handlers.VectorStore") as mock_vs:
+            with patch("local_deepwiki.handlers.core.get_embedding_provider"):
+                with patch("local_deepwiki.handlers.core.VectorStore") as mock_vs:
                     mock_store = MagicMock()
                     mock_store.search = AsyncMock(return_value=[mock_result])
                     mock_vs.return_value = mock_store
@@ -584,7 +591,7 @@ class TestHandleIndexRepositoryProgressCallback:
 
         captured_messages = []
 
-        with patch("local_deepwiki.handlers.RepositoryIndexer") as mock_indexer:
+        with patch("local_deepwiki.handlers.core.RepositoryIndexer") as mock_indexer:
             mock_instance = MagicMock()
 
             async def mock_index(full_rebuild=False, progress_callback=None):
@@ -603,7 +610,7 @@ class TestHandleIndexRepositoryProgressCallback:
             mock_instance.vector_store = MagicMock()
             mock_indexer.return_value = mock_instance
 
-            with patch("local_deepwiki.handlers.generate_wiki") as mock_wiki:
+            with patch("local_deepwiki.handlers.core.generate_wiki") as mock_wiki:
                 mock_wiki.return_value = MagicMock(pages=[])
 
                 result = await handle_index_repository(
@@ -626,7 +633,7 @@ class TestHandleDeepResearchErrorHandling:
     async def test_handles_generic_exception(self, tmp_path):
         """Test that generic exceptions are caught and returned as errors."""
         with patch(
-            "local_deepwiki.handlers._handle_deep_research_impl",
+            "local_deepwiki.handlers.research._handle_deep_research_impl",
             side_effect=RuntimeError("Unexpected error"),
         ):
             result = await handle_deep_research(
@@ -664,7 +671,7 @@ class TestHandleDeepResearchImpl:
         vector_path = tmp_path / ".deepwiki" / "vectors"
         vector_path.mkdir(parents=True)
 
-        with patch("local_deepwiki.handlers.get_config") as mock_config:
+        with patch("local_deepwiki.handlers.research.get_config") as mock_config:
             config = MagicMock()
             config.get_vector_db_path.return_value = vector_path
             config.get_wiki_path.return_value = tmp_path / ".deepwiki"
@@ -686,8 +693,8 @@ class TestHandleDeepResearchImpl:
             )
             mock_config.return_value = config
 
-            with patch("local_deepwiki.handlers.get_embedding_provider"):
-                with patch("local_deepwiki.handlers.VectorStore"):
+            with patch("local_deepwiki.handlers.research.get_embedding_provider"):
+                with patch("local_deepwiki.handlers.research.VectorStore"):
                     with patch("local_deepwiki.providers.llm.get_cached_llm_provider"):
                         with patch(
                             "local_deepwiki.core.deep_research.DeepResearchPipeline"
@@ -699,7 +706,9 @@ class TestHandleDeepResearchImpl:
                                 question="Test question",
                                 answer="Test answer",
                                 sub_questions=[
-                                    SimpleNamespace(question="Sub Q1", category="architecture"),
+                                    SimpleNamespace(
+                                        question="Sub Q1", category="architecture"
+                                    ),
                                 ],
                                 sources=[
                                     SimpleNamespace(
@@ -713,7 +722,9 @@ class TestHandleDeepResearchImpl:
                                 ],
                                 reasoning_trace=[
                                     SimpleNamespace(
-                                        step_type=SimpleNamespace(value="decomposition"),
+                                        step_type=SimpleNamespace(
+                                            value="decomposition"
+                                        ),
                                         description="Breaking down question",
                                         duration_ms=100,
                                     ),
@@ -746,7 +757,7 @@ class TestHandleDeepResearchImpl:
         vector_path = tmp_path / ".deepwiki" / "vectors"
         vector_path.mkdir(parents=True)
 
-        with patch("local_deepwiki.handlers.get_config") as mock_config:
+        with patch("local_deepwiki.handlers.research.get_config") as mock_config:
             config = MagicMock()
             config.get_vector_db_path.return_value = vector_path
             config.get_wiki_path.return_value = tmp_path / ".deepwiki"
@@ -768,8 +779,8 @@ class TestHandleDeepResearchImpl:
             )
             mock_config.return_value = config
 
-            with patch("local_deepwiki.handlers.get_embedding_provider"):
-                with patch("local_deepwiki.handlers.VectorStore"):
+            with patch("local_deepwiki.handlers.research.get_embedding_provider"):
+                with patch("local_deepwiki.handlers.research.VectorStore"):
                     with patch("local_deepwiki.providers.llm.get_cached_llm_provider"):
                         with patch(
                             "local_deepwiki.core.deep_research.DeepResearchPipeline"
@@ -796,7 +807,9 @@ class TestHandleDeepResearchImpl:
                             )
 
                             # Verify preset was passed to config
-                            config.deep_research.with_preset.assert_called_with("thorough")
+                            config.deep_research.with_preset.assert_called_with(
+                                "thorough"
+                            )
                             assert len(result) == 1
 
     async def test_research_cancelled_error(self, tmp_path):
@@ -804,7 +817,7 @@ class TestHandleDeepResearchImpl:
         vector_path = tmp_path / ".deepwiki" / "vectors"
         vector_path.mkdir(parents=True)
 
-        with patch("local_deepwiki.handlers.get_config") as mock_config:
+        with patch("local_deepwiki.handlers.research.get_config") as mock_config:
             config = MagicMock()
             config.get_vector_db_path.return_value = vector_path
             config.get_wiki_path.return_value = tmp_path / ".deepwiki"
@@ -826,13 +839,15 @@ class TestHandleDeepResearchImpl:
             )
             mock_config.return_value = config
 
-            with patch("local_deepwiki.handlers.get_embedding_provider"):
-                with patch("local_deepwiki.handlers.VectorStore"):
+            with patch("local_deepwiki.handlers.research.get_embedding_provider"):
+                with patch("local_deepwiki.handlers.research.VectorStore"):
                     with patch("local_deepwiki.providers.llm.get_cached_llm_provider"):
                         with patch(
                             "local_deepwiki.core.deep_research.DeepResearchPipeline"
                         ) as mock_pipeline_class:
-                            from local_deepwiki.core.deep_research import ResearchCancelledError
+                            from local_deepwiki.core.deep_research import (
+                                ResearchCancelledError,
+                            )
 
                             mock_pipeline = MagicMock()
                             mock_pipeline.research = AsyncMock(
@@ -857,7 +872,7 @@ class TestHandleDeepResearchImpl:
         vector_path = tmp_path / ".deepwiki" / "vectors"
         vector_path.mkdir(parents=True)
 
-        with patch("local_deepwiki.handlers.get_config") as mock_config:
+        with patch("local_deepwiki.handlers.research.get_config") as mock_config:
             config = MagicMock()
             config.get_vector_db_path.return_value = vector_path
             config.get_wiki_path.return_value = tmp_path / ".deepwiki"
@@ -879,14 +894,16 @@ class TestHandleDeepResearchImpl:
             )
             mock_config.return_value = config
 
-            with patch("local_deepwiki.handlers.get_embedding_provider"):
-                with patch("local_deepwiki.handlers.VectorStore"):
+            with patch("local_deepwiki.handlers.research.get_embedding_provider"):
+                with patch("local_deepwiki.handlers.research.VectorStore"):
                     with patch("local_deepwiki.providers.llm.get_cached_llm_provider"):
                         with patch(
                             "local_deepwiki.core.deep_research.DeepResearchPipeline"
                         ) as mock_pipeline_class:
                             mock_pipeline = MagicMock()
-                            mock_pipeline.research = AsyncMock(side_effect=asyncio.CancelledError())
+                            mock_pipeline.research = AsyncMock(
+                                side_effect=asyncio.CancelledError()
+                            )
                             mock_pipeline_class.return_value = mock_pipeline
 
                             with pytest.raises(asyncio.CancelledError):
@@ -909,7 +926,7 @@ class TestHandleDeepResearchImpl:
         mock_ctx.session.send_progress_notification = AsyncMock()
         mock_server.request_context = mock_ctx
 
-        with patch("local_deepwiki.handlers.get_config") as mock_config:
+        with patch("local_deepwiki.handlers.research.get_config") as mock_config:
             config = MagicMock()
             config.get_vector_db_path.return_value = vector_path
             config.get_wiki_path.return_value = tmp_path / ".deepwiki"
@@ -931,8 +948,8 @@ class TestHandleDeepResearchImpl:
             )
             mock_config.return_value = config
 
-            with patch("local_deepwiki.handlers.get_embedding_provider"):
-                with patch("local_deepwiki.handlers.VectorStore"):
+            with patch("local_deepwiki.handlers.research.get_embedding_provider"):
+                with patch("local_deepwiki.handlers.research.VectorStore"):
                     with patch("local_deepwiki.providers.llm.get_cached_llm_provider"):
                         with patch(
                             "local_deepwiki.core.deep_research.DeepResearchPipeline"
@@ -988,7 +1005,7 @@ class TestHandleDeepResearchImpl:
         vector_path = tmp_path / ".deepwiki" / "vectors"
         vector_path.mkdir(parents=True)
 
-        with patch("local_deepwiki.handlers.get_config") as mock_config:
+        with patch("local_deepwiki.handlers.research.get_config") as mock_config:
             config = MagicMock()
             config.get_vector_db_path.return_value = vector_path
             config.get_wiki_path.return_value = tmp_path / ".deepwiki"
@@ -1010,8 +1027,8 @@ class TestHandleDeepResearchImpl:
             )
             mock_config.return_value = config
 
-            with patch("local_deepwiki.handlers.get_embedding_provider"):
-                with patch("local_deepwiki.handlers.VectorStore"):
+            with patch("local_deepwiki.handlers.research.get_embedding_provider"):
+                with patch("local_deepwiki.handlers.research.VectorStore"):
                     with patch("local_deepwiki.providers.llm.get_cached_llm_provider"):
                         with patch(
                             "local_deepwiki.core.deep_research.DeepResearchPipeline"
@@ -1073,7 +1090,7 @@ class TestHandleDeepResearchImpl:
         mock_ctx.meta = None  # No meta
         mock_server.request_context = mock_ctx
 
-        with patch("local_deepwiki.handlers.get_config") as mock_config:
+        with patch("local_deepwiki.handlers.research.get_config") as mock_config:
             config = MagicMock()
             config.get_vector_db_path.return_value = vector_path
             config.get_wiki_path.return_value = tmp_path / ".deepwiki"
@@ -1095,8 +1112,8 @@ class TestHandleDeepResearchImpl:
             )
             mock_config.return_value = config
 
-            with patch("local_deepwiki.handlers.get_embedding_provider"):
-                with patch("local_deepwiki.handlers.VectorStore"):
+            with patch("local_deepwiki.handlers.research.get_embedding_provider"):
+                with patch("local_deepwiki.handlers.research.VectorStore"):
                     with patch("local_deepwiki.providers.llm.get_cached_llm_provider"):
                         with patch(
                             "local_deepwiki.core.deep_research.DeepResearchPipeline"
@@ -1135,7 +1152,7 @@ class TestHandleDeepResearchImpl:
             lambda self: (_ for _ in ()).throw(LookupError("Not in request context"))
         )
 
-        with patch("local_deepwiki.handlers.get_config") as mock_config:
+        with patch("local_deepwiki.handlers.research.get_config") as mock_config:
             config = MagicMock()
             config.get_vector_db_path.return_value = vector_path
             config.get_wiki_path.return_value = tmp_path / ".deepwiki"
@@ -1157,8 +1174,8 @@ class TestHandleDeepResearchImpl:
             )
             mock_config.return_value = config
 
-            with patch("local_deepwiki.handlers.get_embedding_provider"):
-                with patch("local_deepwiki.handlers.VectorStore"):
+            with patch("local_deepwiki.handlers.research.get_embedding_provider"):
+                with patch("local_deepwiki.handlers.research.VectorStore"):
                     with patch("local_deepwiki.providers.llm.get_cached_llm_provider"):
                         with patch(
                             "local_deepwiki.core.deep_research.DeepResearchPipeline"
@@ -1193,7 +1210,10 @@ class TestCancellationAndProgressCallbacks:
 
     async def test_is_cancelled_returns_true_when_event_set(self, tmp_path):
         """Test is_cancelled returns True when cancellation_event is set."""
-        from local_deepwiki.handlers import _DeepResearchContext, _create_progress_callbacks
+        from local_deepwiki.handlers import (
+            _DeepResearchContext,
+            _create_progress_callbacks,
+        )
 
         # Create a context with the cancellation event set
         ctx = _DeepResearchContext(
@@ -1212,7 +1232,10 @@ class TestCancellationAndProgressCallbacks:
 
     async def test_is_cancelled_returns_false_when_not_cancelled(self, tmp_path):
         """Test is_cancelled returns False when nothing is cancelled."""
-        from local_deepwiki.handlers import _DeepResearchContext, _create_progress_callbacks
+        from local_deepwiki.handlers import (
+            _DeepResearchContext,
+            _create_progress_callbacks,
+        )
 
         ctx = _DeepResearchContext(
             repo_path=tmp_path,
@@ -1229,7 +1252,10 @@ class TestCancellationAndProgressCallbacks:
 
     async def test_is_cancelled_checks_task_cancelled_state(self, tmp_path):
         """Test is_cancelled checks asyncio task cancelled state."""
-        from local_deepwiki.handlers import _DeepResearchContext, _create_progress_callbacks
+        from local_deepwiki.handlers import (
+            _DeepResearchContext,
+            _create_progress_callbacks,
+        )
 
         ctx = _DeepResearchContext(
             repo_path=tmp_path,
@@ -1253,7 +1279,10 @@ class TestCancellationAndProgressCallbacks:
 
     async def test_is_cancelled_returns_true_when_task_cancelled(self, tmp_path):
         """Test is_cancelled returns True when current task is cancelled."""
-        from local_deepwiki.handlers import _DeepResearchContext, _create_progress_callbacks
+        from local_deepwiki.handlers import (
+            _DeepResearchContext,
+            _create_progress_callbacks,
+        )
 
         ctx = _DeepResearchContext(
             repo_path=tmp_path,
@@ -1276,7 +1305,10 @@ class TestCancellationAndProgressCallbacks:
 
     async def test_is_cancelled_handles_runtime_error(self, tmp_path):
         """Test is_cancelled handles RuntimeError from asyncio.current_task()."""
-        from local_deepwiki.handlers import _DeepResearchContext, _create_progress_callbacks
+        from local_deepwiki.handlers import (
+            _DeepResearchContext,
+            _create_progress_callbacks,
+        )
 
         ctx = _DeepResearchContext(
             repo_path=tmp_path,
@@ -1289,7 +1321,9 @@ class TestCancellationAndProgressCallbacks:
         is_cancelled, _, _ = _create_progress_callbacks(ctx)
 
         # Mock asyncio.current_task to raise RuntimeError
-        with patch("asyncio.current_task", side_effect=RuntimeError("No running event loop")):
+        with patch(
+            "asyncio.current_task", side_effect=RuntimeError("No running event loop")
+        ):
             result = is_cancelled()
 
         # Should return False, not raise
@@ -1297,7 +1331,10 @@ class TestCancellationAndProgressCallbacks:
 
     async def test_progress_callback_handles_runtime_error(self, tmp_path):
         """Test progress_callback logs warning on RuntimeError."""
-        from local_deepwiki.handlers import _DeepResearchContext, _create_progress_callbacks
+        from local_deepwiki.handlers import (
+            _DeepResearchContext,
+            _create_progress_callbacks,
+        )
         from local_deepwiki.models import ResearchProgress, ResearchProgressType
 
         # Create mock server that raises RuntimeError
@@ -1330,7 +1367,10 @@ class TestCancellationAndProgressCallbacks:
 
     async def test_progress_callback_handles_os_error(self, tmp_path):
         """Test progress_callback logs warning on OSError."""
-        from local_deepwiki.handlers import _DeepResearchContext, _create_progress_callbacks
+        from local_deepwiki.handlers import (
+            _DeepResearchContext,
+            _create_progress_callbacks,
+        )
         from local_deepwiki.models import ResearchProgress, ResearchProgressType
 
         mock_server = MagicMock()
@@ -1361,7 +1401,10 @@ class TestCancellationAndProgressCallbacks:
 
     async def test_progress_callback_handles_attribute_error(self, tmp_path):
         """Test progress_callback logs warning on AttributeError."""
-        from local_deepwiki.handlers import _DeepResearchContext, _create_progress_callbacks
+        from local_deepwiki.handlers import (
+            _DeepResearchContext,
+            _create_progress_callbacks,
+        )
         from local_deepwiki.models import ResearchProgress, ResearchProgressType
 
         mock_server = MagicMock()
@@ -1392,7 +1435,10 @@ class TestCancellationAndProgressCallbacks:
 
     async def test_send_cancellation_notification_sends_notification(self, tmp_path):
         """Test send_cancellation_notification sends proper notification."""
-        from local_deepwiki.handlers import _DeepResearchContext, _create_progress_callbacks
+        from local_deepwiki.handlers import (
+            _DeepResearchContext,
+            _create_progress_callbacks,
+        )
 
         mock_server = MagicMock()
         mock_ctx = MagicMock()
@@ -1423,7 +1469,10 @@ class TestCancellationAndProgressCallbacks:
 
     async def test_send_cancellation_notification_skips_without_token(self, tmp_path):
         """Test send_cancellation_notification does nothing without progress token."""
-        from local_deepwiki.handlers import _DeepResearchContext, _create_progress_callbacks
+        from local_deepwiki.handlers import (
+            _DeepResearchContext,
+            _create_progress_callbacks,
+        )
 
         ctx = _DeepResearchContext(
             repo_path=tmp_path,
@@ -1441,7 +1490,10 @@ class TestCancellationAndProgressCallbacks:
 
     async def test_send_cancellation_notification_handles_runtime_error(self, tmp_path):
         """Test send_cancellation_notification logs warning on RuntimeError."""
-        from local_deepwiki.handlers import _DeepResearchContext, _create_progress_callbacks
+        from local_deepwiki.handlers import (
+            _DeepResearchContext,
+            _create_progress_callbacks,
+        )
 
         mock_server = MagicMock()
         mock_ctx = MagicMock()
@@ -1467,7 +1519,10 @@ class TestCancellationAndProgressCallbacks:
 
     async def test_send_cancellation_notification_handles_os_error(self, tmp_path):
         """Test send_cancellation_notification logs warning on OSError."""
-        from local_deepwiki.handlers import _DeepResearchContext, _create_progress_callbacks
+        from local_deepwiki.handlers import (
+            _DeepResearchContext,
+            _create_progress_callbacks,
+        )
 
         mock_server = MagicMock()
         mock_ctx = MagicMock()
@@ -1490,9 +1545,14 @@ class TestCancellationAndProgressCallbacks:
 
         await send_cancellation_notification("synthesis")
 
-    async def test_send_cancellation_notification_handles_attribute_error(self, tmp_path):
+    async def test_send_cancellation_notification_handles_attribute_error(
+        self, tmp_path
+    ):
         """Test send_cancellation_notification logs warning on AttributeError."""
-        from local_deepwiki.handlers import _DeepResearchContext, _create_progress_callbacks
+        from local_deepwiki.handlers import (
+            _DeepResearchContext,
+            _create_progress_callbacks,
+        )
 
         mock_server = MagicMock()
         mock_ctx = MagicMock()
@@ -1592,7 +1652,9 @@ class TestHandleExportWikiPdf:
         output_path = tmp_path / "custom_output.pdf"
 
         mock_pdf_module = MagicMock()
-        mock_pdf_module.export_to_pdf = MagicMock(return_value="Exported to custom path")
+        mock_pdf_module.export_to_pdf = MagicMock(
+            return_value="Exported to custom path"
+        )
 
         with patch.dict(sys.modules, {"local_deepwiki.export.pdf": mock_pdf_module}):
             result = await handle_export_wiki_pdf(
@@ -1647,9 +1709,7 @@ class TestHandleListResearchCheckpoints:
         """Test listing checkpoints when none exist."""
         from local_deepwiki.handlers import handle_list_research_checkpoints
 
-        result = await handle_list_research_checkpoints(
-            {"repo_path": str(tmp_path)}
-        )
+        result = await handle_list_research_checkpoints({"repo_path": str(tmp_path)})
         assert len(result) == 1
         data = json.loads(result[0].text)
         assert data["status"] == "success"
@@ -1675,9 +1735,7 @@ class TestHandleListResearchCheckpoints:
         )
         manager.save_checkpoint(checkpoint)
 
-        result = await handle_list_research_checkpoints(
-            {"repo_path": str(tmp_path)}
-        )
+        result = await handle_list_research_checkpoints({"repo_path": str(tmp_path)})
         assert len(result) == 1
         data = json.loads(result[0].text)
         assert data["status"] == "success"

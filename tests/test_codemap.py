@@ -822,7 +822,7 @@ class TestGenerateCodemapNarrative:
         graph = CodemapGraph(nodes=nodes, edges=[], entry_point="main.run")
 
         mock_llm = AsyncMock()
-        mock_llm.generate = AsyncMock(side_effect=Exception("LLM unavailable"))
+        mock_llm.generate = AsyncMock(side_effect=RuntimeError("LLM unavailable"))
 
         narrative = await generate_codemap_narrative(
             graph=graph,
@@ -967,7 +967,7 @@ def _make_codemap_result(query="test query"):
 
 @pytest.fixture
 def mock_access_control():
-    with patch("local_deepwiki.handlers.get_access_controller") as mock:
+    with patch("local_deepwiki.handlers.codemap.get_access_controller") as mock:
         controller = MagicMock()
         mock.return_value = controller
         yield controller
@@ -988,19 +988,19 @@ class TestHandleGenerateCodemap:
 
         with (
             patch(
-                "local_deepwiki.handlers._load_index_status",
+                "local_deepwiki.handlers.codemap._load_index_status",
                 return_value=(index_status, tmp_path / ".deepwiki", config),
             ),
             patch(
-                "local_deepwiki.handlers.get_embedding_provider",
+                "local_deepwiki.handlers.codemap.get_embedding_provider",
                 return_value=MagicMock(),
             ),
             patch(
-                "local_deepwiki.handlers.VectorStore",
+                "local_deepwiki.handlers.codemap.VectorStore",
                 return_value=MagicMock(),
             ),
             patch(
-                "local_deepwiki.handlers.validate_query_parameters",
+                "local_deepwiki.handlers.codemap.validate_query_parameters",
             ),
             patch(
                 "local_deepwiki.generators.codemap.generate_codemap",
@@ -1012,7 +1012,7 @@ class TestHandleGenerateCodemap:
                 return_value=MagicMock(),
             ),
             patch(
-                "local_deepwiki.handlers.get_rate_limiter",
+                "local_deepwiki.handlers.codemap.get_rate_limiter",
                 return_value=mock_rate_limiter,
             ),
         ):
@@ -1035,14 +1035,14 @@ class TestHandleGenerateCodemap:
 
         with (
             patch(
-                "local_deepwiki.handlers._load_index_status",
+                "local_deepwiki.handlers.codemap._load_index_status",
                 side_effect=DWValidationError(
                     message=f"Repository {tmp_path} is not indexed",
                     hint="Run index_repository first.",
                 ),
             ),
             patch(
-                "local_deepwiki.handlers.validate_query_parameters",
+                "local_deepwiki.handlers.codemap.validate_query_parameters",
             ),
         ):
             result = await handle_generate_codemap(
@@ -1070,19 +1070,19 @@ class TestHandleGenerateCodemap:
 
         with (
             patch(
-                "local_deepwiki.handlers._load_index_status",
+                "local_deepwiki.handlers.codemap._load_index_status",
                 return_value=(index_status, tmp_path / ".deepwiki", config),
             ),
             patch(
-                "local_deepwiki.handlers.get_embedding_provider",
+                "local_deepwiki.handlers.codemap.get_embedding_provider",
                 return_value=MagicMock(),
             ),
             patch(
-                "local_deepwiki.handlers.VectorStore",
+                "local_deepwiki.handlers.codemap.VectorStore",
                 return_value=MagicMock(),
             ),
             patch(
-                "local_deepwiki.handlers.validate_query_parameters",
+                "local_deepwiki.handlers.codemap.validate_query_parameters",
             ),
             patch(
                 "local_deepwiki.generators.codemap.generate_codemap",
@@ -1094,7 +1094,7 @@ class TestHandleGenerateCodemap:
                 return_value=MagicMock(),
             ),
             patch(
-                "local_deepwiki.handlers.get_rate_limiter",
+                "local_deepwiki.handlers.codemap.get_rate_limiter",
                 return_value=mock_rate_limiter,
             ),
         ):
@@ -1132,19 +1132,19 @@ class TestHandleGenerateCodemap:
 
             with (
                 patch(
-                    "local_deepwiki.handlers._load_index_status",
+                    "local_deepwiki.handlers.codemap._load_index_status",
                     return_value=(index_status, tmp_path / ".deepwiki", config),
                 ),
                 patch(
-                    "local_deepwiki.handlers.get_embedding_provider",
+                    "local_deepwiki.handlers.codemap.get_embedding_provider",
                     return_value=MagicMock(),
                 ),
                 patch(
-                    "local_deepwiki.handlers.VectorStore",
+                    "local_deepwiki.handlers.codemap.VectorStore",
                     return_value=MagicMock(),
                 ),
                 patch(
-                    "local_deepwiki.handlers.validate_query_parameters",
+                    "local_deepwiki.handlers.codemap.validate_query_parameters",
                 ),
                 patch(
                     "local_deepwiki.generators.codemap.generate_codemap",
@@ -1156,7 +1156,7 @@ class TestHandleGenerateCodemap:
                     return_value=MagicMock(),
                 ),
                 patch(
-                    "local_deepwiki.handlers.get_rate_limiter",
+                    "local_deepwiki.handlers.codemap.get_rate_limiter",
                     return_value=mock_rate_limiter,
                 ),
             ):
@@ -1191,15 +1191,15 @@ class TestHandleSuggestCodemapTopics:
 
         with (
             patch(
-                "local_deepwiki.handlers._load_index_status",
+                "local_deepwiki.handlers.codemap._load_index_status",
                 return_value=(index_status, tmp_path / ".deepwiki", config),
             ),
             patch(
-                "local_deepwiki.handlers.get_embedding_provider",
+                "local_deepwiki.handlers.codemap.get_embedding_provider",
                 return_value=MagicMock(),
             ),
             patch(
-                "local_deepwiki.handlers.VectorStore",
+                "local_deepwiki.handlers.codemap.VectorStore",
                 return_value=MagicMock(),
             ),
             patch(
@@ -1220,7 +1220,7 @@ class TestHandleSuggestCodemapTopics:
         from local_deepwiki.errors import ValidationError as DWValidationError
 
         with patch(
-            "local_deepwiki.handlers._load_index_status",
+            "local_deepwiki.handlers.codemap._load_index_status",
             side_effect=DWValidationError(
                 message=f"Repository {tmp_path} is not indexed",
                 hint="Run index_repository first.",
@@ -1244,15 +1244,15 @@ class TestHandleSuggestCodemapTopics:
 
         with (
             patch(
-                "local_deepwiki.handlers._load_index_status",
+                "local_deepwiki.handlers.codemap._load_index_status",
                 return_value=(index_status, tmp_path / ".deepwiki", config),
             ),
             patch(
-                "local_deepwiki.handlers.get_embedding_provider",
+                "local_deepwiki.handlers.codemap.get_embedding_provider",
                 return_value=MagicMock(),
             ),
             patch(
-                "local_deepwiki.handlers.VectorStore",
+                "local_deepwiki.handlers.codemap.VectorStore",
                 return_value=MagicMock(),
             ),
             patch(
@@ -1274,15 +1274,15 @@ class TestHandleSuggestCodemapTopics:
 
         with (
             patch(
-                "local_deepwiki.handlers._load_index_status",
+                "local_deepwiki.handlers.codemap._load_index_status",
                 return_value=(index_status, tmp_path / ".deepwiki", config),
             ),
             patch(
-                "local_deepwiki.handlers.get_embedding_provider",
+                "local_deepwiki.handlers.codemap.get_embedding_provider",
                 return_value=MagicMock(),
             ),
             patch(
-                "local_deepwiki.handlers.VectorStore",
+                "local_deepwiki.handlers.codemap.VectorStore",
                 return_value=MagicMock(),
             ),
             patch(

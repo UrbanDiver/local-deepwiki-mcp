@@ -14,7 +14,7 @@ from local_deepwiki.models import AnalyzeDiffArgs
 @pytest.fixture
 def mock_access_control():
     """Mock RBAC access controller to allow all operations."""
-    with patch("local_deepwiki.handlers.get_access_controller") as mock:
+    with patch("local_deepwiki.handlers.analysis.get_access_controller") as mock:
         controller = MagicMock()
         mock.return_value = controller
         yield controller
@@ -108,7 +108,7 @@ async def test_analyze_diff_with_wiki_mapping(mock_access_control, git_repo):
     mock_config = MagicMock()
     mock_index = MagicMock()
 
-    with patch("local_deepwiki.handlers._load_index_status") as mock_load:
+    with patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load:
         mock_load.return_value = (mock_index, wiki_dir, mock_config)
         result = await handle_analyze_diff({"repo_path": str(git_repo)})
 
