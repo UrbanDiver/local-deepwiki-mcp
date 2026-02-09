@@ -772,6 +772,12 @@ class StreamingHtmlExporter(StreamingExporter):
         iterator = self.get_page_iterator()
         total_pages = iterator.get_page_count()
 
+        # Report total pages at start
+        if progress_callback:
+            progress_callback(
+                0, total_pages, f"Starting HTML export ({total_pages} pages)"
+            )
+
         # Export pages one at a time
         exported = 0
         async for page in iterator:
@@ -789,6 +795,12 @@ class StreamingHtmlExporter(StreamingExporter):
                 error_msg = f"Failed to export {page.path}: {e}"
                 logger.warning(error_msg)
                 errors.append(error_msg)
+
+        # Report completion
+        if progress_callback:
+            progress_callback(
+                exported, total_pages, f"HTML export complete ({exported} pages)"
+            )
 
         duration_ms = int((time.monotonic() - start_time) * 1000)
         logger.info(

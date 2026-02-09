@@ -197,7 +197,11 @@ class TestPdfExporter:
                     "title": "Modules",
                     "path": "modules/index.md",
                     "children": [
-                        {"number": "3.1", "title": "Core Module", "path": "modules/core.md"}
+                        {
+                            "number": "3.1",
+                            "title": "Core Module",
+                            "path": "modules/core.md",
+                        }
                     ],
                 },
             ]
@@ -264,7 +268,9 @@ class TestPdfExporter:
         assert "Architecture" in toc_html
 
     @patch("local_deepwiki.export.pdf.HTML")
-    def test_export_single_creates_pdf(self, mock_html_class, sample_wiki: Path, tmp_path: Path):
+    def test_export_single_creates_pdf(
+        self, mock_html_class, sample_wiki: Path, tmp_path: Path
+    ):
         """Test that export_single creates a PDF file."""
         output_path = tmp_path / "output.pdf"
 
@@ -379,7 +385,9 @@ class TestExportToPdf:
         assert str(expected_path) in result
 
     @patch("local_deepwiki.export.pdf.HTML")
-    def test_custom_output_path(self, mock_html_class, simple_wiki: Path, tmp_path: Path):
+    def test_custom_output_path(
+        self, mock_html_class, simple_wiki: Path, tmp_path: Path
+    ):
         """Test custom output path."""
         mock_html_instance = MagicMock()
         mock_html_class.return_value = mock_html_instance
@@ -391,7 +399,9 @@ class TestExportToPdf:
         assert str(custom_output) in result
 
     @patch("local_deepwiki.export.pdf.HTML")
-    def test_string_paths_accepted(self, mock_html_class, simple_wiki: Path, tmp_path: Path):
+    def test_string_paths_accepted(
+        self, mock_html_class, simple_wiki: Path, tmp_path: Path
+    ):
         """Test that string paths are accepted."""
         mock_html_instance = MagicMock()
         mock_html_class.return_value = mock_html_instance
@@ -808,7 +818,9 @@ class TestMainCli:
 
         from local_deepwiki.export.pdf import main
 
-        with patch("sys.argv", ["deepwiki-export-pdf", str(wiki_path), "-o", str(output_path)]):
+        with patch(
+            "sys.argv", ["deepwiki-export-pdf", str(wiki_path), "-o", str(output_path)]
+        ):
             main()
 
         mock_export.assert_called_once()
@@ -878,7 +890,9 @@ class TestMainCli:
 
         from local_deepwiki.export.pdf import main
 
-        with patch("sys.argv", ["deepwiki-export-pdf", str(wiki_path), "--no-progress"]):
+        with patch(
+            "sys.argv", ["deepwiki-export-pdf", str(wiki_path), "--no-progress"]
+        ):
             main()
 
         mock_export.assert_called_once()
@@ -1112,7 +1126,9 @@ class TestPdfExporterEdgeCases:
         assert "page.md" in paths
 
     @patch("local_deepwiki.export.pdf.HTML")
-    def test_export_separate_with_pdf_suffix_output(self, mock_html_class, tmp_path: Path):
+    def test_export_separate_with_pdf_suffix_output(
+        self, mock_html_class, tmp_path: Path
+    ):
         """Test export_separate when output path has .pdf suffix."""
         wiki_path = tmp_path / ".deepwiki"
         wiki_path.mkdir()
@@ -1157,7 +1173,9 @@ class TestPdfExporterEdgeCases:
         """Test building combined HTML with mermaid diagrams."""
         wiki_path = tmp_path / ".deepwiki"
         wiki_path.mkdir()
-        (wiki_path / "index.md").write_text("# Index\n\n```mermaid\ngraph TD\nA-->B\n```")
+        (wiki_path / "index.md").write_text(
+            "# Index\n\n```mermaid\ngraph TD\nA-->B\n```"
+        )
 
         output_path = tmp_path / "output.pdf"
         exporter = PdfExporter(wiki_path, output_path)
@@ -1209,7 +1227,9 @@ class TestExportToPdfEdgeCases:
         assert "Exported wiki to PDF" in result
 
 
-@pytest.mark.skipif(not weasyprint_functional(), reason="WeasyPrint not fully functional")
+@pytest.mark.skipif(
+    not weasyprint_functional(), reason="WeasyPrint not fully functional"
+)
 class TestPdfExportIntegration:
     """Integration tests that actually create PDF files.
 
@@ -1296,7 +1316,11 @@ def process_data(data: dict) -> dict:
                     "title": "Modules",
                     "path": "modules/index.md",
                     "children": [
-                        {"number": "3.1", "title": "Core Module", "path": "modules/core.md"}
+                        {
+                            "number": "3.1",
+                            "title": "Core Module",
+                            "path": "modules/core.md",
+                        }
                     ],
                 },
             ]
@@ -1305,7 +1329,9 @@ def process_data(data: dict) -> dict:
 
         return wiki_path
 
-    def test_export_single_creates_valid_pdf(self, wiki_with_content: Path, tmp_path: Path):
+    def test_export_single_creates_valid_pdf(
+        self, wiki_with_content: Path, tmp_path: Path
+    ):
         """Test that export_single creates a valid PDF file."""
         output_path = tmp_path / "output.pdf"
 
@@ -1322,12 +1348,16 @@ def process_data(data: dict) -> dict:
         # File should be a valid PDF (check magic bytes)
         with open(result, "rb") as f:
             magic_bytes = f.read(8)
-            assert magic_bytes[:5] == b"%PDF-", f"Invalid PDF magic bytes: {magic_bytes!r}"
+            assert magic_bytes[:5] == b"%PDF-", (
+                f"Invalid PDF magic bytes: {magic_bytes!r}"
+            )
 
         # PDF should be reasonably sized (at least 1KB for this content)
         assert file_size > 1024, f"PDF seems too small: {file_size} bytes"
 
-    def test_export_separate_creates_multiple_pdfs(self, wiki_with_content: Path, tmp_path: Path):
+    def test_export_separate_creates_multiple_pdfs(
+        self, wiki_with_content: Path, tmp_path: Path
+    ):
         """Test that export_separate creates valid PDF files for each page."""
         output_dir = tmp_path / "pdfs"
 
@@ -1346,7 +1376,9 @@ def process_data(data: dict) -> dict:
                 magic_bytes = f.read(5)
                 assert magic_bytes == b"%PDF-", f"Invalid PDF at {pdf_path}"
 
-    def test_export_to_pdf_function_creates_pdf(self, wiki_with_content: Path, tmp_path: Path):
+    def test_export_to_pdf_function_creates_pdf(
+        self, wiki_with_content: Path, tmp_path: Path
+    ):
         """Test the convenience function creates a valid PDF."""
         output_path = tmp_path / "wiki.pdf"
 
@@ -1360,7 +1392,9 @@ def process_data(data: dict) -> dict:
         with open(output_path, "rb") as f:
             assert f.read(5) == b"%PDF-"
 
-    def test_pdf_contains_expected_content(self, wiki_with_content: Path, tmp_path: Path):
+    def test_pdf_contains_expected_content(
+        self, wiki_with_content: Path, tmp_path: Path
+    ):
         """Test that the PDF contains expected text content.
 
         We can't easily extract text from PDF, but we can verify the HTML
@@ -1434,7 +1468,9 @@ Copyright © 2024 — All rights reserved.
         long_content = "# Long Document\n\n"
         for i in range(50):
             long_content += f"## Section {i + 1}\n\n"
-            long_content += "Lorem ipsum dolor sit amet, consectetur adipiscing elit. " * 10
+            long_content += (
+                "Lorem ipsum dolor sit amet, consectetur adipiscing elit. " * 10
+            )
             long_content += "\n\n"
             long_content += "```python\n"
             long_content += f"def function_{i}():\n"
@@ -1453,7 +1489,9 @@ Copyright © 2024 — All rights reserved.
 
         # Long content should produce larger PDF (at least 50KB)
         file_size = result.stat().st_size
-        assert file_size > 50 * 1024, f"PDF seems too small for long content: {file_size} bytes"
+        assert file_size > 50 * 1024, (
+            f"PDF seems too small for long content: {file_size} bytes"
+        )
 
         with open(result, "rb") as f:
             assert f.read(5) == b"%PDF-"
@@ -1509,7 +1547,11 @@ class TestStreamingPdfExporter:
                     "title": "Modules",
                     "path": "modules/index.md",
                     "children": [
-                        {"number": "3.1", "title": "Core Module", "path": "modules/core.md"}
+                        {
+                            "number": "3.1",
+                            "title": "Core Module",
+                            "path": "modules/core.md",
+                        }
                     ],
                 },
             ]
@@ -1543,7 +1585,9 @@ class TestStreamingPdfExporter:
 
     @pytest.mark.asyncio
     @patch("local_deepwiki.export.pdf.HTML")
-    async def test_export_creates_pdf(self, mock_html_class, sample_wiki: Path, tmp_path: Path):
+    async def test_export_creates_pdf(
+        self, mock_html_class, sample_wiki: Path, tmp_path: Path
+    ):
         """Test that export creates a PDF file."""
         output_path = tmp_path / "output.pdf"
 
@@ -1701,7 +1745,10 @@ class TestStreamingPdfExporter:
         result = await exporter.export_separate(progress_callback=progress_callback)
 
         assert result.pages_exported == 4
-        assert len(progress_calls) == 4
+        # start + 4 pages + completion = 6 calls
+        assert len(progress_calls) == 6
+        assert progress_calls[0][0] == 0  # start
+        assert progress_calls[-1][2].startswith("Separate PDF export complete")
 
     @pytest.mark.asyncio
     @patch("local_deepwiki.export.pdf.HTML")
@@ -1732,7 +1779,9 @@ class TestStreamingPdfExporter:
         assert result.pages_exported > 0
 
     @patch("local_deepwiki.export.pdf.HTML")
-    def test_render_batch_to_pdf_basic(self, mock_html_class, sample_wiki: Path, tmp_path: Path):
+    def test_render_batch_to_pdf_basic(
+        self, mock_html_class, sample_wiki: Path, tmp_path: Path
+    ):
         """Test _render_batch_to_pdf creates PDF from pages."""
         output_path = tmp_path / "output.pdf"
         batch_pdf = tmp_path / "batch.pdf"
@@ -1760,7 +1809,9 @@ class TestStreamingPdfExporter:
         mock_html_instance.write_pdf.assert_called_once()
 
     @patch("local_deepwiki.export.pdf.HTML")
-    def test_render_batch_to_pdf_with_toc(self, mock_html_class, sample_wiki: Path, tmp_path: Path):
+    def test_render_batch_to_pdf_with_toc(
+        self, mock_html_class, sample_wiki: Path, tmp_path: Path
+    ):
         """Test _render_batch_to_pdf includes TOC when requested."""
         output_path = tmp_path / "output.pdf"
         batch_pdf = tmp_path / "batch.pdf"
@@ -1784,7 +1835,9 @@ class TestStreamingPdfExporter:
 
         # Check that TOC was included in HTML
         call_args = mock_html_class.call_args
-        html_string = call_args.kwargs.get("string", call_args.args[0] if call_args.args else "")
+        html_string = call_args.kwargs.get(
+            "string", call_args.args[0] if call_args.args else ""
+        )
         assert "Table of Contents" in html_string
 
     def test_build_streaming_toc_html(self, sample_wiki: Path, tmp_path: Path):
@@ -1828,7 +1881,9 @@ class TestStreamingPdfExporter:
         assert 'class="toc-item"' in html
 
     @patch("local_deepwiki.export.pdf.HTML")
-    def test_export_single_page(self, mock_html_class, sample_wiki: Path, tmp_path: Path):
+    def test_export_single_page(
+        self, mock_html_class, sample_wiki: Path, tmp_path: Path
+    ):
         """Test _export_single_page creates PDF for one page."""
         output_path = tmp_path / "output.pdf"
         page_pdf = tmp_path / "page.pdf"
@@ -1850,7 +1905,9 @@ class TestStreamingPdfExporter:
 
         mock_html_class.assert_called_once()
         call_args = mock_html_class.call_args
-        html_string = call_args.kwargs.get("string", call_args.args[0] if call_args.args else "")
+        html_string = call_args.kwargs.get(
+            "string", call_args.args[0] if call_args.args else ""
+        )
         assert "Test Page" in html_string
         mock_html_instance.write_pdf.assert_called_once()
 
@@ -1868,7 +1925,9 @@ class TestStreamingPdfExporter:
 
         mock_html_class.assert_called_once()
         call_args = mock_html_class.call_args
-        html_string = call_args.kwargs.get("string", call_args.args[0] if call_args.args else "")
+        html_string = call_args.kwargs.get(
+            "string", call_args.args[0] if call_args.args else ""
+        )
         assert "No pages to export" in html_string
         mock_html_instance.write_pdf.assert_called_once()
 
@@ -1958,7 +2017,9 @@ class TestStreamingPdfExporter:
 
     @pytest.mark.asyncio
     @patch("local_deepwiki.export.pdf.HTML")
-    async def test_export_error_during_page_processing(self, mock_html_class, sample_wiki: Path, tmp_path: Path):
+    async def test_export_error_during_page_processing(
+        self, mock_html_class, sample_wiki: Path, tmp_path: Path
+    ):
         """Test that errors during page processing (e.g., progress callback) are captured."""
         output_path = tmp_path / "output.pdf"
 
@@ -1971,7 +2032,9 @@ class TestStreamingPdfExporter:
 
         # Use a batch size of 100 to avoid triggering batch processing mid-iteration
         config = ExportConfig(batch_size=100)
-        exporter = StreamingPdfExporter(sample_wiki, output_path, config, no_progress=True)
+        exporter = StreamingPdfExporter(
+            sample_wiki, output_path, config, no_progress=True
+        )
 
         call_count = [0]
 
@@ -2011,7 +2074,9 @@ class TestStreamingPdfExporter:
         mock_html_instance.write_pdf.side_effect = write_pdf_side_effect
         mock_html_class.return_value = mock_html_instance
 
-        exporter = StreamingPdfExporter(wiki_path, output_path, config, no_progress=True)
+        exporter = StreamingPdfExporter(
+            wiki_path, output_path, config, no_progress=True
+        )
 
         # Mock pypdf for merging
         mock_writer = MagicMock()
@@ -2051,13 +2116,19 @@ class TestStreamingPdfExporterIntegration:
 
         return wiki_path
 
-    @pytest.mark.skipif(not weasyprint_functional(), reason="WeasyPrint not fully functional")
+    @pytest.mark.skipif(
+        not weasyprint_functional(), reason="WeasyPrint not fully functional"
+    )
     @pytest.mark.asyncio
-    async def test_export_creates_valid_pdf(self, wiki_with_content: Path, tmp_path: Path):
+    async def test_export_creates_valid_pdf(
+        self, wiki_with_content: Path, tmp_path: Path
+    ):
         """Test that export creates a valid PDF file."""
         output_path = tmp_path / "output.pdf"
 
-        exporter = StreamingPdfExporter(wiki_with_content, output_path, no_progress=True)
+        exporter = StreamingPdfExporter(
+            wiki_with_content, output_path, no_progress=True
+        )
         result = await exporter.export()
 
         assert result.output_path.exists()
@@ -2067,7 +2138,9 @@ class TestStreamingPdfExporterIntegration:
         with open(result.output_path, "rb") as f:
             assert f.read(5) == b"%PDF-"
 
-    @pytest.mark.skipif(not weasyprint_functional(), reason="WeasyPrint not fully functional")
+    @pytest.mark.skipif(
+        not weasyprint_functional(), reason="WeasyPrint not fully functional"
+    )
     @pytest.mark.asyncio
     async def test_export_separate_creates_valid_pdfs(
         self, wiki_with_content: Path, tmp_path: Path
@@ -2075,7 +2148,9 @@ class TestStreamingPdfExporterIntegration:
         """Test that export_separate creates valid PDF files."""
         output_path = tmp_path / "pdfs"
 
-        exporter = StreamingPdfExporter(wiki_with_content, output_path, no_progress=True)
+        exporter = StreamingPdfExporter(
+            wiki_with_content, output_path, no_progress=True
+        )
         result = await exporter.export_separate()
 
         assert result.pages_exported == 3
@@ -2146,7 +2221,9 @@ Some text after.
         else:
             assert "mermaid-note" in html
 
-    @pytest.mark.skipif(not weasyprint_functional(), reason="WeasyPrint not fully functional")
+    @pytest.mark.skipif(
+        not weasyprint_functional(), reason="WeasyPrint not fully functional"
+    )
     def test_pdf_with_rendered_mermaid_diagram(self, tmp_path: Path):
         """Test full PDF export with actual mermaid diagram rendering."""
         wiki_path = tmp_path / ".deepwiki"

@@ -547,6 +547,12 @@ class StreamingPdfExporter(StreamingExporter):
         iterator = self.get_page_iterator()
         total_pages = iterator.get_page_count()
 
+        # Report total pages at start
+        if progress_callback:
+            progress_callback(
+                0, total_pages, f"Starting PDF export ({total_pages} pages)"
+            )
+
         # Determine output file
         output_file = self.output_path
         if output_file.is_dir():
@@ -572,7 +578,7 @@ class StreamingPdfExporter(StreamingExporter):
                         progress_callback(
                             pages_processed,
                             total_pages,
-                            f"Processing {page.path}",
+                            f"Processing page {pages_processed} of {total_pages}: {page.path}",
                         )
 
                     # When batch is full, render to intermediate PDF
@@ -619,6 +625,14 @@ class StreamingPdfExporter(StreamingExporter):
                 # No pages - create empty PDF
                 self._create_empty_pdf(output_file)
 
+        # Report completion
+        if progress_callback:
+            progress_callback(
+                pages_processed,
+                total_pages,
+                f"PDF export complete ({pages_processed} pages)",
+            )
+
         duration_ms = int((time.monotonic() - start_time) * 1000)
         logger.info(
             f"Streaming PDF export complete: {pages_processed} pages "
@@ -658,6 +672,12 @@ class StreamingPdfExporter(StreamingExporter):
         iterator = self.get_page_iterator()
         total_pages = iterator.get_page_count()
 
+        # Report total pages at start
+        if progress_callback:
+            progress_callback(
+                0, total_pages, f"Starting separate PDF export ({total_pages} pages)"
+            )
+
         exported = 0
         async for page in iterator:
             try:
@@ -669,7 +689,11 @@ class StreamingPdfExporter(StreamingExporter):
                 exported += 1
 
                 if progress_callback:
-                    progress_callback(exported, total_pages, f"Exported {page.path}")
+                    progress_callback(
+                        exported,
+                        total_pages,
+                        f"Exported page {exported} of {total_pages}: {page.path}",
+                    )
 
                 # Release content from memory
                 page.release_content()
@@ -678,6 +702,14 @@ class StreamingPdfExporter(StreamingExporter):
                 error_msg = f"Failed to export {page.path}: {e}"
                 logger.warning(error_msg)
                 errors.append(error_msg)
+
+        # Report completion
+        if progress_callback:
+            progress_callback(
+                exported,
+                total_pages,
+                f"Separate PDF export complete ({exported} pages)",
+            )
 
         duration_ms = int((time.monotonic() - start_time) * 1000)
         logger.info(
