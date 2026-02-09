@@ -854,6 +854,7 @@ class ChunkIterator:
         self._row_to_chunk_fn = row_to_chunk_fn or _row_to_chunk_default
         self._offset = 0
         self._total_count: int | None = None
+        self._cached_rows: list[dict[str, Any]] | None = None
 
     def count(self) -> int:
         """Return total count of chunks without loading all data.
@@ -878,16 +879,21 @@ class ChunkIterator:
     def reset(self) -> None:
         """Reset the iterator to the beginning."""
         self._offset = 0
+        self._cached_rows = None
 
-    def _fetch_batch(self, offset: int) -> list[dict[str, Any]]:
-        """Fetch a batch of rows from the table.
+    def _ensure_cached_rows(self) -> list[dict[str, Any]]:
+        """Fetch and cache all matching rows on first access.
 
-        Args:
-            offset: Starting offset for this batch.
+        LanceDB lacks native offset support, so repeated limit+offset
+        fetches are O(n^2). Instead, fetch all rows once and slice from
+        the cached list for O(n) total iteration.
 
         Returns:
-            List of row dictionaries.
+            Cached list of all matching row dictionaries.
         """
+        if self._cached_rows is not None:
+            return self._cached_rows
+
         query = self._table.search()
 
         if self._filter_expr:
@@ -896,15 +902,21 @@ class ChunkIterator:
         if self._columns:
             query = query.select(self._columns)
 
-        # LanceDB uses limit() for batch size
-        # We simulate offset by fetching limit+offset and slicing
-        # For large offsets, this is inefficient - consider cursor-based pagination
-        if offset > 0:
-            # Fetch enough rows to skip past offset
-            rows = query.limit(offset + self._batch_size).to_list()
-            return rows[offset : offset + self._batch_size]
-        else:
-            return query.limit(self._batch_size).to_list()
+        total = self.count()
+        self._cached_rows = query.limit(total).to_list() if total > 0 else []
+        return self._cached_rows
+
+    def _fetch_batch(self, offset: int) -> list[dict[str, Any]]:
+        """Fetch a batch of rows from the cached result set.
+
+        Args:
+            offset: Starting offset for this batch.
+
+        Returns:
+            List of row dictionaries.
+        """
+        all_rows = self._ensure_cached_rows()
+        return all_rows[offset : offset + self._batch_size]
 
     def __iter__(self) -> Iterator[CodeChunk]:
         """Iterate over all chunks in batches.
@@ -2265,6 +2277,14 @@ class VectorStore:
         # Invalidate search cache since index has changed
         self._search_cache.invalidate()
 
+        # Mark vector index as needing rebuild after data changes
+        num_rows = table.count_rows()
+        if (
+            self._lazy_index_manager.config.enabled
+            and num_rows >= self._lazy_index_manager.config.min_rows
+        ):
+            self._lazy_index_manager.mark_index_pending()
+
         return len(data)
 
     async def search(
@@ -3018,40 +3038,26 @@ class VectorStore:
         if total_chunks <= batch_size:
             return self.get_stats()
 
-        # Stream through table in batches
+        # Fetch all rows once with columnar projection (avoids O(n^2) offset re-fetching)
         languages: dict[str, int] = {}
         chunk_types: dict[str, int] = {}
         file_set: set[str] = set()
 
-        # Use columnar projection to only fetch needed columns
         columns = ["language", "chunk_type", "file_path"]
-        offset = 0
+        all_rows = table.search().select(columns).limit(total_chunks).to_list()
 
-        while offset < total_chunks:
-            # Fetch batch with only needed columns
-            rows = table.search().select(columns).limit(offset + batch_size).to_list()
-            # Slice to get just this batch (simulating offset)
-            batch_rows = rows[offset : offset + batch_size]
+        for i, row in enumerate(all_rows):
+            lang = str(row["language"])
+            ctype = str(row["chunk_type"])
+            fpath = str(row["file_path"])
 
-            if not batch_rows:
-                break
+            languages[lang] = languages.get(lang, 0) + 1
+            chunk_types[ctype] = chunk_types.get(ctype, 0) + 1
+            file_set.add(fpath)
 
-            # Process batch
-            for row in batch_rows:
-                lang = str(row["language"])
-                ctype = str(row["chunk_type"])
-                fpath = str(row["file_path"])
-
-                languages[lang] = languages.get(lang, 0) + 1
-                chunk_types[ctype] = chunk_types.get(ctype, 0) + 1
-                file_set.add(fpath)
-
-            offset += len(batch_rows)
-
-            # Log progress for very large datasets
-            if offset % 100_000 == 0:
+            if (i + 1) % 100_000 == 0:
                 logger.debug(
-                    f"Stats streaming progress: {offset}/{total_chunks} rows processed"
+                    f"Stats streaming progress: {i + 1}/{total_chunks} rows processed"
                 )
 
         return {
@@ -3087,45 +3093,32 @@ class VectorStore:
         result: dict[str, tuple[int, int]] = {}
         result_types: dict[str, str] = {}
 
-        # Process in batches directly instead of using ChunkIterator
-        # (ChunkIterator expects full CodeChunk conversion)
-        offset = 0
+        # Fetch all matching rows once (avoids O(n^2) offset re-fetching)
         total_count = table.count_rows()
+        all_rows = (
+            table.search()
+            .where("chunk_type IN ('class', 'function')")
+            .select(columns)
+            .limit(total_count)
+            .to_list()
+        )
 
-        while offset < total_count:
-            # Fetch batch with columnar projection
-            rows = (
-                table.search()
-                .where("chunk_type IN ('class', 'function')")
-                .select(columns)
-                .limit(offset + batch_size)
-                .to_list()
-            )
-            # Slice for this batch
-            batch_rows = rows[offset : offset + batch_size]
+        for row in all_rows:
+            file_path = str(row["file_path"])
+            chunk_type = str(row["chunk_type"])
+            start_line = int(row["start_line"])
+            end_line = int(row["end_line"])
 
-            if not batch_rows:
-                break
-
-            # Process each row in the batch
-            for row in batch_rows:
-                file_path = str(row["file_path"])
-                chunk_type = str(row["chunk_type"])
-                start_line = int(row["start_line"])
-                end_line = int(row["end_line"])
-
-                if file_path not in result:
+            if file_path not in result:
+                result[file_path] = (start_line, end_line)
+                result_types[file_path] = chunk_type
+            elif chunk_type == "class" and result_types[file_path] == "function":
+                if start_line < result[file_path][0]:
                     result[file_path] = (start_line, end_line)
                     result_types[file_path] = chunk_type
-                elif chunk_type == "class" and result_types[file_path] == "function":
-                    if start_line < result[file_path][0]:
-                        result[file_path] = (start_line, end_line)
-                        result_types[file_path] = chunk_type
-                elif chunk_type == result_types[file_path]:
-                    if start_line < result[file_path][0]:
-                        result[file_path] = (start_line, end_line)
-
-            offset += len(batch_rows)
+            elif chunk_type == result_types[file_path]:
+                if start_line < result[file_path][0]:
+                    result[file_path] = (start_line, end_line)
 
         # Yield all results
         for file_path, lines in result.items():
