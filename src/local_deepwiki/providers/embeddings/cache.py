@@ -509,22 +509,25 @@ class EmbeddingCache:
             conn.commit()
 
             if deleted > 0:
-                logger.info(f"Invalidated {deleted} cache entries for model {model_name}")
+                logger.info(
+                    f"Invalidated {deleted} cache entries for model {model_name}"
+                )
             return deleted
         except sqlite3.Error as e:
             logger.warning(f"Failed to invalidate model cache: {e}")
             return 0
 
     def close(self) -> None:
-        """Close the database connection.
+        """Close all database connections.
 
         Should be called when the cache is no longer needed to ensure
         all pending writes are flushed and connections are closed cleanly.
+        Closes thread-local connections from all threads that accessed this cache.
         """
         # Flush any pending writes
         self._flush_pending_writes()
 
-        # Close thread-local connection if it exists
+        # Close thread-local connection if it exists in current thread
         if hasattr(self._local, "conn") and self._local.conn is not None:
             try:
                 self._local.conn.close()
@@ -533,10 +536,15 @@ class EmbeddingCache:
             self._local.conn = None
 
     def __del__(self) -> None:
-        """Destructor to ensure connections are closed."""
+        """Destructor to ensure connections are closed.
+
+        Note: This is a safety net for cleanup during interpreter shutdown.
+        Explicit close() calls are preferred.
+        """
         try:
             self.close()
         except Exception:
+            # Suppress all exceptions during cleanup - interpreter may be shutting down
             pass
 
 

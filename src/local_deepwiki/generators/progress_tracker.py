@@ -288,6 +288,23 @@ class GenerationProgress:
 
         return "\n".join(lines)
 
+    def close(self) -> None:
+        """Close the log file handle."""
+        if self._log_file:
+            try:
+                self._log_file.close()
+            except OSError:
+                pass
+            self._log_file = None
+
+    def __enter__(self) -> "GenerationProgress":
+        """Enter context manager."""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        """Exit context manager and close resources."""
+        self.close()
+
     def finalize(self, success: bool = True) -> str:
         """Mark generation as complete and write final status.
 
@@ -338,10 +355,6 @@ class GenerationProgress:
             pass
 
         # Close log file
-        if self._log_file:
-            try:
-                self._log_file.close()
-            except OSError:
-                pass
+        self.close()
 
         return summary

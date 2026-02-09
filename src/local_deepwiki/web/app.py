@@ -344,7 +344,10 @@ def stream_async_generator(
             break
         yield item
 
-    thread.join()
+    # Wait for thread to finish with timeout to avoid hanging
+    thread.join(timeout=30.0)
+    if thread.is_alive():
+        logger.warning("Async generator thread did not finish within 30 seconds")
 
 
 def format_sources(search_results: list[Any]) -> list[dict[str, Any]]:
