@@ -204,7 +204,19 @@ def build_breadcrumb(wiki_path: Path, current_path: str) -> str:
 
 @app.route("/")
 def index():
-    """Redirect to index.md."""
+    """Redirect to index.md or show onboarding if wiki doesn't exist."""
+    logger.debug("Accessing root route")
+
+    if WIKI_PATH is None:
+        logger.error("Wiki path not configured")
+        abort(500, "Wiki path not configured")
+
+    # Check if wiki directory has content
+    index_md = WIKI_PATH / "index.md"
+    if not index_md.exists():
+        logger.info("Wiki not indexed yet, showing onboarding page")
+        return render_template("onboarding.html", wiki_path=str(WIKI_PATH.parent))
+
     logger.debug("Redirecting / to index.md")
     return redirect(url_for("view_page", path="index.md"))
 
@@ -235,6 +247,12 @@ def view_page(path: str):
     if WIKI_PATH is None:
         logger.error("Wiki path not configured")
         abort(500, "Wiki path not configured")
+
+    # Check if wiki directory exists and is indexed
+    index_md = WIKI_PATH / "index.md"
+    if not index_md.exists():
+        logger.info("Wiki not indexed yet, showing onboarding page")
+        return render_template("onboarding.html", wiki_path=str(WIKI_PATH.parent))
 
     file_path = (WIKI_PATH / path).resolve()
     if not file_path.is_relative_to(WIKI_PATH):
@@ -396,6 +414,13 @@ def chat_page():
     """Render the chat interface."""
     if WIKI_PATH is None:
         abort(500, "Wiki path not configured")
+
+    # Check if wiki is indexed
+    index_md = WIKI_PATH / "index.md"
+    if not index_md.exists():
+        logger.info("Wiki not indexed yet, showing onboarding page")
+        return render_template("onboarding.html", wiki_path=str(WIKI_PATH.parent))
+
     return render_template("chat.html", wiki_path=str(WIKI_PATH))
 
 
@@ -687,6 +712,13 @@ def codemap_page():
     """Render the interactive codemap visualization page."""
     if WIKI_PATH is None:
         abort(500, "Wiki path not configured")
+
+    # Check if wiki is indexed
+    index_md = WIKI_PATH / "index.md"
+    if not index_md.exists():
+        logger.info("Wiki not indexed yet, showing onboarding page")
+        return render_template("onboarding.html", wiki_path=str(WIKI_PATH.parent))
+
     return render_template("codemap.html", wiki_path=str(WIKI_PATH))
 
 
@@ -979,6 +1011,13 @@ def codemap_compare_page():
     """Render the side-by-side codemap comparison page."""
     if WIKI_PATH is None:
         abort(500, "Wiki path not configured")
+
+    # Check if wiki is indexed
+    index_md = WIKI_PATH / "index.md"
+    if not index_md.exists():
+        logger.info("Wiki not indexed yet, showing onboarding page")
+        return render_template("onboarding.html", wiki_path=str(WIKI_PATH.parent))
+
     return render_template("codemap_compare.html", wiki_path=str(WIKI_PATH))
 
 

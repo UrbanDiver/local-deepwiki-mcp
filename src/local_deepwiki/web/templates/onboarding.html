@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Local DeepWiki</title>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --text-color: #c9d1d9;
+            --link-color: #58a6ff;
+            --border-color: #30363d;
+            --code-bg: #1f2428;
+            --heading-color: #f0f6fc;
+            --success-color: #238636;
+            --warning-color: #9e6a03;
+        }
+        [data-theme="light"] {
+            --bg-color: #ffffff;
+            --text-color: #24292f;
+            --link-color: #0969da;
+            --border-color: #d0d7de;
+            --code-bg: #f6f8fa;
+            --heading-color: #1f2328;
+            --success-color: #1a7f37;
+            --warning-color: #9a6700;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 700px;
+            width: 100%;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .header h1 {
+            color: var(--heading-color);
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        .header p {
+            color: #8b949e;
+            font-size: 1.1em;
+        }
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 15px;
+            background: var(--code-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        .status-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--warning-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: white;
+        }
+        .status-text {
+            font-weight: 600;
+            color: var(--warning-color);
+        }
+        .card {
+            background: var(--code-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+        .card h2 {
+            color: var(--heading-color);
+            font-size: 1.5em;
+            margin-bottom: 15px;
+        }
+        .card p {
+            margin-bottom: 15px;
+            line-height: 1.8;
+        }
+        .steps {
+            margin-top: 20px;
+        }
+        .step {
+            margin-bottom: 25px;
+        }
+        .step-number {
+            display: inline-block;
+            width: 28px;
+            height: 28px;
+            background: var(--link-color);
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 28px;
+            font-weight: 600;
+            margin-right: 10px;
+        }
+        .step-title {
+            color: var(--heading-color);
+            font-weight: 600;
+            font-size: 1.1em;
+            margin-bottom: 8px;
+        }
+        .step-description {
+            color: #8b949e;
+            margin-bottom: 10px;
+        }
+        .code-block {
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 15px;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            font-size: 0.9em;
+            color: var(--text-color);
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+        .code-block code {
+            color: #ff7b72;
+        }
+        .feature-list {
+            list-style: none;
+            margin: 15px 0;
+        }
+        .feature-list li {
+            padding: 8px 0;
+            padding-left: 30px;
+            position: relative;
+        }
+        .feature-list li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: var(--success-color);
+            font-weight: 600;
+            font-size: 1.2em;
+        }
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: background 0.2s;
+            color: var(--text-color);
+        }
+        .theme-toggle:hover {
+            background: var(--border-color);
+        }
+        .link {
+            color: var(--link-color);
+            text-decoration: none;
+        }
+        .link:hover {
+            text-decoration: underline;
+        }
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+            .card {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">🌓</button>
+
+    <div class="container">
+        <div class="header">
+            <h1>Welcome to Local DeepWiki</h1>
+            <p>Privacy-focused code documentation with AI-powered Q&A</p>
+        </div>
+
+        <div class="status-indicator">
+            <div class="status-icon">⚠</div>
+            <div class="status-text">Repository Not Indexed</div>
+        </div>
+
+        <div class="card">
+            <h2>What is Local DeepWiki?</h2>
+            <p>
+                Local DeepWiki generates comprehensive documentation for your private repositories,
+                keeping everything on your machine. It combines tree-sitter parsing, semantic code
+                chunking, and LLM-powered wiki generation.
+            </p>
+            <ul class="feature-list">
+                <li>Multi-language AST parsing with tree-sitter</li>
+                <li>Semantic code search with vector embeddings</li>
+                <li>RAG-based Q&A with conversation history</li>
+                <li>Deep research with multi-step reasoning</li>
+                <li>Interactive codemap visualization</li>
+                <li>API docs, call graphs, inheritance trees</li>
+                <li>Privacy-first: everything runs locally</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h2>Get Started</h2>
+            <p>To view your wiki, you need to index your repository first.</p>
+
+            <div class="steps">
+                <div class="step">
+                    <div class="step-title">
+                        <span class="step-number">1</span>
+                        Open MCP Client (Claude Desktop, Cline, etc.)
+                    </div>
+                    <div class="step-description">
+                        Make sure Local DeepWiki MCP server is configured in your client.
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-title">
+                        <span class="step-number">2</span>
+                        Index Your Repository
+                    </div>
+                    <div class="step-description">
+                        Ask Claude to run the <code>index_repository</code> tool:
+                    </div>
+                    <div class="code-block">
+                        <code>index_repository</code>(repo_path="{{ wiki_path }}")
+                    </div>
+                    <div class="step-description">
+                        This will parse your code, generate embeddings, and create wiki documentation.
+                    </div>
+                </div>
+
+                <div class="step">
+                    <div class="step-title">
+                        <span class="step-number">3</span>
+                        Refresh This Page
+                    </div>
+                    <div class="step-description">
+                        Once indexing completes, refresh your browser to see the wiki.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Alternative: CLI Commands</h2>
+            <p>You can also use the CLI for indexing and auto-reindexing:</p>
+
+            <div class="step-description">Index once:</div>
+            <div class="code-block">uv run local-deepwiki</div>
+
+            <div class="step-description" style="margin-top: 15px;">Or watch for changes and auto-reindex:</div>
+            <div class="code-block">uv run deepwiki-watch {{ wiki_path }}</div>
+
+            <p style="margin-top: 15px;">
+                Learn more in the
+                <a href="https://github.com/yourusername/local-deepwiki-mcp" class="link" target="_blank">documentation</a>.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Theme toggle
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        }
+
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        if (savedTheme === 'light') {
+            document.documentElement.setAttribute('data-theme', 'light');
+        }
+    </script>
+</body>
+</html>
