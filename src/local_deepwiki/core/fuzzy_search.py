@@ -20,7 +20,10 @@ from typing import TYPE_CHECKING, Any
 
 from rapidfuzz import fuzz, process
 
+from local_deepwiki.logging import get_logger
 from local_deepwiki.models import ChunkType, CodeChunk, SearchResult
+
+logger = get_logger(__name__)
 
 if TYPE_CHECKING:
     from local_deepwiki.core.vectorstore import VectorStore
@@ -415,9 +418,10 @@ class FuzzySearchHelper:
                     self._name_to_entries[full_qualified_name] = [entry]
                     self._all_names.append(full_qualified_name)
 
-        except Exception:
-            # If pandas is not available or table is empty, fall back to iteration
-            pass
+        except (ImportError, ValueError, RuntimeError, OSError) as e:
+            logger.warning(f"Failed to build fuzzy search index: {e}")
+            self._is_built = False
+            return
 
         self._is_built = True
 

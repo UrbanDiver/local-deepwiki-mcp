@@ -173,7 +173,9 @@ class RateLimiter:
             wait_time = 60 - (now - self._state.minute_reset)
             if wait_time > 0:
                 if self._config.wait_for_minute_limit:
-                    logger.info(f"Rate limit: minute limit reached, waiting {wait_time:.1f}s")
+                    logger.info(
+                        f"Rate limit: minute limit reached, waiting {wait_time:.1f}s"
+                    )
                     # Release lock while waiting to not block other operations
                     self._lock.release()
                     try:
@@ -203,7 +205,9 @@ class RateLimiter:
             wait_time = 3600 - (now - self._state.hour_reset)
             if wait_time > 0:
                 if self._config.wait_for_hour_limit:
-                    logger.warning(f"Rate limit: hour limit reached, waiting {wait_time:.0f}s")
+                    logger.warning(
+                        f"Rate limit: hour limit reached, waiting {wait_time:.0f}s"
+                    )
                     # Release lock while waiting
                     self._lock.release()
                     try:
@@ -263,7 +267,9 @@ class RateLimiter:
         """
         self._burst_semaphore.release()
         self._state.current_concurrent = max(0, self._state.current_concurrent - 1)
-        logger.debug(f"Rate limiter: released (concurrent: {self._state.current_concurrent})")
+        logger.debug(
+            f"Rate limiter: released (concurrent: {self._state.current_concurrent})"
+        )
 
     async def __aenter__(self) -> "RateLimiter":
         """Enter async context manager, acquiring rate limit permission."""
@@ -284,11 +290,15 @@ class RateLimiter:
         return {
             "minute_count": self._state.minute_count,
             "minute_limit": self._config.requests_per_minute,
-            "minute_remaining": max(0, self._config.requests_per_minute - self._state.minute_count),
+            "minute_remaining": max(
+                0, self._config.requests_per_minute - self._state.minute_count
+            ),
             "minute_reset_in": max(0, 60 - (now - self._state.minute_reset)),
             "hour_count": self._state.hour_count,
             "hour_limit": self._config.requests_per_hour,
-            "hour_remaining": max(0, self._config.requests_per_hour - self._state.hour_count),
+            "hour_remaining": max(
+                0, self._config.requests_per_hour - self._state.hour_count
+            ),
             "hour_reset_in": max(0, 3600 - (now - self._state.hour_reset)),
             "current_concurrent": self._state.current_concurrent,
             "burst_limit": self._config.burst_limit,
@@ -297,7 +307,6 @@ class RateLimiter:
 
 # Global rate limiter instance
 _rate_limiter: Optional[RateLimiter] = None
-_rate_limiter_lock = asyncio.Lock()
 
 
 def get_rate_limiter() -> RateLimiter:

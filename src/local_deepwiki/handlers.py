@@ -1117,8 +1117,10 @@ async def handle_read_wiki_structure(args: dict[str, Any]) -> list[TextContent]:
             toc_content = await asyncio.to_thread(toc_path.read_text)
             toc_data = json.loads(toc_content)
             return [TextContent(type="text", text=json.dumps(toc_data, indent=2))]
-        except (json.JSONDecodeError, OSError):
-            pass  # Fall back to dynamic generation
+        except (json.JSONDecodeError, OSError) as e:
+            logger.warning(
+                f"toc.json exists but could not be read, falling back to dynamic generation: {e}"
+            )
 
     # Fall back to dynamic generation if no toc.json
     pages = []
@@ -3197,8 +3199,10 @@ async def handle_explain_entity(args: dict[str, Any]) -> list[TextContent]:
                 if entry.get("name") == entity_name:
                     entity_info = entry
                     break
-        except (json.JSONDecodeError, OSError):
-            pass
+        except (json.JSONDecodeError, OSError) as e:
+            logger.warning(
+                f"search.json exists but could not be read for entity lookup: {e}"
+            )
 
     if entity_info is None:
         result = {
@@ -3868,9 +3872,19 @@ async def handle_analyze_diff(args: dict[str, Any]) -> list[TextContent]:
                             "file": entity.get("file", ""),
                         }
                     )
-    except Exception:
-        # If no index exists, just skip wiki/entity mapping
-        pass
+    except (
+        FileNotFoundError,
+        json.JSONDecodeError,
+        OSError,
+        KeyError,
+        ValidationError,
+    ) as e:
+        # FileNotFoundError: no index exists
+        # json.JSONDecodeError: corrupted toc/search JSON
+        # OSError: file read issues
+        # KeyError: unexpected data format
+        # ValidationError: repository not indexed
+        logger.debug(f"Could not load wiki/entity mapping for diff analysis: {e}")
 
     # Summary
     summary = {

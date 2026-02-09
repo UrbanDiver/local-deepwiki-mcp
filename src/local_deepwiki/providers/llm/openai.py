@@ -105,7 +105,11 @@ class OpenAILLMProvider(LLMProvider):
                     retry_after=retry_after,
                 ) from e
 
-            if e.status_code == 404 or "not found" in error_str or "does not exist" in error_str:
+            if (
+                e.status_code == 404
+                or "not found" in error_str
+                or "does not exist" in error_str
+            ):
                 raise ProviderModelNotFoundError(
                     self._model,
                     provider_name=self.name,
@@ -132,12 +136,6 @@ class OpenAILLMProvider(LLMProvider):
             ProviderConnectionError: If the API cannot be reached.
             ProviderAuthenticationError: If authentication fails.
         """
-        if not self._api_key:
-            raise ProviderAuthenticationError(
-                "No OpenAI API key configured. Set OPENAI_API_KEY environment variable.",
-                provider_name=self.name,
-            )
-
         try:
             # Make a minimal API call to verify connectivity
             await self._client.chat.completions.create(
@@ -179,7 +177,11 @@ class OpenAILLMProvider(LLMProvider):
             return True
         except Exception as e:
             error_str = str(e).lower()
-            if "not found" in error_str or "does not exist" in error_str or "invalid" in error_str:
+            if (
+                "not found" in error_str
+                or "does not exist" in error_str
+                or "invalid" in error_str
+            ):
                 raise ProviderModelNotFoundError(
                     model_name,
                     provider_name=self.name,
@@ -237,7 +239,9 @@ class OpenAILLMProvider(LLMProvider):
             messages.append({"role": "system", "content": system_prompt})
         messages.append({"role": "user", "content": prompt})
 
-        logger.debug(f"Generating with OpenAI model {self._model}, prompt length: {len(prompt)}")
+        logger.debug(
+            f"Generating with OpenAI model {self._model}, prompt length: {len(prompt)}"
+        )
 
         try:
             response = await self._client.chat.completions.create(
@@ -251,8 +255,12 @@ class OpenAILLMProvider(LLMProvider):
             logger.debug(f"OpenAI response length: {len(content)}")
             return content
 
-        except (ProviderConnectionError, ProviderAuthenticationError,
-                ProviderRateLimitError, ProviderModelNotFoundError):
+        except (
+            ProviderConnectionError,
+            ProviderAuthenticationError,
+            ProviderRateLimitError,
+            ProviderModelNotFoundError,
+        ):
             raise
         except Exception as e:
             self._handle_api_error(e)
@@ -299,8 +307,12 @@ class OpenAILLMProvider(LLMProvider):
                 if chunk.choices[0].delta.content:
                     yield chunk.choices[0].delta.content
 
-        except (ProviderConnectionError, ProviderAuthenticationError,
-                ProviderRateLimitError, ProviderModelNotFoundError):
+        except (
+            ProviderConnectionError,
+            ProviderAuthenticationError,
+            ProviderRateLimitError,
+            ProviderModelNotFoundError,
+        ):
             raise
         except Exception as e:
             self._handle_api_error(e)

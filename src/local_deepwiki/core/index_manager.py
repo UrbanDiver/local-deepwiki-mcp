@@ -98,7 +98,9 @@ class IndexStatusManager:
         status, _ = self.load_with_migration_info(wiki_path)
         return status
 
-    def load_with_migration_info(self, wiki_path: Path) -> tuple[IndexStatus | None, bool]:
+    def load_with_migration_info(
+        self, wiki_path: Path
+    ) -> tuple[IndexStatus | None, bool]:
         """Load index status and return migration information.
 
         Args:
@@ -148,8 +150,16 @@ class IndexStatusManager:
         """
         wiki_path.mkdir(parents=True, exist_ok=True)
         status_path = wiki_path / self.status_filename
-        with open(status_path, "w") as f:
-            json.dump(status.model_dump(), f, indent=2)
+        # Atomic write: write to temp file then rename to avoid corruption on crash
+        tmp_path = status_path.with_suffix(".tmp")
+        try:
+            with open(tmp_path, "w") as f:
+                json.dump(status.model_dump(), f, indent=2)
+                f.flush()
+            tmp_path.replace(status_path)
+        except BaseException:
+            tmp_path.unlink(missing_ok=True)
+            raise
 
     def create(
         self,

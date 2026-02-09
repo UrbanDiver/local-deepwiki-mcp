@@ -23,7 +23,9 @@ OPENAI_EMBEDDING_MODELS = {
 class OpenAIEmbeddingProvider(EmbeddingProvider):
     """Embedding provider using OpenAI API."""
 
-    def __init__(self, model: str = "text-embedding-3-small", api_key: str | None = None):
+    def __init__(
+        self, model: str = "text-embedding-3-small", api_key: str | None = None
+    ):
         """Initialize the OpenAI embedding provider.
 
         Args:
@@ -121,7 +123,11 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
                 input=texts,
             )
             return [item.embedding for item in response.data]
-        except (ProviderConnectionError, ProviderAuthenticationError, ProviderRateLimitError):
+        except (
+            ProviderConnectionError,
+            ProviderAuthenticationError,
+            ProviderRateLimitError,
+        ):
             raise
         except Exception as e:
             self._handle_api_error(e)
@@ -145,12 +151,6 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
             ProviderConnectionError: If the API cannot be reached.
             ProviderAuthenticationError: If authentication fails.
         """
-        if not self._api_key:
-            raise ProviderAuthenticationError(
-                "No OpenAI API key configured. Set OPENAI_API_KEY environment variable.",
-                provider_name=self.name,
-            )
-
         try:
             # Make a minimal API call to verify connectivity
             await self._client.embeddings.create(

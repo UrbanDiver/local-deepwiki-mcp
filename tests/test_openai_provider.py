@@ -299,27 +299,8 @@ class TestOpenAIProviderValidateConnectivity:
 
         provider._client.chat.completions.create = AsyncMock(return_value=mock_response)
 
-        # Need to add _api_key attribute for the test since validate_connectivity checks it
-        provider._api_key = "test-key"
-
         result = await provider.validate_connectivity()
         assert result is True
-
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
-    async def test_validate_connectivity_no_api_key(self):
-        """Test connectivity validation fails without API key."""
-        from local_deepwiki.providers.base import ProviderAuthenticationError
-        from local_deepwiki.providers.llm.openai import OpenAILLMProvider
-
-        provider = OpenAILLMProvider(model="gpt-4o")
-
-        # Set _api_key to None to trigger the check
-        provider._api_key = None
-
-        with pytest.raises(ProviderAuthenticationError) as exc_info:
-            await provider.validate_connectivity()
-
-        assert "No OpenAI API key configured" in str(exc_info.value)
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
     async def test_validate_connectivity_auth_error(self):
@@ -328,7 +309,6 @@ class TestOpenAIProviderValidateConnectivity:
         from local_deepwiki.providers.llm.openai import OpenAILLMProvider
 
         provider = OpenAILLMProvider(model="gpt-4o")
-        provider._api_key = "test-key"
 
         auth_error = AuthenticationError(
             message="Invalid API key",
@@ -348,7 +328,6 @@ class TestOpenAIProviderValidateConnectivity:
         from local_deepwiki.providers.llm.openai import OpenAILLMProvider
 
         provider = OpenAILLMProvider(model="gpt-4o")
-        provider._api_key = "test-key"
 
         conn_error = APIConnectionError(request=MagicMock())
 
@@ -364,7 +343,6 @@ class TestOpenAIProviderValidateConnectivity:
         from local_deepwiki.providers.llm.openai import OpenAILLMProvider
 
         provider = OpenAILLMProvider(model="gpt-4o")
-        provider._api_key = "test-key"
 
         # Use a RuntimeError that doesn't match any known patterns
         # This will go through _handle_api_error and then get wrapped
@@ -592,7 +570,9 @@ class TestOpenAIProviderGenerateErrors:
             body=None,
         )
 
-        provider._client.chat.completions.create = AsyncMock(side_effect=not_found_error)
+        provider._client.chat.completions.create = AsyncMock(
+            side_effect=not_found_error
+        )
 
         with pytest.raises(ProviderModelNotFoundError):
             await provider.generate("Test prompt")
@@ -694,7 +674,9 @@ class TestOpenAIProviderStreamErrors:
             body=None,
         )
 
-        provider._client.chat.completions.create = AsyncMock(side_effect=not_found_error)
+        provider._client.chat.completions.create = AsyncMock(
+            side_effect=not_found_error
+        )
 
         with pytest.raises(ProviderModelNotFoundError):
             async for _ in provider.generate_stream("Test prompt"):

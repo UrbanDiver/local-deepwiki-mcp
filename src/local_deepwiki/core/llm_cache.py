@@ -160,7 +160,9 @@ class LLMCache:
         # Fast path: exact hash match
         try:
             # LanceDB filter query for exact hash
-            exact_results = table.search().where(f"exact_hash = '{exact_hash}'").limit(1).to_list()
+            exact_results = (
+                table.search().where(f"exact_hash = '{exact_hash}'").limit(1).to_list()
+            )
 
             if exact_results:
                 entry = exact_results[0]
@@ -190,7 +192,9 @@ class LLMCache:
 
                 if similarity >= self.config.similarity_threshold:
                     # Check model match and validity
-                    if result.get("model_name", "") == model_name and self._is_valid_entry(result):
+                    if result.get(
+                        "model_name", ""
+                    ) == model_name and self._is_valid_entry(result):
                         self._stats["hits"] += 1
                         logger.debug(
                             f"Cache similarity hit: similarity={similarity:.3f}, "
@@ -271,7 +275,9 @@ class LLMCache:
                     # OSError: Storage issues
                     logger.debug(f"Could not create index: {e}")
 
-            logger.debug(f"Cached response: id={entry_id[:8]}..., hash={exact_hash[:12]}...")
+            logger.debug(
+                f"Cached response: id={entry_id[:8]}..., hash={exact_hash[:12]}..."
+            )
 
             # Check if we need to evict old entries
             await self._maybe_evict()
@@ -349,7 +355,9 @@ class LLMCache:
             if count <= self.config.max_entries:
                 return
 
-            logger.info(f"Cache has {count} entries (max: {self.config.max_entries}), evicting...")
+            logger.info(
+                f"Cache has {count} entries (max: {self.config.max_entries}), evicting..."
+            )
 
             # Fetch all entries for eviction analysis
             # Limit to 2x max_entries to avoid memory issues on very large caches
@@ -366,15 +374,20 @@ class LLMCache:
                     valid_entries.append(entry)
 
             deleted_count = 0
+            failed_count = 0
             if expired_ids:
                 for entry_id in expired_ids:
                     try:
                         table.delete(f"id = '{entry_id}'")
                         deleted_count += 1
                     except (ValueError, RuntimeError, OSError):
-                        pass
+                        failed_count += 1
 
                 logger.info(f"Evicted {deleted_count} expired cache entries")
+                if failed_count:
+                    logger.warning(
+                        f"Failed to evict {failed_count} of {len(expired_ids)} expired entries"
+                    )
 
             # Phase 2: LRU eviction if still over limit
             remaining_count = count - deleted_count
@@ -385,25 +398,32 @@ class LLMCache:
 
                 if to_evict > 0 and valid_entries:
                     # Sort by last_hit_at (oldest first = LRU)
-                    valid_entries.sort(key=lambda e: e.get("last_hit_at", e.get("created_at", 0)))
+                    valid_entries.sort(
+                        key=lambda e: e.get("last_hit_at", e.get("created_at", 0))
+                    )
 
                     # Delete oldest entries
                     lru_deleted = 0
+                    lru_failed = 0
                     for entry in valid_entries[:to_evict]:
                         try:
                             table.delete(f"id = '{entry['id']}'")
                             lru_deleted += 1
                         except (ValueError, RuntimeError, OSError):
-                            pass
+                            lru_failed += 1
 
                     logger.info(f"Evicted {lru_deleted} LRU cache entries")
+                    if lru_failed:
+                        logger.warning(
+                            f"Failed to evict {lru_failed} of {to_evict} LRU entries"
+                        )
 
         except (KeyError, ValueError, RuntimeError, OSError) as e:
             # KeyError: Missing fields in entries
             # ValueError: Invalid query during eviction
             # RuntimeError: Database operation failure
             # OSError: Storage issues
-            logger.debug(f"Eviction failed: {e}")
+            logger.warning(f"Eviction failed: {e}")
 
     async def clear(self) -> int:
         """Clear all cache entries.

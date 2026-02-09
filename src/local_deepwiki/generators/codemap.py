@@ -221,7 +221,7 @@ async def discover_entry_points(
     search_query = entry_point_hint if entry_point_hint else query
     try:
         results = await vector_store.search(search_query, limit=20, min_similarity=0.0)
-    except Exception:
+    except (OSError, ValueError, RuntimeError):
         logger.exception("Vector search failed for entry point discovery")
         return []
 
@@ -258,8 +258,8 @@ async def discover_entry_points(
                     abs_path = repo_path / fp
                 cg = extractor.extract_from_file(abs_path, repo_path)
                 file_call_graphs[fp] = cg
-            except Exception:
-                pass
+            except (OSError, ValueError, RuntimeError) as e:
+                logger.debug(f"Could not extract call graph from {fp}: {e}")
 
     # Compute all callees across discovered graphs to identify roots
     all_callees: set[str] = set()
@@ -356,7 +356,8 @@ async def build_cross_file_graph(
                 file_call_graphs[file_key] = extractor.extract_from_file(
                     abs_path, repo_path
                 )
-            except Exception:
+            except (OSError, ValueError, RuntimeError) as e:
+                logger.debug(f"Could not extract call graph for {file_key}: {e}")
                 file_call_graphs[file_key] = {}
 
         cg = file_call_graphs.get(file_key, {})
@@ -505,7 +506,8 @@ async def _search_cross_file(
         results = await vector_store.search(
             f"def {callee_name}", limit=5, min_similarity=0.0
         )
-    except Exception:
+    except (OSError, ValueError, RuntimeError) as e:
+        logger.debug(f"Cross-file search failed for {callee_name}: {e}")
         return None
 
     for r in results:
@@ -891,7 +893,7 @@ async def suggest_topics(
     # Gather all callable chunks
     try:
         all_chunks = list(vector_store.get_all_chunks())
-    except Exception:
+    except (OSError, ValueError, RuntimeError):
         logger.exception("Failed to retrieve chunks for topic suggestions")
         return []
 
@@ -912,7 +914,7 @@ async def suggest_topics(
         try:
             cg = extractor.extract_from_file(abs_path, repo)
             combined_cg.update(cg)
-        except Exception:
+        except (OSError, ValueError, RuntimeError):
             continue
 
     # Index callable chunks by name for quick lookup

@@ -92,7 +92,9 @@ class CheckpointManager:
         self._ensure_dir()
         checkpoint_path = self._checkpoint_path(checkpoint.research_id)
         checkpoint_path.write_text(checkpoint.model_dump_json(indent=2))
-        logger.debug(f"Saved checkpoint {checkpoint.research_id} at step {checkpoint.current_step}")
+        logger.debug(
+            f"Saved checkpoint {checkpoint.research_id} at step {checkpoint.current_step}"
+        )
 
     def load_checkpoint(self, research_id: str) -> ResearchCheckpoint | None:
         """Load a checkpoint from disk.
@@ -159,8 +161,10 @@ class CheckpointManager:
             List of incomplete checkpoints.
         """
         return [
-            c for c in self.list_checkpoints()
-            if c.current_step not in (
+            c
+            for c in self.list_checkpoints()
+            if c.current_step
+            not in (
                 ResearchCheckpointStep.COMPLETE,
                 ResearchCheckpointStep.ERROR,
             )
@@ -377,13 +381,21 @@ class DeepResearchPipeline:
         # Check the cancellation event first
         if self._cancellation_event and self._cancellation_event.is_set():
             logger.info(f"Research cancelled via event during {step_name}")
-            checkpoint_id = self._current_checkpoint.research_id if self._current_checkpoint else None
+            checkpoint_id = (
+                self._current_checkpoint.research_id
+                if self._current_checkpoint
+                else None
+            )
             raise ResearchCancelledError(step_name, checkpoint_id)
 
         # Then check the callback
         if self._cancellation_check and self._cancellation_check():
             logger.info(f"Research cancelled during {step_name}")
-            checkpoint_id = self._current_checkpoint.research_id if self._current_checkpoint else None
+            checkpoint_id = (
+                self._current_checkpoint.research_id
+                if self._current_checkpoint
+                else None
+            )
             raise ResearchCancelledError(step_name, checkpoint_id)
 
     def _save_checkpoint(
@@ -590,7 +602,9 @@ class DeepResearchPipeline:
             checkpoint = self._checkpoint_manager.load_checkpoint(resume_id)
             if checkpoint:
                 self._current_checkpoint = checkpoint
-                logger.info(f"Resuming research {resume_id} from step {checkpoint.current_step}")
+                logger.info(
+                    f"Resuming research {resume_id} from step {checkpoint.current_step}"
+                )
             else:
                 logger.warning(f"Checkpoint {resume_id} not found, starting fresh")
                 self._current_checkpoint = self._create_checkpoint(question)
@@ -604,7 +618,9 @@ class DeepResearchPipeline:
 
             # Clean up checkpoint on successful completion
             if self._current_checkpoint and self._checkpoint_manager:
-                self._checkpoint_manager.delete_checkpoint(self._current_checkpoint.research_id)
+                self._checkpoint_manager.delete_checkpoint(
+                    self._current_checkpoint.research_id
+                )
 
             return result
 
@@ -683,16 +699,26 @@ class DeepResearchPipeline:
             trace.append(follow_up_step)
 
         # Prepare results for synthesis
-        all_results = self._prepare_results_for_synthesis(initial_results, additional_results)
+        all_results = self._prepare_results_for_synthesis(
+            initial_results, additional_results
+        )
 
         # Step 5: Synthesis
-        answer, step, calls = await self._step_synthesize(question, sub_questions, all_results)
+        answer, step, calls = await self._step_synthesize(
+            question, sub_questions, all_results
+        )
         trace.append(step)
         llm_calls += calls
 
         # Finalize and build result
         return await self._finalize_research(
-            question, answer, sub_questions, all_results, trace, llm_calls, step.duration_ms
+            question,
+            answer,
+            sub_questions,
+            all_results,
+            trace,
+            llm_calls,
+            step.duration_ms,
         )
 
     async def _emit_start_event(
@@ -714,7 +740,9 @@ class DeepResearchPipeline:
                 EventType.RESEARCH_START,
                 {"question": question},
             )
-            await self._report_progress(0, ResearchProgressType.STARTED, "Starting deep research...")
+            await self._report_progress(
+                0, ResearchProgressType.STARTED, "Starting deep research..."
+            )
         else:
             await self._report_progress(
                 0,
@@ -738,7 +766,11 @@ class DeepResearchPipeline:
         """
         checkpoint = self._current_checkpoint
 
-        if "decomposition" in completed_steps and checkpoint and checkpoint.sub_questions:
+        if (
+            "decomposition" in completed_steps
+            and checkpoint
+            and checkpoint.sub_questions
+        ):
             # Restore from checkpoint
             sub_questions = checkpoint.sub_questions
             logger.info(f"Restored {len(sub_questions)} sub-questions from checkpoint")
@@ -775,7 +807,11 @@ class DeepResearchPipeline:
         """
         checkpoint = self._current_checkpoint
 
-        if "retrieval" in completed_steps and checkpoint and checkpoint.retrieved_contexts:
+        if (
+            "retrieval" in completed_steps
+            and checkpoint
+            and checkpoint.retrieved_contexts
+        ):
             # Restore from checkpoint
             initial_results = self._checkpoint_to_results(checkpoint.retrieved_contexts)
             logger.info(f"Restored {len(initial_results)} chunks from checkpoint")
@@ -791,7 +827,9 @@ class DeepResearchPipeline:
         # Save checkpoint after retrieval
         self._save_checkpoint(
             step=ResearchCheckpointStep.GAP_ANALYSIS,
-            retrieved_contexts=self._results_to_checkpoint_format(initial_results, "initial"),
+            retrieved_contexts=self._results_to_checkpoint_format(
+                initial_results, "initial"
+            ),
             completed_step="retrieval",
         )
         return initial_results, step
@@ -816,10 +854,16 @@ class DeepResearchPipeline:
         """
         checkpoint = self._current_checkpoint
 
-        if "gap_analysis" in completed_steps and checkpoint and checkpoint.follow_up_queries is not None:
+        if (
+            "gap_analysis" in completed_steps
+            and checkpoint
+            and checkpoint.follow_up_queries is not None
+        ):
             # Restore from checkpoint
             follow_up_queries = checkpoint.follow_up_queries
-            logger.info(f"Restored {len(follow_up_queries)} follow-up queries from checkpoint")
+            logger.info(
+                f"Restored {len(follow_up_queries)} follow-up queries from checkpoint"
+            )
             step = ResearchStep(
                 step_type=ResearchStepType.GAP_ANALYSIS,
                 description=f"Restored {len(follow_up_queries)} follow-up queries from checkpoint",
@@ -833,7 +877,9 @@ class DeepResearchPipeline:
         )
         # Save checkpoint after gap analysis
         self._save_checkpoint(
-            step=ResearchCheckpointStep.FOLLOW_UP_RETRIEVAL if follow_up_queries else ResearchCheckpointStep.SYNTHESIS,
+            step=ResearchCheckpointStep.FOLLOW_UP_RETRIEVAL
+            if follow_up_queries
+            else ResearchCheckpointStep.SYNTHESIS,
             follow_up_queries=follow_up_queries,
             completed_step="gap_analysis",
         )
@@ -860,10 +906,18 @@ class DeepResearchPipeline:
 
         checkpoint = self._current_checkpoint
 
-        if "follow_up_retrieval" in completed_steps and checkpoint and checkpoint.follow_up_contexts:
+        if (
+            "follow_up_retrieval" in completed_steps
+            and checkpoint
+            and checkpoint.follow_up_contexts
+        ):
             # Restore from checkpoint
-            additional_results = [_dict_to_search_result(d) for d in checkpoint.follow_up_contexts]
-            logger.info(f"Restored {len(additional_results)} follow-up chunks from checkpoint")
+            additional_results = [
+                _dict_to_search_result(d) for d in checkpoint.follow_up_contexts
+            ]
+            logger.info(
+                f"Restored {len(additional_results)} follow-up chunks from checkpoint"
+            )
             step = ResearchStep(
                 step_type=ResearchStepType.RETRIEVAL,
                 description=f"Restored {len(additional_results)} follow-up chunks from checkpoint",
@@ -945,7 +999,9 @@ class DeepResearchPipeline:
             total_llm_calls=llm_calls,
         )
 
-    async def _step_decompose(self, question: str) -> tuple[list[SubQuestion], ResearchStep, int]:
+    async def _step_decompose(
+        self, question: str
+    ) -> tuple[list[SubQuestion], ResearchStep, int]:
         """Execute the decomposition step.
 
         Returns:
@@ -1040,7 +1096,9 @@ class DeepResearchPipeline:
             duration_ms=duration_ms,
         )
 
-        logger.info(f"Gap analysis generated {len(follow_up_queries)} follow-up queries")
+        logger.info(
+            f"Gap analysis generated {len(follow_up_queries)} follow-up queries"
+        )
         await self._report_progress(
             3,
             ResearchProgressType.GAP_ANALYSIS_COMPLETE,
@@ -1186,10 +1244,18 @@ class DeepResearchPipeline:
                 if isinstance(item, dict) and "question" in item:
                     category = item.get("category", "structure")
                     # Validate category
-                    valid_categories = {"structure", "flow", "dependencies", "impact", "comparison"}
+                    valid_categories = {
+                        "structure",
+                        "flow",
+                        "dependencies",
+                        "impact",
+                        "comparison",
+                    }
                     if category not in valid_categories:
                         category = "structure"
-                    sub_questions.append(SubQuestion(question=item["question"], category=category))
+                    sub_questions.append(
+                        SubQuestion(question=item["question"], category=category)
+                    )
 
             return sub_questions
 
@@ -1197,7 +1263,9 @@ class DeepResearchPipeline:
             logger.warning(f"Failed to parse decomposition JSON: {e}")
             return []
 
-    async def _parallel_retrieve(self, sub_questions: list[SubQuestion]) -> list[SearchResult]:
+    async def _parallel_retrieve(
+        self, sub_questions: list[SubQuestion]
+    ) -> list[SearchResult]:
         """Retrieve code chunks for each sub-question in parallel.
 
         Args:
@@ -1221,6 +1289,10 @@ class DeepResearchPipeline:
         # Combine results
         all_results: list[SearchResult] = []
         for i, result_or_exc in enumerate(results_lists):
+            if isinstance(
+                result_or_exc, (asyncio.CancelledError, KeyboardInterrupt, SystemExit)
+            ):
+                raise result_or_exc
             if isinstance(result_or_exc, BaseException):
                 logger.warning(f"Search failed for sub-question {i}: {result_or_exc}")
                 continue
@@ -1250,7 +1322,9 @@ class DeepResearchPipeline:
 
         # Build context summary
         context_summary = self._build_context_summary(results)
-        sub_q_text = "\n".join(f"- [{sq.category}] {sq.question}" for sq in sub_questions)
+        sub_q_text = "\n".join(
+            f"- [{sq.category}] {sq.question}" for sq in sub_questions
+        )
 
         prompt = GAP_ANALYSIS_USER_PROMPT.format(
             question=question,
@@ -1344,14 +1418,23 @@ class DeepResearchPipeline:
         # Use slightly fewer chunks per query for follow-ups
         chunks_per_query = max(3, self.chunks_per_subquestion - 2)
 
-        tasks = [self.vector_store.search(query, limit=chunks_per_query) for query in queries]
+        tasks = [
+            self.vector_store.search(query, limit=chunks_per_query) for query in queries
+        ]
 
         results_lists = await asyncio.gather(*tasks, return_exceptions=True)
 
         all_results: list[SearchResult] = []
         for i, result_or_exc in enumerate(results_lists):
+            if isinstance(
+                result_or_exc,
+                (asyncio.CancelledError, KeyboardInterrupt, SystemExit),
+            ):
+                raise result_or_exc
             if isinstance(result_or_exc, BaseException):
-                logger.warning(f"Follow-up search failed for query {i}: {result_or_exc}")
+                logger.warning(
+                    f"Follow-up search failed for query {i}: {result_or_exc}"
+                )
                 continue
             all_results.extend(result_or_exc)
 
@@ -1400,7 +1483,9 @@ class DeepResearchPipeline:
 
         # Build full context
         full_context = self._build_full_context(results)
-        sub_q_text = "\n".join(f"- [{sq.category}] {sq.question}" for sq in sub_questions)
+        sub_q_text = "\n".join(
+            f"- [{sq.category}] {sq.question}" for sq in sub_questions
+        )
 
         # Count unique files
         unique_files = len(set(r.chunk.file_path for r in results))
@@ -1512,7 +1597,9 @@ def list_research_checkpoints(repo_path: Path) -> list[ResearchCheckpoint]:
     return manager.list_checkpoints()
 
 
-def get_research_checkpoint(repo_path: Path, research_id: str) -> ResearchCheckpoint | None:
+def get_research_checkpoint(
+    repo_path: Path, research_id: str
+) -> ResearchCheckpoint | None:
     """Get a specific research checkpoint.
 
     Args:

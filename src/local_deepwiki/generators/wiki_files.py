@@ -18,7 +18,10 @@ from local_deepwiki.core.git_utils import (
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.generators.api_docs import get_file_api_docs
 from local_deepwiki.generators.callgraph import get_file_call_graph, get_file_callers
-from local_deepwiki.generators.context_builder import build_file_context, format_context_for_llm
+from local_deepwiki.generators.context_builder import (
+    build_file_context,
+    format_context_for_llm,
+)
 from local_deepwiki.generators.crosslinks import EntityRegistry
 from local_deepwiki.generators.diagrams import generate_class_diagram
 from local_deepwiki.generators.test_examples import get_file_examples
@@ -231,7 +234,9 @@ def _find_insertion_point(
         if next_line.startswith(("#### ", "### ", "## ")):
             if not found_returns:
                 result_lines.append("")
-                result_lines.append(_create_source_details(chunk, syntax_lang, chunk_url))
+                result_lines.append(
+                    _create_source_details(chunk, syntax_lang, chunk_url)
+                )
             return j - 1
 
         # Track if we found Returns
@@ -323,7 +328,9 @@ def _inject_inline_source_code(
     def get_chunk_url(chunk: CodeChunk) -> str | None:
         if repo_info is None:
             return None
-        return build_source_url(repo_info, chunk.file_path, chunk.start_line, chunk.end_line)
+        return build_source_url(
+            repo_info, chunk.file_path, chunk.start_line, chunk.end_line
+        )
 
     lines = content.split("\n")
     result_lines: list[str] = []
@@ -351,15 +358,23 @@ def _inject_inline_source_code(
                 if matched_chunk is not None:
                     used_chunks.add(matched_chunk.id)
                     i = _find_insertion_point(
-                        lines, i + 1, result_lines, matched_chunk,
-                        syntax_lang, get_chunk_url(matched_chunk)
+                        lines,
+                        i + 1,
+                        result_lines,
+                        matched_chunk,
+                        syntax_lang,
+                        get_chunk_url(matched_chunk),
                     )
 
         i += 1
 
     _append_unused_chunks(
-        result_lines, chunks, maps.all_chunk_ids, used_chunks,
-        syntax_lang, get_chunk_url
+        result_lines,
+        chunks,
+        maps.all_chunk_ids,
+        used_chunks,
+        syntax_lang,
+        get_chunk_url,
     )
 
     return "\n".join(result_lines)
@@ -535,7 +550,9 @@ def _generate_file_enrichments(
                 content += "\n\n" + "\n".join(used_by_lines)
 
     # Add usage examples from test files
-    entity_names = [chunk.name for chunk in all_file_chunks if chunk.name and len(chunk.name) > 2]
+    entity_names = [
+        chunk.name for chunk in all_file_chunks if chunk.name and len(chunk.name) > 2
+    ]
     if entity_names:
         examples_md = get_file_examples(
             source_file=abs_file_path,
@@ -609,7 +626,9 @@ async def generate_single_file_doc(
     source_files = [file_info.path]
 
     # Check if this file page needs regeneration
-    if not full_rebuild and not status_manager.needs_regeneration(wiki_path, source_files):
+    if not full_rebuild and not status_manager.needs_regeneration(
+        wiki_path, source_files
+    ):
         existing_page = await status_manager.load_existing_page(wiki_path)
         if existing_page is not None:
             # Still need to register entities for cross-linking
@@ -712,7 +731,9 @@ def _filter_significant_files(files: list[FileInfo], max_files: int) -> list[Fil
 
     # Limit and prioritize by complexity (chunk count)
     if max_files > 0 and len(significant) > max_files:
-        significant = sorted(significant, key=lambda x: x.chunk_count, reverse=True)[:max_files]
+        significant = sorted(significant, key=lambda x: x.chunk_count, reverse=True)[
+            :max_files
+        ]
 
     return significant
 
@@ -778,7 +799,9 @@ async def generate_file_docs(
     Returns:
         Tuple of (pages list, generated count, skipped count).
     """
-    significant_files = _filter_significant_files(index_status.files, config.wiki.max_file_docs)
+    significant_files = _filter_significant_files(
+        index_status.files, config.wiki.max_file_docs
+    )
     if not significant_files:
         return [], 0, 0
 
@@ -817,6 +840,7 @@ async def generate_file_docs(
     pages: list[WikiPage] = []
     pages_generated = 0
     pages_skipped = 0
+    pages_failed = 0
 
     for coro in asyncio.as_completed(tasks):
         try:
@@ -833,13 +857,16 @@ async def generate_file_docs(
                     await write_callback(page)
 
                 if progress_callback:
-                    progress_callback(f"Generated {file_info.path}", len(pages), len(tasks))
+                    progress_callback(
+                        f"Generated {file_info.path}", len(pages), len(tasks)
+                    )
 
             if generation_progress:
                 generation_progress.complete_file(file_info.path)
 
         except Exception as e:
             logger.error(f"Error generating file doc: {e}")
+            pages_failed += 1
             if generation_progress:
                 generation_progress.complete_file()
 
@@ -851,7 +878,16 @@ async def generate_file_docs(
     if generation_progress:
         generation_progress.complete_phase()
 
-    logger.info(f"File docs complete: {pages_generated} generated, {pages_skipped} skipped")
+    log_msg = (
+        f"File docs complete: {pages_generated} generated, {pages_skipped} skipped"
+    )
+    if pages_failed:
+        log_msg += f", {pages_failed} failed"
+    logger.info(log_msg)
+    if pages_failed:
+        logger.warning(
+            f"{pages_failed} file docs failed to generate out of {len(tasks)} total"
+        )
     return pages, pages_generated, pages_skipped
 
 
@@ -927,7 +963,9 @@ def _generate_blame_section(
                 summary = summary[:27] + "..."
             commit_info = f"`{commit_short}` {summary}"
 
-        lines.append(f"| `{entity_name}` | {entity_type} | {author} | {date_str} | {commit_info} |")
+        lines.append(
+            f"| `{entity_name}` | {entity_type} | {author} | {date_str} | {commit_info} |"
+        )
 
     return "\n".join(lines)
 

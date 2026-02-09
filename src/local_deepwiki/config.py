@@ -191,7 +191,7 @@ def _get_default_parallel_workers() -> int:
             return 4
         # Cap at 8 to avoid excessive thread overhead
         return min(cpu_count, 8)
-    except Exception:
+    except (NotImplementedError, OSError):
         return 4
 
 

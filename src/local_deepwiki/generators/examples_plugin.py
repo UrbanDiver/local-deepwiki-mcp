@@ -214,12 +214,14 @@ class ExamplesWikiGenerator(WikiGeneratorPlugin):
 
         # Section for test examples
         if test_examples:
-            lines.extend([
-                "## Examples from Tests",
-                "",
-                "Real-world usage patterns extracted from test files.",
-                "",
-            ])
+            lines.extend(
+                [
+                    "## Examples from Tests",
+                    "",
+                    "Real-world usage patterns extracted from test files.",
+                    "",
+                ]
+            )
 
             for entity_name in sorted(test_examples.keys()):
                 examples = test_examples[entity_name]
@@ -236,12 +238,14 @@ class ExamplesWikiGenerator(WikiGeneratorPlugin):
 
         # Section for docstring examples
         if docstring_examples:
-            lines.extend([
-                "## Examples from Documentation",
-                "",
-                "Examples extracted from docstrings.",
-                "",
-            ])
+            lines.extend(
+                [
+                    "## Examples from Documentation",
+                    "",
+                    "Examples extracted from docstrings.",
+                    "",
+                ]
+            )
 
             for entity_name in sorted(docstring_examples.keys()):
                 examples = docstring_examples[entity_name]
@@ -288,14 +292,16 @@ def get_examples_for_api_page(
         if loop.is_running():
             # Can't use run_until_complete in running loop
             # Return docstring examples only
-            pass
+            logger.debug(
+                "Event loop already running, skipping async example extraction"
+            )
         else:
             extracted = loop.run_until_complete(
                 extractor.extract_examples_for_function(entity_name, max_examples=3)
             )
             examples.extend(extracted)
-    except Exception:
-        pass
+    except (RuntimeError, OSError, ValueError, TypeError) as e:
+        logger.warning(f"Failed to extract examples for {entity_name}: {e}")
 
     # Add docstring examples
     if docstring:

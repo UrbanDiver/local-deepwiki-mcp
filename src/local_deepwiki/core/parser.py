@@ -201,8 +201,10 @@ class ASTCache:
             estimated_node_size = node_count * 100
 
             return base_size + estimated_node_size
-        except Exception:
-            # If estimation fails, return a reasonable default
+        except (AttributeError, RecursionError, RuntimeError):
+            # AttributeError: malformed tree nodes
+            # RecursionError: deeply nested ASTs
+            # RuntimeError: tree-sitter internal errors
             return 10000  # 10 KB default
 
     def _evict_lru(self) -> None:
@@ -215,7 +217,9 @@ class ASTCache:
                 break
 
             # Find LRU entry
-            lru_key = min(self._cache.keys(), key=lambda k: self._cache[k].last_accessed)
+            lru_key = min(
+                self._cache.keys(), key=lambda k: self._cache[k].last_accessed
+            )
             evicted = self._cache.pop(lru_key)
             self._stats.evictions += 1
             self._stats.estimated_memory_bytes -= evicted.estimated_size_bytes
@@ -252,9 +256,7 @@ class ASTCache:
             self._stats.hits += 1
             return entry.tree
 
-    def set(
-        self, file_path: str, file_hash: str, tree: Any, language: str
-    ) -> None:
+    def set(self, file_path: str, file_hash: str, tree: Any, language: str) -> None:
         """Cache a parsed AST.
 
         Args:
@@ -334,9 +336,7 @@ class ASTCache:
             Number of entries removed.
         """
         with self._lock:
-            expired_keys = [
-                k for k, v in self._cache.items() if self._is_expired(v)
-            ]
+            expired_keys = [k for k, v in self._cache.items() if self._is_expired(v)]
             for key in expired_keys:
                 entry = self._cache.pop(key, None)
                 if entry:
@@ -397,7 +397,9 @@ def _compute_file_hash(file_path: Path) -> str:
         return hashlib.sha256(file_path.read_bytes()).hexdigest()
 
     # Large files: read in chunks
-    logger.debug(f"Using chunked hashing for large file ({file_size} bytes): {file_path.name}")
+    logger.debug(
+        f"Using chunked hashing for large file ({file_size} bytes): {file_path.name}"
+    )
     hasher = hashlib.sha256()
     with open(file_path, "rb") as f:
         while chunk := f.read(HASH_CHUNK_SIZE):
@@ -789,7 +791,9 @@ def _get_jsdoc_or_line_comments(node: Node, source: bytes) -> str | None:
     return None
 
 
-def _get_line_comments(node: Node, source: bytes, comment_type: str, prefix: str) -> str | None:
+def _get_line_comments(
+    node: Node, source: bytes, comment_type: str, prefix: str
+) -> str | None:
     """Extract multi-line comments with a specific prefix."""
     comments = _collect_preceding_comments(node, source, {comment_type}, prefix)
     if comments:

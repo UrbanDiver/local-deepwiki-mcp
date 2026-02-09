@@ -360,13 +360,15 @@ class AdaptiveSearcher:
 
         # Update quality estimates for matching queries in history
         # This provides indirect learning from user feedback
+        # Collect updates first, then apply to avoid mutating during iteration
+        updates: list[tuple[int, tuple[str, float, int, int]]] = []
         for i, (hist_query, quality, count, depth) in enumerate(self._query_history):
             if hist_query == feedback.query:
-                # Adjust quality based on feedback
                 adjustment = 0.1 if feedback.relevant else -0.1
                 new_quality = max(0.0, min(1.0, quality + adjustment))
-                # Replace entry (deque doesn't support direct assignment)
-                self._query_history[i] = (hist_query, new_quality, count, depth)
+                updates.append((i, (hist_query, new_quality, count, depth)))
+        for i, entry in updates:
+            self._query_history[i] = entry
 
     def get_feedback_stats(self) -> dict[str, Any]:
         """Get statistics about collected feedback.
@@ -1075,8 +1077,10 @@ class LazyChunkLoader:
                     int(mem_info.available / (1024 * 1024) * 0.25),
                     self._max_memory_mb,
                 )
-            except Exception:
-                # Fallback to configured max
+            except (ImportError, OSError, AttributeError):
+                # ImportError: psutil not installed
+                # OSError: Permission or OS-level issue
+                # AttributeError: psutil API change
                 available_memory_mb = self._max_memory_mb
 
         available_bytes = available_memory_mb * 1024 * 1024

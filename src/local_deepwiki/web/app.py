@@ -31,6 +31,7 @@ from local_deepwiki.generators.codemap_cache import (
     read_cache,
     write_cache,
 )
+from local_deepwiki.errors import sanitize_error_message
 from local_deepwiki.logging import get_logger
 
 logger = get_logger(__name__)
@@ -308,7 +309,7 @@ def stream_async_generator(
             break
         if isinstance(item, Exception):
             logger.error(f"Error in async generator: {item}")
-            yield f"data: {json.dumps({'type': 'error', 'message': str(item)})}\n\n"
+            yield f"data: {json.dumps({'type': 'error', 'message': sanitize_error_message(str(item))})}\n\n"
             break
         yield item
 
@@ -483,7 +484,7 @@ def api_chat():
                 yield f"data: {json.dumps({'type': 'token', 'content': text_chunk})}\n\n"
         except Exception as e:  # noqa: BLE001 - Report LLM errors to user via SSE
             logger.exception(f"Error generating response: {e}")
-            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+            yield f"data: {json.dumps({'type': 'error', 'message': sanitize_error_message(str(e))})}\n\n"
 
         yield f"data: {json.dumps({'type': 'done'})}\n\n"
 
@@ -654,7 +655,7 @@ def api_research():
             yield f"data: {json.dumps(response)}\n\n"
         except Exception as e:  # noqa: BLE001 - Report research errors to user via SSE
             logger.exception(f"Error in deep research: {e}")
-            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+            yield f"data: {json.dumps({'type': 'error', 'message': sanitize_error_message(str(e))})}\n\n"
 
         yield f"data: {json.dumps({'type': 'done'})}\n\n"
 
@@ -866,7 +867,7 @@ def api_codemap():
 
         except Exception as e:  # noqa: BLE001 - Report codemap errors to user via SSE
             logger.exception(f"Error generating codemap: {e}")
-            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+            yield f"data: {json.dumps({'type': 'error', 'message': sanitize_error_message(str(e))})}\n\n"
 
         yield f"data: {json.dumps({'type': 'done'})}\n\n"
 

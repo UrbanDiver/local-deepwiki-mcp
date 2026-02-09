@@ -467,17 +467,8 @@ class TestOpenAIEmbeddingProviderValidateConnectivity:
 
         provider._client.embeddings.create = AsyncMock(return_value=mock_response)
 
-        # The validate_connectivity method has a bug - it references self._api_key
-        # which doesn't exist. This test will fail with AttributeError.
-        # We'll catch that to document the bug, or it might succeed if the
-        # implementation was fixed.
-        try:
-            result = await provider.validate_connectivity()
-            # If it succeeds, the bug was fixed
-            assert result is True
-        except AttributeError as e:
-            # Document the bug: self._api_key doesn't exist
-            assert "_api_key" in str(e)
+        result = await provider.validate_connectivity()
+        assert result is True
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
     async def test_validate_connectivity_api_error(self):
@@ -492,17 +483,8 @@ class TestOpenAIEmbeddingProviderValidateConnectivity:
         conn_error = APIConnectionError(request=MagicMock())
         provider._client.embeddings.create = AsyncMock(side_effect=conn_error)
 
-        # Due to the bug (self._api_key doesn't exist), this will raise AttributeError
-        # before reaching the API call. We test for that.
-        try:
+        with pytest.raises(ProviderConnectionError):
             await provider.validate_connectivity()
-            pytest.fail("Expected an error")
-        except AttributeError as e:
-            # Bug: self._api_key doesn't exist
-            assert "_api_key" in str(e)
-        except ProviderConnectionError:
-            # If the bug is fixed, this would be the expected behavior
-            pass
 
 
 class TestOpenAIEmbeddingProviderCapabilities:
@@ -589,9 +571,7 @@ class TestOpenAIEmbeddingProviderKeyValidation:
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
 
         # Mock validate_key_format to return False
-        with patch.object(
-            CredentialManager, "validate_key_format", return_value=False
-        ):
+        with patch.object(CredentialManager, "validate_key_format", return_value=False):
             with pytest.raises(ProviderAuthenticationError) as exc_info:
                 OpenAIEmbeddingProvider(model="text-embedding-3-small")
 
@@ -605,9 +585,7 @@ class TestOpenAIEmbeddingProviderKeyValidation:
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
 
         # Mock validate_key_format to return False for any key
-        with patch.object(
-            CredentialManager, "validate_key_format", return_value=False
-        ):
+        with patch.object(CredentialManager, "validate_key_format", return_value=False):
             with pytest.raises(ProviderAuthenticationError) as exc_info:
                 OpenAIEmbeddingProvider(
                     model="text-embedding-3-small", api_key="some-key"
@@ -616,41 +594,16 @@ class TestOpenAIEmbeddingProviderKeyValidation:
             assert "format appears invalid" in str(exc_info.value)
 
 
-class TestOpenAIEmbeddingProviderValidateConnectivityBug:
-    """Tests for validate_connectivity method - covering lines 148-163.
-
-    Note: The source code has a bug where it references self._api_key which
-    doesn't exist (the API key is not stored as an instance variable per the
-    security design). These tests document this bug.
-    """
+class TestOpenAIEmbeddingProviderValidateConnectivityFixed:
+    """Tests for validate_connectivity after _api_key bug fix."""
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
-    async def test_validate_connectivity_attribute_error(self):
-        """Test that validate_connectivity raises AttributeError due to bug."""
+    async def test_validate_connectivity_success(self):
+        """Test that validate_connectivity returns True on successful API call."""
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
 
         provider = OpenAIEmbeddingProvider(model="text-embedding-3-small")
 
-        # The method references self._api_key which doesn't exist
-        with pytest.raises(AttributeError) as exc_info:
-            await provider.validate_connectivity()
-
-        assert "_api_key" in str(exc_info.value)
-
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
-    async def test_validate_connectivity_with_mock_api_key_attribute(self):
-        """Test validate_connectivity when _api_key attribute is manually set.
-
-        This tests the full method path when the bug is worked around.
-        """
-        from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
-
-        provider = OpenAIEmbeddingProvider(model="text-embedding-3-small")
-
-        # Manually add the missing _api_key attribute to test the rest of the method
-        provider._api_key = "test-key"
-
-        # Mock successful embedding response
         mock_embedding = MagicMock()
         mock_embedding.embedding = [0.1] * 1536
 
@@ -663,43 +616,17 @@ class TestOpenAIEmbeddingProviderValidateConnectivityBug:
         assert result is True
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
-    async def test_validate_connectivity_no_api_key(self):
-        """Test validate_connectivity when _api_key is falsy.
-
-        This tests line 149-152 when the bug is worked around.
-        """
-        from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
-
-        provider = OpenAIEmbeddingProvider(model="text-embedding-3-small")
-
-        # Manually add the _api_key attribute as empty string
-        provider._api_key = ""
-
-        with pytest.raises(ProviderAuthenticationError) as exc_info:
-            await provider.validate_connectivity()
-
-        assert "No OpenAI API key configured" in str(exc_info.value)
-
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
     async def test_validate_connectivity_api_error_handled(self):
-        """Test validate_connectivity when API call fails.
-
-        This tests lines 161-167 when the bug is worked around.
-        """
+        """Test validate_connectivity when API connection fails."""
         from openai import APIConnectionError
 
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
 
         provider = OpenAIEmbeddingProvider(model="text-embedding-3-small")
 
-        # Manually add the _api_key attribute
-        provider._api_key = "test-key"
-
-        # Mock connection error
         conn_error = APIConnectionError(request=MagicMock())
         provider._client.embeddings.create = AsyncMock(side_effect=conn_error)
 
-        # _handle_api_error will convert to ProviderConnectionError
         with pytest.raises(ProviderConnectionError):
             await provider.validate_connectivity()
 
@@ -707,48 +634,19 @@ class TestOpenAIEmbeddingProviderValidateConnectivityBug:
     async def test_validate_connectivity_unknown_error(self):
         """Test validate_connectivity with unknown error.
 
-        When an unknown error is raised, _handle_api_error re-raises it
-        via bare 'raise', which propagates back up without reaching line 163.
-        Line 163 appears unreachable in the current implementation because
-        _handle_api_error always either converts the error or re-raises it.
+        _handle_api_error re-raises unknown errors via bare 'raise'.
         """
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
 
         provider = OpenAIEmbeddingProvider(model="text-embedding-3-small")
 
-        # Manually add the _api_key attribute
-        provider._api_key = "test-key"
-
-        # Mock an unknown error that _handle_api_error won't convert
         unknown_error = ValueError("Unknown error")
         provider._client.embeddings.create = AsyncMock(side_effect=unknown_error)
 
-        # The flow: ValueError -> _handle_api_error -> bare raise (re-raises ValueError)
-        # The ValueError propagates up without reaching line 163
         with pytest.raises(ValueError) as exc_info:
             await provider.validate_connectivity()
 
         assert "Unknown error" in str(exc_info.value)
-
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
-    async def test_validate_connectivity_line_163_unreachable(self):
-        """Document that line 163 is unreachable in the current implementation.
-
-        The code structure at lines 161-167 is:
-            except Exception as e:
-                self._handle_api_error(e)  # line 162 - always raises
-                raise ProviderConnectionError(...)  # line 163 - never reached
-
-        _handle_api_error always either:
-        1. Converts to ProviderAuthenticationError (for AuthenticationError)
-        2. Converts to ProviderRateLimitError (for rate limit cases)
-        3. Converts to ProviderConnectionError (for APIConnectionError)
-        4. Re-raises the original exception (bare 'raise')
-
-        So line 163 is dead code.
-        """
-        # This is a documentation test - the assertion is in the docstring
-        pass
 
 
 class TestOpenAIEmbeddingProviderEdgeCases:
