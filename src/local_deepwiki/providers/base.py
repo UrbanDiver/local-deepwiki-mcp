@@ -117,6 +117,62 @@ class ProviderConfigurationError(ProviderError):
 
 
 # =============================================================================
+# Credential Validation
+# =============================================================================
+
+
+def validate_provider_credentials(
+    provider_name: str,
+    api_key: str | None,
+    key_type: str,
+    env_var: str,
+    display_name: str | None = None,
+) -> str:
+    """Validate and return an API key, raising ProviderAuthenticationError if invalid.
+
+    Consolidates the repeated credential validation pattern used by OpenAI and
+    Anthropic providers: get key -> check presence -> validate format.
+
+    Args:
+        provider_name: Provider identifier for the exception
+                       (e.g. ``"openai:gpt"``).
+        api_key: The API key to validate (may be None).
+        key_type: Provider key type passed to
+                  ``CredentialManager.validate_key_format``
+                  (e.g. ``"openai"``, ``"anthropic"``).
+        env_var: Environment variable name for the error hint
+                 (e.g. ``"OPENAI_API_KEY"``).
+        display_name: Human-readable provider name used in error messages
+                      (e.g. ``"OpenAI"``).  Defaults to *key_type* with
+                      its first letter capitalised.
+
+    Returns:
+        The validated API key string.
+
+    Raises:
+        ProviderAuthenticationError: If no key is provided or the format
+            is invalid.
+    """
+    from local_deepwiki.providers.credentials import CredentialManager
+
+    label = display_name if display_name is not None else key_type.capitalize()
+
+    if not api_key:
+        raise ProviderAuthenticationError(
+            f"No {label} API key configured. Set {env_var} environment variable.",
+            provider_name=provider_name,
+        )
+
+    if not CredentialManager.validate_key_format(api_key, key_type):
+        raise ProviderAuthenticationError(
+            f"{label} API key format appears invalid.",
+            provider_name=provider_name,
+        )
+
+    return api_key
+
+
+# =============================================================================
 # Provider Capabilities
 # =============================================================================
 
@@ -191,11 +247,15 @@ def with_retry(
                 except RETRYABLE_EXCEPTIONS as e:
                     last_exception = e
                     if attempt == max_attempts:
-                        logger.warning(f"{func.__name__} failed after {max_attempts} attempts: {e}")
+                        logger.warning(
+                            f"{func.__name__} failed after {max_attempts} attempts: {e}"
+                        )
                         raise
 
                     # Calculate delay with exponential backoff
-                    delay = min(base_delay * (exponential_base ** (attempt - 1)), max_delay)
+                    delay = min(
+                        base_delay * (exponential_base ** (attempt - 1)), max_delay
+                    )
                     if jitter:
                         delay = delay * (0.5 + random.random())
 
@@ -222,9 +282,15 @@ def with_retry(
                         if jitter:
                             delay = delay * (0.5 + random.random())
 
-                        logger.warning(f"{func.__name__} rate limited. Retrying in {delay:.2f}s...")
+                        logger.warning(
+                            f"{func.__name__} rate limited. Retrying in {delay:.2f}s..."
+                        )
                         await asyncio.sleep(delay)
-                    elif "overloaded" in error_str or "503" in error_str or "502" in error_str:
+                    elif (
+                        "overloaded" in error_str
+                        or "503" in error_str
+                        or "502" in error_str
+                    ):
                         # Server overloaded - retry with backoff
                         last_exception = e
                         if attempt == max_attempts:

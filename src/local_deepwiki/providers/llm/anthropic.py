@@ -2,7 +2,12 @@
 
 from typing import Any, AsyncIterator
 
-from anthropic import APIConnectionError, APIStatusError, AsyncAnthropic, AuthenticationError
+from anthropic import (
+    APIConnectionError,
+    APIStatusError,
+    AsyncAnthropic,
+    AuthenticationError,
+)
 
 from local_deepwiki.logging import get_logger
 from local_deepwiki.providers.base import (
@@ -12,6 +17,7 @@ from local_deepwiki.providers.base import (
     ProviderConnectionError,
     ProviderModelNotFoundError,
     ProviderRateLimitError,
+    validate_provider_credentials,
     with_retry,
 )
 from local_deepwiki.providers.credentials import CredentialManager
@@ -34,7 +40,9 @@ ANTHROPIC_MODELS = {
 class AnthropicProvider(LLMProvider):
     """LLM provider using Anthropic API."""
 
-    def __init__(self, model: str = "claude-sonnet-4-20250514", api_key: str | None = None):
+    def __init__(
+        self, model: str = "claude-sonnet-4-20250514", api_key: str | None = None
+    ):
         """Initialize the Anthropic provider.
 
         Args:
@@ -47,20 +55,18 @@ class AnthropicProvider(LLMProvider):
         self._model = model
 
         # Get API key without storing in instance variable
-        api_key = api_key or CredentialManager.get_api_key("ANTHROPIC_API_KEY", "anthropic")
+        api_key = api_key or CredentialManager.get_api_key(
+            "ANTHROPIC_API_KEY", "anthropic"
+        )
 
-        if not api_key:
-            raise ProviderAuthenticationError(
-                "No Anthropic API key configured. Set ANTHROPIC_API_KEY environment variable.",
-                provider_name="anthropic:claude",
-            )
-
-        # Validate format
-        if not CredentialManager.validate_key_format(api_key, "anthropic"):
-            raise ProviderAuthenticationError(
-                "Anthropic API key format appears invalid.",
-                provider_name="anthropic:claude",
-            )
+        # Validate credentials using shared helper
+        api_key = validate_provider_credentials(
+            provider_name="anthropic:claude",
+            api_key=api_key,
+            key_type="anthropic",
+            env_var="ANTHROPIC_API_KEY",
+            display_name="Anthropic",
+        )
 
         # Pass directly to client, don't store in self
         self._client = AsyncAnthropic(api_key=api_key)
@@ -249,7 +255,9 @@ class AnthropicProvider(LLMProvider):
             ProviderRateLimitError: If rate limited.
             ProviderModelNotFoundError: If the model is not available.
         """
-        logger.debug(f"Generating with Anthropic model {self._model}, prompt length: {len(prompt)}")
+        logger.debug(
+            f"Generating with Anthropic model {self._model}, prompt length: {len(prompt)}"
+        )
 
         try:
             kwargs = self._build_kwargs(prompt, system_prompt, max_tokens, temperature)
@@ -262,8 +270,12 @@ class AnthropicProvider(LLMProvider):
             logger.debug(f"Anthropic response length: {len(content)}")
             return content
 
-        except (ProviderConnectionError, ProviderAuthenticationError,
-                ProviderRateLimitError, ProviderModelNotFoundError):
+        except (
+            ProviderConnectionError,
+            ProviderAuthenticationError,
+            ProviderRateLimitError,
+            ProviderModelNotFoundError,
+        ):
             raise
         except Exception as e:
             self._handle_api_error(e)
@@ -298,8 +310,12 @@ class AnthropicProvider(LLMProvider):
             async with self._client.messages.stream(**kwargs) as stream:
                 async for text in stream.text_stream:
                     yield text
-        except (ProviderConnectionError, ProviderAuthenticationError,
-                ProviderRateLimitError, ProviderModelNotFoundError):
+        except (
+            ProviderConnectionError,
+            ProviderAuthenticationError,
+            ProviderRateLimitError,
+            ProviderModelNotFoundError,
+        ):
             raise
         except Exception as e:
             self._handle_api_error(e)

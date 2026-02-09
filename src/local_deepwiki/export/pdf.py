@@ -26,6 +26,7 @@ from local_deepwiki.export.streaming import (
     WikiPage,
     WikiPageIterator,
 )
+from local_deepwiki.export.shared import extract_title as _shared_extract_title
 from local_deepwiki.logging import get_logger
 
 logger = get_logger(__name__)
@@ -484,25 +485,15 @@ def render_markdown_for_pdf(content: str, render_mermaid: bool = True) -> str:
 def extract_title(md_file: Path) -> str:
     """Extract title from markdown file.
 
+    Delegates to ``shared.extract_title``.
+
     Args:
         md_file: Path to markdown file.
 
     Returns:
         Extracted title or filename-based title.
     """
-    try:
-        content = md_file.read_text()
-        for line in content.split("\n"):
-            line = line.strip()
-            if line.startswith("# "):
-                return line[2:].strip()
-            if line.startswith("**") and line.endswith("**"):
-                return line[2:-2].strip()
-    except (OSError, UnicodeDecodeError) as e:
-        # OSError: File access issues
-        # UnicodeDecodeError: File encoding issues
-        logger.debug(f"Could not extract title from {md_file}: {e}")
-    return md_file.stem.replace("_", " ").replace("-", " ").title()
+    return _shared_extract_title(md_file)
 
 
 class StreamingPdfExporter(StreamingExporter):
@@ -587,7 +578,9 @@ class StreamingPdfExporter(StreamingExporter):
                     # When batch is full, render to intermediate PDF
                     if len(batch_pages) >= batch_size:
                         batch_pdf = temp_path / f"batch_{batch_num:04d}.pdf"
-                        self._render_batch_to_pdf(batch_pages, batch_pdf, batch_num == 0)
+                        self._render_batch_to_pdf(
+                            batch_pages, batch_pdf, batch_num == 0
+                        )
                         temp_pdfs.append(batch_pdf)
 
                         # Release memory
@@ -612,7 +605,9 @@ class StreamingPdfExporter(StreamingExporter):
 
             # Merge all batch PDFs into final output
             if progress_callback:
-                progress_callback(pages_processed, total_pages, "Merging PDF batches...")
+                progress_callback(
+                    pages_processed, total_pages, "Merging PDF batches..."
+                )
 
             if len(temp_pdfs) == 1:
                 # Only one batch, just copy it
@@ -685,7 +680,9 @@ class StreamingPdfExporter(StreamingExporter):
                 errors.append(error_msg)
 
         duration_ms = int((time.monotonic() - start_time) * 1000)
-        logger.info(f"Streaming separate PDF export complete: {exported} pages in {duration_ms}ms")
+        logger.info(
+            f"Streaming separate PDF export complete: {exported} pages in {duration_ms}ms"
+        )
 
         return ExportResult(
             pages_exported=exported,
@@ -1072,7 +1069,9 @@ def export_to_pdf(
 
 def main() -> None:
     """CLI entry point for PDF export."""
-    parser = argparse.ArgumentParser(description="Export DeepWiki documentation to PDF format")
+    parser = argparse.ArgumentParser(
+        description="Export DeepWiki documentation to PDF format"
+    )
     parser.add_argument(
         "wiki_path",
         type=Path,

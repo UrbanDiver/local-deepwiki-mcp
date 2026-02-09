@@ -13,6 +13,7 @@ from local_deepwiki.providers.base import (
     ProviderConnectionError,
     ProviderModelNotFoundError,
     ProviderRateLimitError,
+    validate_provider_credentials,
     with_retry,
 )
 from local_deepwiki.providers.credentials import CredentialManager
@@ -53,18 +54,14 @@ class OpenAILLMProvider(LLMProvider):
         # Get API key without storing in instance variable
         api_key = api_key or CredentialManager.get_api_key("OPENAI_API_KEY", "openai")
 
-        if not api_key:
-            raise ProviderAuthenticationError(
-                "No OpenAI API key configured. Set OPENAI_API_KEY environment variable.",
-                provider_name="openai:gpt",
-            )
-
-        # Validate format
-        if not CredentialManager.validate_key_format(api_key, "openai"):
-            raise ProviderAuthenticationError(
-                "OpenAI API key format appears invalid.",
-                provider_name="openai:gpt",
-            )
+        # Validate credentials using shared helper
+        api_key = validate_provider_credentials(
+            provider_name="openai:gpt",
+            api_key=api_key,
+            key_type="openai",
+            env_var="OPENAI_API_KEY",
+            display_name="OpenAI",
+        )
 
         # Pass directly to client, don't store in self
         self._client = AsyncOpenAI(api_key=api_key)
