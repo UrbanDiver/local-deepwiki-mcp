@@ -8,6 +8,7 @@ from local_deepwiki.providers.base import (
     ProviderAuthenticationError,
     ProviderConnectionError,
     ProviderRateLimitError,
+    with_retry,
 )
 from local_deepwiki.providers.credentials import CredentialManager
 
@@ -103,6 +104,7 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         # Re-raise unknown errors
         raise
 
+    @with_retry()
     async def embed(self, texts: list[str]) -> list[list[float]]:
         """Generate embeddings for a list of texts.
 

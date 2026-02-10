@@ -389,8 +389,7 @@ class VectorStore:
                     # Check if this is a retryable error
                     is_retryable = (
                         isinstance(e, (ConnectionError, TimeoutError, OSError))
-                        or "rate" in error_str
-                        and "limit" in error_str
+                        or ("rate" in error_str and "limit" in error_str)
                         or "overloaded" in error_str
                         or "503" in error_str
                         or "502" in error_str

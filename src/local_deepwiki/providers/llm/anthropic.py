@@ -24,10 +24,6 @@ from local_deepwiki.providers.credentials import CredentialManager
 
 logger = get_logger(__name__)
 
-# Retry configuration for API calls
-MAX_RETRY_ATTEMPTS = 3
-RETRY_BASE_DELAY = 1.0
-RETRY_MAX_DELAY = 30.0
 
 # Known Anthropic models with their context lengths
 ANTHROPIC_MODELS = {
@@ -234,11 +230,7 @@ class AnthropicProvider(LLMProvider):
             supports_vision=True,  # Claude 3+ supports vision
         )
 
-    @with_retry(
-        max_attempts=MAX_RETRY_ATTEMPTS,
-        base_delay=RETRY_BASE_DELAY,
-        max_delay=RETRY_MAX_DELAY,
-    )
+    @with_retry()
     async def generate(
         self,
         prompt: str,
