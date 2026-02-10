@@ -1,0 +1,32 @@
+---
+name: DeepWiki PR Analysis
+
+"on":
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  analyze:
+    name: Analyze PR Impact
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run DeepWiki Analysis
+        uses: ./.github/actions/deepwiki-analyze
+        env:
+          PR_BASE_SHA: >-
+            ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.sha }}
+        with:
+          base-ref: ${{ env.PR_BASE_SHA }}
+          head-ref: ${{ env.PR_HEAD_SHA }}
+          stale-threshold-days: "7"
+          comment-on-pr: "true"

@@ -1,0 +1,165 @@
+---
+name: "DeepWiki PR Analysis"
+description: >-
+  Analyze PR changes and report affected wiki
+  pages, entities, and stale documentation
+branding:
+  icon: "book-open"
+  color: "blue"
+
+inputs:
+  repo-path:
+    description: "Path to the repository to analyze"
+    required: false
+    default: "."
+  base-ref:
+    description: >-
+      Git ref to diff from (default: merge base)
+    required: false
+    default: ""
+  head-ref:
+    description: "Git ref to diff to (default: HEAD)"
+    required: false
+    default: "HEAD"
+  stale-threshold-days:
+    description: >-
+      Days after which docs are considered stale
+      (0 = any change)
+    required: false
+    default: "0"
+  include-diff-content:
+    description: >-
+      Include actual diff content per file
+    required: false
+    default: "false"
+  comment-on-pr:
+    description: "Post results as a PR comment"
+    required: false
+    default: "true"
+  fail-on-stale:
+    description: >-
+      Fail if stale documentation is detected
+    required: false
+    default: "false"
+  python-version:
+    description: "Python version to use"
+    required: false
+    default: "3.11"
+
+outputs:
+  changed-files:
+    description: "Number of changed files"
+    value: ${{ steps.analyze.outputs.changed_files }}
+  affected-wiki-pages:
+    description: "Number of affected wiki pages"
+    value: >-
+      ${{ steps.analyze.outputs.affected_wiki_pages }}
+  affected-entities:
+    description: "Number of affected code entities"
+    value: >-
+      ${{ steps.analyze.outputs.affected_entities }}
+  stale-pages:
+    description: "Number of stale wiki pages"
+    value: ${{ steps.analyze.outputs.stale_pages }}
+  analysis-json:
+    description: "Full analysis results as JSON"
+    value: ${{ steps.analyze.outputs.analysis_json }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install local-deepwiki
+      shell: bash
+      run: pip install local-deepwiki
+
+    - name: Determine base ref
+      id: refs
+      shell: bash
+      env:
+        USER_BASE_REF: ${{ inputs.base-ref }}
+        PR_BASE_SHA: >-
+          ${{ github.event.pull_request.base.sha }}
+      run: |
+        if [ -n "$USER_BASE_REF" ]; then
+          echo "base_ref=$USER_BASE_REF" \
+            >> "$GITHUB_OUTPUT"
+        elif [ -n "$PR_BASE_SHA" ]; then
+          echo "base_ref=$PR_BASE_SHA" \
+            >> "$GITHUB_OUTPUT"
+        else
+          echo "base_ref=HEAD~1" \
+            >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Run DeepWiki analysis
+      id: analyze
+      shell: bash
+      env:
+        INPUT_REPO_PATH: ${{ inputs.repo-path }}
+        INPUT_BASE_REF: >-
+          ${{ steps.refs.outputs.base_ref }}
+        INPUT_HEAD_REF: ${{ inputs.head-ref }}
+        INPUT_STALE_THRESHOLD: >-
+          ${{ inputs.stale-threshold-days }}
+        INPUT_INCLUDE_CONTENT: >-
+          ${{ inputs.include-diff-content }}
+        ACTION_PATH: ${{ github.action_path }}
+      run: python "$ACTION_PATH/entrypoint.py"
+
+    - name: Comment on PR
+      if: >-
+        inputs.comment-on-pr == 'true' &&
+        github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const path = '/tmp/deepwiki-comment.md';
+          const comment = fs.readFileSync(path, 'utf8');
+          if (!comment.trim()) return;
+
+          const marker = '<!-- deepwiki-analysis -->';
+          const { data: comments } =
+            await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+          const existing = comments.find(
+            c => c.body.includes(marker)
+          );
+
+          const body = marker + '\n' + comment;
+          if (existing) {
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: existing.id,
+              body,
+            });
+          } else {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });
+          }
+
+    - name: Check stale threshold
+      if: inputs.fail-on-stale == 'true'
+      shell: bash
+      env:
+        STALE_COUNT: >-
+          ${{ steps.analyze.outputs.stale_pages }}
+      run: |
+        if [ "$STALE_COUNT" -gt 0 ]; then
+          echo "::error::Found $STALE_COUNT stale" \
+            "wiki pages. Update docs before merging."
+          exit 1
+        fi

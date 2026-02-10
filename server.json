@@ -1,0 +1,47 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.urbandiver/local-deepwiki-mcp",
+  "description": "Privacy-focused MCP server for DeepWiki-style docs, RAG Q&A, and code analysis",
+  "version": "0.1.0",
+  "repository": {
+    "url": "https://github.com/UrbanDiver/local-deepwiki-mcp",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "pypi",
+      "registryBaseUrl": "https://pypi.org",
+      "identifier": "local-deepwiki",
+      "version": "0.1.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "OPENAI_API_KEY",
+          "description": "OpenAI API key for embeddings and LLM generation",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "ANTHROPIC_API_KEY",
+          "description": "Anthropic API key for Claude LLM generation",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "DEEPWIKI_LLM_PROVIDER",
+          "description": "LLM provider to use: ollama, anthropic, or openai (default: ollama)",
+          "isRequired": false,
+          "isSecret": false
+        },
+        {
+          "name": "DEEPWIKI_EMBEDDING_PROVIDER",
+          "description": "Embedding provider: local or openai (default: local)",
+          "isRequired": false,
+          "isSecret": false
+        }
+      ]
+    }
+  ]
+}
