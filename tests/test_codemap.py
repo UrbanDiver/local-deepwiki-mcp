@@ -992,11 +992,11 @@ class TestHandleGenerateCodemap:
                 return_value=(index_status, tmp_path / ".deepwiki", config),
             ),
             patch(
-                "local_deepwiki.handlers.codemap.get_embedding_provider",
+                "local_deepwiki.handlers.codemap._create_vector_store",
                 return_value=MagicMock(),
             ),
             patch(
-                "local_deepwiki.handlers.codemap.VectorStore",
+                "local_deepwiki.handlers.codemap.get_embedding_provider",
                 return_value=MagicMock(),
             ),
             patch(
@@ -1074,11 +1074,11 @@ class TestHandleGenerateCodemap:
                 return_value=(index_status, tmp_path / ".deepwiki", config),
             ),
             patch(
-                "local_deepwiki.handlers.codemap.get_embedding_provider",
+                "local_deepwiki.handlers.codemap._create_vector_store",
                 return_value=MagicMock(),
             ),
             patch(
-                "local_deepwiki.handlers.codemap.VectorStore",
+                "local_deepwiki.handlers.codemap.get_embedding_provider",
                 return_value=MagicMock(),
             ),
             patch(
@@ -1136,11 +1136,11 @@ class TestHandleGenerateCodemap:
                     return_value=(index_status, tmp_path / ".deepwiki", config),
                 ),
                 patch(
-                    "local_deepwiki.handlers.codemap.get_embedding_provider",
+                    "local_deepwiki.handlers.codemap._create_vector_store",
                     return_value=MagicMock(),
                 ),
                 patch(
-                    "local_deepwiki.handlers.codemap.VectorStore",
+                    "local_deepwiki.handlers.codemap.get_embedding_provider",
                     return_value=MagicMock(),
                 ),
                 patch(
@@ -1195,11 +1195,7 @@ class TestHandleSuggestCodemapTopics:
                 return_value=(index_status, tmp_path / ".deepwiki", config),
             ),
             patch(
-                "local_deepwiki.handlers.codemap.get_embedding_provider",
-                return_value=MagicMock(),
-            ),
-            patch(
-                "local_deepwiki.handlers.codemap.VectorStore",
+                "local_deepwiki.handlers.codemap._create_vector_store",
                 return_value=MagicMock(),
             ),
             patch(
@@ -1248,11 +1244,7 @@ class TestHandleSuggestCodemapTopics:
                 return_value=(index_status, tmp_path / ".deepwiki", config),
             ),
             patch(
-                "local_deepwiki.handlers.codemap.get_embedding_provider",
-                return_value=MagicMock(),
-            ),
-            patch(
-                "local_deepwiki.handlers.codemap.VectorStore",
+                "local_deepwiki.handlers.codemap._create_vector_store",
                 return_value=MagicMock(),
             ),
             patch(
@@ -1278,11 +1270,7 @@ class TestHandleSuggestCodemapTopics:
                 return_value=(index_status, tmp_path / ".deepwiki", config),
             ),
             patch(
-                "local_deepwiki.handlers.codemap.get_embedding_provider",
-                return_value=MagicMock(),
-            ),
-            patch(
-                "local_deepwiki.handlers.codemap.VectorStore",
+                "local_deepwiki.handlers.codemap._create_vector_store",
                 return_value=MagicMock(),
             ),
             patch(

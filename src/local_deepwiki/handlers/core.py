@@ -23,7 +23,7 @@ from local_deepwiki.handlers._shared import (
     ProgressPhase,
     RepositoryIndexer,
     ValidationError,
-    VectorStore,
+    _create_vector_store,
     _validate_export_path,
     create_progress_notifier,
     get_access_controller,
@@ -354,8 +354,7 @@ async def handle_ask_question(args: dict[str, Any]) -> list[TextContent]:
         raise not_indexed_error(str(repo_path))
 
     # Create vector store
-    embedding_provider = get_embedding_provider(config.embedding)
-    vector_store = VectorStore(vector_db_path, embedding_provider)
+    vector_store = _create_vector_store(repo_path, config)
 
     # Search for relevant context
     search_results = await vector_store.search(question, limit=max_context)
@@ -383,7 +382,7 @@ async def handle_ask_question(args: dict[str, Any]) -> list[TextContent]:
     cache_path = wiki_path / "llm_cache.lance"
     llm = get_cached_llm_provider(
         cache_path=cache_path,
-        embedding_provider=embedding_provider,
+        embedding_provider=get_embedding_provider(config.embedding),
         cache_config=config.llm_cache,
         llm_config=config.llm,
     )
@@ -588,8 +587,7 @@ async def handle_search_code(args: dict[str, Any]) -> list[TextContent]:
         raise not_indexed_error(str(repo_path))
 
     # Create vector store
-    embedding_provider = get_embedding_provider(config.embedding)
-    vector_store = VectorStore(vector_db_path, embedding_provider)
+    vector_store = _create_vector_store(repo_path, config)
 
     # Search with filters
     results = await vector_store.search(

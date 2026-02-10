@@ -11,7 +11,7 @@ from local_deepwiki.handlers._shared import (
     GenerateCodemapArgs,
     SuggestCodemapTopicsArgs,
     Permission,
-    VectorStore,
+    _create_vector_store,
     _load_index_status,
     get_access_controller,
     get_embedding_provider,
@@ -46,8 +46,7 @@ async def handle_generate_codemap(args: dict[str, Any]) -> list[TextContent]:
 
     _index_status, wiki_path, config = _load_index_status(repo_path)
 
-    embedding_provider = get_embedding_provider(config.embedding)
-    vector_store = VectorStore(config.get_vector_db_path(repo_path), embedding_provider)
+    vector_store = _create_vector_store(repo_path, config)
 
     from local_deepwiki.generators.codemap import CodemapFocus, generate_codemap
     from local_deepwiki.providers.llm import get_cached_llm_provider
@@ -55,7 +54,7 @@ async def handle_generate_codemap(args: dict[str, Any]) -> list[TextContent]:
     cache_path = wiki_path / "llm_cache.lance"
     llm = get_cached_llm_provider(
         cache_path=cache_path,
-        embedding_provider=embedding_provider,
+        embedding_provider=get_embedding_provider(config.embedding),
         cache_config=config.llm_cache,
         llm_config=config.llm,
     )
@@ -120,8 +119,7 @@ async def handle_suggest_codemap_topics(args: dict[str, Any]) -> list[TextConten
 
     _index_status, _wiki_path, config = _load_index_status(repo_path)
 
-    embedding_provider = get_embedding_provider(config.embedding)
-    vector_store = VectorStore(config.get_vector_db_path(repo_path), embedding_provider)
+    vector_store = _create_vector_store(repo_path, config)
 
     from local_deepwiki.generators.codemap import suggest_topics
 

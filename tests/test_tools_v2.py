@@ -455,11 +455,7 @@ class TestHandleGetFileContext:
                 return_value=(index_status, tmp_path / ".deepwiki", config),
             ),
             patch(
-                "local_deepwiki.handlers.analysis.get_embedding_provider",
-                return_value=MagicMock(),
-            ),
-            patch(
-                "local_deepwiki.handlers.analysis.VectorStore",
+                "local_deepwiki.handlers.analysis._create_vector_store",
                 return_value=mock_vector_store,
             ),
             patch(
@@ -510,11 +506,7 @@ class TestHandleGetFileContext:
                 return_value=(index_status, tmp_path / ".deepwiki", config),
             ),
             patch(
-                "local_deepwiki.handlers.analysis.get_embedding_provider",
-                return_value=MagicMock(),
-            ),
-            patch(
-                "local_deepwiki.handlers.analysis.VectorStore",
+                "local_deepwiki.handlers.analysis._create_vector_store",
                 return_value=mock_vector_store,
             ),
         ):
@@ -571,11 +563,7 @@ class TestHandleFuzzySearch:
                 return_value=(index_status, tmp_path / ".deepwiki", config),
             ),
             patch(
-                "local_deepwiki.handlers.analysis.get_embedding_provider",
-                return_value=MagicMock(),
-            ),
-            patch(
-                "local_deepwiki.handlers.analysis.VectorStore",
+                "local_deepwiki.handlers.analysis._create_vector_store",
                 return_value=MagicMock(),
             ),
             patch(
@@ -612,11 +600,7 @@ class TestHandleFuzzySearch:
                 return_value=(index_status, tmp_path / ".deepwiki", config),
             ),
             patch(
-                "local_deepwiki.handlers.analysis.get_embedding_provider",
-                return_value=MagicMock(),
-            ),
-            patch(
-                "local_deepwiki.handlers.analysis.VectorStore",
+                "local_deepwiki.handlers.analysis._create_vector_store",
                 return_value=MagicMock(),
             ),
             patch(
@@ -657,11 +641,7 @@ class TestHandleFuzzySearch:
                 return_value=(index_status, tmp_path / ".deepwiki", config),
             ),
             patch(
-                "local_deepwiki.handlers.analysis.get_embedding_provider",
-                return_value=MagicMock(),
-            ),
-            patch(
-                "local_deepwiki.handlers.analysis.VectorStore",
+                "local_deepwiki.handlers.analysis._create_vector_store",
                 return_value=MagicMock(),
             ),
             patch(

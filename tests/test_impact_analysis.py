@@ -113,9 +113,8 @@ class TestImpactAnalysisBasic:
                 new_callable=AsyncMock,
                 return_value=FakeContext(),
             ),
-            patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
             patch(
-                "local_deepwiki.handlers.analysis.VectorStore",
+                "local_deepwiki.handlers.analysis._create_vector_store",
                 return_value=mock_vector_store,
             ),
         ):
@@ -172,9 +171,8 @@ class TestImpactAnalysisWithEntityName:
                 new_callable=AsyncMock,
                 return_value={},
             ),
-            patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
             patch(
-                "local_deepwiki.handlers.analysis.VectorStore",
+                "local_deepwiki.handlers.analysis._create_vector_store",
                 return_value=mock_vector_store,
             ),
         ):
@@ -223,9 +221,8 @@ class TestImpactAnalysisNoCallers:
                 new_callable=AsyncMock,
                 return_value={},
             ),
-            patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
             patch(
-                "local_deepwiki.handlers.analysis.VectorStore",
+                "local_deepwiki.handlers.analysis._create_vector_store",
                 return_value=mock_vector_store,
             ),
         ):
@@ -300,9 +297,8 @@ class TestImpactAnalysisWithInheritance:
                 new_callable=AsyncMock,
                 return_value=classes,
             ),
-            patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
             patch(
-                "local_deepwiki.handlers.analysis.VectorStore",
+                "local_deepwiki.handlers.analysis._create_vector_store",
                 return_value=mock_vector_store,
             ),
         ):
@@ -479,9 +475,8 @@ class TestImpactAnalysisRiskLevels:
                 new_callable=AsyncMock,
                 return_value={},
             ),
-            patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
             patch(
-                "local_deepwiki.handlers.analysis.VectorStore",
+                "local_deepwiki.handlers.analysis._create_vector_store",
                 return_value=mock_vector_store,
             ),
         ):
@@ -533,9 +528,8 @@ class TestImpactAnalysisRiskLevels:
                 new_callable=AsyncMock,
                 return_value={},
             ),
-            patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
             patch(
-                "local_deepwiki.handlers.analysis.VectorStore",
+                "local_deepwiki.handlers.analysis._create_vector_store",
                 return_value=mock_vector_store,
             ),
         ):
@@ -581,9 +575,8 @@ class TestImpactAnalysisRiskLevels:
                 new_callable=AsyncMock,
                 return_value={},
             ),
-            patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
             patch(
-                "local_deepwiki.handlers.analysis.VectorStore",
+                "local_deepwiki.handlers.analysis._create_vector_store",
                 return_value=mock_vector_store,
             ),
         ):
@@ -715,9 +708,8 @@ class TestImpactAnalysisLeafNode:
                 new_callable=AsyncMock,
                 return_value={},
             ),
-            patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
             patch(
-                "local_deepwiki.handlers.analysis.VectorStore",
+                "local_deepwiki.handlers.analysis._create_vector_store",
                 return_value=mock_vector_store,
             ),
         ):
@@ -784,9 +776,8 @@ class TestImpactAnalysisCoreModule:
                 new_callable=AsyncMock,
                 return_value=FakeContext(),
             ),
-            patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
             patch(
-                "local_deepwiki.handlers.analysis.VectorStore",
+                "local_deepwiki.handlers.analysis._create_vector_store",
                 return_value=mock_vector_store,
             ),
         ):
@@ -837,9 +828,8 @@ class TestImpactAnalysisCircularDependencies:
                 new_callable=AsyncMock,
                 return_value={},
             ),
-            patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
             patch(
-                "local_deepwiki.handlers.analysis.VectorStore",
+                "local_deepwiki.handlers.analysis._create_vector_store",
                 return_value=mock_vector_store,
             ),
         ):
@@ -914,9 +904,8 @@ class TestImpactAnalysisMultipleEntityFilter:
                 new_callable=AsyncMock,
                 return_value={},
             ),
-            patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
             patch(
-                "local_deepwiki.handlers.analysis.VectorStore",
+                "local_deepwiki.handlers.analysis._create_vector_store",
                 return_value=mock_vector_store,
             ),
         ):
@@ -1073,9 +1062,8 @@ class TestImpactAnalysisOnlyInheritance:
                 new_callable=AsyncMock,
                 return_value={},
             ),
-            patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
             patch(
-                "local_deepwiki.handlers.analysis.VectorStore",
+                "local_deepwiki.handlers.analysis._create_vector_store",
                 return_value=mock_vector_store,
             ),
         ):
@@ -1128,9 +1116,8 @@ class TestImpactAnalysisRiskBoundary:
                 new_callable=AsyncMock,
                 return_value={},
             ),
-            patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
             patch(
-                "local_deepwiki.handlers.analysis.VectorStore",
+                "local_deepwiki.handlers.analysis._create_vector_store",
                 return_value=mock_vector_store,
             ),
         ):
@@ -1174,9 +1161,8 @@ class TestImpactAnalysisRiskBoundary:
                 new_callable=AsyncMock,
                 return_value={},
             ),
-            patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
             patch(
-                "local_deepwiki.handlers.analysis.VectorStore",
+                "local_deepwiki.handlers.analysis._create_vector_store",
                 return_value=mock_vector_store,
             ),
         ):
@@ -1221,9 +1207,8 @@ class TestImpactAnalysisRiskBoundary:
                 new_callable=AsyncMock,
                 return_value={},
             ),
-            patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
             patch(
-                "local_deepwiki.handlers.analysis.VectorStore",
+                "local_deepwiki.handlers.analysis._create_vector_store",
                 return_value=mock_vector_store,
             ),
         ):
@@ -1268,9 +1253,8 @@ class TestImpactAnalysisRiskBoundary:
                 new_callable=AsyncMock,
                 return_value={},
             ),
-            patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
             patch(
-                "local_deepwiki.handlers.analysis.VectorStore",
+                "local_deepwiki.handlers.analysis._create_vector_store",
                 return_value=mock_vector_store,
             ),
         ):
@@ -1347,9 +1331,8 @@ class TestImpactAnalysisEntityInInheritance:
                 new_callable=AsyncMock,
                 return_value=classes,
             ),
-            patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
             patch(
-                "local_deepwiki.handlers.analysis.VectorStore",
+                "local_deepwiki.handlers.analysis._create_vector_store",
                 return_value=mock_vector_store,
             ),
         ):
@@ -1382,9 +1365,8 @@ class TestImpactAnalysisNoDependentsChunks:
 
         with (
             patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
-            patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
             patch(
-                "local_deepwiki.handlers.analysis.VectorStore",
+                "local_deepwiki.handlers.analysis._create_vector_store",
                 return_value=mock_vector_store,
             ),
         ):

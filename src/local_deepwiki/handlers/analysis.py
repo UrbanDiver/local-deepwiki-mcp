@@ -39,6 +39,7 @@ from local_deepwiki.handlers._shared import (
     Permission,
     ValidationError,
     VectorStore,
+    _create_vector_store,
     _load_index_status,
     get_access_controller,
     get_config,
@@ -51,6 +52,18 @@ from local_deepwiki.handlers._shared import (
     sanitize_error_message,
     validate_query_parameters,
 )
+
+
+def _set_section_error(
+    result: dict[str, Any],
+    field: str,
+    operation: str,
+    detail: str,
+    exc: Exception,
+) -> None:
+    """Record a non-fatal section error in an explain/impact result dict."""
+    logger.warning(f"{operation} failed for '{detail}': {exc}")
+    result[field] = {"error": sanitize_error_message(str(exc))}
 
 
 @handle_tool_errors
@@ -287,8 +300,7 @@ async def handle_get_file_context(args: dict[str, Any]) -> list[TextContent]:
 
     from local_deepwiki.generators.context_builder import build_file_context
 
-    embedding_provider = get_embedding_provider(config.embedding)
-    vector_store = VectorStore(config.get_vector_db_path(repo_path), embedding_provider)
+    vector_store = _create_vector_store(repo_path, config)
 
     # Get chunks for the file
     chunks = await vector_store.get_chunks_by_file(file_path)
@@ -357,8 +369,7 @@ async def handle_fuzzy_search(args: dict[str, Any]) -> list[TextContent]:
     from local_deepwiki.core.fuzzy_search import FuzzySearchHelper
     from local_deepwiki.models import ChunkType
 
-    embedding_provider = get_embedding_provider(config.embedding)
-    vector_store = VectorStore(config.get_vector_db_path(repo_path), embedding_provider)
+    vector_store = _create_vector_store(repo_path, config)
 
     helper = FuzzySearchHelper(vector_store)
     await helper.build_name_index()
@@ -644,10 +655,7 @@ async def handle_explain_entity(args: dict[str, Any]) -> list[TextContent]:
 
     vector_store = None
     if needs_vector_store:
-        embedding_provider = get_embedding_provider(config.embedding)
-        vector_store = VectorStore(
-            config.get_vector_db_path(repo_path), embedding_provider
-        )
+        vector_store = _create_vector_store(repo_path, config)
 
     # --- Step 2: Call graph ---
     if validated.include_call_graph and entity_file:
@@ -677,8 +685,9 @@ async def handle_explain_entity(args: dict[str, Any]) -> list[TextContent]:
                     "note": "Source file not found",
                 }
         except Exception as exc:
-            logger.warning(f"Call graph extraction failed for '{entity_name}': {exc}")
-            result["call_graph"] = {"error": sanitize_error_message(str(exc))}
+            _set_section_error(
+                result, "call_graph", "Call graph extraction", entity_name, exc
+            )
 
     # --- Step 3: Inheritance (classes only) ---
     if (
@@ -706,8 +715,9 @@ async def handle_explain_entity(args: dict[str, Any]) -> list[TextContent]:
                     "note": "Class not found in inheritance hierarchy",
                 }
         except Exception as exc:
-            logger.warning(f"Inheritance lookup failed for '{entity_name}': {exc}")
-            result["inheritance"] = {"error": sanitize_error_message(str(exc))}
+            _set_section_error(
+                result, "inheritance", "Inheritance lookup", entity_name, exc
+            )
 
     # --- Step 4: Test examples ---
     if validated.include_test_examples and vector_store is not None:
@@ -738,8 +748,9 @@ async def handle_explain_entity(args: dict[str, Any]) -> list[TextContent]:
                 for ex in examples
             ]
         except Exception as exc:
-            logger.warning(f"Test example extraction failed for '{entity_name}': {exc}")
-            result["test_examples"] = {"error": sanitize_error_message(str(exc))}
+            _set_section_error(
+                result, "test_examples", "Test example extraction", entity_name, exc
+            )
 
     # --- Step 5: API docs ---
     if validated.include_api_docs and entity_file:
@@ -838,8 +849,9 @@ async def handle_explain_entity(args: dict[str, Any]) -> list[TextContent]:
             else:
                 result["api_docs"] = {"note": "Source file not found"}
         except Exception as exc:
-            logger.warning(f"API doc extraction failed for '{entity_name}': {exc}")
-            result["api_docs"] = {"error": sanitize_error_message(str(exc))}
+            _set_section_error(
+                result, "api_docs", "API doc extraction", entity_name, exc
+            )
 
     logger.info(f"Explain entity: '{entity_name}' in {repo_path}")
     return [TextContent(type="text", text=json.dumps(result, indent=2))]
@@ -921,20 +933,20 @@ async def handle_impact_analysis(args: dict[str, Any]) -> list[TextContent]:
                     if "." in caller:
                         affected_files.add(caller.rsplit(".", 1)[0])
         except Exception as exc:
-            logger.warning(
-                f"Reverse call graph extraction failed for '{file_path}': {exc}"
+            _set_section_error(
+                result,
+                "reverse_call_graph",
+                "Reverse call graph extraction",
+                file_path,
+                exc,
             )
-            result["reverse_call_graph"] = {"error": sanitize_error_message(str(exc))}
 
     # --- Section 2: Inheritance dependents ---
     if validated.include_inheritance:
         try:
             from local_deepwiki.generators.inheritance import collect_class_hierarchy
 
-            embedding_provider = get_embedding_provider(config.embedding)
-            vector_store = VectorStore(
-                config.get_vector_db_path(repo_path), embedding_provider
-            )
+            vector_store = _create_vector_store(repo_path, config)
 
             classes = await collect_class_hierarchy(index_status, vector_store)
 
@@ -960,10 +972,9 @@ async def handle_impact_analysis(args: dict[str, Any]) -> list[TextContent]:
 
             result["inheritance_dependents"] = inheritance_dependents
         except Exception as exc:
-            logger.warning(f"Inheritance analysis failed for '{file_path}': {exc}")
-            result["inheritance_dependents"] = {
-                "error": sanitize_error_message(str(exc))
-            }
+            _set_section_error(
+                result, "inheritance_dependents", "Inheritance analysis", file_path, exc
+            )
 
     # --- Section 3: File-level dependents ---
     if validated.include_dependents:
@@ -972,10 +983,7 @@ async def handle_impact_analysis(args: dict[str, Any]) -> list[TextContent]:
 
             # Create vector_store if not already created by inheritance section
             if vector_store is None:
-                embedding_provider = get_embedding_provider(config.embedding)
-                vector_store = VectorStore(
-                    config.get_vector_db_path(repo_path), embedding_provider
-                )
+                vector_store = _create_vector_store(repo_path, config)
 
             dep_store = vector_store
             chunks = await dep_store.get_chunks_by_file(file_path)
@@ -1007,8 +1015,9 @@ async def handle_impact_analysis(args: dict[str, Any]) -> list[TextContent]:
                     "related_files": [],
                 }
         except Exception as exc:
-            logger.warning(f"File dependents analysis failed for '{file_path}': {exc}")
-            result["file_dependents"] = {"error": sanitize_error_message(str(exc))}
+            _set_section_error(
+                result, "file_dependents", "File dependents analysis", file_path, exc
+            )
 
     # --- Section 4: Affected wiki pages ---
     if validated.include_wiki_pages:
@@ -1033,8 +1042,9 @@ async def handle_impact_analysis(args: dict[str, Any]) -> list[TextContent]:
                         )
             result["affected_wiki_pages"] = matched_pages
         except Exception as exc:
-            logger.warning(f"Wiki page lookup failed for '{file_path}': {exc}")
-            result["affected_wiki_pages"] = {"error": sanitize_error_message(str(exc))}
+            _set_section_error(
+                result, "affected_wiki_pages", "Wiki page lookup", file_path, exc
+            )
 
     # --- Impact summary ---
     total_affected_files = len(affected_files)

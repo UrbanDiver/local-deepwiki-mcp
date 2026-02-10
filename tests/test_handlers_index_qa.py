@@ -151,21 +151,22 @@ class TestHandleAskQuestionExtended:
             vector_path = tmp_path / ".deepwiki" / "vectors"
             vector_path.mkdir(parents=True)
 
-            with patch("local_deepwiki.handlers.core.get_embedding_provider"):
-                with patch("local_deepwiki.handlers.core.VectorStore") as mock_vs:
-                    mock_store = MagicMock()
-                    mock_store.search = AsyncMock(return_value=[])
-                    mock_vs.return_value = mock_store
+            mock_store = MagicMock()
+            mock_store.search = AsyncMock(return_value=[])
 
-                    result = await handle_ask_question(
-                        {
-                            "repo_path": str(tmp_path),
-                            "question": "What is this code?",
-                        }
-                    )
+            with patch(
+                "local_deepwiki.handlers.core._create_vector_store",
+                return_value=mock_store,
+            ):
+                result = await handle_ask_question(
+                    {
+                        "repo_path": str(tmp_path),
+                        "question": "What is this code?",
+                    }
+                )
 
-                    assert len(result) == 1
-                    assert "No relevant code found" in result[0].text
+                assert len(result) == 1
+                assert "No relevant code found" in result[0].text
 
     async def test_returns_answer_with_sources(self, tmp_path):
         """Test returns answer with sources when results are found."""
@@ -193,35 +194,42 @@ class TestHandleAskQuestionExtended:
             mock_result.chunk = mock_chunk
             mock_result.score = 0.9
 
-            with patch("local_deepwiki.handlers.core.get_embedding_provider"):
-                with patch("local_deepwiki.handlers.core.VectorStore") as mock_vs:
-                    mock_store = MagicMock()
-                    mock_store.search = AsyncMock(return_value=[mock_result])
-                    mock_vs.return_value = mock_store
+            mock_store = MagicMock()
+            mock_store.search = AsyncMock(return_value=[mock_result])
 
-                    with patch(
+            with patch(
+                "local_deepwiki.handlers.core._create_vector_store",
+                return_value=mock_store,
+            ):
+                with (
+                    patch(
+                        "local_deepwiki.handlers.core.get_embedding_provider",
+                        return_value=MagicMock(),
+                    ),
+                    patch(
                         "local_deepwiki.providers.llm.get_cached_llm_provider"
-                    ) as mock_llm:
-                        mock_provider = MagicMock()
-                        mock_provider.generate = AsyncMock(
-                            return_value="This is a test function."
-                        )
-                        mock_llm.return_value = mock_provider
+                    ) as mock_llm,
+                ):
+                    mock_provider = MagicMock()
+                    mock_provider.generate = AsyncMock(
+                        return_value="This is a test function."
+                    )
+                    mock_llm.return_value = mock_provider
 
-                        result = await handle_ask_question(
-                            {
-                                "repo_path": str(tmp_path),
-                                "question": "What does hello do?",
-                            }
-                        )
+                    result = await handle_ask_question(
+                        {
+                            "repo_path": str(tmp_path),
+                            "question": "What does hello do?",
+                        }
+                    )
 
-                        assert len(result) == 1
-                        data = json.loads(result[0].text)
-                        assert "answer" in data
-                        assert "sources" in data
-                        assert data["answer"] == "This is a test function."
-                        assert len(data["sources"]) == 1
-                        assert data["sources"][0]["file"] == "test.py"
+                    assert len(result) == 1
+                    data = json.loads(result[0].text)
+                    assert "answer" in data
+                    assert "sources" in data
+                    assert data["answer"] == "This is a test function."
+                    assert len(data["sources"]) == 1
+                    assert data["sources"][0]["file"] == "test.py"
 
 
 class TestHandleIndexRepositoryProgressCallback:

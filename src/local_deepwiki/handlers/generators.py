@@ -23,12 +23,11 @@ from local_deepwiki.handlers._shared import (
     ListIndexedReposArgs,
     Permission,
     ValidationError,
-    VectorStore,
+    _create_vector_store,
     _is_test_file,
     _load_index_status,
     get_access_controller,
     get_config,
-    get_embedding_provider,
     handle_tool_errors,
     logger,
     not_indexed_error,
@@ -57,8 +56,7 @@ async def handle_get_glossary(args: dict[str, Any]) -> list[TextContent]:
 
     from local_deepwiki.generators.glossary import collect_all_entities
 
-    embedding_provider = get_embedding_provider(config.embedding)
-    vector_store = VectorStore(config.get_vector_db_path(repo_path), embedding_provider)
+    vector_store = _create_vector_store(repo_path, config)
 
     entities = await collect_all_entities(index_status, vector_store)
 
@@ -129,8 +127,7 @@ async def handle_get_diagrams(args: dict[str, Any]) -> list[TextContent]:
     )
     from local_deepwiki.generators.callgraph import CallGraphExtractor
 
-    embedding_provider = get_embedding_provider(config.embedding)
-    vector_store = VectorStore(config.get_vector_db_path(repo_path), embedding_provider)
+    vector_store = _create_vector_store(repo_path, config)
 
     # Collect chunks from vector store for diagram generation
     all_chunks = list(vector_store.get_all_chunks())
@@ -217,8 +214,7 @@ async def handle_get_inheritance(args: dict[str, Any]) -> list[TextContent]:
         generate_inheritance_diagram,
     )
 
-    embedding_provider = get_embedding_provider(config.embedding)
-    vector_store = VectorStore(config.get_vector_db_path(repo_path), embedding_provider)
+    vector_store = _create_vector_store(repo_path, config)
 
     classes = await collect_class_hierarchy(index_status, vector_store)
 
@@ -370,8 +366,7 @@ async def handle_get_coverage(args: dict[str, Any]) -> list[TextContent]:
 
     from local_deepwiki.generators.coverage import analyze_project_coverage
 
-    embedding_provider = get_embedding_provider(config.embedding)
-    vector_store = VectorStore(config.get_vector_db_path(repo_path), embedding_provider)
+    vector_store = _create_vector_store(repo_path, config)
 
     stats, file_coverages = await analyze_project_coverage(index_status, vector_store)
 
@@ -600,8 +595,7 @@ async def handle_get_test_examples(args: dict[str, Any]) -> list[TextContent]:
 
     from local_deepwiki.generators.test_examples import CodeExampleExtractor
 
-    embedding_provider = get_embedding_provider(config.embedding)
-    vector_store = VectorStore(config.get_vector_db_path(repo_path), embedding_provider)
+    vector_store = _create_vector_store(repo_path, config)
 
     extractor = CodeExampleExtractor(vector_store, repo_path=repo_path)
 

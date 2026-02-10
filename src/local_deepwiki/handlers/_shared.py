@@ -353,6 +353,20 @@ def _load_index_status(repo_path: Path) -> tuple[Any, Path, Any]:
     return index_status, wiki_path, config
 
 
+def _create_vector_store(repo_path: Path, config: Any) -> VectorStore:
+    """Create a VectorStore with the configured embedding provider.
+
+    Args:
+        repo_path: Resolved path to the repository.
+        config: Application configuration object.
+
+    Returns:
+        Initialized VectorStore instance.
+    """
+    embedding_provider = get_embedding_provider(config.embedding)
+    return VectorStore(config.get_vector_db_path(repo_path), embedding_provider)
+
+
 def _format_research_results(result: "ResearchResult") -> dict[str, Any]:
     """Format the research results for return.
 

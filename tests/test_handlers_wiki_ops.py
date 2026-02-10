@@ -187,41 +187,42 @@ class TestHandleSearchCodeWithResults:
             vector_path = tmp_path / ".deepwiki" / "vectors"
             vector_path.mkdir(parents=True)
 
-            with patch("local_deepwiki.handlers.core.get_embedding_provider"):
-                with patch("local_deepwiki.handlers.core.VectorStore") as mock_vs:
-                    # Create mock search result
-                    mock_chunk = MagicMock()
-                    mock_chunk.file_path = "test.py"
-                    mock_chunk.name = "test_function"
-                    mock_chunk.chunk_type.value = "function"
-                    mock_chunk.language.value = "python"
-                    mock_chunk.start_line = 1
-                    mock_chunk.end_line = 10
-                    mock_chunk.content = "def test(): pass"
-                    mock_chunk.docstring = "A test function"
+            # Create mock search result
+            mock_chunk = MagicMock()
+            mock_chunk.file_path = "test.py"
+            mock_chunk.name = "test_function"
+            mock_chunk.chunk_type.value = "function"
+            mock_chunk.language.value = "python"
+            mock_chunk.start_line = 1
+            mock_chunk.end_line = 10
+            mock_chunk.content = "def test(): pass"
+            mock_chunk.docstring = "A test function"
 
-                    mock_result = MagicMock()
-                    mock_result.chunk = mock_chunk
-                    mock_result.score = 0.95
-                    mock_result.highlights = []
+            mock_result = MagicMock()
+            mock_result.chunk = mock_chunk
+            mock_result.score = 0.95
+            mock_result.highlights = []
 
-                    mock_store = MagicMock()
-                    mock_store.search = AsyncMock(return_value=[mock_result])
-                    mock_vs.return_value = mock_store
+            mock_store = MagicMock()
+            mock_store.search = AsyncMock(return_value=[mock_result])
 
-                    result = await handle_search_code(
-                        {
-                            "repo_path": str(tmp_path),
-                            "query": "test function",
-                        }
-                    )
+            with patch(
+                "local_deepwiki.handlers.core._create_vector_store",
+                return_value=mock_store,
+            ):
+                result = await handle_search_code(
+                    {
+                        "repo_path": str(tmp_path),
+                        "query": "test function",
+                    }
+                )
 
-                    assert len(result) == 1
-                    data = json.loads(result[0].text)
-                    assert len(data) == 1
-                    assert data[0]["file_path"] == "test.py"
-                    assert data[0]["name"] == "test_function"
-                    assert data[0]["score"] == 0.95
+                assert len(result) == 1
+                data = json.loads(result[0].text)
+                assert len(data) == 1
+                assert data[0]["file_path"] == "test.py"
+                assert data[0]["name"] == "test_function"
+                assert data[0]["score"] == 0.95
 
     async def test_returns_no_results_message(self, tmp_path):
         """Test returns no results message when search is empty."""
@@ -234,21 +235,22 @@ class TestHandleSearchCodeWithResults:
             vector_path = tmp_path / ".deepwiki" / "vectors"
             vector_path.mkdir(parents=True)
 
-            with patch("local_deepwiki.handlers.core.get_embedding_provider"):
-                with patch("local_deepwiki.handlers.core.VectorStore") as mock_vs:
-                    mock_store = MagicMock()
-                    mock_store.search = AsyncMock(return_value=[])
-                    mock_vs.return_value = mock_store
+            mock_store = MagicMock()
+            mock_store.search = AsyncMock(return_value=[])
 
-                    result = await handle_search_code(
-                        {
-                            "repo_path": str(tmp_path),
-                            "query": "nonexistent",
-                        }
-                    )
+            with patch(
+                "local_deepwiki.handlers.core._create_vector_store",
+                return_value=mock_store,
+            ):
+                result = await handle_search_code(
+                    {
+                        "repo_path": str(tmp_path),
+                        "query": "nonexistent",
+                    }
+                )
 
-                    assert len(result) == 1
-                    assert "No results found" in result[0].text
+                assert len(result) == 1
+                assert "No results found" in result[0].text
 
     async def test_truncates_long_content_preview(self, tmp_path):
         """Test truncates long content in preview."""
@@ -277,21 +279,22 @@ class TestHandleSearchCodeWithResults:
             mock_result.score = 0.8
             mock_result.highlights = []
 
-            with patch("local_deepwiki.handlers.core.get_embedding_provider"):
-                with patch("local_deepwiki.handlers.core.VectorStore") as mock_vs:
-                    mock_store = MagicMock()
-                    mock_store.search = AsyncMock(return_value=[mock_result])
-                    mock_vs.return_value = mock_store
+            mock_store = MagicMock()
+            mock_store.search = AsyncMock(return_value=[mock_result])
 
-                    result = await handle_search_code(
-                        {
-                            "repo_path": str(tmp_path),
-                            "query": "long function",
-                        }
-                    )
+            with patch(
+                "local_deepwiki.handlers.core._create_vector_store",
+                return_value=mock_store,
+            ):
+                result = await handle_search_code(
+                    {
+                        "repo_path": str(tmp_path),
+                        "query": "long function",
+                    }
+                )
 
-                    assert len(result) == 1
-                    data = json.loads(result[0].text)
-                    # Preview should be truncated with "..."
-                    assert data[0]["preview"].endswith("...")
-                    assert len(data[0]["preview"]) <= 303  # 300 + "..."
+                assert len(result) == 1
+                data = json.loads(result[0].text)
+                # Preview should be truncated with "..."
+                assert data[0]["preview"].endswith("...")
+                assert len(data[0]["preview"]) <= 303  # 300 + "..."

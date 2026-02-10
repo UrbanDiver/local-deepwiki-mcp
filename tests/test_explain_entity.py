@@ -206,10 +206,7 @@ class TestHandleExplainEntityBasic:
 
         with (
             patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
-            patch(
-                "local_deepwiki.handlers.analysis.get_embedding_provider"
-            ) as mock_embed,
-            patch("local_deepwiki.handlers.analysis.VectorStore") as mock_vs,
+            patch("local_deepwiki.handlers.analysis._create_vector_store"),
             patch(
                 "local_deepwiki.generators.callgraph.CallGraphExtractor",
                 return_value=mock_extractor_instance,
@@ -299,8 +296,7 @@ class TestHandleExplainEntityClassInheritance:
 
         with (
             patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
-            patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
-            patch("local_deepwiki.handlers.analysis.VectorStore"),
+            patch("local_deepwiki.handlers.analysis._create_vector_store"),
             patch(
                 "local_deepwiki.generators.inheritance.collect_class_hierarchy",
                 new_callable=AsyncMock,
@@ -370,8 +366,7 @@ class TestHandleExplainEntityFunctionNoInheritance:
 
         with (
             patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
-            patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
-            patch("local_deepwiki.handlers.analysis.VectorStore"),
+            patch("local_deepwiki.handlers.analysis._create_vector_store"),
             patch(
                 "local_deepwiki.generators.test_examples.CodeExampleExtractor",
                 return_value=mock_example_extractor,
@@ -430,8 +425,7 @@ class TestHandleExplainEntityDisableCallGraph:
 
         with (
             patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
-            patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
-            patch("local_deepwiki.handlers.analysis.VectorStore"),
+            patch("local_deepwiki.handlers.analysis._create_vector_store"),
             patch(
                 "local_deepwiki.generators.test_examples.CodeExampleExtractor",
                 return_value=mock_example_extractor,
@@ -629,8 +623,7 @@ class TestExplainEntityMultipleMatches:
 
         with (
             patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
-            patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
-            patch("local_deepwiki.handlers.analysis.VectorStore"),
+            patch("local_deepwiki.handlers.analysis._create_vector_store"),
             patch(
                 "local_deepwiki.generators.callgraph.CallGraphExtractor",
                 return_value=mock_cg_extractor,
@@ -695,8 +688,7 @@ class TestExplainEntityMethodEntity:
 
         with (
             patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
-            patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
-            patch("local_deepwiki.handlers.analysis.VectorStore"),
+            patch("local_deepwiki.handlers.analysis._create_vector_store"),
             patch(
                 "local_deepwiki.generators.callgraph.CallGraphExtractor",
                 return_value=mock_cg_extractor,
@@ -758,8 +750,7 @@ class TestExplainEntityNoDocstring:
 
         with (
             patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
-            patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
-            patch("local_deepwiki.handlers.analysis.VectorStore"),
+            patch("local_deepwiki.handlers.analysis._create_vector_store"),
             patch(
                 "local_deepwiki.generators.callgraph.CallGraphExtractor",
                 return_value=mock_cg_extractor,
@@ -844,8 +835,7 @@ class TestExplainEntityAsyncFunction:
 
         with (
             patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
-            patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
-            patch("local_deepwiki.handlers.analysis.VectorStore"),
+            patch("local_deepwiki.handlers.analysis._create_vector_store"),
             patch(
                 "local_deepwiki.generators.callgraph.CallGraphExtractor",
                 return_value=mock_cg_extractor,
@@ -901,8 +891,7 @@ class TestExplainEntityNoCallersCallees:
 
         with (
             patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
-            patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
-            patch("local_deepwiki.handlers.analysis.VectorStore"),
+            patch("local_deepwiki.handlers.analysis._create_vector_store"),
             patch(
                 "local_deepwiki.generators.callgraph.CallGraphExtractor",
                 return_value=mock_cg_extractor,
@@ -951,8 +940,7 @@ class TestExplainEntityDisableApiDocs:
 
         with (
             patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
-            patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
-            patch("local_deepwiki.handlers.analysis.VectorStore"),
+            patch("local_deepwiki.handlers.analysis._create_vector_store"),
             patch(
                 "local_deepwiki.generators.callgraph.CallGraphExtractor",
                 return_value=mock_cg_extractor,
@@ -1043,8 +1031,7 @@ class TestExplainEntityClassNotInHierarchy:
 
         with (
             patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
-            patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
-            patch("local_deepwiki.handlers.analysis.VectorStore"),
+            patch("local_deepwiki.handlers.analysis._create_vector_store"),
             patch(
                 "local_deepwiki.generators.inheritance.collect_class_hierarchy",
                 new_callable=AsyncMock,
@@ -1142,8 +1129,7 @@ class TestExplainEntityCallGraphWithCallersCallees:
 
         with (
             patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
-            patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
-            patch("local_deepwiki.handlers.analysis.VectorStore"),
+            patch("local_deepwiki.handlers.analysis._create_vector_store"),
             patch(
                 "local_deepwiki.generators.callgraph.CallGraphExtractor",
                 return_value=mock_cg_extractor,
@@ -1206,8 +1192,7 @@ class TestExplainEntitySourceFileNotFound:
 
         with (
             patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
-            patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
-            patch("local_deepwiki.handlers.analysis.VectorStore"),
+            patch("local_deepwiki.handlers.analysis._create_vector_store"),
         ):
             mock_load.return_value = (index_status, wiki_path, config)
 
