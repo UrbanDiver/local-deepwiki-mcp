@@ -42,9 +42,19 @@ class CredentialManager:
         # Don't store in memory, validate and return
         return key
 
+    # Minimum key length for generic providers
+    _MIN_GENERIC_KEY_LENGTH = 8
+    # Minimum key length for known providers (Anthropic, OpenAI)
+    _MIN_KNOWN_KEY_LENGTH = 20
+
     @staticmethod
     def validate_key_format(key: str, provider: str) -> bool:
         """Validate API key format without storing.
+
+        Performs strict provider-specific format validation. Anthropic keys
+        must start with ``sk-ant-`` and OpenAI keys with ``sk-``, both with
+        a minimum length of 20 characters. Generic providers require at
+        least 8 characters.
 
         Args:
             key: API key to validate
@@ -53,16 +63,18 @@ class CredentialManager:
         Returns:
             True if key format appears valid, False otherwise
         """
-        # Allow test keys (used in testing)
-        if key in ("test-key", "test", "custom-key") or key.startswith("test-"):
-            return True
+        if not key or len(key) < 4:
+            return False
 
         if provider == "anthropic":
-            # Anthropic keys start with 'sk-ant-' or are valid test keys
-            return (key.startswith("sk-ant-") and len(key) > 20) or len(key) >= 4
+            return (
+                key.startswith("sk-ant-")
+                and len(key) > CredentialManager._MIN_KNOWN_KEY_LENGTH
+            )
         elif provider == "openai":
-            # OpenAI keys start with 'sk-' or are valid test keys
-            return (key.startswith("sk-") and len(key) > 20) or len(key) >= 4
+            return (
+                key.startswith("sk-")
+                and len(key) > CredentialManager._MIN_KNOWN_KEY_LENGTH
+            )
         else:
-            # Generic validation for other providers
-            return len(key) >= 4
+            return len(key) >= CredentialManager._MIN_GENERIC_KEY_LENGTH

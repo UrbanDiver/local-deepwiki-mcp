@@ -550,53 +550,54 @@ class WikiGenerator:
         index_status: IndexStatus,
         progress_callback: ProgressCallback | None,
     ) -> None:
-        """Generate auxiliary pages: inheritance, glossary, coverage, dependency graph."""
-        aux_generators = [
-            (
-                "Generating inheritance tree",
-                6,
-                generate_inheritance_page(index_status, self.vector_store),
-                "inheritance.md",
-                "Class Inheritance",
-            ),
-            (
-                "Generating glossary",
-                7,
-                generate_glossary_page(index_status, self.vector_store),
-                "glossary.md",
-                "Glossary",
-            ),
-            (
-                "Generating coverage report",
-                8,
-                generate_coverage_page(index_status, self.vector_store),
-                "coverage.md",
-                "Documentation Coverage",
-            ),
-        ]
-        for label, step, coro, path, title in aux_generators:
-            if progress_callback:
-                progress_callback(label, step, 14)
-            content = await coro
-            await self._add_auxiliary_page(ctx, content, path, title)
+        """Generate auxiliary pages: inheritance, glossary, coverage, dependency graph.
 
-        # Dependency graph page (has unique error handling)
+        All four pages are generated concurrently with ``asyncio.gather``
+        since they are independent of each other.
+        """
+        import asyncio
+
         if progress_callback:
-            progress_callback("Generating dependency graph", 9, 14)
-        try:
-            dep_content = await generate_dependency_graph_page(
-                index_status=index_status,
-                vector_store=self.vector_store,
-                show_external=True,
-                max_external=10,
-                wiki_base_path="files/",
-            )
-            await self._add_auxiliary_page(
-                ctx, dep_content, "dependency-graph.md", "Dependency Graph"
-            )
-        except Exception as e:
-            logger.debug(f"Failed to generate dependency graph: {e}")
-            ctx.warnings.append(f"Dependency graph generation failed: {e}")
+            progress_callback("Generating auxiliary pages", 6, 14)
+
+        async def _safe_dependency_graph() -> str | None:
+            """Wrapper that catches dependency graph errors."""
+            try:
+                return await generate_dependency_graph_page(
+                    index_status=index_status,
+                    vector_store=self.vector_store,
+                    show_external=True,
+                    max_external=10,
+                    wiki_base_path="files/",
+                )
+            except Exception as e:
+                logger.debug(f"Failed to generate dependency graph: {e}")
+                ctx.warnings.append(f"Dependency graph generation failed: {e}")
+                return None
+
+        # Run all auxiliary generators concurrently
+        (
+            inheritance_content,
+            glossary_content,
+            coverage_content,
+            dep_content,
+        ) = await asyncio.gather(
+            generate_inheritance_page(index_status, self.vector_store),
+            generate_glossary_page(index_status, self.vector_store),
+            generate_coverage_page(index_status, self.vector_store),
+            _safe_dependency_graph(),
+        )
+
+        await self._add_auxiliary_page(
+            ctx, inheritance_content, "inheritance.md", "Class Inheritance"
+        )
+        await self._add_auxiliary_page(ctx, glossary_content, "glossary.md", "Glossary")
+        await self._add_auxiliary_page(
+            ctx, coverage_content, "coverage.md", "Documentation Coverage"
+        )
+        await self._add_auxiliary_page(
+            ctx, dep_content, "dependency-graph.md", "Dependency Graph"
+        )
 
     def _sort_generators_by_dependencies(
         self,

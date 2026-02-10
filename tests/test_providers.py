@@ -169,7 +169,9 @@ class TestProviderCapabilities:
 class TestLLMProviderContract:
     """Tests for LLM provider base class contract."""
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     def test_anthropic_provider_implements_interface(self):
         """Test that AnthropicProvider implements all abstract methods."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -184,7 +186,7 @@ class TestLLMProviderContract:
         assert hasattr(provider, "validate_model")
         assert hasattr(provider, "get_capabilities")
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_openai_provider_implements_interface(self):
         """Test that OpenAILLMProvider implements all abstract methods."""
         from local_deepwiki.providers.llm.openai import OpenAILLMProvider
@@ -211,7 +213,9 @@ class TestLLMProviderContract:
         assert hasattr(provider, "validate_model")
         assert hasattr(provider, "get_capabilities")
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     def test_anthropic_capabilities(self):
         """Test AnthropicProvider capabilities."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -226,7 +230,7 @@ class TestLLMProviderContract:
         assert caps.supports_vision is True
         assert len(caps.models) > 0
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_openai_capabilities(self):
         """Test OpenAILLMProvider capabilities."""
         from local_deepwiki.providers.llm.openai import OpenAILLMProvider
@@ -239,7 +243,7 @@ class TestLLMProviderContract:
         assert caps.supports_function_calling is True
         assert caps.supports_vision is True
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_openai_o1_capabilities(self):
         """Test OpenAILLMProvider capabilities for O1 models."""
         from local_deepwiki.providers.llm.openai import OpenAILLMProvider
@@ -285,7 +289,7 @@ class TestEmbeddingProviderContract:
         assert hasattr(provider, "get_max_tokens")
         assert hasattr(provider, "get_capabilities")
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_openai_embedding_provider_implements_interface(self):
         """Test that OpenAIEmbeddingProvider implements all abstract methods."""
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
@@ -300,7 +304,7 @@ class TestEmbeddingProviderContract:
         assert hasattr(provider, "get_max_tokens")
         assert hasattr(provider, "get_capabilities")
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_openai_embedding_capabilities(self):
         """Test OpenAIEmbeddingProvider capabilities."""
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
@@ -323,7 +327,9 @@ class TestEmbeddingProviderContract:
 class TestStandardizedErrorHandling:
     """Tests for standardized error handling across providers."""
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     async def test_anthropic_authentication_error(self):
         """Test Anthropic provider raises ProviderAuthenticationError."""
         from anthropic import AuthenticationError
@@ -347,7 +353,7 @@ class TestStandardizedErrorHandling:
 
         assert "authentication" in str(exc_info.value).lower()
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     async def test_openai_authentication_error(self):
         """Test OpenAI provider raises ProviderAuthenticationError."""
         from openai import AuthenticationError
@@ -427,11 +433,13 @@ class TestValidationMethods:
     @dataclass
     class MockModel:
         """Mock ollama Model object."""
+
         model: str
 
     @dataclass
     class MockListResponse:
         """Mock ollama ListResponse object."""
+
         models: list
 
     async def test_ollama_validate_connectivity_success(self):
@@ -492,7 +500,9 @@ class TestValidationMethods:
             with pytest.raises(OllamaModelNotFoundError):
                 await provider.validate_model("llama3.2")
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     async def test_anthropic_validate_model_known(self):
         """Test Anthropic validate_model for known model."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -501,7 +511,7 @@ class TestValidationMethods:
         result = await provider.validate_model("claude-sonnet-4-20250514")
         assert result is True
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     async def test_openai_validate_model_known(self):
         """Test OpenAI validate_model for known model."""
         from local_deepwiki.providers.llm.openai import OpenAILLMProvider
@@ -541,7 +551,7 @@ class TestEmbeddingProviderMethods:
         # Should return default
         assert provider.get_max_tokens() == 512
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_openai_embedding_max_batch_size(self):
         """Test OpenAIEmbeddingProvider max batch size."""
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
@@ -549,7 +559,7 @@ class TestEmbeddingProviderMethods:
         provider = OpenAIEmbeddingProvider()
         assert provider.get_max_batch_size() == 2048
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_openai_embedding_max_tokens(self):
         """Test OpenAIEmbeddingProvider max tokens."""
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
@@ -557,7 +567,7 @@ class TestEmbeddingProviderMethods:
         provider = OpenAIEmbeddingProvider(model="text-embedding-3-small")
         assert provider.get_max_tokens() == 8191
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_openai_embedding_dimension(self):
         """Test OpenAIEmbeddingProvider dimension."""
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
@@ -611,7 +621,9 @@ class TestExceptionHierarchy:
 class TestProviderNames:
     """Tests for provider name properties."""
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     def test_anthropic_provider_name(self):
         """Test AnthropicProvider name format."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -619,7 +631,7 @@ class TestProviderNames:
         provider = AnthropicProvider(model="claude-sonnet-4-20250514")
         assert provider.name == "anthropic:claude-sonnet-4-20250514"
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_openai_provider_name(self):
         """Test OpenAILLMProvider name format."""
         from local_deepwiki.providers.llm.openai import OpenAILLMProvider
@@ -641,7 +653,7 @@ class TestProviderNames:
         provider = LocalEmbeddingProvider(model_name="all-MiniLM-L6-v2")
         assert provider.name == "local:all-MiniLM-L6-v2"
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_openai_embedding_provider_name(self):
         """Test OpenAIEmbeddingProvider name format."""
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider

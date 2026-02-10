@@ -55,7 +55,7 @@ class TestOpenAIProviderInitialization:
 class TestOpenAIProviderHandleApiError:
     """Tests for _handle_api_error method."""
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_handle_authentication_error(self):
         """Test handling of AuthenticationError."""
         from local_deepwiki.providers.base import ProviderAuthenticationError
@@ -77,7 +77,7 @@ class TestOpenAIProviderHandleApiError:
         assert "authentication failed" in str(exc_info.value)
         assert "OPENAI_API_KEY" in str(exc_info.value)
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_handle_rate_limit_error_429(self):
         """Test handling of rate limit error (429 status code)."""
         from local_deepwiki.providers.base import ProviderRateLimitError
@@ -102,7 +102,7 @@ class TestOpenAIProviderHandleApiError:
         assert "rate limit" in str(exc_info.value).lower()
         assert exc_info.value.retry_after == 30.0
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_handle_rate_limit_error_by_message(self):
         """Test handling of rate limit error detected by message content."""
         from local_deepwiki.providers.base import ProviderRateLimitError
@@ -125,7 +125,7 @@ class TestOpenAIProviderHandleApiError:
 
         assert "rate limit" in str(exc_info.value).lower()
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_handle_rate_limit_invalid_retry_after(self):
         """Test handling of rate limit with invalid retry-after header."""
         from local_deepwiki.providers.base import ProviderRateLimitError
@@ -149,7 +149,7 @@ class TestOpenAIProviderHandleApiError:
         # retry_after should be None since parsing failed
         assert exc_info.value.retry_after is None
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_handle_rate_limit_no_response(self):
         """Test handling of rate limit error without response object."""
         from local_deepwiki.providers.base import ProviderRateLimitError
@@ -174,7 +174,7 @@ class TestOpenAIProviderHandleApiError:
 
         assert exc_info.value.retry_after is None
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_handle_model_not_found_404(self):
         """Test handling of model not found error (404 status code)."""
         from local_deepwiki.providers.base import ProviderModelNotFoundError
@@ -198,7 +198,7 @@ class TestOpenAIProviderHandleApiError:
         assert "nonexistent-model" in str(exc_info.value)
         assert exc_info.value.available_models  # Should have available models list
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_handle_model_not_found_by_message(self):
         """Test handling of model not found detected by message content."""
         from local_deepwiki.providers.base import ProviderModelNotFoundError
@@ -221,7 +221,7 @@ class TestOpenAIProviderHandleApiError:
 
         assert "bad-model" in str(exc_info.value)
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_handle_connection_error(self):
         """Test handling of APIConnectionError."""
         from local_deepwiki.providers.base import ProviderConnectionError
@@ -236,7 +236,7 @@ class TestOpenAIProviderHandleApiError:
 
         assert "Failed to connect to OpenAI API" in str(exc_info.value)
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_handle_unknown_error_reraises(self):
         """Test that unknown errors are re-raised when called within exception context."""
         from local_deepwiki.providers.llm.openai import OpenAILLMProvider
@@ -253,7 +253,7 @@ class TestOpenAIProviderHandleApiError:
                 provider._handle_api_error(e)
                 raise  # This mirrors the actual usage pattern
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_handle_api_status_error_other(self):
         """Test handling of APIStatusError that doesn't match rate limit or not found."""
         from local_deepwiki.providers.llm.openai import OpenAILLMProvider
@@ -283,7 +283,7 @@ class TestOpenAIProviderHandleApiError:
 class TestOpenAIProviderValidateConnectivity:
     """Tests for validate_connectivity method."""
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     async def test_validate_connectivity_success(self):
         """Test successful connectivity validation."""
         from local_deepwiki.providers.llm.openai import OpenAILLMProvider
@@ -302,7 +302,7 @@ class TestOpenAIProviderValidateConnectivity:
         result = await provider.validate_connectivity()
         assert result is True
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     async def test_validate_connectivity_auth_error(self):
         """Test connectivity validation handles auth error."""
         from local_deepwiki.providers.base import ProviderAuthenticationError
@@ -321,7 +321,7 @@ class TestOpenAIProviderValidateConnectivity:
         with pytest.raises(ProviderAuthenticationError):
             await provider.validate_connectivity()
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     async def test_validate_connectivity_connection_error(self):
         """Test connectivity validation handles connection error."""
         from local_deepwiki.providers.base import ProviderConnectionError
@@ -336,7 +336,7 @@ class TestOpenAIProviderValidateConnectivity:
         with pytest.raises(ProviderConnectionError):
             await provider.validate_connectivity()
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     async def test_validate_connectivity_unknown_error(self):
         """Test connectivity validation wraps unknown errors in ProviderConnectionError."""
         from local_deepwiki.providers.base import ProviderConnectionError
@@ -359,7 +359,7 @@ class TestOpenAIProviderValidateConnectivity:
 class TestOpenAIProviderValidateModel:
     """Tests for validate_model method."""
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     async def test_validate_model_known_model(self):
         """Test validation of known model returns True immediately."""
         from local_deepwiki.providers.llm.openai import OpenAILLMProvider
@@ -369,7 +369,7 @@ class TestOpenAIProviderValidateModel:
         result = await provider.validate_model("gpt-4o")
         assert result is True
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     async def test_validate_model_unknown_model_success(self):
         """Test validation of unknown model via API call."""
         from local_deepwiki.providers.llm.openai import OpenAILLMProvider
@@ -388,7 +388,7 @@ class TestOpenAIProviderValidateModel:
         result = await provider.validate_model("some-unknown-model")
         assert result is True
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     async def test_validate_model_not_found(self):
         """Test validation of model that doesn't exist."""
         from local_deepwiki.providers.base import ProviderModelNotFoundError
@@ -405,7 +405,7 @@ class TestOpenAIProviderValidateModel:
 
         assert "nonexistent" in str(exc_info.value)
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     async def test_validate_model_not_found_message(self):
         """Test validation with 'not found' in error message."""
         from local_deepwiki.providers.base import ProviderModelNotFoundError
@@ -420,7 +420,7 @@ class TestOpenAIProviderValidateModel:
         with pytest.raises(ProviderModelNotFoundError):
             await provider.validate_model("bad-model")
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     async def test_validate_model_invalid_message(self):
         """Test validation with 'invalid' in error message."""
         from local_deepwiki.providers.base import ProviderModelNotFoundError
@@ -435,7 +435,7 @@ class TestOpenAIProviderValidateModel:
         with pytest.raises(ProviderModelNotFoundError):
             await provider.validate_model("invalid-model")
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     async def test_validate_model_auth_error(self):
         """Test validation handles auth error through _handle_api_error."""
         from local_deepwiki.providers.base import ProviderAuthenticationError
@@ -461,7 +461,7 @@ class TestOpenAIProviderValidateModel:
         with pytest.raises(ProviderAuthenticationError):
             await provider.validate_model("some-unknown-model")
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     async def test_validate_model_other_error_reraises(self):
         """Test validation re-raises errors that aren't model-related."""
         from local_deepwiki.providers.llm.openai import OpenAILLMProvider
@@ -480,7 +480,7 @@ class TestOpenAIProviderValidateModel:
 class TestOpenAIProviderGenerateErrors:
     """Tests for error handling in generate method."""
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     async def test_generate_reraises_provider_errors(self):
         """Test that provider errors are re-raised directly."""
         from local_deepwiki.providers.base import ProviderAuthenticationError
@@ -499,7 +499,7 @@ class TestOpenAIProviderGenerateErrors:
         with pytest.raises(ProviderAuthenticationError):
             await provider.generate("Test prompt")
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     async def test_generate_handles_api_error(self):
         """Test that API errors are handled through _handle_api_error."""
         from local_deepwiki.providers.base import ProviderConnectionError
@@ -514,7 +514,7 @@ class TestOpenAIProviderGenerateErrors:
         with pytest.raises(ProviderConnectionError):
             await provider.generate("Test prompt")
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     async def test_generate_unknown_error_calls_handle_api_error(self):
         """Test that unknown errors go through _handle_api_error."""
         from local_deepwiki.providers.llm.openai import OpenAILLMProvider
@@ -529,7 +529,7 @@ class TestOpenAIProviderGenerateErrors:
         with pytest.raises(RuntimeError):
             await provider.generate("Test prompt")
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     async def test_generate_rate_limit_error(self):
         """Test that rate limit errors are handled properly."""
         from local_deepwiki.providers.base import ProviderRateLimitError
@@ -552,7 +552,7 @@ class TestOpenAIProviderGenerateErrors:
         with pytest.raises(ProviderRateLimitError):
             await provider.generate("Test prompt")
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     async def test_generate_model_not_found_error(self):
         """Test that model not found errors are handled properly."""
         from local_deepwiki.providers.base import ProviderModelNotFoundError
@@ -581,7 +581,7 @@ class TestOpenAIProviderGenerateErrors:
 class TestOpenAIProviderStreamErrors:
     """Tests for error handling in generate_stream method."""
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     async def test_stream_reraises_provider_errors(self):
         """Test that provider errors are re-raised directly in stream."""
         from local_deepwiki.providers.base import ProviderAuthenticationError
@@ -601,7 +601,7 @@ class TestOpenAIProviderStreamErrors:
             async for _ in provider.generate_stream("Test prompt"):
                 pass
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     async def test_stream_handles_connection_error(self):
         """Test that connection errors are handled in stream."""
         from local_deepwiki.providers.base import ProviderConnectionError
@@ -617,7 +617,7 @@ class TestOpenAIProviderStreamErrors:
             async for _ in provider.generate_stream("Test prompt"):
                 pass
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     async def test_stream_unknown_error_calls_handle_api_error(self):
         """Test that unknown errors in stream go through _handle_api_error."""
         from local_deepwiki.providers.llm.openai import OpenAILLMProvider
@@ -632,7 +632,7 @@ class TestOpenAIProviderStreamErrors:
             async for _ in provider.generate_stream("Test prompt"):
                 pass
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     async def test_stream_rate_limit_error(self):
         """Test that rate limit errors are handled in stream."""
         from local_deepwiki.providers.base import ProviderRateLimitError
@@ -656,7 +656,7 @@ class TestOpenAIProviderStreamErrors:
             async for _ in provider.generate_stream("Test prompt"):
                 pass
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     async def test_stream_model_not_found_error(self):
         """Test that model not found errors are handled in stream."""
         from local_deepwiki.providers.base import ProviderModelNotFoundError
@@ -686,7 +686,7 @@ class TestOpenAIProviderStreamErrors:
 class TestOpenAIProviderCapabilities:
     """Tests for get_capabilities method."""
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_capabilities_gpt4o(self):
         """Test capabilities for gpt-4o model."""
         from local_deepwiki.providers.llm.openai import OpenAILLMProvider
@@ -701,7 +701,7 @@ class TestOpenAIProviderCapabilities:
         assert caps.supports_function_calling is True
         assert caps.supports_vision is True
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_capabilities_o1_model(self):
         """Test capabilities for o1 model (limited streaming/system prompt)."""
         from local_deepwiki.providers.llm.openai import OpenAILLMProvider
@@ -713,7 +713,7 @@ class TestOpenAIProviderCapabilities:
         assert caps.supports_system_prompt is False  # O1 uses developer messages
         assert caps.max_context_length == 200000
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_capabilities_gpt35_turbo(self):
         """Test capabilities for gpt-3.5-turbo model."""
         from local_deepwiki.providers.llm.openai import OpenAILLMProvider
@@ -724,7 +724,7 @@ class TestOpenAIProviderCapabilities:
         assert caps.max_tokens == 4096  # Not gpt-4o
         assert caps.supports_vision is False  # gpt-3.5 doesn't support vision
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_capabilities_gpt4_turbo(self):
         """Test capabilities for gpt-4-turbo model."""
         from local_deepwiki.providers.llm.openai import OpenAILLMProvider
@@ -735,7 +735,7 @@ class TestOpenAIProviderCapabilities:
         assert caps.supports_vision is True  # gpt-4-turbo supports vision
         assert caps.max_context_length == 128000
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_capabilities_unknown_model(self):
         """Test capabilities for unknown model uses defaults."""
         from local_deepwiki.providers.llm.openai import OpenAILLMProvider
@@ -750,7 +750,7 @@ class TestOpenAIProviderCapabilities:
 class TestOpenAIProviderName:
     """Tests for name property."""
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_name_includes_model(self):
         """Test that name includes the model."""
         from local_deepwiki.providers.llm.openai import OpenAILLMProvider
@@ -758,7 +758,7 @@ class TestOpenAIProviderName:
         provider = OpenAILLMProvider(model="gpt-4o")
         assert provider.name == "openai:gpt-4o"
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_name_different_model(self):
         """Test name with different model."""
         from local_deepwiki.providers.llm.openai import OpenAILLMProvider

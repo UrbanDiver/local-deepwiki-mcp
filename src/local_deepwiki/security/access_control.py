@@ -325,8 +325,31 @@ _access_controller: Optional[AccessController] = None
 _access_controller_lock = threading.Lock()
 
 
+def _rbac_mode_from_env() -> RBACMode:
+    """Read RBAC mode from the ``DEEPWIKI_RBAC_MODE`` environment variable.
+
+    Supported values (case-insensitive): ``disabled``, ``permissive``,
+    ``enforced``.  Falls back to ``permissive`` when the variable is unset
+    or contains an unrecognised value.
+
+    Returns:
+        The RBACMode matching the environment variable.
+    """
+    import os
+
+    raw = os.environ.get("DEEPWIKI_RBAC_MODE", "").strip().lower()
+    for mode in RBACMode:
+        if mode.value == raw:
+            return mode
+    return RBACMode.PERMISSIVE
+
+
 def get_access_controller() -> AccessController:
     """Get the global access controller instance (thread-safe).
+
+    The RBAC mode is read from the ``DEEPWIKI_RBAC_MODE`` environment
+    variable on first access.  Set it to ``enforced`` to require
+    authenticated subjects for every request.
 
     Returns:
         The global AccessController instance.
@@ -336,7 +359,7 @@ def get_access_controller() -> AccessController:
         with _access_controller_lock:
             # Double-check locking pattern
             if _access_controller is None:
-                _access_controller = AccessController()
+                _access_controller = AccessController(mode=_rbac_mode_from_env())
     return _access_controller
 
 

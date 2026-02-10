@@ -34,7 +34,9 @@ def create_mock_request():
 class TestAnthropicProviderInitialization:
     """Tests for AnthropicProvider initialization."""
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     def test_initialization_default_model(self):
         """Test provider initialization with default model."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -42,7 +44,9 @@ class TestAnthropicProviderInitialization:
         provider = AnthropicProvider()
         assert provider.name == "anthropic:claude-sonnet-4-20250514"
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     def test_initialization_custom_model(self):
         """Test provider initialization with custom model."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -50,12 +54,14 @@ class TestAnthropicProviderInitialization:
         provider = AnthropicProvider(model="claude-3-opus-20240229")
         assert provider.name == "anthropic:claude-3-opus-20240229"
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     def test_initialization_with_custom_api_key(self):
         """Test provider initialization with custom API key."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
 
-        provider = AnthropicProvider(api_key="custom-key")
+        provider = AnthropicProvider(api_key="sk-ant-api03-customkey1234567890abcd")
         assert provider.name == "anthropic:claude-sonnet-4-20250514"
 
     @patch.dict(os.environ, {}, clear=True)
@@ -72,7 +78,9 @@ class TestAnthropicProviderInitialization:
         assert "No Anthropic API key configured" in str(exc_info.value)
         assert "ANTHROPIC_API_KEY" in str(exc_info.value)
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     def test_initialization_invalid_api_key_format(self):
         """Test provider raises error when API key format is invalid."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -89,7 +97,9 @@ class TestAnthropicProviderInitialization:
 class TestAnthropicProviderCapabilities:
     """Tests for AnthropicProvider capabilities."""
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     def test_get_capabilities_default_model(self):
         """Test capabilities for default model."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -105,7 +115,9 @@ class TestAnthropicProviderCapabilities:
         assert capabilities.supports_vision is True
         assert "claude-sonnet-4-20250514" in capabilities.models
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     def test_get_capabilities_unknown_model(self):
         """Test capabilities fallback for unknown model."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -120,7 +132,9 @@ class TestAnthropicProviderCapabilities:
 class TestAnthropicProviderBuildKwargs:
     """Tests for _build_kwargs method."""
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     def test_build_kwargs_basic(self):
         """Test building kwargs without system prompt."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -134,7 +148,9 @@ class TestAnthropicProviderBuildKwargs:
         assert kwargs["temperature"] == 0.5
         assert "system" not in kwargs
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     def test_build_kwargs_with_system_prompt(self):
         """Test building kwargs with system prompt."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -144,7 +160,9 @@ class TestAnthropicProviderBuildKwargs:
 
         assert kwargs["system"] == "system instruction"
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     def test_build_kwargs_zero_temperature(self):
         """Test building kwargs with zero temperature (deterministic)."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -159,7 +177,9 @@ class TestAnthropicProviderBuildKwargs:
 class TestAnthropicProviderHandleApiError:
     """Tests for _handle_api_error method."""
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     def test_handle_authentication_error(self):
         """Test handling AuthenticationError."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -180,7 +200,9 @@ class TestAnthropicProviderHandleApiError:
 
         assert "authentication failed" in str(exc_info.value)
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     def test_handle_rate_limit_error_429(self):
         """Test handling rate limit error with 429 status."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -203,7 +225,9 @@ class TestAnthropicProviderHandleApiError:
         assert "rate limit exceeded" in str(exc_info.value).lower()
         assert exc_info.value.retry_after == 30.0
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     def test_handle_rate_limit_error_by_message(self):
         """Test handling rate limit error detected by message content."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -223,7 +247,9 @@ class TestAnthropicProviderHandleApiError:
         with pytest.raises(ProviderRateLimitError):
             provider._handle_api_error(status_error)
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     def test_handle_rate_limit_error_invalid_retry_after(self):
         """Test handling rate limit error with invalid retry-after header."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -245,7 +271,9 @@ class TestAnthropicProviderHandleApiError:
         # retry_after should be None due to invalid value
         assert exc_info.value.retry_after is None
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     def test_handle_rate_limit_error_no_response(self):
         """Test handling rate limit error without response object."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -266,7 +294,9 @@ class TestAnthropicProviderHandleApiError:
         with pytest.raises(ProviderRateLimitError):
             provider._handle_api_error(status_error)
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     def test_handle_model_not_found_404(self):
         """Test handling model not found error with 404 status."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -288,7 +318,9 @@ class TestAnthropicProviderHandleApiError:
         assert exc_info.value.available_models is not None
         assert len(exc_info.value.available_models) > 0
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     def test_handle_model_not_found_by_message(self):
         """Test handling model not found error detected by message."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -307,7 +339,9 @@ class TestAnthropicProviderHandleApiError:
         with pytest.raises(ProviderModelNotFoundError):
             provider._handle_api_error(status_error)
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     def test_handle_connection_error(self):
         """Test handling APIConnectionError."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -324,7 +358,9 @@ class TestAnthropicProviderHandleApiError:
 
         assert "Failed to connect to Anthropic API" in str(exc_info.value)
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     async def test_handle_unknown_error_reraises_via_generate(self):
         """Test that unknown errors are re-raised through generate."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -342,7 +378,9 @@ class TestAnthropicProviderHandleApiError:
 
         assert "Unknown error" in str(exc_info.value)
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     async def test_handle_api_status_error_unknown_via_generate(self):
         """Test that unknown APIStatusError is re-raised through generate."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -367,7 +405,9 @@ class TestAnthropicProviderHandleApiError:
 class TestAnthropicProviderValidateConnectivity:
     """Tests for validate_connectivity method."""
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     async def test_validate_connectivity_success(self):
         """Test successful connectivity validation."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -381,7 +421,9 @@ class TestAnthropicProviderValidateConnectivity:
         result = await provider.validate_connectivity()
         assert result is True
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     async def test_validate_connectivity_auth_error(self):
         """Test connectivity validation with authentication error."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -400,7 +442,9 @@ class TestAnthropicProviderValidateConnectivity:
         with pytest.raises(ProviderAuthenticationError):
             await provider.validate_connectivity()
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     async def test_validate_connectivity_connection_error(self):
         """Test connectivity validation with connection error."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -416,7 +460,9 @@ class TestAnthropicProviderValidateConnectivity:
         with pytest.raises(ProviderConnectionError):
             await provider.validate_connectivity()
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     async def test_validate_connectivity_generic_error(self):
         """Test connectivity validation with generic error.
 
@@ -447,7 +493,9 @@ class TestAnthropicProviderValidateConnectivity:
 class TestAnthropicProviderValidateModel:
     """Tests for validate_model method."""
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     async def test_validate_model_known_model(self):
         """Test validating a known model."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -458,7 +506,9 @@ class TestAnthropicProviderValidateModel:
         result = await provider.validate_model("claude-sonnet-4-20250514")
         assert result is True
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     async def test_validate_model_unknown_success(self):
         """Test validating an unknown model that exists."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -472,7 +522,9 @@ class TestAnthropicProviderValidateModel:
         result = await provider.validate_model("unknown-but-valid-model")
         assert result is True
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     async def test_validate_model_not_found(self):
         """Test validating a model that doesn't exist."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -486,7 +538,9 @@ class TestAnthropicProviderValidateModel:
         with pytest.raises(ProviderModelNotFoundError):
             await provider.validate_model("xyz")
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     async def test_validate_model_invalid_error(self):
         """Test validating a model with 'invalid' in error message."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -500,7 +554,9 @@ class TestAnthropicProviderValidateModel:
         with pytest.raises(ProviderModelNotFoundError):
             await provider.validate_model("bad-model")
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     async def test_validate_model_api_error(self):
         """Test validating a model with API error."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -516,7 +572,9 @@ class TestAnthropicProviderValidateModel:
         with pytest.raises(ProviderConnectionError):
             await provider.validate_model("some-model")
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     async def test_validate_model_other_error(self):
         """Test validating a model with non-model-related error."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -535,7 +593,9 @@ class TestAnthropicProviderValidateModel:
 class TestAnthropicProviderGenerate:
     """Tests for generate method."""
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     async def test_generate_basic(self):
         """Test basic text generation."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -551,7 +611,9 @@ class TestAnthropicProviderGenerate:
         assert result == "Generated text"
         provider._client.messages.create.assert_called_once()
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     async def test_generate_with_system_prompt(self):
         """Test generation with system prompt."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -567,7 +629,9 @@ class TestAnthropicProviderGenerate:
         call_kwargs = provider._client.messages.create.call_args.kwargs
         assert call_kwargs["system"] == "Be helpful"
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     async def test_generate_content_without_text_attr(self):
         """Test generation when content block lacks text attribute."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -584,7 +648,9 @@ class TestAnthropicProviderGenerate:
 
         assert result == ""
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     async def test_generate_reraises_provider_errors(self):
         """Test that provider errors are re-raised directly."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -599,7 +665,9 @@ class TestAnthropicProviderGenerate:
         with pytest.raises(ProviderRateLimitError):
             await provider.generate("Test")
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     async def test_generate_connection_error(self):
         """Test generation with connection error."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -615,7 +683,9 @@ class TestAnthropicProviderGenerate:
         with pytest.raises(ProviderConnectionError):
             await provider.generate("Test")
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     async def test_generate_auth_error(self):
         """Test generation with authentication error."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -634,7 +704,9 @@ class TestAnthropicProviderGenerate:
         with pytest.raises(ProviderAuthenticationError):
             await provider.generate("Test")
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     async def test_generate_model_not_found_error(self):
         """Test generation with model not found error."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -654,7 +726,9 @@ class TestAnthropicProviderGenerate:
         with pytest.raises(ProviderModelNotFoundError):
             await provider.generate("Test")
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     async def test_generate_unknown_error_reraises(self):
         """Test generation re-raises unknown errors after handling."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -673,7 +747,9 @@ class TestAnthropicProviderGenerate:
 class TestAnthropicProviderGenerateStream:
     """Tests for generate_stream method."""
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     async def test_generate_stream_basic(self):
         """Test basic streaming generation."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -697,7 +773,9 @@ class TestAnthropicProviderGenerateStream:
 
         assert chunks == ["Hello", " ", "world"]
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     async def test_generate_stream_with_system_prompt(self):
         """Test streaming with system prompt."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -721,7 +799,9 @@ class TestAnthropicProviderGenerateStream:
         call_kwargs = provider._client.messages.stream.call_args.kwargs
         assert call_kwargs["system"] == "System"
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     async def test_generate_stream_reraises_provider_errors(self):
         """Test that provider errors are re-raised in streaming."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -739,7 +819,9 @@ class TestAnthropicProviderGenerateStream:
             async for _ in provider.generate_stream("Test"):
                 pass
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     async def test_generate_stream_connection_error(self):
         """Test streaming with connection error."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -760,7 +842,9 @@ class TestAnthropicProviderGenerateStream:
             async for _ in provider.generate_stream("Test"):
                 pass
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     async def test_generate_stream_auth_error(self):
         """Test streaming with authentication error."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -784,7 +868,9 @@ class TestAnthropicProviderGenerateStream:
             async for _ in provider.generate_stream("Test"):
                 pass
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     async def test_generate_stream_rate_limit_error(self):
         """Test streaming with rate limit error."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -809,7 +895,9 @@ class TestAnthropicProviderGenerateStream:
             async for _ in provider.generate_stream("Test"):
                 pass
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     async def test_generate_stream_unknown_error_reraises(self):
         """Test streaming re-raises unknown errors."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -817,9 +905,7 @@ class TestAnthropicProviderGenerateStream:
         provider = AnthropicProvider()
 
         mock_stream = MagicMock()
-        mock_stream.__aenter__ = AsyncMock(
-            side_effect=RuntimeError("Unknown error")
-        )
+        mock_stream.__aenter__ = AsyncMock(side_effect=RuntimeError("Unknown error"))
 
         provider._client.messages.stream = MagicMock(return_value=mock_stream)
 
@@ -827,7 +913,9 @@ class TestAnthropicProviderGenerateStream:
             async for _ in provider.generate_stream("Test"):
                 pass
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     async def test_generate_stream_error_during_iteration(self):
         """Test streaming error that occurs during iteration."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -860,7 +948,9 @@ class TestAnthropicProviderGenerateStream:
 class TestAnthropicProviderRetry:
     """Tests for retry behavior in generate method."""
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     async def test_generate_retries_on_connection_error(self):
         """Test that generate retries on connection errors."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -890,7 +980,9 @@ class TestAnthropicProviderRetry:
         assert result == "Success"
         assert call_count == 3
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     async def test_generate_gives_up_after_max_retries(self):
         """Test that generate gives up after max retry attempts."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider

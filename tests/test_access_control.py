@@ -8,11 +8,14 @@ Tests cover:
 - AccessController class
 - Decorators (require_permission, require_any_permission, require_all_permissions)
 - Global singleton pattern
+- Environment-variable-driven RBAC mode (_rbac_mode_from_env)
 """
 
 import asyncio
+import os
 import threading
 from concurrent.futures import ThreadPoolExecutor
+from unittest.mock import patch
 
 import pytest
 
@@ -25,6 +28,7 @@ from local_deepwiki.security.access_control import (
     RBACMode,
     Role,
     Subject,
+    _rbac_mode_from_env,
     get_access_controller,
     require_all_permissions,
     require_any_permission,
@@ -105,7 +109,9 @@ class TestPermissionEnum:
             "SYSTEM_ADMIN",
         ]
         for perm_name in expected_permissions:
-            assert hasattr(Permission, perm_name), f"Permission.{perm_name} should exist"
+            assert hasattr(Permission, perm_name), (
+                f"Permission.{perm_name} should exist"
+            )
 
     def test_permission_string_representation(self):
         """Verify permission string values are formatted correctly."""
@@ -183,7 +189,9 @@ class TestRolePermissionsMapping:
         """Verify EDITOR permissions are a subset of ADMIN permissions."""
         editor_perms = ROLE_PERMISSIONS[Role.EDITOR]
         admin_perms = ROLE_PERMISSIONS[Role.ADMIN]
-        assert editor_perms < admin_perms, "EDITOR should have fewer permissions than ADMIN"
+        assert editor_perms < admin_perms, (
+            "EDITOR should have fewer permissions than ADMIN"
+        )
 
     def test_editor_specific_permissions(self):
         """Verify EDITOR has expected permissions."""
@@ -203,7 +211,9 @@ class TestRolePermissionsMapping:
         """Verify VIEWER permissions are a subset of EDITOR permissions."""
         viewer_perms = ROLE_PERMISSIONS[Role.VIEWER]
         editor_perms = ROLE_PERMISSIONS[Role.EDITOR]
-        assert viewer_perms < editor_perms, "VIEWER should have fewer permissions than EDITOR"
+        assert viewer_perms < editor_perms, (
+            "VIEWER should have fewer permissions than EDITOR"
+        )
 
     def test_viewer_specific_permissions(self):
         """Verify VIEWER has expected permissions."""
@@ -240,7 +250,9 @@ class TestRolePermissionsMapping:
     def test_all_roles_have_mapping(self):
         """Verify every role has a permission mapping."""
         for role in Role:
-            assert role in ROLE_PERMISSIONS, f"Role {role} should have a permission mapping"
+            assert role in ROLE_PERMISSIONS, (
+                f"Role {role} should have a permission mapping"
+            )
 
 
 # =============================================================================
@@ -384,7 +396,9 @@ class TestAccessController:
     def test_set_subject_with_no_roles(self, controller):
         """Verify set_subject raises exception for subject without roles."""
         subject = Subject(identifier="user", roles=set())
-        with pytest.raises(AuthenticationException, match="at least one role is required"):
+        with pytest.raises(
+            AuthenticationException, match="at least one role is required"
+        ):
             controller.set_subject(subject)
 
     def test_clear_subject(self, controller, admin_subject):
@@ -410,7 +424,9 @@ class TestAccessController:
         with pytest.raises(AccessDeniedException, match="lacks permission"):
             controller.require_permission(Permission.INDEX_READ)
 
-    def test_require_permission_permissive_mode_allows_unauthenticated(self, controller):
+    def test_require_permission_permissive_mode_allows_unauthenticated(
+        self, controller
+    ):
         """Verify require_permission allows access in PERMISSIVE mode when not authenticated."""
         # Default mode is PERMISSIVE - should allow access when no subject is set
         controller.require_permission(Permission.QUERY_SEARCH)  # Should not raise
@@ -432,15 +448,21 @@ class TestAccessController:
         """Verify require_any_permission succeeds when subject has one of the permissions."""
         controller.set_subject(viewer_subject)
         # Viewer has QUERY_SEARCH but not INDEX_WRITE
-        controller.require_any_permission(Permission.QUERY_SEARCH, Permission.INDEX_WRITE)
+        controller.require_any_permission(
+            Permission.QUERY_SEARCH, Permission.INDEX_WRITE
+        )
 
     def test_require_any_permission_failure(self, controller, guest_subject):
         """Verify require_any_permission fails when subject lacks all permissions."""
         controller.set_subject(guest_subject)
         with pytest.raises(AccessDeniedException, match="lacks any of"):
-            controller.require_any_permission(Permission.INDEX_READ, Permission.INDEX_WRITE)
+            controller.require_any_permission(
+                Permission.INDEX_READ, Permission.INDEX_WRITE
+            )
 
-    def test_require_any_permission_permissive_mode_allows_unauthenticated(self, controller):
+    def test_require_any_permission_permissive_mode_allows_unauthenticated(
+        self, controller
+    ):
         """Verify require_any_permission allows access in PERMISSIVE mode when not authenticated."""
         # Default mode is PERMISSIVE - should allow access when no subject is set
         controller.require_any_permission(Permission.QUERY_SEARCH)  # Should not raise
@@ -469,9 +491,13 @@ class TestAccessController:
         """Verify require_all_permissions fails when subject lacks one permission."""
         controller.set_subject(editor_subject)
         with pytest.raises(AccessDeniedException, match="lacks permission"):
-            controller.require_all_permissions(Permission.INDEX_READ, Permission.SYSTEM_ADMIN)
+            controller.require_all_permissions(
+                Permission.INDEX_READ, Permission.SYSTEM_ADMIN
+            )
 
-    def test_require_all_permissions_permissive_mode_allows_unauthenticated(self, controller):
+    def test_require_all_permissions_permissive_mode_allows_unauthenticated(
+        self, controller
+    ):
         """Verify require_all_permissions allows access in PERMISSIVE mode when not authenticated."""
         # Default mode is PERMISSIVE - should allow access when no subject is set
         controller.require_all_permissions(Permission.QUERY_SEARCH)  # Should not raise
@@ -663,7 +689,9 @@ class TestRequireAllPermissionsDecorator:
         controller = get_access_controller()
         controller.set_subject(admin_subject)
 
-        @require_all_permissions(Permission.INDEX_READ, Permission.INDEX_WRITE, Permission.SYSTEM_ADMIN)
+        @require_all_permissions(
+            Permission.INDEX_READ, Permission.INDEX_WRITE, Permission.SYSTEM_ADMIN
+        )
         def protected_function():
             return "success"
 
@@ -819,18 +847,24 @@ class TestEdgeCases:
         expected = ROLE_PERMISSIONS[Role.GUEST] | ROLE_PERMISSIONS[Role.VIEWER]
         assert perms == expected
 
-    def test_require_permission_error_message_contains_subject(self, controller, guest_subject):
+    def test_require_permission_error_message_contains_subject(
+        self, controller, guest_subject
+    ):
         """Verify error messages include the subject identifier."""
         controller.set_subject(guest_subject)
         with pytest.raises(AccessDeniedException) as exc_info:
             controller.require_permission(Permission.SYSTEM_ADMIN)
         assert "guest-user" in str(exc_info.value)
 
-    def test_require_any_permission_error_message_lists_permissions(self, controller, guest_subject):
+    def test_require_any_permission_error_message_lists_permissions(
+        self, controller, guest_subject
+    ):
         """Verify require_any error messages list the required permissions."""
         controller.set_subject(guest_subject)
         with pytest.raises(AccessDeniedException) as exc_info:
-            controller.require_any_permission(Permission.INDEX_READ, Permission.INDEX_WRITE)
+            controller.require_any_permission(
+                Permission.INDEX_READ, Permission.INDEX_WRITE
+            )
         error_msg = str(exc_info.value)
         # Error message includes permission enum names
         assert "INDEX_READ" in error_msg or "INDEX_WRITE" in error_msg
@@ -888,3 +922,80 @@ class TestEdgeCases:
         """Verify require_all works with a single permission."""
         controller.set_subject(viewer_subject)
         controller.require_all_permissions(Permission.QUERY_SEARCH)
+
+
+# =============================================================================
+# Environment-Variable-Driven RBAC Mode Tests
+# =============================================================================
+
+
+class TestRbacModeFromEnv:
+    """Tests for _rbac_mode_from_env() and env-driven get_access_controller()."""
+
+    def test_rbac_mode_from_env_disabled(self):
+        """Verify DEEPWIKI_RBAC_MODE=disabled returns DISABLED."""
+        with patch.dict(os.environ, {"DEEPWIKI_RBAC_MODE": "disabled"}):
+            assert _rbac_mode_from_env() == RBACMode.DISABLED
+
+    def test_rbac_mode_from_env_permissive(self):
+        """Verify DEEPWIKI_RBAC_MODE=permissive returns PERMISSIVE."""
+        with patch.dict(os.environ, {"DEEPWIKI_RBAC_MODE": "permissive"}):
+            assert _rbac_mode_from_env() == RBACMode.PERMISSIVE
+
+    def test_rbac_mode_from_env_enforced(self):
+        """Verify DEEPWIKI_RBAC_MODE=enforced returns ENFORCED."""
+        with patch.dict(os.environ, {"DEEPWIKI_RBAC_MODE": "enforced"}):
+            assert _rbac_mode_from_env() == RBACMode.ENFORCED
+
+    def test_rbac_mode_from_env_case_insensitive(self):
+        """Verify env var value is case-insensitive."""
+        with patch.dict(os.environ, {"DEEPWIKI_RBAC_MODE": "ENFORCED"}):
+            assert _rbac_mode_from_env() == RBACMode.ENFORCED
+
+        with patch.dict(os.environ, {"DEEPWIKI_RBAC_MODE": "Disabled"}):
+            assert _rbac_mode_from_env() == RBACMode.DISABLED
+
+    def test_rbac_mode_from_env_strips_whitespace(self):
+        """Verify env var value is stripped of whitespace."""
+        with patch.dict(os.environ, {"DEEPWIKI_RBAC_MODE": "  enforced  "}):
+            assert _rbac_mode_from_env() == RBACMode.ENFORCED
+
+    def test_rbac_mode_from_env_unset_defaults_to_permissive(self):
+        """Verify missing env var defaults to PERMISSIVE."""
+        env_copy = os.environ.copy()
+        env_copy.pop("DEEPWIKI_RBAC_MODE", None)
+        with patch.dict(os.environ, env_copy, clear=True):
+            assert _rbac_mode_from_env() == RBACMode.PERMISSIVE
+
+    def test_rbac_mode_from_env_empty_defaults_to_permissive(self):
+        """Verify empty env var defaults to PERMISSIVE."""
+        with patch.dict(os.environ, {"DEEPWIKI_RBAC_MODE": ""}):
+            assert _rbac_mode_from_env() == RBACMode.PERMISSIVE
+
+    def test_rbac_mode_from_env_invalid_defaults_to_permissive(self):
+        """Verify unrecognized value defaults to PERMISSIVE."""
+        with patch.dict(os.environ, {"DEEPWIKI_RBAC_MODE": "bogus"}):
+            assert _rbac_mode_from_env() == RBACMode.PERMISSIVE
+
+    def test_get_access_controller_uses_env_enforced(self):
+        """Verify get_access_controller reads DEEPWIKI_RBAC_MODE=enforced."""
+        with patch.dict(os.environ, {"DEEPWIKI_RBAC_MODE": "enforced"}):
+            reset_access_controller()
+            controller = get_access_controller()
+            assert controller.mode == RBACMode.ENFORCED
+
+    def test_get_access_controller_uses_env_disabled(self):
+        """Verify get_access_controller reads DEEPWIKI_RBAC_MODE=disabled."""
+        with patch.dict(os.environ, {"DEEPWIKI_RBAC_MODE": "disabled"}):
+            reset_access_controller()
+            controller = get_access_controller()
+            assert controller.mode == RBACMode.DISABLED
+
+    def test_get_access_controller_default_permissive(self):
+        """Verify get_access_controller defaults to PERMISSIVE when env unset."""
+        env_copy = os.environ.copy()
+        env_copy.pop("DEEPWIKI_RBAC_MODE", None)
+        with patch.dict(os.environ, env_copy, clear=True):
+            reset_access_controller()
+            controller = get_access_controller()
+            assert controller.mode == RBACMode.PERMISSIVE

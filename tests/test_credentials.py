@@ -3,7 +3,6 @@
 Tests cover:
 - get_api_key: Environment variable retrieval, missing keys, key validation
 - validate_key_format: Provider-specific validation (anthropic, openai, generic)
-- Test key handling: Short test keys, various test key patterns
 - Edge cases: Empty strings, None values, boundary conditions
 """
 
@@ -26,11 +25,12 @@ class TestGetApiKey:
 
     def test_get_api_key_returns_none_when_not_set(self):
         """Test that get_api_key returns None when env var is not set."""
-        # Ensure the env var is not set
         env_copy = os.environ.copy()
         env_copy.pop("NONEXISTENT_API_KEY", None)
         with patch.dict(os.environ, env_copy, clear=True):
-            result = CredentialManager.get_api_key("NONEXISTENT_API_KEY", "test-provider")
+            result = CredentialManager.get_api_key(
+                "NONEXISTENT_API_KEY", "test-provider"
+            )
             assert result is None
 
     def test_get_api_key_returns_none_for_empty_string(self):
@@ -96,169 +96,133 @@ class TestGetApiKey:
 
 
 class TestValidateKeyFormat:
-    """Tests for CredentialManager.validate_key_format method."""
+    """Tests for CredentialManager.validate_key_format method.
 
-    # ----- Test Key Handling -----
-
-    def test_validate_key_format_accepts_test_key_literal(self):
-        """Test that 'test-key' is accepted as valid."""
-        result = CredentialManager.validate_key_format("test-key", "anthropic")
-        assert result is True
-
-    def test_validate_key_format_accepts_test_literal(self):
-        """Test that 'test' is accepted as valid."""
-        result = CredentialManager.validate_key_format("test", "openai")
-        assert result is True
-
-    def test_validate_key_format_accepts_custom_key_literal(self):
-        """Test that 'custom-key' is accepted as valid."""
-        result = CredentialManager.validate_key_format("custom-key", "anthropic")
-        assert result is True
-
-    def test_validate_key_format_accepts_test_prefix(self):
-        """Test that keys starting with 'test-' are accepted."""
-        result = CredentialManager.validate_key_format("test-abc123", "openai")
-        assert result is True
-
-    def test_validate_key_format_accepts_test_hyphen_only(self):
-        """Test that 'test-' prefix with any suffix is accepted."""
-        result = CredentialManager.validate_key_format("test-", "generic")
-        assert result is True
-
-    def test_validate_key_format_test_key_for_any_provider(self):
-        """Test that test keys work for any provider."""
-        providers = ["anthropic", "openai", "other", "unknown", ""]
-        for provider in providers:
-            assert CredentialManager.validate_key_format("test-key", provider) is True
-            assert CredentialManager.validate_key_format("test", provider) is True
-            assert CredentialManager.validate_key_format("custom-key", provider) is True
-            assert CredentialManager.validate_key_format("test-xyz", provider) is True
+    Strict provider-specific validation:
+    - Anthropic: must start with 'sk-ant-' AND len > 20
+    - OpenAI: must start with 'sk-' AND len > 20
+    - Generic: must have len >= 8
+    """
 
     # ----- Anthropic Provider Validation -----
 
     def test_validate_key_format_anthropic_valid_key(self):
         """Test valid Anthropic API key format."""
-        # Valid Anthropic keys start with 'sk-ant-' and are >20 chars
         valid_key = "sk-ant-" + "a" * 30  # 37 chars total
         result = CredentialManager.validate_key_format(valid_key, "anthropic")
         assert result is True
 
-    def test_validate_key_format_anthropic_short_but_valid_prefix(self):
-        """Test Anthropic key with valid prefix but short length still passes (>=4 chars)."""
-        # 'sk-ant-x' is 8 chars but only 1 char after prefix (not >20 total)
-        # However, the fallback len(key) >= 4 applies
-        short_key = "sk-ant-x"  # 8 chars
+    def test_validate_key_format_anthropic_short_with_valid_prefix(self):
+        """Test Anthropic key with valid prefix but too short (not >20)."""
+        short_key = "sk-ant-x"  # 8 chars, not >20
         result = CredentialManager.validate_key_format(short_key, "anthropic")
-        # This passes because len("sk-ant-x") >= 4, even though it's not >20
-        assert result is True
+        assert result is False
 
     def test_validate_key_format_anthropic_invalid_prefix(self):
-        """Test Anthropic key with wrong prefix but valid length."""
-        # Wrong prefix, but >=4 chars
+        """Test Anthropic key with wrong prefix fails even with valid length."""
         wrong_prefix = "sk-xyz-" + "a" * 30
         result = CredentialManager.validate_key_format(wrong_prefix, "anthropic")
-        # Falls back to len(key) >= 4, which is True
-        assert result is True
+        assert result is False
 
     def test_validate_key_format_anthropic_too_short(self):
-        """Test Anthropic key that is too short."""
-        # Less than 4 chars, not a test key
+        """Test Anthropic key that is too short (<4 chars)."""
         result = CredentialManager.validate_key_format("abc", "anthropic")
         assert result is False
 
-    def test_validate_key_format_anthropic_exactly_4_chars(self):
-        """Test Anthropic key with exactly 4 chars (boundary)."""
+    def test_validate_key_format_anthropic_4_chars_no_prefix(self):
+        """Test Anthropic key with 4 chars but wrong prefix fails."""
         result = CredentialManager.validate_key_format("abcd", "anthropic")
-        assert result is True
+        assert result is False
 
     def test_validate_key_format_anthropic_proper_key_21_chars(self):
         """Test Anthropic key with proper prefix and >20 chars."""
-        # 'sk-ant-' is 7 chars, need >20 total, so need >=14 more
         key = "sk-ant-" + "x" * 14  # 21 chars total
         result = CredentialManager.validate_key_format(key, "anthropic")
         assert result is True
 
     def test_validate_key_format_anthropic_exactly_20_chars(self):
-        """Test Anthropic key with proper prefix but exactly 20 chars (boundary)."""
-        # 'sk-ant-' is 7 chars, need 13 more for 20 total
+        """Test Anthropic key with proper prefix but exactly 20 chars (boundary, not >20)."""
         key = "sk-ant-" + "x" * 13  # 20 chars total
         result = CredentialManager.validate_key_format(key, "anthropic")
-        # Not >20, but len >= 4, so falls back to True
-        assert result is True
+        assert result is False
 
     # ----- OpenAI Provider Validation -----
 
     def test_validate_key_format_openai_valid_key(self):
         """Test valid OpenAI API key format."""
-        # Valid OpenAI keys start with 'sk-' and are >20 chars
         valid_key = "sk-" + "a" * 30  # 33 chars total
         result = CredentialManager.validate_key_format(valid_key, "openai")
         assert result is True
 
-    def test_validate_key_format_openai_short_but_valid_prefix(self):
-        """Test OpenAI key with valid prefix but short length still passes."""
+    def test_validate_key_format_openai_short_with_valid_prefix(self):
+        """Test OpenAI key with valid prefix but too short (not >20)."""
         short_key = "sk-xyz"  # 6 chars, not >20
         result = CredentialManager.validate_key_format(short_key, "openai")
-        # Falls back to len(key) >= 4
-        assert result is True
+        assert result is False
 
     def test_validate_key_format_openai_invalid_prefix(self):
-        """Test OpenAI key with wrong prefix but valid length."""
+        """Test OpenAI key with wrong prefix fails even with valid length."""
         wrong_prefix = "pk-" + "a" * 30
         result = CredentialManager.validate_key_format(wrong_prefix, "openai")
-        # Falls back to len(key) >= 4
-        assert result is True
+        assert result is False
 
     def test_validate_key_format_openai_too_short(self):
-        """Test OpenAI key that is too short."""
+        """Test OpenAI key that is too short (<4 chars)."""
         result = CredentialManager.validate_key_format("xyz", "openai")
         assert result is False
 
-    def test_validate_key_format_openai_exactly_4_chars(self):
-        """Test OpenAI key with exactly 4 chars (boundary)."""
+    def test_validate_key_format_openai_4_chars_with_prefix(self):
+        """Test OpenAI key 'sk-x' (4 chars, valid prefix but not >20)."""
         result = CredentialManager.validate_key_format("sk-x", "openai")
-        assert result is True
+        assert result is False
 
     def test_validate_key_format_openai_proper_key_21_chars(self):
         """Test OpenAI key with proper prefix and >20 chars."""
-        # 'sk-' is 3 chars, need >20 total, so need >=18 more
         key = "sk-" + "x" * 18  # 21 chars total
         result = CredentialManager.validate_key_format(key, "openai")
         assert result is True
 
     def test_validate_key_format_openai_exactly_20_chars(self):
-        """Test OpenAI key with proper prefix but exactly 20 chars."""
-        # 'sk-' is 3 chars, need 17 more for 20 total
+        """Test OpenAI key with proper prefix but exactly 20 chars (boundary, not >20)."""
         key = "sk-" + "x" * 17  # 20 chars total
         result = CredentialManager.validate_key_format(key, "openai")
-        # Not >20, but len >= 4
-        assert result is True
+        assert result is False
 
     # ----- Generic/Other Provider Validation -----
 
     def test_validate_key_format_generic_valid_key(self):
-        """Test valid key for generic/unknown provider."""
+        """Test valid key for generic/unknown provider (>=8 chars)."""
         result = CredentialManager.validate_key_format("valid-key-1234", "other")
         assert result is True
 
     def test_validate_key_format_generic_too_short(self):
-        """Test key that is too short for generic provider."""
+        """Test key that is too short for generic provider (<8 chars)."""
         result = CredentialManager.validate_key_format("abc", "unknown")
         assert result is False
 
-    def test_validate_key_format_generic_exactly_4_chars(self):
-        """Test generic key with exactly 4 chars."""
-        result = CredentialManager.validate_key_format("abcd", "random")
+    def test_validate_key_format_generic_exactly_8_chars(self):
+        """Test generic key with exactly 8 chars (boundary)."""
+        result = CredentialManager.validate_key_format("abcdefgh", "random")
         assert result is True
+
+    def test_validate_key_format_generic_7_chars(self):
+        """Test generic key with 7 chars (just below minimum)."""
+        result = CredentialManager.validate_key_format("abcdefg", "random")
+        assert result is False
+
+    def test_validate_key_format_generic_4_chars(self):
+        """Test generic key with 4 chars (below min 8)."""
+        result = CredentialManager.validate_key_format("abcd", "random")
+        assert result is False
 
     def test_validate_key_format_empty_provider_name(self):
         """Test with empty provider name (falls to generic validation)."""
-        result = CredentialManager.validate_key_format("valid-key", "")
+        result = CredentialManager.validate_key_format("valid-key-longkey", "")
         assert result is True
 
     def test_validate_key_format_none_like_provider_name(self):
-        """Test with unusual provider names."""
-        result = CredentialManager.validate_key_format("valid-key", "none")
+        """Test with unusual provider names (generic path)."""
+        result = CredentialManager.validate_key_format("valid-key-longkey", "none")
         assert result is True
 
     # ----- Edge Cases -----
@@ -284,63 +248,127 @@ class TestValidateKeyFormat:
         assert result is False
 
     def test_validate_key_format_whitespace_only(self):
-        """Test key with only whitespace."""
-        # 4 spaces is >= 4 chars, so it passes length check
+        """Test key with only whitespace (4 spaces, passes len check but not format)."""
+        # 4 spaces >= 4 but not >= 8, and doesn't start with sk-ant- or sk-
         result = CredentialManager.validate_key_format("    ", "anthropic")
-        assert result is True  # Length check passes, no content validation
+        assert result is False  # No sk-ant- prefix
+
+    def test_validate_key_format_whitespace_generic(self):
+        """Test key with whitespace for generic provider (needs >=8)."""
+        result = CredentialManager.validate_key_format("        ", "generic")
+        assert result is True  # 8 spaces >= 8
 
     def test_validate_key_format_key_with_special_chars(self):
-        """Test key with special characters."""
-        result = CredentialManager.validate_key_format("key!@#$%^&*()", "openai")
-        assert result is True  # Length is sufficient
+        """Test key with special characters for generic (>=8 chars)."""
+        result = CredentialManager.validate_key_format("key!@#$%^&*()", "generic")
+        assert result is True  # 13 chars >= 8
 
-    def test_validate_key_format_very_long_key(self):
-        """Test very long key."""
+    def test_validate_key_format_special_chars_openai(self):
+        """Test key with special characters for openai (wrong prefix)."""
+        result = CredentialManager.validate_key_format("key!@#$%^&*()", "openai")
+        assert result is False  # Doesn't start with sk-
+
+    def test_validate_key_format_very_long_key_generic(self):
+        """Test very long key for generic provider."""
+        long_key = "x" * 10000
+        result = CredentialManager.validate_key_format(long_key, "generic")
+        assert result is True
+
+    def test_validate_key_format_very_long_key_anthropic_no_prefix(self):
+        """Test very long key for anthropic without correct prefix."""
         long_key = "x" * 10000
         result = CredentialManager.validate_key_format(long_key, "anthropic")
-        assert result is True
+        assert result is False  # No sk-ant- prefix
 
-    def test_validate_key_format_key_with_newlines(self):
-        """Test key with newlines."""
-        result = CredentialManager.validate_key_format("key\nwith\nnewlines", "openai")
-        assert result is True  # Length is sufficient
+    def test_validate_key_format_key_with_newlines_generic(self):
+        """Test key with newlines for generic (>=8 chars)."""
+        result = CredentialManager.validate_key_format("key\nwith\nnewlines", "generic")
+        assert result is True  # 17 chars >= 8
 
     def test_validate_key_format_unicode_key(self):
-        """Test key with unicode characters."""
-        result = CredentialManager.validate_key_format("key-" + "\u00e9" * 10, "generic")
-        assert result is True
+        """Test key with unicode characters for generic."""
+        result = CredentialManager.validate_key_format(
+            "key-" + "\u00e9" * 10, "generic"
+        )
+        assert result is True  # 14 chars >= 8
 
     def test_validate_key_format_sk_ant_exactly_prefix(self):
         """Test 'sk-ant-' alone (7 chars, not >20)."""
         result = CredentialManager.validate_key_format("sk-ant-", "anthropic")
-        # 7 chars >= 4, so passes fallback
-        assert result is True
+        assert result is False  # Only 7 chars, not >20
 
     def test_validate_key_format_sk_alone(self):
-        """Test 'sk-' alone for OpenAI (3 chars, not >= 4)."""
+        """Test 'sk-' alone for OpenAI (3 chars, <4)."""
         result = CredentialManager.validate_key_format("sk-", "openai")
         assert result is False  # 3 chars < 4
 
     def test_validate_key_format_case_sensitivity_prefix(self):
         """Test that prefix matching is case-sensitive."""
-        # 'SK-ANT-' is not 'sk-ant-'
         upper_key = "SK-ANT-" + "x" * 30
         result = CredentialManager.validate_key_format(upper_key, "anthropic")
-        # Falls back to len(key) >= 4
-        assert result is True
+        assert result is False  # 'SK-ANT-' != 'sk-ant-'
 
     def test_validate_key_format_case_sensitivity_provider(self):
         """Test provider name matching is case-sensitive."""
-        # 'ANTHROPIC' is not 'anthropic'
-        result = CredentialManager.validate_key_format("sk-ant-" + "x" * 30, "ANTHROPIC")
+        key = "sk-ant-" + "x" * 30  # Valid anthropic key
+        result = CredentialManager.validate_key_format(key, "ANTHROPIC")
         # Provider 'ANTHROPIC' doesn't match 'anthropic', falls to generic
+        # 37 chars >= 8 for generic
         assert result is True
 
     def test_validate_key_format_provider_with_whitespace(self):
         """Test provider name with whitespace (doesn't match any specific)."""
-        result = CredentialManager.validate_key_format("valid-key-1234", " anthropic ")
-        # Doesn't match 'anthropic' exactly, falls to generic
+        result = CredentialManager.validate_key_format(
+            "valid-key-1234567", " anthropic "
+        )
+        # Doesn't match 'anthropic' exactly, falls to generic: 17 chars >= 8
         assert result is True
+
+    # ----- Test keys are NOT special-cased -----
+
+    def test_validate_key_format_test_key_not_special_cased_anthropic(self):
+        """Test that 'test-key' is NOT special-cased for anthropic."""
+        result = CredentialManager.validate_key_format("test-key", "anthropic")
+        assert result is False  # No sk-ant- prefix, not >20
+
+    def test_validate_key_format_test_key_not_special_cased_openai(self):
+        """Test that 'test-key' is NOT special-cased for openai."""
+        result = CredentialManager.validate_key_format("test-key", "openai")
+        assert result is False  # No sk- prefix or too short
+
+    def test_validate_key_format_test_key_for_generic(self):
+        """Test that 'test-key' uses generic validation."""
+        result = CredentialManager.validate_key_format("test-key", "generic")
+        assert result is True  # 8 chars >= 8
+
+    def test_validate_key_format_test_literal(self):
+        """Test that 'test' is not special-cased (4 chars, too short for all)."""
+        assert CredentialManager.validate_key_format("test", "anthropic") is False
+        assert CredentialManager.validate_key_format("test", "openai") is False
+        assert (
+            CredentialManager.validate_key_format("test", "generic") is False
+        )  # 4 < 8
+
+    def test_validate_key_format_test_prefix_generic(self):
+        """Test keys starting with 'test-' use normal validation."""
+        # 'test-abc123' is 11 chars >= 8, so passes generic
+        assert CredentialManager.validate_key_format("test-abc123", "generic") is True
+        # But fails anthropic (no sk-ant- prefix)
+        assert (
+            CredentialManager.validate_key_format("test-abc123", "anthropic") is False
+        )
+        # And fails openai (no sk- prefix)
+        assert CredentialManager.validate_key_format("test-abc123", "openai") is False
+
+    # ----- Constants -----
+
+    def test_min_generic_key_length_constant(self):
+        """Test that the generic minimum key length constant is accessible."""
+        assert CredentialManager._MIN_GENERIC_KEY_LENGTH == 8
+
+    def test_min_known_key_length_constant(self):
+        """Test that the known provider minimum key length constant is accessible."""
+        assert CredentialManager._MIN_KNOWN_KEY_LENGTH == 20
 
 
 class TestCredentialManagerStaticBehavior:
@@ -348,23 +376,24 @@ class TestCredentialManagerStaticBehavior:
 
     def test_credential_manager_methods_are_static(self):
         """Test that both methods are static and don't require instance."""
-        # These should not require instantiation
         assert callable(CredentialManager.get_api_key)
         assert callable(CredentialManager.validate_key_format)
 
     def test_credential_manager_can_be_called_without_instance(self):
         """Test methods can be called directly on class."""
-        with patch.dict(os.environ, {"TEST_KEY": "valid-key"}):
+        with patch.dict(os.environ, {"TEST_KEY": "valid-key-longkey"}):
             result = CredentialManager.get_api_key("TEST_KEY", "provider")
-            assert result == "valid-key"
+            assert result == "valid-key-longkey"
 
-        result = CredentialManager.validate_key_format("test-key", "provider")
+        # 'valid-key-longkey' is 17 chars >= 8 for generic
+        result = CredentialManager.validate_key_format("valid-key-longkey", "provider")
         assert result is True
 
     def test_credential_manager_instance_can_call_static_methods(self):
         """Test that instance can also call static methods (Python behavior)."""
         manager = CredentialManager()
-        result = manager.validate_key_format("test-key", "provider")
+        # 'test-key-long' is 13 chars >= 8 for generic
+        result = manager.validate_key_format("test-key-long", "provider")
         assert result is True
 
 
@@ -387,14 +416,17 @@ class TestIntegrationScenarios:
             assert key == valid_key
             assert CredentialManager.validate_key_format(key, "openai") is True
 
-    def test_full_flow_with_test_key(self):
-        """Test full flow with test key for both providers."""
+    def test_full_flow_with_test_key_fails_format(self):
+        """Test that 'test-key' passes get_api_key but fails format validation."""
         with patch.dict(os.environ, {"API_KEY": "test-key"}):
             key = CredentialManager.get_api_key("API_KEY", "anthropic")
             assert key == "test-key"
-            assert CredentialManager.validate_key_format(key, "anthropic") is True
-            assert CredentialManager.validate_key_format(key, "openai") is True
-            assert CredentialManager.validate_key_format(key, "generic") is True
+            # test-key is 8 chars, passes generic but fails provider-specific
+            assert CredentialManager.validate_key_format(key, "anthropic") is False
+            assert CredentialManager.validate_key_format(key, "openai") is False
+            assert (
+                CredentialManager.validate_key_format(key, "generic") is True
+            )  # 8 >= 8
 
     def test_missing_key_flow(self):
         """Test flow when key is missing."""
@@ -403,8 +435,6 @@ class TestIntegrationScenarios:
         with patch.dict(os.environ, env_copy, clear=True):
             key = CredentialManager.get_api_key("MISSING_KEY", "provider")
             assert key is None
-            # Can't validate None, this simulates the provider check
-            # In real usage, provider would raise error for None key
 
     def test_invalid_key_flow(self):
         """Test flow with invalid short key."""

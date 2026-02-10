@@ -23,7 +23,9 @@ from local_deepwiki.providers.base import (
 class TestOpenAIEmbeddingProviderInitialization:
     """Tests for OpenAIEmbeddingProvider initialization."""
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
+    @patch.dict(
+        os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
+    )
     def test_initialization_with_env_var(self):
         """Test provider initialization using environment variable."""
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
@@ -32,13 +34,15 @@ class TestOpenAIEmbeddingProviderInitialization:
         assert provider.name == "openai:text-embedding-3-small"
         assert provider._model == "text-embedding-3-small"
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
+    @patch.dict(
+        os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
+    )
     def test_initialization_with_explicit_api_key(self):
         """Test provider initialization with explicit API key."""
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
 
         provider = OpenAIEmbeddingProvider(
-            model="text-embedding-3-small", api_key="custom-key"
+            model="text-embedding-3-small", api_key="sk-customkey1234567890abcdef"
         )
         assert provider.name == "openai:text-embedding-3-small"
 
@@ -63,7 +67,9 @@ class TestOpenAIEmbeddingProviderInitialization:
         with pytest.raises((ProviderAuthenticationError, ValueError)):
             OpenAIEmbeddingProvider(model="text-embedding-3-small")
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
+    @patch.dict(
+        os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
+    )
     def test_initialization_all_known_models(self):
         """Test initialization with all known embedding models."""
         from local_deepwiki.providers.embeddings.openai import (
@@ -75,7 +81,9 @@ class TestOpenAIEmbeddingProviderInitialization:
             provider = OpenAIEmbeddingProvider(model=model_name)
             assert provider.get_dimension() == model_info["dimension"]
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
+    @patch.dict(
+        os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
+    )
     def test_initialization_unknown_model_uses_defaults(self):
         """Test that unknown model uses default dimension."""
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
@@ -87,7 +95,9 @@ class TestOpenAIEmbeddingProviderInitialization:
 class TestOpenAIEmbeddingProviderHandleApiError:
     """Tests for _handle_api_error method - lines 70-102."""
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
+    @patch.dict(
+        os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
+    )
     def test_handle_authentication_error(self):
         """Test handling of AuthenticationError."""
         from openai import AuthenticationError
@@ -111,7 +121,9 @@ class TestOpenAIEmbeddingProviderHandleApiError:
         assert "authentication failed" in str(exc_info.value).lower()
         assert exc_info.value.provider_name == "openai:text-embedding-3-small"
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
+    @patch.dict(
+        os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
+    )
     def test_handle_rate_limit_error_status_429(self):
         """Test handling of rate limit error with status code 429."""
         from openai import APIStatusError
@@ -137,7 +149,9 @@ class TestOpenAIEmbeddingProviderHandleApiError:
         assert "rate limit" in str(exc_info.value).lower()
         assert exc_info.value.provider_name == "openai:text-embedding-3-small"
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
+    @patch.dict(
+        os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
+    )
     def test_handle_rate_limit_error_with_rate_in_message(self):
         """Test handling of rate limit error detected via message content."""
         from openai import APIStatusError
@@ -162,7 +176,9 @@ class TestOpenAIEmbeddingProviderHandleApiError:
 
         assert "rate" in str(exc_info.value).lower()
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
+    @patch.dict(
+        os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
+    )
     def test_handle_rate_limit_error_with_retry_after_header(self):
         """Test handling of rate limit error with retry-after header."""
         from openai import APIStatusError
@@ -188,7 +204,9 @@ class TestOpenAIEmbeddingProviderHandleApiError:
 
         assert exc_info.value.retry_after == 30.0
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
+    @patch.dict(
+        os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
+    )
     def test_handle_rate_limit_error_with_invalid_retry_after(self):
         """Test handling of rate limit error with invalid retry-after header."""
         from openai import APIStatusError
@@ -215,7 +233,9 @@ class TestOpenAIEmbeddingProviderHandleApiError:
         # retry_after should be None due to ValueError during conversion
         assert exc_info.value.retry_after is None
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
+    @patch.dict(
+        os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
+    )
     def test_handle_connection_error(self):
         """Test handling of APIConnectionError."""
         from openai import APIConnectionError
@@ -233,7 +253,9 @@ class TestOpenAIEmbeddingProviderHandleApiError:
         assert "connect" in str(exc_info.value).lower()
         assert exc_info.value.provider_name == "openai:text-embedding-3-small"
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
+    @patch.dict(
+        os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
+    )
     def test_handle_unknown_error_reraises(self):
         """Test that unknown errors are re-raised.
 
@@ -252,7 +274,9 @@ class TestOpenAIEmbeddingProviderHandleApiError:
         with pytest.raises(RuntimeError):
             provider._handle_api_error(unknown_error)
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
+    @patch.dict(
+        os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
+    )
     def test_handle_api_status_error_non_rate_limit(self):
         """Test handling of APIStatusError that is not a rate limit.
 
@@ -284,7 +308,9 @@ class TestOpenAIEmbeddingProviderHandleApiError:
 class TestOpenAIEmbeddingProviderEmbed:
     """Tests for embed method - including lines 124-128."""
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
+    @patch.dict(
+        os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
+    )
     async def test_embed_success(self):
         """Test successful embedding generation."""
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
@@ -310,7 +336,9 @@ class TestOpenAIEmbeddingProviderEmbed:
             input=["text1", "text2"],
         )
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
+    @patch.dict(
+        os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
+    )
     async def test_embed_reraises_provider_connection_error(self):
         """Test that ProviderConnectionError is re-raised directly."""
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
@@ -327,7 +355,9 @@ class TestOpenAIEmbeddingProviderEmbed:
 
         assert "Connection failed" in str(exc_info.value)
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
+    @patch.dict(
+        os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
+    )
     async def test_embed_reraises_provider_authentication_error(self):
         """Test that ProviderAuthenticationError is re-raised directly."""
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
@@ -344,7 +374,9 @@ class TestOpenAIEmbeddingProviderEmbed:
 
         assert "Auth failed" in str(exc_info.value)
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
+    @patch.dict(
+        os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
+    )
     async def test_embed_reraises_provider_rate_limit_error(self):
         """Test that ProviderRateLimitError is re-raised directly."""
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
@@ -362,7 +394,9 @@ class TestOpenAIEmbeddingProviderEmbed:
         assert "Rate limited" in str(exc_info.value)
         assert exc_info.value.retry_after == 30
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
+    @patch.dict(
+        os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
+    )
     async def test_embed_handles_api_error_via_handler(self):
         """Test that other exceptions go through _handle_api_error."""
         from openai import AuthenticationError
@@ -385,7 +419,9 @@ class TestOpenAIEmbeddingProviderEmbed:
         with pytest.raises(ProviderAuthenticationError):
             await provider.embed(["test"])
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
+    @patch.dict(
+        os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
+    )
     async def test_embed_handles_connection_error_via_handler(self):
         """Test that APIConnectionError goes through _handle_api_error."""
         from openai import APIConnectionError
@@ -402,7 +438,9 @@ class TestOpenAIEmbeddingProviderEmbed:
         with pytest.raises(ProviderConnectionError):
             await provider.embed(["test"])
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
+    @patch.dict(
+        os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
+    )
     async def test_embed_handles_rate_limit_via_handler(self):
         """Test that rate limit APIStatusError goes through _handle_api_error."""
         from openai import APIStatusError
@@ -430,7 +468,9 @@ class TestOpenAIEmbeddingProviderEmbed:
 
         assert exc_info.value.retry_after == 60.0
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
+    @patch.dict(
+        os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
+    )
     async def test_embed_unknown_error_reraises(self):
         """Test that unknown errors are re-raised after going through handler."""
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
@@ -451,7 +491,9 @@ class TestOpenAIEmbeddingProviderEmbed:
 class TestOpenAIEmbeddingProviderValidateConnectivity:
     """Tests for validate_connectivity method - lines 148-163."""
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
+    @patch.dict(
+        os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
+    )
     async def test_validate_connectivity_success(self):
         """Test successful connectivity validation."""
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
@@ -470,7 +512,9 @@ class TestOpenAIEmbeddingProviderValidateConnectivity:
         result = await provider.validate_connectivity()
         assert result is True
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
+    @patch.dict(
+        os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
+    )
     async def test_validate_connectivity_api_error(self):
         """Test connectivity validation with API error."""
         from openai import APIConnectionError
@@ -490,7 +534,9 @@ class TestOpenAIEmbeddingProviderValidateConnectivity:
 class TestOpenAIEmbeddingProviderCapabilities:
     """Tests for capabilities and metadata methods."""
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
+    @patch.dict(
+        os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
+    )
     def test_get_max_batch_size(self):
         """Test get_max_batch_size returns correct value."""
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
@@ -498,7 +544,9 @@ class TestOpenAIEmbeddingProviderCapabilities:
         provider = OpenAIEmbeddingProvider(model="text-embedding-3-small")
         assert provider.get_max_batch_size() == 2048
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
+    @patch.dict(
+        os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
+    )
     def test_get_max_tokens_known_model(self):
         """Test get_max_tokens for known models."""
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
@@ -506,7 +554,9 @@ class TestOpenAIEmbeddingProviderCapabilities:
         provider = OpenAIEmbeddingProvider(model="text-embedding-3-small")
         assert provider.get_max_tokens() == 8191
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
+    @patch.dict(
+        os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
+    )
     def test_get_max_tokens_unknown_model(self):
         """Test get_max_tokens for unknown models returns default."""
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
@@ -514,7 +564,9 @@ class TestOpenAIEmbeddingProviderCapabilities:
         provider = OpenAIEmbeddingProvider(model="unknown-model")
         assert provider.get_max_tokens() == 8191  # Default
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
+    @patch.dict(
+        os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
+    )
     def test_get_capabilities(self):
         """Test get_capabilities returns correct capabilities object."""
         from local_deepwiki.providers.base import EmbeddingProviderCapabilities
@@ -533,7 +585,9 @@ class TestOpenAIEmbeddingProviderCapabilities:
         assert caps.supports_truncation is True
         assert set(caps.models) == set(OPENAI_EMBEDDING_MODELS.keys())
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
+    @patch.dict(
+        os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
+    )
     def test_get_dimension_text_embedding_3_large(self):
         """Test get_dimension for text-embedding-3-large model."""
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
@@ -541,7 +595,9 @@ class TestOpenAIEmbeddingProviderCapabilities:
         provider = OpenAIEmbeddingProvider(model="text-embedding-3-large")
         assert provider.get_dimension() == 3072
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
+    @patch.dict(
+        os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
+    )
     def test_get_dimension_ada_002(self):
         """Test get_dimension for text-embedding-ada-002 model."""
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
@@ -549,7 +605,9 @@ class TestOpenAIEmbeddingProviderCapabilities:
         provider = OpenAIEmbeddingProvider(model="text-embedding-ada-002")
         assert provider.get_dimension() == 1536
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
+    @patch.dict(
+        os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
+    )
     def test_name_property(self):
         """Test name property returns correct format."""
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
@@ -564,7 +622,9 @@ class TestOpenAIEmbeddingProviderCapabilities:
 class TestOpenAIEmbeddingProviderKeyValidation:
     """Tests for API key format validation - covering line 49."""
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
+    @patch.dict(
+        os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
+    )
     def test_invalid_key_format_raises_authentication_error(self):
         """Test that invalid API key format raises ProviderAuthenticationError (line 49)."""
         from local_deepwiki.providers.credentials import CredentialManager
@@ -597,7 +657,9 @@ class TestOpenAIEmbeddingProviderKeyValidation:
 class TestOpenAIEmbeddingProviderValidateConnectivityFixed:
     """Tests for validate_connectivity after _api_key bug fix."""
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
+    @patch.dict(
+        os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
+    )
     async def test_validate_connectivity_success(self):
         """Test that validate_connectivity returns True on successful API call."""
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
@@ -615,7 +677,9 @@ class TestOpenAIEmbeddingProviderValidateConnectivityFixed:
         result = await provider.validate_connectivity()
         assert result is True
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
+    @patch.dict(
+        os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
+    )
     async def test_validate_connectivity_api_error_handled(self):
         """Test validate_connectivity when API connection fails."""
         from openai import APIConnectionError
@@ -630,7 +694,9 @@ class TestOpenAIEmbeddingProviderValidateConnectivityFixed:
         with pytest.raises(ProviderConnectionError):
             await provider.validate_connectivity()
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
+    @patch.dict(
+        os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
+    )
     async def test_validate_connectivity_unknown_error(self):
         """Test validate_connectivity with unknown error.
 
@@ -652,7 +718,9 @@ class TestOpenAIEmbeddingProviderValidateConnectivityFixed:
 class TestOpenAIEmbeddingProviderEdgeCases:
     """Edge case tests for OpenAIEmbeddingProvider."""
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
+    @patch.dict(
+        os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
+    )
     async def test_embed_empty_list(self):
         """Test embedding an empty list of texts."""
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
@@ -667,7 +735,9 @@ class TestOpenAIEmbeddingProviderEdgeCases:
         result = await provider.embed([])
         assert result == []
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
+    @patch.dict(
+        os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
+    )
     async def test_embed_single_text(self):
         """Test embedding a single text."""
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
@@ -686,7 +756,9 @@ class TestOpenAIEmbeddingProviderEdgeCases:
         assert len(result) == 1
         assert len(result[0]) == 1536
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
+    @patch.dict(
+        os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
+    )
     async def test_embed_large_batch(self):
         """Test embedding a large batch of texts."""
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
@@ -711,7 +783,9 @@ class TestOpenAIEmbeddingProviderEdgeCases:
         assert len(result) == 100
         provider._client.embeddings.create.assert_called_once()
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True)
+    @patch.dict(
+        os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
+    )
     def test_default_model(self):
         """Test that default model is text-embedding-3-small."""
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider

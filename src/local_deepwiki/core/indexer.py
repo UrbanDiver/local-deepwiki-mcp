@@ -351,70 +351,86 @@ class RepositoryIndexer:
         )
         parse_start_time = time.time()
 
+        # Process files in windows to limit memory from queued futures.
+        # Each window submits at most ``window_size`` futures at a time so
+        # that completed results can be flushed before the next window.
+        window_size = max(batch_size, parallel_workers * 4)
+        files_completed = 0
+
         with ThreadPoolExecutor(max_workers=parallel_workers) as executor:
-            futures = {
-                executor.submit(self._parse_single_file, file_path): file_path
-                for file_path in files_to_process
-            }
+            for window_start in range(0, file_count, window_size):
+                window_end = min(window_start + window_size, file_count)
+                window_files = files_to_process[window_start:window_end]
+                futures = {
+                    executor.submit(self._parse_single_file, fp): fp
+                    for fp in window_files
+                }
 
-            for i, future in enumerate(as_completed(futures)):
-                file_path = futures[future]
-                if progress_callback:
-                    progress_callback(f"Parsing {file_path.name}", i, file_count)
-
-                result = future.result()
-
-                if result.error:
-                    error_count += 1
-                    logger.warning(
-                        f"Error processing {result.file_path}: {result.error}"
-                    )
+                for future in as_completed(futures):
+                    file_path = futures[future]
                     if progress_callback:
                         progress_callback(
-                            f"Error processing {result.file_path}: {result.error}",
-                            i,
+                            f"Parsing {file_path.name}",
+                            files_completed,
                             file_count,
                         )
-                    # Emit INDEX_ERROR event for file processing errors
+
+                    result = future.result()
+
+                    if result.error:
+                        error_count += 1
+                        logger.warning(
+                            f"Error processing {result.file_path}: {result.error}"
+                        )
+                        if progress_callback:
+                            progress_callback(
+                                f"Error processing {result.file_path}: {result.error}",
+                                files_completed,
+                                file_count,
+                            )
+                        # Emit INDEX_ERROR event for file processing errors
+                        emitter = get_event_emitter()
+                        await emitter.emit(
+                            EventType.INDEX_ERROR,
+                            {
+                                "file_path": str(result.file_path),
+                                "error": result.error,
+                            },
+                        )
+                        files_completed += 1
+                        continue
+
+                    chunk_batch.extend(result.chunks)
+                    processed_files.append(result.file_info)
+
+                    # Emit INDEX_FILE event for successfully parsed file
                     emitter = get_event_emitter()
                     await emitter.emit(
-                        EventType.INDEX_ERROR,
+                        EventType.INDEX_FILE,
                         {
                             "file_path": str(result.file_path),
-                            "error": result.error,
+                            "language": result.file_info.language.value
+                            if result.file_info.language
+                            else None,
+                            "chunk_count": len(result.chunks),
                         },
                     )
-                    continue
 
-                chunk_batch.extend(result.chunks)
-                processed_files.append(result.file_info)
+                    # Process batch if it reaches the batch size
+                    if len(chunk_batch) >= batch_size:
+                        chunks_stored = await self._process_chunk_batch(
+                            chunk_batch,
+                            full_rebuild,
+                            is_first_batch,
+                            progress_callback,
+                            files_completed,
+                            file_count,
+                        )
+                        total_chunks_processed += chunks_stored
+                        is_first_batch = False
+                        chunk_batch = []
 
-                # Emit INDEX_FILE event for successfully parsed file
-                emitter = get_event_emitter()
-                await emitter.emit(
-                    EventType.INDEX_FILE,
-                    {
-                        "file_path": str(result.file_path),
-                        "language": result.file_info.language.value
-                        if result.file_info.language
-                        else None,
-                        "chunk_count": len(result.chunks),
-                    },
-                )
-
-                # Process batch if it reaches the batch size
-                if len(chunk_batch) >= batch_size:
-                    chunks_stored = await self._process_chunk_batch(
-                        chunk_batch,
-                        full_rebuild,
-                        is_first_batch,
-                        progress_callback,
-                        i,
-                        file_count,
-                    )
-                    total_chunks_processed += chunks_stored
-                    is_first_batch = False
-                    chunk_batch = []
+                    files_completed += 1
 
         # Process any remaining chunks in the final batch
         if chunk_batch:

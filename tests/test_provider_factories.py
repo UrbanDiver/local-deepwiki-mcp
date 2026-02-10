@@ -36,7 +36,9 @@ class TestGetLLMProvider:
         assert isinstance(provider, OllamaProvider)
         assert provider.name == "ollama:llama3.2"
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     def test_returns_anthropic_provider(self):
         """Test that anthropic provider is returned when configured."""
         from local_deepwiki.providers.llm import get_llm_provider
@@ -52,7 +54,7 @@ class TestGetLLMProvider:
         assert isinstance(provider, AnthropicProvider)
         assert provider.name == "anthropic:claude-sonnet-4-20250514"
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_returns_openai_provider(self):
         """Test that openai provider is returned when configured."""
         from local_deepwiki.providers.llm import get_llm_provider
@@ -110,7 +112,9 @@ class TestGetCachedLLMProvider:
         provider.dimension = 384
         return provider
 
-    def test_returns_caching_provider_when_enabled(self, mock_embedding_provider, tmp_path: Path):
+    def test_returns_caching_provider_when_enabled(
+        self, mock_embedding_provider, tmp_path: Path
+    ):
         """Test that caching provider is returned when caching enabled."""
         from local_deepwiki.providers.llm import get_cached_llm_provider
         from local_deepwiki.providers.llm.cached import CachingLLMProvider
@@ -151,7 +155,9 @@ class TestGetCachedLLMProvider:
         assert not isinstance(provider, CachingLLMProvider)
         assert isinstance(provider, OllamaProvider)
 
-    def test_uses_global_config_when_none_provided(self, mock_embedding_provider, tmp_path: Path):
+    def test_uses_global_config_when_none_provided(
+        self, mock_embedding_provider, tmp_path: Path
+    ):
         """Test that global config is used when no config provided."""
         from local_deepwiki.providers.llm import get_cached_llm_provider
         from local_deepwiki.providers.llm.cached import CachingLLMProvider
@@ -191,7 +197,7 @@ class TestGetEmbeddingProvider:
         assert isinstance(provider, LocalEmbeddingProvider)
         assert provider.name == "local:all-MiniLM-L6-v2"
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_returns_openai_provider(self):
         """Test that openai provider is returned when configured (without cache)."""
         from local_deepwiki.providers.embeddings import get_embedding_provider
@@ -231,7 +237,9 @@ class TestGetEmbeddingProvider:
             local=LocalEmbeddingConfig(model="test-model"),
         )
 
-        with patch("local_deepwiki.providers.embeddings.get_config", return_value=mock_config):
+        with patch(
+            "local_deepwiki.providers.embeddings.get_config", return_value=mock_config
+        ):
             # Disable cache to test the base provider
             provider = get_embedding_provider(enable_cache=False)
 

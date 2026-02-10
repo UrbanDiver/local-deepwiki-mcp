@@ -9,7 +9,7 @@ import pytest
 class TestOpenAIEmbeddingProvider:
     """Tests for OpenAIEmbeddingProvider."""
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_initialization(self):
         """Test provider initialization."""
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
@@ -17,15 +17,17 @@ class TestOpenAIEmbeddingProvider:
         provider = OpenAIEmbeddingProvider(model="text-embedding-3-small")
         assert provider.name == "openai:text-embedding-3-small"
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_initialization_with_custom_api_key(self):
         """Test provider initialization with custom API key."""
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
 
-        provider = OpenAIEmbeddingProvider(model="text-embedding-3-small", api_key="custom-key")
+        provider = OpenAIEmbeddingProvider(
+            model="text-embedding-3-small", api_key="sk-customkey1234567890abcdef"
+        )
         assert provider.name == "openai:text-embedding-3-small"
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_get_dimension_known_model(self):
         """Test get_dimension for known models."""
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
@@ -39,7 +41,7 @@ class TestOpenAIEmbeddingProvider:
         provider3 = OpenAIEmbeddingProvider(model="text-embedding-ada-002")
         assert provider3.get_dimension() == 1536
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_get_dimension_unknown_model(self):
         """Test get_dimension for unknown models defaults to 1536."""
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
@@ -47,7 +49,7 @@ class TestOpenAIEmbeddingProvider:
         provider = OpenAIEmbeddingProvider(model="unknown-model")
         assert provider.get_dimension() == 1536
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     async def test_embed(self):
         """Test embedding generation."""
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
@@ -73,7 +75,7 @@ class TestOpenAIEmbeddingProvider:
             input=["text1", "text2"],
         )
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     async def test_embed_single_text(self):
         """Test embedding a single text."""
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider

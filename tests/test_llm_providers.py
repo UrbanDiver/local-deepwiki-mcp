@@ -16,7 +16,9 @@ class TestAnthropicProvider:
         client.messages = MagicMock()
         return client
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     def test_initialization(self):
         """Test provider initialization."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -24,15 +26,22 @@ class TestAnthropicProvider:
         provider = AnthropicProvider(model="claude-sonnet-4-20250514")
         assert provider.name == "anthropic:claude-sonnet-4-20250514"
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     def test_initialization_with_custom_api_key(self):
         """Test provider initialization with custom API key."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
 
-        provider = AnthropicProvider(model="claude-sonnet-4-20250514", api_key="custom-key")
+        provider = AnthropicProvider(
+            model="claude-sonnet-4-20250514",
+            api_key="sk-ant-api03-customkey1234567890abcd",
+        )
         assert provider.name == "anthropic:claude-sonnet-4-20250514"
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     async def test_generate_basic(self):
         """Test basic text generation."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -49,7 +58,9 @@ class TestAnthropicProvider:
         assert result == "Generated response"
         provider._client.messages.create.assert_called_once()
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     async def test_generate_with_system_prompt(self):
         """Test generation with system prompt."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -66,7 +77,9 @@ class TestAnthropicProvider:
         assert call_kwargs["system"] == "System prompt"
         assert call_kwargs["messages"] == [{"role": "user", "content": "User prompt"}]
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     async def test_generate_with_zero_temperature(self):
         """Test generation with zero temperature (deterministic)."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -83,7 +96,9 @@ class TestAnthropicProvider:
         # Temperature should not be set when 0
         assert "temperature" not in call_kwargs
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     async def test_generate_stream(self):
         """Test streaming text generation."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -109,7 +124,9 @@ class TestAnthropicProvider:
 
         assert chunks == ["Hello", " ", "world"]
 
-    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    @patch.dict(
+        os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
+    )
     async def test_generate_stream_with_system_prompt(self):
         """Test streaming with system prompt."""
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
@@ -127,7 +144,9 @@ class TestAnthropicProvider:
         provider._client.messages.stream = MagicMock(return_value=mock_stream)
 
         chunks = []
-        async for chunk in provider.generate_stream("User prompt", system_prompt="System"):
+        async for chunk in provider.generate_stream(
+            "User prompt", system_prompt="System"
+        ):
             chunks.append(chunk)
 
         call_kwargs = provider._client.messages.stream.call_args.kwargs
@@ -137,7 +156,7 @@ class TestAnthropicProvider:
 class TestOpenAILLMProvider:
     """Tests for OpenAILLMProvider."""
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_initialization(self):
         """Test provider initialization."""
         from local_deepwiki.providers.llm.openai import OpenAILLMProvider
@@ -145,15 +164,17 @@ class TestOpenAILLMProvider:
         provider = OpenAILLMProvider(model="gpt-4o")
         assert provider.name == "openai:gpt-4o"
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_initialization_with_custom_api_key(self):
         """Test provider initialization with custom API key."""
         from local_deepwiki.providers.llm.openai import OpenAILLMProvider
 
-        provider = OpenAILLMProvider(model="gpt-4o", api_key="custom-key")
+        provider = OpenAILLMProvider(
+            model="gpt-4o", api_key="sk-customkey1234567890abcdef"
+        )
         assert provider.name == "openai:gpt-4o"
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     async def test_generate_basic(self):
         """Test basic text generation."""
         from local_deepwiki.providers.llm.openai import OpenAILLMProvider
@@ -175,7 +196,7 @@ class TestOpenAILLMProvider:
         assert result == "Generated response"
         provider._client.chat.completions.create.assert_called_once()
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     async def test_generate_with_system_prompt(self):
         """Test generation with system prompt."""
         from local_deepwiki.providers.llm.openai import OpenAILLMProvider
@@ -199,7 +220,7 @@ class TestOpenAILLMProvider:
             {"role": "user", "content": "User prompt"},
         ]
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     async def test_generate_without_system_prompt(self):
         """Test generation without system prompt."""
         from local_deepwiki.providers.llm.openai import OpenAILLMProvider
@@ -221,7 +242,7 @@ class TestOpenAILLMProvider:
         # Should only have user message, no system message
         assert call_kwargs["messages"] == [{"role": "user", "content": "User prompt"}]
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     async def test_generate_with_none_content(self):
         """Test generation when response content is None."""
         from local_deepwiki.providers.llm.openai import OpenAILLMProvider
@@ -242,7 +263,7 @@ class TestOpenAILLMProvider:
         # Should return empty string when content is None
         assert result == ""
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     async def test_generate_stream(self):
         """Test streaming text generation."""
         from local_deepwiki.providers.llm.openai import OpenAILLMProvider
@@ -269,7 +290,7 @@ class TestOpenAILLMProvider:
 
         assert chunks == ["Hello", " ", "world"]
 
-    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     async def test_generate_stream_with_system_prompt(self):
         """Test streaming with system prompt."""
         from local_deepwiki.providers.llm.openai import OpenAILLMProvider
@@ -289,7 +310,9 @@ class TestOpenAILLMProvider:
         provider._client.chat.completions.create = AsyncMock(return_value=mock_stream())
 
         chunks = []
-        async for chunk in provider.generate_stream("User prompt", system_prompt="System"):
+        async for chunk in provider.generate_stream(
+            "User prompt", system_prompt="System"
+        ):
             chunks.append(chunk)
 
         call_kwargs = provider._client.chat.completions.create.call_args.kwargs
