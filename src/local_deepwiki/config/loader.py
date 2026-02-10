@@ -581,3 +581,142 @@ def _is_float(s: str) -> bool:
         return "." in s  # Only consider it float if it has a decimal point
     except ValueError:
         return False
+
+
+# ---------------------------------------------------------------------------
+# Config profile management
+# ---------------------------------------------------------------------------
+
+CONFIG_DIR = Path.home() / ".config" / "local-deepwiki"
+PROFILES_DIR = CONFIG_DIR / "profiles"
+ACTIVE_PROFILE_FILE = CONFIG_DIR / "active_profile"
+
+
+def list_profiles() -> list[str]:
+    """List all saved configuration profile names.
+
+    Returns:
+        Sorted list of profile names (without .yaml extension).
+    """
+    if not PROFILES_DIR.exists():
+        return []
+    return sorted(p.stem for p in PROFILES_DIR.glob("*.yaml"))
+
+
+def get_active_profile_name() -> str | None:
+    """Get the name of the currently active profile.
+
+    Returns:
+        The active profile name, or None if no profile is active.
+    """
+    if not ACTIVE_PROFILE_FILE.exists():
+        return None
+    name = ACTIVE_PROFILE_FILE.read_text().strip()
+    if not name:
+        return None
+    # Verify the profile still exists
+    profile_path = PROFILES_DIR / f"{name}.yaml"
+    if not profile_path.exists():
+        return None
+    return name
+
+
+def save_profile(name: str, config_path: Path | None = None) -> Path:
+    """Save current configuration as a named profile.
+
+    Args:
+        name: Profile name (alphanumeric, hyphens, underscores).
+        config_path: Path to config file to snapshot. If None, uses default location.
+
+    Returns:
+        Path to the saved profile file.
+
+    Raises:
+        ValueError: If name contains invalid characters.
+        FileNotFoundError: If no config file is found to snapshot.
+    """
+    import re
+    import shutil
+
+    if not re.match(r"^[a-zA-Z0-9_-]+$", name):
+        raise ValueError(
+            f"Invalid profile name '{name}': use only letters, numbers, hyphens, underscores"
+        )
+
+    # Find config file to snapshot
+    if config_path is None:
+        search_paths = [
+            Path.cwd() / "config.yaml",
+            Path.cwd() / ".local-deepwiki.yaml",
+            CONFIG_DIR / "config.yaml",
+            Path.home() / ".local-deepwiki.yaml",
+        ]
+        config_path = next((p for p in search_paths if p.exists()), None)
+
+    if config_path is None or not config_path.exists():
+        # No config file found - save defaults
+        PROFILES_DIR.mkdir(parents=True, exist_ok=True)
+        profile_path = PROFILES_DIR / f"{name}.yaml"
+        default_config = Config()
+        profile_path.write_text(
+            yaml.dump(default_config.model_dump(), default_flow_style=False)
+        )
+        return profile_path
+
+    PROFILES_DIR.mkdir(parents=True, exist_ok=True)
+    profile_path = PROFILES_DIR / f"{name}.yaml"
+    shutil.copy2(config_path, profile_path)
+    return profile_path
+
+
+def activate_profile(name: str) -> None:
+    """Activate a saved configuration profile.
+
+    Copies the profile's YAML to the main config location and records
+    the active profile name.
+
+    Args:
+        name: Profile name to activate.
+
+    Raises:
+        FileNotFoundError: If the profile does not exist.
+    """
+    import shutil
+
+    profile_path = PROFILES_DIR / f"{name}.yaml"
+    if not profile_path.exists():
+        raise FileNotFoundError(f"Profile '{name}' not found")
+
+    config_dest = CONFIG_DIR / "config.yaml"
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(profile_path, config_dest)
+    ACTIVE_PROFILE_FILE.write_text(name)
+
+    # Reset cached config so next get_config() loads the new profile
+    reset_config()
+
+
+def delete_profile(name: str) -> bool:
+    """Delete a saved configuration profile.
+
+    Args:
+        name: Profile name to delete.
+
+    Returns:
+        True if the profile was deleted, False if it didn't exist.
+    """
+    profile_path = PROFILES_DIR / f"{name}.yaml"
+    if not profile_path.exists():
+        return False
+
+    # Check if this is the active profile BEFORE deleting
+    active_name = get_active_profile_name()
+
+    profile_path.unlink()
+
+    # Clear active profile marker if this was the active one
+    if active_name == name:
+        if ACTIVE_PROFILE_FILE.exists():
+            ACTIVE_PROFILE_FILE.unlink()
+
+    return True

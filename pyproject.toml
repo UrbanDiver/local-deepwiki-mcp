@@ -58,6 +58,7 @@ deepwiki-export = "local_deepwiki.export.html:main"
 deepwiki-export-pdf = "local_deepwiki.export.pdf:main"
 deepwiki-config = "local_deepwiki.cli.config_cli:main"
 deepwiki-search = "local_deepwiki.cli.interactive_search:main"
+deepwiki = "local_deepwiki.cli.main:main"
 
 [build-system]
 requires = ["hatchling"]

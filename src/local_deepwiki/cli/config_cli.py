@@ -963,11 +963,21 @@ def main() -> int:
     )
     health_parser.set_defaults(func=cmd_health_check)
 
+    # profile subcommand
+    from local_deepwiki.cli.profile_cli import (
+        dispatch_profile,
+        register_profile_subparser,
+    )
+
+    register_profile_subparser(subparsers)
+
     args = parser.parse_args()
 
     if args.command is None:
         # Default to validate if no command specified
         args.func = cmd_validate
+    elif args.command == "profile":
+        return dispatch_profile(args)
 
     return args.func(args)
 

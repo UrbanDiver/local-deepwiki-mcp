@@ -6,13 +6,21 @@ Split into multiple modules for maintainability while preserving backward compat
 
 # Re-export all public names for backward compatibility
 from local_deepwiki.config.loader import (
+    ACTIVE_PROFILE_FILE,
+    CONFIG_DIR,
+    PROFILES_DIR,
     ConfigChange,
     ConfigDiff,
+    activate_profile,
     config_context,
+    delete_profile,
+    get_active_profile_name,
     get_config,
+    list_profiles,
     load_config_from_env,
     merge_configs,
     reset_config,
+    save_profile,
     set_config,
     validate_config,
 )
@@ -95,4 +103,13 @@ __all__ = [
     "merge_configs",
     "validate_config",
     "load_config_from_env",
+    # Profile management
+    "CONFIG_DIR",
+    "PROFILES_DIR",
+    "ACTIVE_PROFILE_FILE",
+    "list_profiles",
+    "get_active_profile_name",
+    "save_profile",
+    "activate_profile",
+    "delete_profile",
 ]
