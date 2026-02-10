@@ -139,18 +139,14 @@ class TestHandleAskQuestionExtended:
 
     async def test_returns_no_results_message(self, tmp_path):
         """Test returns appropriate message when no results found."""
-        # Create mock vector store that returns empty results
-        with patch("local_deepwiki.handlers.core.get_config") as mock_config:
-            config = MagicMock()
-            config.get_wiki_path.return_value = tmp_path / ".deepwiki"
-            config.get_vector_db_path.return_value = tmp_path / ".deepwiki" / "vectors"
-            config.embedding = MagicMock()
-            mock_config.return_value = config
+        config = MagicMock()
+        config.embedding = MagicMock()
+        wiki_path = tmp_path / ".deepwiki"
 
-            # Create the vector db path so the check passes
-            vector_path = tmp_path / ".deepwiki" / "vectors"
-            vector_path.mkdir(parents=True)
-
+        with patch(
+            "local_deepwiki.handlers.core._load_index_status",
+            return_value=(MagicMock(), wiki_path, config),
+        ):
             mock_store = MagicMock()
             mock_store.search = AsyncMock(return_value=[])
 
@@ -170,18 +166,16 @@ class TestHandleAskQuestionExtended:
 
     async def test_returns_answer_with_sources(self, tmp_path):
         """Test returns answer with sources when results are found."""
-        with patch("local_deepwiki.handlers.core.get_config") as mock_config:
-            config = MagicMock()
-            config.get_wiki_path.return_value = tmp_path / ".deepwiki"
-            config.get_vector_db_path.return_value = tmp_path / ".deepwiki" / "vectors"
-            config.embedding = MagicMock()
-            config.llm_cache = MagicMock()
-            config.llm = MagicMock()
-            mock_config.return_value = config
+        config = MagicMock()
+        config.embedding = MagicMock()
+        config.llm_cache = MagicMock()
+        config.llm = MagicMock()
+        wiki_path = tmp_path / ".deepwiki"
 
-            vector_path = tmp_path / ".deepwiki" / "vectors"
-            vector_path.mkdir(parents=True)
-
+        with patch(
+            "local_deepwiki.handlers.core._load_index_status",
+            return_value=(MagicMock(), wiki_path, config),
+        ):
             # Create mock search result
             mock_chunk = MagicMock()
             mock_chunk.file_path = "test.py"

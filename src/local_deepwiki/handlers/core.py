@@ -24,6 +24,7 @@ from local_deepwiki.handlers._shared import (
     RepositoryIndexer,
     ValidationError,
     _create_vector_store,
+    _load_index_status,
     _validate_export_path,
     create_progress_notifier,
     get_access_controller,
@@ -36,7 +37,6 @@ from local_deepwiki.handlers._shared import (
     generate_wiki,
     handle_tool_errors,
     logger,
-    not_indexed_error,
     path_not_found_error,
     validate_chunk_type,
     validate_index_parameters,
@@ -346,12 +346,7 @@ async def handle_ask_question(args: dict[str, Any]) -> list[TextContent]:
     logger.info(f"Question about {repo_path}: {question[:100]}...")
     logger.debug(f"Max context chunks: {max_context}")
 
-    config = get_config()
-    wiki_path = config.get_wiki_path(repo_path)
-    vector_db_path = config.get_vector_db_path(repo_path)
-
-    if not vector_db_path.exists():
-        raise not_indexed_error(str(repo_path))
+    _index_status, wiki_path, config = _load_index_status(repo_path)
 
     # Create vector store
     vector_store = _create_vector_store(repo_path, config)
@@ -580,11 +575,7 @@ async def handle_search_code(args: dict[str, Any]) -> list[TextContent]:
         f"path: {path_pattern}, fuzzy: {use_fuzzy}"
     )
 
-    config = get_config()
-    vector_db_path = config.get_vector_db_path(repo_path)
-
-    if not vector_db_path.exists():
-        raise not_indexed_error(str(repo_path))
+    _index_status, _wiki_path, config = _load_index_status(repo_path)
 
     # Create vector store
     vector_store = _create_vector_store(repo_path, config)

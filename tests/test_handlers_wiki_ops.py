@@ -177,16 +177,13 @@ class TestHandleSearchCodeWithResults:
 
     async def test_returns_formatted_results(self, tmp_path):
         """Test returns properly formatted search results."""
-        with patch("local_deepwiki.handlers.core.get_config") as mock_config:
-            config = MagicMock()
-            config.get_vector_db_path.return_value = tmp_path / ".deepwiki" / "vectors"
-            config.embedding = MagicMock()
-            mock_config.return_value = config
+        config = MagicMock()
+        config.embedding = MagicMock()
 
-            # Create the vector db path
-            vector_path = tmp_path / ".deepwiki" / "vectors"
-            vector_path.mkdir(parents=True)
-
+        with patch(
+            "local_deepwiki.handlers.core._load_index_status",
+            return_value=(MagicMock(), tmp_path / ".deepwiki", config),
+        ):
             # Create mock search result
             mock_chunk = MagicMock()
             mock_chunk.file_path = "test.py"
@@ -226,15 +223,13 @@ class TestHandleSearchCodeWithResults:
 
     async def test_returns_no_results_message(self, tmp_path):
         """Test returns no results message when search is empty."""
-        with patch("local_deepwiki.handlers.core.get_config") as mock_config:
-            config = MagicMock()
-            config.get_vector_db_path.return_value = tmp_path / ".deepwiki" / "vectors"
-            config.embedding = MagicMock()
-            mock_config.return_value = config
+        config = MagicMock()
+        config.embedding = MagicMock()
 
-            vector_path = tmp_path / ".deepwiki" / "vectors"
-            vector_path.mkdir(parents=True)
-
+        with patch(
+            "local_deepwiki.handlers.core._load_index_status",
+            return_value=(MagicMock(), tmp_path / ".deepwiki", config),
+        ):
             mock_store = MagicMock()
             mock_store.search = AsyncMock(return_value=[])
 
@@ -254,15 +249,13 @@ class TestHandleSearchCodeWithResults:
 
     async def test_truncates_long_content_preview(self, tmp_path):
         """Test truncates long content in preview."""
-        with patch("local_deepwiki.handlers.core.get_config") as mock_config:
-            config = MagicMock()
-            config.get_vector_db_path.return_value = tmp_path / ".deepwiki" / "vectors"
-            config.embedding = MagicMock()
-            mock_config.return_value = config
+        config = MagicMock()
+        config.embedding = MagicMock()
 
-            vector_path = tmp_path / ".deepwiki" / "vectors"
-            vector_path.mkdir(parents=True)
-
+        with patch(
+            "local_deepwiki.handlers.core._load_index_status",
+            return_value=(MagicMock(), tmp_path / ".deepwiki", config),
+        ):
             # Create mock with long content
             mock_chunk = MagicMock()
             mock_chunk.file_path = "long.py"

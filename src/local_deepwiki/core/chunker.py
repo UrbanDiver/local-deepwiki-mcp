@@ -51,7 +51,11 @@ FUNCTION_NODE_TYPES: dict[Language, set[str]] = {
 CLASS_NODE_TYPES: dict[Language, set[str]] = {
     Language.PYTHON: {"class_definition"},
     Language.JAVASCRIPT: {"class_declaration"},
-    Language.TYPESCRIPT: {"class_declaration", "interface_declaration", "type_alias_declaration"},
+    Language.TYPESCRIPT: {
+        "class_declaration",
+        "interface_declaration",
+        "type_alias_declaration",
+    },
     Language.GO: {"type_declaration"},
     Language.RUST: {"struct_item", "impl_item", "trait_item", "enum_item"},
     Language.JAVA: {"class_declaration", "interface_declaration", "enum_declaration"},
@@ -92,7 +96,9 @@ IMPORT_NODE_TYPES: dict[Language, set[str]] = {
 }
 
 
-def get_parent_classes(class_node: Node, source: bytes, language: Language) -> list[str]:
+def get_parent_classes(
+    class_node: Node, source: bytes, language: Language
+) -> list[str]:
     """Extract parent class names from a class definition.
 
     Args:
@@ -178,7 +184,9 @@ def get_parent_classes(class_node: Node, source: bytes, language: Language) -> l
             if child.type == "delegation_specifiers":
                 for spec in child.children:
                     if spec.type == "delegation_specifier":
-                        for item in find_nodes_by_type(spec, {"user_type", "simple_identifier"}):
+                        for item in find_nodes_by_type(
+                            spec, {"user_type", "simple_identifier"}
+                        ):
                             text = get_node_text(item, source)
                             if text and text not in (":", ","):
                                 parents.append(text)
@@ -198,7 +206,9 @@ def get_parent_classes(class_node: Node, source: bytes, language: Language) -> l
     return parents
 
 
-def extract_python_parameter_types(func_node: Node, source: bytes) -> dict[str, str | None]:
+def extract_python_parameter_types(
+    func_node: Node, source: bytes
+) -> dict[str, str | None]:
     """Extract parameter types from a Python function.
 
     Args:
@@ -251,7 +261,9 @@ def extract_python_parameter_types(func_node: Node, source: bytes) -> dict[str, 
                     type_hint = get_node_text(type_node, source) if type_node else None
                     # Add prefix for splat patterns
                     if splat_pattern:
-                        prefix = "*" if splat_pattern.type == "list_splat_pattern" else "**"
+                        prefix = (
+                            "*" if splat_pattern.type == "list_splat_pattern" else "**"
+                        )
                         name = f"{prefix}{name}"
                     param_types[name] = type_hint
 
@@ -294,7 +306,9 @@ def extract_python_parameter_types(func_node: Node, source: bytes) -> dict[str, 
                     if inner_name:
                         name = get_node_text(inner_name, source)
                         prefix = "*" if child.type == "list_splat_pattern" else "**"
-                        type_hint = get_node_text(inner_type, source) if inner_type else None
+                        type_hint = (
+                            get_node_text(inner_type, source) if inner_type else None
+                        )
                         param_types[f"{prefix}{name}"] = type_hint
                     break
 
@@ -491,8 +505,6 @@ def extract_function_type_metadata(
         if raised_exceptions:
             metadata["raises"] = raised_exceptions
 
-    # TODO: Add support for other languages (TypeScript, Java, etc.)
-
     return metadata
 
 
@@ -530,14 +542,18 @@ class CodeChunker:
 
         if plugin_parser is not None:
             # Use plugin parser - it returns CodeChunk objects directly
-            logger.debug(f"Using plugin parser '{plugin_parser.language_name}' for {file_path.name}")
+            logger.debug(
+                f"Using plugin parser '{plugin_parser.language_name}' for {file_path.name}"
+            )
             try:
                 source = file_path.read_bytes()
                 chunks = plugin_parser.parse_file(file_path, source)
                 yield from chunks
                 return
             except Exception as e:
-                logger.warning(f"Plugin parser failed for {file_path}: {e}, falling back to built-in")
+                logger.warning(
+                    f"Plugin parser failed for {file_path}: {e}, falling back to built-in"
+                )
 
         # Fall back to built-in tree-sitter parser
         result = self.parser.parse_file(file_path)
@@ -561,7 +577,9 @@ class CodeChunker:
         # Extract classes and their methods
         class_types = CLASS_NODE_TYPES.get(language, set())
         for class_node in find_nodes_by_type(root, class_types):
-            yield from self._extract_class_chunks(class_node, source, language, rel_path)
+            yield from self._extract_class_chunks(
+                class_node, source, language, rel_path
+            )
 
         # Extract top-level functions (not inside classes)
         function_types = FUNCTION_NODE_TYPES.get(language, set())
@@ -616,7 +634,9 @@ class CodeChunker:
             metadata={"is_overview": True},
         )
 
-    def _create_file_summary(self, root: Node, source: bytes, language: Language) -> str:
+    def _create_file_summary(
+        self, root: Node, source: bytes, language: Language
+    ) -> str:
         """Create a summary of file structure for the module chunk.
 
         Args:
@@ -642,7 +662,9 @@ class CodeChunker:
         class_types = CLASS_NODE_TYPES.get(language, set())
         classes = find_nodes_by_type(root, class_types)
         if classes:
-            class_names = [get_node_name(c, source, language) or "anonymous" for c in classes]
+            class_names = [
+                get_node_name(c, source, language) or "anonymous" for c in classes
+            ]
             parts.append(f"# Classes: {', '.join(class_names)}")
 
         # List functions
@@ -653,7 +675,9 @@ class CodeChunker:
             if not self._is_inside_class(f, class_types)
         ]
         if functions:
-            func_names = [get_node_name(f, source, language) or "anonymous" for f in functions]
+            func_names = [
+                get_node_name(f, source, language) or "anonymous" for f in functions
+            ]
             parts.append(f"# Functions: {', '.join(func_names)}")
 
         return "\n\n".join(parts) if parts else "# Empty file"
@@ -723,7 +747,13 @@ class CodeChunker:
         if lines > self.config.class_split_threshold:
             # For large classes, create a summary chunk and method chunks
             yield self._create_class_summary_chunk(
-                class_node, source, language, file_path, class_name, docstring, parent_classes
+                class_node,
+                source,
+                language,
+                file_path,
+                class_name,
+                docstring,
+                parent_classes,
             )
 
             # Extract methods separately
@@ -780,7 +810,9 @@ class CodeChunker:
         # Get class signature and method list
         function_types = FUNCTION_NODE_TYPES.get(language, set())
         methods = find_nodes_by_type(class_node, function_types)
-        method_names = [get_node_name(m, source, language) or "anonymous" for m in methods]
+        method_names = [
+            get_node_name(m, source, language) or "anonymous" for m in methods
+        ]
 
         # Build summary content
         signature_end = class_node.start_byte
@@ -790,11 +822,15 @@ class CodeChunker:
                 break
 
         signature = (
-            source[class_node.start_byte : signature_end].decode("utf-8", errors="replace").strip()
+            source[class_node.start_byte : signature_end]
+            .decode("utf-8", errors="replace")
+            .strip()
         )
         content = f"{signature}\n    # Methods: {', '.join(method_names)}"
 
-        chunk_id = self._generate_id(file_path, f"class_{class_name}", class_node.start_point[0])
+        chunk_id = self._generate_id(
+            file_path, f"class_{class_name}", class_node.start_point[0]
+        )
         metadata: dict[str, bool | int | list[str]] = {
             "is_summary": True,
             "method_count": len(methods),
@@ -883,7 +919,9 @@ class CodeChunker:
         # Extract type annotation metadata
         metadata = extract_function_type_metadata(func_node, source, language)
 
-        chunk_id = self._generate_id(file_path, f"func_{func_name}", func_node.start_point[0])
+        chunk_id = self._generate_id(
+            file_path, f"func_{func_name}", func_node.start_point[0]
+        )
         return CodeChunk(
             id=chunk_id,
             file_path=file_path,

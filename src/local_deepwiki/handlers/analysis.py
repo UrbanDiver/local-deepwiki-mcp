@@ -81,12 +81,17 @@ async def handle_search_wiki(args: dict[str, Any]) -> list[TextContent]:
         raise ValueError(str(e)) from e
 
     repo_path = Path(validated.repo_path).resolve()
-    query = validated.query.lower()
+    query = validated.query
     limit = validated.limit
     entity_types = validated.entity_types
 
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
+
+    # Validate query parameters (CWE-400 prevention)
+    validate_query_parameters(query, str(repo_path), limit)
+
+    query = query.lower()
 
     _index_status, wiki_path, _config = _load_index_status(repo_path)
 
@@ -907,7 +912,12 @@ async def handle_impact_analysis(args: dict[str, Any]) -> list[TextContent]:
 
     affected_files: set[str] = set()
     affected_entities: set[str] = set()
-    vector_store = None
+
+    # Create VectorStore once if any section needs it
+    needs_vector_store = validated.include_inheritance or validated.include_dependents
+    vector_store = (
+        _create_vector_store(repo_path, config) if needs_vector_store else None
+    )
 
     # --- Section 1: Reverse call graph ---
     if validated.include_reverse_calls:
@@ -950,8 +960,7 @@ async def handle_impact_analysis(args: dict[str, Any]) -> list[TextContent]:
         try:
             from local_deepwiki.generators.inheritance import collect_class_hierarchy
 
-            vector_store = _create_vector_store(repo_path, config)
-
+            assert vector_store is not None
             classes = await collect_class_hierarchy(index_status, vector_store)
 
             inheritance_dependents: dict[str, list[str]] = {}
@@ -985,19 +994,15 @@ async def handle_impact_analysis(args: dict[str, Any]) -> list[TextContent]:
         try:
             from local_deepwiki.generators.context_builder import build_file_context
 
-            # Create vector_store if not already created by inheritance section
-            if vector_store is None:
-                vector_store = _create_vector_store(repo_path, config)
-
-            dep_store = vector_store
-            chunks = await dep_store.get_chunks_by_file(file_path)
+            assert vector_store is not None
+            chunks = await vector_store.get_chunks_by_file(file_path)
 
             if chunks:
                 context = await build_file_context(
                     file_path=file_path,
                     chunks=chunks,
                     repo_path=repo_path,
-                    vector_store=dep_store,
+                    vector_store=vector_store,
                 )
 
                 importing_files = []

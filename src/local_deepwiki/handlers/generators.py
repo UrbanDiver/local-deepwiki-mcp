@@ -27,10 +27,8 @@ from local_deepwiki.handlers._shared import (
     _is_test_file,
     _load_index_status,
     get_access_controller,
-    get_config,
     handle_tool_errors,
     logger,
-    not_indexed_error,
     path_not_found_error,
 )
 
@@ -410,11 +408,7 @@ async def handle_detect_stale_docs(args: dict[str, Any]) -> list[TextContent]:
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
-    config = get_config()
-    wiki_path = config.get_wiki_path(repo_path)
-
-    if not wiki_path.exists():
-        raise not_indexed_error(str(repo_path))
+    _index_status, wiki_path, _config = _load_index_status(repo_path)
 
     from local_deepwiki.generators.stale_detection import analyze_staleness
     from local_deepwiki.generators.wiki_status import WikiStatusManager
