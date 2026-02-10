@@ -48,7 +48,7 @@ def sort_generators_by_dependencies(
     for generator in generators:
         missing_deps = set(generator.run_after) - available_names
         if missing_deps:
-            logger.warning(
+            logger.debug(
                 f"Wiki generator '{generator.generator_name}' has missing dependencies: "
                 f"{missing_deps}. These generators are not registered and will be skipped."
             )
@@ -180,7 +180,7 @@ async def run_plugin_generators(
             )
 
         except Exception as e:
-            logger.warning(
+            logger.debug(
                 f"Wiki generator plugin '{generator.generator_name}' failed: {e}"
             )
 

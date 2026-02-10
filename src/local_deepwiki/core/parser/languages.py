@@ -1,12 +1,12 @@
 """Language detection configuration and tree-sitter module mappings."""
 
 import importlib
-import logging
 from types import ModuleType
 
 from local_deepwiki.models import Language as LangEnum
+from local_deepwiki.logging import get_logger
 
-_logger = logging.getLogger(__name__)
+_logger = get_logger(__name__)
 
 # Grammar package name -> list of language enums it supports
 _GRAMMAR_CONFIG: list[tuple[str, list[LangEnum]]] = [

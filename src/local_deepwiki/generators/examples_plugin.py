@@ -80,7 +80,7 @@ class ExamplesWikiGenerator(WikiGeneratorPlugin):
         """
         vector_store = context.get("vector_store")
         if vector_store is None:
-            logger.warning("No vector_store in context, skipping examples generation")
+            logger.debug("No vector_store in context, skipping examples generation")
             return WikiGeneratorResult(pages=[])
 
         repo_path = Path(index_status.repo_path)
@@ -154,7 +154,7 @@ class ExamplesWikiGenerator(WikiGeneratorPlugin):
                     all_examples[chunk.name] = examples[:3]
 
         except Exception as e:
-            logger.warning(f"Error extracting examples: {e}")
+            logger.debug(f"Error extracting examples: {e}")
             return WikiGeneratorResult(pages=[])
 
         if not all_examples:
@@ -301,7 +301,7 @@ def get_examples_for_api_page(
             )
             examples.extend(extracted)
     except (RuntimeError, OSError, ValueError, TypeError) as e:
-        logger.warning(f"Failed to extract examples for {entity_name}: {e}")
+        logger.debug(f"Failed to extract examples for {entity_name}: {e}")
 
     # Add docstring examples
     if docstring:

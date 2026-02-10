@@ -62,7 +62,7 @@ def _set_section_error(
     exc: Exception,
 ) -> None:
     """Record a non-fatal section error in an explain/impact result dict."""
-    logger.warning(f"{operation} failed for '{detail}': {exc}")
+    logger.debug(f"{operation} failed for '{detail}': {exc}")
     result[field] = {"error": sanitize_error_message(str(exc))}
 
 
@@ -626,7 +626,7 @@ async def handle_explain_entity(args: dict[str, Any]) -> list[TextContent]:
                     entity_info = entry
                     break
         except (json.JSONDecodeError, OSError) as e:
-            logger.warning(
+            logger.debug(
                 f"search.json exists but could not be read for entity lookup: {e}"
             )
 

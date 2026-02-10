@@ -595,7 +595,7 @@ class WikiGenerator:
                 ctx, dep_content, "dependency-graph.md", "Dependency Graph"
             )
         except Exception as e:
-            logger.warning(f"Failed to generate dependency graph: {e}")
+            logger.debug(f"Failed to generate dependency graph: {e}")
             ctx.warnings.append(f"Dependency graph generation failed: {e}")
 
     def _sort_generators_by_dependencies(

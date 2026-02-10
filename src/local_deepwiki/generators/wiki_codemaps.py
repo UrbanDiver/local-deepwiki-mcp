@@ -273,7 +273,7 @@ async def generate_codemap_pages(
                     md_file.unlink()
                     logger.debug(f"Removed orphaned codemap page: {md_file.name}")
                 except OSError:
-                    logger.warning(f"Failed to remove orphaned codemap: {md_file.name}")
+                    logger.debug(f"Failed to remove orphaned codemap: {md_file.name}")
 
     logger.info(
         f"Codemap generation complete: {generated} generated, {skipped} unchanged"

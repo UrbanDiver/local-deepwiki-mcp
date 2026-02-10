@@ -1,7 +1,6 @@
 """Base classes for providers."""
 
 import asyncio
-import logging
 import random
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -9,8 +8,9 @@ from functools import wraps
 from typing import Any, AsyncIterator, Callable
 
 from local_deepwiki.errors import ProviderError as BaseProviderError
+from local_deepwiki.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 # =============================================================================

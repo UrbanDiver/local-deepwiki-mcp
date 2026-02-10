@@ -357,7 +357,7 @@ def extract_examples_for_entities(
     try:
         source = test_file.read_bytes()
     except (OSError, IOError) as e:
-        logger.warning(f"Failed to read test file {test_file}: {e}")
+        logger.debug(f"Failed to read test file {test_file}: {e}")
         return []
 
     root = parser.parse_source(source, Language.PYTHON)
