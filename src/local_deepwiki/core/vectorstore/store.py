@@ -121,6 +121,52 @@ class VectorStore:
         self._adaptive_searcher = AdaptiveSearcher()
         self._adaptive_searcher.set_store(self)
 
+    def close(self) -> None:
+        """Close the vector store and release all resources.
+
+        Clears internal references to the database connection, table, and
+        fuzzy search helper. Invalidates the search cache and resets the
+        adaptive searcher state. Safe to call multiple times (idempotent).
+
+        After closing, the VectorStore can still be used -- the lazy
+        ``_connect()`` method will re-establish the connection on next access.
+        """
+        with self._lock:
+            self._table = None
+            self._db = None
+            self._fuzzy_search_helper = None
+            self._search_cache.invalidate()
+            # Reset adaptive searcher state
+            self._adaptive_searcher._query_history.clear()
+            self._adaptive_searcher._feedback_history.clear()
+            self._adaptive_searcher._complexity_cache.clear()
+
+    def __del__(self) -> None:
+        """Safety net to release resources on garbage collection."""
+        try:
+            self.close()
+        except Exception:
+            # Suppress errors during GC -- the interpreter may be shutting
+            # down and objects referenced by close() may already be gone.
+            pass
+
+    async def __aenter__(self) -> "VectorStore":
+        """Enter the async context manager.
+
+        Returns:
+            This VectorStore instance.
+        """
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: Any,
+    ) -> None:
+        """Exit the async context manager, closing the store."""
+        self.close()
+
     def _connect(self) -> lancedb.DBConnection:
         """Get or create database connection.
 

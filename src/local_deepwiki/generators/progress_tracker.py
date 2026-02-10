@@ -305,11 +305,16 @@ class GenerationProgress:
         """Exit context manager and close resources."""
         self.close()
 
-    def finalize(self, success: bool = True) -> str:
+    def finalize(
+        self,
+        success: bool = True,
+        warnings: list[str] | None = None,
+    ) -> str:
         """Mark generation as complete and write final status.
 
         Args:
             success: Whether generation completed successfully.
+            warnings: Optional list of generation warning messages.
 
         Returns:
             Summary string for display.
@@ -346,6 +351,10 @@ class GenerationProgress:
             }
             for name, stats in self._phase_stats.items()
         }
+
+        # Add generation warnings if any
+        if warnings:
+            status["generation_warnings"] = warnings
 
         status_path = self.wiki_path / "generation_status.json"
         try:

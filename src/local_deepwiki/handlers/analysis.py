@@ -327,16 +327,20 @@ async def handle_get_file_context(args: dict[str, Any]) -> list[TextContent]:
         vector_store=vector_store,
     )
 
+    result_context: dict = {
+        "file_path": context.file_path,
+        "imports": context.imports,
+        "imported_modules": context.imported_modules,
+        "callers": context.callers,
+        "related_files": context.related_files,
+        "type_definitions": context.type_definitions,
+    }
+    if context.warnings:
+        result_context["warnings"] = context.warnings
+
     result = {
         "status": "success",
-        "context": {
-            "file_path": context.file_path,
-            "imports": context.imports,
-            "imported_modules": context.imported_modules,
-            "callers": context.callers,
-            "related_files": context.related_files,
-            "type_definitions": context.type_definitions,
-        },
+        "context": result_context,
     }
 
     logger.info(

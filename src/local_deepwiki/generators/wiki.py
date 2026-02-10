@@ -72,6 +72,7 @@ class _GenerationContext:
         "pages_skipped",
         "all_source_files",
         "full_rebuild",
+        "warnings",
     )
 
     def __init__(
@@ -87,6 +88,7 @@ class _GenerationContext:
         self.pages_skipped = pages_skipped
         self.all_source_files = all_source_files
         self.full_rebuild = full_rebuild
+        self.warnings: list[str] = []
 
 
 class WikiGenerator:
@@ -221,11 +223,20 @@ class WikiGenerator:
             f"{ctx.pages_skipped} pages unchanged, {len(ctx.pages)} total pages"
         )
 
+        # Log any generation warnings
+        if ctx.warnings:
+            logger.warning(
+                f"Wiki generation completed with {len(ctx.warnings)} warning(s)"
+            )
+            for warning in ctx.warnings:
+                logger.warning(f"  - {warning}")
+                self._progress._log(f"WARNING: {warning}")
+
         # Log LLM cache statistics if available
         self._log_cache_stats()
 
         # Finalize progress tracker and log summary
-        summary = self._progress.finalize(success=True)
+        summary = self._progress.finalize(success=True, warnings=ctx.warnings)
         logger.info(summary)
 
         # Emit WIKI_COMPLETE event
@@ -585,6 +596,7 @@ class WikiGenerator:
             )
         except Exception as e:
             logger.warning(f"Failed to generate dependency graph: {e}")
+            ctx.warnings.append(f"Dependency graph generation failed: {e}")
 
     def _sort_generators_by_dependencies(
         self,

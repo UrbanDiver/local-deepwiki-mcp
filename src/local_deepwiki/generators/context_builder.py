@@ -14,7 +14,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from local_deepwiki.core.vectorstore import VectorStore
-from local_deepwiki.generators.callgraph import CallGraphExtractor, build_reverse_call_graph
+from local_deepwiki.generators.callgraph import (
+    CallGraphExtractor,
+    build_reverse_call_graph,
+)
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import ChunkType, CodeChunk
 
@@ -28,9 +31,12 @@ class FileContext:
     file_path: str
     imports: list[str] = field(default_factory=list)
     imported_modules: list[str] = field(default_factory=list)
-    callers: dict[str, list[str]] = field(default_factory=dict)  # entity -> [caller files]
+    callers: dict[str, list[str]] = field(
+        default_factory=dict
+    )  # entity -> [caller files]
     related_files: list[str] = field(default_factory=list)
     type_definitions: list[str] = field(default_factory=list)  # Type hints used
+    warnings: list[str] = field(default_factory=list)  # Partial failure notes
 
 
 def extract_imports_from_chunks(chunks: list[CodeChunk]) -> tuple[list[str], list[str]]:
@@ -93,6 +99,7 @@ async def get_callers_from_other_files(
     repo_path: Path,
     vector_store: VectorStore,
     max_files: int = 10,
+    warnings: list[str] | None = None,
 ) -> dict[str, list[str]]:
     """Find which other files call entities defined in this file.
 
@@ -102,6 +109,7 @@ async def get_callers_from_other_files(
         repo_path: Repository root path.
         vector_store: Vector store for searching code.
         max_files: Maximum number of caller files to return per entity.
+        warnings: Optional list to collect warning messages for partial failures.
 
     Returns:
         Mapping of entity name to list of calling file paths.
@@ -138,6 +146,8 @@ async def get_callers_from_other_files(
 
         except Exception as e:
             logger.debug(f"Error searching for callers of {entity_name}: {e}")
+            if warnings is not None:
+                warnings.append(f"Caller search failed for '{entity_name}': {e}")
 
     return callers
 
@@ -147,6 +157,7 @@ async def find_related_files(
     imported_modules: list[str],
     vector_store: VectorStore,
     max_files: int = 5,
+    warnings: list[str] | None = None,
 ) -> list[str]:
     """Find files that are closely related to this one.
 
@@ -159,6 +170,7 @@ async def find_related_files(
         imported_modules: Modules imported by this file.
         vector_store: Vector store for searching.
         max_files: Maximum number of related files to return.
+        warnings: Optional list to collect warning messages for partial failures.
 
     Returns:
         List of related file paths.
@@ -177,6 +189,10 @@ async def find_related_files(
                     related.add(result.chunk.file_path)
         except Exception as e:
             logger.debug(f"Error searching for related module '{module}': {e}")
+            if warnings is not None:
+                warnings.append(
+                    f"Related file search failed for module '{module}': {e}"
+                )
 
     return sorted(related)[:max_files]
 
@@ -185,6 +201,7 @@ async def get_type_definitions_used(
     chunks: list[CodeChunk],
     vector_store: VectorStore,
     max_types: int = 10,
+    warnings: list[str] | None = None,
 ) -> list[str]:
     """Extract type definitions used in the file that are defined elsewhere.
 
@@ -192,6 +209,7 @@ async def get_type_definitions_used(
         chunks: Code chunks for the file.
         vector_store: Vector store for searching.
         max_types: Maximum number of type definitions to return.
+        warnings: Optional list to collect warning messages for partial failures.
 
     Returns:
         List of type definition snippets.
@@ -231,6 +249,8 @@ async def get_type_definitions_used(
                         break
         except Exception as e:
             logger.debug(f"Error searching for type definition '{type_name}': {e}")
+            if warnings is not None:
+                warnings.append(f"Type definition search failed for '{type_name}': {e}")
 
     return type_defs
 
@@ -257,9 +277,13 @@ async def build_file_context(
 
     # Get entity names for caller lookup
     entity_names = [
-        chunk.name for chunk in chunks
+        chunk.name
+        for chunk in chunks
         if chunk.name and chunk.chunk_type in (ChunkType.CLASS, ChunkType.FUNCTION)
     ]
+
+    # Collect warnings from all context-building steps
+    context_warnings: list[str] = []
 
     # Get callers from other files
     callers = await get_callers_from_other_files(
@@ -267,6 +291,7 @@ async def build_file_context(
         entity_names=entity_names,
         repo_path=repo_path,
         vector_store=vector_store,
+        warnings=context_warnings,
     )
 
     # Find related files
@@ -274,10 +299,13 @@ async def build_file_context(
         file_path=file_path,
         imported_modules=imported_modules,
         vector_store=vector_store,
+        warnings=context_warnings,
     )
 
     # Get type definitions used
-    type_definitions = await get_type_definitions_used(chunks, vector_store)
+    type_definitions = await get_type_definitions_used(
+        chunks, vector_store, warnings=context_warnings
+    )
 
     return FileContext(
         file_path=file_path,
@@ -286,6 +314,7 @@ async def build_file_context(
         callers=callers,
         related_files=related_files,
         type_definitions=type_definitions,
+        warnings=context_warnings,
     )
 
 
@@ -336,6 +365,14 @@ def format_context_for_llm(context: FileContext, max_imports: int = 15) -> str:
         parts.append("Key types referenced in this file:")
         for type_def in context.type_definitions[:8]:
             parts.append(f"  - {type_def}")
+        parts.append("")
+
+    # Generation notes section (partial failure warnings)
+    if context.warnings:
+        parts.append("## Generation Notes")
+        parts.append("Some context could not be fully resolved:")
+        for warning in context.warnings:
+            parts.append(f"  - {warning}")
         parts.append("")
 
     return "\n".join(parts) if parts else ""
