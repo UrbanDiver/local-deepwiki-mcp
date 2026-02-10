@@ -1,41 +1,51 @@
 """Language detection configuration and tree-sitter module mappings."""
 
-import tree_sitter_c
-import tree_sitter_c_sharp
-import tree_sitter_cpp
-import tree_sitter_go
-import tree_sitter_java
-import tree_sitter_javascript
-import tree_sitter_kotlin
-import tree_sitter_php
-import tree_sitter_python
-import tree_sitter_ruby
-import tree_sitter_rust
-import tree_sitter_swift
-import tree_sitter_typescript
+import importlib
+import logging
+from types import ModuleType
 
 from local_deepwiki.models import Language as LangEnum
 
-# Language modules mapping
-LANGUAGE_MODULES = {
-    LangEnum.PYTHON: tree_sitter_python,
-    LangEnum.JAVASCRIPT: tree_sitter_javascript,
-    LangEnum.TYPESCRIPT: tree_sitter_typescript,
-    LangEnum.TSX: tree_sitter_typescript,
-    LangEnum.GO: tree_sitter_go,
-    LangEnum.RUST: tree_sitter_rust,
-    LangEnum.JAVA: tree_sitter_java,
-    LangEnum.C: tree_sitter_c,
-    LangEnum.CPP: tree_sitter_cpp,
-    LangEnum.SWIFT: tree_sitter_swift,
-    LangEnum.RUBY: tree_sitter_ruby,
-    LangEnum.PHP: tree_sitter_php,
-    LangEnum.KOTLIN: tree_sitter_kotlin,
-    LangEnum.CSHARP: tree_sitter_c_sharp,
-}
+_logger = logging.getLogger(__name__)
 
-# File extension to language mapping
-EXTENSION_MAP: dict[str, LangEnum] = {
+# Grammar package name -> list of language enums it supports
+_GRAMMAR_CONFIG: list[tuple[str, list[LangEnum]]] = [
+    ("tree_sitter_python", [LangEnum.PYTHON]),
+    ("tree_sitter_javascript", [LangEnum.JAVASCRIPT]),
+    ("tree_sitter_typescript", [LangEnum.TYPESCRIPT, LangEnum.TSX]),
+    ("tree_sitter_go", [LangEnum.GO]),
+    ("tree_sitter_rust", [LangEnum.RUST]),
+    ("tree_sitter_java", [LangEnum.JAVA]),
+    ("tree_sitter_c", [LangEnum.C]),
+    ("tree_sitter_cpp", [LangEnum.CPP]),
+    ("tree_sitter_swift", [LangEnum.SWIFT]),
+    ("tree_sitter_ruby", [LangEnum.RUBY]),
+    ("tree_sitter_php", [LangEnum.PHP]),
+    ("tree_sitter_kotlin", [LangEnum.KOTLIN]),
+    ("tree_sitter_c_sharp", [LangEnum.CSHARP]),
+]
+
+# Build LANGUAGE_MODULES dynamically, skipping grammars that aren't installed
+LANGUAGE_MODULES: dict[LangEnum, ModuleType] = {}
+
+for _pkg_name, _langs in _GRAMMAR_CONFIG:
+    try:
+        _mod = importlib.import_module(_pkg_name)
+        for _lang in _langs:
+            LANGUAGE_MODULES[_lang] = _mod
+    except ImportError:
+        _names = ", ".join(lang.value for lang in _langs)
+        _logger.warning(
+            "Tree-sitter grammar '%s' not installed — "
+            "%s files will be skipped. "
+            "Install with: uv pip install %s",
+            _pkg_name,
+            _names,
+            _pkg_name.replace("_", "-"),
+        )
+
+# Full extension map (static reference, filtered below)
+_ALL_EXTENSIONS: dict[str, LangEnum] = {
     ".py": LangEnum.PYTHON,
     ".pyi": LangEnum.PYTHON,
     ".js": LangEnum.JAVASCRIPT,
@@ -62,4 +72,9 @@ EXTENSION_MAP: dict[str, LangEnum] = {
     ".kt": LangEnum.KOTLIN,
     ".kts": LangEnum.KOTLIN,
     ".cs": LangEnum.CSHARP,
+}
+
+# Only map extensions for languages with available grammars
+EXTENSION_MAP: dict[str, LangEnum] = {
+    ext: lang for ext, lang in _ALL_EXTENSIONS.items() if lang in LANGUAGE_MODULES
 }

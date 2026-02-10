@@ -23,7 +23,7 @@ class TestLocalEmbeddingProvider:
         provider = LocalEmbeddingProvider()
         assert provider.name == "local:all-MiniLM-L6-v2"
 
-    @patch("local_deepwiki.providers.embeddings.local.SentenceTransformer")
+    @patch("sentence_transformers.SentenceTransformer")
     def test_load_model(self, mock_transformer_class):
         """Test lazy model loading."""
         from local_deepwiki.providers.embeddings.local import LocalEmbeddingProvider
@@ -45,7 +45,7 @@ class TestLocalEmbeddingProvider:
         mock_model.get_sentence_embedding_dimension.assert_called_once()
         assert provider._dimension == 384
 
-    @patch("local_deepwiki.providers.embeddings.local.SentenceTransformer")
+    @patch("sentence_transformers.SentenceTransformer")
     def test_load_model_cached(self, mock_transformer_class):
         """Test that model is only loaded once."""
         from local_deepwiki.providers.embeddings.local import LocalEmbeddingProvider
@@ -63,7 +63,7 @@ class TestLocalEmbeddingProvider:
         # Should only be called once
         mock_transformer_class.assert_called_once()
 
-    @patch("local_deepwiki.providers.embeddings.local.SentenceTransformer")
+    @patch("sentence_transformers.SentenceTransformer")
     async def test_embed(self, mock_transformer_class):
         """Test embedding generation."""
         import numpy as np
@@ -79,10 +79,12 @@ class TestLocalEmbeddingProvider:
 
         result = await provider.embed(["text1", "text2"])
 
-        mock_model.encode.assert_called_once_with(["text1", "text2"], convert_to_numpy=True)
+        mock_model.encode.assert_called_once_with(
+            ["text1", "text2"], convert_to_numpy=True
+        )
         assert result == [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]
 
-    @patch("local_deepwiki.providers.embeddings.local.SentenceTransformer")
+    @patch("sentence_transformers.SentenceTransformer")
     def test_get_dimension(self, mock_transformer_class):
         """Test getting embedding dimension."""
         from local_deepwiki.providers.embeddings.local import LocalEmbeddingProvider
@@ -99,7 +101,7 @@ class TestLocalEmbeddingProvider:
         assert dimension == 768
         mock_transformer_class.assert_called_once()
 
-    @patch("local_deepwiki.providers.embeddings.local.SentenceTransformer")
+    @patch("sentence_transformers.SentenceTransformer")
     def test_get_dimension_cached(self, mock_transformer_class):
         """Test that dimension is cached after first load."""
         from local_deepwiki.providers.embeddings.local import LocalEmbeddingProvider
@@ -119,7 +121,7 @@ class TestLocalEmbeddingProvider:
         # Model only loaded once
         mock_transformer_class.assert_called_once()
 
-    @patch("local_deepwiki.providers.embeddings.local.SentenceTransformer")
+    @patch("sentence_transformers.SentenceTransformer")
     def test_load_model_failure(self, mock_transformer_class):
         """Test model loading failure raises ProviderConfigurationError."""
         from local_deepwiki.providers.base import ProviderConfigurationError
@@ -135,7 +137,7 @@ class TestLocalEmbeddingProvider:
         assert "Failed to load sentence-transformers model" in str(exc_info.value)
         assert "invalid-model" in str(exc_info.value)
 
-    @patch("local_deepwiki.providers.embeddings.local.SentenceTransformer")
+    @patch("sentence_transformers.SentenceTransformer")
     async def test_validate_connectivity_success(self, mock_transformer_class):
         """Test successful connectivity validation."""
         import numpy as np
@@ -155,7 +157,7 @@ class TestLocalEmbeddingProvider:
         # Model should be loaded and test embedding created
         mock_model.encode.assert_called_once()
 
-    @patch("local_deepwiki.providers.embeddings.local.SentenceTransformer")
+    @patch("sentence_transformers.SentenceTransformer")
     async def test_validate_connectivity_config_error(self, mock_transformer_class):
         """Test connectivity validation with model loading failure."""
         from local_deepwiki.providers.base import ProviderConfigurationError
@@ -168,7 +170,7 @@ class TestLocalEmbeddingProvider:
         with pytest.raises(ProviderConfigurationError):
             await provider.validate_connectivity()
 
-    @patch("local_deepwiki.providers.embeddings.local.SentenceTransformer")
+    @patch("sentence_transformers.SentenceTransformer")
     async def test_validate_connectivity_other_error(self, mock_transformer_class):
         """Test connectivity validation with unexpected error raises ProviderConnectionError."""
         from local_deepwiki.providers.base import ProviderConnectionError
@@ -187,7 +189,7 @@ class TestLocalEmbeddingProvider:
 
         assert "Failed to validate local embedding provider" in str(exc_info.value)
 
-    @patch("local_deepwiki.providers.embeddings.local.SentenceTransformer")
+    @patch("sentence_transformers.SentenceTransformer")
     def test_get_max_batch_size(self, mock_transformer_class):
         """Test get_max_batch_size returns 1000."""
         from local_deepwiki.providers.embeddings.local import LocalEmbeddingProvider
@@ -217,7 +219,7 @@ class TestLocalEmbeddingProvider:
 
         assert provider.get_max_tokens() == 512
 
-    @patch("local_deepwiki.providers.embeddings.local.SentenceTransformer")
+    @patch("sentence_transformers.SentenceTransformer")
     def test_get_capabilities(self, mock_transformer_class):
         """Test get_capabilities returns correct EmbeddingProviderCapabilities."""
         from local_deepwiki.providers.base import EmbeddingProviderCapabilities
@@ -241,7 +243,7 @@ class TestLocalEmbeddingProvider:
         assert capabilities.models == list(LOCAL_EMBEDDING_MODELS.keys())
         assert capabilities.supports_truncation is True
 
-    @patch("local_deepwiki.providers.embeddings.local.SentenceTransformer")
+    @patch("sentence_transformers.SentenceTransformer")
     async def test_embed_empty_list(self, mock_transformer_class):
         """Test embedding an empty list."""
         import numpy as np
@@ -260,7 +262,7 @@ class TestLocalEmbeddingProvider:
         assert result == []
         mock_model.encode.assert_called_once_with([], convert_to_numpy=True)
 
-    @patch("local_deepwiki.providers.embeddings.local.SentenceTransformer")
+    @patch("sentence_transformers.SentenceTransformer")
     async def test_embed_single_text(self, mock_transformer_class):
         """Test embedding a single text."""
         import numpy as np

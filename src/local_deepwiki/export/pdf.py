@@ -15,7 +15,12 @@ from pathlib import Path
 from typing import Any, cast
 
 import markdown
-from weasyprint import CSS, HTML
+
+try:
+    from weasyprint import CSS, HTML
+except ImportError:
+    CSS = None  # type: ignore[assignment,misc]
+    HTML = None  # type: ignore[assignment,misc]
 
 from local_deepwiki.cli_progress import create_progress
 from local_deepwiki.export.streaming import (
@@ -30,6 +35,17 @@ from local_deepwiki.export.shared import extract_title as _shared_extract_title
 from local_deepwiki.logging import get_logger
 
 logger = get_logger(__name__)
+
+
+def _require_weasyprint() -> None:
+    """Raise a helpful error if WeasyPrint is not installed."""
+    if HTML is None:
+        raise ImportError(
+            "WeasyPrint is required for PDF export but is not installed.\n"
+            "Install with: uv pip install weasyprint\n"
+            "See: https://doc.courtbouillon.org/weasyprint/stable/first_steps.html"
+        )
+
 
 # Default timeout for mermaid CLI rendering (seconds)
 MERMAID_RENDER_TIMEOUT = 30
@@ -764,6 +780,7 @@ class StreamingPdfExporter(StreamingExporter):
             content=combined_content,
         )
 
+        _require_weasyprint()
         html_doc = HTML(string=full_html)
         css = CSS(string=PRINT_CSS)
         html_doc.write_pdf(output_path, stylesheets=[css])
@@ -803,6 +820,7 @@ class StreamingPdfExporter(StreamingExporter):
             content=html_content,
         )
 
+        _require_weasyprint()
         html_doc = HTML(string=full_html)
         css = CSS(string=PRINT_CSS)
         html_doc.write_pdf(output_file, stylesheets=[css])
@@ -846,6 +864,7 @@ class StreamingPdfExporter(StreamingExporter):
             title="Documentation",
             content="<p>No pages to export.</p>",
         )
+        _require_weasyprint()
         html_doc = HTML(string=empty_html)
         css = CSS(string=PRINT_CSS)
         html_doc.write_pdf(output_path, stylesheets=[css])
@@ -909,6 +928,7 @@ class PdfExporter:
         with create_progress(disable=self._no_progress) as progress:
             task = progress.add_task("Generating PDF", total=1)
             progress.update(task, description="Writing PDF file")
+            _require_weasyprint()
             html_doc = HTML(string=combined_html)
             css = CSS(string=PRINT_CSS)
             html_doc.write_pdf(output_file, stylesheets=[css])
@@ -1060,6 +1080,7 @@ class PdfExporter:
             content=html_content,
         )
 
+        _require_weasyprint()
         html_doc = HTML(string=full_html)
         css = CSS(string=PRINT_CSS)
         html_doc.write_pdf(output_file, stylesheets=[css])

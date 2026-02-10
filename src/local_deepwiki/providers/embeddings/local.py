@@ -1,9 +1,9 @@
 """Local embedding provider using sentence-transformers."""
 
-import asyncio
-from typing import cast
+from __future__ import annotations
 
-from sentence_transformers import SentenceTransformer
+import asyncio
+from typing import TYPE_CHECKING, cast
 
 from local_deepwiki.providers.base import (
     EmbeddingProvider,
@@ -11,6 +11,9 @@ from local_deepwiki.providers.base import (
     ProviderConfigurationError,
     ProviderConnectionError,
 )
+
+if TYPE_CHECKING:
+    from sentence_transformers import SentenceTransformer
 
 
 # Known model dimensions and max tokens
@@ -48,6 +51,15 @@ class LocalEmbeddingProvider(EmbeddingProvider):
             ProviderConfigurationError: If the model cannot be loaded.
         """
         if self._model is None:
+            try:
+                from sentence_transformers import SentenceTransformer
+            except ImportError:
+                raise ProviderConfigurationError(
+                    "sentence-transformers is required for local embeddings "
+                    "but is not installed.\n"
+                    "Install with: uv pip install sentence-transformers",
+                    provider_name=self.name,
+                ) from None
             try:
                 self._model = SentenceTransformer(self._model_name)
                 self._dimension = self._model.get_sentence_embedding_dimension()

@@ -11,39 +11,48 @@ Route modules:
 
 import hashlib
 import json
+import sys
 from pathlib import Path
 
 import markdown
-from flask import (
-    Flask,
-    Response,
-    abort,
-    jsonify,
-    redirect,
-    render_template,
-    request,
-    url_for,
-)
 
 from local_deepwiki.logging import get_logger
 
-# Re-export symbols that tests and other code import from this module.
-# The canonical definitions now live in routes_chat but we keep these
-# importable from app.py for backward compatibility.
-from local_deepwiki.web.routes_chat import (  # noqa: F401 - backward compat re-exports
-    build_prompt_with_history,
-    format_sources,
-    stream_async_generator,
-)
-
 logger = get_logger(__name__)
+
+try:
+    from flask import (
+        Flask,
+        Response,
+        abort,
+        jsonify,
+        redirect,
+        render_template,
+        request,
+        url_for,
+    )
+
+    # Re-export symbols that tests and other code import from this module.
+    # The canonical definitions now live in routes_chat but we keep these
+    # importable from app.py for backward compatibility.
+    from local_deepwiki.web.routes_chat import (  # noqa: F401 - backward compat re-exports
+        build_prompt_with_history,
+        format_sources,
+        stream_async_generator,
+    )
+
+    _HAS_FLASK = True
+except ImportError:
+    _HAS_FLASK = False
 
 # Get the directory containing this module for template path resolution
 _MODULE_DIR = Path(__file__).parent
 
-# Create Flask app with explicit template folder
-# Flask caches compiled templates when debug=False (the default)
-app = Flask(__name__, template_folder=str(_MODULE_DIR / "templates"))
+# Create Flask app with explicit template folder (only if Flask is available)
+if _HAS_FLASK:
+    app = Flask(__name__, template_folder=str(_MODULE_DIR / "templates"))
+else:
+    app = None  # type: ignore[assignment]
 
 # Default wiki path - can be overridden via create_app()
 WIKI_PATH: Path | None = None
@@ -338,6 +347,14 @@ def run_server(
 
 def main():
     """CLI entry point."""
+    if not _HAS_FLASK:
+        print(
+            "Error: Flask is required for the web UI but is not installed.\n"
+            "Install with: uv pip install flask",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
     import argparse
 
     parser = argparse.ArgumentParser(description="Serve DeepWiki documentation")
