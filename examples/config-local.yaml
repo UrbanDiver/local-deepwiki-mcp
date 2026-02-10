@@ -1,0 +1,40 @@
+# Local-only configuration (fully offline, no API keys needed)
+#
+# Uses Ollama for LLM and sentence-transformers for embeddings.
+# Requires: Ollama running locally (https://ollama.com)
+#
+# Copy to ~/.config/local-deepwiki/config.yaml or use:
+#   deepwiki config profile save local
+---
+
+llm:
+  provider: ollama
+  ollama:
+    model: qwen3-coder:30b    # or llama3.1:8b for less VRAM
+    base_url: http://localhost:11434
+
+embedding:
+  provider: local              # sentence-transformers, runs on CPU/GPU
+  local:
+    model: all-MiniLM-L6-v2   # fast, 384-dim, ~80MB
+
+# Embedding cache (avoids re-embedding unchanged files)
+embedding_cache:
+  enabled: true
+  ttl_seconds: 604800          # 7 days
+
+# LLM response cache (avoids re-generating docs for unchanged code)
+llm_cache:
+  enabled: true
+  ttl_seconds: 604800
+
+# Wiki generation
+wiki:
+  max_file_docs: 500           # max files to document
+  max_concurrent_llm_calls: 2  # keep low for local LLM
+  codemap_enabled: true
+  codemap_max_topics: 5
+
+# Deep research (local models work best with "quick" preset)
+deep_research:
+  preset: quick

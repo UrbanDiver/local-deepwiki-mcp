@@ -287,13 +287,27 @@ def main() -> int:
     """Main entry point for the cache CLI."""
     parser = argparse.ArgumentParser(
         prog="deepwiki cache",
-        description="Manage local-deepwiki caches",
+        description="Manage local-deepwiki caches (embedding cache + LLM response cache)",
+        epilog=(
+            "examples:\n"
+            "  deepwiki cache stats               Show hit/miss rates and entry counts\n"
+            "  deepwiki cache stats --repo /proj   Stats for a specific repo's LLM cache\n"
+            "  deepwiki cache clear                Clear all caches\n"
+            "  deepwiki cache clear --llm          Clear only the LLM response cache\n"
+            "  deepwiki cache clear --embedding    Clear only the embedding cache\n"
+            "  deepwiki cache cleanup              Remove expired entries (keep valid ones)\n"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
     subparsers = parser.add_subparsers(dest="command", help="Cache commands")
 
     # stats
-    stats_parser = subparsers.add_parser("stats", help="Show cache statistics")
+    stats_parser = subparsers.add_parser(
+        "stats",
+        help="Show cache statistics",
+        description="Display hit/miss rates, entry counts, and sizes for both caches.",
+    )
     stats_parser.add_argument(
         "--repo",
         type=str,
@@ -303,7 +317,11 @@ def main() -> int:
     stats_parser.set_defaults(func=cmd_stats)
 
     # clear
-    clear_parser = subparsers.add_parser("clear", help="Clear cache entries")
+    clear_parser = subparsers.add_parser(
+        "clear",
+        help="Clear cache entries",
+        description="Delete all entries from one or both caches. Use --llm or --embedding to target a specific cache.",
+    )
     clear_parser.add_argument("--llm", action="store_true", help="Clear only LLM cache")
     clear_parser.add_argument(
         "--embedding", action="store_true", help="Clear only embedding cache"
@@ -318,7 +336,9 @@ def main() -> int:
 
     # cleanup
     cleanup_parser = subparsers.add_parser(
-        "cleanup", help="Remove expired entries only"
+        "cleanup",
+        help="Remove expired entries only",
+        description="Delete entries past their TTL while keeping valid cached data intact.",
     )
     cleanup_parser.add_argument(
         "--repo",

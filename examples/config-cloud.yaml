@@ -1,0 +1,45 @@
+# Cloud configuration (uses Anthropic + OpenAI APIs)
+#
+# Requires environment variables:
+#   ANTHROPIC_API_KEY=sk-ant-...
+#   OPENAI_API_KEY=sk-...
+#
+# Copy to ~/.config/local-deepwiki/config.yaml or use:
+#   deepwiki config profile save cloud
+---
+
+llm:
+  provider: anthropic
+  anthropic:
+    model: claude-sonnet-4-20250514
+
+embedding:
+  provider: openai
+  openai:
+    model: text-embedding-3-small
+
+# Tune batch settings for API rate limits
+embedding_batch:
+  batch_size: 50               # smaller batches for API
+  concurrency: 4
+  rate_limit_rpm: 3000         # OpenAI tier-1 limit
+
+# Caches reduce API costs significantly
+embedding_cache:
+  enabled: true
+  ttl_seconds: 604800          # 7 days
+
+llm_cache:
+  enabled: true
+  ttl_seconds: 604800
+
+# Wiki generation (higher concurrency OK with cloud APIs)
+wiki:
+  max_file_docs: 1000
+  max_concurrent_llm_calls: 8
+  codemap_enabled: true
+  codemap_max_topics: 10
+
+# Deep research (cloud models handle "thorough" well)
+deep_research:
+  preset: thorough

@@ -934,6 +934,18 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         prog="deepwiki-config",
         description="Validate and display local-deepwiki configuration",
+        epilog=(
+            "examples:\n"
+            "  deepwiki config                    Validate current config\n"
+            "  deepwiki config show               Show effective configuration tree\n"
+            "  deepwiki config show --raw         Show config with raw JSON\n"
+            "  deepwiki config validate -c my.yaml  Validate a specific config file\n"
+            "  deepwiki config health-check       Check providers and system readiness\n"
+            "  deepwiki config profile list       List saved config profiles\n"
+            "  deepwiki config profile save dev   Save current config as 'dev' profile\n"
+            "  deepwiki config profile use prod   Switch to 'prod' profile\n"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
         "-c",
@@ -945,11 +957,19 @@ def main() -> int:
     subparsers = parser.add_subparsers(dest="command", help="Commands")
 
     # validate command
-    validate_parser = subparsers.add_parser("validate", help="Validate configuration")
+    validate_parser = subparsers.add_parser(
+        "validate",
+        help="Validate configuration",
+        description="Check config file for syntax errors, invalid values, and missing providers.",
+    )
     validate_parser.set_defaults(func=cmd_validate)
 
     # show command
-    show_parser = subparsers.add_parser("show", help="Show effective configuration")
+    show_parser = subparsers.add_parser(
+        "show",
+        help="Show effective configuration",
+        description="Display the merged configuration tree (defaults + config file + env vars).",
+    )
     show_parser.add_argument(
         "--raw",
         action="store_true",
@@ -959,7 +979,9 @@ def main() -> int:
 
     # health-check command
     health_parser = subparsers.add_parser(
-        "health-check", help="Verify system is properly configured and ready to use"
+        "health-check",
+        help="Verify system is properly configured and ready to use",
+        description="Test connectivity to LLM and embedding providers, check dependencies.",
     )
     health_parser.set_defaults(func=cmd_health_check)
 

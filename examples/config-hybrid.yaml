@@ -1,0 +1,47 @@
+# Hybrid configuration (local embeddings + cloud LLM)
+#
+# Uses local sentence-transformers for embeddings (free, fast) and
+# Anthropic for LLM calls (higher quality docs). Good balance of
+# cost and quality.
+#
+# Requires: ANTHROPIC_API_KEY=sk-ant-...
+#
+# Copy to ~/.config/local-deepwiki/config.yaml or use:
+#   deepwiki config profile save hybrid
+---
+
+llm:
+  provider: anthropic
+  anthropic:
+    model: claude-sonnet-4-20250514
+
+embedding:
+  provider: local              # free, no API key needed
+  local:
+    model: all-MiniLM-L6-v2
+
+# Local embeddings can handle larger batches
+embedding_batch:
+  batch_size: 100
+  concurrency: 4
+
+embedding_cache:
+  enabled: true
+  ttl_seconds: 604800
+
+llm_cache:
+  enabled: true
+  ttl_seconds: 604800
+
+# Wiki generation
+wiki:
+  max_file_docs: 1000
+  max_concurrent_llm_calls: 6
+  codemap_enabled: true
+  codemap_max_topics: 10
+
+  # Use Ollama for chat (saves API costs for interactive use)
+  chat_llm_provider: ollama
+
+deep_research:
+  preset: default

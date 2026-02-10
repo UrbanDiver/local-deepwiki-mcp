@@ -47,7 +47,21 @@ def show_help() -> None:
         table.add_row(name, description)
 
     console.print(table)
-    console.print("\nUsage: [bold]deepwiki <command> [args...][/bold]\n")
+    console.print("\nUsage: [bold]deepwiki <command> [args...][/bold]")
+    console.print("\n[bold]Examples:[/bold]")
+    console.print(
+        "  deepwiki mcp                     Start MCP server (for IDE integration)"
+    )
+    console.print(
+        "  deepwiki serve .deepwiki          Browse wiki at http://localhost:8080"
+    )
+    console.print("  deepwiki config show              Show current configuration")
+    console.print("  deepwiki config health-check      Verify providers are working")
+    console.print("  deepwiki cache stats              Show cache hit rates and sizes")
+    console.print("  deepwiki export .deepwiki -o html  Export wiki to static HTML")
+    console.print("  deepwiki search                   Interactive fuzzy code search")
+    console.print("  deepwiki watch /path/to/repo      Auto-reindex on file changes")
+    console.print()
 
 
 def main() -> int:
