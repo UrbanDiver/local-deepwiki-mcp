@@ -1,8 +1,7 @@
 """Tests for export progress reporting."""
 
-import tempfile
 from pathlib import Path
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock
 
 import pytest
 
@@ -146,14 +145,43 @@ class TestHtmlExportProgress:
         assert str(output_path) in result
 
 
+def _make_write_pdf_side_effect():
+    """Create a side_effect for write_pdf that creates a minimal valid PDF."""
+
+    def _write_pdf(path, **kwargs):
+        Path(path).write_bytes(
+            b"%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n"
+            b"2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n"
+            b"3 0 obj<</Type/Page/MediaBox[0 0 612 792]/Parent 2 0 R>>endobj\n"
+            b"xref\n0 4\ntrailer<</Size 4/Root 1 0 R>>\nstartxref\n0\n%%EOF"
+        )
+
+    return _write_pdf
+
+
+@pytest.fixture
+def _patch_pdf_html(monkeypatch):
+    """Patch HTML and CSS so write_pdf creates a real file on disk."""
+    from unittest.mock import MagicMock
+
+    mock_html_cls = MagicMock()
+    mock_html_instance = MagicMock()
+    mock_html_instance.write_pdf.side_effect = _make_write_pdf_side_effect()
+    mock_html_cls.return_value = mock_html_instance
+
+    mock_css_cls = MagicMock()
+
+    monkeypatch.setattr("local_deepwiki.export.pdf.HTML", mock_html_cls)
+    monkeypatch.setattr("local_deepwiki.export.pdf.CSS", mock_css_cls)
+    return mock_html_cls, mock_css_cls
+
+
 @pytest.mark.skipif(not PDF_AVAILABLE, reason="WeasyPrint not available")
 class TestPdfExportProgress:
     """Tests for PDF export progress reporting."""
 
-    @patch("local_deepwiki.export.pdf.HTML")
-    @patch("local_deepwiki.export.pdf.CSS")
     async def test_pdf_export_reports_total_at_start(
-        self, mock_css, mock_html, temp_wiki, mock_progress_callback
+        self, _patch_pdf_html, temp_wiki, mock_progress_callback
     ):
         """PDF export should report total page count at start."""
         output_path = temp_wiki.parent / "test.pdf"
@@ -169,10 +197,8 @@ class TestPdfExportProgress:
         assert "Starting PDF export" in message
         assert "5 pages" in message
 
-    @patch("local_deepwiki.export.pdf.HTML")
-    @patch("local_deepwiki.export.pdf.CSS")
     async def test_pdf_export_reports_each_page(
-        self, mock_css, mock_html, temp_wiki, mock_progress_callback
+        self, _patch_pdf_html, temp_wiki, mock_progress_callback
     ):
         """PDF export should report progress for each page."""
         output_path = temp_wiki.parent / "test.pdf"
@@ -187,7 +213,7 @@ class TestPdfExportProgress:
         page_calls = [
             c
             for c in mock_progress_callback.call_args_list
-            if "page" in c[0][2].lower() and "complete" not in c[0][2].lower()
+            if "processing page" in c[0][2].lower()
         ]
         assert len(page_calls) == 5
 
@@ -197,10 +223,8 @@ class TestPdfExportProgress:
             assert total == 5
             assert f"page {i + 1} of 5" in message.lower()
 
-    @patch("local_deepwiki.export.pdf.HTML")
-    @patch("local_deepwiki.export.pdf.CSS")
     async def test_pdf_export_reports_merging(
-        self, mock_css, mock_html, temp_wiki, mock_progress_callback
+        self, _patch_pdf_html, temp_wiki, mock_progress_callback
     ):
         """PDF export should report merging phase."""
         output_path = temp_wiki.parent / "test.pdf"
@@ -219,10 +243,8 @@ class TestPdfExportProgress:
         ]
         assert len(merge_calls) >= 1
 
-    @patch("local_deepwiki.export.pdf.HTML")
-    @patch("local_deepwiki.export.pdf.CSS")
     async def test_pdf_export_reports_completion(
-        self, mock_css, mock_html, temp_wiki, mock_progress_callback
+        self, _patch_pdf_html, temp_wiki, mock_progress_callback
     ):
         """PDF export should report completion."""
         output_path = temp_wiki.parent / "test.pdf"
@@ -237,11 +259,7 @@ class TestPdfExportProgress:
         assert total == 5
         assert "complete" in message.lower()
 
-    @patch("local_deepwiki.export.pdf.HTML")
-    @patch("local_deepwiki.export.pdf.CSS")
-    async def test_pdf_export_works_without_callback(
-        self, mock_css, mock_html, temp_wiki
-    ):
+    async def test_pdf_export_works_without_callback(self, _patch_pdf_html, temp_wiki):
         """PDF export should work when no callback is provided (backward compat)."""
         output_path = temp_wiki.parent / "test.pdf"
         exporter = StreamingPdfExporter(temp_wiki, output_path)
@@ -251,10 +269,8 @@ class TestPdfExportProgress:
 
         assert result.pages_exported == 5
 
-    @patch("local_deepwiki.export.pdf.HTML")
-    @patch("local_deepwiki.export.pdf.CSS")
     async def test_pdf_export_separate_reports_progress(
-        self, mock_css, mock_html, temp_wiki, mock_progress_callback
+        self, _patch_pdf_html, temp_wiki, mock_progress_callback
     ):
         """PDF separate export should report progress for each file."""
         output_path = temp_wiki.parent / "pdfs"
@@ -275,9 +291,7 @@ class TestPdfExportProgress:
         assert last_call[0][0] == 5  # current
         assert "complete" in last_call[0][2].lower()
 
-    @patch("local_deepwiki.export.pdf.HTML")
-    @patch("local_deepwiki.export.pdf.CSS")
-    def test_pdf_export_wrapper_function(self, mock_css, mock_html, temp_wiki):
+    def test_pdf_export_wrapper_function(self, _patch_pdf_html, temp_wiki):
         """Test the export_to_pdf wrapper function."""
         output_path = temp_wiki.parent / "test.pdf"
 
@@ -351,9 +365,7 @@ class TestProgressCallbackSignature:
             assert counts[i] >= counts[i - 1], "Progress should not decrease"
 
     @pytest.mark.skipif(not PDF_AVAILABLE, reason="WeasyPrint not available")
-    @patch("local_deepwiki.export.pdf.HTML")
-    @patch("local_deepwiki.export.pdf.CSS")
-    async def test_pdf_callback_signature(self, mock_css, mock_html, temp_wiki):
+    async def test_pdf_callback_signature(self, _patch_pdf_html, temp_wiki):
         """PDF export callback should have same signature as HTML."""
         output_path = temp_wiki.parent / "test.pdf"
         exporter = StreamingPdfExporter(temp_wiki, output_path)
