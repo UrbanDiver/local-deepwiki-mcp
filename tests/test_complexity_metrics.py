@@ -12,7 +12,9 @@ from local_deepwiki.models import GetComplexityMetricsArgs
 
 @pytest.fixture
 def mock_access_control():
-    with patch("local_deepwiki.handlers.get_access_controller") as mock:
+    with patch(
+        "local_deepwiki.handlers.analysis_metadata.get_access_controller"
+    ) as mock:
         controller = MagicMock()
         mock.return_value = controller
         yield controller
