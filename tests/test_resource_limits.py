@@ -3,8 +3,6 @@
 Tests CWE-400 prevention: resource consumption limits to prevent DoS attacks.
 """
 
-import os
-import tempfile
 from pathlib import Path
 
 import pytest
@@ -254,30 +252,75 @@ class TestValidateIndexParameters:
 
     def test_repo_too_large_raises(self, tmp_path):
         """Test repo exceeding size limit raises ValueError."""
+        from unittest.mock import MagicMock, patch
+
         repo_dir = tmp_path / "test_repo"
         repo_dir.mkdir()
 
-        # We cannot actually create a 1GB+ file in test, so we mock this
-        # by creating a smaller but still detectable scenario.
-        # Instead, we'll test the boundary with a single large file.
-        # Skip this test if not feasible to create large files
-        pytest.skip("Cannot create 1GB test file - would be too slow")
+        # Create 25 small files; mocked stat makes each appear 45 MB
+        # 25 x 45 MB = 1.125 GB > MAX_REPO_SIZE (1 GB)
+        for i in range(25):
+            (repo_dir / f"file{i}.py").write_text("x")
+
+        original_stat = Path.stat
+
+        def fake_stat(self_path):
+            if self_path.parent == repo_dir and self_path.name.endswith(".py"):
+                result = MagicMock()
+                result.st_size = 45_000_000
+                return result
+            return original_stat(self_path)
+
+        with patch.object(Path, "stat", fake_stat):
+            with pytest.raises(ValueError, match="exceeds maximum size"):
+                validate_index_parameters(str(repo_dir))
 
     def test_too_many_files_raises(self, tmp_path):
         """Test repo with too many files raises ValueError."""
-        # Creating 50,000+ files would be too slow for a unit test
-        # This tests that the mechanism exists by checking constant
-        assert ResourceLimits.MAX_FILES_PER_REPO == 50_000
-        pytest.skip("Cannot create 50k files in unit test")
+        from unittest.mock import MagicMock, patch
 
-    def test_file_too_large_raises(self, tmp_path):
-        """Test single file exceeding limit raises ValueError."""
         repo_dir = tmp_path / "test_repo"
         repo_dir.mkdir()
 
-        # Create a file larger than MAX_FILE_SIZE
-        # Note: This would require 50MB+ which is slow, so we skip
-        pytest.skip("Cannot create 50MB test file - would be too slow")
+        fake_filenames = [f"f{i}.py" for i in range(50_001)]
+        fake_walk_result = [(str(repo_dir), [], fake_filenames)]
+
+        original_stat = Path.stat
+
+        def fake_stat(self_path):
+            if str(self_path).startswith(str(repo_dir)):
+                result = MagicMock()
+                result.st_size = 10
+                return result
+            return original_stat(self_path)
+
+        with (
+            patch("os.walk", return_value=iter(fake_walk_result)),
+            patch.object(Path, "stat", fake_stat),
+        ):
+            with pytest.raises(ValueError, match="exceeds maximum file count"):
+                validate_index_parameters(str(repo_dir))
+
+    def test_file_too_large_raises(self, tmp_path):
+        """Test single file exceeding limit raises ValueError."""
+        from unittest.mock import MagicMock, patch
+
+        repo_dir = tmp_path / "test_repo"
+        repo_dir.mkdir()
+        (repo_dir / "huge.bin").write_text("x")
+
+        original_stat = Path.stat
+
+        def fake_stat(self_path):
+            if self_path.name == "huge.bin":
+                result = MagicMock()
+                result.st_size = ResourceLimits.MAX_FILE_SIZE + 1
+                return result
+            return original_stat(self_path)
+
+        with patch.object(Path, "stat", fake_stat):
+            with pytest.raises(ValueError, match="File too large"):
+                validate_index_parameters(str(repo_dir))
 
     def test_returns_correct_tuple_type(self, tmp_path):
         """Test return type is tuple of (int, int)."""
