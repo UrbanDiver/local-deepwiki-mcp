@@ -9,6 +9,8 @@ Route modules:
 - routes_codemap: /codemap, /api/codemap/* (interactive code flow maps)
 """
 
+from __future__ import annotations
+
 import hashlib
 import json
 import sys
@@ -21,16 +23,7 @@ from local_deepwiki.logging import get_logger
 logger = get_logger(__name__)
 
 try:
-    from flask import (
-        Flask,
-        Response,
-        abort,
-        jsonify,
-        redirect,
-        render_template,
-        request,
-        url_for,
-    )
+    from flask import Flask, Response, abort, jsonify, redirect, render_template, request, url_for
 
     # Re-export symbols that tests and other code import from this module.
     # The canonical definitions now live in routes_chat but we keep these

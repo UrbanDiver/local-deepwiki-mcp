@@ -1,5 +1,7 @@
 """AST-based code chunking for semantic extraction."""
 
+from __future__ import annotations
+
 import hashlib
 from pathlib import Path
 from typing import Any, Iterator

@@ -4,14 +4,11 @@ These functions support checkpoint persistence by converting rich domain
 objects into JSON-serializable dictionaries and back.
 """
 
+from __future__ import annotations
+
 from typing import Any
 
-from local_deepwiki.models import (
-    ChunkType,
-    CodeChunk,
-    Language,
-    SearchResult,
-)
+from local_deepwiki.models import ChunkType, CodeChunk, Language, SearchResult
 
 
 def search_result_to_dict(result: SearchResult) -> dict[str, Any]:

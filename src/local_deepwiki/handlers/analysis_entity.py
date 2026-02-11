@@ -1,5 +1,7 @@
 """Entity-related analysis handlers: explain entity and impact analysis."""
 
+from __future__ import annotations
+
 import asyncio
 import json
 from pathlib import Path

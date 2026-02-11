@@ -1,5 +1,7 @@
 """Generator tool handlers: diagrams, call graphs, glossary, inheritance, coverage, etc."""
 
+from __future__ import annotations
+
 import asyncio
 import json
 from pathlib import Path
@@ -116,6 +118,7 @@ async def handle_get_diagrams(args: dict[str, Any]) -> list[TextContent]:
 
     index_status, wiki_path, config = await _load_index_status(repo_path)
 
+    from local_deepwiki.generators.callgraph import CallGraphExtractor
     from local_deepwiki.generators.diagrams import (
         generate_class_diagram,
         generate_dependency_graph,
@@ -123,7 +126,6 @@ async def handle_get_diagrams(args: dict[str, Any]) -> list[TextContent]:
         generate_module_overview,
         generate_sequence_diagram,
     )
-    from local_deepwiki.generators.callgraph import CallGraphExtractor
 
     vector_store = _create_vector_store(repo_path, config)
 
@@ -286,10 +288,7 @@ async def handle_get_call_graph(args: dict[str, Any]) -> list[TextContent]:
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
-    from local_deepwiki.generators.callgraph import (
-        CallGraphExtractor,
-        generate_call_graph_diagram,
-    )
+    from local_deepwiki.generators.callgraph import CallGraphExtractor, generate_call_graph_diagram
 
     extractor = CallGraphExtractor()
 

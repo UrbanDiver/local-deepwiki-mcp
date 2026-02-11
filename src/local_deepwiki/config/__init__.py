@@ -4,6 +4,8 @@ This package provides Pydantic-based configuration models and loading utilities.
 Split into multiple modules for maintainability while preserving backward compatibility.
 """
 
+from __future__ import annotations
+
 # Re-export all public names for backward compatibility
 from local_deepwiki.config.loader import (
     ACTIVE_PROFILE_FILE,

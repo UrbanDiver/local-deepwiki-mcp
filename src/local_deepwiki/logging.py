@@ -1,5 +1,7 @@
 """Logging configuration for local-deepwiki."""
 
+from __future__ import annotations
+
 import logging
 import os
 import sys

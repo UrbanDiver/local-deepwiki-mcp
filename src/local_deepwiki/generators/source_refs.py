@@ -5,6 +5,8 @@ listing the source code files that informed the documentation.
 Links use local wiki paths to keep users on-site.
 """
 
+from __future__ import annotations
+
 import re
 from pathlib import Path
 

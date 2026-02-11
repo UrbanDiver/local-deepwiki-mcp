@@ -54,6 +54,29 @@ html-export/
 .playwright-mcp/
 .deepwiki/
 
+# Development artifacts
+.claude-flow/
+.swarm/
+agents/
+.mcp.json
+coverage_html/
+coverage_openai_embeddings/
+codemap-config-full.png
+docs/plans/
+docs.pdf
+
+# Internal dev/audit docs (kept locally, not published)
+PHASE_*_*.md
+CODE_REVIEW.md
+SECURITY_AUDIT_*.md
+SECURITY_AUDIT_*.txt
+SECURITY_FINDINGS_*.md
+REMEDIATION_GUIDE.md
+TECH_DEBT_REMEDIATION_PLAN.md
+WIKI_IMPROVEMENTS.md
+PUBLICATION_REVIEW.md
+TODO.md
+
 # Coverage
 coverage.json
 coverage.xml

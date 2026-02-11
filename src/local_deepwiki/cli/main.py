@@ -11,11 +11,12 @@ Provides `deepwiki` command that dispatches to all subcommands:
     deepwiki cache        - Cache management
 """
 
+from __future__ import annotations
+
 import sys
 
 from rich.console import Console
 from rich.table import Table
-
 
 # Subcommand table: name -> (module_path, function_name, description)
 SUBCOMMANDS: dict[str, tuple[str, str, str]] = {

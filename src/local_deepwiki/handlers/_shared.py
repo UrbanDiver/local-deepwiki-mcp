@@ -1,5 +1,7 @@
 """Shared helpers, constants, and common imports for handler modules."""
 
+from __future__ import annotations
+
 import asyncio
 import json
 import time
@@ -20,6 +22,11 @@ from mcp.server import Server
 from mcp.types import TextContent
 from pydantic import ValidationError as PydanticValidationError
 
+from local_deepwiki.config import get_config
+from local_deepwiki.core.audit import get_audit_logger
+from local_deepwiki.core.indexer import RepositoryIndexer
+from local_deepwiki.core.rate_limiter import RateLimitExceeded, get_rate_limiter
+from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.errors import (
     DeepWikiError,
     ExportError,
@@ -35,7 +42,8 @@ from local_deepwiki.errors import (
     provider_error,
     sanitize_error_message,
 )
-
+from local_deepwiki.generators.wiki import generate_wiki
+from local_deepwiki.logging import get_logger
 from local_deepwiki.models import (
     AnalyzeDiffArgs,
     AskAboutDiffArgs,
@@ -52,6 +60,7 @@ from local_deepwiki.models import (
     GetApiDocsArgs,
     GetCallGraphArgs,
     GetChangelogArgs,
+    GetComplexityMetricsArgs,
     GetCoverageArgs,
     GetDiagramsArgs,
     GetFileContextArgs,
@@ -60,7 +69,6 @@ from local_deepwiki.models import (
     GetInheritanceArgs,
     GetProjectManifestArgs,
     GetTestExamplesArgs,
-    GetComplexityMetricsArgs,
     GetWikiStatsArgs,
     ImpactAnalysisArgs,
     IndexingProgress,
@@ -76,7 +84,6 @@ from local_deepwiki.models import (
     SearchWikiArgs,
     SuggestCodemapTopicsArgs,
 )
-
 from local_deepwiki.progress import (
     GetOperationProgressArgs,
     OperationType,
@@ -86,14 +93,6 @@ from local_deepwiki.progress import (
     ProgressUpdate,
     get_progress_registry,
 )
-
-from local_deepwiki.config import get_config
-from local_deepwiki.core.audit import get_audit_logger
-from local_deepwiki.core.indexer import RepositoryIndexer
-from local_deepwiki.core.rate_limiter import RateLimitExceeded, get_rate_limiter
-from local_deepwiki.core.vectorstore import VectorStore
-from local_deepwiki.generators.wiki import generate_wiki
-from local_deepwiki.logging import get_logger
 from local_deepwiki.providers.embeddings import get_embedding_provider
 from local_deepwiki.security import (
     AccessDeniedException,

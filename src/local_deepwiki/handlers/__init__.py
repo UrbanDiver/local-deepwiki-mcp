@@ -1,9 +1,11 @@
 """Tool handlers for the MCP server.
 
-This package re-exports all public handler functions and shared utilities
-for backward compatibility. External code can continue to import from
-``local_deepwiki.handlers`` without changes.
+This package exports public handler functions and shared utilities.
+Private implementation details (underscore-prefixed) are not part of
+the public API and should be imported from their defining modules.
 """
+
+from __future__ import annotations
 
 # --- Shared helpers, types, and constants ---
 from local_deepwiki.handlers._shared import (
@@ -11,29 +13,29 @@ from local_deepwiki.handlers._shared import (
     FORBIDDEN_VAR_SUBDIRS,
     ProgressNotifier,
     ToolHandler,
-    _format_research_results,
-    _is_test_file,
-    _load_index_status,
-    _validate_export_path,
     create_progress_notifier,
     handle_tool_errors,
-    # Re-export commonly-patched dependencies so that
-    # ``patch("local_deepwiki.handlers.X")`` continues to work.
-    RepositoryIndexer,
-    VectorStore,
-    generate_wiki,
-    get_access_controller,
-    get_audit_logger,
-    get_config,
-    get_embedding_provider,
-    get_progress_registry,
-    get_rate_limiter,
-    get_repository_access_controller,
 )
+
+# --- Analysis and search tool handlers ---
+from local_deepwiki.handlers.analysis import (
+    handle_analyze_diff,
+    handle_ask_about_diff,
+    handle_explain_entity,
+    handle_fuzzy_search,
+    handle_get_complexity_metrics,
+    handle_get_file_context,
+    handle_get_project_manifest,
+    handle_get_wiki_stats,
+    handle_impact_analysis,
+    handle_search_wiki,
+)
+
+# --- Codemap tool handlers ---
+from local_deepwiki.handlers.codemap import handle_generate_codemap, handle_suggest_codemap_topics
 
 # --- Core tool handlers ---
 from local_deepwiki.handlers.core import (
-    _handle_index_repository_impl,
     handle_ask_question,
     handle_export_wiki_html,
     handle_export_wiki_pdf,
@@ -41,21 +43,6 @@ from local_deepwiki.handlers.core import (
     handle_read_wiki_page,
     handle_read_wiki_structure,
     handle_search_code,
-)
-
-# --- Research tool handlers ---
-from local_deepwiki.handlers.research import (
-    _DeepResearchContext,
-    _create_progress_callbacks,
-    _create_research_pipeline,
-    _execute_research_phases,
-    _handle_deep_research_impl,
-    _setup_deep_research_config,
-    handle_cancel_research,
-    handle_deep_research,
-    handle_get_operation_progress,
-    handle_list_research_checkpoints,
-    handle_resume_research,
 )
 
 # --- Generator tool handlers ---
@@ -74,24 +61,13 @@ from local_deepwiki.handlers.generators import (
     handle_list_indexed_repos,
 )
 
-# --- Analysis and search tool handlers ---
-from local_deepwiki.handlers.analysis import (
-    handle_analyze_diff,
-    handle_ask_about_diff,
-    handle_explain_entity,
-    handle_fuzzy_search,
-    handle_get_complexity_metrics,
-    handle_get_file_context,
-    handle_get_project_manifest,
-    handle_get_wiki_stats,
-    handle_impact_analysis,
-    handle_search_wiki,
-)
-
-# --- Codemap tool handlers ---
-from local_deepwiki.handlers.codemap import (
-    handle_generate_codemap,
-    handle_suggest_codemap_topics,
+# --- Research tool handlers ---
+from local_deepwiki.handlers.research import (
+    handle_cancel_research,
+    handle_deep_research,
+    handle_get_operation_progress,
+    handle_list_research_checkpoints,
+    handle_resume_research,
 )
 
 __all__ = [
@@ -101,25 +77,9 @@ __all__ = [
     "ProgressNotifier",
     "ToolHandler",
     # Shared helpers
-    "_format_research_results",
-    "_is_test_file",
-    "_load_index_status",
-    "_validate_export_path",
     "create_progress_notifier",
     "handle_tool_errors",
-    # Re-exported dependencies (for test patching compatibility)
-    "RepositoryIndexer",
-    "VectorStore",
-    "generate_wiki",
-    "get_access_controller",
-    "get_audit_logger",
-    "get_config",
-    "get_embedding_provider",
-    "get_progress_registry",
-    "get_rate_limiter",
-    "get_repository_access_controller",
     # Core handlers
-    "_handle_index_repository_impl",
     "handle_ask_question",
     "handle_export_wiki_html",
     "handle_export_wiki_pdf",
@@ -128,12 +88,6 @@ __all__ = [
     "handle_read_wiki_structure",
     "handle_search_code",
     # Research handlers
-    "_DeepResearchContext",
-    "_create_progress_callbacks",
-    "_create_research_pipeline",
-    "_execute_research_phases",
-    "_handle_deep_research_impl",
-    "_setup_deep_research_config",
     "handle_cancel_research",
     "handle_deep_research",
     "handle_get_operation_progress",

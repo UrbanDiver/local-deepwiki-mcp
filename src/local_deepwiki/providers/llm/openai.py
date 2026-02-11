@@ -1,5 +1,7 @@
 """OpenAI LLM provider."""
 
+from __future__ import annotations
+
 from typing import AsyncIterator
 
 from openai import APIConnectionError, APIStatusError, AsyncOpenAI, AuthenticationError

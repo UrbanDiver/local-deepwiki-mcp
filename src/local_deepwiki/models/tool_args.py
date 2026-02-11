@@ -1,5 +1,7 @@
 """MCP tool argument models (Pydantic BaseModel for each tool)."""
 
+from __future__ import annotations
+
 from pydantic import BaseModel, Field
 
 from local_deepwiki.models.provider_types import (

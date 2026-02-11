@@ -1,5 +1,7 @@
 """Provider and diagram type enums used by tool argument models."""
 
+from __future__ import annotations
+
 from enum import Enum
 
 

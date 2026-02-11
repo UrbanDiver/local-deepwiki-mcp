@@ -1,5 +1,7 @@
 """OpenAI embedding provider."""
 
+from __future__ import annotations
+
 from openai import APIConnectionError, APIStatusError, AsyncOpenAI, AuthenticationError
 
 from local_deepwiki.providers.base import (
@@ -11,7 +13,6 @@ from local_deepwiki.providers.base import (
     with_retry,
 )
 from local_deepwiki.providers.credentials import CredentialManager
-
 
 # Embedding dimensions and max tokens for OpenAI models
 OPENAI_EMBEDDING_MODELS = {

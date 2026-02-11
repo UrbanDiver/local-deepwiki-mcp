@@ -12,6 +12,8 @@ Plugins can be loaded from:
 4. Config-specified directory
 """
 
+from __future__ import annotations
+
 from local_deepwiki.plugins.base import (
     EmbeddingProviderPlugin,
     LanguageParserPlugin,

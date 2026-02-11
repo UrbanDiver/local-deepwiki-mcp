@@ -8,6 +8,8 @@ code that previously imported from ``core.deep_research`` as a single
 module.
 """
 
+from __future__ import annotations
+
 from .checkpoints import (
     CheckpointManager,
     cancel_research,
@@ -29,10 +31,7 @@ from .reasoning import (
     SYNTHESIS_SYSTEM_PROMPT,
     SYNTHESIS_USER_PROMPT,
 )
-from .serialization import (
-    dict_to_search_result,
-    search_result_to_dict,
-)
+from .serialization import dict_to_search_result, search_result_to_dict
 
 # Preserve original private names used by tests and internal code
 _search_result_to_dict = search_result_to_dict

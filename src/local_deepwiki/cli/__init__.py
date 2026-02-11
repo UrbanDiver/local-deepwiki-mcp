@@ -1,5 +1,7 @@
 """CLI utilities for local-deepwiki."""
 
+from __future__ import annotations
+
 from local_deepwiki.cli.cache_cli import cmd_cleanup, cmd_clear, cmd_stats
 from local_deepwiki.cli.config_cli import ConfigValidator, cmd_show, cmd_validate
 from local_deepwiki.cli.interactive_search import (

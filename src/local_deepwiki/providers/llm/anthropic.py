@@ -1,13 +1,10 @@
 """Anthropic LLM provider."""
 
+from __future__ import annotations
+
 from typing import Any, AsyncIterator
 
-from anthropic import (
-    APIConnectionError,
-    APIStatusError,
-    AsyncAnthropic,
-    AuthenticationError,
-)
+from anthropic import APIConnectionError, APIStatusError, AsyncAnthropic, AuthenticationError
 
 from local_deepwiki.logging import get_logger
 from local_deepwiki.providers.base import (

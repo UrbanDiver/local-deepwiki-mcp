@@ -1,5 +1,7 @@
 """Caching wrapper for LLM providers."""
 
+from __future__ import annotations
+
 from collections.abc import AsyncIterator
 
 from local_deepwiki.core.llm_cache import LLMCache

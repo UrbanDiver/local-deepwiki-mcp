@@ -247,7 +247,7 @@ The `events.py` module implements a pub-sub event system:
 - Tests use `pytest-asyncio` with `asyncio_mode = "auto"` (no need for `@pytest.mark.asyncio`)
 - Most tests mock LLM/embedding providers to avoid external calls
 - Test files follow pattern `test_<module>.py`
-- No shared `conftest.py`; each test file is self-contained
+- Shared `conftest.py` provides factory functions; most test files are otherwise self-contained
 
 ## Supported Languages
 

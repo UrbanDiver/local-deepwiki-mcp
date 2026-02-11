@@ -1,5 +1,7 @@
 """Repository indexing orchestration with incremental update support."""
 
+from __future__ import annotations
+
 import asyncio
 import time
 from concurrent.futures import ThreadPoolExecutor

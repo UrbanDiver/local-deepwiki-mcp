@@ -4,6 +4,8 @@ This module provides functionality to automatically create hyperlinks between
 wiki pages when classes, functions, or other documented entities are mentioned.
 """
 
+from __future__ import annotations
+
 import re
 from collections.abc import Callable
 from dataclasses import dataclass

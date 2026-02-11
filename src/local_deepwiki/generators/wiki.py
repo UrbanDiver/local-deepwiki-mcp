@@ -15,16 +15,12 @@ from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.events import EventType, get_event_emitter
 from local_deepwiki.generators.coverage import generate_coverage_page
 from local_deepwiki.generators.crosslinks import EntityRegistry
-from local_deepwiki.generators.dependency_graph import (
-    generate_dependency_graph_page,
-)
+from local_deepwiki.generators.dependency_graph import generate_dependency_graph_page
 from local_deepwiki.generators.glossary import generate_glossary_page
 from local_deepwiki.generators.inheritance import generate_inheritance_page
 from local_deepwiki.generators.manifest import ProjectManifest, get_cached_manifest
 from local_deepwiki.generators.progress_tracker import GenerationProgress
-from local_deepwiki.generators.see_also import (
-    RelationshipAnalyzer,
-)
+from local_deepwiki.generators.see_also import RelationshipAnalyzer
 from local_deepwiki.generators.wiki_files import generate_file_docs
 from local_deepwiki.generators.wiki_modules import generate_module_docs
 from local_deepwiki.generators.wiki_pages import (

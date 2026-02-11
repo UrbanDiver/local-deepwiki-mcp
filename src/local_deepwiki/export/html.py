@@ -1,5 +1,7 @@
 """HTML export functionality for DeepWiki documentation."""
 
+from __future__ import annotations
+
 import argparse
 import asyncio
 import json
@@ -12,6 +14,9 @@ from typing import Any, cast
 import markdown
 
 from local_deepwiki.cli_progress import create_progress, is_interactive
+from local_deepwiki.export.shared import build_breadcrumb
+from local_deepwiki.export.shared import extract_title as _shared_extract_title
+from local_deepwiki.export.shared import render_toc, render_toc_entry
 from local_deepwiki.export.streaming import (
     ExportConfig,
     ExportResult,
@@ -19,12 +24,6 @@ from local_deepwiki.export.streaming import (
     StreamingExporter,
     WikiPage,
     WikiPageIterator,
-)
-from local_deepwiki.export.shared import (
-    build_breadcrumb,
-    extract_title as _shared_extract_title,
-    render_toc,
-    render_toc_entry,
 )
 from local_deepwiki.logging import get_logger
 
@@ -659,7 +658,7 @@ def render_markdown(content: str) -> str:
             "nl2br",
         ]
     )
-    return cast(str, md.convert(content))
+    return md.convert(content)
 
 
 def fix_internal_links(html_content: str) -> str:

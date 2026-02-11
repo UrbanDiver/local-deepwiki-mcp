@@ -1,5 +1,7 @@
 """File documentation generation for wiki."""
 
+from __future__ import annotations
+
 import asyncio
 import re
 import time
@@ -18,10 +20,7 @@ from local_deepwiki.core.git_utils import (
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.generators.api_docs import get_file_api_docs
 from local_deepwiki.generators.callgraph import get_file_call_graph, get_file_callers
-from local_deepwiki.generators.context_builder import (
-    build_file_context,
-    format_context_for_llm,
-)
+from local_deepwiki.generators.context_builder import build_file_context, format_context_for_llm
 from local_deepwiki.generators.crosslinks import EntityRegistry
 from local_deepwiki.generators.diagrams import generate_class_diagram
 from local_deepwiki.generators.test_examples import get_file_examples

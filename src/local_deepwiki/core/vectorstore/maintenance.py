@@ -1,10 +1,12 @@
 """Index maintenance and lazy creation."""
 
+from __future__ import annotations
+
 import asyncio
 import math
 import threading
 from pathlib import Path
-from typing import Any, Callable, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable
 
 from local_deepwiki.config import LazyIndexConfig
 from local_deepwiki.logging import get_logger

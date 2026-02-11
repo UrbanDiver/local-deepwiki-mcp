@@ -4,6 +4,8 @@ This module provides abstract base classes and utilities for streaming wiki
 exports that avoid loading all pages into memory at once.
 """
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field

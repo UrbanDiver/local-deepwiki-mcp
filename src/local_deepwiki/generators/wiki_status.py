@@ -1,11 +1,12 @@
 """Wiki generation status management for incremental updates."""
 
+from __future__ import annotations
+
 import asyncio
 import hashlib
 import json
 import time
 from pathlib import Path
-
 from typing import Any
 
 from local_deepwiki.logging import get_logger

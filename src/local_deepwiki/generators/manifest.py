@@ -4,6 +4,8 @@ Parses various package manifest formats to extract factual project information
 that can ground LLM documentation generation and reduce hallucinations.
 """
 
+from __future__ import annotations
+
 import json
 import re
 from dataclasses import dataclass, field
@@ -432,7 +434,7 @@ def _parse_pyproject_toml(filepath: Path, manifest: ProjectManifest) -> None:
     try:
         import tomllib
     except ImportError:
-        import tomli as tomllib  # type: ignore[import-untyped]  # fallback for Python <3.11
+        import tomli as tomllib  # fallback for Python <3.11
 
     content = filepath.read_text()
     data = tomllib.loads(content)
@@ -604,7 +606,7 @@ def _parse_cargo_toml(filepath: Path, manifest: ProjectManifest) -> None:
     try:
         import tomllib
     except ImportError:
-        import tomli as tomllib  # type: ignore[import-untyped]  # fallback for Python <3.11
+        import tomli as tomllib  # fallback for Python <3.11
 
     content = filepath.read_text()
     data = tomllib.loads(content)

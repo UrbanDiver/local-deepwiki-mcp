@@ -4,17 +4,15 @@ Contains the LLM-driven decomposition, gap analysis, synthesis, and
 retrieval logic that forms the intellectual core of deep research.
 """
 
+from __future__ import annotations
+
 import asyncio
 import json
 import re
 
 from local_deepwiki.core.rate_limiter import get_rate_limiter
 from local_deepwiki.logging import get_logger
-from local_deepwiki.models import (
-    SearchResult,
-    SourceReference,
-    SubQuestion,
-)
+from local_deepwiki.models import SearchResult, SourceReference, SubQuestion
 
 logger = get_logger(__name__)
 

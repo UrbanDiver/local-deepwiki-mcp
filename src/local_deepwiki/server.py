@@ -1,5 +1,7 @@
 """MCP server for local DeepWiki functionality."""
 
+from __future__ import annotations
+
 import asyncio
 from typing import Any
 
@@ -24,9 +26,9 @@ from local_deepwiki.handlers import (
     handle_get_api_docs,
     handle_get_call_graph,
     handle_get_changelog,
+    handle_get_complexity_metrics,
     handle_get_coverage,
     handle_get_diagrams,
-    handle_get_complexity_metrics,
     handle_get_file_context,
     handle_get_glossary,
     handle_get_index_status,
@@ -131,10 +133,10 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
 
 def _log_security_posture() -> None:
     """Log the current security configuration at startup."""
-    from local_deepwiki.security.access_control import get_access_controller, RBACMode
+    from local_deepwiki.security.access_control import RBACMode, get_access_controller
 
     controller = get_access_controller()
-    mode = controller._mode
+    mode = controller.mode
     if mode == RBACMode.DISABLED:
         logger.warning(
             "SECURITY: RBAC is DISABLED — no permission checks will be performed"

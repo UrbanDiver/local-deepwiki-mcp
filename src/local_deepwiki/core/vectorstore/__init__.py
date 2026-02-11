@@ -4,15 +4,18 @@ This package provides vector storage and search capabilities for code chunks.
 Split into multiple modules for maintainability while preserving backward compatibility.
 """
 
+from __future__ import annotations
+
 # Re-export all public names for backward compatibility
-from local_deepwiki.core.vectorstore.cache import (
-    AdaptiveSearcher,
-    SearchCache,
-    SearchCacheEntry,
-)
+from local_deepwiki.core.vectorstore.cache import AdaptiveSearcher, SearchCache, SearchCacheEntry
 from local_deepwiki.core.vectorstore.iterators import ChunkIterator, LazyChunkLoader
 from local_deepwiki.core.vectorstore.maintenance import LazyIndexManager
 from local_deepwiki.core.vectorstore.schema import (
+    DEFAULT_MAX_MEMORY_MB,
+    ESTIMATED_BYTES_PER_CHUNK,
+    SEARCH_PROFILES,
+    VALID_CHUNK_TYPES,
+    VALID_LANGUAGES,
     BatchEmbeddingResult,
     ChunkBatch,
     EmbeddingProgress,
@@ -21,11 +24,6 @@ from local_deepwiki.core.vectorstore.schema import (
     SearchProfile,
     SearchProfileConfig,
     SearchResultPage,
-    SEARCH_PROFILES,
-    VALID_CHUNK_TYPES,
-    VALID_LANGUAGES,
-    DEFAULT_MAX_MEMORY_MB,
-    ESTIMATED_BYTES_PER_CHUNK,
 )
 from local_deepwiki.core.vectorstore.store import VectorStore
 from local_deepwiki.core.vectorstore.utils import (

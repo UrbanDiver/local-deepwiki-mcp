@@ -8,12 +8,10 @@ All public names are re-exported here for backward compatibility with
 ``from local_deepwiki.core.parser import ...``.
 """
 
+from __future__ import annotations
+
 from local_deepwiki.core.parser.ast_cache import ASTCache, ASTCacheStats, CachedAST
-from local_deepwiki.core.parser.ast_utils import (
-    find_nodes_by_type,
-    get_node_name,
-    get_node_text,
-)
+from local_deepwiki.core.parser.ast_utils import find_nodes_by_type, get_node_name, get_node_text
 from local_deepwiki.core.parser.code_parser import (
     HASH_CHUNK_SIZE,
     MMAP_THRESHOLD_BYTES,

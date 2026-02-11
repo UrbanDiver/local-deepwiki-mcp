@@ -5,6 +5,8 @@ retrieval, gap analysis, follow-up retrieval, and synthesis. Each step
 handles checkpoint restoration and progress reporting.
 """
 
+from __future__ import annotations
+
 import time
 
 from local_deepwiki.events import EventType, get_event_emitter

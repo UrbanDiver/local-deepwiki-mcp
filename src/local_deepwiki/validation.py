@@ -1,5 +1,8 @@
 """Input validation utilities for MCP tool handlers."""
 
+from __future__ import annotations
+
+from pathlib import Path
 from typing import Any
 
 from local_deepwiki.models import ChunkType, Language
@@ -211,8 +214,6 @@ def validate_fuzzy_weight(weight: float | None) -> float:
 # =============================================================================
 # Phase 3: Resource Limits and Input Size Validation (CWE-400 Prevention)
 # =============================================================================
-
-from pathlib import Path
 
 
 class ResourceLimits:

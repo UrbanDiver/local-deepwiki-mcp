@@ -1,5 +1,7 @@
 """Codemap tool handlers: generate_codemap and suggest_codemap_topics."""
 
+from __future__ import annotations
+
 import json
 from pathlib import Path
 from typing import Any
@@ -9,8 +11,8 @@ from pydantic import ValidationError as PydanticValidationError
 
 from local_deepwiki.handlers._shared import (
     GenerateCodemapArgs,
-    SuggestCodemapTopicsArgs,
     Permission,
+    SuggestCodemapTopicsArgs,
     _create_vector_store,
     _load_index_status,
     get_access_controller,

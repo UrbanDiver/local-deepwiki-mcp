@@ -1,5 +1,7 @@
 """Configuration validation and display CLI for local-deepwiki."""
 
+from __future__ import annotations
+
 import argparse
 import os
 import sys
@@ -986,10 +988,7 @@ def main() -> int:
     health_parser.set_defaults(func=cmd_health_check)
 
     # profile subcommand
-    from local_deepwiki.cli.profile_cli import (
-        dispatch_profile,
-        register_profile_subparser,
-    )
+    from local_deepwiki.cli.profile_cli import dispatch_profile, register_profile_subparser
 
     register_profile_subparser(subparsers)
 

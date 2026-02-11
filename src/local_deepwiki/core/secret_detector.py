@@ -6,6 +6,8 @@ to warn users about potential security issues during repository indexing.
 Addresses CWE-798: Use of Hard-Coded Credentials
 """
 
+from __future__ import annotations
+
 import re
 from dataclasses import dataclass
 from enum import Enum

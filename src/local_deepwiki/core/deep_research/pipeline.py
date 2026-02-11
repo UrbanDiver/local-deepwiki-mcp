@@ -5,6 +5,8 @@ retrieval, gap analysis, follow-up retrieval, and synthesis steps to
 answer complex codebase questions.
 """
 
+from __future__ import annotations
+
 import asyncio
 import time
 import uuid
@@ -31,8 +33,8 @@ from .checkpoints import CheckpointManager
 from .reasoning import (
     DECOMPOSITION_SYSTEM_PROMPT,
     GAP_ANALYSIS_SYSTEM_PROMPT,
-    ReasoningMixin,
     SYNTHESIS_SYSTEM_PROMPT,
+    ReasoningMixin,
 )
 from .serialization import dict_to_search_result, search_result_to_dict
 from .steps import StepsMixin

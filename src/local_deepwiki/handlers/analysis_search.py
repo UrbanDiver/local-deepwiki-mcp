@@ -1,5 +1,7 @@
 """Search-related analysis handlers: wiki search and fuzzy search."""
 
+from __future__ import annotations
+
 import asyncio
 import json
 from pathlib import Path

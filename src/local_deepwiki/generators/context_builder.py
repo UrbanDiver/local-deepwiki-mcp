@@ -9,15 +9,14 @@ Context includes:
 - Type definitions used by the code
 """
 
+from __future__ import annotations
+
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from local_deepwiki.core.vectorstore import VectorStore
-from local_deepwiki.generators.callgraph import (
-    CallGraphExtractor,
-    build_reverse_call_graph,
-)
+from local_deepwiki.generators.callgraph import CallGraphExtractor, build_reverse_call_graph
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import ChunkType, CodeChunk
 

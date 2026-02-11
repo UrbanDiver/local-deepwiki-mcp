@@ -1,10 +1,12 @@
 """Language detection configuration and tree-sitter module mappings."""
 
+from __future__ import annotations
+
 import importlib
 from types import ModuleType
 
-from local_deepwiki.models import Language as LangEnum
 from local_deepwiki.logging import get_logger
+from local_deepwiki.models import Language as LangEnum
 
 _logger = get_logger(__name__)
 

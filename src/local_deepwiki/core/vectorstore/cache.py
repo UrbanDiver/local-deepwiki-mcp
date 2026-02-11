@@ -1,11 +1,13 @@
 """Search caching and adaptive search depth estimation."""
 
+from __future__ import annotations
+
 import json
 import threading
 import time
 from collections import deque
 from dataclasses import dataclass, field
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 

@@ -12,14 +12,16 @@ import pytest
 from mcp.types import TextContent
 
 from local_deepwiki.handlers import (
-    _DeepResearchContext,
-    _create_progress_callbacks,
-    _handle_deep_research_impl,
     handle_cancel_research,
     handle_deep_research,
     handle_export_wiki_pdf,
     handle_list_research_checkpoints,
     handle_resume_research,
+)
+from local_deepwiki.handlers.research import (
+    _DeepResearchContext,
+    _create_progress_callbacks,
+    _handle_deep_research_impl,
 )
 
 

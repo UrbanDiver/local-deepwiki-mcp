@@ -1,8 +1,10 @@
 """Iterators for efficient chunk loading."""
 
+from __future__ import annotations
+
 import asyncio
 from collections.abc import AsyncIterator, Iterator
-from typing import Any, Callable, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable
 
 import psutil
 from lancedb.table import Table
@@ -10,11 +12,11 @@ from lancedb.table import Table
 from local_deepwiki.models import CodeChunk
 
 from .schema import (
-    ChunkBatch,
-    VALID_LANGUAGES,
-    VALID_CHUNK_TYPES,
     DEFAULT_MAX_MEMORY_MB,
     ESTIMATED_BYTES_PER_CHUNK,
+    VALID_CHUNK_TYPES,
+    VALID_LANGUAGES,
+    ChunkBatch,
 )
 from .utils import _row_to_chunk_default, _sanitize_string_value
 

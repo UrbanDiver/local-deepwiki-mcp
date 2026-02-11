@@ -1,5 +1,7 @@
 """Tree-sitter AST utility functions for node inspection."""
 
+from __future__ import annotations
+
 from tree_sitter import Node
 
 from local_deepwiki.models import Language as LangEnum

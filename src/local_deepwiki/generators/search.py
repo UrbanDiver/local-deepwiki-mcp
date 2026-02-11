@@ -5,6 +5,8 @@ full-text search across wiki documentation. Includes both page-level
 and entity-level (function/class/method) search entries.
 """
 
+from __future__ import annotations
+
 import json
 import re
 from pathlib import Path

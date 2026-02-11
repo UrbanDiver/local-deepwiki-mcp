@@ -2,8 +2,6 @@
 
 A local, privacy-focused MCP server that generates DeepWiki-style documentation for private repositories with RAG-based Q&A capabilities.
 
-**[View PDF Documentation](docs.pdf)**
-
 ## Features
 
 - **Multi-language code parsing** using tree-sitter (Python, TypeScript/JavaScript, Go, Rust, Java, C/C++, Swift, Ruby, PHP, Kotlin, C#)
@@ -49,7 +47,7 @@ embedding:
 llm:
   provider: "ollama"  # or "anthropic" or "openai"
   ollama:
-    model: "llama3.2"
+    model: "qwen3-coder:30b"
     base_url: "http://localhost:11434"
   anthropic:
     model: "claude-sonnet-4-20250514"
@@ -100,9 +98,13 @@ Add to your Claude Code MCP config (`~/.claude/claude_code_config.json`):
 }
 ```
 
-## MCP Tools
+## MCP Tools (36 tools)
 
-### `index_repository`
+The server exposes **36 MCP tools** across 5 categories. Below are the most commonly used tools with examples, followed by the full tool reference.
+
+### Core Tools
+
+#### `index_repository`
 
 Index a repository and generate wiki documentation.
 
@@ -115,7 +117,7 @@ Index a repository and generate wiki documentation.
 }
 ```
 
-### `ask_question`
+#### `ask_question`
 
 Ask a question about the codebase using RAG.
 
@@ -127,9 +129,9 @@ Ask a question about the codebase using RAG.
 }
 ```
 
-### `deep_research`
+#### `deep_research`
 
-Perform deep research on complex architectural questions using multi-step reasoning. Unlike `ask_question` (single retrieval), this performs query decomposition, parallel retrieval, gap analysis, and comprehensive synthesis.
+Multi-step reasoning for complex architectural questions. Performs query decomposition, parallel retrieval, gap analysis, and comprehensive synthesis.
 
 ```json
 {
@@ -139,73 +141,64 @@ Perform deep research on complex architectural questions using multi-step reason
 }
 ```
 
-Returns a detailed answer with:
-- Sub-questions that were investigated
-- Source references with file paths and line numbers
-- Reasoning trace showing each step's duration
-- Comprehensive answer with citations
+| Tool | Description |
+|------|-------------|
+| `index_repository` | Index a repository and generate wiki documentation |
+| `ask_question` | RAG-based Q&A about the codebase |
+| `deep_research` | Multi-step reasoning with query decomposition and synthesis |
+| `read_wiki_structure` | Get the wiki table of contents |
+| `read_wiki_page` | Read a specific wiki page |
+| `search_code` | Semantic search across the codebase |
+| `export_wiki_html` | Export wiki to a static HTML site |
+| `export_wiki_pdf` | Export wiki to PDF with mermaid diagram rendering |
 
-Best for questions like:
-- "How does data flow from API to database?"
-- "What would break if we change the auth module?"
-- "How are these services coupled?"
+### Generator Tools (12)
 
-### `read_wiki_structure`
+| Tool | Description |
+|------|-------------|
+| `get_diagrams` | Generate Mermaid diagrams (class, dependency, module, sequence) |
+| `get_call_graph` | Function call graph analysis |
+| `get_glossary` | Searchable code entity glossary |
+| `get_inheritance` | Class hierarchy tree |
+| `get_coverage` | Documentation coverage analysis |
+| `get_changelog` | Git-based changelog generation |
+| `get_api_docs` | Parameter and return type extraction |
+| `get_test_examples` | Extract test examples for entities |
+| `detect_stale_docs` | Detect outdated wiki pages |
+| `detect_secrets` | Scan for hardcoded credentials |
+| `get_index_status` | Repository index status and health |
+| `list_indexed_repos` | List all indexed repositories |
 
-Get the wiki table of contents.
+### Analysis & Search Tools (10)
 
-```json
-{
-  "wiki_path": "/path/to/repo/.deepwiki"
-}
-```
+| Tool | Description |
+|------|-------------|
+| `search_wiki` | Full-text search across wiki pages and code entities |
+| `fuzzy_search` | Levenshtein-based name matching ("Did you mean?") |
+| `get_file_context` | Imports, callers, and related files for a source file |
+| `explain_entity` | Composite: glossary + call graph + inheritance + tests + API docs |
+| `impact_analysis` | Blast radius analysis with reverse call graph and risk level |
+| `get_complexity_metrics` | Cyclomatic complexity and nesting depth via tree-sitter AST |
+| `analyze_diff` | Map git diff to affected wiki pages and entities |
+| `ask_about_diff` | RAG-based Q&A about code changes |
+| `get_project_manifest` | Parsed metadata from pyproject.toml, package.json, etc. |
+| `get_wiki_stats` | Wiki health dashboard: index, pages, coverage, status |
 
-### `read_wiki_page`
+### Codemap Tools (2)
 
-Read a specific wiki page.
+| Tool | Description |
+|------|-------------|
+| `generate_codemap` | Cross-file execution-flow maps with Mermaid diagrams and LLM narrative |
+| `suggest_codemap_topics` | Discover interesting entry points from call graph hubs |
 
-```json
-{
-  "wiki_path": "/path/to/repo/.deepwiki",
-  "page": "modules/auth.md"
-}
-```
+### Research & Progress Tools (4)
 
-### `search_code`
-
-Semantic search across the codebase.
-
-```json
-{
-  "repo_path": "/path/to/repo",
-  "query": "user authentication",
-  "limit": 10,
-  "language": "python"
-}
-```
-
-### `export_wiki_html`
-
-Export wiki to a static HTML site.
-
-```json
-{
-  "wiki_path": "/path/to/repo/.deepwiki",
-  "output_path": "./html-export"
-}
-```
-
-### `export_wiki_pdf`
-
-Export wiki to PDF format.
-
-```json
-{
-  "wiki_path": "/path/to/repo/.deepwiki",
-  "output_path": "./documentation.pdf",
-  "single_file": true
-}
-```
+| Tool | Description |
+|------|-------------|
+| `list_research_checkpoints` | List saved deep research checkpoints |
+| `resume_research` | Resume a previously checkpointed research session |
+| `cancel_research` | Cancel an in-progress research operation |
+| `get_operation_progress` | Check progress of long-running operations |
 
 ## CLI Commands
 

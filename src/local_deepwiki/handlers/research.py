@@ -1,5 +1,7 @@
 """Research tool handlers: deep research, checkpoints, cancellation, progress."""
 
+from __future__ import annotations
+
 import asyncio
 import json
 from pathlib import Path
@@ -18,8 +20,8 @@ from local_deepwiki.handlers._shared import (
     DeepResearchArgs,
     GetOperationProgressArgs,
     ListResearchCheckpointsArgs,
-    ResumeResearchArgs,
     Permission,
+    ResumeResearchArgs,
     VectorStore,
     _format_research_results,
     get_access_controller,

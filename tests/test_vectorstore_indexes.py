@@ -110,7 +110,9 @@ class TestVectorIndex:
         # We don't create 1000+ rows in tests, but verify the logic exists
         import inspect
 
-        source = inspect.getsource(vector_store._create_vector_index)
+        from local_deepwiki.core.vectorstore.indexes import create_vector_index
+
+        source = inspect.getsource(create_vector_index)
         assert "1000" in source or "min_rows_for_index" in source
 
     async def test_search_works_without_vector_index(self, vector_store):

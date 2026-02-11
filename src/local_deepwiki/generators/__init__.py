@@ -1,11 +1,17 @@
 """Wiki and diagram generators."""
 
+from __future__ import annotations
+
 from local_deepwiki.generators.dependency_graph import (
     DependencyEdge,
     DependencyGraph,
     DependencyGraphGenerator,
     DependencyNode,
     generate_dependency_graph_page,
+)
+from local_deepwiki.generators.examples_plugin import (
+    ExamplesWikiGenerator,
+    get_examples_for_api_page,
 )
 from local_deepwiki.generators.test_examples import (
     CodeExample,
@@ -18,10 +24,6 @@ from local_deepwiki.generators.test_examples import (
     parse_docstring_examples,
     parse_doctest_examples,
     parse_google_style_examples,
-)
-from local_deepwiki.generators.examples_plugin import (
-    ExamplesWikiGenerator,
-    get_examples_for_api_page,
 )
 
 __all__ = [

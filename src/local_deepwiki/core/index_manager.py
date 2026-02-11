@@ -1,5 +1,7 @@
 """Index status management with centralized load/save/validation logic."""
 
+from __future__ import annotations
+
 import hashlib
 import json
 import time

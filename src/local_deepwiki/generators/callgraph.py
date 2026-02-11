@@ -1,5 +1,7 @@
 """Call graph extraction and diagram generation."""
 
+from __future__ import annotations
+
 from pathlib import Path
 
 from tree_sitter import Node

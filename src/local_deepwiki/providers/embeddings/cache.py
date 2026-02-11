@@ -5,6 +5,8 @@ embeddings to disk using SQLite. It uses content hashing for cache keys
 and supports TTL-based expiration.
 """
 
+from __future__ import annotations
+
 import hashlib
 import json
 import sqlite3

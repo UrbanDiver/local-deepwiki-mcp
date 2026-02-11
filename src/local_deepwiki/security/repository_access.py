@@ -4,6 +4,8 @@ This module provides the ability to restrict which repositories can be indexed
 using configurable allowlist and denylist patterns.
 """
 
+from __future__ import annotations
+
 import fnmatch
 import threading
 from dataclasses import dataclass, field

@@ -4,6 +4,8 @@ Computes cyclomatic complexity, nesting depth, and other code complexity metrics
 using tree-sitter AST analysis.
 """
 
+from __future__ import annotations
+
 from pathlib import Path
 from typing import Any
 

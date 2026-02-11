@@ -4,17 +4,14 @@ Provides the /api/research SSE endpoint for deep, multi-step research
 queries over an indexed codebase.
 """
 
+from __future__ import annotations
+
 import asyncio
 import json
 import queue
 from typing import Any, AsyncIterator
 
-from flask import (
-    Blueprint,
-    Response,
-    jsonify,
-    request,
-)
+from flask import Blueprint, Response, jsonify, request
 
 from local_deepwiki.errors import sanitize_error_message
 from local_deepwiki.logging import get_logger

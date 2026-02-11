@@ -131,7 +131,7 @@ class ValidationError(DeepWikiError):
             self.context["value"] = value
 
 
-class EnvironmentError(DeepWikiError):
+class EnvironmentSetupError(DeepWikiError):
     """Error raised when environment setup is incomplete.
 
     This error indicates that required dependencies, configuration,
@@ -474,7 +474,7 @@ def environment_error(
     setup_instructions: str,
     *,
     context: dict[str, Any] | None = None,
-) -> EnvironmentError:
+) -> EnvironmentSetupError:
     """Create an environment error with setup instructions.
 
     Args:
@@ -484,7 +484,7 @@ def environment_error(
         context: Additional context for debugging.
 
     Returns:
-        An EnvironmentError with formatted message and hint.
+        An EnvironmentSetupError with formatted message and hint.
 
     Example:
         raise environment_error(
@@ -493,7 +493,7 @@ def environment_error(
             setup_instructions="pip install weasyprint"
         )
     """
-    return EnvironmentError(
+    return EnvironmentSetupError(
         message=f"Missing required component: {missing_component}",
         hint=f"Required for {purpose}.\nTo set up:\n{setup_instructions}",
         context=context,
@@ -766,33 +766,33 @@ def sanitize_error_message(message: str, sanitize_paths: bool = True) -> str:
 
         # Remove absolute paths (keep only filename)
         # Pattern: /path/to/file.py → file.py
-        result = re.sub(r'/[a-zA-Z0-9/_.-]*\.py', '.py', result)
-        result = re.sub(r'/[a-zA-Z0-9/_.-]*\.yml', '.yml', result)
-        result = re.sub(r'/[a-zA-Z0-9/_.-]*\.yaml', '.yaml', result)
+        result = re.sub(r"/[a-zA-Z0-9/_.-]*\.py", ".py", result)
+        result = re.sub(r"/[a-zA-Z0-9/_.-]*\.yml", ".yml", result)
+        result = re.sub(r"/[a-zA-Z0-9/_.-]*\.yaml", ".yaml", result)
 
         # Remove absolute paths in general
-        result = re.sub(r'/[a-zA-Z0-9/_.-]+', '<path>', result)
+        result = re.sub(r"/[a-zA-Z0-9/_.-]+", "<path>", result)
 
     # Remove localhost URLs (prevents revealing local service configuration)
-    result = re.sub(r'http://localhost:\d+', 'http://internal-service', result)
-    result = re.sub(r'http://127\.0\.0\.1:\d+', 'http://internal-service', result)
-    result = re.sub(r'localhost:\d+', 'internal-service', result)
-    result = re.sub(r'127\.0\.0\.1:\d+', 'internal-service', result)
+    result = re.sub(r"http://localhost:\d+", "http://internal-service", result)
+    result = re.sub(r"http://127\.0\.0\.1:\d+", "http://internal-service", result)
+    result = re.sub(r"localhost:\d+", "internal-service", result)
+    result = re.sub(r"127\.0\.0\.1:\d+", "internal-service", result)
 
     # Remove API keys (patterns)
-    result = re.sub(r'sk-[a-zA-Z0-9]{40,}', '[REDACTED_KEY]', result)
-    result = re.sub(r'Bearer [a-zA-Z0-9_-]{20,}', 'Bearer [REDACTED_TOKEN]', result)
-    result = re.sub(r'token [a-zA-Z0-9_-]{20,}', 'token [REDACTED_TOKEN]', result)
+    result = re.sub(r"sk-[a-zA-Z0-9]{40,}", "[REDACTED_KEY]", result)
+    result = re.sub(r"Bearer [a-zA-Z0-9_-]{20,}", "Bearer [REDACTED_TOKEN]", result)
+    result = re.sub(r"token [a-zA-Z0-9_-]{20,}", "token [REDACTED_TOKEN]", result)
 
     # Remove database connection strings
     result = re.sub(
-        r'(postgres|mysql|mongodb)://[a-zA-Z0-9_-]+:[a-zA-Z0-9_-]+@[^/\s]+',
-        r'\1://[REDACTED]@[REDACTED]',
-        result
+        r"(postgres|mysql|mongodb)://[a-zA-Z0-9_-]+:[a-zA-Z0-9_-]+@[^/\s]+",
+        r"\1://[REDACTED]@[REDACTED]",
+        result,
     )
 
     # Remove AWS credentials patterns
-    result = re.sub(r'AKIA[0-9A-Z]{16}', '[REDACTED_AWS_KEY]', result)
+    result = re.sub(r"AKIA[0-9A-Z]{16}", "[REDACTED_AWS_KEY]", result)
 
     return result
 

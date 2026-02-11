@@ -1,5 +1,7 @@
 """Thread-safe LRU cache for parsed tree-sitter ASTs."""
 
+from __future__ import annotations
+
 import sys
 import threading
 import time

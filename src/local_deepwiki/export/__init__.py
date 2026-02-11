@@ -1,5 +1,7 @@
 """Export functionality for DeepWiki documentation."""
 
+from __future__ import annotations
+
 from local_deepwiki.export.html import HtmlExporter, StreamingHtmlExporter, export_to_html
 from local_deepwiki.export.streaming import (
     ExportConfig,

@@ -4,6 +4,8 @@ This module provides secure credential handling without storing sensitive
 information in instance variables or memory for longer than necessary.
 """
 
+from __future__ import annotations
+
 import os
 from typing import Optional
 

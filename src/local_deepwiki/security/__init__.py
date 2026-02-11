@@ -3,14 +3,16 @@
 This module provides access control, authorization, and security utilities.
 """
 
+from __future__ import annotations
+
 from local_deepwiki.security.access_control import (
+    ROLE_PERMISSIONS,
     AccessController,
     AccessDeniedException,
     AuthenticationException,
     Permission,
     RBACMode,
     Role,
-    ROLE_PERMISSIONS,
     Subject,
     get_access_controller,
     require_all_permissions,

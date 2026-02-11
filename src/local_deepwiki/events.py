@@ -4,6 +4,8 @@ Provides a basic pub-sub event emitter for subscribing to and emitting
 events during indexing and wiki generation.
 """
 
+from __future__ import annotations
+
 import asyncio
 import uuid
 from dataclasses import dataclass, field

@@ -1,5 +1,7 @@
 """Embedding providers."""
 
+from __future__ import annotations
+
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -11,10 +13,7 @@ if TYPE_CHECKING:
 from local_deepwiki.logging import get_logger
 from local_deepwiki.plugins.registry import get_plugin_registry
 from local_deepwiki.providers.base import EmbeddingProvider
-from local_deepwiki.providers.embeddings.cache import (
-    CachedEmbeddingProvider,
-    EmbeddingCacheConfig,
-)
+from local_deepwiki.providers.embeddings.cache import CachedEmbeddingProvider, EmbeddingCacheConfig
 
 logger = get_logger(__name__)
 

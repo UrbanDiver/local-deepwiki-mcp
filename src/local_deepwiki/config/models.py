@@ -1,5 +1,7 @@
 """Pydantic configuration models."""
 
+from __future__ import annotations
+
 import os
 from dataclasses import dataclass
 from enum import Enum
@@ -986,34 +988,6 @@ class Config(BaseModel):
         # Cloud providers may have rate limits
         return min(base_concurrency, 5)
 
-    @model_validator(mode="after")
-    def validate_config_consistency(self) -> "Config":
-        """Validate cross-field consistency.
-
-        Ensures configuration values are consistent across different
-        sections of the config.
-
-        Returns:
-            The validated config instance.
-
-        Raises:
-            ValueError: If configuration is inconsistent.
-        """
-        # Validate embedding batch rate limit makes sense for API providers
-        if (
-            self.embedding.provider == "openai"
-            and self.embedding_batch.rate_limit_rpm is None
-        ):
-            # This is just a warning condition, not an error
-            pass
-
-        # Validate chunking and deep research are compatible
-        if self.deep_research.max_total_chunks > 100:
-            # Large chunk counts may cause memory issues
-            pass
-
-        return self
-
     def with_embedding_provider(self, provider: Literal["local", "openai"]) -> "Config":
         """Return a new Config with the embedding provider changed.
 
@@ -1076,4 +1050,3 @@ class Config(BaseModel):
     def get_vector_db_path(self, repo_path: Path) -> Path:
         """Get the vector database path for a repository."""
         return self.get_wiki_path(repo_path) / self.output.vector_db_name
-

@@ -1,5 +1,7 @@
 """Wiki structure and status models."""
 
+from __future__ import annotations
+
 from pathlib import Path
 from typing import Any
 

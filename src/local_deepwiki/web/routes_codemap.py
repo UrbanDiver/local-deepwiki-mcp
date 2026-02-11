@@ -5,20 +5,15 @@ topic suggestions, persistent cache browsing, git diff overlay, and
 side-by-side comparison view.
 """
 
+from __future__ import annotations
+
 import asyncio
 import json
 import re
 import subprocess
 from typing import AsyncIterator
 
-from flask import (
-    Blueprint,
-    Response,
-    abort,
-    jsonify,
-    render_template,
-    request,
-)
+from flask import Blueprint, Response, abort, jsonify, render_template, request
 
 from local_deepwiki.errors import sanitize_error_message
 from local_deepwiki.generators.codemap_cache import (

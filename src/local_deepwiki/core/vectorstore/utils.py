@@ -1,5 +1,7 @@
 """Utility functions and classes for vectorstore."""
 
+from __future__ import annotations
+
 import asyncio
 import json
 import time

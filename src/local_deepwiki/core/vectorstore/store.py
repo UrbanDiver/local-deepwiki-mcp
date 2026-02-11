@@ -4,12 +4,9 @@ from __future__ import annotations
 
 import asyncio
 import json
-import math
-import os
-import random
 import threading
 import time
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import Iterator
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable
 
@@ -17,8 +14,6 @@ if TYPE_CHECKING:
     from local_deepwiki.core.fuzzy_search import FuzzySearchHelper
 
 import lancedb
-import numpy as np
-import pyarrow as pa
 from lancedb.table import Table
 
 from local_deepwiki.config import (
@@ -26,7 +21,6 @@ from local_deepwiki.config import (
     FuzzySearchConfig,
     LazyIndexConfig,
     SearchCacheConfig,
-    SearchConfig,
 )
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import CodeChunk, SearchResult
@@ -36,18 +30,18 @@ from .cache import AdaptiveSearcher, SearchCache
 from .iterators import ChunkIterator, LazyChunkLoader
 from .maintenance import LazyIndexManager
 from .schema import (
-    SearchResultPage,
-    SearchProfile,
-    SearchFeedback,
-    SEARCH_PROFILES,
-    BatchEmbeddingResult,
-    EmbeddingProgress,
-    VALID_LANGUAGES,
-    VALID_CHUNK_TYPES,
     DEFAULT_MAX_MEMORY_MB,
     ESTIMATED_BYTES_PER_CHUNK,
+    SEARCH_PROFILES,
+    VALID_CHUNK_TYPES,
+    VALID_LANGUAGES,
+    BatchEmbeddingResult,
+    EmbeddingProgress,
+    SearchFeedback,
+    SearchProfile,
+    SearchResultPage,
 )
-from .utils import RateLimiter, _sanitize_string_value, _row_to_chunk_default
+from .utils import RateLimiter, _row_to_chunk_default, _sanitize_string_value
 
 logger = get_logger(__name__)
 
@@ -222,176 +216,46 @@ class VectorStore:
         return self._fuzzy_search_helper
 
     def _ensure_indexes(self) -> None:
-        """Ensure all indexes exist, creating them if needed.
+        """Ensure all indexes exist, creating them if needed."""
+        if self._table is not None:
+            from .indexes import ensure_indexes
 
-        This is called when opening an existing table to ensure indexes
-        are present even if the table was created by an older version.
-        Creates both scalar indexes (for lookups) and vector indexes (for search).
-        """
-        if self._table is None:
-            return
-
-        # Check existing indexes
-        try:
-            indices = self._table.list_indices()
-            # Handle both dict-style and object-style index configs (LanceDB version compat)
-            existing_indexes = set()
-            has_vector_index = False
-            for idx in indices:
-                name = getattr(idx, "name", None) or (
-                    idx.get("name") if isinstance(idx, dict) else None
-                )
-                if name:
-                    existing_indexes.add(name)
-                # Check for vector index (name contains "vector" or type is IVF/ANN)
-                idx_type = getattr(idx, "index_type", None) or (
-                    idx.get("index_type") if isinstance(idx, dict) else None
-                )
-                if idx_type and "ivf" in str(idx_type).lower():
-                    has_vector_index = True
-        except (KeyError, TypeError, RuntimeError, AttributeError) as e:
-            # Index info structure varies between LanceDB versions
-            # RuntimeError: Table may not support listing indices
-            logger.debug(f"Could not list existing indexes: {e}")
-            existing_indexes = set()
-            has_vector_index = False
-
-        # Create missing scalar indexes
-        if "id_idx" not in existing_indexes:
-            self._create_index_safe("id")
-        if "file_path_idx" not in existing_indexes:
-            self._create_index_safe("file_path")
-
-        # Handle vector index - either create immediately or mark as pending for lazy creation
-        if not has_vector_index:
-            try:
-                num_rows = self._table.count_rows()
-                if self._lazy_index_manager.config.enabled:
-                    # Lazy indexing: mark as pending if table is large enough
-                    if num_rows >= self._lazy_index_manager.config.min_rows:
-                        self._lazy_index_manager.mark_index_pending()
-                        logger.debug(f"Vector index creation deferred (lazy mode): {num_rows} rows")
-                else:
-                    # Eager indexing: create immediately
-                    self._create_vector_index(num_rows)
-            except (RuntimeError, OSError) as e:
-                logger.debug(f"Could not check row count for vector indexing: {e}")
-        else:
-            # Index already exists, mark as created in lazy manager
-            self._lazy_index_manager.mark_index_created()
+            ensure_indexes(self._table, self._lazy_index_manager)
 
     def _create_index_safe(self, column: str) -> None:
-        """Safely create a scalar index on a column.
+        """Safely create a scalar index on a column."""
+        if self._table is not None:
+            from .indexes import create_index_safe
 
-        Args:
-            column: The column name to index.
-        """
-        if self._table is None:
-            return
-
-        try:
-            self._table.create_scalar_index(column)
-            logger.debug(f"Created scalar index on '{column}' column")
-        except (ValueError, RuntimeError, OSError) as e:
-            # ValueError: Index already exists or invalid column
-            # RuntimeError: Column type not supported for indexing
-            # OSError: Underlying storage issues
-            logger.debug(f"Could not create index on '{column}': {e}")
+            create_index_safe(self._table, column)
 
     def _create_scalar_indexes(self) -> None:
-        """Create scalar indexes for efficient lookups.
+        """Create scalar indexes for efficient lookups."""
+        if self._table is not None:
+            from .indexes import create_scalar_indexes
 
-        Creates indexes on 'id' and 'file_path' columns to optimize
-        get_chunk_by_id() and get_chunks_by_file() operations.
-        """
-        self._create_index_safe("id")
-        self._create_index_safe("file_path")
+            create_scalar_indexes(self._table)
 
     def _create_vector_index(self, num_rows: int) -> None:
-        """Create a vector index for faster semantic search.
+        """Create a vector index for faster semantic search."""
+        if self._table is not None:
+            from .indexes import create_vector_index
 
-        Uses IVF-PQ index for approximate nearest neighbor search,
-        which provides 5-10x speedup on large datasets (10k+ vectors).
-
-        Note: This method is used for synchronous/eager index creation.
-        For lazy/deferred index creation, use the LazyIndexManager instead.
-
-        Args:
-            num_rows: Number of rows in the table (used to determine if indexing is beneficial).
-        """
-        if self._table is None:
-            return
-
-        # Use threshold from lazy index config if available
-        min_rows_for_index = self._lazy_index_manager.config.min_rows
-
-        if num_rows < min_rows_for_index:
-            logger.debug(
-                f"Skipping vector index creation: {num_rows} rows < {min_rows_for_index} threshold"
-            )
-            return
-
-        try:
-            # Calculate optimal number of partitions based on table size
-            # Rule of thumb: sqrt(n) partitions, capped at reasonable values
-            num_partitions = min(max(int(math.sqrt(num_rows)), 16), 256)
-
-            # Create IVF-PQ index on the vector column
-            # - metric: L2 (Euclidean distance) matches our similarity scoring
-            # - num_partitions: number of IVF clusters
-            # - num_sub_vectors: for PQ compression (higher = more accurate but slower)
-            self._table.create_index(
-                metric="L2",
-                num_partitions=num_partitions,
-                num_sub_vectors=16,  # Good balance of speed vs accuracy
-            )
-            logger.info(
-                f"Created vector index with {num_partitions} partitions for {num_rows} vectors"
-            )
-
-            # Mark index as created in lazy index manager
-            self._lazy_index_manager.mark_index_created()
-
-        except (ValueError, RuntimeError, OSError) as e:
-            # ValueError: Index already exists or invalid params
-            # RuntimeError: Index creation failed
-            # OSError: Storage issues
-            logger.debug(f"Could not create vector index: {e}")
+            create_vector_index(self._table, num_rows, self._lazy_index_manager)
 
     def _is_local_provider(self) -> bool:
-        """Check if the embedding provider is local (sentence-transformers).
+        """Check if the embedding provider is local (sentence-transformers)."""
+        from .embedding import is_local_provider
 
-        Returns:
-            True if provider is local, False for API-based providers.
-        """
-        provider_name = self.embedding_provider.name.lower()
-        return provider_name.startswith("local:") or "sentence" in provider_name
+        return is_local_provider(self.embedding_provider)
 
     def _get_optimal_batch_config(self) -> tuple[int, int]:
-        """Get optimal batch size and concurrency based on provider type.
+        """Get optimal batch size and concurrency based on provider type."""
+        from .embedding import get_optimal_batch_config
 
-        Returns:
-            Tuple of (batch_size, concurrency).
-        """
-        config = self._embedding_batch_config
-        is_local = self._is_local_provider()
-
-        # Use configured values, but adjust defaults based on provider type
-        batch_size = config.batch_size
-        concurrency = config.concurrency
-
-        # For local providers, can use larger batches and higher concurrency
-        if is_local:
-            # Local models benefit from larger batches for GPU/CPU efficiency
-            batch_size = max(batch_size, 100)
-            concurrency = max(concurrency, 4)
-        else:
-            # API providers should use smaller batches to avoid rate limits
-            batch_size = min(batch_size, 50)
-            # Lower concurrency for APIs to avoid overwhelming the service
-            concurrency = min(concurrency, 4)
-
-        return batch_size, concurrency
+        return get_optimal_batch_config(
+            self._embedding_batch_config, self.embedding_provider
+        )
 
     async def _embed_single_batch_with_retry(
         self,
@@ -400,89 +264,17 @@ class VectorStore:
         progress: EmbeddingProgress,
         semaphore: asyncio.Semaphore,
     ) -> BatchEmbeddingResult:
-        """Embed a single batch with retry logic and rate limiting.
+        """Embed a single batch with retry logic and rate limiting."""
+        from .embedding import embed_single_batch_with_retry
 
-        Args:
-            batch_index: Index of this batch for ordering results.
-            texts: Texts to embed in this batch.
-            progress: Progress tracker to update.
-            semaphore: Semaphore for concurrency control.
-
-        Returns:
-            BatchEmbeddingResult with embeddings or error.
-        """
-        config = self._embedding_batch_config
-        retry_count = 0
-
-        async with semaphore:
-            while retry_count < config.retry_max_attempts:
-                try:
-                    # Apply rate limiting if configured
-                    if self._rate_limiter is not None:
-                        await self._rate_limiter.acquire()
-
-                    # Generate embeddings
-                    embeddings = await self.embedding_provider.embed(texts)
-                    progress.update(success=True)
-
-                    return BatchEmbeddingResult(
-                        batch_index=batch_index,
-                        embeddings=embeddings,
-                        retry_count=retry_count,
-                    )
-
-                except (
-                    ConnectionError,
-                    TimeoutError,
-                    OSError,
-                    RuntimeError,
-                    ValueError,
-                ) as e:
-                    # ConnectionError/TimeoutError: Network issues
-                    # OSError: File system or system-level errors
-                    # RuntimeError: Provider-specific runtime errors
-                    # ValueError: API parameter validation failures
-                    retry_count += 1
-                    error_str = str(e).lower()
-
-                    # Check if this is a retryable error
-                    is_retryable = (
-                        isinstance(e, (ConnectionError, TimeoutError, OSError))
-                        or ("rate" in error_str and "limit" in error_str)
-                        or "overloaded" in error_str
-                        or "503" in error_str
-                        or "502" in error_str
-                        or "timeout" in error_str
-                    )
-
-                    if not is_retryable or retry_count >= config.retry_max_attempts:
-                        logger.warning(
-                            f"Batch {batch_index} failed after {retry_count} attempts: {e}"
-                        )
-                        progress.update(success=False)
-                        return BatchEmbeddingResult(
-                            batch_index=batch_index,
-                            embeddings=None,
-                            error=e,
-                            retry_count=retry_count,
-                        )
-
-                    # Calculate backoff delay with jitter
-                    delay = config.retry_base_delay * (2 ** (retry_count - 1))
-                    delay = delay * (0.5 + random.random())  # Add jitter
-                    logger.warning(
-                        f"Batch {batch_index} failed (attempt {retry_count}): {e}. "
-                        f"Retrying in {delay:.2f}s..."
-                    )
-                    await asyncio.sleep(delay)
-
-        # Should not reach here
-        progress.update(success=False)
-        return BatchEmbeddingResult(
-            batch_index=batch_index,
-            embeddings=None,
-            error=RuntimeError("Unexpected: exhausted retries without returning"),
-            retry_count=retry_count,
+        return await embed_single_batch_with_retry(
+            batch_index,
+            texts,
+            self.embedding_provider,
+            self._embedding_batch_config,
+            self._rate_limiter,
+            progress,
+            semaphore,
         )
 
     async def _batch_embed(
@@ -491,156 +283,27 @@ class VectorStore:
         batch_size: int | None = None,
         log_progress: bool = False,
     ) -> list[list[float]]:
-        """Generate embeddings in parallel batches.
+        """Generate embeddings in parallel batches."""
+        from .embedding import batch_embed
 
-        Uses concurrent batch processing for faster embedding generation.
-        For local providers, uses higher concurrency. For API providers,
-        respects rate limits and uses lower concurrency.
-
-        Args:
-            texts: List of text strings to embed.
-            batch_size: Number of texts to embed per batch. If None, uses config default.
-            log_progress: Whether to log batch progress.
-
-        Returns:
-            List of embedding vectors in the same order as input texts.
-
-        Raises:
-            RuntimeError: If any batches fail after all retry attempts.
-        """
-        if not texts:
-            return []
-
-        # Deduplicate texts to avoid redundant embedding API calls
-        unique_texts: list[str] = []
-        text_to_index: dict[str, int] = {}
-        for text in texts:
-            if text not in text_to_index:
-                text_to_index[text] = len(unique_texts)
-                unique_texts.append(text)
-
-        duplicates_saved = len(texts) - len(unique_texts)
-        if duplicates_saved > 0:
-            logger.debug(
-                f"Embedding dedup: {len(texts)} texts -> {len(unique_texts)} unique "
-                f"({duplicates_saved} duplicates skipped)"
-            )
-
-        # Get optimal config based on provider type
-        optimal_batch_size, optimal_concurrency = self._get_optimal_batch_config()
-        batch_size = batch_size or optimal_batch_size
-
-        # Split unique texts into batches
-        batches: list[list[str]] = []
-        for i in range(0, len(unique_texts), batch_size):
-            batches.append(unique_texts[i : i + batch_size])
-
-        total_batches = len(batches)
-
-        # For single batch, still use retry logic but without parallel overhead
-        if total_batches == 1:
-            progress = EmbeddingProgress(total_texts=len(unique_texts), total_batches=1)
-            semaphore = asyncio.Semaphore(1)
-            result = await self._embed_single_batch_with_retry(0, batches[0], progress, semaphore)
-            if result.error is not None:
-                raise RuntimeError(f"Failed to embed batch: {result.error}")
-            if log_progress:
-                logger.debug(f"Embedded 1/1 batches ({len(unique_texts)} unique texts)")
-            unique_embeddings = result.embeddings or []
-            return [unique_embeddings[text_to_index[t]] for t in texts]
-
-        # Create progress tracker
-        progress = EmbeddingProgress(
-            total_texts=len(unique_texts),
-            total_batches=total_batches,
+        return await batch_embed(
+            texts,
+            self.embedding_provider,
+            self._embedding_batch_config,
+            self._rate_limiter,
+            batch_size,
+            log_progress,
         )
-
-        if log_progress:
-            logger.info(
-                f"Starting parallel embedding: {len(unique_texts)} unique texts "
-                f"in {total_batches} batches "
-                f"(batch_size={batch_size}, concurrency={optimal_concurrency})"
-            )
-
-        # Create semaphore for concurrency control
-        semaphore = asyncio.Semaphore(optimal_concurrency)
-
-        # Create tasks for all batches
-        tasks = [
-            self._embed_single_batch_with_retry(i, batch, progress, semaphore)
-            for i, batch in enumerate(batches)
-        ]
-
-        # Execute all tasks concurrently
-        results: list[BatchEmbeddingResult] = await asyncio.gather(*tasks)
-
-        # Log final progress
-        if log_progress:
-            progress.log_progress()
-
-        # Sort results by batch index to maintain order
-        results.sort(key=lambda r: r.batch_index)
-
-        # Check for failures and collect errors
-        errors: list[tuple[int, Exception]] = []
-        all_embeddings: list[list[float]] = []
-
-        for result in results:
-            if result.error is not None:
-                errors.append((result.batch_index, result.error))
-            elif result.embeddings is not None:
-                all_embeddings.extend(result.embeddings)
-
-        # If there were failures, report them
-        if errors:
-            error_msgs = [f"Batch {idx}: {err}" for idx, err in errors]
-            error_summary = "\n".join(error_msgs)
-            logger.error(f"Embedding failed for {len(errors)} batches:\n{error_summary}")
-
-            # Raise an exception with details about the failures
-            raise RuntimeError(
-                f"Failed to embed {len(errors)} out of {total_batches} batches. "
-                f"First error: {errors[0][1]}"
-            )
-
-        if log_progress:
-            elapsed = progress.elapsed_seconds
-            rate = len(unique_texts) / elapsed if elapsed > 0 else 0
-            logger.info(
-                f"Embedding complete: {len(unique_texts)} unique texts "
-                f"in {elapsed:.2f}s ({rate:.1f} texts/sec)"
-            )
-
-        # Remap unique embeddings back to original text order
-        return [all_embeddings[text_to_index[t]] for t in texts]
 
     async def _batch_embed_sequential(
         self, texts: list[str], batch_size: int, log_progress: bool = False
     ) -> list[list[float]]:
-        """Generate embeddings in sequential batches (legacy method).
+        """Generate embeddings in sequential batches (legacy method)."""
+        from .embedding import batch_embed_sequential
 
-        This is the original sequential implementation, kept for backward
-        compatibility and testing purposes.
-
-        Args:
-            texts: List of text strings to embed.
-            batch_size: Number of texts to embed per batch.
-            log_progress: Whether to log batch progress.
-
-        Returns:
-            List of embedding vectors.
-        """
-        embeddings: list[list[float]] = []
-        for i in range(0, len(texts), batch_size):
-            batch = texts[i : i + batch_size]
-            batch_embeddings = await self.embedding_provider.embed(batch)
-            embeddings.extend(batch_embeddings)
-            if log_progress and len(texts) > batch_size:
-                logger.debug(
-                    f"Embedded batch {i // batch_size + 1}/"
-                    f"{(len(texts) + batch_size - 1) // batch_size}"
-                )
-        return embeddings
+        return await batch_embed_sequential(
+            texts, self.embedding_provider, batch_size, log_progress
+        )
 
     async def create_or_update_table(
         self, chunks: list[CodeChunk], embedding_batch_size: int = 100
@@ -663,11 +326,14 @@ class VectorStore:
 
         # Generate embeddings in batches to avoid OOM and API limits
         texts = [self._chunk_to_text(chunk) for chunk in chunks]
-        embeddings = await self._batch_embed(texts, embedding_batch_size, log_progress=True)
+        embeddings = await self._batch_embed(
+            texts, embedding_batch_size, log_progress=True
+        )
 
         # Prepare data for LanceDB
         data = [
-            chunk.to_vector_record(vector=embedding) for chunk, embedding in zip(chunks, embeddings)
+            chunk.to_vector_record(vector=embedding)
+            for chunk, embedding in zip(chunks, embeddings)
         ]
 
         # Reset lazy index manager state since we're creating a fresh table
@@ -702,7 +368,9 @@ class VectorStore:
 
         return len(data)
 
-    async def add_chunks(self, chunks: list[CodeChunk], embedding_batch_size: int = 100) -> int:
+    async def add_chunks(
+        self, chunks: list[CodeChunk], embedding_batch_size: int = 100
+    ) -> int:
         """Add chunks to existing table.
 
         Args:
@@ -726,7 +394,8 @@ class VectorStore:
 
         # Prepare data
         data = [
-            chunk.to_vector_record(vector=embedding) for chunk, embedding in zip(chunks, embeddings)
+            chunk.to_vector_record(vector=embedding)
+            for chunk, embedding in zip(chunks, embeddings)
         ]
 
         table.add(data)
@@ -809,7 +478,9 @@ class VectorStore:
 
         # Resolve minimum similarity threshold
         effective_min_similarity = (
-            min_similarity if min_similarity is not None else profile_config.min_similarity
+            min_similarity
+            if min_similarity is not None
+            else profile_config.min_similarity
         )
 
         logger.debug(
@@ -851,7 +522,9 @@ class VectorStore:
 
         # Use adaptive search depth if enabled
         if self._adaptive_search_enabled:
-            adaptive_depth = self._adaptive_searcher.estimate_optimal_depth(query, limit)
+            adaptive_depth = self._adaptive_searcher.estimate_optimal_depth(
+                query, limit
+            )
             fetch_limit = max(
                 int(limit * base_fetch_multiplier),
                 adaptive_depth,
@@ -922,7 +595,9 @@ class VectorStore:
         if (
             fuzzy_config.enable_auto_fuzzy
             and not use_fuzzy
-            and should_auto_enable_fuzzy(search_results, fuzzy_config.auto_fuzzy_threshold)
+            and should_auto_enable_fuzzy(
+                search_results, fuzzy_config.auto_fuzzy_threshold
+            )
         ):
             auto_fuzzy_enabled = True
             logger.debug(
@@ -946,7 +621,9 @@ class VectorStore:
         if (
             auto_suggest
             and fuzzy_config.enable_auto_fuzzy
-            and should_auto_enable_fuzzy(search_results, fuzzy_config.auto_fuzzy_threshold)
+            and should_auto_enable_fuzzy(
+                search_results, fuzzy_config.auto_fuzzy_threshold
+            )
         ):
             try:
                 fuzzy_helper = await self._get_fuzzy_helper()
@@ -990,7 +667,9 @@ class VectorStore:
 
         # Cache results (only for non-fuzzy, non-path-pattern, non-auto-fuzzy searches)
         if use_cache and not auto_fuzzy_enabled:
-            self._search_cache.set(query, query_embedding, search_results, cache_filters)
+            self._search_cache.set(
+                query, query_embedding, search_results, cache_filters
+            )
 
         return search_results
 
@@ -1067,7 +746,9 @@ class VectorStore:
 
         # Resolve minimum similarity threshold
         effective_min_similarity = (
-            min_similarity if min_similarity is not None else profile_config.min_similarity
+            min_similarity
+            if min_similarity is not None
+            else profile_config.min_similarity
         )
 
         logger.debug(
@@ -1081,7 +762,9 @@ class VectorStore:
                 if cursor.startswith("offset:"):
                     offset = int(cursor[7:])
             except (ValueError, IndexError):
-                logger.warning(f"Invalid cursor format: {cursor}, using offset={offset}")
+                logger.warning(
+                    f"Invalid cursor format: {cursor}, using offset={offset}"
+                )
 
         # Generate query embedding
         query_embedding = (await self.embedding_provider.embed([query]))[0]
@@ -1435,13 +1118,15 @@ class VectorStore:
         # Count by language
         lang_counts = pc.value_counts(arrow_table.column("language"))
         languages = {
-            str(k): int(v) for k, v in zip(lang_counts.field("values"), lang_counts.field("counts"))
+            str(k): int(v)
+            for k, v in zip(lang_counts.field("values"), lang_counts.field("counts"))
         }
 
         # Count by chunk type
         type_counts = pc.value_counts(arrow_table.column("chunk_type"))
         chunk_types = {
-            str(k): int(v) for k, v in zip(type_counts.field("values"), type_counts.field("counts"))
+            str(k): int(v)
+            for k, v in zip(type_counts.field("values"), type_counts.field("counts"))
         }
 
         # Count unique files
@@ -1500,7 +1185,9 @@ class VectorStore:
             file_set.add(fpath)
 
             if (i + 1) % 100_000 == 0:
-                logger.debug(f"Stats streaming progress: {i + 1}/{total_chunks} rows processed")
+                logger.debug(
+                    f"Stats streaming progress: {i + 1}/{total_chunks} rows processed"
+                )
 
         return {
             "total_chunks": total_chunks,

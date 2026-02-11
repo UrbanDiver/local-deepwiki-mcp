@@ -1,5 +1,7 @@
 """Live progress tracking for wiki generation."""
 
+from __future__ import annotations
+
 import json
 import time
 from collections import deque

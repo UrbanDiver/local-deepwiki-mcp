@@ -3,6 +3,8 @@
 Provides a keyboard-navigable interface for searching code with filters and previews.
 """
 
+from __future__ import annotations
+
 import argparse
 import asyncio
 import fnmatch

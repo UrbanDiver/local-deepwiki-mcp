@@ -5,6 +5,8 @@ handler. Extracted from server.py to keep that file focused on server setup
 and request dispatch.
 """
 
+from __future__ import annotations
+
 from mcp.types import Tool
 
 TOOL_DEFINITIONS: list[Tool] = [

@@ -1,5 +1,7 @@
 """Core tool handlers: indexing, querying, wiki reading, search, and export."""
 
+from __future__ import annotations
+
 import asyncio
 import json
 import time
@@ -10,23 +12,25 @@ from mcp.types import TextContent
 from pydantic import ValidationError as PydanticValidationError
 
 from local_deepwiki.handlers._shared import (
-    IndexRepositoryArgs,
+    MAX_WIKI_PAGE_SIZE,
     AskQuestionArgs,
-    ReadWikiStructureArgs,
-    ReadWikiPageArgs,
-    SearchCodeArgs,
     ExportWikiHtmlArgs,
     ExportWikiPdfArgs,
     IndexingProgressType,
+    IndexRepositoryArgs,
     OperationType,
     Permission,
     ProgressPhase,
+    ReadWikiPageArgs,
+    ReadWikiStructureArgs,
     RepositoryIndexer,
+    SearchCodeArgs,
     ValidationError,
     _create_vector_store,
     _load_index_status,
     _validate_export_path,
     create_progress_notifier,
+    generate_wiki,
     get_access_controller,
     get_audit_logger,
     get_config,
@@ -34,7 +38,6 @@ from local_deepwiki.handlers._shared import (
     get_progress_registry,
     get_rate_limiter,
     get_repository_access_controller,
-    generate_wiki,
     handle_tool_errors,
     logger,
     path_not_found_error,
@@ -44,7 +47,6 @@ from local_deepwiki.handlers._shared import (
     validate_languages_list,
     validate_path_pattern,
     validate_query_parameters,
-    MAX_WIKI_PAGE_SIZE,
 )
 
 

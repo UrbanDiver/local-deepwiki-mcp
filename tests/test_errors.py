@@ -4,7 +4,7 @@ import pytest
 
 from local_deepwiki.errors import (
     DeepWikiError,
-    EnvironmentError,
+    EnvironmentSetupError,
     ExportError,
     IndexingError,
     ProviderError,
@@ -118,18 +118,18 @@ class TestValidationError:
         assert isinstance(error, DeepWikiError)
 
 
-class TestEnvironmentError:
-    """Tests for EnvironmentError."""
+class TestEnvironmentSetupError:
+    """Tests for EnvironmentSetupError."""
 
     def test_basic_environment_error(self):
         """Test basic environment error."""
-        error = EnvironmentError("Missing dependency")
+        error = EnvironmentSetupError("Missing dependency")
         assert "Missing dependency" in str(error)
         assert error.missing_component is None
 
     def test_environment_error_with_component(self):
         """Test environment error with component info."""
-        error = EnvironmentError(
+        error = EnvironmentSetupError(
             "WeasyPrint not installed",
             hint="pip install weasyprint",
             missing_component="weasyprint",
@@ -339,17 +339,17 @@ class TestProviderErrorFactory:
         assert "Some random error" in str(error)
 
 
-class TestEnvironmentErrorFactory:
+class TestEnvironmentSetupErrorFactory:
     """Tests for the environment_error factory function."""
 
     def test_creates_environment_error(self):
-        """Test that factory creates EnvironmentError."""
+        """Test that factory creates EnvironmentSetupError."""
         error = environment_error(
             missing_component="weasyprint",
             purpose="PDF export",
             setup_instructions="pip install weasyprint",
         )
-        assert isinstance(error, EnvironmentError)
+        assert isinstance(error, EnvironmentSetupError)
         assert "weasyprint" in str(error)
         assert "PDF export" in str(error)
         assert "pip install weasyprint" in str(error)
@@ -556,7 +556,7 @@ class TestErrorHierarchy:
     def test_all_errors_inherit_from_deepwiki_error(self):
         """Test that all error classes inherit from DeepWikiError."""
         assert issubclass(ValidationError, DeepWikiError)
-        assert issubclass(EnvironmentError, DeepWikiError)
+        assert issubclass(EnvironmentSetupError, DeepWikiError)
         assert issubclass(ProviderError, DeepWikiError)
         assert issubclass(IndexingError, DeepWikiError)
         assert issubclass(ExportError, DeepWikiError)
@@ -566,7 +566,7 @@ class TestErrorHierarchy:
         """Test that all errors can be caught as DeepWikiError."""
         errors = [
             ValidationError("test"),
-            EnvironmentError("test"),
+            EnvironmentSetupError("test"),
             ProviderError("test"),
             IndexingError("test"),
             ExportError("test"),
@@ -581,7 +581,7 @@ class TestErrorHierarchy:
         """Test that all errors can be caught as Exception."""
         errors = [
             ValidationError("test"),
-            EnvironmentError("test"),
+            EnvironmentSetupError("test"),
             ProviderError("test"),
             IndexingError("test"),
             ExportError("test"),

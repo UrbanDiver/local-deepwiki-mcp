@@ -4,6 +4,8 @@ This module analyzes import relationships between files to suggest
 related documentation pages, helping users discover relevant content.
 """
 
+from __future__ import annotations
+
 import re
 from collections import defaultdict
 from dataclasses import dataclass, field

@@ -10,6 +10,8 @@ The audit system logs:
 - Security events (authentication, authorization failures)
 """
 
+from __future__ import annotations
+
 import json
 import logging
 import logging.handlers

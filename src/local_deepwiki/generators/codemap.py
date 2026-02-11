@@ -220,7 +220,7 @@ async def discover_entry_points(
         from local_deepwiki.generators.callgraph import CallGraphExtractor
     except ImportError:  # pragma: no cover
         logger.warning("Could not import CallGraphExtractor")
-        CallGraphExtractor = None  # type: ignore[assignment]  # fallback if callgraph module unavailable
+        CallGraphExtractor = None  # fallback if callgraph module unavailable
 
     search_query = entry_point_hint if entry_point_hint else query
     try:
@@ -322,7 +322,7 @@ async def build_cross_file_graph(
         from local_deepwiki.generators.callgraph import CallGraphExtractor
     except ImportError:  # pragma: no cover
         logger.warning("Could not import CallGraphExtractor")
-        CallGraphExtractor = None  # type: ignore[assignment]  # fallback if callgraph module unavailable
+        CallGraphExtractor = None  # fallback if callgraph module unavailable
 
     graph = CodemapGraph()
 
@@ -454,9 +454,7 @@ async def _import_based_callees(
 ) -> list[str]:
     """Supplement *existing* callees with import-derived names."""
     try:
-        from local_deepwiki.generators.context_builder import (
-            extract_imports_from_chunks,
-        )
+        from local_deepwiki.generators.context_builder import extract_imports_from_chunks
     except ImportError:
         return existing
 

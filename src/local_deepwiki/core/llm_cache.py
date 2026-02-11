@@ -1,5 +1,7 @@
 """LLM response cache using LanceDB for vector similarity search."""
 
+from __future__ import annotations
+
 import hashlib
 import time
 import uuid

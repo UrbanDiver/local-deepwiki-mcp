@@ -4,6 +4,8 @@ This module provides configuration-driven role assignment for subjects,
 supporting pattern-based matching and explicit admin identifiers.
 """
 
+from __future__ import annotations
+
 import fnmatch
 from dataclasses import dataclass, field
 from pathlib import Path

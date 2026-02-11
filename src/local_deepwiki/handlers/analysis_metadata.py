@@ -1,5 +1,7 @@
 """Metadata-related analysis handlers: manifest, file context, wiki stats, complexity."""
 
+from __future__ import annotations
+
 import asyncio
 import json
 import time

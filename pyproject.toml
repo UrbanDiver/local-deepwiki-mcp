@@ -97,10 +97,16 @@ skip = [".git", ".venv", "__pycache__", ".deepwiki"]
 
 [tool.mypy]
 python_version = "3.11"
-warn_return_any = false
+warn_return_any = true
 warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+# ignore_missing_imports: Required for tree-sitter and other packages without stubs
 ignore_missing_imports = true
+# disallow_untyped_defs: Disabled to allow gradual typing adoption
+# Enable per-module as coverage improves
 disallow_untyped_defs = false
+check_untyped_defs = true
 disable_error_code = [
     "no-any-return",
     "prop-decorator",

@@ -5,6 +5,8 @@ source file links for GitHub, GitLab, and other hosting services.
 Also provides git blame integration for tracking code authorship.
 """
 
+from __future__ import annotations
+
 import re
 import subprocess
 from dataclasses import dataclass

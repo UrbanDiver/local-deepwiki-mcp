@@ -4,6 +4,8 @@ This module extracts commit history from git and generates a changelog
 wiki page with links to GitHub/GitLab commits.
 """
 
+from __future__ import annotations
+
 import subprocess
 from collections import defaultdict
 from dataclasses import dataclass, field

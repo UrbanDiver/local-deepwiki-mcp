@@ -4,6 +4,8 @@ Functions extracted from html.py and pdf.py to eliminate duplication
 of TOC rendering, breadcrumb building, and title extraction logic.
 """
 
+from __future__ import annotations
+
 from pathlib import Path
 from typing import Any
 

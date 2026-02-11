@@ -1,5 +1,7 @@
 """Diff-related analysis handlers: analyze_diff and ask_about_diff."""
 
+from __future__ import annotations
+
 import asyncio
 import json
 import re

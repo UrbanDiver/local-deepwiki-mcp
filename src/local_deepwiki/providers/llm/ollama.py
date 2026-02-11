@@ -1,5 +1,7 @@
 """Ollama LLM provider."""
 
+from __future__ import annotations
+
 from typing import AsyncIterator, cast
 
 from ollama import AsyncClient, ResponseError

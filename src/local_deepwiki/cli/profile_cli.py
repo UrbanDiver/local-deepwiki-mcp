@@ -7,6 +7,8 @@ Provides commands to save, activate, list, and delete config profiles:
     deepwiki config profile delete <name>
 """
 
+from __future__ import annotations
+
 import argparse
 
 from rich.console import Console

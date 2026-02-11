@@ -5,15 +5,14 @@ or cancelled research operations. Checkpoints are stored as JSON files
 in the .deepwiki/research_checkpoints directory within each repository.
 """
 
+from __future__ import annotations
+
 import json
 import time
 from pathlib import Path
 
 from local_deepwiki.logging import get_logger
-from local_deepwiki.models import (
-    ResearchCheckpoint,
-    ResearchCheckpointStep,
-)
+from local_deepwiki.models import ResearchCheckpoint, ResearchCheckpointStep
 
 logger = get_logger(__name__)
 

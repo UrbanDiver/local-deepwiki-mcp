@@ -6,6 +6,8 @@ Provides commands to inspect and manage embedding and LLM caches:
     deepwiki cache cleanup [--repo PATH]
 """
 
+from __future__ import annotations
+
 import argparse
 import sqlite3
 import sys

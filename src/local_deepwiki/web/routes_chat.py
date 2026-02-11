@@ -4,20 +4,15 @@ Provides the /chat page and /api/chat SSE endpoint for RAG-based Q&A
 over an indexed codebase.
 """
 
+from __future__ import annotations
+
 import asyncio
 import json
 import queue
 import threading
 from typing import Any, AsyncIterator, Callable, Iterator
 
-from flask import (
-    Blueprint,
-    Response,
-    abort,
-    jsonify,
-    render_template,
-    request,
-)
+from flask import Blueprint, Response, abort, jsonify, render_template, request
 
 from local_deepwiki.errors import sanitize_error_message
 from local_deepwiki.logging import get_logger

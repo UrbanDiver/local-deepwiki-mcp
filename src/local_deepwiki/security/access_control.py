@@ -4,6 +4,8 @@ This module provides role-based access control (RBAC) and permission checking
 for sensitive operations within the system.
 """
 
+from __future__ import annotations
+
 import asyncio
 import threading
 from dataclasses import dataclass

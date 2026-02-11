@@ -1,5 +1,7 @@
 """LLM providers."""
 
+from __future__ import annotations
+
 from pathlib import Path
 
 from local_deepwiki.config import LLMCacheConfig, LLMConfig, get_config

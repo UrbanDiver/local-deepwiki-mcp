@@ -1,5 +1,7 @@
 """Main CodeParser class for multi-language tree-sitter parsing."""
 
+from __future__ import annotations
+
 import hashlib
 import mmap
 from pathlib import Path

@@ -1,5 +1,7 @@
 """Code chunk and file models."""
 
+from __future__ import annotations
+
 import json
 from typing import Any
 

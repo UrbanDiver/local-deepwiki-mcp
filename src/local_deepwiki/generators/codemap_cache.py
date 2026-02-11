@@ -5,6 +5,8 @@ with a configurable TTL (default 1 hour). Provides cache key generation,
 read/write, and listing of recent cached codemaps.
 """
 
+from __future__ import annotations
+
 import hashlib
 import json
 import time

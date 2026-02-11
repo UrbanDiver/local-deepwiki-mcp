@@ -1,5 +1,7 @@
 """Configuration loading, merging, and validation."""
 
+from __future__ import annotations
+
 import os
 import threading
 from contextlib import contextmanager
