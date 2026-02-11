@@ -28,6 +28,7 @@ from local_deepwiki.models import (
     WikiPage,
     WikiStructure,
 )
+from local_deepwiki.providers.base import EmbeddingProvider
 
 
 # =============================================================================
@@ -412,7 +413,9 @@ class TestWikiGenerationPipeline:
 
         mock_store = create_mock_vector_store()
 
-        with patch("local_deepwiki.generators.wiki.get_cached_llm_provider") as mock_get_llm:
+        with patch(
+            "local_deepwiki.generators.wiki.get_cached_llm_provider"
+        ) as mock_get_llm:
             mock_get_llm.return_value = mock_llm_provider
 
             generator = WikiGenerator(
@@ -422,9 +425,7 @@ class TestWikiGenerationPipeline:
             generator.llm = mock_llm_provider
 
             # Patch the internal calls that need the vector store
-            with patch.object(
-                generator, "_get_main_definition_lines", return_value={}
-            ):
+            with patch.object(generator, "_get_main_definition_lines", return_value={}):
                 wiki_structure = await generator.generate(
                     index_status=mock_index_status,
                     full_rebuild=True,
@@ -449,7 +450,9 @@ class TestWikiGenerationPipeline:
 
         mock_store = create_mock_vector_store()
 
-        with patch("local_deepwiki.generators.wiki.get_cached_llm_provider") as mock_get_llm:
+        with patch(
+            "local_deepwiki.generators.wiki.get_cached_llm_provider"
+        ) as mock_get_llm:
             mock_get_llm.return_value = mock_llm_provider
 
             generator = WikiGenerator(
@@ -458,9 +461,7 @@ class TestWikiGenerationPipeline:
             )
             generator.llm = mock_llm_provider
 
-            with patch.object(
-                generator, "_get_main_definition_lines", return_value={}
-            ):
+            with patch.object(generator, "_get_main_definition_lines", return_value={}):
                 await generator.generate(
                     index_status=mock_index_status,
                     full_rebuild=True,
@@ -546,9 +547,7 @@ class TestHtmlExportPipeline:
 
         return wiki_path
 
-    def test_html_export_creates_files(
-        self, wiki_with_content: Path, tmp_path: Path
-    ):
+    def test_html_export_creates_files(self, wiki_with_content: Path, tmp_path: Path):
         """Test that HTML export creates HTML files from markdown."""
         output_path = tmp_path / "html_output"
 
@@ -566,9 +565,7 @@ class TestHtmlExportPipeline:
         index_html = output_path / "index.html"
         assert index_html.exists()
 
-    def test_html_export_includes_toc(
-        self, wiki_with_content: Path, tmp_path: Path
-    ):
+    def test_html_export_includes_toc(self, wiki_with_content: Path, tmp_path: Path):
         """Test that exported HTML includes table of contents."""
         output_path = tmp_path / "html_output"
 
@@ -813,9 +810,7 @@ class TestPipelineErrorHandling:
             # Should have processed at least the valid file
             assert status.total_files >= 1
 
-    async def test_index_handles_empty_repo(
-        self, tmp_path: Path, test_config: Config
-    ):
+    async def test_index_handles_empty_repo(self, tmp_path: Path, test_config: Config):
         """Test that indexing handles empty repositories gracefully."""
         repo_path = tmp_path / "empty_repo"
         repo_path.mkdir()
@@ -846,9 +841,7 @@ class TestPipelineErrorHandling:
         count = exporter.export()
         assert count == 0
 
-    def test_html_export_handles_invalid_toc(
-        self, tmp_path: Path
-    ):
+    def test_html_export_handles_invalid_toc(self, tmp_path: Path):
         """Test that HTML export handles invalid toc.json."""
         wiki_path = tmp_path / ".deepwiki"
         wiki_path.mkdir()
@@ -874,3 +867,337 @@ class TestPipelineErrorHandling:
             # This is expected behavior - invalid JSON causes an error
             # The test passes by documenting this behavior
             pass
+
+
+# =============================================================================
+# Content-Aware Embedding Provider
+# =============================================================================
+
+
+class ContentAwareEmbeddingProvider(EmbeddingProvider):
+    """Mock embedding that produces different vectors per text, making search meaningful.
+
+    Unlike the standard mock that returns identical [0.1]*384 for all inputs,
+    this provider hashes each text to produce distinguishable vectors so that
+    vector search actually ranks results by relevance.
+    """
+
+    def __init__(self, dimension: int = 384):
+        self._dimension = dimension
+
+    @property
+    def name(self) -> str:
+        return "mock:content-aware"
+
+    def get_dimension(self) -> int:
+        return self._dimension
+
+    async def embed(self, texts: list[str]) -> list[list[float]]:
+        """Hash-based embeddings: different content produces different normalized vectors."""
+        import hashlib
+        import math
+
+        results = []
+        for text in texts:
+            h = hashlib.sha256(text.encode()).digest()
+            raw = [h[i % len(h)] / 255.0 for i in range(self._dimension)]
+            norm = math.sqrt(sum(x * x for x in raw))
+            vec = [x / norm for x in raw] if norm > 0 else raw
+            results.append(vec)
+        return results
+
+
+# =============================================================================
+# Real VectorStore Integration Tests
+# =============================================================================
+
+
+class TestRealVectorStoreIntegration:
+    """Tests that use a real LanceDB VectorStore with content-aware embeddings."""
+
+    @pytest.fixture
+    async def indexed_repo(self, sample_python_repo, tmp_path, test_config):
+        """Index sample_python_repo into a real VectorStore.
+
+        Returns:
+            Tuple of (repo_path, wiki_path, vector_store, index_status).
+        """
+        from local_deepwiki.core.vectorstore import VectorStore
+
+        embedding_provider = ContentAwareEmbeddingProvider()
+        db_path = tmp_path / "vectors.lance"
+        vector_store = VectorStore(db_path, embedding_provider)
+
+        indexer = RepositoryIndexer(sample_python_repo, test_config)
+        indexer.vector_store = vector_store
+
+        index_status = await indexer.index(full_rebuild=True)
+
+        return sample_python_repo, indexer.wiki_path, vector_store, index_status
+
+    async def test_index_populates_real_vectorstore(self, indexed_repo):
+        """Verify indexing stores chunks in real LanceDB and stats are nonzero."""
+        _repo_path, _wiki_path, vector_store, index_status = indexed_repo
+
+        assert index_status.total_chunks > 0
+        stats = vector_store.get_stats()
+        assert stats["total_chunks"] > 0
+        assert stats["total_chunks"] == index_status.total_chunks
+
+    async def test_search_returns_relevant_results(self, indexed_repo):
+        """Search for 'Application' and verify results include main.py content."""
+        _repo_path, _wiki_path, vector_store, _index_status = indexed_repo
+
+        results = await vector_store.search("Application class initialization", limit=5)
+
+        assert len(results) > 0
+        file_paths = {r.chunk.file_path for r in results}
+        # The Application class lives in src/main.py
+        assert any("main.py" in fp for fp in file_paths)
+
+    async def test_search_with_language_filter(self, indexed_repo):
+        """Search with language='python' filter, verify all results are Python."""
+        _repo_path, _wiki_path, vector_store, _index_status = indexed_repo
+
+        results = await vector_store.search(
+            "validate config", limit=10, language="python"
+        )
+
+        assert len(results) > 0
+        for r in results:
+            assert r.chunk.language == Language.PYTHON
+
+    async def test_search_returns_scored_results(self, indexed_repo):
+        """Verify results have scores > 0 and are ordered by descending score."""
+        _repo_path, _wiki_path, vector_store, _index_status = indexed_repo
+
+        results = await vector_store.search("configuration validation", limit=5)
+
+        assert len(results) > 0
+        scores = [r.score for r in results]
+        for s in scores:
+            assert s > 0
+        # Verify descending order
+        assert scores == sorted(scores, reverse=True)
+
+    async def test_incremental_reindex_preserves_search(
+        self, indexed_repo, sample_python_repo, test_config
+    ):
+        """Index, search, add a new file, re-index, verify old+new results appear."""
+        repo_path, _wiki_path, vector_store, initial_status = indexed_repo
+
+        # Verify initial search works
+        initial_results = await vector_store.search("Application", limit=5)
+        assert len(initial_results) > 0
+        initial_chunk_count = vector_store.get_stats()["total_chunks"]
+
+        # Add a new file
+        src_dir = repo_path / "src"
+        (src_dir / "database.py").write_text(
+            '"""Database module."""\n\n'
+            "class DatabaseConnection:\n"
+            '    """Manages database connections and queries."""\n\n'
+            "    def connect(self, host: str, port: int) -> None:\n"
+            '        """Connect to the database server."""\n'
+            "        pass\n\n"
+            "    def execute_query(self, sql: str) -> list:\n"
+            '        """Execute a SQL query and return results."""\n'
+            "        return []\n"
+        )
+
+        # Re-index incrementally
+        indexer = RepositoryIndexer(repo_path, test_config)
+        indexer.vector_store = vector_store
+        new_status = await indexer.index(full_rebuild=False)
+
+        # Verify new chunks were added
+        new_chunk_count = vector_store.get_stats()["total_chunks"]
+        assert new_chunk_count > initial_chunk_count
+
+        # Broad search with low threshold to find new file's chunks
+        all_results = await vector_store.search(
+            "DatabaseConnection", limit=20, min_similarity=0.0
+        )
+        all_files = {r.chunk.file_path for r in all_results}
+        assert any("database.py" in fp for fp in all_files)
+
+        # Old content should still be searchable
+        old_results = await vector_store.search("Application", limit=5)
+        assert len(old_results) > 0
+
+
+# =============================================================================
+# Query Pipeline Integration Tests (real vectorstore, mock LLM)
+# =============================================================================
+
+
+class TestQueryPipelineIntegration:
+    """Tests the ask_question and search_code flows with real vectorstore but mock LLM."""
+
+    @pytest.fixture
+    async def indexed_repo(self, sample_python_repo, tmp_path, test_config):
+        """Index sample_python_repo into a real VectorStore.
+
+        Returns:
+            Tuple of (repo_path, wiki_path, vector_store, index_status, config).
+        """
+        from local_deepwiki.core.vectorstore import VectorStore
+
+        embedding_provider = ContentAwareEmbeddingProvider()
+        db_path = tmp_path / "vectors.lance"
+        vector_store = VectorStore(db_path, embedding_provider)
+
+        indexer = RepositoryIndexer(sample_python_repo, test_config)
+        indexer.vector_store = vector_store
+
+        index_status = await indexer.index(full_rebuild=True)
+
+        return (
+            sample_python_repo,
+            indexer.wiki_path,
+            vector_store,
+            index_status,
+            test_config,
+        )
+
+    @staticmethod
+    def _patch_handler_plumbing(
+        index_status, wiki_path, config, vector_store, mock_llm
+    ):
+        """Create a context manager that patches handler plumbing, keeping real VectorStore.
+
+        Returns a contextlib.ExitStack-compatible nested patch context.
+        """
+        from contextlib import ExitStack
+        from unittest.mock import patch as _patch
+
+        stack = ExitStack()
+
+        # Patch _load_index_status to return our real index data
+        p1 = _patch(
+            "local_deepwiki.handlers.core._load_index_status",
+            return_value=(index_status, wiki_path, config),
+        )
+
+        # Patch _create_vector_store to return our real vector store
+        p2 = _patch(
+            "local_deepwiki.handlers.core._create_vector_store",
+            return_value=vector_store,
+        )
+
+        # Patch the inline import of get_cached_llm_provider
+        p3 = _patch(
+            "local_deepwiki.providers.llm.get_cached_llm_provider",
+            return_value=mock_llm,
+        )
+
+        # Permissive RBAC
+        mock_ac = MagicMock()
+        mock_ac.require_permission = MagicMock()
+        mock_ac.get_current_subject.return_value = None
+        p4 = _patch(
+            "local_deepwiki.handlers.core.get_access_controller",
+            return_value=mock_ac,
+        )
+
+        # No-op audit logger
+        p5 = _patch(
+            "local_deepwiki.handlers.core.get_audit_logger",
+            return_value=MagicMock(),
+        )
+
+        # No-op query validation (already validated by Pydantic)
+        p6 = _patch("local_deepwiki.handlers.core.validate_query_parameters")
+
+        # No-op rate limiter (async context manager)
+        mock_rl = AsyncMock()
+        mock_rl.__aenter__ = AsyncMock()
+        mock_rl.__aexit__ = AsyncMock()
+        p7 = _patch(
+            "local_deepwiki.handlers.core.get_rate_limiter",
+            return_value=mock_rl,
+        )
+
+        # Patch embedding provider used in handler
+        mock_ep = MagicMock()
+        p8 = _patch(
+            "local_deepwiki.handlers.core.get_embedding_provider",
+            return_value=mock_ep,
+        )
+
+        for p in (p1, p2, p3, p4, p5, p6, p7, p8):
+            stack.enter_context(p)
+
+        return stack
+
+    async def test_ask_question_with_real_index(self, indexed_repo):
+        """Test handle_ask_question with real VectorStore returns structured answer."""
+        from local_deepwiki.handlers.core import handle_ask_question
+
+        repo_path, wiki_path, vector_store, index_status, config = indexed_repo
+
+        mock_llm = AsyncMock()
+        mock_llm.generate = AsyncMock(
+            return_value="The Application class handles app lifecycle."
+        )
+
+        with self._patch_handler_plumbing(
+            index_status, wiki_path, config, vector_store, mock_llm
+        ):
+            result = await handle_ask_question(
+                {"repo_path": str(repo_path), "question": "What does Application do?"}
+            )
+
+        assert len(result) == 1
+        data = json.loads(result[0].text)
+        assert "question" in data
+        assert "answer" in data
+        assert "sources" in data
+        assert len(data["sources"]) > 0
+        # Sources should reference real files from the sample repo
+        source_files = {s["file"] for s in data["sources"]}
+        assert any("main.py" in f for f in source_files)
+
+    async def test_search_code_with_real_index(self, indexed_repo):
+        """Test handle_search_code with real VectorStore finds validate_config."""
+        from local_deepwiki.handlers.core import handle_search_code
+
+        repo_path, wiki_path, vector_store, index_status, config = indexed_repo
+
+        with self._patch_handler_plumbing(
+            index_status, wiki_path, config, vector_store, None
+        ):
+            result = await handle_search_code(
+                {"repo_path": str(repo_path), "query": "validate_config"}
+            )
+
+        assert len(result) == 1
+        data = json.loads(result[0].text)
+        assert isinstance(data, list)
+        assert len(data) > 0
+        # Should find the validate_config function in utils.py
+        found_files = {entry["file_path"] for entry in data}
+        assert any("utils.py" in f for f in found_files)
+
+    async def test_ask_question_no_results(self, indexed_repo):
+        """Search for something completely unrelated returns no-results message."""
+        from local_deepwiki.handlers.core import handle_ask_question
+
+        repo_path, wiki_path, vector_store, index_status, config = indexed_repo
+
+        # Create a vector store that returns empty results for this query
+        mock_empty_store = MagicMock()
+        mock_empty_store.search = AsyncMock(return_value=[])
+
+        with self._patch_handler_plumbing(
+            index_status, wiki_path, config, mock_empty_store, None
+        ):
+            result = await handle_ask_question(
+                {
+                    "repo_path": str(repo_path),
+                    "question": "quantum physics entanglement algorithm",
+                }
+            )
+
+        assert len(result) == 1
+        assert "No relevant code found" in result[0].text
