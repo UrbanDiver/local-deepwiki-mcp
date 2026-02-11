@@ -128,10 +128,11 @@ def render_mermaid_to_png(
     except subprocess.TimeoutExpired:
         logger.warning(f"Mermaid CLI timed out after {timeout}s")
         return None
-    except (subprocess.SubprocessError, OSError, ValueError) as e:
-        # SubprocessError: Process execution failures
+    except (subprocess.SubprocessError, OSError, ValueError, UnicodeDecodeError) as e:
+        # subprocess.SubprocessError: Process execution failures (CalledProcessError, etc.)
         # OSError: File system or process spawning issues
-        # ValueError: Invalid diagram code
+        # ValueError: Invalid diagram code or subprocess parameters
+        # UnicodeDecodeError: Output decoding errors
         logger.warning(f"Error rendering mermaid diagram: {e}")
         return None
 
@@ -193,10 +194,11 @@ def render_mermaid_to_svg(
     except subprocess.TimeoutExpired:
         logger.warning(f"Mermaid CLI timed out after {timeout}s")
         return None
-    except (subprocess.SubprocessError, OSError, ValueError) as e:
-        # SubprocessError: Process execution failures
+    except (subprocess.SubprocessError, OSError, ValueError, UnicodeDecodeError) as e:
+        # subprocess.SubprocessError: Process execution failures (CalledProcessError, etc.)
         # OSError: File system or process spawning issues
-        # ValueError: Invalid diagram code
+        # ValueError: Invalid diagram code or subprocess parameters
+        # UnicodeDecodeError: Output decoding errors
         logger.warning(f"Error rendering mermaid diagram: {e}")
         return None
 

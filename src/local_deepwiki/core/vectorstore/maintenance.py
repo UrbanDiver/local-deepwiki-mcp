@@ -79,7 +79,10 @@ class LazyIndexManager:
             for callback in self._on_index_ready_callbacks:
                 try:
                     callback()
-                except Exception as e:
+                except (RuntimeError, ValueError, TypeError) as e:
+                    # RuntimeError: Callback runtime errors
+                    # ValueError: Invalid state during callback
+                    # TypeError: Callback signature mismatch
                     logger.warning(f"Index ready callback failed: {e}")
 
     def is_index_pending(self) -> bool:
@@ -176,7 +179,10 @@ class LazyIndexManager:
         async def _create_index_task():
             try:
                 await self.create_index_now(progress_callback=progress_callback)
-            except Exception as e:
+            except (RuntimeError, ValueError, OSError) as e:
+                # RuntimeError: LanceDB table/index errors
+                # ValueError: Invalid index parameters
+                # OSError: File system or resource errors
                 logger.error(f"Background index creation failed: {e}")
                 with self._lock:
                     self._creation_in_progress = False
@@ -283,7 +289,10 @@ class LazyIndexManager:
                 # Already ready, invoke immediately
                 try:
                     callback()
-                except Exception as e:
+                except (RuntimeError, ValueError, TypeError) as e:
+                    # RuntimeError: Callback runtime errors
+                    # ValueError: Invalid state during callback
+                    # TypeError: Callback signature mismatch
                     logger.warning(f"Index ready callback failed: {e}")
             else:
                 self._on_index_ready_callbacks.append(callback)

@@ -121,7 +121,9 @@ class SearchState:
     filters: SearchFilters = field(default_factory=SearchFilters)
     show_preview: bool = False
     preview_context_lines: int = 3
-    input_mode: str = "search"  # search, filter_language, filter_type, filter_path, filter_score
+    input_mode: str = (
+        "search"  # search, filter_language, filter_type, filter_path, filter_score
+    )
     error_message: str | None = None
     search_complete: bool = False
 
@@ -150,7 +152,9 @@ class SearchState:
         Returns:
             The selected result, or None if no results.
         """
-        if not self.filtered_results or self.selected_index >= len(self.filtered_results):
+        if not self.filtered_results or self.selected_index >= len(
+            self.filtered_results
+        ):
             return None
         return self.filtered_results[self.selected_index]
 
@@ -196,7 +200,11 @@ class InteractiveSearch:
             )
             self._state.apply_filters()
             self._state.search_complete = True
-        except Exception as e:
+        except (RuntimeError, OSError, ValueError, KeyError) as e:
+            # RuntimeError: Vector search/LanceDB failures
+            # OSError: Network/file system issues
+            # ValueError: Invalid search parameters
+            # KeyError: Missing data during search
             logger.exception(f"Search error: {e}")
             self._state.error_message = f"Search error: {e}"
             self._state.results = []
@@ -209,7 +217,9 @@ class InteractiveSearch:
             Rich Table with search results.
         """
         table = Table(
-            title=f"Results for: {self._state.query}" if self._state.query else "Enter a search query",
+            title=f"Results for: {self._state.query}"
+            if self._state.query
+            else "Enter a search query",
             show_header=True,
             header_style="bold cyan",
             expand=True,
@@ -347,7 +357,9 @@ class InteractiveSearch:
 
         # Add docstring if present
         if chunk.docstring:
-            doc_text = Text(f"Docstring: {chunk.docstring[:200]}...", style="italic dim")
+            doc_text = Text(
+                f"Docstring: {chunk.docstring[:200]}...", style="italic dim"
+            )
             content = Group(doc_text, syntax)
         else:
             content = syntax
@@ -576,7 +588,9 @@ class InteractiveSearch:
                 self._console.clear()
                 languages = [lang.value for lang in Language]
                 self._console.print(f"[dim]Available: {', '.join(languages)}[/dim]")
-                value = self._console.input("[yellow]Language: [/yellow]").strip().lower()
+                value = (
+                    self._console.input("[yellow]Language: [/yellow]").strip().lower()
+                )
                 if value:
                     if value in languages:
                         self._state.filters.language = value
@@ -602,15 +616,21 @@ class InteractiveSearch:
 
             elif mode == "filter_score":
                 self._console.clear()
-                value = self._console.input("[yellow]Minimum score (0.0-1.0): [/yellow]").strip()
+                value = self._console.input(
+                    "[yellow]Minimum score (0.0-1.0): [/yellow]"
+                ).strip()
                 if value:
                     try:
                         score = float(value)
                         if 0.0 <= score <= 1.0:
                             self._state.filters.min_similarity = score
                         else:
-                            self._state.error_message = "Score must be between 0.0 and 1.0"
-                    except ValueError:
+                            self._state.error_message = (
+                                "Score must be between 0.0 and 1.0"
+                            )
+                    except (ValueError, TypeError):
+                        # ValueError: Invalid numeric string
+                        # TypeError: Invalid input type
                         self._state.error_message = f"Invalid score: {value}"
 
             # Re-apply filters and re-search if needed
@@ -655,7 +675,9 @@ async def run_search(
     # Check for vector store
     vector_db_path = repo_path / ".deepwiki" / "vectordb"
     if not vector_db_path.exists():
-        console.print(f"[red]Repository not indexed. Run: index_repository {repo_path}[/red]")
+        console.print(
+            f"[red]Repository not indexed. Run: index_repository {repo_path}[/red]"
+        )
         return
 
     # Initialize vector store
@@ -693,7 +715,9 @@ async def run_search(
             console.print()
             search.display_preview(search._state.filtered_results[0])
     else:
-        console.print("[red]Query is required in non-interactive mode. Use --query or -q.[/red]")
+        console.print(
+            "[red]Query is required in non-interactive mode. Use --query or -q.[/red]"
+        )
 
 
 def main() -> int:
@@ -796,7 +820,10 @@ def main() -> int:
     except KeyboardInterrupt:
         print("\nSearch cancelled.")
         return 130
-    except Exception as e:
+    except (RuntimeError, OSError, ValueError) as e:
+        # RuntimeError: Vector store or search failures
+        # OSError: File system or database access errors
+        # ValueError: Invalid configuration or parameters
         print(f"Error: {e}", file=sys.stderr)
         logger.exception("Search failed")
         return 1

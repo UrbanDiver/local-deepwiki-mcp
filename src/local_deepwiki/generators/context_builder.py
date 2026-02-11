@@ -144,7 +144,10 @@ async def get_callers_from_other_files(
             if caller_files:
                 callers[entity_name] = sorted(caller_files)[:max_files]
 
-        except Exception as e:
+        except (RuntimeError, OSError, ValueError, KeyError) as e:
+            # RuntimeError: Vector search/LanceDB failures
+            # OSError: Network/file system issues
+            # ValueError/KeyError: Invalid data during search
             logger.debug(f"Error searching for callers of {entity_name}: {e}")
             if warnings is not None:
                 warnings.append(f"Caller search failed for '{entity_name}': {e}")
@@ -187,7 +190,10 @@ async def find_related_files(
             for result in results:
                 if result.chunk.file_path != file_path:
                     related.add(result.chunk.file_path)
-        except Exception as e:
+        except (RuntimeError, OSError, ValueError, KeyError) as e:
+            # RuntimeError: Vector search/LanceDB failures
+            # OSError: Network/file system issues
+            # ValueError/KeyError: Invalid data during search
             logger.debug(f"Error searching for related module '{module}': {e}")
             if warnings is not None:
                 warnings.append(
@@ -247,7 +253,10 @@ async def get_type_definitions_used(
                     if type_name in first_line:
                         type_defs.append(f"{type_name}: {first_line}")
                         break
-        except Exception as e:
+        except (RuntimeError, OSError, ValueError, KeyError) as e:
+            # RuntimeError: Vector search/LanceDB failures
+            # OSError: Network/file system issues
+            # ValueError/KeyError: Invalid data during search
             logger.debug(f"Error searching for type definition '{type_name}': {e}")
             if warnings is not None:
                 warnings.append(f"Type definition search failed for '{type_name}': {e}")

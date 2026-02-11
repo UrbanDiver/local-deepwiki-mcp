@@ -204,7 +204,7 @@ class TestOllamaProviderGenerateErrors:
         provider._health_checked = True
 
         with patch.object(provider._client, "chat") as mock_chat:
-            mock_chat.side_effect = Exception("connection refused")
+            mock_chat.side_effect = ConnectionError("connection refused")
 
             with pytest.raises(OllamaConnectionError):
                 await provider.generate("Test prompt")
@@ -218,7 +218,7 @@ class TestOllamaProviderGenerateErrors:
         provider._health_checked = True
 
         with patch.object(provider._client, "chat") as mock_chat:
-            mock_chat.side_effect = Exception("timeout waiting for response")
+            mock_chat.side_effect = TimeoutError("timeout waiting for response")
 
             with pytest.raises(OllamaConnectionError):
                 await provider.generate("Test prompt")
@@ -268,7 +268,9 @@ class TestOllamaProviderGenerateStream:
             mock_chat.return_value = mock_stream()
 
             chunks = []
-            async for chunk in provider.generate_stream("User prompt", system_prompt="System"):
+            async for chunk in provider.generate_stream(
+                "User prompt", system_prompt="System"
+            ):
                 chunks.append(chunk)
 
             call_kwargs = mock_chat.call_args.kwargs
@@ -319,7 +321,7 @@ class TestOllamaProviderGenerateStream:
         provider._health_checked = True
 
         async def mock_stream():
-            raise Exception("connection refused")
+            raise ConnectionError("connection refused")
             yield
 
         with patch.object(provider._client, "chat") as mock_chat:

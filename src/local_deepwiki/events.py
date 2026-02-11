@@ -281,6 +281,7 @@ class EventEmitter:
                 )
                 self._lifecycle.on_register(event_str, entry.handler_id)
             except Exception as e:
+                # Broad catch justified: lifecycle hooks are user-provided callbacks; we must not crash registration
                 logger.error(f"Error in on_register lifecycle hook: {e}")
 
         return entry.handler_id
@@ -311,6 +312,7 @@ class EventEmitter:
                 try:
                     self._lifecycle.on_success(event_type.value, handler_id)
                 except Exception as e:
+                    # Broad catch justified: lifecycle hooks are user-provided callbacks; we must not crash tracking
                     logger.error(f"Error in on_success lifecycle hook: {e}")
         else:
             stats.error_count += 1
@@ -390,6 +392,7 @@ class EventEmitter:
             try:
                 self._lifecycle.on_deregister(event_type_str, handler_id, reason)
             except Exception as e:
+                # Broad catch justified: lifecycle hooks are user-provided callbacks; we must not crash cleanup
                 logger.error(f"Error in on_deregister lifecycle hook: {e}")
 
     def off(self, event_type: EventType | str | None, handler_id: str) -> bool:
@@ -521,6 +524,7 @@ class EventEmitter:
                 self._track_handler_result(entry.handler_id, event_type, success=True)
 
             except Exception as e:
+                # Broad catch justified: event handlers are user-provided callbacks; we must isolate failures
                 logger.error(
                     f"Error in event handler {entry.handler_id} for {event_type}: {e}"
                 )
@@ -534,6 +538,7 @@ class EventEmitter:
                     try:
                         self._lifecycle.on_error(event_type.value, entry.handler_id, e)
                     except Exception as hook_error:
+                        # Broad catch justified: lifecycle hooks are user-provided callbacks; we must not crash error handling
                         logger.error(f"Error in on_error lifecycle hook: {hook_error}")
 
                 # Check if should auto-deregister
@@ -634,6 +639,7 @@ class EventEmitter:
                 self._track_handler_result(entry.handler_id, event_type, success=True)
 
             except Exception as e:
+                # Broad catch justified: event handlers are user-provided callbacks; we must isolate failures
                 logger.error(
                     f"Error in event handler {entry.handler_id} for {event_type}: {e}"
                 )
@@ -647,6 +653,7 @@ class EventEmitter:
                     try:
                         self._lifecycle.on_error(event_type.value, entry.handler_id, e)
                     except Exception as hook_error:
+                        # Broad catch justified: lifecycle hooks are user-provided callbacks; we must not crash error handling
                         logger.error(f"Error in on_error lifecycle hook: {hook_error}")
 
                 # Check if should auto-deregister
@@ -924,6 +931,7 @@ class HookRunner:
             try:
                 await self._execute_script(script_path, event)
             except Exception as e:
+                # Broad catch justified: external scripts may fail in unpredictable ways; we must isolate failures
                 logger.error(f"Error running hook script {script_path}: {e}")
 
     async def _execute_script(self, script_path: Path, event: Event) -> None:

@@ -63,7 +63,11 @@ class LocalEmbeddingProvider(EmbeddingProvider):
             try:
                 self._model = SentenceTransformer(self._model_name)
                 self._dimension = self._model.get_sentence_embedding_dimension()
-            except Exception as e:
+            except (RuntimeError, OSError, ValueError, ImportError) as e:
+                # RuntimeError: Model loading failures
+                # OSError: File system or model file access errors
+                # ValueError: Invalid model name or configuration
+                # ImportError: Missing dependencies (torch, transformers, etc.)
                 raise ProviderConfigurationError(
                     f"Failed to load sentence-transformers model '{self._model_name}': {e}",
                     provider_name=self.name,
@@ -113,7 +117,10 @@ class LocalEmbeddingProvider(EmbeddingProvider):
             return True
         except ProviderConfigurationError:
             raise
-        except Exception as e:
+        except (RuntimeError, OSError, ValueError) as e:
+            # RuntimeError: Model inference failures
+            # OSError: File system or model access errors
+            # ValueError: Invalid input during validation
             raise ProviderConnectionError(
                 f"Failed to validate local embedding provider: {e}",
                 provider_name=self.name,

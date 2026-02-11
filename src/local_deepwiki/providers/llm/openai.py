@@ -141,7 +141,13 @@ class OpenAILLMProvider(LLMProvider):
                 messages=[{"role": "user", "content": "Hi"}],
             )
             return True
-        except Exception as e:
+        except (
+            APIConnectionError,
+            APIStatusError,
+            AuthenticationError,
+            ConnectionError,
+            TimeoutError,
+        ) as e:
             self._handle_api_error(e)
             raise ProviderConnectionError(
                 f"Failed to validate OpenAI connectivity: {e}",
@@ -172,7 +178,14 @@ class OpenAILLMProvider(LLMProvider):
                 messages=[{"role": "user", "content": "Hi"}],
             )
             return True
-        except Exception as e:
+        except (
+            APIConnectionError,
+            APIStatusError,
+            AuthenticationError,
+            ConnectionError,
+            TimeoutError,
+        ) as e:
+            # API-specific exceptions - delegate to error handler or check error message
             error_str = str(e).lower()
             if (
                 "not found" in error_str
@@ -184,6 +197,40 @@ class OpenAILLMProvider(LLMProvider):
                     provider_name=self.name,
                     available_models=list(OPENAI_MODELS.keys()),
                 ) from e
+            self._handle_api_error(e)
+            raise
+        except (ValueError, KeyError) as e:
+            # Data validation errors - check if model-related
+            error_str = str(e).lower()
+            if (
+                "not found" in error_str
+                or "does not exist" in error_str
+                or "invalid" in error_str
+            ):
+                raise ProviderModelNotFoundError(
+                    model_name,
+                    provider_name=self.name,
+                    available_models=list(OPENAI_MODELS.keys()),
+                ) from e
+            raise
+        except Exception as e:
+            # Catch-all for library exceptions that don't match known types
+            # Only handle model-related errors, re-raise everything else
+            error_str = str(e).lower()
+            if (
+                "not found" in error_str
+                or "does not exist" in error_str
+                or "invalid" in error_str
+            ):
+                logger.warning(
+                    f"Caught generic exception in validate_model, treating as model error: {e}"
+                )
+                raise ProviderModelNotFoundError(
+                    model_name,
+                    provider_name=self.name,
+                    available_models=list(OPENAI_MODELS.keys()),
+                ) from e
+            # For unknown errors, try the error handler first
             self._handle_api_error(e)
             raise
 
@@ -259,7 +306,13 @@ class OpenAILLMProvider(LLMProvider):
             ProviderModelNotFoundError,
         ):
             raise
-        except Exception as e:
+        except (
+            APIConnectionError,
+            APIStatusError,
+            AuthenticationError,
+            ConnectionError,
+            TimeoutError,
+        ) as e:
             self._handle_api_error(e)
             raise
 
@@ -311,7 +364,13 @@ class OpenAILLMProvider(LLMProvider):
             ProviderModelNotFoundError,
         ):
             raise
-        except Exception as e:
+        except (
+            APIConnectionError,
+            APIStatusError,
+            AuthenticationError,
+            ConnectionError,
+            TimeoutError,
+        ) as e:
             self._handle_api_error(e)
             raise
 

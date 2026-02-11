@@ -198,7 +198,10 @@ class ProgressManager:
         for callback in self._callbacks:
             try:
                 callback(update)
-            except Exception as e:
+            except (RuntimeError, ValueError, TypeError) as e:
+                # RuntimeError: Callback runtime failures
+                # ValueError: Invalid callback state
+                # TypeError: Callback signature mismatch
                 logger.warning(f"Progress callback failed: {e}")
 
         return update
@@ -417,7 +420,10 @@ class OperationProgressRegistry:
                 data = json.loads(self._data_path.read_text())
                 self._historical_data = data
                 logger.debug(f"Loaded historical progress data from {self._data_path}")
-            except (json.JSONDecodeError, OSError) as e:
+            except (json.JSONDecodeError, OSError, ValueError) as e:
+                # json.JSONDecodeError: Invalid JSON format
+                # OSError: File system or file access errors
+                # ValueError: Invalid data structure
                 logger.warning(f"Failed to load historical progress data: {e}")
 
     def _save_historical_data(self) -> None:
@@ -453,7 +459,9 @@ class OperationProgressRegistry:
             historical_data=historical,
         )
         self._operations[operation_id] = manager
-        logger.debug(f"Started tracking operation {operation_id} ({operation_type.value})")
+        logger.debug(
+            f"Started tracking operation {operation_id} ({operation_type.value})"
+        )
         return manager
 
     def get_operation(self, operation_id: str) -> ProgressManager | None:
@@ -514,9 +522,7 @@ class OperationProgressRegistry:
         Returns:
             List of progress dicts for all active operations.
         """
-        return [
-            manager.get_progress_dict() for manager in self._operations.values()
-        ]
+        return [manager.get_progress_dict() for manager in self._operations.values()]
 
     def get_operation_progress(self, operation_id: str) -> dict[str, Any] | None:
         """Get current progress for an operation.
@@ -555,10 +561,14 @@ class OperationProgressResponse(BaseModel):
     phase: str = Field(description="Current phase")
     current: int = Field(description="Current progress value")
     total: int | None = Field(default=None, description="Total items")
-    percent_complete: float | None = Field(default=None, description="Percentage complete")
+    percent_complete: float | None = Field(
+        default=None, description="Percentage complete"
+    )
     message: str = Field(default="", description="Status message")
     elapsed_seconds: float = Field(description="Time elapsed")
-    eta_seconds: float | None = Field(default=None, description="Estimated time remaining")
+    eta_seconds: float | None = Field(
+        default=None, description="Estimated time remaining"
+    )
     phase_durations: dict[str, float] = Field(
         default_factory=dict, description="Duration of each completed phase"
     )

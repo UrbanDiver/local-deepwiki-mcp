@@ -131,7 +131,18 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
             ProviderRateLimitError,
         ):
             raise
-        except Exception as e:
+        except (
+            APIConnectionError,
+            APIStatusError,
+            AuthenticationError,
+            ValueError,
+            RuntimeError,
+        ) as e:
+            # APIConnectionError: Network connection failures
+            # APIStatusError: HTTP 4xx/5xx responses from API
+            # AuthenticationError: Invalid API key
+            # ValueError: API parameter validation failures
+            # RuntimeError: OpenAI SDK internal errors
             self._handle_api_error(e)
             raise
 
@@ -160,7 +171,18 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
                 input=["test"],
             )
             return True
-        except Exception as e:
+        except (
+            APIConnectionError,
+            APIStatusError,
+            AuthenticationError,
+            ValueError,
+            RuntimeError,
+        ) as e:
+            # APIConnectionError: Network connection failures
+            # APIStatusError: HTTP 4xx/5xx responses from API
+            # AuthenticationError: Invalid API key
+            # ValueError: API parameter validation failures
+            # RuntimeError: OpenAI SDK internal errors
             self._handle_api_error(e)
             raise ProviderConnectionError(
                 f"Failed to validate OpenAI embedding connectivity: {e}",

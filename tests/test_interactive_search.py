@@ -236,7 +236,9 @@ class TestSearchState:
         for result in state.filtered_results:
             assert result.chunk.language == Language.PYTHON
 
-    def test_apply_filters_resets_selection(self, sample_results: list[SearchResult]) -> None:
+    def test_apply_filters_resets_selection(
+        self, sample_results: list[SearchResult]
+    ) -> None:
         """apply_filters should reset selection if out of bounds."""
         state = SearchState()
         state.results = sample_results
@@ -274,7 +276,9 @@ class TestSearchState:
         state.move_selection(-2)
         assert state.selected_index == 0
 
-    def test_move_selection_clamps_at_bounds(self, sample_results: list[SearchResult]) -> None:
+    def test_move_selection_clamps_at_bounds(
+        self, sample_results: list[SearchResult]
+    ) -> None:
         """move_selection should not go out of bounds."""
         state = SearchState()
         state.filtered_results = sample_results
@@ -372,7 +376,7 @@ class TestInteractiveSearch:
 
     async def test_search_handles_errors(self, mock_vector_store: MagicMock) -> None:
         """search should handle and report errors."""
-        mock_vector_store.search = AsyncMock(side_effect=Exception("Test error"))
+        mock_vector_store.search = AsyncMock(side_effect=RuntimeError("Test error"))
 
         search = InteractiveSearch(mock_vector_store, Path("/test"))
         await search.search("test", limit=10)
@@ -405,7 +409,9 @@ class TestInteractiveSearch:
         # Should have dim border when no filters
         assert panel.border_style == "dim"
 
-    def test_build_filters_panel_with_filters(self, mock_vector_store: MagicMock) -> None:
+    def test_build_filters_panel_with_filters(
+        self, mock_vector_store: MagicMock
+    ) -> None:
         """_build_filters_panel should show active filters."""
         search = InteractiveSearch(mock_vector_store, Path("/test"))
         search._state.filters = SearchFilters(language="python", min_similarity=0.5)
@@ -428,7 +434,9 @@ class TestInteractiveSearch:
         # Title should include file path
         assert "src/utils/helpers.py" in panel.title
 
-    def test_build_preview_panel_no_selection(self, mock_vector_store: MagicMock) -> None:
+    def test_build_preview_panel_no_selection(
+        self, mock_vector_store: MagicMock
+    ) -> None:
         """_build_preview_panel should return None when no selection."""
         search = InteractiveSearch(mock_vector_store, Path("/test"))
         search._state.filtered_results = []
@@ -503,7 +511,9 @@ class TestRunSearch:
                     # Should print error about query required
                     mock_console.print.assert_called()
                     call_args = str(mock_console.print.call_args)
-                    assert "query" in call_args.lower() and "required" in call_args.lower()
+                    assert (
+                        "query" in call_args.lower() and "required" in call_args.lower()
+                    )
 
 
 # =============================================================================
@@ -1007,9 +1017,7 @@ class TestLayoutAndDisplay:
         assert panel is not None
         assert "src/test.py" in panel.title
 
-    def test_build_input_prompt_search_mode(
-        self, mock_vector_store: MagicMock
-    ) -> None:
+    def test_build_input_prompt_search_mode(self, mock_vector_store: MagicMock) -> None:
         """Input prompt should show search mode with query."""
         search = InteractiveSearch(mock_vector_store, Path("/test"))
         search._state.input_mode = "search"
@@ -1191,6 +1199,7 @@ class TestInteractiveRun:
             # Force reimport by clearing the cached import
             import importlib
             import sys
+
             if "readchar" in sys.modules:
                 del sys.modules["readchar"]
 
@@ -1225,9 +1234,7 @@ class TestInteractiveRun:
             mock_vector_store.search.assert_called()
             assert search._state.query == "test"
 
-    async def test_run_keyboard_interrupt(
-        self, mock_vector_store: MagicMock
-    ) -> None:
+    async def test_run_keyboard_interrupt(self, mock_vector_store: MagicMock) -> None:
         """run should handle KeyboardInterrupt gracefully."""
         search = InteractiveSearch(mock_vector_store, Path("/test"))
 
@@ -1249,9 +1256,7 @@ class TestInteractiveRun:
             # Should have cleared console and printed end message
             search._console.clear.assert_called()
 
-    async def test_run_filter_mode_branch(
-        self, mock_vector_store: MagicMock
-    ) -> None:
+    async def test_run_filter_mode_branch(self, mock_vector_store: MagicMock) -> None:
         """run should call _handle_filter_mode when in filter mode."""
         search = InteractiveSearch(mock_vector_store, Path("/test"))
 
@@ -1294,9 +1299,7 @@ class TestInteractiveRun:
 class TestRunSearchFunction:
     """Additional tests for the run_search function."""
 
-    async def test_run_search_non_interactive_with_query(
-        self, tmp_path: Path
-    ) -> None:
+    async def test_run_search_non_interactive_with_query(self, tmp_path: Path) -> None:
         """run_search should execute search and display results."""
         repo_path = tmp_path / "repo"
         repo_path.mkdir()
@@ -1365,9 +1368,7 @@ class TestRunSearchFunction:
                     # Should have printed multiple times (results + preview)
                     assert mock_console.print.call_count >= 2
 
-    async def test_run_search_interactive_with_query(
-        self, tmp_path: Path
-    ) -> None:
+    async def test_run_search_interactive_with_query(self, tmp_path: Path) -> None:
         """run_search should run interactive mode with initial query."""
         repo_path = tmp_path / "repo"
         repo_path.mkdir()
@@ -1399,9 +1400,7 @@ class TestRunSearchFunction:
                         # Interactive run should have been called with initial query
                         mock_run.assert_called_once_with(initial_query="test")
 
-    async def test_run_search_interactive_without_query(
-        self, tmp_path: Path
-    ) -> None:
+    async def test_run_search_interactive_without_query(self, tmp_path: Path) -> None:
         """run_search should run interactive mode without initial query."""
         repo_path = tmp_path / "repo"
         repo_path.mkdir()
@@ -1433,9 +1432,7 @@ class TestRunSearchFunction:
                         # Interactive run should have been called without query
                         mock_run.assert_called_once()
 
-    async def test_run_search_with_all_filters(
-        self, tmp_path: Path
-    ) -> None:
+    async def test_run_search_with_all_filters(self, tmp_path: Path) -> None:
         """run_search should pass all filters to search instance."""
         repo_path = tmp_path / "repo"
         repo_path.mkdir()
@@ -1489,8 +1486,14 @@ class TestMainFunction:
             coro.close()
             return None
 
-        with patch("sys.argv", ["deepwiki-search", str(repo_path), "-q", "test", "--no-interactive"]):
-            with patch("local_deepwiki.cli.interactive_search.asyncio.run", side_effect=close_coro) as mock_run:
+        with patch(
+            "sys.argv",
+            ["deepwiki-search", str(repo_path), "-q", "test", "--no-interactive"],
+        ):
+            with patch(
+                "local_deepwiki.cli.interactive_search.asyncio.run",
+                side_effect=close_coro,
+            ) as mock_run:
                 result = main()
 
                 assert result == 0
@@ -1500,7 +1503,9 @@ class TestMainFunction:
         """main should error on invalid min_score."""
         from local_deepwiki.cli.interactive_search import main
 
-        with patch("sys.argv", ["deepwiki-search", str(tmp_path), "--min-score", "1.5"]):
+        with patch(
+            "sys.argv", ["deepwiki-search", str(tmp_path), "--min-score", "1.5"]
+        ):
             with patch("sys.stderr"):
                 result = main()
                 assert result == 1
@@ -1522,10 +1527,18 @@ class TestMainFunction:
         repo_path.mkdir()
         (repo_path / ".deepwiki" / "vectordb").mkdir(parents=True)
 
-        with patch("sys.argv", ["deepwiki-search", str(repo_path), "-q", "test", "--no-interactive"]):
+        def close_coro_and_interrupt(coro):
+            """Close coroutine then raise KeyboardInterrupt."""
+            coro.close()
+            raise KeyboardInterrupt
+
+        with patch(
+            "sys.argv",
+            ["deepwiki-search", str(repo_path), "-q", "test", "--no-interactive"],
+        ):
             with patch(
                 "local_deepwiki.cli.interactive_search.asyncio.run",
-                side_effect=KeyboardInterrupt,
+                side_effect=close_coro_and_interrupt,
             ):
                 result = main()
                 assert result == 130
@@ -1539,11 +1552,14 @@ class TestMainFunction:
         (repo_path / ".deepwiki" / "vectordb").mkdir(parents=True)
 
         def close_coro_and_raise(coro):
-            """Close coroutine then raise exception."""
+            """Close coroutine then raise RuntimeError."""
             coro.close()
-            raise Exception("Test error")
+            raise RuntimeError("Test error")
 
-        with patch("sys.argv", ["deepwiki-search", str(repo_path), "-q", "test", "--no-interactive"]):
+        with patch(
+            "sys.argv",
+            ["deepwiki-search", str(repo_path), "-q", "test", "--no-interactive"],
+        ):
             with patch(
                 "local_deepwiki.cli.interactive_search.asyncio.run",
                 side_effect=close_coro_and_raise,
@@ -1568,8 +1584,14 @@ class TestMainFunction:
             coro.close()
             return None
 
-        with patch("sys.argv", ["deepwiki-search", str(repo_path), "-q", "test", "--no-interactive", "-p"]):
-            with patch("local_deepwiki.cli.interactive_search.asyncio.run", side_effect=close_coro):
+        with patch(
+            "sys.argv",
+            ["deepwiki-search", str(repo_path), "-q", "test", "--no-interactive", "-p"],
+        ):
+            with patch(
+                "local_deepwiki.cli.interactive_search.asyncio.run",
+                side_effect=close_coro,
+            ):
                 result = main()
 
                 assert result == 0
@@ -1594,16 +1616,25 @@ class TestMainFunction:
             [
                 "deepwiki-search",
                 str(repo_path),
-                "-q", "test",
-                "-l", "python",
-                "-t", "function",
-                "-f", "*.py",
-                "-s", "0.5",
-                "--limit", "10",
+                "-q",
+                "test",
+                "-l",
+                "python",
+                "-t",
+                "function",
+                "-f",
+                "*.py",
+                "-s",
+                "0.5",
+                "--limit",
+                "10",
                 "--no-interactive",
             ],
         ):
-            with patch("local_deepwiki.cli.interactive_search.asyncio.run", side_effect=close_coro) as mock_run:
+            with patch(
+                "local_deepwiki.cli.interactive_search.asyncio.run",
+                side_effect=close_coro,
+            ) as mock_run:
                 result = main()
 
                 assert result == 0
@@ -1644,8 +1675,13 @@ class TestModuleEntryPoint:
         # Run the module with arguments to make it exit quickly with error
         # (non-interactive mode without query returns error code 1)
         result = subprocess.run(
-            [sys.executable, "-m", "local_deepwiki.cli.interactive_search",
-             str(repo_path), "--no-interactive"],
+            [
+                sys.executable,
+                "-m",
+                "local_deepwiki.cli.interactive_search",
+                str(repo_path),
+                "--no-interactive",
+            ],
             capture_output=True,
             text=True,
             timeout=10,

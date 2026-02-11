@@ -264,11 +264,7 @@ def with_retry(
                         f"Retrying in {delay:.2f}s..."
                     )
                     await asyncio.sleep(delay)
-                except Exception as e:  # noqa: BLE001
-                    # Broad catch is intentional: different API providers (Anthropic, OpenAI,
-                    # Ollama) raise different exception types for rate limits. We inspect
-                    # the error message to determine retry behavior, and re-raise immediately
-                    # if not a recognized retryable condition.
+                except Exception as e:  # noqa: BLE001 - Intentional broad catch for API resilience: different providers (Anthropic, OpenAI, Ollama) raise different exception types for rate limits and server errors. We inspect error messages to detect retryable conditions and re-raise immediately if not recognized.
                     error_str = str(e).lower()
                     if "rate" in error_str and "limit" in error_str:
                         last_exception = e
@@ -381,7 +377,14 @@ class EmbeddingProvider(ABC):
         try:
             await self.embed(["test"])
             return True
-        except Exception as e:
+        except (
+            ConnectionError,
+            TimeoutError,
+            OSError,
+            ProviderConnectionError,
+            ProviderAuthenticationError,
+            ProviderRateLimitError,
+        ) as e:
             raise ProviderConnectionError(
                 f"Failed to validate connectivity: {e}",
                 provider_name=self.name,
@@ -509,7 +512,14 @@ class LLMProvider(ABC):
         except ProviderModelNotFoundError:
             # Model not found is a valid response - connectivity works
             raise
-        except Exception as e:
+        except (
+            ConnectionError,
+            TimeoutError,
+            OSError,
+            ProviderConnectionError,
+            ProviderAuthenticationError,
+            ProviderRateLimitError,
+        ) as e:
             raise ProviderConnectionError(
                 f"Failed to validate connectivity: {e}",
                 provider_name=self.name,

@@ -144,7 +144,7 @@ class RateLimitMockEmbeddingProvider(EmbeddingProvider):
         self._call_count += 1
 
         if self._call_count == self._rate_limit_after:
-            raise Exception("Rate limit exceeded. Please retry after 60 seconds.")
+            raise RuntimeError("Rate limit exceeded. Please retry after 60 seconds.")
 
         return [[0.1] * self._dimension for _ in texts]
 

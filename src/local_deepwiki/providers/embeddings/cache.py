@@ -148,7 +148,9 @@ class EmbeddingCache:
                 )
             conn.commit()
             logger.debug(f"Embedding cache initialized at {self._db_path}")
-        except sqlite3.Error as e:
+        except (sqlite3.Error, OSError) as e:
+            # sqlite3.Error: Database schema creation failures
+            # OSError: File system or database file access errors
             logger.warning(f"Failed to initialize embedding cache: {e}")
 
     def _compute_cache_key(self, text: str) -> str:
