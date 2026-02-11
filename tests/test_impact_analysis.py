@@ -12,7 +12,7 @@ from local_deepwiki.handlers import handle_impact_analysis
 
 @pytest.fixture
 def mock_access_control():
-    with patch("local_deepwiki.handlers.analysis.get_access_controller") as mock:
+    with patch("local_deepwiki.handlers.analysis_entity.get_access_controller") as mock:
         controller = MagicMock()
         mock.return_value = controller
         yield controller
@@ -94,7 +94,9 @@ class TestImpactAnalysisBasic:
         mock_vector_store.get_chunks_by_file = AsyncMock(return_value=[MagicMock()])
 
         with (
-            patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
+            patch(
+                "local_deepwiki.handlers.analysis_entity._load_index_status"
+            ) as mock_load,
             patch(
                 "local_deepwiki.generators.callgraph.CallGraphExtractor.extract_from_file",
                 return_value=mock_call_graph,
@@ -114,7 +116,7 @@ class TestImpactAnalysisBasic:
                 return_value=FakeContext(),
             ),
             patch(
-                "local_deepwiki.handlers.analysis._create_vector_store",
+                "local_deepwiki.handlers.analysis_entity._create_vector_store",
                 return_value=mock_vector_store,
             ),
         ):
@@ -157,7 +159,9 @@ class TestImpactAnalysisWithEntityName:
         mock_vector_store.get_chunks_by_file = AsyncMock(return_value=[])
 
         with (
-            patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
+            patch(
+                "local_deepwiki.handlers.analysis_entity._load_index_status"
+            ) as mock_load,
             patch(
                 "local_deepwiki.generators.callgraph.CallGraphExtractor.extract_from_file",
                 return_value={},
@@ -172,7 +176,7 @@ class TestImpactAnalysisWithEntityName:
                 return_value={},
             ),
             patch(
-                "local_deepwiki.handlers.analysis._create_vector_store",
+                "local_deepwiki.handlers.analysis_entity._create_vector_store",
                 return_value=mock_vector_store,
             ),
         ):
@@ -207,7 +211,9 @@ class TestImpactAnalysisNoCallers:
         mock_vector_store.get_chunks_by_file = AsyncMock(return_value=[])
 
         with (
-            patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
+            patch(
+                "local_deepwiki.handlers.analysis_entity._load_index_status"
+            ) as mock_load,
             patch(
                 "local_deepwiki.generators.callgraph.CallGraphExtractor.extract_from_file",
                 return_value={},
@@ -222,7 +228,7 @@ class TestImpactAnalysisNoCallers:
                 return_value={},
             ),
             patch(
-                "local_deepwiki.handlers.analysis._create_vector_store",
+                "local_deepwiki.handlers.analysis_entity._create_vector_store",
                 return_value=mock_vector_store,
             ),
         ):
@@ -283,7 +289,9 @@ class TestImpactAnalysisWithInheritance:
         mock_vector_store.get_chunks_by_file = AsyncMock(return_value=[])
 
         with (
-            patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
+            patch(
+                "local_deepwiki.handlers.analysis_entity._load_index_status"
+            ) as mock_load,
             patch(
                 "local_deepwiki.generators.callgraph.CallGraphExtractor.extract_from_file",
                 return_value={},
@@ -298,7 +306,7 @@ class TestImpactAnalysisWithInheritance:
                 return_value=classes,
             ),
             patch(
-                "local_deepwiki.handlers.analysis._create_vector_store",
+                "local_deepwiki.handlers.analysis_entity._create_vector_store",
                 return_value=mock_vector_store,
             ),
         ):
@@ -331,7 +339,9 @@ class TestImpactAnalysisDisableSections:
         _write_toc(wiki_dir, [])
 
         with (
-            patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
+            patch(
+                "local_deepwiki.handlers.analysis_entity._load_index_status"
+            ) as mock_load,
         ):
             mock_load.return_value = (mock_index_status, wiki_dir, mock_config)
 
@@ -379,7 +389,9 @@ class TestImpactAnalysisWikiPages:
         _write_toc(wiki_dir, toc_data)
 
         with (
-            patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
+            patch(
+                "local_deepwiki.handlers.analysis_entity._load_index_status"
+            ) as mock_load,
         ):
             mock_load.return_value = (mock_index_status, wiki_dir, mock_config)
 
@@ -412,7 +424,9 @@ class TestImpactAnalysisFileNotFound:
         wiki_dir.mkdir()
 
         with (
-            patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
+            patch(
+                "local_deepwiki.handlers.analysis_entity._load_index_status"
+            ) as mock_load,
         ):
             mock_load.return_value = (mock_index_status, wiki_dir, mock_config)
 
@@ -461,7 +475,9 @@ class TestImpactAnalysisRiskLevels:
         mock_vector_store.get_chunks_by_file = AsyncMock(return_value=[])
 
         with (
-            patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
+            patch(
+                "local_deepwiki.handlers.analysis_entity._load_index_status"
+            ) as mock_load,
             patch(
                 "local_deepwiki.generators.callgraph.CallGraphExtractor.extract_from_file",
                 return_value={},
@@ -476,7 +492,7 @@ class TestImpactAnalysisRiskLevels:
                 return_value={},
             ),
             patch(
-                "local_deepwiki.handlers.analysis._create_vector_store",
+                "local_deepwiki.handlers.analysis_entity._create_vector_store",
                 return_value=mock_vector_store,
             ),
         ):
@@ -514,7 +530,9 @@ class TestImpactAnalysisRiskLevels:
         mock_vector_store.get_chunks_by_file = AsyncMock(return_value=[])
 
         with (
-            patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
+            patch(
+                "local_deepwiki.handlers.analysis_entity._load_index_status"
+            ) as mock_load,
             patch(
                 "local_deepwiki.generators.callgraph.CallGraphExtractor.extract_from_file",
                 return_value={},
@@ -529,7 +547,7 @@ class TestImpactAnalysisRiskLevels:
                 return_value={},
             ),
             patch(
-                "local_deepwiki.handlers.analysis._create_vector_store",
+                "local_deepwiki.handlers.analysis_entity._create_vector_store",
                 return_value=mock_vector_store,
             ),
         ):
@@ -561,7 +579,9 @@ class TestImpactAnalysisRiskLevels:
         mock_vector_store.get_chunks_by_file = AsyncMock(return_value=[])
 
         with (
-            patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
+            patch(
+                "local_deepwiki.handlers.analysis_entity._load_index_status"
+            ) as mock_load,
             patch(
                 "local_deepwiki.generators.callgraph.CallGraphExtractor.extract_from_file",
                 return_value={},
@@ -576,7 +596,7 @@ class TestImpactAnalysisRiskLevels:
                 return_value={},
             ),
             patch(
-                "local_deepwiki.handlers.analysis._create_vector_store",
+                "local_deepwiki.handlers.analysis_entity._create_vector_store",
                 return_value=mock_vector_store,
             ),
         ):
@@ -623,7 +643,9 @@ class TestImpactAnalysisValidationError:
         wiki_dir = tmp_path / ".deepwiki"
         wiki_dir.mkdir()
 
-        with patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load:
+        with patch(
+            "local_deepwiki.handlers.analysis_entity._load_index_status"
+        ) as mock_load:
             mock_load.return_value = (mock_index_status, wiki_dir, mock_config)
 
             result = await handle_impact_analysis(
@@ -658,7 +680,9 @@ class TestImpactAnalysisTocFormats:
         }
         (wiki_dir / "toc.json").write_text(json.dumps(toc_data))
 
-        with patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load:
+        with patch(
+            "local_deepwiki.handlers.analysis_entity._load_index_status"
+        ) as mock_load:
             mock_load.return_value = (mock_index_status, wiki_dir, mock_config)
 
             result = await handle_impact_analysis(
@@ -694,7 +718,9 @@ class TestImpactAnalysisLeafNode:
         mock_vector_store.get_chunks_by_file = AsyncMock(return_value=[])
 
         with (
-            patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
+            patch(
+                "local_deepwiki.handlers.analysis_entity._load_index_status"
+            ) as mock_load,
             patch(
                 "local_deepwiki.generators.callgraph.CallGraphExtractor.extract_from_file",
                 return_value={},
@@ -709,7 +735,7 @@ class TestImpactAnalysisLeafNode:
                 return_value={},
             ),
             patch(
-                "local_deepwiki.handlers.analysis._create_vector_store",
+                "local_deepwiki.handlers.analysis_entity._create_vector_store",
                 return_value=mock_vector_store,
             ),
         ):
@@ -757,7 +783,9 @@ class TestImpactAnalysisCoreModule:
         mock_vector_store.get_chunks_by_file = AsyncMock(return_value=[MagicMock()])
 
         with (
-            patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
+            patch(
+                "local_deepwiki.handlers.analysis_entity._load_index_status"
+            ) as mock_load,
             patch(
                 "local_deepwiki.generators.callgraph.CallGraphExtractor.extract_from_file",
                 return_value={},
@@ -777,7 +805,7 @@ class TestImpactAnalysisCoreModule:
                 return_value=FakeContext(),
             ),
             patch(
-                "local_deepwiki.handlers.analysis._create_vector_store",
+                "local_deepwiki.handlers.analysis_entity._create_vector_store",
                 return_value=mock_vector_store,
             ),
         ):
@@ -814,7 +842,9 @@ class TestImpactAnalysisCircularDependencies:
         mock_vector_store.get_chunks_by_file = AsyncMock(return_value=[])
 
         with (
-            patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
+            patch(
+                "local_deepwiki.handlers.analysis_entity._load_index_status"
+            ) as mock_load,
             patch(
                 "local_deepwiki.generators.callgraph.CallGraphExtractor.extract_from_file",
                 return_value={},
@@ -829,7 +859,7 @@ class TestImpactAnalysisCircularDependencies:
                 return_value={},
             ),
             patch(
-                "local_deepwiki.handlers.analysis._create_vector_store",
+                "local_deepwiki.handlers.analysis_entity._create_vector_store",
                 return_value=mock_vector_store,
             ),
         ):
@@ -857,7 +887,9 @@ class TestImpactAnalysisFileOutsideRepo:
         wiki_dir = tmp_path / ".deepwiki"
         wiki_dir.mkdir()
 
-        with patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load:
+        with patch(
+            "local_deepwiki.handlers.analysis_entity._load_index_status"
+        ) as mock_load:
             mock_load.return_value = (mock_index_status, wiki_dir, mock_config)
 
             result = await handle_impact_analysis(
@@ -890,7 +922,9 @@ class TestImpactAnalysisMultipleEntityFilter:
         mock_vector_store.get_chunks_by_file = AsyncMock(return_value=[])
 
         with (
-            patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
+            patch(
+                "local_deepwiki.handlers.analysis_entity._load_index_status"
+            ) as mock_load,
             patch(
                 "local_deepwiki.generators.callgraph.CallGraphExtractor.extract_from_file",
                 return_value={},
@@ -905,7 +939,7 @@ class TestImpactAnalysisMultipleEntityFilter:
                 return_value={},
             ),
             patch(
-                "local_deepwiki.handlers.analysis._create_vector_store",
+                "local_deepwiki.handlers.analysis_entity._create_vector_store",
                 return_value=mock_vector_store,
             ),
         ):
@@ -953,7 +987,9 @@ class TestImpactAnalysisWikiPagesMultiple:
         ]
         _write_toc(wiki_dir, toc_data)
 
-        with patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load:
+        with patch(
+            "local_deepwiki.handlers.analysis_entity._load_index_status"
+        ) as mock_load:
             mock_load.return_value = (mock_index_status, wiki_dir, mock_config)
 
             result = await handle_impact_analysis(
@@ -984,7 +1020,9 @@ class TestImpactAnalysisWikiPagesNoToc:
         tmp_path, _src_dir, _target_file, wiki_dir = setup_repo
         # Do NOT write toc.json
 
-        with patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load:
+        with patch(
+            "local_deepwiki.handlers.analysis_entity._load_index_status"
+        ) as mock_load:
             mock_load.return_value = (mock_index_status, wiki_dir, mock_config)
 
             result = await handle_impact_analysis(
@@ -1014,7 +1052,9 @@ class TestImpactAnalysisOnlyCalls:
         reverse_graph = {"handle_request": ["caller_a", "caller_b"]}
 
         with (
-            patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
+            patch(
+                "local_deepwiki.handlers.analysis_entity._load_index_status"
+            ) as mock_load,
             patch(
                 "local_deepwiki.generators.callgraph.CallGraphExtractor.extract_from_file",
                 return_value={},
@@ -1056,14 +1096,16 @@ class TestImpactAnalysisOnlyInheritance:
         mock_vector_store = AsyncMock()
 
         with (
-            patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
+            patch(
+                "local_deepwiki.handlers.analysis_entity._load_index_status"
+            ) as mock_load,
             patch(
                 "local_deepwiki.generators.inheritance.collect_class_hierarchy",
                 new_callable=AsyncMock,
                 return_value={},
             ),
             patch(
-                "local_deepwiki.handlers.analysis._create_vector_store",
+                "local_deepwiki.handlers.analysis_entity._create_vector_store",
                 return_value=mock_vector_store,
             ),
         ):
@@ -1102,7 +1144,9 @@ class TestImpactAnalysisRiskBoundary:
         mock_vector_store.get_chunks_by_file = AsyncMock(return_value=[])
 
         with (
-            patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
+            patch(
+                "local_deepwiki.handlers.analysis_entity._load_index_status"
+            ) as mock_load,
             patch(
                 "local_deepwiki.generators.callgraph.CallGraphExtractor.extract_from_file",
                 return_value={},
@@ -1117,7 +1161,7 @@ class TestImpactAnalysisRiskBoundary:
                 return_value={},
             ),
             patch(
-                "local_deepwiki.handlers.analysis._create_vector_store",
+                "local_deepwiki.handlers.analysis_entity._create_vector_store",
                 return_value=mock_vector_store,
             ),
         ):
@@ -1147,7 +1191,9 @@ class TestImpactAnalysisRiskBoundary:
         mock_vector_store.get_chunks_by_file = AsyncMock(return_value=[])
 
         with (
-            patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
+            patch(
+                "local_deepwiki.handlers.analysis_entity._load_index_status"
+            ) as mock_load,
             patch(
                 "local_deepwiki.generators.callgraph.CallGraphExtractor.extract_from_file",
                 return_value={},
@@ -1162,7 +1208,7 @@ class TestImpactAnalysisRiskBoundary:
                 return_value={},
             ),
             patch(
-                "local_deepwiki.handlers.analysis._create_vector_store",
+                "local_deepwiki.handlers.analysis_entity._create_vector_store",
                 return_value=mock_vector_store,
             ),
         ):
@@ -1193,7 +1239,9 @@ class TestImpactAnalysisRiskBoundary:
         mock_vector_store.get_chunks_by_file = AsyncMock(return_value=[])
 
         with (
-            patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
+            patch(
+                "local_deepwiki.handlers.analysis_entity._load_index_status"
+            ) as mock_load,
             patch(
                 "local_deepwiki.generators.callgraph.CallGraphExtractor.extract_from_file",
                 return_value={},
@@ -1208,7 +1256,7 @@ class TestImpactAnalysisRiskBoundary:
                 return_value={},
             ),
             patch(
-                "local_deepwiki.handlers.analysis._create_vector_store",
+                "local_deepwiki.handlers.analysis_entity._create_vector_store",
                 return_value=mock_vector_store,
             ),
         ):
@@ -1239,7 +1287,9 @@ class TestImpactAnalysisRiskBoundary:
         mock_vector_store.get_chunks_by_file = AsyncMock(return_value=[])
 
         with (
-            patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
+            patch(
+                "local_deepwiki.handlers.analysis_entity._load_index_status"
+            ) as mock_load,
             patch(
                 "local_deepwiki.generators.callgraph.CallGraphExtractor.extract_from_file",
                 return_value={},
@@ -1254,7 +1304,7 @@ class TestImpactAnalysisRiskBoundary:
                 return_value={},
             ),
             patch(
-                "local_deepwiki.handlers.analysis._create_vector_store",
+                "local_deepwiki.handlers.analysis_entity._create_vector_store",
                 return_value=mock_vector_store,
             ),
         ):
@@ -1317,7 +1367,9 @@ class TestImpactAnalysisEntityInInheritance:
         mock_vector_store.get_chunks_by_file = AsyncMock(return_value=[])
 
         with (
-            patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
+            patch(
+                "local_deepwiki.handlers.analysis_entity._load_index_status"
+            ) as mock_load,
             patch(
                 "local_deepwiki.generators.callgraph.CallGraphExtractor.extract_from_file",
                 return_value={},
@@ -1332,7 +1384,7 @@ class TestImpactAnalysisEntityInInheritance:
                 return_value=classes,
             ),
             patch(
-                "local_deepwiki.handlers.analysis._create_vector_store",
+                "local_deepwiki.handlers.analysis_entity._create_vector_store",
                 return_value=mock_vector_store,
             ),
         ):
@@ -1364,9 +1416,11 @@ class TestImpactAnalysisNoDependentsChunks:
         mock_vector_store.get_chunks_by_file = AsyncMock(return_value=[])
 
         with (
-            patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
             patch(
-                "local_deepwiki.handlers.analysis._create_vector_store",
+                "local_deepwiki.handlers.analysis_entity._load_index_status"
+            ) as mock_load,
+            patch(
+                "local_deepwiki.handlers.analysis_entity._create_vector_store",
                 return_value=mock_vector_store,
             ),
         ):

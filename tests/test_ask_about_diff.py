@@ -14,7 +14,7 @@ from local_deepwiki.models import AskAboutDiffArgs
 @pytest.fixture
 def mock_access_control():
     """Mock the RBAC access controller."""
-    with patch("local_deepwiki.handlers.analysis.get_access_controller") as mock:
+    with patch("local_deepwiki.handlers.analysis_diff.get_access_controller") as mock:
         controller = MagicMock()
         mock.return_value = controller
         yield controller
@@ -106,16 +106,19 @@ async def test_ask_about_diff_basic(mock_access_control, git_repo):
 
     with (
         patch(
-            "local_deepwiki.handlers.analysis.get_config", return_value=mocks["config"]
+            "local_deepwiki.handlers.analysis_diff.get_config",
+            return_value=mocks["config"],
         ),
-        patch("local_deepwiki.handlers.analysis.get_embedding_provider") as mock_embed,
-        patch("local_deepwiki.handlers.analysis.VectorStore"),
+        patch(
+            "local_deepwiki.handlers.analysis_diff.get_embedding_provider"
+        ) as mock_embed,
+        patch("local_deepwiki.handlers.analysis_diff.VectorStore"),
         patch(
             "local_deepwiki.providers.llm.get_cached_llm_provider",
             return_value=mocks["llm"],
         ),
         patch(
-            "local_deepwiki.handlers.analysis.get_rate_limiter",
+            "local_deepwiki.handlers.analysis_diff.get_rate_limiter",
             return_value=mocks["rate_limiter"],
         ),
     ):
@@ -143,16 +146,17 @@ async def test_ask_about_diff_no_changes(mock_access_control, git_repo):
 
     with (
         patch(
-            "local_deepwiki.handlers.analysis.get_config", return_value=mocks["config"]
+            "local_deepwiki.handlers.analysis_diff.get_config",
+            return_value=mocks["config"],
         ),
-        patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
-        patch("local_deepwiki.handlers.analysis.VectorStore"),
+        patch("local_deepwiki.handlers.analysis_diff.get_embedding_provider"),
+        patch("local_deepwiki.handlers.analysis_diff.VectorStore"),
         patch(
             "local_deepwiki.providers.llm.get_cached_llm_provider",
             return_value=mocks["llm"],
         ),
         patch(
-            "local_deepwiki.handlers.analysis.get_rate_limiter",
+            "local_deepwiki.handlers.analysis_diff.get_rate_limiter",
             return_value=mocks["rate_limiter"],
         ),
     ):
@@ -209,10 +213,12 @@ async def test_ask_about_diff_with_vector_context(mock_access_control, git_repo)
     mock_vector_store.search = AsyncMock(return_value=[mock_search_result])
 
     with (
-        patch("local_deepwiki.handlers.analysis.get_config", return_value=mock_config),
-        patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
         patch(
-            "local_deepwiki.handlers.analysis.VectorStore",
+            "local_deepwiki.handlers.analysis_diff.get_config", return_value=mock_config
+        ),
+        patch("local_deepwiki.handlers.analysis_diff.get_embedding_provider"),
+        patch(
+            "local_deepwiki.handlers.analysis_diff.VectorStore",
             return_value=mock_vector_store,
         ),
         patch(
@@ -220,7 +226,7 @@ async def test_ask_about_diff_with_vector_context(mock_access_control, git_repo)
             return_value=mock_llm,
         ),
         patch(
-            "local_deepwiki.handlers.analysis.get_rate_limiter",
+            "local_deepwiki.handlers.analysis_diff.get_rate_limiter",
             return_value=mock_rate_limiter,
         ),
     ):
@@ -244,16 +250,17 @@ async def test_ask_about_diff_no_vector_store(mock_access_control, git_repo):
 
     with (
         patch(
-            "local_deepwiki.handlers.analysis.get_config", return_value=mocks["config"]
+            "local_deepwiki.handlers.analysis_diff.get_config",
+            return_value=mocks["config"],
         ),
-        patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
-        patch("local_deepwiki.handlers.analysis.VectorStore"),
+        patch("local_deepwiki.handlers.analysis_diff.get_embedding_provider"),
+        patch("local_deepwiki.handlers.analysis_diff.VectorStore"),
         patch(
             "local_deepwiki.providers.llm.get_cached_llm_provider",
             return_value=mocks["llm"],
         ),
         patch(
-            "local_deepwiki.handlers.analysis.get_rate_limiter",
+            "local_deepwiki.handlers.analysis_diff.get_rate_limiter",
             return_value=mocks["rate_limiter"],
         ),
     ):
@@ -369,16 +376,17 @@ async def test_ask_about_diff_truncates_large_diff(mock_access_control, git_repo
 
     with (
         patch(
-            "local_deepwiki.handlers.analysis.get_config", return_value=mocks["config"]
+            "local_deepwiki.handlers.analysis_diff.get_config",
+            return_value=mocks["config"],
         ),
-        patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
-        patch("local_deepwiki.handlers.analysis.VectorStore"),
+        patch("local_deepwiki.handlers.analysis_diff.get_embedding_provider"),
+        patch("local_deepwiki.handlers.analysis_diff.VectorStore"),
         patch(
             "local_deepwiki.providers.llm.get_cached_llm_provider",
             return_value=mocks["llm"],
         ),
         patch(
-            "local_deepwiki.handlers.analysis.get_rate_limiter",
+            "local_deepwiki.handlers.analysis_diff.get_rate_limiter",
             return_value=mocks["rate_limiter"],
         ),
     ):
@@ -406,16 +414,17 @@ async def test_ask_about_diff_custom_refs(mock_access_control, git_repo):
 
     with (
         patch(
-            "local_deepwiki.handlers.analysis.get_config", return_value=mocks["config"]
+            "local_deepwiki.handlers.analysis_diff.get_config",
+            return_value=mocks["config"],
         ),
-        patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
-        patch("local_deepwiki.handlers.analysis.VectorStore"),
+        patch("local_deepwiki.handlers.analysis_diff.get_embedding_provider"),
+        patch("local_deepwiki.handlers.analysis_diff.VectorStore"),
         patch(
             "local_deepwiki.providers.llm.get_cached_llm_provider",
             return_value=mocks["llm"],
         ),
         patch(
-            "local_deepwiki.handlers.analysis.get_rate_limiter",
+            "local_deepwiki.handlers.analysis_diff.get_rate_limiter",
             return_value=mocks["rate_limiter"],
         ),
     ):
@@ -454,16 +463,17 @@ async def test_ask_about_diff_non_git_repo(mock_access_control, tmp_path):
 
     with (
         patch(
-            "local_deepwiki.handlers.analysis.get_config", return_value=mocks["config"]
+            "local_deepwiki.handlers.analysis_diff.get_config",
+            return_value=mocks["config"],
         ),
-        patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
-        patch("local_deepwiki.handlers.analysis.VectorStore"),
+        patch("local_deepwiki.handlers.analysis_diff.get_embedding_provider"),
+        patch("local_deepwiki.handlers.analysis_diff.VectorStore"),
         patch(
             "local_deepwiki.providers.llm.get_cached_llm_provider",
             return_value=mocks["llm"],
         ),
         patch(
-            "local_deepwiki.handlers.analysis.get_rate_limiter",
+            "local_deepwiki.handlers.analysis_diff.get_rate_limiter",
             return_value=mocks["rate_limiter"],
         ),
     ):
@@ -506,16 +516,17 @@ async def test_ask_about_diff_llm_failure(mock_access_control, git_repo):
 
     with (
         patch(
-            "local_deepwiki.handlers.analysis.get_config", return_value=mocks["config"]
+            "local_deepwiki.handlers.analysis_diff.get_config",
+            return_value=mocks["config"],
         ),
-        patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
-        patch("local_deepwiki.handlers.analysis.VectorStore"),
+        patch("local_deepwiki.handlers.analysis_diff.get_embedding_provider"),
+        patch("local_deepwiki.handlers.analysis_diff.VectorStore"),
         patch(
             "local_deepwiki.providers.llm.get_cached_llm_provider",
             return_value=mocks["llm"],
         ),
         patch(
-            "local_deepwiki.handlers.analysis.get_rate_limiter",
+            "local_deepwiki.handlers.analysis_diff.get_rate_limiter",
             return_value=mocks["rate_limiter"],
         ),
     ):
@@ -553,10 +564,12 @@ async def test_ask_about_diff_vector_search_empty(mock_access_control, git_repo)
     mock_vector_store.search = AsyncMock(return_value=[])
 
     with (
-        patch("local_deepwiki.handlers.analysis.get_config", return_value=mock_config),
-        patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
         patch(
-            "local_deepwiki.handlers.analysis.VectorStore",
+            "local_deepwiki.handlers.analysis_diff.get_config", return_value=mock_config
+        ),
+        patch("local_deepwiki.handlers.analysis_diff.get_embedding_provider"),
+        patch(
+            "local_deepwiki.handlers.analysis_diff.VectorStore",
             return_value=mock_vector_store,
         ),
         patch(
@@ -564,7 +577,7 @@ async def test_ask_about_diff_vector_search_empty(mock_access_control, git_repo)
             return_value=mock_llm,
         ),
         patch(
-            "local_deepwiki.handlers.analysis.get_rate_limiter",
+            "local_deepwiki.handlers.analysis_diff.get_rate_limiter",
             return_value=mock_rate_limiter,
         ),
     ):
@@ -617,16 +630,17 @@ async def test_ask_about_diff_multiple_files(mock_access_control, git_repo):
 
     with (
         patch(
-            "local_deepwiki.handlers.analysis.get_config", return_value=mocks["config"]
+            "local_deepwiki.handlers.analysis_diff.get_config",
+            return_value=mocks["config"],
         ),
-        patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
-        patch("local_deepwiki.handlers.analysis.VectorStore"),
+        patch("local_deepwiki.handlers.analysis_diff.get_embedding_provider"),
+        patch("local_deepwiki.handlers.analysis_diff.VectorStore"),
         patch(
             "local_deepwiki.providers.llm.get_cached_llm_provider",
             return_value=mocks["llm"],
         ),
         patch(
-            "local_deepwiki.handlers.analysis.get_rate_limiter",
+            "local_deepwiki.handlers.analysis_diff.get_rate_limiter",
             return_value=mocks["rate_limiter"],
         ),
     ):
@@ -667,16 +681,17 @@ async def test_ask_about_diff_binary_file(mock_access_control, git_repo):
 
     with (
         patch(
-            "local_deepwiki.handlers.analysis.get_config", return_value=mocks["config"]
+            "local_deepwiki.handlers.analysis_diff.get_config",
+            return_value=mocks["config"],
         ),
-        patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
-        patch("local_deepwiki.handlers.analysis.VectorStore"),
+        patch("local_deepwiki.handlers.analysis_diff.get_embedding_provider"),
+        patch("local_deepwiki.handlers.analysis_diff.VectorStore"),
         patch(
             "local_deepwiki.providers.llm.get_cached_llm_provider",
             return_value=mocks["llm"],
         ),
         patch(
-            "local_deepwiki.handlers.analysis.get_rate_limiter",
+            "local_deepwiki.handlers.analysis_diff.get_rate_limiter",
             return_value=mocks["rate_limiter"],
         ),
     ):
@@ -724,16 +739,17 @@ async def test_ask_about_diff_diff_stats_not_truncated(mock_access_control, git_
 
     with (
         patch(
-            "local_deepwiki.handlers.analysis.get_config", return_value=mocks["config"]
+            "local_deepwiki.handlers.analysis_diff.get_config",
+            return_value=mocks["config"],
         ),
-        patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
-        patch("local_deepwiki.handlers.analysis.VectorStore"),
+        patch("local_deepwiki.handlers.analysis_diff.get_embedding_provider"),
+        patch("local_deepwiki.handlers.analysis_diff.VectorStore"),
         patch(
             "local_deepwiki.providers.llm.get_cached_llm_provider",
             return_value=mocks["llm"],
         ),
         patch(
-            "local_deepwiki.handlers.analysis.get_rate_limiter",
+            "local_deepwiki.handlers.analysis_diff.get_rate_limiter",
             return_value=mocks["rate_limiter"],
         ),
     ):
@@ -755,16 +771,17 @@ async def test_ask_about_diff_prompt_contains_question(mock_access_control, git_
 
     with (
         patch(
-            "local_deepwiki.handlers.analysis.get_config", return_value=mocks["config"]
+            "local_deepwiki.handlers.analysis_diff.get_config",
+            return_value=mocks["config"],
         ),
-        patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
-        patch("local_deepwiki.handlers.analysis.VectorStore"),
+        patch("local_deepwiki.handlers.analysis_diff.get_embedding_provider"),
+        patch("local_deepwiki.handlers.analysis_diff.VectorStore"),
         patch(
             "local_deepwiki.providers.llm.get_cached_llm_provider",
             return_value=mocks["llm"],
         ),
         patch(
-            "local_deepwiki.handlers.analysis.get_rate_limiter",
+            "local_deepwiki.handlers.analysis_diff.get_rate_limiter",
             return_value=mocks["rate_limiter"],
         ),
     ):
@@ -821,10 +838,12 @@ async def test_ask_about_diff_multiple_vector_results(mock_access_control, git_r
     )
 
     with (
-        patch("local_deepwiki.handlers.analysis.get_config", return_value=mock_config),
-        patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
         patch(
-            "local_deepwiki.handlers.analysis.VectorStore",
+            "local_deepwiki.handlers.analysis_diff.get_config", return_value=mock_config
+        ),
+        patch("local_deepwiki.handlers.analysis_diff.get_embedding_provider"),
+        patch(
+            "local_deepwiki.handlers.analysis_diff.VectorStore",
             return_value=mock_vector_store,
         ),
         patch(
@@ -832,7 +851,7 @@ async def test_ask_about_diff_multiple_vector_results(mock_access_control, git_r
             return_value=mock_llm,
         ),
         patch(
-            "local_deepwiki.handlers.analysis.get_rate_limiter",
+            "local_deepwiki.handlers.analysis_diff.get_rate_limiter",
             return_value=mock_rate_limiter,
         ),
     ):
@@ -874,10 +893,12 @@ async def test_ask_about_diff_max_context_respected(mock_access_control, git_rep
     mock_vector_store.search = AsyncMock(return_value=[])
 
     with (
-        patch("local_deepwiki.handlers.analysis.get_config", return_value=mock_config),
-        patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
         patch(
-            "local_deepwiki.handlers.analysis.VectorStore",
+            "local_deepwiki.handlers.analysis_diff.get_config", return_value=mock_config
+        ),
+        patch("local_deepwiki.handlers.analysis_diff.get_embedding_provider"),
+        patch(
+            "local_deepwiki.handlers.analysis_diff.VectorStore",
             return_value=mock_vector_store,
         ),
         patch(
@@ -885,7 +906,7 @@ async def test_ask_about_diff_max_context_respected(mock_access_control, git_rep
             return_value=mock_llm,
         ),
         patch(
-            "local_deepwiki.handlers.analysis.get_rate_limiter",
+            "local_deepwiki.handlers.analysis_diff.get_rate_limiter",
             return_value=mock_rate_limiter,
         ),
     ):
@@ -960,16 +981,17 @@ async def test_ask_about_diff_only_whitespace_diff(mock_access_control, git_repo
 
     with (
         patch(
-            "local_deepwiki.handlers.analysis.get_config", return_value=mocks["config"]
+            "local_deepwiki.handlers.analysis_diff.get_config",
+            return_value=mocks["config"],
         ),
-        patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
-        patch("local_deepwiki.handlers.analysis.VectorStore"),
+        patch("local_deepwiki.handlers.analysis_diff.get_embedding_provider"),
+        patch("local_deepwiki.handlers.analysis_diff.VectorStore"),
         patch(
             "local_deepwiki.providers.llm.get_cached_llm_provider",
             return_value=mocks["llm"],
         ),
         patch(
-            "local_deepwiki.handlers.analysis.get_rate_limiter",
+            "local_deepwiki.handlers.analysis_diff.get_rate_limiter",
             return_value=mocks["rate_limiter"],
         ),
     ):
@@ -991,16 +1013,17 @@ async def test_ask_about_diff_special_chars_in_question(mock_access_control, git
 
     with (
         patch(
-            "local_deepwiki.handlers.analysis.get_config", return_value=mocks["config"]
+            "local_deepwiki.handlers.analysis_diff.get_config",
+            return_value=mocks["config"],
         ),
-        patch("local_deepwiki.handlers.analysis.get_embedding_provider"),
-        patch("local_deepwiki.handlers.analysis.VectorStore"),
+        patch("local_deepwiki.handlers.analysis_diff.get_embedding_provider"),
+        patch("local_deepwiki.handlers.analysis_diff.VectorStore"),
         patch(
             "local_deepwiki.providers.llm.get_cached_llm_provider",
             return_value=mocks["llm"],
         ),
         patch(
-            "local_deepwiki.handlers.analysis.get_rate_limiter",
+            "local_deepwiki.handlers.analysis_diff.get_rate_limiter",
             return_value=mocks["rate_limiter"],
         ),
     ):

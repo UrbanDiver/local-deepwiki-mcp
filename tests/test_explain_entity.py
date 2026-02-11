@@ -91,7 +91,7 @@ def _make_search_json(wiki_path, entities=None):
 
 @pytest.fixture
 def mock_access_control():
-    with patch("local_deepwiki.handlers.analysis.get_access_controller") as mock:
+    with patch("local_deepwiki.handlers.analysis_entity.get_access_controller") as mock:
         controller = MagicMock()
         mock.return_value = controller
         yield controller
@@ -205,8 +205,10 @@ class TestHandleExplainEntityBasic:
         mock_api_extractor.extract_from_file.return_value = ([mock_func_sig], [])
 
         with (
-            patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
-            patch("local_deepwiki.handlers.analysis._create_vector_store"),
+            patch(
+                "local_deepwiki.handlers.analysis_entity._load_index_status"
+            ) as mock_load,
+            patch("local_deepwiki.handlers.analysis_entity._create_vector_store"),
             patch(
                 "local_deepwiki.generators.callgraph.CallGraphExtractor",
                 return_value=mock_extractor_instance,
@@ -250,7 +252,9 @@ class TestHandleExplainEntityNotFound:
     async def test_entity_not_in_search_index(self, mock_access_control, wiki_env):
         env = wiki_env
 
-        with patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load:
+        with patch(
+            "local_deepwiki.handlers.analysis_entity._load_index_status"
+        ) as mock_load:
             mock_load.return_value = (
                 env["index_status"],
                 env["wiki_path"],
@@ -295,8 +299,10 @@ class TestHandleExplainEntityClassInheritance:
         mock_cg_extractor.extract_from_file.return_value = {}
 
         with (
-            patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
-            patch("local_deepwiki.handlers.analysis._create_vector_store"),
+            patch(
+                "local_deepwiki.handlers.analysis_entity._load_index_status"
+            ) as mock_load,
+            patch("local_deepwiki.handlers.analysis_entity._create_vector_store"),
             patch(
                 "local_deepwiki.generators.inheritance.collect_class_hierarchy",
                 new_callable=AsyncMock,
@@ -365,8 +371,10 @@ class TestHandleExplainEntityFunctionNoInheritance:
         mock_cg_extractor.extract_from_file.return_value = {}
 
         with (
-            patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
-            patch("local_deepwiki.handlers.analysis._create_vector_store"),
+            patch(
+                "local_deepwiki.handlers.analysis_entity._load_index_status"
+            ) as mock_load,
+            patch("local_deepwiki.handlers.analysis_entity._create_vector_store"),
             patch(
                 "local_deepwiki.generators.test_examples.CodeExampleExtractor",
                 return_value=mock_example_extractor,
@@ -424,8 +432,10 @@ class TestHandleExplainEntityDisableCallGraph:
         mock_api_extractor.extract_from_file.return_value = ([mock_func_sig], [])
 
         with (
-            patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
-            patch("local_deepwiki.handlers.analysis._create_vector_store"),
+            patch(
+                "local_deepwiki.handlers.analysis_entity._load_index_status"
+            ) as mock_load,
+            patch("local_deepwiki.handlers.analysis_entity._create_vector_store"),
             patch(
                 "local_deepwiki.generators.test_examples.CodeExampleExtractor",
                 return_value=mock_example_extractor,
@@ -474,7 +484,9 @@ class TestHandleExplainEntityDisableTestExamples:
         mock_api_extractor.extract_from_file.return_value = ([mock_func_sig], [])
 
         with (
-            patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
+            patch(
+                "local_deepwiki.handlers.analysis_entity._load_index_status"
+            ) as mock_load,
             patch(
                 "local_deepwiki.generators.callgraph.CallGraphExtractor",
                 return_value=mock_cg_extractor,
@@ -622,8 +634,10 @@ class TestExplainEntityMultipleMatches:
         mock_api_extractor.extract_from_file.return_value = ([mock_func_sig], [])
 
         with (
-            patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
-            patch("local_deepwiki.handlers.analysis._create_vector_store"),
+            patch(
+                "local_deepwiki.handlers.analysis_entity._load_index_status"
+            ) as mock_load,
+            patch("local_deepwiki.handlers.analysis_entity._create_vector_store"),
             patch(
                 "local_deepwiki.generators.callgraph.CallGraphExtractor",
                 return_value=mock_cg_extractor,
@@ -687,8 +701,10 @@ class TestExplainEntityMethodEntity:
         mock_example_extractor.extract_examples_for_class = AsyncMock(return_value=[])
 
         with (
-            patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
-            patch("local_deepwiki.handlers.analysis._create_vector_store"),
+            patch(
+                "local_deepwiki.handlers.analysis_entity._load_index_status"
+            ) as mock_load,
+            patch("local_deepwiki.handlers.analysis_entity._create_vector_store"),
             patch(
                 "local_deepwiki.generators.callgraph.CallGraphExtractor",
                 return_value=mock_cg_extractor,
@@ -749,8 +765,10 @@ class TestExplainEntityNoDocstring:
         )
 
         with (
-            patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
-            patch("local_deepwiki.handlers.analysis._create_vector_store"),
+            patch(
+                "local_deepwiki.handlers.analysis_entity._load_index_status"
+            ) as mock_load,
+            patch("local_deepwiki.handlers.analysis_entity._create_vector_store"),
             patch(
                 "local_deepwiki.generators.callgraph.CallGraphExtractor",
                 return_value=mock_cg_extractor,
@@ -834,8 +852,10 @@ class TestExplainEntityAsyncFunction:
         )
 
         with (
-            patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
-            patch("local_deepwiki.handlers.analysis._create_vector_store"),
+            patch(
+                "local_deepwiki.handlers.analysis_entity._load_index_status"
+            ) as mock_load,
+            patch("local_deepwiki.handlers.analysis_entity._create_vector_store"),
             patch(
                 "local_deepwiki.generators.callgraph.CallGraphExtractor",
                 return_value=mock_cg_extractor,
@@ -890,8 +910,10 @@ class TestExplainEntityNoCallersCallees:
         mock_api_extractor.extract_from_file.return_value = ([mock_func_sig], [])
 
         with (
-            patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
-            patch("local_deepwiki.handlers.analysis._create_vector_store"),
+            patch(
+                "local_deepwiki.handlers.analysis_entity._load_index_status"
+            ) as mock_load,
+            patch("local_deepwiki.handlers.analysis_entity._create_vector_store"),
             patch(
                 "local_deepwiki.generators.callgraph.CallGraphExtractor",
                 return_value=mock_cg_extractor,
@@ -939,8 +961,10 @@ class TestExplainEntityDisableApiDocs:
         )
 
         with (
-            patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
-            patch("local_deepwiki.handlers.analysis._create_vector_store"),
+            patch(
+                "local_deepwiki.handlers.analysis_entity._load_index_status"
+            ) as mock_load,
+            patch("local_deepwiki.handlers.analysis_entity._create_vector_store"),
             patch(
                 "local_deepwiki.generators.callgraph.CallGraphExtractor",
                 return_value=mock_cg_extractor,
@@ -979,7 +1003,9 @@ class TestExplainEntityAllSectionsDisabled:
     async def test_all_disabled(self, mock_access_control, wiki_env):
         env = wiki_env
 
-        with patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load:
+        with patch(
+            "local_deepwiki.handlers.analysis_entity._load_index_status"
+        ) as mock_load:
             mock_load.return_value = (
                 env["index_status"],
                 env["wiki_path"],
@@ -1030,8 +1056,10 @@ class TestExplainEntityClassNotInHierarchy:
         mock_cg_extractor.extract_from_file.return_value = {}
 
         with (
-            patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
-            patch("local_deepwiki.handlers.analysis._create_vector_store"),
+            patch(
+                "local_deepwiki.handlers.analysis_entity._load_index_status"
+            ) as mock_load,
+            patch("local_deepwiki.handlers.analysis_entity._create_vector_store"),
             patch(
                 "local_deepwiki.generators.inheritance.collect_class_hierarchy",
                 new_callable=AsyncMock,
@@ -1083,7 +1111,9 @@ class TestExplainEntityEmptySearchJson:
         index_status = _make_index_status(str(tmp_path))
         config = _make_config(tmp_path)
 
-        with patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load:
+        with patch(
+            "local_deepwiki.handlers.analysis_entity._load_index_status"
+        ) as mock_load:
             mock_load.return_value = (index_status, wiki_path, config)
 
             result = await handle_explain_entity(
@@ -1128,8 +1158,10 @@ class TestExplainEntityCallGraphWithCallersCallees:
         mock_api_extractor.extract_from_file.return_value = ([mock_func_sig], [])
 
         with (
-            patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
-            patch("local_deepwiki.handlers.analysis._create_vector_store"),
+            patch(
+                "local_deepwiki.handlers.analysis_entity._load_index_status"
+            ) as mock_load,
+            patch("local_deepwiki.handlers.analysis_entity._create_vector_store"),
             patch(
                 "local_deepwiki.generators.callgraph.CallGraphExtractor",
                 return_value=mock_cg_extractor,
@@ -1191,8 +1223,10 @@ class TestExplainEntitySourceFileNotFound:
         config = _make_config(tmp_path)
 
         with (
-            patch("local_deepwiki.handlers.analysis._load_index_status") as mock_load,
-            patch("local_deepwiki.handlers.analysis._create_vector_store"),
+            patch(
+                "local_deepwiki.handlers.analysis_entity._load_index_status"
+            ) as mock_load,
+            patch("local_deepwiki.handlers.analysis_entity._create_vector_store"),
         ):
             mock_load.return_value = (index_status, wiki_path, config)
 

@@ -123,9 +123,13 @@ def _make_config(repo_path="/tmp/repo"):
 
 @pytest.fixture
 def mock_access_control():
-    with patch("local_deepwiki.handlers.analysis.get_access_controller") as mock:
+    with (
+        patch("local_deepwiki.handlers.analysis_search.get_access_controller") as m1,
+        patch("local_deepwiki.handlers.analysis_metadata.get_access_controller") as m2,
+    ):
         controller = MagicMock()
-        mock.return_value = controller
+        m1.return_value = controller
+        m2.return_value = controller
         yield controller
 
 
@@ -211,7 +215,7 @@ class TestHandleSearchWiki:
         config = _make_config(str(tmp_path))
 
         with patch(
-            "local_deepwiki.handlers.analysis._load_index_status",
+            "local_deepwiki.handlers.analysis_search._load_index_status",
             return_value=(index_status, wiki_dir, config),
         ):
             result = await handle_search_wiki(
@@ -228,7 +232,7 @@ class TestHandleSearchWiki:
         config = _make_config(str(tmp_path))
 
         with patch(
-            "local_deepwiki.handlers.analysis._load_index_status",
+            "local_deepwiki.handlers.analysis_search._load_index_status",
             return_value=(index_status, wiki_dir, config),
         ):
             result = await handle_search_wiki(
@@ -246,7 +250,7 @@ class TestHandleSearchWiki:
         config = _make_config(str(tmp_path))
 
         with patch(
-            "local_deepwiki.handlers.analysis._load_index_status",
+            "local_deepwiki.handlers.analysis_search._load_index_status",
             return_value=(index_status, wiki_dir, config),
         ):
             result = await handle_search_wiki(
@@ -267,7 +271,7 @@ class TestHandleSearchWiki:
         config = _make_config(str(tmp_path))
 
         with patch(
-            "local_deepwiki.handlers.analysis._load_index_status",
+            "local_deepwiki.handlers.analysis_search._load_index_status",
             return_value=(index_status, wiki_dir, config),
         ):
             result = await handle_search_wiki(
@@ -286,7 +290,7 @@ class TestHandleSearchWiki:
         config = _make_config(str(tmp_path))
 
         with patch(
-            "local_deepwiki.handlers.analysis._load_index_status",
+            "local_deepwiki.handlers.analysis_search._load_index_status",
             return_value=(index_status, wiki_path, config),
         ):
             result = await handle_search_wiki(
@@ -306,7 +310,7 @@ class TestHandleSearchWiki:
         config = _make_config(str(tmp_path))
 
         with patch(
-            "local_deepwiki.handlers.analysis._load_index_status",
+            "local_deepwiki.handlers.analysis_search._load_index_status",
             return_value=(index_status, wiki_dir, config),
         ):
             result = await handle_search_wiki(
@@ -324,7 +328,7 @@ class TestHandleSearchWiki:
         config = _make_config(str(tmp_path))
 
         with patch(
-            "local_deepwiki.handlers.analysis._load_index_status",
+            "local_deepwiki.handlers.analysis_search._load_index_status",
             return_value=(index_status, wiki_dir, config),
         ):
             result = await handle_search_wiki(
@@ -451,11 +455,11 @@ class TestHandleGetFileContext:
 
         with (
             patch(
-                "local_deepwiki.handlers.analysis._load_index_status",
+                "local_deepwiki.handlers.analysis_metadata._load_index_status",
                 return_value=(index_status, tmp_path / ".deepwiki", config),
             ),
             patch(
-                "local_deepwiki.handlers.analysis._create_vector_store",
+                "local_deepwiki.handlers.analysis_metadata._create_vector_store",
                 return_value=mock_vector_store,
             ),
             patch(
@@ -480,7 +484,7 @@ class TestHandleGetFileContext:
         config = _make_config(str(tmp_path))
 
         with patch(
-            "local_deepwiki.handlers.analysis._load_index_status",
+            "local_deepwiki.handlers.analysis_metadata._load_index_status",
             return_value=(index_status, tmp_path / ".deepwiki", config),
         ):
             result = await handle_get_file_context(
@@ -502,11 +506,11 @@ class TestHandleGetFileContext:
 
         with (
             patch(
-                "local_deepwiki.handlers.analysis._load_index_status",
+                "local_deepwiki.handlers.analysis_metadata._load_index_status",
                 return_value=(index_status, tmp_path / ".deepwiki", config),
             ),
             patch(
-                "local_deepwiki.handlers.analysis._create_vector_store",
+                "local_deepwiki.handlers.analysis_metadata._create_vector_store",
                 return_value=mock_vector_store,
             ),
         ):
@@ -559,11 +563,11 @@ class TestHandleFuzzySearch:
 
         with (
             patch(
-                "local_deepwiki.handlers.analysis._load_index_status",
+                "local_deepwiki.handlers.analysis_search._load_index_status",
                 return_value=(index_status, tmp_path / ".deepwiki", config),
             ),
             patch(
-                "local_deepwiki.handlers.analysis._create_vector_store",
+                "local_deepwiki.handlers.analysis_search._create_vector_store",
                 return_value=MagicMock(),
             ),
             patch(
@@ -596,11 +600,11 @@ class TestHandleFuzzySearch:
 
         with (
             patch(
-                "local_deepwiki.handlers.analysis._load_index_status",
+                "local_deepwiki.handlers.analysis_search._load_index_status",
                 return_value=(index_status, tmp_path / ".deepwiki", config),
             ),
             patch(
-                "local_deepwiki.handlers.analysis._create_vector_store",
+                "local_deepwiki.handlers.analysis_search._create_vector_store",
                 return_value=MagicMock(),
             ),
             patch(
@@ -637,11 +641,11 @@ class TestHandleFuzzySearch:
 
         with (
             patch(
-                "local_deepwiki.handlers.analysis._load_index_status",
+                "local_deepwiki.handlers.analysis_search._load_index_status",
                 return_value=(index_status, tmp_path / ".deepwiki", config),
             ),
             patch(
-                "local_deepwiki.handlers.analysis._create_vector_store",
+                "local_deepwiki.handlers.analysis_search._create_vector_store",
                 return_value=MagicMock(),
             ),
             patch(
@@ -675,7 +679,7 @@ class TestHandleGetWikiStats:
         config = _make_config(str(tmp_path))
 
         with patch(
-            "local_deepwiki.handlers.analysis._load_index_status",
+            "local_deepwiki.handlers.analysis_metadata._load_index_status",
             return_value=(index_status, wiki_dir, config),
         ):
             result = await handle_get_wiki_stats({"repo_path": str(tmp_path)})
@@ -700,7 +704,7 @@ class TestHandleGetWikiStats:
         config = _make_config(str(tmp_path))
 
         with patch(
-            "local_deepwiki.handlers.analysis._load_index_status",
+            "local_deepwiki.handlers.analysis_metadata._load_index_status",
             return_value=(index_status, wiki_path, config),
         ):
             result = await handle_get_wiki_stats({"repo_path": str(tmp_path)})
@@ -728,7 +732,7 @@ class TestHandleGetWikiStats:
         config = _make_config(str(tmp_path))
 
         with patch(
-            "local_deepwiki.handlers.analysis._load_index_status",
+            "local_deepwiki.handlers.analysis_metadata._load_index_status",
             return_value=(index_status, wiki_path, config),
         ):
             result = await handle_get_wiki_stats({"repo_path": str(tmp_path)})
@@ -774,13 +778,11 @@ class TestToolRegistration:
         for tool in new_tools:
             assert tool in tool_names, f"{tool} not in list_tools()"
 
-    def test_tool_schemas_have_required_fields(self):
+    async def test_tool_schemas_have_required_fields(self):
         """Verify each new tool has proper inputSchema."""
-        import asyncio
-
         from local_deepwiki.server import list_tools
 
-        tools = asyncio.get_event_loop().run_until_complete(list_tools())
+        tools = await list_tools()
         new_tool_names = {
             "search_wiki",
             "get_project_manifest",
