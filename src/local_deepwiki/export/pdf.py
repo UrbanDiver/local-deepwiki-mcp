@@ -19,10 +19,11 @@ import markdown
 try:
     from weasyprint import CSS, HTML
 except ImportError:
-    CSS = None  # type: ignore[assignment,misc]
-    HTML = None  # type: ignore[assignment,misc]
+    CSS = None  # fallback if weasyprint not installed
+    HTML = None
 
 from local_deepwiki.cli_progress import create_progress
+from local_deepwiki.export.shared import extract_title as _shared_extract_title
 from local_deepwiki.export.streaming import (
     ExportConfig,
     ExportResult,
@@ -31,7 +32,6 @@ from local_deepwiki.export.streaming import (
     WikiPage,
     WikiPageIterator,
 )
-from local_deepwiki.export.shared import extract_title as _shared_extract_title
 from local_deepwiki.logging import get_logger
 
 logger = get_logger(__name__)
@@ -504,7 +504,7 @@ def render_markdown_for_pdf(content: str, render_mermaid: bool = True) -> str:
             "toc",
         ]
     )
-    return cast(str, md.convert(processed_content))
+    return md.convert(processed_content)
 
 
 def extract_title(md_file: Path) -> str:
@@ -566,7 +566,7 @@ class StreamingPdfExporter(StreamingExporter):
         )
 
         # Load TOC for ordering
-        self.load_toc()
+        await asyncio.to_thread(self.load_toc)
 
         # Get page count for progress
         iterator = self.get_page_iterator()
@@ -582,7 +582,7 @@ class StreamingPdfExporter(StreamingExporter):
         output_file = self.output_path
         if output_file.is_dir():
             output_file = output_file / "documentation.pdf"
-        output_file.parent.mkdir(parents=True, exist_ok=True)
+        await asyncio.to_thread(output_file.parent.mkdir, parents=True, exist_ok=True)
 
         # Process pages in batches and create intermediate PDFs
         batch_size = self.config.batch_size
@@ -609,8 +609,11 @@ class StreamingPdfExporter(StreamingExporter):
                     # When batch is full, render to intermediate PDF
                     if len(batch_pages) >= batch_size:
                         batch_pdf = temp_path / f"batch_{batch_num:04d}.pdf"
-                        self._render_batch_to_pdf(
-                            batch_pages, batch_pdf, batch_num == 0
+                        await asyncio.to_thread(
+                            self._render_batch_to_pdf,
+                            batch_pages,
+                            batch_pdf,
+                            batch_num == 0,
                         )
                         temp_pdfs.append(batch_pdf)
 
@@ -628,7 +631,9 @@ class StreamingPdfExporter(StreamingExporter):
             # Process remaining pages
             if batch_pages:
                 batch_pdf = temp_path / f"batch_{batch_num:04d}.pdf"
-                self._render_batch_to_pdf(batch_pages, batch_pdf, batch_num == 0)
+                await asyncio.to_thread(
+                    self._render_batch_to_pdf, batch_pages, batch_pdf, batch_num == 0
+                )
                 temp_pdfs.append(batch_pdf)
 
                 for p in batch_pages:
@@ -642,7 +647,7 @@ class StreamingPdfExporter(StreamingExporter):
 
             if len(temp_pdfs) == 1:
                 # Only one batch, just copy it
-                shutil.copy(temp_pdfs[0], output_file)
+                await asyncio.to_thread(shutil.copy, temp_pdfs[0], output_file)
             elif len(temp_pdfs) > 1:
                 # Multiple batches, need to merge
                 self._merge_pdfs(temp_pdfs, output_file)
@@ -691,7 +696,7 @@ class StreamingPdfExporter(StreamingExporter):
         output_dir = self.output_path
         if output_dir.suffix == ".pdf":
             output_dir = output_dir.parent / output_dir.stem
-        output_dir.mkdir(parents=True, exist_ok=True)
+        await asyncio.to_thread(output_dir.mkdir, parents=True, exist_ok=True)
 
         # Get page count for progress
         iterator = self.get_page_iterator()
@@ -708,9 +713,11 @@ class StreamingPdfExporter(StreamingExporter):
             try:
                 rel_path = page.metadata.relative_path
                 output_file = output_dir / rel_path.with_suffix(".pdf")
-                output_file.parent.mkdir(parents=True, exist_ok=True)
+                await asyncio.to_thread(
+                    output_file.parent.mkdir, parents=True, exist_ok=True
+                )
 
-                self._export_single_page(page, output_file)
+                await asyncio.to_thread(self._export_single_page, page, output_file)
                 exported += 1
 
                 if progress_callback:
