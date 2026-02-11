@@ -7,7 +7,7 @@ from local_deepwiki.errors import (
     EnvironmentSetupError,
     ExportError,
     IndexingError,
-    ProviderError,
+    BaseProviderError,
     ResearchError,
     ValidationError,
     environment_error,
@@ -138,12 +138,12 @@ class TestEnvironmentSetupError:
         assert error.context["missing_component"] == "weasyprint"
 
 
-class TestProviderError:
-    """Tests for ProviderError."""
+class TestBaseProviderError:
+    """Tests for BaseProviderError."""
 
     def test_basic_provider_error(self):
         """Test basic provider error."""
-        error = ProviderError("API call failed")
+        error = BaseProviderError("API call failed")
         assert "API call failed" in str(error)
         assert error.provider_name is None
         assert error.original_error is None
@@ -151,7 +151,7 @@ class TestProviderError:
     def test_provider_error_with_original_exception(self):
         """Test provider error with original exception."""
         original = ConnectionError("Connection refused")
-        error = ProviderError(
+        error = BaseProviderError(
             "Failed to connect",
             hint="Check your connection",
             provider_name="anthropic",
@@ -279,14 +279,14 @@ class TestValidationErrorFactory:
         assert error.context["extra"] == "info"
 
 
-class TestProviderErrorFactory:
+class TestBaseProviderErrorFactory:
     """Tests for the provider_error factory function."""
 
     def test_creates_provider_error(self):
-        """Test that factory creates ProviderError."""
+        """Test that factory creates BaseProviderError."""
         original = Exception("API error")
         error = provider_error("anthropic", original)
-        assert isinstance(error, ProviderError)
+        assert isinstance(error, BaseProviderError)
         assert error.provider_name == "anthropic"
         assert error.original_error is original
 
@@ -335,7 +335,7 @@ class TestProviderErrorFactory:
         """Test handling of unknown errors."""
         original = Exception("Some random error")
         error = provider_error("anthropic", original)
-        assert isinstance(error, ProviderError)
+        assert isinstance(error, BaseProviderError)
         assert "Some random error" in str(error)
 
 
@@ -557,7 +557,7 @@ class TestErrorHierarchy:
         """Test that all error classes inherit from DeepWikiError."""
         assert issubclass(ValidationError, DeepWikiError)
         assert issubclass(EnvironmentSetupError, DeepWikiError)
-        assert issubclass(ProviderError, DeepWikiError)
+        assert issubclass(BaseProviderError, DeepWikiError)
         assert issubclass(IndexingError, DeepWikiError)
         assert issubclass(ExportError, DeepWikiError)
         assert issubclass(ResearchError, DeepWikiError)
@@ -567,7 +567,7 @@ class TestErrorHierarchy:
         errors = [
             ValidationError("test"),
             EnvironmentSetupError("test"),
-            ProviderError("test"),
+            BaseProviderError("test"),
             IndexingError("test"),
             ExportError("test"),
             ResearchError("test"),
@@ -582,7 +582,7 @@ class TestErrorHierarchy:
         errors = [
             ValidationError("test"),
             EnvironmentSetupError("test"),
-            ProviderError("test"),
+            BaseProviderError("test"),
             IndexingError("test"),
             ExportError("test"),
             ResearchError("test"),
@@ -637,12 +637,12 @@ class TestHandlerIntegration:
         assert "Hint: Fix your input" in result[0].text
 
     async def test_provider_error_caught_by_handler(self):
-        """Test that ProviderError is properly caught and formatted."""
+        """Test that BaseProviderError is properly caught and formatted."""
         from local_deepwiki.handlers import handle_tool_errors
 
         @handle_tool_errors
         async def handler_that_raises_provider_error(args):
-            raise ProviderError(
+            raise BaseProviderError(
                 "API call failed",
                 hint="Check your API key",
                 provider_name="anthropic",

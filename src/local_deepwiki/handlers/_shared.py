@@ -31,7 +31,6 @@ from local_deepwiki.errors import (
     DeepWikiError,
     ExportError,
     IndexingError,
-    ProviderError,
     ResearchError,
     ValidationError,
     format_error_response,

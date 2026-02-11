@@ -13,7 +13,6 @@ from local_deepwiki.errors import (
     DeepWikiError,
     ExportError,
     IndexingError,
-    ProviderError,
     ValidationError,
     format_error_response,
 )

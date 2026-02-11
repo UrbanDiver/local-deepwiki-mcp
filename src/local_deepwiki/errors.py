@@ -164,7 +164,7 @@ class EnvironmentSetupError(DeepWikiError):
             self.context["missing_component"] = missing_component
 
 
-class ProviderError(DeepWikiError):
+class BaseProviderError(DeepWikiError):
     """Error raised when an LLM or embedding provider fails.
 
     This error wraps failures from external AI providers like
@@ -371,7 +371,7 @@ def provider_error(
     original_error: Exception,
     *,
     context: dict[str, Any] | None = None,
-) -> ProviderError:
+) -> BaseProviderError:
     """Create a provider error from an exception with actionable hints.
 
     This function analyzes the original exception to provide
@@ -383,7 +383,7 @@ def provider_error(
         context: Additional context for debugging.
 
     Returns:
-        A ProviderError with formatted message and hint.
+        A BaseProviderError with formatted message and hint.
 
     Example:
         try:
@@ -419,7 +419,7 @@ def provider_error(
         hint = f"Check your {provider_name.title()} configuration and API status. See provider documentation for details."
         message = f"{provider_name.title()} provider error: {original_error}"
 
-    return ProviderError(
+    return BaseProviderError(
         message=message,
         hint=hint,
         context=context,

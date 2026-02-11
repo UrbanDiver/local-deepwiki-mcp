@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from functools import wraps
 from typing import Any, AsyncIterator, Callable
 
-from local_deepwiki.errors import ProviderError as BaseProviderError
+from local_deepwiki.errors import BaseProviderError
 from local_deepwiki.logging import get_logger
 
 logger = get_logger(__name__)
