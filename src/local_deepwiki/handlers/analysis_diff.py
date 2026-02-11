@@ -1,5 +1,6 @@
 """Diff-related analysis handlers: analyze_diff and ask_about_diff."""
 
+import asyncio
 import json
 import re
 import subprocess
@@ -179,7 +180,8 @@ async def handle_analyze_diff(args: dict[str, Any]) -> list[TextContent]:
         # Map to wiki pages via toc.json
         toc_path = wiki_path / "toc.json"
         if toc_path.exists():
-            toc_data = json.loads(toc_path.read_text())
+            toc_content = await asyncio.to_thread(toc_path.read_text)
+            toc_data = json.loads(toc_content)
             pages = (
                 toc_data if isinstance(toc_data, list) else toc_data.get("pages", [])
             )
@@ -198,7 +200,8 @@ async def handle_analyze_diff(args: dict[str, Any]) -> list[TextContent]:
         # Map to entities via search.json
         search_path = wiki_path / "search.json"
         if search_path.exists():
-            search_data = json.loads(search_path.read_text())
+            search_content = await asyncio.to_thread(search_path.read_text)
+            search_data = json.loads(search_content)
             entities = search_data.get("entities", [])
             changed_file_set = {cf["file"] for cf in changed_files}
             for entity in entities:

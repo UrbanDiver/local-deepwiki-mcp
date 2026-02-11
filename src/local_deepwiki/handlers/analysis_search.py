@@ -1,5 +1,6 @@
 """Search-related analysis handlers: wiki search and fuzzy search."""
 
+import asyncio
 import json
 from pathlib import Path
 from typing import Any
@@ -68,7 +69,8 @@ async def handle_search_wiki(args: dict[str, Any]) -> list[TextContent]:
             )
         ]
 
-    search_data = json.loads(search_index_path.read_text())
+    search_content = await asyncio.to_thread(search_index_path.read_text)
+    search_data = json.loads(search_content)
     pages = search_data.get("pages", [])
     entities = search_data.get("entities", [])
 

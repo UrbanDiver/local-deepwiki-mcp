@@ -1,5 +1,6 @@
 """Entity-related analysis handlers: explain entity and impact analysis."""
 
+import asyncio
 import json
 from pathlib import Path
 from typing import Any
@@ -62,7 +63,8 @@ async def handle_explain_entity(args: dict[str, Any]) -> list[TextContent]:
     entity_info = None
     if search_json_path.exists():
         try:
-            search_data = json.loads(search_json_path.read_text())
+            search_content = await asyncio.to_thread(search_json_path.read_text)
+            search_data = json.loads(search_content)
             entities_list = search_data.get("entities", [])
             for entry in entities_list:
                 if entry.get("name") == entity_name:
@@ -485,7 +487,8 @@ async def handle_impact_analysis(args: dict[str, Any]) -> list[TextContent]:
             toc_path = wiki_path / "toc.json"
             matched_pages: list[dict[str, str]] = []
             if toc_path.exists():
-                toc_data = json.loads(toc_path.read_text())
+                toc_content = await asyncio.to_thread(toc_path.read_text)
+                toc_data = json.loads(toc_content)
                 pages = (
                     toc_data
                     if isinstance(toc_data, list)

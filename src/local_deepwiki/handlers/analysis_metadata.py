@@ -1,5 +1,6 @@
 """Metadata-related analysis handlers: manifest, file context, wiki stats, complexity."""
 
+import asyncio
 import json
 import time
 from pathlib import Path
@@ -225,7 +226,8 @@ async def handle_get_wiki_stats(args: dict[str, Any]) -> list[TextContent]:
     # Wiki page stats from toc.json
     toc_path = wiki_path / "toc.json"
     if toc_path.exists():
-        toc_data = json.loads(toc_path.read_text())
+        toc_content = await asyncio.to_thread(toc_path.read_text)
+        toc_data = json.loads(toc_content)
         pages = toc_data if isinstance(toc_data, list) else toc_data.get("pages", [])
         stats["wiki_pages"] = {
             "total_pages": len(pages),
@@ -236,7 +238,8 @@ async def handle_get_wiki_stats(args: dict[str, Any]) -> list[TextContent]:
     # Search index stats from search.json
     search_path = wiki_path / "search.json"
     if search_path.exists():
-        search_data = json.loads(search_path.read_text())
+        search_content = await asyncio.to_thread(search_path.read_text)
+        search_data = json.loads(search_content)
         meta = search_data.get("meta", {})
         stats["search_index"] = {
             "total_page_entries": meta.get(
@@ -252,7 +255,8 @@ async def handle_get_wiki_stats(args: dict[str, Any]) -> list[TextContent]:
     # Wiki status from wiki_status.json (curated)
     wiki_status_path = wiki_path / "wiki_status.json"
     if wiki_status_path.exists():
-        wiki_status_data = json.loads(wiki_status_path.read_text())
+        wiki_status_content = await asyncio.to_thread(wiki_status_path.read_text)
+        wiki_status_data = json.loads(wiki_status_content)
         # Curate wiki_status: keep high-level metrics, drop verbose page lists
         curated_wiki_status = {
             "total_pages": wiki_status_data.get(
@@ -278,7 +282,8 @@ async def handle_get_wiki_stats(args: dict[str, Any]) -> list[TextContent]:
     # Coverage from coverage.json (curated)
     coverage_path = wiki_path / "coverage.json"
     if coverage_path.exists():
-        coverage_data = json.loads(coverage_path.read_text())
+        coverage_content = await asyncio.to_thread(coverage_path.read_text)
+        coverage_data = json.loads(coverage_content)
         # Curate coverage: keep high-level metrics, drop per-file breakdowns
         if "overall" in coverage_data:
             # New format from handle_get_coverage
@@ -319,7 +324,7 @@ async def handle_get_wiki_stats(args: dict[str, Any]) -> list[TextContent]:
     stats["manifest_cached"] = manifest_path.exists()
 
     # Count wiki markdown files
-    wiki_files = list(wiki_path.glob("**/*.md"))
+    wiki_files = await asyncio.to_thread(lambda: list(wiki_path.glob("**/*.md")))
     stats["total_wiki_files"] = len(wiki_files)
 
     logger.info(f"Wiki stats for {repo_path}")
