@@ -1,5 +1,7 @@
 """Core VectorStore implementation."""
 
+from __future__ import annotations
+
 import asyncio
 import json
 import math
@@ -9,7 +11,10 @@ import threading
 import time
 from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable
+
+if TYPE_CHECKING:
+    from local_deepwiki.core.fuzzy_search import FuzzySearchHelper
 
 import lancedb
 import numpy as np
@@ -146,8 +151,8 @@ class VectorStore:
         try:
             self.close()
         except Exception:
-            # Suppress errors during GC -- the interpreter may be shutting
-            # down and objects referenced by close() may already be gone.
+            # Keep broad catch: destructor must not fail during interpreter shutdown
+            # when objects may already be gone
             pass
 
     async def __aenter__(self) -> "VectorStore":
@@ -265,9 +270,7 @@ class VectorStore:
                     # Lazy indexing: mark as pending if table is large enough
                     if num_rows >= self._lazy_index_manager.config.min_rows:
                         self._lazy_index_manager.mark_index_pending()
-                        logger.debug(
-                            f"Vector index creation deferred (lazy mode): {num_rows} rows"
-                        )
+                        logger.debug(f"Vector index creation deferred (lazy mode): {num_rows} rows")
                 else:
                     # Eager indexing: create immediately
                     self._create_vector_index(num_rows)
@@ -428,7 +431,17 @@ class VectorStore:
                         retry_count=retry_count,
                     )
 
-                except Exception as e:
+                except (
+                    ConnectionError,
+                    TimeoutError,
+                    OSError,
+                    RuntimeError,
+                    ValueError,
+                ) as e:
+                    # ConnectionError/TimeoutError: Network issues
+                    # OSError: File system or system-level errors
+                    # RuntimeError: Provider-specific runtime errors
+                    # ValueError: API parameter validation failures
                     retry_count += 1
                     error_str = str(e).lower()
 
@@ -528,9 +541,7 @@ class VectorStore:
         if total_batches == 1:
             progress = EmbeddingProgress(total_texts=len(unique_texts), total_batches=1)
             semaphore = asyncio.Semaphore(1)
-            result = await self._embed_single_batch_with_retry(
-                0, batches[0], progress, semaphore
-            )
+            result = await self._embed_single_batch_with_retry(0, batches[0], progress, semaphore)
             if result.error is not None:
                 raise RuntimeError(f"Failed to embed batch: {result.error}")
             if log_progress:
@@ -584,9 +595,7 @@ class VectorStore:
         if errors:
             error_msgs = [f"Batch {idx}: {err}" for idx, err in errors]
             error_summary = "\n".join(error_msgs)
-            logger.error(
-                f"Embedding failed for {len(errors)} batches:\n{error_summary}"
-            )
+            logger.error(f"Embedding failed for {len(errors)} batches:\n{error_summary}")
 
             # Raise an exception with details about the failures
             raise RuntimeError(
@@ -654,14 +663,11 @@ class VectorStore:
 
         # Generate embeddings in batches to avoid OOM and API limits
         texts = [self._chunk_to_text(chunk) for chunk in chunks]
-        embeddings = await self._batch_embed(
-            texts, embedding_batch_size, log_progress=True
-        )
+        embeddings = await self._batch_embed(texts, embedding_batch_size, log_progress=True)
 
         # Prepare data for LanceDB
         data = [
-            chunk.to_vector_record(vector=embedding)
-            for chunk, embedding in zip(chunks, embeddings)
+            chunk.to_vector_record(vector=embedding) for chunk, embedding in zip(chunks, embeddings)
         ]
 
         # Reset lazy index manager state since we're creating a fresh table
@@ -696,9 +702,7 @@ class VectorStore:
 
         return len(data)
 
-    async def add_chunks(
-        self, chunks: list[CodeChunk], embedding_batch_size: int = 100
-    ) -> int:
+    async def add_chunks(self, chunks: list[CodeChunk], embedding_batch_size: int = 100) -> int:
         """Add chunks to existing table.
 
         Args:
@@ -722,8 +726,7 @@ class VectorStore:
 
         # Prepare data
         data = [
-            chunk.to_vector_record(vector=embedding)
-            for chunk, embedding in zip(chunks, embeddings)
+            chunk.to_vector_record(vector=embedding) for chunk, embedding in zip(chunks, embeddings)
         ]
 
         table.add(data)
@@ -806,9 +809,7 @@ class VectorStore:
 
         # Resolve minimum similarity threshold
         effective_min_similarity = (
-            min_similarity
-            if min_similarity is not None
-            else profile_config.min_similarity
+            min_similarity if min_similarity is not None else profile_config.min_similarity
         )
 
         logger.debug(
@@ -850,9 +851,7 @@ class VectorStore:
 
         # Use adaptive search depth if enabled
         if self._adaptive_search_enabled:
-            adaptive_depth = self._adaptive_searcher.estimate_optimal_depth(
-                query, limit
-            )
+            adaptive_depth = self._adaptive_searcher.estimate_optimal_depth(query, limit)
             fetch_limit = max(
                 int(limit * base_fetch_multiplier),
                 adaptive_depth,
@@ -923,9 +922,7 @@ class VectorStore:
         if (
             fuzzy_config.enable_auto_fuzzy
             and not use_fuzzy
-            and should_auto_enable_fuzzy(
-                search_results, fuzzy_config.auto_fuzzy_threshold
-            )
+            and should_auto_enable_fuzzy(search_results, fuzzy_config.auto_fuzzy_threshold)
         ):
             auto_fuzzy_enabled = True
             logger.debug(
@@ -949,9 +946,7 @@ class VectorStore:
         if (
             auto_suggest
             and fuzzy_config.enable_auto_fuzzy
-            and should_auto_enable_fuzzy(
-                search_results, fuzzy_config.auto_fuzzy_threshold
-            )
+            and should_auto_enable_fuzzy(search_results, fuzzy_config.auto_fuzzy_threshold)
         ):
             try:
                 fuzzy_helper = await self._get_fuzzy_helper()
@@ -963,7 +958,10 @@ class VectorStore:
                 )
                 if suggestions:
                     logger.debug(f"Generated suggestions: {suggestions}")
-            except Exception as e:
+            except (RuntimeError, OSError, ValueError, KeyError) as e:
+                # RuntimeError: LanceDB/vector store failures
+                # OSError: File system issues
+                # ValueError/KeyError: Invalid fuzzy search data
                 logger.warning(f"Failed to generate suggestions: {e}")
 
         # Attach suggestions to the first result if we have any
@@ -992,9 +990,7 @@ class VectorStore:
 
         # Cache results (only for non-fuzzy, non-path-pattern, non-auto-fuzzy searches)
         if use_cache and not auto_fuzzy_enabled:
-            self._search_cache.set(
-                query, query_embedding, search_results, cache_filters
-            )
+            self._search_cache.set(query, query_embedding, search_results, cache_filters)
 
         return search_results
 
@@ -1071,9 +1067,7 @@ class VectorStore:
 
         # Resolve minimum similarity threshold
         effective_min_similarity = (
-            min_similarity
-            if min_similarity is not None
-            else profile_config.min_similarity
+            min_similarity if min_similarity is not None else profile_config.min_similarity
         )
 
         logger.debug(
@@ -1087,9 +1081,7 @@ class VectorStore:
                 if cursor.startswith("offset:"):
                     offset = int(cursor[7:])
             except (ValueError, IndexError):
-                logger.warning(
-                    f"Invalid cursor format: {cursor}, using offset={offset}"
-                )
+                logger.warning(f"Invalid cursor format: {cursor}, using offset={offset}")
 
         # Generate query embedding
         query_embedding = (await self.embedding_provider.embed([query]))[0]
@@ -1443,15 +1435,13 @@ class VectorStore:
         # Count by language
         lang_counts = pc.value_counts(arrow_table.column("language"))
         languages = {
-            str(k): int(v)
-            for k, v in zip(lang_counts.field("values"), lang_counts.field("counts"))
+            str(k): int(v) for k, v in zip(lang_counts.field("values"), lang_counts.field("counts"))
         }
 
         # Count by chunk type
         type_counts = pc.value_counts(arrow_table.column("chunk_type"))
         chunk_types = {
-            str(k): int(v)
-            for k, v in zip(type_counts.field("values"), type_counts.field("counts"))
+            str(k): int(v) for k, v in zip(type_counts.field("values"), type_counts.field("counts"))
         }
 
         # Count unique files
@@ -1510,9 +1500,7 @@ class VectorStore:
             file_set.add(fpath)
 
             if (i + 1) % 100_000 == 0:
-                logger.debug(
-                    f"Stats streaming progress: {i + 1}/{total_chunks} rows processed"
-                )
+                logger.debug(f"Stats streaming progress: {i + 1}/{total_chunks} rows processed")
 
         return {
             "total_chunks": total_chunks,

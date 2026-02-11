@@ -296,18 +296,14 @@ class DependencyGraphGenerator:
 
         # Get files in the specified module
         module_files = [
-            f
-            for f in index_status.files
-            if module_path in f.path and f.path.endswith(".py")
+            f for f in index_status.files if module_path in f.path and f.path.endswith(".py")
         ]
 
         if exclude_tests:
             module_files = [f for f in module_files if not _is_test_path(f.path)]
 
         if not module_files:
-            return self._generate_empty_graph_message(
-                f"No files found in module: {module_path}"
-            )
+            return self._generate_empty_graph_message(f"No files found in module: {module_path}")
 
         # Search for import chunks in these files
         graph = DependencyGraph()
@@ -323,11 +319,7 @@ class DependencyGraphGenerator:
             )
 
         # Get import chunks for files in this module
-        chunks = (
-            await self._store.get_chunks_by_file(module_files[0].path)
-            if module_files
-            else []
-        )
+        chunks = await self._store.get_chunks_by_file(module_files[0].path) if module_files else []
 
         # Also search for imports mentioning the module
         search_results = await self._store.search(
@@ -349,9 +341,7 @@ class DependencyGraphGenerator:
             imports = self._parse_imports(chunk.content, chunk.language.value)
             for imp in imports:
                 # Check if import is within the module
-                if module_path in imp or imp in [
-                    Path(f.path).stem for f in module_files
-                ]:
+                if module_path in imp or imp in [Path(f.path).stem for f in module_files]:
                     target_file = imp.split(".")[-1]
                     if target_file in [Path(f.path).stem for f in module_files]:
                         graph.add_edge(source_file, target_file)
@@ -365,9 +355,7 @@ class DependencyGraphGenerator:
 
         return self._render_file_graph(graph, module_path)
 
-    def detect_circular_dependencies(
-        self, graph: dict[str, set[str]]
-    ) -> list[list[str]]:
+    def detect_circular_dependencies(self, graph: dict[str, set[str]]) -> list[list[str]]:
         """Find all circular dependency cycles using DFS.
 
         Args:
@@ -484,9 +472,7 @@ class DependencyGraphGenerator:
 
             source_module = file_to_module.get(chunk.file_path)
             if not source_module:
-                source_module = _extract_module_name(
-                    chunk.file_path, index_status.repo_path
-                )
+                source_module = _extract_module_name(chunk.file_path, index_status.repo_path)
                 graph.add_node(
                     DependencyNode(
                         name=source_module,
@@ -581,9 +567,7 @@ class DependencyGraphGenerator:
 
         return False
 
-    def _resolve_internal_import(
-        self, import_name: str, internal_modules: set[str]
-    ) -> str | None:
+    def _resolve_internal_import(self, import_name: str, internal_modules: set[str]) -> str | None:
         """Resolve an import name to an internal module.
 
         Args:
@@ -684,9 +668,7 @@ class DependencyGraphGenerator:
 
         # Add external dependencies subgraph if enabled
         if show_external and external_nodes:
-            ext_nodes_to_show = sorted(external_nodes, key=lambda n: n.name)[
-                :max_external
-            ]
+            ext_nodes_to_show = sorted(external_nodes, key=lambda n: n.name)[:max_external]
 
             lines.append("    subgraph external[External Dependencies]")
             for node in ext_nodes_to_show:
@@ -712,9 +694,7 @@ class DependencyGraphGenerator:
                     lines.append(f"    {source_id} -->|{edge.count}| {target_id}")
                 else:
                     # External edges get dashed lines
-                    if graph.nodes.get(
-                        target, DependencyNode(name="", file_path="")
-                    ).is_external:
+                    if graph.nodes.get(target, DependencyNode(name="", file_path="")).is_external:
                         lines.append(f"    {source_id} -.-> {target_id}")
                     else:
                         lines.append(f"    {source_id} --> {target_id}")
@@ -723,15 +703,13 @@ class DependencyGraphGenerator:
         # Add click handlers for wiki links
         if wiki_base_path:
             for node_name, node_id in sorted(node_ids.items()):
-                node = graph.nodes.get(node_name)
+                node = graph.nodes.get(node_name)  # type: ignore[assignment]
                 if node and not node.is_external and node.file_path:
                     wiki_path = self._file_path_to_wiki_path(node.file_path)
                     lines.append(f'    click {node_id} "{wiki_base_path}{wiki_path}"')
 
         # Add styling
-        lines.append(
-            "    classDef external fill:#2d2d3d,stroke:#666,stroke-dasharray: 5 5"
-        )
+        lines.append("    classDef external fill:#2d2d3d,stroke:#666,stroke-dasharray: 5 5")
         lines.append("    classDef circular fill:#ff6b6b,stroke:#c92a2a")
 
         # Add circular dependency styling
@@ -766,9 +744,7 @@ class DependencyGraphGenerator:
             Mermaid flowchart markdown string.
         """
         lines = ["```mermaid", f"flowchart TD"]
-        lines.append(
-            f"    subgraph {_sanitize_mermaid_name(module_path)}[{module_path}]"
-        )
+        lines.append(f"    subgraph {_sanitize_mermaid_name(module_path)}[{module_path}]")
 
         # Create node ID mapping
         node_ids: dict[str, str] = {}
@@ -899,7 +875,7 @@ async def generate_dependency_graph_page(
     )
 
     # Add recommendations if cycles exist
-    adj_list = {}  # We'd need to recalculate, but for now just note it's in the graph
+    adj_list: dict[str, list[str]] = {}  # Placeholder for cycle detection
     content_parts.extend(
         [
             "## Best Practices",

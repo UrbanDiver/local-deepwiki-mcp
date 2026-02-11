@@ -88,9 +88,7 @@ async def _handle_index_repository_impl(
 
     # Validate input size limits (CWE-400 prevention)
     total_size, file_count = validate_index_parameters(str(repo_path))
-    logger.info(
-        f"Indexing repository: {repo_path} ({total_size:,} bytes, {file_count:,} files)"
-    )
+    logger.info(f"Indexing repository: {repo_path} ({total_size:,} bytes, {file_count:,} files)")
 
     # Get subject ID for audit logging
     subject = controller.get_current_subject()
@@ -355,9 +353,7 @@ async def handle_ask_question(args: dict[str, Any]) -> list[TextContent]:
     search_results = await vector_store.search(question, limit=max_context)
 
     if not search_results:
-        return [
-            TextContent(type="text", text="No relevant code found for your question.")
-        ]
+        return [TextContent(type="text", text="No relevant code found for your question.")]
 
     # Build context from search results
     context_parts = []
@@ -389,7 +385,9 @@ Code Context:
 
 Provide a clear, accurate answer based only on the code provided. If the code doesn't contain enough information to answer fully, say so."""
 
-    system_prompt = "You are a helpful code assistant. Answer questions about code clearly and accurately."
+    system_prompt = (
+        "You are a helpful code assistant. Answer questions about code clearly and accurately."
+    )
 
     # Acquire rate limit before LLM call
     rate_limiter = get_rate_limiter()
@@ -464,11 +462,7 @@ async def handle_read_wiki_structure(args: dict[str, Any]) -> list[TextContent]:
         try:
             file_content = await asyncio.to_thread(md_file.read_text)
             first_line = file_content.split("\n", 1)[0].strip()
-            title = (
-                first_line.lstrip("#").strip()
-                if first_line.startswith("#")
-                else rel_path
-            )
+            title = first_line.lstrip("#").strip() if first_line.startswith("#") else rel_path
         except (OSError, UnicodeDecodeError) as e:
             # OSError: File access issues
             # UnicodeDecodeError: File encoding issues
@@ -605,11 +599,7 @@ async def handle_search_code(args: dict[str, Any]) -> list[TextContent]:
             "language": chunk.language.value,
             "lines": f"{chunk.start_line}-{chunk.end_line}",
             "score": round(r.score, 4),
-            "preview": (
-                chunk.content[:300] + "..."
-                if len(chunk.content) > 300
-                else chunk.content
-            ),
+            "preview": (chunk.content[:300] + "..." if len(chunk.content) > 300 else chunk.content),
             "docstring": chunk.docstring,
         }
         # Include highlights if present (from fuzzy search)
@@ -637,18 +627,18 @@ async def handle_export_wiki_html(args: dict[str, Any]) -> list[TextContent]:
         raise ValueError(str(e)) from e
 
     wiki_path = Path(validated.wiki_path).resolve()
-    output_path = validated.output_path
 
     if not wiki_path.exists():
         raise path_not_found_error(str(wiki_path), "wiki")
 
     # Determine and validate output path
-    if output_path:
-        output_path = _validate_export_path(Path(output_path), wiki_path)
+    raw_output = validated.output_path
+    if raw_output:
+        resolved_output = _validate_export_path(Path(raw_output), wiki_path)
     else:
-        output_path = wiki_path.parent / f"{wiki_path.name}_html"
-        # Validate default path as well
-        output_path = _validate_export_path(output_path, wiki_path)
+        resolved_output = _validate_export_path(
+            wiki_path.parent / f"{wiki_path.name}_html", wiki_path
+        )
 
     # Get subject ID for audit logging
     subject = controller.get_current_subject()
@@ -657,7 +647,7 @@ async def handle_export_wiki_html(args: dict[str, Any]) -> list[TextContent]:
     start_time = time.time()
 
     # Audit: Log export operation started
-    actual_output = output_path
+    actual_output = resolved_output
     audit_logger.log_export_operation(
         subject_id=subject_id,
         wiki_path=str(wiki_path),
@@ -674,11 +664,10 @@ async def handle_export_wiki_html(args: dict[str, Any]) -> list[TextContent]:
     use_streaming = iterator.should_use_streaming()
 
     logger.info(
-        f"Wiki export: {page_count} pages, {total_size_mb:.2f}MB, "
-        f"streaming: {use_streaming}"
+        f"Wiki export: {page_count} pages, {total_size_mb:.2f}MB, " f"streaming: {use_streaming}"
     )
 
-    result = export_to_html(wiki_path, output_path)
+    result = export_to_html(wiki_path, resolved_output)
 
     # Audit: Log export operation completed
     duration_ms = int((time.time() - start_time) * 1000)
@@ -725,23 +714,22 @@ async def handle_export_wiki_pdf(args: dict[str, Any]) -> list[TextContent]:
         raise ValueError(str(e)) from e
 
     wiki_path = Path(validated.wiki_path).resolve()
-    output_path = validated.output_path
     single_file = validated.single_file
 
     if not wiki_path.exists():
         raise path_not_found_error(str(wiki_path), "wiki")
 
     # Determine and validate output path
-    if output_path:
-        output_path = _validate_export_path(Path(output_path), wiki_path)
+    raw_output = validated.output_path
+    if raw_output:
+        resolved_output = _validate_export_path(Path(raw_output), wiki_path)
     else:
         # Determine default path based on single_file mode
         if single_file:
-            output_path = wiki_path.parent / f"{wiki_path.name}.pdf"
+            default_path = wiki_path.parent / f"{wiki_path.name}.pdf"
         else:
-            output_path = wiki_path.parent / f"{wiki_path.name}_pdfs"
-        # Validate default path as well
-        output_path = _validate_export_path(output_path, wiki_path)
+            default_path = wiki_path.parent / f"{wiki_path.name}_pdfs"
+        resolved_output = _validate_export_path(default_path, wiki_path)
 
     # Get subject ID for audit logging
     subject = controller.get_current_subject()
@@ -749,7 +737,7 @@ async def handle_export_wiki_pdf(args: dict[str, Any]) -> list[TextContent]:
     audit_logger = get_audit_logger()
     start_time = time.time()
 
-    actual_output = output_path
+    actual_output = resolved_output
 
     # Audit: Log export operation started
     audit_logger.log_export_operation(
@@ -768,11 +756,10 @@ async def handle_export_wiki_pdf(args: dict[str, Any]) -> list[TextContent]:
     use_streaming = iterator.should_use_streaming()
 
     logger.info(
-        f"PDF export: {page_count} pages, {total_size_mb:.2f}MB, "
-        f"streaming: {use_streaming}"
+        f"PDF export: {page_count} pages, {total_size_mb:.2f}MB, " f"streaming: {use_streaming}"
     )
 
-    result = export_to_pdf(wiki_path, output_path, single_file=single_file)
+    result = export_to_pdf(wiki_path, resolved_output, single_file=single_file)
 
     # Audit: Log export operation completed
     duration_ms = int((time.time() - start_time) * 1000)

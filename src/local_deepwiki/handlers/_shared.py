@@ -9,8 +9,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Awaitable, Callable
 
 if TYPE_CHECKING:
-    from local_deepwiki.core.deep_research import DeepResearchPipeline, ResearchResult
-    from local_deepwiki.models import IndexingProgress, ResearchProgress
+    from local_deepwiki.core.deep_research import DeepResearchPipeline
+    from local_deepwiki.models import (
+        DeepResearchResult,
+        IndexingProgress,
+        ResearchProgress,
+    )
 
 from mcp.server import Server
 from mcp.types import TextContent
@@ -112,7 +116,7 @@ from local_deepwiki.validation import (
 logger = get_logger(__name__)
 
 # Type alias for tool handler functions
-ToolHandler = Callable[[dict[str, Any]], Awaitable[list[TextContent]]]
+ToolHandler = Callable[..., Awaitable[list[TextContent]]]
 
 # Forbidden directories for export operations (security: prevent writing to sensitive locations)
 # Note: /var and /private/var are excluded because temp directories live there
@@ -153,11 +157,7 @@ def _is_test_file(file_path: str) -> bool:
     if any(p in ("tests", "test", "testing", "spec", "specs") for p in parts):
         return True
     # Common test file patterns
-    if (
-        name.startswith("test_")
-        or name.endswith("_test.py")
-        or name.startswith("conftest")
-    ):
+    if name.startswith("test_") or name.endswith("_test.py") or name.startswith("conftest"):
         return True
     return False
 
@@ -255,9 +255,7 @@ def handle_tool_errors(func: ToolHandler) -> ToolHandler:
     """
 
     @wraps(func)
-    async def wrapper(
-        args: dict[str, Any], **kwargs: dict[str, Any]
-    ) -> list[TextContent]:
+    async def wrapper(args: dict[str, Any], **kwargs: dict[str, Any]) -> list[TextContent]:
         try:
             return await func(args, **kwargs)
         except AccessDeniedException as e:
@@ -367,7 +365,7 @@ def _create_vector_store(repo_path: Path, config: Any) -> VectorStore:
     return VectorStore(config.get_vector_db_path(repo_path), embedding_provider)
 
 
-def _format_research_results(result: "ResearchResult") -> dict[str, Any]:
+def _format_research_results(result: "DeepResearchResult") -> dict[str, Any]:
     """Format the research results for return.
 
     Args:
@@ -380,8 +378,7 @@ def _format_research_results(result: "ResearchResult") -> dict[str, Any]:
         "question": result.question,
         "answer": result.answer,
         "sub_questions": [
-            {"question": sq.question, "category": sq.category}
-            for sq in result.sub_questions
+            {"question": sq.question, "category": sq.category} for sq in result.sub_questions
         ],
         "sources": [
             {
@@ -547,9 +544,7 @@ def create_progress_notifier(
             if request_ctx.meta and request_ctx.meta.progressToken:
                 progress_token = request_ctx.meta.progressToken
         except LookupError:
-            logger.debug(
-                "No MCP request context available for progress token extraction"
-            )
+            logger.debug("No MCP request context available for progress token extraction")
 
     # Create progress manager
     progress_manager = registry.start_operation(

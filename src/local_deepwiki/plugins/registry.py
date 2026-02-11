@@ -242,7 +242,9 @@ class PluginRegistry:
                 loaded += 1
                 logger.debug(f"Loaded plugin module: {py_file.name}")
 
-            except Exception as e:
+            except (
+                Exception
+            ) as e:  # Broad catch: plugin isolation — one bad plugin must not crash the system
                 logger.warning(f"Failed to load plugin {py_file}: {e}")
 
         return loaded
@@ -270,7 +272,9 @@ class PluginRegistry:
                             plugin = plugin_class()
                             self.register(plugin)
                             loaded += 1
-                        except Exception as e:
+                        except (
+                            Exception
+                        ) as e:  # Broad catch: plugin isolation — one bad plugin must not crash the system
                             logger.warning(f"Failed to load entry point {ep.name}: {e}")
             else:
                 # Python 3.9 compatibility
@@ -285,7 +289,9 @@ class PluginRegistry:
                                 plugin = plugin_class()
                                 self.register(plugin)
                                 loaded += 1
-                            except Exception as e:
+                            except (
+                                Exception
+                            ) as e:  # Broad catch: plugin isolation — one bad plugin must not crash the system
                                 logger.warning(f"Failed to load entry point {ep.name}: {e}")
 
         except ImportError:
@@ -344,19 +350,25 @@ class PluginRegistry:
         for plugin in self._language_parsers.values():
             try:
                 plugin.cleanup()
-            except Exception as e:
+            except (
+                Exception
+            ) as e:  # Broad catch: plugin isolation — one bad plugin must not crash the system
                 logger.warning(f"Error cleaning up parser plugin: {e}")
 
-        for plugin in self._wiki_generators.values():
+        for gen_plugin in self._wiki_generators.values():
             try:
-                plugin.cleanup()
-            except Exception as e:
+                gen_plugin.cleanup()
+            except (
+                Exception
+            ) as e:  # Broad catch: plugin isolation — one bad plugin must not crash the system
                 logger.warning(f"Error cleaning up generator plugin: {e}")
 
-        for plugin in self._embedding_providers.values():
+        for emb_plugin in self._embedding_providers.values():
             try:
-                plugin.cleanup()
-            except Exception as e:
+                emb_plugin.cleanup()
+            except (
+                Exception
+            ) as e:  # Broad catch: plugin isolation — one bad plugin must not crash the system
                 logger.warning(f"Error cleaning up embedding plugin: {e}")
 
         self._language_parsers.clear()

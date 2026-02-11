@@ -108,7 +108,7 @@ class WikiGenerator:
 
         # Create a copy with overridden LLM provider if specified
         if llm_provider_name:
-            self.config = base_config.with_llm_provider(llm_provider_name)
+            self.config = base_config.with_llm_provider(llm_provider_name)  # type: ignore[arg-type]
         else:
             # Store a defensive copy to prevent external mutation
             self.config = base_config.model_copy(deep=True)
@@ -163,9 +163,7 @@ class WikiGenerator:
     ) -> WikiStructure:
         """Generate wiki documentation for the indexed repository."""
         logger.info(f"Starting wiki generation for {index_status.repo_path}")
-        logger.debug(
-            f"Full rebuild: {full_rebuild}, Total files: {index_status.total_files}"
-        )
+        logger.debug(f"Full rebuild: {full_rebuild}, Total files: {index_status.total_files}")
 
         # Emit WIKI_START event
         emitter = get_event_emitter()
@@ -225,9 +223,7 @@ class WikiGenerator:
 
         # Log any generation warnings
         if ctx.warnings:
-            logger.warning(
-                f"Wiki generation completed with {len(ctx.warnings)} warning(s)"
-            )
+            logger.warning(f"Wiki generation completed with {len(ctx.warnings)} warning(s)")
             for warning in ctx.warnings:
                 logger.warning(f"  - {warning}")
                 self._progress._log(f"WARNING: {warning}")
@@ -368,9 +364,7 @@ class WikiGenerator:
         source_files: list[str],
     ) -> tuple[WikiPage, bool]:
         """Generate a page or load from cache if unchanged."""
-        if ctx.full_rebuild or self.status_manager.needs_regeneration(
-            page_path, source_files
-        ):
+        if ctx.full_rebuild or self.status_manager.needs_regeneration(page_path, source_files):
             page = await generator()
             was_generated = True
         else:
@@ -404,9 +398,7 @@ class WikiGenerator:
             "import require include",
             limit=self.config.wiki.import_search_limit,
         )
-        import_chunks = [
-            r.chunk for r in import_results if r.chunk.chunk_type.value == "import"
-        ]
+        import_chunks = [r.chunk for r in import_results if r.chunk.chunk_type.value == "import"]
         self.relationship_analyzer.analyze_chunks(import_chunks)
 
     async def _generate_module_pages(
@@ -482,16 +474,12 @@ class WikiGenerator:
         if ctx.full_rebuild or self.status_manager.needs_regeneration(
             deps_path, ctx.all_source_files
         ):
-            deps_page, deps_source_files = await self._generate_dependencies(
-                index_status
-            )
+            deps_page, deps_source_files = await self._generate_dependencies(index_status)
             ctx.pages_generated += 1
         else:
             existing_deps_page = await self.status_manager.load_existing_page(deps_path)
             if existing_deps_page is None:
-                deps_page, deps_source_files = await self._generate_dependencies(
-                    index_status
-                )
+                deps_page, deps_source_files = await self._generate_dependencies(index_status)
                 ctx.pages_generated += 1
             else:
                 deps_page = existing_deps_page
@@ -536,9 +524,7 @@ class WikiGenerator:
         """Record and write an auxiliary page if content was generated."""
         if not content:
             return
-        page = WikiPage(
-            path=path, title=title, content=content, generated_at=time.time()
-        )
+        page = WikiPage(path=path, title=title, content=content, generated_at=time.time())
         ctx.pages.append(page)
         self.status_manager.record_page_status(page, ctx.all_source_files)
         await self._write_page(page)
@@ -595,9 +581,7 @@ class WikiGenerator:
         await self._add_auxiliary_page(
             ctx, coverage_content, "coverage.md", "Documentation Coverage"
         )
-        await self._add_auxiliary_page(
-            ctx, dep_content, "dependency-graph.md", "Dependency Graph"
-        )
+        await self._add_auxiliary_page(ctx, dep_content, "dependency-graph.md", "Dependency Graph")
 
     def _sort_generators_by_dependencies(
         self,
@@ -635,9 +619,7 @@ class WikiGenerator:
         progress_callback: ProgressCallback | None,
     ) -> None:
         """Generate codemap pages for auto-discovered entry points."""
-        assert self._repo_path is not None, (
-            "Repository path must be set before generating codemaps"
-        )
+        assert self._repo_path is not None, "Repository path must be set before generating codemaps"
 
         (
             codemap_pages,
@@ -710,9 +692,7 @@ class WikiGenerator:
         progress_callback: ProgressCallback | None,
     ) -> None:
         """Generate freshness report and finalize wiki status."""
-        assert self._repo_path is not None, (
-            "Repository path must be set before generating wiki"
-        )
+        assert self._repo_path is not None, "Repository path must be set before generating wiki"
         freshness_page, ctx.pages_generated = await generate_freshness_and_finalize(
             pages=ctx.pages,
             all_source_files=ctx.all_source_files,
@@ -748,9 +728,7 @@ class WikiGenerator:
             repo_path=self._repo_path,
         )
 
-    async def _generate_dependencies(
-        self, index_status: IndexStatus
-    ) -> tuple[WikiPage, list[str]]:
+    async def _generate_dependencies(self, index_status: IndexStatus) -> tuple[WikiPage, list[str]]:
         """Generate dependencies documentation with grounded facts from manifest."""
         return await generate_dependencies_page(
             index_status=index_status,
@@ -799,9 +777,7 @@ async def generate_wiki(
     if effective_provider is None and config.wiki.use_cloud_for_github:
         if is_github_repo(repo_path):
             effective_provider = config.wiki.github_llm_provider
-            logger.info(
-                f"GitHub repo detected, using cloud provider: {effective_provider}"
-            )
+            logger.info(f"GitHub repo detected, using cloud provider: {effective_provider}")
 
     generator = WikiGenerator(
         wiki_path=wiki_path,
