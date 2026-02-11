@@ -132,7 +132,9 @@ class RepositoryIndexer:
 
         logger.info("Scanning for hardcoded secrets...")
 
-        secret_findings = scan_repository_for_secrets(self.repo_path)
+        secret_findings = await asyncio.to_thread(
+            scan_repository_for_secrets, self.repo_path
+        )
 
         if secret_findings:
             total_secrets = sum(len(findings) for findings in secret_findings.values())
@@ -211,15 +213,17 @@ class RepositoryIndexer:
         if full_rebuild:
             return None, {}, full_rebuild
 
-        previous_status, requires_rebuild = self._status_manager.load_with_migration_info(
-            self.wiki_path
+        previous_status, requires_rebuild = (
+            self._status_manager.load_with_migration_info(self.wiki_path)
         )
         if requires_rebuild:
             logger.info("Schema migration requires full rebuild")
             return None, {}, True
 
         if previous_status:
-            logger.debug(f"Loaded previous index status: {previous_status.total_files} files")
+            logger.debug(
+                f"Loaded previous index status: {previous_status.total_files} files"
+            )
             # Pre-build hash map for O(1) lookups instead of O(N) linear scan per file
             # This reduces O(N*M) to O(N+M) for file comparison
             prev_files_by_path = {f.path: f for f in previous_status.files}
@@ -245,7 +249,9 @@ class RepositoryIndexer:
         logger.info(f"Found {len(source_files)} source files to consider")
 
         if progress_callback:
-            progress_callback("Found source files", len(source_files), len(source_files))
+            progress_callback(
+                "Found source files", len(source_files), len(source_files)
+            )
 
         files_to_process: list[Path] = []
         files_unchanged: list[FileInfo] = []
@@ -302,7 +308,9 @@ class RepositoryIndexer:
                     len(files_to_process),
                 )
             await self.vector_store.delete_chunks_by_files(files_to_delete)
-            logger.debug(f"Batch deleted chunks for {len(files_to_delete)} modified files")
+            logger.debug(
+                f"Batch deleted chunks for {len(files_to_delete)} modified files"
+            )
 
     async def _parse_files_parallel(
         self,
@@ -355,7 +363,10 @@ class RepositoryIndexer:
             for window_start in range(0, file_count, window_size):
                 window_end = min(window_start + window_size, file_count)
                 window_files = files_to_process[window_start:window_end]
-                futures = {executor.submit(self._parse_single_file, fp): fp for fp in window_files}
+                futures = {
+                    executor.submit(self._parse_single_file, fp): fp
+                    for fp in window_files
+                }
 
                 for future in as_completed(futures):
                     file_path = futures[future]
@@ -370,7 +381,9 @@ class RepositoryIndexer:
 
                     if result.error:
                         error_count += 1
-                        logger.warning(f"Error processing {result.file_path}: {result.error}")
+                        logger.warning(
+                            f"Error processing {result.file_path}: {result.error}"
+                        )
                         if progress_callback:
                             progress_callback(
                                 f"Error processing {result.file_path}: {result.error}",
@@ -440,7 +453,9 @@ class RepositoryIndexer:
         parse_duration = time.time() - parse_start_time
         files_parsed = len(processed_files)
         files_per_second = files_parsed / parse_duration if parse_duration > 0 else 0
-        chunks_per_second = total_chunks_processed / parse_duration if parse_duration > 0 else 0
+        chunks_per_second = (
+            total_chunks_processed / parse_duration if parse_duration > 0 else 0
+        )
 
         logger.info(
             f"Parallel parsing complete: {files_parsed} files, "
@@ -555,7 +570,7 @@ class RepositoryIndexer:
             IndexStatus with indexing results.
         """
         # Ensure wiki directory exists
-        self.wiki_path.mkdir(parents=True, exist_ok=True)
+        await asyncio.to_thread(self.wiki_path.mkdir, parents=True, exist_ok=True)
 
         logger.info(f"Starting indexing for repository: {self.repo_path}")
         logger.debug(f"Wiki path: {self.wiki_path}, Full rebuild: {full_rebuild}")
@@ -574,7 +589,9 @@ class RepositoryIndexer:
         await self._scan_for_secrets(progress_callback)
 
         # Phase 1: Load previous status for incremental updates
-        previous_status, prev_files_by_path, full_rebuild = self._load_previous_status(full_rebuild)
+        previous_status, prev_files_by_path, full_rebuild = await asyncio.to_thread(
+            self._load_previous_status, full_rebuild
+        )
 
         # Phase 2: Collect files to process
         files_to_process, files_unchanged = self._collect_files_to_process(
@@ -593,8 +610,10 @@ class RepositoryIndexer:
         )
 
         # Phase 5: Create and save index status
-        status = self._create_index_status(processed_files, files_unchanged, total_chunks_processed)
-        self._save_index_status(status)
+        status = self._create_index_status(
+            processed_files, files_unchanged, total_chunks_processed
+        )
+        await asyncio.to_thread(self._save_index_status, status)
 
         if progress_callback:
             progress_callback("Indexing complete", 1, 1)
@@ -721,7 +740,9 @@ class RepositoryIndexer:
                 "lines": f"{r.chunk.start_line}-{r.chunk.end_line}",
                 "score": r.score,
                 "content": (
-                    r.chunk.content[:500] + "..." if len(r.chunk.content) > 500 else r.chunk.content
+                    r.chunk.content[:500] + "..."
+                    if len(r.chunk.content) > 500
+                    else r.chunk.content
                 ),
                 "docstring": r.chunk.docstring,
             }
