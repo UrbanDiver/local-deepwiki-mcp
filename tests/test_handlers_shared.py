@@ -320,7 +320,7 @@ class TestValidateExportPath:
 class TestLoadIndexStatus:
     """Tests for _load_index_status function."""
 
-    def test_successful_load(self, tmp_path):
+    async def test_successful_load(self, tmp_path):
         """Test successful loading of index status."""
         repo_path = tmp_path / "repo"
         repo_path.mkdir()
@@ -344,15 +344,17 @@ class TestLoadIndexStatus:
                     mock_status = Mock()
                     mock_manager.return_value.load.return_value = mock_status
 
-                    index_status, result_wiki_path, result_config = _load_index_status(
-                        repo_path
-                    )
+                    (
+                        index_status,
+                        result_wiki_path,
+                        result_config,
+                    ) = await _load_index_status(repo_path)
 
                     assert index_status == mock_status
                     assert result_wiki_path == wiki_path
                     assert result_config == config
 
-    def test_missing_vector_db(self, tmp_path):
+    async def test_missing_vector_db(self, tmp_path):
         """Test error when vector database doesn't exist."""
         repo_path = tmp_path / "repo"
         repo_path.mkdir()
@@ -367,11 +369,11 @@ class TestLoadIndexStatus:
             mock_config.return_value = config
 
             with pytest.raises(ValidationError) as exc_info:
-                _load_index_status(repo_path)
+                await _load_index_status(repo_path)
 
             assert "not indexed" in str(exc_info.value).lower()
 
-    def test_missing_index_status(self, tmp_path):
+    async def test_missing_index_status(self, tmp_path):
         """Test error when index status file doesn't exist."""
         repo_path = tmp_path / "repo"
         repo_path.mkdir()
@@ -395,7 +397,7 @@ class TestLoadIndexStatus:
                     mock_manager.return_value.load.return_value = None
 
                     with pytest.raises(ValidationError) as exc_info:
-                        _load_index_status(repo_path)
+                        await _load_index_status(repo_path)
 
                     assert "not indexed" in str(exc_info.value).lower()
 

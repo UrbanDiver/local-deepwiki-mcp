@@ -129,7 +129,7 @@ async def handle_get_file_context(args: dict[str, Any]) -> list[TextContent]:
     if not full_file_path.exists():
         raise path_not_found_error(file_path, "file")
 
-    index_status, _wiki_path, config = _load_index_status(repo_path)
+    index_status, _wiki_path, config = await _load_index_status(repo_path)
 
     from local_deepwiki.generators.context_builder import build_file_context
 
@@ -202,7 +202,7 @@ async def handle_get_wiki_stats(args: dict[str, Any]) -> list[TextContent]:
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
-    index_status, wiki_path, _config = _load_index_status(repo_path)
+    index_status, wiki_path, _config = await _load_index_status(repo_path)
 
     from datetime import datetime
 

@@ -87,8 +87,12 @@ async def _handle_index_repository_impl(
     repo_access.require_access(repo_path)
 
     # Validate input size limits (CWE-400 prevention)
-    total_size, file_count = validate_index_parameters(str(repo_path))
-    logger.info(f"Indexing repository: {repo_path} ({total_size:,} bytes, {file_count:,} files)")
+    total_size, file_count = await asyncio.to_thread(
+        validate_index_parameters, str(repo_path)
+    )
+    logger.info(
+        f"Indexing repository: {repo_path} ({total_size:,} bytes, {file_count:,} files)"
+    )
 
     # Get subject ID for audit logging
     subject = controller.get_current_subject()
@@ -344,7 +348,7 @@ async def handle_ask_question(args: dict[str, Any]) -> list[TextContent]:
     logger.info(f"Question about {repo_path}: {question[:100]}...")
     logger.debug(f"Max context chunks: {max_context}")
 
-    _index_status, wiki_path, config = _load_index_status(repo_path)
+    _index_status, wiki_path, config = await _load_index_status(repo_path)
 
     # Create vector store
     vector_store = _create_vector_store(repo_path, config)
@@ -353,7 +357,9 @@ async def handle_ask_question(args: dict[str, Any]) -> list[TextContent]:
     search_results = await vector_store.search(question, limit=max_context)
 
     if not search_results:
-        return [TextContent(type="text", text="No relevant code found for your question.")]
+        return [
+            TextContent(type="text", text="No relevant code found for your question.")
+        ]
 
     # Build context from search results
     context_parts = []
@@ -385,9 +391,7 @@ Code Context:
 
 Provide a clear, accurate answer based only on the code provided. If the code doesn't contain enough information to answer fully, say so."""
 
-    system_prompt = (
-        "You are a helpful code assistant. Answer questions about code clearly and accurately."
-    )
+    system_prompt = "You are a helpful code assistant. Answer questions about code clearly and accurately."
 
     # Acquire rate limit before LLM call
     rate_limiter = get_rate_limiter()
@@ -462,7 +466,11 @@ async def handle_read_wiki_structure(args: dict[str, Any]) -> list[TextContent]:
         try:
             file_content = await asyncio.to_thread(md_file.read_text)
             first_line = file_content.split("\n", 1)[0].strip()
-            title = first_line.lstrip("#").strip() if first_line.startswith("#") else rel_path
+            title = (
+                first_line.lstrip("#").strip()
+                if first_line.startswith("#")
+                else rel_path
+            )
         except (OSError, UnicodeDecodeError) as e:
             # OSError: File access issues
             # UnicodeDecodeError: File encoding issues
@@ -569,7 +577,7 @@ async def handle_search_code(args: dict[str, Any]) -> list[TextContent]:
         f"path: {path_pattern}, fuzzy: {use_fuzzy}"
     )
 
-    _index_status, _wiki_path, config = _load_index_status(repo_path)
+    _index_status, _wiki_path, config = await _load_index_status(repo_path)
 
     # Create vector store
     vector_store = _create_vector_store(repo_path, config)
@@ -599,7 +607,11 @@ async def handle_search_code(args: dict[str, Any]) -> list[TextContent]:
             "language": chunk.language.value,
             "lines": f"{chunk.start_line}-{chunk.end_line}",
             "score": round(r.score, 4),
-            "preview": (chunk.content[:300] + "..." if len(chunk.content) > 300 else chunk.content),
+            "preview": (
+                chunk.content[:300] + "..."
+                if len(chunk.content) > 300
+                else chunk.content
+            ),
             "docstring": chunk.docstring,
         }
         # Include highlights if present (from fuzzy search)
@@ -664,7 +676,8 @@ async def handle_export_wiki_html(args: dict[str, Any]) -> list[TextContent]:
     use_streaming = iterator.should_use_streaming()
 
     logger.info(
-        f"Wiki export: {page_count} pages, {total_size_mb:.2f}MB, " f"streaming: {use_streaming}"
+        f"Wiki export: {page_count} pages, {total_size_mb:.2f}MB, "
+        f"streaming: {use_streaming}"
     )
 
     result = export_to_html(wiki_path, resolved_output)
@@ -756,7 +769,8 @@ async def handle_export_wiki_pdf(args: dict[str, Any]) -> list[TextContent]:
     use_streaming = iterator.should_use_streaming()
 
     logger.info(
-        f"PDF export: {page_count} pages, {total_size_mb:.2f}MB, " f"streaming: {use_streaming}"
+        f"PDF export: {page_count} pages, {total_size_mb:.2f}MB, "
+        f"streaming: {use_streaming}"
     )
 
     result = export_to_pdf(wiki_path, resolved_output, single_file=single_file)

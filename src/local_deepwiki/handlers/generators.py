@@ -50,7 +50,7 @@ async def handle_get_glossary(args: dict[str, Any]) -> list[TextContent]:
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
-    index_status, wiki_path, config = _load_index_status(repo_path)
+    index_status, wiki_path, config = await _load_index_status(repo_path)
 
     from local_deepwiki.generators.glossary import collect_all_entities
 
@@ -114,7 +114,7 @@ async def handle_get_diagrams(args: dict[str, Any]) -> list[TextContent]:
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
-    index_status, wiki_path, config = _load_index_status(repo_path)
+    index_status, wiki_path, config = await _load_index_status(repo_path)
 
     from local_deepwiki.generators.diagrams import (
         generate_class_diagram,
@@ -205,7 +205,7 @@ async def handle_get_inheritance(args: dict[str, Any]) -> list[TextContent]:
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
-    index_status, wiki_path, config = _load_index_status(repo_path)
+    index_status, wiki_path, config = await _load_index_status(repo_path)
 
     from local_deepwiki.generators.inheritance import (
         collect_class_hierarchy,
@@ -310,7 +310,7 @@ async def handle_get_call_graph(args: dict[str, Any]) -> list[TextContent]:
         diagram = generate_call_graph_diagram(graph, title=file_path)
     else:
         # Build combined call graph for entire repo
-        index_status, wiki_path, config = _load_index_status(repo_path)
+        index_status, wiki_path, config = await _load_index_status(repo_path)
         combined_graph: dict[str, list[str]] = {}
         for file_info in index_status.files:
             fp = repo_path / file_info.path
@@ -360,7 +360,7 @@ async def handle_get_coverage(args: dict[str, Any]) -> list[TextContent]:
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
-    index_status, wiki_path, config = _load_index_status(repo_path)
+    index_status, wiki_path, config = await _load_index_status(repo_path)
 
     from local_deepwiki.generators.coverage import analyze_project_coverage
 
@@ -408,7 +408,7 @@ async def handle_detect_stale_docs(args: dict[str, Any]) -> list[TextContent]:
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
-    _index_status, wiki_path, _config = _load_index_status(repo_path)
+    _index_status, wiki_path, _config = await _load_index_status(repo_path)
 
     from local_deepwiki.generators.stale_detection import analyze_staleness
     from local_deepwiki.generators.wiki_status import WikiStatusManager
@@ -585,7 +585,7 @@ async def handle_get_test_examples(args: dict[str, Any]) -> list[TextContent]:
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
-    index_status, wiki_path, config = _load_index_status(repo_path)
+    index_status, wiki_path, config = await _load_index_status(repo_path)
 
     from local_deepwiki.generators.test_examples import CodeExampleExtractor
 
@@ -761,7 +761,7 @@ async def handle_get_index_status(args: dict[str, Any]) -> list[TextContent]:
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
-    index_status, wiki_path, config = _load_index_status(repo_path)
+    index_status, wiki_path, config = await _load_index_status(repo_path)
 
     from datetime import datetime
 

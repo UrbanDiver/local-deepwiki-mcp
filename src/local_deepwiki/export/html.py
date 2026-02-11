@@ -757,15 +757,17 @@ class StreamingHtmlExporter(StreamingExporter):
         )
 
         # Load TOC for navigation
-        self.load_toc()
+        await asyncio.to_thread(self.load_toc)
 
         # Create output directory
-        self.output_path.mkdir(parents=True, exist_ok=True)
+        await asyncio.to_thread(self.output_path.mkdir, parents=True, exist_ok=True)
 
         # Copy search.json
         search_src = self.wiki_path / "search.json"
         if search_src.exists():
-            shutil.copy(search_src, self.output_path / "search.json")
+            await asyncio.to_thread(
+                shutil.copy, search_src, self.output_path / "search.json"
+            )
             logger.debug("Copied search.json to output directory")
 
         # Get page count for progress
@@ -782,7 +784,7 @@ class StreamingHtmlExporter(StreamingExporter):
         exported = 0
         async for page in iterator:
             try:
-                self._export_wiki_page(page)
+                await asyncio.to_thread(self._export_wiki_page, page)
                 exported += 1
 
                 if progress_callback:

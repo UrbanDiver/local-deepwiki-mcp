@@ -44,7 +44,7 @@ async def handle_generate_codemap(args: dict[str, Any]) -> list[TextContent]:
 
     validate_query_parameters(validated.query, str(repo_path), 30)
 
-    _index_status, wiki_path, config = _load_index_status(repo_path)
+    _index_status, wiki_path, config = await _load_index_status(repo_path)
 
     vector_store = _create_vector_store(repo_path, config)
 
@@ -117,7 +117,7 @@ async def handle_suggest_codemap_topics(args: dict[str, Any]) -> list[TextConten
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
-    _index_status, _wiki_path, config = _load_index_status(repo_path)
+    _index_status, _wiki_path, config = await _load_index_status(repo_path)
 
     vector_store = _create_vector_store(repo_path, config)
 

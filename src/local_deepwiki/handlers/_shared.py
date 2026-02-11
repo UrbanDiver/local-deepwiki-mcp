@@ -157,7 +157,11 @@ def _is_test_file(file_path: str) -> bool:
     if any(p in ("tests", "test", "testing", "spec", "specs") for p in parts):
         return True
     # Common test file patterns
-    if name.startswith("test_") or name.endswith("_test.py") or name.startswith("conftest"):
+    if (
+        name.startswith("test_")
+        or name.endswith("_test.py")
+        or name.startswith("conftest")
+    ):
         return True
     return False
 
@@ -255,7 +259,9 @@ def handle_tool_errors(func: ToolHandler) -> ToolHandler:
     """
 
     @wraps(func)
-    async def wrapper(args: dict[str, Any], **kwargs: dict[str, Any]) -> list[TextContent]:
+    async def wrapper(
+        args: dict[str, Any], **kwargs: dict[str, Any]
+    ) -> list[TextContent]:
         try:
             return await func(args, **kwargs)
         except AccessDeniedException as e:
@@ -322,7 +328,7 @@ def handle_tool_errors(func: ToolHandler) -> ToolHandler:
     return wrapper
 
 
-def _load_index_status(repo_path: Path) -> tuple[Any, Path, Any]:
+async def _load_index_status(repo_path: Path) -> tuple[Any, Path, Any]:
     """Load index status for a repository, raising if not indexed.
 
     Args:
@@ -344,7 +350,7 @@ def _load_index_status(repo_path: Path) -> tuple[Any, Path, Any]:
         raise not_indexed_error(str(repo_path))
 
     manager = IndexStatusManager()
-    index_status = manager.load(wiki_path)
+    index_status = await asyncio.to_thread(manager.load, wiki_path)
     if index_status is None:
         raise not_indexed_error(str(repo_path))
 
@@ -378,7 +384,8 @@ def _format_research_results(result: "DeepResearchResult") -> dict[str, Any]:
         "question": result.question,
         "answer": result.answer,
         "sub_questions": [
-            {"question": sq.question, "category": sq.category} for sq in result.sub_questions
+            {"question": sq.question, "category": sq.category}
+            for sq in result.sub_questions
         ],
         "sources": [
             {
@@ -544,7 +551,9 @@ def create_progress_notifier(
             if request_ctx.meta and request_ctx.meta.progressToken:
                 progress_token = request_ctx.meta.progressToken
         except LookupError:
-            logger.debug("No MCP request context available for progress token extraction")
+            logger.debug(
+                "No MCP request context available for progress token extraction"
+            )
 
     # Create progress manager
     progress_manager = registry.start_operation(

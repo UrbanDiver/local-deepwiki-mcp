@@ -51,7 +51,7 @@ async def handle_search_wiki(args: dict[str, Any]) -> list[TextContent]:
 
     query = query.lower()
 
-    _index_status, wiki_path, _config = _load_index_status(repo_path)
+    _index_status, wiki_path, _config = await _load_index_status(repo_path)
 
     search_index_path = wiki_path / "search.json"
     if not search_index_path.exists():
@@ -176,7 +176,7 @@ async def handle_fuzzy_search(args: dict[str, Any]) -> list[TextContent]:
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
-    _index_status, _wiki_path, config = _load_index_status(repo_path)
+    _index_status, _wiki_path, config = await _load_index_status(repo_path)
 
     from local_deepwiki.core.fuzzy_search import FuzzySearchHelper
     from local_deepwiki.models import ChunkType

@@ -174,7 +174,7 @@ async def handle_analyze_diff(args: dict[str, Any]) -> list[TextContent]:
     affected_wiki_pages: list[dict[str, str]] = []
     affected_entities: list[dict[str, str]] = []
     try:
-        _index_status, wiki_path, _config = _load_index_status(repo_path)
+        _index_status, wiki_path, _config = await _load_index_status(repo_path)
 
         # Map to wiki pages via toc.json
         toc_path = wiki_path / "toc.json"

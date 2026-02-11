@@ -55,7 +55,7 @@ async def handle_explain_entity(args: dict[str, Any]) -> list[TextContent]:
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
-    index_status, wiki_path, config = _load_index_status(repo_path)
+    index_status, wiki_path, config = await _load_index_status(repo_path)
 
     # --- Step 1: Look up entity in search.json ---
     search_json_path = wiki_path / "search.json"
@@ -350,7 +350,7 @@ async def handle_impact_analysis(args: dict[str, Any]) -> list[TextContent]:
     if not full_file.exists():
         raise path_not_found_error(file_path, "file")
 
-    index_status, wiki_path, config = _load_index_status(repo_path)
+    index_status, wiki_path, config = await _load_index_status(repo_path)
 
     result: dict[str, Any] = {
         "status": "success",
