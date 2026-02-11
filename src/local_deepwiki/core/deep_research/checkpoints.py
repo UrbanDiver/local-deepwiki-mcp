@@ -78,7 +78,7 @@ class CheckpointManager:
             data = json.loads(checkpoint_path.read_text())
             return ResearchCheckpoint.model_validate(data)
         except (json.JSONDecodeError, ValueError) as e:
-            logger.warning(f"Failed to load checkpoint {research_id}: {e}")
+            logger.warning("Failed to load checkpoint %s: %s", research_id, e)
             return None
 
     def list_checkpoints(self) -> list[ResearchCheckpoint]:
@@ -97,7 +97,7 @@ class CheckpointManager:
                 checkpoint = ResearchCheckpoint.model_validate(data)
                 checkpoints.append(checkpoint)
             except (json.JSONDecodeError, ValueError) as e:
-                logger.warning(f"Failed to load checkpoint {path.name}: {e}")
+                logger.warning("Failed to load checkpoint %s: %s", path.name, e)
                 continue
 
         # Sort by updated_at descending (most recent first)
@@ -115,7 +115,7 @@ class CheckpointManager:
         checkpoint_path = self._checkpoint_path(research_id)
         if checkpoint_path.exists():
             checkpoint_path.unlink()
-            logger.debug(f"Deleted checkpoint {research_id}")
+            logger.debug("Deleted checkpoint %s", research_id)
             return True
         return False
 
@@ -162,7 +162,7 @@ def cancel_research(repo_path: Path, research_id: str) -> ResearchCheckpoint | N
     checkpoint.error = "Research was cancelled by user"
 
     manager.save_checkpoint(checkpoint)
-    logger.info(f"Cancelled research {research_id}")
+    logger.info("Cancelled research %s", research_id)
 
     return checkpoint
 

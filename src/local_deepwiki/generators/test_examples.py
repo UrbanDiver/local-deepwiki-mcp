@@ -108,7 +108,7 @@ def find_test_files(source_file: Path, repo_root: Path) -> list[Path]:
             test_files.append(alt_file)
 
     if test_files:
-        logger.debug(f"Found {len(test_files)} test file(s) for {source_file.name}")
+        logger.debug("Found %s test file(s) for %s", len(test_files), source_file.name)
 
     return test_files
 
@@ -357,7 +357,7 @@ def extract_examples_for_entities(
     try:
         source = test_file.read_bytes()
     except (OSError, IOError) as e:
-        logger.debug(f"Failed to read test file {test_file}: {e}")
+        logger.debug("Failed to read test file %s: %s", test_file, e)
         return []
 
     root = parser.parse_source(source, Language.PYTHON)
@@ -472,7 +472,7 @@ def get_file_examples(
     # Find all corresponding test files
     test_files = find_test_files(source_file, repo_root)
     if not test_files:
-        logger.debug(f"No test files found for {source_file}")
+        logger.debug("No test files found for %s", source_file)
         return None
 
     # Filter to meaningful entity names (skip short ones)
@@ -491,7 +491,7 @@ def get_file_examples(
         all_examples.extend(examples)
 
     if not all_examples:
-        logger.debug(f"No examples found in {len(test_files)} test file(s)")
+        logger.debug("No examples found in %s test file(s)", len(test_files))
         return None
 
     # Deduplicate by entity_name + code (same example from different sources)

@@ -264,7 +264,7 @@ def handle_tool_errors(func: ToolHandler) -> ToolHandler:
             return await func(args, **kwargs)
         except AccessDeniedException as e:
             # RBAC: User lacks required permission
-            logger.warning(f"Access denied in {func.__name__}: {e}")
+            logger.warning("Access denied in %s: %s", func.__name__, e)
             error = DeepWikiError(
                 message=f"Access denied: {e}",
                 hint="You don't have permission for this operation. Contact an administrator to request access.",
@@ -272,7 +272,7 @@ def handle_tool_errors(func: ToolHandler) -> ToolHandler:
             return [TextContent(type="text", text=format_error_response(error))]
         except AuthenticationException as e:
             # RBAC: No authenticated subject
-            logger.warning(f"Authentication required in {func.__name__}: {e}")
+            logger.warning("Authentication required in %s: %s", func.__name__, e)
             error = DeepWikiError(
                 message=f"Authentication required: {e}",
                 hint="Please authenticate before performing this operation.",
@@ -280,9 +280,9 @@ def handle_tool_errors(func: ToolHandler) -> ToolHandler:
             return [TextContent(type="text", text=format_error_response(error))]
         except DeepWikiError as e:
             # Our custom errors already have good messages and hints
-            logger.error(f"DeepWiki error in {func.__name__}: {e.message}")
+            logger.error("DeepWiki error in %s: %s", func.__name__, e.message)
             if e.context:
-                logger.debug(f"Error context: {e.context}")
+                logger.debug("Error context: %s", e.context)
             return [TextContent(type="text", text=format_error_response(e))]
         except ValueError as e:
             # Wrap ValueError in ValidationError for better hints
@@ -290,21 +290,21 @@ def handle_tool_errors(func: ToolHandler) -> ToolHandler:
                 message=str(e),
                 hint="Check that all input parameters are valid.",
             )
-            logger.error(f"Validation error in {func.__name__}: {e}")
+            logger.error("Validation error in %s: %s", func.__name__, e)
             return [TextContent(type="text", text=format_error_response(error))]
         except (FileNotFoundError, PermissionError) as e:
             # Map common file system errors
             error = map_exception_to_deepwiki_error(e)
-            logger.error(f"File system error in {func.__name__}: {e}")
+            logger.error("File system error in %s: %s", func.__name__, e)
             return [TextContent(type="text", text=format_error_response(error))]
         except (ConnectionError, TimeoutError) as e:
             # Map common network errors
             error = map_exception_to_deepwiki_error(e)
-            logger.error(f"Network error in {func.__name__}: {e}")
+            logger.error("Network error in %s: %s", func.__name__, e)
             return [TextContent(type="text", text=format_error_response(error))]
         except RateLimitExceeded as e:
             # Rate limit exceeded - provide helpful message
-            logger.warning(f"Rate limit exceeded in {func.__name__}: {e}")
+            logger.warning("Rate limit exceeded in %s: %s", func.__name__, e)
             error = DeepWikiError(
                 message=str(e),
                 hint="Wait for the rate limit to reset, or reduce the frequency of requests.",
@@ -515,7 +515,7 @@ class ProgressNotifier:
                 message=json.dumps(progress_data),
             )
         except (RuntimeError, OSError, AttributeError, LookupError) as e:
-            logger.warning(f"Failed to send progress notification: {e}")
+            logger.warning("Failed to send progress notification: %s", e)
 
     @property
     def messages(self) -> list[str]:

@@ -26,8 +26,6 @@ from __future__ import annotations
 import asyncio
 import time
 from dataclasses import dataclass, field
-from typing import Optional
-
 from local_deepwiki.logging import get_logger
 
 logger = get_logger(__name__)
@@ -125,7 +123,7 @@ class RateLimiter:
             return await api_call()
     """
 
-    def __init__(self, config: Optional[RateLimitConfig] = None) -> None:
+    def __init__(self, config: RateLimitConfig | None = None) -> None:
         """Initialize the rate limiter.
 
         Args:
@@ -314,7 +312,7 @@ class RateLimiter:
 
 
 # Global rate limiter instance
-_rate_limiter: Optional[RateLimiter] = None
+_rate_limiter: RateLimiter | None = None
 
 
 def get_rate_limiter() -> RateLimiter:

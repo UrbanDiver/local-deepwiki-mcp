@@ -560,12 +560,12 @@ class CodeChunker:
         # Fall back to built-in tree-sitter parser
         result = self.parser.parse_file(file_path)
         if result is None:
-            logger.debug(f"Skipping unsupported file: {file_path}")
+            logger.debug("Skipping unsupported file: %s", file_path)
             return
 
         root, language, source = result
         rel_path = str(file_path.relative_to(repo_root))
-        logger.debug(f"Chunking {rel_path} ({language.value})")
+        logger.debug("Chunking %s (%s)", rel_path, language.value)
 
         # Extract module-level chunk (file overview)
         yield self._create_module_chunk(root, source, language, rel_path)

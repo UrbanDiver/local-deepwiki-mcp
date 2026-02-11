@@ -94,7 +94,7 @@ async def handle_get_glossary(args: dict[str, Any]) -> list[TextContent]:
         ],
     }
 
-    logger.info(f"Glossary: {len(entities)}/{total_entities} entities for {repo_path}")
+    logger.info("Glossary: %s/%s entities for %s", len(entities), total_entities, repo_path)
     return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
 
@@ -187,7 +187,7 @@ async def handle_get_diagrams(args: dict[str, Any]) -> list[TextContent]:
         "mermaid": diagram,
     }
 
-    logger.info(f"Generated {diagram_type.value} diagram for {repo_path}")
+    logger.info("Generated %s diagram for %s", diagram_type.value, repo_path)
     return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
 
@@ -339,7 +339,7 @@ async def handle_get_call_graph(args: dict[str, Any]) -> list[TextContent]:
         "scope": file_path or "full_repository",
     }
 
-    logger.info(f"Call graph generated for {file_path or repo_path}")
+    logger.info("Call graph generated for %s", file_path or repo_path)
     return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
 
@@ -496,7 +496,7 @@ async def handle_get_changelog(args: dict[str, Any]) -> list[TextContent]:
         "changelog": content,
     }
 
-    logger.info(f"Changelog generated for {repo_path}")
+    logger.info("Changelog generated for %s", repo_path)
     return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
 
@@ -632,7 +632,7 @@ async def handle_get_test_examples(args: dict[str, Any]) -> list[TextContent]:
         ],
     }
 
-    logger.info(f"Test examples: {len(examples)} for '{entity_name}' in {repo_path}")
+    logger.info("Test examples: %s for '%s' in %s", len(examples), entity_name, repo_path)
     return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
 
@@ -690,7 +690,7 @@ async def handle_get_api_docs(args: dict[str, Any]) -> list[TextContent]:
         "api_docs": api_docs,
     }
 
-    logger.info(f"API docs generated for {file_path}")
+    logger.info("API docs generated for %s", file_path)
     return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
 
@@ -740,7 +740,7 @@ async def handle_list_indexed_repos(args: dict[str, Any]) -> list[TextContent]:
         "repos": repos,
     }
 
-    logger.info(f"Found {len(repos)} indexed repos under {base_path}")
+    logger.info("Found %s indexed repos under %s", len(repos), base_path)
     return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
 

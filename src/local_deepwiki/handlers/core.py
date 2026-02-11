@@ -347,8 +347,8 @@ async def handle_ask_question(args: dict[str, Any]) -> list[TextContent]:
     audit_logger = get_audit_logger()
     start_time = time.time()
 
-    logger.info(f"Question about {repo_path}: {question[:100]}...")
-    logger.debug(f"Max context chunks: {max_context}")
+    logger.info("Question about %s: %s...", repo_path, question[:100])
+    logger.debug("Max context chunks: %s", max_context)
 
     _index_status, wiki_path, config = await _load_index_status(repo_path)
 
@@ -426,7 +426,7 @@ Provide a clear, accurate answer based only on the code provided. If the code do
         duration_ms=duration_ms,
     )
 
-    logger.info(f"Generated answer with {len(search_results)} sources")
+    logger.info("Generated answer with %s sources", len(search_results))
     return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
 
@@ -476,7 +476,7 @@ async def handle_read_wiki_structure(args: dict[str, Any]) -> list[TextContent]:
         except (OSError, UnicodeDecodeError) as e:
             # OSError: File access issues
             # UnicodeDecodeError: File encoding issues
-            logger.debug(f"Could not read title from {md_file}: {e}")
+            logger.debug("Could not read title from %s: %s", md_file, e)
             title = rel_path
 
         pages.append(
@@ -573,7 +573,7 @@ async def handle_search_code(args: dict[str, Any]) -> list[TextContent]:
     use_fuzzy = validated.fuzzy
     fuzzy_weight = validated.fuzzy_weight
 
-    logger.info(f"Code search in {repo_path}: {query[:50]}...")
+    logger.info("Code search in %s: %s...", repo_path, query[:50])
     logger.debug(
         f"Search limit: {limit}, language: {language}, type: {chunk_type}, "
         f"path: {path_pattern}, fuzzy: {use_fuzzy}"
@@ -595,7 +595,7 @@ async def handle_search_code(args: dict[str, Any]) -> list[TextContent]:
         fuzzy_weight=fuzzy_weight,
     )
 
-    logger.info(f"Search returned {len(results)} results")
+    logger.info("Search returned %s results", len(results))
     if not results:
         return [TextContent(type="text", text="No results found.")]
 

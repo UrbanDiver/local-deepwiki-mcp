@@ -11,7 +11,7 @@ import threading
 from dataclasses import dataclass
 from enum import Enum
 from functools import wraps
-from typing import Callable, Optional, TypeVar
+from typing import Callable, TypeVar
 
 # Type variable for decorators
 F = TypeVar("F", bound=Callable)
@@ -161,7 +161,7 @@ class AccessController:
         Args:
             mode: The RBAC enforcement mode. Defaults to PERMISSIVE.
         """
-        self._current_subject: Optional[Subject] = None
+        self._current_subject: Subject | None = None
         self._mode = mode
 
     @property
@@ -195,7 +195,7 @@ class AccessController:
         """Clear the current subject."""
         self._current_subject = None
 
-    def get_current_subject(self) -> Optional[Subject]:
+    def get_current_subject(self) -> Subject | None:
         """Get the currently authenticated subject.
 
         Returns:
@@ -323,7 +323,7 @@ class AccessController:
 
 
 # Global access controller instance with thread-safe initialization
-_access_controller: Optional[AccessController] = None
+_access_controller: AccessController | None = None
 _access_controller_lock = threading.Lock()
 
 

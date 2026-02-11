@@ -419,7 +419,7 @@ class FuzzySearchHelper:
                     self._all_names.append(full_qualified_name)
 
         except (ImportError, ValueError, RuntimeError, OSError) as e:
-            logger.warning(f"Failed to build fuzzy search index: {e}")
+            logger.warning("Failed to build fuzzy search index: %s", e)
             self._is_built = False
             return
 

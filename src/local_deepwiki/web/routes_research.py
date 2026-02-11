@@ -84,7 +84,7 @@ def api_research():
         if chat_provider != "default":
             # Override provider for research
             llm_config = llm_config.model_copy(update={"provider": chat_provider})
-            logger.info(f"Using {chat_provider} provider for deep research")
+            logger.info("Using %s provider for deep research", chat_provider)
 
         llm = get_cached_llm_provider(
             cache_path=cache_path,

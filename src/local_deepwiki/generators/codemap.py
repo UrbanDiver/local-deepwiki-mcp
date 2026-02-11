@@ -263,7 +263,7 @@ async def discover_entry_points(
                 cg = extractor.extract_from_file(abs_path, repo_path)
                 file_call_graphs[fp] = cg
             except (OSError, ValueError, RuntimeError) as e:
-                logger.debug(f"Could not extract call graph from {fp}: {e}")
+                logger.debug("Could not extract call graph from %s: %s", fp, e)
 
     # Compute all callees across discovered graphs to identify roots
     all_callees: set[str] = set()
@@ -361,7 +361,7 @@ async def build_cross_file_graph(
                     abs_path, repo_path
                 )
             except (OSError, ValueError, RuntimeError) as e:
-                logger.debug(f"Could not extract call graph for {file_key}: {e}")
+                logger.debug("Could not extract call graph for %s: %s", file_key, e)
                 file_call_graphs[file_key] = {}
 
         cg = file_call_graphs.get(file_key, {})
@@ -512,7 +512,7 @@ async def _search_cross_file(
             f"def {callee_name}", limit=5, min_similarity=0.0
         )
     except (OSError, ValueError, RuntimeError) as e:
-        logger.debug(f"Cross-file search failed for {callee_name}: {e}")
+        logger.debug("Cross-file search failed for %s: %s", callee_name, e)
         return None
 
     for r in results:

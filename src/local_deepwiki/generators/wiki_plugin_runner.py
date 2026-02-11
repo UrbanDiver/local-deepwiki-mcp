@@ -143,7 +143,7 @@ async def run_plugin_generators(
     # Validate and sort generators respecting run_after dependencies
     generators = sort_generators_by_dependencies(generators)
 
-    logger.info(f"Running {len(generators)} wiki generator plugin(s)")
+    logger.info("Running %s wiki generator plugin(s)", len(generators))
 
     # Build context dict for plugins
     plugin_context: dict[str, object] = {
@@ -158,7 +158,7 @@ async def run_plugin_generators(
 
     for generator in generators:
         try:
-            logger.debug(f"Running wiki generator plugin: {generator.generator_name}")
+            logger.debug("Running wiki generator plugin: %s", generator.generator_name)
             result = await generator.generate(
                 index_status=index_status,
                 wiki_path=wiki_path,

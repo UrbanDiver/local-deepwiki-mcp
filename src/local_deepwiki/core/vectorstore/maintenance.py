@@ -85,7 +85,7 @@ class LazyIndexManager:
                     # RuntimeError: Callback runtime errors
                     # ValueError: Invalid state during callback
                     # TypeError: Callback signature mismatch
-                    logger.warning(f"Index ready callback failed: {e}")
+                    logger.warning("Index ready callback failed: %s", e)
 
     def is_index_pending(self) -> bool:
         """Check if vector index creation is pending.
@@ -185,7 +185,7 @@ class LazyIndexManager:
                 # RuntimeError: LanceDB table/index errors
                 # ValueError: Invalid index parameters
                 # OSError: File system or resource errors
-                logger.error(f"Background index creation failed: {e}")
+                logger.error("Background index creation failed: %s", e)
                 with self._lock:
                     self._creation_in_progress = False
                 raise
@@ -246,7 +246,7 @@ class LazyIndexManager:
             if progress_callback:
                 progress_callback(f"Creating vector index for {num_rows} rows...")
 
-            logger.info(f"Creating vector index for {num_rows} rows")
+            logger.info("Creating vector index for %s rows", num_rows)
 
             # Calculate optimal number of partitions
             num_partitions = min(max(int(math.sqrt(num_rows)), 16), 256)
@@ -273,7 +273,7 @@ class LazyIndexManager:
             self.mark_index_created()
 
         except (ValueError, RuntimeError, OSError) as e:
-            logger.warning(f"Could not create vector index: {e}")
+            logger.warning("Could not create vector index: %s", e)
             with self._lock:
                 self._creation_in_progress = False
             raise
@@ -295,7 +295,7 @@ class LazyIndexManager:
                     # RuntimeError: Callback runtime errors
                     # ValueError: Invalid state during callback
                     # TypeError: Callback signature mismatch
-                    logger.warning(f"Index ready callback failed: {e}")
+                    logger.warning("Index ready callback failed: %s", e)
             else:
                 self._on_index_ready_callbacks.append(callback)
 

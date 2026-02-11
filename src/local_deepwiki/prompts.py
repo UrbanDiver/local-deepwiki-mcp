@@ -167,11 +167,11 @@ class PromptLoader:
                             content,
                             source=str(prompt_file),
                         )
-                        logger.debug(f"Loaded custom prompt '{name}' from {prompt_file}")
+                        logger.debug("Loaded custom prompt '%s' from %s", name, prompt_file)
                         self._cache[cache_key] = template
                         return template
                     except OSError as e:
-                        logger.warning(f"Failed to read prompt file {prompt_file}: {e}")
+                        logger.warning("Failed to read prompt file %s: %s", prompt_file, e)
                         continue
 
         # Fall back to default

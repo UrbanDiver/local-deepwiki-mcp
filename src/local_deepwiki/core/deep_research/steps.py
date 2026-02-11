@@ -69,7 +69,7 @@ class StepsMixin:
         ):
             # Restore from checkpoint
             sub_questions = checkpoint.sub_questions
-            logger.info(f"Restored {len(sub_questions)} sub-questions from checkpoint")
+            logger.info("Restored %s sub-questions from checkpoint", len(sub_questions))
             step = ResearchStep(
                 step_type=ResearchStepType.DECOMPOSITION,
                 description=f"Restored {len(sub_questions)} sub-questions from checkpoint",
@@ -110,7 +110,7 @@ class StepsMixin:
         ):
             # Restore from checkpoint
             initial_results = self._checkpoint_to_results(checkpoint.retrieved_contexts)
-            logger.info(f"Restored {len(initial_results)} chunks from checkpoint")
+            logger.info("Restored %s chunks from checkpoint", len(initial_results))
             step = ResearchStep(
                 step_type=ResearchStepType.RETRIEVAL,
                 description=f"Restored {len(initial_results)} chunks from checkpoint",
@@ -253,7 +253,7 @@ class StepsMixin:
             duration_ms=duration_ms,
         )
 
-        logger.info(f"Decomposed question into {len(sub_questions)} sub-questions")
+        logger.info("Decomposed question into %s sub-questions", len(sub_questions))
 
         # Emit RESEARCH_QUERY events for each sub-question
         emitter = get_event_emitter()
@@ -296,7 +296,7 @@ class StepsMixin:
             duration_ms=duration_ms,
         )
 
-        logger.info(f"Initial retrieval found {len(results)} chunks")
+        logger.info("Initial retrieval found %s chunks", len(results))
         await self._report_progress(
             2,
             ResearchProgressType.RETRIEVAL_COMPLETE,
@@ -363,7 +363,7 @@ class StepsMixin:
             duration_ms=duration_ms,
         )
 
-        logger.info(f"Follow-up retrieval found {len(results)} chunks")
+        logger.info("Follow-up retrieval found %s chunks", len(results))
         await self._report_progress(
             4,
             ResearchProgressType.FOLLOWUP_COMPLETE,

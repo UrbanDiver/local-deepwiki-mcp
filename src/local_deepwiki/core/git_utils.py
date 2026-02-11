@@ -142,7 +142,7 @@ def get_git_remote_url(repo_path: Path) -> str | None:
         OSError,
         GitPathValidationError,
     ) as e:
-        logger.debug(f"Failed to get git remote URL: {e}")
+        logger.debug("Failed to get git remote URL: %s", e)
     return None
 
 
@@ -406,7 +406,7 @@ def get_line_blame(
         OSError,
         GitPathValidationError,
     ) as e:
-        logger.debug(f"Failed to get git blame: {e}")
+        logger.debug("Failed to get git blame: %s", e)
         return None
 
 
@@ -468,7 +468,7 @@ def get_range_blame(
         OSError,
         GitPathValidationError,
     ) as e:
-        logger.debug(f"Failed to get git blame for range: {e}")
+        logger.debug("Failed to get git blame for range: %s", e)
         return None
 
 
@@ -628,7 +628,7 @@ def get_file_entity_blame(
         OSError,
         GitPathValidationError,
     ) as e:
-        logger.debug(f"Failed to get file entity blame: {e}")
+        logger.debug("Failed to get file entity blame: %s", e)
         return []
 
 
@@ -768,7 +768,7 @@ def get_file_last_modified(repo_path: Path, file_path: str) -> datetime | None:
         ValueError,
         GitPathValidationError,
     ) as e:
-        logger.debug(f"Failed to get last modified date for {file_path}: {e}")
+        logger.debug("Failed to get last modified date for %s: %s", file_path, e)
     return None
 
 

@@ -298,7 +298,7 @@ class OpenAILLMProvider(LLMProvider):
             )
             content = response.choices[0].message.content or ""
 
-            logger.debug(f"OpenAI response length: {len(content)}")
+            logger.debug("OpenAI response length: %s", len(content))
             return content
 
         except (

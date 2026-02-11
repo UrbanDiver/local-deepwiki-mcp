@@ -147,7 +147,7 @@ def extract_title(md_file: Path) -> str:
             if line.startswith("**") and line.endswith("**"):
                 return line[2:-2].strip()
     except (OSError, UnicodeDecodeError) as e:
-        logger.debug(f"Could not extract title from {md_file}: {e}")
+        logger.debug("Could not extract title from %s: %s", md_file, e)
     return md_file.stem.replace("_", " ").replace("-", " ").title()
 
 
@@ -255,7 +255,7 @@ def search_json():
 @app.route("/wiki/<path:path>")
 def view_page(path: str):
     """View a wiki page."""
-    logger.debug(f"Viewing page: {path}")
+    logger.debug("Viewing page: %s", path)
 
     if WIKI_PATH is None:
         logger.error("Wiki path not configured")
@@ -269,10 +269,10 @@ def view_page(path: str):
 
     file_path = (WIKI_PATH / path).resolve()
     if not file_path.is_relative_to(WIKI_PATH):
-        logger.warning(f"Path traversal attempt blocked: {path}")
+        logger.warning("Path traversal attempt blocked: %s", path)
         abort(403, "Invalid path")
     if not file_path.exists() or not file_path.is_file():
-        logger.warning(f"Page not found: {path}")
+        logger.warning("Page not found: %s", path)
         abort(404, f"Page not found: {path}")
 
     try:
@@ -319,9 +319,9 @@ def create_app(wiki_path: str | Path) -> Flask:
     global WIKI_PATH
     WIKI_PATH = Path(wiki_path).resolve()
     if not WIKI_PATH.exists():
-        logger.error(f"Wiki path does not exist: {wiki_path}")
+        logger.error("Wiki path does not exist: %s", wiki_path)
         raise ValueError(f"Wiki path does not exist: {wiki_path}")
-    logger.info(f"Configured wiki path: {WIKI_PATH}")
+    logger.info("Configured wiki path: %s", WIKI_PATH)
     return app
 
 
@@ -333,8 +333,8 @@ def run_server(
 ):
     """Run the wiki web server."""
     flask_app = create_app(wiki_path)
-    logger.info(f"Starting DeepWiki server at http://{host}:{port}")
-    logger.info(f"Serving wiki from: {wiki_path}")
+    logger.info("Starting DeepWiki server at http://%s:%s", host, port)
+    logger.info("Serving wiki from: %s", wiki_path)
     flask_app.run(host=host, port=port, debug=debug)
 
 

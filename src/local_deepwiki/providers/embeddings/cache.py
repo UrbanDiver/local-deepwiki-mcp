@@ -149,11 +149,11 @@ class EmbeddingCache:
                     (str(self.SCHEMA_VERSION),),
                 )
             conn.commit()
-            logger.debug(f"Embedding cache initialized at {self._db_path}")
+            logger.debug("Embedding cache initialized at %s", self._db_path)
         except (sqlite3.Error, OSError) as e:
             # sqlite3.Error: Database schema creation failures
             # OSError: File system or database file access errors
-            logger.warning(f"Failed to initialize embedding cache: {e}")
+            logger.warning("Failed to initialize embedding cache: %s", e)
 
     def _compute_cache_key(self, text: str) -> str:
         """Compute a cache key for the given text and model.
@@ -239,7 +239,7 @@ class EmbeddingCache:
             return self._deserialize_embedding(row["embedding"])
 
         except sqlite3.Error as e:
-            logger.debug(f"Cache lookup failed: {e}")
+            logger.debug("Cache lookup failed: %s", e)
             self._stats["errors"] += 1
             return None
 
@@ -303,10 +303,10 @@ class EmbeddingCache:
                 ],
             )
             conn.commit()
-            logger.debug(f"Flushed {len(writes)} embeddings to cache")
+            logger.debug("Flushed %s embeddings to cache", len(writes))
 
         except sqlite3.Error as e:
-            logger.warning(f"Failed to write embeddings to cache: {e}")
+            logger.warning("Failed to write embeddings to cache: %s", e)
             self._stats["errors"] += 1
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
@@ -413,10 +413,10 @@ class EmbeddingCache:
             conn.execute("DELETE FROM embeddings")
             conn.commit()
 
-            logger.info(f"Cleared {count} embedding cache entries")
+            logger.info("Cleared %s embedding cache entries", count)
             return count
         except sqlite3.Error as e:
-            logger.warning(f"Failed to clear embedding cache: {e}")
+            logger.warning("Failed to clear embedding cache: %s", e)
             return 0
 
     def cleanup_expired(self) -> int:
@@ -438,10 +438,10 @@ class EmbeddingCache:
             conn.commit()
 
             if deleted > 0:
-                logger.info(f"Cleaned up {deleted} expired embedding cache entries")
+                logger.info("Cleaned up %s expired embedding cache entries", deleted)
             return deleted
         except sqlite3.Error as e:
-            logger.warning(f"Failed to cleanup expired entries: {e}")
+            logger.warning("Failed to cleanup expired entries: %s", e)
             return 0
 
     def cleanup_if_needed(self) -> int:
@@ -489,7 +489,7 @@ class EmbeddingCache:
             return expired_count + deleted
 
         except sqlite3.Error as e:
-            logger.warning(f"Cache cleanup failed: {e}")
+            logger.warning("Cache cleanup failed: %s", e)
             return 0
 
     def invalidate_by_model(self, model_name: str) -> int:
@@ -518,7 +518,7 @@ class EmbeddingCache:
                 )
             return deleted
         except sqlite3.Error as e:
-            logger.warning(f"Failed to invalidate model cache: {e}")
+            logger.warning("Failed to invalidate model cache: %s", e)
             return 0
 
     def close(self) -> None:

@@ -184,7 +184,7 @@ async def generate_codemap_pages(
         logger.info("No codemap topics discovered, skipping codemap generation")
         return [], 0, 0
 
-    logger.info(f"Generating codemaps for {len(topics)} entry points")
+    logger.info("Generating codemaps for %s entry points", len(topics))
 
     pages: list[WikiPage] = []
     generated = 0
@@ -271,9 +271,9 @@ async def generate_codemap_pages(
             if md_file.stem not in current_slugs:
                 try:
                     md_file.unlink()
-                    logger.debug(f"Removed orphaned codemap page: {md_file.name}")
+                    logger.debug("Removed orphaned codemap page: %s", md_file.name)
                 except OSError:
-                    logger.debug(f"Failed to remove orphaned codemap: {md_file.name}")
+                    logger.debug("Failed to remove orphaned codemap: %s", md_file.name)
 
     logger.info(
         f"Codemap generation complete: {generated} generated, {skipped} unchanged"

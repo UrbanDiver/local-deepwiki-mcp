@@ -60,10 +60,10 @@ class PluginRegistry:
         """
         name = plugin.language_name
         if name in self._language_parsers:
-            logger.warning(f"Language parser '{name}' already registered, overwriting")
+            logger.warning("Language parser '%s' already registered, overwriting", name)
         self._language_parsers[name] = plugin
         plugin.initialize()
-        logger.info(f"Registered language parser plugin: {plugin.metadata}")
+        logger.info("Registered language parser plugin: %s", plugin.metadata)
 
     def register_wiki_generator(self, plugin: WikiGeneratorPlugin) -> None:
         """Register a wiki generator plugin.
@@ -73,10 +73,10 @@ class PluginRegistry:
         """
         name = plugin.generator_name
         if name in self._wiki_generators:
-            logger.warning(f"Wiki generator '{name}' already registered, overwriting")
+            logger.warning("Wiki generator '%s' already registered, overwriting", name)
         self._wiki_generators[name] = plugin
         plugin.initialize()
-        logger.info(f"Registered wiki generator plugin: {plugin.metadata}")
+        logger.info("Registered wiki generator plugin: %s", plugin.metadata)
 
     def register_embedding_provider(self, plugin: EmbeddingProviderPlugin) -> None:
         """Register an embedding provider plugin.
@@ -86,10 +86,10 @@ class PluginRegistry:
         """
         name = plugin.provider_name
         if name in self._embedding_providers:
-            logger.warning(f"Embedding provider '{name}' already registered, overwriting")
+            logger.warning("Embedding provider '%s' already registered, overwriting", name)
         self._embedding_providers[name] = plugin
         plugin.initialize()
-        logger.info(f"Registered embedding provider plugin: {plugin.metadata}")
+        logger.info("Registered embedding provider plugin: %s", plugin.metadata)
 
     def register(self, plugin: Plugin) -> None:
         """Register a plugin based on its type.
@@ -121,7 +121,7 @@ class PluginRegistry:
         if name in self._language_parsers:
             plugin = self._language_parsers.pop(name)
             plugin.cleanup()
-            logger.info(f"Unregistered language parser: {name}")
+            logger.info("Unregistered language parser: %s", name)
             return True
         return False
 
@@ -137,7 +137,7 @@ class PluginRegistry:
         if name in self._wiki_generators:
             plugin = self._wiki_generators.pop(name)
             plugin.cleanup()
-            logger.info(f"Unregistered wiki generator: {name}")
+            logger.info("Unregistered wiki generator: %s", name)
             return True
         return False
 
@@ -153,7 +153,7 @@ class PluginRegistry:
         if name in self._embedding_providers:
             plugin = self._embedding_providers.pop(name)
             plugin.cleanup()
-            logger.info(f"Unregistered embedding provider: {name}")
+            logger.info("Unregistered embedding provider: %s", name)
             return True
         return False
 
@@ -227,13 +227,13 @@ class PluginRegistry:
 
             module_name = f"local_deepwiki_plugin_{py_file.stem}"
             if module_name in self._loaded_modules:
-                logger.debug(f"Plugin module already loaded: {module_name}")
+                logger.debug("Plugin module already loaded: %s", module_name)
                 continue
 
             try:
                 spec = importlib.util.spec_from_file_location(module_name, py_file)
                 if spec is None or spec.loader is None:
-                    logger.warning(f"Could not load plugin spec: {py_file}")
+                    logger.warning("Could not load plugin spec: %s", py_file)
                     continue
 
                 module = importlib.util.module_from_spec(spec)
@@ -242,12 +242,12 @@ class PluginRegistry:
 
                 self._loaded_modules.add(module_name)
                 loaded += 1
-                logger.debug(f"Loaded plugin module: {py_file.name}")
+                logger.debug("Loaded plugin module: %s", py_file.name)
 
             except (
                 Exception
             ) as e:  # Broad catch: plugin isolation — one bad plugin must not crash the system
-                logger.warning(f"Failed to load plugin {py_file}: {e}")
+                logger.warning("Failed to load plugin %s: %s", py_file, e)
 
         return loaded
 
@@ -277,7 +277,7 @@ class PluginRegistry:
                         except (
                             Exception
                         ) as e:  # Broad catch: plugin isolation — one bad plugin must not crash the system
-                            logger.warning(f"Failed to load entry point {ep.name}: {e}")
+                            logger.warning("Failed to load entry point %s: %s", ep.name, e)
             else:
                 # Python 3.9 compatibility
                 from importlib.metadata import entry_points as get_entry_points
@@ -294,7 +294,7 @@ class PluginRegistry:
                             except (
                                 Exception
                             ) as e:  # Broad catch: plugin isolation — one bad plugin must not crash the system
-                                logger.warning(f"Failed to load entry point {ep.name}: {e}")
+                                logger.warning("Failed to load entry point %s: %s", ep.name, e)
 
         except ImportError:
             logger.debug("importlib.metadata not available, skipping entry points")
@@ -355,7 +355,7 @@ class PluginRegistry:
             except (
                 Exception
             ) as e:  # Broad catch: plugin isolation — one bad plugin must not crash the system
-                logger.warning(f"Error cleaning up parser plugin: {e}")
+                logger.warning("Error cleaning up parser plugin: %s", e)
 
         for gen_plugin in self._wiki_generators.values():
             try:
@@ -363,7 +363,7 @@ class PluginRegistry:
             except (
                 Exception
             ) as e:  # Broad catch: plugin isolation — one bad plugin must not crash the system
-                logger.warning(f"Error cleaning up generator plugin: {e}")
+                logger.warning("Error cleaning up generator plugin: %s", e)
 
         for emb_plugin in self._embedding_providers.values():
             try:
@@ -371,7 +371,7 @@ class PluginRegistry:
             except (
                 Exception
             ) as e:  # Broad catch: plugin isolation — one bad plugin must not crash the system
-                logger.warning(f"Error cleaning up embedding plugin: {e}")
+                logger.warning("Error cleaning up embedding plugin: %s", e)
 
         self._language_parsers.clear()
         self._wiki_generators.clear()

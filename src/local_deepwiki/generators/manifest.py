@@ -225,7 +225,7 @@ def _get_manifest_mtimes(repo_path: Path) -> dict[str, float]:
             try:
                 mtimes[filename] = filepath.stat().st_mtime
             except OSError as e:
-                logger.debug(f"Could not get mtime for {filename}: {e}")
+                logger.debug("Could not get mtime for %s: %s", filename, e)
                 mtimes[filename] = 0
     return mtimes
 
@@ -256,7 +256,7 @@ def _is_cache_valid(
     for filename, cached_mtime in cache_entry.file_mtimes.items():
         current_mtime = current_mtimes.get(filename, 0)
         if cached_mtime != current_mtime:
-            logger.debug(f"Manifest cache invalid: {filename} modified")
+            logger.debug("Manifest cache invalid: %s modified", filename)
             return False
 
     return True
@@ -282,7 +282,7 @@ def _load_manifest_cache(cache_path: Path) -> ManifestCacheEntry | None:
         # json.JSONDecodeError: Corrupted or invalid JSON
         # OSError: File read issues
         # KeyError/TypeError: Invalid cache structure
-        logger.debug(f"Could not load manifest cache: {e}")
+        logger.debug("Could not load manifest cache: %s", e)
         return None
 
 
@@ -297,11 +297,11 @@ def _save_manifest_cache(cache_path: Path, entry: ManifestCacheEntry) -> None:
         cache_path.parent.mkdir(parents=True, exist_ok=True)
         with open(cache_path, "w") as f:
             json.dump(entry.to_dict(), f, indent=2)
-        logger.debug(f"Saved manifest cache to {cache_path}")
+        logger.debug("Saved manifest cache to %s", cache_path)
     except (OSError, TypeError) as e:
         # OSError: File write or directory creation issues
         # TypeError: Unserializable data in cache entry
-        logger.warning(f"Could not save manifest cache: {e}")
+        logger.warning("Could not save manifest cache: %s", e)
 
 
 def _manifest_to_dict(manifest: "ProjectManifest") -> dict[str, Any]:
@@ -424,7 +424,7 @@ def parse_manifest(repo_path: Path) -> ProjectManifest:
                 # ValueError: Invalid file content or format
                 # KeyError/TypeError: Missing or invalid fields
                 # Skip files that fail to parse but log the issue
-                logger.warning(f"Failed to parse manifest file {filename}: {e}")
+                logger.warning("Failed to parse manifest file %s: %s", filename, e)
 
     return manifest
 

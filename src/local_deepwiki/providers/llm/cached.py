@@ -76,11 +76,11 @@ class CachingLLMProvider(LLMProvider):
         )
 
         if cached is not None:
-            logger.debug(f"Cache hit for prompt: {prompt[:50]}...")
+            logger.debug("Cache hit for prompt: %s...", prompt[:50])
             return cached
 
         # Generate from provider
-        logger.debug(f"Cache miss, generating for prompt: {prompt[:50]}...")
+        logger.debug("Cache miss, generating for prompt: %s...", prompt[:50])
         response = await self._provider.generate(
             prompt=prompt,
             system_prompt=system_prompt,
@@ -129,7 +129,7 @@ class CachingLLMProvider(LLMProvider):
         )
 
         if cached is not None:
-            logger.debug(f"Cache hit (stream) for prompt: {prompt[:50]}...")
+            logger.debug("Cache hit (stream) for prompt: %s...", prompt[:50])
             # Simulate streaming for cached response
             chunk_size = 100
             for i in range(0, len(cached), chunk_size):
@@ -137,7 +137,7 @@ class CachingLLMProvider(LLMProvider):
             return
 
         # Stream from provider and collect for caching
-        logger.debug(f"Cache miss (stream), generating for prompt: {prompt[:50]}...")
+        logger.debug("Cache miss (stream), generating for prompt: %s...", prompt[:50])
         chunks: list[str] = []
 
         async for chunk in self._provider.generate_stream(

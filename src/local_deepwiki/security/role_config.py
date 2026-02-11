@@ -9,8 +9,6 @@ from __future__ import annotations
 import fnmatch
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
-
 import yaml
 
 from local_deepwiki.security.access_control import Role, Subject
@@ -64,7 +62,7 @@ class RoleManager:
         # subject.roles == {Role.ADMIN}
     """
 
-    def __init__(self, config: Optional[RoleConfig] = None):
+    def __init__(self, config: RoleConfig | None = None):
         """Initialize the role manager.
 
         Args:
@@ -166,7 +164,7 @@ class RoleManager:
 
 
 # Global instance
-_role_manager: Optional[RoleManager] = None
+_role_manager: RoleManager | None = None
 
 
 def get_role_manager() -> RoleManager:

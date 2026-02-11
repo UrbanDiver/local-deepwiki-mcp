@@ -118,7 +118,7 @@ def render_mermaid_to_png(
             )
 
             if result.returncode != 0:
-                logger.warning(f"Mermaid CLI failed: {result.stderr}")
+                logger.warning("Mermaid CLI failed: %s", result.stderr)
                 return None
 
             if not output_file.exists():
@@ -128,14 +128,14 @@ def render_mermaid_to_png(
             return output_file.read_bytes()
 
     except subprocess.TimeoutExpired:
-        logger.warning(f"Mermaid CLI timed out after {timeout}s")
+        logger.warning("Mermaid CLI timed out after %ss", timeout)
         return None
     except (subprocess.SubprocessError, OSError, ValueError, UnicodeDecodeError) as e:
         # subprocess.SubprocessError: Process execution failures (CalledProcessError, etc.)
         # OSError: File system or process spawning issues
         # ValueError: Invalid diagram code or subprocess parameters
         # UnicodeDecodeError: Output decoding errors
-        logger.warning(f"Error rendering mermaid diagram: {e}")
+        logger.warning("Error rendering mermaid diagram: %s", e)
         return None
 
 
@@ -183,7 +183,7 @@ def render_mermaid_to_svg(
             )
 
             if result.returncode != 0:
-                logger.warning(f"Mermaid CLI failed: {result.stderr}")
+                logger.warning("Mermaid CLI failed: %s", result.stderr)
                 return None
 
             if not output_file.exists():
@@ -194,14 +194,14 @@ def render_mermaid_to_svg(
             return svg_content
 
     except subprocess.TimeoutExpired:
-        logger.warning(f"Mermaid CLI timed out after {timeout}s")
+        logger.warning("Mermaid CLI timed out after %ss", timeout)
         return None
     except (subprocess.SubprocessError, OSError, ValueError, UnicodeDecodeError) as e:
         # subprocess.SubprocessError: Process execution failures (CalledProcessError, etc.)
         # OSError: File system or process spawning issues
         # ValueError: Invalid diagram code or subprocess parameters
         # UnicodeDecodeError: Output decoding errors
-        logger.warning(f"Error rendering mermaid diagram: {e}")
+        logger.warning("Error rendering mermaid diagram: %s", e)
         return None
 
 
@@ -692,7 +692,7 @@ class StreamingPdfExporter(StreamingExporter):
         start_time = time.monotonic()
         errors: list[str] = []
 
-        logger.info(f"Starting streaming separate PDF export from {self.wiki_path}")
+        logger.info("Starting streaming separate PDF export from %s", self.wiki_path)
 
         # Determine output directory
         output_dir = self.output_path
@@ -821,7 +821,7 @@ class StreamingPdfExporter(StreamingExporter):
             page: WikiPage object to export.
             output_file: Output PDF path.
         """
-        logger.debug(f"Exporting page: {page.path}")
+        logger.debug("Exporting page: %s", page.path)
 
         content = page.content
         html_content = render_markdown_for_pdf(content)
@@ -854,7 +854,7 @@ class StreamingPdfExporter(StreamingExporter):
                 writer.append(str(pdf_file))
             writer.write(str(output_path))
             writer.close()
-            logger.debug(f"Merged {len(pdf_files)} PDFs using pypdf")
+            logger.debug("Merged %s PDFs using pypdf", len(pdf_files))
 
         except ImportError:
             # Fallback: Copy first PDF and log warning about potential issues
@@ -913,18 +913,18 @@ class PdfExporter:
         Returns:
             Path to the generated PDF file.
         """
-        logger.info(f"Starting PDF export from {self.wiki_path}")
+        logger.info("Starting PDF export from %s", self.wiki_path)
 
         # Load TOC for ordering
         toc_path = self.wiki_path / "toc.json"
         if toc_path.exists():
             toc_data = json.loads(toc_path.read_text())
             self.toc_entries = toc_data.get("entries", [])
-            logger.debug(f"Loaded {len(self.toc_entries)} TOC entries")
+            logger.debug("Loaded %s TOC entries", len(self.toc_entries))
 
         # Collect all pages in TOC order
         pages = self._collect_pages_in_order()
-        logger.info(f"Found {len(pages)} pages to export")
+        logger.info("Found %s pages to export", len(pages))
 
         # Build combined HTML with progress
         combined_html = self._build_combined_html(pages)
@@ -945,7 +945,7 @@ class PdfExporter:
             html_doc.write_pdf(output_file, stylesheets=[css])
             progress.update(task, advance=1)
 
-        logger.info(f"Generated PDF: {output_file}")
+        logger.info("Generated PDF: %s", output_file)
         return output_file
 
     def export_separate(self) -> list[Path]:
@@ -954,7 +954,7 @@ class PdfExporter:
         Returns:
             List of paths to generated PDF files.
         """
-        logger.info(f"Starting separate PDF export from {self.wiki_path}")
+        logger.info("Starting separate PDF export from %s", self.wiki_path)
 
         output_dir = self.output_path
         if output_dir.suffix == ".pdf":
@@ -978,7 +978,7 @@ class PdfExporter:
                 generated.append(output_file)
                 progress.update(task, advance=1)
 
-        logger.info(f"Generated {len(generated)} PDF files")
+        logger.info("Generated %s PDF files", len(generated))
         return generated
 
     def _collect_pages_in_order(self) -> list[Path]:
@@ -1080,7 +1080,7 @@ class PdfExporter:
             md_file: Path to markdown file.
             output_file: Output PDF path.
         """
-        logger.debug(f"Exporting page: {md_file.name}")
+        logger.debug("Exporting page: %s", md_file.name)
 
         content = md_file.read_text()
         html_content = render_markdown_for_pdf(content)

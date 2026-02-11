@@ -303,7 +303,7 @@ class AnthropicProvider(LLMProvider):
             first_block = response.content[0]
             content = first_block.text if hasattr(first_block, "text") else ""
 
-            logger.debug(f"Anthropic response length: {len(content)}")
+            logger.debug("Anthropic response length: %s", len(content))
             return content
 
         except (

@@ -466,7 +466,7 @@ class SearchCache:
             del self._cache[key]
 
         if expired_keys:
-            logger.debug(f"Evicted {len(expired_keys)} expired search cache entries")
+            logger.debug("Evicted %s expired search cache entries", len(expired_keys))
 
         # Phase 2: LRU eviction if still over limit
         if len(self._cache) > self.config.max_entries:
@@ -480,7 +480,7 @@ class SearchCache:
             for key, _ in sorted_entries[:to_remove]:
                 del self._cache[key]
 
-            logger.debug(f"Evicted {to_remove} LRU search cache entries")
+            logger.debug("Evicted %s LRU search cache entries", to_remove)
 
     def invalidate(self) -> int:
         """Invalidate all cache entries.
@@ -495,7 +495,7 @@ class SearchCache:
             self._cache.clear()
             self._stats["invalidations"] += 1
             if count > 0:
-                logger.debug(f"Invalidated {count} search cache entries")
+                logger.debug("Invalidated %s search cache entries", count)
             return count
 
     def get_stats(self) -> dict[str, Any]:

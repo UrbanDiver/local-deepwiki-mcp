@@ -175,7 +175,7 @@ class ReasoningMixin:
             return sub_questions
 
         except json.JSONDecodeError as e:
-            logger.warning(f"Failed to parse decomposition JSON: {e}")
+            logger.warning("Failed to parse decomposition JSON: %s", e)
             return []
 
     async def _parallel_retrieve(
@@ -209,7 +209,7 @@ class ReasoningMixin:
             ):
                 raise result_or_exc
             if isinstance(result_or_exc, BaseException):
-                logger.warning(f"Search failed for sub-question {i}: {result_or_exc}")
+                logger.warning("Search failed for sub-question %s: %s", i, result_or_exc)
                 continue
             all_results.extend(result_or_exc)
 
@@ -315,7 +315,7 @@ class ReasoningMixin:
             return [q for q in follow_ups if q and isinstance(q, str)]
 
         except json.JSONDecodeError as e:
-            logger.warning(f"Failed to parse gap analysis JSON: {e}")
+            logger.warning("Failed to parse gap analysis JSON: %s", e)
             return []
 
     async def _targeted_retrieve(self, queries: list[str]) -> list[SearchResult]:

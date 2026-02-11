@@ -43,7 +43,7 @@ def _read_file_content(file_path: Path) -> bytes:
         return file_path.read_bytes()
 
     # Large files: use memory mapping
-    logger.debug(f"Using mmap for large file ({file_size} bytes): {file_path.name}")
+    logger.debug("Using mmap for large file (%s bytes): %s", file_size, file_path.name)
     with open(file_path, "rb") as f:
         # Memory-map the file (read-only)
         with mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ) as mm:
@@ -169,13 +169,13 @@ class CodeParser:
         """
         language = self.detect_language(file_path)
         if language is None:
-            logger.debug(f"Unsupported file type: {file_path}")
+            logger.debug("Unsupported file type: %s", file_path)
             return None
 
         try:
             source = _read_file_content(file_path)
         except (OSError, IOError) as e:
-            logger.warning(f"Failed to read file {file_path}: {e}")
+            logger.warning("Failed to read file %s: %s", file_path, e)
             return None
 
         # Compute file hash for cache lookup
@@ -186,11 +186,11 @@ class CodeParser:
         if self._cache is not None:
             cached_tree = self._cache.get(file_path_str, file_hash)
             if cached_tree is not None:
-                logger.debug(f"Cache hit for {file_path.name}")
+                logger.debug("Cache hit for %s", file_path.name)
                 return cached_tree.root_node, language, source
 
         # Parse the file
-        logger.debug(f"Parsing {file_path.name} as {language.value}")
+        logger.debug("Parsing %s as %s", file_path.name, language.value)
         parser = self._get_parser(language)
         tree = parser.parse(source)
 

@@ -147,7 +147,7 @@ async def get_callers_from_other_files(
             # RuntimeError: Vector search/LanceDB failures
             # OSError: Network/file system issues
             # ValueError/KeyError: Invalid data during search
-            logger.debug(f"Error searching for callers of {entity_name}: {e}")
+            logger.debug("Error searching for callers of %s: %s", entity_name, e)
             if warnings is not None:
                 warnings.append(f"Caller search failed for '{entity_name}': {e}")
 
@@ -193,7 +193,7 @@ async def find_related_files(
             # RuntimeError: Vector search/LanceDB failures
             # OSError: Network/file system issues
             # ValueError/KeyError: Invalid data during search
-            logger.debug(f"Error searching for related module '{module}': {e}")
+            logger.debug("Error searching for related module '%s': %s", module, e)
             if warnings is not None:
                 warnings.append(
                     f"Related file search failed for module '{module}': {e}"
@@ -256,7 +256,7 @@ async def get_type_definitions_used(
             # RuntimeError: Vector search/LanceDB failures
             # OSError: Network/file system issues
             # ValueError/KeyError: Invalid data during search
-            logger.debug(f"Error searching for type definition '{type_name}': {e}")
+            logger.debug("Error searching for type definition '%s': %s", type_name, e)
             if warnings is not None:
                 warnings.append(f"Type definition search failed for '{type_name}': {e}")
 

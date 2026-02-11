@@ -103,7 +103,7 @@ class LLMCache:
             return self._table
 
         # Table doesn't exist yet - will be created on first insert
-        logger.debug(f"LLM cache table does not exist yet at {self.cache_path}")
+        logger.debug("LLM cache table does not exist yet at %s", self.cache_path)
         return None
 
     def _is_valid_entry(self, entry: dict[str, Any]) -> bool:
@@ -170,7 +170,7 @@ class LLMCache:
                 entry = exact_results[0]
                 if self._is_valid_entry(entry):
                     self._stats["hits"] += 1
-                    logger.debug(f"Cache exact hit: hash={exact_hash[:12]}...")
+                    logger.debug("Cache exact hit: hash=%s...", exact_hash[:12])
                     # Update hit tracking (pass entry to avoid re-fetch)
                     await self._record_hit(entry["id"], entry)
                     return cast(str, entry["response"])
@@ -179,7 +179,7 @@ class LLMCache:
             # ValueError: Invalid query or filter expression
             # RuntimeError: LanceDB query execution error
             # OSError: Database file access issues
-            logger.debug(f"Exact hash lookup failed: {e}")
+            logger.debug("Exact hash lookup failed: %s", e)
 
         # Slow path: embedding similarity search
         try:
@@ -209,7 +209,7 @@ class LLMCache:
             # ValueError: Invalid embedding or search parameters
             # RuntimeError: Vector search execution error
             # OSError: Database access issues
-            logger.debug(f"Similarity search failed: {e}")
+            logger.debug("Similarity search failed: %s", e)
 
         self._stats["misses"] += 1
         return None
@@ -235,7 +235,7 @@ class LLMCache:
         """
         # Skip if temperature too high
         if temperature > self.config.max_cacheable_temperature:
-            logger.debug(f"Cache skip set: temperature {temperature} > max")
+            logger.debug("Cache skip set: temperature %s > max", temperature)
             return
 
         try:
@@ -275,7 +275,7 @@ class LLMCache:
                     # ValueError: Index already exists
                     # RuntimeError: Column type not supported
                     # OSError: Storage issues
-                    logger.debug(f"Could not create index: {e}")
+                    logger.debug("Could not create index: %s", e)
 
             logger.debug(
                 f"Cached response: id={entry_id[:8]}..., hash={exact_hash[:12]}..."
@@ -288,7 +288,7 @@ class LLMCache:
             # ValueError: Invalid data format or embedding failure
             # RuntimeError: Database operation failure
             # OSError: File system or storage issues
-            logger.warning(f"Failed to cache response: {e}")
+            logger.warning("Failed to cache response: %s", e)
 
     async def _record_hit(self, entry_id: str, entry: dict[str, Any]) -> None:
         """Record a cache hit for an entry.
@@ -331,7 +331,7 @@ class LLMCache:
             # ValueError: Invalid query
             # RuntimeError: Database operation failure
             # OSError: Storage issues
-            logger.debug(f"Failed to record hit: {e}")
+            logger.debug("Failed to record hit: %s", e)
 
     async def _maybe_evict(self) -> None:
         """Evict old entries if cache exceeds max_entries.
@@ -382,7 +382,7 @@ class LLMCache:
                     except (ValueError, RuntimeError, OSError):
                         failed_count += 1
 
-                logger.info(f"Evicted {deleted_count} expired cache entries")
+                logger.info("Evicted %s expired cache entries", deleted_count)
                 if failed_count:
                     logger.warning(
                         f"Failed to evict {failed_count} of {len(expired_ids)} expired entries"
@@ -411,7 +411,7 @@ class LLMCache:
                         except (ValueError, RuntimeError, OSError):
                             lru_failed += 1
 
-                    logger.info(f"Evicted {lru_deleted} LRU cache entries")
+                    logger.info("Evicted %s LRU cache entries", lru_deleted)
                     if lru_failed:
                         logger.warning(
                             f"Failed to evict {lru_failed} of {to_evict} LRU entries"
@@ -422,7 +422,7 @@ class LLMCache:
             # ValueError: Invalid query during eviction
             # RuntimeError: Database operation failure
             # OSError: Storage issues
-            logger.warning(f"Eviction failed: {e}")
+            logger.warning("Eviction failed: %s", e)
 
     async def clear(self) -> int:
         """Clear all cache entries.
@@ -437,13 +437,13 @@ class LLMCache:
                 count = cast(int, table.count_rows())
                 db.drop_table(self.TABLE_NAME)
                 self._table = None
-                logger.info(f"Cleared {count} cache entries")
+                logger.info("Cleared %s cache entries", count)
                 return count
             return 0
         except (RuntimeError, OSError) as e:
             # RuntimeError: Database operation failure
             # OSError: Storage or file system issues
-            logger.warning(f"Failed to clear cache: {e}")
+            logger.warning("Failed to clear cache: %s", e)
             return 0
 
     def get_entry_count(self) -> int:

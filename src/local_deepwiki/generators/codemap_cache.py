@@ -66,7 +66,7 @@ def write_cache(wiki_path: Path | None, key: str, result: dict) -> None:
     try:
         cache_file.write_text(json.dumps(cache_data))
     except OSError:
-        logger.debug(f"Failed to write codemap cache: {key}")
+        logger.debug("Failed to write codemap cache: %s", key)
 
 
 def list_cached_codemaps(wiki_path: Path | None) -> list[dict]:

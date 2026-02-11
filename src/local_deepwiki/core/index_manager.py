@@ -138,7 +138,7 @@ class IndexStatusManager:
             # json.JSONDecodeError: Corrupted or invalid JSON
             # OSError: File read issues
             # ValueError: Pydantic validation failure
-            logger.warning(f"Failed to load index status from {status_path}: {e}")
+            logger.warning("Failed to load index status from %s: %s", status_path, e)
             return None, False
 
     def save(self, wiki_path: Path, status: IndexStatus) -> None:

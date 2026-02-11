@@ -213,7 +213,7 @@ async def batch_embed(
         if result.error is not None:
             raise RuntimeError(f"Failed to embed batch: {result.error}")
         if log_progress:
-            logger.debug(f"Embedded 1/1 batches ({len(unique_texts)} unique texts)")
+            logger.debug("Embedded 1/1 batches (%s unique texts)", len(unique_texts))
         unique_embeddings = result.embeddings or []
         return [unique_embeddings[text_to_index[t]] for t in texts]
 
@@ -271,7 +271,7 @@ async def batch_embed(
     if errors:
         error_msgs = [f"Batch {idx}: {err}" for idx, err in errors]
         error_summary = "\n".join(error_msgs)
-        logger.error(f"Embedding failed for {len(errors)} batches:\n{error_summary}")
+        logger.error("Embedding failed for %s batches:\n%s", len(errors), error_summary)
 
         raise RuntimeError(
             f"Failed to embed {len(errors)} out of {total_batches} batches. "

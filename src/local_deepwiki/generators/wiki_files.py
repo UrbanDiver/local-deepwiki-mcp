@@ -820,7 +820,7 @@ async def generate_file_docs(
     ) -> tuple[FileInfo, WikiPage | None, bool]:
         """Generate doc for a file, returning file_info for tracking."""
         async with semaphore:
-            logger.debug(f"Generating doc for {file_info.path}")
+            logger.debug("Generating doc for %s", file_info.path)
             page, was_skipped = await generate_single_file_doc(
                 file_info=file_info,
                 index_status=index_status,
@@ -864,7 +864,7 @@ async def generate_file_docs(
                 generation_progress.complete_file(file_info.path)
 
         except Exception as e:
-            logger.error(f"Error generating file doc: {e}")
+            logger.error("Error generating file doc: %s", e)
             pages_failed += 1
             if generation_progress:
                 generation_progress.complete_file()

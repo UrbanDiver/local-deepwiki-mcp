@@ -202,7 +202,7 @@ class ProgressManager:
                 # RuntimeError: Callback runtime failures
                 # ValueError: Invalid callback state
                 # TypeError: Callback signature mismatch
-                logger.warning(f"Progress callback failed: {e}")
+                logger.warning("Progress callback failed: %s", e)
 
         return update
 
@@ -419,12 +419,12 @@ class OperationProgressRegistry:
             try:
                 data = json.loads(self._data_path.read_text())
                 self._historical_data = data
-                logger.debug(f"Loaded historical progress data from {self._data_path}")
+                logger.debug("Loaded historical progress data from %s", self._data_path)
             except (json.JSONDecodeError, OSError, ValueError) as e:
                 # json.JSONDecodeError: Invalid JSON format
                 # OSError: File system or file access errors
                 # ValueError: Invalid data structure
-                logger.warning(f"Failed to load historical progress data: {e}")
+                logger.warning("Failed to load historical progress data: %s", e)
 
     def _save_historical_data(self) -> None:
         """Save historical timing data to disk."""
@@ -433,7 +433,7 @@ class OperationProgressRegistry:
                 self._data_path.parent.mkdir(parents=True, exist_ok=True)
                 self._data_path.write_text(json.dumps(self._historical_data, indent=2))
             except OSError as e:
-                logger.warning(f"Failed to save historical progress data: {e}")
+                logger.warning("Failed to save historical progress data: %s", e)
 
     def start_operation(
         self,
@@ -513,7 +513,7 @@ class OperationProgressRegistry:
 
             self._save_historical_data()
 
-        logger.debug(f"Completed operation {operation_id}")
+        logger.debug("Completed operation %s", operation_id)
         return final_progress
 
     def list_operations(self) -> list[dict[str, Any]]:

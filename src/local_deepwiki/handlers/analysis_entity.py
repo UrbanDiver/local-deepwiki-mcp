@@ -33,7 +33,7 @@ def _set_section_error(
     exc: Exception,
 ) -> None:
     """Record a non-fatal section error in an explain/impact result dict."""
-    logger.warning(f"{operation} failed for '{detail}': {exc}")
+    logger.warning("%s failed for '%s': %s", operation, detail, exc)
     result[field] = {"error": sanitize_error_message(str(exc))}
 
 
@@ -314,7 +314,7 @@ async def handle_explain_entity(args: dict[str, Any]) -> list[TextContent]:
                 result, "api_docs", "API doc extraction", entity_name, exc
             )
 
-    logger.info(f"Explain entity: '{entity_name}' in {repo_path}")
+    logger.info("Explain entity: '%s' in %s", entity_name, repo_path)
     return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
 

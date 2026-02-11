@@ -37,7 +37,7 @@ def extract_title(md_file: Path) -> str:
     except (OSError, UnicodeDecodeError) as e:
         # OSError: File access issues
         # UnicodeDecodeError: File encoding issues
-        logger.debug(f"Could not extract title from {md_file}: {e}")
+        logger.debug("Could not extract title from %s: %s", md_file, e)
     return md_file.stem.replace("_", " ").replace("-", " ").title()
 
 

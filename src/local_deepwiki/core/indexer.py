@@ -152,8 +152,8 @@ class RepositoryIndexer:
                         f"  [{finding.secret_type.value}] {finding.file_path}:{finding.line_number} "
                         f"(confidence: {finding.confidence:.0%})"
                     )
-                    logger.warning(f"    Context: {finding.context}")
-                    logger.warning(f"    Recommendation: {finding.recommendation}")
+                    logger.warning("    Context: %s", finding.context)
+                    logger.warning("    Recommendation: %s", finding.recommendation)
 
             logger.warning(
                 "Please remediate these findings before sharing or deploying this code. "
@@ -248,7 +248,7 @@ class RepositoryIndexer:
             Tuple of (files_to_process, files_unchanged).
         """
         source_files = list(self._find_source_files())
-        logger.info(f"Found {len(source_files)} source files to consider")
+        logger.info("Found %s source files to consider", len(source_files))
 
         if progress_callback:
             progress_callback(
@@ -574,8 +574,8 @@ class RepositoryIndexer:
         # Ensure wiki directory exists
         await asyncio.to_thread(self.wiki_path.mkdir, parents=True, exist_ok=True)
 
-        logger.info(f"Starting indexing for repository: {self.repo_path}")
-        logger.debug(f"Wiki path: {self.wiki_path}, Full rebuild: {full_rebuild}")
+        logger.info("Starting indexing for repository: %s", self.repo_path)
+        logger.debug("Wiki path: %s, Full rebuild: %s", self.wiki_path, full_rebuild)
 
         # Emit INDEX_START event
         emitter = get_event_emitter()

@@ -110,8 +110,8 @@ PROGRESS_ENABLED_TOOLS = {"index_repository", "deep_research", "resume_research"
 @server.call_tool()
 async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
     """Handle tool calls."""
-    logger.info(f"Tool call received: {name}")
-    logger.debug(f"Tool arguments: {arguments}")
+    logger.info("Tool call received: %s", name)
+    logger.debug("Tool arguments: %s", arguments)
 
     # Special handling for tools that need server context for progress streaming
     if name == "index_repository":
@@ -125,7 +125,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
 
     handler = TOOL_HANDLERS.get(name)
     if handler is None:
-        logger.warning(f"Unknown tool requested: {name}")
+        logger.warning("Unknown tool requested: %s", name)
         return [TextContent(type="text", text=f"Unknown tool: {name}")]
 
     return await handler(arguments)

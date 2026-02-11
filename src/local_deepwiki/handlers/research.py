@@ -90,7 +90,7 @@ def _setup_deep_research_config(
     # Validate input size limits (CWE-400 prevention)
     validate_deep_research_parameters(question, preset, max_chunks)
 
-    logger.info(f"Deep research on {repo_path}: {question[:100]}...")
+    logger.info("Deep research on %s: %s...", repo_path, question[:100])
     logger.debug(
         f"Max chunks: {max_chunks}, preset: {preset or 'default'}, resume: {resume_research_id or 'new'}"
     )
@@ -232,7 +232,7 @@ def _create_progress_callbacks(
             # RuntimeError: Session or context issues
             # OSError: Network communication failures
             # AttributeError: Missing session/context attributes
-            logger.warning(f"Failed to send progress notification: {e}")
+            logger.warning("Failed to send progress notification: %s", e)
 
     async def send_cancellation_notification(step: str) -> None:
         """Send a cancellation progress notification."""
@@ -255,7 +255,7 @@ def _create_progress_callbacks(
             # RuntimeError: Session or context issues
             # OSError: Network communication failures
             # AttributeError: Missing session/context attributes
-            logger.warning(f"Failed to send cancellation notification: {e}")
+            logger.warning("Failed to send cancellation notification: %s", e)
 
     return is_cancelled, progress_callback, send_cancellation_notification
 
@@ -302,7 +302,7 @@ async def _execute_research_phases(
         return [TextContent(type="text", text=json.dumps(response, indent=2))]
 
     except ResearchCancelledError as e:
-        logger.info(f"Deep research cancelled: {e}")
+        logger.info("Deep research cancelled: %s", e)
         await send_cancellation_notification(e.step)
         response = {
             "status": "cancelled",
@@ -443,7 +443,7 @@ async def handle_list_research_checkpoints(args: dict[str, Any]) -> list[TextCon
         "checkpoints": checkpoint_list,
     }
 
-    logger.info(f"Listed {len(checkpoints)} research checkpoints for {repo_path}")
+    logger.info("Listed %s research checkpoints for %s", len(checkpoints), repo_path)
     return [TextContent(type="text", text=json.dumps(response, indent=2))]
 
 
@@ -493,7 +493,7 @@ async def handle_cancel_research(args: dict[str, Any]) -> list[TextContent]:
         "hint": "Use deep_research with resume_research_id to continue later",
     }
 
-    logger.info(f"Cancelled research {research_id}")
+    logger.info("Cancelled research %s", research_id)
     return [TextContent(type="text", text=json.dumps(response, indent=2))]
 
 

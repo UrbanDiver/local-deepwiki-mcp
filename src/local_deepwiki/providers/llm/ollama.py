@@ -98,7 +98,7 @@ class OllamaProvider(LLMProvider):
             OllamaConnectionError: If Ollama server is not accessible.
             OllamaModelNotFoundError: If the requested model is not available.
         """
-        logger.debug(f"Checking Ollama health at {self._base_url}")
+        logger.debug("Checking Ollama health at %s", self._base_url)
 
         try:
             # Try to list models to verify connection
@@ -107,7 +107,7 @@ class OllamaProvider(LLMProvider):
             self._available_models = [
                 m.model for m in models_response.models if m.model is not None
             ]
-            logger.debug(f"Ollama available models: {self._available_models}")
+            logger.debug("Ollama available models: %s", self._available_models)
 
             # Check if our model is available (handle both "model" and "model:tag" formats)
             model_base = self._model.split(":")[0]
@@ -119,10 +119,10 @@ class OllamaProvider(LLMProvider):
             )
 
             if not model_found:
-                logger.error(f"Model '{self._model}' not found in Ollama")
+                logger.error("Model '%s' not found in Ollama", self._model)
                 raise OllamaModelNotFoundError(self._model, self._available_models)
 
-            logger.info(f"Ollama health check passed: model '{self._model}' available")
+            logger.info("Ollama health check passed: model '%s' available", self._model)
             self._health_checked = True
             return True
 
@@ -130,7 +130,7 @@ class OllamaProvider(LLMProvider):
             raise
         except (ConnectionError, TimeoutError, OSError, ResponseError) as e:
             # Connection errors, timeouts, network errors, and Ollama API errors
-            logger.error(f"Failed to connect to Ollama at {self._base_url}: {e}")
+            logger.error("Failed to connect to Ollama at %s: %s", self._base_url, e)
             raise OllamaConnectionError(self._base_url, e) from e
 
     async def _ensure_healthy(self) -> None:
@@ -255,18 +255,18 @@ class OllamaProvider(LLMProvider):
             )
 
             content = cast(str, response["message"]["content"])
-            logger.debug(f"Ollama response length: {len(content)}")
+            logger.debug("Ollama response length: %s", len(content))
             return content
 
         except ResponseError as e:
             # Handle model not found during generation (e.g., model was deleted)
             if "not found" in str(e).lower():
-                logger.error(f"Model '{self._model}' not found during generation")
+                logger.error("Model '%s' not found during generation", self._model)
                 raise OllamaModelNotFoundError(self._model) from e
             raise
         except (ConnectionError, TimeoutError, OSError) as e:
             # Connection errors, timeouts, and network-related OS errors
-            logger.error(f"Lost connection to Ollama: {e}")
+            logger.error("Lost connection to Ollama: %s", e)
             self._health_checked = False  # Reset health check
             raise OllamaConnectionError(self._base_url, e) from e
 
@@ -315,12 +315,12 @@ class OllamaProvider(LLMProvider):
 
         except ResponseError as e:
             if "not found" in str(e).lower():
-                logger.error(f"Model '{self._model}' not found during streaming")
+                logger.error("Model '%s' not found during streaming", self._model)
                 raise OllamaModelNotFoundError(self._model) from e
             raise
         except (ConnectionError, TimeoutError, OSError) as e:
             # Connection errors, timeouts, and network-related OS errors
-            logger.error(f"Lost connection to Ollama during streaming: {e}")
+            logger.error("Lost connection to Ollama during streaming: %s", e)
             self._health_checked = False
             raise OllamaConnectionError(self._base_url, e) from e
 

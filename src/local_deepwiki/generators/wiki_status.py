@@ -89,7 +89,7 @@ class WikiStatusManager:
                 # json.JSONDecodeError: Corrupted or invalid JSON
                 # OSError: File read issues
                 # ValueError: Pydantic validation failure
-                logger.warning(f"Failed to load wiki status from {status_path}: {e}")
+                logger.warning("Failed to load wiki status from %s: %s", status_path, e)
                 return None
 
         self._previous_status = await asyncio.to_thread(_read_status)
@@ -188,7 +188,7 @@ class WikiStatusManager:
             except (OSError, UnicodeDecodeError) as e:
                 # OSError: File read issues
                 # UnicodeDecodeError: File encoding issues
-                logger.warning(f"Failed to load existing page {page_path}: {e}")
+                logger.warning("Failed to load existing page %s: %s", page_path, e)
                 return None
 
         return await asyncio.to_thread(_read_page)

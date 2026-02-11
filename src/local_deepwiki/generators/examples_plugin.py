@@ -150,7 +150,7 @@ class ExamplesWikiGenerator(WikiGeneratorPlugin):
                     all_examples[chunk.name] = examples[:3]
 
         except Exception as e:
-            logger.debug(f"Error extracting examples: {e}")
+            logger.debug("Error extracting examples: %s", e)
             return WikiGeneratorResult(pages=[])
 
         if not all_examples:
@@ -167,7 +167,7 @@ class ExamplesWikiGenerator(WikiGeneratorPlugin):
             generated_at=time.time(),
         )
 
-        logger.info(f"Generated examples page with {len(all_examples)} entities")
+        logger.info("Generated examples page with %s entities", len(all_examples))
 
         return WikiGeneratorResult(
             pages=[page],
@@ -297,7 +297,7 @@ def get_examples_for_api_page(
             )
             examples.extend(extracted)
     except (RuntimeError, OSError, ValueError, TypeError) as e:
-        logger.debug(f"Failed to extract examples for {entity_name}: {e}")
+        logger.debug("Failed to extract examples for %s: %s", entity_name, e)
 
     # Add docstring examples
     if docstring:

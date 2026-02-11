@@ -822,7 +822,7 @@ class StreamingHtmlExporter(StreamingExporter):
             page: WikiPage object with content loaded on demand.
         """
         rel_path = page.metadata.relative_path
-        logger.debug(f"Exporting page: {rel_path}")
+        logger.debug("Exporting page: %s", rel_path)
 
         # Render markdown to HTML, fix internal links, and set external link targets
         html_content = render_markdown(page.content)
@@ -906,7 +906,7 @@ class HtmlExporter:
         Returns:
             Number of pages exported
         """
-        logger.info(f"Starting HTML export from {self.wiki_path} to {self.output_path}")
+        logger.info("Starting HTML export from %s to %s", self.wiki_path, self.output_path)
 
         # Check if we should use streaming mode
         iterator = WikiPageIterator(self.wiki_path)
@@ -952,7 +952,7 @@ class HtmlExporter:
         if toc_path.exists():
             toc_data = json.loads(toc_path.read_text())
             self.toc_entries = toc_data.get("entries", [])
-            logger.debug(f"Loaded {len(self.toc_entries)} TOC entries")
+            logger.debug("Loaded %s TOC entries", len(self.toc_entries))
 
         # Create output directory
         self.output_path.mkdir(parents=True, exist_ok=True)
@@ -977,7 +977,7 @@ class HtmlExporter:
                 exported += 1
                 progress.update(task, advance=1)
 
-        logger.info(f"Exported {exported} pages to HTML")
+        logger.info("Exported %s pages to HTML", exported)
         return exported
 
     def _export_page(self, md_file: Path, rel_path: Path) -> None:
@@ -987,7 +987,7 @@ class HtmlExporter:
             md_file: Path to the markdown file
             rel_path: Relative path from wiki root
         """
-        logger.debug(f"Exporting page: {rel_path}")
+        logger.debug("Exporting page: %s", rel_path)
 
         # Read and convert markdown, fix internal links, set external link targets
         content = md_file.read_text()
@@ -1061,11 +1061,11 @@ def export_to_html(
     else:
         output_path = Path(output_path)
 
-    logger.info(f"Exporting wiki from {wiki_path} to {output_path}")
+    logger.info("Exporting wiki from %s to %s", wiki_path, output_path)
     exporter = HtmlExporter(wiki_path, output_path, no_progress=no_progress)
     count = exporter.export()
 
-    logger.info(f"HTML export complete: {count} pages")
+    logger.info("HTML export complete: %s pages", count)
     return f"Exported {count} pages to {output_path}"
 
 

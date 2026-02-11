@@ -128,19 +128,19 @@ class DebouncedHandler(FileSystemEventHandler):
 
         # Check extension
         if file_path.suffix.lower() not in WATCHED_EXTENSIONS:
-            logger.debug(f"Ignoring file with unsupported extension: {path}")
+            logger.debug("Ignoring file with unsupported extension: %s", path)
             return False
 
         # Check exclude patterns
         try:
             rel_path = str(file_path.relative_to(self.repo_path))
         except ValueError:
-            logger.debug(f"File outside repo path: {path}")
+            logger.debug("File outside repo path: %s", path)
             return False
 
         for pattern in self.config.parsing.exclude_patterns:
             if fnmatch.fnmatch(rel_path, pattern):
-                logger.debug(f"File matches exclude pattern '{pattern}': {rel_path}")
+                logger.debug("File matches exclude pattern '%s': %s", pattern, rel_path)
                 return False
 
         return True
@@ -161,7 +161,7 @@ class DebouncedHandler(FileSystemEventHandler):
                 dest_path=dest_path,
             )
             self._last_event_time = time.time()
-            logger.debug(f"Added pending change: {change_type.value} {path}")
+            logger.debug("Added pending change: %s %s", change_type.value, path)
 
     def _schedule_reindex(self) -> None:
         """Schedule a reindex after debounce period (thread-safe)."""
@@ -172,7 +172,7 @@ class DebouncedHandler(FileSystemEventHandler):
 
             self._timer = Timer(self.debounce_seconds, self._trigger_reindex)
             self._timer.start()
-            logger.debug(f"Scheduled reindex in {self.debounce_seconds}s")
+            logger.debug("Scheduled reindex in %ss", self.debounce_seconds)
 
     def _trigger_reindex(self) -> None:
         """Trigger the actual reindex operation (thread-safe)."""
@@ -189,7 +189,7 @@ class DebouncedHandler(FileSystemEventHandler):
             self._pending_changes.clear()
 
         if files:
-            logger.info(f"Triggering reindex for {len(files)} files")
+            logger.info("Triggering reindex for %s files", len(files))
             # Run in asyncio event loop
             asyncio.run(self._do_reindex(files, changes))
 
@@ -214,7 +214,7 @@ class DebouncedHandler(FileSystemEventHandler):
             changed_files=changed_files,
         )
 
-        logger.info(f"Starting reindex for {len(changed_files)} changed files")
+        logger.info("Starting reindex for %s changed files", len(changed_files))
 
         try:
             console.print()
@@ -237,7 +237,7 @@ class DebouncedHandler(FileSystemEventHandler):
                     type_counts[change.change_type.value] = type_counts.get(
                         change.change_type.value, 0
                     ) + 1
-                logger.info(f"Change types: {type_counts}")
+                logger.info("Change types: %s", type_counts)
 
             console.print()
             console.print("[yellow]Starting incremental reindex...[/yellow]")
@@ -309,7 +309,7 @@ class DebouncedHandler(FileSystemEventHandler):
                 try:
                     self.on_reindex_complete(result)
                 except Exception as callback_error:  # noqa: BLE001
-                    logger.error(f"Error in reindex callback: {callback_error}")
+                    logger.error("Error in reindex callback: %s", callback_error)
 
     def on_modified(self, event: FileSystemEvent) -> None:
         """Handle file modification events."""
@@ -411,7 +411,7 @@ class RepositoryWatcher:
 
     def start(self) -> None:
         """Start watching the repository."""
-        logger.info(f"Starting file watcher for {self.repo_path}")
+        logger.info("Starting file watcher for %s", self.repo_path)
 
         self._handler = DebouncedHandler(
             repo_path=self.repo_path,

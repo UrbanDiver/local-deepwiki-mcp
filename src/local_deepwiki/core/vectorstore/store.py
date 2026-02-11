@@ -321,7 +321,7 @@ class VectorStore:
             logger.debug("No chunks to store, skipping table creation")
             return 0
 
-        logger.info(f"Creating/updating vector table with {len(chunks)} chunks")
+        logger.info("Creating/updating vector table with %s chunks", len(chunks))
         db = self._connect()
 
         # Generate embeddings in batches to avoid OOM and API limits
@@ -383,7 +383,7 @@ class VectorStore:
         if not chunks:
             return 0
 
-        logger.debug(f"Adding {len(chunks)} chunks to existing table")
+        logger.debug("Adding %s chunks to existing table", len(chunks))
         table = self._get_table()
         if table is None:
             return await self.create_or_update_table(chunks, embedding_batch_size)
@@ -469,7 +469,7 @@ class VectorStore:
             try:
                 resolved_profile = SearchProfile(profile.lower())
             except ValueError:
-                logger.warning(f"Invalid search profile '{profile}', using default")
+                logger.warning("Invalid search profile '%s', using default", profile)
                 resolved_profile = self._default_search_profile
         else:
             resolved_profile = profile
@@ -634,12 +634,12 @@ class VectorStore:
                     max_suggestions=fuzzy_config.max_suggestions,
                 )
                 if suggestions:
-                    logger.debug(f"Generated suggestions: {suggestions}")
+                    logger.debug("Generated suggestions: %s", suggestions)
             except (RuntimeError, OSError, ValueError, KeyError) as e:
                 # RuntimeError: LanceDB/vector store failures
                 # OSError: File system issues
                 # ValueError/KeyError: Invalid fuzzy search data
-                logger.warning(f"Failed to generate suggestions: {e}")
+                logger.warning("Failed to generate suggestions: %s", e)
 
         # Attach suggestions to the first result if we have any
         if suggestions and search_results:
@@ -655,7 +655,7 @@ class VectorStore:
             # Create a placeholder result with suggestions when no results found
             # This allows the caller to show "Did you mean?" even with empty results
             # We don't add a fake result, but we can log for now
-            logger.debug(f"No results found, but have suggestions: {suggestions}")
+            logger.debug("No results found, but have suggestions: %s", suggestions)
 
         # Record search for adaptive learning
         if self._adaptive_search_enabled and search_results:
@@ -737,7 +737,7 @@ class VectorStore:
             try:
                 resolved_profile = SearchProfile(profile.lower())
             except ValueError:
-                logger.warning(f"Invalid search profile '{profile}', using default")
+                logger.warning("Invalid search profile '%s', using default", profile)
                 resolved_profile = self._default_search_profile
         else:
             resolved_profile = profile
@@ -1044,7 +1044,7 @@ class VectorStore:
         # Invalidate search cache since index has changed
         self._search_cache.invalidate()
 
-        logger.debug(f"Batch deleted chunks for {len(file_paths)} files")
+        logger.debug("Batch deleted chunks for %s files", len(file_paths))
         return len(file_paths)
 
     def get_main_definition_lines(self) -> dict[str, tuple[int, int]]:

@@ -75,7 +75,7 @@ def stream_async_generator(
         if item is None:
             break
         if isinstance(item, Exception):
-            logger.error(f"Error in async generator: {item}")
+            logger.error("Error in async generator: %s", item)
             yield f"data: {json.dumps({'type': 'error', 'message': sanitize_error_message(str(item))})}\n\n"
             break
         yield item
@@ -216,7 +216,7 @@ def api_chat():
         if chat_provider != "default":
             # Override provider for chat
             llm_config = llm_config.model_copy(update={"provider": chat_provider})
-            logger.info(f"Using {chat_provider} provider for chat")
+            logger.info("Using %s provider for chat", chat_provider)
 
         llm = get_cached_llm_provider(
             cache_path=cache_path,

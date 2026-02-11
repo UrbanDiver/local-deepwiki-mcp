@@ -69,7 +69,7 @@ def get_commit_history(repo_path: Path, limit: int = 30) -> list[CommitInfo]:
         )
 
         if result.returncode != 0:
-            logger.debug(f"Git log failed: {result.stderr}")
+            logger.debug("Git log failed: %s", result.stderr)
             return []
 
         commits: list[CommitInfo] = []
@@ -114,7 +114,7 @@ def get_commit_history(repo_path: Path, limit: int = 30) -> list[CommitInfo]:
         logger.warning("Git log timed out")
         return []
     except (FileNotFoundError, OSError) as e:
-        logger.debug(f"Failed to get git history: {e}")
+        logger.debug("Failed to get git history: %s", e)
         return []
 
 

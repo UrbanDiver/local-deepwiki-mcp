@@ -227,7 +227,7 @@ async def handle_analyze_diff(args: dict[str, Any]) -> list[TextContent]:
         # OSError: file read issues
         # KeyError: unexpected data format
         # ValidationError: repository not indexed
-        logger.debug(f"Could not load wiki/entity mapping for diff analysis: {e}")
+        logger.debug("Could not load wiki/entity mapping for diff analysis: %s", e)
 
     # Summary
     summary = {
@@ -431,5 +431,5 @@ async def handle_ask_about_diff(args: dict[str, Any]) -> list[TextContent]:
         "sources": sources,
     }
 
-    logger.info(f"Ask about diff: '{question[:50]}...' for {repo_path}")
+    logger.info("Ask about diff: '%s...' for %s", question[:50], repo_path)
     return [TextContent(type="text", text=json.dumps(result, indent=2))]

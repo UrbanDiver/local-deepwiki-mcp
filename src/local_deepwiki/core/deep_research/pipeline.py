@@ -140,7 +140,7 @@ class DeepResearchPipeline(ReasoningMixin, StepsMixin):
         """
         # Check the cancellation event first
         if self._cancellation_event and self._cancellation_event.is_set():
-            logger.info(f"Research cancelled via event during {step_name}")
+            logger.info("Research cancelled via event during %s", step_name)
             checkpoint_id = (
                 self._current_checkpoint.research_id
                 if self._current_checkpoint
@@ -150,7 +150,7 @@ class DeepResearchPipeline(ReasoningMixin, StepsMixin):
 
         # Then check the callback
         if self._cancellation_check and self._cancellation_check():
-            logger.info(f"Research cancelled during {step_name}")
+            logger.info("Research cancelled during %s", step_name)
             checkpoint_id = (
                 self._current_checkpoint.research_id
                 if self._current_checkpoint
@@ -264,7 +264,7 @@ class DeepResearchPipeline(ReasoningMixin, StepsMixin):
                 try:
                     results.append(dict_to_search_result(data))
                 except (KeyError, ValueError) as e:
-                    logger.warning(f"Failed to restore search result: {e}")
+                    logger.warning("Failed to restore search result: %s", e)
                     continue
         return results
 
@@ -366,7 +366,7 @@ class DeepResearchPipeline(ReasoningMixin, StepsMixin):
                     f"Resuming research {resume_id} from step {checkpoint.current_step}"
                 )
             else:
-                logger.warning(f"Checkpoint {resume_id} not found, starting fresh")
+                logger.warning("Checkpoint %s not found, starting fresh", resume_id)
                 self._current_checkpoint = self._create_checkpoint(question)
         elif self._checkpoint_manager:
             self._current_checkpoint = self._create_checkpoint(question)
@@ -524,7 +524,7 @@ class DeepResearchPipeline(ReasoningMixin, StepsMixin):
 
         if len(all_results) > self.max_total_chunks:
             all_results = all_results[: self.max_total_chunks]
-            logger.info(f"Limited to {self.max_total_chunks} chunks for synthesis")
+            logger.info("Limited to %s chunks for synthesis", self.max_total_chunks)
 
         return all_results
 

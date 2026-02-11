@@ -137,5 +137,5 @@ async def handle_suggest_codemap_topics(args: dict[str, Any]) -> list[TextConten
         "total": len(suggestions),
     }
 
-    logger.info(f"Codemap topics: {len(suggestions)} suggestions for {repo_path}")
+    logger.info("Codemap topics: %s suggestions for %s", len(suggestions), repo_path)
     return [TextContent(type="text", text=json.dumps(result, indent=2))]

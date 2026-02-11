@@ -541,7 +541,7 @@ def scan_repository_for_secrets(repo_path: Path) -> dict[str, list[SecretFinding
     files_scanned = 0
     files_skipped = 0
 
-    logger.debug(f"Starting secret scan of repository: {repo_path}")
+    logger.debug("Starting secret scan of repository: %s", repo_path)
 
     for file_path in repo_path.rglob("*"):
         if not file_path.is_file():
@@ -570,7 +570,7 @@ def scan_repository_for_secrets(repo_path: Path) -> dict[str, list[SecretFinding
                 findings_by_file[str(file_path)] = findings
 
         except (OSError, PermissionError) as e:
-            logger.debug(f"Could not read file for secret scanning: {file_path}: {e}")
+            logger.debug("Could not read file for secret scanning: %s: %s", file_path, e)
             continue
 
     logger.debug(

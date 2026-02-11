@@ -94,7 +94,7 @@ async def handle_get_project_manifest(args: dict[str, Any]) -> list[TextContent]
         "manifest": manifest_dict,
     }
 
-    logger.info(f"Project manifest: {manifest.name or 'unknown'} for {repo_path}")
+    logger.info("Project manifest: %s for %s", manifest.name or 'unknown', repo_path)
     return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
 
@@ -329,7 +329,7 @@ async def handle_get_wiki_stats(args: dict[str, Any]) -> list[TextContent]:
     wiki_files = await asyncio.to_thread(lambda: list(wiki_path.glob("**/*.md")))
     stats["total_wiki_files"] = len(wiki_files)
 
-    logger.info(f"Wiki stats for {repo_path}")
+    logger.info("Wiki stats for %s", repo_path)
     return [TextContent(type="text", text=json.dumps(stats, indent=2))]
 
 

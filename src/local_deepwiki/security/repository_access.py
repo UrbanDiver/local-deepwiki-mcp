@@ -10,8 +10,6 @@ import fnmatch
 import threading
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
-
 from local_deepwiki.logging import get_logger
 
 logger = get_logger(__name__)
@@ -56,7 +54,7 @@ class RepositoryAccessController:
             pass
     """
 
-    def __init__(self, config: Optional[RepositoryAccessConfig] = None):
+    def __init__(self, config: RepositoryAccessConfig | None = None):
         """Initialize the repository access controller.
 
         Args:
@@ -93,7 +91,9 @@ class RepositoryAccessController:
         # If allowlist is empty and enforced, deny all
         if not self._config.allowlist:
             if self._config.log_denied:
-                logger.warning(f"Repository access denied (empty allowlist): {path_str}")
+                logger.warning(
+                    f"Repository access denied (empty allowlist): {path_str}"
+                )
             return False
 
         # Check allowlist
@@ -103,7 +103,7 @@ class RepositoryAccessController:
 
         # No allowlist match
         if self._config.log_denied:
-            logger.warning(f"Repository access denied (no allowlist match): {path_str}")
+            logger.warning("Repository access denied (no allowlist match): %s", path_str)
         return False
 
     def require_access(self, repo_path: str | Path) -> None:
@@ -131,7 +131,7 @@ class RepositoryAccessController:
 
 
 # Thread-safe global instance management
-_repo_access_controller: Optional[RepositoryAccessController] = None
+_repo_access_controller: RepositoryAccessController | None = None
 _repo_access_controller_lock = threading.Lock()
 
 

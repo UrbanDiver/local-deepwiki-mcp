@@ -158,8 +158,8 @@ class WikiGenerator:
         full_rebuild: bool = False,
     ) -> WikiStructure:
         """Generate wiki documentation for the indexed repository."""
-        logger.info(f"Starting wiki generation for {index_status.repo_path}")
-        logger.debug(f"Full rebuild: {full_rebuild}, Total files: {index_status.total_files}")
+        logger.info("Starting wiki generation for %s", index_status.repo_path)
+        logger.debug("Full rebuild: %s, Total files: %s", full_rebuild, index_status.total_files)
 
         # Emit WIKI_START event
         emitter = get_event_emitter()
@@ -219,9 +219,9 @@ class WikiGenerator:
 
         # Log any generation warnings
         if ctx.warnings:
-            logger.warning(f"Wiki generation completed with {len(ctx.warnings)} warning(s)")
+            logger.warning("Wiki generation completed with %s warning(s)", len(ctx.warnings))
             for warning in ctx.warnings:
-                logger.warning(f"  - {warning}")
+                logger.warning("  - %s", warning)
                 self._progress._log(f"WARNING: {warning}")
 
         # Log LLM cache statistics if available
@@ -303,7 +303,7 @@ class WikiGenerator:
                 )
                 if summary["changed_file_count"] <= 5:
                     for f in summary["changed_files"]:
-                        logger.debug(f"  Changed: {f}")
+                        logger.debug("  Changed: %s", f)
 
         # Pre-compute line info for source files (for source refs with line numbers)
         self.status_manager.file_line_info = self._get_main_definition_lines()
@@ -553,7 +553,7 @@ class WikiGenerator:
                     wiki_base_path="files/",
                 )
             except Exception as e:
-                logger.debug(f"Failed to generate dependency graph: {e}")
+                logger.debug("Failed to generate dependency graph: %s", e)
                 ctx.warnings.append(f"Dependency graph generation failed: {e}")
                 return None
 
@@ -773,7 +773,7 @@ async def generate_wiki(
     if effective_provider is None and config.wiki.use_cloud_for_github:
         if is_github_repo(repo_path):
             effective_provider = config.wiki.github_llm_provider
-            logger.info(f"GitHub repo detected, using cloud provider: {effective_provider}")
+            logger.info("GitHub repo detected, using cloud provider: %s", effective_provider)
 
     generator = WikiGenerator(
         wiki_path=wiki_path,

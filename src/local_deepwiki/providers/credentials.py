@@ -7,7 +7,6 @@ information in instance variables or memory for longer than necessary.
 from __future__ import annotations
 
 import os
-from typing import Optional
 
 
 class CredentialManager:
@@ -19,7 +18,7 @@ class CredentialManager:
     """
 
     @staticmethod
-    def get_api_key(env_var: str, provider: str) -> Optional[str]:
+    def get_api_key(env_var: str, provider: str) -> str | None:
         """Get API key from environment without storing.
 
         Args:

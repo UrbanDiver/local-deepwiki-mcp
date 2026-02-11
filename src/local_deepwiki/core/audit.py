@@ -20,7 +20,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from local_deepwiki.logging import get_logger
 
@@ -97,13 +97,13 @@ class AuditEvent:
     timestamp: str
     event_type: AuditEventType
     severity: AuditSeverity
-    subject_id: Optional[str]
-    subject_role: Optional[str]
+    subject_id: str | None
+    subject_role: str | None
     resource_type: str
     resource_path: str
     action: str
     result: str
-    reason: Optional[str] = None
+    reason: str | None = None
     details: dict[str, Any] = field(default_factory=dict)
 
 
@@ -117,7 +117,7 @@ class AuditLogger:
     logger to ensure audit events are never accidentally filtered or lost.
     """
 
-    def __init__(self, log_dir: Optional[Path] = None) -> None:
+    def __init__(self, log_dir: Path | None = None) -> None:
         """Initialize the audit logger.
 
         Args:
@@ -203,13 +203,13 @@ class AuditLogger:
 
     def log_access_decision(
         self,
-        subject_id: Optional[str],
-        subject_role: Optional[str],
+        subject_id: str | None,
+        subject_role: str | None,
         resource_type: str,
         resource_path: str,
         permission_requested: str,
         granted: bool,
-        reason: Optional[str] = None,
+        reason: str | None = None,
     ) -> None:
         """Log an access control decision.
 
@@ -226,7 +226,9 @@ class AuditLogger:
         """
         event = AuditEvent(
             timestamp=datetime.now(timezone.utc).isoformat(),
-            event_type=AuditEventType.ACCESS_GRANTED if granted else AuditEventType.ACCESS_DENIED,
+            event_type=AuditEventType.ACCESS_GRANTED
+            if granted
+            else AuditEventType.ACCESS_DENIED,
             severity=AuditSeverity.INFO if granted else AuditSeverity.WARNING,
             subject_id=subject_id,
             subject_role=subject_role,
@@ -243,14 +245,14 @@ class AuditLogger:
 
     def log_query_execution(
         self,
-        subject_id: Optional[str],
+        subject_id: str | None,
         repo_path: str,
         query: str,
         success: bool,
         query_type: str = "search",
-        error_message: Optional[str] = None,
-        chunks_returned: Optional[int] = None,
-        duration_ms: Optional[int] = None,
+        error_message: str | None = None,
+        chunks_returned: int | None = None,
+        duration_ms: int | None = None,
     ) -> None:
         """Log a query execution.
 
@@ -282,7 +284,9 @@ class AuditLogger:
 
         event = AuditEvent(
             timestamp=datetime.now(timezone.utc).isoformat(),
-            event_type=AuditEventType.QUERY_EXECUTED if success else AuditEventType.QUERY_FAILED,
+            event_type=AuditEventType.QUERY_EXECUTED
+            if success
+            else AuditEventType.QUERY_FAILED,
             severity=AuditSeverity.INFO if success else AuditSeverity.WARNING,
             subject_id=subject_id,
             subject_role=None,  # Populated from context if available
@@ -297,14 +301,14 @@ class AuditLogger:
 
     def log_index_operation(
         self,
-        subject_id: Optional[str],
+        subject_id: str | None,
         repo_path: str,
         operation: str,
         success: bool,
-        files_processed: Optional[int] = None,
-        chunks_created: Optional[int] = None,
-        duration_ms: Optional[int] = None,
-        error_message: Optional[str] = None,
+        files_processed: int | None = None,
+        chunks_created: int | None = None,
+        duration_ms: int | None = None,
+        error_message: str | None = None,
     ) -> None:
         """Log an indexing operation.
 
@@ -363,15 +367,15 @@ class AuditLogger:
 
     def log_export_operation(
         self,
-        subject_id: Optional[str],
+        subject_id: str | None,
         wiki_path: str,
         output_path: str,
         export_type: str,
         operation: str,
         success: bool,
-        pages_exported: Optional[int] = None,
-        duration_ms: Optional[int] = None,
-        error_message: Optional[str] = None,
+        pages_exported: int | None = None,
+        duration_ms: int | None = None,
+        error_message: str | None = None,
     ) -> None:
         """Log an export operation.
 
@@ -388,9 +392,17 @@ class AuditLogger:
             duration_ms: Operation duration in milliseconds.
             error_message: Error message if operation failed.
         """
-        event_type = AuditEventType.EXPORT_STARTED if operation == "started" else AuditEventType.EXPORT_COMPLETED
+        event_type = (
+            AuditEventType.EXPORT_STARTED
+            if operation == "started"
+            else AuditEventType.EXPORT_COMPLETED
+        )
         severity = AuditSeverity.INFO if success else AuditSeverity.WARNING
-        result = "in_progress" if operation == "started" else ("success" if success else "failure")
+        result = (
+            "in_progress"
+            if operation == "started"
+            else ("success" if success else "failure")
+        )
 
         details: dict[str, Any] = {
             "export_type": export_type,
@@ -420,7 +432,7 @@ class AuditLogger:
 
 
 # Global audit logger instance with thread-safe initialization
-_audit_logger: Optional[AuditLogger] = None
+_audit_logger: AuditLogger | None = None
 _audit_logger_lock = threading.Lock()
 
 

@@ -43,7 +43,7 @@ def ensure_indexes(table: Table, lazy_index_manager: LazyIndexManager) -> None:
             if idx_type and "ivf" in str(idx_type).lower():
                 has_vector_index = True
     except (KeyError, TypeError, RuntimeError, AttributeError) as e:
-        logger.debug(f"Could not list existing indexes: {e}")
+        logger.debug("Could not list existing indexes: %s", e)
         existing_indexes = set()
         has_vector_index = False
 
@@ -66,7 +66,7 @@ def ensure_indexes(table: Table, lazy_index_manager: LazyIndexManager) -> None:
             else:
                 create_vector_index(table, num_rows, lazy_index_manager)
         except (RuntimeError, OSError) as e:
-            logger.debug(f"Could not check row count for vector indexing: {e}")
+            logger.debug("Could not check row count for vector indexing: %s", e)
     else:
         lazy_index_manager.mark_index_created()
 
@@ -80,9 +80,9 @@ def create_index_safe(table: Table, column: str) -> None:
     """
     try:
         table.create_scalar_index(column)
-        logger.debug(f"Created scalar index on '{column}' column")
+        logger.debug("Created scalar index on '%s' column", column)
     except (ValueError, RuntimeError, OSError) as e:
-        logger.debug(f"Could not create index on '{column}': {e}")
+        logger.debug("Could not create index on '%s': %s", column, e)
 
 
 def create_scalar_indexes(table: Table) -> None:
@@ -136,4 +136,4 @@ def create_vector_index(
         lazy_index_manager.mark_index_created()
 
     except (ValueError, RuntimeError, OSError) as e:
-        logger.debug(f"Could not create vector index: {e}")
+        logger.debug("Could not create vector index: %s", e)

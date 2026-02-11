@@ -223,7 +223,7 @@ class WikiPageIterator:
                     if f.tell() > 1024:
                         break
         except (OSError, UnicodeDecodeError) as e:
-            logger.debug(f"Could not extract title from {md_file}: {e}")
+            logger.debug("Could not extract title from %s: %s", md_file, e)
 
         return md_file.stem.replace("_", " ").replace("-", " ").title()
 
@@ -270,10 +270,10 @@ class StreamingExporter(ABC):
             self._toc_entries = toc_data.get("entries", [])
             paths: list[str] = []
             self._extract_paths_from_toc(self._toc_entries, paths)
-            logger.debug(f"Loaded {len(paths)} paths from TOC")
+            logger.debug("Loaded %s paths from TOC", len(paths))
             return paths
         except (json.JSONDecodeError, OSError) as e:
-            logger.warning(f"Could not load TOC: {e}")
+            logger.warning("Could not load TOC: %s", e)
             return []
 
     def _extract_paths_from_toc(

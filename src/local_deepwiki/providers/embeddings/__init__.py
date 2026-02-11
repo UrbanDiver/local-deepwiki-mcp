@@ -71,7 +71,7 @@ def get_embedding_provider(
 
     if plugin_provider is not None:
         # Use plugin provider - wrap it to match EmbeddingProvider interface
-        logger.debug(f"Using plugin embedding provider: {plugin_provider.provider_name}")
+        logger.debug("Using plugin embedding provider: %s", plugin_provider.provider_name)
         provider = _PluginEmbeddingProviderWrapper(plugin_provider)
     elif config.provider == "local":
         from local_deepwiki.providers.embeddings.local import LocalEmbeddingProvider
