@@ -1,6 +1,6 @@
 """MCP tool definitions for local-deepwiki.
 
-This module contains the 33 Tool objects returned by the server's list_tools
+This module contains the 40 Tool objects returned by the server's list_tools
 handler. Extracted from server.py to keep that file focused on server setup
 and request dispatch.
 """

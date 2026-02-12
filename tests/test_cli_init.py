@@ -343,6 +343,79 @@ class TestNonInteractiveMode:
         loaded = yaml.safe_load(dest.read_text())
         assert loaded["llm"]["provider"] == "anthropic"
 
+    def test_non_interactive_force_overwrites_existing(self, tmp_path: Path):
+        existing = tmp_path / "existing.yaml"
+        existing.write_text("llm:\n  provider: ollama\n")
+        dest = tmp_path / "config.yaml"
+
+        console = MagicMock()
+        with (
+            patch(
+                "local_deepwiki.cli.init_cli.find_existing_config",
+                return_value=existing,
+            ),
+            patch(
+                "local_deepwiki.cli.init_cli.detect_providers",
+                return_value={
+                    "ollama": True,
+                    "anthropic": False,
+                    "openai": False,
+                },
+            ),
+        ):
+            result = run_wizard(
+                tmp_path,
+                console,
+                non_interactive=True,
+                force=True,
+                config_dest=dest,
+            )
+
+        assert result == 0
+        assert dest.exists()
+        loaded = yaml.safe_load(dest.read_text())
+        assert loaded["llm"]["provider"] == "ollama"
+
+    def test_non_interactive_force_via_main(self, tmp_path: Path):
+        dest = tmp_path / "config.yaml"
+        existing = tmp_path / "existing.yaml"
+        existing.write_text("llm:\n  provider: ollama\n")
+
+        with (
+            patch.object(
+                sys,
+                "argv",
+                [
+                    "deepwiki init",
+                    str(tmp_path),
+                    "--non-interactive",
+                    "--force",
+                    "--provider",
+                    "anthropic",
+                    "--config",
+                    str(dest),
+                ],
+            ),
+            patch(
+                "local_deepwiki.cli.init_cli.find_existing_config",
+                return_value=existing,
+            ),
+            patch(
+                "local_deepwiki.cli.init_cli.detect_providers",
+                return_value={
+                    "ollama": False,
+                    "anthropic": True,
+                    "openai": False,
+                },
+            ),
+        ):
+            result = main()
+
+        assert result == 0
+        assert dest.exists()
+        loaded = yaml.safe_load(dest.read_text())
+        assert loaded["llm"]["provider"] == "anthropic"
+
     def test_non_interactive_fallback_to_ollama(self, tmp_path: Path):
         dest = tmp_path / "config.yaml"
         console = MagicMock()

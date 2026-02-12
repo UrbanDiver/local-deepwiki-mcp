@@ -29,26 +29,56 @@ uv run black src/ tests/
 uv run isort src/ tests/
 uv run mypy src/
 
+# Initialize configuration (interactive wizard)
+uv run deepwiki init
+
+# Initialize with auto-detected defaults (CI/CD friendly)
+uv run deepwiki init --non-interactive
+
+# Overwrite existing config in CI/CD
+uv run deepwiki init --non-interactive --force
+
 # Run the MCP server
 uv run local-deepwiki
 
+# Index repo and regenerate wiki
+uv run deepwiki update
+
+# Preview what would change without indexing
+uv run deepwiki update --dry-run
+
+# Force full rebuild
+uv run deepwiki update --full-rebuild
+
+# Show index health dashboard
+uv run deepwiki status
+uv run deepwiki status --json --verbose
+
 # Serve the wiki with web UI
-uv run deepwiki-serve .deepwiki --port 8080
+uv run deepwiki serve .deepwiki --port 8080
 
 # Watch mode - auto-reindex on file changes
-uv run deepwiki-watch /path/to/repo
+uv run deepwiki watch /path/to/repo
 
 # Export wiki to static HTML
-uv run deepwiki-export .deepwiki --output ./html-export
+uv run deepwiki export .deepwiki --output ./html-export
 
 # Export wiki to PDF
-uv run deepwiki-export-pdf .deepwiki -o documentation.pdf
+uv run deepwiki export-pdf .deepwiki -o documentation.pdf
 
 # Interactive code search
-uv run deepwiki-search
+uv run deepwiki search
 
-# Configure providers and settings
-uv run deepwiki-config
+# Configuration management
+uv run deepwiki config show
+uv run deepwiki config validate
+uv run deepwiki config health-check
+uv run deepwiki config profile list
+
+# Cache management
+uv run deepwiki cache stats
+uv run deepwiki cache clear --llm --embedding
+uv run deepwiki cache cleanup
 ```
 
 ## Architecture
@@ -79,6 +109,10 @@ uv run deepwiki-config
 │  Research & Progress Tools (4):                                     │
 │    list_research_checkpoints, cancel_research,                      │
 │    resume_research, get_operation_progress                          │
+│                                                                     │
+│  Agentic Tools (4):                                                 │
+│    suggest_next_actions, run_workflow,                               │
+│    batch_explain_entities, query_codebase                           │
 └─────────────────────────────────────────────────────────────────────┘
            │                    │                    │
            v                    v                    v

@@ -60,44 +60,95 @@ def _count_wiki_pages(wiki_path: Path) -> int:
 def _scan_current_files(repo_path: Path) -> dict[str, str]:
     """Scan a repository for source files and compute their hashes.
 
-    Uses the same extension map as the parser to identify source files,
-    and the same hash function to enable comparison with the index.
+    Uses the same exclusion logic as the indexer's ``_find_source_files``
+    so that the freshness check only considers files the indexer would
+    actually process.  This means:
+
+    * Hidden directories (starting with ``"."``) are skipped.
+    * Directories matching ``exclude_patterns`` ending with ``/**`` are skipped.
+    * Individual files matching other ``exclude_patterns`` are skipped.
+    * Only files whose extension is in the parser's ``EXTENSION_MAP`` and
+      whose language is in the configured ``parsing.languages`` are included.
 
     Returns:
         Dict mapping relative file paths to their SHA-256 hashes.
     """
+    import fnmatch
+    import os
+    import re
+
+    from local_deepwiki.config import Config
     from local_deepwiki.core.parser import EXTENSION_MAP, _compute_file_hash
 
-    skip_dirs = frozenset(
-        {
-            ".git",
-            "node_modules",
-            "__pycache__",
-            "venv",
-            ".venv",
-            "dist",
-            "build",
-            ".next",
-            "target",
-            "vendor",
-            ".deepwiki",
-        }
-    )
+    config = Config.load()
+
+    # Build skip_dirs and compiled file patterns from config, mirroring
+    # Indexer._compile_exclude_patterns().
+    skip_dirs: set[str] = set()
+    compiled_patterns: list[re.Pattern[str]] = []
+    for pattern in config.parsing.exclude_patterns:
+        if pattern.endswith("/**"):
+            skip_dirs.add(pattern[:-3])
+        else:
+            compiled_patterns.append(re.compile(fnmatch.translate(pattern)))
+
+    # Also always skip .deepwiki itself
+    skip_dirs.add(".deepwiki")
+
+    configured_languages = set(config.parsing.languages)
+    max_size = config.parsing.max_file_size
+
+    # Map extensions to their language names so we can filter by config
+    ext_to_lang: dict[str, str] = {}
+    for ext, lang in EXTENSION_MAP.items():
+        # EXTENSION_MAP values are Language enum members; use .value for the
+        # string name that appears in config.parsing.languages.
+        ext_to_lang[ext] = lang.value if hasattr(lang, "value") else str(lang)
 
     current_files: dict[str, str] = {}
 
-    for item in repo_path.rglob("*"):
-        if any(part in skip_dirs for part in item.relative_to(repo_path).parts):
-            continue
-        if not item.is_file():
-            continue
-        if item.suffix.lower() not in EXTENSION_MAP:
-            continue
-        try:
-            rel_path = str(item.relative_to(repo_path))
-            current_files[rel_path] = _compute_file_hash(item)
-        except OSError:
-            pass
+    for root, dirs, filenames in os.walk(repo_path):
+        root_path = Path(root)
+        rel_root = root_path.relative_to(repo_path)
+
+        # Early directory filtering — mirrors Indexer._find_source_files()
+        dirs[:] = [
+            d
+            for d in dirs
+            if d not in skip_dirs
+            and str(rel_root / d) not in skip_dirs
+            and not d.startswith(".")  # Skip hidden directories
+        ]
+
+        for filename in filenames:
+            file_path = root_path / filename
+            rel_path = str(file_path.relative_to(repo_path))
+
+            # Check against compiled file patterns
+            if any(p.match(rel_path) for p in compiled_patterns):
+                continue
+
+            # Check file size
+            try:
+                if file_path.stat().st_size > max_size:
+                    continue
+            except OSError:
+                continue
+
+            # Check if extension is recognised
+            ext = file_path.suffix.lower()
+            lang = ext_to_lang.get(ext)
+            if lang is None:
+                continue
+
+            # Check if language is in configured list
+            if lang not in configured_languages:
+                continue
+
+            try:
+                current_files[rel_path] = _compute_file_hash(file_path)
+            except OSError:
+                pass
 
     return current_files
 

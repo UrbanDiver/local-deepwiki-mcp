@@ -34,7 +34,14 @@ pip install -e .
 
 ## Configuration
 
-Create a config file at `~/.config/local-deepwiki/config.yaml`:
+Run the init wizard to generate a config file automatically:
+
+```bash
+deepwiki init                    # Interactive wizard
+deepwiki init --non-interactive  # Auto-detect defaults (CI/CD)
+```
+
+Or create one manually at `~/.config/local-deepwiki/config.yaml`:
 
 ```yaml
 embedding:
@@ -98,9 +105,9 @@ Add to your Claude Code MCP config (`~/.claude/claude_code_config.json`):
 }
 ```
 
-## MCP Tools (36 tools)
+## MCP Tools (40 tools)
 
-The server exposes **36 MCP tools** across 5 categories. Below are the most commonly used tools with examples, followed by the full tool reference.
+The server exposes **40 MCP tools** across 6 categories. Below are the most commonly used tools with examples, followed by the full tool reference.
 
 ### Core Tools
 
@@ -200,26 +207,71 @@ Multi-step reasoning for complex architectural questions. Performs query decompo
 | `cancel_research` | Cancel an in-progress research operation |
 | `get_operation_progress` | Check progress of long-running operations |
 
+### Agentic Tools (4)
+
+| Tool | Description |
+|------|-------------|
+| `suggest_next_actions` | Context-aware suggestions for next tools to use based on recent actions |
+| `run_workflow` | Run predefined multi-step workflows (e.g., full analysis, quick review) |
+| `batch_explain_entities` | Batch version of `explain_entity` for multiple entities at once |
+| `query_codebase` | Agentic RAG: grades chunk relevance, rewrites queries for better results |
+
 ## CLI Commands
 
+All commands are subcommands of the unified `deepwiki` CLI. Legacy entry points (`deepwiki-serve`, `deepwiki-export`, etc.) still work for backwards compatibility.
+
+| Command | Description |
+|---------|-------------|
+| `deepwiki init` | Interactive setup wizard for configuration |
+| `deepwiki status` | Show index health, freshness, and wiki coverage |
+| `deepwiki update` | Index repo and regenerate wiki (incremental) |
+| `deepwiki mcp` | Start the MCP server (for IDE integration) |
+| `deepwiki serve` | Serve wiki with web UI |
+| `deepwiki watch` | Watch mode - auto-reindex on file changes |
+| `deepwiki export` | Export wiki to static HTML |
+| `deepwiki export-pdf` | Export wiki to PDF |
+| `deepwiki config` | Configuration management (validate, show, health-check, profile) |
+| `deepwiki search` | Interactive fuzzy code search |
+| `deepwiki cache` | Cache management (stats, clear, cleanup) |
+
 ```bash
-# Run the MCP server
-uv run local-deepwiki
+# Setup
+deepwiki init                                   # Interactive wizard
+deepwiki init --non-interactive                  # Auto-detect defaults (CI/CD)
+deepwiki init --non-interactive --force          # Overwrite existing config
 
-# Serve the wiki with web UI
-uv run deepwiki-serve .deepwiki --port 8080
+# Indexing & status
+deepwiki update                                  # Index repo and regenerate wiki
+deepwiki update --full-rebuild                   # Force full rebuild
+deepwiki update --dry-run                        # Preview what would change
+deepwiki status                                  # Show index health dashboard
+deepwiki status --json                           # Machine-readable output
+deepwiki status --verbose                        # Detailed file-level info
 
-# Watch mode - auto-reindex on file changes
-uv run deepwiki-watch /path/to/repo
+# MCP server
+deepwiki mcp                                     # Start MCP server (stdio)
 
-# Export wiki to static HTML
-uv run deepwiki-export .deepwiki --output ./html-export
+# Web UI & export
+deepwiki serve .deepwiki --port 8080             # Browse wiki in browser
+deepwiki export .deepwiki --output ./html-export # Export to static HTML
+deepwiki export-pdf .deepwiki -o docs.pdf        # Export to single PDF
+deepwiki export-pdf .deepwiki --separate -o dir/ # Export each page as PDF
 
-# Export wiki to PDF (single file)
-uv run deepwiki-export-pdf .deepwiki -o documentation.pdf
+# Configuration
+deepwiki config show                             # Show effective configuration
+deepwiki config show --raw                       # Show raw YAML
+deepwiki config validate                         # Check config for errors
+deepwiki config health-check                     # Verify provider connectivity
+deepwiki config profile list                     # List saved config profiles
+deepwiki config profile save dev                 # Save current config as profile
+deepwiki config profile use prod                 # Switch to a profile
 
-# Export each page as separate PDF
-uv run deepwiki-export-pdf .deepwiki --separate -o ./pdfs/
+# Utilities
+deepwiki search                                  # Interactive fuzzy code search
+deepwiki watch /path/to/repo                     # Auto-reindex on file changes
+deepwiki cache stats                             # Show cache hit rates and sizes
+deepwiki cache clear --llm --embedding           # Clear caches
+deepwiki cache cleanup                           # Remove expired entries
 ```
 
 ## Environment Variables
@@ -278,7 +330,7 @@ If wiki content has hallucinations or low quality:
 ### Web UI Not Loading
 
 1. Check if port 8080 is in use: `lsof -i :8080`
-2. Try a different port: `uv run deepwiki-serve .deepwiki --port 8081`
+2. Try a different port: `deepwiki serve .deepwiki --port 8081`
 3. Ensure `.deepwiki` directory exists and contains generated wiki
 
 ## Example Configurations

@@ -13,6 +13,7 @@ from local_deepwiki.cli.status_cli import (
     _dir_size,
     _format_size,
     _format_timestamp,
+    _scan_current_files,
     collect_status,
     display_status,
     main,
@@ -343,6 +344,70 @@ class TestStatusVerbose:
         assert "Stale" in captured.out
         assert "new_module.py" in captured.out
         assert "main.py" in captured.out
+
+
+# ── _scan_current_files ──────────────────────────────────────────────
+
+
+class TestScanCurrentFiles:
+    """Verify _scan_current_files mirrors the indexer's exclusion logic."""
+
+    def test_includes_python_file(self, tmp_path: Path):
+        (tmp_path / "app.py").write_text("print('hi')")
+        result = _scan_current_files(tmp_path)
+        assert "app.py" in result
+
+    def test_skips_hidden_directories(self, tmp_path: Path):
+        """Hidden dirs like .claude/ and .github/ should be excluded."""
+        hidden = tmp_path / ".claude" / "helpers"
+        hidden.mkdir(parents=True)
+        (hidden / "script.js").write_text("console.log('test')")
+        (tmp_path / "app.js").write_text("console.log('main')")
+
+        result = _scan_current_files(tmp_path)
+        assert "app.js" in result
+        assert not any(".claude" in k for k in result)
+
+    def test_skips_htmlcov_via_exclude_patterns(self, tmp_path: Path):
+        """htmlcov/** is in default exclude_patterns and should be skipped."""
+        cov = tmp_path / "htmlcov"
+        cov.mkdir()
+        (cov / "coverage.js").write_text("var x = 1;")
+        (tmp_path / "main.js").write_text("var y = 2;")
+
+        result = _scan_current_files(tmp_path)
+        assert "main.js" in result
+        assert not any("htmlcov" in k for k in result)
+
+    def test_skips_node_modules(self, tmp_path: Path):
+        nm = tmp_path / "node_modules" / "pkg"
+        nm.mkdir(parents=True)
+        (nm / "index.js").write_text("")
+        (tmp_path / "app.js").write_text("")
+
+        result = _scan_current_files(tmp_path)
+        assert "app.js" in result
+        assert not any("node_modules" in k for k in result)
+
+    def test_skips_dotgit(self, tmp_path: Path):
+        git_dir = tmp_path / ".git" / "objects"
+        git_dir.mkdir(parents=True)
+        (git_dir / "pack.py").write_text("")
+        assert _scan_current_files(tmp_path) == {}
+
+    def test_skips_deepwiki(self, tmp_path: Path):
+        wiki = tmp_path / ".deepwiki"
+        wiki.mkdir()
+        (wiki / "index.py").write_text("")
+        assert _scan_current_files(tmp_path) == {}
+
+    def test_empty_directory(self, tmp_path: Path):
+        assert _scan_current_files(tmp_path) == {}
+
+    def test_ignores_unrecognised_extensions(self, tmp_path: Path):
+        (tmp_path / "data.csv").write_text("a,b,c")
+        (tmp_path / "readme.md").write_text("# Hi")
+        assert _scan_current_files(tmp_path) == {}
 
 
 # ── Freshness detection ──────────────────────────────────────────────

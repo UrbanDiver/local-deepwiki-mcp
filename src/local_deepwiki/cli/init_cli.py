@@ -3,7 +3,7 @@
 Guides new users through provider selection, language detection, and
 config file creation:
 
-    deepwiki init [REPO_PATH] [--non-interactive] [--provider ...] [--embedding ...] [--config PATH]
+    deepwiki init [REPO_PATH] [--non-interactive] [--force] [--provider ...] [--embedding ...] [--config PATH]
 """
 
 from __future__ import annotations
@@ -245,6 +245,7 @@ def run_wizard(
     console: Console,
     *,
     non_interactive: bool = False,
+    force: bool = False,
     provider_flag: str | None = None,
     embedding_flag: str | None = None,
     config_dest: Path | None = None,
@@ -257,15 +258,18 @@ def run_wizard(
     existing = find_existing_config()
     if existing is not None:
         console.print(f"[yellow]Existing config found:[/yellow] {existing}")
-        if non_interactive:
+        if non_interactive and not force:
             console.print(
-                "[red]Aborting (--non-interactive, will not overwrite).[/red]"
+                "[red]Aborting (--non-interactive, will not overwrite). Use --force to overwrite.[/red]"
             )
             return 1
-        overwrite = Prompt.ask("Overwrite?", choices=["yes", "no"], default="no")
-        if overwrite != "yes":
-            console.print("[dim]Aborted.[/dim]")
-            return 1
+        if non_interactive and force:
+            console.print("[yellow]--force: overwriting existing config.[/yellow]")
+        else:
+            overwrite = Prompt.ask("Overwrite?", choices=["yes", "no"], default="no")
+            if overwrite != "yes":
+                console.print("[dim]Aborted.[/dim]")
+                return 1
 
     # ── Step 2: Detect languages ──────────────────────────────────
     console.print(f"[bold]Scanning[/bold] {repo_path.resolve()} for source files...")
@@ -379,6 +383,7 @@ def main() -> int:
             "  deepwiki init /path/to/repo                Scan a specific repo\n"
             "  deepwiki init --non-interactive             Use auto-detected defaults\n"
             "  deepwiki init --provider anthropic          Pre-select LLM provider\n"
+            "  deepwiki init --non-interactive --force     Overwrite existing config\n"
             "  deepwiki init --config ./my-config.yaml     Write to custom path\n"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -393,6 +398,11 @@ def main() -> int:
         "--non-interactive",
         action="store_true",
         help="Skip all prompts, use detected defaults and flags",
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite existing config without prompting (use with --non-interactive)",
     )
     parser.add_argument(
         "--provider",
@@ -424,6 +434,7 @@ def main() -> int:
         repo,
         console,
         non_interactive=args.non_interactive,
+        force=args.force,
         provider_flag=args.provider,
         embedding_flag=args.embedding,
         config_dest=config_dest,
