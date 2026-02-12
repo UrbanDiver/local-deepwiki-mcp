@@ -11,6 +11,9 @@ class TestSubcommandTable:
 
     def test_all_expected_commands_present(self):
         expected = {
+            "init",
+            "status",
+            "update",
             "mcp",
             "serve",
             "watch",

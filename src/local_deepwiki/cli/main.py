@@ -1,6 +1,9 @@
 """Unified CLI entry point for local-deepwiki.
 
 Provides `deepwiki` command that dispatches to all subcommands:
+    deepwiki init         - Initialize project configuration
+    deepwiki status       - Show index health and freshness
+    deepwiki update       - Index repo and regenerate wiki
     deepwiki mcp          - Start the MCP server
     deepwiki serve        - Serve wiki with web UI
     deepwiki watch        - Watch mode for auto-reindexing
@@ -20,6 +23,17 @@ from rich.table import Table
 
 # Subcommand table: name -> (module_path, function_name, description)
 SUBCOMMANDS: dict[str, tuple[str, str, str]] = {
+    "init": ("local_deepwiki.cli.init_cli", "main", "Initialize project configuration"),
+    "status": (
+        "local_deepwiki.cli.status_cli",
+        "main",
+        "Show index health and freshness",
+    ),
+    "update": (
+        "local_deepwiki.cli.update_cli",
+        "main",
+        "Index repo and regenerate wiki",
+    ),
     "mcp": ("local_deepwiki.server", "main", "Start the MCP server"),
     "serve": ("local_deepwiki.web.app", "main", "Serve wiki with web UI"),
     "watch": ("local_deepwiki.watcher", "main", "Watch mode for auto-reindexing"),
@@ -50,6 +64,12 @@ def show_help() -> None:
     console.print(table)
     console.print("\nUsage: [bold]deepwiki <command> [args...][/bold]")
     console.print("\n[bold]Examples:[/bold]")
+    console.print(
+        "  deepwiki init                    Guided setup wizard for new users"
+    )
+    console.print("  deepwiki status                  Show index health and freshness")
+    console.print("  deepwiki update                  Index repo and regenerate wiki")
+    console.print("  deepwiki update --dry-run        Preview what would change")
     console.print(
         "  deepwiki mcp                     Start MCP server (for IDE integration)"
     )
