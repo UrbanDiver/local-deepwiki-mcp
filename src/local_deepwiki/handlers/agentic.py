@@ -642,12 +642,13 @@ async def handle_query_codebase(args: dict[str, Any]) -> list[TextContent]:
 
     from local_deepwiki.handlers.core import handle_ask_question
 
-    # First try with ask_question (max_context=15 for more context)
+    # First try with ask_question (max_context=15, agentic_rag for smarter retrieval)
     ask_result = await handle_ask_question(
         {
             "repo_path": str(repo_path),
             "question": query,
             "max_context": 15,
+            "agentic_rag": True,
         }
     )
 

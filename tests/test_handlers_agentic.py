@@ -389,6 +389,10 @@ class TestQueryCodebase:
         assert data["data"]["escalated"] is False
         assert "hints" in data
 
+        # Verify agentic_rag=True is passed through to ask_question
+        call_args = mock_ask.call_args[0][0]
+        assert call_args["agentic_rag"] is True
+
     @patch("local_deepwiki.handlers.research.handle_deep_research")
     @patch("local_deepwiki.handlers.core.handle_ask_question")
     async def test_short_answer_triggers_escalation(
