@@ -34,6 +34,7 @@ from local_deepwiki.models.tool_args import (
     AnalyzeDiffArgs,
     AskAboutDiffArgs,
     AskQuestionArgs,
+    BatchExplainEntitiesArgs,
     DeepResearchArgs,
     DetectSecretsArgs,
     DetectStaleDocsArgs,
@@ -58,11 +59,14 @@ from local_deepwiki.models.tool_args import (
     ImpactAnalysisArgs,
     IndexRepositoryArgs,
     ListIndexedReposArgs,
+    QueryCodebaseArgs,
     ReadWikiPageArgs,
     ReadWikiStructureArgs,
+    RunWorkflowArgs,
     SearchCodeArgs,
     SearchWikiArgs,
     SuggestCodemapTopicsArgs,
+    SuggestNextActionsArgs,
 )
 from local_deepwiki.models.wiki import (
     IndexStatus,
@@ -140,4 +144,8 @@ __all__ = [
     "GetWikiStatsArgs",
     "GenerateCodemapArgs",
     "SuggestCodemapTopicsArgs",
+    "SuggestNextActionsArgs",
+    "RunWorkflowArgs",
+    "BatchExplainEntitiesArgs",
+    "QueryCodebaseArgs",
 ]

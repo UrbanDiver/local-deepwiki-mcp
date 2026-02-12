@@ -47,6 +47,7 @@ from local_deepwiki.models import (
     AnalyzeDiffArgs,
     AskAboutDiffArgs,
     AskQuestionArgs,
+    BatchExplainEntitiesArgs,
     CancelResearchArgs,
     DeepResearchArgs,
     DetectSecretsArgs,
@@ -75,13 +76,16 @@ from local_deepwiki.models import (
     IndexRepositoryArgs,
     ListIndexedReposArgs,
     ListResearchCheckpointsArgs,
+    QueryCodebaseArgs,
     ReadWikiPageArgs,
     ReadWikiStructureArgs,
     ResearchCheckpoint,
     ResumeResearchArgs,
+    RunWorkflowArgs,
     SearchCodeArgs,
     SearchWikiArgs,
     SuggestCodemapTopicsArgs,
+    SuggestNextActionsArgs,
 )
 from local_deepwiki.progress import (
     GetOperationProgressArgs,
@@ -316,7 +320,7 @@ def handle_tool_errors(func: ToolHandler) -> ToolHandler:
         except Exception as e:  # noqa: BLE001
             # Broad catch is intentional: top-level error handler for MCP tools
             # that converts any unhandled exception to a user-friendly error message
-            logger.exception(f"Unexpected error in {func.__name__}: {e}")
+            logger.exception("Unexpected error in %s: %s", func.__name__, e)
             error = DeepWikiError(
                 message=f"An unexpected error occurred: {e}",
                 hint="Check the logs for more details. If this persists, please report the issue.",
@@ -521,6 +525,47 @@ class ProgressNotifier:
     def messages(self) -> list[str]:
         """Get accumulated progress messages."""
         return self._messages
+
+
+def wrap_tool_response(
+    tool_name: str,
+    data: dict[str, Any],
+    *,
+    hints: dict[str, Any] | None = None,
+) -> str:
+    """Wrap tool output in a structured JSON envelope.
+
+    Used by new agentic tools. Existing tools are not changed.
+
+    Args:
+        tool_name: Name of the tool that produced this response.
+        data: The tool's result payload.
+        hints: Optional follow-up suggestions for agents.
+
+    Returns:
+        JSON string with standard envelope.
+    """
+    envelope: dict[str, Any] = {
+        "tool": tool_name,
+        "status": "success",
+        "data": data,
+    }
+    if hints is not None:
+        envelope["hints"] = hints
+    return json.dumps(envelope, indent=2)
+
+
+def build_wiki_resource_uri(wiki_path: Path, page_relative: str) -> str:
+    """Build a deepwiki:// resource URI for a wiki page.
+
+    Args:
+        wiki_path: Absolute path to the wiki directory.
+        page_relative: Page path relative to wiki root.
+
+    Returns:
+        URI string like 'deepwiki:///path/to/.deepwiki/index.md'.
+    """
+    return f"deepwiki://{wiki_path}/{page_relative}"
 
 
 def create_progress_notifier(

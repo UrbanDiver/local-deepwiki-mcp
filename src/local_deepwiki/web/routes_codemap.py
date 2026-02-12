@@ -125,6 +125,9 @@ def api_codemap():
     if not query:
         return jsonify({"error": "Query is required"}), 400
 
+    if len(query) > 5000:
+        return jsonify({"error": "Query exceeds maximum length (5000 characters)"}), 400
+
     focus = data.get("focus", "execution_flow")
     valid_focus = {"execution_flow", "data_flow", "dependency_chain"}
     if focus not in valid_focus:
@@ -244,7 +247,7 @@ def api_codemap():
             write_cache(wiki_path, cache_k, response)
 
         except Exception as e:  # noqa: BLE001 - Report codemap errors to user via SSE
-            logger.exception(f"Error generating codemap: {e}")
+            logger.exception("Error generating codemap: %s", e)
             yield f"data: {json.dumps({'type': 'error', 'message': sanitize_error_message(str(e))})}\n\n"
 
         yield f"data: {json.dumps({'type': 'done'})}\n\n"

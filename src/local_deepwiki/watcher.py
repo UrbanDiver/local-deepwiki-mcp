@@ -145,7 +145,9 @@ class DebouncedHandler(FileSystemEventHandler):
 
         return True
 
-    def _add_pending_change(self, path: str, change_type: ChangeType, dest_path: str | None = None) -> None:
+    def _add_pending_change(
+        self, path: str, change_type: ChangeType, dest_path: str | None = None
+    ) -> None:
         """Add a file change to the pending set (thread-safe).
 
         Args:
@@ -234,9 +236,9 @@ class DebouncedHandler(FileSystemEventHandler):
             if changes:
                 type_counts: dict[str, int] = {}
                 for change in changes.values():
-                    type_counts[change.change_type.value] = type_counts.get(
-                        change.change_type.value, 0
-                    ) + 1
+                    type_counts[change.change_type.value] = (
+                        type_counts.get(change.change_type.value, 0) + 1
+                    )
                 logger.info("Change types: %s", type_counts)
 
             console.print()
@@ -262,7 +264,9 @@ class DebouncedHandler(FileSystemEventHandler):
             )
 
             index_time = time.time() - start_time
-            console.print(f"[green]Indexed {status.total_files} files in {index_time:.1f}s[/green]")
+            console.print(
+                f"[green]Indexed {status.total_files} files in {index_time:.1f}s[/green]"
+            )
             result.files_processed = status.total_files
 
             # Generate wiki
@@ -296,7 +300,7 @@ class DebouncedHandler(FileSystemEventHandler):
             result.duration_seconds = total_time
 
         except Exception as e:  # noqa: BLE001 - Keep watcher alive despite errors
-            logger.exception(f"Error during reindex: {e}")
+            logger.exception("Error during reindex: %s", e)
             console.print(f"[red]Error during reindex: {e}[/red]")
             result.error = str(e)
             result.duration_seconds = time.time() - start_time
@@ -351,7 +355,9 @@ class DebouncedHandler(FileSystemEventHandler):
         dest_path_str = str(event.dest_path) if hasattr(event, "dest_path") else None
 
         if self._should_watch_file(src_path):
-            self._add_pending_change(src_path, ChangeType.MOVED, dest_path=dest_path_str)
+            self._add_pending_change(
+                src_path, ChangeType.MOVED, dest_path=dest_path_str
+            )
             self._schedule_reindex()
 
         if dest_path_str and self._should_watch_file(dest_path_str):
@@ -529,7 +535,9 @@ async def initial_index(
 
     total_time = time.time() - start_time
     console.print(f"[green]Generated {len(wiki_structure.pages)} wiki pages[/green]")
-    console.print(f"[bold green]Initial index complete in {total_time:.1f}s[/bold green]")
+    console.print(
+        f"[bold green]Initial index complete in {total_time:.1f}s[/bold green]"
+    )
 
 
 def main() -> None:

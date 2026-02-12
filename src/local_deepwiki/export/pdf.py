@@ -857,11 +857,13 @@ class StreamingPdfExporter(StreamingExporter):
             logger.debug("Merged %s PDFs using pypdf", len(pdf_files))
 
         except ImportError:
-            # Fallback: Copy first PDF and log warning about potential issues
+            # Fallback: Copy first PDF only — remaining batches are lost
             logger.warning(
                 "pypdf not available for PDF merging. "
-                "Install pypdf for better multi-batch support. "
-                "Using first batch only."
+                "Only %d of %d PDF batches included in output. "
+                "Install pypdf (`pip install pypdf`) for complete multi-batch merging.",
+                1,
+                len(pdf_files),
             )
             shutil.copy(pdf_files[0], output_path)
 

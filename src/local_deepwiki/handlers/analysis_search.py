@@ -19,6 +19,7 @@ from local_deepwiki.handlers._shared import (
     SearchWikiArgs,
     _create_vector_store,
     _load_index_status,
+    build_wiki_resource_uri,
     get_access_controller,
     handle_tool_errors,
     logger,
@@ -93,15 +94,19 @@ async def handle_search_wiki(args: dict[str, Any]) -> list[TextContent]:
                 score = 0.4
 
             if score > 0:
-                matches.append(
-                    {
-                        "type": "page",
-                        "title": page.get("title"),
-                        "path": page.get("path"),
-                        "snippet": page.get("snippet", ""),
-                        "score": score,
-                    }
-                )
+                page_match: dict[str, Any] = {
+                    "type": "page",
+                    "title": page.get("title"),
+                    "path": page.get("path"),
+                    "snippet": page.get("snippet", ""),
+                    "score": score,
+                }
+                page_path_str = page.get("path", "")
+                if page_path_str:
+                    page_match["wiki_resource"] = build_wiki_resource_uri(
+                        wiki_path, page_path_str
+                    )
+                matches.append(page_match)
 
     # Search entities
     allowed_entity_types = None

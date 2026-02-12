@@ -281,6 +281,15 @@ If wiki content has hallucinations or low quality:
 2. Try a different port: `uv run deepwiki-serve .deepwiki --port 8081`
 3. Ensure `.deepwiki` directory exists and contains generated wiki
 
+## Example Configurations
+
+The `examples/` directory contains sample configuration files:
+
+- `config-local.yaml` - Fully local setup with Ollama and sentence-transformers
+- `config-cloud.yaml` - Cloud-based setup using Anthropic/OpenAI
+- `config-hybrid.yaml` - Local embeddings with cloud LLM
+- `roles.yaml` - RBAC role configuration example
+
 ## Development
 
 ```bash

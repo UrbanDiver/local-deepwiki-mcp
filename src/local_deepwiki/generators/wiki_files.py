@@ -20,7 +20,10 @@ from local_deepwiki.core.git_utils import (
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.generators.api_docs import get_file_api_docs
 from local_deepwiki.generators.callgraph import get_file_call_graph, get_file_callers
-from local_deepwiki.generators.context_builder import build_file_context, format_context_for_llm
+from local_deepwiki.generators.context_builder import (
+    build_file_context,
+    format_context_for_llm,
+)
 from local_deepwiki.generators.crosslinks import EntityRegistry
 from local_deepwiki.generators.diagrams import generate_class_diagram
 from local_deepwiki.generators.test_examples import get_file_examples
@@ -695,18 +698,21 @@ WriteCallback = Callable[[WikiPage], Awaitable[None]]
 
 
 def _is_test_file(path: str) -> bool:
-    """Check if a file is a test file in tests/ directory.
+    """Check if a file is in a test directory.
 
-    Note: Don't skip test_*.py in src/ (e.g., test_examples.py is a source file).
+    Only checks directory membership, not filename patterns, because files like
+    ``src/test_examples.py`` may be legitimate source files.
 
     Args:
         path: File path to check.
 
     Returns:
-        True if file is in tests/ directory.
+        True if file is inside a common test directory.
     """
-    parts = path.split("/")
-    return "tests" in parts
+    from pathlib import PurePosixPath
+
+    parts = PurePosixPath(path).parts
+    return any(p in ("tests", "test", "testing", "spec", "specs") for p in parts)
 
 
 def _filter_significant_files(files: list[FileInfo], max_files: int) -> list[FileInfo]:

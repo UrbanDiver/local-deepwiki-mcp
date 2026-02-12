@@ -31,8 +31,19 @@ from local_deepwiki.handlers.analysis import (
     handle_search_wiki,
 )
 
+# --- Agentic tool handlers ---
+from local_deepwiki.handlers.agentic import (
+    handle_batch_explain_entities,
+    handle_query_codebase,
+    handle_run_workflow,
+    handle_suggest_next_actions,
+)
+
 # --- Codemap tool handlers ---
-from local_deepwiki.handlers.codemap import handle_generate_codemap, handle_suggest_codemap_topics
+from local_deepwiki.handlers.codemap import (
+    handle_generate_codemap,
+    handle_suggest_codemap_topics,
+)
 
 # --- Core tool handlers ---
 from local_deepwiki.handlers.core import (
@@ -120,4 +131,9 @@ __all__ = [
     # Codemap handlers
     "handle_generate_codemap",
     "handle_suggest_codemap_topics",
+    # Agentic handlers
+    "handle_suggest_next_actions",
+    "handle_run_workflow",
+    "handle_batch_explain_entities",
+    "handle_query_codebase",
 ]

@@ -16,6 +16,8 @@ import json
 import sys
 from pathlib import Path
 
+import html
+
 import markdown
 
 from local_deepwiki.logging import get_logger
@@ -23,7 +25,16 @@ from local_deepwiki.logging import get_logger
 logger = get_logger(__name__)
 
 try:
-    from flask import Flask, Response, abort, jsonify, redirect, render_template, request, url_for
+    from flask import (
+        Flask,
+        Response,
+        abort,
+        jsonify,
+        redirect,
+        render_template,
+        request,
+        url_for,
+    )
 
     # Re-export symbols that tests and other code import from this module.
     # The canonical definitions now live in routes_chat but we keep these
@@ -52,15 +63,16 @@ WIKI_PATH: Path | None = None
 
 
 # ---------------------------------------------------------------------------
-# Register Blueprints
+# Register Blueprints (only when Flask is available)
 # ---------------------------------------------------------------------------
-from local_deepwiki.web.routes_chat import chat_bp  # noqa: E402
-from local_deepwiki.web.routes_codemap import codemap_bp  # noqa: E402
-from local_deepwiki.web.routes_research import research_bp  # noqa: E402
+if _HAS_FLASK:
+    from local_deepwiki.web.routes_chat import chat_bp  # noqa: E402
+    from local_deepwiki.web.routes_codemap import codemap_bp  # noqa: E402
+    from local_deepwiki.web.routes_research import research_bp  # noqa: E402
 
-app.register_blueprint(chat_bp)
-app.register_blueprint(research_bp)
-app.register_blueprint(codemap_bp)
+    app.register_blueprint(chat_bp)
+    app.register_blueprint(research_bp)
+    app.register_blueprint(codemap_bp)
 
 
 # ---------------------------------------------------------------------------
@@ -152,7 +164,11 @@ def extract_title(md_file: Path) -> str:
 
 
 def render_markdown(content: str) -> str:
-    """Render markdown to HTML."""
+    """Render markdown to HTML with sanitization.
+
+    Uses nh3 (if available) to strip dangerous tags like <script> while
+    preserving safe HTML produced by the markdown renderer.
+    """
     md = markdown.Markdown(
         extensions=[
             "fenced_code",
@@ -161,7 +177,13 @@ def render_markdown(content: str) -> str:
             "nl2br",
         ]
     )
-    return md.convert(content)
+    raw_html = md.convert(content)
+    try:
+        import nh3
+
+        return nh3.clean(raw_html)
+    except ImportError:
+        return raw_html
 
 
 def build_breadcrumb(wiki_path: Path, current_path: str) -> str:
@@ -193,7 +215,7 @@ def build_breadcrumb(wiki_path: Path, current_path: str) -> str:
 
         # Check if there's an index.md in this folder
         index_path = wiki_path / cumulative_path / "index.md"
-        display_name = part.replace("_", " ").replace("-", " ").title()
+        display_name = html.escape(part.replace("_", " ").replace("-", " ").title())
 
         if index_path.exists():
             link_path = f"{cumulative_path}/index.md"
@@ -206,7 +228,7 @@ def build_breadcrumb(wiki_path: Path, current_path: str) -> str:
     current_page = parts[-1]
     if current_page.endswith(".md"):
         current_page = current_page[:-3]
-    current_page = current_page.replace("_", " ").replace("-", " ").title()
+    current_page = html.escape(current_page.replace("_", " ").replace("-", " ").title())
     breadcrumb_items.append(f'<span class="current">{current_page}</span>')
 
     return ' <span class="separator">›</span> '.join(breadcrumb_items)
@@ -249,7 +271,9 @@ def search_json():
         data = json.loads(search_path.read_text())
         return jsonify(data)
     except (json.JSONDecodeError, OSError) as e:
-        abort(500, f"Error reading search index: {e}")
+        from local_deepwiki.errors import sanitize_error_message
+
+        abort(500, sanitize_error_message(str(e)))
 
 
 @app.route("/wiki/<path:path>")
@@ -286,7 +310,9 @@ def view_page(path: str):
         content = file_path.read_text()
         html_content = render_markdown(content)
     except (OSError, UnicodeDecodeError) as e:
-        abort(500, f"Error reading page: {e}")
+        from local_deepwiki.errors import sanitize_error_message
+
+        abort(500, sanitize_error_message(str(e)))
 
     pages, sections, toc_entries = get_wiki_structure(WIKI_PATH)
     title = extract_title(file_path)

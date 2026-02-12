@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
+
 class AdaptiveSearcher:
     """Adaptive search depth estimator based on query characteristics and history.
 
@@ -224,6 +225,16 @@ class AdaptiveSearcher:
                 updates.append((i, (hist_query, new_quality, count, depth)))
         for i, entry in updates:
             self._query_history[i] = entry
+
+    def reset(self) -> None:
+        """Reset all adaptive searcher state.
+
+        Clears query history, feedback history, and complexity cache.
+        Called during VectorStore.close() to release resources.
+        """
+        self._query_history.clear()
+        self._feedback_history.clear()
+        self._complexity_cache.clear()
 
     def get_feedback_stats(self) -> dict[str, Any]:
         """Get statistics about collected feedback.
@@ -520,4 +531,3 @@ class SearchCache:
                     else 0.0
                 ),
             }
-

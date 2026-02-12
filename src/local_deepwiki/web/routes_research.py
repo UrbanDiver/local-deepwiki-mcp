@@ -49,6 +49,11 @@ def api_research():
     if not question:
         return jsonify({"error": "Question is required"}), 400
 
+    if len(question) > 5000:
+        return jsonify(
+            {"error": "Question exceeds maximum length (5000 characters)"}
+        ), 400
+
     # Determine the repository path from wiki path
     repo_path = wiki_path.parent
     if wiki_path.name == ".deepwiki":
@@ -186,7 +191,7 @@ def api_research():
             }
             yield f"data: {json.dumps(response)}\n\n"
         except Exception as e:  # noqa: BLE001 - Report research errors to user via SSE
-            logger.exception(f"Error in deep research: {e}")
+            logger.exception("Error in deep research: %s", e)
             yield f"data: {json.dumps({'type': 'error', 'message': sanitize_error_message(str(e))})}\n\n"
 
         yield f"data: {json.dumps({'type': 'done'})}\n\n"

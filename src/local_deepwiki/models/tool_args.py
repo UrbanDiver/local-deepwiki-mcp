@@ -45,6 +45,10 @@ class AskQuestionArgs(BaseModel):
     max_context: int = Field(
         default=10, ge=1, le=50, description="Maximum code chunks for context (1-50)"
     )
+    agentic_rag: bool = Field(
+        default=False,
+        description="Enable agentic RAG: grade relevance + auto-rewrite query if needed (default: false)",
+    )
 
 
 class DeepResearchArgs(BaseModel):
@@ -493,4 +497,57 @@ class SuggestCodemapTopicsArgs(BaseModel):
         ge=1,
         le=30,
         description="Maximum topic suggestions to return (1-30)",
+    )
+
+
+class SuggestNextActionsArgs(BaseModel):
+    """Arguments for the suggest_next_actions tool."""
+
+    tools_used: list[str] = Field(
+        default_factory=list,
+        description="List of tool names the agent has already used in this session",
+    )
+    context: str | None = Field(
+        default=None,
+        max_length=2000,
+        description="Optional context about what the agent is trying to accomplish",
+    )
+    repo_path: str | None = Field(
+        default=None,
+        description="Path to the repository (used to check if wiki exists)",
+    )
+
+
+class RunWorkflowArgs(BaseModel):
+    """Arguments for the run_workflow tool."""
+
+    repo_path: str = Field(description="Path to the indexed repository")
+    workflow: str = Field(
+        description="Workflow preset to run: 'onboarding', 'security_audit', 'full_analysis', or 'quick_refresh'",
+    )
+
+
+class BatchExplainEntitiesArgs(BaseModel):
+    """Arguments for the batch_explain_entities tool."""
+
+    repo_path: str = Field(description="Path to the indexed repository")
+    entity_names: list[str] = Field(
+        min_length=1,
+        max_length=20,
+        description="List of entity names to explain (max 20)",
+    )
+
+
+class QueryCodebaseArgs(BaseModel):
+    """Arguments for the query_codebase tool."""
+
+    repo_path: str = Field(description="Path to the indexed repository")
+    query: str = Field(
+        min_length=1,
+        max_length=5000,
+        description="Natural language question about the codebase",
+    )
+    auto_escalate: bool = Field(
+        default=True,
+        description="Automatically escalate to deep_research if initial answer is insufficient (default: true)",
     )

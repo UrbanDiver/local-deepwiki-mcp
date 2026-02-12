@@ -770,8 +770,8 @@ def sanitize_error_message(message: str, sanitize_paths: bool = True) -> str:
         result = re.sub(r"/[a-zA-Z0-9/_.-]*\.yml", ".yml", result)
         result = re.sub(r"/[a-zA-Z0-9/_.-]*\.yaml", ".yaml", result)
 
-        # Remove absolute paths in general
-        result = re.sub(r"/[a-zA-Z0-9/_.-]+", "<path>", result)
+        # Remove absolute paths (3+ segments like /foo/bar/baz, not short URL paths)
+        result = re.sub(r"/[a-zA-Z0-9_.-]+(?:/[a-zA-Z0-9_.-]+){2,}", "<path>", result)
 
     # Remove localhost URLs (prevents revealing local service configuration)
     result = re.sub(r"http://localhost:\d+", "http://internal-service", result)

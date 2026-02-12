@@ -135,10 +135,7 @@ class VectorStore:
             self._db = None
             self._fuzzy_search_helper = None
             self._search_cache.invalidate()
-            # Reset adaptive searcher state
-            self._adaptive_searcher._query_history.clear()
-            self._adaptive_searcher._feedback_history.clear()
-            self._adaptive_searcher._complexity_cache.clear()
+            self._adaptive_searcher.reset()
 
     def __del__(self) -> None:
         """Safety net to release resources on garbage collection."""

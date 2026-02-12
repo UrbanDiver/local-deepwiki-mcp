@@ -334,9 +334,10 @@
             }
         }
     </style>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css" id="hljs-theme">
-    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css" crossorigin="anonymous" id="hljs-theme">
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@14/marked.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
     <header class="header">
@@ -749,11 +750,12 @@
             questionInput.focus();
         }
 
-        // Render markdown
+        // Render markdown (sanitized to prevent XSS from LLM output)
         function renderMarkdown(text) {
             if (!text) return '';
             try {
-                return marked.parse(text);
+                const html = marked.parse(text);
+                return typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(html) : html;
             } catch (e) {
                 return escapeHtml(text);
             }

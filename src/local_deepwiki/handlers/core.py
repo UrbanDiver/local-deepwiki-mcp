@@ -29,6 +29,7 @@ from local_deepwiki.handlers._shared import (
     _create_vector_store,
     _load_index_status,
     _validate_export_path,
+    build_wiki_resource_uri,
     create_progress_notifier,
     generate_wiki,
     get_access_controller,
@@ -355,8 +356,30 @@ async def handle_ask_question(args: dict[str, Any]) -> list[TextContent]:
     # Create vector store
     vector_store = _create_vector_store(repo_path, config)
 
-    # Search for relevant context
-    search_results = await vector_store.search(question, limit=max_context)
+    # Generate LLM provider (needed for both paths)
+    from local_deepwiki.providers.llm import get_cached_llm_provider
+
+    cache_path = wiki_path / "llm_cache.lance"
+    llm = get_cached_llm_provider(
+        cache_path=cache_path,
+        embedding_provider=get_embedding_provider(config.embedding),
+        cache_config=config.llm_cache,
+        llm_config=config.llm,
+    )
+
+    # Agentic RAG path: grade relevance and optionally rewrite query
+    agentic_metadata = None
+    if validated.agentic_rag:
+        from local_deepwiki.core.agentic_rag import agentic_retrieve
+
+        rag_result = await agentic_retrieve(
+            question, vector_store, llm, max_context=max_context
+        )
+        search_results = rag_result.results
+        agentic_metadata = rag_result.metadata
+    else:
+        # Standard retrieval path
+        search_results = await vector_store.search(question, limit=max_context)
 
     if not search_results:
         return [
@@ -375,17 +398,6 @@ async def handle_ask_question(args: dict[str, Any]) -> list[TextContent]:
 
     context = "\n\n---\n\n".join(context_parts)
 
-    # Generate answer using LLM (with caching if enabled)
-    from local_deepwiki.providers.llm import get_cached_llm_provider
-
-    cache_path = wiki_path / "llm_cache.lance"
-    llm = get_cached_llm_provider(
-        cache_path=cache_path,
-        embedding_provider=get_embedding_provider(config.embedding),
-        cache_config=config.llm_cache,
-        llm_config=config.llm,
-    )
-
     prompt = f"""Based on the following code context, answer this question: {question}
 
 Code Context:
@@ -400,19 +412,28 @@ Provide a clear, accurate answer based only on the code provided. If the code do
     async with rate_limiter:
         answer = await llm.generate(prompt, system_prompt=system_prompt)
 
-    result = {
+    # Build source entries with optional wiki_resource URIs
+    sources = []
+    for r in search_results:
+        entry: dict[str, Any] = {
+            "file": r.chunk.file_path,
+            "lines": f"{r.chunk.start_line}-{r.chunk.end_line}",
+            "type": r.chunk.chunk_type.value,
+            "score": r.score,
+        }
+        # Add wiki_resource URI if a matching wiki page exists
+        file_wiki_page = f"files/{r.chunk.file_path}.md"
+        if (wiki_path / file_wiki_page).exists():
+            entry["wiki_resource"] = build_wiki_resource_uri(wiki_path, file_wiki_page)
+        sources.append(entry)
+
+    result: dict[str, Any] = {
         "question": question,
         "answer": answer,
-        "sources": [
-            {
-                "file": r.chunk.file_path,
-                "lines": f"{r.chunk.start_line}-{r.chunk.end_line}",
-                "type": r.chunk.chunk_type.value,
-                "score": r.score,
-            }
-            for r in search_results
-        ],
+        "sources": sources,
     }
+    if agentic_metadata is not None:
+        result["agentic_rag"] = agentic_metadata
 
     # Audit: Log query execution success
     duration_ms = int((time.time() - start_time) * 1000)

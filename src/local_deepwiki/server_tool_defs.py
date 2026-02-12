@@ -69,6 +69,10 @@ TOOL_DEFINITIONS: list[Tool] = [
                     "type": "integer",
                     "description": "Maximum number of code chunks for context (default: 10)",
                 },
+                "agentic_rag": {
+                    "type": "boolean",
+                    "description": "Enable agentic RAG: grade chunk relevance and auto-rewrite query if results are poor (default: false)",
+                },
             },
             "required": ["repo_path", "question"],
         },
@@ -873,6 +877,95 @@ TOOL_DEFINITIONS: list[Tool] = [
                 },
             },
             "required": ["repo_path"],
+        },
+    ),
+    Tool(
+        name="suggest_next_actions",
+        description="Suggest which tools to use next based on tools already used. Returns ranked suggestions with reasons. No LLM calls — uses a static decision tree for instant responses.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "tools_used": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of tool names the agent has already used in this session",
+                },
+                "context": {
+                    "type": "string",
+                    "description": "Optional context about what the agent is trying to accomplish",
+                },
+                "repo_path": {
+                    "type": "string",
+                    "description": "Path to the repository (used to check if wiki exists)",
+                },
+            },
+            "required": [],
+        },
+    ),
+    Tool(
+        name="run_workflow",
+        description="Run a pre-built multi-step workflow. Available presets: 'onboarding' (project overview), 'security_audit' (secrets + complexity), 'full_analysis' (stats + coverage + stale + secrets), 'quick_refresh' (stale docs + changelog).",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "repo_path": {
+                    "type": "string",
+                    "description": "Path to the indexed repository",
+                },
+                "workflow": {
+                    "type": "string",
+                    "enum": [
+                        "onboarding",
+                        "security_audit",
+                        "full_analysis",
+                        "quick_refresh",
+                    ],
+                    "description": "Workflow preset to run",
+                },
+            },
+            "required": ["repo_path", "workflow"],
+        },
+    ),
+    Tool(
+        name="batch_explain_entities",
+        description="Explain multiple code entities in a single call. Loads the search index once and looks up each entity name. More efficient than calling explain_entity repeatedly.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "repo_path": {
+                    "type": "string",
+                    "description": "Path to the indexed repository",
+                },
+                "entity_names": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of entity names to explain (max 20)",
+                    "maxItems": 20,
+                },
+            },
+            "required": ["repo_path", "entity_names"],
+        },
+    ),
+    Tool(
+        name="query_codebase",
+        description="Smart query that combines ask_question with automatic escalation to deep_research when the initial answer is insufficient. Single entry point for codebase Q&A.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "repo_path": {
+                    "type": "string",
+                    "description": "Path to the indexed repository",
+                },
+                "query": {
+                    "type": "string",
+                    "description": "Natural language question about the codebase",
+                },
+                "auto_escalate": {
+                    "type": "boolean",
+                    "description": "Automatically escalate to deep_research if initial answer is insufficient (default: true)",
+                },
+            },
+            "required": ["repo_path", "query"],
         },
     ),
 ]

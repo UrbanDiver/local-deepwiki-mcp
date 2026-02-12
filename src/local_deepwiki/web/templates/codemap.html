@@ -481,12 +481,13 @@
             .narrative-panel { flex: 1; }
         }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/cytoscape@3/dist/cytoscape.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/dagre@0.8/dist/dagre.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/cytoscape-dagre@2/cytoscape-dagre.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/cytoscape-navigator@2/cytoscape-navigator.min.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cytoscape-navigator@2/cytoscape.js-navigator.css">
+    <script src="https://cdn.jsdelivr.net/npm/cytoscape@3/dist/cytoscape.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dagre@0.8/dist/dagre.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/cytoscape-dagre@2/cytoscape-dagre.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@14/marked.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/cytoscape-navigator@2/cytoscape-navigator.min.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cytoscape-navigator@2/cytoscape.js-navigator.css" crossorigin="anonymous">
 </head>
 <body>
     <header class="header">
@@ -1564,7 +1565,8 @@
         function renderMarkdown(text) {
             if (!text) return '';
             try {
-                return marked.parse(text);
+                const html = marked.parse(text);
+                return typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(html) : html;
             } catch (e) {
                 return escapeHtml(text);
             }

@@ -14,6 +14,7 @@ from local_deepwiki.handlers import (
     handle_analyze_diff,
     handle_ask_about_diff,
     handle_ask_question,
+    handle_batch_explain_entities,
     handle_cancel_research,
     handle_deep_research,
     handle_detect_secrets,
@@ -41,13 +42,17 @@ from local_deepwiki.handlers import (
     handle_index_repository,
     handle_list_indexed_repos,
     handle_list_research_checkpoints,
+    handle_query_codebase,
     handle_read_wiki_page,
     handle_read_wiki_structure,
     handle_resume_research,
+    handle_run_workflow,
     handle_search_code,
     handle_search_wiki,
     handle_suggest_codemap_topics,
+    handle_suggest_next_actions,
 )
+from local_deepwiki.handlers.resources import register_resource_handlers
 from local_deepwiki.logging import get_logger
 from local_deepwiki.server_tool_defs import TOOL_DEFINITIONS
 
@@ -56,6 +61,9 @@ logger = get_logger(__name__)
 
 # Create the MCP server
 server = Server("local-deepwiki")
+
+# Register MCP Resource protocol handlers
+register_resource_handlers(server)
 
 
 @server.list_tools()
@@ -101,6 +109,10 @@ TOOL_HANDLERS: dict[str, ToolHandler] = {
     "ask_about_diff": handle_ask_about_diff,
     "generate_codemap": handle_generate_codemap,
     "suggest_codemap_topics": handle_suggest_codemap_topics,
+    "suggest_next_actions": handle_suggest_next_actions,
+    "run_workflow": handle_run_workflow,
+    "batch_explain_entities": handle_batch_explain_entities,
+    "query_codebase": handle_query_codebase,
 }
 
 # Tools that need server context for progress streaming

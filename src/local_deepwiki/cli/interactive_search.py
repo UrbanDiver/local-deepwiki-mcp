@@ -207,7 +207,7 @@ class InteractiveSearch:
             # OSError: Network/file system issues
             # ValueError: Invalid search parameters
             # KeyError: Missing data during search
-            logger.exception(f"Search error: {e}")
+            logger.exception("Search error: %s", e)
             self._state.error_message = f"Search error: {e}"
             self._state.results = []
             self._state.filtered_results = []

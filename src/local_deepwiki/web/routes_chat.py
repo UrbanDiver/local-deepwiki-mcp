@@ -186,6 +186,11 @@ def api_chat():
     if not question:
         return jsonify({"error": "Question is required"}), 400
 
+    if len(question) > 5000:
+        return jsonify(
+            {"error": "Question exceeds maximum length (5000 characters)"}
+        ), 400
+
     # Determine the repository path from wiki path
     repo_path = wiki_path.parent
     if wiki_path.name == ".deepwiki":
@@ -262,7 +267,7 @@ def api_chat():
             ):
                 yield f"data: {json.dumps({'type': 'token', 'content': text_chunk})}\n\n"
         except Exception as e:  # noqa: BLE001 - Report LLM errors to user via SSE
-            logger.exception(f"Error generating response: {e}")
+            logger.exception("Error generating response: %s", e)
             yield f"data: {json.dumps({'type': 'error', 'message': sanitize_error_message(str(e))})}\n\n"
 
         yield f"data: {json.dumps({'type': 'done'})}\n\n"
