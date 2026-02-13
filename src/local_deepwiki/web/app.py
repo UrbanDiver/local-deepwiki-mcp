@@ -181,7 +181,10 @@ def render_markdown(content: str) -> str:
     try:
         import nh3
 
-        return nh3.clean(raw_html)
+        return nh3.clean(
+            raw_html,
+            attributes={"code": {"class"}, "a": {"href"}, "img": {"src", "alt"}},
+        )
     except ImportError:
         return raw_html
 
