@@ -72,7 +72,9 @@ async def generate_module_docs(
         )
 
         # Filter to chunks from this directory
-        relevant_chunks = [r for r in search_results if r.chunk.file_path.startswith(dir_name)]
+        relevant_chunks = [
+            r for r in search_results if r.chunk.file_path.startswith(dir_name)
+        ]
 
         if not relevant_chunks:
             continue
@@ -86,7 +88,7 @@ async def generate_module_docs(
 
         prompt = f"""Generate documentation for the '{dir_name}' module based ONLY on the code provided.
 
-Files in module: {', '.join(files[:10])}{'...' if len(files) > 10 else ''}
+Files in module: {", ".join(files[:10])}{"..." if len(files) > 10 else ""}
 
 Code context:
 {context}
@@ -118,18 +120,46 @@ Format as markdown."""
         status_manager.record_page_status(page, files)
         pages_generated += 1
 
-    # Create modules index (always regenerate since it depends on module pages)
+    # Create modules index — uses structural fingerprint since content only
+    # changes when modules are added/removed
     if pages:
-        modules_index = WikiPage(
-            path="modules/index.md",
-            title="Modules",
-            content=_generate_modules_index(pages),
-            generated_at=time.time(),
-        )
-        pages.insert(0, modules_index)
-        # Index depends on all files in all modules
+        index_path = "modules/index.md"
         all_module_files = [f for files in directories.values() for f in files]
-        status_manager.record_page_status(modules_index, all_module_files)
+
+        if not full_rebuild and not status_manager.needs_regeneration_structural(
+            index_path, index_status
+        ):
+            existing = await status_manager.load_existing_page(index_path)
+            if existing is not None:
+                pages.insert(0, existing)
+                status_manager.record_summary_page_status(
+                    existing, all_module_files, index_status
+                )
+                pages_skipped += 1
+            else:
+                modules_index = WikiPage(
+                    path=index_path,
+                    title="Modules",
+                    content=_generate_modules_index(pages),
+                    generated_at=time.time(),
+                )
+                pages.insert(0, modules_index)
+                status_manager.record_summary_page_status(
+                    modules_index, all_module_files, index_status
+                )
+                pages_generated += 1
+        else:
+            modules_index = WikiPage(
+                path=index_path,
+                title="Modules",
+                content=_generate_modules_index(pages),
+                generated_at=time.time(),
+            )
+            pages.insert(0, modules_index)
+            status_manager.record_summary_page_status(
+                modules_index, all_module_files, index_status
+            )
+            pages_generated += 1
 
     return pages, pages_generated, pages_skipped
 

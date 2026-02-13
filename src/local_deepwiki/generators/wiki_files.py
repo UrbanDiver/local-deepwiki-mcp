@@ -579,14 +579,7 @@ def _generate_file_enrichments(
 
 async def generate_single_file_doc(
     file_info: FileInfo,
-    index_status: IndexStatus,
-    vector_store: VectorStore,
-    llm: LLMProvider,
-    system_prompt: str,
-    status_manager: "WikiStatusManager",
-    entity_registry: EntityRegistry,
-    config: Config,
-    full_rebuild: bool,
+    ctx: FileDocContext,
 ) -> tuple[WikiPage | None, bool]:
     """Generate documentation for a single source file.
 
@@ -600,14 +593,7 @@ async def generate_single_file_doc(
 
     Args:
         file_info: File status information.
-        index_status: Index status with repo information.
-        vector_store: Vector store with indexed code.
-        llm: LLM provider for generation.
-        system_prompt: System prompt for LLM.
-        status_manager: Wiki status manager for incremental updates.
-        entity_registry: Entity registry for cross-linking.
-        config: Configuration.
-        full_rebuild: If True, regenerate even if unchanged.
+        ctx: Bundled context with all generation dependencies.
 
     Returns:
         Tuple of (WikiPage or None, was_skipped).
@@ -616,7 +602,7 @@ async def generate_single_file_doc(
         Returns (page, False) if new page was generated.
     """
     file_path = Path(file_info.path)
-    repo_path = Path(index_status.repo_path)
+    repo_path = Path(ctx.index_status.repo_path)
 
     # Create nested path structure: files/module/filename.md
     parts = file_path.parts
@@ -628,22 +614,22 @@ async def generate_single_file_doc(
     source_files = [file_info.path]
 
     # Check if this file page needs regeneration
-    if not full_rebuild and not status_manager.needs_regeneration(
+    if not ctx.full_rebuild and not ctx.status_manager.needs_regeneration(
         wiki_path, source_files
     ):
-        existing_page = await status_manager.load_existing_page(wiki_path)
+        existing_page = await ctx.status_manager.load_existing_page(wiki_path)
         if existing_page is not None:
             # Still need to register entities for cross-linking
-            all_file_chunks = await vector_store.get_chunks_by_file(file_info.path)
-            entity_registry.register_from_chunks(all_file_chunks, wiki_path)
-            status_manager.record_page_status(existing_page, source_files)
+            all_file_chunks = await ctx.vector_store.get_chunks_by_file(file_info.path)
+            ctx.entity_registry.register_from_chunks(all_file_chunks, wiki_path)
+            ctx.status_manager.record_page_status(existing_page, source_files)
             return existing_page, True  # Skipped (reused existing)
 
     # Step 1: Gather file context (chunks, imports, related context)
     context_result = await _gather_file_context(
         file_info=file_info,
-        index_status=index_status,
-        vector_store=vector_store,
+        index_status=ctx.index_status,
+        vector_store=ctx.vector_store,
     )
 
     if context_result is None:
@@ -661,8 +647,8 @@ async def generate_single_file_doc(
     # Step 3: Generate and format the documentation
     content = await _generate_and_format_doc(
         prompt=prompt,
-        llm=llm,
-        system_prompt=system_prompt,
+        llm=ctx.llm,
+        system_prompt=ctx.system_prompt,
     )
 
     # Step 4: Generate enrichments (diagrams, call graphs, examples, blame)
@@ -681,7 +667,7 @@ async def generate_single_file_doc(
     content = _inject_inline_source_code(content, file_chunks, lang_str, repo_info)
 
     # Register entities for cross-linking
-    entity_registry.register_from_chunks(file_chunks, wiki_path)
+    ctx.entity_registry.register_from_chunks(file_chunks, wiki_path)
 
     page = WikiPage(
         path=wiki_path,
@@ -689,12 +675,30 @@ async def generate_single_file_doc(
         content=content,
         generated_at=time.time(),
     )
-    status_manager.record_page_status(page, source_files)
+    ctx.status_manager.record_page_status(page, source_files)
     return page, False  # Generated new
 
 
 # Type alias for async write callback
 WriteCallback = Callable[[WikiPage], Awaitable[None]]
+
+
+@dataclass(frozen=True)
+class FileDocContext:
+    """Bundled context for file documentation generation.
+
+    Groups the parameters shared between generate_file_docs and
+    generate_single_file_doc to reduce parameter counts.
+    """
+
+    index_status: IndexStatus
+    vector_store: VectorStore
+    llm: LLMProvider
+    system_prompt: str
+    status_manager: "WikiStatusManager"
+    entity_registry: EntityRegistry
+    config: Config
+    full_rebuild: bool = False
 
 
 def _is_test_file(path: str) -> bool:
@@ -810,8 +814,19 @@ async def generate_file_docs(
     if not significant_files:
         return [], 0, 0
 
-    # Use semaphore to limit concurrent LLM calls
-    max_concurrent = config.wiki.max_concurrent_llm_calls
+    ctx = FileDocContext(
+        index_status=index_status,
+        vector_store=vector_store,
+        llm=llm,
+        system_prompt=system_prompt,
+        status_manager=status_manager,
+        entity_registry=entity_registry,
+        config=config,
+        full_rebuild=full_rebuild,
+    )
+
+    # Use semaphore to limit concurrent LLM calls (provider-aware)
+    max_concurrent = config.effective_llm_concurrency
     semaphore = asyncio.Semaphore(max_concurrent)
     logger.info(
         f"Generating file docs for {len(significant_files)} files "
@@ -829,14 +844,7 @@ async def generate_file_docs(
             logger.debug("Generating doc for %s", file_info.path)
             page, was_skipped = await generate_single_file_doc(
                 file_info=file_info,
-                index_status=index_status,
-                vector_store=vector_store,
-                llm=llm,
-                system_prompt=system_prompt,
-                status_manager=status_manager,
-                entity_registry=entity_registry,
-                config=config,
-                full_rebuild=full_rebuild,
+                ctx=ctx,
             )
             return file_info, page, was_skipped
 

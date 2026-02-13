@@ -216,6 +216,7 @@ async def generate_freshness_and_finalize(
     pages_skipped: int,
     repo_path: Path,
     wiki_status: WikiGenerationStatus,
+    index_status: IndexStatus,
     status_manager: WikiStatusManager,
     write_callback: object,
     progress_callback: ProgressCallback | None,
@@ -229,6 +230,7 @@ async def generate_freshness_and_finalize(
         pages_skipped: Running count of skipped pages.
         repo_path: Path to the repository.
         wiki_status: Wiki generation status to update.
+        index_status: Index status for structural fingerprint.
         status_manager: Wiki status manager.
         write_callback: Async callback to write pages to disk.
         progress_callback: Optional progress callback.
@@ -243,7 +245,9 @@ async def generate_freshness_and_finalize(
         wiki_status=wiki_status,
         stale_threshold_days=0,
     )
-    status_manager.record_page_status(freshness_page, all_source_files)
+    status_manager.record_summary_page_status(
+        freshness_page, all_source_files, index_status
+    )
     await write_callback(freshness_page)
     pages_generated += 1
 

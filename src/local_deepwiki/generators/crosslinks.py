@@ -7,7 +7,6 @@ wiki pages when classes, functions, or other documented entities are mentioned.
 from __future__ import annotations
 
 import re
-from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -305,22 +304,54 @@ class CrossLinker:
         Returns:
             Content with cross-links added.
         """
-        # Get entities on the current page (to avoid self-links)
         current_page_entities = set(self.registry.get_page_entities(current_page))
 
+        # Build linkable lookup: name -> (display_text, rel_path)
+        entities = self.registry.get_all_entities()
+        aliases = self.registry.get_all_aliases()
+
+        linkable: dict[str, tuple[str, str]] = {}
+
+        for name, entity in entities.items():
+            if name in current_page_entities:
+                continue
+            rel_path = self._relative_path(current_page, entity.wiki_path)
+            linkable[name] = (name, rel_path)
+
+        for alias, canonical_name in aliases.items():
+            if canonical_name in current_page_entities:
+                continue
+            alias_entity = entities.get(canonical_name)
+            if not alias_entity:
+                continue
+            rel_path = self._relative_path(current_page, alias_entity.wiki_path)
+            linkable[alias] = (alias, rel_path)
+
+        if not linkable:
+            return content
+
+        # Pre-compile one combined regex per match type (longest-first alternation)
+        sorted_names = sorted(linkable.keys(), key=len, reverse=True)
+        alternation = "|".join(re.escape(n) for n in sorted_names)
+
+        backtick_re = re.compile(
+            rf"`(?:(?:[a-zA-Z_][a-zA-Z0-9_]*\.)+)?({alternation})`"
+        )
+        bold_re = re.compile(rf"\*\*({alternation})\*\*")
+        plain_re = re.compile(rf"\b({alternation})\b")
+
         # Split content into code blocks and non-code sections
-        # We only want to add links in non-code sections
         parts = self._split_by_code_blocks(content)
         processed_parts = []
 
         for part, is_code in parts:
             if is_code:
-                # Don't modify code blocks
                 processed_parts.append(part)
             else:
-                # Add links to prose sections
                 processed_parts.append(
-                    self._add_links_to_text(part, current_page, current_page_entities)
+                    self._add_links_to_text(
+                        part, linkable, backtick_re, bold_re, plain_re
+                    )
                 )
 
         return "".join(processed_parts)
@@ -359,171 +390,79 @@ class CrossLinker:
     def _add_links_to_text(
         self,
         text: str,
-        current_page: str,
-        current_page_entities: set[str],
+        linkable: dict[str, tuple[str, str]],
+        backtick_re: re.Pattern[str],
+        bold_re: re.Pattern[str],
+        plain_re: re.Pattern[str],
     ) -> str:
-        """Add links to a text section (not code).
+        """Add links to a text section (not code) using single-pass matching.
+
+        Instead of iterating per-entity with 8+ regex ops each, this uses one
+        pre-compiled alternation pattern per match type (backtick, bold, plain)
+        to process ALL entities in a single pass.
 
         Args:
             text: The text to process.
-            current_page: Path of the current page.
-            current_page_entities: Entities defined on the current page.
+            linkable: Map of name -> (display_text, rel_path).
+            backtick_re: Compiled pattern for backticked entity matches.
+            bold_re: Compiled pattern for bold entity matches.
+            plain_re: Compiled pattern for plain word-boundary matches.
 
         Returns:
             Text with links added.
         """
-        entities = self.registry.get_all_entities()
-        aliases = self.registry.get_all_aliases()
-
-        if not entities and not aliases:
-            return text
-
-        # Sort by name length (longest first) to avoid partial replacements
-        sorted_names = sorted(entities.keys(), key=len, reverse=True)
-
-        for name in sorted_names:
-            # Skip entities on the current page
-            if name in current_page_entities:
-                continue
-
-            entity = entities[name]
-
-            # Calculate relative path from current page to target
-            rel_path = self._relative_path(current_page, entity.wiki_path)
-
-            # Create the link
-            link = f"[{name}]({rel_path})"
-
-            # Replace mentions of the entity with links
-            # Use word boundaries to avoid partial matches
-            # Also avoid replacing inside existing links or inline code
-            text = self._replace_entity_mentions(text, name, link, rel_path)
-
-        # Also try to match aliases (spaced versions like "Vector Store")
-        # Sort by length (longest first)
-        sorted_aliases = sorted(aliases.keys(), key=len, reverse=True)
-
-        for alias in sorted_aliases:
-            canonical_name = aliases[alias]
-
-            # Skip if canonical entity is on current page
-            if canonical_name in current_page_entities:
-                continue
-
-            alias_entity = entities.get(canonical_name)
-            if not alias_entity:
-                continue
-
-            # Calculate relative path
-            rel_path = self._relative_path(current_page, alias_entity.wiki_path)
-
-            # Create link - use alias as display text
-            link = f"[{alias}]({rel_path})"
-
-            # Replace alias mentions
-            text = self._replace_entity_mentions(text, alias, link, rel_path)
-
-        return text
-
-    def _replace_entity_mentions(
-        self,
-        text: str,
-        entity_name: str,
-        link: str,
-        rel_path: str,
-    ) -> str:
-        """Replace entity mentions with links.
-
-        Args:
-            text: The text to process.
-            entity_name: The entity name to find.
-            link: The markdown link to insert.
-            rel_path: The relative path to the entity's wiki page.
-
-        Returns:
-            Text with entity mentions replaced.
-        """
-        # First, protect existing links and headings by replacing them temporarily
         protected: list[tuple[str, str]] = []
         counter = 0
 
-        def protect(match: re.Match) -> str:
+        def protect(match: re.Match[str]) -> str:
             nonlocal counter
             placeholder = f"\x00PROTECTED{counter}\x00"
             protected.append((placeholder, match.group(0)))
             counter += 1
             return placeholder
 
-        # Protect existing markdown links and headings
-        temp_text = re.sub(r"\[([^\]]+)\]\([^)]+\)", protect, text)
-        temp_text = re.sub(r"^(#{1,6}\s+.+)$", protect, temp_text, flags=re.MULTILINE)
+        # 1. Protect existing markdown links
+        text = re.sub(r"\[([^\]]+)\]\([^)]+\)", protect, text)
+        # 2. Protect headings
+        text = re.sub(r"^(#{1,6}\s+.+)$", protect, text, flags=re.MULTILINE)
 
-        # Convert backticked entity names to links: `EntityName` -> [`EntityName`](path)
-        # Also handle qualified names like `module.EntityName` -> [`EntityName`](path)
-        temp_text = self._link_backticked_entities(temp_text, entity_name, rel_path, protect)
+        # 3. Link backticked entities: `EntityName` or `module.EntityName`
+        def backtick_repl(match: re.Match[str]) -> str:
+            entity_name = match.group(1)
+            full_text = match.group(0)[1:-1]  # Strip surrounding backticks
+            _, rel_path = linkable[entity_name]
+            display = full_text if full_text != entity_name else entity_name
+            return f"[`{display}`]({rel_path})"
 
-        # Protect all remaining inline code (that didn't match entities)
-        temp_text = re.sub(r"`[^`]+`", protect, temp_text)
+        text = backtick_re.sub(backtick_repl, text)
 
-        # Replace bold entity mentions: **EntityName** -> **[EntityName](path)**
-        bold_pattern = rf"\*\*{re.escape(entity_name)}\*\*"
-        bold_link = f"**[{entity_name}]({rel_path})**"
-        temp_text = re.sub(bold_pattern, bold_link, temp_text)
-
-        # Protect links we just created to avoid double-linking
-        temp_text = re.sub(r"\[([^\]]+)\]\([^)]+\)", protect, temp_text)
-
-        # Also replace plain entity mentions (but not inside headings to avoid breaking them)
-        pattern = rf"\b{re.escape(entity_name)}\b"
-        temp_text = re.sub(pattern, link, temp_text)
-
-        # Restore protected content
-        for placeholder, original in protected:
-            temp_text = temp_text.replace(placeholder, original)
-
-        return temp_text
-
-    def _link_backticked_entities(
-        self,
-        text: str,
-        entity_name: str,
-        rel_path: str,
-        protect: Callable[[re.Match[str]], str],
-    ) -> str:
-        """Convert backticked entity names to links.
-
-        Handles:
-        - `EntityName` -> [`EntityName`](path)
-        - `module.EntityName` -> [`EntityName`](path)
-        - `module.submodule.EntityName` -> [`EntityName`](path)
-
-        Args:
-            text: The text to process.
-            entity_name: The entity name to find.
-            rel_path: The relative path to the entity's wiki page.
-            protect: Function to protect already-processed content.
-
-        Returns:
-            Text with backticked entities converted to links.
-        """
-        # Pattern for exact match: `EntityName`
-        exact_pattern = rf"`{re.escape(entity_name)}`"
-        exact_replacement = f"[`{entity_name}`]({rel_path})"
-        text = re.sub(exact_pattern, exact_replacement, text)
-
-        # Pattern for qualified names: `something.EntityName` or `a.b.EntityName`
-        # Captures the entity name at the end after a dot
-        qualified_pattern = rf"`([a-zA-Z_][a-zA-Z0-9_]*\.)+{re.escape(entity_name)}`"
-
-        def qualified_replacement(match: re.Match) -> str:
-            # Link just the entity name, showing full qualified name
-            full_name = match.group(0)[1:-1]  # Remove backticks
-            return f"[`{full_name}`]({rel_path})"
-
-        text = re.sub(qualified_pattern, qualified_replacement, text)
-
-        # Protect the links we just created
+        # 4. Protect backtick links we just created
         text = re.sub(r"\[`[^`]+`\]\([^)]+\)", protect, text)
+        # 5. Protect all remaining inline code
+        text = re.sub(r"`[^`]+`", protect, text)
+
+        # 6. Link bold entity mentions: **EntityName** -> **[EntityName](path)**
+        def bold_repl(match: re.Match[str]) -> str:
+            name = match.group(1)
+            display, rel_path = linkable[name]
+            return f"**[{display}]({rel_path})**"
+
+        text = bold_re.sub(bold_repl, text)
+
+        # 7. Protect links from bold step
+        text = re.sub(r"\[([^\]]+)\]\([^)]+\)", protect, text)
+
+        # 8. Link plain word-boundary mentions
+        def plain_repl(match: re.Match[str]) -> str:
+            name = match.group(1)
+            display, rel_path = linkable[name]
+            return f"[{display}]({rel_path})"
+
+        text = plain_re.sub(plain_repl, text)
+
+        # 9. Restore all protected content
+        for placeholder, original in protected:
+            text = text.replace(placeholder, original)
 
         return text
 

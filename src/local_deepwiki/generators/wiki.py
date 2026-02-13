@@ -159,7 +159,9 @@ class WikiGenerator:
     ) -> WikiStructure:
         """Generate wiki documentation for the indexed repository."""
         logger.info("Starting wiki generation for %s", index_status.repo_path)
-        logger.debug("Full rebuild: %s, Total files: %s", full_rebuild, index_status.total_files)
+        logger.debug(
+            "Full rebuild: %s, Total files: %s", full_rebuild, index_status.total_files
+        )
 
         # Emit WIKI_START event
         emitter = get_event_emitter()
@@ -191,7 +193,7 @@ class WikiGenerator:
         await self._generate_dependencies_page(ctx, index_status, progress_callback)
 
         # Phase 6: Generate changelog
-        await self._generate_changelog_page(ctx, progress_callback)
+        await self._generate_changelog_page(ctx, index_status, progress_callback)
 
         # Phase 7: Generate auxiliary pages (inheritance, glossary, coverage)
         await self._generate_auxiliary_pages(ctx, index_status, progress_callback)
@@ -210,7 +212,9 @@ class WikiGenerator:
 
         # Phase 10: Generate freshness report and finalize
         wiki_status = self._build_wiki_status(ctx, index_status)
-        await self._generate_freshness_and_finalize(ctx, wiki_status, progress_callback)
+        await self._generate_freshness_and_finalize(
+            ctx, wiki_status, index_status, progress_callback
+        )
 
         logger.info(
             f"Wiki generation complete: {ctx.pages_generated} pages generated, "
@@ -219,7 +223,9 @@ class WikiGenerator:
 
         # Log any generation warnings
         if ctx.warnings:
-            logger.warning("Wiki generation completed with %s warning(s)", len(ctx.warnings))
+            logger.warning(
+                "Wiki generation completed with %s warning(s)", len(ctx.warnings)
+            )
             for warning in ctx.warnings:
                 logger.warning("  - %s", warning)
                 self._progress._log(f"WARNING: {warning}")
@@ -340,11 +346,11 @@ class WikiGenerator:
         for page_path, label, step, gen_fn in pages_to_generate:
             if progress_callback:
                 progress_callback(label, step, 14)
-            page, generated = await self._generate_or_load_page(
+            page, generated = await self._generate_or_load_summary_page(
                 ctx=ctx,
                 page_path=page_path,
                 generator=gen_fn,
-                source_files=ctx.all_source_files,
+                index_status=index_status,
             )
             ctx.pages.append(page)
             if generated:
@@ -360,7 +366,9 @@ class WikiGenerator:
         source_files: list[str],
     ) -> tuple[WikiPage, bool]:
         """Generate a page or load from cache if unchanged."""
-        if ctx.full_rebuild or self.status_manager.needs_regeneration(page_path, source_files):
+        if ctx.full_rebuild or self.status_manager.needs_regeneration(
+            page_path, source_files
+        ):
             page = await generator()
             was_generated = True
         else:
@@ -388,13 +396,54 @@ class WikiGenerator:
 
         return page, was_generated
 
+    async def _generate_or_load_summary_page(
+        self,
+        ctx: _GenerationContext,
+        page_path: str,
+        generator: "Callable[[], Awaitable[WikiPage]]",
+        index_status: IndexStatus,
+    ) -> tuple[WikiPage, bool]:
+        """Generate a summary page or load from cache using structural fingerprint."""
+        if ctx.full_rebuild or self.status_manager.needs_regeneration_structural(
+            page_path, index_status
+        ):
+            page = await generator()
+            was_generated = True
+        else:
+            existing_page = await self.status_manager.load_existing_page(page_path)
+            if existing_page is None:
+                page = await generator()
+                was_generated = True
+            else:
+                page = existing_page
+                was_generated = False
+
+        self.status_manager.record_summary_page_status(
+            page, ctx.all_source_files, index_status
+        )
+        await self._write_page(page)
+
+        emitter = get_event_emitter()
+        await emitter.emit(
+            EventType.WIKI_PAGE_COMPLETE,
+            {
+                "page_path": page.path,
+                "page_title": page.title,
+                "was_generated": was_generated,
+            },
+        )
+
+        return page, was_generated
+
     async def _analyze_imports_for_relationships(self) -> None:
         """Collect import chunks for relationship analysis (See Also sections)."""
         import_results = await self.vector_store.search(
             "import require include",
             limit=self.config.wiki.import_search_limit,
         )
-        import_chunks = [r.chunk for r in import_results if r.chunk.chunk_type.value == "import"]
+        import_chunks = [
+            r.chunk for r in import_results if r.chunk.chunk_type.value == "import"
+        ]
         self.relationship_analyzer.analyze_chunks(import_chunks)
 
     async def _generate_module_pages(
@@ -470,12 +519,16 @@ class WikiGenerator:
         if ctx.full_rebuild or self.status_manager.needs_regeneration(
             deps_path, ctx.all_source_files
         ):
-            deps_page, deps_source_files = await self._generate_dependencies(index_status)
+            deps_page, deps_source_files = await self._generate_dependencies(
+                index_status
+            )
             ctx.pages_generated += 1
         else:
             existing_deps_page = await self.status_manager.load_existing_page(deps_path)
             if existing_deps_page is None:
-                deps_page, deps_source_files = await self._generate_dependencies(index_status)
+                deps_page, deps_source_files = await self._generate_dependencies(
+                    index_status
+                )
                 ctx.pages_generated += 1
             else:
                 deps_page = existing_deps_page
@@ -497,16 +550,36 @@ class WikiGenerator:
     async def _generate_changelog_page(
         self,
         ctx: _GenerationContext,
+        index_status: IndexStatus,
         progress_callback: ProgressCallback | None,
     ) -> None:
         """Generate changelog page from git history."""
         if progress_callback:
             progress_callback("Generating changelog", 5, 14)
 
+        page_path = "changelog.md"
+
+        if (
+            not ctx.full_rebuild
+            and not self.status_manager.needs_regeneration_structural(
+                page_path, index_status
+            )
+        ):
+            existing_page = await self.status_manager.load_existing_page(page_path)
+            if existing_page is not None:
+                ctx.pages.append(existing_page)
+                self.status_manager.record_summary_page_status(
+                    existing_page, ctx.all_source_files, index_status
+                )
+                ctx.pages_skipped += 1
+                return
+
         changelog_page = await self._generate_changelog()
         if changelog_page:
             ctx.pages.append(changelog_page)
-            self.status_manager.record_page_status(changelog_page, ctx.all_source_files)
+            self.status_manager.record_summary_page_status(
+                changelog_page, ctx.all_source_files, index_status
+            )
             await self._write_page(changelog_page)
             ctx.pages_generated += 1
 
@@ -516,13 +589,18 @@ class WikiGenerator:
         content: str | None,
         path: str,
         title: str,
+        index_status: IndexStatus,
     ) -> None:
         """Record and write an auxiliary page if content was generated."""
         if not content:
             return
-        page = WikiPage(path=path, title=title, content=content, generated_at=time.time())
+        page = WikiPage(
+            path=path, title=title, content=content, generated_at=time.time()
+        )
         ctx.pages.append(page)
-        self.status_manager.record_page_status(page, ctx.all_source_files)
+        self.status_manager.record_summary_page_status(
+            page, ctx.all_source_files, index_status
+        )
         await self._write_page(page)
         ctx.pages_generated += 1
 
@@ -535,12 +613,51 @@ class WikiGenerator:
         """Generate auxiliary pages: inheritance, glossary, coverage, dependency graph.
 
         All four pages are generated concurrently with ``asyncio.gather``
-        since they are independent of each other.
+        since they are independent of each other.  Uses structural
+        fingerprinting so content-only changes skip these pages.
         """
         import asyncio
 
         if progress_callback:
             progress_callback("Generating auxiliary pages", 6, 14)
+
+        aux_pages = [
+            ("inheritance.md", "Class Inheritance"),
+            ("glossary.md", "Glossary"),
+            ("coverage.md", "Documentation Coverage"),
+            ("dependency-graph.md", "Dependency Graph"),
+        ]
+
+        # If structure unchanged, try to load all auxiliary pages from disk
+        if (
+            not ctx.full_rebuild
+            and not self.status_manager.needs_regeneration_structural(
+                aux_pages[0][0], index_status
+            )
+        ):
+            all_loaded = True
+            for page_path, _title in aux_pages:
+                existing = await self.status_manager.load_existing_page(page_path)
+                if existing is not None:
+                    ctx.pages.append(existing)
+                    self.status_manager.record_summary_page_status(
+                        existing, ctx.all_source_files, index_status
+                    )
+                    ctx.pages_skipped += 1
+                else:
+                    all_loaded = False
+                    break
+            if all_loaded:
+                return
+
+            # Partial load failed — regenerate all; undo pages we added
+            loaded_paths = {
+                pp for pp, _ in aux_pages if pp in self.status_manager.page_statuses
+            }
+            ctx.pages = [p for p in ctx.pages if p.path not in loaded_paths]
+            for pp in loaded_paths:
+                self.status_manager.page_statuses.pop(pp, None)
+            ctx.pages_skipped -= len(loaded_paths)
 
         async def _safe_dependency_graph() -> str | None:
             """Wrapper that catches dependency graph errors."""
@@ -571,13 +688,21 @@ class WikiGenerator:
         )
 
         await self._add_auxiliary_page(
-            ctx, inheritance_content, "inheritance.md", "Class Inheritance"
+            ctx,
+            inheritance_content,
+            "inheritance.md",
+            "Class Inheritance",
+            index_status,
         )
-        await self._add_auxiliary_page(ctx, glossary_content, "glossary.md", "Glossary")
         await self._add_auxiliary_page(
-            ctx, coverage_content, "coverage.md", "Documentation Coverage"
+            ctx, glossary_content, "glossary.md", "Glossary", index_status
         )
-        await self._add_auxiliary_page(ctx, dep_content, "dependency-graph.md", "Dependency Graph")
+        await self._add_auxiliary_page(
+            ctx, coverage_content, "coverage.md", "Documentation Coverage", index_status
+        )
+        await self._add_auxiliary_page(
+            ctx, dep_content, "dependency-graph.md", "Dependency Graph", index_status
+        )
 
     def _sort_generators_by_dependencies(
         self,
@@ -615,7 +740,9 @@ class WikiGenerator:
         progress_callback: ProgressCallback | None,
     ) -> None:
         """Generate codemap pages for auto-discovered entry points."""
-        assert self._repo_path is not None, "Repository path must be set before generating codemaps"
+        assert self._repo_path is not None, (
+            "Repository path must be set before generating codemaps"
+        )
 
         (
             codemap_pages,
@@ -685,10 +812,13 @@ class WikiGenerator:
         self,
         ctx: _GenerationContext,
         wiki_status: WikiGenerationStatus,
+        index_status: IndexStatus,
         progress_callback: ProgressCallback | None,
     ) -> None:
         """Generate freshness report and finalize wiki status."""
-        assert self._repo_path is not None, "Repository path must be set before generating wiki"
+        assert self._repo_path is not None, (
+            "Repository path must be set before generating wiki"
+        )
         freshness_page, ctx.pages_generated = await generate_freshness_and_finalize(
             pages=ctx.pages,
             all_source_files=ctx.all_source_files,
@@ -696,6 +826,7 @@ class WikiGenerator:
             pages_skipped=ctx.pages_skipped,
             repo_path=self._repo_path,
             wiki_status=wiki_status,
+            index_status=index_status,
             status_manager=self.status_manager,
             write_callback=self._write_page,
             progress_callback=progress_callback,
@@ -724,7 +855,9 @@ class WikiGenerator:
             repo_path=self._repo_path,
         )
 
-    async def _generate_dependencies(self, index_status: IndexStatus) -> tuple[WikiPage, list[str]]:
+    async def _generate_dependencies(
+        self, index_status: IndexStatus
+    ) -> tuple[WikiPage, list[str]]:
         """Generate dependencies documentation with grounded facts from manifest."""
         return await generate_dependencies_page(
             index_status=index_status,
@@ -773,7 +906,9 @@ async def generate_wiki(
     if effective_provider is None and config.wiki.use_cloud_for_github:
         if is_github_repo(repo_path):
             effective_provider = config.wiki.github_llm_provider
-            logger.info("GitHub repo detected, using cloud provider: %s", effective_provider)
+            logger.info(
+                "GitHub repo detected, using cloud provider: %s", effective_provider
+            )
 
     generator = WikiGenerator(
         wiki_path=wiki_path,

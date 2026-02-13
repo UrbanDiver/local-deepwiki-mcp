@@ -13,6 +13,7 @@ from local_deepwiki.models import (
     WikiPage,
 )
 
+
 def make_index_status(
     repo_path: str,
     total_files: int = 0,
@@ -30,6 +31,7 @@ def make_index_status(
         files=files or [],
     )
 
+
 def make_file_info(
     path: str,
     hash: str = "abc123",
@@ -43,6 +45,7 @@ def make_file_info(
         size_bytes=100,
         last_modified=time.time(),
     )
+
 
 class TestGenerateWikiFunction:
     """Tests for the generate_wiki convenience function."""
@@ -195,6 +198,7 @@ class TestGenerateWikiFunction:
                     call_args.kwargs.get("full_rebuild") is True
                     or call_args.args[2] is True
                 )
+
 
 class TestIncrementalGeneration:
     """Tests for incremental wiki generation (not full_rebuild).
@@ -359,6 +363,11 @@ class TestIncrementalGeneration:
         # Set up previous status so pages are NOT regenerated
         from local_deepwiki.models import WikiGenerationStatus, WikiPageStatus
 
+        # Compute the structural fingerprint so summary pages are skipped
+        structural_fp = generator.status_manager.compute_structural_fingerprint(
+            index_status
+        )
+
         prev_status = WikiGenerationStatus(
             repo_path=str(tmp_path),
             generated_at=time.time(),
@@ -368,6 +377,7 @@ class TestIncrementalGeneration:
                     path="index.md",
                     source_files=["src/main.py"],
                     source_hashes={"src/main.py": "same_hash"},
+                    structural_fingerprint=structural_fp,
                     content_hash="abc",
                     generated_at=time.time(),
                 ),
@@ -375,6 +385,7 @@ class TestIncrementalGeneration:
                     path="architecture.md",
                     source_files=["src/main.py"],
                     source_hashes={"src/main.py": "same_hash"},
+                    structural_fingerprint=structural_fp,
                     content_hash="def",
                     generated_at=time.time(),
                 ),
@@ -605,6 +616,7 @@ class TestIncrementalGeneration:
         # Should generate since cache file doesn't exist
         assert was_generated is True
         assert "# Generated Content" in page.content
+
 
 class TestDependenciesIncrementalLogic:
     """Tests for dependencies page incremental logic (lines 433-448)."""

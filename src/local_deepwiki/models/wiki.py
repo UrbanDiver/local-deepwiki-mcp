@@ -90,6 +90,10 @@ class WikiPageStatus(BaseModel):
         default_factory=dict,
         description="Mapping of source file path to {start_line, end_line}",
     )
+    structural_fingerprint: str = Field(
+        default="",
+        description="Structural fingerprint for summary pages (empty for file-level pages)",
+    )
     content_hash: str = Field(description="Hash of the generated page content")
     generated_at: float = Field(description="Timestamp when page was generated")
 

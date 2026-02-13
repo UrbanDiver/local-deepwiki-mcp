@@ -145,7 +145,9 @@ class TestSecretDetectorScanContent:
 
         assert len(findings) >= 1
         # Check that GitHub token was found
-        github_findings = [f for f in findings if f.secret_type == SecretType.GITHUB_TOKEN]
+        github_findings = [
+            f for f in findings if f.secret_type == SecretType.GITHUB_TOKEN
+        ]
         assert len(github_findings) == 1
 
     def test_finds_private_key(self):
@@ -160,7 +162,9 @@ MIIEowIBAAKCAQEA1234...
         # May find both PRIVATE_KEY and SSH_KEY due to overlapping patterns
         assert len(findings) >= 1
         secret_types = [f.secret_type for f in findings]
-        assert SecretType.PRIVATE_KEY in secret_types or SecretType.SSH_KEY in secret_types
+        assert (
+            SecretType.PRIVATE_KEY in secret_types or SecretType.SSH_KEY in secret_types
+        )
 
     def test_finds_database_url(self):
         """Test detecting database URLs with credentials."""
@@ -318,7 +322,9 @@ class TestConfidenceScoring:
         findings = detector.scan_content(content, "auth.py")
 
         assert len(findings) >= 1
-        github_findings = [f for f in findings if f.secret_type == SecretType.GITHUB_TOKEN]
+        github_findings = [
+            f for f in findings if f.secret_type == SecretType.GITHUB_TOKEN
+        ]
         assert len(github_findings) == 1
         assert github_findings[0].confidence == 0.95
 
@@ -359,7 +365,9 @@ class TestRecommendations:
         findings = detector.scan_content(content, "config.py")
 
         assert len(findings) == 1
-        assert "IAM" in findings[0].recommendation or "AWS" in findings[0].recommendation
+        assert (
+            "IAM" in findings[0].recommendation or "AWS" in findings[0].recommendation
+        )
 
     def test_github_token_recommendation(self):
         """Test GitHub token has appropriate recommendation."""
@@ -371,9 +379,14 @@ class TestRecommendations:
         findings = detector.scan_content(content, "auth.py")
 
         assert len(findings) >= 1
-        github_findings = [f for f in findings if f.secret_type == SecretType.GITHUB_TOKEN]
+        github_findings = [
+            f for f in findings if f.secret_type == SecretType.GITHUB_TOKEN
+        ]
         assert len(github_findings) == 1
-        assert "GitHub" in github_findings[0].recommendation or "token" in github_findings[0].recommendation
+        assert (
+            "GitHub" in github_findings[0].recommendation
+            or "token" in github_findings[0].recommendation
+        )
 
     def test_private_key_recommendation(self):
         """Test private key has appropriate recommendation."""
@@ -385,7 +398,10 @@ class TestRecommendations:
         assert len(findings) >= 1
         for f in findings:
             if f.secret_type == SecretType.PRIVATE_KEY:
-                assert "private key" in f.recommendation.lower() or "rotate" in f.recommendation.lower()
+                assert (
+                    "private key" in f.recommendation.lower()
+                    or "rotate" in f.recommendation.lower()
+                )
 
     def test_all_secret_types_have_recommendations(self):
         """Test all secret types have non-empty recommendations."""
@@ -439,6 +455,23 @@ class TestShouldSkipFile:
         assert not _should_skip_file(Path("main.py"))
         assert not _should_skip_file(Path("src/app.js"))
         assert not _should_skip_file(Path("config.yaml"))
+
+    def test_skips_secret_detector_self(self):
+        """Test secret_detector.py is skipped (self-detection false positives)."""
+        assert _should_skip_file(Path("src/core/secret_detector.py"))
+        assert _should_skip_file(Path("secret_detector.py"))
+
+    def test_skips_documentation_files(self):
+        """Test markdown and rst files are skipped."""
+        assert _should_skip_file(Path("README.md"))
+        assert _should_skip_file(Path("docs/guide.md"))
+        assert _should_skip_file(Path("CHANGELOG.rst"))
+        # .txt files should NOT be skipped (may contain real config secrets)
+        assert not _should_skip_file(Path("config.txt"))
+
+    def test_skips_secret_detector_test(self):
+        """Test test_secret_detector.py is skipped (contains test patterns)."""
+        assert _should_skip_file(Path("tests/test_secret_detector.py"))
 
     def test_skips_build_directory(self, tmp_path):
         """Test build directories are skipped."""
@@ -582,7 +615,7 @@ class TestContextCreation:
         detector = SecretDetector()
         # Use padding that doesn't trigger false positive patterns
         prefix = "data = " + "v" * 93  # 100 chars total prefix
-        content = f'{prefix}AKIAWR5PROD9N7K2JLMN' + 'w' * 100
+        content = f"{prefix}AKIAWR5PROD9N7K2JLMN" + "w" * 100
 
         findings = detector.scan_content(content, "config.py")
 
@@ -642,7 +675,7 @@ class TestEdgeCases:
         # Use AWS keys in both files for consistent detection
         # Note: JSON with braces triggers false positive filter, so use a text file instead
         (tmp_path / "script.py").write_text('aws_cred = "AKIAWR5PROD9N7K2JLMN"')
-        (tmp_path / "config.txt").write_text('aws_cred = AKIA1234567890ABCDEF')
+        (tmp_path / "config.txt").write_text("aws_cred = AKIA1234567890ABCDEF")
         (tmp_path / "readme.md").write_text("# Readme\nNo secrets here")
 
         findings = scan_repository_for_secrets(tmp_path)

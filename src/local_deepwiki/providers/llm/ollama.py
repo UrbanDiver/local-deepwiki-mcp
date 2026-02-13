@@ -252,6 +252,7 @@ class OllamaProvider(LLMProvider):
                     "num_predict": max_tokens,
                     "temperature": temperature,
                 },
+                keep_alive="60m",
             )
 
             content = cast(str, response["message"]["content"])
@@ -308,6 +309,7 @@ class OllamaProvider(LLMProvider):
                     "num_predict": max_tokens,
                     "temperature": temperature,
                 },
+                keep_alive="60m",
                 stream=True,
             ):
                 if chunk["message"]["content"]:

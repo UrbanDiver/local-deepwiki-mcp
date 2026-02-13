@@ -402,6 +402,18 @@ def _should_skip_file(file_path: Path) -> bool:
     Returns:
         True if the file should be skipped.
     """
+    # Skip the secret detector itself (self-detection false positives)
+    if file_path.name == "secret_detector.py":
+        return True
+
+    # Skip documentation files (contain example key formats, not real secrets)
+    if file_path.suffix.lower() in {".md", ".rst"}:
+        return True
+
+    # Skip test files for secret detector (contain test patterns)
+    if file_path.name == "test_secret_detector.py":
+        return True
+
     # Binary and compiled file extensions to skip
     skip_extensions = {
         # Images
@@ -570,7 +582,9 @@ def scan_repository_for_secrets(repo_path: Path) -> dict[str, list[SecretFinding
                 findings_by_file[str(file_path)] = findings
 
         except (OSError, PermissionError) as e:
-            logger.debug("Could not read file for secret scanning: %s: %s", file_path, e)
+            logger.debug(
+                "Could not read file for secret scanning: %s: %s", file_path, e
+            )
             continue
 
     logger.debug(

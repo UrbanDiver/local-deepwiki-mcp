@@ -171,6 +171,8 @@ class ParsingConfig(BaseModel):
             ".nox/**",
             "coverage/**",
             ".coverage",
+            "coverage_html/**",
+            "coverage_openai_embeddings/**",
         ],
         description="Glob patterns to exclude",
     )
@@ -973,20 +975,21 @@ class Config(BaseModel):
     def effective_llm_concurrency(self) -> int:
         """Compute effective LLM concurrency based on provider.
 
-        Cloud providers may have rate limits, so we adjust concurrency
-        accordingly.
+        Local models (Ollama) run on a single GPU and benefit from limited
+        parallelism (2-3 concurrent requests). Cloud providers handle higher
+        concurrency but may have rate limits.
 
         Returns:
             Optimal LLM concurrency for the current provider.
         """
         base_concurrency = self.wiki.max_concurrent_llm_calls
 
-        # Local models can handle more concurrent requests
+        # Local models: single GPU, limit to 2-3 to avoid OOM/thrashing
         if self.llm.provider == "ollama":
-            return base_concurrency
+            return min(base_concurrency, 3)
 
-        # Cloud providers may have rate limits
-        return min(base_concurrency, 5)
+        # Cloud providers: allow higher concurrency, cap at configured limit
+        return base_concurrency
 
     def with_embedding_provider(self, provider: Literal["local", "openai"]) -> "Config":
         """Return a new Config with the embedding provider changed.

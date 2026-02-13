@@ -68,21 +68,14 @@ async def handle_index_repository(
     return await _handle_index_repository_impl(args, server)
 
 
-async def _handle_index_repository_impl(
-    args: dict[str, Any],
-    server: Any = None,
-) -> list[TextContent]:
-    """Internal implementation of index_repository with progress streaming and ETA."""
-    # RBAC check - behavior depends on controller mode (disabled/permissive/enforced)
-    controller = get_access_controller()
-    controller.require_permission(Permission.INDEX_WRITE)
+def _validate_and_build_config(
+    validated: IndexRepositoryArgs,
+) -> tuple[Path, Any, str | None, str | None]:
+    """Validate inputs and build configuration for indexing.
 
-    # Validate with Pydantic
-    try:
-        validated = IndexRepositoryArgs.model_validate(args)
-    except PydanticValidationError as e:
-        raise ValueError(str(e)) from e
-
+    Returns:
+        Tuple of (repo_path, config, llm_provider, embedding_provider).
+    """
     repo_path = Path(validated.repo_path).resolve()
 
     # Check repository access (allowlist/denylist)
@@ -90,25 +83,9 @@ async def _handle_index_repository_impl(
     repo_access.require_access(repo_path)
 
     # Validate input size limits (CWE-400 prevention)
-    total_size, file_count = await asyncio.to_thread(
-        validate_index_parameters, str(repo_path)
-    )
+    total_size, file_count = validate_index_parameters(str(repo_path))
     logger.info(
         f"Indexing repository: {repo_path} ({total_size:,} bytes, {file_count:,} files)"
-    )
-
-    # Get subject ID for audit logging
-    subject = controller.get_current_subject()
-    subject_id = subject.identifier if subject else "anonymous"
-
-    # Audit: Log index operation started
-    audit_logger = get_audit_logger()
-    start_time = time.time()
-    audit_logger.log_index_operation(
-        subject_id=subject_id,
-        repo_path=str(repo_path),
-        operation="started",
-        success=True,
     )
 
     if not repo_path.exists():
@@ -122,78 +99,69 @@ async def _handle_index_repository_impl(
             value=str(repo_path),
         )
 
-    # Use validated values
     languages = validate_languages_list(validated.languages)
     llm_provider = validated.llm_provider.value if validated.llm_provider else None
     embedding_provider = (
         validated.embedding_provider.value if validated.embedding_provider else None
     )
 
-    # Get config (immutable, create copy with any overrides)
+    # Build config with any overrides
     base_config = get_config()
     config_updates: dict = {}
 
-    # Override languages if specified
     if languages:
-        new_parsing = base_config.parsing.model_copy(update={"languages": languages})
-        config_updates["parsing"] = new_parsing
-
-    # Override use_cloud_for_github if specified
-    use_cloud_for_github = validated.use_cloud_for_github
-    if use_cloud_for_github is not None:
-        new_wiki = base_config.wiki.model_copy(
-            update={"use_cloud_for_github": use_cloud_for_github}
+        config_updates["parsing"] = base_config.parsing.model_copy(
+            update={"languages": languages}
         )
-        config_updates["wiki"] = new_wiki
 
-    # Create modified config or use base if no overrides
-    if config_updates:
-        config = base_config.model_copy(update=config_updates)
-    else:
-        config = base_config
+    if validated.use_cloud_for_github is not None:
+        config_updates["wiki"] = base_config.wiki.model_copy(
+            update={"use_cloud_for_github": validated.use_cloud_for_github}
+        )
 
-    # Initialize progress registry data path for persistence
+    config = (
+        base_config.model_copy(update=config_updates) if config_updates else base_config
+    )
+
+    return repo_path, config, llm_provider, embedding_provider
+
+
+async def _run_indexing_pipeline(
+    repo_path: Path,
+    config: Any,
+    llm_provider: str | None,
+    embedding_provider: str | None,
+    full_rebuild: bool,
+    server: Any,
+) -> tuple[Any, Any, Any, list[str], str]:
+    """Run the indexing and wiki generation pipeline with progress tracking.
+
+    Returns:
+        Tuple of (indexer, status, wiki_structure, progress_messages, operation_id).
+    """
     registry = get_progress_registry()
     wiki_path = config.get_wiki_path(repo_path)
     progress_data_path = wiki_path / "progress_history.json"
     registry.set_data_path(progress_data_path)
 
-    # Create progress notifier with ETA support
     notifier, operation_id = create_progress_notifier(
         operation_type=OperationType.INDEX_REPOSITORY,
         server=server,
-        total=6,  # Total steps: scan, parse, embed, store, generate wiki, complete
+        total=6,
     )
 
-    # Create indexer
     indexer = RepositoryIndexer(
         repo_path=repo_path,
         config=config,
         embedding_provider_name=embedding_provider,
     )
 
-    # Index the repository
-    full_rebuild = validated.full_rebuild
-
-    # Track indexing state for backward compatibility
-    indexing_state = {
-        "files_processed": 0,
-        "total_files": 0,
-        "chunks_created": 0,
-        "pages_generated": 0,
-    }
-
-    # Capture all progress messages for backward compatibility
     progress_messages: list[str] = []
 
     def sync_progress_callback(msg: str, current: int, total: int) -> None:
-        """Sync callback for indexer - updates state for next async notification."""
-        indexing_state["files_processed"] = current
-        indexing_state["total_files"] = total
         progress_messages.append(f"[{current}/{total}] {msg}")
 
     try:
-        # Step 1: Started
         if notifier:
             await notifier.update(
                 current=1,
@@ -207,7 +175,6 @@ async def _handle_index_repository_impl(
                 },
             )
 
-        # Step 2-4: Index repository (parsing, embedding, storing)
         if notifier:
             await notifier.update(
                 current=2,
@@ -219,8 +186,6 @@ async def _handle_index_repository_impl(
             full_rebuild=full_rebuild,
             progress_callback=sync_progress_callback,
         )
-
-        indexing_state["chunks_created"] = status.total_chunks
 
         if notifier:
             await notifier.update(
@@ -234,7 +199,6 @@ async def _handle_index_repository_impl(
                 },
             )
 
-        # Step 5: Generate wiki documentation
         if notifier:
             await notifier.update(
                 current=5,
@@ -253,9 +217,6 @@ async def _handle_index_repository_impl(
             full_rebuild=full_rebuild,
         )
 
-        indexing_state["pages_generated"] = len(wiki_structure.pages)
-
-        # Step 6: Complete
         if notifier:
             await notifier.update(
                 current=6,
@@ -270,14 +231,61 @@ async def _handle_index_repository_impl(
             )
             await notifier.flush()
 
-        # Complete operation in registry (records timing for future ETA predictions)
         registry.complete_operation(operation_id, record_timing=True)
 
-    except Exception as e:
-        # Clean up operation on error
+    except Exception:
         registry.complete_operation(operation_id, record_timing=False)
+        raise
 
-        # Audit: Log index operation failed
+    all_messages = (notifier.messages if notifier else []) + progress_messages
+    return indexer, status, wiki_structure, all_messages, operation_id
+
+
+async def _handle_index_repository_impl(
+    args: dict[str, Any],
+    server: Any = None,
+) -> list[TextContent]:
+    """Internal implementation of index_repository with progress streaming and ETA."""
+    controller = get_access_controller()
+    controller.require_permission(Permission.INDEX_WRITE)
+
+    try:
+        validated = IndexRepositoryArgs.model_validate(args)
+    except PydanticValidationError as e:
+        raise ValueError(str(e)) from e
+
+    subject = controller.get_current_subject()
+    subject_id = subject.identifier if subject else "anonymous"
+
+    audit_logger = get_audit_logger()
+    start_time = time.time()
+    audit_logger.log_index_operation(
+        subject_id=subject_id,
+        repo_path=validated.repo_path,
+        operation="started",
+        success=True,
+    )
+
+    repo_path, config, llm_provider, embedding_provider = await asyncio.to_thread(
+        _validate_and_build_config, validated
+    )
+
+    try:
+        (
+            indexer,
+            status,
+            wiki_structure,
+            all_messages,
+            operation_id,
+        ) = await _run_indexing_pipeline(
+            repo_path=repo_path,
+            config=config,
+            llm_provider=llm_provider,
+            embedding_provider=embedding_provider,
+            full_rebuild=validated.full_rebuild,
+            server=server,
+        )
+    except Exception as e:
         duration_ms = int((time.time() - start_time) * 1000)
         audit_logger.log_index_operation(
             subject_id=subject_id,
@@ -289,7 +297,6 @@ async def _handle_index_repository_impl(
         )
         raise
 
-    # Audit: Log index operation completed
     duration_ms = int((time.time() - start_time) * 1000)
     audit_logger.log_index_operation(
         subject_id=subject_id,
@@ -301,9 +308,6 @@ async def _handle_index_repository_impl(
         duration_ms=duration_ms,
     )
 
-    # Build result with ETA information
-    # Combine notifier messages with sync callback messages for full history
-    all_messages = (notifier.messages if notifier else []) + progress_messages
     result = {
         "status": "success",
         "repo_path": str(repo_path),
@@ -317,7 +321,8 @@ async def _handle_index_repository_impl(
     }
 
     logger.info(
-        f"Indexing complete: {status.total_files} files, {status.total_chunks} chunks, {len(wiki_structure.pages)} wiki pages"
+        f"Indexing complete: {status.total_files} files, {status.total_chunks} chunks, "
+        f"{len(wiki_structure.pages)} wiki pages"
     )
     return [TextContent(type="text", text=json.dumps(result, indent=2))]
 

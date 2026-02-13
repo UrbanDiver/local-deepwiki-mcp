@@ -83,7 +83,9 @@ class TestConfig:
         config = Config()
 
         assert config.wiki.max_file_docs == 500  # Increased for larger repos
-        assert config.wiki.max_concurrent_llm_calls == 8  # Increased for faster generation
+        assert (
+            config.wiki.max_concurrent_llm_calls == 8
+        )  # Increased for faster generation
         assert config.wiki.use_cloud_for_github is False
         assert config.wiki.github_llm_provider == "anthropic"
         assert config.wiki.chat_llm_provider == "default"
@@ -138,7 +140,9 @@ class TestConfig:
 
     def test_ast_cache_config_custom(self):
         """Test AST cache with custom configuration."""
-        config = Config(ast_cache={"enabled": False, "max_entries": 500, "ttl_seconds": 1800})
+        config = Config(
+            ast_cache={"enabled": False, "max_entries": 500, "ttl_seconds": 1800}
+        )
 
         assert config.ast_cache.enabled is False
         assert config.ast_cache.max_entries == 500
@@ -243,7 +247,9 @@ class TestThreadSafeConfig:
         def modify_config(value: int):
             try:
                 # Config classes are frozen, so we use model_copy to create modified versions
-                new_chunking = ChunkingConfig().model_copy(update={"max_chunk_tokens": value})
+                new_chunking = ChunkingConfig().model_copy(
+                    update={"max_chunk_tokens": value}
+                )
                 new_config = Config().model_copy(update={"chunking": new_chunking})
                 set_config(new_config)
                 # Read back
@@ -589,7 +595,9 @@ class TestComputedFields:
         assert config.embedding.provider == "local"
         # Local providers can use up to 200
         assert config.effective_embedding_batch_size <= 200
-        assert config.effective_embedding_batch_size <= config.embedding_batch.batch_size
+        assert (
+            config.effective_embedding_batch_size <= config.embedding_batch.batch_size
+        )
 
     def test_effective_embedding_batch_size_openai(self):
         """Test effective_embedding_batch_size for OpenAI provider."""
@@ -607,17 +615,17 @@ class TestComputedFields:
         assert config.effective_max_workers >= 1
 
     def test_effective_llm_concurrency_ollama(self):
-        """Test effective_llm_concurrency for local provider."""
+        """Test effective_llm_concurrency caps local models at 3."""
         config = Config()  # Default is ollama
         assert config.llm.provider == "ollama"
-        # Local models get full concurrency
-        assert config.effective_llm_concurrency == config.wiki.max_concurrent_llm_calls
+        # Local models capped at 3 (single GPU, avoid OOM)
+        assert config.effective_llm_concurrency <= 3
 
     def test_effective_llm_concurrency_cloud(self):
-        """Test effective_llm_concurrency for cloud providers."""
+        """Test effective_llm_concurrency allows full concurrency for cloud."""
         config = Config().with_llm_provider("anthropic")
-        # Cloud providers are capped at 5
-        assert config.effective_llm_concurrency <= 5
+        # Cloud providers get full configured concurrency
+        assert config.effective_llm_concurrency == config.wiki.max_concurrent_llm_calls
 
 
 class TestValidationHooks:
@@ -644,9 +652,7 @@ class TestValidationHooks:
 
         # Valid configuration
         config = Config(wiki={"context_search_limit": 50, "fallback_search_limit": 30})
-        assert (
-            config.wiki.fallback_search_limit <= config.wiki.context_search_limit
-        )
+        assert config.wiki.fallback_search_limit <= config.wiki.context_search_limit
 
         # Invalid configuration
         with pytest.raises(ValidationError):

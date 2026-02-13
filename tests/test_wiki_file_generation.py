@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from local_deepwiki.generators.wiki_files import (
+    FileDocContext,
     _create_source_details,
     _generate_files_index,
     _inject_inline_source_code,
@@ -22,6 +23,7 @@ from local_deepwiki.models import (
     SearchResult,
     WikiPage,
 )
+
 
 def make_index_status(
     repo_path: str,
@@ -40,6 +42,7 @@ def make_index_status(
         files=files or [],
     )
 
+
 def make_file_info(
     path: str,
     hash: str = "abc123",
@@ -55,6 +58,7 @@ def make_file_info(
         last_modified=time.time(),
         chunk_count=chunk_count,
     )
+
 
 def make_code_chunk(
     file_path: str = "src/test.py",
@@ -79,6 +83,7 @@ def make_code_chunk(
         parent_name=parent_name,
     )
 
+
 def make_search_result(
     chunk: CodeChunk | None = None,
     score: float = 0.9,
@@ -92,6 +97,7 @@ def make_search_result(
         highlights=[],
     )
 
+
 class TestGenerateSingleFileDoc:
     """Tests for generate_single_file_doc function."""
 
@@ -99,7 +105,9 @@ class TestGenerateSingleFileDoc:
     def mock_llm(self):
         """Create a mock LLM provider."""
         mock = MagicMock()
-        mock.generate = AsyncMock(return_value="## File Overview\n\nTest file documentation.")
+        mock.generate = AsyncMock(
+            return_value="## File Overview\n\nTest file documentation."
+        )
         return mock
 
     @pytest.fixture
@@ -152,14 +160,16 @@ class TestGenerateSingleFileDoc:
 
         page, was_skipped = await generate_single_file_doc(
             file_info=file_info,
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="System prompt",
-            status_manager=mock_status_manager,
-            entity_registry=mock_entity_registry,
-            config=mock_config,
-            full_rebuild=True,
+            ctx=FileDocContext(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="System prompt",
+                status_manager=mock_status_manager,
+                entity_registry=mock_entity_registry,
+                config=mock_config,
+                full_rebuild=True,
+            ),
         )
 
         assert page is None
@@ -186,14 +196,16 @@ class TestGenerateSingleFileDoc:
 
         page, was_skipped = await generate_single_file_doc(
             file_info=file_info,
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="System prompt",
-            status_manager=mock_status_manager,
-            entity_registry=mock_entity_registry,
-            config=mock_config,
-            full_rebuild=True,
+            ctx=FileDocContext(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="System prompt",
+                status_manager=mock_status_manager,
+                entity_registry=mock_entity_registry,
+                config=mock_config,
+                full_rebuild=True,
+            ),
         )
 
         assert page is not None
@@ -220,14 +232,16 @@ class TestGenerateSingleFileDoc:
 
         page, _was_skipped = await generate_single_file_doc(
             file_info=file_info,
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="System prompt",
-            status_manager=mock_status_manager,
-            entity_registry=mock_entity_registry,
-            config=mock_config,
-            full_rebuild=True,
+            ctx=FileDocContext(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="System prompt",
+                status_manager=mock_status_manager,
+                entity_registry=mock_entity_registry,
+                config=mock_config,
+                full_rebuild=True,
+            ),
         )
 
         assert page.path == "files/src/core/parser.md"
@@ -257,14 +271,16 @@ class TestGenerateSingleFileDoc:
 
         page, was_skipped = await generate_single_file_doc(
             file_info=file_info,
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="System prompt",
-            status_manager=mock_status_manager,
-            entity_registry=mock_entity_registry,
-            config=mock_config,
-            full_rebuild=False,
+            ctx=FileDocContext(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="System prompt",
+                status_manager=mock_status_manager,
+                entity_registry=mock_entity_registry,
+                config=mock_config,
+                full_rebuild=False,
+            ),
         )
 
         assert page == existing_page
@@ -291,14 +307,16 @@ class TestGenerateSingleFileDoc:
 
         page, was_skipped = await generate_single_file_doc(
             file_info=file_info,
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="System prompt",
-            status_manager=mock_status_manager,
-            entity_registry=mock_entity_registry,
-            config=mock_config,
-            full_rebuild=True,  # Full rebuild
+            ctx=FileDocContext(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="System prompt",
+                status_manager=mock_status_manager,
+                entity_registry=mock_entity_registry,
+                config=mock_config,
+                full_rebuild=True,
+            ),
         )
 
         assert page is not None
@@ -324,14 +342,16 @@ class TestGenerateSingleFileDoc:
 
         page, _was_skipped = await generate_single_file_doc(
             file_info=file_info,
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="System prompt",
-            status_manager=mock_status_manager,
-            entity_registry=mock_entity_registry,
-            config=mock_config,
-            full_rebuild=True,
+            ctx=FileDocContext(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="System prompt",
+                status_manager=mock_status_manager,
+                entity_registry=mock_entity_registry,
+                config=mock_config,
+                full_rebuild=True,
+            ),
         )
 
         assert page is not None
@@ -360,14 +380,16 @@ class TestGenerateSingleFileDoc:
 
         await generate_single_file_doc(
             file_info=file_info,
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="System prompt",
-            status_manager=mock_status_manager,
-            entity_registry=mock_entity_registry,
-            config=mock_config,
-            full_rebuild=True,
+            ctx=FileDocContext(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="System prompt",
+                status_manager=mock_status_manager,
+                entity_registry=mock_entity_registry,
+                config=mock_config,
+                full_rebuild=True,
+            ),
         )
 
         mock_entity_registry.register_from_chunks.assert_called()
@@ -382,26 +404,32 @@ class TestGenerateSingleFileDoc:
         tmp_path,
     ):
         """Test adds class diagram for files with classes."""
-        chunk = make_code_chunk(file_path="src/models.py", name="User", chunk_type=ChunkType.CLASS)
+        chunk = make_code_chunk(
+            file_path="src/models.py", name="User", chunk_type=ChunkType.CLASS
+        )
         mock_vector_store.search = AsyncMock(return_value=[make_search_result(chunk)])
         mock_vector_store.get_chunks_by_file = AsyncMock(return_value=[chunk])
 
         file_info = make_file_info(path="src/models.py")
         index_status = make_index_status(repo_path=str(tmp_path))
 
-        with patch("local_deepwiki.generators.wiki_files.generate_class_diagram") as mock_diagram:
+        with patch(
+            "local_deepwiki.generators.wiki_files.generate_class_diagram"
+        ) as mock_diagram:
             mock_diagram.return_value = "```mermaid\nclassDiagram\n```"
 
             page, _was_skipped = await generate_single_file_doc(
                 file_info=file_info,
-                index_status=index_status,
-                vector_store=mock_vector_store,
-                llm=mock_llm,
-                system_prompt="System prompt",
-                status_manager=mock_status_manager,
-                entity_registry=mock_entity_registry,
-                config=mock_config,
-                full_rebuild=True,
+                ctx=FileDocContext(
+                    index_status=index_status,
+                    vector_store=mock_vector_store,
+                    llm=mock_llm,
+                    system_prompt="System prompt",
+                    status_manager=mock_status_manager,
+                    entity_registry=mock_entity_registry,
+                    config=mock_config,
+                    full_rebuild=True,
+                ),
             )
 
             assert "Class Diagram" in page.content
@@ -426,19 +454,23 @@ class TestGenerateSingleFileDoc:
         file_info = make_file_info(path="main.py")
         index_status = make_index_status(repo_path=str(tmp_path))
 
-        with patch("local_deepwiki.generators.wiki_files.get_file_api_docs") as mock_api:
+        with patch(
+            "local_deepwiki.generators.wiki_files.get_file_api_docs"
+        ) as mock_api:
             mock_api.return_value = "### run()\n\nExecutes the main function."
 
             page, _was_skipped = await generate_single_file_doc(
                 file_info=file_info,
-                index_status=index_status,
-                vector_store=mock_vector_store,
-                llm=mock_llm,
-                system_prompt="System prompt",
-                status_manager=mock_status_manager,
-                entity_registry=mock_entity_registry,
-                config=mock_config,
-                full_rebuild=True,
+                ctx=FileDocContext(
+                    index_status=index_status,
+                    vector_store=mock_vector_store,
+                    llm=mock_llm,
+                    system_prompt="System prompt",
+                    status_manager=mock_status_manager,
+                    entity_registry=mock_entity_registry,
+                    config=mock_config,
+                    full_rebuild=True,
+                ),
             )
 
             assert "API Reference" in page.content
@@ -463,19 +495,23 @@ class TestGenerateSingleFileDoc:
         file_info = make_file_info(path="src/main.py")
         index_status = make_index_status(repo_path=str(tmp_path))
 
-        with patch("local_deepwiki.generators.wiki_files.generate_class_diagram") as mock_diagram:
+        with patch(
+            "local_deepwiki.generators.wiki_files.generate_class_diagram"
+        ) as mock_diagram:
             mock_diagram.return_value = ""  # No auto-generated diagram
 
             page, _was_skipped = await generate_single_file_doc(
                 file_info=file_info,
-                index_status=index_status,
-                vector_store=mock_vector_store,
-                llm=mock_llm,
-                system_prompt="System prompt",
-                status_manager=mock_status_manager,
-                entity_registry=mock_entity_registry,
-                config=mock_config,
-                full_rebuild=True,
+                ctx=FileDocContext(
+                    index_status=index_status,
+                    vector_store=mock_vector_store,
+                    llm=mock_llm,
+                    system_prompt="System prompt",
+                    status_manager=mock_status_manager,
+                    entity_registry=mock_entity_registry,
+                    config=mock_config,
+                    full_rebuild=True,
+                ),
             )
 
             # LLM diagram should be stripped, so just one Class Diagram section if auto-generated
@@ -501,14 +537,16 @@ class TestGenerateSingleFileDoc:
 
         page, _was_skipped = await generate_single_file_doc(
             file_info=file_info,
-            index_status=index_status,
-            vector_store=mock_vector_store,
-            llm=mock_llm,
-            system_prompt="System prompt",
-            status_manager=mock_status_manager,
-            entity_registry=mock_entity_registry,
-            config=mock_config,
-            full_rebuild=True,
+            ctx=FileDocContext(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="System prompt",
+                status_manager=mock_status_manager,
+                entity_registry=mock_entity_registry,
+                config=mock_config,
+                full_rebuild=True,
+            ),
         )
 
         assert page.path == "files/setup.md"
@@ -533,19 +571,23 @@ class TestGenerateSingleFileDoc:
         file_info = make_file_info(path="main.py")
         index_status = make_index_status(repo_path=str(tmp_path))
 
-        with patch("local_deepwiki.generators.wiki_files.get_file_call_graph") as mock_graph:
+        with patch(
+            "local_deepwiki.generators.wiki_files.get_file_call_graph"
+        ) as mock_graph:
             mock_graph.return_value = "graph TD\n  A --> B"
 
             page, _was_skipped = await generate_single_file_doc(
                 file_info=file_info,
-                index_status=index_status,
-                vector_store=mock_vector_store,
-                llm=mock_llm,
-                system_prompt="System prompt",
-                status_manager=mock_status_manager,
-                entity_registry=mock_entity_registry,
-                config=mock_config,
-                full_rebuild=True,
+                ctx=FileDocContext(
+                    index_status=index_status,
+                    vector_store=mock_vector_store,
+                    llm=mock_llm,
+                    system_prompt="System prompt",
+                    status_manager=mock_status_manager,
+                    entity_registry=mock_entity_registry,
+                    config=mock_config,
+                    full_rebuild=True,
+                ),
             )
 
             assert "Call Graph" in page.content
@@ -571,22 +613,27 @@ class TestGenerateSingleFileDoc:
         file_info = make_file_info(path="main.py")
         index_status = make_index_status(repo_path=str(tmp_path))
 
-        with patch("local_deepwiki.generators.wiki_files.get_file_examples") as mock_examples:
+        with patch(
+            "local_deepwiki.generators.wiki_files.get_file_examples"
+        ) as mock_examples:
             mock_examples.return_value = "## Test Examples\n\n```python\ntest code\n```"
 
             page, _was_skipped = await generate_single_file_doc(
                 file_info=file_info,
-                index_status=index_status,
-                vector_store=mock_vector_store,
-                llm=mock_llm,
-                system_prompt="System prompt",
-                status_manager=mock_status_manager,
-                entity_registry=mock_entity_registry,
-                config=mock_config,
-                full_rebuild=True,
+                ctx=FileDocContext(
+                    index_status=index_status,
+                    vector_store=mock_vector_store,
+                    llm=mock_llm,
+                    system_prompt="System prompt",
+                    status_manager=mock_status_manager,
+                    entity_registry=mock_entity_registry,
+                    config=mock_config,
+                    full_rebuild=True,
+                ),
             )
 
             assert "Test Examples" in page.content
+
 
 class TestGenerateFileDocs:
     """Tests for generate_file_docs function."""
@@ -631,6 +678,7 @@ class TestGenerateFileDocs:
         mock.wiki.fallback_search_limit = 10
         mock.wiki.max_file_docs = 50
         mock.wiki.max_concurrent_llm_calls = 3
+        mock.effective_llm_concurrency = 3
         return mock
 
     async def test_returns_empty_for_no_files(
@@ -794,7 +842,9 @@ class TestGenerateFileDocs:
         mock_vector_store.get_chunks_by_file = AsyncMock(return_value=[chunk])
 
         # Create many files
-        files = [make_file_info(path=f"src/file{i}.py", chunk_count=5) for i in range(10)]
+        files = [
+            make_file_info(path=f"src/file{i}.py", chunk_count=5) for i in range(10)
+        ]
         index_status = make_index_status(repo_path=str(tmp_path), files=files)
 
         pages, _generated, _skipped = await generate_file_docs(
@@ -875,7 +925,9 @@ class TestGenerateFileDocs:
             return []
 
         mock_vector_store.search = AsyncMock(side_effect=search_side_effect)
-        mock_vector_store.get_chunks_by_file = AsyncMock(side_effect=get_chunks_side_effect)
+        mock_vector_store.get_chunks_by_file = AsyncMock(
+            side_effect=get_chunks_side_effect
+        )
 
         # Make LLM raise an error on second call
         call_count = 0

@@ -48,8 +48,10 @@ class TestGenerateModuleDocs:
         """Create a mock WikiStatusManager."""
         mock = MagicMock()
         mock.needs_regeneration = MagicMock(return_value=True)
+        mock.needs_regeneration_structural = MagicMock(return_value=True)
         mock.load_existing_page = AsyncMock(return_value=None)
         mock.record_page_status = MagicMock()
+        mock.record_summary_page_status = MagicMock()
         return mock
 
     async def test_returns_empty_for_no_files(
@@ -123,7 +125,7 @@ class TestGenerateModuleDocs:
 
         # Should generate module index + src module page
         assert len(pages) == 2
-        assert generated == 1  # One module page generated
+        assert generated == 2  # One module page + modules index generated
         assert any(p.path == "modules/src.md" for p in pages)
 
     async def test_handles_root_level_files(
@@ -196,13 +198,30 @@ class TestGenerateModuleDocs:
         """Test skips regeneration of unchanged pages."""
         # Configure status manager to indicate no regeneration needed
         mock_status_manager.needs_regeneration = MagicMock(return_value=False)
+        mock_status_manager.needs_regeneration_structural = MagicMock(
+            return_value=False
+        )
         existing_page = WikiPage(
             path="modules/src.md",
             title="Module: src",
             content="# Existing content",
             generated_at=time.time(),
         )
-        mock_status_manager.load_existing_page = AsyncMock(return_value=existing_page)
+        existing_index = WikiPage(
+            path="modules/index.md",
+            title="Modules",
+            content="# Modules",
+            generated_at=time.time(),
+        )
+
+        async def _load_existing(page_path):
+            if page_path == "modules/src.md":
+                return existing_page
+            if page_path == "modules/index.md":
+                return existing_index
+            return None
+
+        mock_status_manager.load_existing_page = AsyncMock(side_effect=_load_existing)
 
         index_status = make_index_status(
             repo_path=str(tmp_path),
@@ -222,7 +241,7 @@ class TestGenerateModuleDocs:
         )
 
         assert generated == 0
-        assert skipped == 1
+        assert skipped == 2  # module page + modules index both skipped
         # LLM should not have been called
         mock_llm.generate.assert_not_called()
 
@@ -252,7 +271,7 @@ class TestGenerateModuleDocs:
             full_rebuild=True,  # Full rebuild
         )
 
-        assert generated == 1
+        assert generated == 2  # module page + modules index
         assert skipped == 0
         mock_llm.generate.assert_called()
 
@@ -359,7 +378,7 @@ class TestGenerateModuleDocs:
 
         # Should have index + 2 module pages
         assert len(pages) == 3
-        assert generated == 2
+        assert generated == 3  # 2 module pages + modules index
         module_paths = [p.path for p in pages]
         assert "modules/index.md" in module_paths
         assert "modules/src.md" in module_paths
@@ -389,8 +408,9 @@ class TestGenerateModuleDocs:
             full_rebuild=True,
         )
 
-        # Should have called record_page_status for module page and index
-        assert mock_status_manager.record_page_status.call_count >= 2
+        # record_page_status called for module page, record_summary_page_status for index
+        assert mock_status_manager.record_page_status.call_count >= 1
+        assert mock_status_manager.record_summary_page_status.call_count >= 1
 
     async def test_handles_many_files_in_prompt(
         self, mock_llm, mock_vector_store, mock_status_manager, tmp_path

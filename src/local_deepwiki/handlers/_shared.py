@@ -168,6 +168,30 @@ def _is_test_file(file_path: str) -> bool:
     return False
 
 
+def _check_forbidden_dirs(
+    resolved_str: str,
+    dirs: frozenset[str],
+    output_path: Path,
+    label: str = "system directory",
+) -> None:
+    """Raise ValidationError if resolved_str is inside any forbidden directory.
+
+    Args:
+        resolved_str: Resolved absolute path as string.
+        dirs: Set of forbidden directory paths.
+        output_path: Original output path (for error context).
+        label: Label for error messages (e.g., "system directory").
+    """
+    for forbidden in dirs:
+        if resolved_str == forbidden or resolved_str.startswith(forbidden + "/"):
+            raise ValidationError(
+                message=f"Cannot export to {label}: {forbidden}",
+                hint="Choose an output path in your project or home directory.",
+                field="output_path",
+                value=str(output_path),
+            )
+
+
 def _validate_export_path(output_path: Path, wiki_path: Path) -> Path:
     """Validate that export output path is not in a sensitive system directory.
 
@@ -184,25 +208,10 @@ def _validate_export_path(output_path: Path, wiki_path: Path) -> Path:
     resolved = output_path.resolve()
     resolved_str = str(resolved)
 
-    # Check against forbidden directories
-    for forbidden in FORBIDDEN_EXPORT_DIRS:
-        if resolved_str == forbidden or resolved_str.startswith(forbidden + "/"):
-            raise ValidationError(
-                message=f"Cannot export to system directory: {forbidden}",
-                hint="Choose an output path in your project or home directory.",
-                field="output_path",
-                value=str(output_path),
-            )
-
-    # Check against forbidden /var subdirectories (but allow /var/folders, /var/tmp for temp files)
-    for forbidden in FORBIDDEN_VAR_SUBDIRS:
-        if resolved_str == forbidden or resolved_str.startswith(forbidden + "/"):
-            raise ValidationError(
-                message=f"Cannot export to system directory: {forbidden}",
-                hint="Choose an output path in your project or home directory.",
-                field="output_path",
-                value=str(output_path),
-            )
+    _check_forbidden_dirs(resolved_str, FORBIDDEN_EXPORT_DIRS, output_path)
+    _check_forbidden_dirs(
+        resolved_str, FORBIDDEN_VAR_SUBDIRS, output_path, label="system directory"
+    )
 
     # Check for ~/.config (allow only ~/.config/local-deepwiki)
     config_dir = Path.home() / ".config"

@@ -104,10 +104,16 @@ class TestGenerateFilesIndex:
         """Test generates basic index content."""
         pages = [
             WikiPage(
-                path="files/src/main.md", title="main.py", content="", generated_at=time.time()
+                path="files/src/main.md",
+                title="main.py",
+                content="",
+                generated_at=time.time(),
             ),
             WikiPage(
-                path="files/src/utils.md", title="utils.py", content="", generated_at=time.time()
+                path="files/src/utils.md",
+                title="utils.py",
+                content="",
+                generated_at=time.time(),
             ),
         ]
 
@@ -121,7 +127,10 @@ class TestGenerateFilesIndex:
         """Test groups files by directory."""
         pages = [
             WikiPage(
-                path="files/src/main.md", title="main.py", content="", generated_at=time.time()
+                path="files/src/main.md",
+                title="main.py",
+                content="",
+                generated_at=time.time(),
             ),
             WikiPage(
                 path="files/tests/test_main.md",
@@ -140,10 +149,16 @@ class TestGenerateFilesIndex:
         """Test excludes index page from listing."""
         pages = [
             WikiPage(
-                path="files/index.md", title="Source Files", content="", generated_at=time.time()
+                path="files/index.md",
+                title="Source Files",
+                content="",
+                generated_at=time.time(),
             ),
             WikiPage(
-                path="files/src/main.md", title="main.py", content="", generated_at=time.time()
+                path="files/src/main.md",
+                title="main.py",
+                content="",
+                generated_at=time.time(),
             ),
         ]
 
@@ -155,7 +170,12 @@ class TestGenerateFilesIndex:
     def test_handles_root_level_files(self):
         """Test handles files without directory prefix."""
         pages = [
-            WikiPage(path="files/setup.md", title="setup.py", content="", generated_at=time.time()),
+            WikiPage(
+                path="files/setup.md",
+                title="setup.py",
+                content="",
+                generated_at=time.time(),
+            ),
         ]
 
         result = _generate_files_index(pages)
@@ -183,10 +203,16 @@ class TestGenerateFilesIndex:
         """Test sorts files alphabetically within directories."""
         pages = [
             WikiPage(
-                path="files/src/zebra.md", title="zebra.py", content="", generated_at=time.time()
+                path="files/src/zebra.md",
+                title="zebra.py",
+                content="",
+                generated_at=time.time(),
             ),
             WikiPage(
-                path="files/src/alpha.md", title="alpha.py", content="", generated_at=time.time()
+                path="files/src/alpha.md",
+                title="alpha.py",
+                content="",
+                generated_at=time.time(),
             ),
         ]
 
@@ -247,6 +273,7 @@ class TestGenerateFileDocsCallbacks:
         mock.wiki.fallback_search_limit = 10
         mock.wiki.max_file_docs = 50
         mock.wiki.max_concurrent_llm_calls = 3
+        mock.effective_llm_concurrency = 3
         return mock
 
     async def test_calls_write_callback_for_each_page(
