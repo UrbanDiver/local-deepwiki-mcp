@@ -553,13 +553,10 @@
     </main>
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js" crossorigin="anonymous"></script>
     <script>
-        // Initialize mermaid with base theme (allows custom styles)
+        // Theme-aware Mermaid configuration
         // securityLevel: 'strict' prevents XSS from user-controlled diagram content
-        mermaid.initialize({
-            startOnLoad: false,
-            securityLevel: 'strict',
-            theme: 'base',
-            themeVariables: {
+        var mermaidThemes = {
+            dark: {
                 primaryColor: '#238636',
                 primaryTextColor: '#c9d1d9',
                 primaryBorderColor: '#30363d',
@@ -575,24 +572,75 @@
                 edgeLabelBackground: '#161b22',
                 fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif'
             },
-            themeCSS: '.node rect, .node polygon { fill: #161b22; stroke: #30363d; } .edgeLabel { background-color: #161b22; }'
-        });
+            light: {
+                primaryColor: '#2da44e',
+                primaryTextColor: '#24292f',
+                primaryBorderColor: '#d0d7de',
+                lineColor: '#57606a',
+                secondaryColor: '#f6f8fa',
+                tertiaryColor: '#ffffff',
+                background: '#ffffff',
+                mainBkg: '#f6f8fa',
+                nodeBorder: '#d0d7de',
+                clusterBkg: '#f6f8fa',
+                clusterBorder: '#d0d7de',
+                titleColor: '#1f2328',
+                edgeLabelBackground: '#ffffff',
+                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif'
+            }
+        };
 
-        // Find mermaid code blocks and render them
-        document.addEventListener('DOMContentLoaded', function() {
-            // Find all code blocks with language-mermaid class
-            const codeBlocks = document.querySelectorAll('pre code.language-mermaid');
-            codeBlocks.forEach(function(codeBlock, index) {
-                const pre = codeBlock.parentElement;
-                const mermaidDiv = document.createElement('div');
-                mermaidDiv.className = 'mermaid';
-                mermaidDiv.textContent = codeBlock.textContent;
-                pre.parentNode.replaceChild(mermaidDiv, pre);
+        // Store original diagram sources for re-rendering on theme change
+        var mermaidSources = [];
+
+        function getMermaidThemeCSS(mode) {
+            if (mode === 'light') {
+                return '.node rect, .node polygon { fill: #f6f8fa; stroke: #d0d7de; } .edgeLabel { background-color: #ffffff; }';
+            }
+            return '.node rect, .node polygon { fill: #161b22; stroke: #30363d; } .edgeLabel { background-color: #161b22; }';
+        }
+
+        function initMermaid(mode) {
+            mermaid.initialize({
+                startOnLoad: false,
+                securityLevel: 'strict',
+                theme: 'base',
+                themeVariables: mermaidThemes[mode],
+                themeCSS: getMermaidThemeCSS(mode)
             });
+        }
 
-            // Render all mermaid diagrams
+        function renderMermaidDiagrams() {
+            var currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+            initMermaid(currentTheme);
+
+            // On first run, extract sources from code blocks
+            if (mermaidSources.length === 0) {
+                var codeBlocks = document.querySelectorAll('pre code.language-mermaid');
+                codeBlocks.forEach(function(codeBlock) {
+                    mermaidSources.push(codeBlock.textContent);
+                    var pre = codeBlock.parentElement;
+                    var mermaidDiv = document.createElement('div');
+                    mermaidDiv.className = 'mermaid';
+                    mermaidDiv.textContent = codeBlock.textContent;
+                    pre.parentNode.replaceChild(mermaidDiv, pre);
+                });
+            } else {
+                // Re-render: replace rendered SVGs with fresh source text
+                var containers = document.querySelectorAll('.mermaid');
+                containers.forEach(function(container, i) {
+                    if (i < mermaidSources.length) {
+                        container.removeAttribute('data-processed');
+                        container.textContent = mermaidSources[i];
+                    }
+                });
+            }
+
             mermaid.run();
-        });
+        }
+
+        // Initial render on DOM ready
+        document.addEventListener('DOMContentLoaded', renderMermaidDiagrams);
     </script>
     <script>
         // Search functionality
@@ -885,6 +933,10 @@
                     hljsTheme.href = theme === 'dark'
                         ? 'https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css'
                         : 'https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github.min.css';
+                }
+                // Re-render Mermaid diagrams with new theme colors
+                if (typeof renderMermaidDiagrams === 'function' && mermaidSources.length > 0) {
+                    renderMermaidDiagrams();
                 }
             }
 
