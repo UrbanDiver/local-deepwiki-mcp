@@ -719,7 +719,7 @@ def _is_test_file(path: str) -> bool:
     return any(p in ("tests", "test", "testing", "spec", "specs") for p in parts)
 
 
-def _filter_significant_files(files: list[FileInfo], max_files: int) -> list[FileInfo]:
+def filter_significant_files(files: list[FileInfo], max_files: int) -> list[FileInfo]:
     """Filter and limit files for documentation generation.
 
     Args:
@@ -785,6 +785,7 @@ async def generate_file_docs(
     full_rebuild: bool = False,
     write_callback: WriteCallback | None = None,
     generation_progress: "GenerationProgress | None" = None,
+    max_files: int | None = None,
 ) -> tuple[list[WikiPage], int, int]:
     """Generate documentation for individual source files.
 
@@ -808,11 +809,13 @@ async def generate_file_docs(
     Returns:
         Tuple of (pages list, generated count, skipped count).
     """
-    significant_files = _filter_significant_files(
+    significant_files = filter_significant_files(
         index_status.files, config.wiki.max_file_docs
     )
     if not significant_files:
         return [], 0, 0
+    if max_files is not None and max_files < len(significant_files):
+        significant_files = significant_files[:max_files]
 
     ctx = FileDocContext(
         index_status=index_status,

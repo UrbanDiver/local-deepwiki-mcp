@@ -35,6 +35,18 @@ class IndexRepositoryArgs(BaseModel):
     use_cloud_for_github: bool | None = Field(
         default=None, description="Use cloud LLM for GitHub repos"
     )
+    skip_wiki: bool = Field(
+        default=False,
+        description="Skip wiki page generation (index and embed only). Pages generate on demand.",
+    )
+    generation_mode: str | None = Field(
+        default=None,
+        description="Override wiki generation strategy: 'eager', 'lazy', or 'hybrid'.",
+    )
+    prefetch_drain: bool | None = Field(
+        default=None,
+        description="Enable drain mode to backfill all remaining pages in the background after indexing.",
+    )
 
 
 class AskQuestionArgs(BaseModel):

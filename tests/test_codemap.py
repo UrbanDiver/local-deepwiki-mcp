@@ -1312,7 +1312,7 @@ class TestCodemapToolRegistration:
 
         from local_deepwiki.server import list_tools
 
-        tools = asyncio.get_event_loop().run_until_complete(list_tools())
+        tools = asyncio.run(list_tools())
         codemap_tool = next(t for t in tools if t.name == "generate_codemap")
         schema = codemap_tool.inputSchema
 
@@ -1332,7 +1332,7 @@ class TestCodemapToolRegistration:
 
         from local_deepwiki.server import list_tools
 
-        tools = asyncio.get_event_loop().run_until_complete(list_tools())
+        tools = asyncio.run(list_tools())
         topics_tool = next(t for t in tools if t.name == "suggest_codemap_topics")
         schema = topics_tool.inputSchema
 

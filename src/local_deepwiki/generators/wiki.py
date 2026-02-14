@@ -156,6 +156,7 @@ class WikiGenerator:
         index_status: IndexStatus,
         progress_callback: ProgressCallback | None = None,
         full_rebuild: bool = False,
+        max_file_pages: int | None = None,
     ) -> WikiStructure:
         """Generate wiki documentation for the indexed repository."""
         logger.info("Starting wiki generation for %s", index_status.repo_path)
@@ -187,7 +188,7 @@ class WikiGenerator:
         await self._generate_module_pages(ctx, index_status, progress_callback)
 
         # Phase 4: Generate file documentation
-        await self._generate_file_pages(ctx, index_status, progress_callback)
+        await self._generate_file_pages(ctx, index_status, progress_callback, max_files=max_file_pages)
 
         # Phase 5: Generate dependencies page
         await self._generate_dependencies_page(ctx, index_status, progress_callback)
@@ -482,6 +483,7 @@ class WikiGenerator:
         ctx: _GenerationContext,
         index_status: IndexStatus,
         progress_callback: ProgressCallback | None,
+        max_files: int | None = None,
     ) -> None:
         """Generate file-level documentation pages."""
         if progress_callback:
@@ -499,6 +501,7 @@ class WikiGenerator:
             full_rebuild=ctx.full_rebuild,
             write_callback=self._write_page,
             generation_progress=self._progress,
+            max_files=max_files,
         )
         ctx.pages_generated += gen_count
         ctx.pages_skipped += skip_count
@@ -895,6 +898,7 @@ async def generate_wiki(
     llm_provider: str | None = None,
     progress_callback: ProgressCallback | None = None,
     full_rebuild: bool = False,
+    max_file_pages: int | None = None,
 ) -> WikiStructure:
     """Convenience function to generate wiki documentation."""
     from local_deepwiki.core.git_utils import is_github_repo
@@ -916,4 +920,4 @@ async def generate_wiki(
         config=config,
         llm_provider_name=effective_provider,
     )
-    return await generator.generate(index_status, progress_callback, full_rebuild)
+    return await generator.generate(index_status, progress_callback, full_rebuild, max_file_pages=max_file_pages)

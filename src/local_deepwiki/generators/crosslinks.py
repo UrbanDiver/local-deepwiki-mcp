@@ -6,11 +6,28 @@ wiki pages when classes, functions, or other documented entities are mentioned.
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any, Iterator
 
 from local_deepwiki.models import ChunkType, CodeChunk, WikiPage
+
+
+def file_path_to_wiki_path(file_path: str) -> str:
+    """Convert a source file path to a wiki page path.
+
+    Examples:
+        src/indexer.py -> files/src/indexer.md
+        main.go        -> files/main.md
+    """
+    p = Path(file_path)
+    parts = p.parts
+    stem = p.stem
+    if len(parts) > 1:
+        return f"files/{'/'.join(parts[:-1])}/{stem}.md"
+    return f"files/{stem}.md"
 
 
 @dataclass
@@ -259,6 +276,79 @@ class EntityRegistry:
             List of entity names defined in that page.
         """
         return self._page_entities.get(wiki_path, [])
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize registry to a JSON-compatible dict."""
+        entities = {}
+        for name, info in self._entities.items():
+            entities[name] = {
+                "name": info.name,
+                "entity_type": info.entity_type.value,
+                "wiki_path": info.wiki_path,
+                "file_path": info.file_path,
+                "parent_name": info.parent_name,
+            }
+        return {
+            "entities": entities,
+            "aliases": dict(self._aliases),
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "EntityRegistry":
+        """Deserialize registry from a dict."""
+        registry = cls()
+        for _name, info in data.get("entities", {}).items():
+            registry.register_entity(
+                name=info["name"],
+                entity_type=ChunkType(info["entity_type"]),
+                wiki_path=info["wiki_path"],
+                file_path=info["file_path"],
+                parent_name=info.get("parent_name"),
+            )
+        return registry
+
+    def save(self, path: Path) -> None:
+        """Persist registry to a JSON file."""
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(self.to_dict(), indent=2))
+
+    @classmethod
+    def load(cls, path: Path) -> "EntityRegistry":
+        """Load registry from a JSON file."""
+        data = json.loads(path.read_text())
+        return cls.from_dict(data)
+
+
+def build_entity_registry_from_store(
+    chunks_iter: Iterator[CodeChunk],
+    significant_paths: set[str],
+) -> EntityRegistry:
+    """Build an entity registry from a chunk iterator.
+
+    Only registers entities from files in significant_paths (those that
+    pass filter_significant_files).
+
+    Args:
+        chunks_iter: Iterator of all chunks (e.g. vector_store.get_all_chunks()).
+        significant_paths: Set of file paths eligible for wiki pages.
+
+    Returns:
+        Populated EntityRegistry.
+    """
+    registry = EntityRegistry()
+    for chunk in chunks_iter:
+        if chunk.file_path not in significant_paths:
+            continue
+        if chunk.name and chunk.chunk_type in (ChunkType.CLASS, ChunkType.FUNCTION):
+            wiki_path = file_path_to_wiki_path(chunk.file_path)
+            registry.register_entity(
+                name=chunk.name,
+                entity_type=chunk.chunk_type,
+                wiki_path=wiki_path,
+                file_path=chunk.file_path,
+                parent_name=chunk.parent_name,
+            )
+    return registry
 
 
 class CrossLinker:

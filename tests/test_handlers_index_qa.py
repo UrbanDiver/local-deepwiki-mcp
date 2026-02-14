@@ -141,28 +141,40 @@ class TestHandleAskQuestionExtended:
         """Test returns appropriate message when no results found."""
         config = MagicMock()
         config.embedding = MagicMock()
+        config.embedding.provider = "local"
+        config.llm = MagicMock()
+        config.llm.provider = "ollama"
+        config.llm_cache = MagicMock()
+        config.llm_cache.enabled = False
         wiki_path = tmp_path / ".deepwiki"
+
+        mock_embedding_provider = MagicMock()
 
         with patch(
             "local_deepwiki.handlers.core._load_index_status",
             return_value=(MagicMock(), wiki_path, config),
-        ):
-            mock_store = MagicMock()
-            mock_store.search = AsyncMock(return_value=[])
+        ), patch(
+            "local_deepwiki.handlers.core._create_vector_store",
+            return_value=MagicMock(search=AsyncMock(return_value=[])),
+        ), patch(
+            "local_deepwiki.handlers.core.get_embedding_provider",
+            return_value=mock_embedding_provider,
+        ), patch(
+            "local_deepwiki.providers.llm.get_cached_llm_provider",
+        ) as mock_llm_factory:
+            mock_llm = MagicMock()
+            mock_llm.generate = AsyncMock(return_value="test answer")
+            mock_llm_factory.return_value = mock_llm
 
-            with patch(
-                "local_deepwiki.handlers.core._create_vector_store",
-                return_value=mock_store,
-            ):
-                result = await handle_ask_question(
-                    {
-                        "repo_path": str(tmp_path),
-                        "question": "What is this code?",
-                    }
-                )
+            result = await handle_ask_question(
+                {
+                    "repo_path": str(tmp_path),
+                    "question": "What is this code?",
+                }
+            )
 
-                assert len(result) == 1
-                assert "No relevant code found" in result[0].text
+            assert len(result) == 1
+            assert "No relevant code found" in result[0].text
 
     async def test_returns_answer_with_sources(self, tmp_path):
         """Test returns answer with sources when results are found."""

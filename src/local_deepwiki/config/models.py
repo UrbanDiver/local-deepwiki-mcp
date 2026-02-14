@@ -20,6 +20,14 @@ class ResearchPreset(str, Enum):
     THOROUGH = "thorough"
 
 
+class GenerationMode(str, Enum):
+    """Wiki page generation strategy."""
+
+    EAGER = "eager"
+    LAZY = "lazy"
+    HYBRID = "hybrid"
+
+
 # Preset parameter values for each research mode
 RESEARCH_PRESETS: dict[ResearchPreset, dict[str, Any]] = {
     ResearchPreset.QUICK: {
@@ -384,6 +392,43 @@ class WikiConfig(BaseModel):
         ge=5,
         le=60,
         description="Maximum nodes per codemap graph.",
+    )
+    generation_mode: GenerationMode = Field(
+        default=GenerationMode.EAGER,
+        description="Wiki page generation strategy. "
+        "'eager' (default): generate all pages during indexing. "
+        "'lazy': generate pages on first read. "
+        "'hybrid': generate summary pages and top N files at index time, rest on demand.",
+    )
+    hybrid_eager_pages: int = Field(
+        default=10,
+        ge=0,
+        le=50,
+        description="Number of top file pages to eagerly generate in hybrid mode.",
+    )
+    prefetch_workers: int = Field(
+        default=2,
+        ge=0,
+        le=5,
+        description="Background workers for predictive page prefetch (0 disables). "
+        "Only active in lazy and hybrid modes.",
+    )
+    prefetch_max_queue: int = Field(
+        default=20,
+        ge=0,
+        le=100,
+        description="Maximum pages in the prefetch queue.",
+    )
+    prefetch_drain: bool = Field(
+        default=False,
+        description="When true, prefetch workers will eventually generate all "
+        "remaining pages after prediction queue drains and system is idle.",
+    )
+    drain_idle_seconds: int = Field(
+        default=30,
+        ge=5,
+        le=300,
+        description="Seconds of idle time before drain mode starts backfilling.",
     )
 
     @field_validator("max_concurrent_llm_calls")

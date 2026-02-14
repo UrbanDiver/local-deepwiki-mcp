@@ -94,7 +94,7 @@ async def handle_get_project_manifest(args: dict[str, Any]) -> list[TextContent]
         "manifest": manifest_dict,
     }
 
-    logger.info("Project manifest: %s for %s", manifest.name or 'unknown', repo_path)
+    logger.info("Project manifest: %s for %s", manifest.name or "unknown", repo_path)
     return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
 
@@ -328,6 +328,14 @@ async def handle_get_wiki_stats(args: dict[str, Any]) -> list[TextContent]:
     # Count wiki markdown files
     wiki_files = await asyncio.to_thread(lambda: list(wiki_path.glob("**/*.md")))
     stats["total_wiki_files"] = len(wiki_files)
+
+    # Drain status (if lazy generator is active for this wiki)
+    from local_deepwiki.generators.lazy_generator import get_active_generators
+
+    active = get_active_generators()
+    lazy_key = str(wiki_path.resolve())
+    if lazy_key in active:
+        stats["drain"] = active[lazy_key].get_drain_status()
 
     logger.info("Wiki stats for %s", repo_path)
     return [TextContent(type="text", text=json.dumps(stats, indent=2))]

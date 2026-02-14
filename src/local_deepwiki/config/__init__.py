@@ -42,6 +42,7 @@ from local_deepwiki.config.models import (
     EmbeddingConfig,
     ExportBatchConfig,
     FuzzySearchConfig,
+    GenerationMode,
     HooksConfig,
     LazyIndexConfig,
     LLMCacheConfig,
@@ -93,6 +94,7 @@ __all__ = [
     "SearchConfig",
     "LazyIndexConfig",
     "FuzzySearchConfig",
+    "GenerationMode",
     "ProviderPromptsConfig",
     "PromptsConfig",
     # Loader functions

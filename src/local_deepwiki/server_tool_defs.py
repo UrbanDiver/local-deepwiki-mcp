@@ -47,6 +47,19 @@ TOOL_DEFINITIONS: list[Tool] = [
                     "type": "boolean",
                     "description": "Use cloud LLM (Anthropic Claude) for GitHub repos. Faster and higher quality but requires API key. (default: from config)",
                 },
+                "skip_wiki": {
+                    "type": "boolean",
+                    "description": "Skip wiki page generation (index and embed only). Pages will generate on demand when read. (default: false)",
+                },
+                "generation_mode": {
+                    "type": "string",
+                    "enum": ["eager", "lazy", "hybrid"],
+                    "description": "Override wiki generation strategy for this invocation. If not provided, uses the config file setting.",
+                },
+                "prefetch_drain": {
+                    "type": "boolean",
+                    "description": "Enable drain mode to backfill all remaining pages in the background after indexing. Most useful with 'hybrid' or 'lazy' mode. (default: from config)",
+                },
             },
             "required": ["repo_path"],
         },

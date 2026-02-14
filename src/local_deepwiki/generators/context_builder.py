@@ -11,12 +11,16 @@ Context includes:
 
 from __future__ import annotations
 
+import asyncio
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from local_deepwiki.core.vectorstore import VectorStore
-from local_deepwiki.generators.callgraph import CallGraphExtractor, build_reverse_call_graph
+from local_deepwiki.generators.callgraph import (
+    CallGraphExtractor,
+    build_reverse_call_graph,
+)
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import ChunkType, CodeChunk
 
@@ -290,29 +294,26 @@ async def build_file_context(
         if chunk.name and chunk.chunk_type in (ChunkType.CLASS, ChunkType.FUNCTION)
     ]
 
-    # Collect warnings from all context-building steps
+    # Each coroutine may append warnings. This is safe in single-threaded asyncio
+    # because list.append() is atomic and all coroutines share the same event loop thread.
     context_warnings: list[str] = []
 
-    # Get callers from other files
-    callers = await get_callers_from_other_files(
-        file_path=file_path,
-        entity_names=entity_names,
-        repo_path=repo_path,
-        vector_store=vector_store,
-        warnings=context_warnings,
-    )
-
-    # Find related files
-    related_files = await find_related_files(
-        file_path=file_path,
-        imported_modules=imported_modules,
-        vector_store=vector_store,
-        warnings=context_warnings,
-    )
-
-    # Get type definitions used
-    type_definitions = await get_type_definitions_used(
-        chunks, vector_store, warnings=context_warnings
+    # Run independent context-gathering steps in parallel
+    callers, related_files, type_definitions = await asyncio.gather(
+        get_callers_from_other_files(
+            file_path=file_path,
+            entity_names=entity_names,
+            repo_path=repo_path,
+            vector_store=vector_store,
+            warnings=context_warnings,
+        ),
+        find_related_files(
+            file_path=file_path,
+            imported_modules=imported_modules,
+            vector_store=vector_store,
+            warnings=context_warnings,
+        ),
+        get_type_definitions_used(chunks, vector_store, warnings=context_warnings),
     )
 
     return FileContext(

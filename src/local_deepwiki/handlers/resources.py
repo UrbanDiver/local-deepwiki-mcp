@@ -171,6 +171,18 @@ def register_resource_handlers(server: Server) -> None:
             )
 
         if not page_path.exists():
+            entity_reg = wiki_path / "entity_registry.json"
+            index_status_file = wiki_path / "index_status.json"
+            if entity_reg.exists() or index_status_file.exists():
+                from local_deepwiki.generators.lazy_generator import (
+                    get_lazy_generator,
+                )
+
+                generator = get_lazy_generator(wiki_path)
+                content = await generator.get_page(page_relative)
+                return [
+                    ReadResourceContents(content=content, mime_type="text/markdown")
+                ]
             raise FileNotFoundError(f"Wiki page not found: {page_relative}")
 
         content = page_path.read_text(encoding="utf-8")

@@ -65,57 +65,15 @@ async def generate_module_docs(
                 pages_skipped += 1
                 continue
 
-        # Get chunks for this directory
-        search_results = await vector_store.search(
-            f"module {dir_name}",
-            limit=15,
+        page = await generate_single_module_doc(
+            dir_name=dir_name,
+            files=files,
+            vector_store=vector_store,
+            llm=llm,
+            system_prompt=system_prompt,
         )
-
-        # Filter to chunks from this directory
-        relevant_chunks = [
-            r for r in search_results if r.chunk.file_path.startswith(dir_name)
-        ]
-
-        if not relevant_chunks:
+        if page is None:
             continue
-
-        context = "\n\n".join(
-            [
-                f"File: {r.chunk.file_path}\nType: {r.chunk.chunk_type.value}\nName: {r.chunk.name}\n{r.chunk.content[:400]}"
-                for r in relevant_chunks[:10]
-            ]
-        )
-
-        prompt = f"""Generate documentation for the '{dir_name}' module based ONLY on the code provided.
-
-Files in module: {", ".join(files[:10])}{"..." if len(files) > 10 else ""}
-
-Code context:
-{context}
-
-Generate documentation that includes:
-1. **Module Purpose** - Explain what this module does based on the code shown
-2. **Key Classes and Functions** - Describe each class/function visible in the code above. Write class names as plain text for cross-linking.
-3. **How Components Interact** - Explain how the components shown work together
-4. **Usage Examples** - Show how to use the components (use code blocks)
-5. **Dependencies** - What other modules this depends on (based on imports shown)
-
-CRITICAL CONSTRAINTS:
-- ONLY describe classes and functions that appear in the code context above
-- Do NOT invent additional components not shown
-- Do NOT fabricate usage patterns or APIs not visible in the code
-- Write class names as plain text (e.g., "The CodeParser class") for cross-linking
-
-Format as markdown."""
-
-        content = await llm.generate(prompt, system_prompt=system_prompt)
-
-        page = WikiPage(
-            path=page_path,
-            title=f"Module: {dir_name}",
-            content=content,
-            generated_at=time.time(),
-        )
         pages.append(page)
         status_manager.record_page_status(page, files)
         pages_generated += 1
@@ -162,6 +120,62 @@ Format as markdown."""
             pages_generated += 1
 
     return pages, pages_generated, pages_skipped
+
+
+async def generate_single_module_doc(
+    dir_name: str,
+    files: list[str],
+    vector_store: VectorStore,
+    llm: LLMProvider,
+    system_prompt: str,
+) -> WikiPage | None:
+    """Generate documentation for a single module directory."""
+    page_path = f"modules/{dir_name}.md"
+
+    search_results = await vector_store.search(f"module {dir_name}", limit=15)
+    relevant_chunks = [
+        r for r in search_results if r.chunk.file_path.startswith(dir_name)
+    ]
+    if not relevant_chunks:
+        return None
+
+    context = "\n\n".join(
+        [
+            f"File: {r.chunk.file_path}\nType: {r.chunk.chunk_type.value}\nName: {r.chunk.name}\n{r.chunk.content[:400]}"
+            for r in relevant_chunks[:10]
+        ]
+    )
+
+    prompt = f"""Generate documentation for the '{dir_name}' module based ONLY on the code provided.
+
+Files in module: {", ".join(files[:10])}{"..." if len(files) > 10 else ""}
+
+Code context:
+{context}
+
+Generate documentation that includes:
+1. **Module Purpose** - Explain what this module does based on the code shown
+2. **Key Classes and Functions** - Describe each class/function visible in the code above. Write class names as plain text for cross-linking.
+3. **How Components Interact** - Explain how the components shown work together
+4. **Usage Examples** - Show how to use the components (use code blocks)
+5. **Dependencies** - What other modules this depends on (based on imports shown)
+
+CRITICAL CONSTRAINTS:
+- ONLY describe classes and functions that appear in the code context above
+- Do NOT invent additional components not shown
+- Do NOT fabricate usage patterns or APIs not visible in the code
+- Write class names as plain text (e.g., "The CodeParser class") for cross-linking
+
+Format as markdown."""
+
+    content = await llm.generate(prompt, system_prompt=system_prompt)
+
+    return WikiPage(
+        path=page_path,
+        title=f"Module: {dir_name}",
+        content=content,
+        generated_at=time.time(),
+    )
 
 
 def _generate_modules_index(module_pages: list[WikiPage]) -> str:

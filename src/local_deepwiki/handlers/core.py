@@ -49,6 +49,7 @@ from local_deepwiki.handlers._shared import (
     validate_path_pattern,
     validate_query_parameters,
 )
+from local_deepwiki.models import WikiStructure
 
 
 @handle_tool_errors
@@ -118,6 +119,25 @@ def _validate_and_build_config(
         config_updates["wiki"] = base_config.wiki.model_copy(
             update={"use_cloud_for_github": validated.use_cloud_for_github}
         )
+
+    # Override generation_mode if specified (or skip_wiki forces lazy)
+    effective_mode = validated.generation_mode
+    if validated.skip_wiki:
+        effective_mode = "lazy"
+    wiki_overrides: dict = {}
+    if effective_mode is not None:
+        from local_deepwiki.config import GenerationMode
+
+        wiki_overrides["generation_mode"] = GenerationMode(effective_mode)
+    if validated.prefetch_drain is not None:
+        wiki_overrides["prefetch_drain"] = validated.prefetch_drain
+    if wiki_overrides:
+        if "wiki" in config_updates:
+            config_updates["wiki"] = config_updates["wiki"].model_copy(
+                update=wiki_overrides
+            )
+        else:
+            config_updates["wiki"] = base_config.wiki.model_copy(update=wiki_overrides)
 
     config = (
         base_config.model_copy(update=config_updates) if config_updates else base_config
@@ -206,16 +226,81 @@ async def _run_indexing_pipeline(
                 message="Generating wiki documentation...",
             )
 
-        wiki_structure = await generate_wiki(
-            repo_path=repo_path,
-            wiki_path=indexer.wiki_path,
-            vector_store=indexer.vector_store,
-            index_status=status,
-            config=config,
-            llm_provider=llm_provider,
-            progress_callback=sync_progress_callback,
-            full_rebuild=full_rebuild,
-        )
+        from local_deepwiki.config import GenerationMode
+
+        gen_mode = config.wiki.generation_mode
+
+        if gen_mode == GenerationMode.LAZY:
+            from local_deepwiki.generators.crosslinks import (
+                build_entity_registry_from_store,
+            )
+            from local_deepwiki.generators.wiki_files import filter_significant_files
+
+            significant = filter_significant_files(
+                status.files, config.wiki.max_file_docs
+            )
+            sig_paths = {f.path for f in significant}
+            registry = build_entity_registry_from_store(
+                indexer.vector_store.get_all_chunks(), sig_paths
+            )
+            registry.save(indexer.wiki_path / "entity_registry.json")
+
+            wiki_structure = WikiStructure(root=str(indexer.wiki_path), pages=[])
+
+        elif gen_mode == GenerationMode.HYBRID:
+            from local_deepwiki.generators.crosslinks import (
+                build_entity_registry_from_store,
+            )
+            from local_deepwiki.generators.wiki_files import filter_significant_files
+
+            eager_limit = config.wiki.hybrid_eager_pages
+            wiki_structure = await generate_wiki(
+                repo_path=repo_path,
+                wiki_path=indexer.wiki_path,
+                vector_store=indexer.vector_store,
+                index_status=status,
+                config=config,
+                llm_provider=llm_provider,
+                progress_callback=sync_progress_callback,
+                full_rebuild=full_rebuild,
+                max_file_pages=eager_limit,
+            )
+
+            significant = filter_significant_files(
+                status.files, config.wiki.max_file_docs
+            )
+            sig_paths = {f.path for f in significant}
+            entity_reg = build_entity_registry_from_store(
+                indexer.vector_store.get_all_chunks(), sig_paths
+            )
+            entity_reg.save(indexer.wiki_path / "entity_registry.json")
+
+            remaining = len(significant) - eager_limit
+            if remaining > 0:
+                logger.info(
+                    "Hybrid mode: %d pages generated eagerly, %d deferred to lazy/drain",
+                    eager_limit,
+                    remaining,
+                )
+                if config.wiki.prefetch_drain:
+                    from local_deepwiki.generators.lazy_generator import (
+                        get_lazy_generator,
+                    )
+
+                    lazy_gen = get_lazy_generator(indexer.wiki_path, config)
+                    lazy_gen.kickstart_drain()
+
+        else:
+            wiki_structure = await generate_wiki(
+                repo_path=repo_path,
+                wiki_path=indexer.wiki_path,
+                vector_store=indexer.vector_store,
+                index_status=status,
+                config=config,
+                llm_provider=llm_provider,
+                progress_callback=sync_progress_callback,
+                full_rebuild=full_rebuild,
+            )
 
         if notifier:
             await notifier.update(
@@ -472,6 +557,14 @@ async def handle_read_wiki_structure(args: dict[str, Any]) -> list[TextContent]:
     wiki_path = Path(validated.wiki_path).resolve()
 
     if not wiki_path.exists():
+        entity_reg = wiki_path / "entity_registry.json"
+        index_status_file = wiki_path / "index_status.json"
+        if entity_reg.exists() or index_status_file.exists():
+            from local_deepwiki.generators.lazy_generator import get_lazy_generator
+
+            generator = get_lazy_generator(wiki_path)
+            structure = generator.get_virtual_structure()
+            return [TextContent(type="text", text=json.dumps(structure, indent=2))]
         raise path_not_found_error(str(wiki_path), "wiki")
 
     # Check for toc.json (numbered hierarchical structure)
@@ -556,6 +649,15 @@ async def handle_read_wiki_page(args: dict[str, Any]) -> list[TextContent]:
         )
 
     if not page_path.exists():
+        entity_reg = wiki_path / "entity_registry.json"
+        index_status_file = wiki_path / "index_status.json"
+        if entity_reg.exists() or index_status_file.exists():
+            from local_deepwiki.generators.lazy_generator import get_lazy_generator
+
+            generator = get_lazy_generator(wiki_path)
+            page_relative = str(page_path.relative_to(wiki_path))
+            content = await generator.get_page(page_relative)
+            return [TextContent(type="text", text=content)]
         raise path_not_found_error(page, "wiki page")
 
     # Check file size to prevent memory exhaustion
