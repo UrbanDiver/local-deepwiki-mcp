@@ -159,6 +159,7 @@
             flex: 3;
             position: relative;
             border-right: 1px solid var(--border-color);
+            overflow: hidden;
         }
         #cy {
             width: 100%;
@@ -211,8 +212,10 @@
             padding: 10px 14px;
             font-size: 12px;
             max-width: 320px;
+            max-height: 280px;
+            overflow-y: auto;
             z-index: 20;
-            pointer-events: none;
+            pointer-events: auto;
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
             display: none;
             line-height: 1.5;
@@ -236,8 +239,8 @@
             padding-top: 6px;
             margin-top: 4px;
             white-space: pre-wrap;
-            max-height: 80px;
-            overflow: hidden;
+            max-height: 120px;
+            overflow-y: auto;
         }
 
         /* Zoom controls */
@@ -955,20 +958,23 @@
                 html += '<div class="tooltip-docstring">' + escapeHtml(truncated) + '</div>';
             }
 
+            // Content is built from escapeHtml()-sanitized values above
             nodeTooltip.innerHTML = html;
             nodeTooltip.classList.add('visible');
 
-            // Position relative to graph-panel
+            // Position relative to graph-panel, measuring actual tooltip size
             var panelRect = document.getElementById('graph-panel').getBoundingClientRect();
+            var tipRect = nodeTooltip.getBoundingClientRect();
             var x = renderedPos.x + 15;
             var y = renderedPos.y - 10;
 
-            // Keep tooltip within panel bounds
-            if (x + 320 > panelRect.width) {
-                x = renderedPos.x - 330;
+            // Keep tooltip within panel bounds using actual dimensions
+            if (x + tipRect.width > panelRect.width) {
+                x = renderedPos.x - tipRect.width - 15;
             }
-            if (y + 120 > panelRect.height) {
-                y = panelRect.height - 130;
+            if (x < 0) { x = 10; }
+            if (y + tipRect.height > panelRect.height) {
+                y = panelRect.height - tipRect.height - 10;
             }
             if (y < 0) { y = 10; }
 
@@ -1028,6 +1034,9 @@
             }
             hideContextMenu();
         });
+
+        // Hide tooltip when mouse leaves it
+        nodeTooltip.addEventListener('mouseleave', hideTooltip);
 
         // Close context menu on Escape or outside click
         document.addEventListener('keydown', function(e) {
@@ -1301,28 +1310,9 @@
 
         // --- Minimap ---
         function initMinimap() {
-            if (!cy) return;
-            // Only show for graphs with many nodes
-            var childNodes = cy.nodes(':childless');
-            if (childNodes.length < 15) {
-                cyMinimap.classList.remove('visible');
-                return;
-            }
-
-            try {
-                if (typeof cy.navigator === 'function') {
-                    cy.navigator({
-                        container: cyMinimap,
-                        viewLiveFramerate: 0,
-                        thumbnailLiveFramerate: 0,
-                        dblClickDelay: 200,
-                    });
-                    cyMinimap.classList.add('visible');
-                }
-            } catch (err) {
-                // Navigator plugin not available
-                cyMinimap.classList.remove('visible');
-            }
+            // Disabled: the cytoscape-navigator plugin renders its thumbnail
+            // outside the container bounds, overlapping the narrative panel.
+            cyMinimap.classList.remove('visible');
         }
 
         // --- Recent Codemaps (Cache) ---
@@ -1450,7 +1440,10 @@
                 });
                 cy.on('mouseout', 'node:childless', function() {
                     cyContainer.style.cursor = 'default';
-                    hideTooltip();
+                    // Delay hide so user can hover onto the tooltip
+                    setTimeout(function() {
+                        if (!nodeTooltip.matches(':hover')) hideTooltip();
+                    }, 200);
                 });
 
                 // Right-click context menu

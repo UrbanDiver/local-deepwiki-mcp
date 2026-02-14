@@ -149,6 +149,10 @@
             margin-right: 6px;
             font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
         }
+        /* Hide deep hierarchical numbers — tree indentation is sufficient */
+        .sidebar .toc-nested .toc-nested .toc-number {
+            display: none;
+        }
         .sidebar .toc-nested {
             margin-left: 12px;
             border-left: 1px solid var(--border-color);
@@ -695,6 +699,22 @@
             renderMermaidDiagrams();
             // Mermaid.run() is async; inject links after a brief delay
             setTimeout(addCodemapLinks, 500);
+
+            // Glossary expand/collapse — nh3 strips onclick so we bind here
+            document.querySelectorAll('.content a[href="#"]').forEach(function(a) {
+                var text = a.textContent.trim();
+                if (text === 'Expand All') {
+                    a.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        document.querySelectorAll('details').forEach(function(d) { d.open = true; });
+                    });
+                } else if (text === 'Collapse All') {
+                    a.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        document.querySelectorAll('details').forEach(function(d) { d.open = false; });
+                    });
+                }
+            });
         });
     </script>
     <script>
