@@ -417,14 +417,32 @@
             color: #8b949e;
             text-align: center;
         }
+        .mermaid-wrapper {
+            position: relative;
+            margin: 16px 0;
+        }
         .mermaid {
             background: var(--sidebar-bg);
             padding: 20px;
             border-radius: 8px;
-            margin: 16px 0;
             text-align: center;
             overflow-x: auto;
             overflow-y: hidden;
+        }
+        .mermaid-codemap-link {
+            display: inline-block;
+            margin-top: 6px;
+            padding: 3px 10px;
+            font-size: 0.78em;
+            color: var(--link-color);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background: var(--sidebar-bg);
+            text-decoration: none;
+            transition: background 0.15s;
+        }
+        .mermaid-codemap-link:hover {
+            background: var(--border-color);
         }
         .mermaid svg {
             max-width: none;
@@ -639,8 +657,45 @@
             mermaid.run();
         }
 
+        // After Mermaid renders, inject "Open in Codemap" links below each diagram
+        function addCodemapLinks() {
+            document.querySelectorAll('.mermaid').forEach(function(el) {
+                if (el.parentElement && el.parentElement.classList.contains('mermaid-wrapper')) return;
+
+                // Find a subject from the nearest preceding heading
+                var subject = '';
+                var prev = el.previousElementSibling;
+                while (prev) {
+                    if (/^H[1-6]$/.test(prev.tagName)) {
+                        subject = prev.textContent.trim();
+                        break;
+                    }
+                    prev = prev.previousElementSibling;
+                }
+                if (!subject) subject = document.title || '';
+
+                // Wrap in container
+                var wrapper = document.createElement('div');
+                wrapper.className = 'mermaid-wrapper';
+                el.parentNode.insertBefore(wrapper, el);
+                wrapper.appendChild(el);
+
+                // Add link
+                var link = document.createElement('a');
+                link.className = 'mermaid-codemap-link';
+                link.href = '/codemap?query=' + encodeURIComponent(subject);
+                link.textContent = '\u{1f5fa} Open in Codemap';
+                link.title = 'Explore this topic in the interactive codemap';
+                wrapper.appendChild(link);
+            });
+        }
+
         // Initial render on DOM ready
-        document.addEventListener('DOMContentLoaded', renderMermaidDiagrams);
+        document.addEventListener('DOMContentLoaded', function() {
+            renderMermaidDiagrams();
+            // Mermaid.run() is async; inject links after a brief delay
+            setTimeout(addCodemapLinks, 500);
+        });
     </script>
     <script>
         // Search functionality

@@ -211,7 +211,7 @@ def test_onboarding_has_correct_structure(client, mock_wiki_path, monkeypatch):
     # Check for features
     assert b"Multi-language AST parsing" in response.data
     assert b"Semantic code search" in response.data
-    assert b"RAG-based Q&A" in response.data
+    assert b"RAG-based Q&amp;A" in response.data
 
     # Check for instructions
     assert b"Index Your Repository" in response.data
@@ -258,8 +258,8 @@ def test_onboarding_theme_toggle_exists(client, mock_wiki_path, monkeypatch):
 
     # Check for theme toggle button and script
     assert b"theme-toggle" in response.data
-    assert b"toggleTheme()" in response.data
-    assert b"localStorage.getItem('theme')" in response.data
+    assert b"setBaseTheme" in response.data
+    assert b"localStorage.getItem('deepwiki-theme')" in response.data
 
 
 def test_onboarding_status_indicator(client, mock_wiki_path, monkeypatch):

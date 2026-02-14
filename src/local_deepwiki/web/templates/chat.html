@@ -179,6 +179,37 @@
             color: #238636;
             font-size: 0.8em;
         }
+        .source-file {
+            text-decoration: none;
+        }
+        .source-file:hover {
+            text-decoration: underline;
+        }
+        .source-codemap-link {
+            text-decoration: none;
+            font-size: 0.85em;
+            opacity: 0.6;
+            transition: opacity 0.15s;
+        }
+        .source-codemap-link:hover {
+            opacity: 1;
+        }
+        .visualize-btn {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 4px 12px;
+            font-size: 0.8em;
+            color: var(--link-color);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: transparent;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background 0.15s;
+        }
+        .visualize-btn:hover {
+            background: var(--border-color);
+        }
         .progress-panel {
             background: var(--progress-bg);
             border: 1px solid var(--border-color);
@@ -452,13 +483,17 @@
                             <span>&#9654;</span> ${sources.length} source${sources.length > 1 ? 's' : ''}
                         </div>
                         <div class="sources-list">
-                            ${sources.map(s => `
+                            ${sources.map(s => {
+                                const wikiPath = '/wiki/files/' + escapeHtml(s.file).replace(/\.[^.]+$/, '.md');
+                                const codemapPath = '/codemap?query=' + encodeURIComponent(s.file);
+                                return `
                                 <div class="source-item">
-                                    <span class="source-file">${escapeHtml(s.file)}</span>
+                                    <a href="${wikiPath}" class="source-file" title="Open in Wiki">${escapeHtml(s.file)}</a>
                                     <span class="source-lines">:${s.lines}</span>
                                     ${s.score ? `<span class="source-score">${(s.score * 100).toFixed(0)}%</span>` : ''}
-                                </div>
-                            `).join('')}
+                                    <a href="${codemapPath}" class="source-codemap-link" title="Explore in Codemap">&#x1f5fa;</a>
+                                </div>`;
+                            }).join('')}
                         </div>
                     </div>
                 `;
@@ -483,6 +518,17 @@
             }
 
             msgEl.innerHTML = html;
+
+            // Add "Visualize in Codemap" link for assistant messages with content
+            if (role === 'assistant' && content && content.length > 20) {
+                const vizLink = document.createElement('a');
+                vizLink.className = 'visualize-btn';
+                vizLink.href = '/codemap?query=' + encodeURIComponent(content.slice(0, 200));
+                vizLink.textContent = '\u{1f5fa} Visualize in Codemap';
+                vizLink.title = 'Open this topic in the interactive codemap';
+                msgEl.appendChild(vizLink);
+            }
+
             messagesEl.appendChild(msgEl);
 
             // Highlight code blocks
@@ -719,13 +765,17 @@
                                 <span>&#9654;</span> ${responseSources.length} source${responseSources.length > 1 ? 's' : ''}
                             </div>
                             <div class="sources-list">
-                                ${responseSources.map(s => `
+                                ${responseSources.map(s => {
+                                    const wikiPath = '/wiki/files/' + escapeHtml(s.file).replace(/\.[^.]+$/, '.md');
+                                    const codemapPath = '/codemap?query=' + encodeURIComponent(s.file);
+                                    return `
                                     <div class="source-item">
-                                        <span class="source-file">${escapeHtml(s.file)}</span>
+                                        <a href="${wikiPath}" class="source-file" title="Open in Wiki">${escapeHtml(s.file)}</a>
                                         <span class="source-lines">:${s.lines}</span>
                                         ${s.score ? `<span class="source-score">${(s.score * 100).toFixed(0)}%</span>` : ''}
-                                    </div>
-                                `).join('')}
+                                        <a href="${codemapPath}" class="source-codemap-link" title="Explore in Codemap">&#x1f5fa;</a>
+                                    </div>`;
+                                }).join('')}
                             </div>
                         </div>
                     `;
@@ -819,6 +869,14 @@
         const savedTheme = localStorage.getItem('deepwiki-theme') || 'dark';
         setTheme(savedTheme);
         loadConversation();
+
+        // Deep-linking: pre-fill from ?q= URL parameter
+        const urlQ = new URLSearchParams(window.location.search).get('q');
+        if (urlQ) {
+            questionInput.value = urlQ;
+            autoResizeTextarea();
+        }
+
         questionInput.focus();
     </script>
 </body>

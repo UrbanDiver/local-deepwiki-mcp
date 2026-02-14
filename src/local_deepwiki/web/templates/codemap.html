@@ -467,6 +467,70 @@
             display: none;
         }
 
+        /* Right-click context menu */
+        .ctx-menu {
+            display: none;
+            position: absolute;
+            z-index: 100;
+            background: var(--sidebar-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            min-width: 180px;
+            overflow: hidden;
+        }
+        .ctx-menu.visible { display: block; }
+        .ctx-menu-item {
+            display: block;
+            padding: 8px 14px;
+            font-size: 0.85em;
+            color: var(--text-color);
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+        }
+        .ctx-menu-item:hover {
+            background: var(--border-color);
+            color: var(--link-color);
+        }
+        .ctx-menu-sep {
+            height: 1px;
+            background: var(--border-color);
+            margin: 2px 0;
+        }
+        /* Inline code preview in narrative panel */
+        .code-preview-section {
+            margin-top: 16px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 12px;
+        }
+        .code-preview-section h4 {
+            color: var(--heading-color);
+            font-size: 0.9em;
+            margin-bottom: 8px;
+        }
+        .code-preview-section pre {
+            background: var(--code-bg);
+            padding: 12px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 0.82em;
+            line-height: 1.5;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .code-preview-section pre code {
+            background: none;
+            padding: 0;
+        }
+        .code-preview-meta {
+            font-size: 0.78em;
+            color: var(--muted-color);
+            margin-bottom: 6px;
+        }
         /* Welcome state */
         .narrative-welcome {
             color: var(--muted-color);
@@ -481,6 +545,8 @@
             .narrative-panel { flex: 1; }
         }
     </style>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css" crossorigin="anonymous" id="hljs-theme">
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/cytoscape@3/dist/cytoscape.min.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/dagre@0.8/dist/dagre.min.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/cytoscape-dagre@2/cytoscape-dagre.js" crossorigin="anonymous"></script>
@@ -543,6 +609,12 @@
                 <div id="progress-message">Generating codemap...</div>
             </div>
             <div class="node-tooltip" id="node-tooltip"></div>
+            <div class="ctx-menu" id="ctx-menu">
+                <a class="ctx-menu-item" id="ctx-wiki">View in Wiki</a>
+                <a class="ctx-menu-item" id="ctx-chat">Ask about this</a>
+                <div class="ctx-menu-sep"></div>
+                <button class="ctx-menu-item" id="ctx-copy">Copy name</button>
+            </div>
             <div class="play-controls" id="play-controls">
                 <button class="play-btn" id="play-btn" title="Play animated trace">&#9654;</button>
                 <button class="play-btn" id="pause-btn" title="Pause">&#10074;&#10074;</button>
@@ -906,6 +978,107 @@
 
         function hideTooltip() {
             nodeTooltip.classList.remove('visible');
+        }
+
+        // --- Context Menu ---
+        var ctxMenu = document.getElementById('ctx-menu');
+        var ctxWiki = document.getElementById('ctx-wiki');
+        var ctxChat = document.getElementById('ctx-chat');
+        var ctxCopy = document.getElementById('ctx-copy');
+        var ctxNode = null;
+
+        function showContextMenu(node, mouseEvent) {
+            ctxNode = node;
+            var filePath = node.data('filePath') || '';
+            var name = node.data('qualifiedName') || node.data('label') || '';
+
+            // Set up links
+            if (filePath) {
+                var wikiPath = '/wiki/files/' + filePath.replace(/\.[^/.]+$/, '.md');
+                ctxWiki.href = wikiPath;
+                ctxWiki.style.display = 'block';
+            } else {
+                ctxWiki.style.display = 'none';
+            }
+            ctxChat.href = '/chat?q=' + encodeURIComponent('Explain ' + name);
+
+            // Position menu at mouse location relative to graph-panel
+            var panelRect = document.getElementById('graph-panel').getBoundingClientRect();
+            var x = mouseEvent.clientX - panelRect.left;
+            var y = mouseEvent.clientY - panelRect.top;
+
+            // Keep within bounds
+            if (x + 200 > panelRect.width) x = panelRect.width - 210;
+            if (y + 120 > panelRect.height) y = panelRect.height - 130;
+
+            ctxMenu.style.left = x + 'px';
+            ctxMenu.style.top = y + 'px';
+            ctxMenu.classList.add('visible');
+        }
+
+        function hideContextMenu() {
+            ctxMenu.classList.remove('visible');
+            ctxNode = null;
+        }
+
+        ctxCopy.addEventListener('click', function() {
+            if (ctxNode) {
+                var name = ctxNode.data('qualifiedName') || ctxNode.data('label') || '';
+                navigator.clipboard.writeText(name);
+            }
+            hideContextMenu();
+        });
+
+        // Close context menu on Escape or outside click
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') hideContextMenu();
+        });
+        document.addEventListener('click', function(e) {
+            if (!ctxMenu.contains(e.target)) hideContextMenu();
+        });
+
+        // --- Inline Code Preview ---
+        function showCodePreview(node) {
+            var preview = node.data('contentPreview') || '';
+            var name = node.data('qualifiedName') || node.data('label') || '';
+            var filePath = node.data('filePath') || '';
+            var startLine = node.data('startLine');
+            var endLine = node.data('endLine');
+            var language = node.data('language') || '';
+
+            if (!preview) return;
+
+            // Remove existing preview section
+            var existing = narrativePanel.querySelector('.code-preview-section');
+            if (existing) existing.remove();
+
+            var section = document.createElement('div');
+            section.className = 'code-preview-section';
+
+            var heading = document.createElement('h4');
+            heading.textContent = name;
+            section.appendChild(heading);
+
+            if (filePath) {
+                var meta = document.createElement('div');
+                meta.className = 'code-preview-meta';
+                meta.textContent = filePath + (startLine ? ':' + startLine + '-' + endLine : '');
+                section.appendChild(meta);
+            }
+
+            var pre = document.createElement('pre');
+            var code = document.createElement('code');
+            if (language) code.className = 'language-' + language;
+            code.textContent = preview;
+            pre.appendChild(code);
+            section.appendChild(pre);
+
+            narrativePanel.appendChild(section);
+
+            // Syntax highlight if hljs available
+            if (typeof hljs !== 'undefined') {
+                hljs.highlightElement(code);
+            }
         }
 
         // --- Path Highlighting (BFS) ---
@@ -1278,6 +1451,23 @@
                 cy.on('mouseout', 'node:childless', function() {
                     cyContainer.style.cursor = 'default';
                     hideTooltip();
+                });
+
+                // Right-click context menu
+                cy.on('cxttap', 'node:childless', function(evt) {
+                    evt.originalEvent.preventDefault();
+                    var node = evt.target;
+                    showContextMenu(node, evt.originalEvent);
+                });
+
+                // Single-click: also show code preview in narrative panel
+                cy.on('tap', 'node:childless', function(evt) {
+                    showCodePreview(evt.target);
+                });
+
+                // Dismiss context menu on background click
+                cy.on('tap', function(evt) {
+                    if (evt.target === cy) hideContextMenu();
                 });
 
                 // Show play controls and init minimap

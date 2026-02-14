@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}DeepWiki{% endblock %}</title>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --text-color: #c9d1d9;
+            --link-color: #58a6ff;
+            --border-color: #30363d;
+            --sidebar-bg: #161b22;
+            --code-bg: #1f2428;
+            --heading-color: #f0f6fc;
+            --muted-color: #8b949e;
+        }
+        [data-theme="light"] {
+            --bg-color: #ffffff;
+            --text-color: #24292f;
+            --link-color: #0969da;
+            --border-color: #d0d7de;
+            --sidebar-bg: #f6f8fa;
+            --code-bg: #f6f8fa;
+            --heading-color: #1f2328;
+            --muted-color: #656d76;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+        /* --- Shared top nav bar --- */
+        .topnav {
+            background: var(--sidebar-bg);
+            border-bottom: 1px solid var(--border-color);
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .topnav-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .topnav-brand {
+            font-weight: 700;
+            font-size: 1.1em;
+            color: var(--heading-color);
+            text-decoration: none;
+        }
+        .topnav-links {
+            display: flex;
+            gap: 4px;
+        }
+        .topnav-links a {
+            color: var(--text-color);
+            text-decoration: none;
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-size: 0.9em;
+            transition: background 0.15s;
+        }
+        .topnav-links a:hover {
+            background: var(--border-color);
+        }
+        .topnav-links a.active {
+            background: var(--link-color);
+            color: #fff;
+        }
+        .topnav-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        /* --- Theme toggle button (reused everywhere) --- */
+        .theme-toggle {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 14px;
+            color: var(--text-color);
+            transition: background 0.2s;
+        }
+        .theme-toggle:hover {
+            background: var(--border-color);
+        }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body {% block body_attrs %}{% endblock %}>
+    {% block nav %}
+    <nav class="topnav">
+        <div class="topnav-left">
+            <a href="/" class="topnav-brand">DeepWiki</a>
+        </div>
+        <div class="topnav-links">
+            <a href="/" class="{{ 'active' if active_page == 'wiki' else '' }}">Wiki</a>
+            <a href="/codemap" class="{{ 'active' if active_page == 'codemap' else '' }}">Codemap</a>
+            <a href="/chat" class="{{ 'active' if active_page == 'chat' else '' }}">Chat</a>
+        </div>
+        <div class="topnav-right">
+            {% block nav_extra %}{% endblock %}
+            <button id="theme-toggle" class="theme-toggle" title="Toggle theme">&#127769;</button>
+        </div>
+    </nav>
+    {% endblock %}
+
+    {% block content %}{% endblock %}
+
+    <script>
+        // Shared theme toggle
+        (function() {
+            var themeToggle = document.getElementById('theme-toggle');
+            var hljsTheme = document.getElementById('hljs-theme');
+
+            function setBaseTheme(theme) {
+                document.documentElement.setAttribute('data-theme', theme);
+                localStorage.setItem('deepwiki-theme', theme);
+                if (themeToggle) {
+                    themeToggle.textContent = theme === 'dark' ? '\u{1f319}' : '\u{2600}';
+                }
+                if (hljsTheme) {
+                    hljsTheme.href = theme === 'dark'
+                        ? 'https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css'
+                        : 'https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github.min.css';
+                }
+                // Hook for page-specific theme handling
+                if (typeof onThemeChange === 'function') onThemeChange(theme);
+            }
+
+            window.setBaseTheme = setBaseTheme;
+
+            var savedTheme = localStorage.getItem('deepwiki-theme') || 'dark';
+            setBaseTheme(savedTheme);
+
+            if (themeToggle) {
+                themeToggle.addEventListener('click', function() {
+                    var current = document.documentElement.getAttribute('data-theme') || 'dark';
+                    setBaseTheme(current === 'dark' ? 'light' : 'dark');
+                });
+            }
+        })();
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

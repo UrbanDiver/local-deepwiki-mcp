@@ -238,6 +238,24 @@ def build_breadcrumb(wiki_path: Path, current_path: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Inject shared template variables
+# ---------------------------------------------------------------------------
+@app.context_processor
+def inject_active_page():
+    """Make active_page available to all templates for nav highlighting."""
+    from flask import request as _req
+
+    path = _req.path
+    if path.startswith("/codemap"):
+        page = "codemap"
+    elif path.startswith("/chat"):
+        page = "chat"
+    else:
+        page = "wiki"
+    return {"active_page": page}
+
+
+# ---------------------------------------------------------------------------
 # Core routes (kept in app.py: index, search, view_page)
 # ---------------------------------------------------------------------------
 @app.route("/")
