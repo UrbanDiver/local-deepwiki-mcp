@@ -534,6 +534,16 @@
             color: var(--muted-color);
             margin-bottom: 6px;
         }
+        /* Active narrative step highlight during animated trace */
+        .narrative-content li.trace-step-active {
+            background: color-mix(in srgb, var(--link-color) 12%, transparent);
+            border-left: 3px solid var(--link-color);
+            padding-left: 8px;
+            margin-left: -11px;
+            border-radius: 4px;
+            transition: background 0.3s;
+        }
+
         /* Welcome state */
         .narrative-welcome {
             color: var(--muted-color);
@@ -619,10 +629,10 @@
                 <button class="ctx-menu-item" id="ctx-copy">Copy name</button>
             </div>
             <div class="play-controls" id="play-controls">
-                <button class="play-btn" id="play-btn" title="Play animated trace">&#9654;</button>
-                <button class="play-btn" id="pause-btn" title="Pause">&#10074;&#10074;</button>
-                <button class="play-btn" id="step-btn" title="Step forward">&#9655;|</button>
-                <button class="play-btn" id="stop-trace-btn" title="Stop trace">&#9632;</button>
+                <button class="play-btn" id="play-btn" title="Walk through the execution trace step-by-step, highlighting each node in the graph and scrolling the narrative panel to the matching step">&#9654;</button>
+                <button class="play-btn" id="pause-btn" title="Pause the animated trace at the current step">&#10074;&#10074;</button>
+                <button class="play-btn" id="step-btn" title="Advance one step at a time — click repeatedly to step through at your own pace">&#9655;|</button>
+                <button class="play-btn" id="stop-trace-btn" title="Stop the trace and reset all highlighting">&#9632;</button>
                 <span class="play-step-label" id="play-step-label">Step 0/0</span>
             </div>
             <div class="cy-minimap" id="cy-minimap"></div>
@@ -1247,6 +1257,9 @@
             cy.animate({ center: { eles: node }, duration: 300 });
 
             playStepLabel.textContent = 'Step ' + (traceStep + 1) + '/' + traceNodes.length;
+
+            // Sync narrative panel: highlight and scroll to the matching step
+            syncNarrativeStep(traceStep);
         }
 
         function pauseTrace() {
@@ -1261,6 +1274,28 @@
             traceStep = -1;
             if (cy) cy.elements().removeClass('trace-active trace-visited trace-bridge');
             playStepLabel.textContent = 'Step 0/' + traceNodes.length;
+            clearNarrativeHighlight();
+        }
+
+        function syncNarrativeStep(stepIndex) {
+            // Find list items in the narrative that correspond to execution steps
+            var items = narrativePanel.querySelectorAll('.narrative-content li');
+            if (items.length === 0) return;
+
+            // Clear previous highlight
+            items.forEach(function(li) { li.classList.remove('trace-step-active'); });
+
+            // Highlight the matching step (narrative steps map 1:1 to trace nodes)
+            if (stepIndex >= 0 && stepIndex < items.length) {
+                var activeItem = items[stepIndex];
+                activeItem.classList.add('trace-step-active');
+                activeItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        function clearNarrativeHighlight() {
+            var items = narrativePanel.querySelectorAll('.narrative-content li.trace-step-active');
+            items.forEach(function(li) { li.classList.remove('trace-step-active'); });
         }
 
         // --- Git Diff Overlay ---
