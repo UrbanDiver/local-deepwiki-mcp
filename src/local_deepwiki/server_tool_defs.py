@@ -30,18 +30,6 @@ _STATEFUL = ToolAnnotations(
     openWorldHint=False,
 )
 
-# --- Output schema for envelope-wrapped responses ---
-
-_ENVELOPE_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "tool": {"type": "string"},
-        "status": {"type": "string", "enum": ["success", "error"]},
-        "data": {"type": "object"},
-        "hints": {"type": "object"},
-    },
-    "required": ["tool", "status", "data"],
-}
 
 TOOL_DEFINITIONS: list[Tool] = [
     Tool(
@@ -104,7 +92,6 @@ TOOL_DEFINITIONS: list[Tool] = [
             "required": ["repo_path"],
         },
         annotations=_WRITE_SAFE,
-        outputSchema=_ENVELOPE_SCHEMA,
     ),
     Tool(
         name="ask_question",
@@ -137,7 +124,6 @@ TOOL_DEFINITIONS: list[Tool] = [
             "required": ["repo_path", "question"],
         },
         annotations=_READ_ONLY,
-        outputSchema=_ENVELOPE_SCHEMA,
     ),
     Tool(
         name="deep_research",
@@ -178,7 +164,6 @@ TOOL_DEFINITIONS: list[Tool] = [
             "required": ["repo_path", "question"],
         },
         annotations=_STATEFUL,
-        outputSchema=_ENVELOPE_SCHEMA,
     ),
     Tool(
         name="read_wiki_structure",
@@ -504,7 +489,6 @@ TOOL_DEFINITIONS: list[Tool] = [
             "required": ["repo_path"],
         },
         annotations=_READ_ONLY,
-        outputSchema=_ENVELOPE_SCHEMA,
     ),
     Tool(
         name="get_inheritance",
@@ -928,7 +912,6 @@ TOOL_DEFINITIONS: list[Tool] = [
             "required": ["repo_path", "entity_name"],
         },
         annotations=_READ_ONLY,
-        outputSchema=_ENVELOPE_SCHEMA,
     ),
     Tool(
         name="impact_analysis",
@@ -974,7 +957,6 @@ TOOL_DEFINITIONS: list[Tool] = [
             "required": ["repo_path", "file_path"],
         },
         annotations=_READ_ONLY,
-        outputSchema=_ENVELOPE_SCHEMA,
     ),
     Tool(
         name="get_complexity_metrics",
@@ -1117,7 +1099,6 @@ TOOL_DEFINITIONS: list[Tool] = [
             "required": ["repo_path", "query"],
         },
         annotations=_READ_ONLY,
-        outputSchema=_ENVELOPE_SCHEMA,
     ),
     Tool(
         name="suggest_codemap_topics",
@@ -1203,7 +1184,6 @@ TOOL_DEFINITIONS: list[Tool] = [
             "required": ["repo_path", "workflow"],
         },
         annotations=_READ_ONLY,
-        outputSchema=_ENVELOPE_SCHEMA,
     ),
     Tool(
         name="batch_explain_entities",
@@ -1235,7 +1215,6 @@ TOOL_DEFINITIONS: list[Tool] = [
             "required": ["repo_path", "entity_names"],
         },
         annotations=_READ_ONLY,
-        outputSchema=_ENVELOPE_SCHEMA,
     ),
     Tool(
         name="query_codebase",
@@ -1264,7 +1243,6 @@ TOOL_DEFINITIONS: list[Tool] = [
             "required": ["repo_path", "query"],
         },
         annotations=_READ_ONLY,
-        outputSchema=_ENVELOPE_SCHEMA,
     ),
     Tool(
         name="find_tools",
@@ -1285,6 +1263,5 @@ TOOL_DEFINITIONS: list[Tool] = [
             "required": ["query"],
         },
         annotations=_READ_ONLY,
-        outputSchema=_ENVELOPE_SCHEMA,
     ),
 ]
