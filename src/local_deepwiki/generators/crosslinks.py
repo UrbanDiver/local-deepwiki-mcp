@@ -153,6 +153,27 @@ class EntityRegistry:
             "model",
             "base",
             "test",
+            # Common function/method names that are also English words
+            "main",
+            "init",
+            "start",
+            "setup",
+            "entry",
+            "close",
+            "parse",
+            "store",
+            "cache",
+            "build",
+            "write",
+            "check",
+            "fetch",
+            "reset",
+            "clear",
+            "flush",
+            "state",
+            "event",
+            "token",
+            "Role",
         }
 
     def register_entity(

@@ -236,9 +236,21 @@ async def generate_glossary_page(
     lines.append("---")
     lines.append("")
 
-    # Generate sections for each letter
+    # Expand/Collapse all controls
+    lines.append(
+        "<p>"
+        '<a href="#" onclick="document.querySelectorAll(\'details\').forEach(d=>d.open=true);return false">Expand All</a>'
+        " | "
+        '<a href="#" onclick="document.querySelectorAll(\'details\').forEach(d=>d.open=false);return false">Collapse All</a>'
+        "</p>"
+    )
+    lines.append("")
+
+    # Generate collapsible sections for each letter
     for letter in letters:
-        lines.append(f"## {letter}")
+        count = len(grouped[letter])
+        lines.append(f'<details id="{letter.lower()}">')
+        lines.append(f"<summary><strong>{letter}</strong> — {count} entities</summary>")
         lines.append("")
 
         for entity in grouped[letter]:
@@ -282,6 +294,8 @@ async def generate_glossary_page(
                 f"(`{file_name}`){desc_part}"
             )
 
+        lines.append("")
+        lines.append("</details>")
         lines.append("")
 
     # Add legend

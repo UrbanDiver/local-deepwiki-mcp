@@ -865,4 +865,4 @@ class TestGenerateGlossaryPage:
 
         result = await generate_glossary_page(sample_index_status, mock_vector_store)
 
-        assert "## #" in result
+        assert "<strong>#</strong>" in result
