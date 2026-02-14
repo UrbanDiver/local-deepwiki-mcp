@@ -162,7 +162,7 @@ async def test_analyze_diff_repo_not_found(mock_access_control, tmp_path):
     result = await handle_analyze_diff({"repo_path": fake_path})
 
     text = result[0].text
-    assert "Error" in text
+    assert "error" in text.lower()
     assert "does not exist" in text or "not found" in text.lower()
 
 
@@ -181,7 +181,7 @@ async def test_analyze_diff_validation_error(mock_access_control, tmp_path):
 
     # Pydantic validation errors are formatted as plain text by the decorator
     text = result[0].text
-    assert "Error" in text
+    assert "error" in text.lower()
     assert "repo_path" in text
 
 

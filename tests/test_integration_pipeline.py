@@ -1173,10 +1173,10 @@ class TestQueryPipelineIntegration:
 
         assert len(result) == 1
         data = json.loads(result[0].text)
-        assert isinstance(data, list)
-        assert len(data) > 0
+        assert data["status"] == "success"
+        assert len(data["results"]) > 0
         # Should find the validate_config function in utils.py
-        found_files = {entry["file_path"] for entry in data}
+        found_files = {entry["file_path"] for entry in data["results"]}
         assert any("utils.py" in f for f in found_files)
 
     async def test_ask_question_no_results(self, indexed_repo):

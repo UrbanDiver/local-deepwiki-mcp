@@ -7,12 +7,52 @@ and request dispatch.
 
 from __future__ import annotations
 
-from mcp.types import Tool
+from mcp.types import Tool, ToolAnnotations
+
+# --- Annotation constants ---
+
+_READ_ONLY = ToolAnnotations(
+    readOnlyHint=True,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=False,
+)
+_WRITE_SAFE = ToolAnnotations(
+    readOnlyHint=False,
+    destructiveHint=False,
+    idempotentHint=True,
+    openWorldHint=False,
+)
+_STATEFUL = ToolAnnotations(
+    readOnlyHint=False,
+    destructiveHint=False,
+    idempotentHint=False,
+    openWorldHint=False,
+)
+
+# --- Output schema for envelope-wrapped responses ---
+
+_ENVELOPE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "tool": {"type": "string"},
+        "status": {"type": "string", "enum": ["success", "error"]},
+        "data": {"type": "object"},
+        "hints": {"type": "object"},
+    },
+    "required": ["tool", "status", "data"],
+}
 
 TOOL_DEFINITIONS: list[Tool] = [
     Tool(
         name="index_repository",
-        description="Index a repository and generate wiki documentation. This parses all source files, extracts semantic code chunks, generates embeddings, and creates wiki markdown files.",
+        description=(
+            "Index a repository and generate wiki documentation. This parses all "
+            "source files, extracts semantic code chunks, generates embeddings, and "
+            "creates wiki markdown files."
+            "\n\nNo prior indexing required."
+            '\n\nExample: {"repo_path": "/path/to/repo"}'
+        ),
         inputSchema={
             "type": "object",
             "properties": {
@@ -63,10 +103,17 @@ TOOL_DEFINITIONS: list[Tool] = [
             },
             "required": ["repo_path"],
         },
+        annotations=_WRITE_SAFE,
+        outputSchema=_ENVELOPE_SCHEMA,
     ),
     Tool(
         name="ask_question",
-        description="Ask a question about an indexed repository using RAG. Returns an answer based on relevant code context.",
+        description=(
+            "Ask a question about an indexed repository using RAG. Returns an "
+            "answer based on relevant code context."
+            "\n\nRequires: index_repository must be called first."
+            '\n\nExample: {"repo_path": "/path/to/repo", "question": "How does authentication work?"}'
+        ),
         inputSchema={
             "type": "object",
             "properties": {
@@ -89,10 +136,20 @@ TOOL_DEFINITIONS: list[Tool] = [
             },
             "required": ["repo_path", "question"],
         },
+        annotations=_READ_ONLY,
+        outputSchema=_ENVELOPE_SCHEMA,
     ),
     Tool(
         name="deep_research",
-        description="Perform deep research on a codebase question using multi-step reasoning. Unlike ask_question (single retrieval), this performs query decomposition, parallel retrieval, gap analysis, and comprehensive synthesis. Best for complex architectural questions. Supports checkpointing for long-running research that can be resumed if interrupted.",
+        description=(
+            "Perform deep research on a codebase question using multi-step reasoning. "
+            "Unlike ask_question (single retrieval), this performs query decomposition, "
+            "parallel retrieval, gap analysis, and comprehensive synthesis. Best for "
+            "complex architectural questions. Supports checkpointing for long-running "
+            "research that can be resumed if interrupted."
+            "\n\nRequires: index_repository must be called first."
+            '\n\nExample: {"repo_path": "/path/to/repo", "question": "How is the event system architected?"}'
+        ),
         inputSchema={
             "type": "object",
             "properties": {
@@ -120,10 +177,15 @@ TOOL_DEFINITIONS: list[Tool] = [
             },
             "required": ["repo_path", "question"],
         },
+        annotations=_STATEFUL,
+        outputSchema=_ENVELOPE_SCHEMA,
     ),
     Tool(
         name="read_wiki_structure",
-        description="Get the table of contents and structure of a generated wiki.",
+        description=(
+            "Get the table of contents and structure of a generated wiki."
+            "\n\nRequires: index_repository must be called first."
+        ),
         inputSchema={
             "type": "object",
             "properties": {
@@ -134,10 +196,14 @@ TOOL_DEFINITIONS: list[Tool] = [
             },
             "required": ["wiki_path"],
         },
+        annotations=_READ_ONLY,
     ),
     Tool(
         name="read_wiki_page",
-        description="Read a specific wiki page content.",
+        description=(
+            "Read a specific wiki page content."
+            "\n\nRequires: index_repository must be called first."
+        ),
         inputSchema={
             "type": "object",
             "properties": {
@@ -152,10 +218,16 @@ TOOL_DEFINITIONS: list[Tool] = [
             },
             "required": ["wiki_path", "page"],
         },
+        annotations=_READ_ONLY,
     ),
     Tool(
         name="search_code",
-        description="Semantic search across the indexed codebase with optional fuzzy matching and filters. Returns relevant code chunks with similarity scores.",
+        description=(
+            "Semantic search across the indexed codebase with optional fuzzy "
+            "matching and filters. Returns relevant code chunks with similarity scores."
+            "\n\nRequires: index_repository must be called first."
+            '\n\nExample: {"repo_path": "/path/to/repo", "query": "error handling"}'
+        ),
         inputSchema={
             "type": "object",
             "properties": {
@@ -219,10 +291,15 @@ TOOL_DEFINITIONS: list[Tool] = [
             },
             "required": ["repo_path", "query"],
         },
+        annotations=_READ_ONLY,
     ),
     Tool(
         name="export_wiki_html",
-        description="Export wiki documentation to static HTML files. Creates a self-contained website that can be viewed without a server.",
+        description=(
+            "Export wiki documentation to static HTML files. Creates a "
+            "self-contained website that can be viewed without a server."
+            "\n\nRequires: index_repository must be called first."
+        ),
         inputSchema={
             "type": "object",
             "properties": {
@@ -237,10 +314,15 @@ TOOL_DEFINITIONS: list[Tool] = [
             },
             "required": ["wiki_path"],
         },
+        annotations=_WRITE_SAFE,
     ),
     Tool(
         name="export_wiki_pdf",
-        description="Export wiki documentation to PDF format. Creates a printable PDF document with proper formatting, page numbers, and table of contents.",
+        description=(
+            "Export wiki documentation to PDF format. Creates a printable PDF "
+            "document with proper formatting, page numbers, and table of contents."
+            "\n\nRequires: index_repository must be called first."
+        ),
         inputSchema={
             "type": "object",
             "properties": {
@@ -259,10 +341,16 @@ TOOL_DEFINITIONS: list[Tool] = [
             },
             "required": ["wiki_path"],
         },
+        annotations=_WRITE_SAFE,
     ),
     Tool(
         name="list_research_checkpoints",
-        description="List all research checkpoints for a repository. Shows incomplete and cancelled research sessions that can be resumed using the deep_research tool with resume_research_id.",
+        description=(
+            "List all research checkpoints for a repository. Shows incomplete "
+            "and cancelled research sessions that can be resumed using the "
+            "deep_research tool with resume_research_id."
+            "\n\nRequires: index_repository must be called first."
+        ),
         inputSchema={
             "type": "object",
             "properties": {
@@ -273,10 +361,16 @@ TOOL_DEFINITIONS: list[Tool] = [
             },
             "required": ["repo_path"],
         },
+        annotations=_READ_ONLY,
     ),
     Tool(
         name="cancel_research",
-        description="Cancel an active deep research session and save its checkpoint. The research can be resumed later using the deep_research tool with resume_research_id.",
+        description=(
+            "Cancel an active deep research session and save its checkpoint. "
+            "The research can be resumed later using the deep_research tool "
+            "with resume_research_id."
+            "\n\nRequires: index_repository must be called first."
+        ),
         inputSchema={
             "type": "object",
             "properties": {
@@ -291,10 +385,16 @@ TOOL_DEFINITIONS: list[Tool] = [
             },
             "required": ["repo_path", "research_id"],
         },
+        annotations=_STATEFUL,
     ),
     Tool(
         name="resume_research",
-        description="Resume a previously interrupted deep research session from its checkpoint. This is a convenience wrapper - you can also use deep_research with resume_research_id directly.",
+        description=(
+            "Resume a previously interrupted deep research session from its "
+            "checkpoint. This is a convenience wrapper - you can also use "
+            "deep_research with resume_research_id directly."
+            "\n\nRequires: index_repository must be called first."
+        ),
         inputSchema={
             "type": "object",
             "properties": {
@@ -309,10 +409,16 @@ TOOL_DEFINITIONS: list[Tool] = [
             },
             "required": ["repo_path", "research_id"],
         },
+        annotations=_STATEFUL,
     ),
     Tool(
         name="get_operation_progress",
-        description="Get progress for active long-running operations. Supports polling-based progress tracking for clients that cannot receive push notifications. Returns current progress, ETA, and phase information.",
+        description=(
+            "Get progress for active long-running operations. Supports "
+            "polling-based progress tracking for clients that cannot receive "
+            "push notifications. Returns current progress, ETA, and phase information."
+            "\n\nNo prior indexing required."
+        ),
         inputSchema={
             "type": "object",
             "properties": {
@@ -323,10 +429,16 @@ TOOL_DEFINITIONS: list[Tool] = [
             },
             "required": [],
         },
+        annotations=_READ_ONLY,
     ),
     Tool(
         name="get_glossary",
-        description="Get a searchable glossary of all code entities (classes, functions, methods) in an indexed repository. Useful for discovering what's in the codebase.",
+        description=(
+            "Get a searchable glossary of all code entities (classes, functions, "
+            "methods) in an indexed repository. Useful for discovering what's in "
+            "the codebase."
+            "\n\nRequires: index_repository must be called first."
+        ),
         inputSchema={
             "type": "object",
             "properties": {
@@ -355,10 +467,17 @@ TOOL_DEFINITIONS: list[Tool] = [
             },
             "required": ["repo_path"],
         },
+        annotations=_READ_ONLY,
     ),
     Tool(
         name="get_diagrams",
-        description="Generate Mermaid diagrams for an indexed repository. Supports class diagrams, dependency graphs, module overviews, language distribution pie charts, and sequence diagrams.",
+        description=(
+            "Generate Mermaid diagrams for an indexed repository. Supports class "
+            "diagrams, dependency graphs, module overviews, language distribution "
+            "pie charts, and sequence diagrams."
+            "\n\nRequires: index_repository must be called first."
+            '\n\nExample: {"repo_path": "/path/to/repo", "diagram_type": "class"}'
+        ),
         inputSchema={
             "type": "object",
             "properties": {
@@ -384,10 +503,17 @@ TOOL_DEFINITIONS: list[Tool] = [
             },
             "required": ["repo_path"],
         },
+        annotations=_READ_ONLY,
+        outputSchema=_ENVELOPE_SCHEMA,
     ),
     Tool(
         name="get_inheritance",
-        description="Get class inheritance hierarchy trees for an indexed repository. Shows parent-child relationships, abstract classes, and generates a Mermaid inheritance diagram.",
+        description=(
+            "Get class inheritance hierarchy trees for an indexed repository. "
+            "Shows parent-child relationships, abstract classes, and generates "
+            "a Mermaid inheritance diagram."
+            "\n\nRequires: index_repository must be called first."
+        ),
         inputSchema={
             "type": "object",
             "properties": {
@@ -412,10 +538,16 @@ TOOL_DEFINITIONS: list[Tool] = [
             },
             "required": ["repo_path"],
         },
+        annotations=_READ_ONLY,
     ),
     Tool(
         name="get_call_graph",
-        description="Get function call graphs showing which functions call which. Can analyze a specific file or the entire repository. Returns a Mermaid flowchart.",
+        description=(
+            "Get function call graphs showing which functions call which. Can "
+            "analyze a specific file or the entire repository. Returns a "
+            "Mermaid flowchart."
+            "\n\nRequires: index_repository must be called first."
+        ),
         inputSchema={
             "type": "object",
             "properties": {
@@ -430,10 +562,16 @@ TOOL_DEFINITIONS: list[Tool] = [
             },
             "required": ["repo_path"],
         },
+        annotations=_READ_ONLY,
     ),
     Tool(
         name="get_coverage",
-        description="Get documentation coverage report for an indexed repository. Shows which classes, functions, and methods have docstrings and which don't.",
+        description=(
+            "Get documentation coverage report for an indexed repository. "
+            "Shows which classes, functions, and methods have docstrings "
+            "and which don't."
+            "\n\nRequires: index_repository must be called first."
+        ),
         inputSchema={
             "type": "object",
             "properties": {
@@ -444,10 +582,15 @@ TOOL_DEFINITIONS: list[Tool] = [
             },
             "required": ["repo_path"],
         },
+        annotations=_READ_ONLY,
     ),
     Tool(
         name="detect_stale_docs",
-        description="Find wiki pages that may be outdated because their source files have been modified since the documentation was generated.",
+        description=(
+            "Find wiki pages that may be outdated because their source files "
+            "have been modified since the documentation was generated."
+            "\n\nRequires: index_repository must be called first."
+        ),
         inputSchema={
             "type": "object",
             "properties": {
@@ -462,10 +605,15 @@ TOOL_DEFINITIONS: list[Tool] = [
             },
             "required": ["repo_path"],
         },
+        annotations=_READ_ONLY,
     ),
     Tool(
         name="get_changelog",
-        description="Extract recent git commit history as a formatted changelog. Groups commits by date and includes file change information.",
+        description=(
+            "Extract recent git commit history as a formatted changelog. "
+            "Groups commits by date and includes file change information."
+            "\n\nNo prior indexing required."
+        ),
         inputSchema={
             "type": "object",
             "properties": {
@@ -480,10 +628,16 @@ TOOL_DEFINITIONS: list[Tool] = [
             },
             "required": ["repo_path"],
         },
+        annotations=_READ_ONLY,
     ),
     Tool(
         name="detect_secrets",
-        description="Scan a repository for hardcoded credentials and secrets (API keys, tokens, passwords, private keys). Returns findings with type, location, confidence, and remediation advice.",
+        description=(
+            "Scan a repository for hardcoded credentials and secrets (API keys, "
+            "tokens, passwords, private keys). Returns findings with type, "
+            "location, confidence, and remediation advice."
+            "\n\nNo prior indexing required."
+        ),
         inputSchema={
             "type": "object",
             "properties": {
@@ -498,10 +652,16 @@ TOOL_DEFINITIONS: list[Tool] = [
             },
             "required": ["repo_path"],
         },
+        annotations=_READ_ONLY,
     ),
     Tool(
         name="get_test_examples",
-        description="Find usage examples for a function or class by searching test files in the indexed repository. Returns code snippets showing how the entity is used in tests.",
+        description=(
+            "Find usage examples for a function or class by searching test "
+            "files in the indexed repository. Returns code snippets showing "
+            "how the entity is used in tests."
+            "\n\nRequires: index_repository must be called first."
+        ),
         inputSchema={
             "type": "object",
             "properties": {
@@ -520,10 +680,16 @@ TOOL_DEFINITIONS: list[Tool] = [
             },
             "required": ["repo_path", "entity_name"],
         },
+        annotations=_READ_ONLY,
     ),
     Tool(
         name="get_api_docs",
-        description="Get API documentation with function signatures, parameters, return types, and docstrings for a specific file. Uses tree-sitter AST parsing for accuracy.",
+        description=(
+            "Get API documentation with function signatures, parameters, return "
+            "types, and docstrings for a specific file. Uses tree-sitter AST "
+            "parsing for accuracy."
+            "\n\nNo prior indexing required."
+        ),
         inputSchema={
             "type": "object",
             "properties": {
@@ -538,10 +704,16 @@ TOOL_DEFINITIONS: list[Tool] = [
             },
             "required": ["repo_path", "file_path"],
         },
+        annotations=_READ_ONLY,
     ),
     Tool(
         name="list_indexed_repos",
-        description="Discover all indexed repositories under a given directory. Searches for .deepwiki directories and returns index metadata for each.",
+        description=(
+            "Discover all indexed repositories under a given directory. "
+            "Searches for .deepwiki directories and returns index metadata "
+            "for each."
+            "\n\nNo prior indexing required."
+        ),
         inputSchema={
             "type": "object",
             "properties": {
@@ -552,10 +724,16 @@ TOOL_DEFINITIONS: list[Tool] = [
             },
             "required": [],
         },
+        annotations=_READ_ONLY,
     ),
     Tool(
         name="get_index_status",
-        description="Get index statistics for a repository without re-indexing. Shows file count, chunk count, languages, and when it was last indexed.",
+        description=(
+            "Get index statistics for a repository without re-indexing. "
+            "Shows file count, chunk count, languages, and when it was "
+            "last indexed."
+            "\n\nRequires: index_repository must be called first."
+        ),
         inputSchema={
             "type": "object",
             "properties": {
@@ -566,10 +744,16 @@ TOOL_DEFINITIONS: list[Tool] = [
             },
             "required": ["repo_path"],
         },
+        annotations=_READ_ONLY,
     ),
     Tool(
         name="search_wiki",
-        description="Full-text search across wiki pages and code entities. Searches titles, headings, code terms, descriptions, and keywords. Returns ranked matches.",
+        description=(
+            "Full-text search across wiki pages and code entities. Searches "
+            "titles, headings, code terms, descriptions, and keywords. "
+            "Returns ranked matches."
+            "\n\nRequires: index_repository must be called first."
+        ),
         inputSchema={
             "type": "object",
             "properties": {
@@ -593,10 +777,16 @@ TOOL_DEFINITIONS: list[Tool] = [
             },
             "required": ["repo_path", "query"],
         },
+        annotations=_READ_ONLY,
     ),
     Tool(
         name="get_project_manifest",
-        description="Get parsed project metadata from package manifest files (pyproject.toml, package.json, Cargo.toml, go.mod, etc.). Returns name, version, dependencies, scripts, tech stack summary.",
+        description=(
+            "Get parsed project metadata from package manifest files "
+            "(pyproject.toml, package.json, Cargo.toml, go.mod, etc.). "
+            "Returns name, version, dependencies, scripts, tech stack summary."
+            "\n\nNo prior indexing required."
+        ),
         inputSchema={
             "type": "object",
             "properties": {
@@ -611,10 +801,16 @@ TOOL_DEFINITIONS: list[Tool] = [
             },
             "required": ["repo_path"],
         },
+        annotations=_READ_ONLY,
     ),
     Tool(
         name="get_file_context",
-        description="Get rich context for a source file: imports, callers (who uses this file), related files, and type definitions used. Helps understand a file's role in the codebase.",
+        description=(
+            "Get rich context for a source file: imports, callers (who uses "
+            "this file), related files, and type definitions used. Helps "
+            "understand a file's role in the codebase."
+            "\n\nRequires: index_repository must be called first."
+        ),
         inputSchema={
             "type": "object",
             "properties": {
@@ -629,10 +825,17 @@ TOOL_DEFINITIONS: list[Tool] = [
             },
             "required": ["repo_path", "file_path"],
         },
+        annotations=_READ_ONLY,
     ),
     Tool(
         name="fuzzy_search",
-        description="Fuzzy name matching for functions, classes, and methods using Levenshtein distance. Returns 'Did you mean?' suggestions, file locations, and similarity scores. Great for finding entities when you don't know the exact name.",
+        description=(
+            "Fuzzy name matching for functions, classes, and methods using "
+            "Levenshtein distance. Returns 'Did you mean?' suggestions, file "
+            "locations, and similarity scores. Great for finding entities when "
+            "you don't know the exact name."
+            "\n\nRequires: index_repository must be called first."
+        ),
         inputSchema={
             "type": "object",
             "properties": {
@@ -659,10 +862,16 @@ TOOL_DEFINITIONS: list[Tool] = [
             },
             "required": ["repo_path", "query"],
         },
+        annotations=_READ_ONLY,
     ),
     Tool(
         name="get_wiki_stats",
-        description="Get a wiki health dashboard with index stats, page counts, search index size, coverage data, and wiki status - all in a single call.",
+        description=(
+            "Get a wiki health dashboard with index stats, page counts, "
+            "search index size, coverage data, and wiki status - all in "
+            "a single call."
+            "\n\nRequires: index_repository must be called first."
+        ),
         inputSchema={
             "type": "object",
             "properties": {
@@ -673,10 +882,17 @@ TOOL_DEFINITIONS: list[Tool] = [
             },
             "required": ["repo_path"],
         },
+        annotations=_READ_ONLY,
     ),
     Tool(
         name="explain_entity",
-        description="Get a comprehensive explanation of a function, class, or method by combining glossary info, call graph, inheritance tree, test examples, and API docs into a single response.",
+        description=(
+            "Get a comprehensive explanation of a function, class, or method "
+            "by combining glossary info, call graph, inheritance tree, test "
+            "examples, and API docs into a single response."
+            "\n\nRequires: index_repository must be called first."
+            '\n\nExample: {"repo_path": "/path/to/repo", "entity_name": "MyClass"}'
+        ),
         inputSchema={
             "type": "object",
             "properties": {
@@ -711,10 +927,18 @@ TOOL_DEFINITIONS: list[Tool] = [
             },
             "required": ["repo_path", "entity_name"],
         },
+        annotations=_READ_ONLY,
+        outputSchema=_ENVELOPE_SCHEMA,
     ),
     Tool(
         name="impact_analysis",
-        description="Analyze the blast radius of changes to a file or entity. Combines reverse call graph, inheritance dependents, file-level imports, and affected wiki pages to help understand impact before making changes.",
+        description=(
+            "Analyze the blast radius of changes to a file or entity. Combines "
+            "reverse call graph, inheritance dependents, file-level imports, and "
+            "affected wiki pages to help understand impact before making changes."
+            "\n\nRequires: index_repository must be called first."
+            '\n\nExample: {"repo_path": "/path/to/repo", "file_path": "src/auth.py"}'
+        ),
         inputSchema={
             "type": "object",
             "properties": {
@@ -749,10 +973,17 @@ TOOL_DEFINITIONS: list[Tool] = [
             },
             "required": ["repo_path", "file_path"],
         },
+        annotations=_READ_ONLY,
+        outputSchema=_ENVELOPE_SCHEMA,
     ),
     Tool(
         name="get_complexity_metrics",
-        description="Analyze code complexity for a source file using tree-sitter AST parsing. Returns function/class counts, line metrics, cyclomatic complexity, nesting depth, and parameter counts.",
+        description=(
+            "Analyze code complexity for a source file using tree-sitter AST "
+            "parsing. Returns function/class counts, line metrics, cyclomatic "
+            "complexity, nesting depth, and parameter counts."
+            "\n\nNo prior indexing required."
+        ),
         inputSchema={
             "type": "object",
             "properties": {
@@ -767,10 +998,16 @@ TOOL_DEFINITIONS: list[Tool] = [
             },
             "required": ["repo_path", "file_path"],
         },
+        annotations=_READ_ONLY,
     ),
     Tool(
         name="analyze_diff",
-        description="Analyze git diff between two refs and map changed files to affected wiki pages and code entities. Helps understand documentation impact of code changes.",
+        description=(
+            "Analyze git diff between two refs and map changed files to "
+            "affected wiki pages and code entities. Helps understand "
+            "documentation impact of code changes."
+            "\n\nNo prior indexing required."
+        ),
         inputSchema={
             "type": "object",
             "properties": {
@@ -793,10 +1030,17 @@ TOOL_DEFINITIONS: list[Tool] = [
             },
             "required": ["repo_path"],
         },
+        annotations=_READ_ONLY,
     ),
     Tool(
         name="ask_about_diff",
-        description="Ask questions about recent code changes using RAG. Combines git diff with vector search context and LLM synthesis to answer questions like 'What changed?', 'Are there any bugs?', or 'What's the impact?'.",
+        description=(
+            "Ask questions about recent code changes using RAG. Combines git "
+            "diff with vector search context and LLM synthesis to answer "
+            "questions like 'What changed?', 'Are there any bugs?', or "
+            "'What's the impact?'."
+            "\n\nNo prior indexing required."
+        ),
         inputSchema={
             "type": "object",
             "properties": {
@@ -823,6 +1067,7 @@ TOOL_DEFINITIONS: list[Tool] = [
             },
             "required": ["repo_path", "question"],
         },
+        annotations=_READ_ONLY,
     ),
     Tool(
         name="generate_codemap",
@@ -831,6 +1076,8 @@ TOOL_DEFINITIONS: list[Tool] = [
             "Mermaid diagram and narrative trace for a question or topic. Shows how "
             "code flows across files with file paths and line numbers. Best for "
             "understanding 'How does X work?' questions."
+            "\n\nRequires: index_repository must be called first."
+            '\n\nExample: {"repo_path": "/path/to/repo", "query": "How does request handling work?"}'
         ),
         inputSchema={
             "type": "object",
@@ -869,6 +1116,8 @@ TOOL_DEFINITIONS: list[Tool] = [
             },
             "required": ["repo_path", "query"],
         },
+        annotations=_READ_ONLY,
+        outputSchema=_ENVELOPE_SCHEMA,
     ),
     Tool(
         name="suggest_codemap_topics",
@@ -876,6 +1125,7 @@ TOOL_DEFINITIONS: list[Tool] = [
             "Suggest interesting codemap topics for a repository based on call graph hubs, "
             "core modules, and common entry patterns. Use before generate_codemap to discover "
             "what flows are worth exploring."
+            "\n\nRequires: index_repository must be called first."
         ),
         inputSchema={
             "type": "object",
@@ -891,10 +1141,16 @@ TOOL_DEFINITIONS: list[Tool] = [
             },
             "required": ["repo_path"],
         },
+        annotations=_READ_ONLY,
     ),
     Tool(
         name="suggest_next_actions",
-        description="Suggest which tools to use next based on tools already used. Returns ranked suggestions with reasons. No LLM calls — uses a static decision tree for instant responses.",
+        description=(
+            "Suggest which tools to use next based on tools already used. "
+            "Returns ranked suggestions with reasons. No LLM calls - uses a "
+            "static decision tree for instant responses."
+            "\n\nNo prior indexing required."
+        ),
         inputSchema={
             "type": "object",
             "properties": {
@@ -914,10 +1170,18 @@ TOOL_DEFINITIONS: list[Tool] = [
             },
             "required": [],
         },
+        annotations=_READ_ONLY,
     ),
     Tool(
         name="run_workflow",
-        description="Run a pre-built multi-step workflow. Available presets: 'onboarding' (project overview), 'security_audit' (secrets + complexity), 'full_analysis' (stats + coverage + stale + secrets), 'quick_refresh' (stale docs + changelog).",
+        description=(
+            "Run a pre-built multi-step workflow. Available presets: 'onboarding' "
+            "(project overview), 'security_audit' (secrets + complexity), "
+            "'full_analysis' (stats + coverage + stale + secrets), 'quick_refresh' "
+            "(stale docs + changelog)."
+            "\n\nRequires: index_repository must be called first."
+            '\n\nExample: {"repo_path": "/path/to/repo", "workflow": "onboarding"}'
+        ),
         inputSchema={
             "type": "object",
             "properties": {
@@ -938,10 +1202,17 @@ TOOL_DEFINITIONS: list[Tool] = [
             },
             "required": ["repo_path", "workflow"],
         },
+        annotations=_READ_ONLY,
+        outputSchema=_ENVELOPE_SCHEMA,
     ),
     Tool(
         name="batch_explain_entities",
-        description="Explain multiple code entities in a single call. Loads the search index once and looks up each entity name. More efficient than calling explain_entity repeatedly.",
+        description=(
+            "Explain multiple code entities in a single call. Loads the search "
+            "index once and looks up each entity name. More efficient than "
+            "calling explain_entity repeatedly."
+            "\n\nRequires: index_repository must be called first."
+        ),
         inputSchema={
             "type": "object",
             "properties": {
@@ -955,13 +1226,25 @@ TOOL_DEFINITIONS: list[Tool] = [
                     "description": "List of entity names to explain (max 20)",
                     "maxItems": 20,
                 },
+                "depth": {
+                    "type": "string",
+                    "enum": ["shallow", "full"],
+                    "description": "Depth of explanation: 'shallow' (search index only, default) or 'full' (calls explain_entity for each)",
+                },
             },
             "required": ["repo_path", "entity_names"],
         },
+        annotations=_READ_ONLY,
+        outputSchema=_ENVELOPE_SCHEMA,
     ),
     Tool(
         name="query_codebase",
-        description="Smart query that combines ask_question with automatic escalation to deep_research when the initial answer is insufficient. Single entry point for codebase Q&A.",
+        description=(
+            "Smart query that combines ask_question with automatic escalation "
+            "to deep_research when the initial answer is insufficient. Single "
+            "entry point for codebase Q&A."
+            "\n\nRequires: index_repository must be called first."
+        ),
         inputSchema={
             "type": "object",
             "properties": {
@@ -980,5 +1263,28 @@ TOOL_DEFINITIONS: list[Tool] = [
             },
             "required": ["repo_path", "query"],
         },
+        annotations=_READ_ONLY,
+        outputSchema=_ENVELOPE_SCHEMA,
+    ),
+    Tool(
+        name="find_tools",
+        description=(
+            "Search for tools by capability description. Returns ranked matches "
+            "with tool name, description, and whether indexing is required. "
+            "Useful when an agent needs to discover which tool to use."
+            "\n\nNo prior indexing required."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "Capability description to search for (e.g., 'security scanning', 'code visualization')",
+                },
+            },
+            "required": ["query"],
+        },
+        annotations=_READ_ONLY,
+        outputSchema=_ENVELOPE_SCHEMA,
     ),
 ]

@@ -303,7 +303,7 @@ class TestHandleSearchWiki:
 
     async def test_search_invalid_args(self, mock_access_control):
         result = await handle_search_wiki({"repo_path": "/tmp/repo"})
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
 
     async def test_search_by_keyword(self, tmp_path, wiki_dir, mock_access_control):
         index_status = _make_index_status(str(tmp_path))
@@ -347,7 +347,7 @@ class TestHandleSearchWiki:
         result = await handle_search_wiki(
             {"repo_path": "/nonexistent/path/xyz", "query": "test"}
         )
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "does not exist" in result[0].text
 
 
@@ -393,7 +393,7 @@ class TestHandleGetProjectManifest:
         result = await handle_get_project_manifest(
             {"repo_path": "/nonexistent/path/xyz"}
         )
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "does not exist" in result[0].text
 
     async def test_no_cache_option(self, tmp_path, mock_access_control):
@@ -490,7 +490,7 @@ class TestHandleGetFileContext:
             result = await handle_get_file_context(
                 {"repo_path": str(tmp_path), "file_path": "nonexistent.py"}
             )
-            assert "Error" in result[0].text
+            assert "error" in result[0].text.lower()
             assert "does not exist" in result[0].text
 
     async def test_no_chunks(self, tmp_path, mock_access_control):
@@ -524,14 +524,14 @@ class TestHandleGetFileContext:
 
     async def test_invalid_args_missing_file_path(self, mock_access_control):
         result = await handle_get_file_context({"repo_path": "/tmp/repo"})
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
 
     async def test_path_traversal_rejected(self, tmp_path, mock_access_control):
         """Path traversal via '../' must be blocked."""
         result = await handle_get_file_context(
             {"repo_path": str(tmp_path), "file_path": "../../etc/passwd"}
         )
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "traversal" in result[0].text.lower()
 
 
@@ -669,7 +669,7 @@ class TestHandleFuzzySearch:
         result = await handle_fuzzy_search(
             {"repo_path": "/nonexistent/path/xyz", "query": "test"}
         )
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "does not exist" in result[0].text
 
 
@@ -718,7 +718,7 @@ class TestHandleGetWikiStats:
 
     async def test_nonexistent_repo(self, mock_access_control):
         result = await handle_get_wiki_stats({"repo_path": "/nonexistent/path/xyz"})
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "does not exist" in result[0].text
 
     async def test_includes_coverage(self, tmp_path, mock_access_control):

@@ -260,7 +260,7 @@ class TestSuggestNextActionsIntegration:
             result = await handle_suggest_next_actions({"repo_path": str(repo_path)})
 
         data = json.loads(result[0].text)
-        suggestions = data["data"]["suggestions"]
+        suggestions = data["suggestions"]
         tool_names = [s["tool"] for s in suggestions]
 
         assert "read_wiki_structure" in tool_names
@@ -275,7 +275,7 @@ class TestSuggestNextActionsIntegration:
             {"tools_used": ["index_repository"]}
         )
         data1 = json.loads(result1[0].text)
-        tools1 = [s["tool"] for s in data1["data"]["suggestions"]]
+        tools1 = [s["tool"] for s in data1["suggestions"]]
         assert "read_wiki_structure" in tools1
 
         # Step 2: after reading structure
@@ -283,7 +283,7 @@ class TestSuggestNextActionsIntegration:
             {"tools_used": ["index_repository", "read_wiki_structure"]}
         )
         data2 = json.loads(result2[0].text)
-        tools2 = [s["tool"] for s in data2["data"]["suggestions"]]
+        tools2 = [s["tool"] for s in data2["suggestions"]]
 
         # read_wiki_structure already used, should not reappear
         assert "read_wiki_structure" not in tools2
@@ -316,10 +316,10 @@ class TestBatchExplainEntitiesIntegration:
             )
 
         data = json.loads(result[0].text)
-        assert data["data"]["total_requested"] == 2
-        assert data["data"]["total_found"] == 2
+        assert data["total_requested"] == 2
+        assert data["total_found"] == 2
 
-        results = data["data"]["results"]
+        results = data["results"]
         app_result = next(r for r in results if r["entity"] == "Application")
         assert app_result["found"] is True
         assert app_result["matches"][0]["type"] == "class"
@@ -344,8 +344,8 @@ class TestBatchExplainEntitiesIntegration:
             )
 
         data = json.loads(result[0].text)
-        assert data["data"]["total_found"] == 1
-        results = data["data"]["results"]
+        assert data["total_found"] == 1
+        results = data["results"]
         assert results[0]["found"] is True
         assert results[1]["found"] is False
 
@@ -445,8 +445,8 @@ class TestQueryCodebaseIntegration:
         data = json.loads(result[0].text)
         assert data["tool"] == "query_codebase"
         assert data["status"] == "success"
-        assert "answer" in data["data"] or "escalated" in data["data"]
-        assert data["data"]["escalated"] is False
+        assert "answer" in data or "escalated" in data
+        assert data["escalated"] is False
         assert "hints" in data
 
     async def test_no_escalation_when_disabled(self, indexed_repo) -> None:
@@ -524,7 +524,7 @@ class TestQueryCodebaseIntegration:
             )
 
         data = json.loads(result[0].text)
-        assert data["data"]["escalated"] is False
+        assert data["escalated"] is False
 
 
 # =============================================================================
@@ -562,12 +562,12 @@ class TestAgenticToolChainIntegration:
 
         data2 = json.loads(result2[0].text)
         assert data2["status"] == "success"
-        assert data2["data"]["total_requested"] == 3
+        assert data2["total_requested"] == 3
         # At least Application and validate_config should be found
-        assert data2["data"]["total_found"] >= 2
+        assert data2["total_found"] >= 2
 
         # Verify entity details are structurally complete
-        for r in data2["data"]["results"]:
+        for r in data2["results"]:
             assert "entity" in r
             assert "found" in r
             if r["found"]:

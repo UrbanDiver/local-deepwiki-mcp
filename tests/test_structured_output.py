@@ -18,7 +18,7 @@ class TestWrapToolResponse:
         parsed = json.loads(result)
         assert parsed["tool"] == "my_tool"
         assert parsed["status"] == "success"
-        assert parsed["data"] == {"key": "value"}
+        assert parsed["key"] == "value"
         assert "hints" not in parsed
 
     def test_with_hints(self) -> None:
@@ -26,19 +26,19 @@ class TestWrapToolResponse:
         result = wrap_tool_response("my_tool", {"answer": "hello"}, hints=hints)
         parsed = json.loads(result)
         assert parsed["hints"] == hints
-        assert parsed["data"]["answer"] == "hello"
+        assert parsed["answer"] == "hello"
 
     def test_empty_data(self) -> None:
         result = wrap_tool_response("empty_tool", {})
         parsed = json.loads(result)
-        assert parsed["data"] == {}
+        assert parsed["tool"] == "empty_tool"
         assert parsed["status"] == "success"
 
     def test_nested_data(self) -> None:
         data = {"results": [{"name": "foo", "score": 0.9}], "count": 1}
         result = wrap_tool_response("search", data)
         parsed = json.loads(result)
-        assert parsed["data"]["results"][0]["name"] == "foo"
+        assert parsed["results"][0]["name"] == "foo"
 
     def test_none_hints_excluded(self) -> None:
         result = wrap_tool_response("tool", {"x": 1}, hints=None)

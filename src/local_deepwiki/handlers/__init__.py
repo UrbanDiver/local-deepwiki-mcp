@@ -34,6 +34,7 @@ from local_deepwiki.handlers.analysis import (
 # --- Agentic tool handlers ---
 from local_deepwiki.handlers.agentic import (
     handle_batch_explain_entities,
+    handle_find_tools,
     handle_query_codebase,
     handle_run_workflow,
     handle_suggest_next_actions,
@@ -135,5 +136,6 @@ __all__ = [
     "handle_suggest_next_actions",
     "handle_run_workflow",
     "handle_batch_explain_entities",
+    "handle_find_tools",
     "handle_query_codebase",
 ]

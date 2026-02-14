@@ -207,7 +207,9 @@ class TestCallTool:
 
     async def test_calls_index_repository_handler(self, tmp_path):
         """Test that index_repository dispatches to handler with server context."""
-        mock_handler = AsyncMock(return_value=[TextContent(type="text", text="success")])
+        mock_handler = AsyncMock(
+            return_value=[TextContent(type="text", text="success")]
+        )
         # index_repository is called directly with server context for progress streaming
         with patch("local_deepwiki.server.handle_index_repository", mock_handler):
             args = {"repo_path": str(tmp_path)}
@@ -233,7 +235,9 @@ class TestCallTool:
 
     async def test_calls_read_wiki_structure_handler(self, tmp_path):
         """Test that read_wiki_structure dispatches to handler."""
-        mock_handler = AsyncMock(return_value=[TextContent(type="text", text='{"pages": []}')])
+        mock_handler = AsyncMock(
+            return_value=[TextContent(type="text", text='{"pages": []}')]
+        )
         with patch.dict(TOOL_HANDLERS, {"read_wiki_structure": mock_handler}):
             args = {"wiki_path": str(tmp_path)}
 
@@ -243,7 +247,9 @@ class TestCallTool:
 
     async def test_calls_read_wiki_page_handler(self, tmp_path):
         """Test that read_wiki_page dispatches to handler."""
-        mock_handler = AsyncMock(return_value=[TextContent(type="text", text="# Page content")])
+        mock_handler = AsyncMock(
+            return_value=[TextContent(type="text", text="# Page content")]
+        )
         with patch.dict(TOOL_HANDLERS, {"read_wiki_page": mock_handler}):
             args = {"wiki_path": str(tmp_path), "page": "index.md"}
 
@@ -292,7 +298,9 @@ class TestCallToolDeepResearch:
     async def test_deep_research_passes_server_to_handler(self, tmp_path):
         """Test that deep_research handler receives the server context."""
         with patch("local_deepwiki.server.handle_deep_research") as mock_handler:
-            mock_handler.return_value = [TextContent(type="text", text='{"answer": "result"}')]
+            mock_handler.return_value = [
+                TextContent(type="text", text='{"answer": "result"}')
+            ]
             args = {"repo_path": str(tmp_path), "question": "How does X work?"}
 
             await call_tool("deep_research", args)
@@ -334,7 +342,7 @@ class TestToolHandlersIntegration:
         result = await call_tool("index_repository", {"repo_path": str(nonexistent)})
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "does not exist" in result[0].text
 
     async def test_ask_question_real_handler_validation(self):
@@ -342,16 +350,22 @@ class TestToolHandlersIntegration:
         result = await call_tool("ask_question", {"repo_path": "/tmp", "question": ""})
 
         assert len(result) == 1
-        assert "Error" in result[0].text
-        assert "at least 1 character" in result[0].text or "string_too_short" in result[0].text
+        assert "error" in result[0].text.lower()
+        assert (
+            "at least 1 character" in result[0].text
+            or "string_too_short" in result[0].text
+        )
 
     async def test_search_code_real_handler_validation(self):
         """Test that real search_code handler validates inputs."""
         result = await call_tool("search_code", {"repo_path": "/tmp", "query": ""})
 
         assert len(result) == 1
-        assert "Error" in result[0].text
-        assert "at least 1 character" in result[0].text or "string_too_short" in result[0].text
+        assert "error" in result[0].text.lower()
+        assert (
+            "at least 1 character" in result[0].text
+            or "string_too_short" in result[0].text
+        )
 
     async def test_read_wiki_structure_real_handler_validation(self, tmp_path):
         """Test that real read_wiki_structure handler validates inputs."""
@@ -359,7 +373,7 @@ class TestToolHandlersIntegration:
         result = await call_tool("read_wiki_structure", {"wiki_path": str(nonexistent)})
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "does not exist" in result[0].text
 
     async def test_read_wiki_page_real_handler_validation(self, tmp_path):
@@ -369,9 +383,12 @@ class TestToolHandlersIntegration:
         )
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         # Error message may say "not found" or "does not exist" depending on error type
-        assert "not found" in result[0].text.lower() or "does not exist" in result[0].text.lower()
+        assert (
+            "not found" in result[0].text.lower()
+            or "does not exist" in result[0].text.lower()
+        )
 
     async def test_export_wiki_html_real_handler_validation(self, tmp_path):
         """Test that real export_wiki_html handler validates inputs."""
@@ -379,7 +396,7 @@ class TestToolHandlersIntegration:
         result = await call_tool("export_wiki_html", {"wiki_path": str(nonexistent)})
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "does not exist" in result[0].text
 
     async def test_export_wiki_pdf_real_handler_validation(self, tmp_path):
@@ -388,9 +405,12 @@ class TestToolHandlersIntegration:
         result = await call_tool("export_wiki_pdf", {"wiki_path": str(nonexistent)})
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         # Either validation error (does not exist) or WeasyPrint library error
-        assert "does not exist" in result[0].text or "cannot load library" in result[0].text
+        assert (
+            "does not exist" in result[0].text
+            or "cannot load library" in result[0].text
+        )
 
 
 class TestToolSchemaValidation:
@@ -411,7 +431,9 @@ class TestToolSchemaValidation:
         tools = await list_tools()
         tool = next(t for t in tools if t.name == "index_repository")
 
-        embedding_provider_enum = tool.inputSchema["properties"]["embedding_provider"]["enum"]
+        embedding_provider_enum = tool.inputSchema["properties"]["embedding_provider"][
+            "enum"
+        ]
         assert "local" in embedding_provider_enum
         assert "openai" in embedding_provider_enum
 
@@ -430,7 +452,9 @@ class TestToolSchemaValidation:
         tool = next(t for t in tools if t.name == "index_repository")
 
         assert tool.inputSchema["properties"]["full_rebuild"]["type"] == "boolean"
-        assert tool.inputSchema["properties"]["use_cloud_for_github"]["type"] == "boolean"
+        assert (
+            tool.inputSchema["properties"]["use_cloud_for_github"]["type"] == "boolean"
+        )
 
     async def test_integer_property_types(self):
         """Test that integer properties have correct type."""
@@ -468,7 +492,9 @@ class TestMainFunction:
             coro.close()
             return None
 
-        with patch("local_deepwiki.server.asyncio.run", side_effect=close_coro) as mock_asyncio_run:
+        with patch(
+            "local_deepwiki.server.asyncio.run", side_effect=close_coro
+        ) as mock_asyncio_run:
             main()
             mock_asyncio_run.assert_called_once()
 
@@ -488,7 +514,9 @@ class TestMainFunction:
         mock_logger.info.assert_called()
         # Check that startup message was logged
         calls = [str(call) for call in mock_logger.info.call_args_list]
-        assert any("Starting" in str(call) or "local-deepwiki" in str(call) for call in calls)
+        assert any(
+            "Starting" in str(call) or "local-deepwiki" in str(call) for call in calls
+        )
 
 
 class TestMainFunctionInnerRun:
@@ -527,7 +555,9 @@ class TestMainFunctionInnerRun:
 
         with patch("local_deepwiki.server.stdio_server", mock_stdio_server):
             with patch.object(server, "run", mock_server_run):
-                with patch.object(server, "create_initialization_options") as mock_init_options:
+                with patch.object(
+                    server, "create_initialization_options"
+                ) as mock_init_options:
                     mock_init_options.return_value = {"test": "options"}
                     with patch("local_deepwiki.server.asyncio.run", custom_asyncio_run):
                         main()
@@ -559,7 +589,9 @@ class TestMainFunctionInnerRun:
 
         with patch("local_deepwiki.server.stdio_server", mock_stdio_server):
             with patch.object(server, "run", mock_server_run):
-                with patch.object(server, "create_initialization_options", return_value={}):
+                with patch.object(
+                    server, "create_initialization_options", return_value={}
+                ):
                     with patch("local_deepwiki.server.asyncio.run", custom_asyncio_run):
                         with pytest.raises(RuntimeError, match="Server error"):
                             main()
@@ -628,7 +660,9 @@ class TestToolDescriptions:
 
         description = tool.description.lower()
         assert "question" in description
-        assert "rag" in description or "context" in description or "answer" in description
+        assert (
+            "rag" in description or "context" in description or "answer" in description
+        )
 
     async def test_deep_research_description_is_informative(self):
         """Test that deep_research has an informative description."""
@@ -638,7 +672,9 @@ class TestToolDescriptions:
         description = tool.description.lower()
         assert "research" in description
         # Should mention multi-step or complex reasoning
-        assert "multi" in description or "complex" in description or "step" in description
+        assert (
+            "multi" in description or "complex" in description or "step" in description
+        )
 
     async def test_search_code_description_is_informative(self):
         """Test that search_code has an informative description."""

@@ -106,6 +106,52 @@ def generate_llms_txt(
     return output_path
 
 
+def generate_llms_full_txt(
+    pages: list[WikiPage],
+    index_status: IndexStatus,
+    wiki_path: Path,
+    manifest: dict | None = None,
+) -> Path:
+    """Generate an llms-full.txt file with full wiki content concatenated.
+
+    Per the llmstxt.org specification, llms-full.txt provides the complete
+    documentation content in a single file, with ``---`` separators between
+    pages.
+
+    Args:
+        pages: List of generated wiki pages.
+        index_status: Index status with repo metadata.
+        wiki_path: Path to the wiki output directory.
+        manifest: Optional parsed project manifest dict.
+
+    Returns:
+        Path to the written llms-full.txt file.
+    """
+    project_name = "Project"
+    if manifest:
+        project_name = manifest.get("name", project_name)
+    if project_name == "Project":
+        project_name = Path(index_status.repo_path).name
+
+    parts: list[str] = [f"# {project_name} — Full Documentation\n"]
+
+    sorted_pages = sorted(pages, key=_sort_key)
+    for page in sorted_pages:
+        parts.append(f"---\n\n## {page.title or page.path}\n")
+        parts.append(page.content.strip())
+        parts.append("")
+
+    output_path = wiki_path / "llms-full.txt"
+    output_path.write_text("\n".join(parts), encoding="utf-8")
+    logger.info(
+        "Generated llms-full.txt at %s (%d pages, %d bytes)",
+        output_path,
+        len(pages),
+        output_path.stat().st_size,
+    )
+    return output_path
+
+
 def _page_summary(page: WikiPage) -> str:
     """Extract a brief summary from a page's content.
 

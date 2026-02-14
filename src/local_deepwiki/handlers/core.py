@@ -41,6 +41,7 @@ from local_deepwiki.handlers._shared import (
     get_repository_access_controller,
     handle_tool_errors,
     logger,
+    make_tool_text_content,
     path_not_found_error,
     validate_chunk_type,
     validate_index_parameters,
@@ -409,7 +410,13 @@ async def _handle_index_repository_impl(
         f"Indexing complete: {status.total_files} files, {status.total_chunks} chunks, "
         f"{len(wiki_structure.pages)} wiki pages"
     )
-    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+
+    # Record in session state so downstream tools know this repo is indexed
+    from local_deepwiki.handlers.session_state import record_index
+
+    record_index(str(repo_path), str(indexer.wiki_path))
+
+    return make_tool_text_content("index_repository", result)
 
 
 @handle_tool_errors
@@ -538,7 +545,7 @@ Provide a clear, accurate answer based only on the code provided. If the code do
     )
 
     logger.info("Generated answer with %s sources", len(search_results))
-    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+    return make_tool_text_content("ask_question", result)
 
 
 @handle_tool_errors
@@ -564,7 +571,7 @@ async def handle_read_wiki_structure(args: dict[str, Any]) -> list[TextContent]:
 
             generator = get_lazy_generator(wiki_path)
             structure = generator.get_virtual_structure()
-            return [TextContent(type="text", text=json.dumps(structure, indent=2))]
+            return make_tool_text_content("read_wiki_structure", structure)
         raise path_not_found_error(str(wiki_path), "wiki")
 
     # Check for toc.json (numbered hierarchical structure)
@@ -573,7 +580,10 @@ async def handle_read_wiki_structure(args: dict[str, Any]) -> list[TextContent]:
         try:
             toc_content = await asyncio.to_thread(toc_path.read_text)
             toc_data = json.loads(toc_content)
-            return [TextContent(type="text", text=json.dumps(toc_data, indent=2))]
+            structure_data = (
+                toc_data if isinstance(toc_data, dict) else {"pages": toc_data}
+            )
+            return make_tool_text_content("read_wiki_structure", structure_data)
         except (json.JSONDecodeError, OSError) as e:
             logger.warning(
                 f"toc.json exists but could not be read, falling back to dynamic generation: {e}"
@@ -618,7 +628,7 @@ async def handle_read_wiki_structure(args: dict[str, Any]) -> list[TextContent]:
                 structure["sections"][section] = []
             structure["sections"][section].append(page)
 
-    return [TextContent(type="text", text=json.dumps(structure, indent=2))]
+    return make_tool_text_content("read_wiki_structure", structure)
 
 
 @handle_tool_errors
@@ -725,7 +735,14 @@ async def handle_search_code(args: dict[str, Any]) -> list[TextContent]:
 
     logger.info("Search returned %s results", len(results))
     if not results:
-        return [TextContent(type="text", text="No results found.")]
+        return make_tool_text_content(
+            "search_code",
+            {
+                "message": "No results found.",
+                "total_results": 0,
+                "results": [],
+            },
+        )
 
     output = []
     for r in results:
@@ -749,7 +766,13 @@ async def handle_search_code(args: dict[str, Any]) -> list[TextContent]:
             result_entry["highlights"] = r.highlights
         output.append(result_entry)
 
-    return [TextContent(type="text", text=json.dumps(output, indent=2))]
+    return make_tool_text_content(
+        "search_code",
+        {
+            "total_results": len(output),
+            "results": output,
+        },
+    )
 
 
 @handle_tool_errors
@@ -837,7 +860,7 @@ async def handle_export_wiki_html(args: dict[str, Any]) -> list[TextContent]:
         },
     }
 
-    return [TextContent(type="text", text=json.dumps(response, indent=2))]
+    return make_tool_text_content("export_wiki_html", response)
 
 
 @handle_tool_errors
@@ -929,4 +952,4 @@ async def handle_export_wiki_pdf(args: dict[str, Any]) -> list[TextContent]:
         },
     }
 
-    return [TextContent(type="text", text=json.dumps(response, indent=2))]
+    return make_tool_text_content("export_wiki_pdf", response)

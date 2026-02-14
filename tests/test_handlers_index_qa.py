@@ -38,7 +38,7 @@ class TestHandleToolErrorsDecorator:
 
         result = await failing_handler({})
         assert len(result) == 1
-        assert "Error: Invalid input" in result[0].text
+        assert "Invalid input" in result[0].text
 
     async def test_catches_generic_exception(self):
         """Test decorator catches generic exceptions and returns error message."""
@@ -51,7 +51,7 @@ class TestHandleToolErrorsDecorator:
         assert len(result) == 1
         # Error now includes hints and wraps the original message
         assert "Something went wrong" in result[0].text
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
 
     async def test_propagates_cancelled_error(self):
         """Test decorator re-raises CancelledError."""
@@ -150,18 +150,23 @@ class TestHandleAskQuestionExtended:
 
         mock_embedding_provider = MagicMock()
 
-        with patch(
-            "local_deepwiki.handlers.core._load_index_status",
-            return_value=(MagicMock(), wiki_path, config),
-        ), patch(
-            "local_deepwiki.handlers.core._create_vector_store",
-            return_value=MagicMock(search=AsyncMock(return_value=[])),
-        ), patch(
-            "local_deepwiki.handlers.core.get_embedding_provider",
-            return_value=mock_embedding_provider,
-        ), patch(
-            "local_deepwiki.providers.llm.get_cached_llm_provider",
-        ) as mock_llm_factory:
+        with (
+            patch(
+                "local_deepwiki.handlers.core._load_index_status",
+                return_value=(MagicMock(), wiki_path, config),
+            ),
+            patch(
+                "local_deepwiki.handlers.core._create_vector_store",
+                return_value=MagicMock(search=AsyncMock(return_value=[])),
+            ),
+            patch(
+                "local_deepwiki.handlers.core.get_embedding_provider",
+                return_value=mock_embedding_provider,
+            ),
+            patch(
+                "local_deepwiki.providers.llm.get_cached_llm_provider",
+            ) as mock_llm_factory,
+        ):
             mock_llm = MagicMock()
             mock_llm.generate = AsyncMock(return_value="test answer")
             mock_llm_factory.return_value = mock_llm

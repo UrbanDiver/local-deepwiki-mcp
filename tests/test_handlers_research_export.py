@@ -38,7 +38,7 @@ class TestHandleDeepResearch:
         )
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         # Pydantic validates min_length=1
         assert (
             "at least 1 character" in result[0].text
@@ -55,7 +55,7 @@ class TestHandleDeepResearch:
         )
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "not indexed" in result[0].text
 
     async def test_rejects_max_chunks_out_of_range(self, tmp_path):
@@ -69,7 +69,7 @@ class TestHandleDeepResearch:
         )
 
         # Pydantic now rejects out-of-range values instead of clamping
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "less_than_equal" in result[0].text or "50" in result[0].text
 
     async def test_handles_cancelled_error(self, tmp_path):
@@ -108,7 +108,7 @@ class TestHandleDeepResearchErrorHandling:
             )
 
             assert len(result) == 1
-            assert "Error" in result[0].text
+            assert "error" in result[0].text.lower()
             assert "Unexpected error" in result[0].text
 
 
@@ -991,7 +991,7 @@ class TestHandleExportWikiPdf:
             result = await handle_export_wiki_pdf({"wiki_path": str(nonexistent)})
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "does not exist" in result[0].text
 
     async def test_exports_single_file_pdf(self, tmp_path):
@@ -1091,7 +1091,7 @@ class TestHandleListResearchCheckpoints:
             {"repo_path": "/nonexistent/path"}
         )
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
 
     async def test_returns_empty_list_when_no_checkpoints(self, tmp_path):
         """Test listing checkpoints when none exist."""
@@ -1137,7 +1137,7 @@ class TestHandleCancelResearch:
             {"repo_path": "/nonexistent/path", "research_id": "test-123"}
         )
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
 
     async def test_returns_error_for_nonexistent_checkpoint(self, tmp_path):
         """Test cancelling a checkpoint that doesn't exist."""
@@ -1189,7 +1189,7 @@ class TestHandleResumeResearch:
             {"repo_path": "/nonexistent/path", "research_id": "test-123"}
         )
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
 
     async def test_returns_error_for_nonexistent_checkpoint(self, tmp_path):
         """Test resuming a checkpoint that doesn't exist."""

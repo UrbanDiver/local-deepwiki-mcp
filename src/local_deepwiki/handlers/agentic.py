@@ -26,6 +26,124 @@ from local_deepwiki.handlers._shared import (
 
 # --- Tool graph for suggest_next_actions ---
 
+# Keywords per tool used for context-aware suggestion boosting (Item 5)
+_TOOL_KEYWORDS: dict[str, list[str]] = {
+    "detect_secrets": [
+        "secret",
+        "credential",
+        "security",
+        "vulnerability",
+        "leak",
+        "key",
+        "token",
+        "password",
+    ],
+    "get_complexity_metrics": [
+        "complex",
+        "complexity",
+        "cyclomatic",
+        "nesting",
+        "refactor",
+        "quality",
+    ],
+    "impact_analysis": [
+        "change",
+        "impact",
+        "blast",
+        "radius",
+        "modify",
+        "refactor",
+        "risk",
+        "breaking",
+    ],
+    "get_coverage": ["coverage", "documentation", "undocumented", "missing", "docs"],
+    "detect_stale_docs": ["stale", "outdated", "update", "refresh", "drift"],
+    "deep_research": [
+        "research",
+        "investigate",
+        "understand",
+        "architecture",
+        "design",
+        "how",
+    ],
+    "explain_entity": [
+        "explain",
+        "entity",
+        "function",
+        "class",
+        "method",
+        "what",
+        "does",
+    ],
+    "search_code": ["find", "search", "locate", "where", "code", "function", "class"],
+    "get_diagrams": [
+        "diagram",
+        "visualize",
+        "chart",
+        "mermaid",
+        "class diagram",
+        "dependency",
+    ],
+    "generate_codemap": [
+        "flow",
+        "execution",
+        "trace",
+        "codemap",
+        "how does",
+        "pipeline",
+    ],
+    "get_call_graph": ["call", "caller", "callee", "invoke", "call graph"],
+    "get_test_examples": ["test", "example", "usage", "how to use"],
+    "get_file_context": ["import", "file", "context", "role", "dependency"],
+    "ask_question": ["question", "ask", "what", "why", "how", "explain"],
+    "get_changelog": ["changelog", "history", "commit", "recent", "changes"],
+    "fuzzy_search": ["fuzzy", "search", "find", "similar", "name"],
+    "get_project_manifest": [
+        "manifest",
+        "package",
+        "dependency",
+        "version",
+        "metadata",
+    ],
+    "analyze_diff": ["diff", "change", "commit", "pr", "pull request", "review"],
+    "index_repository": ["index", "reindex", "rebuild", "generate"],
+    "suggest_codemap_topics": ["topic", "discover", "explore", "flow", "entry point"],
+}
+
+
+# Phrases indicating an insufficient answer (for query_codebase escalation, Item 6)
+_INSUFFICIENT_PHRASES = [
+    "i don't have enough",
+    "no relevant code found",
+    "not found",
+    "unable to determine",
+    "cannot determine",
+    "i'm not sure",
+    "no information",
+    "insufficient context",
+    "no matching",
+    "couldn't find",
+    "no results",
+]
+
+
+def _answer_seems_insufficient(answer: str, question: str) -> bool:
+    """Check if an answer seems insufficient and should trigger escalation.
+
+    Uses keyword matching instead of raw length, avoiding false positives
+    on concise but correct answers.
+
+    Args:
+        answer: The answer text from ask_question.
+        question: The original question (unused for now, reserved for future use).
+
+    Returns:
+        True if the answer appears insufficient.
+    """
+    answer_lower = answer.lower()
+    return any(phrase in answer_lower for phrase in _INSUFFICIENT_PHRASES)
+
+
 TOOL_GRAPH: dict[str, list[dict[str, str]]] = {
     "index_repository": [
         {
@@ -199,14 +317,20 @@ async def handle_suggest_next_actions(args: dict[str, Any]) -> list[TextContent]
 
     # If no tools used, suggest starting points
     if not tools_used:
-        # Check if wiki exists
+        # Check if wiki exists (session state or filesystem)
+        from local_deepwiki.handlers.session_state import is_repo_indexed
+
         has_wiki = False
         if repo_path_str:
-            from local_deepwiki.config import get_config
+            # Fast check: was it indexed in this session?
+            if is_repo_indexed(str(Path(repo_path_str).resolve())):
+                has_wiki = True
+            else:
+                from local_deepwiki.config import get_config
 
-            config = get_config()
-            wiki_path = config.get_wiki_path(Path(repo_path_str).resolve())
-            has_wiki = wiki_path.exists()
+                config = get_config()
+                wiki_path = config.get_wiki_path(Path(repo_path_str).resolve())
+                has_wiki = wiki_path.exists()
 
         if has_wiki:
             suggestions = [
@@ -282,14 +406,34 @@ async def handle_suggest_next_actions(args: dict[str, Any]) -> list[TextContent]
             },
         ]
 
+    # Boost suggestions matching context keywords (Item 5)
+    context = validated.context
+    if context:
+        context_lower = context.lower()
+        for suggestion in suggestions:
+            tool_kws = _TOOL_KEYWORDS.get(suggestion["tool"], [])
+            if any(kw in context_lower for kw in tool_kws):
+                suggestion["priority"] = "high"
+
     # Sort by priority
     priority_order = {"high": 0, "medium": 1, "low": 2}
     suggestions.sort(key=lambda s: priority_order.get(s.get("priority", "low"), 2))
 
-    data = {
+    # Include session state summary for agent awareness
+    from local_deepwiki.handlers.session_state import get_session_state
+
+    session = get_session_state()
+
+    data: dict[str, Any] = {
         "suggestions": suggestions[:8],
         "based_on": tools_used[-3:],
+        "session": {
+            "tool_call_count": session["tool_call_count"],
+            "indexed_repos": list(session["indexed_repos"].keys()),
+        },
     }
+    if context:
+        data["context_applied"] = True
     return [
         TextContent(type="text", text=wrap_tool_response("suggest_next_actions", data))
     ]
@@ -383,22 +527,17 @@ async def _run_step(
 
 
 async def _run_onboarding(repo_path: str) -> list[dict[str, Any]]:
-    """Run the onboarding workflow."""
+    """Run the onboarding workflow.
+
+    Project manifest runs in parallel with wiki-dependent steps.
+    The three wiki steps are also independent of each other.
+    """
     from local_deepwiki.handlers.analysis_metadata import (
         handle_get_project_manifest,
         handle_get_wiki_stats,
     )
     from local_deepwiki.handlers.codemap import handle_suggest_codemap_topics
     from local_deepwiki.handlers.core import handle_read_wiki_structure
-
-    steps = []
-    steps.append(
-        await _run_step(
-            handle_get_project_manifest,
-            "get_project_manifest",
-            {"repo_path": repo_path},
-        )
-    )
 
     # Check if wiki exists before reading structure
     from local_deepwiki.config import get_config
@@ -407,74 +546,86 @@ async def _run_onboarding(repo_path: str) -> list[dict[str, Any]]:
     wiki_path = config.get_wiki_path(Path(repo_path).resolve())
 
     if wiki_path.exists():
-        steps.append(
-            await _run_step(
+        # All four steps are independent — run in parallel
+        results = await asyncio.gather(
+            _run_step(
+                handle_get_project_manifest,
+                "get_project_manifest",
+                {"repo_path": repo_path},
+            ),
+            _run_step(
                 handle_read_wiki_structure,
                 "read_wiki_structure",
                 {"wiki_path": str(wiki_path)},
-            )
-        )
-        steps.append(
-            await _run_step(
+            ),
+            _run_step(
                 handle_get_wiki_stats, "get_wiki_stats", {"repo_path": repo_path}
-            )
-        )
-        steps.append(
-            await _run_step(
+            ),
+            _run_step(
                 handle_suggest_codemap_topics,
                 "suggest_codemap_topics",
                 {"repo_path": repo_path},
-            )
+            ),
         )
-    else:
-        steps.append(
-            {
-                "step": "read_wiki_structure",
-                "status": "skipped",
-                "reason": "Wiki not indexed yet",
-            }
-        )
+        return list(results)
 
-    return steps
+    # Wiki not indexed — manifest only, skip wiki steps
+    manifest_step = await _run_step(
+        handle_get_project_manifest,
+        "get_project_manifest",
+        {"repo_path": repo_path},
+    )
+    return [
+        manifest_step,
+        {
+            "step": "read_wiki_structure",
+            "status": "skipped",
+            "reason": "Wiki not indexed yet",
+        },
+    ]
 
 
 async def _run_security_audit(repo_path: str) -> list[dict[str, Any]]:
-    """Run the security audit workflow."""
+    """Run the security audit workflow.
+
+    Secret detection and complexity metrics are independent, so they
+    run in parallel.  Individual complexity-metrics calls are also
+    independent of each other.
+    """
+    from local_deepwiki.handlers.analysis_metadata import handle_get_complexity_metrics
     from local_deepwiki.handlers.generators import handle_detect_secrets
 
-    steps = []
-    steps.append(
-        await _run_step(
-            handle_detect_secrets, "detect_secrets", {"repo_path": repo_path}
-        )
-    )
-
-    # Get complexity metrics for the most complex files
-    from local_deepwiki.handlers.analysis_metadata import handle_get_complexity_metrics
-
-    # Try to find top-level source files
+    # Try to find top-level source files for complexity analysis
     repo = Path(repo_path)
-    source_files = []
+    source_files: list[Path] = []
     for ext in ("*.py", "*.ts", "*.js", "*.go", "*.rs"):
         source_files.extend(repo.rglob(ext))
         if len(source_files) >= 5:
             break
 
+    # Build all coroutines — secrets + per-file complexity — then run in parallel
+    coros = [
+        _run_step(handle_detect_secrets, "detect_secrets", {"repo_path": repo_path}),
+    ]
     for src_file in source_files[:3]:
         rel_path = str(src_file.relative_to(repo))
-        steps.append(
-            await _run_step(
+        coros.append(
+            _run_step(
                 handle_get_complexity_metrics,
                 f"complexity:{rel_path}",
                 {"repo_path": repo_path, "file_path": rel_path},
             )
         )
 
-    return steps
+    results = await asyncio.gather(*coros)
+    return list(results)
 
 
 async def _run_full_analysis(repo_path: str) -> list[dict[str, Any]]:
-    """Run the full analysis workflow."""
+    """Run the full analysis workflow.
+
+    All four steps are independent, so they run in parallel.
+    """
     from local_deepwiki.handlers.analysis_metadata import handle_get_wiki_stats
     from local_deepwiki.handlers.generators import (
         handle_detect_secrets,
@@ -482,47 +633,34 @@ async def _run_full_analysis(repo_path: str) -> list[dict[str, Any]]:
         handle_get_coverage,
     )
 
-    steps = []
-    steps.append(
-        await _run_step(
-            handle_get_wiki_stats, "get_wiki_stats", {"repo_path": repo_path}
-        )
-    )
-    steps.append(
-        await _run_step(handle_get_coverage, "get_coverage", {"repo_path": repo_path})
-    )
-    steps.append(
-        await _run_step(
+    steps = await asyncio.gather(
+        _run_step(handle_get_wiki_stats, "get_wiki_stats", {"repo_path": repo_path}),
+        _run_step(handle_get_coverage, "get_coverage", {"repo_path": repo_path}),
+        _run_step(
             handle_detect_stale_docs, "detect_stale_docs", {"repo_path": repo_path}
-        )
+        ),
+        _run_step(handle_detect_secrets, "detect_secrets", {"repo_path": repo_path}),
     )
-    steps.append(
-        await _run_step(
-            handle_detect_secrets, "detect_secrets", {"repo_path": repo_path}
-        )
-    )
-
-    return steps
+    return list(steps)
 
 
 async def _run_quick_refresh(repo_path: str) -> list[dict[str, Any]]:
-    """Run the quick refresh workflow."""
+    """Run the quick refresh workflow.
+
+    Both steps are independent, so they run in parallel.
+    """
     from local_deepwiki.handlers.generators import (
         handle_detect_stale_docs,
         handle_get_changelog,
     )
 
-    steps = []
-    steps.append(
-        await _run_step(
+    steps = await asyncio.gather(
+        _run_step(
             handle_detect_stale_docs, "detect_stale_docs", {"repo_path": repo_path}
-        )
+        ),
+        _run_step(handle_get_changelog, "get_changelog", {"repo_path": repo_path}),
     )
-    steps.append(
-        await _run_step(handle_get_changelog, "get_changelog", {"repo_path": repo_path})
-    )
-
-    return steps
+    return list(steps)
 
 
 @handle_tool_errors
@@ -542,13 +680,47 @@ async def handle_batch_explain_entities(args: dict[str, Any]) -> list[TextConten
 
     repo_path = Path(validated.repo_path).resolve()
     entity_names = validated.entity_names
+    depth = validated.depth
 
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
     _index_status, wiki_path, _config = await _load_index_status(repo_path)
 
-    # Load search.json once
+    # Full depth: delegate to explain_entity for each name (Item 7)
+    if depth == "full":
+        from local_deepwiki.handlers.analysis_entity import handle_explain_entity
+
+        async def _explain_one(name: str) -> dict[str, Any]:
+            try:
+                res = await handle_explain_entity(
+                    {"repo_path": str(repo_path), "entity_name": name}
+                )
+                text = res[0].text if res else ""
+                try:
+                    return {"entity": name, "found": True, **json.loads(text)}
+                except (json.JSONDecodeError, TypeError):
+                    return {"entity": name, "found": True, "raw": text[:500]}
+            except Exception as exc:  # noqa: BLE001
+                return {"entity": name, "found": False, "error": str(exc)}
+
+        results = await asyncio.gather(*[_explain_one(n) for n in entity_names])
+
+        data: dict[str, Any] = {
+            "repo_path": str(repo_path),
+            "total_requested": len(entity_names),
+            "total_found": sum(1 for r in results if r.get("found")),
+            "depth": "full",
+            "results": list(results),
+        }
+        return [
+            TextContent(
+                type="text",
+                text=wrap_tool_response("batch_explain_entities", data),
+            )
+        ]
+
+    # Shallow depth (default): search index lookup
     search_index_path = wiki_path / "search.json"
     if not search_index_path.exists():
         data = {
@@ -575,11 +747,11 @@ async def handle_batch_explain_entities(args: dict[str, Any]) -> list[TextConten
                 name_index.setdefault(key, []).append(entity)
 
     # Look up each requested entity
-    results = []
+    results_list = []
     for entity_name in entity_names:
         matches = name_index.get(entity_name.lower(), [])
         if matches:
-            results.append(
+            results_list.append(
                 {
                     "entity": entity_name,
                     "found": True,
@@ -596,7 +768,7 @@ async def handle_batch_explain_entities(args: dict[str, Any]) -> list[TextConten
                 }
             )
         else:
-            results.append(
+            results_list.append(
                 {
                     "entity": entity_name,
                     "found": False,
@@ -607,8 +779,9 @@ async def handle_batch_explain_entities(args: dict[str, Any]) -> list[TextConten
     data = {
         "repo_path": str(repo_path),
         "total_requested": len(entity_names),
-        "total_found": sum(1 for r in results if r["found"]),
-        "results": results,
+        "total_found": sum(1 for r in results_list if r["found"]),
+        "depth": "shallow",
+        "results": results_list,
     }
 
     return [
@@ -662,11 +835,9 @@ async def handle_query_codebase(args: dict[str, Any]) -> list[TextContent]:
     answer = ask_data.get("answer", "")
     escalated = False
 
-    # Escalate if answer is short and auto_escalate is enabled
-    if auto_escalate and len(answer) < 200:
-        logger.info(
-            "Answer too short (%d chars), escalating to deep_research", len(answer)
-        )
+    # Escalate if answer seems insufficient and auto_escalate is enabled (Item 6)
+    if auto_escalate and _answer_seems_insufficient(answer, query):
+        logger.info("Answer seems insufficient, escalating to deep_research")
         try:
             from local_deepwiki.handlers.research import handle_deep_research
 
@@ -712,3 +883,60 @@ async def handle_query_codebase(args: dict[str, Any]) -> list[TextContent]:
             type="text", text=wrap_tool_response("query_codebase", data, hints=hints)
         )
     ]
+
+
+@handle_tool_errors
+async def handle_find_tools(args: dict[str, Any]) -> list[TextContent]:
+    """Search available tools by capability description.
+
+    Scores each tool's description against the query using keyword matching.
+    Returns the top-5 ranked tools with name, description, and whether they
+    require prior indexing.
+    """
+    query = (args.get("query") or "").strip()
+    if not query:
+        raise ValueError("query is required")
+
+    from local_deepwiki.server_tool_defs import TOOL_DEFINITIONS
+
+    query_lower = query.lower()
+    query_words = set(query_lower.split())
+
+    scored: list[tuple[float, Any]] = []
+    for tool_def in TOOL_DEFINITIONS:
+        desc_lower = (tool_def.description or "").lower()
+        name_lower = tool_def.name.lower()
+
+        # Score: count matching query words in description + name
+        score = sum(1 for w in query_words if w in desc_lower or w in name_lower)
+        # Bonus for exact phrase match
+        if query_lower in desc_lower:
+            score += 3
+        if query_lower in name_lower:
+            score += 5
+
+        if score > 0:
+            requires_index = "Requires: index_repository" in (
+                tool_def.description or ""
+            )
+            scored.append(
+                (
+                    score,
+                    {
+                        "tool": tool_def.name,
+                        "description": (tool_def.description or "")[:200],
+                        "requires_index": requires_index,
+                        "score": score,
+                    },
+                )
+            )
+
+    scored.sort(key=lambda x: x[0], reverse=True)
+    top_results = [item for _, item in scored[:5]]
+
+    data = {
+        "query": query,
+        "results": top_results,
+        "total_tools": len(TOOL_DEFINITIONS),
+    }
+    return [TextContent(type="text", text=wrap_tool_response("find_tools", data))]

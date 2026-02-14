@@ -548,6 +548,10 @@ class BatchExplainEntitiesArgs(BaseModel):
         max_length=20,
         description="List of entity names to explain (max 20)",
     )
+    depth: str = Field(
+        default="shallow",
+        description="Lookup depth: 'shallow' (search index only) or 'full' (calls explain_entity for each)",
+    )
 
 
 class QueryCodebaseArgs(BaseModel):

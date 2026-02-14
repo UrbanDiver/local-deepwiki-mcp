@@ -55,7 +55,7 @@ class TestHandleToolErrors:
         result = await failing_tool({})
         assert len(result) == 1
         assert "Invalid input" in result[0].text
-        assert "Hint:" in result[0].text
+        assert "hint" in result[0].text
 
     async def test_value_error_wrapping(self):
         """Test ValueError is wrapped in ValidationError."""
@@ -67,7 +67,7 @@ class TestHandleToolErrors:
         result = await failing_tool({})
         assert len(result) == 1
         assert "Bad value" in result[0].text
-        assert "Hint:" in result[0].text
+        assert "hint" in result[0].text
 
     async def test_file_not_found_error_handling(self):
         """Test FileNotFoundError is mapped to DeepWikiError."""
@@ -176,7 +176,7 @@ class TestHandleToolErrors:
         result = await failing_tool({})
         assert len(result) == 1
         assert "unexpected error" in result[0].text.lower()
-        assert "Hint:" in result[0].text
+        assert "hint" in result[0].text
 
 
 class TestForbiddenExportDirs:

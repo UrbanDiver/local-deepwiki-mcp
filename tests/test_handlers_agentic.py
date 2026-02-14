@@ -106,7 +106,7 @@ class TestSuggestNextActions:
         data = _parse_response(result)
         assert data["tool"] == "suggest_next_actions"
         assert data["status"] == "success"
-        suggestions = data["data"]["suggestions"]
+        suggestions = data["suggestions"]
         assert len(suggestions) > 0
         # Without repo, should suggest index_repository
         tool_names = [s["tool"] for s in suggestions]
@@ -132,7 +132,7 @@ class TestSuggestNextActions:
             )
 
         data = _parse_response(result)
-        suggestions = data["data"]["suggestions"]
+        suggestions = data["suggestions"]
         tool_names = [s["tool"] for s in suggestions]
         assert "read_wiki_structure" in tool_names
 
@@ -143,7 +143,7 @@ class TestSuggestNextActions:
             }
         )
         data = _parse_response(result)
-        suggestions = data["data"]["suggestions"]
+        suggestions = data["suggestions"]
         tool_names = [s["tool"] for s in suggestions]
         assert "read_wiki_structure" in tool_names
         assert "get_wiki_stats" in tool_names
@@ -155,7 +155,7 @@ class TestSuggestNextActions:
             }
         )
         data = _parse_response(result)
-        suggestions = data["data"]["suggestions"]
+        suggestions = data["suggestions"]
         tool_names = [s["tool"] for s in suggestions]
         assert "explain_entity" in tool_names
 
@@ -166,7 +166,7 @@ class TestSuggestNextActions:
             }
         )
         data = _parse_response(result)
-        suggestions = data["data"]["suggestions"]
+        suggestions = data["suggestions"]
         assert len(suggestions) > 0
 
     async def test_deduplicates_already_used(self) -> None:
@@ -176,7 +176,7 @@ class TestSuggestNextActions:
             }
         )
         data = _parse_response(result)
-        suggestions = data["data"]["suggestions"]
+        suggestions = data["suggestions"]
         tool_names = [s["tool"] for s in suggestions]
         # read_wiki_structure already used, should not be suggested
         assert "read_wiki_structure" not in tool_names
@@ -188,7 +188,7 @@ class TestSuggestNextActions:
             }
         )
         data = _parse_response(result)
-        suggestions = data["data"]["suggestions"]
+        suggestions = data["suggestions"]
         # High priority should come before medium
         priorities = [s["priority"] for s in suggestions]
         for i in range(len(priorities) - 1):
@@ -210,7 +210,7 @@ class TestRunWorkflow:
             }
         )
         # Errors are returned as plain text via format_error_response
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "nonexistent" in result[0].text
 
     async def test_repo_not_found(self, tmp_path: Path, mock_rbac) -> None:
@@ -220,7 +220,7 @@ class TestRunWorkflow:
                 "workflow": "onboarding",
             }
         )
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
 
     @patch("local_deepwiki.handlers.agentic._run_onboarding")
     async def test_onboarding_calls_steps(
@@ -237,9 +237,9 @@ class TestRunWorkflow:
             }
         )
         data = _parse_response(result)
-        assert data["data"]["workflow"] == "onboarding"
-        assert data["data"]["completed"] == 2
-        assert data["data"]["failed"] == 0
+        assert data["workflow"] == "onboarding"
+        assert data["completed"] == 2
+        assert data["failed"] == 0
 
     @patch("local_deepwiki.handlers.agentic._run_security_audit")
     async def test_step_failure_doesnt_cascade(
@@ -260,8 +260,8 @@ class TestRunWorkflow:
             }
         )
         data = _parse_response(result)
-        assert data["data"]["completed"] == 1
-        assert data["data"]["failed"] == 1
+        assert data["completed"] == 1
+        assert data["failed"] == 1
 
 
 # ---- TestBatchExplainEntities ----
@@ -286,7 +286,7 @@ class TestBatchExplainEntities:
             )
 
         data = _parse_response(result)
-        results = data["data"]["results"]
+        results = data["results"]
         assert len(results) == 1
         assert results[0]["found"] is True
         assert results[0]["matches"][0]["name"] == "my_function"
@@ -307,9 +307,9 @@ class TestBatchExplainEntities:
             )
 
         data = _parse_response(result)
-        assert data["data"]["total_requested"] == 3
-        assert data["data"]["total_found"] == 2
-        results = data["data"]["results"]
+        assert data["total_requested"] == 3
+        assert data["total_found"] == 2
+        results = data["results"]
         assert results[0]["found"] is True
         assert results[1]["found"] is True
         assert results[2]["found"] is False
@@ -330,8 +330,8 @@ class TestBatchExplainEntities:
             )
 
         data = _parse_response(result)
-        assert data["data"]["total_found"] == 0
-        assert data["data"]["results"][0]["found"] is False
+        assert data["total_found"] == 0
+        assert data["results"][0]["found"] is False
 
     async def test_no_search_index(self, tmp_path: Path, mock_rbac) -> None:
         repo = tmp_path / "empty_repo"
@@ -350,7 +350,7 @@ class TestBatchExplainEntities:
             )
 
         data = _parse_response(result)
-        assert "error" in data["data"]
+        assert "error" in data
 
 
 # ---- TestQueryCodebase ----
@@ -386,7 +386,7 @@ class TestQueryCodebase:
         )
 
         data = _parse_response(result)
-        assert data["data"]["escalated"] is False
+        assert data["escalated"] is False
         assert "hints" in data
 
         # Verify agentic_rag=True is passed through to ask_question
@@ -402,14 +402,14 @@ class TestQueryCodebase:
         indexed_repo: Path,
         mock_rbac,
     ) -> None:
-        # Return a short answer (<200 chars)
+        # Return an insufficient answer (triggers keyword-based escalation)
         mock_ask.return_value = [
             TextContent(
                 type="text",
                 text=json.dumps(
                     {
                         "question": "What is X?",
-                        "answer": "X is a thing.",
+                        "answer": "No relevant code found for that query.",
                         "sources": [],
                     }
                 ),
@@ -437,7 +437,7 @@ class TestQueryCodebase:
         )
 
         data = _parse_response(result)
-        assert data["data"]["escalated"] is True
+        assert data["escalated"] is True
 
     @patch("local_deepwiki.handlers.core.handle_ask_question")
     async def test_escalation_disabled(
@@ -465,4 +465,4 @@ class TestQueryCodebase:
         )
 
         data = _parse_response(result)
-        assert data["data"]["escalated"] is False
+        assert data["escalated"] is False

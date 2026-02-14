@@ -21,7 +21,7 @@ class TestHandleIndexRepository:
         result = await handle_index_repository({"repo_path": str(nonexistent)})
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "does not exist" in result[0].text
 
     async def test_returns_error_for_file_path(self, tmp_path):
@@ -32,7 +32,7 @@ class TestHandleIndexRepository:
         result = await handle_index_repository({"repo_path": str(file_path)})
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "not a directory" in result[0].text
 
     async def test_returns_error_for_invalid_language(self, tmp_path):
@@ -45,7 +45,7 @@ class TestHandleIndexRepository:
         )
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "Invalid languages" in result[0].text
 
     async def test_returns_error_for_invalid_llm_provider(self, tmp_path):
@@ -58,7 +58,7 @@ class TestHandleIndexRepository:
         )
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         # Pydantic enum validation error
         assert "llm_provider" in result[0].text or "Input should be" in result[0].text
 
@@ -72,9 +72,12 @@ class TestHandleIndexRepository:
         )
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         # Pydantic enum validation error
-        assert "embedding_provider" in result[0].text or "Input should be" in result[0].text
+        assert (
+            "embedding_provider" in result[0].text
+            or "Input should be" in result[0].text
+        )
 
 
 class TestHandleAskQuestion:
@@ -90,8 +93,11 @@ class TestHandleAskQuestion:
         )
 
         assert len(result) == 1
-        assert "Error" in result[0].text
-        assert "at least 1 character" in result[0].text or "string_too_short" in result[0].text
+        assert "error" in result[0].text.lower()
+        assert (
+            "at least 1 character" in result[0].text
+            or "string_too_short" in result[0].text
+        )
 
     async def test_returns_error_for_whitespace_question(self, tmp_path):
         """Test error returned for whitespace-only question (fails on not indexed)."""
@@ -103,7 +109,7 @@ class TestHandleAskQuestion:
         )
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         # Whitespace passes min_length but fails at repo check
         assert "not indexed" in result[0].text
 
@@ -117,7 +123,7 @@ class TestHandleAskQuestion:
         )
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "not indexed" in result[0].text
 
     async def test_rejects_max_context_out_of_range(self, tmp_path):
@@ -131,7 +137,7 @@ class TestHandleAskQuestion:
         )
 
         # Pydantic rejects out-of-range values
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "less_than_equal" in result[0].text or "50" in result[0].text
 
 
@@ -148,8 +154,11 @@ class TestHandleSearchCode:
         )
 
         assert len(result) == 1
-        assert "Error" in result[0].text
-        assert "at least 1 character" in result[0].text or "string_too_short" in result[0].text
+        assert "error" in result[0].text.lower()
+        assert (
+            "at least 1 character" in result[0].text
+            or "string_too_short" in result[0].text
+        )
 
     async def test_returns_error_for_invalid_language_filter(self, tmp_path):
         """Test error returned for invalid language filter."""
@@ -162,7 +171,7 @@ class TestHandleSearchCode:
         )
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "Invalid language" in result[0].text
 
     async def test_returns_error_for_unindexed_repo(self, tmp_path):
@@ -175,7 +184,7 @@ class TestHandleSearchCode:
         )
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "not indexed" in result[0].text
 
     async def test_rejects_limit_out_of_range(self, tmp_path):
@@ -189,7 +198,7 @@ class TestHandleSearchCode:
         )
 
         # Pydantic rejects out-of-range values
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "less_than_equal" in result[0].text or "100" in result[0].text
 
 
@@ -202,7 +211,7 @@ class TestHandleReadWikiStructure:
         result = await handle_read_wiki_structure({"wiki_path": str(nonexistent)})
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "does not exist" in result[0].text
 
     async def test_returns_structure_for_empty_wiki(self, tmp_path):
@@ -270,9 +279,12 @@ class TestHandleReadWikiPage:
         )
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         # Error message now includes hints and may say "does not exist" instead of "not found"
-        assert "not found" in result[0].text.lower() or "does not exist" in result[0].text.lower()
+        assert (
+            "not found" in result[0].text.lower()
+            or "does not exist" in result[0].text.lower()
+        )
 
     async def test_returns_page_content(self, tmp_path):
         """Test returns page content successfully."""
@@ -303,7 +315,7 @@ class TestHandleReadWikiPage:
         )
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "Invalid page path" in result[0].text
 
     async def test_returns_nested_page(self, tmp_path):
@@ -340,7 +352,7 @@ class TestHandleReadWikiPage:
         )
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "too large" in result[0].text
 
 
@@ -353,7 +365,7 @@ class TestHandleExportWikiHtml:
         result = await handle_export_wiki_html({"wiki_path": str(nonexistent)})
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "does not exist" in result[0].text
 
     async def test_exports_wiki_successfully(self, tmp_path):

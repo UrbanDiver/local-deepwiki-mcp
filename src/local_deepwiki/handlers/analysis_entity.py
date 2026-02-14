@@ -20,6 +20,7 @@ from local_deepwiki.handlers._shared import (
     get_access_controller,
     handle_tool_errors,
     logger,
+    make_tool_text_content,
     path_not_found_error,
     sanitize_error_message,
 )
@@ -87,7 +88,7 @@ async def handle_explain_entity(args: dict[str, Any]) -> list[TextContent]:
                 "Try using fuzzy_search or search_wiki to find the correct name."
             ),
         }
-        return [TextContent(type="text", text=json.dumps(result, indent=2))]
+        return make_tool_text_content("explain_entity", result)
 
     entity_type = entity_info.get("entity_type", "unknown")
     entity_file = entity_info.get("file", "")
@@ -315,7 +316,7 @@ async def handle_explain_entity(args: dict[str, Any]) -> list[TextContent]:
             )
 
     logger.info("Explain entity: '%s' in %s", entity_name, repo_path)
-    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+    return make_tool_text_content("explain_entity", result)
 
 
 @handle_tool_errors
@@ -533,4 +534,4 @@ async def handle_impact_analysis(args: dict[str, Any]) -> list[TextContent]:
         f"Impact analysis: {file_path} -> {total_affected_files} files, "
         f"risk={risk_level}"
     )
-    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+    return make_tool_text_content("impact_analysis", result)

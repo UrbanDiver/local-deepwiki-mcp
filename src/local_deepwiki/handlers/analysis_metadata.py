@@ -26,6 +26,7 @@ from local_deepwiki.handlers._shared import (
     get_access_controller,
     handle_tool_errors,
     logger,
+    make_tool_text_content,
     path_not_found_error,
 )
 
@@ -58,19 +59,13 @@ async def handle_get_project_manifest(args: dict[str, Any]) -> list[TextContent]
         manifest = parse_manifest(repo_path)
 
     if not manifest.has_data():
-        return [
-            TextContent(
-                type="text",
-                text=json.dumps(
-                    {
-                        "status": "success",
-                        "message": "No recognized package manifest files found in repository.",
-                        "manifest": {},
-                    },
-                    indent=2,
-                ),
-            )
-        ]
+        return make_tool_text_content(
+            "get_project_manifest",
+            {
+                "message": "No recognized package manifest files found in repository.",
+                "manifest": {},
+            },
+        )
 
     manifest_dict = {
         "name": manifest.name,
@@ -95,7 +90,7 @@ async def handle_get_project_manifest(args: dict[str, Any]) -> list[TextContent]
     }
 
     logger.info("Project manifest: %s for %s", manifest.name or "unknown", repo_path)
-    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+    return make_tool_text_content("get_project_manifest", result)
 
 
 @handle_tool_errors
@@ -142,19 +137,13 @@ async def handle_get_file_context(args: dict[str, Any]) -> list[TextContent]:
     chunks = await vector_store.get_chunks_by_file(file_path)
 
     if not chunks:
-        return [
-            TextContent(
-                type="text",
-                text=json.dumps(
-                    {
-                        "status": "success",
-                        "message": f"No indexed chunks found for '{file_path}'. The file may not have been indexed.",
-                        "context": {"file_path": file_path},
-                    },
-                    indent=2,
-                ),
-            )
-        ]
+        return make_tool_text_content(
+            "get_file_context",
+            {
+                "message": f"No indexed chunks found for '{file_path}'. The file may not have been indexed.",
+                "context": {"file_path": file_path},
+            },
+        )
 
     context = await build_file_context(
         file_path=file_path,
@@ -182,7 +171,7 @@ async def handle_get_file_context(args: dict[str, Any]) -> list[TextContent]:
     logger.info(
         f"File context: {len(context.imports)} imports, {len(context.callers)} callers for {file_path}"
     )
-    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+    return make_tool_text_content("get_file_context", result)
 
 
 @handle_tool_errors
@@ -338,7 +327,7 @@ async def handle_get_wiki_stats(args: dict[str, Any]) -> list[TextContent]:
         stats["drain"] = active[lazy_key].get_drain_status()
 
     logger.info("Wiki stats for %s", repo_path)
-    return [TextContent(type="text", text=json.dumps(stats, indent=2))]
+    return make_tool_text_content("get_wiki_stats", stats)
 
 
 @handle_tool_errors
@@ -381,4 +370,4 @@ async def handle_get_complexity_metrics(
     # Compute complexity metrics using the generator
     result = await compute_complexity_metrics(Path(file_path), repo_path)
 
-    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+    return make_tool_text_content("get_complexity_metrics", result)

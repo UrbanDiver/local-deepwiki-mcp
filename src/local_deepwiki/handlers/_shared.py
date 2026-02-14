@@ -311,16 +311,20 @@ def handle_tool_errors(func: ToolHandler) -> ToolHandler:
             logger.error("File system error in %s: %s", func.__name__, e)
             return [TextContent(type="text", text=format_error_response(error))]
         except (ConnectionError, TimeoutError) as e:
-            # Map common network errors
+            # Map common network errors — retryable
             error = map_exception_to_deepwiki_error(e)
+            error.retryable = True
+            error.retry_after_seconds = 5
             logger.error("Network error in %s: %s", func.__name__, e)
             return [TextContent(type="text", text=format_error_response(error))]
         except RateLimitExceeded as e:
-            # Rate limit exceeded - provide helpful message
+            # Rate limit exceeded — retryable after cooldown
             logger.warning("Rate limit exceeded in %s: %s", func.__name__, e)
             error = DeepWikiError(
                 message=str(e),
                 hint="Wait for the rate limit to reset, or reduce the frequency of requests.",
+                retryable=True,
+                retry_after_seconds=60,
             )
             return [TextContent(type="text", text=format_error_response(error))]
         except asyncio.CancelledError:
@@ -544,7 +548,9 @@ def wrap_tool_response(
 ) -> str:
     """Wrap tool output in a structured JSON envelope.
 
-    Used by new agentic tools. Existing tools are not changed.
+    Merges ``tool`` (and optionally ``hints``) into the data dict so that
+    existing fields like ``status``, ``message``, etc. remain at the top
+    level for backward-compatible parsing.
 
     Args:
         tool_name: Name of the tool that produced this response.
@@ -554,14 +560,36 @@ def wrap_tool_response(
     Returns:
         JSON string with standard envelope.
     """
-    envelope: dict[str, Any] = {
-        "tool": tool_name,
-        "status": "success",
-        "data": data,
-    }
+    envelope: dict[str, Any] = {**data, "tool": tool_name}
+    if "status" not in envelope:
+        envelope["status"] = "success"
     if hints is not None:
         envelope["hints"] = hints
     return json.dumps(envelope, indent=2)
+
+
+def make_tool_text_content(
+    tool_name: str,
+    data: dict[str, Any],
+    *,
+    hints: dict[str, Any] | None = None,
+) -> list[TextContent]:
+    """Produce a list[TextContent] wrapped in a standard JSON envelope.
+
+    Convenience wrapper combining ``wrap_tool_response`` with the
+    ``TextContent`` construction that every handler needs.
+
+    Args:
+        tool_name: Name of the tool that produced this response.
+        data: The tool's result payload.
+        hints: Optional follow-up suggestions for agents.
+
+    Returns:
+        Single-element list of TextContent with the JSON envelope.
+    """
+    return [
+        TextContent(type="text", text=wrap_tool_response(tool_name, data, hints=hints))
+    ]
 
 
 def build_wiki_resource_uri(wiki_path: Path, page_relative: str) -> str:

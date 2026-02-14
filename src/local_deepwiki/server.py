@@ -16,6 +16,7 @@ from local_deepwiki.handlers import (
     handle_ask_question,
     handle_batch_explain_entities,
     handle_cancel_research,
+    handle_find_tools,
     handle_deep_research,
     handle_detect_secrets,
     handle_detect_stale_docs,
@@ -52,6 +53,7 @@ from local_deepwiki.handlers import (
     handle_suggest_codemap_topics,
     handle_suggest_next_actions,
 )
+from local_deepwiki.handlers.prompts import register_prompt_handlers
 from local_deepwiki.handlers.resources import register_resource_handlers
 from local_deepwiki.logging import get_logger
 from local_deepwiki.server_tool_defs import TOOL_DEFINITIONS
@@ -64,6 +66,9 @@ server = Server("local-deepwiki")
 
 # Register MCP Resource protocol handlers
 register_resource_handlers(server)
+
+# Register MCP Prompt protocol handlers
+register_prompt_handlers(server)
 
 
 @server.list_tools()
@@ -113,6 +118,7 @@ TOOL_HANDLERS: dict[str, ToolHandler] = {
     "run_workflow": handle_run_workflow,
     "batch_explain_entities": handle_batch_explain_entities,
     "query_codebase": handle_query_codebase,
+    "find_tools": handle_find_tools,
 }
 
 # Tools that need server context for progress streaming
@@ -122,8 +128,11 @@ PROGRESS_ENABLED_TOOLS = {"index_repository", "deep_research", "resume_research"
 @server.call_tool()
 async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
     """Handle tool calls."""
+    from local_deepwiki.handlers.session_state import record_tool_call
+
     logger.info("Tool call received: %s", name)
     logger.debug("Tool arguments: %s", arguments)
+    record_tool_call(name)
 
     # Special handling for tools that need server context for progress streaming
     if name == "index_repository":

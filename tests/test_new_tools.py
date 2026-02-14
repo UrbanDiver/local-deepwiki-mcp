@@ -27,7 +27,7 @@ class TestHandleGetGlossary:
         result = await handle_get_glossary({"repo_path": str(nonexistent)})
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "does not exist" in result[0].text
 
     async def test_returns_error_for_unindexed_repo(self, tmp_path):
@@ -35,7 +35,7 @@ class TestHandleGetGlossary:
         result = await handle_get_glossary({"repo_path": str(tmp_path)})
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "not indexed" in result[0].text
 
     async def test_missing_repo_path(self):
@@ -43,7 +43,7 @@ class TestHandleGetGlossary:
         result = await handle_get_glossary({})
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
 
 
 class TestHandleGetDiagrams:
@@ -55,7 +55,7 @@ class TestHandleGetDiagrams:
         result = await handle_get_diagrams({"repo_path": str(nonexistent)})
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "does not exist" in result[0].text
 
     async def test_returns_error_for_unindexed_repo(self, tmp_path):
@@ -63,7 +63,7 @@ class TestHandleGetDiagrams:
         result = await handle_get_diagrams({"repo_path": str(tmp_path)})
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "not indexed" in result[0].text
 
     async def test_invalid_diagram_type(self, tmp_path):
@@ -73,7 +73,7 @@ class TestHandleGetDiagrams:
         )
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
 
     async def test_sequence_requires_entry_point(self, tmp_path):
         """Test that sequence diagram without entry_point gives validation error."""
@@ -83,7 +83,7 @@ class TestHandleGetDiagrams:
         )
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
 
 
 class TestHandleGetInheritance:
@@ -95,7 +95,7 @@ class TestHandleGetInheritance:
         result = await handle_get_inheritance({"repo_path": str(nonexistent)})
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "does not exist" in result[0].text
 
     async def test_returns_error_for_unindexed_repo(self, tmp_path):
@@ -103,7 +103,7 @@ class TestHandleGetInheritance:
         result = await handle_get_inheritance({"repo_path": str(tmp_path)})
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "not indexed" in result[0].text
 
 
@@ -116,7 +116,7 @@ class TestHandleGetCallGraph:
         result = await handle_get_call_graph({"repo_path": str(nonexistent)})
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "does not exist" in result[0].text
 
     async def test_rejects_path_traversal(self, tmp_path):
@@ -126,7 +126,7 @@ class TestHandleGetCallGraph:
         )
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "traversal" in result[0].text
 
     async def test_returns_error_for_nonexistent_file(self, tmp_path):
@@ -136,7 +136,7 @@ class TestHandleGetCallGraph:
         )
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "does not exist" in result[0].text
 
 
@@ -149,7 +149,7 @@ class TestHandleGetCoverage:
         result = await handle_get_coverage({"repo_path": str(nonexistent)})
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "does not exist" in result[0].text
 
     async def test_returns_error_for_unindexed_repo(self, tmp_path):
@@ -157,7 +157,7 @@ class TestHandleGetCoverage:
         result = await handle_get_coverage({"repo_path": str(tmp_path)})
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "not indexed" in result[0].text
 
 
@@ -170,7 +170,7 @@ class TestHandleDetectStaleDocs:
         result = await handle_detect_stale_docs({"repo_path": str(nonexistent)})
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "does not exist" in result[0].text
 
     async def test_returns_error_for_unindexed_repo(self, tmp_path):
@@ -178,7 +178,7 @@ class TestHandleDetectStaleDocs:
         result = await handle_detect_stale_docs({"repo_path": str(tmp_path)})
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "not indexed" in result[0].text
 
     async def test_rejects_negative_threshold(self, tmp_path):
@@ -188,7 +188,7 @@ class TestHandleDetectStaleDocs:
         )
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
 
 
 class TestHandleGetChangelog:
@@ -200,7 +200,7 @@ class TestHandleGetChangelog:
         result = await handle_get_changelog({"repo_path": str(nonexistent)})
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "does not exist" in result[0].text
 
     async def test_non_git_repo_returns_no_history(self, tmp_path):
@@ -219,7 +219,7 @@ class TestHandleGetChangelog:
         )
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
 
     async def test_git_repo_returns_changelog(self, tmp_path):
         """Test that a git repo returns changelog content."""
@@ -263,7 +263,7 @@ class TestHandleDetectSecrets:
         result = await handle_detect_secrets({"repo_path": str(nonexistent)})
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "does not exist" in result[0].text
 
     async def test_returns_error_for_file_path(self, tmp_path):
@@ -274,7 +274,7 @@ class TestHandleDetectSecrets:
         result = await handle_detect_secrets({"repo_path": str(file_path)})
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "not a directory" in result[0].text
 
     async def test_clean_repo_returns_no_findings(self, tmp_path):
@@ -314,7 +314,7 @@ class TestHandleGetTestExamples:
         )
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "does not exist" in result[0].text
 
     async def test_returns_error_for_unindexed_repo(self, tmp_path):
@@ -324,7 +324,7 @@ class TestHandleGetTestExamples:
         )
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "not indexed" in result[0].text
 
     async def test_rejects_empty_entity_name(self):
@@ -334,7 +334,7 @@ class TestHandleGetTestExamples:
         )
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
 
     async def test_rejects_max_examples_out_of_range(self, tmp_path):
         """Test that max_examples out of range is rejected."""
@@ -343,7 +343,7 @@ class TestHandleGetTestExamples:
         )
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
 
 
 class TestHandleGetApiDocs:
@@ -357,7 +357,7 @@ class TestHandleGetApiDocs:
         )
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "does not exist" in result[0].text
 
     async def test_rejects_path_traversal(self, tmp_path):
@@ -367,7 +367,7 @@ class TestHandleGetApiDocs:
         )
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "traversal" in result[0].text
 
     async def test_returns_error_for_nonexistent_file(self, tmp_path):
@@ -377,7 +377,7 @@ class TestHandleGetApiDocs:
         )
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "does not exist" in result[0].text
 
     async def test_missing_file_path(self):
@@ -385,7 +385,7 @@ class TestHandleGetApiDocs:
         result = await handle_get_api_docs({"repo_path": "/some/path"})
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
 
     async def test_returns_api_docs_for_python_file(self, tmp_path):
         """Test that API docs are generated for a Python file."""
@@ -414,7 +414,7 @@ class TestHandleListIndexedRepos:
         result = await handle_list_indexed_repos({"base_path": str(nonexistent)})
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "does not exist" in result[0].text
 
     async def test_empty_directory_returns_no_repos(self, tmp_path):
@@ -445,7 +445,7 @@ class TestHandleGetIndexStatus:
         result = await handle_get_index_status({"repo_path": str(nonexistent)})
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "does not exist" in result[0].text
 
     async def test_returns_error_for_unindexed_repo(self, tmp_path):
@@ -453,7 +453,7 @@ class TestHandleGetIndexStatus:
         result = await handle_get_index_status({"repo_path": str(tmp_path)})
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "not indexed" in result[0].text
 
     async def test_missing_repo_path(self):
@@ -461,4 +461,4 @@ class TestHandleGetIndexStatus:
         result = await handle_get_index_status({})
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()

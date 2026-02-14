@@ -1,5 +1,7 @@
 """Tests for the structured error system."""
 
+import json
+
 import pytest
 
 from local_deepwiki.errors import (
@@ -540,14 +542,18 @@ class TestFormatErrorResponse:
         """Test formatting error without hint."""
         error = DeepWikiError("Something failed")
         result = format_error_response(error)
-        assert result == "Error: Something failed"
+        parsed = json.loads(result)
+        assert parsed["status"] == "error"
+        assert parsed["error"] == "Something failed"
+        assert "hint" not in parsed
 
     def test_formats_error_with_hint(self):
         """Test formatting error with hint."""
         error = DeepWikiError("Something failed", hint="Try again")
         result = format_error_response(error)
-        assert "Error: Something failed" in result
-        assert "Hint: Try again" in result
+        parsed = json.loads(result)
+        assert parsed["error"] == "Something failed"
+        assert parsed["hint"] == "Try again"
 
 
 class TestErrorHierarchy:
@@ -633,8 +639,8 @@ class TestHandlerIntegration:
 
         result = await handler_that_raises_validation_error({})
         assert len(result) == 1
-        assert "Error: Invalid input" in result[0].text
-        assert "Hint: Fix your input" in result[0].text
+        assert "Invalid input" in result[0].text
+        assert "Fix your input" in result[0].text
 
     async def test_provider_error_caught_by_handler(self):
         """Test that BaseProviderError is properly caught and formatted."""
@@ -650,8 +656,8 @@ class TestHandlerIntegration:
 
         result = await handler_that_raises_provider_error({})
         assert len(result) == 1
-        assert "Error: API call failed" in result[0].text
-        assert "Hint: Check your API key" in result[0].text
+        assert "API call failed" in result[0].text
+        assert "Check your API key" in result[0].text
 
     async def test_file_not_found_error_mapped_by_handler(self):
         """Test that FileNotFoundError is mapped to DeepWikiError."""
@@ -663,8 +669,8 @@ class TestHandlerIntegration:
 
         result = await handler_that_raises_file_not_found({})
         assert len(result) == 1
-        assert "Error" in result[0].text
-        assert "Hint" in result[0].text  # Should have a hint
+        assert "error" in result[0].text.lower()
+        assert "hint" in result[0].text  # Should have a hint
 
     async def test_connection_error_mapped_by_handler(self):
         """Test that ConnectionError is mapped to DeepWikiError."""
@@ -676,7 +682,7 @@ class TestHandlerIntegration:
 
         result = await handler_that_raises_connection_error({})
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "connection" in result[0].text.lower()
 
     async def test_permission_error_mapped_by_handler(self):
@@ -689,7 +695,7 @@ class TestHandlerIntegration:
 
         result = await handler_that_raises_permission_error({})
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "permission" in result[0].text.lower()
 
     async def test_timeout_error_mapped_by_handler(self):
@@ -702,7 +708,7 @@ class TestHandlerIntegration:
 
         result = await handler_that_raises_timeout_error({})
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "timeout" in result[0].text.lower() or "timed" in result[0].text.lower()
 
 

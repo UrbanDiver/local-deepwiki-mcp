@@ -25,6 +25,7 @@ Example usage:
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 from typing import Any
@@ -49,6 +50,8 @@ class DeepWikiError(Exception):
         message: str,
         hint: str | None = None,
         context: dict[str, Any] | None = None,
+        retryable: bool = False,
+        retry_after_seconds: int | None = None,
     ) -> None:
         """Initialize the error.
 
@@ -56,11 +59,15 @@ class DeepWikiError(Exception):
             message: What happened.
             hint: How to fix it.
             context: Additional debug info.
+            retryable: Whether the operation can be retried.
+            retry_after_seconds: Suggested wait before retrying.
         """
         super().__init__(message)
         self.message = message
         self.hint = hint
         self.context = context or {}
+        self.retryable = retryable
+        self.retry_after_seconds = retry_after_seconds
 
     def __str__(self) -> str:
         """Format the error message with hint if available."""
@@ -813,7 +820,14 @@ def format_error_response(error: DeepWikiError) -> str:
     else:
         safe_hint = None
 
-    lines = [f"Error: {safe_message}"]
+    result: dict[str, Any] = {
+        "status": "error",
+        "error": safe_message,
+    }
     if safe_hint:
-        lines.append(f"\nHint: {safe_hint}")
-    return "".join(lines)
+        result["hint"] = safe_hint
+    if error.retryable:
+        result["retryable"] = True
+        if error.retry_after_seconds is not None:
+            result["retry_after_seconds"] = error.retry_after_seconds
+    return json.dumps(result, indent=2)

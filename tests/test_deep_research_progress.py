@@ -123,7 +123,7 @@ class TestHandleDeepResearch:
         )
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert (
             "at least 1 character" in result[0].text
             or "string_too_short" in result[0].text
@@ -141,7 +141,7 @@ class TestHandleDeepResearch:
         )
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "not indexed" in result[0].text
 
     async def test_validates_max_chunks(self):
@@ -158,7 +158,7 @@ class TestHandleDeepResearch:
         )
 
         # Will fail on "not indexed" but that's after validation
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
 
 
 class TestDeepResearchProgress:

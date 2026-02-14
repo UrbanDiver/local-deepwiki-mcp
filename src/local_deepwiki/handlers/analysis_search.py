@@ -23,6 +23,7 @@ from local_deepwiki.handlers._shared import (
     get_access_controller,
     handle_tool_errors,
     logger,
+    make_tool_text_content,
     path_not_found_error,
     validate_query_parameters,
 )
@@ -163,7 +164,7 @@ async def handle_search_wiki(args: dict[str, Any]) -> list[TextContent]:
     logger.info(
         f"Wiki search: {len(matches)} results for '{validated.query}' in {repo_path}"
     )
-    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+    return make_tool_text_content("search_wiki", result)
 
 
 @handle_tool_errors
@@ -254,4 +255,4 @@ async def handle_fuzzy_search(args: dict[str, Any]) -> list[TextContent]:
     logger.info(
         f"Fuzzy search: {len(match_results)} matches for '{validated.query}' in {repo_path}"
     )
-    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+    return make_tool_text_content("fuzzy_search", result)

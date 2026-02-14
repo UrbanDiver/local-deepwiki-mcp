@@ -301,7 +301,7 @@ async def test_ask_about_diff_repo_not_found(mock_access_control, tmp_path):
     )
 
     text = result[0].text
-    assert "Error" in text
+    assert "error" in text.lower()
     assert "does not exist" in text
 
 
@@ -315,7 +315,7 @@ async def test_ask_about_diff_validation_error(mock_access_control):
     )
 
     text = result[0].text
-    assert "Error" in text
+    assert "error" in text.lower()
     assert "question" in text.lower()
 
 
@@ -538,7 +538,7 @@ async def test_ask_about_diff_llm_failure(mock_access_control, git_repo):
         )
 
     text = result[0].text
-    assert "Error" in text or "error" in text.lower()
+    assert "error" in text.lower()
 
 
 async def test_ask_about_diff_vector_search_empty(mock_access_control, git_repo):

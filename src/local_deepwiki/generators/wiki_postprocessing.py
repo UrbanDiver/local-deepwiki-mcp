@@ -172,13 +172,17 @@ async def generate_search_and_toc(
     toc = generate_toc(page_list)
     write_toc(toc, wiki_path)
 
-    # Generate llms.txt for LLM-friendly project discovery
+    # Generate llms.txt and llms-full.txt for LLM-friendly project discovery
     try:
-        from local_deepwiki.generators.llms_txt import generate_llms_txt
+        from local_deepwiki.generators.llms_txt import (
+            generate_llms_full_txt,
+            generate_llms_txt,
+        )
 
         generate_llms_txt(pages, index_status, wiki_path)
+        generate_llms_full_txt(pages, index_status, wiki_path)
     except Exception:  # noqa: BLE001
-        logger.warning("Failed to generate llms.txt", exc_info=True)
+        logger.warning("Failed to generate llms.txt / llms-full.txt", exc_info=True)
 
 
 def build_wiki_status(

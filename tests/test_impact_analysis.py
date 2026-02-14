@@ -438,7 +438,7 @@ class TestImpactAnalysisFileNotFound:
             )
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "does not exist" in result[0].text
 
 
@@ -456,7 +456,7 @@ class TestImpactAnalysisRepoNotFound:
         )
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "does not exist" in result[0].text
 
 
@@ -622,7 +622,7 @@ class TestImpactAnalysisValidationError:
         result = await handle_impact_analysis({})
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
 
     async def test_impact_analysis_empty_file_path(self, mock_access_control):
         """Empty file_path should fail min_length validation."""
@@ -634,7 +634,7 @@ class TestImpactAnalysisValidationError:
         )
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
 
     async def test_impact_analysis_path_traversal(
         self, tmp_path, mock_access_control, mock_index_status, mock_config
@@ -656,7 +656,7 @@ class TestImpactAnalysisValidationError:
             )
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "traversal" in result[0].text
 
 
@@ -899,7 +899,7 @@ class TestImpactAnalysisFileOutsideRepo:
                 }
             )
 
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "traversal" in result[0].text
 
 

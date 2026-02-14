@@ -36,6 +36,7 @@ from local_deepwiki.handlers._shared import (
     get_rate_limiter,
     handle_tool_errors,
     logger,
+    make_tool_text_content,
     path_not_found_error,
     sanitize_error_message,
 )
@@ -253,7 +254,7 @@ async def handle_analyze_diff(args: dict[str, Any]) -> list[TextContent]:
         f"Diff analysis: {len(changed_files)} files changed, "
         f"{len(affected_wiki_pages)} wiki pages affected"
     )
-    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+    return make_tool_text_content("analyze_diff", result)
 
 
 @handle_tool_errors
@@ -432,4 +433,4 @@ async def handle_ask_about_diff(args: dict[str, Any]) -> list[TextContent]:
     }
 
     logger.info("Ask about diff: '%s...' for %s", question[:50], repo_path)
-    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+    return make_tool_text_content("ask_about_diff", result)

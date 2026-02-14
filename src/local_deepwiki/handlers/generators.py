@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
 from pathlib import Path
 from typing import Any
 
@@ -31,6 +30,7 @@ from local_deepwiki.handlers._shared import (
     get_access_controller,
     handle_tool_errors,
     logger,
+    make_tool_text_content,
     path_not_found_error,
 )
 
@@ -94,8 +94,10 @@ async def handle_get_glossary(args: dict[str, Any]) -> list[TextContent]:
         ],
     }
 
-    logger.info("Glossary: %s/%s entities for %s", len(entities), total_entities, repo_path)
-    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+    logger.info(
+        "Glossary: %s/%s entities for %s", len(entities), total_entities, repo_path
+    )
+    return make_tool_text_content("get_glossary", result)
 
 
 @handle_tool_errors
@@ -168,18 +170,12 @@ async def handle_get_diagrams(args: dict[str, Any]) -> list[TextContent]:
             )
 
     if diagram is None:
-        return [
-            TextContent(
-                type="text",
-                text=json.dumps(
-                    {
-                        "status": "success",
-                        "message": f"No {diagram_type.value} diagram could be generated (no relevant data found)",
-                    },
-                    indent=2,
-                ),
-            )
-        ]
+        return make_tool_text_content(
+            "get_diagrams",
+            {
+                "message": f"No {diagram_type.value} diagram could be generated (no relevant data found)",
+            },
+        )
 
     result = {
         "status": "success",
@@ -188,7 +184,7 @@ async def handle_get_diagrams(args: dict[str, Any]) -> list[TextContent]:
     }
 
     logger.info("Generated %s diagram for %s", diagram_type.value, repo_path)
-    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+    return make_tool_text_content("get_diagrams", result)
 
 
 @handle_tool_errors
@@ -219,19 +215,13 @@ async def handle_get_inheritance(args: dict[str, Any]) -> list[TextContent]:
     classes = await collect_class_hierarchy(index_status, vector_store)
 
     if not classes:
-        return [
-            TextContent(
-                type="text",
-                text=json.dumps(
-                    {
-                        "status": "success",
-                        "message": "No class hierarchies found in the codebase",
-                        "classes": [],
-                    },
-                    indent=2,
-                ),
-            )
-        ]
+        return make_tool_text_content(
+            "get_inheritance",
+            {
+                "message": "No class hierarchies found in the codebase",
+                "classes": [],
+            },
+        )
 
     diagram = generate_inheritance_diagram(classes)
 
@@ -268,7 +258,7 @@ async def handle_get_inheritance(args: dict[str, Any]) -> list[TextContent]:
     logger.info(
         f"Inheritance: {len(class_list)}/{total_classes} classes for {repo_path}"
     )
-    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+    return make_tool_text_content("get_inheritance", result)
 
 
 @handle_tool_errors
@@ -288,7 +278,10 @@ async def handle_get_call_graph(args: dict[str, Any]) -> list[TextContent]:
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
-    from local_deepwiki.generators.callgraph import CallGraphExtractor, generate_call_graph_diagram
+    from local_deepwiki.generators.callgraph import (
+        CallGraphExtractor,
+        generate_call_graph_diagram,
+    )
 
     extractor = CallGraphExtractor()
 
@@ -320,18 +313,10 @@ async def handle_get_call_graph(args: dict[str, Any]) -> list[TextContent]:
         diagram = generate_call_graph_diagram(combined_graph)
 
     if diagram is None:
-        return [
-            TextContent(
-                type="text",
-                text=json.dumps(
-                    {
-                        "status": "success",
-                        "message": "No call relationships found",
-                    },
-                    indent=2,
-                ),
-            )
-        ]
+        return make_tool_text_content(
+            "get_call_graph",
+            {"message": "No call relationships found"},
+        )
 
     result = {
         "status": "success",
@@ -340,7 +325,7 @@ async def handle_get_call_graph(args: dict[str, Any]) -> list[TextContent]:
     }
 
     logger.info("Call graph generated for %s", file_path or repo_path)
-    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+    return make_tool_text_content("get_call_graph", result)
 
 
 @handle_tool_errors
@@ -387,7 +372,7 @@ async def handle_get_coverage(args: dict[str, Any]) -> list[TextContent]:
     }
 
     logger.info(f"Coverage: {stats.coverage_percent:.1f}% for {repo_path}")
-    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+    return make_tool_text_content("get_coverage", result)
 
 
 @handle_tool_errors
@@ -416,19 +401,13 @@ async def handle_detect_stale_docs(args: dict[str, Any]) -> list[TextContent]:
     wiki_status = await manager.load_status()
 
     if wiki_status is None:
-        return [
-            TextContent(
-                type="text",
-                text=json.dumps(
-                    {
-                        "status": "success",
-                        "message": "No wiki generation status found. Run index_repository first.",
-                        "stale_pages": [],
-                    },
-                    indent=2,
-                ),
-            )
-        ]
+        return make_tool_text_content(
+            "detect_stale_docs",
+            {
+                "message": "No wiki generation status found. Run index_repository first.",
+                "stale_pages": [],
+            },
+        )
 
     report = analyze_staleness(repo_path, wiki_status, threshold_days)
 
@@ -451,7 +430,7 @@ async def handle_detect_stale_docs(args: dict[str, Any]) -> list[TextContent]:
     logger.info(
         f"Stale detection: {report.stale_pages}/{report.total_pages} stale for {repo_path}"
     )
-    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+    return make_tool_text_content("detect_stale_docs", result)
 
 
 @handle_tool_errors
@@ -478,18 +457,10 @@ async def handle_get_changelog(args: dict[str, Any]) -> list[TextContent]:
     )
 
     if content is None:
-        return [
-            TextContent(
-                type="text",
-                text=json.dumps(
-                    {
-                        "status": "success",
-                        "message": "No git history found. Is this a git repository?",
-                    },
-                    indent=2,
-                ),
-            )
-        ]
+        return make_tool_text_content(
+            "get_changelog",
+            {"message": "No git history found. Is this a git repository?"},
+        )
 
     result = {
         "status": "success",
@@ -497,7 +468,7 @@ async def handle_get_changelog(args: dict[str, Any]) -> list[TextContent]:
     }
 
     logger.info("Changelog generated for %s", repo_path)
-    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+    return make_tool_text_content("get_changelog", result)
 
 
 @handle_tool_errors
@@ -563,7 +534,7 @@ async def handle_detect_secrets(args: dict[str, Any]) -> list[TextContent]:
     logger.info(
         f"Secret scan: {total_findings} findings in {len(findings_by_file)} files for {repo_path}"
     )
-    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+    return make_tool_text_content("detect_secrets", result)
 
 
 @handle_tool_errors
@@ -602,19 +573,13 @@ async def handle_get_test_examples(args: dict[str, Any]) -> list[TextContent]:
         )
 
     if not examples:
-        return [
-            TextContent(
-                type="text",
-                text=json.dumps(
-                    {
-                        "status": "success",
-                        "message": f"No test examples found for '{entity_name}'",
-                        "examples": [],
-                    },
-                    indent=2,
-                ),
-            )
-        ]
+        return make_tool_text_content(
+            "get_test_examples",
+            {
+                "message": f"No test examples found for '{entity_name}'",
+                "examples": [],
+            },
+        )
 
     result = {
         "status": "success",
@@ -632,8 +597,10 @@ async def handle_get_test_examples(args: dict[str, Any]) -> list[TextContent]:
         ],
     }
 
-    logger.info("Test examples: %s for '%s' in %s", len(examples), entity_name, repo_path)
-    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+    logger.info(
+        "Test examples: %s for '%s' in %s", len(examples), entity_name, repo_path
+    )
+    return make_tool_text_content("get_test_examples", result)
 
 
 @handle_tool_errors
@@ -671,18 +638,12 @@ async def handle_get_api_docs(args: dict[str, Any]) -> list[TextContent]:
     api_docs = await asyncio.to_thread(get_file_api_docs, target)
 
     if api_docs is None:
-        return [
-            TextContent(
-                type="text",
-                text=json.dumps(
-                    {
-                        "status": "success",
-                        "message": f"No API documentation could be extracted from '{file_path}'",
-                    },
-                    indent=2,
-                ),
-            )
-        ]
+        return make_tool_text_content(
+            "get_api_docs",
+            {
+                "message": f"No API documentation could be extracted from '{file_path}'",
+            },
+        )
 
     result = {
         "status": "success",
@@ -691,7 +652,7 @@ async def handle_get_api_docs(args: dict[str, Any]) -> list[TextContent]:
     }
 
     logger.info("API docs generated for %s", file_path)
-    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+    return make_tool_text_content("get_api_docs", result)
 
 
 @handle_tool_errors
@@ -741,7 +702,7 @@ async def handle_list_indexed_repos(args: dict[str, Any]) -> list[TextContent]:
     }
 
     logger.info("Found %s indexed repos under %s", len(repos), base_path)
-    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+    return make_tool_text_content("list_indexed_repos", result)
 
 
 @handle_tool_errors
@@ -779,4 +740,4 @@ async def handle_get_index_status(args: dict[str, Any]) -> list[TextContent]:
     logger.info(
         f"Index status: {index_status.total_files} files, {index_status.total_chunks} chunks for {repo_path}"
     )
-    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+    return make_tool_text_content("get_index_status", result)

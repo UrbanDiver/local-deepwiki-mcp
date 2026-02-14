@@ -1049,14 +1049,14 @@ class TestHandleGenerateCodemap:
                 {"repo_path": str(tmp_path), "query": "test"}
             )
 
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "not indexed" in result[0].text
 
     async def test_nonexistent_repo(self, mock_access_control):
         result = await handle_generate_codemap(
             {"repo_path": "/nonexistent/path/xyz", "query": "test"}
         )
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "does not exist" in result[0].text
 
     async def test_with_entry_point(self, tmp_path, mock_access_control):
@@ -1116,7 +1116,7 @@ class TestHandleGenerateCodemap:
     async def test_invalid_args(self, mock_access_control):
         # Missing required 'query' field
         result = await handle_generate_codemap({"repo_path": "/tmp/repo"})
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
 
     async def test_all_focus_modes(self, tmp_path, mock_access_control):
         """Verify all three focus modes are accepted."""
@@ -1224,14 +1224,14 @@ class TestHandleSuggestCodemapTopics:
         ):
             result = await handle_suggest_codemap_topics({"repo_path": str(tmp_path)})
 
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "not indexed" in result[0].text
 
     async def test_nonexistent_repo(self, mock_access_control):
         result = await handle_suggest_codemap_topics(
             {"repo_path": "/nonexistent/path/xyz"}
         )
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         assert "does not exist" in result[0].text
 
     async def test_empty_repo(self, tmp_path, mock_access_control):

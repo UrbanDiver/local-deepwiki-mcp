@@ -528,7 +528,7 @@ class TestHandleExplainEntityRepoNotFound:
         )
 
         data_text = result[0].text
-        assert "Error" in data_text
+        assert "error" in data_text.lower()
 
 
 class TestHandleExplainEntityValidationError:
@@ -538,19 +538,19 @@ class TestHandleExplainEntityValidationError:
         result = await handle_explain_entity({"repo_path": "/tmp/repo"})
 
         data_text = result[0].text
-        assert "Error" in data_text
+        assert "error" in data_text.lower()
 
     async def test_missing_repo_path(self, mock_access_control):
         result = await handle_explain_entity({"entity_name": "foo"})
 
         data_text = result[0].text
-        assert "Error" in data_text
+        assert "error" in data_text.lower()
 
     async def test_empty_args(self, mock_access_control):
         result = await handle_explain_entity({})
 
         data_text = result[0].text
-        assert "Error" in data_text
+        assert "error" in data_text.lower()
 
     async def test_max_examples_out_of_range(self, mock_access_control):
         result = await handle_explain_entity(
@@ -562,7 +562,7 @@ class TestHandleExplainEntityValidationError:
         )
 
         data_text = result[0].text
-        assert "Error" in data_text
+        assert "error" in data_text.lower()
 
 
 # ── Additional Coverage Tests ──────────────────────────────────────

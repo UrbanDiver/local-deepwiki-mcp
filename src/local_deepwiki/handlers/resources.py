@@ -100,6 +100,23 @@ def register_resource_handlers(server: Server) -> None:
                     )
                 )
 
+            # Expose llms.txt and llms-full.txt as resources
+            for txt_name, txt_desc in (
+                ("llms.txt", "LLM-friendly project summary (llmstxt.org)"),
+                ("llms-full.txt", "Full documentation for LLM consumption"),
+            ):
+                txt_path = wiki_dir / txt_name
+                if txt_path.is_file():
+                    uri = build_resource_uri(wiki_dir, txt_name)
+                    resources.append(
+                        Resource(
+                            uri=AnyUrl(uri),
+                            name=txt_name,
+                            description=f"{txt_desc} in {wiki_dir.parent.name}",
+                            mimeType="text/plain",
+                        )
+                    )
+
         return resources
 
     @server.read_resource()
@@ -185,5 +202,6 @@ def register_resource_handlers(server: Server) -> None:
                 ]
             raise FileNotFoundError(f"Wiki page not found: {page_relative}")
 
+        mime = "text/plain" if page_path.suffix == ".txt" else "text/markdown"
         content = page_path.read_text(encoding="utf-8")
-        return [ReadResourceContents(content=content, mime_type="text/markdown")]
+        return [ReadResourceContents(content=content, mime_type=mime)]

@@ -108,7 +108,7 @@ class TestHandleSearchCodeExtended:
         )
 
         assert len(result) == 1
-        assert "Error" in result[0].text
+        assert "error" in result[0].text.lower()
         # Whitespace passes min_length but fails at repo check
         assert "not indexed" in result[0].text
 
@@ -216,10 +216,10 @@ class TestHandleSearchCodeWithResults:
 
                 assert len(result) == 1
                 data = json.loads(result[0].text)
-                assert len(data) == 1
-                assert data[0]["file_path"] == "test.py"
-                assert data[0]["name"] == "test_function"
-                assert data[0]["score"] == 0.95
+                assert data["total_results"] == 1
+                assert data["results"][0]["file_path"] == "test.py"
+                assert data["results"][0]["name"] == "test_function"
+                assert data["results"][0]["score"] == 0.95
 
     async def test_returns_no_results_message(self, tmp_path):
         """Test returns no results message when search is empty."""
@@ -289,5 +289,5 @@ class TestHandleSearchCodeWithResults:
                 assert len(result) == 1
                 data = json.loads(result[0].text)
                 # Preview should be truncated with "..."
-                assert data[0]["preview"].endswith("...")
-                assert len(data[0]["preview"]) <= 303  # 300 + "..."
+                assert data["results"][0]["preview"].endswith("...")
+                assert len(data["results"][0]["preview"]) <= 303  # 300 + "..."
