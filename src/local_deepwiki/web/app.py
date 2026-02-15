@@ -175,6 +175,7 @@ def render_markdown(content: str) -> str:
             "tables",
             "toc",
             "nl2br",
+            "md_in_html",
         ]
     )
     raw_html = md.convert(content)

@@ -249,7 +249,7 @@ async def generate_glossary_page(
     # Generate collapsible sections for each letter
     for letter in letters:
         count = len(grouped[letter])
-        lines.append(f'<details id="{letter.lower()}">')
+        lines.append(f'<details id="{letter.lower()}" markdown="1">')
         lines.append(f"<summary><strong>{letter}</strong> — {count} entities</summary>")
         lines.append("")
 

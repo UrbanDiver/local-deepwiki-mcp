@@ -571,8 +571,9 @@ class CrossLinker:
 
         text = plain_re.sub(plain_repl, text)
 
-        # 9. Restore all protected content
-        for placeholder, original in protected:
+        # 9. Restore all protected content (reverse order so outer protections
+        # from later steps are unwrapped first, exposing inner placeholders)
+        for placeholder, original in reversed(protected):
             text = text.replace(placeholder, original)
 
         return text
