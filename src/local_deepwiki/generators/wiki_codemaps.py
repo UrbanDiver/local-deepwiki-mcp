@@ -34,21 +34,33 @@ _CLICK_RE = re.compile(r'(\s+click\s+\S+\s+)"files/([^"]+)"(\s+_blank)')
 _MIN_NODES = 3
 
 
-def _fix_mermaid_click_paths(diagram: str) -> str:
+def _has_wiki_page(wiki_path: Path | None, rel_md: str) -> bool:
+    """Check whether a wiki file page exists on disk."""
+    if wiki_path is None:
+        return True  # Optimistic when wiki_path unknown
+    return (wiki_path / "files" / rel_md).exists()
+
+
+def _fix_mermaid_click_paths(diagram: str, wiki_path: Path | None = None) -> str:
     """Rewrite Mermaid click handlers for wiki context.
 
     The codemap generator produces ``click N0 "files/src/foo.py" _blank``
     but wiki codemap pages live under ``codemaps/``, so relative links must
     go up one level and use ``.md`` extensions.
+
+    Click handlers for files without wiki pages are removed entirely.
     """
 
     def _repl(m: re.Match) -> str:
         prefix, rel_path, suffix = m.group(1), m.group(2), m.group(3)
-        # Strip source extension, add .md
         md_path = str(Path(rel_path).with_suffix(".md"))
+        if not _has_wiki_page(wiki_path, md_path):
+            return ""  # Remove click handler for missing pages
         return f'{prefix}"../files/{md_path}"{suffix}'
 
-    return _CLICK_RE.sub(_repl, diagram)
+    # Filter out empty replacements (removed click lines)
+    result = _CLICK_RE.sub(_repl, diagram)
+    return "\n".join(line for line in result.split("\n") if line.strip())
 
 
 def _topic_slug(entry_point: str) -> str:
@@ -64,20 +76,23 @@ def _topic_slug(entry_point: str) -> str:
     return slug[:80] if slug else "unnamed"
 
 
-def _format_codemap_page(topic: dict, result: CodemapResult) -> str:
+def _format_codemap_page(
+    topic: dict, result: CodemapResult, wiki_path: Path | None = None
+) -> str:
     """Format a single codemap result as a markdown page."""
     entry_point = topic.get("entry_point", "unknown")
     file_path = topic.get("file_path", "")
 
-    diagram = _fix_mermaid_click_paths(result.mermaid_diagram)
+    diagram = _fix_mermaid_click_paths(result.mermaid_diagram, wiki_path)
 
-    # Build a wiki-relative link for the entry point file
+    # Build a wiki-relative link for the entry point file (only if page exists)
     entry_link = str(Path(file_path).with_suffix(".md")) if file_path else ""
-    entry_ref = (
-        f"> Entry point: [`{entry_point}`](../files/{entry_link}) in `{file_path}`"
-        if entry_link
-        else f"> Entry point: `{entry_point}` in `{file_path}`"
-    )
+    if entry_link and _has_wiki_page(wiki_path, entry_link):
+        entry_ref = (
+            f"> Entry point: [`{entry_point}`](../files/{entry_link}) in `{file_path}`"
+        )
+    else:
+        entry_ref = f"> Entry point: `{entry_point}` in `{file_path}`"
 
     lines = [
         f"# Codemap: How {entry_point} Works",
@@ -108,7 +123,10 @@ def _format_codemap_page(topic: dict, result: CodemapResult) -> str:
     ]
     for fp in sorted(result.files_involved):
         md_rel = str(Path(fp).with_suffix(".md"))
-        lines.append(f"- [`{fp}`](../files/{md_rel})")
+        if _has_wiki_page(wiki_path, md_rel):
+            lines.append(f"- [`{fp}`](../files/{md_rel})")
+        else:
+            lines.append(f"- `{fp}`")
 
     return "\n".join(lines) + "\n"
 
@@ -235,7 +253,7 @@ async def generate_codemap_pages(
             )
             continue
 
-        content = _format_codemap_page(topic, result)
+        content = _format_codemap_page(topic, result, wiki_path)
         page = WikiPage(
             path=page_path,
             title=f"Codemap: {entry_point}",

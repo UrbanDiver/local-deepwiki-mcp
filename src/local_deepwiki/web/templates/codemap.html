@@ -1489,13 +1489,18 @@
                     highlightPath(nodeId);
                 });
 
-                // Double-click to navigate to wiki page
+                // Double-click to navigate to wiki page (if it exists)
                 cy.on('dbltap', 'node:childless', function(evt) {
                     var node = evt.target;
                     var filePath = node.data('filePath');
                     if (filePath) {
                         var wikiPath = filePath.replace(/\.[^/.]+$/, '');
-                        window.open('/wiki/files/' + wikiPath + '.md', '_blank');
+                        var url = '/wiki/files/' + wikiPath + '.md';
+                        fetch(url, { method: 'HEAD' }).then(function(resp) {
+                            if (resp.ok) {
+                                window.open(url, '_blank');
+                            }
+                        });
                     }
                 });
 
