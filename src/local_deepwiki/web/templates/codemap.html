@@ -826,7 +826,7 @@
                 'border-color': '#3fb950',
                 'border-width': 2,
             }},
-            // Cross-file bridge edge during animated trace
+            // Active edge during animated trace (current step transition)
             { selector: 'edge.trace-bridge', style: {
                 'line-color': '#f0883e',
                 'target-arrow-color': '#f0883e',
@@ -836,6 +836,14 @@
                 'overlay-color': '#f0883e',
                 'overlay-opacity': 0.2,
                 'overlay-padding': 4,
+            }},
+            // Previously traversed edge (visited path)
+            { selector: 'edge.trace-visited-edge', style: {
+                'line-color': '#3fb950',
+                'target-arrow-color': '#3fb950',
+                'width': 2.5,
+                'line-style': 'solid',
+                'z-index': 5,
             }},
         ];
 
@@ -1171,17 +1179,40 @@
 
         // --- Animated Execution Trace ---
         function buildTraceSequence() {
-            // Parse narrative for step references to node names
-            if (!currentResult || !currentResult.nodes || !cy) return [];
-            var nodes = currentResult.nodes;
+            // DFS traversal from entry point so animation follows graph edges
+            if (!currentResult || !currentResult.nodes || !cy || !currentEntryPoint) return [];
+
+            var visited = {};
             var ordered = [];
-            // Use node order from the result (matches narrative flow)
-            for (var i = 0; i < nodes.length; i++) {
-                var qn = nodes[i].qualified_name;
-                if (cy.getElementById(qn).length > 0 && !cy.getElementById(qn).isParent()) {
-                    ordered.push(qn);
+
+            function dfs(nodeId) {
+                if (visited[nodeId]) return;
+                var node = cy.getElementById(nodeId);
+                if (node.length === 0 || node.isParent()) return;
+                visited[nodeId] = true;
+                ordered.push(nodeId);
+
+                // Follow outgoing edges (caller → callee)
+                var outEdges = node.outgoers('edge');
+                outEdges.forEach(function(edge) {
+                    dfs(edge.target().id());
+                });
+            }
+
+            dfs(currentEntryPoint);
+
+            // Add any remaining nodes not reachable from entry (disconnected)
+            var allNodes = currentResult.nodes;
+            for (var i = 0; i < allNodes.length; i++) {
+                var qn = allNodes[i].qualified_name;
+                if (!visited[qn]) {
+                    var node = cy.getElementById(qn);
+                    if (node.length > 0 && !node.isParent()) {
+                        ordered.push(qn);
+                    }
                 }
             }
+
             return ordered;
         }
 
@@ -1219,8 +1250,8 @@
         function stepTrace() {
             if (!cy || traceNodes.length === 0) return;
 
-            // Remove previous bridge highlighting
-            cy.elements().removeClass('trace-bridge');
+            // Downgrade active bridge edges to visited
+            cy.edges('.trace-bridge').removeClass('trace-bridge').addClass('trace-visited-edge');
 
             // Un-highlight previous
             var prevStep = traceStep;
@@ -1239,17 +1270,24 @@
             var node = cy.getElementById(nodeId);
             node.addClass('trace-active');
 
-            // Cross-file bridge: highlight the connecting edge with glow
-            if (prevStep >= 0 && prevStep < traceNodes.length) {
-                var prevNodeId = traceNodes[prevStep];
-                var prevFile = cy.getElementById(prevNodeId).data('filePath') || '';
-                var curFile = node.data('filePath') || '';
-                if (prevFile !== curFile && prevFile !== '' && curFile !== '') {
-                    var bridgeEdges = cy.getElementById(prevNodeId).edgesTo(cy.getElementById(nodeId));
-                    if (bridgeEdges.length === 0) {
-                        bridgeEdges = cy.getElementById(nodeId).edgesTo(cy.getElementById(prevNodeId));
+            // Highlight the edge connecting any visited node to the current node
+            if (traceStep > 0) {
+                var incomingEdges = node.incomers('edge');
+                incomingEdges.forEach(function(edge) {
+                    var sourceNode = edge.source();
+                    if (sourceNode.hasClass('trace-visited') || sourceNode.hasClass('trace-active')) {
+                        edge.addClass('trace-bridge');
                     }
-                    bridgeEdges.addClass('trace-bridge');
+                });
+                // If no incoming from visited, try outgoing (reverse edges)
+                if (incomingEdges.filter('.trace-bridge').length === 0) {
+                    var outgoingEdges = node.outgoers('edge');
+                    outgoingEdges.forEach(function(edge) {
+                        var targetNode = edge.target();
+                        if (targetNode.hasClass('trace-visited') || targetNode.hasClass('trace-active')) {
+                            edge.addClass('trace-bridge');
+                        }
+                    });
                 }
             }
 
@@ -1272,7 +1310,7 @@
         function stopTrace() {
             pauseTrace();
             traceStep = -1;
-            if (cy) cy.elements().removeClass('trace-active trace-visited trace-bridge');
+            if (cy) cy.elements().removeClass('trace-active trace-visited trace-bridge trace-visited-edge');
             playStepLabel.textContent = 'Step 0/' + traceNodes.length;
             clearNarrativeHighlight();
         }
