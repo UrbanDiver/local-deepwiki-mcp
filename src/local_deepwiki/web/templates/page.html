@@ -421,6 +421,41 @@
             color: #8b949e;
             text-align: center;
         }
+        /* Loading overlay for lazy page generation */
+        .lazy-loading-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(13, 17, 23, 0.85);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .lazy-loading-overlay.active {
+            display: flex;
+        }
+        .lazy-loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--link-color);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .lazy-loading-text {
+            color: var(--heading-color);
+            font-size: 1.1em;
+            font-weight: 500;
+        }
+        .lazy-loading-subtext {
+            color: #8b949e;
+            font-size: 0.85em;
+        }
         .mermaid-wrapper {
             position: relative;
             margin: 16px 0;
@@ -493,6 +528,11 @@
     <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
 </head>
 <body>
+    <div class="lazy-loading-overlay" id="lazy-loading-overlay">
+        <div class="lazy-loading-spinner"></div>
+        <div class="lazy-loading-text">Generating documentation...</div>
+        <div class="lazy-loading-subtext">This page is being created for the first time</div>
+    </div>
     <button id="sidebar-toggle" class="sidebar-toggle" title="Toggle sidebar">&#9776;</button>
     <nav class="sidebar">
         <div class="sidebar-header">
@@ -891,10 +931,19 @@
                 searchResults.innerHTML = html;
                 searchResults.classList.add('active');
 
-                // Add click handlers
+                // Add click handlers with loading overlay for lazy generation
                 searchResults.querySelectorAll('.search-result').forEach(el => {
                     el.addEventListener('click', () => {
-                        window.location.href = '/wiki/' + el.dataset.path;
+                        const targetUrl = '/wiki/' + el.dataset.path;
+                        const overlay = document.getElementById('lazy-loading-overlay');
+
+                        // Show loading overlay and navigate. The browser keeps
+                        // the current page visible (with overlay) until the
+                        // server responds, providing visual feedback during
+                        // lazy page generation.
+                        overlay.classList.add('active');
+                        searchResults.classList.remove('active');
+                        window.location.href = targetUrl;
                     });
                 });
             }

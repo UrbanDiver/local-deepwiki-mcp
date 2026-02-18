@@ -11,6 +11,7 @@ Route modules:
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import sys
@@ -304,6 +305,57 @@ def search_json():
         abort(500, sanitize_error_message(str(e)))
 
 
+import threading
+
+# Persistent event loop for lazy generation so that in-flight futures
+# created by LazyPageGenerator stay on the same loop across requests.
+_lazy_loop: asyncio.AbstractEventLoop | None = None
+_lazy_loop_lock = threading.Lock()
+
+
+def _get_lazy_loop() -> asyncio.AbstractEventLoop:
+    """Return a persistent background event loop for lazy page generation."""
+    global _lazy_loop
+    if _lazy_loop is None or _lazy_loop.is_closed():
+        with _lazy_loop_lock:
+            if _lazy_loop is None or _lazy_loop.is_closed():
+                _lazy_loop = asyncio.new_event_loop()
+                t = threading.Thread(target=_lazy_loop.run_forever, daemon=True)
+                t.start()
+    return _lazy_loop
+
+
+def _try_lazy_generate(page_path: str, wiki_path: Path) -> str | None:
+    """Attempt to generate a missing wiki page on demand.
+
+    Uses the lazy page generator to create pages for files, modules,
+    and other known page types when they haven't been eagerly generated.
+
+    Args:
+        page_path: Relative wiki page path (e.g. 'files/utils.md').
+        wiki_path: Resolved path to the .deepwiki directory.
+
+    Returns:
+        Markdown content string if generation succeeded, None otherwise.
+    """
+    try:
+        from local_deepwiki.generators.lazy_generator import get_lazy_generator
+
+        generator = get_lazy_generator(wiki_path)
+        loop = _get_lazy_loop()
+        future = asyncio.run_coroutine_threadsafe(generator.get_page(page_path), loop)
+        content = future.result(timeout=120)
+
+        logger.info("Lazy-generated page: %s", page_path)
+        return content
+    except FileNotFoundError:
+        logger.debug("Lazy generation has no source for: %s", page_path)
+        return None
+    except Exception:
+        logger.exception("Lazy generation failed for: %s", page_path)
+        return None
+
+
 @app.route("/wiki/<path:path>")
 def view_page(path: str):
     """View a wiki page."""
@@ -323,27 +375,45 @@ def view_page(path: str):
     if not file_path.is_relative_to(WIKI_PATH):
         logger.warning("Path traversal attempt blocked: %s", path)
         abort(403, "Invalid path")
+
+    # If the page doesn't exist on disk, attempt lazy generation
     if not file_path.exists() or not file_path.is_file():
-        logger.warning("Page not found: %s", path)
-        abort(404, f"Page not found: {path}")
+        content = _try_lazy_generate(path, WIKI_PATH)
+        if content is None:
+            logger.warning("Page not found: %s", path)
+            abort(404, f"Page not found: {path}")
+    else:
+        content = None
 
     try:
-        # ETag based on file mtime + size for conditional requests
-        stat = file_path.stat()
-        etag = hashlib.md5(f"{stat.st_mtime_ns}:{stat.st_size}".encode()).hexdigest()
+        if content is not None:
+            # Page was just generated — no ETag yet
+            html_content = render_markdown(content)
+        else:
+            # ETag based on file mtime + size for conditional requests
+            stat = file_path.stat()
+            etag = hashlib.md5(
+                f"{stat.st_mtime_ns}:{stat.st_size}".encode()
+            ).hexdigest()
 
-        if request.if_none_match and etag in request.if_none_match:
-            return Response(status=304)
+            if request.if_none_match and etag in request.if_none_match:
+                return Response(status=304)
 
-        content = file_path.read_text()
-        html_content = render_markdown(content)
+            content = file_path.read_text()
+            html_content = render_markdown(content)
     except (OSError, UnicodeDecodeError) as e:
         from local_deepwiki.errors import sanitize_error_message
 
         abort(500, sanitize_error_message(str(e)))
 
     pages, sections, toc_entries = get_wiki_structure(WIKI_PATH)
-    title = extract_title(file_path)
+
+    # After lazy generation the file now exists on disk
+    title = (
+        extract_title(file_path)
+        if file_path.exists()
+        else path.split("/")[-1].replace(".md", "").replace("_", " ").title()
+    )
 
     # Build breadcrumb navigation
     breadcrumb = build_breadcrumb(WIKI_PATH, path)
@@ -360,7 +430,17 @@ def view_page(path: str):
             breadcrumb=breadcrumb,
         )
     )
-    response.headers["ETag"] = etag
+
+    # Set caching headers — use ETag if we read from disk, skip for freshly generated
+    if file_path.exists():
+        try:
+            stat = file_path.stat()
+            fresh_etag = hashlib.md5(
+                f"{stat.st_mtime_ns}:{stat.st_size}".encode()
+            ).hexdigest()
+            response.headers["ETag"] = fresh_etag
+        except OSError:
+            pass
     response.headers["Cache-Control"] = "private, max-age=60"
     return response
 

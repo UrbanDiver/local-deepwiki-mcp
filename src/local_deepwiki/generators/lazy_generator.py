@@ -122,10 +122,12 @@ class LazyPageGenerator:
     async def _get_vector_store(self) -> VectorStore:
         if self._vector_store is None:
             from local_deepwiki.core.vectorstore import VectorStore as VS
+            from local_deepwiki.providers.embeddings import get_embedding_provider
 
             repo_path = self._get_repo_path()
             db_path = self._config.get_vector_db_path(repo_path)
-            self._vector_store = VS(db_path=db_path, config=self._config)
+            embedding_provider = get_embedding_provider(self._config.embedding)
+            self._vector_store = VS(db_path, embedding_provider)
         return self._vector_store
 
     async def _get_entity_registry(self) -> EntityRegistry:
