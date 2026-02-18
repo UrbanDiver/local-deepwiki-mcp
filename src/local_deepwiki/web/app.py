@@ -375,6 +375,10 @@ def create_app(wiki_path: str | Path) -> Flask:
     if not WIKI_PATH.exists():
         logger.error("Wiki path does not exist: %s", wiki_path)
         raise ValueError(f"Wiki path does not exist: {wiki_path}")
+    # Store on app.config so blueprints can access via current_app.config
+    # even when the server is launched via `python -m` (where __main__ and
+    # local_deepwiki.web.app are separate module objects).
+    app.config["WIKI_PATH"] = WIKI_PATH
     logger.info("Configured wiki path: %s", WIKI_PATH)
     return app
 

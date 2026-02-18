@@ -23,7 +23,13 @@ research_bp = Blueprint("research", __name__)
 
 
 def _get_wiki_path():
-    """Retrieve the current WIKI_PATH from the main app module."""
+    """Retrieve the current WIKI_PATH, preferring Flask app config."""
+    from flask import current_app
+
+    path = current_app.config.get("WIKI_PATH")
+    if path is not None:
+        return path
+
     from local_deepwiki.web import app as _app_module
 
     return _app_module.WIKI_PATH

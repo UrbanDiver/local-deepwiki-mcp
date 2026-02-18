@@ -23,12 +23,19 @@ chat_bp = Blueprint("chat", __name__)
 
 
 def _get_wiki_path():
-    """Retrieve the current WIKI_PATH from the main app module.
+    """Retrieve the current WIKI_PATH, preferring Flask app config.
 
-    Returns the module-level WIKI_PATH, which is set by create_app().
-    Using a function avoids circular imports and keeps the blueprint
-    decoupled from the app module's global state at import time.
+    Checks current_app.config first (set by create_app), which works even
+    when the server is launched via ``python -m`` where __main__ and the
+    importable module are separate objects.  Falls back to the module-level
+    global for backward compatibility with tests that monkeypatch it directly.
     """
+    from flask import current_app
+
+    path = current_app.config.get("WIKI_PATH")
+    if path is not None:
+        return path
+
     from local_deepwiki.web import app as _app_module
 
     return _app_module.WIKI_PATH
