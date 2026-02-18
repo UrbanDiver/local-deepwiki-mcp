@@ -1,6 +1,6 @@
 """MCP tool definitions for local-deepwiki.
 
-This module contains the 40 Tool objects returned by the server's list_tools
+This module contains the 42 Tool objects returned by the server's list_tools
 handler. Extracted from server.py to keep that file focused on server setup
 and request dispatch.
 """
@@ -28,6 +28,12 @@ _STATEFUL = ToolAnnotations(
     destructiveHint=False,
     idempotentHint=False,
     openWorldHint=False,
+)
+_SIDE_EFFECT = ToolAnnotations(
+    readOnlyHint=False,
+    destructiveHint=False,
+    idempotentHint=False,
+    openWorldHint=True,
 )
 
 
@@ -1263,5 +1269,70 @@ TOOL_DEFINITIONS: list[Tool] = [
             "required": ["query"],
         },
         annotations=_READ_ONLY,
+    ),
+    Tool(
+        name="serve_wiki",
+        description=(
+            "Start the interactive wiki web server for a .deepwiki directory. "
+            "Launches a Flask app with chat, search, codemap explorer, and research UI. "
+            "The server runs as a subprocess and can be stopped with stop_wiki_server."
+            "\n\nRequires: index_repository must be called first."
+            '\n\nExample: {"wiki_path": "/path/to/repo/.deepwiki"}'
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "wiki_path": {
+                    "type": "string",
+                    "description": "Path to the wiki directory (typically {repo}/.deepwiki)",
+                },
+                "host": {
+                    "type": "string",
+                    "description": "Host to bind to (default: 127.0.0.1, loopback only)",
+                    "default": "127.0.0.1",
+                },
+                "port": {
+                    "type": "integer",
+                    "description": "Port to bind to (default: 8080, range: 1024-65535)",
+                    "default": 8080,
+                    "minimum": 1024,
+                    "maximum": 65535,
+                },
+                "open_browser": {
+                    "type": "boolean",
+                    "description": "Open the wiki in the default browser after starting (default: false)",
+                    "default": False,
+                },
+            },
+            "required": ["wiki_path"],
+        },
+        annotations=_SIDE_EFFECT,
+    ),
+    Tool(
+        name="stop_wiki_server",
+        description=(
+            "Stop a previously started wiki web server. Gracefully terminates "
+            "the server process. If no server is found on the specified port, "
+            "returns a list of currently running servers."
+            "\n\nNo prior indexing required."
+        ),
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "port": {
+                    "type": "integer",
+                    "description": "Port of the wiki server to stop (default: 8080)",
+                    "default": 8080,
+                    "minimum": 1024,
+                    "maximum": 65535,
+                },
+                "wiki_path": {
+                    "type": "string",
+                    "description": "Optional wiki path to identify which server to stop",
+                },
+            },
+            "required": [],
+        },
+        annotations=_SIDE_EFFECT,
     ),
 ]

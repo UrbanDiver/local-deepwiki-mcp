@@ -65,6 +65,8 @@ from local_deepwiki.models.tool_args import (
     RunWorkflowArgs,
     SearchCodeArgs,
     SearchWikiArgs,
+    ServeWikiArgs,
+    StopWikiServerArgs,
     SuggestCodemapTopicsArgs,
     SuggestNextActionsArgs,
 )
@@ -148,4 +150,6 @@ __all__ = [
     "RunWorkflowArgs",
     "BatchExplainEntitiesArgs",
     "QueryCodebaseArgs",
+    "ServeWikiArgs",
+    "StopWikiServerArgs",
 ]

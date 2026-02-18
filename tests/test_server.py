@@ -43,6 +43,8 @@ class TestServer:
             "search_code",
             "export_wiki_html",
             "export_wiki_pdf",
+            "serve_wiki",
+            "stop_wiki_server",
         ]
         for tool_name in expected_tools:
             assert tool_name in TOOL_HANDLERS, f"Missing tool: {tool_name}"
@@ -77,6 +79,8 @@ class TestListTools:
             "search_code",
             "export_wiki_html",
             "export_wiki_pdf",
+            "serve_wiki",
+            "stop_wiki_server",
         ]
 
         for expected in expected_tools:
@@ -471,6 +475,32 @@ class TestToolSchemaValidation:
         # search_code limit
         search_tool = next(t for t in tools if t.name == "search_code")
         assert search_tool.inputSchema["properties"]["limit"]["type"] == "integer"
+
+    async def test_serve_wiki_tool_schema(self):
+        """Test serve_wiki tool has correct schema."""
+        tools = await list_tools()
+        tool = next(t for t in tools if t.name == "serve_wiki")
+
+        assert "wiki_path" in tool.inputSchema["properties"]
+        assert "host" in tool.inputSchema["properties"]
+        assert "port" in tool.inputSchema["properties"]
+        assert "open_browser" in tool.inputSchema["properties"]
+        assert "wiki_path" in tool.inputSchema["required"]
+
+        assert tool.inputSchema["properties"]["port"]["type"] == "integer"
+        assert tool.inputSchema["properties"]["port"]["minimum"] == 1024
+        assert tool.inputSchema["properties"]["port"]["maximum"] == 65535
+        assert tool.inputSchema["properties"]["open_browser"]["type"] == "boolean"
+
+    async def test_stop_wiki_server_tool_schema(self):
+        """Test stop_wiki_server tool has correct schema."""
+        tools = await list_tools()
+        tool = next(t for t in tools if t.name == "stop_wiki_server")
+
+        assert "port" in tool.inputSchema["properties"]
+        assert "wiki_path" in tool.inputSchema["properties"]
+        assert tool.inputSchema["properties"]["port"]["type"] == "integer"
+        assert tool.inputSchema["required"] == []
 
 
 class TestMainFunction:

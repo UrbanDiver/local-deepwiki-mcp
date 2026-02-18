@@ -73,6 +73,12 @@ from local_deepwiki.handlers.generators import (
     handle_list_indexed_repos,
 )
 
+# --- Web server lifecycle handlers ---
+from local_deepwiki.handlers.web_server import (
+    handle_serve_wiki,
+    handle_stop_wiki_server,
+)
+
 # --- Research tool handlers ---
 from local_deepwiki.handlers.research import (
     handle_cancel_research,
@@ -138,4 +144,7 @@ __all__ = [
     "handle_batch_explain_entities",
     "handle_find_tools",
     "handle_query_codebase",
+    # Web server handlers
+    "handle_serve_wiki",
+    "handle_stop_wiki_server",
 ]

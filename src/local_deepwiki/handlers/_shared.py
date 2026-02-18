@@ -84,6 +84,8 @@ from local_deepwiki.models import (
     RunWorkflowArgs,
     SearchCodeArgs,
     SearchWikiArgs,
+    ServeWikiArgs,
+    StopWikiServerArgs,
     SuggestCodemapTopicsArgs,
     SuggestNextActionsArgs,
 )

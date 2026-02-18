@@ -567,3 +567,39 @@ class QueryCodebaseArgs(BaseModel):
         default=True,
         description="Automatically escalate to deep_research if initial answer is insufficient (default: true)",
     )
+
+
+class ServeWikiArgs(BaseModel):
+    """Arguments for the serve_wiki tool."""
+
+    wiki_path: str = Field(description="Path to the wiki directory (typically {repo}/.deepwiki)")
+    host: str = Field(
+        default="127.0.0.1",
+        max_length=256,
+        description="Host to bind to (default: 127.0.0.1)",
+    )
+    port: int = Field(
+        default=8080,
+        ge=1024,
+        le=65535,
+        description="Port to bind to (default: 8080)",
+    )
+    open_browser: bool = Field(
+        default=False,
+        description="Open the wiki in the default browser after starting",
+    )
+
+
+class StopWikiServerArgs(BaseModel):
+    """Arguments for the stop_wiki_server tool."""
+
+    port: int = Field(
+        default=8080,
+        ge=1024,
+        le=65535,
+        description="Port of the wiki server to stop",
+    )
+    wiki_path: str | None = Field(
+        default=None,
+        description="Optional wiki path to identify which server to stop",
+    )

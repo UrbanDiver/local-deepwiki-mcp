@@ -50,6 +50,8 @@ from local_deepwiki.handlers import (
     handle_run_workflow,
     handle_search_code,
     handle_search_wiki,
+    handle_serve_wiki,
+    handle_stop_wiki_server,
     handle_suggest_codemap_topics,
     handle_suggest_next_actions,
 )
@@ -119,6 +121,8 @@ TOOL_HANDLERS: dict[str, ToolHandler] = {
     "batch_explain_entities": handle_batch_explain_entities,
     "query_codebase": handle_query_codebase,
     "find_tools": handle_find_tools,
+    "serve_wiki": handle_serve_wiki,
+    "stop_wiki_server": handle_stop_wiki_server,
 }
 
 # Tools that need server context for progress streaming
