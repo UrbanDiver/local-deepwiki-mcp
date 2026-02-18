@@ -19,6 +19,51 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
+# Filenames to check for authoritative project descriptions, in priority order.
+_AUTHORITATIVE_DOC_NAMES = [
+    "CLAUDE.md",
+    "README.md",
+    "README.rst",
+    "README.txt",
+    "README",
+]
+
+# Maximum characters to include from authoritative docs to stay within
+# reasonable prompt budgets while still capturing the project overview.
+_MAX_AUTHORITATIVE_CHARS = 4000
+
+
+def _read_authoritative_docs(repo_path: Path | None) -> str | None:
+    """Read authoritative project documentation for LLM grounding.
+
+    Checks for CLAUDE.md and README files in the repo root. Returns the
+    first found, truncated to a reasonable size.
+
+    Args:
+        repo_path: Path to the repository root.
+
+    Returns:
+        Content string if found, None otherwise.
+    """
+    if repo_path is None:
+        return None
+
+    for name in _AUTHORITATIVE_DOC_NAMES:
+        doc_path = repo_path / name
+        if doc_path.is_file():
+            try:
+                content = doc_path.read_text(encoding="utf-8")
+                if content.strip():
+                    logger.debug("Using %s as authoritative project doc", name)
+                    truncated = content[:_MAX_AUTHORITATIVE_CHARS]
+                    if len(content) > _MAX_AUTHORITATIVE_CHARS:
+                        truncated += "\n\n[... truncated]"
+                    return truncated
+            except (OSError, UnicodeDecodeError) as e:
+                logger.debug("Could not read %s: %s", name, e)
+
+    return None
+
 
 def _build_tech_stack_section(manifest: ProjectManifest, max_deps: int = 12) -> str:
     """Build technology stack section from manifest.
@@ -108,33 +153,52 @@ async def _gather_code_context(vector_store: VectorStore) -> list[str]:
     return code_parts
 
 
-def _build_overview_prompt(pre_generated: str, code_samples: str) -> str:
+def _build_overview_prompt(
+    pre_generated: str,
+    code_samples: str,
+    authoritative_docs: str | None = None,
+) -> str:
     """Build the LLM prompt for overview generation.
 
     Args:
         pre_generated: Already-generated content sections.
         code_samples: Formatted code samples for context.
+        authoritative_docs: Optional high-priority project documentation
+            (CLAUDE.md, README.md) that should be weighted heavily.
 
     Returns:
         Formatted prompt for LLM.
     """
+    auth_section = ""
+    auth_rule = ""
+    if authoritative_docs:
+        auth_section = f"""
+AUTHORITATIVE PROJECT DOCUMENTATION (HIGH PRIORITY — the project maintainer wrote this):
+{authoritative_docs}
+"""
+        auth_rule = (
+            "- The AUTHORITATIVE PROJECT DOCUMENTATION is the most reliable source "
+            "of truth. Align your description and features with it. Code samples "
+            "provide supporting detail but should not contradict the authoritative docs.\n"
+        )
+
     return f"""You are filling in sections of a README. Some sections are already written below. You need to write the "## Description" and "## Key Features" sections ONLY.
 
 ALREADY WRITTEN (do not modify):
 {pre_generated}
-
+{auth_section}
 CODE SAMPLES FOR CONTEXT:
 {code_samples}
 
 YOUR TASK:
 Write ONLY these two sections:
 
-1. **## Description** (2-3 sentences explaining what this project does based on the code samples and existing content)
+1. **## Description** (2-3 sentences explaining what this project does)
 
-2. **## Key Features** (bullet list of 3-5 features you can VERIFY from the code samples shown)
+2. **## Key Features** (bullet list of 3-5 features you can VERIFY from the sources shown)
 
 RULES:
-- ONLY describe functionality visible in the code samples
+{auth_rule}- ONLY describe functionality visible in the provided sources
 - Do NOT invent features not shown
 - Do NOT mention libraries not in the Technology Stack section
 - Keep it factual and grounded
@@ -171,7 +235,14 @@ async def generate_overview_page(
 
     # Gather code context for LLM
     code_context_parts = await _gather_code_context(vector_store)
-    code_samples = "\n\n".join(code_context_parts) if code_context_parts else "No code samples available."
+    code_samples = (
+        "\n\n".join(code_context_parts)
+        if code_context_parts
+        else "No code samples available."
+    )
+
+    # Read authoritative project docs (CLAUDE.md, README.md, etc.)
+    authoritative_docs = _read_authoritative_docs(repo_path)
 
     # Build pre-generated sections for LLM context
     prompt_parts = [f"# {repo_name}\n"]
@@ -193,7 +264,7 @@ async def generate_overview_page(
             prompt_parts.append(qs_section)
 
     pre_generated = "\n".join(prompt_parts)
-    prompt = _build_overview_prompt(pre_generated, code_samples)
+    prompt = _build_overview_prompt(pre_generated, code_samples, authoritative_docs)
     llm_content = await llm.generate(prompt, system_prompt=system_prompt)
 
     # Build final content
@@ -280,7 +351,9 @@ async def generate_architecture_page(
         if r.chunk.chunk_type.value == "class" and r.chunk.name:
             class_names.add(r.chunk.name)
 
-    class_list = ", ".join(sorted(class_names)[:30]) if class_names else "No classes found"
+    class_list = (
+        ", ".join(sorted(class_names)[:30]) if class_names else "No classes found"
+    )
 
     # Include directory structure for module organization
     dir_structure = ""
@@ -290,7 +363,9 @@ async def generate_architecture_page(
     # Include dependencies for technology context
     dep_context = ""
     if manifest and manifest.dependencies:
-        dep_context = "Key dependencies: " + ", ".join(sorted(manifest.dependencies.keys())[:15])
+        dep_context = "Key dependencies: " + ", ".join(
+            sorted(manifest.dependencies.keys())[:15]
+        )
 
     prompt = f"""Generate architecture documentation based ONLY on the code provided below.
 
@@ -332,7 +407,9 @@ Format as markdown with clear sections."""
 
     # Add link to detailed dependency graph
     content += "\n\n## Module Dependencies\n\n"
-    content += "For a detailed view of module interdependencies including circular dependency "
+    content += (
+        "For a detailed view of module interdependencies including circular dependency "
+    )
     content += "detection, see the [Dependency Graph](dependency-graph.md) page.\n"
 
     return WikiPage(
@@ -376,7 +453,8 @@ async def generate_dependencies_page(
             version_str = f" ({version})" if version and version != "*" else ""
             deps_list.append(f"- {name}{version_str}")
         facts_sections.append(
-            "EXTERNAL DEPENDENCIES (from package manifest):\n" + "\n".join(deps_list[:30])
+            "EXTERNAL DEPENDENCIES (from package manifest):\n"
+            + "\n".join(deps_list[:30])
         )
 
     # 2. Dev dependencies from manifest (GROUNDED FACTS)
@@ -386,7 +464,8 @@ async def generate_dependencies_page(
             version_str = f" ({version})" if version and version != "*" else ""
             dev_deps_list.append(f"- {name}{version_str}")
         facts_sections.append(
-            "DEV DEPENDENCIES (from package manifest):\n" + "\n".join(dev_deps_list[:20])
+            "DEV DEPENDENCIES (from package manifest):\n"
+            + "\n".join(dev_deps_list[:20])
         )
 
     # 3. Get import chunks for internal dependency analysis

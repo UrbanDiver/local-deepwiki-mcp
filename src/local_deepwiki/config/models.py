@@ -181,6 +181,12 @@ class ParsingConfig(BaseModel):
             ".coverage",
             "coverage_html/**",
             "coverage_openai_embeddings/**",
+            ".claude/**",
+            ".windsurf/**",
+            ".cursor/**",
+            ".aider/**",
+            "agents/**",
+            "AGENTS.md",
         ],
         description="Glob patterns to exclude",
     )
