@@ -13,7 +13,9 @@ from pathlib import Path
 from local_deepwiki.models import WikiPage, WikiPageStatus
 
 
-def build_file_to_wiki_map(pages: list[WikiPage], wiki_path: Path | None = None) -> dict[str, str]:
+def build_file_to_wiki_map(
+    pages: list[WikiPage], wiki_path: Path | None = None
+) -> dict[str, str]:
     """Build a mapping from source file paths to wiki page paths.
 
     Args:
@@ -106,8 +108,13 @@ def _format_file_entry(
     else:
         display = f"`{file_path}`"
 
+    # Infer wiki path if not in the map (lazy generation will create on demand)
+    if wiki_path is None:
+        stem = re.sub(r"\.[^.]+$", "", file_path)
+        wiki_path = f"files/{stem}.md"
+
     # Format the entry - prefer local wiki links to keep users on-site
-    if wiki_path and wiki_path != current_wiki_path:
+    if wiki_path != current_wiki_path:
         rel_path = _relative_path(current_wiki_path, wiki_path)
         return f"- [{display}]({rel_path})"
     else:
@@ -154,16 +161,22 @@ def generate_source_refs_section(
         file_path = files_to_show[0]
         wiki_path = file_to_wiki.get(file_path)
         line_info = file_line_info.get(file_path) if file_line_info else None
-        lines.append(_format_file_entry(file_path, wiki_path, current_wiki_path, line_info))
+        lines.append(
+            _format_file_entry(file_path, wiki_path, current_wiki_path, line_info)
+        )
     else:
         # Multiple files - list format for overview/module pages
-        lines.append("The following source files were used to generate this documentation:")
+        lines.append(
+            "The following source files were used to generate this documentation:"
+        )
         lines.append("")
 
         for file_path in files_to_show:
             wiki_path = file_to_wiki.get(file_path)
             line_info = file_line_info.get(file_path) if file_line_info else None
-            lines.append(_format_file_entry(file_path, wiki_path, current_wiki_path, line_info))
+            lines.append(
+                _format_file_entry(file_path, wiki_path, current_wiki_path, line_info)
+            )
 
     if summary_note:
         lines.append(summary_note)
@@ -254,7 +267,12 @@ def add_source_refs_sections(
                 # Insert before See Also
                 parts = content.split(see_also_marker, 1)
                 new_content = (
-                    parts[0].rstrip() + "\n\n" + source_refs + "\n" + see_also_marker + parts[1]
+                    parts[0].rstrip()
+                    + "\n\n"
+                    + source_refs
+                    + "\n"
+                    + see_also_marker
+                    + parts[1]
                 )
             else:
                 # Add at end

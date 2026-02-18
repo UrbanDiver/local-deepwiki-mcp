@@ -529,7 +529,7 @@ class TestFormatFileEntry:
             current_wiki_path="files/src/chunker.md",
             line_info=None,
         )
-        assert result == "- `src/parser.py`"
+        assert result == "- [`src/parser.py`](parser.md)"
 
     def test_with_line_info(self):
         """Test formatting with line info shows start-end range."""
@@ -539,7 +539,7 @@ class TestFormatFileEntry:
             current_wiki_path="files/src/chunker.md",
             line_info={"start_line": 42, "end_line": 150},
         )
-        assert result == "- `src/parser.py:42-150`"
+        assert result == "- [`src/parser.py:42-150`](parser.md)"
 
     def test_with_line_info_and_wiki_link(self):
         """Test formatting with line info and wiki link."""
