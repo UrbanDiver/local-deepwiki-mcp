@@ -7,11 +7,15 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from local_deepwiki.models import (
+    ChunkType,
+    CodeChunk,
     FileInfo,
     IndexStatus,
     Language,
+    SearchResult,
     WikiPage,
 )
+
 
 def make_index_status(
     repo_path: str,
@@ -30,6 +34,7 @@ def make_index_status(
         files=files or [],
     )
 
+
 def make_file_info(
     path: str,
     hash: str = "abc123",
@@ -43,6 +48,7 @@ def make_file_info(
         size_bytes=100,
         last_modified=time.time(),
     )
+
 
 class TestWritePage:
     """Tests for _write_page method."""
@@ -114,6 +120,7 @@ class TestWritePage:
                 written_file = tmp_path / "modules" / "deep" / "nested.md"
                 assert written_file.exists()
                 assert written_file.read_text() == "# Nested\n\nDeep content"
+
 
 class TestModulePageProcessing:
     """Tests for module page processing (lines 373-374)."""
@@ -283,6 +290,7 @@ class TestModulePageProcessing:
                                                                             / "utils.md"
                                                                         ).exists()
 
+
 class TestChangelogPageGeneration:
     """Tests for changelog page generation (lines 470-473)."""
 
@@ -438,6 +446,7 @@ class TestChangelogPageGeneration:
                                                                             "# Changelog"
                                                                             in changelog_file.read_text()
                                                                         )
+
 
 class TestAuxiliaryPagesGeneration:
     """Tests for auxiliary pages (inheritance, glossary, coverage) - lines 494-537."""
@@ -950,3 +959,104 @@ class TestAuxiliaryPagesGeneration:
                                                                             tmp_path
                                                                             / "coverage.md"
                                                                         ).exists()
+
+
+class TestArchitecturePageAuthoritativeDocs:
+    """Tests for architecture page authoritative docs inclusion."""
+
+    async def test_architecture_prompt_includes_authoritative_docs(self, tmp_path):
+        """Verify LLM prompt contains authoritative doc content when CLAUDE.md exists."""
+        from local_deepwiki.generators.wiki_pages import generate_architecture_page
+
+        # Create a CLAUDE.md in the repo
+        claude_md = tmp_path / "CLAUDE.md"
+        claude_md.write_text("# My Project\n\nThis project does amazing things.")
+
+        index_status = make_index_status(repo_path=str(tmp_path))
+
+        # Mock vector store with some search results
+        mock_chunk = MagicMock()
+        mock_chunk.file_path = "src/main.py"
+        mock_chunk.chunk_type = MagicMock()
+        mock_chunk.chunk_type.value = "class"
+        mock_chunk.name = "MainClass"
+        mock_chunk.content = "class MainClass:\n    pass"
+
+        mock_result = MagicMock()
+        mock_result.chunk = mock_chunk
+        mock_result.score = 0.9
+
+        mock_vector_store = MagicMock()
+        mock_vector_store.search = AsyncMock(return_value=[mock_result])
+
+        captured_prompt = {}
+
+        async def capture_generate(prompt, **kwargs):
+            captured_prompt["prompt"] = prompt
+            return "# Architecture\n\nContent here"
+
+        mock_llm = MagicMock()
+        mock_llm.generate = AsyncMock(side_effect=capture_generate)
+
+        with patch(
+            "local_deepwiki.generators.wiki_pages.generate_workflow_sequences",
+            return_value="",
+        ):
+            await generate_architecture_page(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="You are a documentation expert.",
+                manifest=None,
+                repo_path=tmp_path,
+            )
+
+        # The authoritative docs should appear in the prompt
+        assert "AUTHORITATIVE PROJECT DOCUMENTATION" in captured_prompt["prompt"]
+        assert "This project does amazing things" in captured_prompt["prompt"]
+
+    async def test_architecture_prompt_no_authoritative_docs_when_missing(
+        self, tmp_path
+    ):
+        """Verify prompt has no authoritative section when no docs exist."""
+        from local_deepwiki.generators.wiki_pages import generate_architecture_page
+
+        index_status = make_index_status(repo_path=str(tmp_path))
+
+        mock_chunk = MagicMock()
+        mock_chunk.file_path = "src/main.py"
+        mock_chunk.chunk_type = MagicMock()
+        mock_chunk.chunk_type.value = "function"
+        mock_chunk.name = "main"
+        mock_chunk.content = "def main(): pass"
+
+        mock_result = MagicMock()
+        mock_result.chunk = mock_chunk
+        mock_result.score = 0.8
+
+        mock_vector_store = MagicMock()
+        mock_vector_store.search = AsyncMock(return_value=[mock_result])
+
+        captured_prompt = {}
+
+        async def capture_generate(prompt, **kwargs):
+            captured_prompt["prompt"] = prompt
+            return "# Architecture\n\nContent here"
+
+        mock_llm = MagicMock()
+        mock_llm.generate = AsyncMock(side_effect=capture_generate)
+
+        with patch(
+            "local_deepwiki.generators.wiki_pages.generate_workflow_sequences",
+            return_value="",
+        ):
+            await generate_architecture_page(
+                index_status=index_status,
+                vector_store=mock_vector_store,
+                llm=mock_llm,
+                system_prompt="You are a documentation expert.",
+                manifest=None,
+                repo_path=tmp_path,
+            )
+
+        assert "AUTHORITATIVE PROJECT DOCUMENTATION" not in captured_prompt["prompt"]

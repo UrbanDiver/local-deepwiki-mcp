@@ -132,6 +132,9 @@ class WikiGenerator:
             provider=self.config.llm.provider,
         )
 
+        # Build page-type-specific prompts
+        self._page_prompts = self._build_page_prompts()
+
         # Entity registry for cross-linking
         self.entity_registry = EntityRegistry()
 
@@ -146,6 +149,21 @@ class WikiGenerator:
 
         # Repository path (set during generation)
         self._repo_path: Path | None = None
+
+    def _build_page_prompts(self) -> dict[str, str]:
+        """Build page-type-specific system prompts.
+
+        Returns a dict mapping page type names to their system prompts,
+        falling back to ``self._system_prompt`` for unknown types.
+        """
+        provider = self.config.llm.provider
+        prompts: dict[str, str] = {}
+        for page_type in ("overview", "architecture", "file", "module"):
+            prompts[page_type] = self._prompt_manager.get_wiki_page_prompt(
+                page_type=page_type,
+                provider=provider,
+            )
+        return prompts
 
     def _get_main_definition_lines(self) -> dict[str, tuple[int, int]]:
         """Get line range of main definition (first class/function) per file."""
@@ -188,7 +206,9 @@ class WikiGenerator:
         await self._generate_module_pages(ctx, index_status, progress_callback)
 
         # Phase 4: Generate file documentation
-        await self._generate_file_pages(ctx, index_status, progress_callback, max_files=max_file_pages)
+        await self._generate_file_pages(
+            ctx, index_status, progress_callback, max_files=max_file_pages
+        )
 
         # Phase 5: Generate dependencies page
         await self._generate_dependencies_page(ctx, index_status, progress_callback)
@@ -285,10 +305,11 @@ class WikiGenerator:
         # Update prompt manager with repo path for per-project prompts
         self._prompt_manager.loader.repo_path = self._repo_path
         self._prompt_manager.loader.clear_cache()  # Clear cache to pick up repo prompts
-        # Reload system prompt in case repo has custom prompts
+        # Reload system prompt and page-type prompts in case repo has custom prompts
         self._system_prompt = self._prompt_manager.get_wiki_system_prompt(
             provider=self.config.llm.provider,
         )
+        self._page_prompts = self._build_page_prompts()
 
         # Build file hash map for incremental generation
         self.status_manager.file_hashes = {f.path: f.hash for f in index_status.files}
@@ -463,7 +484,7 @@ class WikiGenerator:
             index_status=index_status,
             vector_store=self.vector_store,
             llm=self.llm,
-            system_prompt=self._system_prompt,
+            system_prompt=self._page_prompts.get("module", self._system_prompt),
             status_manager=self.status_manager,
             full_rebuild=ctx.full_rebuild,
         )
@@ -493,7 +514,7 @@ class WikiGenerator:
             index_status=index_status,
             vector_store=self.vector_store,
             llm=self.llm,
-            system_prompt=self._system_prompt,
+            system_prompt=self._page_prompts.get("file", self._system_prompt),
             status_manager=self.status_manager,
             entity_registry=self.entity_registry,
             config=self.config,
@@ -842,7 +863,7 @@ class WikiGenerator:
             index_status=index_status,
             vector_store=self.vector_store,
             llm=self.llm,
-            system_prompt=self._system_prompt,
+            system_prompt=self._page_prompts.get("overview", self._system_prompt),
             manifest=self._manifest,
             repo_path=self._repo_path,
         )
@@ -853,7 +874,7 @@ class WikiGenerator:
             index_status=index_status,
             vector_store=self.vector_store,
             llm=self.llm,
-            system_prompt=self._system_prompt,
+            system_prompt=self._page_prompts.get("architecture", self._system_prompt),
             manifest=self._manifest,
             repo_path=self._repo_path,
         )
@@ -920,4 +941,6 @@ async def generate_wiki(
         config=config,
         llm_provider_name=effective_provider,
     )
-    return await generator.generate(index_status, progress_callback, full_rebuild, max_file_pages=max_file_pages)
+    return await generator.generate(
+        index_status, progress_callback, full_rebuild, max_file_pages=max_file_pages
+    )

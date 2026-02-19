@@ -405,12 +405,12 @@ async def _gather_file_context(
 
     # Build context from chunks
     context_parts = []
-    for chunk in file_chunks[:15]:  # Limit context size
+    for chunk in file_chunks[:30]:  # Limit context size
         context_parts.append(
             f"Type: {chunk.chunk_type.value}\n"
             f"Name: {chunk.name}\n"
             f"Lines: {chunk.start_line}-{chunk.end_line}\n"
-            f"```\n{chunk.content[:600]}\n```"
+            f"```\n{chunk.content[:1500]}\n```"
         )
 
     context = "\n\n".join(context_parts)

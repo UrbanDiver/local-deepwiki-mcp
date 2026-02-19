@@ -15,6 +15,8 @@ A local, privacy-focused MCP server that generates DeepWiki-style documentation 
 - **Web UI** - browse generated wiki in your browser
 - **Export to HTML** - generate static HTML site for sharing
 - **Export to PDF** - generate printable PDF documentation with mermaid diagrams
+- **Interactive Codemap** - cross-file execution-flow visualization with Mermaid diagrams
+- **Lazy page generation** - missing wiki pages generated on demand when visited
 
 ## Installation
 
@@ -105,9 +107,9 @@ Add to your Claude Code MCP config (`~/.claude/claude_code_config.json`):
 }
 ```
 
-## MCP Tools (40 tools)
+## MCP Tools (43 tools)
 
-The server exposes **40 MCP tools** across 6 categories. Below are the most commonly used tools with examples, followed by the full tool reference.
+The server exposes **43 MCP tools** across 8 categories. Below are the most commonly used tools with examples, followed by the full tool reference.
 
 ### Core Tools
 
@@ -207,7 +209,7 @@ Multi-step reasoning for complex architectural questions. Performs query decompo
 | `cancel_research` | Cancel an in-progress research operation |
 | `get_operation_progress` | Check progress of long-running operations |
 
-### Agentic Tools (4)
+### Agentic Tools (5)
 
 | Tool | Description |
 |------|-------------|
@@ -215,6 +217,14 @@ Multi-step reasoning for complex architectural questions. Performs query decompo
 | `run_workflow` | Run predefined multi-step workflows (e.g., full analysis, quick review) |
 | `batch_explain_entities` | Batch version of `explain_entity` for multiple entities at once |
 | `query_codebase` | Agentic RAG: grades chunk relevance, rewrites queries for better results |
+| `find_tools` | Discover relevant tools based on a natural language query |
+
+### Web Server Tools (2)
+
+| Tool | Description |
+|------|-------------|
+| `serve_wiki` | Start the wiki web server for browsing documentation |
+| `stop_wiki_server` | Stop a running wiki web server |
 
 ## CLI Commands
 
@@ -358,25 +368,25 @@ uv run local-deepwiki
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                     MCP Server (FastMCP)                        │
-├─────────────────────────────────────────────────────────────────┤
-│  Tools:                                                         │
-│  - index_repository    - Generate wiki + embeddings             │
-│  - ask_question        - RAG Q&A about codebase                 │
-│  - deep_research       - Multi-step reasoning for complex Q&A   │
-│  - read_wiki_structure - Get wiki table of contents             │
-│  - read_wiki_page      - Read specific wiki page                │
-│  - search_code         - Semantic code search                   │
-│  - export_wiki_html    - Export wiki to static HTML             │
-│  - export_wiki_pdf     - Export wiki to PDF format              │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                      MCP Server (Python/FastMCP)                    │
+├─────────────────────────────────────────────────────────────────────┤
+│  43 tools across 8 categories:                                      │
+│  Core (8) · Generators (12) · Analysis & Search (10) · Codemap (2) │
+│  Research & Progress (4) · Agentic (5) · Web Server (2)            │
+└─────────────────────────────────────────────────────────────────────┘
            │                    │                    │
            ▼                    ▼                    ▼
 ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
 │   Tree-sitter    │  │     LanceDB      │  │   LLM Provider   │
 │  (Code Parsing)  │  │  (Vector Store)  │  │ (Doc Generation) │
 └──────────────────┘  └──────────────────┘  └──────────────────┘
+           │                    │                    │
+           ▼                    ▼                    ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                     Flask Web UI                                  │
+│  Wiki Browser · Chat (RAG Q&A) · Codemap Explorer · Search      │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ## License

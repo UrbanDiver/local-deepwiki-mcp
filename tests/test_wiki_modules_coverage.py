@@ -419,8 +419,8 @@ class TestGenerateModuleDocs:
         chunk = make_code_chunk(file_path="src/main.py", name="main")
         mock_vector_store.search = AsyncMock(return_value=[make_search_result(chunk)])
 
-        # Create 15 files in src directory
-        files = [make_file_info(path=f"src/file{i}.py") for i in range(15)]
+        # Create 25 files in src directory (truncation threshold is 20)
+        files = [make_file_info(path=f"src/file{i}.py") for i in range(25)]
         index_status = make_index_status(repo_path=str(tmp_path), files=files)
 
         await generate_module_docs(
@@ -511,3 +511,137 @@ class TestGenerateModulesIndex:
 
         # Link should use stem (filename without extension)
         assert "[Module: my_module](my_module.md)" in result
+
+
+class TestModuleDocEnrichment:
+    """Tests for enriched module documentation (file list, imports, authoritative docs)."""
+
+    @pytest.fixture
+    def mock_llm(self):
+        """Create a mock LLM provider that captures prompts."""
+        mock = MagicMock()
+        mock.captured_prompt = None
+
+        async def capture_generate(prompt, **kwargs):
+            mock.captured_prompt = prompt
+            return "## Module Purpose\n\nEnriched module doc."
+
+        mock.generate = AsyncMock(side_effect=capture_generate)
+        return mock
+
+    @pytest.fixture
+    def mock_vector_store(self):
+        """Create a mock vector store with relevant chunks."""
+        mock = MagicMock()
+
+        chunk1 = make_code_chunk(
+            file_path="src/parser.py", name="CodeParser", chunk_type="class"
+        )
+        chunk2 = make_code_chunk(
+            file_path="src/indexer.py", name="index_repo", chunk_type="function"
+        )
+        mock.search = AsyncMock(
+            return_value=[make_search_result(chunk1), make_search_result(chunk2)]
+        )
+        return mock
+
+    async def test_file_list_appears_in_prompt(
+        self, mock_llm, mock_vector_store, tmp_path
+    ):
+        """Test that the enriched file list appears in the LLM prompt."""
+        from local_deepwiki.generators.wiki_modules import generate_single_module_doc
+
+        page = await generate_single_module_doc(
+            dir_name="src",
+            files=["src/parser.py", "src/indexer.py", "src/utils.py"],
+            vector_store=mock_vector_store,
+            llm=mock_llm,
+            system_prompt="System prompt",
+            repo_path=tmp_path,
+        )
+
+        assert page is not None
+        prompt = mock_llm.captured_prompt
+        assert "FILES IN MODULE:" in prompt
+        assert "src/parser.py" in prompt
+        assert "src/indexer.py" in prompt
+
+    async def test_authoritative_docs_appear_in_prompt(
+        self, mock_llm, mock_vector_store, tmp_path
+    ):
+        """Test that authoritative docs appear when CLAUDE.md exists."""
+        from local_deepwiki.generators.wiki_modules import generate_single_module_doc
+
+        # Create CLAUDE.md
+        claude_md = tmp_path / "CLAUDE.md"
+        claude_md.write_text("# Project\n\nThis is a code indexing tool.")
+
+        page = await generate_single_module_doc(
+            dir_name="src",
+            files=["src/parser.py", "src/indexer.py"],
+            vector_store=mock_vector_store,
+            llm=mock_llm,
+            system_prompt="System prompt",
+            repo_path=tmp_path,
+        )
+
+        assert page is not None
+        prompt = mock_llm.captured_prompt
+        assert "AUTHORITATIVE PROJECT DOCUMENTATION" in prompt
+        assert "code indexing tool" in prompt
+
+    async def test_no_authoritative_section_without_docs(
+        self, mock_llm, mock_vector_store, tmp_path
+    ):
+        """Test no authoritative section when no docs exist."""
+        from local_deepwiki.generators.wiki_modules import generate_single_module_doc
+
+        page = await generate_single_module_doc(
+            dir_name="src",
+            files=["src/parser.py", "src/indexer.py"],
+            vector_store=mock_vector_store,
+            llm=mock_llm,
+            system_prompt="System prompt",
+            repo_path=tmp_path,
+        )
+
+        assert page is not None
+        prompt = mock_llm.captured_prompt
+        assert "AUTHORITATIVE PROJECT DOCUMENTATION" not in prompt
+
+    async def test_file_entity_descriptions_from_chunks(
+        self, mock_llm, mock_vector_store, tmp_path
+    ):
+        """Test that file list includes entity names from search results."""
+        from local_deepwiki.generators.wiki_modules import generate_single_module_doc
+
+        page = await generate_single_module_doc(
+            dir_name="src",
+            files=["src/parser.py", "src/indexer.py"],
+            vector_store=mock_vector_store,
+            llm=mock_llm,
+            system_prompt="System prompt",
+            repo_path=tmp_path,
+        )
+
+        assert page is not None
+        prompt = mock_llm.captured_prompt
+        # Should have entity descriptions from chunk results
+        assert "defines CodeParser" in prompt or "defines index_repo" in prompt
+
+    async def test_repo_path_none_still_works(self, mock_llm, mock_vector_store):
+        """Test that generate_single_module_doc works when repo_path is None."""
+        from local_deepwiki.generators.wiki_modules import generate_single_module_doc
+
+        page = await generate_single_module_doc(
+            dir_name="src",
+            files=["src/parser.py", "src/indexer.py"],
+            vector_store=mock_vector_store,
+            llm=mock_llm,
+            system_prompt="System prompt",
+            repo_path=None,
+        )
+
+        assert page is not None
+        prompt = mock_llm.captured_prompt
+        assert "AUTHORITATIVE PROJECT DOCUMENTATION" not in prompt

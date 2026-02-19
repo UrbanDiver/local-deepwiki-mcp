@@ -167,11 +167,15 @@ class PromptLoader:
                             content,
                             source=str(prompt_file),
                         )
-                        logger.debug("Loaded custom prompt '%s' from %s", name, prompt_file)
+                        logger.debug(
+                            "Loaded custom prompt '%s' from %s", name, prompt_file
+                        )
                         self._cache[cache_key] = template
                         return template
                     except OSError as e:
-                        logger.warning("Failed to read prompt file %s: %s", prompt_file, e)
+                        logger.warning(
+                            "Failed to read prompt file %s: %s", prompt_file, e
+                        )
                         continue
 
         # Fall back to default
@@ -205,15 +209,26 @@ class PromptManager:
             RESEARCH_DECOMPOSITION_PROMPTS,
             RESEARCH_GAP_ANALYSIS_PROMPTS,
             RESEARCH_SYNTHESIS_PROMPTS,
+            WIKI_ARCHITECTURE_PROMPTS,
+            WIKI_FILE_PROMPTS,
+            WIKI_MODULE_PROMPTS,
+            WIKI_OVERVIEW_PROMPTS,
             WIKI_SYSTEM_PROMPTS,
         )
 
         self._defaults = {
             "wiki_system": WIKI_SYSTEM_PROMPTS,
+            "wiki_overview": WIKI_OVERVIEW_PROMPTS,
+            "wiki_architecture": WIKI_ARCHITECTURE_PROMPTS,
+            "wiki_file": WIKI_FILE_PROMPTS,
+            "wiki_module": WIKI_MODULE_PROMPTS,
             "research_decomposition": RESEARCH_DECOMPOSITION_PROMPTS,
             "research_gap_analysis": RESEARCH_GAP_ANALYSIS_PROMPTS,
             "research_synthesis": RESEARCH_SYNTHESIS_PROMPTS,
         }
+
+    # Valid page types for get_wiki_page_prompt
+    _PAGE_TYPES = frozenset({"overview", "architecture", "file", "module"})
 
     def get_wiki_system_prompt(
         self,
@@ -234,6 +249,44 @@ class PromptManager:
             self._defaults["wiki_system"]["anthropic"],
         )
         template = self.loader.load_prompt("wiki_system", default, provider)
+        return template.render(**variables)
+
+    def get_wiki_page_prompt(
+        self,
+        page_type: str,
+        provider: str = "anthropic",
+        **variables: Any,
+    ) -> str:
+        """Get a page-type-specific wiki prompt for a provider.
+
+        Looks for custom file overrides like ``wiki_architecture.anthropic.md``
+        or ``wiki_module.md``, then falls back to the built-in page-type
+        prompt, and finally to the generic ``wiki_system`` prompt.
+
+        Args:
+            page_type: One of "overview", "architecture", "file", "module".
+            provider: LLM provider name.
+            **variables: Variables to interpolate into the template.
+
+        Returns:
+            Rendered prompt string.
+        """
+        prompt_key = f"wiki_{page_type}"
+
+        # If we have a page-type-specific default, use it
+        if prompt_key in self._defaults:
+            default = self._defaults[prompt_key].get(
+                provider,
+                self._defaults[prompt_key]["anthropic"],
+            )
+        else:
+            # Fall back to the generic wiki_system prompt
+            default = self._defaults["wiki_system"].get(
+                provider,
+                self._defaults["wiki_system"]["anthropic"],
+            )
+
+        template = self.loader.load_prompt(prompt_key, default, provider)
         return template.render(**variables)
 
     def get_research_decomposition_prompt(

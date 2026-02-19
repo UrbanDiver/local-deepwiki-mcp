@@ -7,11 +7,14 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from local_deepwiki.core.vectorstore import VectorStore
+from local_deepwiki.logging import get_logger
 from local_deepwiki.models import IndexStatus, WikiPage
 from local_deepwiki.providers.base import LLMProvider
 
 if TYPE_CHECKING:
     from local_deepwiki.generators.wiki_status import WikiStatusManager
+
+logger = get_logger(__name__)
 
 
 async def generate_module_docs(
@@ -71,6 +74,7 @@ async def generate_module_docs(
             vector_store=vector_store,
             llm=llm,
             system_prompt=system_prompt,
+            repo_path=Path(index_status.repo_path),
         )
         if page is None:
             continue
@@ -128,11 +132,24 @@ async def generate_single_module_doc(
     vector_store: VectorStore,
     llm: LLMProvider,
     system_prompt: str,
+    repo_path: Path | None = None,
 ) -> WikiPage | None:
-    """Generate documentation for a single module directory."""
+    """Generate documentation for a single module directory.
+
+    Args:
+        dir_name: Name of the module directory.
+        files: List of file paths in this module.
+        vector_store: Vector store with indexed code.
+        llm: LLM provider for generation.
+        system_prompt: System prompt for LLM.
+        repo_path: Optional path to the repository root for authoritative docs.
+
+    Returns:
+        WikiPage with module documentation, or None if no relevant content.
+    """
     page_path = f"modules/{dir_name}.md"
 
-    search_results = await vector_store.search(f"module {dir_name}", limit=15)
+    search_results = await vector_store.search(f"module {dir_name}", limit=40)
     relevant_chunks = [
         r for r in search_results if r.chunk.file_path.startswith(dir_name)
     ]
@@ -141,16 +158,21 @@ async def generate_single_module_doc(
 
     context = "\n\n".join(
         [
-            f"File: {r.chunk.file_path}\nType: {r.chunk.chunk_type.value}\nName: {r.chunk.name}\n{r.chunk.content[:400]}"
-            for r in relevant_chunks[:10]
+            f"File: {r.chunk.file_path}\nType: {r.chunk.chunk_type.value}\nName: {r.chunk.name}\n{r.chunk.content[:1200]}"
+            for r in relevant_chunks[:25]
         ]
     )
 
+    # Build enriched context: file list with descriptions, imports, authoritative docs
+    file_list_section = _build_file_list_section(files, relevant_chunks)
+    imports_section = _build_imports_section(relevant_chunks)
+    auth_section = _build_authoritative_section(repo_path)
+
     prompt = f"""Generate documentation for the '{dir_name}' module based ONLY on the code provided.
 
-Files in module: {", ".join(files[:10])}{"..." if len(files) > 10 else ""}
-
-Code context:
+FILES IN MODULE:
+{file_list_section}
+{auth_section}{imports_section}CODE CONTEXT:
 {context}
 
 Generate documentation that includes:
@@ -176,6 +198,101 @@ Format as markdown."""
         content=content,
         generated_at=time.time(),
     )
+
+
+def _build_file_list_section(files: list[str], relevant_chunks: list) -> str:
+    """Build a file list with brief descriptions from search results.
+
+    Args:
+        files: File paths in the module.
+        relevant_chunks: Search results containing chunks from this module.
+
+    Returns:
+        Formatted file list string.
+    """
+    # Build a map of file -> first class/function name from search results
+    file_entity_map: dict[str, str] = {}
+    for r in relevant_chunks:
+        fp = r.chunk.file_path
+        if (
+            fp not in file_entity_map
+            and r.chunk.name
+            and r.chunk.chunk_type.value in ("class", "function")
+        ):
+            file_entity_map[fp] = r.chunk.name
+
+    lines: list[str] = []
+    for file_path in sorted(files[:20]):
+        entity_name = file_entity_map.get(file_path)
+        if entity_name:
+            lines.append(f"- {file_path} (defines {entity_name})")
+        else:
+            lines.append(f"- {file_path}")
+
+    if len(files) > 20:
+        lines.append(f"- ... and {len(files) - 20} more files")
+    return "\n".join(lines) if lines else ", ".join(files[:10])
+
+
+def _build_imports_section(relevant_chunks: list) -> str:
+    """Extract import information from search results.
+
+    Args:
+        relevant_chunks: Search results filtered to this module.
+
+    Returns:
+        Formatted imports section for the prompt, or empty string.
+    """
+    try:
+        from local_deepwiki.generators.context_builder import (
+            extract_imports_from_chunks,
+        )
+
+        import_chunks = [
+            r.chunk for r in relevant_chunks if r.chunk.chunk_type.value == "import"
+        ]
+        if not import_chunks:
+            return ""
+
+        names, modules = extract_imports_from_chunks(import_chunks)
+        if not names and not modules:
+            return ""
+
+        parts = ["MODULE IMPORTS:\n"]
+        if modules:
+            parts.append(f"Imported modules: {', '.join(sorted(modules)[:20])}")
+        if names:
+            parts.append(f"Imported names: {', '.join(sorted(names)[:20])}")
+        return "\n".join(parts) + "\n\n"
+    except (ImportError, AttributeError, TypeError):
+        return ""
+
+
+def _build_authoritative_section(repo_path: Path | None) -> str:
+    """Read authoritative project docs for LLM grounding.
+
+    Args:
+        repo_path: Path to the repository root.
+
+    Returns:
+        Formatted authoritative docs section, or empty string.
+    """
+    if repo_path is None:
+        return ""
+
+    try:
+        from local_deepwiki.generators.wiki_pages import _read_authoritative_docs
+
+        docs = _read_authoritative_docs(repo_path)
+        if docs:
+            return f"""AUTHORITATIVE PROJECT DOCUMENTATION (HIGH PRIORITY):
+{docs}
+
+"""
+    except ImportError:
+        pass
+
+    return ""
 
 
 def _generate_modules_index(module_pages: list[WikiPage]) -> str:

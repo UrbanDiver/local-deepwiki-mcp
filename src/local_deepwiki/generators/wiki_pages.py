@@ -30,7 +30,7 @@ _AUTHORITATIVE_DOC_NAMES = [
 
 # Maximum characters to include from authoritative docs to stay within
 # reasonable prompt budgets while still capturing the project overview.
-_MAX_AUTHORITATIVE_CHARS = 4000
+_MAX_AUTHORITATIVE_CHARS = 8000
 
 
 def _read_authoritative_docs(repo_path: Path | None) -> str | None:
@@ -142,13 +142,13 @@ async def _gather_code_context(vector_store: VectorStore) -> list[str]:
     seen_paths: set[str] = set()
     code_parts: list[str] = []
     for r in entry_search + key_class_search:
-        if r.chunk.file_path not in seen_paths and len(code_parts) < 8:
+        if r.chunk.file_path not in seen_paths and len(code_parts) < 16:
             seen_paths.add(r.chunk.file_path)
             code_parts.append(
                 f"File: {r.chunk.file_path}\n"
                 f"Type: {r.chunk.chunk_type.value}\n"
                 f"Name: {r.chunk.name}\n"
-                f"```\n{r.chunk.content[:400]}\n```"
+                f"```\n{r.chunk.content[:1200]}\n```"
             )
     return code_parts
 
@@ -312,6 +312,9 @@ async def generate_architecture_page(
     Returns:
         WikiPage with architecture documentation.
     """
+    # Read authoritative project docs (CLAUDE.md, README.md, etc.)
+    authoritative_docs = _read_authoritative_docs(repo_path)
+
     # Gather multiple types of context for comprehensive architecture view (parallel)
     core_results, pattern_results, flow_results, class_results = await asyncio.gather(
         # 1. Search for core/main components
@@ -335,12 +338,12 @@ async def generate_architecture_page(
 
     # Build detailed context with more content per chunk
     context_parts = []
-    for r in all_chunks[:20]:
+    for r in all_chunks[:40]:
         context_parts.append(
             f"File: {r.chunk.file_path}\n"
             f"Type: {r.chunk.chunk_type.value}\n"
             f"Name: {r.chunk.name}\n"
-            f"```\n{r.chunk.content[:800]}\n```"
+            f"```\n{r.chunk.content[:2000]}\n```"
         )
 
     code_context = "\n\n".join(context_parts)
@@ -367,9 +370,16 @@ async def generate_architecture_page(
             sorted(manifest.dependencies.keys())[:15]
         )
 
+    auth_section = ""
+    if authoritative_docs:
+        auth_section = f"""AUTHORITATIVE PROJECT DOCUMENTATION (HIGH PRIORITY — the project maintainer wrote this):
+{authoritative_docs}
+
+"""
+
     prompt = f"""Generate architecture documentation based ONLY on the code provided below.
 
-CLASSES FOUND IN CODEBASE:
+{auth_section}CLASSES FOUND IN CODEBASE:
 {class_list}
 
 DIRECTORY STRUCTURE:

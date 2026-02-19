@@ -286,6 +286,67 @@ class TestPromptManager:
         assert ollama_prompt == "Ollama-specific prompt"
 
 
+class TestGetWikiPagePrompt:
+    """Tests for PromptManager.get_wiki_page_prompt method."""
+
+    def test_returns_page_specific_prompt(self):
+        """Test that page-type-specific prompts differ from the generic system prompt."""
+        manager = PromptManager()
+        system_prompt = manager.get_wiki_system_prompt(provider="anthropic")
+        arch_prompt = manager.get_wiki_page_prompt("architecture", provider="anthropic")
+
+        # Architecture prompt should be different from the generic system prompt
+        assert arch_prompt != system_prompt
+        # Should contain architecture-specific content
+        assert (
+            "architecture" in arch_prompt.lower() or "component" in arch_prompt.lower()
+        )
+
+    def test_falls_back_to_system_for_unknown_type(self):
+        """Test that unknown page types fall back to wiki_system prompt."""
+        manager = PromptManager()
+        system_prompt = manager.get_wiki_system_prompt(provider="anthropic")
+        unknown_prompt = manager.get_wiki_page_prompt(
+            "unknown_type", provider="anthropic"
+        )
+
+        assert unknown_prompt == system_prompt
+
+    def test_custom_file_override(self, tmp_path):
+        """Test that custom wiki_architecture.anthropic.md overrides built-in."""
+        prompts_dir = tmp_path / "prompts"
+        prompts_dir.mkdir()
+
+        (prompts_dir / "wiki_architecture.anthropic.md").write_text(
+            "My custom architecture prompt for {project}"
+        )
+
+        manager = PromptManager(custom_dir=prompts_dir)
+        prompt = manager.get_wiki_page_prompt(
+            "architecture", provider="anthropic", project="TestProject"
+        )
+
+        assert prompt == "My custom architecture prompt for TestProject"
+
+    def test_all_page_types_return_prompts(self):
+        """Test that all standard page types return non-empty prompts."""
+        manager = PromptManager()
+        for page_type in ("overview", "architecture", "file", "module"):
+            prompt = manager.get_wiki_page_prompt(page_type, provider="anthropic")
+            assert len(prompt) > 0, f"Empty prompt for page_type={page_type}"
+
+    def test_provider_specific_page_prompts(self):
+        """Test that different providers get different page prompts."""
+        manager = PromptManager()
+        anthropic_prompt = manager.get_wiki_page_prompt(
+            "overview", provider="anthropic"
+        )
+        ollama_prompt = manager.get_wiki_page_prompt("overview", provider="ollama")
+
+        # Anthropic prompt should be longer/more detailed than ollama
+        assert len(anthropic_prompt) > len(ollama_prompt)
+
+
 class TestGetPromptManager:
     """Tests for get_prompt_manager factory function."""
 

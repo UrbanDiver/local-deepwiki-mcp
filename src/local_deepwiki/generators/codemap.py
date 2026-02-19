@@ -50,6 +50,16 @@ _CALLABLE_CHUNK_TYPES = frozenset(
     }
 )
 
+# Weights for chunk types when scoring codemap topic suggestions.
+# Classes often accumulate many connections just from their methods
+# (e.g. __init__, properties), so they are downranked relative to
+# functions and methods which represent actual execution flows.
+_CHUNK_TYPE_WEIGHTS: dict[str, float] = {
+    ChunkType.FUNCTION.value: 1.0,
+    ChunkType.METHOD.value: 1.0,
+    ChunkType.CLASS.value: 0.3,
+}
+
 
 # ---------------------------------------------------------------------------
 # Data structures
@@ -454,7 +464,9 @@ async def _import_based_callees(
 ) -> list[str]:
     """Supplement *existing* callees with import-derived names."""
     try:
-        from local_deepwiki.generators.context_builder import extract_imports_from_chunks
+        from local_deepwiki.generators.context_builder import (
+            extract_imports_from_chunks,
+        )
     except ImportError:
         return existing
 
@@ -942,6 +954,14 @@ async def suggest_topics(
         for callee in callees:
             if not _is_noise(callee):
                 connection_count[callee] += 1
+
+    # Apply chunk-type weighting so classes (which accumulate connections
+    # from their methods) don't dominate over actual execution-flow functions.
+    for func_name in list(connection_count):
+        chunk = chunk_by_name.get(func_name)
+        if chunk:
+            weight = _CHUNK_TYPE_WEIGHTS.get(chunk.chunk_type.value, 1.0)
+            connection_count[func_name] = int(connection_count[func_name] * weight)
 
     # Also count how many files import each file (core module detection)
     file_import_count: dict[str, int] = defaultdict(int)

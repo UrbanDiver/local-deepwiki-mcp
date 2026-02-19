@@ -899,6 +899,79 @@ class TestSuggestTopics:
         assert isinstance(suggestions, list)
         assert len(suggestions) == 0
 
+    async def test_chunk_type_weighting_favors_functions_over_classes(self, tmp_path):
+        """Verify a function with 15 connections ranks above a class with 50."""
+        from local_deepwiki.generators.codemap import suggest_topics
+
+        # A class with many connections (50) and a function with fewer (15).
+        # After weighting (class * 0.3 = 15, function * 1.0 = 15),
+        # but we give function slightly more to ensure it wins.
+        mock_vs = MagicMock()
+        mock_vs.get_all_chunks.return_value = [
+            _make_mock_code_chunk(
+                name="BigDataModel",
+                file_path=str(tmp_path / "src" / "models.py"),
+                chunk_type="class",
+                content="class BigDataModel:\n    pass",
+            ),
+            _make_mock_code_chunk(
+                name="handle_request",
+                file_path=str(tmp_path / "src" / "server.py"),
+                chunk_type="function",
+                content="def handle_request(): process(); validate(); transform()",
+            ),
+        ]
+
+        with patch("local_deepwiki.generators.callgraph.CallGraphExtractor") as MockCGE:
+            extractor = MagicMock()
+
+            # BigDataModel gets 50 raw connections; handle_request gets 16
+            def extract_side_effect(abs_path, repo):
+                name = str(abs_path)
+                if "models.py" in name:
+                    # Class with many method-like callees
+                    callees = [f"method_{i}" for i in range(49)]
+                    return {"BigDataModel": callees}
+                if "server.py" in name:
+                    return {
+                        "handle_request": [
+                            "process",
+                            "validate",
+                            "transform",
+                            "send",
+                            "log_request",
+                            "check_auth",
+                            "parse_body",
+                            "route",
+                            "respond",
+                            "cleanup",
+                            "metrics",
+                            "trace",
+                            "cache_check",
+                            "rate_limit",
+                            "serialize",
+                        ]
+                    }
+                return {}
+
+            extractor.extract_from_file.side_effect = extract_side_effect
+            MockCGE.return_value = extractor
+
+            suggestions = await suggest_topics(
+                vector_store=mock_vs,
+                repo_path=tmp_path,
+                max_suggestions=5,
+            )
+
+        assert len(suggestions) >= 2
+        names = [s["entry_point"] for s in suggestions]
+        assert "handle_request" in names
+        assert "BigDataModel" in names
+        # handle_request (16 * 1.0 = 16) should rank above BigDataModel (50 * 0.3 = 15)
+        handle_idx = names.index("handle_request")
+        class_idx = names.index("BigDataModel")
+        assert handle_idx < class_idx, f"Function should rank above class: {names}"
+
 
 # ── Handler helpers ──────────────────────────────────────────────────
 

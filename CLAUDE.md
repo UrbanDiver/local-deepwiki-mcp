@@ -110,9 +110,12 @@ uv run deepwiki cache cleanup
 │    list_research_checkpoints, cancel_research,                      │
 │    resume_research, get_operation_progress                          │
 │                                                                     │
-│  Agentic Tools (4):                                                 │
+│  Agentic Tools (5):                                                 │
 │    suggest_next_actions, run_workflow,                               │
-│    batch_explain_entities, query_codebase                           │
+│    batch_explain_entities, query_codebase, find_tools               │
+│                                                                     │
+│  Web Server Tools (2):                                              │
+│    serve_wiki, stop_wiki_server                                     │
 └─────────────────────────────────────────────────────────────────────┘
            │                    │                    │
            v                    v                    v
@@ -141,7 +144,10 @@ uv run deepwiki cache cleanup
 | Audit Logger | `core/audit.py` | Operation audit logging |
 | Events | `events.py` | Pub-sub event system with lifecycle hooks |
 | Validation | `validation.py` | Input validation with resource limits (CWE-400) |
-| Web UI | `web/app.py` | Flask-based wiki browser with chat and research |
+| Web UI | `web/app.py` | Flask-based wiki browser with chat, research, and codemap |
+| Web Chat | `web/routes_chat.py` | RAG Q&A chat blueprint with SSE streaming |
+| Web Research | `web/routes_research.py` | Deep research blueprint with progress tracking |
+| Web Codemap | `web/routes_codemap.py` | Interactive codemap explorer blueprint |
 
 ### Generators
 
@@ -172,7 +178,14 @@ uv run deepwiki cache cleanup
 | Progress Tracker | `generators/progress_tracker.py` | Live progress tracking for wiki generation |
 | Examples Plugin | `generators/examples_plugin.py` | Wiki plugin aggregating code examples from tests |
 | Codemap | `generators/codemap.py` | Cross-file execution-flow maps with Mermaid diagrams and LLM narrative |
+| Codemap Cache | `generators/codemap_cache.py` | Caching layer for codemap generation results |
+| Wiki Codemaps | `generators/wiki_codemaps.py` | Codemap-specific wiki page generation |
 | Complexity | `generators/complexity.py` | Cyclomatic complexity and nesting depth via tree-sitter AST |
+| Lazy Generator | `generators/lazy_generator.py` | On-demand wiki page generation for missing pages |
+| LLMs.txt | `generators/llms_txt.py` | LLMs.txt format output for AI consumption |
+| Prefetch | `generators/prefetch.py` | Prefetches vector search results for wiki generation |
+| Wiki Plugin Runner | `generators/wiki_plugin_runner.py` | Executes registered wiki generator plugins |
+| Wiki Postprocessing | `generators/wiki_postprocessing.py` | Post-generation content cleanup and enrichment |
 
 ### Codemap Tools
 
@@ -277,7 +290,7 @@ The `events.py` module implements a pub-sub event system:
 
 ## Testing Notes
 
-- 4,097 tests across 90 test files with 95% coverage
+- 5,115 tests across 141 test files with 95% coverage
 - Tests use `pytest-asyncio` with `asyncio_mode = "auto"` (no need for `@pytest.mark.asyncio`)
 - Most tests mock LLM/embedding providers to avoid external calls
 - Test files follow pattern `test_<module>.py`
