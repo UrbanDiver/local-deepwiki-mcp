@@ -419,8 +419,8 @@ async def build_cross_file_graph(
                 continue
 
             # Check same file first
-            same_file_node = _find_in_same_file(
-                callee_name, cg, current_node, repo_path
+            same_file_node = await _find_in_same_file(
+                callee_name, cg, current_node, repo_path, vector_store
             )
             if same_file_node is not None:
                 graph.nodes[same_file_node.qualified_name] = same_file_node
@@ -489,27 +489,62 @@ async def _import_based_callees(
         return existing
 
 
-def _find_in_same_file(
+async def _find_in_same_file(
     callee_name: str,
     call_graph: dict[str, list[str]],
     current_node: CodemapNode,
     repo_path: Path,
+    vector_store: "VectorStore",
 ) -> CodemapNode | None:
-    """Return a ``CodemapNode`` if *callee_name* is defined in the same file."""
+    """Return a ``CodemapNode`` if *callee_name* is defined in the same file.
+
+    First confirms the callee exists via the call graph, then searches the
+    vector store for the matching chunk so that ``content_preview``,
+    ``start_line``, ``end_line``, and ``docstring`` are populated.
+    """
     # A function is "defined" in the same file if it appears as a caller key
     # in the file's call graph (meaning tree-sitter found its definition).
+    matched_key: str | None = None
     for key in call_graph:
         short = key.split(".")[-1]
         if short == callee_name or key == callee_name:
-            return CodemapNode(
-                name=callee_name,
-                qualified_name=key,
-                file_path=current_node.file_path,
-                start_line=0,
-                end_line=0,
-                chunk_type="function",
-            )
-    return None
+            matched_key = key
+            break
+
+    if matched_key is None:
+        return None
+
+    # Try to find the actual chunk from the vector store for full metadata.
+    # Search with both the short name and the qualified name (for class
+    # methods the qualified form like "WikiGenerator._init_context" gives
+    # a much better semantic match than just "def _init_context").
+    queries = [f"def {callee_name}"]
+    if matched_key != callee_name:
+        queries.append(matched_key)
+
+    try:
+        for query in queries:
+            results = await vector_store.search(query, limit=10, min_similarity=0.0)
+            for r in results:
+                chunk = r.chunk
+                if chunk.chunk_type.value not in _CALLABLE_CHUNK_TYPES:
+                    continue
+                if chunk.name and chunk.name.lower() == callee_name.lower():
+                    node = _node_from_chunk(chunk, repo_path)
+                    if node.file_path == current_node.file_path:
+                        return node
+    except (OSError, ValueError, RuntimeError) as e:
+        logger.debug("Same-file chunk lookup failed for %s: %s", callee_name, e)
+
+    # Fallback: return a skeleton node when the vector store has no match.
+    return CodemapNode(
+        name=callee_name,
+        qualified_name=matched_key,
+        file_path=current_node.file_path,
+        start_line=0,
+        end_line=0,
+        chunk_type="function",
+    )
 
 
 async def _search_cross_file(
