@@ -28,7 +28,8 @@ class MockEmbeddingProvider(EmbeddingProvider):
         """Return provider name."""
         return self._name
 
-    def get_dimension(self) -> int:
+    @property
+    def dimension(self) -> int:
         """Return embedding dimension."""
         return self._dimension
 
@@ -58,7 +59,8 @@ class SlowMockEmbeddingProvider(EmbeddingProvider):
         """Return provider name."""
         return self._name  # Configurable to test different provider types
 
-    def get_dimension(self) -> int:
+    @property
+    def dimension(self) -> int:
         """Return embedding dimension."""
         return self._dimension
 
@@ -91,7 +93,8 @@ class FailingMockEmbeddingProvider(EmbeddingProvider):
         """Return provider name."""
         return "mock:failing"
 
-    def get_dimension(self) -> int:
+    @property
+    def dimension(self) -> int:
         """Return embedding dimension."""
         return self._dimension
 
@@ -134,7 +137,8 @@ class RateLimitMockEmbeddingProvider(EmbeddingProvider):
         """Return provider name."""
         return "openai:rate-limited"  # Simulates API provider
 
-    def get_dimension(self) -> int:
+    @property
+    def dimension(self) -> int:
         """Return embedding dimension."""
         return self._dimension
 
@@ -531,7 +535,7 @@ class TestEmbeddingBatchConfig:
             tmp_path / "test.lance", provider, embedding_batch_config=config
         )
 
-        batch_config = store.get_embedding_batch_config()
+        batch_config = store.embedding_batch_config
 
         assert batch_config["batch_size"] == 100
         assert batch_config["concurrency"] == 4
@@ -549,7 +553,7 @@ class TestEmbeddingBatchConfig:
         provider = MockEmbeddingProvider()
         store = VectorStore(tmp_path / "test.lance", provider)
 
-        batch_config = store.get_embedding_batch_config()
+        batch_config = store.embedding_batch_config
 
         # Check defaults from EmbeddingBatchConfig
         assert batch_config["batch_size"] == 100
@@ -695,7 +699,7 @@ class TestParallelEmbeddingIntegration:
         count = await vector_store.create_or_update_table(chunks)
 
         assert count == 50
-        stats = vector_store.get_stats()
+        stats = vector_store.stats
         assert stats["total_chunks"] == 50
 
     async def test_add_chunks_with_parallel_embedding(self, vector_store):
@@ -709,7 +713,7 @@ class TestParallelEmbeddingIntegration:
         count = await vector_store.add_chunks(new_chunks)
 
         assert count == 40
-        stats = vector_store.get_stats()
+        stats = vector_store.stats
         assert stats["total_chunks"] == 50
 
     async def test_search_after_parallel_indexing(self, vector_store):

@@ -91,7 +91,8 @@ class LocalEmbeddingProvider(EmbeddingProvider):
         embeddings = await asyncio.to_thread(model.encode, texts, convert_to_numpy=True)
         return cast(list[list[float]], embeddings.tolist())
 
-    def get_dimension(self) -> int:
+    @property
+    def dimension(self) -> int:
         """Get the embedding dimension.
 
         Returns:
@@ -127,7 +128,8 @@ class LocalEmbeddingProvider(EmbeddingProvider):
                 original_error=e,
             ) from e
 
-    def get_max_batch_size(self) -> int:
+    @property
+    def max_batch_size(self) -> int:
         """Return maximum number of texts that can be embedded in a single call.
 
         Returns:
@@ -135,7 +137,8 @@ class LocalEmbeddingProvider(EmbeddingProvider):
         """
         return 1000  # Local models can handle larger batches
 
-    def get_max_tokens(self) -> int:
+    @property
+    def max_tokens(self) -> int:
         """Return maximum tokens per text.
 
         Returns:
@@ -144,16 +147,17 @@ class LocalEmbeddingProvider(EmbeddingProvider):
         model_info = LOCAL_EMBEDDING_MODELS.get(self._model_name, {})
         return model_info.get("max_tokens", 512)
 
-    def get_capabilities(self) -> EmbeddingProviderCapabilities:
+    @property
+    def capabilities(self) -> EmbeddingProviderCapabilities:
         """Return provider capabilities.
 
         Returns:
             EmbeddingProviderCapabilities with model-specific information.
         """
         return EmbeddingProviderCapabilities(
-            max_batch_size=self.get_max_batch_size(),
-            max_tokens_per_text=self.get_max_tokens(),
-            dimension=self.get_dimension(),
+            max_batch_size=self.max_batch_size,
+            max_tokens_per_text=self.max_tokens,
+            dimension=self.dimension,
             models=list(LOCAL_EMBEDDING_MODELS.keys()),
             supports_truncation=True,  # sentence-transformers handles truncation
         )

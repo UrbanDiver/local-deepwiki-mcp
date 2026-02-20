@@ -116,7 +116,8 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
             self._handle_api_error(e)
             raise
 
-    def get_dimension(self) -> int:
+    @property
+    def dimension(self) -> int:
         """Get the embedding dimension.
 
         Returns:
@@ -160,7 +161,8 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
                 original_error=e,
             ) from e
 
-    def get_max_batch_size(self) -> int:
+    @property
+    def max_batch_size(self) -> int:
         """Return maximum number of texts that can be embedded in a single call.
 
         Returns:
@@ -168,7 +170,8 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         """
         return 2048  # OpenAI allows up to 2048 inputs per request
 
-    def get_max_tokens(self) -> int:
+    @property
+    def max_tokens(self) -> int:
         """Return maximum tokens per text.
 
         Returns:
@@ -177,15 +180,16 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         model_info = OPENAI_EMBEDDING_MODELS.get(self._model, {})
         return model_info.get("max_tokens", 8191)
 
-    def get_capabilities(self) -> EmbeddingProviderCapabilities:
+    @property
+    def capabilities(self) -> EmbeddingProviderCapabilities:
         """Return provider capabilities.
 
         Returns:
             EmbeddingProviderCapabilities with OpenAI-specific information.
         """
         return EmbeddingProviderCapabilities(
-            max_batch_size=self.get_max_batch_size(),
-            max_tokens_per_text=self.get_max_tokens(),
+            max_batch_size=self.max_batch_size,
+            max_tokens_per_text=self.max_tokens,
             dimension=self._dimension,
             models=list(OPENAI_EMBEDDING_MODELS.keys()),
             supports_truncation=True,  # OpenAI API handles truncation

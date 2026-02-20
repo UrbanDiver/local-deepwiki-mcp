@@ -365,7 +365,7 @@ class EmbeddingCache:
         Returns:
             The dimension of the embedding vectors.
         """
-        return self._provider.get_dimension()
+        return self._provider.dimension
 
     @property
     def name(self) -> str:
@@ -598,7 +598,8 @@ class CachedEmbeddingProvider(EmbeddingProvider):
         """
         return await self._cache.embed(texts)
 
-    def get_dimension(self) -> int:
+    @property
+    def dimension(self) -> int:
         """Get the embedding dimension.
 
         Returns:

@@ -53,7 +53,8 @@ class ContentAwareEmbeddingProvider(EmbeddingProvider):
     def name(self) -> str:
         return "mock:content-aware"
 
-    def get_dimension(self) -> int:
+    @property
+    def dimension(self) -> int:
         return self._dimension
 
     async def embed(self, texts: list[str]) -> list[list[float]]:

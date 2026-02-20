@@ -692,7 +692,7 @@ class TestOpenAIProviderCapabilities:
         from local_deepwiki.providers.llm.openai import OpenAILLMProvider
 
         provider = OpenAILLMProvider(model="gpt-4o")
-        caps = provider.get_capabilities()
+        caps = provider.capabilities
 
         assert caps.supports_streaming is True
         assert caps.supports_system_prompt is True
@@ -707,7 +707,7 @@ class TestOpenAIProviderCapabilities:
         from local_deepwiki.providers.llm.openai import OpenAILLMProvider
 
         provider = OpenAILLMProvider(model="o1")
-        caps = provider.get_capabilities()
+        caps = provider.capabilities
 
         assert caps.supports_streaming is False  # O1 has limited streaming
         assert caps.supports_system_prompt is False  # O1 uses developer messages
@@ -719,7 +719,7 @@ class TestOpenAIProviderCapabilities:
         from local_deepwiki.providers.llm.openai import OpenAILLMProvider
 
         provider = OpenAILLMProvider(model="gpt-3.5-turbo")
-        caps = provider.get_capabilities()
+        caps = provider.capabilities
 
         assert caps.max_tokens == 4096  # Not gpt-4o
         assert caps.supports_vision is False  # gpt-3.5 doesn't support vision
@@ -730,7 +730,7 @@ class TestOpenAIProviderCapabilities:
         from local_deepwiki.providers.llm.openai import OpenAILLMProvider
 
         provider = OpenAILLMProvider(model="gpt-4-turbo")
-        caps = provider.get_capabilities()
+        caps = provider.capabilities
 
         assert caps.supports_vision is True  # gpt-4-turbo supports vision
         assert caps.max_context_length == 128000
@@ -741,7 +741,7 @@ class TestOpenAIProviderCapabilities:
         from local_deepwiki.providers.llm.openai import OpenAILLMProvider
 
         provider = OpenAILLMProvider(model="some-future-model")
-        caps = provider.get_capabilities()
+        caps = provider.capabilities
 
         # Should use default context length
         assert caps.max_context_length == 128000

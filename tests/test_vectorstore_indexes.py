@@ -26,7 +26,8 @@ class MockEmbeddingProvider(EmbeddingProvider):
         """Return provider name."""
         return self._name
 
-    def get_dimension(self) -> int:
+    @property
+    def dimension(self) -> int:
         """Return embedding dimension."""
         return self._dimension
 

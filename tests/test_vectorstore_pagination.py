@@ -21,7 +21,8 @@ class MockEmbeddingProvider(EmbeddingProvider):
         """Return provider name."""
         return self._name
 
-    def get_dimension(self) -> int:
+    @property
+    def dimension(self) -> int:
         """Return embedding dimension."""
         return self._dimension
 
@@ -398,7 +399,7 @@ class TestStreamingStats:
 
     async def test_streaming_stats_matches_regular_stats(self, populated_store):
         """Test streaming stats matches regular stats."""
-        regular_stats = populated_store.get_stats()
+        regular_stats = populated_store.stats
         streaming_stats = populated_store.get_stats_streaming(batch_size=10)
 
         assert regular_stats["total_chunks"] == streaming_stats["total_chunks"]

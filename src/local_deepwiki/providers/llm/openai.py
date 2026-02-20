@@ -197,7 +197,8 @@ class OpenAILLMProvider(LLMProvider):
             self._handle_api_error(e)
             raise
 
-    def get_capabilities(self) -> LLMProviderCapabilities:
+    @property
+    def capabilities(self) -> LLMProviderCapabilities:
         """Return OpenAI provider capabilities.
 
         Returns:

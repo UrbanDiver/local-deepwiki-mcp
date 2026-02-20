@@ -219,6 +219,7 @@ async def discover_entry_points(
     query: str,
     vector_store: "VectorStore",
     repo_path: Path,
+    *,
     entry_point_hint: str | None = None,
     max_candidates: int = 5,
 ) -> list[CodemapNode]:
@@ -320,6 +321,7 @@ async def build_cross_file_graph(
     entry_nodes: list[CodemapNode],
     vector_store: "VectorStore",
     repo_path: Path,
+    *,
     max_depth: int = 4,
     max_nodes: int = 40,
     focus: CodemapFocus = CodemapFocus.EXECUTION_FLOW,
@@ -848,6 +850,7 @@ async def generate_codemap(
     vector_store: "VectorStore",
     repo_path: Path,
     llm: "LLMProvider",
+    *,
     entry_point: str | None = None,
     focus: CodemapFocus = CodemapFocus.EXECUTION_FLOW,
     max_depth: int = 4,

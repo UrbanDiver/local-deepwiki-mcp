@@ -31,7 +31,8 @@ class _PluginEmbeddingProviderWrapper(EmbeddingProvider):
         """Generate embeddings using the plugin."""
         return await self._plugin.embed(texts)
 
-    def get_dimension(self) -> int:
+    @property
+    def dimension(self) -> int:
         """Get embedding dimension from the plugin."""
         return self._plugin.get_dimension()
 

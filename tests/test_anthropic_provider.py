@@ -105,7 +105,7 @@ class TestAnthropicProviderCapabilities:
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
 
         provider = AnthropicProvider()
-        capabilities = provider.get_capabilities()
+        capabilities = provider.capabilities
 
         assert capabilities.supports_streaming is True
         assert capabilities.supports_system_prompt is True
@@ -123,7 +123,7 @@ class TestAnthropicProviderCapabilities:
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
 
         provider = AnthropicProvider(model="unknown-model")
-        capabilities = provider.get_capabilities()
+        capabilities = provider.capabilities
 
         # Should default to 200000 for unknown models
         assert capabilities.max_context_length == 200000

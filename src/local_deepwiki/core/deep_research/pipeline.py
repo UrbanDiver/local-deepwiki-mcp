@@ -77,6 +77,7 @@ class DeepResearchPipeline(ReasoningMixin, StepsMixin):
         self,
         vector_store: VectorStore,
         llm_provider: LLMProvider,
+        *,
         max_sub_questions: int = 4,
         chunks_per_subquestion: int = 5,
         max_total_chunks: int = 30,

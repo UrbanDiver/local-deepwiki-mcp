@@ -128,6 +128,7 @@ def validate_provider_credentials(
     api_key: str | None,
     key_type: str,
     env_var: str,
+    *,
     display_name: str | None = None,
 ) -> str:
     """Validate and return an API key, raising ProviderAuthenticationError if invalid.
@@ -296,6 +297,7 @@ RETRYABLE_EXCEPTIONS = (
 
 
 def with_retry(
+    *,
     max_attempts: int = 3,
     base_delay: float = 1.0,
     max_delay: float = 30.0,
@@ -434,8 +436,9 @@ class EmbeddingProvider(ABC):
         """
         pass
 
+    @property
     @abstractmethod
-    def get_dimension(self) -> int:
+    def dimension(self) -> int:
         """Get the embedding dimension.
 
         Returns:
@@ -482,7 +485,8 @@ class EmbeddingProvider(ABC):
                 original_error=e,
             ) from e
 
-    def get_max_batch_size(self) -> int:
+    @property
+    def max_batch_size(self) -> int:
         """Return maximum number of texts that can be embedded in a single call.
 
         Returns:
@@ -490,7 +494,8 @@ class EmbeddingProvider(ABC):
         """
         return 100
 
-    def get_max_tokens(self) -> int:
+    @property
+    def max_tokens(self) -> int:
         """Return maximum tokens per text.
 
         Returns:
@@ -498,16 +503,17 @@ class EmbeddingProvider(ABC):
         """
         return 8192
 
-    def get_capabilities(self) -> EmbeddingProviderCapabilities:
+    @property
+    def capabilities(self) -> EmbeddingProviderCapabilities:
         """Return provider capabilities.
 
         Returns:
             EmbeddingProviderCapabilities dataclass with provider information.
         """
         return EmbeddingProviderCapabilities(
-            max_batch_size=self.get_max_batch_size(),
-            max_tokens_per_text=self.get_max_tokens(),
-            dimension=self.get_dimension(),
+            max_batch_size=self.max_batch_size,
+            max_tokens_per_text=self.max_tokens,
+            dimension=self.dimension,
         )
 
 
@@ -637,7 +643,8 @@ class LLMProvider(ABC):
             return True
         raise ProviderModelNotFoundError(model_name, provider_name=self.name)
 
-    def get_capabilities(self) -> LLMProviderCapabilities:
+    @property
+    def capabilities(self) -> LLMProviderCapabilities:
         """Return provider capabilities.
 
         Returns:

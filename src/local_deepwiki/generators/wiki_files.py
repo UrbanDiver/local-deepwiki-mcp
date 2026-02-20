@@ -826,6 +826,7 @@ async def generate_file_docs(
     vector_store: VectorStore,
     llm: LLMProvider,
     system_prompt: str,
+    *,
     status_manager: "WikiStatusManager",
     entity_registry: EntityRegistry,
     config: Config,

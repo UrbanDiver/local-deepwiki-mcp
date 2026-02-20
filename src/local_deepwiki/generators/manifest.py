@@ -433,10 +433,7 @@ def parse_manifest(repo_path: Path) -> ProjectManifest:
 
 def _parse_pyproject_toml(filepath: Path, manifest: ProjectManifest) -> None:
     """Parse pyproject.toml (Python)."""
-    try:
-        import tomllib
-    except ImportError:
-        import tomli as tomllib  # fallback for Python <3.11
+    import tomllib
 
     content = filepath.read_text()
     data = tomllib.loads(content)
@@ -605,10 +602,7 @@ def _parse_package_json(filepath: Path, manifest: ProjectManifest) -> None:
 
 def _parse_cargo_toml(filepath: Path, manifest: ProjectManifest) -> None:
     """Parse Cargo.toml (Rust)."""
-    try:
-        import tomllib
-    except ImportError:
-        import tomli as tomllib  # fallback for Python <3.11
+    import tomllib
 
     content = filepath.read_text()
     data = tomllib.loads(content)

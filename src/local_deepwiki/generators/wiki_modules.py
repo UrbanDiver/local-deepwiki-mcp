@@ -22,6 +22,7 @@ async def generate_module_docs(
     vector_store: VectorStore,
     llm: LLMProvider,
     system_prompt: str,
+    *,
     status_manager: "WikiStatusManager",
     full_rebuild: bool = False,
     max_chunk_content_chars: int = 15000,
@@ -135,6 +136,7 @@ async def generate_single_module_doc(
     vector_store: VectorStore,
     llm: LLMProvider,
     system_prompt: str,
+    *,
     repo_path: Path | None = None,
     max_chunk_content_chars: int = 15000,
 ) -> WikiPage | None:

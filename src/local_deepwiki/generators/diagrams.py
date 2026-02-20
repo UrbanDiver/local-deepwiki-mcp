@@ -208,6 +208,7 @@ def _package_from_file_path(file_path: str) -> str:
 
 def generate_class_diagram(
     chunks: list,
+    *,
     show_attributes: bool = True,
     show_types: bool = True,
     max_methods: int = 15,
@@ -420,6 +421,7 @@ class _DependencyData:
 def _collect_dependencies(
     chunks: list,
     project_name: str,
+    *,
     show_external: bool,
     exclude_tests: bool,
 ) -> _DependencyData:
@@ -647,6 +649,7 @@ def _add_circular_styling(
 def generate_dependency_graph(
     chunks: list,
     project_name: str = "project",
+    *,
     detect_circular: bool = True,
     show_external: bool = False,
     max_external: int = 10,
@@ -674,7 +677,9 @@ def generate_dependency_graph(
         Mermaid flowchart markdown string, or None if no dependencies found.
     """
     # Collect all dependency data
-    data = _collect_dependencies(chunks, project_name, show_external, exclude_tests)
+    data = _collect_dependencies(
+        chunks, project_name, show_external=show_external, exclude_tests=exclude_tests
+    )
 
     if not data.dependencies:
         return None

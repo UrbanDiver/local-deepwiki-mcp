@@ -76,7 +76,8 @@ async def handle_analyze_diff(args: dict[str, Any]) -> list[TextContent]:
 
     # Run git diff --name-status
     try:
-        diff_result = subprocess.run(
+        diff_result = await asyncio.to_thread(
+            subprocess.run,
             [
                 "git",
                 "diff",
@@ -156,7 +157,8 @@ async def handle_analyze_diff(args: dict[str, Any]) -> list[TextContent]:
     if validated.include_content:
         for cf in changed_files:
             try:
-                file_diff = subprocess.run(
+                file_diff = await asyncio.to_thread(
+                    subprocess.run,
                     [
                         "git",
                         "diff",
@@ -295,7 +297,8 @@ async def handle_ask_about_diff(args: dict[str, Any]) -> list[TextContent]:
 
     # Get the diff
     try:
-        diff_result = subprocess.run(
+        diff_result = await asyncio.to_thread(
+            subprocess.run,
             ["git", "diff", validated.base_ref, validated.head_ref],
             cwd=str(repo_path),
             capture_output=True,

@@ -369,7 +369,7 @@ class TestPluginRegistry:
 
         # Create a simple plugin file
         plugin_file = plugins_dir / "test_plugin.py"
-        plugin_file.write_text('''
+        plugin_file.write_text("""
 from local_deepwiki.plugins import PluginMetadata, LanguageParserPlugin, get_plugin_registry
 from local_deepwiki.models import CodeChunk
 from pathlib import Path
@@ -392,7 +392,7 @@ class TestParser(LanguageParserPlugin):
 
 # Auto-register
 get_plugin_registry().register(TestParser())
-''')
+""")
 
         loaded = registry.load_from_directory(plugins_dir)
         # Note: This loads the module but registration goes to the global registry
@@ -548,7 +548,7 @@ class TestEmbeddingProviderPluginIntegration:
         assert wrapper.name == "mock"
 
         # Check dimension is forwarded
-        assert wrapper.get_dimension() == 384
+        assert wrapper.dimension == 384
 
     async def test_wrapper_embed_forwards_to_plugin(self):
         """Test that wrapper.embed() calls plugin.embed()."""
@@ -577,7 +577,7 @@ class TestEmbeddingProviderPluginIntegration:
         # Create wrapper manually to test integration
         wrapper = _PluginEmbeddingProviderWrapper(plugin)
         assert wrapper.name == "mock"
-        assert wrapper.get_dimension() == 384
+        assert wrapper.dimension == 384
 
     def test_get_embedding_provider_falls_back_to_builtin(self):
         """Test that get_embedding_provider uses built-in for unknown providers."""
@@ -691,7 +691,10 @@ class TestWikiGeneratorPluginIntegration:
                 return "failing"
 
             async def generate(
-                self, index_status: IndexStatus, wiki_path: Path, context: dict[str, Any]
+                self,
+                index_status: IndexStatus,
+                wiki_path: Path,
+                context: dict[str, Any],
             ) -> WikiGeneratorResult:
                 raise RuntimeError("Intentional failure")
 
@@ -758,7 +761,10 @@ class TestWikiGeneratorPluginIntegration:
                 return self._priority
 
             async def generate(
-                self, index_status: IndexStatus, wiki_path: Path, context: dict[str, Any]
+                self,
+                index_status: IndexStatus,
+                wiki_path: Path,
+                context: dict[str, Any],
             ) -> WikiGeneratorResult:
                 execution_order.append(self._name)
                 return WikiGeneratorResult(pages=[])
@@ -866,7 +872,10 @@ class TestWikiGeneratorPluginIntegration:
                 return self._run_after
 
             async def generate(
-                self, index_status: IndexStatus, wiki_path: Path, context: dict[str, Any]
+                self,
+                index_status: IndexStatus,
+                wiki_path: Path,
+                context: dict[str, Any],
             ) -> WikiGeneratorResult:
                 execution_order.append(self._name)
                 return WikiGeneratorResult(pages=[])
@@ -932,7 +941,10 @@ class TestWikiGeneratorPluginIntegration:
                 return ["nonexistent-generator"]  # This doesn't exist
 
             async def generate(
-                self, index_status: IndexStatus, wiki_path: Path, context: dict[str, Any]
+                self,
+                index_status: IndexStatus,
+                wiki_path: Path,
+                context: dict[str, Any],
             ) -> WikiGeneratorResult:
                 executed.append("dependent")
                 return WikiGeneratorResult(pages=[])
@@ -997,7 +1009,10 @@ class TestWikiGeneratorPluginIntegration:
                 return self._run_after
 
             async def generate(
-                self, index_status: IndexStatus, wiki_path: Path, context: dict[str, Any]
+                self,
+                index_status: IndexStatus,
+                wiki_path: Path,
+                context: dict[str, Any],
             ) -> WikiGeneratorResult:
                 executed.append(self._name)
                 return WikiGeneratorResult(pages=[])
@@ -1036,4 +1051,6 @@ class TestWikiGeneratorPluginIntegration:
         await generator._run_plugin_generators(ctx, index_status, None)
 
         # None of the circular generators should have executed
-        assert len(executed) == 0, f"Expected no generators to run due to cycle, but got: {executed}"
+        assert len(executed) == 0, (
+            f"Expected no generators to run due to cycle, but got: {executed}"
+        )

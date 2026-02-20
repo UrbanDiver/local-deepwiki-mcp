@@ -889,7 +889,8 @@ class ContentAwareEmbeddingProvider(EmbeddingProvider):
     def name(self) -> str:
         return "mock:content-aware"
 
-    def get_dimension(self) -> int:
+    @property
+    def dimension(self) -> int:
         return self._dimension
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
@@ -940,7 +941,7 @@ class TestRealVectorStoreIntegration:
         _repo_path, _wiki_path, vector_store, index_status = indexed_repo
 
         assert index_status.total_chunks > 0
-        stats = vector_store.get_stats()
+        stats = vector_store.stats
         assert stats["total_chunks"] > 0
         assert stats["total_chunks"] == index_status.total_chunks
 
@@ -989,7 +990,7 @@ class TestRealVectorStoreIntegration:
         # Verify initial search works
         initial_results = await vector_store.search("Application", limit=5)
         assert len(initial_results) > 0
-        initial_chunk_count = vector_store.get_stats()["total_chunks"]
+        initial_chunk_count = vector_store.stats["total_chunks"]
 
         # Add a new file
         src_dir = repo_path / "src"
@@ -1011,7 +1012,7 @@ class TestRealVectorStoreIntegration:
         new_status = await indexer.index(full_rebuild=False)
 
         # Verify new chunks were added
-        new_chunk_count = vector_store.get_stats()["total_chunks"]
+        new_chunk_count = vector_store.stats["total_chunks"]
         assert new_chunk_count > initial_chunk_count
 
         # Broad search with low threshold to find new file's chunks

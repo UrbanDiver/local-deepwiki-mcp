@@ -27,6 +27,7 @@ LOG_FORMAT_DETAILED = (
 
 def setup_logging(
     level: str | int | None = None,
+    *,
     format_style: Literal["simple", "detailed"] = "simple",
     stream: bool = True,
     log_file: str | None = None,

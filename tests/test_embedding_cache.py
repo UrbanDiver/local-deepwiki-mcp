@@ -28,7 +28,8 @@ class MockEmbeddingProvider:
         self.embed_calls.append(texts)
         return [[float(i) for i in range(self._dimension)] for _ in texts]
 
-    def get_dimension(self) -> int:
+    @property
+    def dimension(self) -> int:
         """Get the embedding dimension."""
         return self._dimension
 
@@ -380,7 +381,7 @@ class TestCachedEmbeddingProvider:
 
     def test_get_dimension(self, cached_provider):
         """Test get_dimension delegates to underlying provider."""
-        assert cached_provider.get_dimension() == 384
+        assert cached_provider.dimension == 384
 
     def test_name_property(self, cached_provider):
         """Test name property includes cache indicator."""

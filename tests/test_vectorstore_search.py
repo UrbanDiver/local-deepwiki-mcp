@@ -19,7 +19,8 @@ class MockEmbeddingProvider(EmbeddingProvider):
         """Return provider name."""
         return self._name
 
-    def get_dimension(self) -> int:
+    @property
+    def dimension(self) -> int:
         """Return embedding dimension."""
         return self._dimension
 
@@ -42,7 +43,8 @@ class SemanticMockEmbeddingProvider(EmbeddingProvider):
         """Return provider name."""
         return self._name
 
-    def get_dimension(self) -> int:
+    @property
+    def dimension(self) -> int:
         """Return embedding dimension."""
         return self._dimension
 
@@ -218,7 +220,7 @@ class TestSearchProfiles:
             provider,
             default_search_profile=SearchProfile.FAST,
         )
-        assert store.get_search_profile() == SearchProfile.FAST
+        assert store.search_profile == SearchProfile.FAST
 
         # Create store with THOROUGH as default
         store2 = VectorStore(
@@ -226,27 +228,27 @@ class TestSearchProfiles:
             provider,
             default_search_profile=SearchProfile.THOROUGH,
         )
-        assert store2.get_search_profile() == SearchProfile.THOROUGH
+        assert store2.search_profile == SearchProfile.THOROUGH
 
     async def test_set_search_profile(self, vector_store):
         """Test setting search profile at runtime."""
         from local_deepwiki.core.vectorstore import SearchProfile
 
         # Default should be BALANCED
-        assert vector_store.get_search_profile() == SearchProfile.BALANCED
+        assert vector_store.search_profile == SearchProfile.BALANCED
 
         # Set to FAST
-        vector_store.set_search_profile(SearchProfile.FAST)
-        assert vector_store.get_search_profile() == SearchProfile.FAST
+        vector_store.search_profile = SearchProfile.FAST
+        assert vector_store.search_profile == SearchProfile.FAST
 
         # Set using string
-        vector_store.set_search_profile("thorough")
-        assert vector_store.get_search_profile() == SearchProfile.THOROUGH
+        vector_store.search_profile = "thorough"
+        assert vector_store.search_profile == SearchProfile.THOROUGH
 
     async def test_set_search_profile_invalid_string(self, vector_store):
         """Test setting invalid profile string raises ValueError."""
         with pytest.raises(ValueError, match="Invalid search profile"):
-            vector_store.set_search_profile("invalid")
+            vector_store.search_profile = "invalid"
 
 
 class TestAdaptiveSearch:
@@ -272,12 +274,12 @@ class TestAdaptiveSearch:
 
     async def test_adaptive_search_enabled_by_default(self, vector_store):
         """Test that adaptive search is enabled by default."""
-        assert vector_store.get_adaptive_search_enabled() is True
+        assert vector_store.adaptive_search_enabled is True
 
     async def test_disable_adaptive_search(self, vector_store):
         """Test disabling adaptive search."""
-        vector_store.set_adaptive_search_enabled(False)
-        assert vector_store.get_adaptive_search_enabled() is False
+        vector_store.adaptive_search_enabled = False
+        assert vector_store.adaptive_search_enabled is False
 
     async def test_adaptive_search_estimates_depth(self, populated_store):
         """Test that adaptive searcher estimates optimal depth."""
@@ -301,20 +303,20 @@ class TestAdaptiveSearch:
         await populated_store.search("test content")
 
         # Check that stats show recorded queries
-        stats = populated_store.get_adaptive_search_stats()
+        stats = populated_store.adaptive_search_stats
         assert stats["query_history_size"] >= 1
 
     async def test_adaptive_search_disabled_does_not_record(self, populated_store):
         """Test that disabled adaptive search doesn't record quality."""
         # Disable adaptive search
-        populated_store.set_adaptive_search_enabled(False)
+        populated_store.adaptive_search_enabled = False
 
         # Perform a search
         await populated_store.search("test content")
 
         # Quality should not be recorded (though history may still grow)
         # The key thing is searches still work
-        stats = populated_store.get_adaptive_search_stats()
+        stats = populated_store.adaptive_search_stats
         assert "adaptive_search_enabled" in stats
         assert stats["adaptive_search_enabled"] is False
 
@@ -357,7 +359,7 @@ class TestSearchFeedback:
         populated_store.record_feedback(feedback)
 
         # Check feedback stats
-        stats = populated_store.get_adaptive_search_stats()
+        stats = populated_store.adaptive_search_stats
         assert stats["feedback_stats"]["total_feedback"] == 1
         assert stats["feedback_stats"]["relevant_count"] == 1
 
@@ -378,7 +380,7 @@ class TestSearchFeedback:
             SearchFeedback(query="test", result_id="chunk_2", relevant=True)
         )
 
-        stats = populated_store.get_adaptive_search_stats()
+        stats = populated_store.adaptive_search_stats
         assert stats["feedback_stats"]["total_feedback"] == 3
         assert stats["feedback_stats"]["relevant_count"] == 2
         assert stats["feedback_stats"]["irrelevant_count"] == 1
@@ -386,7 +388,7 @@ class TestSearchFeedback:
 
     async def test_feedback_stats_empty(self, vector_store):
         """Test feedback stats when no feedback recorded."""
-        stats = vector_store.get_adaptive_search_stats()
+        stats = vector_store.adaptive_search_stats
         assert stats["feedback_stats"]["total_feedback"] == 0
         assert stats["feedback_stats"]["relevance_rate"] == 0.0
 

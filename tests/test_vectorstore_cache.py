@@ -28,7 +28,8 @@ class MockEmbeddingProvider(EmbeddingProvider):
         """Return provider name."""
         return self._name
 
-    def get_dimension(self) -> int:
+    @property
+    def dimension(self) -> int:
         """Return embedding dimension."""
         return self._dimension
 
@@ -54,7 +55,8 @@ class SemanticMockEmbeddingProvider(EmbeddingProvider):
         """Return provider name."""
         return "semantic_mock"
 
-    def get_dimension(self) -> int:
+    @property
+    def dimension(self) -> int:
         """Return embedding dimension."""
         return self._dimension
 
@@ -161,13 +163,13 @@ class TestSearchCache:
         """Test that repeated identical searches return cached results."""
         # First search - cache miss
         results1 = await populated_store.search("calculate")
-        stats1 = populated_store.get_search_cache_stats()
+        stats1 = populated_store.search_cache_stats
         assert stats1["misses"] == 1
         assert stats1["hits"] == 0
 
         # Second search - cache hit
         results2 = await populated_store.search("calculate")
-        stats2 = populated_store.get_search_cache_stats()
+        stats2 = populated_store.search_cache_stats
         assert stats2["misses"] == 1
         assert stats2["hits"] == 1
 
@@ -180,25 +182,25 @@ class TestSearchCache:
         """Test that different queries with different embeddings result in cache misses."""
         # First search - starts with 'c'
         await populated_store.search("calculate")
-        stats1 = populated_store.get_search_cache_stats()
+        stats1 = populated_store.search_cache_stats
         assert stats1["misses"] == 1
 
         # Different search starting with different letter - cache miss
         # SemanticMockEmbeddingProvider generates different embeddings based on first char
         await populated_store.search("parse json")
-        stats2 = populated_store.get_search_cache_stats()
+        stats2 = populated_store.search_cache_stats
         assert stats2["misses"] == 2
 
     async def test_search_cache_miss_different_filters(self, populated_store):
         """Test that same query with different filters results in cache miss."""
         # Search without filters
         await populated_store.search("calculate")
-        stats1 = populated_store.get_search_cache_stats()
+        stats1 = populated_store.search_cache_stats
         assert stats1["misses"] == 1
 
         # Same query with language filter - cache miss
         await populated_store.search("calculate", language="python")
-        stats2 = populated_store.get_search_cache_stats()
+        stats2 = populated_store.search_cache_stats
         assert stats2["misses"] == 2
 
     async def test_search_cache_invalidated_on_create_or_update(self, populated_store):
@@ -207,7 +209,7 @@ class TestSearchCache:
 
         # First search - cache miss
         await populated_store.search("calculate")
-        stats1 = populated_store.get_search_cache_stats()
+        stats1 = populated_store.search_cache_stats
         assert stats1["entries"] == 1
         initial_invalidations = stats1["invalidations"]
 
@@ -215,7 +217,7 @@ class TestSearchCache:
         new_chunks = [make_chunk("new_1", content="def new_function(): pass")]
         await populated_store.create_or_update_table(new_chunks)
 
-        stats2 = populated_store.get_search_cache_stats()
+        stats2 = populated_store.search_cache_stats
         assert stats2["entries"] == 0
         assert stats2["invalidations"] == initial_invalidations + 1
 
@@ -223,7 +225,7 @@ class TestSearchCache:
         """Test that cache is invalidated when chunks are added."""
         # First search - cache miss
         await populated_store.search("calculate")
-        stats1 = populated_store.get_search_cache_stats()
+        stats1 = populated_store.search_cache_stats
         assert stats1["entries"] == 1
         initial_invalidations = stats1["invalidations"]
 
@@ -231,7 +233,7 @@ class TestSearchCache:
         new_chunks = [make_chunk("added_1", content="def added_function(): pass")]
         await populated_store.add_chunks(new_chunks)
 
-        stats2 = populated_store.get_search_cache_stats()
+        stats2 = populated_store.search_cache_stats
         assert stats2["entries"] == 0
         assert stats2["invalidations"] == initial_invalidations + 1
 
@@ -241,14 +243,14 @@ class TestSearchCache:
         """Test that cache is invalidated when chunks are deleted by file."""
         # First search - cache miss
         await populated_store.search("calculate")
-        stats1 = populated_store.get_search_cache_stats()
+        stats1 = populated_store.search_cache_stats
         assert stats1["entries"] == 1
         initial_invalidations = stats1["invalidations"]
 
         # Delete chunks - should invalidate cache
         await populated_store.delete_chunks_by_file("test.py")
 
-        stats2 = populated_store.get_search_cache_stats()
+        stats2 = populated_store.search_cache_stats
         assert stats2["entries"] == 0
         assert stats2["invalidations"] == initial_invalidations + 1
 
@@ -258,14 +260,14 @@ class TestSearchCache:
         """Test that cache is invalidated when chunks are deleted by files."""
         # First search - cache miss
         await populated_store.search("calculate")
-        stats1 = populated_store.get_search_cache_stats()
+        stats1 = populated_store.search_cache_stats
         assert stats1["entries"] == 1
         initial_invalidations = stats1["invalidations"]
 
         # Delete chunks - should invalidate cache
         await populated_store.delete_chunks_by_files(["test.py"])
 
-        stats2 = populated_store.get_search_cache_stats()
+        stats2 = populated_store.search_cache_stats
         assert stats2["entries"] == 0
         assert stats2["invalidations"] == initial_invalidations + 1
 
@@ -274,19 +276,19 @@ class TestSearchCache:
         # Populate cache with different queries (different first chars = different embeddings)
         await populated_store.search("alpha query")
         await populated_store.search("beta query")
-        stats1 = populated_store.get_search_cache_stats()
+        stats1 = populated_store.search_cache_stats
         assert stats1["entries"] == 2
 
         # Invalidate
         count = populated_store.invalidate_search_cache()
         assert count == 2
 
-        stats2 = populated_store.get_search_cache_stats()
+        stats2 = populated_store.search_cache_stats
         assert stats2["entries"] == 0
 
     async def test_search_cache_stats(self, populated_store):
         """Test get_search_cache_stats returns correct structure."""
-        stats = populated_store.get_search_cache_stats()
+        stats = populated_store.search_cache_stats
 
         assert "enabled" in stats
         assert "entries" in stats
@@ -307,7 +309,7 @@ class TestSearchCache:
         """Test that fuzzy searches don't use the cache."""
         # Fuzzy search
         await populated_store.search("calculate", use_fuzzy=True)
-        stats = populated_store.get_search_cache_stats()
+        stats = populated_store.search_cache_stats
         # Should not cache fuzzy results
         assert stats["entries"] == 0
 
@@ -315,7 +317,7 @@ class TestSearchCache:
         """Test that path pattern searches don't use the cache."""
         # Path pattern search
         await populated_store.search("calculate", path_pattern="src/**/*.py")
-        stats = populated_store.get_search_cache_stats()
+        stats = populated_store.search_cache_stats
         # Should not cache path pattern results
         assert stats["entries"] == 0
 
@@ -346,7 +348,7 @@ class TestSearchCacheDisabled:
         await vector_store.search("calculate")
         await vector_store.search("calculate")
 
-        stats = vector_store.get_search_cache_stats()
+        stats = vector_store.search_cache_stats
         assert stats["enabled"] is False
         assert stats["entries"] == 0
         assert stats["hits"] == 0
@@ -403,7 +405,7 @@ class TestSearchCacheEviction:
         await vector_store.search("gamma")
         await vector_store.search("delta")  # This should trigger eviction
 
-        stats = vector_store.get_search_cache_stats()
+        stats = vector_store.search_cache_stats
         # Should have evicted some entries (max is 3, target is 80% = 2.4 -> 2)
         assert stats["entries"] <= 3
 
@@ -446,7 +448,7 @@ class TestSearchCacheTTL:
 
         # First search - cache miss
         await vector_store.search("calculate")
-        stats1 = vector_store.get_search_cache_stats()
+        stats1 = vector_store.search_cache_stats
         assert stats1["entries"] == 1
 
         # Wait for TTL to expire (generous buffer for CI)
@@ -454,7 +456,7 @@ class TestSearchCacheTTL:
 
         # Second search - entry expired, should be cache miss
         await vector_store.search("calculate")
-        stats2 = vector_store.get_search_cache_stats()
+        stats2 = vector_store.search_cache_stats
         # The expired entry should have been cleaned up
         assert stats2["misses"] == 2
 
@@ -488,13 +490,13 @@ class TestSearchCacheSemanticSimilarity:
 
         # First search
         await vector_store.search("query1")
-        stats1 = vector_store.get_search_cache_stats()
+        stats1 = vector_store.search_cache_stats
         assert stats1["misses"] == 1
         assert stats1["hits"] == 0
 
         # Second search with different text but identical embedding (from mock)
         await vector_store.search("query2")
-        stats2 = vector_store.get_search_cache_stats()
+        stats2 = vector_store.search_cache_stats
         # Mock provider returns identical embeddings, so should be a cache hit
         assert stats2["hits"] == 1
 
@@ -514,7 +516,7 @@ class TestSearchCacheIntegration:
 
     async def test_default_cache_config(self, vector_store):
         """Test that default cache config is applied."""
-        stats = vector_store.get_search_cache_stats()
+        stats = vector_store.search_cache_stats
         assert stats["enabled"] is True
         assert stats["ttl_seconds"] == 3600  # Default 1 hour
         assert stats["max_entries"] == 1000  # Default
@@ -526,7 +528,7 @@ class TestSearchCacheIntegration:
         results = await vector_store.search("calculate")
         assert results == []
 
-        stats = vector_store.get_search_cache_stats()
+        stats = vector_store.search_cache_stats
         # Empty results should not be cached (no table exists)
         assert stats["entries"] == 0
 
@@ -541,12 +543,12 @@ class TestSearchCacheIntegration:
 
         # Search with default limit
         await vector_store.search("calculate")
-        stats1 = vector_store.get_search_cache_stats()
+        stats1 = vector_store.search_cache_stats
         assert stats1["entries"] == 1
 
         # Search with different limit - should be cache miss
         await vector_store.search("calculate", limit=5)
-        stats2 = vector_store.get_search_cache_stats()
+        stats2 = vector_store.search_cache_stats
         assert stats2["entries"] == 2
         assert stats2["misses"] == 2
 

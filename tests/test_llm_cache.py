@@ -33,7 +33,8 @@ class MockEmbeddingProvider:
             embeddings.append(values)
         return embeddings
 
-    def get_dimension(self) -> int:
+    @property
+    def dimension(self) -> int:
         return self._dimension
 
     @property

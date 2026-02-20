@@ -924,6 +924,7 @@ async def generate_wiki(
     wiki_path: Path,
     vector_store: VectorStore,
     index_status: IndexStatus,
+    *,
     config: Config | None = None,
     llm_provider: str | None = None,
     progress_callback: ProgressCallback | None = None,

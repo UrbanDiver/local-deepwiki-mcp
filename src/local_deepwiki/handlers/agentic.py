@@ -17,6 +17,7 @@ from local_deepwiki.handlers._shared import (
     QueryCodebaseArgs,
     RunWorkflowArgs,
     SuggestNextActionsArgs,
+    ToolHandler,
     _load_index_status,
     get_access_controller,
     handle_tool_errors,
@@ -497,7 +498,7 @@ async def handle_run_workflow(args: dict[str, Any]) -> list[TextContent]:
 
 
 async def _run_step(
-    handler_func: Any, step_name: str, args: dict[str, Any]
+    handler_func: ToolHandler, step_name: str, args: dict[str, Any]
 ) -> dict[str, Any]:
     """Run a single workflow step with error handling.
 

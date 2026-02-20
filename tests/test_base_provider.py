@@ -21,9 +21,10 @@ class TestEmbeddingProviderAbstractMethods:
                 await EmbeddingProvider.embed(self, texts)
                 return [[0.0] * 768 for _ in texts]
 
-            def get_dimension(self) -> int:
-                # Call the abstract method's pass body via super
-                EmbeddingProvider.get_dimension(self)
+            @property
+            def dimension(self) -> int:
+                # Call the abstract property's pass body via super
+                EmbeddingProvider.dimension.fget(self)
                 return 768
 
             @property
@@ -34,7 +35,7 @@ class TestEmbeddingProviderAbstractMethods:
         provider = ConcreteEmbeddingProvider()
 
         # These calls will execute the pass statements in the abstract base
-        assert provider.get_dimension() == 768
+        assert provider.dimension == 768
         assert provider.name == "test-embedding"
 
     async def test_embed_abstract_calls_pass(self):
@@ -49,7 +50,8 @@ class TestEmbeddingProviderAbstractMethods:
                 # result is None because pass returns None
                 return [[0.0] * 768 for _ in texts]
 
-            def get_dimension(self) -> int:
+            @property
+            def dimension(self) -> int:
                 return 768
 
             @property
@@ -60,8 +62,8 @@ class TestEmbeddingProviderAbstractMethods:
         result = await provider.embed(["test"])
         assert result == [[0.0] * 768]
 
-    def test_get_dimension_abstract_calls_pass(self):
-        """Test that get_dimension abstract method body is covered."""
+    def test_dimension_abstract_calls_pass(self):
+        """Test that dimension abstract property body is covered."""
 
         class TestEmbeddingProvider(EmbeddingProvider):
             """Test implementation that calls super."""
@@ -69,9 +71,10 @@ class TestEmbeddingProviderAbstractMethods:
             async def embed(self, texts: list[str]) -> list[list[float]]:
                 return [[0.0] * 768 for _ in texts]
 
-            def get_dimension(self) -> int:
+            @property
+            def dimension(self) -> int:
                 # Call parent's pass body
-                EmbeddingProvider.get_dimension(self)
+                EmbeddingProvider.dimension.fget(self)
                 return 768
 
             @property
@@ -79,7 +82,7 @@ class TestEmbeddingProviderAbstractMethods:
                 return "test"
 
         provider = TestEmbeddingProvider()
-        assert provider.get_dimension() == 768
+        assert provider.dimension == 768
 
     def test_name_property_abstract(self):
         """Test that name property abstract body is covered."""
@@ -90,7 +93,8 @@ class TestEmbeddingProviderAbstractMethods:
             async def embed(self, texts: list[str]) -> list[list[float]]:
                 return [[0.0] * 768 for _ in texts]
 
-            def get_dimension(self) -> int:
+            @property
+            def dimension(self) -> int:
                 return 768
 
             @property
@@ -102,6 +106,7 @@ class TestEmbeddingProviderAbstractMethods:
 
     def test_name_property_abstract_fget_coverage(self):
         """Test that calling the abstract name property fget covers line 141."""
+
         # Create a concrete instance to pass to fget
         class TestEmbeddingProvider(EmbeddingProvider):
             """Test implementation."""
@@ -109,7 +114,8 @@ class TestEmbeddingProviderAbstractMethods:
             async def embed(self, texts: list[str]) -> list[list[float]]:
                 return [[0.0] * 768 for _ in texts]
 
-            def get_dimension(self) -> int:
+            @property
+            def dimension(self) -> int:
                 return 768
 
             @property
@@ -366,7 +372,9 @@ class TestWithRetryFallbackPath:
 
         call_count = 0
 
-        @with_retry(max_attempts=3, base_delay=0.001, exponential_base=3.0, jitter=False)
+        @with_retry(
+            max_attempts=3, base_delay=0.001, exponential_base=3.0, jitter=False
+        )
         async def custom_backoff_func():
             nonlocal call_count
             call_count += 1

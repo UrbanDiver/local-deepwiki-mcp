@@ -51,6 +51,12 @@ AUXILIARY_PAGES = frozenset(
 )
 
 
+def _log_task_exception(task: asyncio.Task[Any]) -> None:
+    """Log exceptions from fire-and-forget background tasks."""
+    if not task.cancelled() and task.exception() is not None:
+        logger.warning("Background task failed: %s", task.exception())
+
+
 class LazyPageGenerator:
     """On-demand wiki page generator.
 
@@ -206,9 +212,10 @@ class LazyPageGenerator:
             if self._prefetch is not None:
                 cross_links = _extract_cross_link_targets(content)
                 siblings = self._get_module_siblings(page_path)
-                asyncio.create_task(
+                task = asyncio.create_task(
                     self._prefetch.enqueue_predictions(page_path, cross_links, siblings)
                 )
+                task.add_done_callback(_log_task_exception)
 
             return content
         except Exception as exc:
@@ -265,11 +272,11 @@ class LazyPageGenerator:
 
         if page_path == "index.md":
             return await generate_overview_page(
-                idx, vs, llm, prompt, manifest, repo_path
+                idx, vs, llm, prompt, manifest=manifest, repo_path=repo_path
             )
         elif page_path == "architecture.md":
             return await generate_architecture_page(
-                idx, vs, llm, prompt, manifest, repo_path
+                idx, vs, llm, prompt, manifest=manifest, repo_path=repo_path
             )
         elif page_path == "dependencies.md":
             page, _ = await generate_dependencies_page(
@@ -277,7 +284,7 @@ class LazyPageGenerator:
                 vs,
                 llm,
                 prompt,
-                manifest,
+                manifest=manifest,
                 import_search_limit=self._config.wiki.import_search_limit,
             )
             return page
@@ -373,7 +380,9 @@ class LazyPageGenerator:
 
         llm = self._get_llm()
         prompt = self._get_system_prompt()
-        page = await generate_single_module_doc(dir_name, files, vs, llm, prompt)
+        page = await generate_single_module_doc(
+            dir_name, files, vs, llm, prompt, repo_path=self._get_repo_path()
+        )
         if page is None:
             raise FileNotFoundError(f"Module generation failed: {dir_name}")
         return page

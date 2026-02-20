@@ -21,6 +21,7 @@ from local_deepwiki.logging import get_logger
 if TYPE_CHECKING:
     from local_deepwiki.core.vectorstore import VectorStore
     from local_deepwiki.models.chunks import SearchResult
+    from local_deepwiki.providers.base import LLMProvider
 
 logger = get_logger(__name__)
 
@@ -46,7 +47,7 @@ class AgenticRetrievalResult:
 async def grade_relevance(
     results: list[SearchResult],
     question: str,
-    llm: Any,
+    llm: LLMProvider,
 ) -> list[GradedChunk]:
     """Grade the relevance of search results to the question.
 
@@ -121,7 +122,7 @@ async def rewrite_query(
     question: str,
     context_summary: str,
     gaps: str,
-    llm: Any,
+    llm: LLMProvider,
 ) -> str:
     """Rewrite a query to better target missing information.
 
@@ -159,7 +160,7 @@ Rewrite the question to better find the missing information. Output only the rew
 async def agentic_retrieve(
     question: str,
     vector_store: VectorStore,
-    llm: Any,
+    llm: LLMProvider,
     *,
     max_context: int = 15,
     relevance_threshold: float = 0.5,

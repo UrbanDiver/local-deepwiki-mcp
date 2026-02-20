@@ -96,7 +96,7 @@ class TestLocalEmbeddingProvider:
         provider = LocalEmbeddingProvider()
 
         # Should trigger model load
-        dimension = provider.get_dimension()
+        dimension = provider.dimension
 
         assert dimension == 768
         mock_transformer_class.assert_called_once()
@@ -113,9 +113,9 @@ class TestLocalEmbeddingProvider:
         provider = LocalEmbeddingProvider()
 
         # First call loads model
-        dim1 = provider.get_dimension()
+        dim1 = provider.dimension
         # Second call should use cached value
-        dim2 = provider.get_dimension()
+        dim2 = provider.dimension
 
         assert dim1 == dim2 == 384
         # Model only loaded once
@@ -196,20 +196,20 @@ class TestLocalEmbeddingProvider:
 
         provider = LocalEmbeddingProvider()
 
-        assert provider.get_max_batch_size() == 1000
+        assert provider.max_batch_size == 1000
 
     def test_get_max_tokens_known_model(self):
         """Test get_max_tokens for known models."""
         from local_deepwiki.providers.embeddings.local import LocalEmbeddingProvider
 
         provider = LocalEmbeddingProvider(model_name="all-MiniLM-L6-v2")
-        assert provider.get_max_tokens() == 256
+        assert provider.max_tokens == 256
 
         provider2 = LocalEmbeddingProvider(model_name="multi-qa-MiniLM-L6-cos-v1")
-        assert provider2.get_max_tokens() == 512
+        assert provider2.max_tokens == 512
 
         provider3 = LocalEmbeddingProvider(model_name="all-mpnet-base-v2")
-        assert provider3.get_max_tokens() == 384
+        assert provider3.max_tokens == 384
 
     def test_get_max_tokens_unknown_model(self):
         """Test get_max_tokens defaults to 512 for unknown models."""
@@ -217,7 +217,7 @@ class TestLocalEmbeddingProvider:
 
         provider = LocalEmbeddingProvider(model_name="unknown-custom-model")
 
-        assert provider.get_max_tokens() == 512
+        assert provider.max_tokens == 512
 
     @patch("sentence_transformers.SentenceTransformer")
     def test_get_capabilities(self, mock_transformer_class):
@@ -234,7 +234,7 @@ class TestLocalEmbeddingProvider:
 
         provider = LocalEmbeddingProvider(model_name="all-MiniLM-L6-v2")
 
-        capabilities = provider.get_capabilities()
+        capabilities = provider.capabilities
 
         assert isinstance(capabilities, EmbeddingProviderCapabilities)
         assert capabilities.max_batch_size == 1000

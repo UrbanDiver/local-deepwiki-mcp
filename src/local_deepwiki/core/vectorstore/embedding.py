@@ -62,6 +62,7 @@ async def embed_single_batch_with_retry(
     texts: list[str],
     embedding_provider: EmbeddingProvider,
     config: EmbeddingBatchConfig,
+    *,
     rate_limiter: RateLimiter | None,
     progress: EmbeddingProgress,
     semaphore: asyncio.Semaphore,
@@ -156,6 +157,7 @@ async def batch_embed(
     embedding_provider: EmbeddingProvider,
     config: EmbeddingBatchConfig,
     rate_limiter: RateLimiter | None,
+    *,
     batch_size: int | None = None,
     log_progress: bool = False,
 ) -> list[list[float]]:
@@ -217,7 +219,13 @@ async def batch_embed(
         progress = EmbeddingProgress(total_texts=len(unique_texts), total_batches=1)
         semaphore = asyncio.Semaphore(1)
         result = await embed_single_batch_with_retry(
-            0, batches[0], embedding_provider, config, rate_limiter, progress, semaphore
+            0,
+            batches[0],
+            embedding_provider,
+            config,
+            rate_limiter=rate_limiter,
+            progress=progress,
+            semaphore=semaphore,
         )
         if result.error is not None:
             raise RuntimeError(f"Failed to embed batch: {result.error}")
@@ -252,9 +260,9 @@ async def batch_embed(
             batch_texts,
             embedding_provider,
             config,
-            rate_limiter,
-            progress,
-            semaphore,
+            rate_limiter=rate_limiter,
+            progress=progress,
+            semaphore=semaphore,
         )
         for i, batch_texts in enumerate(batches)
     ]
@@ -308,6 +316,7 @@ async def batch_embed_sequential(
     texts: list[str],
     embedding_provider: EmbeddingProvider,
     batch_size: int,
+    *,
     log_progress: bool = False,
 ) -> list[list[float]]:
     """Generate embeddings in sequential batches (legacy method).

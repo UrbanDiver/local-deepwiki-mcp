@@ -184,7 +184,7 @@ class TestLLMProviderContract:
         assert hasattr(provider, "name")
         assert hasattr(provider, "validate_connectivity")
         assert hasattr(provider, "validate_model")
-        assert hasattr(provider, "get_capabilities")
+        assert hasattr(provider, "capabilities")
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_openai_provider_implements_interface(self):
@@ -198,7 +198,7 @@ class TestLLMProviderContract:
         assert hasattr(provider, "name")
         assert hasattr(provider, "validate_connectivity")
         assert hasattr(provider, "validate_model")
-        assert hasattr(provider, "get_capabilities")
+        assert hasattr(provider, "capabilities")
 
     def test_ollama_provider_implements_interface(self):
         """Test that OllamaProvider implements all abstract methods."""
@@ -211,7 +211,7 @@ class TestLLMProviderContract:
         assert hasattr(provider, "name")
         assert hasattr(provider, "validate_connectivity")
         assert hasattr(provider, "validate_model")
-        assert hasattr(provider, "get_capabilities")
+        assert hasattr(provider, "capabilities")
 
     @patch.dict(
         os.environ, {"ANTHROPIC_API_KEY": "sk-ant-api03-testkey1234567890abcdef"}
@@ -221,7 +221,7 @@ class TestLLMProviderContract:
         from local_deepwiki.providers.llm.anthropic import AnthropicProvider
 
         provider = AnthropicProvider(model="claude-sonnet-4-20250514")
-        caps = provider.get_capabilities()
+        caps = provider.capabilities
 
         assert isinstance(caps, LLMProviderCapabilities)
         assert caps.supports_streaming is True
@@ -236,7 +236,7 @@ class TestLLMProviderContract:
         from local_deepwiki.providers.llm.openai import OpenAILLMProvider
 
         provider = OpenAILLMProvider(model="gpt-4o")
-        caps = provider.get_capabilities()
+        caps = provider.capabilities
 
         assert isinstance(caps, LLMProviderCapabilities)
         assert caps.supports_streaming is True
@@ -249,7 +249,7 @@ class TestLLMProviderContract:
         from local_deepwiki.providers.llm.openai import OpenAILLMProvider
 
         provider = OpenAILLMProvider(model="o1")
-        caps = provider.get_capabilities()
+        caps = provider.capabilities
 
         # O1 models have different capabilities
         assert caps.supports_streaming is False
@@ -260,7 +260,7 @@ class TestLLMProviderContract:
         from local_deepwiki.providers.llm.ollama import OllamaProvider
 
         provider = OllamaProvider()
-        caps = provider.get_capabilities()
+        caps = provider.capabilities
 
         assert isinstance(caps, LLMProviderCapabilities)
         assert caps.supports_streaming is True
@@ -282,12 +282,12 @@ class TestEmbeddingProviderContract:
         provider = LocalEmbeddingProvider()
 
         assert hasattr(provider, "embed")
-        assert hasattr(provider, "get_dimension")
+        assert hasattr(provider, "dimension")
         assert hasattr(provider, "name")
         assert hasattr(provider, "validate_connectivity")
-        assert hasattr(provider, "get_max_batch_size")
-        assert hasattr(provider, "get_max_tokens")
-        assert hasattr(provider, "get_capabilities")
+        assert hasattr(provider, "max_batch_size")
+        assert hasattr(provider, "max_tokens")
+        assert hasattr(provider, "capabilities")
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_openai_embedding_provider_implements_interface(self):
@@ -297,12 +297,12 @@ class TestEmbeddingProviderContract:
         provider = OpenAIEmbeddingProvider()
 
         assert hasattr(provider, "embed")
-        assert hasattr(provider, "get_dimension")
+        assert hasattr(provider, "dimension")
         assert hasattr(provider, "name")
         assert hasattr(provider, "validate_connectivity")
-        assert hasattr(provider, "get_max_batch_size")
-        assert hasattr(provider, "get_max_tokens")
-        assert hasattr(provider, "get_capabilities")
+        assert hasattr(provider, "max_batch_size")
+        assert hasattr(provider, "max_tokens")
+        assert hasattr(provider, "capabilities")
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_openai_embedding_capabilities(self):
@@ -310,7 +310,7 @@ class TestEmbeddingProviderContract:
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
 
         provider = OpenAIEmbeddingProvider(model="text-embedding-3-small")
-        caps = provider.get_capabilities()
+        caps = provider.capabilities
 
         assert isinstance(caps, EmbeddingProviderCapabilities)
         assert caps.dimension == 1536
@@ -534,14 +534,14 @@ class TestEmbeddingProviderMethods:
         from local_deepwiki.providers.embeddings.local import LocalEmbeddingProvider
 
         provider = LocalEmbeddingProvider()
-        assert provider.get_max_batch_size() == 1000
+        assert provider.max_batch_size == 1000
 
     def test_local_embedding_max_tokens(self):
         """Test LocalEmbeddingProvider max tokens."""
         from local_deepwiki.providers.embeddings.local import LocalEmbeddingProvider
 
         provider = LocalEmbeddingProvider(model_name="all-MiniLM-L6-v2")
-        assert provider.get_max_tokens() == 256
+        assert provider.max_tokens == 256
 
     def test_local_embedding_max_tokens_unknown_model(self):
         """Test LocalEmbeddingProvider max tokens for unknown model."""
@@ -549,7 +549,7 @@ class TestEmbeddingProviderMethods:
 
         provider = LocalEmbeddingProvider(model_name="unknown-model")
         # Should return default
-        assert provider.get_max_tokens() == 512
+        assert provider.max_tokens == 512
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_openai_embedding_max_batch_size(self):
@@ -557,7 +557,7 @@ class TestEmbeddingProviderMethods:
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
 
         provider = OpenAIEmbeddingProvider()
-        assert provider.get_max_batch_size() == 2048
+        assert provider.max_batch_size == 2048
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_openai_embedding_max_tokens(self):
@@ -565,7 +565,7 @@ class TestEmbeddingProviderMethods:
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
 
         provider = OpenAIEmbeddingProvider(model="text-embedding-3-small")
-        assert provider.get_max_tokens() == 8191
+        assert provider.max_tokens == 8191
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_openai_embedding_dimension(self):
@@ -573,7 +573,7 @@ class TestEmbeddingProviderMethods:
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
 
         provider = OpenAIEmbeddingProvider(model="text-embedding-3-large")
-        assert provider.get_dimension() == 3072
+        assert provider.dimension == 3072
 
 
 # =============================================================================

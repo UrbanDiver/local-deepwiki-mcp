@@ -193,7 +193,8 @@ class OllamaProvider(LLMProvider):
             # Connection errors, timeouts, network errors, and Ollama API errors
             raise OllamaConnectionError(self._base_url, e) from e
 
-    def get_capabilities(self) -> LLMProviderCapabilities:
+    @property
+    def capabilities(self) -> LLMProviderCapabilities:
         """Return Ollama provider capabilities.
 
         Returns:

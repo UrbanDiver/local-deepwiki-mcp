@@ -33,13 +33,13 @@ class TestOpenAIEmbeddingProvider:
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
 
         provider = OpenAIEmbeddingProvider(model="text-embedding-3-small")
-        assert provider.get_dimension() == 1536
+        assert provider.dimension == 1536
 
         provider2 = OpenAIEmbeddingProvider(model="text-embedding-3-large")
-        assert provider2.get_dimension() == 3072
+        assert provider2.dimension == 3072
 
         provider3 = OpenAIEmbeddingProvider(model="text-embedding-ada-002")
-        assert provider3.get_dimension() == 1536
+        assert provider3.dimension == 1536
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_get_dimension_unknown_model(self):
@@ -47,7 +47,7 @@ class TestOpenAIEmbeddingProvider:
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
 
         provider = OpenAIEmbeddingProvider(model="unknown-model")
-        assert provider.get_dimension() == 1536
+        assert provider.dimension == 1536
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     async def test_embed(self):

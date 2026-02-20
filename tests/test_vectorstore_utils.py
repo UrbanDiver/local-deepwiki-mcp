@@ -19,7 +19,8 @@ class MockEmbeddingProvider(EmbeddingProvider):
         """Return provider name."""
         return self._name
 
-    def get_dimension(self) -> int:
+    @property
+    def dimension(self) -> int:
         """Return embedding dimension."""
         return self._dimension
 
@@ -467,7 +468,7 @@ class TestLazyIndexManager:
 
     async def test_lazy_index_stats(self, vector_store_lazy):
         """Test get_lazy_index_stats returns correct information."""
-        stats = vector_store_lazy.get_lazy_index_stats()
+        stats = vector_store_lazy.lazy_index_stats
 
         assert stats["enabled"] is True
         assert stats["index_pending"] is False
@@ -490,7 +491,7 @@ class TestLazyIndexManager:
         await vector_store_lazy.search("unique query gamma", use_fuzzy=True)
 
         # Check latency was recorded
-        stats = vector_store_lazy.get_lazy_index_stats()
+        stats = vector_store_lazy.lazy_index_stats
         assert stats["latency_samples"] == 3
         assert stats["average_latency_ms"] is not None
         assert stats["average_latency_ms"] >= 0
@@ -556,7 +557,7 @@ class TestLazyIndexManager:
         await vector_store_lazy.create_or_update_table(chunks)
 
         # State should be fresh (only pending flag set for large table)
-        stats = vector_store_lazy.get_lazy_index_stats()
+        stats = vector_store_lazy.lazy_index_stats
         assert stats["index_pending"] is True  # Set during create
         assert stats["index_created"] is False
         assert stats["latency_samples"] == 0  # Reset clears latency
@@ -797,7 +798,7 @@ class TestLazyIndexIntegration:
         assert len(results1) > 0
 
         # 3. Check stats
-        stats = vector_store.get_lazy_index_stats()
+        stats = vector_store.lazy_index_stats
         assert stats["index_pending"] is True
         assert stats["latency_samples"] == 1  # One search recorded
 

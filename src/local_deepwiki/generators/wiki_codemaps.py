@@ -164,9 +164,10 @@ async def generate_codemap_pages(
     llm: "LLMProvider",
     repo_path: Path,
     wiki_path: Path,
+    *,
     status_manager: "WikiStatusManager",
     config: "WikiConfig",
-    full_rebuild: bool,
+    full_rebuild: bool = False,
 ) -> tuple[list[WikiPage], int, int]:
     """Generate codemap wiki pages for auto-discovered entry points.
 

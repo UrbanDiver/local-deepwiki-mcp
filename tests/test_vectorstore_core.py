@@ -23,7 +23,8 @@ class MockEmbeddingProvider(EmbeddingProvider):
         """Return provider name."""
         return self._name
 
-    def get_dimension(self) -> int:
+    @property
+    def dimension(self) -> int:
         """Return embedding dimension."""
         return self._dimension
 
@@ -296,7 +297,7 @@ class TestVectorStoreStats:
 
     def test_stats_empty_store(self, vector_store):
         """Test stats for empty store."""
-        stats = vector_store.get_stats()
+        stats = vector_store.stats
         assert stats["total_chunks"] == 0
         assert stats["languages"] == {}
         assert stats["chunk_types"] == {}
@@ -316,7 +317,7 @@ class TestVectorStoreStats:
         ]
         await vector_store.create_or_update_table(chunks)
 
-        stats = vector_store.get_stats()
+        stats = vector_store.stats
         assert stats["total_chunks"] == 3
         assert stats["languages"]["python"] == 2
         assert stats["languages"]["typescript"] == 1
@@ -344,7 +345,7 @@ class TestVectorStoreAddChunks:
         assert count == 1
 
         # Verify data exists
-        stats = vector_store.get_stats()
+        stats = vector_store.stats
         assert stats["total_chunks"] == 1
 
     async def test_add_to_existing_table(self, vector_store):
@@ -359,7 +360,7 @@ class TestVectorStoreAddChunks:
         assert count == 2
 
         # Verify total
-        stats = vector_store.get_stats()
+        stats = vector_store.stats
         assert stats["total_chunks"] == 3
 
     async def test_add_empty_list(self, vector_store):
@@ -401,7 +402,7 @@ class TestVectorStoreEdgeCases:
         """Test create_or_update_table with empty list returns 0."""
         result = await vector_store.create_or_update_table([])
         assert result == 0
-        assert vector_store.get_stats()["total_chunks"] == 0
+        assert vector_store.stats["total_chunks"] == 0
 
     # --- Special characters and injection protection ---
 
@@ -505,14 +506,14 @@ class TestVectorStoreEdgeCases:
         # Create initial data
         initial_chunks = [make_chunk("old_1"), make_chunk("old_2")]
         await vector_store.create_or_update_table(initial_chunks)
-        assert vector_store.get_stats()["total_chunks"] == 2
+        assert vector_store.stats["total_chunks"] == 2
 
         # Replace with new data
         new_chunks = [make_chunk("new_1")]
         await vector_store.create_or_update_table(new_chunks)
 
         # Old data should be gone
-        assert vector_store.get_stats()["total_chunks"] == 1
+        assert vector_store.stats["total_chunks"] == 1
         old_chunk = await vector_store.get_chunk_by_id("old_1")
         assert old_chunk is None
         new_chunk = await vector_store.get_chunk_by_id("new_1")
@@ -548,7 +549,7 @@ class TestVectorStoreEdgeCases:
         assert result is not None
 
         # Stats
-        stats = vector_store.get_stats()
+        stats = vector_store.stats
         assert stats["total_chunks"] == 1
 
     async def test_empty_content_chunk(self, vector_store):

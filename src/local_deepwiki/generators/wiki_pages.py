@@ -215,6 +215,7 @@ async def generate_overview_page(
     vector_store: VectorStore,
     llm: LLMProvider,
     system_prompt: str,
+    *,
     manifest: ProjectManifest | None,
     repo_path: Path | None,
     max_chunk_content_chars: int = 15000,
@@ -304,6 +305,7 @@ async def generate_architecture_page(
     vector_store: VectorStore,
     llm: LLMProvider,
     system_prompt: str,
+    *,
     manifest: ProjectManifest | None,
     repo_path: Path | None,
     max_chunk_content_chars: int = 15000,
@@ -445,6 +447,7 @@ async def generate_dependencies_page(
     vector_store: VectorStore,
     llm: LLMProvider,
     system_prompt: str,
+    *,
     manifest: ProjectManifest | None,
     import_search_limit: int,
 ) -> tuple[WikiPage, list[str]]:

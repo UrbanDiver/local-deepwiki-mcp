@@ -227,7 +227,9 @@ class TestRerankWithFuzzy:
         return [
             make_result("get_user", "def get_user(): return user", 0.8),
             make_result("process_data", "def process_data(): return data", 0.85),
-            make_result("calculate_user_score", "def calculate_user_score(): pass", 0.7),
+            make_result(
+                "calculate_user_score", "def calculate_user_score(): pass", 0.7
+            ),
         ]
 
     def test_rerank_boosts_exact_match(self, sample_results):
@@ -326,7 +328,8 @@ class TestVectorStoreSearchWithFilters:
             def name(self) -> str:
                 return "mock"
 
-            def get_dimension(self) -> int:
+            @property
+            def dimension(self) -> int:
                 return 384
 
             async def embed(self, texts: list[str]) -> list[list[float]]:
@@ -462,7 +465,8 @@ class TestFuzzySearchHelper:
             def name(self) -> str:
                 return "mock"
 
-            def get_dimension(self) -> int:
+            @property
+            def dimension(self) -> int:
                 return 384
 
             async def embed(self, texts: list[str]) -> list[list[float]]:
@@ -582,7 +586,9 @@ class TestFuzzySearchHelper:
         # Should suggest names containing "calculate"
         assert any("calculate" in s for s in suggestions)
 
-    async def test_generate_suggestions_excludes_existing_names(self, store_with_named_chunks):
+    async def test_generate_suggestions_excludes_existing_names(
+        self, store_with_named_chunks
+    ):
         """Test that suggestions exclude names already in results."""
         from local_deepwiki.core.fuzzy_search import FuzzySearchHelper
 
@@ -600,9 +606,13 @@ class TestFuzzySearchHelper:
             start_line=1,
             end_line=1,
         )
-        existing_results = [SearchResult(chunk=existing_chunk, score=0.3, highlights=[])]
+        existing_results = [
+            SearchResult(chunk=existing_chunk, score=0.3, highlights=[])
+        ]
 
-        suggestions = helper.generate_suggestions("calculate", existing_results, threshold=0.5)
+        suggestions = helper.generate_suggestions(
+            "calculate", existing_results, threshold=0.5
+        )
         # Should not include calculate_sum
         assert "calculate_sum" not in suggestions
 
@@ -775,7 +785,8 @@ class TestFuzzySearchHelperEdgeCases:
             def name(self) -> str:
                 return "mock"
 
-            def get_dimension(self) -> int:
+            @property
+            def dimension(self) -> int:
                 return 384
 
             async def embed(self, texts: list[str]) -> list[list[float]]:
@@ -796,7 +807,8 @@ class TestFuzzySearchHelperEdgeCases:
             def name(self) -> str:
                 return "mock"
 
-            def get_dimension(self) -> int:
+            @property
+            def dimension(self) -> int:
                 return 384
 
             async def embed(self, texts: list[str]) -> list[list[float]]:
@@ -817,7 +829,9 @@ class TestFuzzySearchHelperEdgeCases:
         stats = helper.get_stats()
         assert stats["total_names"] == 0
 
-    async def test_build_name_index_with_empty_names(self, vector_store_with_edge_cases):
+    async def test_build_name_index_with_empty_names(
+        self, vector_store_with_edge_cases
+    ):
         """Test build_name_index skips chunks with empty names (line 366)."""
         from local_deepwiki.core.fuzzy_search import FuzzySearchHelper
 
@@ -863,7 +877,9 @@ class TestFuzzySearchHelperEdgeCases:
         # Only valid_function should be indexed
         assert stats["total_names"] == 1
 
-    async def test_build_name_index_skips_non_name_types(self, vector_store_with_edge_cases):
+    async def test_build_name_index_skips_non_name_types(
+        self, vector_store_with_edge_cases
+    ):
         """Test build_name_index skips chunks without meaningful names (line 375)."""
         from local_deepwiki.core.fuzzy_search import FuzzySearchHelper
 
@@ -967,13 +983,17 @@ class TestFuzzySearchHelperEdgeCases:
         await helper.build_name_index()
 
         # Filter by function type
-        results = helper.find_similar_names("calc", threshold=0.5, chunk_type=ChunkType.FUNCTION)
+        results = helper.find_similar_names(
+            "calc", threshold=0.5, chunk_type=ChunkType.FUNCTION
+        )
         names = [n for n, s in results]
         assert "calculate_sum" in names
         assert "Calculator" not in names
 
         # Filter by method type (should include fully qualified names)
-        method_results = helper.find_similar_names("add", threshold=0.5, chunk_type=ChunkType.METHOD)
+        method_results = helper.find_similar_names(
+            "add", threshold=0.5, chunk_type=ChunkType.METHOD
+        )
         method_names = [n for n, s in method_results]
         assert "add" in method_names or "Calculator.add" in method_names
 
@@ -988,7 +1008,9 @@ class TestFuzzySearchHelperEdgeCases:
         results = helper.find_similar_names("test", threshold=0.6)
         assert results == []
 
-    async def test_find_similar_names_skips_duplicates(self, vector_store_with_edge_cases):
+    async def test_find_similar_names_skips_duplicates(
+        self, vector_store_with_edge_cases
+    ):
         """Test find_similar_names skips duplicate names (line 483)."""
         from local_deepwiki.core.fuzzy_search import FuzzySearchHelper
 
@@ -1049,7 +1071,9 @@ class TestFuzzySearchHelperEdgeCases:
         suggestions = helper.generate_suggestions("", [])
         assert suggestions == []
 
-    async def test_generate_suggestions_short_query_terms(self, vector_store_with_edge_cases):
+    async def test_generate_suggestions_short_query_terms(
+        self, vector_store_with_edge_cases
+    ):
         """Test generate_suggestions with single char query terms (line 523)."""
         from local_deepwiki.core.fuzzy_search import FuzzySearchHelper
 
@@ -1074,7 +1098,9 @@ class TestFuzzySearchHelperEdgeCases:
         suggestions = helper.generate_suggestions("a", [], threshold=0.5)
         # May or may not have suggestions depending on fuzzy threshold
 
-    async def test_generate_suggestions_full_query_boost(self, vector_store_with_edge_cases):
+    async def test_generate_suggestions_full_query_boost(
+        self, vector_store_with_edge_cases
+    ):
         """Test generate_suggestions boosts full query matches (lines 556-558)."""
         from local_deepwiki.core.fuzzy_search import FuzzySearchHelper
 
@@ -1125,7 +1151,8 @@ class TestGetFileSuggestions:
             def name(self) -> str:
                 return "mock"
 
-            def get_dimension(self) -> int:
+            @property
+            def dimension(self) -> int:
                 return 384
 
             async def embed(self, texts: list[str]) -> list[list[float]]:

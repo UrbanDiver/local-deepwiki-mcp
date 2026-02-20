@@ -79,7 +79,7 @@ class TestOpenAIEmbeddingProviderInitialization:
 
         for model_name, model_info in OPENAI_EMBEDDING_MODELS.items():
             provider = OpenAIEmbeddingProvider(model=model_name)
-            assert provider.get_dimension() == model_info["dimension"]
+            assert provider.dimension == model_info["dimension"]
 
     @patch.dict(
         os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
@@ -89,7 +89,7 @@ class TestOpenAIEmbeddingProviderInitialization:
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
 
         provider = OpenAIEmbeddingProvider(model="unknown-future-model")
-        assert provider.get_dimension() == 1536  # Default dimension
+        assert provider.dimension == 1536  # Default dimension
 
 
 class TestOpenAIEmbeddingProviderHandleApiError:
@@ -542,7 +542,7 @@ class TestOpenAIEmbeddingProviderCapabilities:
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
 
         provider = OpenAIEmbeddingProvider(model="text-embedding-3-small")
-        assert provider.get_max_batch_size() == 2048
+        assert provider.max_batch_size == 2048
 
     @patch.dict(
         os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
@@ -552,7 +552,7 @@ class TestOpenAIEmbeddingProviderCapabilities:
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
 
         provider = OpenAIEmbeddingProvider(model="text-embedding-3-small")
-        assert provider.get_max_tokens() == 8191
+        assert provider.max_tokens == 8191
 
     @patch.dict(
         os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
@@ -562,7 +562,7 @@ class TestOpenAIEmbeddingProviderCapabilities:
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
 
         provider = OpenAIEmbeddingProvider(model="unknown-model")
-        assert provider.get_max_tokens() == 8191  # Default
+        assert provider.max_tokens == 8191  # Default
 
     @patch.dict(
         os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
@@ -576,7 +576,7 @@ class TestOpenAIEmbeddingProviderCapabilities:
         )
 
         provider = OpenAIEmbeddingProvider(model="text-embedding-3-small")
-        caps = provider.get_capabilities()
+        caps = provider.capabilities
 
         assert isinstance(caps, EmbeddingProviderCapabilities)
         assert caps.max_batch_size == 2048
@@ -593,7 +593,7 @@ class TestOpenAIEmbeddingProviderCapabilities:
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
 
         provider = OpenAIEmbeddingProvider(model="text-embedding-3-large")
-        assert provider.get_dimension() == 3072
+        assert provider.dimension == 3072
 
     @patch.dict(
         os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
@@ -603,7 +603,7 @@ class TestOpenAIEmbeddingProviderCapabilities:
         from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
 
         provider = OpenAIEmbeddingProvider(model="text-embedding-ada-002")
-        assert provider.get_dimension() == 1536
+        assert provider.dimension == 1536
 
     @patch.dict(
         os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"}, clear=True
@@ -792,7 +792,7 @@ class TestOpenAIEmbeddingProviderEdgeCases:
 
         provider = OpenAIEmbeddingProvider()
         assert provider._model == "text-embedding-3-small"
-        assert provider.get_dimension() == 1536
+        assert provider.dimension == 1536
 
 
 class TestOpenAIEmbeddingModelsDict:

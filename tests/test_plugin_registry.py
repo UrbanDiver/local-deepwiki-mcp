@@ -450,9 +450,7 @@ class TestLoadFromEntryPoints:
                     mock_metadata = MagicMock()
                     mock_metadata.entry_points = mock_entry_points
 
-                    with patch.dict(
-                        sys.modules, {"importlib.metadata": mock_metadata}
-                    ):
+                    with patch.dict(sys.modules, {"importlib.metadata": mock_metadata}):
                         loaded = registry.load_from_entry_points()
                         # The actual implementation checks version_info at runtime
                         # This test verifies the path doesn't crash
@@ -504,9 +502,7 @@ class TestLoadFromEntryPoints:
 
         # Force Python 3.9 path
         with patch.object(sys, "version_info", (3, 9, 0)):
-            with patch(
-                "importlib.metadata.entry_points", mock_get_entry_points
-            ):
+            with patch("importlib.metadata.entry_points", mock_get_entry_points):
                 loaded = registry.load_from_entry_points()
                 # Should not crash on 3.9 path
                 assert loaded >= 0
@@ -527,9 +523,7 @@ class TestLoadFromEntryPoints:
 
         # Force Python 3.9 path
         with patch.object(sys, "version_info", (3, 9, 0)):
-            with patch(
-                "importlib.metadata.entry_points", mock_get_entry_points
-            ):
+            with patch("importlib.metadata.entry_points", mock_get_entry_points):
                 with patch("local_deepwiki.plugins.registry.logger") as mock_logger:
                     loaded = registry.load_from_entry_points()
                     # Should log warning for failed load
@@ -618,9 +612,7 @@ class TestDiscoverPlugins:
         monkeypatch.setattr(Path, "home", lambda: mock_home)
 
         mock_load_entry_points = MagicMock(return_value=2)
-        with patch.object(
-            registry, "load_from_entry_points", mock_load_entry_points
-        ):
+        with patch.object(registry, "load_from_entry_points", mock_load_entry_points):
             loaded = registry.discover_plugins()
             mock_load_entry_points.assert_called_once()
             assert loaded == 2

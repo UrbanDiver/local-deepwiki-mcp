@@ -229,6 +229,7 @@ class DependencyGraphGenerator:
     async def generate_module_graph(
         self,
         index_status: IndexStatus,
+        *,
         show_external: bool = False,
         max_external: int = 10,
         exclude_tests: bool = True,
@@ -848,6 +849,7 @@ flowchart TD
 async def generate_dependency_graph_page(
     index_status: IndexStatus,
     vector_store: "VectorStore",
+    *,
     show_external: bool = True,
     max_external: int = 10,
     wiki_base_path: str = "files/",

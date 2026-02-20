@@ -8,6 +8,7 @@ import threading
 import time
 from collections.abc import Iterator
 from pathlib import Path
+from types import TracebackType
 from typing import TYPE_CHECKING, Any, Callable
 
 if TYPE_CHECKING:
@@ -46,6 +47,12 @@ from .utils import RateLimiter, _row_to_chunk_default, _sanitize_string_value
 logger = get_logger(__name__)
 
 
+def _log_task_exception(task: asyncio.Task[Any]) -> None:
+    """Log exceptions from fire-and-forget background tasks."""
+    if not task.cancelled() and task.exception() is not None:
+        logger.warning("Background task failed: %s", task.exception())
+
+
 class VectorStore:
     """Vector store using LanceDB for code chunk storage and semantic search."""
 
@@ -55,6 +62,7 @@ class VectorStore:
         self,
         db_path: Path,
         embedding_provider: EmbeddingProvider,
+        *,
         search_cache_config: SearchCacheConfig | None = None,
         embedding_batch_config: EmbeddingBatchConfig | None = None,
         lazy_index_config: LazyIndexConfig | None = None,
@@ -158,7 +166,7 @@ class VectorStore:
         self,
         exc_type: type[BaseException] | None,
         exc_val: BaseException | None,
-        exc_tb: Any,
+        exc_tb: TracebackType | None,
     ) -> None:
         """Exit the async context manager, closing the store."""
         self.close()
@@ -269,9 +277,9 @@ class VectorStore:
             texts,
             self.embedding_provider,
             self._embedding_batch_config,
-            self._rate_limiter,
-            progress,
-            semaphore,
+            rate_limiter=self._rate_limiter,
+            progress=progress,
+            semaphore=semaphore,
         )
 
     async def _batch_embed(
@@ -288,8 +296,8 @@ class VectorStore:
             self.embedding_provider,
             self._embedding_batch_config,
             self._rate_limiter,
-            batch_size,
-            log_progress,
+            batch_size=batch_size,
+            log_progress=log_progress,
         )
 
     async def _batch_embed_sequential(
@@ -299,7 +307,7 @@ class VectorStore:
         from .embedding import batch_embed_sequential
 
         return await batch_embed_sequential(
-            texts, self.embedding_provider, batch_size, log_progress
+            texts, self.embedding_provider, batch_size, log_progress=log_progress
         )
 
     async def create_or_update_table(
@@ -415,6 +423,7 @@ class VectorStore:
         self,
         query: str,
         limit: int = 10,
+        *,
         language: str | None = None,
         chunk_type: str | None = None,
         path_pattern: str | None = None,
@@ -561,7 +570,10 @@ class VectorStore:
         if self._lazy_index_manager.should_create_index():
             # Schedule background index creation (non-blocking)
             try:
-                asyncio.create_task(self._lazy_index_manager.schedule_index_creation())
+                task = asyncio.create_task(
+                    self._lazy_index_manager.schedule_index_creation()
+                )
+                task.add_done_callback(_log_task_exception)
             except RuntimeError:
                 # No event loop running (e.g., in sync context)
                 logger.debug("Cannot schedule lazy index creation: no event loop")
@@ -679,6 +691,7 @@ class VectorStore:
         query: str,
         limit: int = 10,
         offset: int = 0,
+        *,
         language: str | None = None,
         chunk_type: str | None = None,
         path_pattern: str | None = None,
@@ -865,7 +878,8 @@ class VectorStore:
         """
         self._adaptive_searcher.record_feedback(feedback)
 
-    def get_search_profile(self) -> SearchProfile:
+    @property
+    def search_profile(self) -> SearchProfile:
         """Get the current default search profile.
 
         Returns:
@@ -873,7 +887,8 @@ class VectorStore:
         """
         return self._default_search_profile
 
-    def set_search_profile(self, profile: SearchProfile | str) -> None:
+    @search_profile.setter
+    def search_profile(self, profile: SearchProfile | str) -> None:
         """Set the default search profile.
 
         Args:
@@ -894,7 +909,8 @@ class VectorStore:
         else:
             self._default_search_profile = profile
 
-    def get_adaptive_search_enabled(self) -> bool:
+    @property
+    def adaptive_search_enabled(self) -> bool:
         """Check if adaptive search is enabled.
 
         Returns:
@@ -902,7 +918,8 @@ class VectorStore:
         """
         return self._adaptive_search_enabled
 
-    def set_adaptive_search_enabled(self, enabled: bool) -> None:
+    @adaptive_search_enabled.setter
+    def adaptive_search_enabled(self, enabled: bool) -> None:
         """Enable or disable adaptive search.
 
         Args:
@@ -910,7 +927,8 @@ class VectorStore:
         """
         self._adaptive_search_enabled = enabled
 
-    def get_adaptive_search_stats(self) -> dict[str, Any]:
+    @property
+    def adaptive_search_stats(self) -> dict[str, Any]:
         """Get statistics about adaptive search performance.
 
         Returns:
@@ -1098,7 +1116,8 @@ class VectorStore:
 
         return result
 
-    def get_stats(self) -> dict[str, Any]:
+    @property
+    def stats(self) -> dict[str, Any]:
         """Get statistics about the vector store.
 
         Uses PyArrow for memory-efficient aggregation instead of loading
@@ -1169,7 +1188,7 @@ class VectorStore:
 
         # For small tables, use the regular method
         if total_chunks <= batch_size:
-            return self.get_stats()
+            return self.stats
 
         # Fetch all rows once with columnar projection (avoids O(n^2) offset re-fetching)
         languages: dict[str, int] = {}
@@ -1378,7 +1397,8 @@ class VectorStore:
         """
         return self._search_cache.invalidate()
 
-    def get_search_cache_stats(self) -> dict[str, Any]:
+    @property
+    def search_cache_stats(self) -> dict[str, Any]:
         """Get search cache statistics.
 
         Returns:
@@ -1395,7 +1415,8 @@ class VectorStore:
         """
         return self._search_cache.get_stats()
 
-    def get_embedding_batch_config(self) -> dict[str, Any]:
+    @property
+    def embedding_batch_config(self) -> dict[str, Any]:
         """Get embedding batch configuration.
 
         Returns:
@@ -1432,7 +1453,8 @@ class VectorStore:
         """
         return self._lazy_index_manager
 
-    def get_lazy_index_stats(self) -> dict[str, Any]:
+    @property
+    def lazy_index_stats(self) -> dict[str, Any]:
         """Get statistics about lazy index creation.
 
         Returns:
