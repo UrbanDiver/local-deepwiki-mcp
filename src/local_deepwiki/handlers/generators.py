@@ -9,6 +9,7 @@ from typing import Any, Callable
 from mcp.types import TextContent
 from pydantic import ValidationError as PydanticValidationError
 
+from local_deepwiki.core.path_utils import find_deepwiki_dirs, validate_file_in_repo
 from local_deepwiki.handlers._shared import (
     DetectSecretsArgs,
     DetectStaleDocsArgs,
@@ -290,17 +291,7 @@ async def handle_get_call_graph(args: dict[str, Any]) -> list[TextContent]:
     extractor = CallGraphExtractor()
 
     if file_path:
-        # Validate file path is within repo (prevent traversal)
-        target = (repo_path / file_path).resolve()
-        if not target.is_relative_to(repo_path):
-            raise ValidationError(
-                message="Invalid file path: path traversal not allowed",
-                hint="The file path must be within the repository.",
-                field="file_path",
-                value=file_path,
-            )
-        if not target.exists():
-            raise path_not_found_error(file_path, "file")
+        target = validate_file_in_repo(repo_path, file_path)
 
         graph = extractor.extract_from_file(target, repo_path)
         diagram = generate_call_graph_diagram(graph, title=file_path)
@@ -630,18 +621,7 @@ async def handle_get_api_docs(args: dict[str, Any]) -> list[TextContent]:
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
-    # Validate file path is within repo (prevent traversal)
-    target = (repo_path / file_path).resolve()
-    if not target.is_relative_to(repo_path):
-        raise ValidationError(
-            message="Invalid file path: path traversal not allowed",
-            hint="The file path must be within the repository.",
-            field="file_path",
-            value=file_path,
-        )
-
-    if not target.exists():
-        raise path_not_found_error(file_path, "file")
+    target = validate_file_in_repo(repo_path, file_path)
 
     from local_deepwiki.generators.api_docs import get_file_api_docs
 
@@ -688,10 +668,7 @@ async def handle_list_indexed_repos(args: dict[str, Any]) -> list[TextContent]:
     manager = IndexStatusManager()
     repos: list[dict[str, Any]] = []
 
-    # Search for .deepwiki directories
-    for deepwiki_dir in base_path.rglob(".deepwiki"):
-        if not deepwiki_dir.is_dir():
-            continue
+    for deepwiki_dir in find_deepwiki_dirs(base_path):
         status = manager.load(deepwiki_dir)
         if status is not None:
             repos.append(

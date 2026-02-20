@@ -300,9 +300,8 @@ class SearchCache:
         """Get cache statistics."""
         return self._stats.copy()
 
-    def _compute_similarity(
-        self, embedding1: list[float], embedding2: list[float]
-    ) -> float:
+    @staticmethod
+    def _compute_similarity(embedding1: list[float], embedding2: list[float]) -> float:
         """Compute cosine similarity between two embeddings.
 
         Args:
@@ -337,8 +336,9 @@ class SearchCache:
         age = time.time() - entry.created_at
         return age < self.config.ttl_seconds
 
+    @staticmethod
     def _filters_match(
-        self, cached_filters: dict[str, Any], query_filters: dict[str, Any]
+        cached_filters: dict[str, Any], query_filters: dict[str, Any]
     ) -> bool:
         """Check if cached filters match the query filters.
 

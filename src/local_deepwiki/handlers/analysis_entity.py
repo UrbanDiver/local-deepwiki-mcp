@@ -10,6 +10,7 @@ from typing import Any
 from mcp.types import TextContent
 from pydantic import ValidationError as PydanticValidationError
 
+from local_deepwiki.core.path_utils import validate_file_in_repo
 from local_deepwiki.handlers._shared import (
     ExplainEntityArgs,
     ImpactAnalysisArgs,
@@ -341,19 +342,7 @@ async def handle_impact_analysis(args: dict[str, Any]) -> list[TextContent]:
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
-    full_file = repo_path / file_path
-
-    # Validate file path is within repo (prevent traversal)
-    if not full_file.resolve().is_relative_to(repo_path):
-        raise ValidationError(
-            message="Invalid file path: path traversal not allowed",
-            hint="The file path must be within the repository.",
-            field="file_path",
-            value=file_path,
-        )
-
-    if not full_file.exists():
-        raise path_not_found_error(file_path, "file")
+    full_file = validate_file_in_repo(repo_path, file_path)
 
     index_status, wiki_path, config = await _load_index_status(repo_path)
 

@@ -859,14 +859,16 @@ class StreamingHtmlExporter(StreamingExporter):
         output_file.parent.mkdir(parents=True, exist_ok=True)
         output_file.write_text(html)
 
+    @staticmethod
     def _render_toc(
-        self, entries: list[dict[str, Any]], current_path: str, root_path: str
+        entries: list[dict[str, Any]], current_path: str, root_path: str
     ) -> str:
         """Render TOC entries as HTML. Delegates to shared.render_toc."""
         return render_toc(entries, current_path, root_path)
 
+    @staticmethod
     def _render_toc_entry(
-        self, entry: dict[str, Any], current_path: str, root_path: str
+        entry: dict[str, Any], current_path: str, root_path: str
     ) -> str:
         """Render a single TOC entry recursively. Delegates to shared.render_toc_entry."""
         return render_toc_entry(entry, current_path, root_path)
@@ -1028,13 +1030,13 @@ class HtmlExporter:
         output_file.parent.mkdir(parents=True, exist_ok=True)
         output_file.write_text(html)
 
-    def _render_toc(
-        self, entries: list[dict], current_path: str, root_path: str
-    ) -> str:
+    @staticmethod
+    def _render_toc(entries: list[dict], current_path: str, root_path: str) -> str:
         """Render TOC entries as HTML. Delegates to shared.render_toc."""
         return render_toc(entries, current_path, root_path)
 
-    def _render_toc_entry(self, entry: dict, current_path: str, root_path: str) -> str:
+    @staticmethod
+    def _render_toc_entry(entry: dict, current_path: str, root_path: str) -> str:
         """Render a single TOC entry recursively. Delegates to shared.render_toc_entry."""
         return render_toc_entry(entry, current_path, root_path)
 

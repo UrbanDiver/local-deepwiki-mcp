@@ -165,8 +165,8 @@ class IndexStatusManager:
             tmp_path.unlink(missing_ok=True)
             raise
 
+    @staticmethod
     def create(
-        self,
         repo_path: Path,
         files: list[FileInfo],
         total_chunks: int,
@@ -200,7 +200,8 @@ class IndexStatusManager:
             schema_version=schema_version or CURRENT_SCHEMA_VERSION,
         )
 
-    def validate(self, status: IndexStatus) -> list[str]:
+    @staticmethod
+    def validate(status: IndexStatus) -> list[str]:
         """Validate an index status and return a list of errors.
 
         Checks for:
@@ -272,8 +273,8 @@ class IndexStatusManager:
 
         return errors
 
+    @staticmethod
     def needs_reindex(
-        self,
         status: IndexStatus,
         file_path: str,
         file_hash: str,
@@ -302,8 +303,8 @@ class IndexStatusManager:
         # File exists - check if hash changed
         return prev_file.hash != file_hash
 
+    @staticmethod
     def get_files_needing_reindex(
-        self,
         status: IndexStatus,
         current_files: dict[str, str],
     ) -> tuple[list[str], list[str], list[str]]:
@@ -341,7 +342,8 @@ class IndexStatusManager:
 
         return new_files, modified_files, deleted_files
 
-    def compute_status_hash(self, status: IndexStatus) -> str:
+    @staticmethod
+    def compute_status_hash(status: IndexStatus) -> str:
         """Compute a hash of the index status for change detection.
 
         This hash can be used to detect if the index has changed since
@@ -357,8 +359,8 @@ class IndexStatusManager:
             json.dumps(status.model_dump(), sort_keys=True).encode()
         ).hexdigest()
 
+    @staticmethod
     def merge_files(
-        self,
         processed_files: list[FileInfo],
         unchanged_files: list[FileInfo],
         total_new_chunks: int,

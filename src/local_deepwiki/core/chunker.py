@@ -941,7 +941,8 @@ class CodeChunker:
             metadata=metadata,
         )
 
-    def _is_inside_class(self, node: Node, class_types: set[str]) -> bool:
+    @staticmethod
+    def _is_inside_class(node: Node, class_types: set[str]) -> bool:
         """Check if a node is inside a class definition.
 
         Args:
@@ -958,7 +959,8 @@ class CodeChunker:
             parent = parent.parent
         return False
 
-    def _generate_id(self, file_path: str, name: str, line: int) -> str:
+    @staticmethod
+    def _generate_id(file_path: str, name: str, line: int) -> str:
         """Generate a unique chunk ID.
 
         Args:

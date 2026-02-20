@@ -11,6 +11,7 @@ from typing import Any
 from mcp.types import TextContent
 from pydantic import ValidationError as PydanticValidationError
 
+from local_deepwiki.core.path_utils import validate_sub_path
 from local_deepwiki.handlers._shared import (
     MAX_WIKI_PAGE_SIZE,
     AskQuestionArgs,
@@ -653,16 +654,12 @@ async def handle_read_wiki_page(args: dict[str, Any]) -> list[TextContent]:
     wiki_path = Path(validated.wiki_path).resolve()
     page = validated.page
 
-    # Resolve the full path and validate it's within the wiki directory
-    # This prevents path traversal attacks (e.g., "../../etc/passwd")
-    page_path = (wiki_path / page).resolve()
-    if not page_path.is_relative_to(wiki_path):
-        raise ValidationError(
-            message="Invalid page path: path traversal not allowed",
-            hint="The page path must be within the wiki directory.",
-            field="page",
-            value=page,
-        )
+    page_path = validate_sub_path(
+        wiki_path,
+        page,
+        field="page",
+        hint="The page path must be within the wiki directory.",
+    )
 
     if not page_path.exists():
         entity_reg = wiki_path / "entity_registry.json"

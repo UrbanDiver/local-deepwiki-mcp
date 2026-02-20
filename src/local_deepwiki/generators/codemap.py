@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import re
 from collections import Counter, defaultdict, deque
+from itertools import chain
 from dataclasses import dataclass, field
 from operator import itemgetter
 from enum import StrEnum
@@ -279,8 +280,7 @@ async def discover_entry_points(
     # Compute all callees across discovered graphs to identify roots
     all_callees: set[str] = set()
     for cg in file_call_graphs.values():
-        for callees in cg.values():
-            all_callees.update(callees)
+        all_callees.update(chain.from_iterable(cg.values()))
 
     scored: list[tuple[float, CodemapNode]] = []
     for r in callable_results:

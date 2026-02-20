@@ -115,7 +115,8 @@ class WikiStatusManager:
 
         await asyncio.to_thread(_write_status)
 
-    def compute_content_hash(self, content: str) -> str:
+    @staticmethod
+    def compute_content_hash(content: str) -> str:
         """Compute hash of page content.
 
         Args:
@@ -370,7 +371,8 @@ class WikiStatusManager:
             "is_full_rebuild": self._previous_status is None,
         }
 
-    def compute_structural_fingerprint(self, index_status: IndexStatus) -> str:
+    @staticmethod
+    def compute_structural_fingerprint(index_status: IndexStatus) -> str:
         """Compute a structural fingerprint from the index status.
 
         The fingerprint changes when files are added, removed, or renamed,

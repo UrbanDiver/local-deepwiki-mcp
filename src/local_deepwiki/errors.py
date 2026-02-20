@@ -30,6 +30,28 @@ import re
 from pathlib import Path
 from typing import Any
 
+__all__ = [
+    "BaseProviderError",
+    "DeepWikiError",
+    "EnvironmentSetupError",
+    "EXCEPTION_HINTS",
+    "ExportError",
+    "IndexingError",
+    "ResearchError",
+    "ValidationError",
+    "environment_error",
+    "export_error",
+    "format_error_response",
+    "indexing_error",
+    "map_exception_to_deepwiki_error",
+    "not_indexed_error",
+    "path_not_found_error",
+    "provider_error",
+    "research_error",
+    "sanitize_error_message",
+    "validation_error",
+]
+
 
 class DeepWikiError(Exception):
     """Base exception for all DeepWiki errors.

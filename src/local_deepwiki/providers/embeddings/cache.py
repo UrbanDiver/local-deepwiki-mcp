@@ -162,7 +162,8 @@ class EmbeddingCache:
         combined = f"{self._provider.name}:{text}"
         return hashlib.sha256(combined.encode("utf-8")).hexdigest()
 
-    def _is_valid_entry(self, row: sqlite3.Row) -> bool:
+    @staticmethod
+    def _is_valid_entry(row: sqlite3.Row) -> bool:
         """Check if a cache entry is still valid (not expired).
 
         Args:
@@ -176,7 +177,8 @@ class EmbeddingCache:
         age = time.time() - created_at
         return age < ttl
 
-    def _serialize_embedding(self, embedding: list[float]) -> bytes:
+    @staticmethod
+    def _serialize_embedding(embedding: list[float]) -> bytes:
         """Serialize an embedding vector to bytes for storage.
 
         Uses JSON for simplicity and compatibility. For higher performance
@@ -190,7 +192,8 @@ class EmbeddingCache:
         """
         return json.dumps(embedding).encode("utf-8")
 
-    def _deserialize_embedding(self, data: bytes) -> list[float]:
+    @staticmethod
+    def _deserialize_embedding(data: bytes) -> list[float]:
         """Deserialize an embedding vector from bytes.
 
         Args:

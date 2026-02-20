@@ -456,7 +456,8 @@ class CrossLinker:
 
         return "".join(processed_parts)
 
-    def _split_by_code_blocks(self, content: str) -> list[tuple[str, bool]]:
+    @staticmethod
+    def _split_by_code_blocks(content: str) -> list[tuple[str, bool]]:
         """Split content into code and non-code sections.
 
         Args:
@@ -487,8 +488,8 @@ class CrossLinker:
 
         return parts
 
+    @staticmethod
     def _add_links_to_text(
-        self,
         text: str,
         linkable: dict[str, tuple[str, str]],
         backtick_re: re.Pattern[str],

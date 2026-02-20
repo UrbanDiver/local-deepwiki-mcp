@@ -14,6 +14,7 @@ from pydantic import ValidationError as PydanticValidationError
 # Threshold for considering wiki pages as stale (30 days in seconds)
 STALE_DOCS_THRESHOLD_SECONDS = 30 * 24 * 60 * 60
 
+from local_deepwiki.core.path_utils import validate_file_in_repo
 from local_deepwiki.handlers._shared import (
     GetComplexityMetricsArgs,
     GetFileContextArgs,
@@ -113,19 +114,7 @@ async def handle_get_file_context(args: dict[str, Any]) -> list[TextContent]:
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
-    full_file_path = (repo_path / file_path).resolve()
-
-    # Validate file path is within repo (prevent traversal)
-    if not full_file_path.is_relative_to(repo_path):
-        raise ValidationError(
-            message="Invalid file path: path traversal not allowed",
-            hint="The file path must be within the repository.",
-            field="file_path",
-            value=file_path,
-        )
-
-    if not full_file_path.exists():
-        raise path_not_found_error(file_path, "file")
+    validate_file_in_repo(repo_path, file_path)
 
     index_status, _wiki_path, config = await _load_index_status(repo_path)
 
@@ -357,16 +346,7 @@ async def handle_get_complexity_metrics(
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
-    full_file = repo_path / file_path
-    if not full_file.resolve().is_relative_to(repo_path):
-        raise ValidationError(
-            message="Invalid file path: path traversal not allowed",
-            hint="The file path must be within the repository.",
-            field="file_path",
-            value=file_path,
-        )
-    if not full_file.exists():
-        raise path_not_found_error(file_path, "file")
+    validate_file_in_repo(repo_path, file_path)
 
     from local_deepwiki.generators.complexity import compute_complexity_metrics
 

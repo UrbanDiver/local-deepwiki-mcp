@@ -7,13 +7,21 @@ import os
 import sys
 from typing import Literal
 
+__all__ = [
+    "LOG_FORMAT",
+    "LOG_FORMAT_DETAILED",
+    "PACKAGE_NAME",
+    "get_logger",
+    "setup_logging",
+]
+
 # Package-level logger
 PACKAGE_NAME = "local_deepwiki"
 
 # Log format with structured information
 LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 LOG_FORMAT_DETAILED = (
-    "%(asctime)s - %(name)s - %(levelname)s - " "[%(filename)s:%(lineno)d] %(message)s"
+    "%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] %(message)s"
 )
 
 
@@ -100,6 +108,10 @@ if not _default_logger.handlers:
     _handler.setFormatter(logging.Formatter(LOG_FORMAT))
     _default_logger.addHandler(_handler)
     _default_logger.setLevel(
-        getattr(logging, os.environ.get("DEEPWIKI_LOG_LEVEL", "WARNING").upper(), logging.WARNING)
+        getattr(
+            logging,
+            os.environ.get("DEEPWIKI_LOG_LEVEL", "WARNING").upper(),
+            logging.WARNING,
+        )
     )
     _default_logger.propagate = False

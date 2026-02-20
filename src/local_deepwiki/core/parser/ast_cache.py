@@ -114,7 +114,8 @@ class ASTCache:
         self._lock = threading.RLock()
         self._stats = ASTCacheStats()
 
-    def _make_key(self, file_path: str, file_hash: str) -> str:
+    @staticmethod
+    def _make_key(file_path: str, file_hash: str) -> str:
         """Create a cache key from file path and hash.
 
         Args:
@@ -137,7 +138,8 @@ class ASTCache:
         """
         return time.time() - entry.created_at > self._ttl_seconds
 
-    def _estimate_tree_size(self, tree: Any) -> int:
+    @staticmethod
+    def _estimate_tree_size(tree: Any) -> int:
         """Estimate memory size of a tree-sitter Tree.
 
         This is a rough estimate based on the tree structure. Tree-sitter

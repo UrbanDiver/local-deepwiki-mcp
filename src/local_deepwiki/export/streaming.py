@@ -206,7 +206,8 @@ class WikiPageIterator:
 
             yield page
 
-    def _extract_title(self, md_file: Path) -> str:
+    @staticmethod
+    def _extract_title(md_file: Path) -> str:
         """Extract title from markdown file without loading full content.
 
         Reads only the first few lines to find the title.

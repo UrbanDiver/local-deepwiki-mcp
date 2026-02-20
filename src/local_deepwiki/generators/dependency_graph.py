@@ -406,7 +406,8 @@ class DependencyGraphGenerator:
 
         return cycles
 
-    def _normalize_cycle(self, cycle: list[str]) -> list[str]:
+    @staticmethod
+    def _normalize_cycle(cycle: list[str]) -> list[str]:
         """Normalize a cycle for consistent comparison.
 
         Rotates the cycle so that the smallest element is first.
@@ -523,7 +524,8 @@ class DependencyGraphGenerator:
 
         return graph
 
-    def _parse_imports(self, content: str, language: str) -> list[str]:
+    @staticmethod
+    def _parse_imports(content: str, language: str) -> list[str]:
         """Parse import statements from code content.
 
         Args:
@@ -613,7 +615,8 @@ class DependencyGraphGenerator:
 
         return None
 
-    def _get_circular_edges(self, cycles: list[list[str]]) -> set[tuple[str, str]]:
+    @staticmethod
+    def _get_circular_edges(cycles: list[list[str]]) -> set[tuple[str, str]]:
         """Extract edges that are part of circular dependencies.
 
         Args:
@@ -752,7 +755,8 @@ class DependencyGraphGenerator:
 
         return "\n".join(lines)
 
-    def _render_file_graph(self, graph: DependencyGraph, module_path: str) -> str:
+    @staticmethod
+    def _render_file_graph(graph: DependencyGraph, module_path: str) -> str:
         """Render the file dependency graph as Mermaid markdown.
 
         Args:
@@ -810,7 +814,8 @@ class DependencyGraphGenerator:
 
         return "\n".join(lines)
 
-    def _file_path_to_wiki_path(self, file_path: str) -> str:
+    @staticmethod
+    def _file_path_to_wiki_path(file_path: str) -> str:
         """Convert a file path to its wiki page path.
 
         Args:
@@ -824,7 +829,8 @@ class DependencyGraphGenerator:
         wiki_path = str(path.with_suffix(".md"))
         return f"files/{wiki_path}"
 
-    def _generate_empty_graph_message(self, message: str) -> str:
+    @staticmethod
+    def _generate_empty_graph_message(message: str) -> str:
         """Generate a placeholder for empty graphs.
 
         Args:

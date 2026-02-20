@@ -316,7 +316,7 @@ class TestHandleReadWikiPage:
 
         assert len(result) == 1
         assert "error" in result[0].text.lower()
-        assert "Invalid page path" in result[0].text
+        assert "traversal" in result[0].text.lower()
 
     async def test_returns_nested_page(self, tmp_path):
         """Test returns nested page content."""

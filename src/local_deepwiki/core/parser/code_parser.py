@@ -145,7 +145,8 @@ class CodeParser:
 
         return self._parsers[language]
 
-    def detect_language(self, file_path: Path) -> LangEnum | None:
+    @staticmethod
+    def detect_language(file_path: Path) -> LangEnum | None:
         """Detect the programming language from file extension.
 
         Args:

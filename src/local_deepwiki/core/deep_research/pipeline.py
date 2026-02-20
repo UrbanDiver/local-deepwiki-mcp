@@ -11,6 +11,7 @@ import asyncio
 import time
 import uuid
 from collections.abc import Awaitable, Callable
+from itertools import chain
 from pathlib import Path
 from typing import Any, TypeAlias
 
@@ -227,8 +228,8 @@ class DeepResearchPipeline(ReasoningMixin, StepsMixin):
             completed_steps=[],
         )
 
+    @staticmethod
     def _results_to_checkpoint_format(
-        self,
         results: list[SearchResult],
         key: str = "default",
     ) -> dict[str, list[dict]]:
@@ -243,8 +244,8 @@ class DeepResearchPipeline(ReasoningMixin, StepsMixin):
         """
         return {key: [search_result_to_dict(r) for r in results]}
 
+    @staticmethod
     def _checkpoint_to_results(
-        self,
         contexts: dict[str, list[dict]] | None,
     ) -> list[SearchResult]:
         """Convert checkpoint context data back to SearchResults.
@@ -259,13 +260,12 @@ class DeepResearchPipeline(ReasoningMixin, StepsMixin):
             return []
 
         results = []
-        for key_results in contexts.values():
-            for data in key_results:
-                try:
-                    results.append(dict_to_search_result(data))
-                except (KeyError, ValueError) as e:
-                    logger.warning("Failed to restore search result: %s", e)
-                    continue
+        for data in chain.from_iterable(contexts.values()):
+            try:
+                results.append(dict_to_search_result(data))
+            except (KeyError, ValueError) as e:
+                logger.warning("Failed to restore search result: %s", e)
+                continue
         return results
 
     def load_checkpoint(self, research_id: str) -> ResearchCheckpoint | None:

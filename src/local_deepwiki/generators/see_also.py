@@ -67,7 +67,8 @@ class RelationshipAnalyzer:
                     self._imports[file_path].add(imported)
                     self._imported_by[imported].add(file_path)
 
-    def _parse_import_line(self, line: str) -> str | None:
+    @staticmethod
+    def _parse_import_line(line: str) -> str | None:
         """Parse a Python import line to extract the imported module.
 
         Args:
@@ -159,7 +160,8 @@ class RelationshipAnalyzer:
 
         return relationships
 
-    def _module_matches_file(self, module: str, file_path: str) -> bool:
+    @staticmethod
+    def _module_matches_file(module: str, file_path: str) -> bool:
         """Check if a module name refers to a file path.
 
         Args:

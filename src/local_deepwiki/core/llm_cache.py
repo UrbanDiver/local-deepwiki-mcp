@@ -56,7 +56,8 @@ class LLMCache:
         """Get cache statistics."""
         return self._stats.copy()
 
-    def _compute_hash(self, system_prompt: str | None, prompt: str) -> str:
+    @staticmethod
+    def _compute_hash(system_prompt: str | None, prompt: str) -> str:
         """Compute exact match hash for fast lookup.
 
         Args:

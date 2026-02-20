@@ -1313,7 +1313,8 @@ class VectorStore:
             row_to_chunk_fn=self._row_to_chunk,
         )
 
-    def _row_to_chunk(self, row: dict[str, Any]) -> CodeChunk:
+    @staticmethod
+    def _row_to_chunk(row: dict[str, Any]) -> CodeChunk:
         """Convert a LanceDB row to a CodeChunk object.
 
         Args:
@@ -1336,7 +1337,8 @@ class VectorStore:
             metadata=json.loads(row["metadata"]) if row["metadata"] else {},
         )
 
-    def _chunk_to_text(self, chunk: CodeChunk) -> str:
+    @staticmethod
+    def _chunk_to_text(chunk: CodeChunk) -> str:
         """Convert a chunk to text for embedding.
 
         Args:

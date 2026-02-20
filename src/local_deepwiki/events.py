@@ -15,6 +15,18 @@ from typing import Any, Callable, Coroutine, TypeAlias
 
 from local_deepwiki.logging import get_logger
 
+__all__ = [
+    "AsyncHandler",
+    "Event",
+    "EventEmitter",
+    "EventType",
+    "Handler",
+    "HandlerEntry",
+    "SyncHandler",
+    "get_event_emitter",
+    "reset_event_emitter",
+]
+
 logger = get_logger(__name__)
 
 

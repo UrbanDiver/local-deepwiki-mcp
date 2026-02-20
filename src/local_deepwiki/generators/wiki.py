@@ -735,8 +735,8 @@ class WikiGenerator:
             ctx, dep_content, "dependency-graph.md", "Dependency Graph", index_status
         )
 
+    @staticmethod
     def _sort_generators_by_dependencies(
-        self,
         generators: list["WikiGeneratorPlugin"],
     ) -> list["WikiGeneratorPlugin"]:
         """Sort generators respecting run_after dependencies."""
