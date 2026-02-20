@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Iterable
 from mcp.server.lowlevel.helper_types import ReadResourceContents
 from mcp.types import AnyUrl, Resource, ResourceTemplate
 
+from local_deepwiki.core.path_utils import find_deepwiki_dirs, validate_sub_path
 from local_deepwiki.errors import ValidationError
 from local_deepwiki.logging import get_logger
 
@@ -21,20 +22,8 @@ DEEPWIKI_SCHEME = "deepwiki"
 
 
 def _find_wiki_directories() -> list[Path]:
-    """Find .deepwiki directories under the current working directory.
-
-    Returns:
-        List of resolved paths to .deepwiki directories.
-    """
-    base = Path.cwd()
-    results: list[Path] = []
-    try:
-        for candidate in base.rglob(".deepwiki"):
-            if candidate.is_dir():
-                results.append(candidate.resolve())
-    except (PermissionError, OSError) as e:
-        logger.warning("Error scanning for wiki directories: %s", e)
-    return results
+    """Find .deepwiki directories under the current working directory."""
+    return find_deepwiki_dirs()
 
 
 def build_resource_uri(wiki_path: Path, page_relative: str) -> str:
@@ -177,15 +166,13 @@ def register_resource_handlers(server: Server) -> None:
                 value=uri_str,
             )
 
-        # Resolve and validate path traversal
-        page_path = (wiki_path / page_relative).resolve()
-        if not page_path.is_relative_to(wiki_path):
-            raise ValidationError(
-                message="Path traversal not allowed",
-                hint="The page path must be within the wiki directory.",
-                field="uri",
-                value=uri_str,
-            )
+        page_path = validate_sub_path(
+            wiki_path,
+            page_relative,
+            field="uri",
+            value=uri_str,
+            hint="The page path must be within the wiki directory.",
+        )
 
         if not page_path.exists():
             entity_reg = wiki_path / "entity_registry.json"

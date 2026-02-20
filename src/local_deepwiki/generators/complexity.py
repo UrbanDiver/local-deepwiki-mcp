@@ -256,7 +256,9 @@ async def compute_complexity_metrics(
     }
 
     logger.info(
-        f"Complexity metrics: {len(functions)} functions, "
-        f"{len(classes)} classes for {file_path}"
+        "Complexity metrics: %d functions, %d classes for %s",
+        len(functions),
+        len(classes),
+        file_path,
     )
     return result

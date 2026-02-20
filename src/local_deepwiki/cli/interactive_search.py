@@ -297,7 +297,8 @@ class InteractiveSearch:
             border_style="green" if filters else "dim",
         )
 
-    def _build_help_panel(self) -> Panel:
+    @staticmethod
+    def _build_help_panel() -> Panel:
         """Build the keyboard help panel.
 
         Returns:

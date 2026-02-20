@@ -71,7 +71,9 @@ def _compute_file_hash(file_path: Path) -> str:
 
     # Large files: read in chunks
     logger.debug(
-        f"Using chunked hashing for large file ({file_size} bytes): {file_path.name}"
+        "Using chunked hashing for large file (%d bytes): %s",
+        file_size,
+        file_path.name,
     )
     hasher = hashlib.sha256()
     with open(file_path, "rb") as f:
@@ -143,7 +145,8 @@ class CodeParser:
 
         return self._parsers[language]
 
-    def detect_language(self, file_path: Path) -> LangEnum | None:
+    @staticmethod
+    def detect_language(file_path: Path) -> LangEnum | None:
         """Detect the programming language from file extension.
 
         Args:

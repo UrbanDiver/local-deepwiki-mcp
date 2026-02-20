@@ -94,8 +94,10 @@ async def handle_generate_codemap(args: dict[str, Any]) -> list[TextContent]:
     }
 
     logger.info(
-        f"Codemap: '{validated.query[:50]}' -> {codemap_result.total_nodes} nodes, "
-        f"{len(codemap_result.files_involved)} files"
+        "Codemap: '%s' -> %d nodes, %d files",
+        validated.query[:50],
+        codemap_result.total_nodes,
+        len(codemap_result.files_involved),
     )
     return [TextContent(type="text", text=json.dumps(result, indent=2))]
 

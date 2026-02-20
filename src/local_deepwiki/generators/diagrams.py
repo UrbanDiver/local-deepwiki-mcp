@@ -45,7 +45,7 @@ def sanitize_mermaid_name(name: str) -> str:
 
 def _unwrap_chunk(chunk: CodeChunk | Any) -> CodeChunk:
     """Unwrap SearchResult to get the underlying chunk."""
-    return chunk.chunk if hasattr(chunk, "chunk") else chunk
+    return getattr(chunk, "chunk", chunk)
 
 
 def _collect_class_from_chunk(

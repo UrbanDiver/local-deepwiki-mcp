@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class GradedChunk:
     """A search result with its relevance grade."""
 
@@ -33,7 +33,7 @@ class GradedChunk:
     grade: str  # "relevant", "partial", "irrelevant"
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class AgenticRetrievalResult:
     """Result of the agentic retrieval process."""
 

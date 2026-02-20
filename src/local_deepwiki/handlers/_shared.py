@@ -8,7 +8,7 @@ import time
 import uuid
 from functools import wraps
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Awaitable, Callable
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, TypeAlias
 
 if TYPE_CHECKING:
     from local_deepwiki.core.deep_research import DeepResearchPipeline
@@ -120,7 +120,7 @@ from local_deepwiki.validation import (
 logger = get_logger(__name__)
 
 # Type alias for tool handler functions
-ToolHandler = Callable[..., Awaitable[list[TextContent]]]
+ToolHandler: TypeAlias = Callable[..., Awaitable[list[TextContent]]]
 
 # Forbidden directories for export operations (security: prevent writing to sensitive locations)
 # Note: /var and /private/var are excluded because temp directories live there

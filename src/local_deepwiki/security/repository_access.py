@@ -75,14 +75,18 @@ class RepositoryAccessController:
         path_str = str(resolved)
 
         # Check denylist first (deny takes precedence)
-        for pattern in self._config.denylist:
-            if fnmatch.fnmatch(path_str, pattern):
-                if self._config.log_denied:
-                    logger.warning(
-                        f"Repository access denied (denylist match): {path_str} "
-                        f"matches pattern '{pattern}'"
-                    )
-                return False
+        denied_pattern = next(
+            (p for p in self._config.denylist if fnmatch.fnmatch(path_str, p)),
+            None,
+        )
+        if denied_pattern is not None:
+            if self._config.log_denied:
+                logger.warning(
+                    "Repository access denied (denylist match): %s matches pattern '%s'",
+                    path_str,
+                    denied_pattern,
+                )
+            return False
 
         # If allowlist is not enforced, allow all non-denied
         if not self._config.enforce_allowlist:
@@ -92,18 +96,19 @@ class RepositoryAccessController:
         if not self._config.allowlist:
             if self._config.log_denied:
                 logger.warning(
-                    f"Repository access denied (empty allowlist): {path_str}"
+                    "Repository access denied (empty allowlist): %s", path_str
                 )
             return False
 
         # Check allowlist
-        for pattern in self._config.allowlist:
-            if fnmatch.fnmatch(path_str, pattern):
-                return True
+        if any(fnmatch.fnmatch(path_str, p) for p in self._config.allowlist):
+            return True
 
         # No allowlist match
         if self._config.log_denied:
-            logger.warning("Repository access denied (no allowlist match): %s", path_str)
+            logger.warning(
+                "Repository access denied (no allowlist match): %s", path_str
+            )
         return False
 
     def require_access(self, repo_path: str | Path) -> None:

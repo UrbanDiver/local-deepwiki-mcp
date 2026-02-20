@@ -176,7 +176,7 @@ class RateLimiter:
             if wait_time > 0:
                 if self._config.wait_for_minute_limit:
                     logger.info(
-                        f"Rate limit: minute limit reached, waiting {wait_time:.1f}s"
+                        "Rate limit: minute limit reached, waiting %.1fs", wait_time
                     )
                     # Release lock while waiting to not block other operations
                     self._lock.release()
@@ -208,7 +208,7 @@ class RateLimiter:
             if wait_time > 0:
                 if self._config.wait_for_hour_limit:
                     logger.warning(
-                        f"Rate limit: hour limit reached, waiting {wait_time:.0f}s"
+                        "Rate limit: hour limit reached, waiting %.0fs", wait_time
                     )
                     # Release lock while waiting
                     self._lock.release()
@@ -256,9 +256,13 @@ class RateLimiter:
             self._state.current_concurrent += 1
 
             logger.debug(
-                f"Rate limiter: acquired (min: {self._state.minute_count}/{self._config.requests_per_minute}, "
-                f"hour: {self._state.hour_count}/{self._config.requests_per_hour}, "
-                f"concurrent: {self._state.current_concurrent}/{self._config.burst_limit})"
+                "Rate limiter: acquired (min: %d/%d, hour: %d/%d, concurrent: %d/%d)",
+                self._state.minute_count,
+                self._config.requests_per_minute,
+                self._state.hour_count,
+                self._config.requests_per_hour,
+                self._state.current_concurrent,
+                self._config.burst_limit,
             )
 
     def release(self) -> None:
@@ -270,7 +274,7 @@ class RateLimiter:
         self._burst_semaphore.release()
         self._state.current_concurrent = max(0, self._state.current_concurrent - 1)
         logger.debug(
-            f"Rate limiter: released (concurrent: {self._state.current_concurrent})"
+            "Rate limiter: released (concurrent: %d)", self._state.current_concurrent
         )
 
     async def __aenter__(self) -> "RateLimiter":
@@ -340,8 +344,10 @@ def configure_rate_limiter(config: RateLimitConfig) -> None:
     global _rate_limiter
     _rate_limiter = RateLimiter(config)
     logger.info(
-        f"Rate limiter configured: {config.requests_per_minute}/min, "
-        f"{config.requests_per_hour}/hour, burst={config.burst_limit}"
+        "Rate limiter configured: %d/min, %d/hour, burst=%d",
+        config.requests_per_minute,
+        config.requests_per_hour,
+        config.burst_limit,
     )
 
 

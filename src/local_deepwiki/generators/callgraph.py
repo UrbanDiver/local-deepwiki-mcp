@@ -333,7 +333,8 @@ class CallGraphExtractor:
 
         return call_graph
 
-    def _is_inside_class(self, node: Node, class_types: set[str]) -> bool:
+    @staticmethod
+    def _is_inside_class(node: Node, class_types: set[str]) -> bool:
         """Check if a node is inside a class definition."""
         parent = node.parent
         while parent:

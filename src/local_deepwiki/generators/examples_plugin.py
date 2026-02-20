@@ -18,7 +18,11 @@ from local_deepwiki.generators.test_examples import (
 )
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import ChunkType, IndexStatus, WikiPage
-from local_deepwiki.plugins.base import PluginMetadata, WikiGeneratorPlugin, WikiGeneratorResult
+from local_deepwiki.plugins.base import (
+    PluginMetadata,
+    WikiGeneratorPlugin,
+    WikiGeneratorResult,
+)
 
 logger = get_logger(__name__)
 
@@ -174,8 +178,8 @@ class ExamplesWikiGenerator(WikiGeneratorPlugin):
             metadata={"total_entities": len(all_examples)},
         )
 
+    @staticmethod
     def _generate_examples_page(
-        self,
         examples_by_entity: dict[str, list[CodeExample]],
         index_status: IndexStatus,
     ) -> str:

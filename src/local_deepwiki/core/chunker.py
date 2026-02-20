@@ -545,7 +545,9 @@ class CodeChunker:
         if plugin_parser is not None:
             # Use plugin parser - it returns CodeChunk objects directly
             logger.debug(
-                f"Using plugin parser '{plugin_parser.language_name}' for {file_path.name}"
+                "Using plugin parser '%s' for %s",
+                plugin_parser.language_name,
+                file_path.name,
             )
             try:
                 source = file_path.read_bytes()
@@ -554,7 +556,9 @@ class CodeChunker:
                 return
             except Exception as e:
                 logger.warning(
-                    f"Plugin parser failed for {file_path}: {e}, falling back to built-in"
+                    "Plugin parser failed for %s: %s, falling back to built-in",
+                    file_path,
+                    e,
                 )
 
         # Fall back to built-in tree-sitter parser
@@ -937,7 +941,8 @@ class CodeChunker:
             metadata=metadata,
         )
 
-    def _is_inside_class(self, node: Node, class_types: set[str]) -> bool:
+    @staticmethod
+    def _is_inside_class(node: Node, class_types: set[str]) -> bool:
         """Check if a node is inside a class definition.
 
         Args:
@@ -954,7 +959,8 @@ class CodeChunker:
             parent = parent.parent
         return False
 
-    def _generate_id(self, file_path: str, name: str, line: int) -> str:
+    @staticmethod
+    def _generate_id(file_path: str, name: str, line: int) -> str:
         """Generate a unique chunk ID.
 
         Args:

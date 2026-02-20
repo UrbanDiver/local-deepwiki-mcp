@@ -241,7 +241,9 @@ class OllamaProvider(LLMProvider):
         messages.append({"role": "user", "content": prompt})
 
         logger.debug(
-            f"Generating with Ollama model {self._model}, prompt length: {len(prompt)}"
+            "Generating with Ollama model %s, prompt length: %d",
+            self._model,
+            len(prompt),
         )
 
         try:

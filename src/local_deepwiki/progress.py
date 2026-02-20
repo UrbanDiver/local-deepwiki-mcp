@@ -10,7 +10,7 @@ import asyncio
 import json
 import time
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any, Callable
 
@@ -18,10 +18,22 @@ from pydantic import BaseModel, Field
 
 from local_deepwiki.logging import get_logger
 
+__all__ = [
+    "GetOperationProgressArgs",
+    "OperationProgressRegistry",
+    "OperationProgressResponse",
+    "OperationType",
+    "ProgressBuffer",
+    "ProgressManager",
+    "ProgressPhase",
+    "ProgressUpdate",
+    "get_progress_registry",
+]
+
 logger = get_logger(__name__)
 
 
-class OperationType(str, Enum):
+class OperationType(StrEnum):
     """Types of operations that can be tracked."""
 
     INDEX_REPOSITORY = "index_repository"
@@ -31,7 +43,7 @@ class OperationType(str, Enum):
     ASK_QUESTION = "ask_question"
 
 
-class ProgressPhase(str, Enum):
+class ProgressPhase(StrEnum):
     """Phases within an operation."""
 
     # Indexing phases
@@ -460,7 +472,7 @@ class OperationProgressRegistry:
         )
         self._operations[operation_id] = manager
         logger.debug(
-            f"Started tracking operation {operation_id} ({operation_type.value})"
+            "Started tracking operation %s (%s)", operation_id, operation_type.value
         )
         return manager
 

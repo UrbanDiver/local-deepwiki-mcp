@@ -50,8 +50,10 @@ def sort_generators_by_dependencies(
         missing_deps = set(generator.run_after) - available_names
         if missing_deps:
             logger.debug(
-                f"Wiki generator '{generator.generator_name}' has missing dependencies: "
-                f"{missing_deps}. These generators are not registered and will be skipped."
+                "Wiki generator '%s' has missing dependencies: %s. "
+                "These generators are not registered and will be skipped.",
+                generator.generator_name,
+                missing_deps,
             )
 
     # Build dependency graph for topological sort
@@ -98,8 +100,9 @@ def sort_generators_by_dependencies(
             g.generator_name for g in generators if g not in sorted_generators
         ]
         logger.error(
-            f"Circular dependency detected in wiki generators: {unresolved}. "
-            f"These generators will not run."
+            "Circular dependency detected in wiki generators: %s. "
+            "These generators will not run.",
+            unresolved,
         )
 
     return sorted_generators
@@ -177,12 +180,14 @@ async def run_plugin_generators(
             plugin_context["existing_pages"] = list(pages) + list(new_pages)
 
             logger.debug(
-                f"Plugin '{generator.generator_name}' generated {len(result.pages)} page(s)"
+                "Plugin '%s' generated %d page(s)",
+                generator.generator_name,
+                len(result.pages),
             )
 
         except Exception as e:
             logger.debug(
-                f"Wiki generator plugin '{generator.generator_name}' failed: {e}"
+                "Wiki generator plugin '%s' failed: %s", generator.generator_name, e
             )
 
     return new_pages, pages_generated

@@ -9,6 +9,7 @@ from typing import Any, Callable
 from mcp.types import TextContent
 from pydantic import ValidationError as PydanticValidationError
 
+from local_deepwiki.core.path_utils import find_deepwiki_dirs, validate_file_in_repo
 from local_deepwiki.handlers._shared import (
     DetectSecretsArgs,
     DetectStaleDocsArgs,
@@ -260,7 +261,7 @@ async def handle_get_inheritance(args: dict[str, Any]) -> list[TextContent]:
     }
 
     logger.info(
-        f"Inheritance: {len(class_list)}/{total_classes} classes for {repo_path}"
+        "Inheritance: %d/%d classes for %s", len(class_list), total_classes, repo_path
     )
     return make_tool_text_content("get_inheritance", result)
 
@@ -290,17 +291,7 @@ async def handle_get_call_graph(args: dict[str, Any]) -> list[TextContent]:
     extractor = CallGraphExtractor()
 
     if file_path:
-        # Validate file path is within repo (prevent traversal)
-        target = (repo_path / file_path).resolve()
-        if not target.is_relative_to(repo_path):
-            raise ValidationError(
-                message="Invalid file path: path traversal not allowed",
-                hint="The file path must be within the repository.",
-                field="file_path",
-                value=file_path,
-            )
-        if not target.exists():
-            raise path_not_found_error(file_path, "file")
+        target = validate_file_in_repo(repo_path, file_path)
 
         graph = extractor.extract_from_file(target, repo_path)
         diagram = generate_call_graph_diagram(graph, title=file_path)
@@ -432,7 +423,10 @@ async def handle_detect_stale_docs(args: dict[str, Any]) -> list[TextContent]:
     }
 
     logger.info(
-        f"Stale detection: {report.stale_pages}/{report.total_pages} stale for {repo_path}"
+        "Stale detection: %d/%d stale for %s",
+        report.stale_pages,
+        report.total_pages,
+        repo_path,
     )
     return make_tool_text_content("detect_stale_docs", result)
 
@@ -536,7 +530,10 @@ async def handle_detect_secrets(args: dict[str, Any]) -> list[TextContent]:
     }
 
     logger.info(
-        f"Secret scan: {total_findings} findings in {len(findings_by_file)} files for {repo_path}"
+        "Secret scan: %d findings in %d files for %s",
+        total_findings,
+        len(findings_by_file),
+        repo_path,
     )
     return make_tool_text_content("detect_secrets", result)
 
@@ -624,18 +621,7 @@ async def handle_get_api_docs(args: dict[str, Any]) -> list[TextContent]:
     if not repo_path.exists():
         raise path_not_found_error(str(repo_path), "repository")
 
-    # Validate file path is within repo (prevent traversal)
-    target = (repo_path / file_path).resolve()
-    if not target.is_relative_to(repo_path):
-        raise ValidationError(
-            message="Invalid file path: path traversal not allowed",
-            hint="The file path must be within the repository.",
-            field="file_path",
-            value=file_path,
-        )
-
-    if not target.exists():
-        raise path_not_found_error(file_path, "file")
+    target = validate_file_in_repo(repo_path, file_path)
 
     from local_deepwiki.generators.api_docs import get_file_api_docs
 
@@ -682,10 +668,7 @@ async def handle_list_indexed_repos(args: dict[str, Any]) -> list[TextContent]:
     manager = IndexStatusManager()
     repos: list[dict[str, Any]] = []
 
-    # Search for .deepwiki directories
-    for deepwiki_dir in base_path.rglob(".deepwiki"):
-        if not deepwiki_dir.is_dir():
-            continue
+    for deepwiki_dir in find_deepwiki_dirs(base_path):
         status = manager.load(deepwiki_dir)
         if status is not None:
             repos.append(
@@ -742,6 +725,9 @@ async def handle_get_index_status(args: dict[str, Any]) -> list[TextContent]:
     }
 
     logger.info(
-        f"Index status: {index_status.total_files} files, {index_status.total_chunks} chunks for {repo_path}"
+        "Index status: %d files, %d chunks for %s",
+        index_status.total_files,
+        index_status.total_chunks,
+        repo_path,
     )
     return make_tool_text_content("get_index_status", result)

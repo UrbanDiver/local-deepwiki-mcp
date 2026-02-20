@@ -239,7 +239,9 @@ class LazyIndexManager:
             num_rows = table.count_rows()
             if num_rows < self.config.min_rows:
                 logger.debug(
-                    f"Skipping index creation: {num_rows} rows < {self.config.min_rows} threshold"
+                    "Skipping index creation: %d rows < %d threshold",
+                    num_rows,
+                    self.config.min_rows,
                 )
                 return
 
@@ -267,7 +269,9 @@ class LazyIndexManager:
                 progress_callback("Vector index created successfully")
 
             logger.info(
-                f"Created vector index with {num_partitions} partitions for {num_rows} vectors"
+                "Created vector index with %d partitions for %d vectors",
+                num_partitions,
+                num_rows,
             )
 
             self.mark_index_created()

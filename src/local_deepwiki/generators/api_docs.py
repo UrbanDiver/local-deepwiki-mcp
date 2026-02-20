@@ -10,7 +10,12 @@ from typing import TypedDict
 from tree_sitter import Node
 
 from local_deepwiki.core.chunker import CLASS_NODE_TYPES, FUNCTION_NODE_TYPES
-from local_deepwiki.core.parser import CodeParser, find_nodes_by_type, get_node_name, get_node_text
+from local_deepwiki.core.parser import (
+    CodeParser,
+    find_nodes_by_type,
+    get_node_name,
+    get_node_text,
+)
 from local_deepwiki.models import Language
 
 
@@ -63,7 +68,9 @@ class ClassSignature:
     docstring: str | None = None
     description: str | None = None
     methods: list[FunctionSignature] = field(default_factory=list)
-    class_variables: list[tuple[str, str | None, str | None]] = field(default_factory=list)
+    class_variables: list[tuple[str, str | None, str | None]] = field(
+        default_factory=list
+    )
 
 
 def extract_python_parameters(func_node: Node, source: bytes) -> list[Parameter]:
@@ -230,7 +237,12 @@ def parse_google_docstring(docstring: str) -> ParsedDocstring:
     raises_list: list[str] = []
 
     if not docstring:
-        return {"description": "", "args": args_dict, "returns": None, "raises": raises_list}
+        return {
+            "description": "",
+            "args": args_dict,
+            "returns": None,
+            "raises": raises_list,
+        }
 
     lines = docstring.split("\n")
     current_section = "description"
@@ -286,7 +298,12 @@ def parse_google_docstring(docstring: str) -> ParsedDocstring:
     if "\n\n" in description:
         description = description.split("\n\n")[0]
 
-    return {"description": description, "args": args_dict, "returns": returns_str, "raises": raises_list}
+    return {
+        "description": description,
+        "args": args_dict,
+        "returns": returns_str,
+        "raises": raises_list,
+    }
 
 
 def parse_numpy_docstring(docstring: str) -> ParsedDocstring:
@@ -303,7 +320,12 @@ def parse_numpy_docstring(docstring: str) -> ParsedDocstring:
     raises_list: list[str] = []
 
     if not docstring:
-        return {"description": "", "args": args_dict, "returns": None, "raises": raises_list}
+        return {
+            "description": "",
+            "args": args_dict,
+            "returns": None,
+            "raises": raises_list,
+        }
 
     lines = docstring.split("\n")
     current_section = "description"
@@ -362,7 +384,12 @@ def parse_numpy_docstring(docstring: str) -> ParsedDocstring:
     if "\n\n" in description:
         description = description.split("\n\n")[0]
 
-    return {"description": description, "args": args_dict, "returns": returns_str, "raises": raises_list}
+    return {
+        "description": description,
+        "args": args_dict,
+        "returns": returns_str,
+        "raises": raises_list,
+    }
 
 
 def parse_docstring(docstring: str) -> ParsedDocstring:
@@ -529,7 +556,8 @@ class APIDocExtractor:
 
         return functions, classes
 
-    def _is_inside_class(self, node: Node, class_types: set[str]) -> bool:
+    @staticmethod
+    def _is_inside_class(node: Node, class_types: set[str]) -> bool:
         """Check if a node is inside a class definition."""
         parent = node.parent
         while parent:
@@ -598,7 +626,9 @@ def generate_api_reference_markdown(
         lines.append(f"### class `{cls.name}`")
 
         if cls.bases:
-            lines.append(f"\n**Inherits from:** {', '.join(f'`{b}`' for b in cls.bases)}")
+            lines.append(
+                f"\n**Inherits from:** {', '.join(f'`{b}`' for b in cls.bases)}"
+            )
 
         if cls.description:
             lines.append(f"\n{cls.description}")
@@ -631,7 +661,9 @@ def generate_api_reference_markdown(
                     lines.append("|-----------|------|---------|-------------|")
                     for param in params:
                         type_str = f"`{param.type_hint}`" if param.type_hint else "-"
-                        default_str = f"`{param.default_value}`" if param.default_value else "-"
+                        default_str = (
+                            f"`{param.default_value}`" if param.default_value else "-"
+                        )
                         desc_str = param.description or "-"
                         lines.append(
                             f"| `{param.name}` | {type_str} | {default_str} | {desc_str} |"
@@ -666,9 +698,13 @@ def generate_api_reference_markdown(
                 lines.append("|-----------|------|---------|-------------|")
                 for param in func.parameters:
                     type_str = f"`{param.type_hint}`" if param.type_hint else "-"
-                    default_str = f"`{param.default_value}`" if param.default_value else "-"
+                    default_str = (
+                        f"`{param.default_value}`" if param.default_value else "-"
+                    )
                     desc_str = param.description or "-"
-                    lines.append(f"| `{param.name}` | {type_str} | {default_str} | {desc_str} |")
+                    lines.append(
+                        f"| `{param.name}` | {type_str} | {default_str} | {desc_str} |"
+                    )
                 lines.append("")
 
             # Return type

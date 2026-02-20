@@ -11,8 +11,9 @@ import asyncio
 import time
 import uuid
 from collections.abc import Awaitable, Callable
+from itertools import chain
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeAlias
 
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.events import EventType, get_event_emitter
@@ -40,11 +41,11 @@ from .serialization import dict_to_search_result, search_result_to_dict
 from .steps import StepsMixin
 
 # Type alias for progress callback
-ProgressCallback = Callable[[ResearchProgress], Awaitable[None]] | None
+ProgressCallback: TypeAlias = Callable[[ResearchProgress], Awaitable[None]] | None
 
 # Type alias for cancellation check callback
 # Returns True if the operation should be cancelled
-CancellationCallback = Callable[[], bool] | None
+CancellationCallback: TypeAlias = Callable[[], bool] | None
 
 logger = get_logger(__name__)
 
@@ -227,8 +228,8 @@ class DeepResearchPipeline(ReasoningMixin, StepsMixin):
             completed_steps=[],
         )
 
+    @staticmethod
     def _results_to_checkpoint_format(
-        self,
         results: list[SearchResult],
         key: str = "default",
     ) -> dict[str, list[dict]]:
@@ -243,8 +244,8 @@ class DeepResearchPipeline(ReasoningMixin, StepsMixin):
         """
         return {key: [search_result_to_dict(r) for r in results]}
 
+    @staticmethod
     def _checkpoint_to_results(
-        self,
         contexts: dict[str, list[dict]] | None,
     ) -> list[SearchResult]:
         """Convert checkpoint context data back to SearchResults.
@@ -259,13 +260,12 @@ class DeepResearchPipeline(ReasoningMixin, StepsMixin):
             return []
 
         results = []
-        for key_results in contexts.values():
-            for data in key_results:
-                try:
-                    results.append(dict_to_search_result(data))
-                except (KeyError, ValueError) as e:
-                    logger.warning("Failed to restore search result: %s", e)
-                    continue
+        for data in chain.from_iterable(contexts.values()):
+            try:
+                results.append(dict_to_search_result(data))
+            except (KeyError, ValueError) as e:
+                logger.warning("Failed to restore search result: %s", e)
+                continue
         return results
 
     def load_checkpoint(self, research_id: str) -> ResearchCheckpoint | None:
@@ -363,7 +363,9 @@ class DeepResearchPipeline(ReasoningMixin, StepsMixin):
             if checkpoint:
                 self._current_checkpoint = checkpoint
                 logger.info(
-                    f"Resuming research {resume_id} from step {checkpoint.current_step}"
+                    "Resuming research %s from step %s",
+                    resume_id,
+                    checkpoint.current_step,
                 )
             else:
                 logger.warning("Checkpoint %s not found, starting fresh", resume_id)

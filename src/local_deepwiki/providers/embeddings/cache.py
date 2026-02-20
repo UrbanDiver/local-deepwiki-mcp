@@ -162,7 +162,8 @@ class EmbeddingCache:
         combined = f"{self._provider.name}:{text}"
         return hashlib.sha256(combined.encode("utf-8")).hexdigest()
 
-    def _is_valid_entry(self, row: sqlite3.Row) -> bool:
+    @staticmethod
+    def _is_valid_entry(row: sqlite3.Row) -> bool:
         """Check if a cache entry is still valid (not expired).
 
         Args:
@@ -176,7 +177,8 @@ class EmbeddingCache:
         age = time.time() - created_at
         return age < ttl
 
-    def _serialize_embedding(self, embedding: list[float]) -> bytes:
+    @staticmethod
+    def _serialize_embedding(embedding: list[float]) -> bytes:
         """Serialize an embedding vector to bytes for storage.
 
         Uses JSON for simplicity and compatibility. For higher performance
@@ -190,7 +192,8 @@ class EmbeddingCache:
         """
         return json.dumps(embedding).encode("utf-8")
 
-    def _deserialize_embedding(self, data: bytes) -> list[float]:
+    @staticmethod
+    def _deserialize_embedding(data: bytes) -> list[float]:
         """Deserialize an embedding vector from bytes.
 
         Args:
@@ -333,8 +336,10 @@ class EmbeddingCache:
         # Log cache performance
         if texts_to_embed:
             logger.debug(
-                f"Embedding cache: {len(texts) - len(texts_to_embed)}/{len(texts)} hits, "
-                f"fetching {len(texts_to_embed)} from provider"
+                "Embedding cache: %d/%d hits, fetching %d from provider",
+                len(texts) - len(texts_to_embed),
+                len(texts),
+                len(texts_to_embed),
             )
 
         # Fetch uncached embeddings from provider
@@ -475,7 +480,9 @@ class EmbeddingCache:
             conn.commit()
 
             logger.info(
-                f"Cache cleanup: removed {expired_count} expired + {deleted} oldest entries"
+                "Cache cleanup: removed %d expired + %d oldest entries",
+                expired_count,
+                deleted,
             )
             return expired_count + deleted
 
@@ -505,7 +512,7 @@ class EmbeddingCache:
 
             if deleted > 0:
                 logger.info(
-                    f"Invalidated {deleted} cache entries for model {model_name}"
+                    "Invalidated %d cache entries for model %s", deleted, model_name
                 )
             return deleted
         except sqlite3.Error as e:

@@ -11,13 +11,13 @@ from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from threading import Lock, Timer
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Callable, TypeAlias
 
 from rich.console import Console
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 
-from local_deepwiki.cli_progress import MultiPhaseProgress, ProgressCallback
+from local_deepwiki.cli_progress import MultiPhaseProgress
 
 if TYPE_CHECKING:
     from watchdog.observers.api import BaseObserver
@@ -68,7 +68,7 @@ class ReindexResult:
 
 
 # Type alias for reindex completion callbacks
-ReindexCallback = Callable[[ReindexResult], None]
+ReindexCallback: TypeAlias = Callable[[ReindexResult], None]
 
 
 class DebouncedHandler(FileSystemEventHandler):

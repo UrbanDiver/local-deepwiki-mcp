@@ -505,7 +505,7 @@ def get_file_examples(
 
     test_names = [tf.name for tf in test_files]
     logger.info(
-        f"Found {len(unique_examples)} usage examples from {', '.join(test_names)}"
+        "Found %d usage examples from %s", len(unique_examples), ", ".join(test_names)
     )
 
     return format_examples_markdown(unique_examples, max_examples=max_examples)

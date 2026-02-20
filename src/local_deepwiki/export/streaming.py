@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, TypeAlias
 
 from pydantic import BaseModel, Field
 
@@ -102,7 +102,7 @@ class ExportResult:
         )
 
 
-ProgressCallback = Callable[[int, int, str], None]
+ProgressCallback: TypeAlias = Callable[[int, int, str], None]
 """Progress callback signature: (current, total, message) -> None"""
 
 
@@ -158,15 +158,15 @@ class WikiPageIterator:
         self._page_count = len(md_files)
         self._total_size = sum(f.stat().st_size for f in md_files)
         logger.debug(
-            f"Scanned wiki: {self._page_count} pages, "
-            f"{self._total_size / 1024 / 1024:.2f} MB"
+            "Scanned wiki: %d pages, %.2f MB",
+            self._page_count,
+            self._total_size / 1024 / 1024,
         )
 
     def _get_ordered_paths(self) -> list[Path]:
         """Get page paths in the correct order (TOC order or alphabetical)."""
         all_files = {
-            str(f.relative_to(self.wiki_path)): f
-            for f in self.wiki_path.rglob("*.md")
+            str(f.relative_to(self.wiki_path)): f for f in self.wiki_path.rglob("*.md")
         }
 
         if self._toc_order:
@@ -206,7 +206,8 @@ class WikiPageIterator:
 
             yield page
 
-    def _extract_title(self, md_file: Path) -> str:
+    @staticmethod
+    def _extract_title(md_file: Path) -> str:
         """Extract title from markdown file without loading full content.
 
         Reads only the first few lines to find the title.

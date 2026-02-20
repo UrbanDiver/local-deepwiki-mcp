@@ -61,7 +61,7 @@ def ensure_indexes(table: Table, lazy_index_manager: LazyIndexManager) -> None:
                 if num_rows >= lazy_index_manager.config.min_rows:
                     lazy_index_manager.mark_index_pending()
                     logger.debug(
-                        f"Vector index creation deferred (lazy mode): {num_rows} rows"
+                        "Vector index creation deferred (lazy mode): %d rows", num_rows
                     )
             else:
                 create_vector_index(table, num_rows, lazy_index_manager)
@@ -117,7 +117,9 @@ def create_vector_index(
 
     if num_rows < min_rows_for_index:
         logger.debug(
-            f"Skipping vector index creation: {num_rows} rows < {min_rows_for_index} threshold"
+            "Skipping vector index creation: %d rows < %d threshold",
+            num_rows,
+            min_rows_for_index,
         )
         return
 
@@ -130,7 +132,9 @@ def create_vector_index(
             num_sub_vectors=16,
         )
         logger.info(
-            f"Created vector index with {num_partitions} partitions for {num_rows} vectors"
+            "Created vector index with %d partitions for %d vectors",
+            num_partitions,
+            num_rows,
         )
 
         lazy_index_manager.mark_index_created()

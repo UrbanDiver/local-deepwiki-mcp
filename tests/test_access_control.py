@@ -866,8 +866,8 @@ class TestEdgeCases:
                 Permission.INDEX_READ, Permission.INDEX_WRITE
             )
         error_msg = str(exc_info.value)
-        # Error message includes permission enum names
-        assert "INDEX_READ" in error_msg or "INDEX_WRITE" in error_msg
+        # Error message includes permission values (StrEnum uses value as str)
+        assert "index:read" in error_msg or "index:write" in error_msg
 
     def test_decorator_on_method(self, admin_subject):
         """Verify decorators work on class methods."""

@@ -238,8 +238,10 @@ class WikiGenerator:
         )
 
         logger.info(
-            f"Wiki generation complete: {ctx.pages_generated} pages generated, "
-            f"{ctx.pages_skipped} pages unchanged, {len(ctx.pages)} total pages"
+            "Wiki generation complete: %d pages generated, %d pages unchanged, %d total pages",
+            ctx.pages_generated,
+            ctx.pages_skipped,
+            len(ctx.pages),
         )
 
         # Log any generation warnings
@@ -283,8 +285,11 @@ class WikiGenerator:
             total = hits + misses
             hit_rate = (hits / total * 100) if total > 0 else 0.0
             logger.info(
-                f"LLM cache stats: {hits} hits, {misses} misses, {skipped} skipped "
-                f"({hit_rate:.1f}% hit rate)"
+                "LLM cache stats: %d hits, %d misses, %d skipped (%.1f%% hit rate)",
+                hits,
+                misses,
+                skipped,
+                hit_rate,
             )
         except (TypeError, ValueError, AttributeError):
             # Skip logging if stats are not properly available (e.g., mock objects)
@@ -325,9 +330,10 @@ class WikiGenerator:
                 logger.info("No previous wiki status found, performing full generation")
             else:
                 logger.info(
-                    f"Incremental update: {summary['changed_file_count']} files changed, "
-                    f"{summary['affected_page_count']} pages to regenerate, "
-                    f"{summary['unchanged_page_count']} pages unchanged"
+                    "Incremental update: %d files changed, %d pages to regenerate, %d pages unchanged",
+                    summary["changed_file_count"],
+                    summary["affected_page_count"],
+                    summary["unchanged_page_count"],
                 )
                 if summary["changed_file_count"] <= 5:
                     for f in summary["changed_files"]:
@@ -729,8 +735,8 @@ class WikiGenerator:
             ctx, dep_content, "dependency-graph.md", "Dependency Graph", index_status
         )
 
+    @staticmethod
     def _sort_generators_by_dependencies(
-        self,
         generators: list["WikiGeneratorPlugin"],
     ) -> list["WikiGeneratorPlugin"]:
         """Sort generators respecting run_after dependencies."""

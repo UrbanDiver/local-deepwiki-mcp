@@ -248,7 +248,9 @@ def _is_cache_valid(
 
     if cached_files != current_files:
         logger.debug(
-            f"Manifest cache invalid: file set changed ({cached_files} vs {current_files})"
+            "Manifest cache invalid: file set changed (%s vs %s)",
+            cached_files,
+            current_files,
         )
         return False
 

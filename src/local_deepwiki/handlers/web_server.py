@@ -39,7 +39,7 @@ SERVER_STARTUP_TIMEOUT = 10
 HEALTH_CHECK_INTERVAL = 0.3
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class RunningServer:
     """Immutable record of a running wiki server process."""
 
@@ -111,7 +111,9 @@ def _validate_wiki_path(raw_path: str) -> Path:
 
 def _prune_dead_servers() -> None:
     """Remove entries for processes that have already exited."""
-    dead_ports = [p for p, s in _running_servers.items() if s.process.poll() is not None]
+    dead_ports = [
+        p for p, s in _running_servers.items() if s.process.poll() is not None
+    ]
     for port in dead_ports:
         del _running_servers[port]
 
@@ -185,13 +187,16 @@ async def handle_serve_wiki(args: dict[str, Any]) -> list[TextContent]:
         existing = _running_servers.get(port)
         if existing is not None:
             if existing.process.poll() is None:
-                return make_tool_text_content("serve_wiki", {
-                    "status": "already_running",
-                    "message": f"Wiki server already running on port {port}",
-                    "url": existing.url,
-                    "pid": existing.pid,
-                    "wiki_path": existing.wiki_path,
-                })
+                return make_tool_text_content(
+                    "serve_wiki",
+                    {
+                        "status": "already_running",
+                        "message": f"Wiki server already running on port {port}",
+                        "url": existing.url,
+                        "pid": existing.pid,
+                        "wiki_path": existing.wiki_path,
+                    },
+                )
             del _running_servers[port]
 
         # Check port not in use by external process
@@ -209,8 +214,16 @@ async def handle_serve_wiki(args: dict[str, Any]) -> list[TextContent]:
         # Spawn subprocess
         process = await asyncio.to_thread(
             subprocess.Popen,
-            [sys.executable, "-m", "local_deepwiki.web.app",
-             str(wiki_path), "--host", host, "--port", str(port)],
+            [
+                sys.executable,
+                "-m",
+                "local_deepwiki.web.app",
+                str(wiki_path),
+                "--host",
+                host,
+                "--port",
+                str(port),
+            ],
             shell=False,
             env=safe_env,
             stdout=subprocess.PIPE,
@@ -226,7 +239,9 @@ async def handle_serve_wiki(args: dict[str, Any]) -> list[TextContent]:
             if process.poll() is not None:
                 stderr_out = ""
                 if process.stderr:
-                    stderr_out = process.stderr.read().decode("utf-8", errors="replace")[:500]
+                    stderr_out = process.stderr.read().decode(
+                        "utf-8", errors="replace"
+                    )[:500]
                 raise ValidationError(
                     message=f"Wiki server exited with code {process.returncode}",
                     hint=f"Check Flask is installed and wiki path is valid. stderr: {stderr_out}",
@@ -295,33 +310,42 @@ async def handle_stop_wiki_server(args: dict[str, Any]) -> list[TextContent]:
             for p, s in _running_servers.items()
             if s.process.poll() is None
         }
-        return make_tool_text_content("stop_wiki_server", {
-            "status": "not_found",
-            "message": f"No wiki server found on port {port}",
-            "running_servers": running,
-        })
+        return make_tool_text_content(
+            "stop_wiki_server",
+            {
+                "status": "not_found",
+                "message": f"No wiki server found on port {port}",
+                "running_servers": running,
+            },
+        )
 
     # Optional wiki_path filter
     if validated.wiki_path is not None:
         resolved_filter = str(Path(validated.wiki_path).resolve())
         if server_record.wiki_path != resolved_filter:
-            return make_tool_text_content("stop_wiki_server", {
-                "status": "not_found",
-                "message": (
-                    f"Server on port {port} serves {server_record.wiki_path}, "
-                    f"not {resolved_filter}"
-                ),
-            })
+            return make_tool_text_content(
+                "stop_wiki_server",
+                {
+                    "status": "not_found",
+                    "message": (
+                        f"Server on port {port} serves {server_record.wiki_path}, "
+                        f"not {resolved_filter}"
+                    ),
+                },
+            )
 
     if server_record.process.poll() is not None:
         del _running_servers[port]
-        return make_tool_text_content("stop_wiki_server", {
-            "status": "already_stopped",
-            "message": (
-                f"Server on port {port} had already exited "
-                f"(code {server_record.process.returncode})"
-            ),
-        })
+        return make_tool_text_content(
+            "stop_wiki_server",
+            {
+                "status": "already_stopped",
+                "message": (
+                    f"Server on port {port} had already exited "
+                    f"(code {server_record.process.returncode})"
+                ),
+            },
+        )
 
     # Graceful terminate, then force kill if needed
     logger.info("Stopping wiki server: pid=%d, port=%d", server_record.pid, port)
@@ -336,9 +360,12 @@ async def handle_stop_wiki_server(args: dict[str, Any]) -> list[TextContent]:
     del _running_servers[port]
     logger.info("Wiki server stopped: pid=%d, port=%d", server_record.pid, port)
 
-    return make_tool_text_content("stop_wiki_server", {
-        "status": "stopped",
-        "message": f"Wiki server on port {port} has been stopped",
-        "pid": server_record.pid,
-        "wiki_path": server_record.wiki_path,
-    })
+    return make_tool_text_content(
+        "stop_wiki_server",
+        {
+            "status": "stopped",
+            "message": f"Wiki server on port {port} has been stopped",
+            "pid": server_record.pid,
+            "wiki_path": server_record.wiki_path,
+        },
+    )

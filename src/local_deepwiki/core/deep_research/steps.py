@@ -158,7 +158,8 @@ class StepsMixin:
             # Restore from checkpoint
             follow_up_queries = checkpoint.follow_up_queries
             logger.info(
-                f"Restored {len(follow_up_queries)} follow-up queries from checkpoint"
+                "Restored %d follow-up queries from checkpoint",
+                len(follow_up_queries),
             )
             step = ResearchStep(
                 step_type=ResearchStepType.GAP_ANALYSIS,
@@ -212,7 +213,8 @@ class StepsMixin:
                 dict_to_search_result(d) for d in checkpoint.follow_up_contexts
             ]
             logger.info(
-                f"Restored {len(additional_results)} follow-up chunks from checkpoint"
+                "Restored %d follow-up chunks from checkpoint",
+                len(additional_results),
             )
             step = ResearchStep(
                 step_type=ResearchStepType.RETRIEVAL,
@@ -331,7 +333,7 @@ class StepsMixin:
         )
 
         logger.info(
-            f"Gap analysis generated {len(follow_up_queries)} follow-up queries"
+            "Gap analysis generated %d follow-up queries", len(follow_up_queries)
         )
         await self._report_progress(
             3,

@@ -327,7 +327,10 @@ def with_retry(
                     last_exception = e
                     if attempt == max_attempts:
                         logger.warning(
-                            f"{func.__name__} failed after {max_attempts} attempts: {e}"
+                            "%s failed after %d attempts: %s",
+                            func.__name__,
+                            max_attempts,
+                            e,
                         )
                         raise
 
@@ -339,8 +342,11 @@ def with_retry(
                         delay = delay * (0.5 + random.random())
 
                     logger.warning(
-                        f"{func.__name__} attempt {attempt} failed: {e}. "
-                        f"Retrying in {delay:.2f}s..."
+                        "%s attempt %d failed: %s. Retrying in %.2fs...",
+                        func.__name__,
+                        attempt,
+                        e,
+                        delay,
                     )
                     await asyncio.sleep(delay)
                 except Exception as e:  # noqa: BLE001 - Intentional broad catch for API resilience: different providers (Anthropic, OpenAI, Ollama) raise different exception types for rate limits and server errors. We inspect error messages to detect retryable conditions and re-raise immediately if not recognized.
@@ -349,7 +355,9 @@ def with_retry(
                         last_exception = e
                         if attempt == max_attempts:
                             logger.warning(
-                                f"{func.__name__} rate limited after {max_attempts} attempts"
+                                "%s rate limited after %d attempts",
+                                func.__name__,
+                                max_attempts,
                             )
                             raise
 
@@ -358,7 +366,9 @@ def with_retry(
                             delay = delay * (0.5 + random.random())
 
                         logger.warning(
-                            f"{func.__name__} rate limited. Retrying in {delay:.2f}s..."
+                            "%s rate limited. Retrying in %.2fs...",
+                            func.__name__,
+                            delay,
                         )
                         await asyncio.sleep(delay)
                     elif (
@@ -376,7 +386,9 @@ def with_retry(
                             delay = delay * (0.5 + random.random())
 
                         logger.warning(
-                            f"{func.__name__} server overloaded. Retrying in {delay:.2f}s..."
+                            "%s server overloaded. Retrying in %.2fs...",
+                            func.__name__,
+                            delay,
                         )
                         await asyncio.sleep(delay)
                     else:

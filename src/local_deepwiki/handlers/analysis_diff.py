@@ -251,8 +251,9 @@ async def handle_analyze_diff(args: dict[str, Any]) -> list[TextContent]:
     }
 
     logger.info(
-        f"Diff analysis: {len(changed_files)} files changed, "
-        f"{len(affected_wiki_pages)} wiki pages affected"
+        "Diff analysis: %d files changed, %d wiki pages affected",
+        len(changed_files),
+        len(affected_wiki_pages),
     )
     return make_tool_text_content("analyze_diff", result)
 

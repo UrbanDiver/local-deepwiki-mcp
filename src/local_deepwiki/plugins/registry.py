@@ -86,7 +86,9 @@ class PluginRegistry:
         """
         name = plugin.provider_name
         if name in self._embedding_providers:
-            logger.warning("Embedding provider '%s' already registered, overwriting", name)
+            logger.warning(
+                "Embedding provider '%s' already registered, overwriting", name
+            )
         self._embedding_providers[name] = plugin
         plugin.initialize()
         logger.info("Registered embedding provider plugin: %s", plugin.metadata)
@@ -244,9 +246,7 @@ class PluginRegistry:
                 loaded += 1
                 logger.debug("Loaded plugin module: %s", py_file.name)
 
-            except (
-                Exception
-            ) as e:  # Broad catch: plugin isolation — one bad plugin must not crash the system
+            except Exception as e:  # Broad catch: plugin isolation — one bad plugin must not crash the system
                 logger.warning("Failed to load plugin %s: %s", py_file, e)
 
         return loaded
@@ -274,10 +274,10 @@ class PluginRegistry:
                             plugin = plugin_class()
                             self.register(plugin)
                             loaded += 1
-                        except (
-                            Exception
-                        ) as e:  # Broad catch: plugin isolation — one bad plugin must not crash the system
-                            logger.warning("Failed to load entry point %s: %s", ep.name, e)
+                        except Exception as e:  # Broad catch: plugin isolation — one bad plugin must not crash the system
+                            logger.warning(
+                                "Failed to load entry point %s: %s", ep.name, e
+                            )
             else:
                 # Python 3.9 compatibility
                 from importlib.metadata import entry_points as get_entry_points
@@ -291,10 +291,10 @@ class PluginRegistry:
                                 plugin = plugin_class()
                                 self.register(plugin)
                                 loaded += 1
-                            except (
-                                Exception
-                            ) as e:  # Broad catch: plugin isolation — one bad plugin must not crash the system
-                                logger.warning("Failed to load entry point %s: %s", ep.name, e)
+                            except Exception as e:  # Broad catch: plugin isolation — one bad plugin must not crash the system
+                                logger.warning(
+                                    "Failed to load entry point %s: %s", ep.name, e
+                                )
 
         except ImportError:
             logger.debug("importlib.metadata not available, skipping entry points")
@@ -340,9 +340,10 @@ class PluginRegistry:
         loaded += self.load_from_entry_points()
 
         logger.info(
-            f"Plugin discovery complete: {len(self._language_parsers)} parsers, "
-            f"{len(self._wiki_generators)} generators, "
-            f"{len(self._embedding_providers)} embedding providers"
+            "Plugin discovery complete: %d parsers, %d generators, %d embedding providers",
+            len(self._language_parsers),
+            len(self._wiki_generators),
+            len(self._embedding_providers),
         )
 
         return loaded
@@ -352,25 +353,19 @@ class PluginRegistry:
         for plugin in self._language_parsers.values():
             try:
                 plugin.cleanup()
-            except (
-                Exception
-            ) as e:  # Broad catch: plugin isolation — one bad plugin must not crash the system
+            except Exception as e:  # Broad catch: plugin isolation — one bad plugin must not crash the system
                 logger.warning("Error cleaning up parser plugin: %s", e)
 
         for gen_plugin in self._wiki_generators.values():
             try:
                 gen_plugin.cleanup()
-            except (
-                Exception
-            ) as e:  # Broad catch: plugin isolation — one bad plugin must not crash the system
+            except Exception as e:  # Broad catch: plugin isolation — one bad plugin must not crash the system
                 logger.warning("Error cleaning up generator plugin: %s", e)
 
         for emb_plugin in self._embedding_providers.values():
             try:
                 emb_plugin.cleanup()
-            except (
-                Exception
-            ) as e:  # Broad catch: plugin isolation — one bad plugin must not crash the system
+            except Exception as e:  # Broad catch: plugin isolation — one bad plugin must not crash the system
                 logger.warning("Error cleaning up embedding plugin: %s", e)
 
         self._language_parsers.clear()

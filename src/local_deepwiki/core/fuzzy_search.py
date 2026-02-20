@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import fnmatch
 import re
+from itertools import chain
 from dataclasses import dataclass, field
 from operator import attrgetter, itemgetter
 from pathlib import Path
@@ -597,11 +598,11 @@ class FuzzySearchHelper:
             return []
 
         # Collect unique file paths
-        file_paths: set[str] = set()
-        for entries in self._name_to_entries.values():
-            for entry in entries:
-                if entry.file_path:
-                    file_paths.add(entry.file_path)
+        file_paths = {
+            entry.file_path
+            for entry in chain.from_iterable(self._name_to_entries.values())
+            if entry.file_path
+        }
 
         if not file_paths:
             return []

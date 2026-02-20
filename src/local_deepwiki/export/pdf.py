@@ -564,7 +564,9 @@ class StreamingPdfExporter(StreamingExporter):
         errors: list[str] = []
 
         logger.info(
-            f"Starting streaming PDF export from {self.wiki_path} to {self.output_path}"
+            "Starting streaming PDF export from %s to %s",
+            self.wiki_path,
+            self.output_path,
         )
 
         # Load TOC for ordering
@@ -667,8 +669,10 @@ class StreamingPdfExporter(StreamingExporter):
 
         duration_ms = int((time.monotonic() - start_time) * 1000)
         logger.info(
-            f"Streaming PDF export complete: {pages_processed} pages "
-            f"in {len(temp_pdfs)} batches, {duration_ms}ms"
+            "Streaming PDF export complete: %d pages in %d batches, %dms",
+            pages_processed,
+            len(temp_pdfs),
+            duration_ms,
         )
 
         return ExportResult(
@@ -747,7 +751,9 @@ class StreamingPdfExporter(StreamingExporter):
 
         duration_ms = int((time.monotonic() - start_time) * 1000)
         logger.info(
-            f"Streaming separate PDF export complete: {exported} pages in {duration_ms}ms"
+            "Streaming separate PDF export complete: %d pages in %dms",
+            exported,
+            duration_ms,
         )
 
         return ExportResult(
@@ -814,7 +820,8 @@ class StreamingPdfExporter(StreamingExporter):
             if "children" in entry:
                 self._add_toc_entries_html(entry["children"], parts, depth + 1)
 
-    def _export_single_page(self, page: WikiPage, output_file: Path) -> None:
+    @staticmethod
+    def _export_single_page(page: WikiPage, output_file: Path) -> None:
         """Export a single wiki page to PDF.
 
         Args:
@@ -836,7 +843,8 @@ class StreamingPdfExporter(StreamingExporter):
         css = CSS(string=PRINT_CSS)
         html_doc.write_pdf(output_file, stylesheets=[css])
 
-    def _merge_pdfs(self, pdf_files: list[Path], output_path: Path) -> None:
+    @staticmethod
+    def _merge_pdfs(pdf_files: list[Path], output_path: Path) -> None:
         """Merge multiple PDF files into one.
 
         Uses pypdf if available, otherwise concatenates using WeasyPrint.
@@ -867,7 +875,8 @@ class StreamingPdfExporter(StreamingExporter):
             )
             shutil.copy(pdf_files[0], output_path)
 
-    def _create_empty_pdf(self, output_path: Path) -> None:
+    @staticmethod
+    def _create_empty_pdf(output_path: Path) -> None:
         """Create an empty PDF file.
 
         Args:
@@ -1075,7 +1084,8 @@ class PdfExporter:
         parts.append("</div>")
         return "\n".join(parts)
 
-    def _export_page(self, md_file: Path, output_file: Path) -> None:
+    @staticmethod
+    def _export_page(md_file: Path, output_file: Path) -> None:
         """Export a single page to PDF.
 
         Args:

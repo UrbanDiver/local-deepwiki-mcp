@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Optional
 
@@ -25,7 +25,7 @@ MIN_SECRET_MASK_LENGTH = 10
 MAX_SECRET_CONTEXT_LENGTH = 100
 
 
-class SecretType(str, Enum):
+class SecretType(StrEnum):
     """Types of secrets that can be detected."""
 
     AWS_KEY = "aws_access_key"
@@ -239,7 +239,8 @@ class SecretDetector:
 
         return False
 
-    def _calculate_confidence(self, secret_type: SecretType, match: str) -> float:
+    @staticmethod
+    def _calculate_confidence(secret_type: SecretType, match: str) -> float:
         """Calculate confidence score for secret detection.
 
         Args:
@@ -251,7 +252,8 @@ class SecretDetector:
         """
         return _CONFIDENCE_SCORES.get(secret_type, 0.75)
 
-    def _get_recommendation(self, secret_type: SecretType) -> str:
+    @staticmethod
+    def _get_recommendation(secret_type: SecretType) -> str:
         """Get remediation recommendation for secret type.
 
         Args:
@@ -323,7 +325,8 @@ class SecretDetector:
             f"Review and rotate {secret_type.value} if genuine. Use environment variables or secrets manager.",
         )
 
-    def _create_safe_context(self, line: str, match: re.Match) -> str:
+    @staticmethod
+    def _create_safe_context(line: str, match: re.Match) -> str:
         """Create a safe context string that partially masks the secret.
 
         Args:
@@ -558,9 +561,10 @@ def scan_repository_for_secrets(repo_path: Path) -> dict[str, list[SecretFinding
             continue
 
     logger.debug(
-        f"Secret scan complete: scanned {files_scanned} files, "
-        f"skipped {files_skipped} files, "
-        f"found secrets in {len(findings_by_file)} files"
+        "Secret scan complete: scanned %d files, skipped %d files, found secrets in %d files",
+        files_scanned,
+        files_skipped,
+        len(findings_by_file),
     )
 
     return findings_by_file

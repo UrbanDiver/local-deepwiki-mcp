@@ -752,7 +752,9 @@ class StreamingHtmlExporter(StreamingExporter):
         errors: list[str] = []
 
         logger.info(
-            f"Starting streaming HTML export from {self.wiki_path} to {self.output_path}"
+            "Starting streaming HTML export from %s to %s",
+            self.wiki_path,
+            self.output_path,
         )
 
         # Load TOC for navigation
@@ -805,7 +807,7 @@ class StreamingHtmlExporter(StreamingExporter):
 
         duration_ms = int((time.monotonic() - start_time) * 1000)
         logger.info(
-            f"Streaming HTML export complete: {exported} pages in {duration_ms}ms"
+            "Streaming HTML export complete: %d pages in %dms", exported, duration_ms
         )
 
         return ExportResult(
@@ -857,14 +859,16 @@ class StreamingHtmlExporter(StreamingExporter):
         output_file.parent.mkdir(parents=True, exist_ok=True)
         output_file.write_text(html)
 
+    @staticmethod
     def _render_toc(
-        self, entries: list[dict[str, Any]], current_path: str, root_path: str
+        entries: list[dict[str, Any]], current_path: str, root_path: str
     ) -> str:
         """Render TOC entries as HTML. Delegates to shared.render_toc."""
         return render_toc(entries, current_path, root_path)
 
+    @staticmethod
     def _render_toc_entry(
-        self, entry: dict[str, Any], current_path: str, root_path: str
+        entry: dict[str, Any], current_path: str, root_path: str
     ) -> str:
         """Render a single TOC entry recursively. Delegates to shared.render_toc_entry."""
         return render_toc_entry(entry, current_path, root_path)
@@ -906,7 +910,9 @@ class HtmlExporter:
         Returns:
             Number of pages exported
         """
-        logger.info("Starting HTML export from %s to %s", self.wiki_path, self.output_path)
+        logger.info(
+            "Starting HTML export from %s to %s", self.wiki_path, self.output_path
+        )
 
         # Check if we should use streaming mode
         iterator = WikiPageIterator(self.wiki_path)
@@ -1024,13 +1030,13 @@ class HtmlExporter:
         output_file.parent.mkdir(parents=True, exist_ok=True)
         output_file.write_text(html)
 
-    def _render_toc(
-        self, entries: list[dict], current_path: str, root_path: str
-    ) -> str:
+    @staticmethod
+    def _render_toc(entries: list[dict], current_path: str, root_path: str) -> str:
         """Render TOC entries as HTML. Delegates to shared.render_toc."""
         return render_toc(entries, current_path, root_path)
 
-    def _render_toc_entry(self, entry: dict, current_path: str, root_path: str) -> str:
+    @staticmethod
+    def _render_toc_entry(entry: dict, current_path: str, root_path: str) -> str:
         """Render a single TOC entry recursively. Delegates to shared.render_toc_entry."""
         return render_toc_entry(entry, current_path, root_path)
 
