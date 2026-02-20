@@ -3,10 +3,39 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Callable
 
 from local_deepwiki.config import LLMCacheConfig, LLMConfig, get_config
 from local_deepwiki.providers.base import EmbeddingProvider, LLMProvider
-from local_deepwiki.providers.llm.ollama import OllamaConnectionError, OllamaModelNotFoundError
+from local_deepwiki.providers.llm.ollama import (
+    OllamaConnectionError,
+    OllamaModelNotFoundError,
+)
+
+
+def _create_ollama(config: LLMConfig) -> LLMProvider:
+    from local_deepwiki.providers.llm.ollama import OllamaProvider
+
+    return OllamaProvider(model=config.ollama.model, base_url=config.ollama.base_url)
+
+
+def _create_anthropic(config: LLMConfig) -> LLMProvider:
+    from local_deepwiki.providers.llm.anthropic import AnthropicProvider
+
+    return AnthropicProvider(model=config.anthropic.model)
+
+
+def _create_openai(config: LLMConfig) -> LLMProvider:
+    from local_deepwiki.providers.llm.openai import OpenAILLMProvider
+
+    return OpenAILLMProvider(model=config.openai.model)
+
+
+_LLM_FACTORIES: dict[str, Callable[[LLMConfig], LLMProvider]] = {
+    "ollama": _create_ollama,
+    "anthropic": _create_anthropic,
+    "openai": _create_openai,
+}
 
 
 def get_llm_provider(config: LLMConfig | None = None) -> LLMProvider:
@@ -21,23 +50,10 @@ def get_llm_provider(config: LLMConfig | None = None) -> LLMProvider:
     if config is None:
         config = get_config().llm
 
-    if config.provider == "ollama":
-        from local_deepwiki.providers.llm.ollama import OllamaProvider
-
-        return OllamaProvider(
-            model=config.ollama.model,
-            base_url=config.ollama.base_url,
-        )
-    elif config.provider == "anthropic":
-        from local_deepwiki.providers.llm.anthropic import AnthropicProvider
-
-        return AnthropicProvider(model=config.anthropic.model)
-    elif config.provider == "openai":
-        from local_deepwiki.providers.llm.openai import OpenAILLMProvider
-
-        return OpenAILLMProvider(model=config.openai.model)
-    else:
+    factory = _LLM_FACTORIES.get(config.provider)
+    if factory is None:
         raise ValueError(f"Unknown LLM provider: {config.provider}")
+    return factory(config)
 
 
 def get_cached_llm_provider(

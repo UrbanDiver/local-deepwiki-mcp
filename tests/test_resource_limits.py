@@ -500,8 +500,8 @@ class TestValidResearchPresets:
         assert VALID_RESEARCH_PRESETS is not None
 
     def test_presets_is_set(self):
-        """Test VALID_RESEARCH_PRESETS is a set."""
-        assert isinstance(VALID_RESEARCH_PRESETS, set)
+        """Test VALID_RESEARCH_PRESETS is a frozenset."""
+        assert isinstance(VALID_RESEARCH_PRESETS, frozenset)
 
     def test_presets_contains_quick(self):
         """Test 'quick' is a valid preset."""

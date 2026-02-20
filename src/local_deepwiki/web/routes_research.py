@@ -22,17 +22,7 @@ logger = get_logger(__name__)
 research_bp = Blueprint("research", __name__)
 
 
-def _get_wiki_path():
-    """Retrieve the current WIKI_PATH, preferring Flask app config."""
-    from flask import current_app
-
-    path = current_app.config.get("WIKI_PATH")
-    if path is not None:
-        return path
-
-    from local_deepwiki.web import app as _app_module
-
-    return _app_module.WIKI_PATH
+from local_deepwiki.web.utils import get_wiki_path as _get_wiki_path
 
 
 @research_bp.route("/api/research", methods=["POST"])

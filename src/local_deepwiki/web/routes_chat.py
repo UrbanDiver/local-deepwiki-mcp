@@ -22,23 +22,7 @@ logger = get_logger(__name__)
 chat_bp = Blueprint("chat", __name__)
 
 
-def _get_wiki_path():
-    """Retrieve the current WIKI_PATH, preferring Flask app config.
-
-    Checks current_app.config first (set by create_app), which works even
-    when the server is launched via ``python -m`` where __main__ and the
-    importable module are separate objects.  Falls back to the module-level
-    global for backward compatibility with tests that monkeypatch it directly.
-    """
-    from flask import current_app
-
-    path = current_app.config.get("WIKI_PATH")
-    if path is not None:
-        return path
-
-    from local_deepwiki.web import app as _app_module
-
-    return _app_module.WIKI_PATH
+from local_deepwiki.web.utils import get_wiki_path as _get_wiki_path
 
 
 def stream_async_generator(

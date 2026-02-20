@@ -273,10 +273,10 @@ class WikiGenerator:
 
     def _log_cache_stats(self) -> None:
         """Log LLM cache statistics if available."""
-        if not hasattr(self.llm, "stats"):
-            return
         try:
-            cache_stats = self.llm.stats
+            cache_stats = getattr(self.llm, "stats", None)
+            if cache_stats is None:
+                return
             hits = int(cache_stats.get("hits", 0))
             misses = int(cache_stats.get("misses", 0))
             skipped = int(cache_stats.get("skipped", 0))

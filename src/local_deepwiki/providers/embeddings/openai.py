@@ -10,6 +10,7 @@ from local_deepwiki.providers.base import (
     ProviderAuthenticationError,
     ProviderConnectionError,
     ProviderRateLimitError,
+    handle_api_status_error,
     with_retry,
 )
 from local_deepwiki.providers.credentials import CredentialManager
@@ -61,47 +62,15 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         self._dimension = model_info.get("dimension", 1536)
 
     def _handle_api_error(self, e: Exception) -> None:
-        """Convert OpenAI API errors to standardized provider errors.
-
-        Args:
-            e: The exception from the OpenAI API.
-
-        Raises:
-            ProviderAuthenticationError: If authentication fails.
-            ProviderRateLimitError: If rate limited.
-            ProviderConnectionError: If connection fails.
-        """
-        if isinstance(e, AuthenticationError):
-            raise ProviderAuthenticationError(
-                "OpenAI API authentication failed. Check your OPENAI_API_KEY.",
-                provider_name=self.name,
-            ) from e
-
-        if isinstance(e, APIStatusError):
-            error_str = str(e).lower()
-            if e.status_code == 429 or "rate" in error_str:
-                # Try to extract retry-after header
-                retry_after = None
-                if hasattr(e, "response") and e.response:
-                    retry_after_str = e.response.headers.get("retry-after")
-                    if retry_after_str:
-                        try:
-                            retry_after = float(retry_after_str)
-                        except ValueError:
-                            pass
-                raise ProviderRateLimitError(
-                    f"OpenAI API rate limit exceeded: {e}",
-                    provider_name=self.name,
-                    retry_after=retry_after,
-                ) from e
-
-        if isinstance(e, APIConnectionError):
-            raise ProviderConnectionError(
-                f"Failed to connect to OpenAI API: {e}",
-                provider_name=self.name,
-                original_error=e,
-            ) from e
-
+        """Convert OpenAI API errors to standardized provider errors."""
+        handle_api_status_error(
+            e,
+            provider_name=self.name,
+            api_label="OpenAI API",
+            auth_error_type=AuthenticationError,
+            status_error_type=APIStatusError,
+            connection_error_type=APIConnectionError,
+        )
         # Re-raise unknown errors
         raise
 

@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 
 from local_deepwiki.core.vectorstore import VectorStore
+from local_deepwiki.generators.wiki_utils import file_path_to_wiki_path
 from local_deepwiki.models import ChunkType, IndexStatus
 
 
@@ -91,32 +93,18 @@ def group_entities_by_letter(
     Returns:
         Dictionary mapping letter to list of entities.
     """
-    grouped: dict[str, list[EntityEntry]] = {}
+    grouped: dict[str, list[EntityEntry]] = defaultdict(list)
 
     for entity in entities:
         first_char = entity.name[0].upper() if entity.name else "#"
         if not first_char.isalpha():
             first_char = "#"  # Group non-alphabetic under #
-
-        if first_char not in grouped:
-            grouped[first_char] = []
         grouped[first_char].append(entity)
 
     return grouped
 
 
-def _get_wiki_link(file_path: str) -> str:
-    """Convert a source file path to a wiki link.
-
-    Args:
-        file_path: Source file path like 'src/module/file.py'.
-
-    Returns:
-        Wiki link like 'files/src/module/file.md'.
-    """
-    # Replace .py extension with .md and prepend files/
-    wiki_path = file_path.replace(".py", ".md")
-    return f"files/{wiki_path}"
+_get_wiki_link = file_path_to_wiki_path
 
 
 def _get_brief_description(docstring: str | None, max_length: int = 60) -> str:

@@ -2,12 +2,18 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from pathlib import Path
 
 from tree_sitter import Node
 
 from local_deepwiki.core.chunker import CLASS_NODE_TYPES, FUNCTION_NODE_TYPES
-from local_deepwiki.core.parser import CodeParser, find_nodes_by_type, get_node_name, get_node_text
+from local_deepwiki.core.parser import (
+    CodeParser,
+    find_nodes_by_type,
+    get_node_name,
+    get_node_text,
+)
 from local_deepwiki.models import Language
 
 # Node types that represent function calls per language
@@ -237,7 +243,18 @@ def _is_builtin_or_noise(name: str, language: Language) -> bool:
 
     # Language-specific noise
     if language == Language.PYTHON:
-        python_noise = {"super", "next", "iter", "abs", "round", "ord", "chr", "hex", "bin", "oct"}
+        python_noise = {
+            "super",
+            "next",
+            "iter",
+            "abs",
+            "round",
+            "ord",
+            "chr",
+            "hex",
+            "bin",
+            "oct",
+        }
         if name in python_noise:
             return True
 
@@ -353,14 +370,16 @@ def generate_call_graph_diagram(
     # If too many nodes, filter to most connected
     if len(all_nodes) > max_nodes:
         # Count connections per node
-        connection_count: dict[str, int] = {}
+        connection_count: Counter[str] = Counter()
         for caller, callees in call_graph.items():
-            connection_count[caller] = connection_count.get(caller, 0) + len(callees)
+            connection_count[caller] += len(callees)
             for callee in callees:
-                connection_count[callee] = connection_count.get(callee, 0) + 1
+                connection_count[callee] += 1
 
         # Keep top nodes by connection count
-        sorted_nodes = sorted(connection_count.items(), key=lambda x: x[1], reverse=True)
+        sorted_nodes = sorted(
+            connection_count.items(), key=lambda x: x[1], reverse=True
+        )
         all_nodes = {node for node, _ in sorted_nodes[:max_nodes]}
 
     # Build diagram

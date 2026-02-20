@@ -12,22 +12,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterator
 
+from local_deepwiki.generators.wiki_utils import (
+    file_path_to_wiki_path,
+    relative_wiki_path,
+)
 from local_deepwiki.models import ChunkType, CodeChunk, WikiPage
-
-
-def file_path_to_wiki_path(file_path: str) -> str:
-    """Convert a source file path to a wiki page path.
-
-    Examples:
-        src/indexer.py -> files/src/indexer.md
-        main.go        -> files/main.md
-    """
-    p = Path(file_path)
-    parts = p.parts
-    stem = p.stem
-    if len(parts) > 1:
-        return f"files/{'/'.join(parts[:-1])}/{stem}.md"
-    return f"files/{stem}.md"
 
 
 @dataclass
@@ -578,32 +567,10 @@ class CrossLinker:
 
         return text
 
-    def _relative_path(self, from_path: str, to_path: str) -> str:
-        """Calculate relative path between two wiki pages.
-
-        Args:
-            from_path: Path of the source page (e.g., "modules/src.md").
-            to_path: Path of the target page (e.g., "files/src/indexer.md").
-
-        Returns:
-            Relative path from source to target.
-        """
-        from_parts = Path(from_path).parts[:-1]  # Directory parts only
-        to_parts = Path(to_path).parts
-
-        # Find common prefix
-        common_length = 0
-        for i in range(min(len(from_parts), len(to_parts) - 1)):
-            if from_parts[i] == to_parts[i]:
-                common_length = i + 1
-            else:
-                break
-
-        # Build relative path
-        ups = len(from_parts) - common_length
-        rel_parts = [".."] * ups + list(to_parts[common_length:])
-
-        return "/".join(rel_parts)
+    @staticmethod
+    def _relative_path(from_path: str, to_path: str) -> str:
+        """Calculate relative path between two wiki pages."""
+        return relative_wiki_path(from_path, to_path)
 
 
 def add_cross_links(

@@ -30,17 +30,7 @@ logger = get_logger(__name__)
 codemap_bp = Blueprint("codemap", __name__)
 
 
-def _get_wiki_path():
-    """Retrieve the current WIKI_PATH, preferring Flask app config."""
-    from flask import current_app
-
-    path = current_app.config.get("WIKI_PATH")
-    if path is not None:
-        return path
-
-    from local_deepwiki.web import app as _app_module
-
-    return _app_module.WIKI_PATH
+from local_deepwiki.web.utils import get_wiki_path as _get_wiki_path
 
 
 @codemap_bp.route("/codemap")
@@ -135,7 +125,7 @@ def api_codemap():
         return jsonify({"error": "Query exceeds maximum length (5000 characters)"}), 400
 
     focus = data.get("focus", "execution_flow")
-    valid_focus = {"execution_flow", "data_flow", "dependency_chain"}
+    valid_focus = frozenset({"execution_flow", "data_flow", "dependency_chain"})
     if focus not in valid_focus:
         return jsonify(
             {

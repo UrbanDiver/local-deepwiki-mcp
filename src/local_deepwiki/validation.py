@@ -12,10 +12,10 @@ MIN_CONTEXT_CHUNKS = 1
 MAX_CONTEXT_CHUNKS = 50
 MIN_SEARCH_LIMIT = 1
 MAX_SEARCH_LIMIT = 100
-VALID_LANGUAGES = {lang.value for lang in Language}
-VALID_CHUNK_TYPES = {ct.value for ct in ChunkType}
-VALID_LLM_PROVIDERS = {"ollama", "anthropic", "openai"}
-VALID_EMBEDDING_PROVIDERS = {"local", "openai"}
+VALID_LANGUAGES = frozenset(lang.value for lang in Language)
+VALID_CHUNK_TYPES = frozenset(ct.value for ct in ChunkType)
+VALID_LLM_PROVIDERS = frozenset({"ollama", "anthropic", "openai"})
+VALID_EMBEDDING_PROVIDERS = frozenset({"local", "openai"})
 
 # Deep research validation constants
 MIN_DEEP_RESEARCH_CHUNKS = 10
@@ -243,7 +243,7 @@ class ResourceLimits:
 
 
 # Valid deep research presets
-VALID_RESEARCH_PRESETS = {"quick", "default", "thorough"}
+VALID_RESEARCH_PRESETS = frozenset({"quick", "default", "thorough"})
 
 
 def validate_query_parameters(

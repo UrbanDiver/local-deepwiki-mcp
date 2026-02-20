@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from functools import partial
 from typing import Any, cast
 
 from tree_sitter import Node
@@ -148,20 +149,22 @@ def _get_block_comment(node: Node, source: bytes, comment_type: str) -> str | No
 
 # Docstring extraction dispatch - maps languages to their extraction functions
 _DOCSTRING_EXTRACTORS: dict[LangEnum, Any] = {
-    LangEnum.PYTHON: lambda n, s: _get_python_docstring(n, s),
-    LangEnum.JAVASCRIPT: lambda n, s: _get_jsdoc_or_line_comments(n, s),
-    LangEnum.TYPESCRIPT: lambda n, s: _get_jsdoc_or_line_comments(n, s),
-    LangEnum.TSX: lambda n, s: _get_jsdoc_or_line_comments(n, s),
-    LangEnum.GO: lambda n, s: _get_line_comments(n, s, "comment", "//"),
-    LangEnum.JAVA: lambda n, s: _get_javadoc_or_doxygen(n, s),
-    LangEnum.C: lambda n, s: _get_javadoc_or_doxygen(n, s),
-    LangEnum.CPP: lambda n, s: _get_javadoc_or_doxygen(n, s),
-    LangEnum.RUST: lambda n, s: _get_line_comments(n, s, "line_comment", "///"),
-    LangEnum.SWIFT: lambda n, s: _get_swift_docstring(n, s),
-    LangEnum.RUBY: lambda n, s: _get_line_comments(n, s, "comment", "#"),
-    LangEnum.PHP: lambda n, s: _get_block_comment(n, s, "comment"),
-    LangEnum.KOTLIN: lambda n, s: _get_block_comment(n, s, "multiline_comment"),
-    LangEnum.CSHARP: lambda n, s: _get_line_comments(n, s, "comment", "///"),
+    LangEnum.PYTHON: _get_python_docstring,
+    LangEnum.JAVASCRIPT: _get_jsdoc_or_line_comments,
+    LangEnum.TYPESCRIPT: _get_jsdoc_or_line_comments,
+    LangEnum.TSX: _get_jsdoc_or_line_comments,
+    LangEnum.GO: partial(_get_line_comments, comment_type="comment", prefix="//"),
+    LangEnum.JAVA: _get_javadoc_or_doxygen,
+    LangEnum.C: _get_javadoc_or_doxygen,
+    LangEnum.CPP: _get_javadoc_or_doxygen,
+    LangEnum.RUST: partial(
+        _get_line_comments, comment_type="line_comment", prefix="///"
+    ),
+    LangEnum.SWIFT: _get_swift_docstring,
+    LangEnum.RUBY: partial(_get_line_comments, comment_type="comment", prefix="#"),
+    LangEnum.PHP: partial(_get_block_comment, comment_type="comment"),
+    LangEnum.KOTLIN: partial(_get_block_comment, comment_type="multiline_comment"),
+    LangEnum.CSHARP: partial(_get_line_comments, comment_type="comment", prefix="///"),
 }
 
 

@@ -15,6 +15,7 @@ from local_deepwiki.providers.base import (
     ProviderConnectionError,
     ProviderModelNotFoundError,
     ProviderRateLimitError,
+    handle_api_status_error,
     validate_provider_credentials,
     with_retry,
 )
@@ -69,59 +70,18 @@ class OpenAILLMProvider(LLMProvider):
         self._client = AsyncOpenAI(api_key=api_key)
 
     def _handle_api_error(self, e: Exception) -> None:
-        """Convert OpenAI API errors to standardized provider errors.
-
-        Args:
-            e: The exception from the OpenAI API.
-
-        Raises:
-            ProviderAuthenticationError: If authentication fails.
-            ProviderRateLimitError: If rate limited.
-            ProviderModelNotFoundError: If model not found.
-            ProviderConnectionError: If connection fails.
-        """
-        if isinstance(e, AuthenticationError):
-            raise ProviderAuthenticationError(
-                "OpenAI API authentication failed. Check your OPENAI_API_KEY.",
-                provider_name=self.name,
-            ) from e
-
-        if isinstance(e, APIStatusError):
-            error_str = str(e).lower()
-            if e.status_code == 429 or "rate" in error_str:
-                # Try to extract retry-after header
-                retry_after = None
-                if hasattr(e, "response") and e.response:
-                    retry_after_str = e.response.headers.get("retry-after")
-                    if retry_after_str:
-                        try:
-                            retry_after = float(retry_after_str)
-                        except ValueError:
-                            pass
-                raise ProviderRateLimitError(
-                    f"OpenAI API rate limit exceeded: {e}",
-                    provider_name=self.name,
-                    retry_after=retry_after,
-                ) from e
-
-            if (
-                e.status_code == 404
-                or "not found" in error_str
-                or "does not exist" in error_str
-            ):
-                raise ProviderModelNotFoundError(
-                    self._model,
-                    provider_name=self.name,
-                    available_models=list(OPENAI_MODELS.keys()),
-                ) from e
-
-        if isinstance(e, APIConnectionError):
-            raise ProviderConnectionError(
-                f"Failed to connect to OpenAI API: {e}",
-                provider_name=self.name,
-                original_error=e,
-            ) from e
-
+        """Convert OpenAI API errors to standardized provider errors."""
+        handle_api_status_error(
+            e,
+            provider_name=self.name,
+            api_label="OpenAI API",
+            model=self._model,
+            available_models=list(OPENAI_MODELS.keys()),
+            not_found_extra_patterns=("does not exist",),
+            auth_error_type=AuthenticationError,
+            status_error_type=APIStatusError,
+            connection_error_type=APIConnectionError,
+        )
         # Re-raise unknown errors
         raise
 

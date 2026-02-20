@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from mcp.types import TextContent
 from pydantic import ValidationError as PydanticValidationError
@@ -134,40 +134,44 @@ async def handle_get_diagrams(args: dict[str, Any]) -> list[TextContent]:
     # Collect chunks from vector store for diagram generation
     all_chunks = list(vector_store.get_all_chunks())
 
-    diagram: str | None = None
+    project_name = Path(repo_path).name.lower().replace("-", "_")
 
-    if diagram_type.value == "class":
-        diagram = generate_class_diagram(all_chunks)
-    elif diagram_type.value == "dependency":
-        project_name = Path(repo_path).name.lower().replace("-", "_")
-        diagram = generate_dependency_graph(
+    # Lazy dict dispatch — only the requested generator runs
+    simple_generators: dict[str, Callable[[], str | None]] = {
+        "class": lambda: generate_class_diagram(all_chunks),
+        "dependency": lambda: generate_dependency_graph(
             all_chunks,
             project_name=project_name,
             detect_circular=True,
             exclude_tests=True,
-        )
-    elif diagram_type.value == "module":
-        diagram = generate_module_overview(index_status)
-    elif diagram_type.value == "language_pie":
-        diagram = generate_language_pie_chart(index_status)
-    elif diagram_type.value == "sequence":
-        if entry_point:
-            # Build call graph first
-            extractor = CallGraphExtractor()
-            combined_graph: dict[str, list[str]] = {}
-            for file_info in index_status.files:
-                file_path = repo_path / file_info.path
-                if file_path.exists():
-                    graph = extractor.extract_from_file(file_path, repo_path)
-                    for k, v in graph.items():
-                        combined_graph.setdefault(k, []).extend(v)
-            diagram = generate_sequence_diagram(combined_graph, entry_point=entry_point)
-        else:
+        ),
+        "module": lambda: generate_module_overview(index_status),
+        "language_pie": lambda: generate_language_pie_chart(index_status),
+    }
+
+    dtype = diagram_type.value
+    generator = simple_generators.get(dtype)
+    if generator is not None:
+        diagram = generator()
+    elif dtype == "sequence":
+        if not entry_point:
             raise ValidationError(
                 message="entry_point is required for sequence diagrams",
                 hint="Provide the name of the function to use as the sequence diagram entry point.",
                 field="entry_point",
             )
+        # Build call graph first
+        extractor = CallGraphExtractor()
+        combined_graph: dict[str, list[str]] = {}
+        for file_info in index_status.files:
+            file_path = repo_path / file_info.path
+            if file_path.exists():
+                graph = extractor.extract_from_file(file_path, repo_path)
+                for k, v in graph.items():
+                    combined_graph.setdefault(k, []).extend(v)
+        diagram = generate_sequence_diagram(combined_graph, entry_point=entry_point)
+    else:
+        diagram = None
 
     if diagram is None:
         return make_tool_text_content(

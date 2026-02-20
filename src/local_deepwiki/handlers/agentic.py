@@ -441,7 +441,9 @@ async def handle_suggest_next_actions(args: dict[str, Any]) -> list[TextContent]
 
 # --- Workflow presets ---
 
-WORKFLOW_PRESETS = {"onboarding", "security_audit", "full_analysis", "quick_refresh"}
+WORKFLOW_PRESETS = frozenset(
+    {"onboarding", "security_audit", "full_analysis", "quick_refresh"}
+)
 
 
 @handle_tool_errors
@@ -462,7 +464,11 @@ async def handle_run_workflow(args: dict[str, Any]) -> list[TextContent]:
     repo_path = Path(validated.repo_path).resolve()
     workflow = validated.workflow
 
-    if workflow not in WORKFLOW_PRESETS:
+    if not repo_path.exists():
+        raise path_not_found_error(str(repo_path), "repository")
+
+    runner_name = _WORKFLOW_RUNNER_NAMES.get(workflow)
+    if runner_name is None:
         from local_deepwiki.errors import ValidationError
 
         raise ValidationError(
@@ -472,21 +478,11 @@ async def handle_run_workflow(args: dict[str, Any]) -> list[TextContent]:
             value=workflow,
         )
 
-    if not repo_path.exists():
-        raise path_not_found_error(str(repo_path), "repository")
+    import local_deepwiki.handlers.agentic as _self_module
 
+    runner = getattr(_self_module, runner_name)
     logger.info("Running workflow '%s' for %s", workflow, repo_path)
-
-    steps: list[dict[str, Any]] = []
-
-    if workflow == "onboarding":
-        steps = await _run_onboarding(str(repo_path))
-    elif workflow == "security_audit":
-        steps = await _run_security_audit(str(repo_path))
-    elif workflow == "full_analysis":
-        steps = await _run_full_analysis(str(repo_path))
-    elif workflow == "quick_refresh":
-        steps = await _run_quick_refresh(str(repo_path))
+    steps = await runner(str(repo_path))
 
     data = {
         "workflow": workflow,
@@ -661,6 +657,15 @@ async def _run_quick_refresh(repo_path: str) -> list[dict[str, Any]]:
         _run_step(handle_get_changelog, "get_changelog", {"repo_path": repo_path}),
     )
     return list(steps)
+
+
+# Workflow name -> module-level function name (looked up via globals() for mock-ability)
+_WORKFLOW_RUNNER_NAMES: dict[str, str] = {
+    "onboarding": "_run_onboarding",
+    "security_audit": "_run_security_audit",
+    "full_analysis": "_run_full_analysis",
+    "quick_refresh": "_run_quick_refresh",
+}
 
 
 @handle_tool_errors

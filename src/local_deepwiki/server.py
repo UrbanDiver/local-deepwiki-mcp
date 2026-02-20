@@ -126,7 +126,9 @@ TOOL_HANDLERS: dict[str, ToolHandler] = {
 }
 
 # Tools that need server context for progress streaming
-PROGRESS_ENABLED_TOOLS = {"index_repository", "deep_research", "resume_research"}
+PROGRESS_ENABLED_TOOLS = frozenset(
+    {"index_repository", "deep_research", "resume_research"}
+)
 
 
 @server.call_tool()

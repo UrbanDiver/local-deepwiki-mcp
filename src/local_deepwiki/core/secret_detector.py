@@ -44,6 +44,24 @@ class SecretType(str, Enum):
     PGP_KEY = "pgp_key"
 
 
+_CONFIDENCE_SCORES: dict[SecretType, float] = {
+    SecretType.PRIVATE_KEY: 0.98,
+    SecretType.SSH_KEY: 0.98,
+    SecretType.PGP_KEY: 0.98,
+    SecretType.AWS_KEY: 0.95,
+    SecretType.GITHUB_TOKEN: 0.95,
+    SecretType.GITLAB_TOKEN: 0.92,
+    SecretType.SLACK_TOKEN: 0.92,
+    SecretType.DATABASE_URL: 0.90,
+    SecretType.GOOGLE_KEY: 0.90,
+    SecretType.AWS_SECRET: 0.85,
+    SecretType.AZURE_KEY: 0.80,
+    SecretType.DOCKER_AUTH: 0.75,
+    SecretType.API_KEY: 0.70,
+    SecretType.GENERIC_TOKEN: 0.70,
+}
+
+
 @dataclass
 class SecretFinding:
     """Represents a detected secret in code."""
@@ -231,55 +249,7 @@ class SecretDetector:
         Returns:
             Confidence score between 0.0 and 1.0.
         """
-        # AWS keys have very specific format - high confidence
-        if secret_type == SecretType.AWS_KEY:
-            return 0.95
-
-        # GitHub tokens have specific prefix - high confidence
-        if secret_type == SecretType.GITHUB_TOKEN:
-            return 0.95
-
-        # GitLab tokens have specific prefix - high confidence
-        if secret_type == SecretType.GITLAB_TOKEN:
-            return 0.92
-
-        # Slack tokens have specific prefix - high confidence
-        if secret_type == SecretType.SLACK_TOKEN:
-            return 0.92
-
-        # Private keys are very distinctive - very high confidence
-        if secret_type in (
-            SecretType.PRIVATE_KEY,
-            SecretType.SSH_KEY,
-            SecretType.PGP_KEY,
-        ):
-            return 0.98
-
-        # Database URLs with credentials - high confidence
-        if secret_type == SecretType.DATABASE_URL:
-            return 0.90
-
-        # Google API keys have specific format
-        if secret_type == SecretType.GOOGLE_KEY:
-            return 0.90
-
-        # AWS secret requires context - moderate-high confidence
-        if secret_type == SecretType.AWS_SECRET:
-            return 0.85
-
-        # Azure keys depend on context
-        if secret_type == SecretType.AZURE_KEY:
-            return 0.80
-
-        # Docker auth
-        if secret_type == SecretType.DOCKER_AUTH:
-            return 0.75
-
-        # Generic patterns are lower confidence due to false positive potential
-        if secret_type in (SecretType.API_KEY, SecretType.GENERIC_TOKEN):
-            return 0.70
-
-        return 0.75
+        return _CONFIDENCE_SCORES.get(secret_type, 0.75)
 
     def _get_recommendation(self, secret_type: SecretType) -> str:
         """Get remediation recommendation for secret type.

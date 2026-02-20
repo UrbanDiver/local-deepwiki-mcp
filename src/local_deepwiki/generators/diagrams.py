@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from collections import Counter, defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -23,6 +24,9 @@ class ClassInfo:
     docstring: str | None = None
 
 
+_MERMAID_SANITIZE_TABLE = str.maketrans({ch: "_" for ch in "<>[] .-:"})
+
+
 def sanitize_mermaid_name(name: str) -> str:
     """Sanitize a name for use in Mermaid diagrams.
 
@@ -32,10 +36,7 @@ def sanitize_mermaid_name(name: str) -> str:
     Returns:
         Sanitized name safe for Mermaid syntax.
     """
-    # Replace problematic characters
-    result = name.replace("<", "_").replace(">", "_").replace(" ", "_")
-    result = result.replace("[", "_").replace("]", "_").replace(".", "_")
-    result = result.replace("-", "_").replace(":", "_")
+    result = name.translate(_MERMAID_SANITIZE_TABLE)
     # Ensure it starts with a letter
     if result and result[0].isdigit():
         result = "C" + result
@@ -433,9 +434,9 @@ def _collect_dependencies(
     Returns:
         DependencyData with collected dependencies.
     """
-    dependencies: dict[str, set[str]] = {}
-    external_deps: dict[str, int] = {}
-    module_external_deps: dict[str, set[str]] = {}
+    dependencies: dict[str, set[str]] = defaultdict(set)
+    external_deps: Counter[str] = Counter()
+    module_external_deps: dict[str, set[str]] = defaultdict(set)
     all_internal_modules: set[str] = set()
 
     for chunk in chunks:
@@ -452,10 +453,6 @@ def _collect_dependencies(
         if exclude_tests and _is_test_module(module, file_path):
             continue
 
-        if module not in dependencies:
-            dependencies[module] = set()
-        if module not in module_external_deps:
-            module_external_deps[module] = set()
         all_internal_modules.add(module)
 
         for line in chunk.content.split("\n"):
@@ -472,7 +469,7 @@ def _collect_dependencies(
             elif show_external:
                 ext_module = _parse_external_import(line)
                 if ext_module:
-                    external_deps[ext_module] = external_deps.get(ext_module, 0) + 1
+                    external_deps[ext_module] += 1
                     module_external_deps[module].add(ext_module)
 
     return _DependencyData(
@@ -513,12 +510,10 @@ def _group_modules(modules: set[str]) -> dict[str, list[str]]:
     Returns:
         Mapping of group name to list of modules.
     """
-    groups: dict[str, list[str]] = {}
+    groups: dict[str, list[str]] = defaultdict(list)
     for module in sorted(modules):
         parts = module.split(".")
         group = parts[0] if parts else "other"
-        if group not in groups:
-            groups[group] = []
         groups[group].append(module)
     return groups
 
@@ -920,7 +915,7 @@ def generate_module_overview(
     )
 
     # Group files by top-level directory
-    directories: dict[str, dict[str, int]] = {}  # dir -> {subdir: count}
+    directories: defaultdict[str, Counter[str]] = defaultdict(Counter)
 
     for file_info in index_status.files:
         parts = list(Path(file_info.path).parts)
@@ -937,14 +932,10 @@ def generate_module_overview(
                 top_dir = parts[1]
                 parts = parts[1:]
 
-        if top_dir not in directories:
-            directories[top_dir] = {}
-
         if len(parts) > 1:
-            subdir = parts[1]
-            directories[top_dir][subdir] = directories[top_dir].get(subdir, 0) + 1
+            directories[top_dir][parts[1]] += 1
         else:
-            directories[top_dir]["_root"] = directories[top_dir].get("_root", 0) + 1
+            directories[top_dir]["_root"] += 1
 
     if not directories:
         return None

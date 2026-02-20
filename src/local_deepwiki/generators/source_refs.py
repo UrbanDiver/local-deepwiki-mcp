@@ -10,6 +10,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from local_deepwiki.generators.wiki_utils import relative_wiki_path
 from local_deepwiki.models import WikiPage, WikiPageStatus
 
 
@@ -57,32 +58,7 @@ def build_file_to_wiki_map(
     return file_to_wiki
 
 
-def _relative_path(from_path: str, to_path: str) -> str:
-    """Calculate relative path between two wiki pages.
-
-    Args:
-        from_path: Path of the source page.
-        to_path: Path of the target page.
-
-    Returns:
-        Relative path from source to target.
-    """
-    from_parts = Path(from_path).parts[:-1]  # Directory parts only
-    to_parts = Path(to_path).parts
-
-    # Find common prefix
-    common_length = 0
-    for i in range(min(len(from_parts), len(to_parts) - 1)):
-        if from_parts[i] == to_parts[i]:
-            common_length = i + 1
-        else:
-            break
-
-    # Build relative path
-    ups = len(from_parts) - common_length
-    rel_parts = [".."] * ups + list(to_parts[common_length:])
-
-    return "/".join(rel_parts)
+_relative_path = relative_wiki_path
 
 
 def _format_file_entry(

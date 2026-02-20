@@ -15,8 +15,8 @@ if TYPE_CHECKING:
     from local_deepwiki.models import CodeChunk
 
 # Valid values for filtering - used to prevent injection attacks
-VALID_LANGUAGES = {lang.value for lang in Language}
-VALID_CHUNK_TYPES = {ct.value for ct in ChunkType}
+VALID_LANGUAGES = frozenset(lang.value for lang in Language)
+VALID_CHUNK_TYPES = frozenset(ct.value for ct in ChunkType)
 
 # Default memory budget for batch operations (256 MB)
 DEFAULT_MAX_MEMORY_MB = 256
@@ -188,7 +188,9 @@ class EmbeddingProgress:
             if self.completed_batches == 0:
                 return None
             avg_time_per_batch = self.elapsed_seconds / self.completed_batches
-            remaining_batches = self.total_batches - self.completed_batches - self.failed_batches
+            remaining_batches = (
+                self.total_batches - self.completed_batches - self.failed_batches
+            )
             return avg_time_per_batch * remaining_batches
 
     def log_progress(self) -> None:
@@ -214,7 +216,8 @@ class EmbeddingProgress:
             eta_str = ""
 
         logger.info(
-            f"Embedding progress: {completed}/{total} batches " f"({progress_pct:.1f}%){eta_str}"
+            f"Embedding progress: {completed}/{total} batches "
+            f"({progress_pct:.1f}%){eta_str}"
         )
 
 

@@ -12,6 +12,7 @@ import json
 import sqlite3
 import threading
 import time
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import cast
 
@@ -21,28 +22,18 @@ from local_deepwiki.providers.base import EmbeddingProvider
 logger = get_logger(__name__)
 
 
+def _default_cache_dir() -> Path:
+    return Path.home() / ".cache" / "local-deepwiki"
+
+
+@dataclass(slots=True)
 class EmbeddingCacheConfig:
     """Configuration for the embedding cache."""
 
-    def __init__(
-        self,
-        cache_dir: Path | None = None,
-        ttl_seconds: int = 604800,  # 7 days default
-        max_entries: int = 100000,
-        batch_write_threshold: int = 100,
-    ):
-        """Initialize cache configuration.
-
-        Args:
-            cache_dir: Directory for cache database. Defaults to ~/.cache/local-deepwiki.
-            ttl_seconds: Time-to-live for cache entries in seconds (default: 7 days).
-            max_entries: Maximum number of cache entries before cleanup (default: 100k).
-            batch_write_threshold: Number of entries to batch before committing.
-        """
-        self.cache_dir = cache_dir or (Path.home() / ".cache" / "local-deepwiki")
-        self.ttl_seconds = ttl_seconds
-        self.max_entries = max_entries
-        self.batch_write_threshold = batch_write_threshold
+    cache_dir: Path = field(default_factory=_default_cache_dir)
+    ttl_seconds: int = 604800  # 7 days default
+    max_entries: int = 100000
+    batch_write_threshold: int = 100
 
 
 class EmbeddingCache:
@@ -521,6 +512,14 @@ class EmbeddingCache:
             logger.warning("Failed to invalidate model cache: %s", e)
             return 0
 
+    def __enter__(self) -> EmbeddingCache:
+        """Enter context manager."""
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        """Exit context manager, closing all connections."""
+        self.close()
+
     def close(self) -> None:
         """Close all database connections.
 
@@ -532,9 +531,10 @@ class EmbeddingCache:
         self._flush_pending_writes()
 
         # Close thread-local connection if it exists in current thread
-        if hasattr(self._local, "conn") and self._local.conn is not None:
+        conn = getattr(self._local, "conn", None)
+        if conn is not None:
             try:
-                self._local.conn.close()
+                conn.close()
             except sqlite3.Error:
                 pass
             self._local.conn = None

@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from typing import Any, AsyncIterator
 
-from anthropic import APIConnectionError, APIStatusError, AsyncAnthropic, AuthenticationError
+from anthropic import (
+    APIConnectionError,
+    APIStatusError,
+    AsyncAnthropic,
+    AuthenticationError,
+)
 
 from local_deepwiki.logging import get_logger
 from local_deepwiki.providers.base import (
@@ -14,6 +19,7 @@ from local_deepwiki.providers.base import (
     ProviderConnectionError,
     ProviderModelNotFoundError,
     ProviderRateLimitError,
+    handle_api_status_error,
     validate_provider_credentials,
     with_retry,
 )
@@ -98,55 +104,17 @@ class AnthropicProvider(LLMProvider):
         return kwargs
 
     def _handle_api_error(self, e: Exception) -> None:
-        """Convert Anthropic API errors to standardized provider errors.
-
-        Args:
-            e: The exception from the Anthropic API.
-
-        Raises:
-            ProviderAuthenticationError: If authentication fails.
-            ProviderRateLimitError: If rate limited.
-            ProviderModelNotFoundError: If model not found.
-            ProviderConnectionError: If connection fails.
-        """
-        if isinstance(e, AuthenticationError):
-            raise ProviderAuthenticationError(
-                "Anthropic API authentication failed. Check your ANTHROPIC_API_KEY.",
-                provider_name=self.name,
-            ) from e
-
-        if isinstance(e, APIStatusError):
-            error_str = str(e).lower()
-            if e.status_code == 429 or "rate" in error_str:
-                # Try to extract retry-after header
-                retry_after = None
-                if hasattr(e, "response") and e.response:
-                    retry_after_str = e.response.headers.get("retry-after")
-                    if retry_after_str:
-                        try:
-                            retry_after = float(retry_after_str)
-                        except ValueError:
-                            pass
-                raise ProviderRateLimitError(
-                    f"Anthropic API rate limit exceeded: {e}",
-                    provider_name=self.name,
-                    retry_after=retry_after,
-                ) from e
-
-            if e.status_code == 404 or "not found" in error_str:
-                raise ProviderModelNotFoundError(
-                    self._model,
-                    provider_name=self.name,
-                    available_models=list(ANTHROPIC_MODELS.keys()),
-                ) from e
-
-        if isinstance(e, APIConnectionError):
-            raise ProviderConnectionError(
-                f"Failed to connect to Anthropic API: {e}",
-                provider_name=self.name,
-                original_error=e,
-            ) from e
-
+        """Convert Anthropic API errors to standardized provider errors."""
+        handle_api_status_error(
+            e,
+            provider_name=self.name,
+            api_label="Anthropic API",
+            model=self._model,
+            available_models=list(ANTHROPIC_MODELS.keys()),
+            auth_error_type=AuthenticationError,
+            status_error_type=APIStatusError,
+            connection_error_type=APIConnectionError,
+        )
         # Re-raise unknown errors
         raise
 
@@ -301,7 +269,7 @@ class AnthropicProvider(LLMProvider):
 
             # Get text from the first content block (should be TextBlock)
             first_block = response.content[0]
-            content = first_block.text if hasattr(first_block, "text") else ""
+            content = getattr(first_block, "text", "")
 
             logger.debug("Anthropic response length: %s", len(content))
             return content

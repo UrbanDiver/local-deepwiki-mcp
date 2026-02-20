@@ -11,6 +11,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from local_deepwiki.generators.wiki_utils import relative_wiki_path
 from local_deepwiki.models import ChunkType, CodeChunk, WikiPage
 
 
@@ -21,7 +22,9 @@ class FileRelationships:
     file_path: str
     imports: set[str] = field(default_factory=set)  # Files this file imports
     imported_by: set[str] = field(default_factory=set)  # Files that import this
-    shared_deps_with: dict[str, int] = field(default_factory=dict)  # File -> shared count
+    shared_deps_with: dict[str, int] = field(
+        default_factory=dict
+    )  # File -> shared count
 
 
 class RelationshipAnalyzer:
@@ -241,7 +244,9 @@ def generate_see_also_section(
             related.append((wiki_path, title, "dependency"))
 
     # Add files with shared dependencies (sorted by count)
-    shared_sorted = sorted(relationships.shared_deps_with.items(), key=lambda x: x[1], reverse=True)
+    shared_sorted = sorted(
+        relationships.shared_deps_with.items(), key=lambda x: x[1], reverse=True
+    )
     for file_path, count in shared_sorted[:3]:  # Limit shared deps
         wiki_path = file_to_wiki.get(file_path)
         if wiki_path and wiki_path != current_wiki_path:
@@ -267,38 +272,10 @@ def generate_see_also_section(
     lines = ["## See Also", ""]
     for wiki_path, title, rel_type in unique_related:
         # Calculate relative path from current page
-        rel_path = _relative_path(current_wiki_path, wiki_path)
+        rel_path = relative_wiki_path(current_wiki_path, wiki_path)
         lines.append(f"- [{title}]({rel_path}) - {rel_type}")
 
     return "\n".join(lines)
-
-
-def _relative_path(from_path: str, to_path: str) -> str:
-    """Calculate relative path between two wiki pages.
-
-    Args:
-        from_path: Path of the source page.
-        to_path: Path of the target page.
-
-    Returns:
-        Relative path from source to target.
-    """
-    from_parts = Path(from_path).parts[:-1]  # Directory parts only
-    to_parts = Path(to_path).parts
-
-    # Find common prefix
-    common_length = 0
-    for i in range(min(len(from_parts), len(to_parts) - 1)):
-        if from_parts[i] == to_parts[i]:
-            common_length = i + 1
-        else:
-            break
-
-    # Build relative path
-    ups = len(from_parts) - common_length
-    rel_parts = [".."] * ups + list(to_parts[common_length:])
-
-    return "/".join(rel_parts)
 
 
 def add_see_also_sections(

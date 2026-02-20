@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable
 
 from local_deepwiki.config import EmbeddingConfig, get_config
 
@@ -13,7 +13,10 @@ if TYPE_CHECKING:
 from local_deepwiki.logging import get_logger
 from local_deepwiki.plugins.registry import get_plugin_registry
 from local_deepwiki.providers.base import EmbeddingProvider
-from local_deepwiki.providers.embeddings.cache import CachedEmbeddingProvider, EmbeddingCacheConfig
+from local_deepwiki.providers.embeddings.cache import (
+    CachedEmbeddingProvider,
+    EmbeddingCacheConfig,
+)
 
 logger = get_logger(__name__)
 
@@ -36,6 +39,24 @@ class _PluginEmbeddingProviderWrapper(EmbeddingProvider):
     def name(self) -> str:
         """Get provider name from the plugin."""
         return self._plugin.provider_name
+
+
+def _create_local(config: EmbeddingConfig) -> EmbeddingProvider:
+    from local_deepwiki.providers.embeddings.local import LocalEmbeddingProvider
+
+    return LocalEmbeddingProvider(model_name=config.local.model)
+
+
+def _create_openai(config: EmbeddingConfig) -> EmbeddingProvider:
+    from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
+
+    return OpenAIEmbeddingProvider(model=config.openai.model)
+
+
+_EMBEDDING_FACTORIES: dict[str, Callable[[EmbeddingConfig], EmbeddingProvider]] = {
+    "local": _create_local,
+    "openai": _create_openai,
+}
 
 
 def get_embedding_provider(
@@ -70,28 +91,25 @@ def get_embedding_provider(
     plugin_provider = registry.get_embedding_provider(config.provider)
 
     if plugin_provider is not None:
-        # Use plugin provider - wrap it to match EmbeddingProvider interface
-        logger.debug("Using plugin embedding provider: %s", plugin_provider.provider_name)
+        logger.debug(
+            "Using plugin embedding provider: %s", plugin_provider.provider_name
+        )
         provider = _PluginEmbeddingProviderWrapper(plugin_provider)
-    elif config.provider == "local":
-        from local_deepwiki.providers.embeddings.local import LocalEmbeddingProvider
-
-        provider = LocalEmbeddingProvider(model_name=config.local.model)
-    elif config.provider == "openai":
-        from local_deepwiki.providers.embeddings.openai import OpenAIEmbeddingProvider
-
-        provider = OpenAIEmbeddingProvider(model=config.openai.model)
     else:
-        raise ValueError(f"Unknown embedding provider: {config.provider}")
+        factory = _EMBEDDING_FACTORIES.get(config.provider)
+        if factory is None:
+            raise ValueError(f"Unknown embedding provider: {config.provider}")
+        provider = factory(config)
 
     # Wrap with caching if enabled
     if enable_cache:
-        # Use config values from global config
-        cache_config = EmbeddingCacheConfig(
-            cache_dir=cache_dir,
-            ttl_seconds=global_config.embedding_cache.ttl_seconds,
-            max_entries=global_config.embedding_cache.max_entries,
-        )
+        cache_kwargs: dict[str, Any] = {
+            "ttl_seconds": global_config.embedding_cache.ttl_seconds,
+            "max_entries": global_config.embedding_cache.max_entries,
+        }
+        if cache_dir is not None:
+            cache_kwargs["cache_dir"] = cache_dir
+        cache_config = EmbeddingCacheConfig(**cache_kwargs)
         provider = CachedEmbeddingProvider(provider, cache_config)
 
     return provider

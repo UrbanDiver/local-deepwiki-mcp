@@ -75,7 +75,7 @@ class TestOpenAIProviderHandleApiError:
             provider._handle_api_error(auth_error)
 
         assert "authentication failed" in str(exc_info.value)
-        assert "OPENAI_API_KEY" in str(exc_info.value)
+        assert "API key" in str(exc_info.value)
 
     @patch.dict(os.environ, {"OPENAI_API_KEY": "sk-testkey1234567890abcdef1234"})
     def test_handle_rate_limit_error_429(self):

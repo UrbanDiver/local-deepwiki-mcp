@@ -5,11 +5,11 @@ import pytest
 from local_deepwiki.generators.see_also import (
     FileRelationships,
     RelationshipAnalyzer,
-    _relative_path,
     add_see_also_sections,
     build_file_to_wiki_map,
     generate_see_also_section,
 )
+from local_deepwiki.generators.wiki_utils import relative_wiki_path as _relative_path
 from local_deepwiki.models import ChunkType, CodeChunk, Language, WikiPage
 
 
@@ -209,7 +209,10 @@ class TestBuildFileToWikiMap:
             mapping["src/local_deepwiki/core/chunker.py"]
             == "files/src/local_deepwiki/core/chunker.md"
         )
-        assert mapping["src/local_deepwiki/models.py"] == "files/src/local_deepwiki/models.md"
+        assert (
+            mapping["src/local_deepwiki/models.py"]
+            == "files/src/local_deepwiki/models.md"
+        )
         # index.md shouldn't be mapped (not a file doc)
         assert "index.py" not in mapping
 

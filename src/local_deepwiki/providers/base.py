@@ -175,6 +175,83 @@ def validate_provider_credentials(
 
 
 # =============================================================================
+# Shared API Error Handling
+# =============================================================================
+
+
+def handle_api_status_error(
+    e: Exception,
+    *,
+    provider_name: str,
+    api_label: str,
+    model: str | None = None,
+    available_models: list[str] | None = None,
+    not_found_extra_patterns: tuple[str, ...] = (),
+    auth_error_type: type | None = None,
+    status_error_type: type | None = None,
+    connection_error_type: type | None = None,
+) -> None:
+    """Convert SDK-specific API errors to standardized provider errors.
+
+    This consolidates the duplicated error-handling logic shared by the
+    Anthropic, OpenAI LLM, and OpenAI embedding providers.
+
+    Args:
+        e: The original exception from the SDK.
+        provider_name: Provider name for error messages.
+        api_label: Human label (e.g. "Anthropic API", "OpenAI API").
+        model: Model name (enables model-not-found handling when set).
+        available_models: Known models to suggest on model-not-found.
+        not_found_extra_patterns: Additional lowered substrings that indicate
+            a model-not-found error (e.g. ``("does not exist",)``).
+        auth_error_type: SDK's AuthenticationError class.
+        status_error_type: SDK's APIStatusError class.
+        connection_error_type: SDK's APIConnectionError class.
+    """
+    if auth_error_type and isinstance(e, auth_error_type):
+        raise ProviderAuthenticationError(
+            f"{api_label} authentication failed. Check your API key.",
+            provider_name=provider_name,
+        ) from e
+
+    if status_error_type and isinstance(e, status_error_type):
+        error_str = str(e).lower()
+        status_code = getattr(e, "status_code", None)
+
+        if status_code == 429 or "rate" in error_str:
+            retry_after = None
+            response = getattr(e, "response", None)
+            if response:
+                retry_after_str = response.headers.get("retry-after")
+                if retry_after_str:
+                    try:
+                        retry_after = float(retry_after_str)
+                    except ValueError:
+                        pass
+            raise ProviderRateLimitError(
+                f"{api_label} rate limit exceeded: {e}",
+                provider_name=provider_name,
+                retry_after=retry_after,
+            ) from e
+
+        if model is not None:
+            not_found_patterns = ("not found", *not_found_extra_patterns)
+            if status_code == 404 or any(p in error_str for p in not_found_patterns):
+                raise ProviderModelNotFoundError(
+                    model,
+                    provider_name=provider_name,
+                    available_models=available_models or [],
+                ) from e
+
+    if connection_error_type and isinstance(e, connection_error_type):
+        raise ProviderConnectionError(
+            f"Failed to connect to {api_label}: {e}",
+            provider_name=provider_name,
+            original_error=e,
+        ) from e
+
+
+# =============================================================================
 # Provider Capabilities
 # =============================================================================
 

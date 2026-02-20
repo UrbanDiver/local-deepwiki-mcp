@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from local_deepwiki.core.vectorstore import VectorStore
+from local_deepwiki.generators.wiki_utils import file_path_to_wiki_path
 from local_deepwiki.models import ChunkType, IndexStatus
 
 # Minimum characters for a docstring to be considered meaningful
@@ -52,6 +53,16 @@ class CoverageStats:
         if self.total_entities == 0:
             return 100.0
         return (self.documented_entities / self.total_entities) * 100
+
+    def __iadd__(self, other: CoverageStats) -> CoverageStats:
+        """Accumulate stats from another CoverageStats instance."""
+        self.total_classes += other.total_classes
+        self.documented_classes += other.documented_classes
+        self.total_functions += other.total_functions
+        self.documented_functions += other.documented_functions
+        self.total_methods += other.total_methods
+        self.documented_methods += other.documented_methods
+        return self
 
 
 @dataclass
@@ -155,13 +166,7 @@ async def analyze_project_coverage(
         file_coverage = await analyze_file_coverage(file_info.path, vector_store)
         file_coverages.append(file_coverage)
 
-        # Aggregate stats
-        overall.total_classes += file_coverage.stats.total_classes
-        overall.documented_classes += file_coverage.stats.documented_classes
-        overall.total_functions += file_coverage.stats.total_functions
-        overall.documented_functions += file_coverage.stats.documented_functions
-        overall.total_methods += file_coverage.stats.total_methods
-        overall.documented_methods += file_coverage.stats.documented_methods
+        overall += file_coverage.stats
 
     # Sort by coverage (lowest first)
     file_coverages.sort(key=lambda f: f.stats.coverage_percent)
@@ -188,10 +193,7 @@ def _get_coverage_emoji(percent: float) -> str:
         return "🔴"
 
 
-def _get_wiki_link(file_path: str) -> str:
-    """Convert a source file path to a wiki link."""
-    wiki_path = file_path.replace(".py", ".md")
-    return f"files/{wiki_path}"
+_get_wiki_link = file_path_to_wiki_path
 
 
 async def generate_coverage_page(

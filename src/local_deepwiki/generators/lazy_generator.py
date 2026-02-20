@@ -15,8 +15,8 @@ from local_deepwiki.generators.crosslinks import (
     CrossLinker,
     EntityRegistry,
     build_entity_registry_from_store,
-    file_path_to_wiki_path,
 )
+from local_deepwiki.generators.wiki_utils import file_path_to_wiki_path
 from local_deepwiki.generators.wiki_files import (
     FileDocContext,
     filter_significant_files,
@@ -38,13 +38,17 @@ from local_deepwiki.models import FileInfo, IndexStatus, WikiPage, WikiStructure
 
 logger = get_logger(__name__)
 
-SUMMARY_PAGES = {"index.md", "architecture.md", "dependencies.md", "changelog.md"}
-AUXILIARY_PAGES = {
-    "glossary.md",
-    "inheritance.md",
-    "coverage.md",
-    "dependency-graph.md",
-}
+SUMMARY_PAGES = frozenset(
+    {"index.md", "architecture.md", "dependencies.md", "changelog.md"}
+)
+AUXILIARY_PAGES = frozenset(
+    {
+        "glossary.md",
+        "inheritance.md",
+        "coverage.md",
+        "dependency-graph.md",
+    }
+)
 
 
 class LazyPageGenerator:
