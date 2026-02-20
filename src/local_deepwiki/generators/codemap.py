@@ -928,12 +928,30 @@ async def generate_codemap(
 # ---------------------------------------------------------------------------
 
 
+def _is_test_path(file_path: str) -> bool:
+    """Return ``True`` if *file_path* looks like a test/fixture file."""
+    parts = Path(file_path).parts
+    name = Path(file_path).name
+    # Common test directory names
+    if any(p in ("tests", "test", "testing", "spec", "specs") for p in parts):
+        return True
+    # Common test file naming conventions
+    if name.startswith(("test_", "tests_")) or name.endswith(("_test.py", "_spec.py")):
+        return True
+    if name in ("conftest.py", "fixtures.py"):
+        return True
+    return False
+
+
 async def suggest_topics(
     vector_store: "VectorStore",
     repo_path: Path,
     max_suggestions: int = 8,
 ) -> list[dict[str, Any]]:
     """Suggest interesting codemap topics based on call-graph hubs.
+
+    Focuses on production source code — test helpers and fixtures are
+    excluded so that codemap pages document real execution flows.
 
     Returns a list of suggestion dicts sorted by connection count.
     """
@@ -972,13 +990,22 @@ async def suggest_topics(
         except (OSError, ValueError, RuntimeError):
             continue
 
-    # Index callable chunks by name for quick lookup
+    # Index callable chunks by name for quick lookup.
+    # When multiple chunks share a name (e.g. "main" in several files),
+    # prefer the one from production source code.
     for chunk in all_chunks:
         if chunk.chunk_type.value in _CALLABLE_CHUNK_TYPES and chunk.name:
             key = chunk.name
             if chunk.parent_name:
                 key = f"{chunk.parent_name}.{chunk.name}"
-            chunk_by_name[key] = chunk
+            existing = chunk_by_name.get(key)
+            if existing is None:
+                chunk_by_name[key] = chunk
+            elif _is_test_path(existing.file_path) and not _is_test_path(
+                chunk.file_path
+            ):
+                # Prefer source over test when names collide
+                chunk_by_name[key] = chunk
 
     # Count connections per function (skip noise/builtins for accurate ranking)
     connection_count: dict[str, int] = defaultdict(int)
@@ -1043,11 +1070,16 @@ async def suggest_topics(
         chunk = chunk_by_name.get(func_name)
         if chunk is None:
             continue  # Skip stdlib/external entities without indexed source
+
         file_path = chunk.file_path
         try:
             file_path = str(Path(file_path).relative_to(repo))
         except (ValueError, TypeError):
             pass
+
+        # Skip test helpers / fixtures — they aren't useful entry points
+        if _is_test_path(file_path):
+            continue
 
         is_entry = bool(_ENTRY_PATTERNS.match(func_name.split(".")[-1]))
         reason = f"Hub function with {count} connections"
