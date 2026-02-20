@@ -50,7 +50,7 @@ class TestConfig:
         """Test embedding configuration."""
         config = Config()
 
-        assert config.embedding.local.model == "all-MiniLM-L6-v2"
+        assert config.embedding.local.model == "multi-qa-MiniLM-L6-cos-v1"
         assert config.embedding.openai.model == "text-embedding-3-small"
 
     def test_llm_config(self):

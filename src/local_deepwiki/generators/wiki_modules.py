@@ -24,6 +24,7 @@ async def generate_module_docs(
     system_prompt: str,
     status_manager: "WikiStatusManager",
     full_rebuild: bool = False,
+    max_chunk_content_chars: int = 15000,
 ) -> tuple[list[WikiPage], int, int]:
     """Generate documentation for each module/directory.
 
@@ -34,6 +35,7 @@ async def generate_module_docs(
         system_prompt: System prompt for LLM.
         status_manager: Wiki status manager for incremental updates.
         full_rebuild: If True, regenerate all pages.
+        max_chunk_content_chars: Max characters of chunk content in LLM prompt.
 
     Returns:
         Tuple of (pages list, generated count, skipped count).
@@ -75,6 +77,7 @@ async def generate_module_docs(
             llm=llm,
             system_prompt=system_prompt,
             repo_path=Path(index_status.repo_path),
+            max_chunk_content_chars=max_chunk_content_chars,
         )
         if page is None:
             continue
@@ -133,6 +136,7 @@ async def generate_single_module_doc(
     llm: LLMProvider,
     system_prompt: str,
     repo_path: Path | None = None,
+    max_chunk_content_chars: int = 15000,
 ) -> WikiPage | None:
     """Generate documentation for a single module directory.
 
@@ -143,6 +147,7 @@ async def generate_single_module_doc(
         llm: LLM provider for generation.
         system_prompt: System prompt for LLM.
         repo_path: Optional path to the repository root for authoritative docs.
+        max_chunk_content_chars: Max characters of chunk content in LLM prompt.
 
     Returns:
         WikiPage with module documentation, or None if no relevant content.
@@ -158,7 +163,7 @@ async def generate_single_module_doc(
 
     context = "\n\n".join(
         [
-            f"File: {r.chunk.file_path}\nType: {r.chunk.chunk_type.value}\nName: {r.chunk.name}\n{r.chunk.content[:1200]}"
+            f"File: {r.chunk.file_path}\nType: {r.chunk.chunk_type.value}\nName: {r.chunk.name}\n{r.chunk.content[:max_chunk_content_chars]}"
             for r in relevant_chunks[:25]
         ]
     )

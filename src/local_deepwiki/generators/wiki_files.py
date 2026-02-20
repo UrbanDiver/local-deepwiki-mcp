@@ -382,10 +382,49 @@ def _inject_inline_source_code(
     return "\n".join(result_lines)
 
 
+# Chunk type priority for LLM context: lower value = higher priority
+_CHUNK_TYPE_PRIORITY: dict[ChunkType, int] = {
+    ChunkType.FUNCTION: 0,
+    ChunkType.METHOD: 0,
+    ChunkType.CLASS: 1,
+    ChunkType.MODULE: 2,
+    ChunkType.IMPORT: 3,
+    ChunkType.COMMENT: 4,
+    ChunkType.OTHER: 4,
+}
+
+
+def _prioritize_chunks(chunks: list[CodeChunk], max_chunks: int) -> list[CodeChunk]:
+    """Select the most documentation-relevant chunks up to a limit.
+
+    Prioritizes functions/methods (most useful for documentation), then
+    classes, then module summaries, then imports. Within each priority
+    level, chunks retain their original file order.
+
+    Args:
+        chunks: All chunks for a file.
+        max_chunks: Maximum number of chunks to return.
+
+    Returns:
+        Prioritized list of chunks, up to max_chunks.
+    """
+    if len(chunks) <= max_chunks:
+        return chunks
+
+    # Stable sort by priority (preserves file order within each level)
+    sorted_chunks = sorted(
+        chunks,
+        key=lambda c: _CHUNK_TYPE_PRIORITY.get(c.chunk_type, 4),
+    )
+    return sorted_chunks[:max_chunks]
+
+
 async def _gather_file_context(
     file_info: FileInfo,
     index_status: IndexStatus,
     vector_store: VectorStore,
+    max_chunk_content_chars: int = 15000,
+    max_chunks_per_file: int = 60,
 ) -> tuple[list[CodeChunk], str, str] | None:
     """Collect chunks, imports, and related context for the file.
 
@@ -393,6 +432,8 @@ async def _gather_file_context(
         file_info: File status information.
         index_status: Index status with repo information.
         vector_store: Vector store with indexed code.
+        max_chunk_content_chars: Max characters of chunk content in LLM prompt.
+        max_chunks_per_file: Max chunks to include in LLM prompt context.
 
     Returns:
         Tuple of (chunks_list, context_text, rich_context_text) or None if no content.
@@ -403,14 +444,18 @@ async def _gather_file_context(
     if not file_chunks:
         return None  # No content to document
 
-    # Build context from chunks
+    # Prioritize chunks by documentation value: functions/methods first,
+    # then classes, then module summaries, then imports
+    prioritized = _prioritize_chunks(file_chunks, max_chunks_per_file)
+
+    # Build context from prioritized chunks
     context_parts = []
-    for chunk in file_chunks[:30]:  # Limit context size
+    for chunk in prioritized:
         context_parts.append(
             f"Type: {chunk.chunk_type.value}\n"
             f"Name: {chunk.name}\n"
             f"Lines: {chunk.start_line}-{chunk.end_line}\n"
-            f"```\n{chunk.content[:1500]}\n```"
+            f"```\n{chunk.content[:max_chunk_content_chars]}\n```"
         )
 
     context = "\n\n".join(context_parts)
@@ -630,6 +675,8 @@ async def generate_single_file_doc(
         file_info=file_info,
         index_status=ctx.index_status,
         vector_store=ctx.vector_store,
+        max_chunk_content_chars=ctx.config.wiki.max_chunk_content_chars,
+        max_chunks_per_file=ctx.config.wiki.max_chunks_per_file,
     )
 
     if context_result is None:

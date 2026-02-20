@@ -487,6 +487,7 @@ class WikiGenerator:
             system_prompt=self._page_prompts.get("module", self._system_prompt),
             status_manager=self.status_manager,
             full_rebuild=ctx.full_rebuild,
+            max_chunk_content_chars=self.config.wiki.max_chunk_content_chars,
         )
         ctx.pages_generated += gen_count
         ctx.pages_skipped += skip_count
@@ -866,6 +867,7 @@ class WikiGenerator:
             system_prompt=self._page_prompts.get("overview", self._system_prompt),
             manifest=self._manifest,
             repo_path=self._repo_path,
+            max_chunk_content_chars=self.config.wiki.max_chunk_content_chars,
         )
 
     async def _generate_architecture(self, index_status: IndexStatus) -> WikiPage:
@@ -877,6 +879,7 @@ class WikiGenerator:
             system_prompt=self._page_prompts.get("architecture", self._system_prompt),
             manifest=self._manifest,
             repo_path=self._repo_path,
+            max_chunk_content_chars=self.config.wiki.max_chunk_content_chars,
         )
 
     async def _generate_dependencies(

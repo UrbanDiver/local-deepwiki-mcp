@@ -273,6 +273,8 @@ class TestGenerateFileDocsCallbacks:
         mock.wiki.fallback_search_limit = 10
         mock.wiki.max_file_docs = 50
         mock.wiki.max_concurrent_llm_calls = 3
+        mock.wiki.max_chunk_content_chars = 15000
+        mock.wiki.max_chunks_per_file = 60
         mock.effective_llm_concurrency = 3
         return mock
 

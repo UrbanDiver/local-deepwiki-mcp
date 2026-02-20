@@ -21,7 +21,7 @@ class TestLocalEmbeddingProvider:
         from local_deepwiki.providers.embeddings.local import LocalEmbeddingProvider
 
         provider = LocalEmbeddingProvider()
-        assert provider.name == "local:all-MiniLM-L6-v2"
+        assert provider.name == "local:multi-qa-MiniLM-L6-cos-v1"
 
     @patch("sentence_transformers.SentenceTransformer")
     def test_load_model(self, mock_transformer_class):

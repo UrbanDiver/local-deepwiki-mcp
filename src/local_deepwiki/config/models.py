@@ -63,7 +63,10 @@ class LocalEmbeddingConfig(BaseModel):
     model_config = {"frozen": True}
 
     model: str = Field(
-        default="all-MiniLM-L6-v2", description="Model name for sentence-transformers"
+        default="multi-qa-MiniLM-L6-cos-v1",
+        description="Model name for sentence-transformers. "
+        "Default is multi-qa-MiniLM-L6-cos-v1 (512 tokens, Q&A-optimized) which "
+        "provides better semantic coverage than all-MiniLM-L6-v2 (256 tokens).",
     )
 
 
@@ -375,6 +378,24 @@ class WikiConfig(BaseModel):
     )
     fallback_search_limit: int = Field(
         default=30, description="Maximum chunks to search in fallback queries"
+    )
+    max_chunk_content_chars: int = Field(
+        default=15000,
+        ge=500,
+        le=50000,
+        description="Maximum characters of chunk content included in LLM prompts "
+        "during wiki generation. Higher values produce more accurate documentation "
+        "for large functions but increase token usage. The previous hardcoded limit "
+        "was 1500.",
+    )
+    max_chunks_per_file: int = Field(
+        default=60,
+        ge=5,
+        le=200,
+        description="Maximum number of code chunks included in the LLM prompt when "
+        "generating file-level documentation. Chunks are prioritized by type "
+        "(functions/methods first, then classes, then module/imports) so the most "
+        "documentation-relevant content is preserved when files exceed this limit.",
     )
     codemap_enabled: bool = Field(
         default=True,

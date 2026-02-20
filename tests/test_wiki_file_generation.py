@@ -141,6 +141,8 @@ class TestGenerateSingleFileDoc:
         mock.wiki = MagicMock()
         mock.wiki.context_search_limit = 20
         mock.wiki.fallback_search_limit = 10
+        mock.wiki.max_chunk_content_chars = 15000
+        mock.wiki.max_chunks_per_file = 60
         return mock
 
     async def test_returns_none_for_no_chunks(
@@ -678,6 +680,8 @@ class TestGenerateFileDocs:
         mock.wiki.fallback_search_limit = 10
         mock.wiki.max_file_docs = 50
         mock.wiki.max_concurrent_llm_calls = 3
+        mock.wiki.max_chunk_content_chars = 15000
+        mock.wiki.max_chunks_per_file = 60
         mock.effective_llm_concurrency = 3
         return mock
 

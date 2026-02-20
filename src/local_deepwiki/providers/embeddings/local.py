@@ -31,7 +31,7 @@ LOCAL_EMBEDDING_MODELS = {
 class LocalEmbeddingProvider(EmbeddingProvider):
     """Embedding provider using local sentence-transformers models."""
 
-    def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
+    def __init__(self, model_name: str = "multi-qa-MiniLM-L6-cos-v1"):
         """Initialize the local embedding provider.
 
         Args:

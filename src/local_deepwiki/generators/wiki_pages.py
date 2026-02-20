@@ -125,11 +125,15 @@ def _build_quick_start_section(manifest: ProjectManifest) -> str:
     return "\n".join(lines)
 
 
-async def _gather_code_context(vector_store: VectorStore) -> list[str]:
+async def _gather_code_context(
+    vector_store: VectorStore,
+    max_chunk_content_chars: int = 15000,
+) -> list[str]:
     """Search for main entry points and key classes for context.
 
     Args:
         vector_store: Vector store for code search.
+        max_chunk_content_chars: Max characters of chunk content in LLM prompt.
 
     Returns:
         List of formatted code context strings.
@@ -148,7 +152,7 @@ async def _gather_code_context(vector_store: VectorStore) -> list[str]:
                 f"File: {r.chunk.file_path}\n"
                 f"Type: {r.chunk.chunk_type.value}\n"
                 f"Name: {r.chunk.name}\n"
-                f"```\n{r.chunk.content[:1200]}\n```"
+                f"```\n{r.chunk.content[:max_chunk_content_chars]}\n```"
             )
     return code_parts
 
@@ -213,6 +217,7 @@ async def generate_overview_page(
     system_prompt: str,
     manifest: ProjectManifest | None,
     repo_path: Path | None,
+    max_chunk_content_chars: int = 15000,
 ) -> WikiPage:
     """Generate the main overview/index page with grounded facts.
 
@@ -227,6 +232,7 @@ async def generate_overview_page(
         system_prompt: System prompt for the LLM.
         manifest: Parsed project manifest (dependencies, entry points).
         repo_path: Path to the repository root.
+        max_chunk_content_chars: Max characters of chunk content in LLM prompt.
 
     Returns:
         WikiPage with overview content.
@@ -234,7 +240,9 @@ async def generate_overview_page(
     repo_name = Path(index_status.repo_path).name
 
     # Gather code context for LLM
-    code_context_parts = await _gather_code_context(vector_store)
+    code_context_parts = await _gather_code_context(
+        vector_store, max_chunk_content_chars
+    )
     code_samples = (
         "\n\n".join(code_context_parts)
         if code_context_parts
@@ -298,6 +306,7 @@ async def generate_architecture_page(
     system_prompt: str,
     manifest: ProjectManifest | None,
     repo_path: Path | None,
+    max_chunk_content_chars: int = 15000,
 ) -> WikiPage:
     """Generate architecture documentation with diagrams and grounded facts.
 
@@ -308,6 +317,7 @@ async def generate_architecture_page(
         system_prompt: System prompt for the LLM.
         manifest: Parsed project manifest.
         repo_path: Path to the repository root.
+        max_chunk_content_chars: Max characters of chunk content in LLM prompt.
 
     Returns:
         WikiPage with architecture documentation.
@@ -343,7 +353,7 @@ async def generate_architecture_page(
             f"File: {r.chunk.file_path}\n"
             f"Type: {r.chunk.chunk_type.value}\n"
             f"Name: {r.chunk.name}\n"
-            f"```\n{r.chunk.content[:2000]}\n```"
+            f"```\n{r.chunk.content[:max_chunk_content_chars]}\n```"
         )
 
     code_context = "\n\n".join(context_parts)
