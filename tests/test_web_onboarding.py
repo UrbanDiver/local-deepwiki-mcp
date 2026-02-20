@@ -8,12 +8,21 @@ import pytest
 
 @pytest.fixture
 def app():
-    """Create a test Flask app."""
+    """Create a test Flask app with isolated WIKI_PATH.
+
+    Clears app.config["WIKI_PATH"] so that get_wiki_path() (used by
+    blueprint routes) falls through to the module-level WIKI_PATH that
+    tests control via monkeypatch.
+    """
     from local_deepwiki.web.app import app as flask_app
-    from local_deepwiki.web.app import WIKI_PATH
 
     flask_app.config["TESTING"] = True
-    return flask_app
+    saved = flask_app.config.pop("WIKI_PATH", None)
+    yield flask_app
+    if saved is not None:
+        flask_app.config["WIKI_PATH"] = saved
+    else:
+        flask_app.config.pop("WIKI_PATH", None)
 
 
 @pytest.fixture

@@ -289,7 +289,10 @@ class TestChatEndpoints:
         )
         # Should return SSE or error (no indexed data)
         # We check content type for valid responses
-        assert response.content_type.startswith("text/event-stream") or response.status_code == 500
+        assert (
+            response.content_type.startswith("text/event-stream")
+            or response.status_code == 500
+        )
 
     def test_api_research_returns_sse(self, wiki_dir):
         """Test that /api/research returns Server-Sent Events content type."""
@@ -301,7 +304,10 @@ class TestChatEndpoints:
             json={"question": "test question"},
         )
         # Should return SSE or error (no indexed data)
-        assert response.content_type.startswith("text/event-stream") or response.status_code == 500
+        assert (
+            response.content_type.startswith("text/event-stream")
+            or response.status_code == 500
+        )
 
     def test_page_template_has_chat_link(self, wiki_dir):
         """Test that wiki pages have a link to the chat interface."""
@@ -644,7 +650,9 @@ class TestMainAndRunServer:
             with patch("local_deepwiki.web.app.create_app", return_value=mock_app):
                 run_server(wiki_dir, host="127.0.0.1", port=8080, debug=False)
 
-            mock_app.run.assert_called_once_with(host="127.0.0.1", port=8080, debug=False)
+            mock_app.run.assert_called_once_with(
+                host="127.0.0.1", port=8080, debug=False
+            )
 
     def test_main_parses_arguments(self):
         """Test that main() parses command line arguments."""
@@ -707,7 +715,9 @@ class TestWikiPathNotConfigured:
         import local_deepwiki.web.app as web_app
 
         original = web_app.WIKI_PATH
+        original_config = app.config.get("WIKI_PATH")
         web_app.WIKI_PATH = None
+        app.config.pop("WIKI_PATH", None)
 
         try:
             client = app.test_client()
@@ -715,13 +725,17 @@ class TestWikiPathNotConfigured:
             assert response.status_code == 500
         finally:
             web_app.WIKI_PATH = original
+            if original_config is not None:
+                app.config["WIKI_PATH"] = original_config
 
     def test_api_chat_without_wiki_path(self):
         """Test api_chat returns error when wiki path not set."""
         import local_deepwiki.web.app as web_app
 
         original = web_app.WIKI_PATH
+        original_config = app.config.get("WIKI_PATH")
         web_app.WIKI_PATH = None
+        app.config.pop("WIKI_PATH", None)
 
         try:
             client = app.test_client()
@@ -729,13 +743,17 @@ class TestWikiPathNotConfigured:
             assert response.status_code == 500
         finally:
             web_app.WIKI_PATH = original
+            if original_config is not None:
+                app.config["WIKI_PATH"] = original_config
 
     def test_api_research_without_wiki_path(self):
         """Test api_research returns error when wiki path not set."""
         import local_deepwiki.web.app as web_app
 
         original = web_app.WIKI_PATH
+        original_config = app.config.get("WIKI_PATH")
         web_app.WIKI_PATH = None
+        app.config.pop("WIKI_PATH", None)
 
         try:
             client = app.test_client()
@@ -743,6 +761,8 @@ class TestWikiPathNotConfigured:
             assert response.status_code == 500
         finally:
             web_app.WIKI_PATH = original
+            if original_config is not None:
+                app.config["WIKI_PATH"] = original_config
 
 
 class TestViewPageReadError:
@@ -954,9 +974,17 @@ class TestApiChatFullFlow:
             mock_llm.generate_stream = mock_stream
 
             with patch("local_deepwiki.config.get_config", return_value=mock_config):
-                with patch("local_deepwiki.core.vectorstore.VectorStore", return_value=mock_vector_store):
-                    with patch("local_deepwiki.providers.embeddings.get_embedding_provider"):
-                        with patch("local_deepwiki.providers.llm.get_cached_llm_provider", return_value=mock_llm):
+                with patch(
+                    "local_deepwiki.core.vectorstore.VectorStore",
+                    return_value=mock_vector_store,
+                ):
+                    with patch(
+                        "local_deepwiki.providers.embeddings.get_embedding_provider"
+                    ):
+                        with patch(
+                            "local_deepwiki.providers.llm.get_cached_llm_provider",
+                            return_value=mock_llm,
+                        ):
                             client = app.test_client()
                             response = client.post(
                                 "/api/chat",
@@ -997,9 +1025,16 @@ class TestApiChatFullFlow:
             mock_vector_store.search = AsyncMock(return_value=[])
 
             with patch("local_deepwiki.config.get_config", return_value=mock_config):
-                with patch("local_deepwiki.core.vectorstore.VectorStore", return_value=mock_vector_store):
-                    with patch("local_deepwiki.providers.embeddings.get_embedding_provider"):
-                        with patch("local_deepwiki.providers.llm.get_cached_llm_provider"):
+                with patch(
+                    "local_deepwiki.core.vectorstore.VectorStore",
+                    return_value=mock_vector_store,
+                ):
+                    with patch(
+                        "local_deepwiki.providers.embeddings.get_embedding_provider"
+                    ):
+                        with patch(
+                            "local_deepwiki.providers.llm.get_cached_llm_provider"
+                        ):
                             client = app.test_client()
                             response = client.post(
                                 "/api/chat",
@@ -1051,9 +1086,17 @@ class TestApiChatFullFlow:
             mock_llm.generate_stream = mock_stream
 
             with patch("local_deepwiki.config.get_config", return_value=mock_config):
-                with patch("local_deepwiki.core.vectorstore.VectorStore", return_value=mock_vector_store):
-                    with patch("local_deepwiki.providers.embeddings.get_embedding_provider"):
-                        with patch("local_deepwiki.providers.llm.get_cached_llm_provider", return_value=mock_llm):
+                with patch(
+                    "local_deepwiki.core.vectorstore.VectorStore",
+                    return_value=mock_vector_store,
+                ):
+                    with patch(
+                        "local_deepwiki.providers.embeddings.get_embedding_provider"
+                    ):
+                        with patch(
+                            "local_deepwiki.providers.llm.get_cached_llm_provider",
+                            return_value=mock_llm,
+                        ):
                             client = app.test_client()
                             response = client.post(
                                 "/api/chat",
@@ -1104,9 +1147,17 @@ class TestApiChatFullFlow:
             mock_llm.generate_stream = failing_stream
 
             with patch("local_deepwiki.config.get_config", return_value=mock_config):
-                with patch("local_deepwiki.core.vectorstore.VectorStore", return_value=mock_vector_store):
-                    with patch("local_deepwiki.providers.embeddings.get_embedding_provider"):
-                        with patch("local_deepwiki.providers.llm.get_cached_llm_provider", return_value=mock_llm):
+                with patch(
+                    "local_deepwiki.core.vectorstore.VectorStore",
+                    return_value=mock_vector_store,
+                ):
+                    with patch(
+                        "local_deepwiki.providers.embeddings.get_embedding_provider"
+                    ):
+                        with patch(
+                            "local_deepwiki.providers.llm.get_cached_llm_provider",
+                            return_value=mock_llm,
+                        ):
                             client = app.test_client()
                             response = client.post(
                                 "/api/chat",
@@ -1179,16 +1230,25 @@ class TestApiResearchFullFlow:
 
             with patch("local_deepwiki.config.get_config", return_value=mock_config):
                 with patch("local_deepwiki.core.vectorstore.VectorStore"):
-                    with patch("local_deepwiki.providers.embeddings.get_embedding_provider"):
-                        with patch("local_deepwiki.providers.llm.get_cached_llm_provider"):
-                            with patch("local_deepwiki.core.deep_research.DeepResearchPipeline", return_value=mock_pipeline):
+                    with patch(
+                        "local_deepwiki.providers.embeddings.get_embedding_provider"
+                    ):
+                        with patch(
+                            "local_deepwiki.providers.llm.get_cached_llm_provider"
+                        ):
+                            with patch(
+                                "local_deepwiki.core.deep_research.DeepResearchPipeline",
+                                return_value=mock_pipeline,
+                            ):
                                 client = app.test_client()
                                 response = client.post(
                                     "/api/research",
                                     json={"question": "How does this work?"},
                                 )
 
-                                assert response.content_type.startswith("text/event-stream")
+                                assert response.content_type.startswith(
+                                    "text/event-stream"
+                                )
                                 data = response.get_data(as_text=True)
                                 # Should contain result
                                 assert "result" in data
@@ -1235,9 +1295,16 @@ class TestApiResearchFullFlow:
 
             with patch("local_deepwiki.config.get_config", return_value=mock_config):
                 with patch("local_deepwiki.core.vectorstore.VectorStore"):
-                    with patch("local_deepwiki.providers.embeddings.get_embedding_provider"):
-                        with patch("local_deepwiki.providers.llm.get_cached_llm_provider"):
-                            with patch("local_deepwiki.core.deep_research.DeepResearchPipeline", return_value=mock_pipeline):
+                    with patch(
+                        "local_deepwiki.providers.embeddings.get_embedding_provider"
+                    ):
+                        with patch(
+                            "local_deepwiki.providers.llm.get_cached_llm_provider"
+                        ):
+                            with patch(
+                                "local_deepwiki.core.deep_research.DeepResearchPipeline",
+                                return_value=mock_pipeline,
+                            ):
                                 client = app.test_client()
                                 response = client.post(
                                     "/api/research",
@@ -1273,13 +1340,22 @@ class TestApiResearchFullFlow:
             mock_config.deep_research.synthesis_max_tokens = 2000
 
             mock_pipeline = MagicMock()
-            mock_pipeline.research = AsyncMock(side_effect=RuntimeError("Pipeline failed"))
+            mock_pipeline.research = AsyncMock(
+                side_effect=RuntimeError("Pipeline failed")
+            )
 
             with patch("local_deepwiki.config.get_config", return_value=mock_config):
                 with patch("local_deepwiki.core.vectorstore.VectorStore"):
-                    with patch("local_deepwiki.providers.embeddings.get_embedding_provider"):
-                        with patch("local_deepwiki.providers.llm.get_cached_llm_provider"):
-                            with patch("local_deepwiki.core.deep_research.DeepResearchPipeline", return_value=mock_pipeline):
+                    with patch(
+                        "local_deepwiki.providers.embeddings.get_embedding_provider"
+                    ):
+                        with patch(
+                            "local_deepwiki.providers.llm.get_cached_llm_provider"
+                        ):
+                            with patch(
+                                "local_deepwiki.core.deep_research.DeepResearchPipeline",
+                                return_value=mock_pipeline,
+                            ):
                                 client = app.test_client()
                                 response = client.post(
                                     "/api/research",
@@ -1295,7 +1371,11 @@ class TestApiResearchFullFlow:
     def test_api_research_progress_callback(self, wiki_dir):
         """Test api_research sends progress updates."""
         import local_deepwiki.web.app as web_app
-        from local_deepwiki.models import ResearchProgress, ResearchProgressType, SubQuestion
+        from local_deepwiki.models import (
+            ResearchProgress,
+            ResearchProgressType,
+            SubQuestion,
+        )
 
         vector_db_path = wiki_dir / "vector_db_research4"
         vector_db_path.mkdir(exist_ok=True)
@@ -1348,9 +1428,16 @@ class TestApiResearchFullFlow:
 
             with patch("local_deepwiki.config.get_config", return_value=mock_config):
                 with patch("local_deepwiki.core.vectorstore.VectorStore"):
-                    with patch("local_deepwiki.providers.embeddings.get_embedding_provider"):
-                        with patch("local_deepwiki.providers.llm.get_cached_llm_provider"):
-                            with patch("local_deepwiki.core.deep_research.DeepResearchPipeline", return_value=mock_pipeline):
+                    with patch(
+                        "local_deepwiki.providers.embeddings.get_embedding_provider"
+                    ):
+                        with patch(
+                            "local_deepwiki.providers.llm.get_cached_llm_provider"
+                        ):
+                            with patch(
+                                "local_deepwiki.core.deep_research.DeepResearchPipeline",
+                                return_value=mock_pipeline,
+                            ):
                                 client = app.test_client()
                                 response = client.post(
                                     "/api/research",
