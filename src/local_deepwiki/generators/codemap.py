@@ -11,7 +11,7 @@ import re
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from operator import itemgetter
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -67,7 +67,7 @@ _CHUNK_TYPE_WEIGHTS: dict[str, float] = {
 # ---------------------------------------------------------------------------
 
 
-class CodemapFocus(str, Enum):
+class CodemapFocus(StrEnum):
     """Focus mode for codemap generation."""
 
     EXECUTION_FLOW = "execution_flow"

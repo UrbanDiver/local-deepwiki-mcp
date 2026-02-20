@@ -363,7 +363,9 @@ class DeepResearchPipeline(ReasoningMixin, StepsMixin):
             if checkpoint:
                 self._current_checkpoint = checkpoint
                 logger.info(
-                    f"Resuming research {resume_id} from step {checkpoint.current_step}"
+                    "Resuming research %s from step %s",
+                    resume_id,
+                    checkpoint.current_step,
                 )
             else:
                 logger.warning("Checkpoint %s not found, starting fresh", resume_id)

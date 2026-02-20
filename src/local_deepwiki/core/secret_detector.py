@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Optional
 
@@ -25,7 +25,7 @@ MIN_SECRET_MASK_LENGTH = 10
 MAX_SECRET_CONTEXT_LENGTH = 100
 
 
-class SecretType(str, Enum):
+class SecretType(StrEnum):
     """Types of secrets that can be detected."""
 
     AWS_KEY = "aws_access_key"
@@ -558,9 +558,10 @@ def scan_repository_for_secrets(repo_path: Path) -> dict[str, list[SecretFinding
             continue
 
     logger.debug(
-        f"Secret scan complete: scanned {files_scanned} files, "
-        f"skipped {files_skipped} files, "
-        f"found secrets in {len(findings_by_file)} files"
+        "Secret scan complete: scanned %d files, skipped %d files, found secrets in %d files",
+        files_scanned,
+        files_skipped,
+        len(findings_by_file),
     )
 
     return findings_by_file

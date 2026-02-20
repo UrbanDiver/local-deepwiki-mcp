@@ -58,7 +58,9 @@ class CheckpointManager:
         checkpoint_path = self._checkpoint_path(checkpoint.research_id)
         checkpoint_path.write_text(checkpoint.model_dump_json(indent=2))
         logger.debug(
-            f"Saved checkpoint {checkpoint.research_id} at step {checkpoint.current_step}"
+            "Saved checkpoint %s at step %s",
+            checkpoint.research_id,
+            checkpoint.current_step,
         )
 
     def load_checkpoint(self, research_id: str) -> ResearchCheckpoint | None:

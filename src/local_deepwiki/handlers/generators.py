@@ -260,7 +260,7 @@ async def handle_get_inheritance(args: dict[str, Any]) -> list[TextContent]:
     }
 
     logger.info(
-        f"Inheritance: {len(class_list)}/{total_classes} classes for {repo_path}"
+        "Inheritance: %d/%d classes for %s", len(class_list), total_classes, repo_path
     )
     return make_tool_text_content("get_inheritance", result)
 
@@ -432,7 +432,10 @@ async def handle_detect_stale_docs(args: dict[str, Any]) -> list[TextContent]:
     }
 
     logger.info(
-        f"Stale detection: {report.stale_pages}/{report.total_pages} stale for {repo_path}"
+        "Stale detection: %d/%d stale for %s",
+        report.stale_pages,
+        report.total_pages,
+        repo_path,
     )
     return make_tool_text_content("detect_stale_docs", result)
 
@@ -536,7 +539,10 @@ async def handle_detect_secrets(args: dict[str, Any]) -> list[TextContent]:
     }
 
     logger.info(
-        f"Secret scan: {total_findings} findings in {len(findings_by_file)} files for {repo_path}"
+        "Secret scan: %d findings in %d files for %s",
+        total_findings,
+        len(findings_by_file),
+        repo_path,
     )
     return make_tool_text_content("detect_secrets", result)
 
@@ -742,6 +748,9 @@ async def handle_get_index_status(args: dict[str, Any]) -> list[TextContent]:
     }
 
     logger.info(
-        f"Index status: {index_status.total_files} files, {index_status.total_chunks} chunks for {repo_path}"
+        "Index status: %d files, %d chunks for %s",
+        index_status.total_files,
+        index_status.total_chunks,
+        repo_path,
     )
     return make_tool_text_content("get_index_status", result)

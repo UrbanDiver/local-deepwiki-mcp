@@ -1,8 +1,5 @@
 """Tests for web onboarding page functionality."""
 
-from pathlib import Path
-from unittest.mock import MagicMock, patch
-
 import pytest
 
 

@@ -87,7 +87,10 @@ def _validate_and_build_config(
     # Validate input size limits (CWE-400 prevention)
     total_size, file_count = validate_index_parameters(str(repo_path))
     logger.info(
-        f"Indexing repository: {repo_path} ({total_size:,} bytes, {file_count:,} files)"
+        "Indexing repository: %s (%s bytes, %s files)",
+        repo_path,
+        f"{total_size:,}",
+        f"{file_count:,}",
     )
 
     if not repo_path.exists():
@@ -407,8 +410,10 @@ async def _handle_index_repository_impl(
     }
 
     logger.info(
-        f"Indexing complete: {status.total_files} files, {status.total_chunks} chunks, "
-        f"{len(wiki_structure.pages)} wiki pages"
+        "Indexing complete: %d files, %d chunks, %d wiki pages",
+        status.total_files,
+        status.total_chunks,
+        len(wiki_structure.pages),
     )
 
     # Record in session state so downstream tools know this repo is indexed
@@ -586,7 +591,8 @@ async def handle_read_wiki_structure(args: dict[str, Any]) -> list[TextContent]:
             return make_tool_text_content("read_wiki_structure", structure_data)
         except (json.JSONDecodeError, OSError) as e:
             logger.warning(
-                f"toc.json exists but could not be read, falling back to dynamic generation: {e}"
+                "toc.json exists but could not be read, falling back to dynamic generation: %s",
+                e,
             )
 
     # Fall back to dynamic generation if no toc.json
@@ -713,8 +719,12 @@ async def handle_search_code(args: dict[str, Any]) -> list[TextContent]:
 
     logger.info("Code search in %s: %s...", repo_path, query[:50])
     logger.debug(
-        f"Search limit: {limit}, language: {language}, type: {chunk_type}, "
-        f"path: {path_pattern}, fuzzy: {use_fuzzy}"
+        "Search limit: %d, language: %s, type: %s, path: %s, fuzzy: %s",
+        limit,
+        language,
+        chunk_type,
+        path_pattern,
+        use_fuzzy,
     )
 
     _index_status, _wiki_path, config = await _load_index_status(repo_path)
@@ -829,8 +839,10 @@ async def handle_export_wiki_html(args: dict[str, Any]) -> list[TextContent]:
     use_streaming = iterator.should_use_streaming()
 
     logger.info(
-        f"Wiki export: {page_count} pages, {total_size_mb:.2f}MB, "
-        f"streaming: {use_streaming}"
+        "Wiki export: %d pages, %.2fMB, streaming: %s",
+        page_count,
+        total_size_mb,
+        use_streaming,
     )
 
     result = export_to_html(wiki_path, resolved_output)
@@ -922,8 +934,10 @@ async def handle_export_wiki_pdf(args: dict[str, Any]) -> list[TextContent]:
     use_streaming = iterator.should_use_streaming()
 
     logger.info(
-        f"PDF export: {page_count} pages, {total_size_mb:.2f}MB, "
-        f"streaming: {use_streaming}"
+        "PDF export: %d pages, %.2fMB, streaming: %s",
+        page_count,
+        total_size_mb,
+        use_streaming,
     )
 
     result = export_to_pdf(wiki_path, resolved_output, single_file=single_file)

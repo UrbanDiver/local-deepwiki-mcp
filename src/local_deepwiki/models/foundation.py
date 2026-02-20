@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from typing import Protocol
 
 
@@ -24,7 +24,7 @@ class ProgressCallback(Protocol):
         ...
 
 
-class Language(str, Enum):
+class Language(StrEnum):
     """Supported programming languages."""
 
     PYTHON = "python"
@@ -43,7 +43,7 @@ class Language(str, Enum):
     CSHARP = "csharp"
 
 
-class ChunkType(str, Enum):
+class ChunkType(StrEnum):
     """Types of code chunks."""
 
     FUNCTION = "function"

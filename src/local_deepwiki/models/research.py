@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
 
-class ResearchStepType(str, Enum):
+class ResearchStepType(StrEnum):
     """Types of steps in the deep research process."""
 
     DECOMPOSITION = "decomposition"
@@ -82,7 +82,7 @@ class DeepResearchResult(BaseModel):
         )
 
 
-class IndexingProgressType(str, Enum):
+class IndexingProgressType(StrEnum):
     """Types of indexing progress events."""
 
     STARTED = "started"
@@ -121,7 +121,7 @@ class IndexingProgress(BaseModel):
     )
 
 
-class ResearchProgressType(str, Enum):
+class ResearchProgressType(StrEnum):
     """Types of deep research progress events."""
 
     STARTED = "started"
@@ -164,7 +164,7 @@ class ResearchProgress(BaseModel):
 # =============================================================================
 
 
-class ResearchCheckpointStep(str, Enum):
+class ResearchCheckpointStep(StrEnum):
     """Current step in a research checkpoint."""
 
     DECOMPOSITION = "decomposition"

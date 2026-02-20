@@ -75,7 +75,7 @@ async def handle_explain_entity(args: dict[str, Any]) -> list[TextContent]:
                     break
         except (json.JSONDecodeError, OSError) as e:
             logger.debug(
-                f"search.json exists but could not be read for entity lookup: {e}"
+                "search.json exists but could not be read for entity lookup: %s", e
             )
 
     if entity_info is None:
@@ -531,7 +531,9 @@ async def handle_impact_analysis(args: dict[str, Any]) -> list[TextContent]:
     }
 
     logger.info(
-        f"Impact analysis: {file_path} -> {total_affected_files} files, "
-        f"risk={risk_level}"
+        "Impact analysis: %s -> %d files, risk=%s",
+        file_path,
+        total_affected_files,
+        risk_level,
     )
     return make_tool_text_content("impact_analysis", result)

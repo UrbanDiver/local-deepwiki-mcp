@@ -545,7 +545,9 @@ class CodeChunker:
         if plugin_parser is not None:
             # Use plugin parser - it returns CodeChunk objects directly
             logger.debug(
-                f"Using plugin parser '{plugin_parser.language_name}' for {file_path.name}"
+                "Using plugin parser '%s' for %s",
+                plugin_parser.language_name,
+                file_path.name,
             )
             try:
                 source = file_path.read_bytes()
@@ -554,7 +556,9 @@ class CodeChunker:
                 return
             except Exception as e:
                 logger.warning(
-                    f"Plugin parser failed for {file_path}: {e}, falling back to built-in"
+                    "Plugin parser failed for %s: %s, falling back to built-in",
+                    file_path,
+                    e,
                 )
 
         # Fall back to built-in tree-sitter parser

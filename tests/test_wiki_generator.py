@@ -13,6 +13,7 @@ from local_deepwiki.models import (
     WikiPage,
 )
 
+
 def make_index_status(
     repo_path: str,
     total_files: int = 0,
@@ -30,6 +31,7 @@ def make_index_status(
         files=files or [],
     )
 
+
 def make_file_info(
     path: str,
     hash: str = "abc123",
@@ -43,6 +45,7 @@ def make_file_info(
         size_bytes=100,
         last_modified=time.time(),
     )
+
 
 class TestWikiGeneratorInit:
     """Tests for WikiGenerator initialization."""
@@ -152,6 +155,7 @@ class TestWikiGeneratorInit:
                 assert generator.config == config_with_provider
                 assert generator.config.llm.provider == "anthropic"
 
+
 class TestGetMainDefinitionLines:
     """Tests for _get_main_definition_lines method."""
 
@@ -243,6 +247,7 @@ class TestGetMainDefinitionLines:
                 # Should return first function lines
                 assert "src/utils.py" in result
                 assert result["src/utils.py"] == (5, 15)
+
 
 class TestWikiGeneratorGenerate:
     """Tests for WikiGenerator.generate method."""
@@ -518,6 +523,7 @@ class TestWikiGeneratorGenerate:
                                                                             ][0].lower()
                                                                         )
 
+
 class TestCacheStatisticsLogging:
     """Tests for LLM cache statistics logging in wiki generation."""
 
@@ -737,22 +743,24 @@ class TestCacheStatisticsLogging:
                         full_rebuild=True,
                     )
 
-                    # Check that cache stats were logged
-                    info_calls = [str(call) for call in mock_logger.info.call_args_list]
-                    cache_stats_logged = any(
-                        "LLM cache stats" in call for call in info_calls
-                    )
-                    assert cache_stats_logged, (
-                        f"Cache stats not logged. Calls: {info_calls}"
+                    # Check that cache stats were logged (lazy % formatting)
+                    cache_stats_call = None
+                    for call in mock_logger.info.call_args_list:
+                        args = call[0]
+                        if args and "LLM cache stats" in str(args[0]):
+                            cache_stats_call = args
+                            break
+
+                    assert cache_stats_call is not None, (
+                        f"Cache stats not logged. Calls: {mock_logger.info.call_args_list}"
                     )
 
-                    # Verify the specific stats were included
-                    stats_call = [
-                        call for call in info_calls if "LLM cache stats" in call
-                    ][0]
-                    assert "5 hits" in stats_call
-                    assert "10 misses" in stats_call
-                    assert "33.3%" in stats_call
+                    # Verify the specific stats were included as arguments
+                    # Format: ("LLM cache stats: %d hits, %d misses, %d skipped (%.1f%% hit rate)", hits, misses, skipped, hit_rate)
+                    formatted = cache_stats_call[0] % cache_stats_call[1:]
+                    assert "5 hits" in formatted
+                    assert "10 misses" in formatted
+                    assert "33.3%" in formatted
 
     @pytest.mark.asyncio
     async def test_handles_mock_stats_gracefully(self, tmp_path):

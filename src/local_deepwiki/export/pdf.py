@@ -564,7 +564,9 @@ class StreamingPdfExporter(StreamingExporter):
         errors: list[str] = []
 
         logger.info(
-            f"Starting streaming PDF export from {self.wiki_path} to {self.output_path}"
+            "Starting streaming PDF export from %s to %s",
+            self.wiki_path,
+            self.output_path,
         )
 
         # Load TOC for ordering
@@ -667,8 +669,10 @@ class StreamingPdfExporter(StreamingExporter):
 
         duration_ms = int((time.monotonic() - start_time) * 1000)
         logger.info(
-            f"Streaming PDF export complete: {pages_processed} pages "
-            f"in {len(temp_pdfs)} batches, {duration_ms}ms"
+            "Streaming PDF export complete: %d pages in %d batches, %dms",
+            pages_processed,
+            len(temp_pdfs),
+            duration_ms,
         )
 
         return ExportResult(
@@ -747,7 +751,9 @@ class StreamingPdfExporter(StreamingExporter):
 
         duration_ms = int((time.monotonic() - start_time) * 1000)
         logger.info(
-            f"Streaming separate PDF export complete: {exported} pages in {duration_ms}ms"
+            "Streaming separate PDF export complete: %d pages in %dms",
+            exported,
+            duration_ms,
         )
 
         return ExportResult(

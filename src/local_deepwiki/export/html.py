@@ -752,7 +752,9 @@ class StreamingHtmlExporter(StreamingExporter):
         errors: list[str] = []
 
         logger.info(
-            f"Starting streaming HTML export from {self.wiki_path} to {self.output_path}"
+            "Starting streaming HTML export from %s to %s",
+            self.wiki_path,
+            self.output_path,
         )
 
         # Load TOC for navigation
@@ -805,7 +807,7 @@ class StreamingHtmlExporter(StreamingExporter):
 
         duration_ms = int((time.monotonic() - start_time) * 1000)
         logger.info(
-            f"Streaming HTML export complete: {exported} pages in {duration_ms}ms"
+            "Streaming HTML export complete: %d pages in %dms", exported, duration_ms
         )
 
         return ExportResult(
@@ -906,7 +908,9 @@ class HtmlExporter:
         Returns:
             Number of pages exported
         """
-        logger.info("Starting HTML export from %s to %s", self.wiki_path, self.output_path)
+        logger.info(
+            "Starting HTML export from %s to %s", self.wiki_path, self.output_path
+        )
 
         # Check if we should use streaming mode
         iterator = WikiPageIterator(self.wiki_path)

@@ -209,7 +209,9 @@ class ReasoningMixin:
             ):
                 raise result_or_exc
             if isinstance(result_or_exc, BaseException):
-                logger.warning("Search failed for sub-question %s: %s", i, result_or_exc)
+                logger.warning(
+                    "Search failed for sub-question %s: %s", i, result_or_exc
+                )
                 continue
             all_results.extend(result_or_exc)
 
@@ -348,7 +350,7 @@ class ReasoningMixin:
                 raise result_or_exc
             if isinstance(result_or_exc, BaseException):
                 logger.warning(
-                    f"Follow-up search failed for query {i}: {result_or_exc}"
+                    "Follow-up search failed for query %d: %s", i, result_or_exc
                 )
                 continue
             all_results.extend(result_or_exc)

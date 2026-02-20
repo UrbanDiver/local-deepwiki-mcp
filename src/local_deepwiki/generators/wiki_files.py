@@ -880,8 +880,9 @@ async def generate_file_docs(
     max_concurrent = config.effective_llm_concurrency
     semaphore = asyncio.Semaphore(max_concurrent)
     logger.info(
-        f"Generating file docs for {len(significant_files)} files "
-        f"(max {max_concurrent} concurrent)"
+        "Generating file docs for %d files (max %d concurrent)",
+        len(significant_files),
+        max_concurrent,
     )
 
     if generation_progress:
@@ -950,7 +951,9 @@ async def generate_file_docs(
     logger.info(log_msg)
     if pages_failed:
         logger.warning(
-            f"{pages_failed} file docs failed to generate out of {len(tasks)} total"
+            "%d file docs failed to generate out of %d total",
+            pages_failed,
+            len(tasks),
         )
     return pages, pages_generated, pages_skipped
 

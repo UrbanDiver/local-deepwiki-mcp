@@ -148,7 +148,9 @@ class LLMCache:
         if temperature > self.config.max_cacheable_temperature:
             self._stats["skipped"] += 1
             logger.debug(
-                f"Cache skip: temperature {temperature} > max {self.config.max_cacheable_temperature}"
+                "Cache skip: temperature %s > max %s",
+                temperature,
+                self.config.max_cacheable_temperature,
             )
             return None
 
@@ -199,8 +201,9 @@ class LLMCache:
                     ) == model_name and self._is_valid_entry(result):
                         self._stats["hits"] += 1
                         logger.debug(
-                            f"Cache similarity hit: similarity={similarity:.3f}, "
-                            f"entry={result['id'][:8]}..."
+                            "Cache similarity hit: similarity=%.3f, entry=%s...",
+                            similarity,
+                            result["id"][:8],
                         )
                         await self._record_hit(result["id"], result)
                         return cast(str, result["response"])
@@ -278,7 +281,7 @@ class LLMCache:
                     logger.debug("Could not create index: %s", e)
 
             logger.debug(
-                f"Cached response: id={entry_id[:8]}..., hash={exact_hash[:12]}..."
+                "Cached response: id=%s..., hash=%s...", entry_id[:8], exact_hash[:12]
             )
 
             # Check if we need to evict old entries
@@ -353,7 +356,9 @@ class LLMCache:
                 return
 
             logger.info(
-                f"Cache has {count} entries (max: {self.config.max_entries}), evicting..."
+                "Cache has %d entries (max: %d), evicting...",
+                count,
+                self.config.max_entries,
             )
 
             # Fetch only eviction-relevant columns (skip large vector/response fields)
@@ -385,7 +390,9 @@ class LLMCache:
                 logger.info("Evicted %s expired cache entries", deleted_count)
                 if failed_count:
                     logger.warning(
-                        f"Failed to evict {failed_count} of {len(expired_ids)} expired entries"
+                        "Failed to evict %d of %d expired entries",
+                        failed_count,
+                        len(expired_ids),
                     )
 
             # Phase 2: LRU eviction if still over limit
@@ -414,7 +421,7 @@ class LLMCache:
                     logger.info("Evicted %s LRU cache entries", lru_deleted)
                     if lru_failed:
                         logger.warning(
-                            f"Failed to evict {lru_failed} of {to_evict} LRU entries"
+                            "Failed to evict %d of %d LRU entries", lru_failed, to_evict
                         )
 
         except (KeyError, ValueError, RuntimeError, OSError) as e:

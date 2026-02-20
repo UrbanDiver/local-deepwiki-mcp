@@ -89,8 +89,9 @@ class RepositoryIndexer:
                 ttl_seconds=self.config.ast_cache.ttl_seconds,
             )
             logger.debug(
-                f"AST cache enabled: max_entries={self.config.ast_cache.max_entries}, "
-                f"ttl={self.config.ast_cache.ttl_seconds}s"
+                "AST cache enabled: max_entries=%d, ttl=%ds",
+                self.config.ast_cache.max_entries,
+                self.config.ast_cache.ttl_seconds,
             )
 
         self.parser = CodeParser(cache=self.ast_cache)
@@ -141,16 +142,20 @@ class RepositoryIndexer:
         if secret_findings:
             total_secrets = sum(len(findings) for findings in secret_findings.values())
             logger.warning(
-                f"SECURITY WARNING: Found {total_secrets} potential secret(s) "
-                f"in {len(secret_findings)} file(s)"
+                "SECURITY WARNING: Found %d potential secret(s) in %d file(s)",
+                total_secrets,
+                len(secret_findings),
             )
 
             # Log each finding with recommendations
             for file_path, findings in secret_findings.items():
                 for finding in findings:
                     logger.warning(
-                        f"  [{finding.secret_type.value}] {finding.file_path}:{finding.line_number} "
-                        f"(confidence: {finding.confidence:.0%})"
+                        "  [%s] %s:%d (confidence: %.0f%%)",
+                        finding.secret_type.value,
+                        finding.file_path,
+                        finding.line_number,
+                        finding.confidence * 100,
                     )
                     logger.warning("    Context: %s", finding.context)
                     logger.warning("    Recommendation: %s", finding.recommendation)
@@ -224,7 +229,7 @@ class RepositoryIndexer:
 
         if previous_status:
             logger.debug(
-                f"Loaded previous index status: {previous_status.total_files} files"
+                "Loaded previous index status: %d files", previous_status.total_files
             )
             # Pre-build hash map for O(1) lookups instead of O(N) linear scan per file
             # This reduces O(N*M) to O(N+M) for file comparison
@@ -311,7 +316,7 @@ class RepositoryIndexer:
                 )
             await self.vector_store.delete_chunks_by_files(files_to_delete)
             logger.debug(
-                f"Batch deleted chunks for {len(files_to_delete)} modified files"
+                "Batch deleted chunks for %d modified files", len(files_to_delete)
             )
 
     async def _parse_files_parallel(
@@ -350,8 +355,9 @@ class RepositoryIndexer:
             return processed_files, total_chunks_processed
 
         logger.info(
-            f"Starting parallel file parsing: {file_count} files with "
-            f"{parallel_workers} workers"
+            "Starting parallel file parsing: %d files with %d workers",
+            file_count,
+            parallel_workers,
         )
         parse_start_time = time.time()
 
@@ -384,7 +390,7 @@ class RepositoryIndexer:
                     if result.error:
                         error_count += 1
                         logger.warning(
-                            f"Error processing {result.file_path}: {result.error}"
+                            "Error processing %s: %s", result.file_path, result.error
                         )
                         if progress_callback:
                             progress_callback(
@@ -460,10 +466,15 @@ class RepositoryIndexer:
         )
 
         logger.info(
-            f"Parallel parsing complete: {files_parsed} files, "
-            f"{total_chunks_processed} chunks in {parse_duration:.2f}s "
-            f"({files_per_second:.1f} files/s, {chunks_per_second:.1f} chunks/s, "
-            f"{parallel_workers} workers, {error_count} errors)"
+            "Parallel parsing complete: %d files, %d chunks in %.2fs "
+            "(%.1f files/s, %.1f chunks/s, %d workers, %d errors)",
+            files_parsed,
+            total_chunks_processed,
+            parse_duration,
+            files_per_second,
+            chunks_per_second,
+            parallel_workers,
+            error_count,
         )
 
         return processed_files, total_chunks_processed
@@ -541,17 +552,22 @@ class RepositoryIndexer:
         """
         self._status_manager.save(self.wiki_path, status)
         logger.info(
-            f"Indexing complete: {status.total_files} files, "
-            f"{status.total_chunks} chunks, languages: {list(status.languages.keys())}"
+            "Indexing complete: %d files, %d chunks, languages: %s",
+            status.total_files,
+            status.total_chunks,
+            list(status.languages.keys()),
         )
 
         # Log AST cache statistics if enabled
         if self.ast_cache is not None:
             cache_stats = self.ast_cache.get_stats()
             logger.info(
-                f"AST cache stats: hits={cache_stats['hits']}, misses={cache_stats['misses']}, "
-                f"hit_rate={cache_stats['hit_rate']:.2%}, entries={cache_stats['total_entries']}, "
-                f"memory={cache_stats['estimated_memory_bytes'] / 1024:.1f}KB"
+                "AST cache stats: hits=%d, misses=%d, hit_rate=%.2f%%, entries=%d, memory=%.1fKB",
+                cache_stats["hits"],
+                cache_stats["misses"],
+                cache_stats["hit_rate"] * 100,
+                cache_stats["total_entries"],
+                cache_stats["estimated_memory_bytes"] / 1024,
             )
 
     async def index(

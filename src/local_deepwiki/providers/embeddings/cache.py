@@ -333,8 +333,10 @@ class EmbeddingCache:
         # Log cache performance
         if texts_to_embed:
             logger.debug(
-                f"Embedding cache: {len(texts) - len(texts_to_embed)}/{len(texts)} hits, "
-                f"fetching {len(texts_to_embed)} from provider"
+                "Embedding cache: %d/%d hits, fetching %d from provider",
+                len(texts) - len(texts_to_embed),
+                len(texts),
+                len(texts_to_embed),
             )
 
         # Fetch uncached embeddings from provider
@@ -475,7 +477,9 @@ class EmbeddingCache:
             conn.commit()
 
             logger.info(
-                f"Cache cleanup: removed {expired_count} expired + {deleted} oldest entries"
+                "Cache cleanup: removed %d expired + %d oldest entries",
+                expired_count,
+                deleted,
             )
             return expired_count + deleted
 
@@ -505,7 +509,7 @@ class EmbeddingCache:
 
             if deleted > 0:
                 logger.info(
-                    f"Invalidated {deleted} cache entries for model {model_name}"
+                    "Invalidated %d cache entries for model %s", deleted, model_name
                 )
             return deleted
         except sqlite3.Error as e:

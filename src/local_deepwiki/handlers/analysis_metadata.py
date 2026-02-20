@@ -169,7 +169,10 @@ async def handle_get_file_context(args: dict[str, Any]) -> list[TextContent]:
     }
 
     logger.info(
-        f"File context: {len(context.imports)} imports, {len(context.callers)} callers for {file_path}"
+        "File context: %d imports, %d callers for %s",
+        len(context.imports),
+        len(context.callers),
+        file_path,
     )
     return make_tool_text_content("get_file_context", result)
 

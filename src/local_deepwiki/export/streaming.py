@@ -158,15 +158,15 @@ class WikiPageIterator:
         self._page_count = len(md_files)
         self._total_size = sum(f.stat().st_size for f in md_files)
         logger.debug(
-            f"Scanned wiki: {self._page_count} pages, "
-            f"{self._total_size / 1024 / 1024:.2f} MB"
+            "Scanned wiki: %d pages, %.2f MB",
+            self._page_count,
+            self._total_size / 1024 / 1024,
         )
 
     def _get_ordered_paths(self) -> list[Path]:
         """Get page paths in the correct order (TOC order or alphabetical)."""
         all_files = {
-            str(f.relative_to(self.wiki_path)): f
-            for f in self.wiki_path.rglob("*.md")
+            str(f.relative_to(self.wiki_path)): f for f in self.wiki_path.rglob("*.md")
         }
 
         if self._toc_order:

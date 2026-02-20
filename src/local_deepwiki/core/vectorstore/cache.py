@@ -196,8 +196,11 @@ class AdaptiveSearcher:
         quality = max(0.0, min(1.0, quality))  # Clamp to valid range
         self._query_history.append((query, quality, result_count, depth_used))
         logger.debug(
-            f"Recorded search quality: query='{query[:50]}...' quality={quality:.2f} "
-            f"results={result_count} depth={depth_used}"
+            "Recorded search quality: query='%s...' quality=%.2f results=%d depth=%d",
+            query[:50],
+            quality,
+            result_count,
+            depth_used,
         )
 
     def record_feedback(self, feedback: SearchFeedback) -> None:
@@ -210,8 +213,10 @@ class AdaptiveSearcher:
         """
         self._feedback_history.append(feedback)
         logger.debug(
-            f"Recorded feedback: query='{feedback.query[:50]}...' "
-            f"result={feedback.result_id} relevant={feedback.relevant}"
+            "Recorded feedback: query='%s...' result=%s relevant=%s",
+            feedback.query[:50],
+            feedback.result_id,
+            feedback.relevant,
         )
 
         # Update quality estimates for matching queries in history
@@ -400,8 +405,9 @@ class SearchCache:
             if best_match is not None:
                 self._stats["hits"] += 1
                 logger.debug(
-                    f"Search cache hit: similarity={best_similarity:.3f}, "
-                    f"query='{best_match.query_text[:50]}...'"
+                    "Search cache hit: similarity=%.3f, query='%s...'",
+                    best_similarity,
+                    best_match.query_text[:50],
                 )
                 return best_match.results
 
@@ -444,8 +450,9 @@ class SearchCache:
             self._cache[cache_key] = entry
 
             logger.debug(
-                f"Cached search results: query='{query_text[:50]}...', "
-                f"results={len(results)}"
+                "Cached search results: query='%s...', results=%d",
+                query_text[:50],
+                len(results),
             )
 
             # Evict if over capacity
@@ -462,8 +469,9 @@ class SearchCache:
             return
 
         logger.debug(
-            f"Search cache has {len(self._cache)} entries "
-            f"(max: {self.config.max_entries}), evicting..."
+            "Search cache has %d entries (max: %d), evicting...",
+            len(self._cache),
+            self.config.max_entries,
         )
 
         # Phase 1: Remove expired entries

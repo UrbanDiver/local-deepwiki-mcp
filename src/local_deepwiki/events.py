@@ -9,7 +9,7 @@ from __future__ import annotations
 import asyncio
 import uuid
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from operator import attrgetter
 from typing import Any, Callable, Coroutine
 
@@ -18,7 +18,7 @@ from local_deepwiki.logging import get_logger
 logger = get_logger(__name__)
 
 
-class EventType(str, Enum):
+class EventType(StrEnum):
     """Event types emitted during operations."""
 
     # Indexing events
@@ -161,8 +161,11 @@ class EventEmitter:
             self._handlers[event_type].sort(key=attrgetter("priority"), reverse=True)
 
         logger.debug(
-            f"Registered handler {entry.handler_id} for {event_type or 'all events'} "
-            f"(priority={priority}, async={entry.is_async})"
+            "Registered handler %s for %s (priority=%d, async=%s)",
+            entry.handler_id,
+            event_type or "all events",
+            priority,
+            entry.is_async,
         )
 
         return entry.handler_id
@@ -279,7 +282,10 @@ class EventEmitter:
             except Exception as e:
                 # Broad catch justified: event handlers are user-provided callbacks; we must isolate failures
                 logger.error(
-                    f"Error in event handler {entry.handler_id} for {event_type}: {e}"
+                    "Error in event handler %s for %s: %s",
+                    entry.handler_id,
+                    event_type,
+                    e,
                 )
 
         return event

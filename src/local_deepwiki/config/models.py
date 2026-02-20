@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any, Literal
 
@@ -12,7 +12,7 @@ import yaml
 from pydantic import BaseModel, Field, computed_field, field_validator, model_validator
 
 
-class ResearchPreset(str, Enum):
+class ResearchPreset(StrEnum):
     """Research mode presets for deep research pipeline."""
 
     QUICK = "quick"
@@ -20,7 +20,7 @@ class ResearchPreset(str, Enum):
     THOROUGH = "thorough"
 
 
-class GenerationMode(str, Enum):
+class GenerationMode(StrEnum):
     """Wiki page generation strategy."""
 
     EAGER = "eager"

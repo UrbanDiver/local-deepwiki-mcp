@@ -206,7 +206,8 @@ class AnthropicProvider(LLMProvider):
             error_str = str(e).lower()
             if "not found" in error_str or "invalid" in error_str:
                 logger.warning(
-                    f"Caught generic exception in validate_model, treating as model error: {e}"
+                    "Caught generic exception in validate_model, treating as model error: %s",
+                    e,
                 )
                 raise ProviderModelNotFoundError(
                     model_name,
@@ -260,7 +261,9 @@ class AnthropicProvider(LLMProvider):
             ProviderModelNotFoundError: If the model is not available.
         """
         logger.debug(
-            f"Generating with Anthropic model {self._model}, prompt length: {len(prompt)}"
+            "Generating with Anthropic model %s, prompt length: %d",
+            self._model,
+            len(prompt),
         )
 
         try:

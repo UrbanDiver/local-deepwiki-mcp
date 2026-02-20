@@ -92,7 +92,10 @@ def _setup_deep_research_config(
 
     logger.info("Deep research on %s: %s...", repo_path, question[:100])
     logger.debug(
-        f"Max chunks: {max_chunks}, preset: {preset or 'default'}, resume: {resume_research_id or 'new'}"
+        "Max chunks: %d, preset: %s, resume: %s",
+        max_chunks,
+        preset or "default",
+        resume_research_id or "new",
     )
 
     # Create context
@@ -296,8 +299,9 @@ async def _execute_research_phases(
         response = _format_research_results(result)
 
         logger.info(
-            f"Deep research complete: {result.total_chunks_analyzed} chunks, "
-            f"{result.total_llm_calls} LLM calls"
+            "Deep research complete: %d chunks, %d LLM calls",
+            result.total_chunks_analyzed,
+            result.total_llm_calls,
         )
         return [TextContent(type="text", text=json.dumps(response, indent=2))]
 

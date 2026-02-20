@@ -18,7 +18,7 @@ import logging.handlers
 import threading
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
@@ -28,7 +28,7 @@ from local_deepwiki.logging import get_logger
 logger = get_logger(__name__)
 
 
-class AuditEventType(str, Enum):
+class AuditEventType(StrEnum):
     """Types of audit events.
 
     Categorized by operation type for easier filtering and analysis.
@@ -62,7 +62,7 @@ class AuditEventType(str, Enum):
     SENSITIVE_RESOURCE_ACCESSED = "sensitive_resource_accessed"
 
 
-class AuditSeverity(str, Enum):
+class AuditSeverity(StrEnum):
     """Severity levels for audit events.
 
     Used to categorize events for alerting and log rotation policies.
@@ -197,8 +197,11 @@ class AuditLogger:
         # Log critical events to application logger for visibility
         if event.severity == AuditSeverity.CRITICAL:
             logger.warning(
-                f"AUDIT[CRITICAL]: {event.action} on {event.resource_type} "
-                f"by {event.subject_id or 'anonymous'} - {event.result}"
+                "AUDIT[CRITICAL]: %s on %s by %s - %s",
+                event.action,
+                event.resource_type,
+                event.subject_id or "anonymous",
+                event.result,
             )
 
     def log_access_decision(

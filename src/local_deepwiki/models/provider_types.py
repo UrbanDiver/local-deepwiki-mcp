@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 
-class LLMProviderType(str, Enum):
+class LLMProviderType(StrEnum):
     """Supported LLM providers."""
 
     OLLAMA = "ollama"
@@ -13,14 +13,14 @@ class LLMProviderType(str, Enum):
     OPENAI = "openai"
 
 
-class EmbeddingProviderType(str, Enum):
+class EmbeddingProviderType(StrEnum):
     """Supported embedding providers."""
 
     LOCAL = "local"
     OPENAI = "openai"
 
 
-class DiagramType(str, Enum):
+class DiagramType(StrEnum):
     """Types of diagrams that can be generated."""
 
     CLASS = "class"
@@ -30,7 +30,7 @@ class DiagramType(str, Enum):
     LANGUAGE_PIE = "language_pie"
 
 
-class CodemapFocusType(str, Enum):
+class CodemapFocusType(StrEnum):
     """Focus modes for codemap generation."""
 
     EXECUTION_FLOW = "execution_flow"

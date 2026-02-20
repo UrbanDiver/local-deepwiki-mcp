@@ -118,7 +118,10 @@ async def embed_single_batch_with_retry(
 
                 if not is_retryable or retry_count >= config.retry_max_attempts:
                     logger.warning(
-                        f"Batch {batch_index} failed after {retry_count} attempts: {e}"
+                        "Batch %d failed after %d attempts: %s",
+                        batch_index,
+                        retry_count,
+                        e,
                     )
                     progress.update(success=False)
                     return BatchEmbeddingResult(
@@ -131,8 +134,11 @@ async def embed_single_batch_with_retry(
                 delay = config.retry_base_delay * (2 ** (retry_count - 1))
                 delay = delay * (0.5 + random.random())
                 logger.warning(
-                    f"Batch {batch_index} failed (attempt {retry_count}): {e}. "
-                    f"Retrying in {delay:.2f}s..."
+                    "Batch %d failed (attempt %d): %s. Retrying in %.2fs...",
+                    batch_index,
+                    retry_count,
+                    e,
+                    delay,
                 )
                 await asyncio.sleep(delay)
 
@@ -187,8 +193,10 @@ async def batch_embed(
     duplicates_saved = len(texts) - len(unique_texts)
     if duplicates_saved > 0:
         logger.debug(
-            f"Embedding dedup: {len(texts)} texts -> {len(unique_texts)} unique "
-            f"({duplicates_saved} duplicates skipped)"
+            "Embedding dedup: %d texts -> %d unique (%d duplicates skipped)",
+            len(texts),
+            len(unique_texts),
+            duplicates_saved,
         )
 
     # Get optimal config based on provider type
@@ -226,9 +234,12 @@ async def batch_embed(
 
     if log_progress:
         logger.info(
-            f"Starting parallel embedding: {len(unique_texts)} unique texts "
-            f"in {total_batches} batches "
-            f"(batch_size={batch_size}, concurrency={optimal_concurrency})"
+            "Starting parallel embedding: %d unique texts in %d batches "
+            "(batch_size=%d, concurrency=%d)",
+            len(unique_texts),
+            total_batches,
+            batch_size,
+            optimal_concurrency,
         )
 
     # Create semaphore for concurrency control
@@ -283,8 +294,10 @@ async def batch_embed(
         elapsed = progress.elapsed_seconds
         rate = len(unique_texts) / elapsed if elapsed > 0 else 0
         logger.info(
-            f"Embedding complete: {len(unique_texts)} unique texts "
-            f"in {elapsed:.2f}s ({rate:.1f} texts/sec)"
+            "Embedding complete: %d unique texts in %.2fs (%.1f texts/sec)",
+            len(unique_texts),
+            elapsed,
+            rate,
         )
 
     # Remap unique embeddings back to original text order
@@ -318,7 +331,8 @@ async def batch_embed_sequential(
         embeddings.extend(batch_embeddings)
         if log_progress and len(texts) > batch_size:
             logger.debug(
-                f"Embedded batch {i // batch_size + 1}/"
-                f"{(len(texts) + batch_size - 1) // batch_size}"
+                "Embedded batch %d/%d",
+                i // batch_size + 1,
+                (len(texts) + batch_size - 1) // batch_size,
             )
     return embeddings

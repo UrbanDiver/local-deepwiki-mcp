@@ -185,7 +185,8 @@ class OpenAILLMProvider(LLMProvider):
                 or "invalid" in error_str
             ):
                 logger.warning(
-                    f"Caught generic exception in validate_model, treating as model error: {e}"
+                    "Caught generic exception in validate_model, treating as model error: %s",
+                    e,
                 )
                 raise ProviderModelNotFoundError(
                     model_name,
@@ -246,7 +247,9 @@ class OpenAILLMProvider(LLMProvider):
         messages.append({"role": "user", "content": prompt})
 
         logger.debug(
-            f"Generating with OpenAI model {self._model}, prompt length: {len(prompt)}"
+            "Generating with OpenAI model %s, prompt length: %d",
+            self._model,
+            len(prompt),
         )
 
         try:

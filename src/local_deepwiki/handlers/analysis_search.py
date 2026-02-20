@@ -163,7 +163,10 @@ async def handle_search_wiki(args: dict[str, Any]) -> list[TextContent]:
     }
 
     logger.info(
-        f"Wiki search: {len(matches)} results for '{validated.query}' in {repo_path}"
+        "Wiki search: %d results for '%s' in %s",
+        len(matches),
+        validated.query,
+        repo_path,
     )
     return make_tool_text_content("search_wiki", result)
 
@@ -254,6 +257,9 @@ async def handle_fuzzy_search(args: dict[str, Any]) -> list[TextContent]:
         result["hint"] = hint
 
     logger.info(
-        f"Fuzzy search: {len(match_results)} matches for '{validated.query}' in {repo_path}"
+        "Fuzzy search: %d matches for '%s' in %s",
+        len(match_results),
+        validated.query,
+        repo_path,
     )
     return make_tool_text_content("fuzzy_search", result)

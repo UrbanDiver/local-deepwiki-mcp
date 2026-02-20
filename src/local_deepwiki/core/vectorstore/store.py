@@ -356,8 +356,9 @@ class VectorStore:
             if num_rows >= self._lazy_index_manager.config.min_rows:
                 self._lazy_index_manager.mark_index_pending()
                 logger.info(
-                    f"Vector index creation deferred (lazy mode): {num_rows} rows. "
-                    "Index will be created in background or on-demand."
+                    "Vector index creation deferred (lazy mode): %d rows. "
+                    "Index will be created in background or on-demand.",
+                    num_rows,
                 )
         else:
             # Eager indexing: create immediately
@@ -481,8 +482,11 @@ class VectorStore:
         )
 
         logger.debug(
-            f"Searching for: '{query[:50]}...' limit={limit} "
-            f"profile={resolved_profile.value} min_sim={effective_min_similarity}"
+            "Searching for: '%s...' limit=%d profile=%s min_sim=%s",
+            query[:50],
+            limit,
+            resolved_profile.value,
+            effective_min_similarity,
         )
 
         # Generate query embedding
@@ -598,8 +602,8 @@ class VectorStore:
         ):
             auto_fuzzy_enabled = True
             logger.debug(
-                f"Auto-enabling fuzzy search due to poor results "
-                f"(best score below {fuzzy_config.auto_fuzzy_threshold})"
+                "Auto-enabling fuzzy search due to poor results (best score below %s)",
+                fuzzy_config.auto_fuzzy_threshold,
             )
 
         # Apply fuzzy re-ranking (either explicit or auto-enabled)
@@ -749,8 +753,11 @@ class VectorStore:
         )
 
         logger.debug(
-            f"Paginated search for: '{query[:50]}...' limit={limit} offset={offset} "
-            f"profile={resolved_profile.value}"
+            "Paginated search for: '%s...' limit=%d offset=%d profile=%s",
+            query[:50],
+            limit,
+            offset,
+            resolved_profile.value,
         )
 
         # Parse cursor if provided (format: "offset:{number}")
@@ -760,7 +767,7 @@ class VectorStore:
                     offset = int(cursor[7:])
             except (ValueError, IndexError):
                 logger.warning(
-                    f"Invalid cursor format: {cursor}, using offset={offset}"
+                    "Invalid cursor format: %s, using offset=%d", cursor, offset
                 )
 
         # Generate query embedding
@@ -1183,7 +1190,9 @@ class VectorStore:
 
             if (i + 1) % 100_000 == 0:
                 logger.debug(
-                    f"Stats streaming progress: {i + 1}/{total_chunks} rows processed"
+                    "Stats streaming progress: %d/%d rows processed",
+                    i + 1,
+                    total_chunks,
                 )
 
         return {

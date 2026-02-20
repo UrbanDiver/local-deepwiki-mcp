@@ -6,7 +6,7 @@ import threading
 import time
 from collections import deque
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from local_deepwiki.models import ChunkType, Language, SearchResult
@@ -64,7 +64,7 @@ class ChunkBatch:
     has_more: bool
 
 
-class SearchProfile(str, Enum):
+class SearchProfile(StrEnum):
     """Search profile for precision/recall trade-off.
 
     Profiles control how exhaustive the search is, trading off speed vs accuracy:
@@ -216,8 +216,11 @@ class EmbeddingProgress:
             eta_str = ""
 
         logger.info(
-            f"Embedding progress: {completed}/{total} batches "
-            f"({progress_pct:.1f}%){eta_str}"
+            "Embedding progress: %d/%d batches (%.1f%%)%s",
+            completed,
+            total,
+            progress_pct,
+            eta_str,
         )
 
 

@@ -249,7 +249,9 @@ async def generate_codemap_pages(
         # Skip trivial graphs
         if result.total_nodes < _MIN_NODES:
             logger.debug(
-                f"Skipping trivial codemap for {entry_point} ({result.total_nodes} nodes)"
+                "Skipping trivial codemap for %s (%d nodes)",
+                entry_point,
+                result.total_nodes,
             )
             continue
 
@@ -294,6 +296,6 @@ async def generate_codemap_pages(
                     logger.debug("Failed to remove orphaned codemap: %s", md_file.name)
 
     logger.info(
-        f"Codemap generation complete: {generated} generated, {skipped} unchanged"
+        "Codemap generation complete: %d generated, %d unchanged", generated, skipped
     )
     return pages, generated, skipped

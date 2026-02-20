@@ -9,7 +9,7 @@ from __future__ import annotations
 import asyncio
 import threading
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from functools import wraps
 from typing import Callable, TypeVar
 
@@ -17,7 +17,7 @@ from typing import Callable, TypeVar
 F = TypeVar("F", bound=Callable)
 
 
-class RBACMode(str, Enum):
+class RBACMode(StrEnum):
     """RBAC enforcement modes."""
 
     DISABLED = "disabled"  # No permission checks
@@ -25,7 +25,7 @@ class RBACMode(str, Enum):
     ENFORCED = "enforced"  # Always require authenticated subject
 
 
-class Permission(str, Enum):
+class Permission(StrEnum):
     """Available permissions in the system."""
 
     # Index management
@@ -49,7 +49,7 @@ class Permission(str, Enum):
     SYSTEM_ADMIN = "system:admin"
 
 
-class Role(str, Enum):
+class Role(StrEnum):
     """Predefined roles in the system."""
 
     ADMIN = "admin"
@@ -126,10 +126,9 @@ class Subject:
         Returns:
             True if the subject has the permission through any of its roles.
         """
-        for role in self.roles:
-            if permission in ROLE_PERMISSIONS.get(role, set()):
-                return True
-        return False
+        return any(
+            permission in ROLE_PERMISSIONS.get(role, set()) for role in self.roles
+        )
 
     def get_all_permissions(self) -> set[Permission]:
         """Get all permissions for this subject.
@@ -137,10 +136,7 @@ class Subject:
         Returns:
             Set of all permissions granted through assigned roles.
         """
-        permissions: set[Permission] = set()
-        for role in self.roles:
-            permissions.update(ROLE_PERMISSIONS.get(role, set()))
-        return permissions
+        return {p for role in self.roles for p in ROLE_PERMISSIONS.get(role, set())}
 
 
 class AccessController:
