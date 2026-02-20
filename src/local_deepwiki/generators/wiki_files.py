@@ -6,6 +6,7 @@ import asyncio
 import re
 import time
 from dataclasses import dataclass
+from operator import attrgetter
 from pathlib import Path
 from typing import TYPE_CHECKING, Awaitable, Callable
 
@@ -997,7 +998,7 @@ def _generate_blame_section(
         return None
 
     # Sort by most recently modified first
-    blame_infos.sort(key=lambda b: b.last_modified_date, reverse=True)
+    blame_infos.sort(key=attrgetter("last_modified_date"), reverse=True)
 
     # Build the section
     lines = [

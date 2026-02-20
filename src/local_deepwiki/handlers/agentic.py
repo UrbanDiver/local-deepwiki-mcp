@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from operator import itemgetter
 from pathlib import Path
 from typing import Any
 
@@ -936,7 +937,7 @@ async def handle_find_tools(args: dict[str, Any]) -> list[TextContent]:
                 )
             )
 
-    scored.sort(key=lambda x: x[0], reverse=True)
+    scored.sort(key=itemgetter(0), reverse=True)
     top_results = [item for _, item in scored[:5]]
 
     data = {

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from operator import itemgetter
 from pathlib import Path
 
 from local_deepwiki.core.vectorstore import VectorStore
@@ -129,7 +130,7 @@ def generate_inheritance_diagram(
             (name, len([p for p in node.parents if p in classes]) + len(node.children))
             for name, node in classes_with_internal_inheritance.items()
         ]
-        scored.sort(key=lambda x: x[1], reverse=True)
+        scored.sort(key=itemgetter(1), reverse=True)
         keep_names = {name for name, _ in scored[:max_classes]}
         classes_with_internal_inheritance = {
             name: node

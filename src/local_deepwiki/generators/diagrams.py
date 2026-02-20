@@ -789,8 +789,8 @@ def _find_circular_dependencies(deps: dict[str, set[str]]) -> set[tuple[str, str
             # Found a cycle - mark all edges in the cycle
             cycle_start = path.index(node)
             cycle = path[cycle_start:] + [node]
-            for i in range(len(cycle) - 1):
-                circular.add((cycle[i], cycle[i + 1]))
+            for src, tgt in zip(cycle, cycle[1:]):
+                circular.add((src, tgt))
             return
 
         if node in visited:

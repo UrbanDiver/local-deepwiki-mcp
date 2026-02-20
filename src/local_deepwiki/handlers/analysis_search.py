@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from operator import itemgetter
 from pathlib import Path
 from typing import Any
 
@@ -151,7 +152,7 @@ async def handle_search_wiki(args: dict[str, Any]) -> list[TextContent]:
                 )
 
     # Sort by score descending, then limit
-    matches.sort(key=lambda m: m["score"], reverse=True)
+    matches.sort(key=itemgetter("score"), reverse=True)
     matches = matches[:limit]
 
     result = {

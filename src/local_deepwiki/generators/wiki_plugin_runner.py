@@ -6,6 +6,7 @@ wiki generator plugins.
 
 from __future__ import annotations
 
+from operator import attrgetter
 from typing import TYPE_CHECKING
 
 from local_deepwiki.logging import get_logger
@@ -69,7 +70,7 @@ def sort_generators_by_dependencies(
     # Start with generators that have no dependencies
     # Sort by priority (higher first) within each level
     ready = [g for g in generators if in_degree[g.generator_name] == 0]
-    ready.sort(key=lambda g: g.priority, reverse=True)
+    ready.sort(key=attrgetter("priority"), reverse=True)
 
     sorted_generators: list[WikiGeneratorPlugin] = []
     while ready:

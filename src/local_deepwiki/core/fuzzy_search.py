@@ -15,6 +15,7 @@ from __future__ import annotations
 import fnmatch
 import re
 from dataclasses import dataclass, field
+from operator import attrgetter, itemgetter
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -210,7 +211,7 @@ def rerank_with_fuzzy(
         )
 
     # Sort by combined score (descending)
-    reranked.sort(key=lambda r: r.score, reverse=True)
+    reranked.sort(key=attrgetter("score"), reverse=True)
     return reranked
 
 
@@ -571,7 +572,7 @@ class FuzzySearchHelper:
                 suggestions.append((name, score * 1.1))
 
         # Sort by score descending and limit
-        suggestions.sort(key=lambda x: x[1], reverse=True)
+        suggestions.sort(key=itemgetter(1), reverse=True)
         return [name for name, _ in suggestions[:max_suggestions]]
 
     def get_file_suggestions(

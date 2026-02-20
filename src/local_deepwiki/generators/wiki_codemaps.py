@@ -243,7 +243,7 @@ async def generate_codemap_pages(
             # ValueError/RuntimeError: vector store or LLM provider failures
             # OSError: file I/O or network errors
             # TypeError: unexpected data shapes from LLM or vector store
-            logger.exception(f"Failed to generate codemap for {entry_point}")
+            logger.exception("Failed to generate codemap for %s", entry_point)
             continue
 
         # Skip trivial graphs

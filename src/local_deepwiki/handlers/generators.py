@@ -375,7 +375,7 @@ async def handle_get_coverage(args: dict[str, Any]) -> list[TextContent]:
         ],
     }
 
-    logger.info(f"Coverage: {stats.coverage_percent:.1f}% for {repo_path}")
+    logger.info("Coverage: %.1f%% for %s", stats.coverage_percent, repo_path)
     return make_tool_text_content("get_coverage", result)
 
 

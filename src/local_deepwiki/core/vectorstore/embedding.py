@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import random
+from operator import attrgetter
 
 from local_deepwiki.config import EmbeddingBatchConfig
 from local_deepwiki.logging import get_logger
@@ -255,7 +256,7 @@ async def batch_embed(
         progress.log_progress()
 
     # Sort results by batch index to maintain order
-    results.sort(key=lambda r: r.batch_index)
+    results.sort(key=attrgetter("batch_index"))
 
     # Check for failures and collect errors
     errors: list[tuple[int, Exception]] = []

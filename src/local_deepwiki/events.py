@@ -10,6 +10,7 @@ import asyncio
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
+from operator import attrgetter
 from typing import Any, Callable, Coroutine
 
 from local_deepwiki.logging import get_logger
@@ -148,7 +149,7 @@ class EventEmitter:
 
         if event_type is None:
             self._global_handlers.append(entry)
-            self._global_handlers.sort(key=lambda e: e.priority, reverse=True)
+            self._global_handlers.sort(key=attrgetter("priority"), reverse=True)
         else:
             if isinstance(event_type, str):
                 event_type = EventType(event_type)
@@ -157,7 +158,7 @@ class EventEmitter:
                 self._handlers[event_type] = []
 
             self._handlers[event_type].append(entry)
-            self._handlers[event_type].sort(key=lambda e: e.priority, reverse=True)
+            self._handlers[event_type].sort(key=attrgetter("priority"), reverse=True)
 
         logger.debug(
             f"Registered handler {entry.handler_id} for {event_type or 'all events'} "
@@ -264,7 +265,7 @@ class EventEmitter:
             handlers.extend(self._handlers[event_type])
 
         # Sort by priority
-        handlers.sort(key=lambda e: e.priority, reverse=True)
+        handlers.sort(key=attrgetter("priority"), reverse=True)
 
         # Execute handlers
         for entry in handlers:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from operator import attrgetter
 from pathlib import Path
 
 from local_deepwiki.core.vectorstore import VectorStore
@@ -169,7 +170,7 @@ async def analyze_project_coverage(
         overall += file_coverage.stats
 
     # Sort by coverage (lowest first)
-    file_coverages.sort(key=lambda f: f.stats.coverage_percent)
+    file_coverages.sort(key=attrgetter("stats.coverage_percent"))
 
     return overall, file_coverages
 

@@ -10,6 +10,7 @@ from __future__ import annotations
 import re
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
+from operator import itemgetter
 from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -306,7 +307,7 @@ async def discover_entry_points(
 
         scored.append((score, node))
 
-    scored.sort(key=lambda t: t[0], reverse=True)
+    scored.sort(key=itemgetter(0), reverse=True)
     return [node for _, node in scored[:max_candidates]]
 
 

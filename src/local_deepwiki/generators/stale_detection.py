@@ -8,10 +8,15 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
+from operator import attrgetter
 from datetime import datetime
 from pathlib import Path
 
-from local_deepwiki.core.git_utils import StaleInfo, check_page_staleness, format_blame_date
+from local_deepwiki.core.git_utils import (
+    StaleInfo,
+    check_page_staleness,
+    format_blame_date,
+)
 from local_deepwiki.models import WikiGenerationStatus, WikiPage
 
 
@@ -59,7 +64,7 @@ def analyze_staleness(
             stale_info.append(info)
 
     # Sort by days stale (most stale first)
-    stale_info.sort(key=lambda x: x.days_stale, reverse=True)
+    stale_info.sort(key=attrgetter("days_stale"), reverse=True)
 
     return StaleReport(
         total_pages=len([p for p in wiki_status.pages if p.startswith("files/")]),
