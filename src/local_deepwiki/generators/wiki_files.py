@@ -8,7 +8,7 @@ import time
 from dataclasses import dataclass
 from operator import attrgetter
 from pathlib import Path
-from typing import TYPE_CHECKING, Awaitable, Callable
+from typing import TYPE_CHECKING, Awaitable, Callable, TypeAlias
 
 from local_deepwiki.config import Config
 from local_deepwiki.core.git_utils import (
@@ -728,10 +728,10 @@ async def generate_single_file_doc(
 
 
 # Type alias for async write callback
-WriteCallback = Callable[[WikiPage], Awaitable[None]]
+WriteCallback: TypeAlias = Callable[[WikiPage], Awaitable[None]]
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class FileDocContext:
     """Bundled context for file documentation generation.
 

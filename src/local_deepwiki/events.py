@@ -11,7 +11,7 @@ import uuid
 from dataclasses import dataclass, field
 from enum import StrEnum
 from operator import attrgetter
-from typing import Any, Callable, Coroutine
+from typing import Any, Callable, Coroutine, TypeAlias
 
 from local_deepwiki.logging import get_logger
 
@@ -60,9 +60,9 @@ class Event:
 
 
 # Type aliases for handlers
-SyncHandler = Callable[[Event], None]
-AsyncHandler = Callable[[Event], Coroutine[Any, Any, None]]
-Handler = SyncHandler | AsyncHandler
+SyncHandler: TypeAlias = Callable[[Event], None]
+AsyncHandler: TypeAlias = Callable[[Event], Coroutine[Any, Any, None]]
+Handler: TypeAlias = SyncHandler | AsyncHandler
 
 
 @dataclass

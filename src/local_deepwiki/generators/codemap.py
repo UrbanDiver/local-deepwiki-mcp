@@ -8,7 +8,7 @@ Mermaid flowchart, and uses an LLM to synthesize a narrative trace.
 from __future__ import annotations
 
 import re
-from collections import defaultdict, deque
+from collections import Counter, defaultdict, deque
 from dataclasses import dataclass, field
 from operator import itemgetter
 from enum import StrEnum
@@ -75,7 +75,7 @@ class CodemapFocus(StrEnum):
     DEPENDENCY_CHAIN = "dependency_chain"
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class CodemapNode:
     """A single node in the codemap graph."""
 
@@ -89,7 +89,7 @@ class CodemapNode:
     content_preview: str = ""
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class CodemapEdge:
     """A directed edge in the codemap graph."""
 
@@ -1009,7 +1009,7 @@ async def suggest_topics(
                 chunk_by_name[key] = chunk
 
     # Count connections per function (skip noise/builtins for accurate ranking)
-    connection_count: dict[str, int] = defaultdict(int)
+    connection_count: Counter[str] = Counter()
     for caller, callees in combined_cg.items():
         if _is_noise(caller):
             continue
@@ -1027,7 +1027,7 @@ async def suggest_topics(
             connection_count[func_name] = int(connection_count[func_name] * weight)
 
     # Also count how many files import each file (core module detection)
-    file_import_count: dict[str, int] = defaultdict(int)
+    file_import_count: Counter[str] = Counter()
     for chunk in all_chunks:
         if chunk.chunk_type == ChunkType.IMPORT:
             for line in chunk.content.splitlines():
@@ -1058,8 +1058,8 @@ async def suggest_topics(
     suggestions: list[dict[str, Any]] = []
     seen_names: set[str] = set()
 
-    # Sort by connection count
-    ranked = sorted(connection_count.items(), key=lambda t: t[1], reverse=True)
+    # Sort by connection count (most_common returns descending order)
+    ranked = connection_count.most_common()
 
     for func_name, count in ranked:
         if func_name in seen_names:

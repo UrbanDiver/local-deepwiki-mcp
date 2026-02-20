@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, TypeAlias
 
 from pydantic import BaseModel, Field
 
@@ -102,7 +102,7 @@ class ExportResult:
         )
 
 
-ProgressCallback = Callable[[int, int, str], None]
+ProgressCallback: TypeAlias = Callable[[int, int, str], None]
 """Progress callback signature: (current, total, message) -> None"""
 
 

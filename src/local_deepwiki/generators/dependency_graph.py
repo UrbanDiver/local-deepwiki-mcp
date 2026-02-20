@@ -651,12 +651,10 @@ class DependencyGraphGenerator:
 
         # Group nodes by directory
         groups: dict[str, list[DependencyNode]] = defaultdict(list)
-        external_nodes: list[DependencyNode] = []
+        external_nodes = [node for node in graph.nodes.values() if node.is_external]
 
         for node in graph.nodes.values():
-            if node.is_external:
-                external_nodes.append(node)
-            else:
+            if not node.is_external:
                 group = node.name.split(".")[0] if "." in node.name else "root"
                 groups[group].append(node)
 

@@ -12,7 +12,7 @@ import time
 import uuid
 from collections.abc import Awaitable, Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeAlias
 
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.events import EventType, get_event_emitter
@@ -40,11 +40,11 @@ from .serialization import dict_to_search_result, search_result_to_dict
 from .steps import StepsMixin
 
 # Type alias for progress callback
-ProgressCallback = Callable[[ResearchProgress], Awaitable[None]] | None
+ProgressCallback: TypeAlias = Callable[[ResearchProgress], Awaitable[None]] | None
 
 # Type alias for cancellation check callback
 # Returns True if the operation should be cancelled
-CancellationCallback = Callable[[], bool] | None
+CancellationCallback: TypeAlias = Callable[[], bool] | None
 
 logger = get_logger(__name__)
 
