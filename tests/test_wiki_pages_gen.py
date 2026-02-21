@@ -998,18 +998,14 @@ class TestArchitecturePageAuthoritativeDocs:
         mock_llm = MagicMock()
         mock_llm.generate = AsyncMock(side_effect=capture_generate)
 
-        with patch(
-            "local_deepwiki.generators.wiki_pages.generate_workflow_sequences",
-            return_value="",
-        ):
-            await generate_architecture_page(
-                index_status=index_status,
-                vector_store=mock_vector_store,
-                llm=mock_llm,
-                system_prompt="You are a documentation expert.",
-                manifest=None,
-                repo_path=tmp_path,
-            )
+        await generate_architecture_page(
+            index_status=index_status,
+            vector_store=mock_vector_store,
+            llm=mock_llm,
+            system_prompt="You are a documentation expert.",
+            manifest=None,
+            repo_path=tmp_path,
+        )
 
         # The authoritative docs should appear in the prompt
         assert "AUTHORITATIVE PROJECT DOCUMENTATION" in captured_prompt["prompt"]
@@ -1046,17 +1042,13 @@ class TestArchitecturePageAuthoritativeDocs:
         mock_llm = MagicMock()
         mock_llm.generate = AsyncMock(side_effect=capture_generate)
 
-        with patch(
-            "local_deepwiki.generators.wiki_pages.generate_workflow_sequences",
-            return_value="",
-        ):
-            await generate_architecture_page(
-                index_status=index_status,
-                vector_store=mock_vector_store,
-                llm=mock_llm,
-                system_prompt="You are a documentation expert.",
-                manifest=None,
-                repo_path=tmp_path,
-            )
+        await generate_architecture_page(
+            index_status=index_status,
+            vector_store=mock_vector_store,
+            llm=mock_llm,
+            system_prompt="You are a documentation expert.",
+            manifest=None,
+            repo_path=tmp_path,
+        )
 
         assert "AUTHORITATIVE PROJECT DOCUMENTATION" not in captured_prompt["prompt"]

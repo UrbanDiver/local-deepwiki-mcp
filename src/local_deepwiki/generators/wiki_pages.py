@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from local_deepwiki.core.vectorstore import VectorStore
-from local_deepwiki.generators.diagrams import generate_workflow_sequences
 from local_deepwiki.generators.manifest import ProjectManifest, get_directory_tree
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import IndexStatus, WikiPage
@@ -421,11 +420,6 @@ CRITICAL CONSTRAINTS:
 Format as markdown with clear sections."""
 
     content = await llm.generate(prompt, system_prompt=system_prompt)
-
-    # Add workflow sequence diagrams
-    content += "\n\n## Workflow Sequences\n\n"
-    content += "The following diagrams show how data flows through key operations:\n\n"
-    content += generate_workflow_sequences()
 
     # Add link to detailed dependency graph
     content += "\n\n## Module Dependencies\n\n"

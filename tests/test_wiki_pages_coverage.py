@@ -266,31 +266,6 @@ class TestGenerateArchitecturePage:
         assert result.title == "Architecture"
         assert "System Overview" in result.content or "Architecture" in result.content
 
-    async def test_includes_workflow_sequences(
-        self, mock_llm, mock_vector_store, tmp_path
-    ):
-        """Test includes workflow sequence diagrams."""
-        repo_path = tmp_path / "project"
-        repo_path.mkdir()
-        index_status = make_index_status(repo_path=str(repo_path))
-
-        with patch(
-            "local_deepwiki.generators.wiki_pages.generate_workflow_sequences"
-        ) as mock_workflows:
-            mock_workflows.return_value = "```mermaid\nsequenceDiagram\n```"
-
-            result = await generate_architecture_page(
-                index_status=index_status,
-                vector_store=mock_vector_store,
-                llm=mock_llm,
-                system_prompt="Architecture expert",
-                manifest=None,
-                repo_path=repo_path,
-            )
-
-            assert "Workflow Sequences" in result.content
-            mock_workflows.assert_called_once()
-
     async def test_searches_multiple_context_types(
         self, mock_llm, mock_vector_store, tmp_path
     ):

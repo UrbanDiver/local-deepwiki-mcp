@@ -42,11 +42,7 @@ from local_deepwiki.generators.diagrams.module_diagram import (
     generate_module_overview,
 )
 from local_deepwiki.generators.diagrams.sequence_diagram import (
-    generate_deep_research_sequence,
-    generate_indexing_sequence,
     generate_sequence_diagram,
-    generate_wiki_generation_sequence,
-    generate_workflow_sequences,
 )
 
 __all__ = [
@@ -87,9 +83,5 @@ __all__ = [
     # module_diagram
     "generate_module_overview",
     # sequence_diagram
-    "generate_deep_research_sequence",
-    "generate_indexing_sequence",
     "generate_sequence_diagram",
-    "generate_wiki_generation_sequence",
-    "generate_workflow_sequences",
 ]
