@@ -242,7 +242,7 @@ class RepositoryIndexer:
         self,
         prev_files_by_path: dict[str, FileInfo],
         progress_callback: ProgressCallback | None,
-    ) -> tuple[list[Path], list[FileInfo]]:
+    ) -> tuple[list[Path], list[FileInfo], list[str]]:
         """Gather source files and determine what needs processing.
 
         Args:
@@ -250,7 +250,9 @@ class RepositoryIndexer:
             progress_callback: Optional callback for progress updates.
 
         Returns:
-            Tuple of (files_to_process, files_unchanged).
+            Tuple of (files_to_process, files_unchanged, deleted_file_paths).
+            deleted_file_paths contains relative paths of files that existed in the
+            previous index but are no longer present on disk.
         """
         source_files = list(self._find_source_files())
         logger.info("Found %s source files to consider", len(source_files))
@@ -263,8 +265,12 @@ class RepositoryIndexer:
         files_to_process: list[Path] = []
         files_unchanged: list[FileInfo] = []
 
+        # Track current file paths for deleted file detection
+        current_file_paths: set[str] = set()
+
         for file_path in source_files:
             file_info = self.parser.get_file_info(file_path, self.repo_path)
+            current_file_paths.add(file_info.path)
 
             if prev_files_by_path:
                 # Check if file has changed using O(1) dict lookup
@@ -275,14 +281,27 @@ class RepositoryIndexer:
 
             files_to_process.append(file_path)
 
+        # Detect files that existed in the previous index but no longer exist on disk
+        deleted_file_paths = [
+            path for path in prev_files_by_path if path not in current_file_paths
+        ]
+
+        if deleted_file_paths:
+            logger.info(
+                "Detected %d deleted file(s): %s",
+                len(deleted_file_paths),
+                deleted_file_paths,
+            )
+
         if progress_callback:
             progress_callback(
-                f"Processing {len(files_to_process)} files ({len(files_unchanged)} unchanged)",
+                f"Processing {len(files_to_process)} files "
+                f"({len(files_unchanged)} unchanged, {len(deleted_file_paths)} deleted)",
                 0,
                 len(files_to_process),
             )
 
-        return files_to_process, files_unchanged
+        return files_to_process, files_unchanged, deleted_file_paths
 
     async def _delete_old_chunks_for_modified_files(
         self,
@@ -318,6 +337,30 @@ class RepositoryIndexer:
             logger.debug(
                 "Batch deleted chunks for %d modified files", len(files_to_delete)
             )
+
+    async def _delete_chunks_for_deleted_files(
+        self,
+        deleted_file_paths: list[str],
+        progress_callback: ProgressCallback | None,
+    ) -> None:
+        """Delete chunks from the vector store for files that no longer exist on disk.
+
+        Args:
+            deleted_file_paths: Relative paths of deleted files.
+            progress_callback: Optional callback for progress updates.
+        """
+        if progress_callback:
+            progress_callback(
+                f"Removing stale chunks for {len(deleted_file_paths)} deleted file(s)...",
+                0,
+                len(deleted_file_paths),
+            )
+        await self.vector_store.delete_chunks_by_files(deleted_file_paths)
+        logger.info(
+            "Cleaned up chunks for %d deleted file(s): %s",
+            len(deleted_file_paths),
+            deleted_file_paths,
+        )
 
     async def _parse_files_parallel(
         self,
@@ -611,16 +654,21 @@ class RepositoryIndexer:
             self._load_previous_status, full_rebuild
         )
 
-        # Phase 2: Collect files to process
-        files_to_process, files_unchanged = self._collect_files_to_process(
-            prev_files_by_path, progress_callback
+        # Phase 2: Collect files to process (and detect deleted files)
+        files_to_process, files_unchanged, deleted_file_paths = (
+            self._collect_files_to_process(prev_files_by_path, progress_callback)
         )
 
-        # Phase 3: Delete old chunks for modified files (incremental only)
-        if not full_rebuild and prev_files_by_path and files_to_process:
-            await self._delete_old_chunks_for_modified_files(
-                files_to_process, prev_files_by_path, progress_callback
-            )
+        # Phase 3: Delete old chunks for modified and deleted files (incremental only)
+        if not full_rebuild and prev_files_by_path:
+            if files_to_process:
+                await self._delete_old_chunks_for_modified_files(
+                    files_to_process, prev_files_by_path, progress_callback
+                )
+            if deleted_file_paths:
+                await self._delete_chunks_for_deleted_files(
+                    deleted_file_paths, progress_callback
+                )
 
         # Phase 4: Parse files in parallel and store chunks
         processed_files, total_chunks_processed = await self._parse_files_parallel(

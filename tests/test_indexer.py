@@ -15,7 +15,7 @@ from local_deepwiki.core.indexer import (
     _needs_migration,
 )
 from local_deepwiki.core.parser import ASTCache
-from local_deepwiki.models import ChunkType, CodeChunk, IndexStatus, Language
+from local_deepwiki.models import ChunkType, CodeChunk, FileInfo, IndexStatus, Language
 
 
 class TestChunkingConfigBatchSize:
@@ -1005,7 +1005,15 @@ class TestDeleteOldChunks:
 
             # Simulate files_to_process with a file that exists in prev_files_by_path
             files_to_process = [repo_path / "test.py"]
-            prev_files_by_path = {"test.py": MagicMock()}
+            prev_files_by_path: dict[str, FileInfo] = {
+                "test.py": FileInfo(
+                    path="test.py",
+                    language=Language.PYTHON,
+                    size_bytes=50,
+                    last_modified=1.0,
+                    hash="old_hash",
+                ),
+            }
 
             await indexer._delete_old_chunks_for_modified_files(
                 files_to_process, prev_files_by_path, progress_callback
@@ -1047,7 +1055,6 @@ class TestParseFilesParallelErrors:
 
             # Create a ParseResult with error to simulate failure
             from local_deepwiki.core.indexer import ParseResult
-            from local_deepwiki.models import FileInfo
 
             def mock_parse_single_file(file_path):
                 file_info = indexer.parser.get_file_info(file_path, repo_path)
@@ -1181,13 +1188,259 @@ class TestCollectFilesToProcess:
 
             indexer = RepositoryIndexer(repo_path, config)
 
-            files_to_process, files_unchanged = indexer._collect_files_to_process(
-                {}, progress_callback
+            files_to_process, files_unchanged, deleted_file_paths = (
+                indexer._collect_files_to_process({}, progress_callback)
             )
 
             # Should have called progress callback for found files and processing status
             assert any("Found source files" in msg for msg in progress_messages)
             assert any("Processing" in msg for msg in progress_messages)
+            # No deleted files when prev_files_by_path is empty
+            assert deleted_file_paths == []
+
+
+class TestDeletedFileCleanup:
+    """Tests for deleted file cleanup during incremental indexing."""
+
+    def test_collect_files_detects_deleted_files(self, tmp_path):
+        """Test that _collect_files_to_process detects files removed from disk."""
+        repo_path = tmp_path / "repo"
+        repo_path.mkdir()
+
+        # Only module_a.py exists on disk
+        (repo_path / "module_a.py").write_text("def a(): pass")
+
+        parsing = ParsingConfig().model_copy(update={"languages": ["python"]})
+        config = Config().model_copy(update={"parsing": parsing})
+
+        with patch("local_deepwiki.core.indexer.VectorStore") as MockVectorStore:
+            mock_store = MagicMock()
+            MockVectorStore.return_value = mock_store
+
+            indexer = RepositoryIndexer(repo_path, config)
+
+            # Simulate a previous index that knew about module_a.py and module_b.py
+            prev_files_by_path: dict[str, FileInfo] = {
+                "module_a.py": FileInfo(
+                    path="module_a.py",
+                    language=Language.PYTHON,
+                    size_bytes=50,
+                    last_modified=1.0,
+                    hash="same_hash",
+                ),
+                "module_b.py": FileInfo(
+                    path="module_b.py",
+                    language=Language.PYTHON,
+                    size_bytes=50,
+                    last_modified=1.0,
+                    hash="old_hash",
+                ),
+            }
+
+            # Patch get_file_info to return a matching hash for module_a.py
+            original_get_file_info = indexer.parser.get_file_info
+
+            def patched_get_file_info(file_path, repo_path):
+                info = original_get_file_info(file_path, repo_path)
+                if info.path == "module_a.py":
+                    info.hash = "same_hash"
+                return info
+
+            with patch.object(
+                indexer.parser, "get_file_info", side_effect=patched_get_file_info
+            ):
+                _, files_unchanged, deleted_file_paths = (
+                    indexer._collect_files_to_process(prev_files_by_path, None)
+                )
+
+            assert "module_b.py" in deleted_file_paths
+            assert len(deleted_file_paths) == 1
+            # module_a.py should be unchanged (same hash)
+            assert len(files_unchanged) == 1
+
+    def test_collect_files_no_deletions_when_no_previous(self, tmp_path):
+        """Test that no deletions are detected on first run (empty prev_files_by_path)."""
+        repo_path = tmp_path / "repo"
+        repo_path.mkdir()
+
+        (repo_path / "module_a.py").write_text("def a(): pass")
+
+        parsing = ParsingConfig().model_copy(update={"languages": ["python"]})
+        config = Config().model_copy(update={"parsing": parsing})
+
+        with patch("local_deepwiki.core.indexer.VectorStore") as MockVectorStore:
+            mock_store = MagicMock()
+            MockVectorStore.return_value = mock_store
+
+            indexer = RepositoryIndexer(repo_path, config)
+
+            _, _, deleted_file_paths = indexer._collect_files_to_process({}, None)
+
+            assert deleted_file_paths == []
+
+    async def test_deleted_files_chunks_removed_from_vector_store(self, tmp_path):
+        """Test that chunks for deleted files are removed from the vector store during indexing."""
+        repo_path = tmp_path / "repo"
+        repo_path.mkdir()
+
+        # Only module_a.py exists on disk now
+        (repo_path / "module_a.py").write_text("def a(): pass")
+
+        parsing = ParsingConfig().model_copy(update={"languages": ["python"]})
+        config = Config().model_copy(update={"parsing": parsing})
+
+        delete_calls: list[list[str]] = []
+
+        async def mock_delete_chunks_by_files(file_paths):
+            delete_calls.append(list(file_paths))
+            return len(file_paths)
+
+        with patch("local_deepwiki.core.indexer.VectorStore") as MockVectorStore:
+            mock_store = MagicMock()
+            mock_store.create_or_update_table = AsyncMock(return_value=1)
+            mock_store.add_chunks = AsyncMock(return_value=0)
+            mock_store.delete_chunks_by_files = AsyncMock(
+                side_effect=mock_delete_chunks_by_files
+            )
+            MockVectorStore.return_value = mock_store
+
+            indexer = RepositoryIndexer(repo_path, config)
+            indexer.vector_store = mock_store
+
+            # Simulate a previous index with module_a.py and module_b.py
+            prev_status = IndexStatus(
+                repo_path=str(repo_path),
+                indexed_at=1.0,
+                total_files=2,
+                total_chunks=10,
+                languages={"python": 2},
+                files=[
+                    FileInfo(
+                        path="module_a.py",
+                        language=Language.PYTHON,
+                        size_bytes=50,
+                        last_modified=1.0,
+                        hash="placeholder",
+                    ),
+                    FileInfo(
+                        path="module_b.py",
+                        language=Language.PYTHON,
+                        size_bytes=50,
+                        last_modified=1.0,
+                        hash="old_hash",
+                    ),
+                ],
+                schema_version=CURRENT_SCHEMA_VERSION,
+            )
+
+            # Write previous status so the indexer loads it
+            import json
+
+            status_path = indexer.wiki_path / "index_status.json"
+            status_path.parent.mkdir(parents=True, exist_ok=True)
+            status_path.write_text(prev_status.model_dump_json())
+
+            # Run incremental indexing (module_b.py is gone from disk)
+            await indexer.index(full_rebuild=False)
+
+            # Verify delete_chunks_by_files was called with module_b.py
+            all_deleted_paths = [path for call in delete_calls for path in call]
+            assert "module_b.py" in all_deleted_paths
+
+    async def test_no_deletion_when_no_files_deleted(self, tmp_path):
+        """Test that no deletion occurs when all previously indexed files still exist."""
+        repo_path = tmp_path / "repo"
+        repo_path.mkdir()
+
+        (repo_path / "module_a.py").write_text("def a(): pass")
+
+        parsing = ParsingConfig().model_copy(update={"languages": ["python"]})
+        config = Config().model_copy(update={"parsing": parsing})
+
+        with patch("local_deepwiki.core.indexer.VectorStore") as MockVectorStore:
+            mock_store = MagicMock()
+            mock_store.create_or_update_table = AsyncMock(return_value=1)
+            mock_store.add_chunks = AsyncMock(return_value=0)
+            mock_store.delete_chunks_by_files = AsyncMock(return_value=0)
+            MockVectorStore.return_value = mock_store
+
+            indexer = RepositoryIndexer(repo_path, config)
+            indexer.vector_store = mock_store
+
+            # First index
+            await indexer.index(full_rebuild=True)
+
+            # Reset mock tracking
+            mock_store.delete_chunks_by_files.reset_mock()
+
+            # Incremental index with same files
+            await indexer.index(full_rebuild=False)
+
+            # delete_chunks_by_files should NOT have been called for deleted files
+            # (it may be called for modified files, but not for deleted)
+            # Since the file is unchanged, no deletion calls at all
+            mock_store.delete_chunks_by_files.assert_not_called()
+
+    async def test_deleted_files_are_logged(self, tmp_path):
+        """Test that deleted files are properly logged."""
+        repo_path = tmp_path / "repo"
+        repo_path.mkdir()
+
+        (repo_path / "remaining.py").write_text("def remaining(): pass")
+
+        parsing = ParsingConfig().model_copy(update={"languages": ["python"]})
+        config = Config().model_copy(update={"parsing": parsing})
+
+        log_messages: list[str] = []
+
+        with patch("local_deepwiki.core.indexer.VectorStore") as MockVectorStore:
+            mock_store = MagicMock()
+            mock_store.create_or_update_table = AsyncMock(return_value=1)
+            mock_store.add_chunks = AsyncMock(return_value=0)
+            mock_store.delete_chunks_by_files = AsyncMock(return_value=1)
+            MockVectorStore.return_value = mock_store
+
+            indexer = RepositoryIndexer(repo_path, config)
+            indexer.vector_store = mock_store
+
+            # Simulate previous index with a file that no longer exists
+            prev_files_by_path: dict[str, FileInfo] = {
+                "remaining.py": FileInfo(
+                    path="remaining.py",
+                    language=Language.PYTHON,
+                    size_bytes=50,
+                    last_modified=1.0,
+                    hash="different_hash",
+                ),
+                "deleted_module.py": FileInfo(
+                    path="deleted_module.py",
+                    language=Language.PYTHON,
+                    size_bytes=50,
+                    last_modified=1.0,
+                    hash="old_hash",
+                ),
+            }
+
+            with patch("local_deepwiki.core.indexer.logger") as mock_logger:
+                mock_logger.info = MagicMock(
+                    side_effect=lambda msg, *args: log_messages.append(
+                        msg % args if args else msg
+                    )
+                )
+                mock_logger.warning = MagicMock()
+                mock_logger.debug = MagicMock()
+
+                _, _, deleted_file_paths = indexer._collect_files_to_process(
+                    prev_files_by_path, None
+                )
+
+            assert "deleted_module.py" in deleted_file_paths
+            # Check that the detection was logged
+            detection_logs = [
+                m for m in log_messages if "Detected" in m and "deleted" in m
+            ]
+            assert len(detection_logs) == 1
+            assert "deleted_module.py" in detection_logs[0]
 
 
 class TestIndexWithProgressCallback:
@@ -1535,6 +1788,7 @@ class TestASTCacheIntegration:
             MockVectorStore.return_value = mock_store
 
             indexer = RepositoryIndexer(repo_path, config)
+            assert indexer.ast_cache is not None
 
             # First parse - should be a cache miss
             result1 = indexer.parser.parse_file(repo_path / "test.py")
@@ -1566,6 +1820,7 @@ class TestASTCacheIntegration:
             MockVectorStore.return_value = mock_store
 
             indexer = RepositoryIndexer(repo_path, config)
+            assert indexer.ast_cache is not None
 
             # First parse
             result1 = indexer.parser.parse_file(repo_path / "test.py")
