@@ -131,7 +131,8 @@ uv run deepwiki cache cleanup
 |-----------|------|---------|
 | MCP Server | `server.py` | Entry point, tool definitions delegated to `handlers.py` |
 | Parser | `core/parser.py` | Tree-sitter multi-language AST parsing |
-| Chunker | `core/chunker.py` | AST-based semantic code chunking |
+| Chunker | `core/chunker.py` | AST-based semantic code chunking (delegates to `chunk_extractors`) |
+| Chunk Extractors | `core/chunk_extractors.py` | Constants (`FUNCTION_NODE_TYPES`, etc.) and standalone AST extraction functions |
 | VectorStore | `core/vectorstore.py` | LanceDB vector storage and retrieval |
 | Indexer | `core/indexer.py` | Orchestrates parsing, chunking, embedding, wiki generation |
 | Deep Research | `core/deep_research.py` | Multi-step reasoning pipeline with query decomposition |
@@ -140,10 +141,14 @@ uv run deepwiki cache cleanup
 | Rate Limiter | `core/rate_limiter.py` | API rate limiting with token bucket |
 | Fuzzy Search | `core/fuzzy_search.py` | Fuzzy name matching for search suggestions |
 | Index Manager | `core/index_manager.py` | IndexStatus tracking with schema versioning |
-| Git Utils | `core/git_utils.py` | Secure git operations with injection prevention |
+| Git Utils | `core/git_utils.py` | Secure git operations, path validation, remote URL functions |
+| Git Blame | `core/git_blame.py` | Git blame dataclasses (`BlameInfo`, `EntityBlameInfo`) and blame functions |
 | Audit Logger | `core/audit.py` | Operation audit logging |
 | Events | `events.py` | Pub-sub event system with lifecycle hooks |
 | Validation | `validation.py` | Input validation with resource limits (CWE-400) |
+| Handlers: Indexing | `handlers/indexing.py` | Repository indexing handler (`handle_index_repository`) and pipeline |
+| Handlers: Agentic Data | `handlers/agentic_data.py` | Tool keywords, workflow presets, and suggestion constants |
+| Handlers: Agentic Workflows | `handlers/agentic_workflows.py` | Workflow runner functions (onboarding, security audit, full analysis) |
 | Web UI | `web/app.py` | Flask-based wiki browser with chat, research, and codemap |
 | Web Chat | `web/routes_chat.py` | RAG Q&A chat blueprint with SSE streaming |
 | Web Research | `web/routes_research.py` | Deep research blueprint with progress tracking |
@@ -161,15 +166,20 @@ uv run deepwiki cache cleanup
 | Inheritance | `generators/inheritance.py` | Class hierarchy tree generation |
 | Stale Detection | `generators/stale_detection.py` | Detects outdated wiki pages |
 | API Docs | `generators/api_docs.py` | Parameter and return type extraction |
-| Test Examples | `generators/test_examples.py` | Extracts test examples for entities |
+| Test Examples | `generators/test_examples.py` | Test-file-based example extraction and orchestration |
+| Docstring Examples | `generators/docstring_examples.py` | Docstring example parsing (doctest and Google-style) |
+| Example Extractor | `generators/example_extractor.py` | `CodeExampleExtractor` class and markdown formatting |
 | Crosslinks | `generators/crosslinks.py` | Cross-reference linking between wiki pages |
 | See Also | `generators/see_also.py` | Related page suggestions |
 | Source Refs | `generators/source_refs.py` | Source code reference links |
 | Changelog | `generators/changelog.py` | Git-based changelog generation |
-| Dependency Graph | `generators/dependency_graph.py` | Module dependency graphs with circular dependency detection |
+| Dependency Graph | `generators/dependency_graph.py` | `DependencyGraphGenerator` class and page generation |
+| Dependency Graph Data | `generators/dependency_graph_data.py` | Import patterns, dataclasses (`DependencyNode/Edge/Graph`), utility functions |
 | TOC | `generators/toc.py` | Table of contents generation with hierarchical numbering |
 | Search Index | `generators/search.py` | JSON search index for client-side full-text search |
-| Manifest | `generators/manifest.py` | Package manifest parser for project metadata |
+| Manifest | `generators/manifest.py` | Manifest dataclasses, cache, and `parse_manifest` orchestrator |
+| Manifest Parsers | `generators/manifest_parsers.py` | Language-specific parsers (pyproject.toml, package.json, Cargo.toml, etc.) |
+| Dir Tree | `generators/dir_tree.py` | Directory tree generation with gitignore support |
 | Context Builder | `generators/context_builder.py` | Rich LLM context from imports, callers, related files |
 | Wiki Modules | `generators/wiki_modules.py` | Module-level documentation generation |
 | Wiki Files | `generators/wiki_files.py` | File-level documentation generation |
@@ -186,6 +196,20 @@ uv run deepwiki cache cleanup
 | Prefetch | `generators/prefetch.py` | Prefetches vector search results for wiki generation |
 | Wiki Plugin Runner | `generators/wiki_plugin_runner.py` | Executes registered wiki generator plugins |
 | Wiki Postprocessing | `generators/wiki_postprocessing.py` | Post-generation content cleanup and enrichment |
+
+### CLI
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| Interactive Search | `cli/interactive_search.py` | `InteractiveSearch` TUI class, `run_search`, `main` |
+| Search Models | `cli/search_models.py` | `LANGUAGE_LEXERS`, `SearchFilters`, `SearchState` dataclasses |
+
+### Export
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| PDF (Streaming) | `export/pdf.py` | `StreamingPdfExporter`, `render_markdown_for_pdf`, `extract_title` |
+| PDF (Sync) | `export/pdf_sync.py` | `PdfExporter` (legacy sync exporter), `export_to_pdf`, CLI `main` |
 
 ### Codemap Tools
 
@@ -290,7 +314,7 @@ The `events.py` module implements a pub-sub event system:
 
 ## Testing Notes
 
-- 5,115 tests across 141 test files with 95% coverage
+- 5,128 tests across 141 test files with 95% coverage
 - Tests use `pytest-asyncio` with `asyncio_mode = "auto"` (no need for `@pytest.mark.asyncio`)
 - Most tests mock LLM/embedding providers to avoid external calls
 - Test files follow pattern `test_<module>.py`
