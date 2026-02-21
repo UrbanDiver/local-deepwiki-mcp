@@ -1,4 +1,4 @@
-"""Core tool handlers: indexing, querying, wiki reading, search, and export."""
+"""Core tool handlers: querying, wiki reading, search, and export."""
 
 from __future__ import annotations
 
@@ -17,412 +17,37 @@ from local_deepwiki.handlers._shared import (
     AskQuestionArgs,
     ExportWikiHtmlArgs,
     ExportWikiPdfArgs,
-    IndexingProgressType,
-    IndexRepositoryArgs,
-    OperationType,
     Permission,
-    ProgressPhase,
     ReadWikiPageArgs,
     ReadWikiStructureArgs,
-    RepositoryIndexer,
     SearchCodeArgs,
     ValidationError,
     _create_vector_store,
     _load_index_status,
     _validate_export_path,
     build_wiki_resource_uri,
-    create_progress_notifier,
-    generate_wiki,
     get_access_controller,
     get_audit_logger,
     get_config,
     get_embedding_provider,
-    get_progress_registry,
     get_rate_limiter,
-    get_repository_access_controller,
     handle_tool_errors,
     logger,
     make_tool_text_content,
     path_not_found_error,
     validate_chunk_type,
-    validate_index_parameters,
     validate_language,
-    validate_languages_list,
     validate_path_pattern,
     validate_query_parameters,
 )
-from local_deepwiki.models import WikiStructure
 
-
-@handle_tool_errors
-async def handle_index_repository(
-    args: dict[str, Any],
-    server: Any = None,
-) -> list[TextContent]:
-    """Handle index_repository tool call with streaming progress.
-
-    Args:
-        args: Tool arguments.
-        server: Optional MCP server instance for progress notifications.
-
-    Returns:
-        List of TextContent with indexing results.
-    """
-    return await _handle_index_repository_impl(args, server)
-
-
-def _validate_and_build_config(
-    validated: IndexRepositoryArgs,
-) -> tuple[Path, Any, str | None, str | None]:
-    """Validate inputs and build configuration for indexing.
-
-    Returns:
-        Tuple of (repo_path, config, llm_provider, embedding_provider).
-    """
-    repo_path = Path(validated.repo_path).resolve()
-
-    # Check repository access (allowlist/denylist)
-    repo_access = get_repository_access_controller()
-    repo_access.require_access(repo_path)
-
-    # Validate input size limits (CWE-400 prevention)
-    total_size, file_count = validate_index_parameters(str(repo_path))
-    logger.info(
-        "Indexing repository: %s (%s bytes, %s files)",
-        repo_path,
-        f"{total_size:,}",
-        f"{file_count:,}",
-    )
-
-    if not repo_path.exists():
-        raise path_not_found_error(str(repo_path), "repository")
-
-    if not repo_path.is_dir():
-        raise ValidationError(
-            message=f"Path is not a directory: {repo_path}",
-            hint="Provide a path to a directory, not a file.",
-            field="repo_path",
-            value=str(repo_path),
-        )
-
-    languages = validate_languages_list(validated.languages)
-    llm_provider = validated.llm_provider.value if validated.llm_provider else None
-    embedding_provider = (
-        validated.embedding_provider.value if validated.embedding_provider else None
-    )
-
-    # Build config with any overrides
-    base_config = get_config()
-    config_updates: dict = {}
-
-    if languages:
-        config_updates["parsing"] = base_config.parsing.model_copy(
-            update={"languages": languages}
-        )
-
-    if validated.use_cloud_for_github is not None:
-        config_updates["wiki"] = base_config.wiki.model_copy(
-            update={"use_cloud_for_github": validated.use_cloud_for_github}
-        )
-
-    # Override generation_mode if specified (or skip_wiki forces lazy)
-    effective_mode = validated.generation_mode
-    if validated.skip_wiki:
-        effective_mode = "lazy"
-    wiki_overrides: dict = {}
-    if effective_mode is not None:
-        from local_deepwiki.config import GenerationMode
-
-        wiki_overrides["generation_mode"] = GenerationMode(effective_mode)
-    if validated.prefetch_drain is not None:
-        wiki_overrides["prefetch_drain"] = validated.prefetch_drain
-    if wiki_overrides:
-        if "wiki" in config_updates:
-            config_updates["wiki"] = config_updates["wiki"].model_copy(
-                update=wiki_overrides
-            )
-        else:
-            config_updates["wiki"] = base_config.wiki.model_copy(update=wiki_overrides)
-
-    config = (
-        base_config.model_copy(update=config_updates) if config_updates else base_config
-    )
-
-    return repo_path, config, llm_provider, embedding_provider
-
-
-async def _run_indexing_pipeline(
-    repo_path: Path,
-    config: Any,
-    llm_provider: str | None,
-    embedding_provider: str | None,
-    full_rebuild: bool,
-    server: Any,
-) -> tuple[Any, Any, Any, list[str], str]:
-    """Run the indexing and wiki generation pipeline with progress tracking.
-
-    Returns:
-        Tuple of (indexer, status, wiki_structure, progress_messages, operation_id).
-    """
-    registry = get_progress_registry()
-    wiki_path = config.get_wiki_path(repo_path)
-    progress_data_path = wiki_path / "progress_history.json"
-    registry.set_data_path(progress_data_path)
-
-    notifier, operation_id = create_progress_notifier(
-        operation_type=OperationType.INDEX_REPOSITORY,
-        server=server,
-        total=6,
-    )
-
-    indexer = RepositoryIndexer(
-        repo_path=repo_path,
-        config=config,
-        embedding_provider_name=embedding_provider,
-    )
-
-    progress_messages: list[str] = []
-
-    def sync_progress_callback(msg: str, current: int, total: int) -> None:
-        progress_messages.append(f"[{current}/{total}] {msg}")
-
-    try:
-        if notifier:
-            await notifier.update(
-                current=1,
-                phase=ProgressPhase.SCANNING,
-                message=f"Starting indexing of {repo_path.name}",
-                metadata={
-                    "files_processed": 0,
-                    "total_files": 0,
-                    "chunks_created": 0,
-                    "pages_generated": 0,
-                },
-            )
-
-        if notifier:
-            await notifier.update(
-                current=2,
-                phase=ProgressPhase.PARSING,
-                message="Parsing source files...",
-            )
-
-        status = await indexer.index(
-            full_rebuild=full_rebuild,
-            progress_callback=sync_progress_callback,
-        )
-
-        if notifier:
-            await notifier.update(
-                current=4,
-                phase=ProgressPhase.STORING,
-                message=f"Indexed {status.total_files} files, {status.total_chunks} chunks",
-                metadata={
-                    "files_processed": status.total_files,
-                    "total_files": status.total_files,
-                    "chunks_created": status.total_chunks,
-                },
-            )
-
-        if notifier:
-            await notifier.update(
-                current=5,
-                phase=ProgressPhase.WIKI_GENERATION,
-                message="Generating wiki documentation...",
-            )
-
-        from local_deepwiki.config import GenerationMode
-
-        gen_mode = config.wiki.generation_mode
-
-        if gen_mode == GenerationMode.LAZY:
-            from local_deepwiki.generators.crosslinks import (
-                build_entity_registry_from_store,
-            )
-            from local_deepwiki.generators.wiki_files import filter_significant_files
-
-            significant = filter_significant_files(
-                status.files, config.wiki.max_file_docs
-            )
-            sig_paths = {f.path for f in significant}
-            registry = build_entity_registry_from_store(
-                indexer.vector_store.get_all_chunks(), sig_paths
-            )
-            registry.save(indexer.wiki_path / "entity_registry.json")
-
-            wiki_structure = WikiStructure(root=str(indexer.wiki_path), pages=[])
-
-        elif gen_mode == GenerationMode.HYBRID:
-            from local_deepwiki.generators.crosslinks import (
-                build_entity_registry_from_store,
-            )
-            from local_deepwiki.generators.wiki_files import filter_significant_files
-
-            eager_limit = config.wiki.hybrid_eager_pages
-            wiki_structure = await generate_wiki(
-                repo_path=repo_path,
-                wiki_path=indexer.wiki_path,
-                vector_store=indexer.vector_store,
-                index_status=status,
-                config=config,
-                llm_provider=llm_provider,
-                progress_callback=sync_progress_callback,
-                full_rebuild=full_rebuild,
-                max_file_pages=eager_limit,
-            )
-
-            significant = filter_significant_files(
-                status.files, config.wiki.max_file_docs
-            )
-            sig_paths = {f.path for f in significant}
-            entity_reg = build_entity_registry_from_store(
-                indexer.vector_store.get_all_chunks(), sig_paths
-            )
-            entity_reg.save(indexer.wiki_path / "entity_registry.json")
-
-            remaining = len(significant) - eager_limit
-            if remaining > 0:
-                logger.info(
-                    "Hybrid mode: %d pages generated eagerly, %d deferred to lazy/drain",
-                    eager_limit,
-                    remaining,
-                )
-                if config.wiki.prefetch_drain:
-                    from local_deepwiki.generators.lazy_generator import (
-                        get_lazy_generator,
-                    )
-
-                    lazy_gen = get_lazy_generator(indexer.wiki_path, config)
-                    lazy_gen.kickstart_drain()
-
-        else:
-            wiki_structure = await generate_wiki(
-                repo_path=repo_path,
-                wiki_path=indexer.wiki_path,
-                vector_store=indexer.vector_store,
-                index_status=status,
-                config=config,
-                llm_provider=llm_provider,
-                progress_callback=sync_progress_callback,
-                full_rebuild=full_rebuild,
-            )
-
-        if notifier:
-            await notifier.update(
-                current=6,
-                phase=ProgressPhase.COMPLETE,
-                message=f"Complete: {status.total_files} files, {status.total_chunks} chunks, {len(wiki_structure.pages)} pages",
-                metadata={
-                    "files_processed": status.total_files,
-                    "total_files": status.total_files,
-                    "chunks_created": status.total_chunks,
-                    "pages_generated": len(wiki_structure.pages),
-                },
-            )
-            await notifier.flush()
-
-        registry.complete_operation(operation_id, record_timing=True)
-
-    except Exception:
-        registry.complete_operation(operation_id, record_timing=False)
-        raise
-
-    all_messages = (notifier.messages if notifier else []) + progress_messages
-    return indexer, status, wiki_structure, all_messages, operation_id
-
-
-async def _handle_index_repository_impl(
-    args: dict[str, Any],
-    server: Any = None,
-) -> list[TextContent]:
-    """Internal implementation of index_repository with progress streaming and ETA."""
-    controller = get_access_controller()
-    controller.require_permission(Permission.INDEX_WRITE)
-
-    try:
-        validated = IndexRepositoryArgs.model_validate(args)
-    except PydanticValidationError as e:
-        raise ValueError(str(e)) from e
-
-    subject = controller.get_current_subject()
-    subject_id = subject.identifier if subject else "anonymous"
-
-    audit_logger = get_audit_logger()
-    start_time = time.time()
-    audit_logger.log_index_operation(
-        subject_id=subject_id,
-        repo_path=validated.repo_path,
-        operation="started",
-        success=True,
-    )
-
-    repo_path, config, llm_provider, embedding_provider = await asyncio.to_thread(
-        _validate_and_build_config, validated
-    )
-
-    try:
-        (
-            indexer,
-            status,
-            wiki_structure,
-            all_messages,
-            operation_id,
-        ) = await _run_indexing_pipeline(
-            repo_path=repo_path,
-            config=config,
-            llm_provider=llm_provider,
-            embedding_provider=embedding_provider,
-            full_rebuild=validated.full_rebuild,
-            server=server,
-        )
-    except Exception as e:
-        duration_ms = int((time.time() - start_time) * 1000)
-        audit_logger.log_index_operation(
-            subject_id=subject_id,
-            repo_path=str(repo_path),
-            operation="failed",
-            success=False,
-            duration_ms=duration_ms,
-            error_message=str(e),
-        )
-        raise
-
-    duration_ms = int((time.time() - start_time) * 1000)
-    audit_logger.log_index_operation(
-        subject_id=subject_id,
-        repo_path=str(repo_path),
-        operation="completed",
-        success=True,
-        files_processed=status.total_files,
-        chunks_created=status.total_chunks,
-        duration_ms=duration_ms,
-    )
-
-    result = {
-        "status": "success",
-        "repo_path": str(repo_path),
-        "wiki_path": str(indexer.wiki_path),
-        "files_indexed": status.total_files,
-        "chunks_created": status.total_chunks,
-        "languages": status.languages,
-        "wiki_pages": len(wiki_structure.pages),
-        "operation_id": operation_id,
-        "messages": all_messages,
-    }
-
-    logger.info(
-        "Indexing complete: %d files, %d chunks, %d wiki pages",
-        status.total_files,
-        status.total_chunks,
-        len(wiki_structure.pages),
-    )
-
-    # Record in session state so downstream tools know this repo is indexed
-    from local_deepwiki.handlers.session_state import record_index
-
-    record_index(str(repo_path), str(indexer.wiki_path))
-
-    return make_tool_text_content("index_repository", result)
+# Re-export indexing handler and helpers for backward compatibility
+from local_deepwiki.handlers.indexing import (  # noqa: F401
+    _handle_index_repository_impl,
+    _run_indexing_pipeline,
+    _validate_and_build_config,
+    handle_index_repository,
+)
 
 
 @handle_tool_errors

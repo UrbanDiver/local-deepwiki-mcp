@@ -74,7 +74,9 @@ class TestHandleIndexRepositoryExtended:
 
         # This will still fail because no actual indexing infrastructure,
         # but it tests the validation path
-        with patch("local_deepwiki.handlers.core.RepositoryIndexer") as mock_indexer:
+        with patch(
+            "local_deepwiki.handlers.indexing.RepositoryIndexer"
+        ) as mock_indexer:
             mock_instance = MagicMock()
             mock_instance.index = AsyncMock(
                 return_value=MagicMock(
@@ -87,7 +89,7 @@ class TestHandleIndexRepositoryExtended:
             mock_instance.vector_store = MagicMock()
             mock_indexer.return_value = mock_instance
 
-            with patch("local_deepwiki.handlers.core.generate_wiki") as mock_wiki:
+            with patch("local_deepwiki.handlers.indexing.generate_wiki") as mock_wiki:
                 mock_wiki.return_value = MagicMock(pages=[])
 
                 result = await handle_index_repository(
@@ -106,7 +108,9 @@ class TestHandleIndexRepositoryExtended:
         """Test handles use_cloud_for_github flag."""
         (tmp_path / "test.py").write_text("print('hello')")
 
-        with patch("local_deepwiki.handlers.core.RepositoryIndexer") as mock_indexer:
+        with patch(
+            "local_deepwiki.handlers.indexing.RepositoryIndexer"
+        ) as mock_indexer:
             mock_instance = MagicMock()
             mock_instance.index = AsyncMock(
                 return_value=MagicMock(
@@ -119,7 +123,7 @@ class TestHandleIndexRepositoryExtended:
             mock_instance.vector_store = MagicMock()
             mock_indexer.return_value = mock_instance
 
-            with patch("local_deepwiki.handlers.core.generate_wiki") as mock_wiki:
+            with patch("local_deepwiki.handlers.indexing.generate_wiki") as mock_wiki:
                 mock_wiki.return_value = MagicMock(pages=[])
 
                 result = await handle_index_repository(
@@ -252,7 +256,9 @@ class TestHandleIndexRepositoryProgressCallback:
 
         captured_messages = []
 
-        with patch("local_deepwiki.handlers.core.RepositoryIndexer") as mock_indexer:
+        with patch(
+            "local_deepwiki.handlers.indexing.RepositoryIndexer"
+        ) as mock_indexer:
             mock_instance = MagicMock()
 
             async def mock_index(full_rebuild=False, progress_callback=None):
@@ -271,7 +277,7 @@ class TestHandleIndexRepositoryProgressCallback:
             mock_instance.vector_store = MagicMock()
             mock_indexer.return_value = mock_instance
 
-            with patch("local_deepwiki.handlers.core.generate_wiki") as mock_wiki:
+            with patch("local_deepwiki.handlers.indexing.generate_wiki") as mock_wiki:
                 mock_wiki.return_value = MagicMock(pages=[])
 
                 result = await handle_index_repository(
