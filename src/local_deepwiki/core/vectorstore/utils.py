@@ -7,7 +7,16 @@ import json
 import time
 from typing import Any
 
+from local_deepwiki.logging import get_logger
 from local_deepwiki.models import CodeChunk
+
+logger = get_logger(__name__)
+
+
+def _log_task_exception(task: asyncio.Task[Any]) -> None:
+    """Log exceptions from fire-and-forget background tasks."""
+    if not task.cancelled() and task.exception() is not None:
+        logger.warning("Background task failed: %s", task.exception())
 
 
 class RateLimiter:

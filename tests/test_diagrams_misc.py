@@ -493,7 +493,9 @@ class TestPathToModuleExceptionCoverage:
                     return BadList(parts)
                 return parts
 
-        with patch("local_deepwiki.generators.diagrams.Path", MockPath):
+        with patch(
+            "local_deepwiki.generators.diagrams.dependency_diagram.Path", MockPath
+        ):
             result = _path_to_module("forceerror/module.py")
 
 

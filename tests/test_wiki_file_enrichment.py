@@ -491,7 +491,9 @@ A function.
 
         # Should include GitHub link
         assert "GitHub" in result
-        assert "https://github.com/owner/repo/blob/main/src/example.py#L10-L12" in result
+        assert (
+            "https://github.com/owner/repo/blob/main/src/example.py#L10-L12" in result
+        )
 
 
 class TestExtractEntityFromHeading:
@@ -605,7 +607,9 @@ class TestGenerateBlameSectionCoverage:
             ),
         ]
 
-        with patch("local_deepwiki.generators.wiki_files.get_file_entity_blame") as mock_blame:
+        with patch(
+            "local_deepwiki.generators.wiki_source_formatter.get_file_entity_blame"
+        ) as mock_blame:
             mock_blame.return_value = mock_blame_info
 
             result = _generate_blame_section(
@@ -654,7 +658,9 @@ class TestGenerateBlameSectionCoverage:
             ),
         ]
 
-        with patch("local_deepwiki.generators.wiki_files.get_file_entity_blame") as mock_blame:
+        with patch(
+            "local_deepwiki.generators.wiki_source_formatter.get_file_entity_blame"
+        ) as mock_blame:
             mock_blame.return_value = mock_blame_info
 
             result = _generate_blame_section(
@@ -696,7 +702,9 @@ class TestGenerateBlameSectionCoverage:
             ),
         ]
 
-        with patch("local_deepwiki.generators.wiki_files.get_file_entity_blame") as mock_blame:
+        with patch(
+            "local_deepwiki.generators.wiki_source_formatter.get_file_entity_blame"
+        ) as mock_blame:
             mock_blame.return_value = mock_blame_info
 
             result = _generate_blame_section(
@@ -723,7 +731,9 @@ class TestGenerateBlameSectionCoverage:
             ),
         ]
 
-        with patch("local_deepwiki.generators.wiki_files.get_file_entity_blame") as mock_blame:
+        with patch(
+            "local_deepwiki.generators.wiki_source_formatter.get_file_entity_blame"
+        ) as mock_blame:
             mock_blame.return_value = []
 
             result = _generate_blame_section(
@@ -757,11 +767,21 @@ class TestGenerateFileEnrichmentsUsedBy:
 
         with (
             patch("local_deepwiki.generators.wiki_files.get_file_api_docs") as mock_api,
-            patch("local_deepwiki.generators.wiki_files.generate_class_diagram") as mock_diagram,
-            patch("local_deepwiki.generators.wiki_files.get_file_call_graph") as mock_graph,
-            patch("local_deepwiki.generators.wiki_files.get_file_callers") as mock_callers,
-            patch("local_deepwiki.generators.wiki_files.get_file_examples") as mock_examples,
-            patch("local_deepwiki.generators.wiki_files._generate_blame_section") as mock_blame,
+            patch(
+                "local_deepwiki.generators.wiki_files.generate_class_diagram"
+            ) as mock_diagram,
+            patch(
+                "local_deepwiki.generators.wiki_files.get_file_call_graph"
+            ) as mock_graph,
+            patch(
+                "local_deepwiki.generators.wiki_files.get_file_callers"
+            ) as mock_callers,
+            patch(
+                "local_deepwiki.generators.wiki_files.get_file_examples"
+            ) as mock_examples,
+            patch(
+                "local_deepwiki.generators.wiki_files._generate_blame_section"
+            ) as mock_blame,
         ):
             mock_api.return_value = ""
             mock_diagram.return_value = ""
@@ -802,11 +822,21 @@ class TestGenerateFileEnrichmentsUsedBy:
 
         with (
             patch("local_deepwiki.generators.wiki_files.get_file_api_docs") as mock_api,
-            patch("local_deepwiki.generators.wiki_files.generate_class_diagram") as mock_diagram,
-            patch("local_deepwiki.generators.wiki_files.get_file_call_graph") as mock_graph,
-            patch("local_deepwiki.generators.wiki_files.get_file_callers") as mock_callers,
-            patch("local_deepwiki.generators.wiki_files.get_file_examples") as mock_examples,
-            patch("local_deepwiki.generators.wiki_files._generate_blame_section") as mock_blame,
+            patch(
+                "local_deepwiki.generators.wiki_files.generate_class_diagram"
+            ) as mock_diagram,
+            patch(
+                "local_deepwiki.generators.wiki_files.get_file_call_graph"
+            ) as mock_graph,
+            patch(
+                "local_deepwiki.generators.wiki_files.get_file_callers"
+            ) as mock_callers,
+            patch(
+                "local_deepwiki.generators.wiki_files.get_file_examples"
+            ) as mock_examples,
+            patch(
+                "local_deepwiki.generators.wiki_files._generate_blame_section"
+            ) as mock_blame,
         ):
             mock_api.return_value = ""
             mock_diagram.return_value = ""
@@ -841,11 +871,21 @@ class TestGenerateFileEnrichmentsUsedBy:
 
         with (
             patch("local_deepwiki.generators.wiki_files.get_file_api_docs") as mock_api,
-            patch("local_deepwiki.generators.wiki_files.generate_class_diagram") as mock_diagram,
-            patch("local_deepwiki.generators.wiki_files.get_file_call_graph") as mock_graph,
-            patch("local_deepwiki.generators.wiki_files.get_file_callers") as mock_callers,
-            patch("local_deepwiki.generators.wiki_files.get_file_examples") as mock_examples,
-            patch("local_deepwiki.generators.wiki_files._generate_blame_section") as mock_blame,
+            patch(
+                "local_deepwiki.generators.wiki_files.generate_class_diagram"
+            ) as mock_diagram,
+            patch(
+                "local_deepwiki.generators.wiki_files.get_file_call_graph"
+            ) as mock_graph,
+            patch(
+                "local_deepwiki.generators.wiki_files.get_file_callers"
+            ) as mock_callers,
+            patch(
+                "local_deepwiki.generators.wiki_files.get_file_examples"
+            ) as mock_examples,
+            patch(
+                "local_deepwiki.generators.wiki_files._generate_blame_section"
+            ) as mock_blame,
         ):
             mock_api.return_value = ""
             mock_diagram.return_value = ""
@@ -888,11 +928,21 @@ class TestGenerateFileEnrichmentsUsedBy:
 
         with (
             patch("local_deepwiki.generators.wiki_files.get_file_api_docs") as mock_api,
-            patch("local_deepwiki.generators.wiki_files.generate_class_diagram") as mock_diagram,
-            patch("local_deepwiki.generators.wiki_files.get_file_call_graph") as mock_graph,
-            patch("local_deepwiki.generators.wiki_files.get_file_callers") as mock_callers,
-            patch("local_deepwiki.generators.wiki_files.get_file_examples") as mock_examples,
-            patch("local_deepwiki.generators.wiki_files._generate_blame_section") as mock_blame,
+            patch(
+                "local_deepwiki.generators.wiki_files.generate_class_diagram"
+            ) as mock_diagram,
+            patch(
+                "local_deepwiki.generators.wiki_files.get_file_call_graph"
+            ) as mock_graph,
+            patch(
+                "local_deepwiki.generators.wiki_files.get_file_callers"
+            ) as mock_callers,
+            patch(
+                "local_deepwiki.generators.wiki_files.get_file_examples"
+            ) as mock_examples,
+            patch(
+                "local_deepwiki.generators.wiki_files._generate_blame_section"
+            ) as mock_blame,
         ):
             mock_api.return_value = ""
             mock_diagram.return_value = ""

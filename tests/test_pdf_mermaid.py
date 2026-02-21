@@ -193,35 +193,35 @@ graph TD
 class TestIsMmdcAvailable:
     """Tests for mermaid CLI availability check."""
 
-    @patch("local_deepwiki.export.pdf.shutil.which")
+    @patch("local_deepwiki.export.mermaid_renderer.shutil.which")
     def test_mmdc_available(self, mock_which):
         """Test when mmdc is available."""
-        import local_deepwiki.export.pdf as pdf_module
+        import local_deepwiki.export.mermaid_renderer as mermaid_module
 
-        pdf_module._mmdc_available = None
+        mermaid_module._mmdc_available = None
         mock_which.return_value = "/usr/local/bin/mmdc"
 
         result = is_mmdc_available()
         assert result is True
         mock_which.assert_called_once_with("mmdc")
 
-    @patch("local_deepwiki.export.pdf.shutil.which")
+    @patch("local_deepwiki.export.mermaid_renderer.shutil.which")
     def test_mmdc_not_available(self, mock_which):
         """Test when mmdc is not available."""
-        import local_deepwiki.export.pdf as pdf_module
+        import local_deepwiki.export.mermaid_renderer as mermaid_module
 
-        pdf_module._mmdc_available = None
+        mermaid_module._mmdc_available = None
         mock_which.return_value = None
 
         result = is_mmdc_available()
         assert result is False
 
-    @patch("local_deepwiki.export.pdf.shutil.which")
+    @patch("local_deepwiki.export.mermaid_renderer.shutil.which")
     def test_result_is_cached(self, mock_which):
         """Test that the result is cached."""
-        import local_deepwiki.export.pdf as pdf_module
+        import local_deepwiki.export.mermaid_renderer as mermaid_module
 
-        pdf_module._mmdc_available = None
+        mermaid_module._mmdc_available = None
         mock_which.return_value = "/usr/local/bin/mmdc"
 
         result1 = is_mmdc_available()
@@ -235,7 +235,7 @@ class TestIsMmdcAvailable:
 class TestRenderMermaidToSvg:
     """Tests for mermaid to SVG rendering."""
 
-    @patch("local_deepwiki.export.pdf.is_mmdc_available")
+    @patch("local_deepwiki.export.mermaid_renderer.is_mmdc_available")
     def test_returns_none_when_mmdc_unavailable(self, mock_available):
         """Test that None is returned when mmdc is not available."""
         mock_available.return_value = False
@@ -243,15 +243,15 @@ class TestRenderMermaidToSvg:
         result = render_mermaid_to_svg("graph TD\nA-->B")
         assert result is None
 
-    @patch("local_deepwiki.export.pdf.subprocess.run")
-    @patch("local_deepwiki.export.pdf.is_mmdc_available")
+    @patch("local_deepwiki.export.mermaid_renderer.subprocess.run")
+    @patch("local_deepwiki.export.mermaid_renderer.is_mmdc_available")
     def test_renders_svg_successfully(self, mock_available, mock_run, tmp_path):
         """Test successful SVG rendering."""
         mock_available.return_value = True
         mock_run.return_value = MagicMock(returncode=0)
 
-    @patch("local_deepwiki.export.pdf.subprocess.run")
-    @patch("local_deepwiki.export.pdf.is_mmdc_available")
+    @patch("local_deepwiki.export.mermaid_renderer.subprocess.run")
+    @patch("local_deepwiki.export.mermaid_renderer.is_mmdc_available")
     def test_returns_none_on_cli_error(self, mock_available, mock_run):
         """Test that None is returned on CLI error."""
         mock_available.return_value = True
@@ -260,14 +260,14 @@ class TestRenderMermaidToSvg:
         result = render_mermaid_to_svg("invalid diagram")
         assert result is None
 
-    @patch("local_deepwiki.export.pdf.is_mmdc_available")
+    @patch("local_deepwiki.export.mermaid_renderer.is_mmdc_available")
     def test_handles_timeout(self, mock_available):
         """Test that timeout is handled gracefully."""
         import subprocess
 
         mock_available.return_value = True
 
-        with patch("local_deepwiki.export.pdf.subprocess.run") as mock_run:
+        with patch("local_deepwiki.export.mermaid_renderer.subprocess.run") as mock_run:
             mock_run.side_effect = subprocess.TimeoutExpired("mmdc", 30)
             result = render_mermaid_to_svg("graph TD\nA-->B")
             assert result is None
@@ -276,7 +276,7 @@ class TestRenderMermaidToSvg:
 class TestRenderMermaidToPng:
     """Tests for mermaid to PNG rendering."""
 
-    @patch("local_deepwiki.export.pdf.is_mmdc_available")
+    @patch("local_deepwiki.export.mermaid_renderer.is_mmdc_available")
     def test_returns_none_when_mmdc_unavailable(self, mock_available):
         """Test that None is returned when mmdc is not available."""
         mock_available.return_value = False
@@ -284,8 +284,8 @@ class TestRenderMermaidToPng:
         result = render_mermaid_to_png("graph TD\nA-->B")
         assert result is None
 
-    @patch("local_deepwiki.export.pdf.subprocess.run")
-    @patch("local_deepwiki.export.pdf.is_mmdc_available")
+    @patch("local_deepwiki.export.mermaid_renderer.subprocess.run")
+    @patch("local_deepwiki.export.mermaid_renderer.is_mmdc_available")
     def test_returns_none_on_cli_error(self, mock_available, mock_run):
         """Test that None is returned on CLI error."""
         mock_available.return_value = True
@@ -294,14 +294,14 @@ class TestRenderMermaidToPng:
         result = render_mermaid_to_png("invalid diagram")
         assert result is None
 
-    @patch("local_deepwiki.export.pdf.is_mmdc_available")
+    @patch("local_deepwiki.export.mermaid_renderer.is_mmdc_available")
     def test_handles_timeout(self, mock_available):
         """Test that timeout is handled gracefully."""
         import subprocess
 
         mock_available.return_value = True
 
-        with patch("local_deepwiki.export.pdf.subprocess.run") as mock_run:
+        with patch("local_deepwiki.export.mermaid_renderer.subprocess.run") as mock_run:
             mock_run.side_effect = subprocess.TimeoutExpired("mmdc", 30)
             result = render_mermaid_to_png("graph TD\nA-->B")
             assert result is None
@@ -382,8 +382,8 @@ sequenceDiagram
 class TestRenderMermaidToPngSuccessPath:
     """Tests for successful mermaid PNG rendering."""
 
-    @patch("local_deepwiki.export.pdf.subprocess.run")
-    @patch("local_deepwiki.export.pdf.is_mmdc_available")
+    @patch("local_deepwiki.export.mermaid_renderer.subprocess.run")
+    @patch("local_deepwiki.export.mermaid_renderer.is_mmdc_available")
     def test_successful_png_rendering(self, mock_available, mock_run, tmp_path: Path):
         """Test successful PNG rendering with mocked subprocess."""
         mock_available.return_value = True
@@ -402,8 +402,8 @@ class TestRenderMermaidToPngSuccessPath:
         assert result is not None
         assert result.startswith(b"\x89PNG")
 
-    @patch("local_deepwiki.export.pdf.subprocess.run")
-    @patch("local_deepwiki.export.pdf.is_mmdc_available")
+    @patch("local_deepwiki.export.mermaid_renderer.subprocess.run")
+    @patch("local_deepwiki.export.mermaid_renderer.is_mmdc_available")
     def test_png_output_file_not_created(self, mock_available, mock_run):
         """Test when mmdc succeeds but doesn't create output file."""
         mock_available.return_value = True
@@ -412,24 +412,24 @@ class TestRenderMermaidToPngSuccessPath:
         result = render_mermaid_to_png("graph TD\nA-->B")
         assert result is None
 
-    @patch("local_deepwiki.export.pdf.is_mmdc_available")
+    @patch("local_deepwiki.export.mermaid_renderer.is_mmdc_available")
     def test_handles_oserror(self, mock_available):
         """Test that OSError is handled gracefully."""
         mock_available.return_value = True
 
-        with patch("local_deepwiki.export.pdf.subprocess.run") as mock_run:
+        with patch("local_deepwiki.export.mermaid_renderer.subprocess.run") as mock_run:
             mock_run.side_effect = OSError("File system error")
             result = render_mermaid_to_png("graph TD\nA-->B")
             assert result is None
 
-    @patch("local_deepwiki.export.pdf.is_mmdc_available")
+    @patch("local_deepwiki.export.mermaid_renderer.is_mmdc_available")
     def test_handles_subprocess_error(self, mock_available):
         """Test that SubprocessError is handled gracefully."""
         import subprocess
 
         mock_available.return_value = True
 
-        with patch("local_deepwiki.export.pdf.subprocess.run") as mock_run:
+        with patch("local_deepwiki.export.mermaid_renderer.subprocess.run") as mock_run:
             mock_run.side_effect = subprocess.SubprocessError("Process failed")
             result = render_mermaid_to_png("graph TD\nA-->B")
             assert result is None
@@ -438,8 +438,8 @@ class TestRenderMermaidToPngSuccessPath:
 class TestRenderMermaidToSvgSuccessPath:
     """Tests for successful mermaid SVG rendering."""
 
-    @patch("local_deepwiki.export.pdf.subprocess.run")
-    @patch("local_deepwiki.export.pdf.is_mmdc_available")
+    @patch("local_deepwiki.export.mermaid_renderer.subprocess.run")
+    @patch("local_deepwiki.export.mermaid_renderer.is_mmdc_available")
     def test_successful_svg_rendering(self, mock_available, mock_run):
         """Test successful SVG rendering with mocked subprocess."""
         mock_available.return_value = True
@@ -458,8 +458,8 @@ class TestRenderMermaidToSvgSuccessPath:
         assert result is not None
         assert "<svg" in result
 
-    @patch("local_deepwiki.export.pdf.subprocess.run")
-    @patch("local_deepwiki.export.pdf.is_mmdc_available")
+    @patch("local_deepwiki.export.mermaid_renderer.subprocess.run")
+    @patch("local_deepwiki.export.mermaid_renderer.is_mmdc_available")
     def test_svg_output_file_not_created(self, mock_available, mock_run):
         """Test when mmdc succeeds but doesn't create output file."""
         mock_available.return_value = True
@@ -468,24 +468,24 @@ class TestRenderMermaidToSvgSuccessPath:
         result = render_mermaid_to_svg("graph TD\nA-->B")
         assert result is None
 
-    @patch("local_deepwiki.export.pdf.is_mmdc_available")
+    @patch("local_deepwiki.export.mermaid_renderer.is_mmdc_available")
     def test_handles_oserror(self, mock_available):
         """Test that OSError is handled gracefully."""
         mock_available.return_value = True
 
-        with patch("local_deepwiki.export.pdf.subprocess.run") as mock_run:
+        with patch("local_deepwiki.export.mermaid_renderer.subprocess.run") as mock_run:
             mock_run.side_effect = OSError("File system error")
             result = render_mermaid_to_svg("graph TD\nA-->B")
             assert result is None
 
-    @patch("local_deepwiki.export.pdf.is_mmdc_available")
+    @patch("local_deepwiki.export.mermaid_renderer.is_mmdc_available")
     def test_handles_subprocess_error(self, mock_available):
         """Test that SubprocessError is handled gracefully."""
         import subprocess
 
         mock_available.return_value = True
 
-        with patch("local_deepwiki.export.pdf.subprocess.run") as mock_run:
+        with patch("local_deepwiki.export.mermaid_renderer.subprocess.run") as mock_run:
             mock_run.side_effect = subprocess.SubprocessError("Process failed")
             result = render_mermaid_to_svg("graph TD\nA-->B")
             assert result is None
