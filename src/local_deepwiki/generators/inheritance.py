@@ -130,7 +130,7 @@ def generate_inheritance_diagram(
             (name, len([p for p in node.parents if p in classes]) + len(node.children))
             for name, node in classes_with_internal_inheritance.items()
         ]
-        scored.sort(key=itemgetter(1), reverse=True)
+        scored = sorted(scored, key=itemgetter(1), reverse=True)
         keep_names = {name for name, _ in scored[:max_classes]}
         classes_with_internal_inheritance = {
             name: node

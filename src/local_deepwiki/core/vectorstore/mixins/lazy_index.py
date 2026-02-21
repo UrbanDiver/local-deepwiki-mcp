@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Callable
 
 from local_deepwiki.logging import get_logger
+from local_deepwiki.models.foundation import LogCallback
 
 from ..maintenance import LazyIndexManager
 
@@ -50,7 +51,7 @@ class LazyIndexMixin:
 
     async def schedule_lazy_index_creation(
         self,
-        progress_callback: Callable[[str], None] | None = None,
+        progress_callback: LogCallback | None = None,
     ) -> None:
         """Schedule vector index creation as a background task.
 
@@ -79,7 +80,7 @@ class LazyIndexMixin:
 
     async def create_vector_index_now(
         self,
-        progress_callback: Callable[[str], None] | None = None,
+        progress_callback: LogCallback | None = None,
     ) -> None:
         """Force immediate vector index creation.
 

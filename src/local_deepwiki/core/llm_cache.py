@@ -405,8 +405,9 @@ class LLMCache:
 
                 if to_evict > 0 and valid_entries:
                     # Sort by last_hit_at (oldest first = LRU)
-                    valid_entries.sort(
-                        key=lambda e: e.get("last_hit_at", e.get("created_at", 0))
+                    valid_entries = sorted(
+                        valid_entries,
+                        key=lambda e: e.get("last_hit_at", e.get("created_at", 0)),
                     )
 
                     # Delete oldest entries

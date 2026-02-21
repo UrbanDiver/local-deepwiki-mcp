@@ -153,7 +153,7 @@ class OllamaProvider(LLMProvider):
         try:
             await self._client.list()
             return True
-        except Exception as e:
+        except (ConnectionError, TimeoutError, OSError, ResponseError) as e:
             raise OllamaConnectionError(self._base_url, e) from e
 
     async def validate_model(self, model_name: str) -> bool:

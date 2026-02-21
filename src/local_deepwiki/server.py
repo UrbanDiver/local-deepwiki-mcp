@@ -76,7 +76,7 @@ register_prompt_handlers(server)
 @server.list_tools()
 async def list_tools() -> list:
     """List available tools."""
-    return TOOL_DEFINITIONS
+    return list(TOOL_DEFINITIONS)
 
 
 # Tool handler dispatch dictionary

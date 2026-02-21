@@ -28,7 +28,7 @@ COMMIT_MESSAGE_TRUNCATED_LENGTH = 77  # Leaves room for "..."
 MAX_CHANGED_FILES_PER_COMMIT = 5
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class CommitInfo:
     """Information about a git commit."""
 

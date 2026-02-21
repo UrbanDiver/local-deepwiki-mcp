@@ -10,16 +10,17 @@ from __future__ import annotations
 import asyncio
 import time
 import uuid
-from collections.abc import Awaitable, Callable
 from itertools import chain
 from pathlib import Path
-from typing import Any, TypeAlias
+from typing import Any
 
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.events import EventType, get_event_emitter
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import (
+    CancellationChecker,
     DeepResearchResult,
+    ProgressReporter,
     ResearchCheckpoint,
     ResearchCheckpointStep,
     ResearchProgress,
@@ -39,13 +40,6 @@ from .reasoning import (
 )
 from .serialization import dict_to_search_result, search_result_to_dict
 from .steps import StepsMixin
-
-# Type alias for progress callback
-ProgressCallback: TypeAlias = Callable[[ResearchProgress], Awaitable[None]] | None
-
-# Type alias for cancellation check callback
-# Returns True if the operation should be cancelled
-CancellationCallback: TypeAlias = Callable[[], bool] | None
 
 logger = get_logger(__name__)
 
@@ -126,8 +120,8 @@ class DeepResearchPipeline(ReasoningMixin, StepsMixin):
             self._checkpoint_manager = CheckpointManager(repo_path)
 
         # Runtime state (set during research())
-        self._progress_callback: ProgressCallback = None
-        self._cancellation_check: CancellationCallback = None
+        self._progress_callback: ProgressReporter | None = None
+        self._cancellation_check: CancellationChecker | None = None
         self._current_checkpoint: ResearchCheckpoint | None = None
         self._cancellation_event: asyncio.Event | None = None
 
@@ -333,8 +327,8 @@ class DeepResearchPipeline(ReasoningMixin, StepsMixin):
     async def research(
         self,
         question: str,
-        progress_callback: ProgressCallback = None,
-        cancellation_check: CancellationCallback = None,
+        progress_callback: ProgressReporter | None = None,
+        cancellation_check: CancellationChecker | None = None,
         resume_id: str | None = None,
         cancellation_event: asyncio.Event | None = None,
     ) -> DeepResearchResult:

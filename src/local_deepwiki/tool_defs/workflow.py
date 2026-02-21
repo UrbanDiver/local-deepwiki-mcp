@@ -11,7 +11,7 @@ from mcp.types import Tool
 
 from local_deepwiki.tool_defs.annotations import _READ_ONLY, _SIDE_EFFECT
 
-WORKFLOW_TOOLS: list[Tool] = [
+WORKFLOW_TOOLS: tuple[Tool, ...] = (
     Tool(
         name="generate_codemap",
         description=(
@@ -290,4 +290,4 @@ WORKFLOW_TOOLS: list[Tool] = [
         },
         annotations=_SIDE_EFFECT,
     ),
-]
+)

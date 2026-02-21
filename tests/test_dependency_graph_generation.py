@@ -1,5 +1,7 @@
 """Tests for dependency graph generation - generator class, rendering, and edge cases."""
 
+import dataclasses
+
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
@@ -381,8 +383,12 @@ class TestMermaidRendering:
         graph.add_node(DependencyNode(name="b", file_path="b.py"))
         graph.add_edge("a", "b")
         graph.add_edge("b", "a")
-        graph.edges[("a", "b")].is_circular = True
-        graph.edges[("b", "a")].is_circular = True
+        graph.edges[("a", "b")] = dataclasses.replace(
+            graph.edges[("a", "b")], is_circular=True
+        )
+        graph.edges[("b", "a")] = dataclasses.replace(
+            graph.edges[("b", "a")], is_circular=True
+        )
         graph.cycles = [["a", "b"]]
 
         result = generator._render_module_graph(
@@ -1398,8 +1404,12 @@ class TestRenderFileGraphEdges:
         graph.add_node(DependencyNode(name="b", file_path="b.py"))
         graph.add_edge("a", "b")
         graph.add_edge("b", "a")
-        graph.edges[("a", "b")].is_circular = True
-        graph.edges[("b", "a")].is_circular = True
+        graph.edges[("a", "b")] = dataclasses.replace(
+            graph.edges[("a", "b")], is_circular=True
+        )
+        graph.edges[("b", "a")] = dataclasses.replace(
+            graph.edges[("b", "a")], is_circular=True
+        )
 
         result = generator._render_file_graph(graph, "core")
         assert "circular" in result
@@ -1411,7 +1421,9 @@ class TestRenderFileGraphEdges:
         graph.add_node(DependencyNode(name="a", file_path="a.py"))
         graph.add_node(DependencyNode(name="b", file_path="b.py"))
         graph.add_edge("a", "b")
-        graph.edges[("a", "b")].is_circular = True
+        graph.edges[("a", "b")] = dataclasses.replace(
+            graph.edges[("a", "b")], is_circular=True
+        )
 
         result = generator._render_file_graph(graph, "core")
         # Should have linkStyle for circular edge

@@ -436,7 +436,9 @@ def _generate_blame_section(
         return None
 
     # Sort by most recently modified first
-    blame_infos.sort(key=attrgetter("last_modified_date"), reverse=True)
+    blame_infos = sorted(
+        blame_infos, key=attrgetter("last_modified_date"), reverse=True
+    )
 
     # Build the section
     lines = [

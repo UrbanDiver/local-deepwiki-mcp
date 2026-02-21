@@ -7,6 +7,7 @@ dependency detection.
 
 from __future__ import annotations
 
+import dataclasses
 from collections import defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -88,7 +89,9 @@ class DependencyGraphGenerator:
         circular_edges = self._get_circular_edges(graph.cycles)
         for edge_key in circular_edges:
             if edge_key in graph.edges:
-                graph.edges[edge_key].is_circular = True
+                graph.edges[edge_key] = dataclasses.replace(
+                    graph.edges[edge_key], is_circular=True
+                )
 
         # Generate Mermaid diagram
         return self._render_module_graph(
@@ -183,7 +186,9 @@ class DependencyGraphGenerator:
         circular_edges = self._get_circular_edges(graph.cycles)
         for edge_key in circular_edges:
             if edge_key in graph.edges:
-                graph.edges[edge_key].is_circular = True
+                graph.edges[edge_key] = dataclasses.replace(
+                    graph.edges[edge_key], is_circular=True
+                )
 
         return self._render_file_graph(graph, module_path)
 

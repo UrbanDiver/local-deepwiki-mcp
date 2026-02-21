@@ -161,7 +161,9 @@ async def handle_suggest_next_actions(args: dict[str, Any]) -> list[TextContent]
 
     # Sort by priority
     priority_order = {"high": 0, "medium": 1, "low": 2}
-    suggestions.sort(key=lambda s: priority_order.get(s.get("priority", "low"), 2))
+    suggestions = sorted(
+        suggestions, key=lambda s: priority_order.get(s.get("priority", "low"), 2)
+    )
 
     # Include session state summary for agent awareness
     from local_deepwiki.handlers.session_state import get_session_state
@@ -451,7 +453,7 @@ async def handle_find_tools(args: dict[str, Any]) -> list[TextContent]:
                 )
             )
 
-    scored.sort(key=itemgetter(0), reverse=True)
+    scored = sorted(scored, key=itemgetter(0), reverse=True)
     top_results = [item for _, item in scored[:5]]
 
     data = {

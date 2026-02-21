@@ -144,7 +144,11 @@ async def generate_entity_entries(
         chunks = await vector_store.get_chunks_by_file(file_info.path)
 
         for chunk in chunks:
-            if chunk.chunk_type not in (ChunkType.CLASS, ChunkType.FUNCTION, ChunkType.METHOD):
+            if chunk.chunk_type not in (
+                ChunkType.CLASS,
+                ChunkType.FUNCTION,
+                ChunkType.METHOD,
+            ):
                 continue
 
             # Determine entity type
@@ -197,12 +201,14 @@ async def generate_entity_entries(
                 "is_async": is_async,
                 "raises": raises,
                 # Keywords for search matching
-                "keywords": _build_keywords(chunk.name, param_types, return_type, raises),
+                "keywords": _build_keywords(
+                    chunk.name, param_types, return_type, raises
+                ),
             }
             entries.append(entry)
 
     # Sort by name for consistent output
-    entries.sort(key=lambda e: e["display_name"].lower())
+    entries = sorted(entries, key=lambda e: e["display_name"].lower())
     return entries
 
 

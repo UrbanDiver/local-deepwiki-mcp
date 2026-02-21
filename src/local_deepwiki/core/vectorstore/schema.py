@@ -26,7 +26,7 @@ DEFAULT_MAX_MEMORY_MB = 256
 ESTIMATED_BYTES_PER_CHUNK = 10_000  # ~10KB per chunk
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class SearchResultPage:
     """Paginated search results with metadata.
 
@@ -47,7 +47,7 @@ class SearchResultPage:
     cursor: str | None = None
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class ChunkBatch:
     """A batch of chunks loaded from the store.
 
@@ -78,7 +78,7 @@ class SearchProfile(StrEnum):
     THOROUGH = "thorough"
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class SearchProfileConfig:
     """Configuration for a search profile.
 
@@ -127,7 +127,7 @@ SEARCH_PROFILES: dict[SearchProfile, SearchProfileConfig] = {
 }
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class SearchFeedback:
     """User feedback on search result relevance.
 
@@ -147,7 +147,7 @@ class SearchFeedback:
     timestamp: float = field(default_factory=time.time)
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class BatchEmbeddingResult:
     """Result of a batch embedding operation."""
 

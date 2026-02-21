@@ -212,7 +212,7 @@ def rerank_with_fuzzy(
         )
 
     # Sort by combined score (descending)
-    reranked.sort(key=attrgetter("score"), reverse=True)
+    reranked = sorted(reranked, key=attrgetter("score"), reverse=True)
     return reranked
 
 
@@ -573,7 +573,7 @@ class FuzzySearchHelper:
                 suggestions.append((name, score * 1.1))
 
         # Sort by score descending and limit
-        suggestions.sort(key=itemgetter(1), reverse=True)
+        suggestions = sorted(suggestions, key=itemgetter(1), reverse=True)
         return [name for name, _ in suggestions[:max_suggestions]]
 
     def get_file_suggestions(

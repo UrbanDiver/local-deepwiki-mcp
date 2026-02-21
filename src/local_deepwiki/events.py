@@ -57,7 +57,7 @@ class EventType(StrEnum):
     WARNING = "warning"
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class Event:
     """An event with type and associated data."""
 
@@ -65,10 +65,28 @@ class Event:
     data: dict[str, Any] = field(default_factory=dict)
     timestamp: float = field(default_factory=lambda: __import__("time").time())
 
-    def __post_init__(self) -> None:
-        """Convert string type to EventType if needed."""
-        if isinstance(self.type, str):
-            self.type = EventType(self.type)
+    @classmethod
+    def create(
+        cls,
+        type: EventType | str,
+        data: dict[str, Any] | None = None,
+        timestamp: float | None = None,
+    ) -> "Event":
+        """Create an Event, coercing string type to EventType if needed.
+
+        Args:
+            type: The event type (EventType enum or string).
+            data: Optional event data.
+            timestamp: Optional timestamp (auto-generated if omitted).
+
+        Returns:
+            A new Event instance.
+        """
+        event_type = EventType(type) if isinstance(type, str) else type
+        kwargs: dict[str, Any] = {"type": event_type, "data": data or {}}
+        if timestamp is not None:
+            kwargs["timestamp"] = timestamp
+        return cls(**kwargs)
 
 
 # Type aliases for handlers
@@ -77,18 +95,14 @@ AsyncHandler: TypeAlias = Callable[[Event], Coroutine[Any, Any, None]]
 Handler: TypeAlias = SyncHandler | AsyncHandler
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class HandlerEntry:
     """A registered event handler with priority."""
 
     handler: Handler
+    is_async: bool
     priority: int = 0
-    is_async: bool = False
     handler_id: str = field(default_factory=lambda: str(uuid.uuid4()))
-
-    def __post_init__(self) -> None:
-        """Detect if handler is async."""
-        self.is_async = asyncio.iscoroutinefunction(self.handler)
 
 
 class EventEmitter:
@@ -157,11 +171,17 @@ class EventEmitter:
         Returns:
             The handler ID for later removal.
         """
-        entry = HandlerEntry(handler=handler, priority=priority)
+        entry = HandlerEntry(
+            handler=handler,
+            is_async=asyncio.iscoroutinefunction(handler),
+            priority=priority,
+        )
 
         if event_type is None:
             self._global_handlers.append(entry)
-            self._global_handlers.sort(key=attrgetter("priority"), reverse=True)
+            self._global_handlers = sorted(
+                self._global_handlers, key=attrgetter("priority"), reverse=True
+            )
         else:
             if isinstance(event_type, str):
                 event_type = EventType(event_type)
@@ -170,7 +190,9 @@ class EventEmitter:
                 self._handlers[event_type] = []
 
             self._handlers[event_type].append(entry)
-            self._handlers[event_type].sort(key=attrgetter("priority"), reverse=True)
+            self._handlers[event_type] = sorted(
+                self._handlers[event_type], key=attrgetter("priority"), reverse=True
+            )
 
         logger.debug(
             "Registered handler %s for %s (priority=%d, async=%s)",
@@ -272,7 +294,7 @@ class EventEmitter:
         if isinstance(event_type, str):
             event_type = EventType(event_type)
 
-        event = Event(type=event_type, data=data or {})
+        event = Event.create(type=event_type, data=data)
 
         # Collect handlers (global + specific)
         handlers = list(self._global_handlers)
@@ -280,7 +302,7 @@ class EventEmitter:
             handlers.extend(self._handlers[event_type])
 
         # Sort by priority
-        handlers.sort(key=attrgetter("priority"), reverse=True)
+        handlers = sorted(handlers, key=attrgetter("priority"), reverse=True)
 
         # Execute handlers
         for entry in handlers:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass
@@ -10,6 +11,8 @@ from pathlib import Path
 from local_deepwiki.models import ChunkType
 
 from ._utils import sanitize_mermaid_name
+
+logger = logging.getLogger(__name__)
 
 
 def _is_test_module(module: str, file_path: str) -> bool:
@@ -462,7 +465,7 @@ def _path_to_module(file_path: str) -> str | None:
         if len(parts) > 1:
             parts = parts[1:]  # Skip e.g. 'local_deepwiki'
     except (ValueError, IndexError):
-        pass
+        logger.debug("Failed to extract module path from %s", file_path, exc_info=True)
 
     # Remove .py extension from last part
     if parts:

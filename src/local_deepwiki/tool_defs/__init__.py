@@ -19,7 +19,7 @@ from local_deepwiki.tool_defs.core import CORE_TOOLS
 from local_deepwiki.tool_defs.generators import GENERATOR_TOOLS
 from local_deepwiki.tool_defs.workflow import WORKFLOW_TOOLS
 
-TOOL_DEFINITIONS: list[Tool] = (
+TOOL_DEFINITIONS: tuple[Tool, ...] = (
     CORE_TOOLS + GENERATOR_TOOLS + ANALYSIS_TOOLS + WORKFLOW_TOOLS
 )
 

@@ -12,7 +12,7 @@ import os
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from openai import APIConnectionError, APIStatusError, AuthenticationError
+from openai import APIConnectionError, APIStatusError, AuthenticationError, OpenAIError
 
 
 class TestOpenAIProviderInitialization:
@@ -397,7 +397,7 @@ class TestOpenAIProviderValidateModel:
         provider = OpenAILLMProvider(model="gpt-4o")
 
         provider._client.chat.completions.create = AsyncMock(
-            side_effect=Exception("Model 'nonexistent' does not exist")
+            side_effect=OpenAIError("Model 'nonexistent' does not exist")
         )
 
         with pytest.raises(ProviderModelNotFoundError) as exc_info:
@@ -414,7 +414,7 @@ class TestOpenAIProviderValidateModel:
         provider = OpenAILLMProvider(model="gpt-4o")
 
         provider._client.chat.completions.create = AsyncMock(
-            side_effect=Exception("Model not found")
+            side_effect=OpenAIError("Model not found")
         )
 
         with pytest.raises(ProviderModelNotFoundError):
@@ -429,7 +429,7 @@ class TestOpenAIProviderValidateModel:
         provider = OpenAILLMProvider(model="gpt-4o")
 
         provider._client.chat.completions.create = AsyncMock(
-            side_effect=Exception("Invalid model specified")
+            side_effect=OpenAIError("Invalid model specified")
         )
 
         with pytest.raises(ProviderModelNotFoundError):

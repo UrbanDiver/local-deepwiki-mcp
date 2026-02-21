@@ -14,7 +14,7 @@ import yaml
 from local_deepwiki.security.access_control import Role, Subject
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class RoleAssignment:
     """Maps an identifier pattern to a role.
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import deque
 from functools import partial
 from typing import Any, cast
 
@@ -28,19 +29,19 @@ def _collect_preceding_comments(
     Returns:
         List of comment text lines in order (first comment first).
     """
-    comments: list[str] = []
+    comments: deque[str] = deque()
     prev = node.prev_sibling
 
     while prev and prev.type in comment_types:
         text = get_node_text(prev, source)
         if prefix is None or text.startswith(prefix):
-            comments.insert(0, text)
+            comments.appendleft(text)
             prev = prev.prev_sibling
         else:
             # Stop at non-matching comment (e.g., regular // after ///)
             break
 
-    return comments
+    return list(comments)
 
 
 def _strip_line_comment_prefix(lines: list[str], prefix: str) -> str:
@@ -179,7 +180,6 @@ def get_docstring(node: Node, source: bytes, language: LangEnum) -> str | None:
     Returns:
         The docstring or None if not found.
     """
-    extractor = _DOCSTRING_EXTRACTORS.get(language)
-    if extractor:
+    if extractor := _DOCSTRING_EXTRACTORS.get(language):
         return cast(str | None, extractor(node, source))
     return None

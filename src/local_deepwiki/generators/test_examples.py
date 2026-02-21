@@ -174,7 +174,7 @@ def _extract_usage_snippet(
     try:
         result = dedent(result)
     except TypeError:
-        pass
+        logger.debug("Failed to dedent extracted usage snippet", exc_info=True)
 
     return result.strip()
 
@@ -198,7 +198,7 @@ def extract_examples_for_entities(
 
     try:
         source = test_file.read_bytes()
-    except (OSError, IOError) as e:
+    except OSError as e:
         logger.debug("Failed to read test file %s: %s", test_file, e)
         return []
 

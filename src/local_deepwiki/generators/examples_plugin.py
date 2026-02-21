@@ -6,6 +6,7 @@ from test files and docstrings across the codebase.
 
 from __future__ import annotations
 
+import dataclasses
 import time
 from pathlib import Path
 from typing import Any
@@ -123,9 +124,10 @@ class ExamplesWikiGenerator(WikiGeneratorPlugin):
                 # Also extract from docstring directly
                 if chunk.docstring:
                     doc_examples = parse_docstring_examples(chunk.docstring)
-                    for ex in doc_examples:
-                        ex.entity_name = chunk.name
-                    examples.extend(doc_examples)
+                    examples.extend(
+                        dataclasses.replace(ex, entity_name=chunk.name)
+                        for ex in doc_examples
+                    )
 
                 if examples:
                     all_examples[chunk.name] = examples[:3]  # Limit per entity
@@ -146,9 +148,10 @@ class ExamplesWikiGenerator(WikiGeneratorPlugin):
 
                 if chunk.docstring:
                     doc_examples = parse_docstring_examples(chunk.docstring)
-                    for ex in doc_examples:
-                        ex.entity_name = chunk.name
-                    examples.extend(doc_examples)
+                    examples.extend(
+                        dataclasses.replace(ex, entity_name=chunk.name)
+                        for ex in doc_examples
+                    )
 
                 if examples:
                     all_examples[chunk.name] = examples[:3]
@@ -306,9 +309,9 @@ def get_examples_for_api_page(
     # Add docstring examples
     if docstring:
         doc_examples = parse_docstring_examples(docstring)
-        for ex in doc_examples:
-            ex.entity_name = entity_name
-        examples.extend(doc_examples)
+        examples.extend(
+            dataclasses.replace(ex, entity_name=entity_name) for ex in doc_examples
+        )
 
     if not examples:
         return ""

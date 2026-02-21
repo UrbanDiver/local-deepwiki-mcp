@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import AsyncIterator, Iterator
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 import psutil
 from lancedb.table import Table
 
 from local_deepwiki.models import CodeChunk
+from local_deepwiki.models.foundation import RowMapper
 
 from .schema import (
     DEFAULT_MAX_MEMORY_MB,
@@ -57,7 +58,7 @@ class ChunkIterator:
         batch_size: int = 1000,
         columns: list[str] | None = None,
         filter_expr: str | None = None,
-        row_to_chunk_fn: Callable[[dict[str, Any]], CodeChunk] | None = None,
+        row_to_chunk_fn: RowMapper | None = None,
     ):
         """Initialize the chunk iterator.
 

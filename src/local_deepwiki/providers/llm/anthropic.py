@@ -7,6 +7,7 @@ from typing import Any, AsyncIterator
 from anthropic import (
     APIConnectionError,
     APIStatusError,
+    AnthropicError,
     AsyncAnthropic,
     AuthenticationError,
 )
@@ -200,13 +201,13 @@ class AnthropicProvider(LLMProvider):
                     available_models=list(ANTHROPIC_MODELS.keys()),
                 ) from e
             raise
-        except Exception as e:
-            # Catch-all for library exceptions that don't match known types
+        except AnthropicError as e:
+            # Catch remaining Anthropic library exceptions not matched above
             # Only handle model-related errors, re-raise everything else
             error_str = str(e).lower()
             if "not found" in error_str or "invalid" in error_str:
                 logger.warning(
-                    "Caught generic exception in validate_model, treating as model error: %s",
+                    "Caught AnthropicError in validate_model, treating as model error: %s",
                     e,
                 )
                 raise ProviderModelNotFoundError(

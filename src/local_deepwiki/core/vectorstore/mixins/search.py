@@ -546,11 +546,11 @@ class SearchMixin:
         if isinstance(profile, str):
             try:
                 self._default_search_profile = SearchProfile(profile.lower())
-            except ValueError:
+            except ValueError as e:
                 raise ValueError(
                     f"Invalid search profile: {profile}. "
                     f"Valid values: {[p.value for p in SearchProfile]}"
-                )
+                ) from e
         else:
             self._default_search_profile = profile
 

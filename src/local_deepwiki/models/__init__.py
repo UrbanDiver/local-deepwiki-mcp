@@ -7,7 +7,16 @@ Import from ``local_deepwiki.models`` continues to work.
 from __future__ import annotations
 
 from local_deepwiki.models.chunks import CodeChunk, FileInfo, SearchResult
-from local_deepwiki.models.foundation import ChunkType, Language, ProgressCallback
+from local_deepwiki.models.foundation import (
+    CancellationChecker,
+    ChunkType,
+    Language,
+    LogCallback,
+    PageGenerator,
+    ProgressCallback,
+    ProgressReporter,
+    RowMapper,
+)
 from local_deepwiki.models.provider_types import (
     CodemapFocusType,
     DiagramType,
@@ -81,6 +90,11 @@ from local_deepwiki.models.wiki import (
 __all__ = [
     # foundation
     "ProgressCallback",
+    "CancellationChecker",
+    "ProgressReporter",
+    "LogCallback",
+    "PageGenerator",
+    "RowMapper",
     "Language",
     "ChunkType",
     # chunks

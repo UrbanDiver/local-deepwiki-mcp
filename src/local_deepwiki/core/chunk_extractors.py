@@ -105,97 +105,98 @@ def get_parent_classes(
     """
     parents = []
 
-    if language == Language.PYTHON:
-        # Python: class Child(Parent, Mixin): → argument_list > identifier
-        for child in class_node.children:
-            if child.type == "argument_list":
-                for arg in child.children:
-                    if arg.type == "identifier":
-                        parents.append(get_node_text(arg, source))
+    match language:
+        case Language.PYTHON:
+            # Python: class Child(Parent, Mixin): -> argument_list > identifier
+            for child in class_node.children:
+                if child.type == "argument_list":
+                    for arg in child.children:
+                        if arg.type == "identifier":
+                            parents.append(get_node_text(arg, source))
 
-    elif language in (Language.TYPESCRIPT, Language.JAVASCRIPT):
-        # TS/JS: class Child extends Parent implements Interface
-        for child in class_node.children:
-            if child.type == "class_heritage":
-                for clause in child.children:
-                    if clause.type in ("extends_clause", "implements_clause"):
-                        for item in clause.children:
-                            if item.type in ("identifier", "type_identifier"):
-                                parents.append(get_node_text(item, source))
+        case Language.TYPESCRIPT | Language.JAVASCRIPT:
+            # TS/JS: class Child extends Parent implements Interface
+            for child in class_node.children:
+                if child.type == "class_heritage":
+                    for clause in child.children:
+                        if clause.type in ("extends_clause", "implements_clause"):
+                            for item in clause.children:
+                                if item.type in ("identifier", "type_identifier"):
+                                    parents.append(get_node_text(item, source))
 
-    elif language == Language.JAVA:
-        # Java: class Child extends Parent implements Interface
-        for child in class_node.children:
-            if child.type == "superclass":
-                for item in child.children:
-                    if item.type == "type_identifier":
+        case Language.JAVA:
+            # Java: class Child extends Parent implements Interface
+            for child in class_node.children:
+                if child.type == "superclass":
+                    for item in child.children:
+                        if item.type == "type_identifier":
+                            parents.append(get_node_text(item, source))
+                elif child.type == "super_interfaces":
+                    for item in find_nodes_by_type(child, {"type_identifier"}):
                         parents.append(get_node_text(item, source))
-            elif child.type == "super_interfaces":
-                for item in find_nodes_by_type(child, {"type_identifier"}):
-                    parents.append(get_node_text(item, source))
 
-    elif language == Language.SWIFT:
-        # Swift: class Child: Parent, Protocol
-        for child in class_node.children:
-            if child.type == "type_inheritance_clause":
-                for item in child.children:
-                    if item.type in ("user_type", "type_identifier"):
-                        # Get the identifier from user_type
-                        text = get_node_text(item, source)
-                        if text and text not in (":", ","):
-                            parents.append(text)
-
-    elif language == Language.CPP:
-        # C++: class Child : public Parent
-        for child in class_node.children:
-            if child.type == "base_class_clause":
-                for item in find_nodes_by_type(child, {"type_identifier"}):
-                    parents.append(get_node_text(item, source))
-
-    elif language == Language.RUBY:
-        # Ruby: class Child < Parent
-        for child in class_node.children:
-            if child.type == "superclass":
-                for sc in child.children:
-                    if sc.type == "constant" or sc.type == "scope_resolution":
-                        parents.append(get_node_text(sc, source))
-
-    elif language == Language.PHP:
-        # PHP: class Child extends Parent implements Interface1, Interface2
-        for child in class_node.children:
-            if child.type == "base_clause":
-                # extends clause
-                for item in find_nodes_by_type(child, {"name", "qualified_name"}):
-                    parents.append(get_node_text(item, source))
-            elif child.type == "class_interface_clause":
-                # implements clause
-                for item in find_nodes_by_type(child, {"name", "qualified_name"}):
-                    parents.append(get_node_text(item, source))
-
-    elif language == Language.KOTLIN:
-        # Kotlin: class Child : Parent(), Interface1, Interface2
-        for child in class_node.children:
-            if child.type == "delegation_specifiers":
-                for spec in child.children:
-                    if spec.type == "delegation_specifier":
-                        for item in find_nodes_by_type(
-                            spec, {"user_type", "simple_identifier"}
-                        ):
+        case Language.SWIFT:
+            # Swift: class Child: Parent, Protocol
+            for child in class_node.children:
+                if child.type == "type_inheritance_clause":
+                    for item in child.children:
+                        if item.type in ("user_type", "type_identifier"):
+                            # Get the identifier from user_type
                             text = get_node_text(item, source)
                             if text and text not in (":", ","):
                                 parents.append(text)
-                                break  # Only get the type name, not nested parts
 
-    elif language == Language.CSHARP:
-        # C#: class Child : Parent, IInterface1, IInterface2
-        for child in class_node.children:
-            if child.type == "base_list":
-                for item in find_nodes_by_type(
-                    child, {"identifier", "generic_name", "qualified_name"}
-                ):
-                    text = get_node_text(item, source)
-                    if text:
-                        parents.append(text)
+        case Language.CPP:
+            # C++: class Child : public Parent
+            for child in class_node.children:
+                if child.type == "base_class_clause":
+                    for item in find_nodes_by_type(child, {"type_identifier"}):
+                        parents.append(get_node_text(item, source))
+
+        case Language.RUBY:
+            # Ruby: class Child < Parent
+            for child in class_node.children:
+                if child.type == "superclass":
+                    for sc in child.children:
+                        if sc.type == "constant" or sc.type == "scope_resolution":
+                            parents.append(get_node_text(sc, source))
+
+        case Language.PHP:
+            # PHP: class Child extends Parent implements Interface1, Interface2
+            for child in class_node.children:
+                if child.type == "base_clause":
+                    # extends clause
+                    for item in find_nodes_by_type(child, {"name", "qualified_name"}):
+                        parents.append(get_node_text(item, source))
+                elif child.type == "class_interface_clause":
+                    # implements clause
+                    for item in find_nodes_by_type(child, {"name", "qualified_name"}):
+                        parents.append(get_node_text(item, source))
+
+        case Language.KOTLIN:
+            # Kotlin: class Child : Parent(), Interface1, Interface2
+            for child in class_node.children:
+                if child.type == "delegation_specifiers":
+                    for spec in child.children:
+                        if spec.type == "delegation_specifier":
+                            for item in find_nodes_by_type(
+                                spec, {"user_type", "simple_identifier"}
+                            ):
+                                text = get_node_text(item, source)
+                                if text and text not in (":", ","):
+                                    parents.append(text)
+                                    break  # Only get the type name, not nested parts
+
+        case Language.CSHARP:
+            # C#: class Child : Parent, IInterface1, IInterface2
+            for child in class_node.children:
+                if child.type == "base_list":
+                    for item in find_nodes_by_type(
+                        child, {"identifier", "generic_name", "qualified_name"}
+                    ):
+                        text = get_node_text(item, source)
+                        if text:
+                            parents.append(text)
 
     return parents
 

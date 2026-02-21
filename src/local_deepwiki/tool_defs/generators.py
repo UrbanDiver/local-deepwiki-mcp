@@ -13,7 +13,7 @@ from mcp.types import Tool
 
 from local_deepwiki.tool_defs.annotations import _READ_ONLY, _STATEFUL
 
-GENERATOR_TOOLS: list[Tool] = [
+GENERATOR_TOOLS: tuple[Tool, ...] = (
     Tool(
         name="list_research_checkpoints",
         description=(
@@ -416,4 +416,4 @@ GENERATOR_TOOLS: list[Tool] = [
         },
         annotations=_READ_ONLY,
     ),
-]
+)

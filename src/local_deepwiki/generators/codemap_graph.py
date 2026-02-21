@@ -62,7 +62,9 @@ def _node_from_chunk(chunk: CodeChunk, repo_path: Path) -> CodemapNode:
     try:
         rel_path = str(Path(chunk.file_path).relative_to(repo_path))
     except ValueError:
-        pass
+        logger.debug(
+            "Failed to compute relative path for %s", chunk.file_path, exc_info=True
+        )
 
     return CodemapNode(
         name=chunk.name or "unknown",
@@ -203,7 +205,7 @@ async def discover_entry_points(
 
         scored.append((score, node))
 
-    scored.sort(key=itemgetter(0), reverse=True)
+    scored = sorted(scored, key=itemgetter(0), reverse=True)
     return [node for _, node in scored[:max_candidates]]
 
 

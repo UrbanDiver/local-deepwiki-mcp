@@ -11,7 +11,7 @@ from local_deepwiki.generators.wiki_utils import file_path_to_wiki_path
 from local_deepwiki.models import ChunkType, IndexStatus
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class EntityEntry:
     """An entry in the glossary."""
 
@@ -78,7 +78,7 @@ async def collect_all_entities(
             entities.append(EntityEntry(**entry_kwargs))
 
     # Sort alphabetically by name (case-insensitive)
-    entities.sort(key=lambda e: e.name.lower())
+    entities = sorted(entities, key=lambda e: e.name.lower())
     return entities
 
 

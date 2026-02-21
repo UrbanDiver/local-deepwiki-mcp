@@ -106,7 +106,7 @@ class CodemapGraph:
         return {node.file_path for node in self.nodes.values()}
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class CodemapResult:
     """Final result returned by ``generate_codemap``."""
 

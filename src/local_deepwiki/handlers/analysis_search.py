@@ -152,7 +152,7 @@ async def handle_search_wiki(args: dict[str, Any]) -> list[TextContent]:
                 )
 
     # Sort by score descending, then limit
-    matches.sort(key=itemgetter("score"), reverse=True)
+    matches = sorted(matches, key=itemgetter("score"), reverse=True)
     matches = matches[:limit]
 
     result = {

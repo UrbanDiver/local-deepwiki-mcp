@@ -68,7 +68,7 @@ class ProgressPhase(StrEnum):
     COMPLETE = "complete"
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class ProgressUpdate:
     """A single progress update."""
 

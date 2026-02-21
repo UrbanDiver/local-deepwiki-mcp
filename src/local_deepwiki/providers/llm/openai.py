@@ -4,7 +4,13 @@ from __future__ import annotations
 
 from typing import AsyncIterator
 
-from openai import APIConnectionError, APIStatusError, AsyncOpenAI, AuthenticationError
+from openai import (
+    APIConnectionError,
+    APIStatusError,
+    AsyncOpenAI,
+    AuthenticationError,
+    OpenAIError,
+)
 from openai.types.chat import ChatCompletionMessageParam
 
 from local_deepwiki.logging import get_logger
@@ -175,8 +181,8 @@ class OpenAILLMProvider(LLMProvider):
                     available_models=list(OPENAI_MODELS.keys()),
                 ) from e
             raise
-        except Exception as e:
-            # Catch-all for library exceptions that don't match known types
+        except OpenAIError as e:
+            # Catch remaining OpenAI library exceptions not matched above
             # Only handle model-related errors, re-raise everything else
             error_str = str(e).lower()
             if (
@@ -185,7 +191,7 @@ class OpenAILLMProvider(LLMProvider):
                 or "invalid" in error_str
             ):
                 logger.warning(
-                    "Caught generic exception in validate_model, treating as model error: %s",
+                    "Caught OpenAIError in validate_model, treating as model error: %s",
                     e,
                 )
                 raise ProviderModelNotFoundError(

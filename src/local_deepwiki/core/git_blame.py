@@ -24,7 +24,7 @@ from local_deepwiki.logging import get_logger
 logger = get_logger(__name__)
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class BlameInfo:
     """Git blame information for a line or range."""
 
@@ -35,7 +35,7 @@ class BlameInfo:
     summary: str | None = None  # Commit message summary
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class EntityBlameInfo:
     """Blame information for a code entity (function, class, method)."""
 

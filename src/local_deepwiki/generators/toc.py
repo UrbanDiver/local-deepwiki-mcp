@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class TocEntry:
     """A single entry in the table of contents."""
 

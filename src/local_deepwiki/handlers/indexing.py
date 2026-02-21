@@ -215,77 +215,82 @@ async def _run_indexing_pipeline(
 
         gen_mode = config.wiki.generation_mode
 
-        if gen_mode == GenerationMode.LAZY:
-            from local_deepwiki.generators.crosslinks import (
-                build_entity_registry_from_store,
-            )
-            from local_deepwiki.generators.wiki_files import filter_significant_files
-
-            significant = filter_significant_files(
-                status.files, config.wiki.max_file_docs
-            )
-            sig_paths = {f.path for f in significant}
-            registry = build_entity_registry_from_store(
-                indexer.vector_store.get_all_chunks(), sig_paths
-            )
-            registry.save(indexer.wiki_path / "entity_registry.json")
-
-            wiki_structure = WikiStructure(root=str(indexer.wiki_path), pages=[])
-
-        elif gen_mode == GenerationMode.HYBRID:
-            from local_deepwiki.generators.crosslinks import (
-                build_entity_registry_from_store,
-            )
-            from local_deepwiki.generators.wiki_files import filter_significant_files
-
-            eager_limit = config.wiki.hybrid_eager_pages
-            wiki_structure = await generate_wiki(
-                repo_path=repo_path,
-                wiki_path=indexer.wiki_path,
-                vector_store=indexer.vector_store,
-                index_status=status,
-                config=config,
-                llm_provider=llm_provider,
-                progress_callback=sync_progress_callback,
-                full_rebuild=full_rebuild,
-                max_file_pages=eager_limit,
-            )
-
-            significant = filter_significant_files(
-                status.files, config.wiki.max_file_docs
-            )
-            sig_paths = {f.path for f in significant}
-            entity_reg = build_entity_registry_from_store(
-                indexer.vector_store.get_all_chunks(), sig_paths
-            )
-            entity_reg.save(indexer.wiki_path / "entity_registry.json")
-
-            remaining = len(significant) - eager_limit
-            if remaining > 0:
-                logger.info(
-                    "Hybrid mode: %d pages generated eagerly, %d deferred to lazy/drain",
-                    eager_limit,
-                    remaining,
+        match gen_mode:
+            case GenerationMode.LAZY:
+                from local_deepwiki.generators.crosslinks import (
+                    build_entity_registry_from_store,
                 )
-                if config.wiki.prefetch_drain:
-                    from local_deepwiki.generators.lazy_generator import (
-                        get_lazy_generator,
+                from local_deepwiki.generators.wiki_files import (
+                    filter_significant_files,
+                )
+
+                significant = filter_significant_files(
+                    status.files, config.wiki.max_file_docs
+                )
+                sig_paths = {f.path for f in significant}
+                registry = build_entity_registry_from_store(
+                    indexer.vector_store.get_all_chunks(), sig_paths
+                )
+                registry.save(indexer.wiki_path / "entity_registry.json")
+
+                wiki_structure = WikiStructure(root=str(indexer.wiki_path), pages=[])
+
+            case GenerationMode.HYBRID:
+                from local_deepwiki.generators.crosslinks import (
+                    build_entity_registry_from_store,
+                )
+                from local_deepwiki.generators.wiki_files import (
+                    filter_significant_files,
+                )
+
+                eager_limit = config.wiki.hybrid_eager_pages
+                wiki_structure = await generate_wiki(
+                    repo_path=repo_path,
+                    wiki_path=indexer.wiki_path,
+                    vector_store=indexer.vector_store,
+                    index_status=status,
+                    config=config,
+                    llm_provider=llm_provider,
+                    progress_callback=sync_progress_callback,
+                    full_rebuild=full_rebuild,
+                    max_file_pages=eager_limit,
+                )
+
+                significant = filter_significant_files(
+                    status.files, config.wiki.max_file_docs
+                )
+                sig_paths = {f.path for f in significant}
+                entity_reg = build_entity_registry_from_store(
+                    indexer.vector_store.get_all_chunks(), sig_paths
+                )
+                entity_reg.save(indexer.wiki_path / "entity_registry.json")
+
+                remaining = len(significant) - eager_limit
+                if remaining > 0:
+                    logger.info(
+                        "Hybrid mode: %d pages generated eagerly, %d deferred to lazy/drain",
+                        eager_limit,
+                        remaining,
                     )
+                    if config.wiki.prefetch_drain:
+                        from local_deepwiki.generators.lazy_generator import (
+                            get_lazy_generator,
+                        )
 
-                    lazy_gen = get_lazy_generator(indexer.wiki_path, config)
-                    lazy_gen.kickstart_drain()
+                        lazy_gen = get_lazy_generator(indexer.wiki_path, config)
+                        lazy_gen.kickstart_drain()
 
-        else:
-            wiki_structure = await generate_wiki(
-                repo_path=repo_path,
-                wiki_path=indexer.wiki_path,
-                vector_store=indexer.vector_store,
-                index_status=status,
-                config=config,
-                llm_provider=llm_provider,
-                progress_callback=sync_progress_callback,
-                full_rebuild=full_rebuild,
-            )
+            case _:
+                wiki_structure = await generate_wiki(
+                    repo_path=repo_path,
+                    wiki_path=indexer.wiki_path,
+                    vector_store=indexer.vector_store,
+                    index_status=status,
+                    config=config,
+                    llm_provider=llm_provider,
+                    progress_callback=sync_progress_callback,
+                    full_rebuild=full_rebuild,
+                )
 
         if notifier:
             await notifier.update(

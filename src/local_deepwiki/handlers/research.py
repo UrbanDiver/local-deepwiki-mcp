@@ -7,6 +7,8 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Awaitable, Callable
 
+from local_deepwiki.models.foundation import CancellationChecker, ProgressReporter
+
 from mcp.server import Server
 from mcp.types import TextContent
 from pydantic import ValidationError as PydanticValidationError
@@ -191,8 +193,8 @@ def _create_research_pipeline(
 def _create_progress_callbacks(
     ctx: _DeepResearchContext,
 ) -> tuple[
-    Callable[[], bool],
-    Callable[["ResearchProgress"], Awaitable[None]],
+    CancellationChecker,
+    ProgressReporter,
     Callable[[str], Awaitable[None]],
 ]:
     """Create cancellation checker and progress callback functions.
@@ -216,7 +218,9 @@ def _create_progress_callbacks(
             if task and task.cancelled():
                 return True
         except RuntimeError:
-            pass
+            logger.debug(
+                "Failed to check asyncio task cancellation state", exc_info=True
+            )
         return False
 
     async def progress_callback(progress: ResearchProgress) -> None:
@@ -266,8 +270,8 @@ def _create_progress_callbacks(
 async def _execute_research_phases(
     ctx: _DeepResearchContext,
     pipeline: "DeepResearchPipeline",
-    is_cancelled: Callable[[], bool],
-    progress_callback: Callable[["ResearchProgress"], Awaitable[None]],
+    is_cancelled: CancellationChecker,
+    progress_callback: ProgressReporter,
     send_cancellation_notification: Callable[[str], Awaitable[None]],
 ) -> list[TextContent]:
     """Execute the research phases with progress tracking.

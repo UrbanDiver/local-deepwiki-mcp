@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from textwrap import dedent
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class CodeExample:
     """A code example extracted from tests or docstrings.
 

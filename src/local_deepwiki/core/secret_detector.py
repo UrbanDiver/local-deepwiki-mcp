@@ -12,7 +12,6 @@ import re
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
-from typing import Optional
 
 from local_deepwiki.logging import get_logger
 
@@ -62,7 +61,7 @@ _CONFIDENCE_SCORES: dict[SecretType, float] = {
 }
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class SecretFinding:
     """Represents a detected secret in code."""
 

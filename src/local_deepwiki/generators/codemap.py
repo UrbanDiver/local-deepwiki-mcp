@@ -355,6 +355,9 @@ async def suggest_topics(
             cg = extractor.extract_from_file(abs_path, repo)
             combined_cg.update(cg)
         except (OSError, ValueError, RuntimeError):
+            logger.debug(
+                "Failed to extract call graph from %s", file_path, exc_info=True
+            )
             continue
 
     # Index callable chunks by name for quick lookup.

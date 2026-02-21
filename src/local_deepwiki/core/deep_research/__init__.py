@@ -17,10 +17,13 @@ from .checkpoints import (
     get_research_checkpoint,
     list_research_checkpoints,
 )
+from local_deepwiki.models.foundation import (
+    CancellationChecker as CancellationCallback,
+    ProgressReporter as ProgressCallback,
+)
+
 from .pipeline import (
-    CancellationCallback,
     DeepResearchPipeline,
-    ProgressCallback,
     ResearchCancelledError,
 )
 from .reasoning import (

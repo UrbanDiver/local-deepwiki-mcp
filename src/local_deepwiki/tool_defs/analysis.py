@@ -11,7 +11,7 @@ from mcp.types import Tool
 
 from local_deepwiki.tool_defs.annotations import _READ_ONLY
 
-ANALYSIS_TOOLS: list[Tool] = [
+ANALYSIS_TOOLS: tuple[Tool, ...] = (
     Tool(
         name="search_wiki",
         description=(
@@ -333,4 +333,4 @@ ANALYSIS_TOOLS: list[Tool] = [
         },
         annotations=_READ_ONLY,
     ),
-]
+)

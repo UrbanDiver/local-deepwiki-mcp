@@ -130,14 +130,15 @@ class CodeParser:
                 raise ValueError(f"Unsupported language: {language}")
 
             # Some modules have different function names
-            if language == LangEnum.PHP:
-                lang = Language(module.language_php())
-            elif language == LangEnum.TYPESCRIPT:
-                lang = Language(module.language_typescript())
-            elif language == LangEnum.TSX:
-                lang = Language(module.language_tsx())
-            else:
-                lang = Language(module.language())
+            match language:
+                case LangEnum.PHP:
+                    lang = Language(module.language_php())
+                case LangEnum.TYPESCRIPT:
+                    lang = Language(module.language_typescript())
+                case LangEnum.TSX:
+                    lang = Language(module.language_tsx())
+                case _:
+                    lang = Language(module.language())
             self._languages[language] = lang
 
             parser = Parser(lang)
@@ -177,7 +178,7 @@ class CodeParser:
 
         try:
             source = _read_file_content(file_path)
-        except (OSError, IOError) as e:
+        except OSError as e:
             logger.warning("Failed to read file %s: %s", file_path, e)
             return None
 

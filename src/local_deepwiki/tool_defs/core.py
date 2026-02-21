@@ -10,7 +10,7 @@ from mcp.types import Tool
 
 from local_deepwiki.tool_defs.annotations import _READ_ONLY, _STATEFUL, _WRITE_SAFE
 
-CORE_TOOLS: list[Tool] = [
+CORE_TOOLS: tuple[Tool, ...] = (
     Tool(
         name="index_repository",
         description=(
@@ -307,4 +307,4 @@ CORE_TOOLS: list[Tool] = [
         },
         annotations=_WRITE_SAFE,
     ),
-]
+)

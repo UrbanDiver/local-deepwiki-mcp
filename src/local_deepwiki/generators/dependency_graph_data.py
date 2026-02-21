@@ -59,7 +59,7 @@ IMPORT_PATTERNS = {
 _SKIP_DIRS = frozenset({"src", "lib", "pkg", "app", "source", "sources"})
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class DependencyNode:
     """A node in the dependency graph."""
 

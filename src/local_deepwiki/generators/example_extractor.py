@@ -7,6 +7,7 @@ in a codebase, plus a markdown formatter for CodeExample objects.
 
 from __future__ import annotations
 
+import dataclasses
 from pathlib import Path
 from textwrap import dedent
 from typing import TYPE_CHECKING
@@ -226,8 +227,9 @@ class CodeExampleExtractor:
             if chunk.docstring:
                 docstring_examples = parse_docstring_examples(chunk.docstring)
                 for doc_ex in docstring_examples[:max_results]:
-                    doc_ex.entity_name = entity_name
-                    examples.append(doc_ex)
+                    examples.append(
+                        dataclasses.replace(doc_ex, entity_name=entity_name)
+                    )
 
             if len(examples) >= max_results:
                 break

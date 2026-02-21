@@ -275,7 +275,7 @@ async def batch_embed(
         progress.log_progress()
 
     # Sort results by batch index to maintain order
-    results.sort(key=attrgetter("batch_index"))
+    results = sorted(results, key=attrgetter("batch_index"))
 
     # Check for failures and collect errors
     errors: list[tuple[int, Exception]] = []

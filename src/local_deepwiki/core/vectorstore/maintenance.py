@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any, Callable
 
 from local_deepwiki.config import LazyIndexConfig
 from local_deepwiki.logging import get_logger
+from local_deepwiki.models.foundation import LogCallback
 
 from .schema import LatencyStats
 
@@ -156,7 +157,7 @@ class LazyIndexManager:
 
     async def schedule_index_creation(
         self,
-        progress_callback: Callable[[str], None] | None = None,
+        progress_callback: LogCallback | None = None,
     ) -> None:
         """Schedule index creation as a background task.
 
@@ -212,7 +213,7 @@ class LazyIndexManager:
 
     async def create_index_now(
         self,
-        progress_callback: Callable[[str], None] | None = None,
+        progress_callback: LogCallback | None = None,
     ) -> None:
         """Force immediate index creation.
 

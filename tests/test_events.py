@@ -50,26 +50,32 @@ class TestEvent:
 
     def test_create_event(self):
         """Test creating an event."""
-        event = Event(type=EventType.INDEX_START, data={"repo": "/path"})
+        event = Event.create(type=EventType.INDEX_START, data={"repo": "/path"})
         assert event.type == EventType.INDEX_START
         assert event.data == {"repo": "/path"}
         assert event.timestamp > 0
 
     def test_create_event_with_string_type(self):
         """Test creating event with string type converts to enum."""
-        event = Event(type="index.start", data={})  # type: ignore[arg-type]
+        event = Event.create(type="index.start", data={})
         assert event.type == EventType.INDEX_START
 
     def test_event_default_data(self):
         """Test event has empty dict as default data."""
-        event = Event(type=EventType.INDEX_START)
+        event = Event.create(type=EventType.INDEX_START)
         assert event.data == {}
 
     def test_event_timestamp_auto_generated(self):
         """Test event timestamp is auto-generated."""
-        event = Event(type=EventType.INDEX_START)
+        event = Event.create(type=EventType.INDEX_START)
         assert isinstance(event.timestamp, float)
         assert event.timestamp > 0
+
+    def test_event_is_frozen(self):
+        """Test that Event is immutable."""
+        event = Event.create(type=EventType.INDEX_START, data={"key": "value"})
+        with pytest.raises(AttributeError):
+            event.type = EventType.WIKI_START  # type: ignore[misc]
 
 
 class TestHandlerEntry:
@@ -81,7 +87,11 @@ class TestHandlerEntry:
         def sync_handler(_event: Event) -> None:
             pass
 
-        entry = HandlerEntry(handler=sync_handler, priority=0)
+        entry = HandlerEntry(
+            handler=sync_handler,
+            is_async=asyncio.iscoroutinefunction(sync_handler),
+            priority=0,
+        )
         assert entry.is_async is False
 
     def test_async_handler_detection(self):
@@ -90,7 +100,11 @@ class TestHandlerEntry:
         async def async_handler(_event: Event) -> None:
             pass
 
-        entry = HandlerEntry(handler=async_handler, priority=0)
+        entry = HandlerEntry(
+            handler=async_handler,
+            is_async=asyncio.iscoroutinefunction(async_handler),
+            priority=0,
+        )
         assert entry.is_async is True
 
     def test_priority_default(self):
@@ -99,8 +113,21 @@ class TestHandlerEntry:
         def handler(_event: Event) -> None:
             pass
 
-        entry = HandlerEntry(handler=handler)
+        entry = HandlerEntry(
+            handler=handler,
+            is_async=asyncio.iscoroutinefunction(handler),
+        )
         assert entry.priority == 0
+
+    def test_handler_entry_is_frozen(self):
+        """Test that HandlerEntry is immutable."""
+
+        def handler(_event: Event) -> None:
+            pass
+
+        entry = HandlerEntry(handler=handler, is_async=False)
+        with pytest.raises(AttributeError):
+            entry.priority = 99  # type: ignore[misc]
 
 
 class TestEventEmitter:

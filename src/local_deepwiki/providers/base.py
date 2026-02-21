@@ -257,7 +257,7 @@ def handle_api_status_error(
 # =============================================================================
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class LLMProviderCapabilities:
     """Capabilities of an LLM provider."""
 
@@ -270,7 +270,7 @@ class LLMProviderCapabilities:
     supports_vision: bool = False
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class EmbeddingProviderCapabilities:
     """Capabilities of an embedding provider."""
 

@@ -72,7 +72,7 @@ def sort_generators_by_dependencies(
     # Start with generators that have no dependencies
     # Sort by priority (higher first) within each level
     ready = [g for g in generators if in_degree[g.generator_name] == 0]
-    ready.sort(key=attrgetter("priority"), reverse=True)
+    ready = sorted(ready, key=attrgetter("priority"), reverse=True)
 
     sorted_generators: list[WikiGeneratorPlugin] = []
     while ready:

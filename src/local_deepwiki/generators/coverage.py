@@ -170,7 +170,7 @@ async def analyze_project_coverage(
         overall += file_coverage.stats
 
     # Sort by coverage (lowest first)
-    file_coverages.sort(key=attrgetter("stats.coverage_percent"))
+    file_coverages = sorted(file_coverages, key=attrgetter("stats.coverage_percent"))
 
     return overall, file_coverages
 

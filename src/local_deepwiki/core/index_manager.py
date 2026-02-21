@@ -159,9 +159,9 @@ class IndexStatusManager:
                 json.dump(status.model_dump(), f, indent=2)
                 f.flush()
             tmp_path.replace(status_path)
-        except Exception:
-            # Clean up temp file on failure (OSError from write, json errors, etc.)
-            # but do not catch KeyboardInterrupt or SystemExit
+        except (OSError, TypeError, ValueError) as e:
+            # OSError: File write/rename failures
+            # TypeError/ValueError: JSON serialization issues (e.g., non-serializable data)
             tmp_path.unlink(missing_ok=True)
             raise
 

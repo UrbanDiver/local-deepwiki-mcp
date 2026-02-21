@@ -64,7 +64,7 @@ def analyze_staleness(
             stale_info.append(info)
 
     # Sort by days stale (most stale first)
-    stale_info.sort(key=attrgetter("days_stale"), reverse=True)
+    stale_info = sorted(stale_info, key=attrgetter("days_stale"), reverse=True)
 
     return StaleReport(
         total_pages=len([p for p in wiki_status.pages if p.startswith("files/")]),
