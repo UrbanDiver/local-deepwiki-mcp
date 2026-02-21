@@ -155,7 +155,7 @@ class SecretDetector:
         re.compile(r"<[^>]+>"),  # <YOUR_API_KEY>
         re.compile(r"\{[^}]+\}"),  # {your_api_key}
         # Common dummy values
-        re.compile(r"(?i)changeme|replace[-_]?me|insert[-_]?here"),
+        re.compile(r"(?i)changeme|replace[-_]?me|insert[-_]?here|customkey"),
         # Environment variable references
         re.compile(r"\$\{?[A-Z_]+\}?"),  # $API_KEY or ${API_KEY}
         re.compile(r"(?i)process\.env\.[A-Z_]+"),  # process.env.API_KEY
@@ -172,6 +172,11 @@ class SecretDetector:
         # Function/method calls as values (credentials(...), get_token(...), etc.)
         re.compile(r"[:=]\s*[a-zA-Z_][a-zA-Z0-9_.]*\("),
     ]
+
+    # Low-confidence secret types that should be suppressed in test files
+    _LOW_CONFIDENCE_TYPES: frozenset[SecretType] = frozenset(
+        {SecretType.API_KEY, SecretType.GENERIC_TOKEN}
+    )
 
     def scan_content(
         self,
@@ -191,6 +196,7 @@ class SecretDetector:
         """
         findings: list[SecretFinding] = []
         lines = content.split("\n")
+        is_test_file = self._is_test_file(file_path)
 
         for line_num, line in enumerate(lines, start=start_line + 1):
             # Skip empty lines
@@ -204,6 +210,11 @@ class SecretDetector:
 
             # Check each pattern
             for secret_type, pattern in self.PATTERNS.items():
+                # Skip low-confidence patterns in test files — test files
+                # routinely use dummy keys that look real but aren't.
+                if is_test_file and secret_type in self._LOW_CONFIDENCE_TYPES:
+                    continue
+
                 matches = pattern.finditer(line)
 
                 for match in matches:
@@ -230,6 +241,25 @@ class SecretDetector:
                     )
 
         return findings
+
+    @staticmethod
+    def _is_test_file(file_path: str) -> bool:
+        """Check if the file path indicates a test file.
+
+        Args:
+            file_path: Relative or absolute file path.
+
+        Returns:
+            True if the file appears to be a test file.
+        """
+        parts = file_path.replace("\\", "/").split("/")
+        filename = parts[-1] if parts else file_path
+        return (
+            "tests/" in file_path
+            or "test/" in file_path
+            or filename.startswith("test_")
+            or filename.endswith("_test.py")
+        )
 
     def _is_false_positive(self, match: str, full_line: str) -> bool:
         """Check if match is a known false positive.

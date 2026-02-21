@@ -805,3 +805,44 @@ class TestCompoundVariableFalsePositives:
         assert len(findings) >= 1
         secret_types = [f.secret_type for f in findings]
         assert SecretType.GENERIC_TOKEN in secret_types
+
+    def test_dummy_key_with_customkey_not_flagged(self):
+        """Test that keys containing 'customkey' are filtered as dummy values."""
+        detector = SecretDetector()
+        content = 'api_key = "sk-customkey1234567890abcdef"'
+
+        findings = detector.scan_content(content, "config.py")
+
+        assert len(findings) == 0
+
+    def test_test_file_skips_low_confidence_api_key(self):
+        """Test that API_KEY pattern is skipped in test files."""
+        detector = SecretDetector()
+        content = 'api_key="sk-ant-api03-realkey9876543210wxyz"'
+
+        # In a non-test file, this should trigger
+        findings_prod = detector.scan_content(content, "src/config.py")
+        assert len(findings_prod) >= 1
+
+        # In a test file, low-confidence types are suppressed
+        findings_test = detector.scan_content(content, "tests/test_provider.py")
+        assert len(findings_test) == 0
+
+    def test_test_file_still_detects_high_confidence_secrets(self):
+        """Test that high-confidence patterns (AWS, private keys) still trigger in test files."""
+        detector = SecretDetector()
+        content = 'key = "AKIAWR5PROD9N7K2JLMN"'
+
+        findings = detector.scan_content(content, "tests/test_aws.py")
+
+        assert len(findings) >= 1
+        assert any(f.secret_type == SecretType.AWS_KEY for f in findings)
+
+    def test_is_test_file_detection(self):
+        """Test _is_test_file correctly identifies test files."""
+        assert SecretDetector._is_test_file("tests/test_provider.py")
+        assert SecretDetector._is_test_file("test/test_api.py")
+        assert SecretDetector._is_test_file("test_something.py")
+        assert SecretDetector._is_test_file("src/tests/test_util.py")
+        assert not SecretDetector._is_test_file("src/config.py")
+        assert not SecretDetector._is_test_file("src/provider.py")
