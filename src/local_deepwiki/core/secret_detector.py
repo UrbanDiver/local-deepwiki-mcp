@@ -114,8 +114,10 @@ class SecretDetector:
         # PGP private keys
         SecretType.PGP_KEY: re.compile(r"-----BEGIN PGP PRIVATE KEY BLOCK-----"),
         # Generic API key patterns
+        # Negative lookbehind rejects compound names (e.g. old_api_key_manager)
+        # Value must not start with a function call (parenthesis)
         SecretType.API_KEY: re.compile(
-            r"(?i)api[_-]?key\s*[:=]\s*[\"']?[a-zA-Z0-9_\-]{20,}[\"']?"
+            r"(?i)(?<![a-zA-Z_])api[_-]?key\s*[:=]\s*[\"']?(?![a-zA-Z0-9_]*\()[a-zA-Z0-9_\-]{20,}[\"']?"
         ),
         # Database connection URLs with credentials
         SecretType.DATABASE_URL: re.compile(
@@ -132,8 +134,10 @@ class SecretDetector:
             r"(?i)docker[_-]?(?:auth|password|token)\s*[:=]\s*[\"']?[a-zA-Z0-9_\-]{20,}[\"']?"
         ),
         # Generic tokens and secrets
+        # Negative lookbehind rejects compound names (e.g. progress_token, token_config)
+        # Value must not start with a function call (parenthesis)
         SecretType.GENERIC_TOKEN: re.compile(
-            r"(?i)(?:secret|token|password|passwd|pwd)\s*[:=]\s*[\"']?[a-zA-Z0-9_\-!@#$%^&*]{12,}[\"']?"
+            r"(?i)(?<![a-zA-Z_])(?:secret|token|password|passwd|pwd)\s*[:=]\s*[\"']?(?![a-zA-Z0-9_]*\()[a-zA-Z0-9_\-!@#$%^&*]{12,}[\"']?"
         ),
     }
 
@@ -157,6 +161,16 @@ class SecretDetector:
         re.compile(r"(?i)process\.env\.[A-Z_]+"),  # process.env.API_KEY
         re.compile(r"(?i)os\.environ"),  # os.environ
         re.compile(r"(?i)getenv\("),  # getenv()
+        # Compound variable names where keyword is a suffix (progress_token, auth_secret)
+        re.compile(r"(?i)[a-zA-Z_]+_(?:token|secret|password|passwd|pwd|api_key)\b"),
+        # Compound variable names where keyword is a prefix (token_config, secret_manager)
+        re.compile(r"(?i)\b(?:token|secret|password|passwd|pwd)_[a-zA-Z_]+\b"),
+        # Type annotations (: str, : int, : Optional[, : str | None, etc.)
+        re.compile(
+            r":\s*(?:str|int|float|bool|bytes|None|Optional\[|Union\[|list\[|dict\[|str\s*\|)"
+        ),
+        # Function/method calls as values (credentials(...), get_token(...), etc.)
+        re.compile(r"[:=]\s*[a-zA-Z_][a-zA-Z0-9_.]*\("),
     ]
 
     def scan_content(

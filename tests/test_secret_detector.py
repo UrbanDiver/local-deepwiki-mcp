@@ -682,3 +682,126 @@ class TestEdgeCases:
 
         # Should find secrets in py and txt but not md
         assert len(findings) == 2
+
+
+class TestCompoundVariableFalsePositives:
+    """Tests for false positives on compound variable names and type annotations.
+
+    Ensures the detector does not flag legitimate variable names like
+    progress_token, token_config, or function call values like
+    api_key=credentials(...).
+    """
+
+    def test_progress_token_assignment_not_flagged(self):
+        """Test that progress_token = token does NOT trigger detection."""
+        detector = SecretDetector()
+        content = "progress_token = token"
+
+        findings = detector.scan_content(content, "handler.py")
+
+        assert len(findings) == 0
+
+    def test_self_progress_token_type_annotation_not_flagged(self):
+        """Test that self.progress_token: str | int | None = None does NOT trigger."""
+        detector = SecretDetector()
+        content = "self.progress_token: str | int | None = None"
+
+        findings = detector.scan_content(content, "handler.py")
+
+        assert len(findings) == 0
+
+    def test_api_key_equals_credentials_call_not_flagged(self):
+        """Test that api_key=credentials(...) does NOT trigger detection."""
+        detector = SecretDetector()
+        content = 'api_key=credentials("service_name")'
+
+        findings = detector.scan_content(content, "config.py")
+
+        assert len(findings) == 0
+
+    def test_token_config_method_call_not_flagged(self):
+        """Test that token_config.set(config) does NOT trigger detection."""
+        detector = SecretDetector()
+        content = "token_config.set(config)"
+
+        findings = detector.scan_content(content, "settings.py")
+
+        assert len(findings) == 0
+
+    def test_access_token_url_not_flagged(self):
+        """Test that access_token_url assignment does NOT trigger."""
+        detector = SecretDetector()
+        content = 'access_token_url = "https://oauth.provider.com/token"'
+
+        findings = detector.scan_content(content, "oauth.py")
+
+        assert len(findings) == 0
+
+    def test_secret_manager_not_flagged(self):
+        """Test that secret_manager variable does NOT trigger."""
+        detector = SecretDetector()
+        content = "secret_manager = SecretManager()"
+
+        findings = detector.scan_content(content, "app.py")
+
+        assert len(findings) == 0
+
+    def test_password_hash_not_flagged(self):
+        """Test that password_hash variable does NOT trigger."""
+        detector = SecretDetector()
+        content = "password_hash = bcrypt.hash(raw_input)"
+
+        findings = detector.scan_content(content, "auth.py")
+
+        assert len(findings) == 0
+
+    def test_token_type_annotation_optional_not_flagged(self):
+        """Test that token: Optional[str] = None does NOT trigger."""
+        detector = SecretDetector()
+        content = "token: Optional[str] = None"
+
+        findings = detector.scan_content(content, "models.py")
+
+        assert len(findings) == 0
+
+    def test_real_generic_token_still_triggers(self):
+        """Test that a real hardcoded token STILL triggers detection."""
+        detector = SecretDetector()
+        content = 'token = "sk-proj-abc123def456ghi789"'
+
+        findings = detector.scan_content(content, "config.py")
+
+        assert len(findings) >= 1
+        secret_types = [f.secret_type for f in findings]
+        assert SecretType.GENERIC_TOKEN in secret_types
+
+    def test_real_api_key_still_triggers(self):
+        """Test that a real hardcoded API key STILL triggers detection."""
+        detector = SecretDetector()
+        content = 'api_key = "sk-proj-abc123def456ghi789jkl012"'
+
+        findings = detector.scan_content(content, "config.py")
+
+        assert len(findings) >= 1
+        secret_types = [f.secret_type for f in findings]
+        assert SecretType.API_KEY in secret_types
+
+    def test_real_token_with_quotes_still_triggers(self):
+        """Test that token = 'long_literal_value' STILL triggers."""
+        detector = SecretDetector()
+        content = "token = 'a1b2c3d4e5f6g7h8i9j0k1l2'"
+
+        findings = detector.scan_content(content, "config.py")
+
+        assert len(findings) >= 1
+
+    def test_password_with_literal_value_still_triggers(self):
+        """Test that password = 'hardcoded_value' STILL triggers."""
+        detector = SecretDetector()
+        content = "password = 'Sup3rS3cur3P4ssw0rd!'"
+
+        findings = detector.scan_content(content, "settings.py")
+
+        assert len(findings) >= 1
+        secret_types = [f.secret_type for f in findings]
+        assert SecretType.GENERIC_TOKEN in secret_types
