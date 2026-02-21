@@ -12,6 +12,23 @@ from typing import Any, AsyncIterator, Callable
 from local_deepwiki.errors import BaseProviderError
 from local_deepwiki.logging import get_logger
 
+__all__ = [
+    "EmbeddingProvider",
+    "EmbeddingProviderCapabilities",
+    "LLMProvider",
+    "LLMProviderCapabilities",
+    "ProviderAuthenticationError",
+    "ProviderConfigurationError",
+    "ProviderConnectionError",
+    "ProviderError",
+    "ProviderModelNotFoundError",
+    "ProviderRateLimitError",
+    "RETRYABLE_EXCEPTIONS",
+    "handle_api_status_error",
+    "validate_provider_credentials",
+    "with_retry",
+]
+
 logger = get_logger(__name__)
 
 

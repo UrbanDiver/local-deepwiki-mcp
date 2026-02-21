@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import sys
+from functools import singledispatchmethod
 from pathlib import Path
 from typing import TypeVar
 
@@ -93,6 +94,7 @@ class PluginRegistry:
         plugin.initialize()
         logger.info("Registered embedding provider plugin: %s", plugin.metadata)
 
+    @singledispatchmethod
     def register(self, plugin: Plugin) -> None:
         """Register a plugin based on its type.
 
@@ -102,14 +104,19 @@ class PluginRegistry:
         Raises:
             TypeError: If plugin type is not recognized.
         """
-        if isinstance(plugin, LanguageParserPlugin):
-            self.register_language_parser(plugin)
-        elif isinstance(plugin, WikiGeneratorPlugin):
-            self.register_wiki_generator(plugin)
-        elif isinstance(plugin, EmbeddingProviderPlugin):
-            self.register_embedding_provider(plugin)
-        else:
-            raise TypeError(f"Unknown plugin type: {type(plugin)}")
+        raise TypeError(f"Unknown plugin type: {type(plugin)}")
+
+    @register.register
+    def _(self, plugin: LanguageParserPlugin) -> None:
+        self.register_language_parser(plugin)
+
+    @register.register
+    def _(self, plugin: WikiGeneratorPlugin) -> None:
+        self.register_wiki_generator(plugin)
+
+    @register.register
+    def _(self, plugin: EmbeddingProviderPlugin) -> None:
+        self.register_embedding_provider(plugin)
 
     def unregister_language_parser(self, name: str) -> bool:
         """Unregister a language parser plugin.

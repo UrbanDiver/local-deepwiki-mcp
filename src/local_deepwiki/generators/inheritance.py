@@ -114,12 +114,11 @@ def generate_inheritance_diagram(
     """
     # Filter to classes that have INTERNAL inheritance relationships
     # (parent or child is also in our codebase)
-    classes_with_internal_inheritance = {}
-    for name, node in classes.items():
-        has_internal_parent = any(p in classes for p in node.parents)
-        has_children = bool(node.children)
-        if has_internal_parent or has_children:
-            classes_with_internal_inheritance[name] = node
+    classes_with_internal_inheritance = {
+        name: node
+        for name, node in classes.items()
+        if any(p in classes for p in node.parents) or node.children
+    }
 
     if not classes_with_internal_inheritance:
         return None
@@ -247,12 +246,11 @@ async def generate_inheritance_page(
         return None
 
     # Filter to classes with INTERNAL inheritance relationships
-    classes_with_inheritance = {}
-    for name, node in classes.items():
-        has_internal_parent = any(p in classes for p in node.parents)
-        has_children = bool(node.children)
-        if has_internal_parent or has_children:
-            classes_with_inheritance[name] = node
+    classes_with_inheritance = {
+        name: node
+        for name, node in classes.items()
+        if any(p in classes for p in node.parents) or node.children
+    }
 
     if not classes_with_inheritance:
         return None

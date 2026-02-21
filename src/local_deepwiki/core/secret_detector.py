@@ -42,6 +42,19 @@ class SecretType(StrEnum):
     SSH_KEY = "ssh_key"
     PGP_KEY = "pgp_key"
 
+    @property
+    def confidence(self) -> float:
+        """Base confidence score for this secret type."""
+        return _CONFIDENCE_SCORES.get(self, 0.75)
+
+    @property
+    def recommendation(self) -> str:
+        """Remediation recommendation for this secret type."""
+        return _RECOMMENDATIONS.get(
+            self,
+            f"Review and rotate {self.value} if genuine. Use environment variables or secrets manager.",
+        )
+
 
 _CONFIDENCE_SCORES: dict[SecretType, float] = {
     SecretType.PRIVATE_KEY: 0.98,
@@ -58,6 +71,64 @@ _CONFIDENCE_SCORES: dict[SecretType, float] = {
     SecretType.DOCKER_AUTH: 0.75,
     SecretType.API_KEY: 0.70,
     SecretType.GENERIC_TOKEN: 0.70,
+}
+
+_RECOMMENDATIONS: dict[SecretType, str] = {
+    SecretType.AWS_KEY: (
+        "Rotate AWS access key immediately via IAM console. "
+        "Check CloudTrail for unauthorized access. Use IAM roles or environment variables instead."
+    ),
+    SecretType.AWS_SECRET: (
+        "Rotate AWS secret access key immediately. "
+        "Use AWS Secrets Manager or environment variables."
+    ),
+    SecretType.PRIVATE_KEY: (
+        "Rotate private key immediately and revoke associated certificate. "
+        "Never commit private keys to version control."
+    ),
+    SecretType.SSH_KEY: (
+        "Generate new SSH key pair and update authorized_keys. "
+        "Remove compromised key from all servers."
+    ),
+    SecretType.PGP_KEY: (
+        "Revoke PGP key and generate new key pair. "
+        "Update key servers with revocation certificate."
+    ),
+    SecretType.GITHUB_TOKEN: (
+        "Revoke GitHub token immediately in Settings > Developer settings > Personal access tokens. "
+        "Generate new token with minimal required scopes."
+    ),
+    SecretType.GITLAB_TOKEN: (
+        "Revoke GitLab token in User Settings > Access Tokens. "
+        "Create new token with appropriate expiration."
+    ),
+    SecretType.SLACK_TOKEN: (
+        "Revoke Slack token in your Slack app settings. "
+        "Regenerate token and update configuration."
+    ),
+    SecretType.DATABASE_URL: (
+        "Change database password immediately. "
+        "Update connection strings in all environments. Use secrets management."
+    ),
+    SecretType.AZURE_KEY: (
+        "Rotate Azure key in Azure Portal. Use Azure Key Vault for secret management."
+    ),
+    SecretType.GOOGLE_KEY: (
+        "Regenerate Google API key in Google Cloud Console. "
+        "Apply API key restrictions for security."
+    ),
+    SecretType.DOCKER_AUTH: (
+        "Rotate Docker credentials. "
+        "Use Docker credential helpers or secrets management."
+    ),
+    SecretType.API_KEY: (
+        "Rotate API key with the service provider. "
+        "Use environment variables or secrets manager instead of hardcoding."
+    ),
+    SecretType.GENERIC_TOKEN: (
+        "Review and rotate this credential if it's a real secret. "
+        "Move to environment variables or secrets manager."
+    ),
 }
 
 
@@ -293,7 +364,7 @@ class SecretDetector:
         Returns:
             Confidence score between 0.0 and 1.0.
         """
-        return _CONFIDENCE_SCORES.get(secret_type, 0.75)
+        return secret_type.confidence
 
     @staticmethod
     def _get_recommendation(secret_type: SecretType) -> str:
@@ -305,68 +376,7 @@ class SecretDetector:
         Returns:
             Recommendation string for remediation.
         """
-        recommendations = {
-            SecretType.AWS_KEY: (
-                "Rotate AWS access key immediately via IAM console. "
-                "Check CloudTrail for unauthorized access. Use IAM roles or environment variables instead."
-            ),
-            SecretType.AWS_SECRET: (
-                "Rotate AWS secret access key immediately. "
-                "Use AWS Secrets Manager or environment variables."
-            ),
-            SecretType.PRIVATE_KEY: (
-                "Rotate private key immediately and revoke associated certificate. "
-                "Never commit private keys to version control."
-            ),
-            SecretType.SSH_KEY: (
-                "Generate new SSH key pair and update authorized_keys. "
-                "Remove compromised key from all servers."
-            ),
-            SecretType.PGP_KEY: (
-                "Revoke PGP key and generate new key pair. "
-                "Update key servers with revocation certificate."
-            ),
-            SecretType.GITHUB_TOKEN: (
-                "Revoke GitHub token immediately in Settings > Developer settings > Personal access tokens. "
-                "Generate new token with minimal required scopes."
-            ),
-            SecretType.GITLAB_TOKEN: (
-                "Revoke GitLab token in User Settings > Access Tokens. "
-                "Create new token with appropriate expiration."
-            ),
-            SecretType.SLACK_TOKEN: (
-                "Revoke Slack token in your Slack app settings. "
-                "Regenerate token and update configuration."
-            ),
-            SecretType.DATABASE_URL: (
-                "Change database password immediately. "
-                "Update connection strings in all environments. Use secrets management."
-            ),
-            SecretType.AZURE_KEY: (
-                "Rotate Azure key in Azure Portal. "
-                "Use Azure Key Vault for secret management."
-            ),
-            SecretType.GOOGLE_KEY: (
-                "Regenerate Google API key in Google Cloud Console. "
-                "Apply API key restrictions for security."
-            ),
-            SecretType.DOCKER_AUTH: (
-                "Rotate Docker credentials. "
-                "Use Docker credential helpers or secrets management."
-            ),
-            SecretType.API_KEY: (
-                "Rotate API key with the service provider. "
-                "Use environment variables or secrets manager instead of hardcoding."
-            ),
-            SecretType.GENERIC_TOKEN: (
-                "Review and rotate this credential if it's a real secret. "
-                "Move to environment variables or secrets manager."
-            ),
-        }
-        return recommendations.get(
-            secret_type,
-            f"Review and rotate {secret_type.value} if genuine. Use environment variables or secrets manager.",
-        )
+        return secret_type.recommendation
 
     @staticmethod
     def _create_safe_context(line: str, match: re.Match) -> str:
