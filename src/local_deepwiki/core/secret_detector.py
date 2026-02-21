@@ -231,10 +231,8 @@ class SecretDetector:
         re.compile(r"(?i)process\.env\.[A-Z_]+"),  # process.env.API_KEY
         re.compile(r"(?i)os\.environ"),  # os.environ
         re.compile(r"(?i)getenv\("),  # getenv()
-        # Compound variable names where keyword is a suffix (progress_token, auth_secret)
-        re.compile(r"(?i)[a-zA-Z_]+_(?:token|secret|password|passwd|pwd|api_key)\b"),
-        # Compound variable names where keyword is a prefix (token_config, secret_manager)
-        re.compile(r"(?i)\b(?:token|secret|password|passwd|pwd)_[a-zA-Z_]+\b"),
+        # NOTE: compound variable name patterns (_COMPOUND_NAME_PATTERNS) are
+        # checked separately and only for low-confidence secret types.
         # Type annotations (: str, : int, : Optional[, : str | None, etc.)
         re.compile(
             r":\s*(?:str|int|float|bool|bytes|None|Optional\[|Union\[|list\[|dict\[|str\s*\|)"
@@ -247,6 +245,15 @@ class SecretDetector:
     _LOW_CONFIDENCE_TYPES: frozenset[SecretType] = frozenset(
         {SecretType.API_KEY, SecretType.GENERIC_TOKEN}
     )
+
+    # Compound variable name patterns — only applied to low-confidence types
+    # to avoid suppressing high-confidence matches (e.g. ghp_* in GITHUB_TOKEN)
+    _COMPOUND_NAME_PATTERNS: list[re.Pattern] = [
+        # Compound variable names where keyword is a suffix (progress_token, auth_secret)
+        re.compile(r"(?i)[a-zA-Z_]+_(?:token|secret|password|passwd|pwd|api_key)\b"),
+        # Compound variable names where keyword is a prefix (token_config, secret_manager)
+        re.compile(r"(?i)\b(?:token|secret|password|passwd|pwd)_[a-zA-Z_]+\b"),
+    ]
 
     def scan_content(
         self,
@@ -291,7 +298,7 @@ class SecretDetector:
                     matched_text = match.group()
 
                     # Check false positives
-                    if self._is_false_positive(matched_text, line):
+                    if self._is_false_positive(matched_text, line, secret_type):
                         continue
 
                     # Create truncated context (hide actual secret)
@@ -331,12 +338,15 @@ class SecretDetector:
             or filename.endswith("_test.py")
         )
 
-    def _is_false_positive(self, match: str, full_line: str) -> bool:
+    def _is_false_positive(
+        self, match: str, full_line: str, secret_type: SecretType
+    ) -> bool:
         """Check if match is a known false positive.
 
         Args:
             match: The matched secret pattern.
             full_line: The full line containing the match.
+            secret_type: The type of secret that was matched.
 
         Returns:
             True if this appears to be a false positive.
@@ -350,6 +360,14 @@ class SecretDetector:
         for pattern in self.FALSE_POSITIVES:
             if pattern.search(full_line):
                 return True
+
+        # Compound variable name patterns only suppress low-confidence types
+        # (e.g. GENERIC_TOKEN, API_KEY) to avoid filtering out high-confidence
+        # matches like ghp_* found in a line containing "GITHUB_TOKEN = ..."
+        if secret_type in self._LOW_CONFIDENCE_TYPES:
+            for pattern in self._COMPOUND_NAME_PATTERNS:
+                if pattern.search(full_line):
+                    return True
 
         return False
 
