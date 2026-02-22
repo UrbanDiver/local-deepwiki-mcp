@@ -6,7 +6,7 @@ modules into reusable helpers.
 
 from __future__ import annotations
 
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from local_deepwiki.errors import ValidationError, path_not_found_error
 from local_deepwiki.logging import get_logger
@@ -75,6 +75,35 @@ def validate_sub_path(
             value=value if value is not None else sub_path,
         )
     return resolved
+
+
+_TEST_DIR_NAMES = frozenset({"tests", "test", "testing", "spec", "specs"})
+
+
+def is_test_file(path: str, *, check_filename: bool = True) -> bool:
+    """Check if a file path looks like a test file.
+
+    Args:
+        path: File path (relative or absolute, POSIX or Windows).
+        check_filename: When True, also match filename patterns like
+            ``test_*``, ``*_test.py``, and ``conftest*``.  Set to False
+            to only check directory membership.
+
+    Returns:
+        True if the file appears to be a test file.
+    """
+    parts = PurePosixPath(path.replace("\\", "/")).parts
+    if any(p in _TEST_DIR_NAMES for p in parts):
+        return True
+    if check_filename:
+        name = parts[-1] if parts else path
+        if (
+            name.startswith("test_")
+            or name.endswith("_test.py")
+            or name.startswith("conftest")
+        ):
+            return True
+    return False
 
 
 def find_deepwiki_dirs(base_path: Path | None = None) -> list[Path]:

@@ -26,6 +26,7 @@ from pydantic import ValidationError as PydanticValidationError
 from local_deepwiki.config import get_config
 from local_deepwiki.core.audit import get_audit_logger
 from local_deepwiki.core.indexer import RepositoryIndexer
+from local_deepwiki.core.path_utils import is_test_file
 from local_deepwiki.core.rate_limiter import RateLimitExceeded, get_rate_limiter
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.errors import (
@@ -155,20 +156,11 @@ FORBIDDEN_VAR_SUBDIRS = frozenset(
 
 
 def _is_test_file(file_path: str) -> bool:
-    """Check if a file path looks like a test file."""
-    parts = Path(file_path).parts
-    name = Path(file_path).name
-    # Common test directory names
-    if any(p in ("tests", "test", "testing", "spec", "specs") for p in parts):
-        return True
-    # Common test file patterns
-    if (
-        name.startswith("test_")
-        or name.endswith("_test.py")
-        or name.startswith("conftest")
-    ):
-        return True
-    return False
+    """Check if a file path looks like a test file.
+
+    Delegates to :func:`local_deepwiki.core.path_utils.is_test_file`.
+    """
+    return is_test_file(file_path, check_filename=True)
 
 
 def _check_forbidden_dirs(

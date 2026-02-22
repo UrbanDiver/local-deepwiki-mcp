@@ -13,6 +13,8 @@ from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 
+from local_deepwiki.core.path_utils import is_test_file
+
 from local_deepwiki.logging import get_logger
 
 logger = get_logger(__name__)
@@ -323,20 +325,9 @@ class SecretDetector:
     def _is_test_file(file_path: str) -> bool:
         """Check if the file path indicates a test file.
 
-        Args:
-            file_path: Relative or absolute file path.
-
-        Returns:
-            True if the file appears to be a test file.
+        Delegates to :func:`local_deepwiki.core.path_utils.is_test_file`.
         """
-        parts = file_path.replace("\\", "/").split("/")
-        filename = parts[-1] if parts else file_path
-        return (
-            "tests/" in file_path
-            or "test/" in file_path
-            or filename.startswith("test_")
-            or filename.endswith("_test.py")
-        )
+        return is_test_file(file_path, check_filename=True)
 
     def _is_false_positive(
         self, match: str, full_line: str, secret_type: SecretType

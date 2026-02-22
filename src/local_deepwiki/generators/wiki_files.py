@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, TypeAlias
 
 from local_deepwiki.config import Config
 from local_deepwiki.core.git_utils import get_repo_info
+from local_deepwiki.core.path_utils import is_test_file
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.generators.api_docs import get_file_api_docs
 from local_deepwiki.generators.callgraph import get_file_call_graph, get_file_callers
@@ -400,19 +401,10 @@ class FileDocContext:
 def _is_test_file(path: str) -> bool:
     """Check if a file is in a test directory.
 
-    Only checks directory membership, not filename patterns, because files like
-    ``src/test_examples.py`` may be legitimate source files.
-
-    Args:
-        path: File path to check.
-
-    Returns:
-        True if file is inside a common test directory.
+    Delegates to :func:`local_deepwiki.core.path_utils.is_test_file`
+    with ``check_filename=False`` (directory membership only).
     """
-    from pathlib import PurePosixPath
-
-    parts = PurePosixPath(path).parts
-    return any(p in ("tests", "test", "testing", "spec", "specs") for p in parts)
+    return is_test_file(path, check_filename=False)
 
 
 def filter_significant_files(files: list[FileInfo], max_files: int) -> list[FileInfo]:
