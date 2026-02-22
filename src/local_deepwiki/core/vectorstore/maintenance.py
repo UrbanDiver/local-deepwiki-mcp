@@ -5,8 +5,9 @@ from __future__ import annotations
 import asyncio
 import math
 import threading
+from collections.abc import Callable
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from local_deepwiki.config import LazyIndexConfig
 from local_deepwiki.logging import get_logger

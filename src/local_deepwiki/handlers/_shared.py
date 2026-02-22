@@ -6,9 +6,10 @@ import asyncio
 import json
 import time
 import uuid
+from collections.abc import Awaitable, Callable
 from functools import wraps
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Awaitable, Callable, TypeAlias
+from typing import TYPE_CHECKING, Any, TypeAlias
 
 if TYPE_CHECKING:
     from local_deepwiki.core.deep_research import DeepResearchPipeline

@@ -10,7 +10,8 @@ import asyncio
 import json
 import queue
 import threading
-from typing import Any, AsyncIterator, Callable, Iterator
+from collections.abc import AsyncIterator, Callable, Iterator
+from typing import Any
 
 from flask import Blueprint, Response, abort, jsonify, render_template, request
 

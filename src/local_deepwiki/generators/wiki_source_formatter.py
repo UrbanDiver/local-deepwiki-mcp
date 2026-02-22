@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from operator import attrgetter
 from pathlib import Path
-from typing import Callable
 
 from local_deepwiki.core.git_utils import (
     GitRepoInfo,

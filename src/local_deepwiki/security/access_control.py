@@ -8,10 +8,11 @@ from __future__ import annotations
 
 import asyncio
 import threading
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
 from functools import wraps
-from typing import Callable, TypeVar
+from typing import TypeVar
 
 # Type variable for decorators
 F = TypeVar("F", bound=Callable)

@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import asyncio
+import fnmatch
+import os
+import re
 import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
@@ -14,8 +17,6 @@ from local_deepwiki.core.index_manager import (
     CURRENT_SCHEMA_VERSION,
     INDEX_STATUS_FILE,
     IndexStatusManager,
-    _migrate_status,
-    _needs_migration,
 )
 from local_deepwiki.core.parser import ASTCache, CodeParser
 from local_deepwiki.core.secret_detector import scan_repository_for_secrets
@@ -38,14 +39,11 @@ class ParseResult:
     error: str | None = None
 
 
-# Re-export for backward compatibility - these are now defined in index_manager
 __all__ = [
     "CURRENT_SCHEMA_VERSION",
     "INDEX_STATUS_FILE",
     "ParseResult",
     "RepositoryIndexer",
-    "_migrate_status",
-    "_needs_migration",
 ]
 
 
@@ -109,9 +107,6 @@ class RepositoryIndexer:
 
     def _compile_exclude_patterns(self) -> None:
         """Pre-compile exclude patterns from config into skip_dirs and regexes."""
-        import fnmatch
-        import re
-
         for pattern in self.config.parsing.exclude_patterns:
             if pattern.endswith("/**"):
                 self._exclude_skip_dirs.add(pattern[:-3])
@@ -707,8 +702,6 @@ class RepositoryIndexer:
         Returns:
             List of paths to source files.
         """
-        import os
-
         files = []
         max_size = self.config.parsing.max_file_size
         skip_dirs = self._exclude_skip_dirs

@@ -8,11 +8,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from local_deepwiki.config import ASTCacheConfig, ChunkingConfig, Config, ParsingConfig
+from local_deepwiki.core.index_manager import _migrate_status, _needs_migration
 from local_deepwiki.core.indexer import (
     CURRENT_SCHEMA_VERSION,
     RepositoryIndexer,
-    _migrate_status,
-    _needs_migration,
 )
 from local_deepwiki.core.parser import ASTCache
 from local_deepwiki.models import ChunkType, CodeChunk, FileInfo, IndexStatus, Language

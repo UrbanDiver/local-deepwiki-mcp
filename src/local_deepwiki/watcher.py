@@ -7,11 +7,12 @@ import asyncio
 import fnmatch
 import sys
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from threading import Lock, Timer
-from typing import TYPE_CHECKING, Callable, TypeAlias
+from typing import TYPE_CHECKING, TypeAlias
 
 from rich.console import Console
 from watchdog.events import FileSystemEvent, FileSystemEventHandler

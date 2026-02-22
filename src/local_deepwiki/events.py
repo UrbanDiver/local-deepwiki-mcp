@@ -8,10 +8,11 @@ from __future__ import annotations
 
 import asyncio
 import uuid
+from collections.abc import Callable, Coroutine
 from dataclasses import dataclass, field
 from enum import StrEnum
 from operator import attrgetter
-from typing import Any, Callable, Coroutine, TypeAlias
+from typing import Any, TypeAlias
 
 from local_deepwiki.logging import get_logger
 

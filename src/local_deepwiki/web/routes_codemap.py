@@ -11,7 +11,7 @@ import asyncio
 import json
 import re
 import subprocess
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
 
 from flask import Blueprint, Response, abort, jsonify, render_template, request
 

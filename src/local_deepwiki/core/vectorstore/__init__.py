@@ -7,7 +7,11 @@ Split into multiple modules for maintainability while preserving backward compat
 from __future__ import annotations
 
 # Re-export all public names for backward compatibility
-from local_deepwiki.core.vectorstore.cache import AdaptiveSearcher, SearchCache, SearchCacheEntry
+from local_deepwiki.core.vectorstore.cache import (
+    AdaptiveSearcher,
+    SearchCache,
+    SearchCacheEntry,
+)
 from local_deepwiki.core.vectorstore.iterators import ChunkIterator, LazyChunkLoader
 from local_deepwiki.core.vectorstore.maintenance import LazyIndexManager
 from local_deepwiki.core.vectorstore.schema import (
@@ -60,6 +64,7 @@ __all__ = [
     "LazyIndexManager",
     # Utils
     "RateLimiter",
+    # Underscore-prefixed names exposed for test access only
     "_sanitize_string_value",
     "_row_to_chunk_default",
 ]

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 from local_deepwiki.config import LLMCacheConfig, LLMConfig, get_config
 from local_deepwiki.providers.base import EmbeddingProvider, LLMProvider

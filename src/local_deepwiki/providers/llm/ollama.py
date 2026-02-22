@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import AsyncIterator, cast
+from collections.abc import AsyncIterator
+from typing import cast
 
 from ollama import AsyncClient, ResponseError
 

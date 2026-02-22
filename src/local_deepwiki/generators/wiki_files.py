@@ -5,9 +5,10 @@ from __future__ import annotations
 import asyncio
 import re
 import time
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Awaitable, Callable, TypeAlias
+from typing import TYPE_CHECKING, TypeAlias
 
 from local_deepwiki.config import Config
 from local_deepwiki.core.git_utils import get_repo_info
@@ -52,6 +53,7 @@ logger = get_logger(__name__)
 
 # Re-export extracted helpers so existing imports continue to work
 __all__ = [
+    # Underscore-prefixed names exposed for test access only
     "_ChunkMaps",
     "_append_unused_chunks",
     "_build_chunk_maps",
