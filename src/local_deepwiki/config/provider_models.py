@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Literal
-
 from pydantic import BaseModel, Field
+
+from local_deepwiki.models.provider_types import EmbeddingProviderType, LLMProviderType
 
 
 class LocalEmbeddingConfig(BaseModel):
@@ -35,8 +35,8 @@ class EmbeddingConfig(BaseModel):
 
     model_config = {"frozen": True}
 
-    provider: Literal["local", "openai"] = Field(
-        default="local", description="Embedding provider"
+    provider: EmbeddingProviderType = Field(
+        default=EmbeddingProviderType.LOCAL, description="Embedding provider"
     )
     local: LocalEmbeddingConfig = Field(default_factory=LocalEmbeddingConfig)
     openai: OpenAIEmbeddingConfig = Field(default_factory=OpenAIEmbeddingConfig)
@@ -76,8 +76,8 @@ class LLMConfig(BaseModel):
 
     model_config = {"frozen": True}
 
-    provider: Literal["ollama", "anthropic", "openai"] = Field(
-        default="ollama", description="LLM provider"
+    provider: LLMProviderType = Field(
+        default=LLMProviderType.OLLAMA, description="LLM provider"
     )
     ollama: OllamaConfig = Field(default_factory=OllamaConfig)
     anthropic: AnthropicConfig = Field(default_factory=AnthropicConfig)

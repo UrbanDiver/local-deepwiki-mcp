@@ -13,6 +13,8 @@ from typing import Any, Generator
 import yaml
 from pydantic import BaseModel
 
+from local_deepwiki.models.provider_types import EmbeddingProviderType, LLMProviderType
+
 from .models import Config
 
 # Thread-safe global config singleton
@@ -451,19 +453,19 @@ def validate_config(config: Config) -> list[str]:
     warnings: list[str] = []
 
     # Check embedding configuration
-    if config.embedding.provider == "openai":
+    if config.embedding.provider == EmbeddingProviderType.OPENAI:
         if not os.environ.get("OPENAI_API_KEY"):
             warnings.append(
                 "OpenAI embedding provider selected but OPENAI_API_KEY not set"
             )
 
     # Check LLM configuration
-    if config.llm.provider == "anthropic":
+    if config.llm.provider == LLMProviderType.ANTHROPIC:
         if not os.environ.get("ANTHROPIC_API_KEY"):
             warnings.append(
                 "Anthropic LLM provider selected but ANTHROPIC_API_KEY not set"
             )
-    elif config.llm.provider == "openai":
+    elif config.llm.provider == LLMProviderType.OPENAI:
         if not os.environ.get("OPENAI_API_KEY"):
             warnings.append("OpenAI LLM provider selected but OPENAI_API_KEY not set")
 

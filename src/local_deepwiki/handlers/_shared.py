@@ -44,6 +44,7 @@ from local_deepwiki.errors import (
     sanitize_error_message,
 )
 from local_deepwiki.generators.wiki import generate_wiki
+from local_deepwiki.handlers.types import ResearchResult
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import (
     AnalyzeDiffArgs,
@@ -381,7 +382,7 @@ def _create_vector_store(repo_path: Path, config: Any) -> VectorStore:
     return VectorStore(config.get_vector_db_path(repo_path), embedding_provider)
 
 
-def _format_research_results(result: "DeepResearchResult") -> dict[str, Any]:
+def _format_research_results(result: "DeepResearchResult") -> ResearchResult:
     """Format the research results for return.
 
     Args:

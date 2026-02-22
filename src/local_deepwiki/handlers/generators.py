@@ -11,6 +11,7 @@ from mcp.types import TextContent
 from pydantic import ValidationError as PydanticValidationError
 
 from local_deepwiki.core.path_utils import find_deepwiki_dirs, validate_file_in_repo
+from local_deepwiki.handlers.types import SecretScanResult
 from local_deepwiki.handlers._shared import (
     DetectSecretsArgs,
     DetectStaleDocsArgs,
@@ -507,7 +508,7 @@ async def handle_detect_secrets(args: dict[str, Any]) -> list[TextContent]:
 
     total_findings = sum(len(findings) for findings in findings_by_file.values())
 
-    result = {
+    result: SecretScanResult = {
         "status": "success",
         "files_with_secrets": len(findings_by_file),
         "total_findings": total_findings,

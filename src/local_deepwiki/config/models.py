@@ -38,6 +38,7 @@ from local_deepwiki.config.provider_models import (
     OpenAIEmbeddingConfig,
     OpenAILLMConfig,
 )
+from local_deepwiki.models.provider_types import EmbeddingProviderType, LLMProviderType
 
 
 class ResearchPreset(StrEnum):
@@ -669,7 +670,7 @@ class Config(BaseModel):
         base_batch_size = self.embedding_batch.batch_size
 
         # Local providers can handle larger batches
-        if self.embedding.provider == "local":
+        if self.embedding.provider == EmbeddingProviderType.LOCAL:
             # Local models benefit from larger batches for throughput
             return min(base_batch_size, 200)
         else:
@@ -708,13 +709,15 @@ class Config(BaseModel):
         base_concurrency = self.wiki.max_concurrent_llm_calls
 
         # Local models: single GPU, limit to 2-3 to avoid OOM/thrashing
-        if self.llm.provider == "ollama":
+        if self.llm.provider == LLMProviderType.OLLAMA:
             return min(base_concurrency, 3)
 
         # Cloud providers: allow higher concurrency, cap at configured limit
         return base_concurrency
 
-    def with_embedding_provider(self, provider: Literal["local", "openai"]) -> "Config":
+    def with_embedding_provider(
+        self, provider: EmbeddingProviderType | str
+    ) -> "Config":
         """Return a new Config with the embedding provider changed.
 
         Args:
@@ -726,9 +729,7 @@ class Config(BaseModel):
         new_embedding = self.embedding.model_copy(update={"provider": provider})
         return self.model_copy(update={"embedding": new_embedding})
 
-    def with_llm_provider(
-        self, provider: Literal["ollama", "anthropic", "openai"]
-    ) -> "Config":
+    def with_llm_provider(self, provider: LLMProviderType | str) -> "Config":
         """Return a new Config with the LLM provider changed.
 
         Args:

@@ -15,6 +15,7 @@ from rich.tree import Tree
 
 from local_deepwiki.cli.config_validator import ConfigValidator, ValidationIssue
 from local_deepwiki.config import Config
+from local_deepwiki.models.provider_types import EmbeddingProviderType, LLMProviderType
 
 
 def display_config(config: Config, console: Console) -> None:
@@ -24,16 +25,16 @@ def display_config(config: Config, console: Console) -> None:
     # LLM Settings
     llm_branch = tree.add("[bold cyan]LLM[/bold cyan]")
     llm_branch.add(f"Provider: [green]{config.llm.provider}[/green]")
-    if config.llm.provider == "ollama":
+    if config.llm.provider == LLMProviderType.OLLAMA:
         llm_branch.add(f"Model: {config.llm.ollama.model}")
         llm_branch.add(f"Base URL: {config.llm.ollama.base_url}")
-    elif config.llm.provider == "anthropic":
+    elif config.llm.provider == LLMProviderType.ANTHROPIC:
         llm_branch.add(f"Model: {config.llm.anthropic.model}")
         key = os.environ.get("ANTHROPIC_API_KEY", "")
         llm_branch.add(
             f"API Key: {'[green]set[/green]' if key else '[red]not set[/red]'}"
         )
-    elif config.llm.provider == "openai":
+    elif config.llm.provider == LLMProviderType.OPENAI:
         llm_branch.add(f"Model: {config.llm.openai.model}")
         key = os.environ.get("OPENAI_API_KEY", "")
         llm_branch.add(
@@ -43,7 +44,7 @@ def display_config(config: Config, console: Console) -> None:
     # Embedding Settings
     embed_branch = tree.add("[bold cyan]Embedding[/bold cyan]")
     embed_branch.add(f"Provider: [green]{config.embedding.provider}[/green]")
-    if config.embedding.provider == "local":
+    if config.embedding.provider == EmbeddingProviderType.LOCAL:
         embed_branch.add(f"Model: {config.embedding.local.model}")
     else:
         embed_branch.add(f"Model: {config.embedding.openai.model}")
