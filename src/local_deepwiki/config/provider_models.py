@@ -33,7 +33,7 @@ class OpenAIEmbeddingConfig(BaseModel):
 class EmbeddingConfig(BaseModel):
     """Embedding provider configuration."""
 
-    model_config = {"frozen": True}
+    model_config = {"frozen": True, "use_enum_values": True}
 
     provider: EmbeddingProviderType = Field(
         default=EmbeddingProviderType.LOCAL, description="Embedding provider"
@@ -74,7 +74,7 @@ class OpenAILLMConfig(BaseModel):
 class LLMConfig(BaseModel):
     """LLM provider configuration."""
 
-    model_config = {"frozen": True}
+    model_config = {"frozen": True, "use_enum_values": True}
 
     provider: LLMProviderType = Field(
         default=LLMProviderType.OLLAMA, description="LLM provider"

@@ -778,7 +778,7 @@ class TestGlobalSingleton:
         assert new_controller.get_current_subject() is None
 
     def test_thread_safety_basic(self):
-        """Basic test for thread-safe singleton creation."""
+        """Basic test that each thread gets a valid controller via ContextVar."""
         controllers = []
 
         def get_controller():
@@ -790,9 +790,14 @@ class TestGlobalSingleton:
         for t in threads:
             t.join()
 
-        # All threads should get the same instance
+        # All threads should get a valid AccessController instance
         assert len(controllers) == 10
-        assert all(c is controllers[0] for c in controllers)
+        assert all(isinstance(c, AccessController) for c in controllers)
+
+        # Within a single context, the same instance is returned (singleton)
+        c1 = get_access_controller()
+        c2 = get_access_controller()
+        assert c1 is c2
 
 
 # =============================================================================

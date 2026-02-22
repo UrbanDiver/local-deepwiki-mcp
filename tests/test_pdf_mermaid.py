@@ -198,7 +198,7 @@ class TestIsMmdcAvailable:
         """Test when mmdc is available."""
         import local_deepwiki.export.mermaid_renderer as mermaid_module
 
-        mermaid_module._mmdc_available = None
+        mermaid_module._mmdc_available_var.set(None)
         mock_which.return_value = "/usr/local/bin/mmdc"
 
         result = is_mmdc_available()
@@ -210,7 +210,7 @@ class TestIsMmdcAvailable:
         """Test when mmdc is not available."""
         import local_deepwiki.export.mermaid_renderer as mermaid_module
 
-        mermaid_module._mmdc_available = None
+        mermaid_module._mmdc_available_var.set(None)
         mock_which.return_value = None
 
         result = is_mmdc_available()
@@ -221,7 +221,7 @@ class TestIsMmdcAvailable:
         """Test that the result is cached."""
         import local_deepwiki.export.mermaid_renderer as mermaid_module
 
-        mermaid_module._mmdc_available = None
+        mermaid_module._mmdc_available_var.set(None)
         mock_which.return_value = "/usr/local/bin/mmdc"
 
         result1 = is_mmdc_available()

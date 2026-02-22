@@ -7,8 +7,8 @@ for sensitive operations within the system.
 from __future__ import annotations
 
 import asyncio
-import threading
 from collections.abc import Callable
+from contextvars import ContextVar
 from dataclasses import dataclass
 from enum import StrEnum
 from functools import wraps
@@ -319,9 +319,10 @@ class AccessController:
         return self._current_subject.has_permission(permission)
 
 
-# Global access controller instance with thread-safe initialization
-_access_controller: AccessController | None = None
-_access_controller_lock = threading.Lock()
+# Global access controller instance using context-local storage
+_access_controller_var: ContextVar[AccessController | None] = ContextVar(
+    "access_controller", default=None
+)
 
 
 def _rbac_mode_from_env() -> RBACMode:
@@ -344,7 +345,7 @@ def _rbac_mode_from_env() -> RBACMode:
 
 
 def get_access_controller() -> AccessController:
-    """Get the global access controller instance (thread-safe).
+    """Get the global access controller instance.
 
     The RBAC mode is read from the ``DEEPWIKI_RBAC_MODE`` environment
     variable on first access.  Set it to ``enforced`` to require
@@ -353,13 +354,11 @@ def get_access_controller() -> AccessController:
     Returns:
         The global AccessController instance.
     """
-    global _access_controller
-    if _access_controller is None:
-        with _access_controller_lock:
-            # Double-check locking pattern
-            if _access_controller is None:
-                _access_controller = AccessController(mode=_rbac_mode_from_env())
-    return _access_controller
+    val = _access_controller_var.get()
+    if val is None:
+        val = AccessController(mode=_rbac_mode_from_env())
+        _access_controller_var.set(val)
+    return val
 
 
 def reset_access_controller() -> None:
@@ -368,9 +367,7 @@ def reset_access_controller() -> None:
     This clears the global instance, allowing a fresh controller
     to be created on the next call to get_access_controller().
     """
-    global _access_controller
-    with _access_controller_lock:
-        _access_controller = None
+    _access_controller_var.set(None)
 
 
 def require_permission(permission: Permission) -> Callable[[F], F]:

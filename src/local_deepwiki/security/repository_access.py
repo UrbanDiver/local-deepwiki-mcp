@@ -7,7 +7,7 @@ using configurable allowlist and denylist patterns.
 from __future__ import annotations
 
 import fnmatch
-import threading
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from pathlib import Path
 from local_deepwiki.logging import get_logger
@@ -135,24 +135,23 @@ class RepositoryAccessController:
         return self._config
 
 
-# Thread-safe global instance management
-_repo_access_controller: RepositoryAccessController | None = None
-_repo_access_controller_lock = threading.Lock()
+# Global instance using context-local storage
+_repo_access_controller_var: ContextVar[RepositoryAccessController | None] = ContextVar(
+    "repo_access_controller", default=None
+)
 
 
 def get_repository_access_controller() -> RepositoryAccessController:
-    """Get the global repository access controller instance (thread-safe).
+    """Get the global repository access controller instance.
 
     Returns:
         The global RepositoryAccessController instance.
     """
-    global _repo_access_controller
-    if _repo_access_controller is None:
-        with _repo_access_controller_lock:
-            # Double-check locking pattern
-            if _repo_access_controller is None:
-                _repo_access_controller = RepositoryAccessController()
-    return _repo_access_controller
+    val = _repo_access_controller_var.get()
+    if val is None:
+        val = RepositoryAccessController()
+        _repo_access_controller_var.set(val)
+    return val
 
 
 def configure_repository_access(config: RepositoryAccessConfig) -> None:
@@ -161,9 +160,7 @@ def configure_repository_access(config: RepositoryAccessConfig) -> None:
     Args:
         config: The RepositoryAccessConfig to use.
     """
-    global _repo_access_controller
-    with _repo_access_controller_lock:
-        _repo_access_controller = RepositoryAccessController(config)
+    _repo_access_controller_var.set(RepositoryAccessController(config))
 
 
 def reset_repository_access() -> None:
@@ -172,6 +169,4 @@ def reset_repository_access() -> None:
     This clears the global instance, allowing a fresh controller
     to be created on the next call to get_repository_access_controller().
     """
-    global _repo_access_controller
-    with _repo_access_controller_lock:
-        _repo_access_controller = None
+    _repo_access_controller_var.set(None)

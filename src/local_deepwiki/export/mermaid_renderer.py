@@ -11,6 +11,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+from contextvars import ContextVar
 from pathlib import Path
 
 from local_deepwiki.logging import get_logger
@@ -21,7 +22,9 @@ logger = get_logger(__name__)
 MERMAID_RENDER_TIMEOUT = 30
 
 # Cache for mermaid CLI availability check
-_mmdc_available: bool | None = None
+_mmdc_available_var: ContextVar[bool | None] = ContextVar(
+    "mmdc_available", default=None
+)
 
 
 def is_mmdc_available() -> bool:
@@ -30,16 +33,17 @@ def is_mmdc_available() -> bool:
     Returns:
         True if mmdc is available, False otherwise.
     """
-    global _mmdc_available
-    if _mmdc_available is not None:
-        return _mmdc_available
+    val = _mmdc_available_var.get()
+    if val is not None:
+        return val
 
-    _mmdc_available = shutil.which("mmdc") is not None
-    if _mmdc_available:
+    val = shutil.which("mmdc") is not None
+    _mmdc_available_var.set(val)
+    if val:
         logger.debug("Mermaid CLI (mmdc) is available")
     else:
         logger.debug("Mermaid CLI (mmdc) not found - diagrams will use placeholder")
-    return _mmdc_available
+    return val
 
 
 def render_mermaid_to_png(

@@ -15,7 +15,7 @@ from __future__ import annotations
 import json
 import logging
 import logging.handlers
-import threading
+from contextvars import ContextVar
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from enum import StrEnum
@@ -434,24 +434,23 @@ class AuditLogger:
         self.log_event(event)
 
 
-# Global audit logger instance with thread-safe initialization
-_audit_logger: AuditLogger | None = None
-_audit_logger_lock = threading.Lock()
+# Global audit logger instance
+_audit_logger_var: ContextVar[AuditLogger | None] = ContextVar(
+    "audit_logger", default=None
+)
 
 
 def get_audit_logger() -> AuditLogger:
-    """Get the global audit logger instance (thread-safe).
+    """Get the global audit logger instance.
 
     Returns:
         The global AuditLogger instance.
     """
-    global _audit_logger
-    if _audit_logger is None:
-        with _audit_logger_lock:
-            # Double-check locking pattern
-            if _audit_logger is None:
-                _audit_logger = AuditLogger()
-    return _audit_logger
+    val = _audit_logger_var.get()
+    if val is None:
+        val = AuditLogger()
+        _audit_logger_var.set(val)
+    return val
 
 
 def reset_audit_logger() -> None:
@@ -460,6 +459,4 @@ def reset_audit_logger() -> None:
     This clears the global instance, allowing a fresh logger
     to be created on the next call to get_audit_logger().
     """
-    global _audit_logger
-    with _audit_logger_lock:
-        _audit_logger = None
+    _audit_logger_var.set(None)

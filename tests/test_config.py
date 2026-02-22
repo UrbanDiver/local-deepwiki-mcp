@@ -217,7 +217,12 @@ class TestThreadSafeConfig:
         assert config2 is not None
 
     def test_concurrent_get_config(self):
-        """Test thread-safe concurrent access to get_config."""
+        """Test context-isolated concurrent access to get_config.
+
+        With ContextVar, each thread gets its own context and lazily
+        creates its own Config instance — so we verify that every
+        thread receives a valid Config (not that they share one).
+        """
         results = []
         errors = []
 
@@ -235,27 +240,30 @@ class TestThreadSafeConfig:
         for t in threads:
             t.join()
 
-        # All threads should succeed and get the same instance
+        # All threads should succeed and get a valid Config
         assert len(errors) == 0
         assert len(results) == 10
-        assert all(r is results[0] for r in results)
+        assert all(isinstance(r, Config) for r in results)
 
     def test_concurrent_set_and_get_config(self):
-        """Test thread-safe concurrent set and get operations."""
+        """Test context-isolated concurrent set and get operations.
+
+        With ContextVar, each thread's set_config only affects its own
+        context, so the read-back always sees exactly the value that
+        thread set.
+        """
         errors = []
 
         def modify_config(value: int):
             try:
-                # Config classes are frozen, so we use model_copy to create modified versions
                 new_chunking = ChunkingConfig().model_copy(
                     update={"max_chunk_tokens": value}
                 )
                 new_config = Config().model_copy(update={"chunking": new_chunking})
                 set_config(new_config)
-                # Read back
+                # Read back — with ContextVar this is always our own value
                 retrieved = get_config()
-                # Value should be one of the set values (may not be our value due to race)
-                assert retrieved.chunking.max_chunk_tokens >= 100
+                assert retrieved.chunking.max_chunk_tokens == value
             except Exception as e:
                 errors.append(e)
 

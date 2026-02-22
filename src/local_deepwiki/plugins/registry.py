@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import sys
+from contextvars import ContextVar
 from functools import singledispatchmethod
 from pathlib import Path
 from typing import TypeVar
@@ -394,7 +395,7 @@ class PluginRegistry:
 
 
 # Global plugin registry singleton
-_registry: PluginRegistry | None = None
+_registry_var: ContextVar[PluginRegistry | None] = ContextVar("registry", default=None)
 
 
 def get_plugin_registry() -> PluginRegistry:
@@ -403,10 +404,11 @@ def get_plugin_registry() -> PluginRegistry:
     Returns:
         The global PluginRegistry singleton.
     """
-    global _registry
-    if _registry is None:
-        _registry = PluginRegistry()
-    return _registry
+    val = _registry_var.get()
+    if val is None:
+        val = PluginRegistry()
+        _registry_var.set(val)
+    return val
 
 
 def reset_plugin_registry() -> None:
@@ -414,7 +416,7 @@ def reset_plugin_registry() -> None:
 
     Useful for testing.
     """
-    global _registry
-    if _registry is not None:
-        _registry.cleanup_all()
-    _registry = None
+    val = _registry_var.get()
+    if val is not None:
+        val.cleanup_all()
+    _registry_var.set(None)

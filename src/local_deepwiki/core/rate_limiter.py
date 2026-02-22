@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from local_deepwiki.logging import get_logger
 
@@ -316,7 +317,9 @@ class RateLimiter:
 
 
 # Global rate limiter instance
-_rate_limiter: RateLimiter | None = None
+_rate_limiter_var: ContextVar[RateLimiter | None] = ContextVar(
+    "rate_limiter", default=None
+)
 
 
 def get_rate_limiter() -> RateLimiter:
@@ -327,10 +330,11 @@ def get_rate_limiter() -> RateLimiter:
     Returns:
         The global RateLimiter instance.
     """
-    global _rate_limiter
-    if _rate_limiter is None:
-        _rate_limiter = RateLimiter()
-    return _rate_limiter
+    val = _rate_limiter_var.get()
+    if val is None:
+        val = RateLimiter()
+        _rate_limiter_var.set(val)
+    return val
 
 
 def configure_rate_limiter(config: RateLimitConfig) -> None:
@@ -341,8 +345,7 @@ def configure_rate_limiter(config: RateLimitConfig) -> None:
     Args:
         config: Rate limit configuration to use.
     """
-    global _rate_limiter
-    _rate_limiter = RateLimiter(config)
+    _rate_limiter_var.set(RateLimiter(config))
     logger.info(
         "Rate limiter configured: %d/min, %d/hour, burst=%d",
         config.requests_per_minute,
@@ -356,6 +359,5 @@ def reset_rate_limiter() -> None:
 
     Useful for testing or when reconfiguration is needed.
     """
-    global _rate_limiter
-    _rate_limiter = None
+    _rate_limiter_var.set(None)
     logger.debug("Rate limiter reset")

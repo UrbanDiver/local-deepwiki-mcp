@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-import threading
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass, field
@@ -17,68 +16,48 @@ from local_deepwiki.models.provider_types import EmbeddingProviderType, LLMProvi
 
 from .models import Config
 
-# Thread-safe global config singleton
-_config: Config | None = None
-_config_lock = threading.Lock()
-
-# Context-local config override for async contexts
-_context_config: ContextVar[Config | None] = ContextVar("config", default=None)
+# Context-local config storage
+_config_var: ContextVar[Config | None] = ContextVar("config", default=None)
 
 
 def get_config() -> Config:
     """Get the configuration instance.
 
-    Returns the context-local config if set, otherwise the global config.
-    Thread-safe for concurrent access.
+    Returns the context-local config, lazily loading from disk on first access.
 
     Returns:
         The active configuration instance.
     """
-    # Check for context-local override first (async-safe)
-    context_cfg = _context_config.get()
-    if context_cfg is not None:
-        return context_cfg
-
-    # Fall back to global singleton (thread-safe)
-    global _config
-    with _config_lock:
-        if _config is None:
-            _config = Config.load()
-        return _config
+    cfg = _config_var.get()
+    if cfg is None:
+        cfg = Config.load()
+        _config_var.set(cfg)
+    return cfg
 
 
 def set_config(config: Config) -> None:
-    """Set the global configuration instance.
-
-    Thread-safe. Note: This sets the global config, not a context-local one.
-    Use config_context() for temporary context-local overrides.
+    """Set the configuration instance.
 
     Args:
-        config: The configuration to set globally.
+        config: The configuration to set.
     """
-    global _config
-    with _config_lock:
-        _config = config
+    _config_var.set(config)
 
 
 def reset_config() -> None:
-    """Reset the global configuration to uninitialized state.
+    """Reset the configuration to uninitialized state.
 
     Useful for testing to ensure a fresh config is loaded.
-    Also clears any context-local override.
     """
-    global _config
-    with _config_lock:
-        _config = None
-    _context_config.set(None)
+    _config_var.set(None)
 
 
 @contextmanager
 def config_context(config: Config) -> Generator[Config, None, None]:
     """Context manager for temporary config override.
 
-    Sets a context-local configuration that takes precedence over the global
-    config within the context. Useful for testing or per-request config.
+    Sets a temporary configuration that is restored when the context exits.
+    Useful for testing or per-request config.
 
     Args:
         config: The configuration to use within the context.
@@ -90,13 +69,13 @@ def config_context(config: Config) -> Generator[Config, None, None]:
         with config_context(custom_config):
             # get_config() returns custom_config here
             do_something()
-        # get_config() returns global config again
+        # get_config() returns previous config again
     """
-    token = _context_config.set(config)
+    token = _config_var.set(config)
     try:
         yield config
     finally:
-        _context_config.reset(token)
+        _config_var.reset(token)
 
 
 # ---------------------------------------------------------------------------

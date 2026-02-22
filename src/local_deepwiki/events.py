@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import uuid
 from collections.abc import Callable, Coroutine
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from enum import StrEnum
 from operator import attrgetter
@@ -366,7 +367,7 @@ class EventEmitter:
 
 
 # Global event emitter singleton
-_emitter: EventEmitter | None = None
+_emitter_var: ContextVar[EventEmitter | None] = ContextVar("emitter", default=None)
 
 
 def get_event_emitter() -> EventEmitter:
@@ -375,10 +376,11 @@ def get_event_emitter() -> EventEmitter:
     Returns:
         The global EventEmitter singleton.
     """
-    global _emitter
-    if _emitter is None:
-        _emitter = EventEmitter()
-    return _emitter
+    val = _emitter_var.get()
+    if val is None:
+        val = EventEmitter()
+        _emitter_var.set(val)
+    return val
 
 
 def reset_event_emitter() -> None:
@@ -386,7 +388,7 @@ def reset_event_emitter() -> None:
 
     Useful for testing.
     """
-    global _emitter
-    if _emitter is not None:
-        _emitter.clear_handlers()
-    _emitter = None
+    val = _emitter_var.get()
+    if val is not None:
+        val.clear_handlers()
+    _emitter_var.set(None)

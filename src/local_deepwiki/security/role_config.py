@@ -7,8 +7,10 @@ supporting pattern-based matching and explicit admin identifiers.
 from __future__ import annotations
 
 import fnmatch
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from pathlib import Path
+
 import yaml
 
 from local_deepwiki.security.access_control import Role, Subject
@@ -163,8 +165,10 @@ class RoleManager:
         return self._config
 
 
-# Global instance
-_role_manager: RoleManager | None = None
+# Global instance using context-local storage
+_role_manager_var: ContextVar[RoleManager | None] = ContextVar(
+    "role_manager", default=None
+)
 
 
 def get_role_manager() -> RoleManager:
@@ -175,10 +179,11 @@ def get_role_manager() -> RoleManager:
     Returns:
         The global RoleManager instance.
     """
-    global _role_manager
-    if _role_manager is None:
-        _role_manager = RoleManager()
-    return _role_manager
+    val = _role_manager_var.get()
+    if val is None:
+        val = RoleManager()
+        _role_manager_var.set(val)
+    return val
 
 
 def configure_roles(config: RoleConfig) -> None:
@@ -187,8 +192,7 @@ def configure_roles(config: RoleConfig) -> None:
     Args:
         config: The role configuration to use.
     """
-    global _role_manager
-    _role_manager = RoleManager(config)
+    _role_manager_var.set(RoleManager(config))
 
 
 def reset_role_manager() -> None:
@@ -197,5 +201,4 @@ def reset_role_manager() -> None:
     This clears the global instance, allowing a fresh manager
     to be created on the next call to get_role_manager().
     """
-    global _role_manager
-    _role_manager = None
+    _role_manager_var.set(None)

@@ -78,7 +78,11 @@ class TestConfigSingleton:
         assert new_config.chunking.max_chunk_tokens == 512  # default
 
     def test_config_singleton_thread_safety_get(self):
-        """Test concurrent get_config calls are thread-safe."""
+        """Test context-isolated concurrent get_config calls.
+
+        With ContextVar, each thread gets its own context and lazily
+        creates its own Config instance.
+        """
         results = []
         errors = []
 
@@ -97,11 +101,16 @@ class TestConfigSingleton:
 
         assert len(errors) == 0
         assert len(results) == 20
-        # All threads should get the same instance
-        assert all(r is results[0] for r in results)
+        # All threads should get a valid Config
+        assert all(isinstance(r, Config) for r in results)
 
     def test_config_singleton_thread_safety_set_get(self):
-        """Test concurrent set and get operations are thread-safe."""
+        """Test context-isolated concurrent set and get operations.
+
+        With ContextVar, each thread's set_config only affects its own
+        context, so the read-back always sees exactly the value that
+        thread set.
+        """
         errors = []
 
         def set_and_get(value: int):
@@ -109,8 +118,7 @@ class TestConfigSingleton:
                 config = Config(chunking={"max_chunk_tokens": value})
                 set_config(config)
                 retrieved = get_config()
-                # Should get a valid config with a valid value
-                assert retrieved.chunking.max_chunk_tokens >= 100
+                assert retrieved.chunking.max_chunk_tokens == value
             except Exception as e:
                 errors.append(e)
 

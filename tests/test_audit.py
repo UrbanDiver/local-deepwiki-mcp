@@ -94,7 +94,10 @@ class TestAuditEventTypeEnum:
 
     def test_sensitive_resource_accessed_exists(self):
         """Test SENSITIVE_RESOURCE_ACCESSED enum value exists."""
-        assert AuditEventType.SENSITIVE_RESOURCE_ACCESSED.value == "sensitive_resource_accessed"
+        assert (
+            AuditEventType.SENSITIVE_RESOURCE_ACCESSED.value
+            == "sensitive_resource_accessed"
+        )
 
     def test_all_event_types_are_strings(self):
         """Test all event type values are strings."""
@@ -653,8 +656,8 @@ class TestGetAuditLoggerSingleton:
 
         assert logger1 is logger2
 
-    def test_thread_safe_initialization(self):
-        """Test get_audit_logger is thread-safe."""
+    def test_context_isolation(self):
+        """Test get_audit_logger provides per-context isolation via ContextVar."""
         import threading
 
         reset_audit_logger()
@@ -669,8 +672,9 @@ class TestGetAuditLoggerSingleton:
         for t in threads:
             t.join()
 
-        # All instances should be the same object
-        assert all(inst is instances[0] for inst in instances)
+        # Each thread has its own ContextVar context, so each creates its own instance
+        assert len(instances) == 10
+        assert all(isinstance(inst, AuditLogger) for inst in instances)
 
 
 class TestResetAuditLogger:
