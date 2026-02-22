@@ -10,12 +10,12 @@ from typing import Any
 from mcp.types import TextContent
 from pydantic import ValidationError as PydanticValidationError
 
+from local_deepwiki.core.indexer import RepositoryIndexer
 from local_deepwiki.handlers._shared import (
     IndexRepositoryArgs,
     OperationType,
     Permission,
     ProgressPhase,
-    RepositoryIndexer,
     ValidationError,
     create_progress_notifier,
     generate_wiki,

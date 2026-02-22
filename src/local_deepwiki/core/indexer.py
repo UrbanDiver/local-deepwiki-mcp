@@ -10,6 +10,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from local_deepwiki.config import Config, get_config
 from local_deepwiki.core.chunker import CodeChunker
@@ -22,10 +23,12 @@ from local_deepwiki.core.parser import ASTCache, CodeParser
 from local_deepwiki.core.secret_detector import scan_repository_for_secrets
 from local_deepwiki.core.vectorstore import VectorStore
 from local_deepwiki.events import EventType, get_event_emitter
-from local_deepwiki.handlers.types import SearchResult
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import CodeChunk, FileInfo, IndexStatus, ProgressCallback
 from local_deepwiki.providers.embeddings import get_embedding_provider
+
+if TYPE_CHECKING:
+    from local_deepwiki.handlers.types import SearchResult
 
 logger = get_logger(__name__)
 

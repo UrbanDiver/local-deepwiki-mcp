@@ -25,7 +25,6 @@ from pydantic import ValidationError as PydanticValidationError
 
 from local_deepwiki.config import get_config
 from local_deepwiki.core.audit import get_audit_logger
-from local_deepwiki.core.indexer import RepositoryIndexer
 from local_deepwiki.core.path_utils import is_test_file
 from local_deepwiki.core.rate_limiter import RateLimitExceeded, get_rate_limiter
 from local_deepwiki.core.vectorstore import VectorStore
