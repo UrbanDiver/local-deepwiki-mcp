@@ -93,6 +93,21 @@ markers = [
 ]
 filterwarnings = []
 
+[tool.coverage.run]
+source = ["src/local_deepwiki"]
+omit = ["*/tests/*", "*/__pycache__/*"]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.",
+    "@overload",
+]
+
 [tool.black]
 line-length = 100
 target-version = ["py311"]

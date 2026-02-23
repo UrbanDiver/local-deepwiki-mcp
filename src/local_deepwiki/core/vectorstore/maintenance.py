@@ -180,7 +180,7 @@ class LazyIndexManager:
 
         logger.info("Scheduling background vector index creation")
 
-        async def _create_index_task():
+        async def _create_index_task() -> None:
             try:
                 await self.create_index_now(progress_callback=progress_callback)
             except (RuntimeError, ValueError, OSError) as e:

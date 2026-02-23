@@ -7,9 +7,12 @@ using tree-sitter AST analysis.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from local_deepwiki.core.parser import CodeParser
+
+if TYPE_CHECKING:
+    from tree_sitter import Node
 from local_deepwiki.logging import get_logger
 
 logger = get_logger(__name__)
@@ -55,11 +58,11 @@ async def compute_complexity_metrics(
     total_lines = len(lines)
     blank_lines = sum(1 for line in lines if not line.strip())
 
-    def _count_comment_lines(root):
+    def _count_comment_lines(root: Node) -> int:
         """Count lines that contain comments."""
         comment_line_set: set[int] = set()
 
-        def _walk(n):
+        def _walk(n: Node) -> None:
             if n.type in ("comment", "line_comment", "block_comment"):
                 for line_no in range(n.start_point[0], n.end_point[0] + 1):
                     comment_line_set.add(line_no)
@@ -109,7 +112,7 @@ async def compute_complexity_metrics(
         }
     )
 
-    def _estimate_cyclomatic(node):
+    def _estimate_cyclomatic(node: Node) -> int:
         """Estimate cyclomatic complexity by counting decision points."""
         count = 1  # Base complexity
         branch_types = frozenset(
@@ -131,7 +134,7 @@ async def compute_complexity_metrics(
         )
         logical_ops = frozenset({"and", "or", "&&", "||"})
 
-        def _count_branches(n):
+        def _count_branches(n: Node) -> None:
             nonlocal count
             if n.type in branch_types:
                 count += 1
@@ -149,7 +152,7 @@ async def compute_complexity_metrics(
         _count_branches(node)
         return count
 
-    def _extract_function_info(node, depth):
+    def _extract_function_info(node: Node, depth: int) -> dict[str, Any]:
         name = ""
         param_count = 0
         for child in node.children:
@@ -179,7 +182,7 @@ async def compute_complexity_metrics(
             "cyclomatic_complexity": cyclomatic,
         }
 
-    def _walk_node(node, depth=0):
+    def _walk_node(node: Node, depth: int = 0) -> None:
         nonlocal max_nesting
         node_type = node.type
 

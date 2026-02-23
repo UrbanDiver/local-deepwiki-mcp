@@ -57,15 +57,24 @@ html-export/
 # Development artifacts
 .claude-flow/
 .swarm/
+.windsurf/
 agents/
 .mcp.json
 coverage_html/
 coverage_openai_embeddings/
-codemap-config-full.png
 docs/plans/
+docs/plan-*.md
 docs.pdf
 
+# Screenshots and UI previews
+*.png
+
+# Runtime artifacts
+lazy-generated-page
+search-result-404
+
 # Internal dev/audit docs (kept locally, not published)
+AGENTS.md
 PHASE_*_*.md
 CODE_REVIEW.md
 SECURITY_AUDIT_*.md
@@ -79,6 +88,8 @@ PUBLICATION_PLAN.md
 COMPETITIVE_ANALYSIS.md
 docs/WIKI_ENHANCEMENTS.md
 TODO.md
+pythonic-audit.md
+glossary-*.md
 
 # Coverage
 coverage.json

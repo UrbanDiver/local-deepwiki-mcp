@@ -32,7 +32,7 @@ def find_nodes_by_type(root: Node, node_types: set[str]) -> list[Node]:
     """
     results = []
 
-    def walk(node: Node):
+    def walk(node: Node) -> None:
         if node.type in node_types:
             results.append(node)
         for child in node.children:

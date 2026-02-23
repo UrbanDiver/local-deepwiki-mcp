@@ -7,7 +7,7 @@ import json
 import re
 import time
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from local_deepwiki.config import Config, GenerationMode, get_config
 from local_deepwiki.core.vectorstore import VectorStore
@@ -35,6 +35,9 @@ from local_deepwiki.generators.wiki_pages import (
 )
 from local_deepwiki.logging import get_logger
 from local_deepwiki.models import FileInfo, IndexStatus, WikiPage, WikiStructure
+
+if TYPE_CHECKING:
+    from local_deepwiki.providers.base import LLMProvider
 
 logger = get_logger(__name__)
 
@@ -160,7 +163,7 @@ class LazyPageGenerator:
             self._cross_linker = CrossLinker(await self._get_entity_registry())
         return self._cross_linker
 
-    def _get_llm(self):
+    def _get_llm(self) -> LLMProvider:
         from local_deepwiki.providers.llm import get_cached_llm_provider
 
         vs = self._vector_store
